@@ -11,10 +11,10 @@ import {
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useShowEmptyDays } from "@plugins/stats/web";
-import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
-import { getCommitsRate } from "../../shared/endpoints";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { commitsCounts, type CommitBucket } from "../../shared";
+import { LiveChart } from "./live-chart";
 import {
-  ChartState,
   axisProps,
   barCursor,
   fillGaps,
@@ -25,8 +25,7 @@ import {
   yAxisFormatter,
 } from "./chart-primitives";
 
-type Bucket = "hour" | "day" | "week" | "month" | "year";
-const BUCKETS: { id: Bucket; label: string }[] = [
+const BUCKETS: { id: CommitBucket; label: string }[] = [
   { id: "hour", label: "Hour" },
   { id: "day", label: "Day" },
   { id: "week", label: "Week" },
@@ -35,36 +34,52 @@ const BUCKETS: { id: Bucket; label: string }[] = [
 ];
 
 interface Point {
-  bucket: string;
+  x: string;
   count: number;
 }
 
 export function CommitsRateChart({ dedup }: { dedup?: boolean }) {
-  const valueLabel = "Commits";
-  const [bucket, setBucket] = useState<Bucket>("day");
-  const { showEmptyDays } = useShowEmptyDays();
-  const { data: resp, error } = useEndpoint(getCommitsRate, {}, { query: { bucket, dedup: dedup ? "true" : "false" } });
-  // Plain (non-breakdown) call site — the response is always the plain branch.
-  const rawPoints = useMemo(() => (resp?.points ?? []) as Point[], [resp]);
-  const points = useMemo(() => {
-    return showEmptyDays ? fillGaps(rawPoints, "bucket", bucket) : rawPoints;
-  }, [rawPoints, showEmptyDays, bucket]);
-
+  const [bucket, setBucket] = useState<CommitBucket>("day");
+  const read = useLive(commitsCounts, {
+    series: { kind: "rate", bucket },
+    dedup: dedup ?? false,
+  });
   return (
     <Stack gap="md">
-      <div className="h-64 w-full">
-        <ChartState
-          error={error ? getEndpointErrorMessage(error) : null}
-          loading={resp === undefined}
-          empty={!!resp && rawPoints.length === 0}
-        >
-          <ResponsiveContainer width="100%" height="100%">
+      <LiveChart
+        read={read}
+        subject="the commit counts"
+        isEmpty={(d) => d.points.length === 0}
+        emptyText="No commits yet."
+      >
+        {({ points }) => <CommitsRateBody rawPoints={points} bucket={bucket} />}
+      </LiveChart>
+      <SegmentedControl options={BUCKETS} value={bucket} onChange={setBucket} />
+    </Stack>
+  );
+}
+
+function CommitsRateBody({
+  rawPoints,
+  bucket,
+}: {
+  rawPoints: Point[];
+  bucket: CommitBucket;
+}) {
+  const valueLabel = "Commits";
+  const { showEmptyDays } = useShowEmptyDays();
+  const points = useMemo(
+    () => (showEmptyDays ? fillGaps(rawPoints, "x", bucket) : rawPoints),
+    [rawPoints, showEmptyDays, bucket],
+  );
+  return (
+    <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={points}
               margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
             >
               <CartesianGrid {...gridProps} />
-              <XAxis dataKey="bucket" {...axisProps} minTickGap={32} />
+        <XAxis dataKey="x" {...axisProps} minTickGap={32} />
               <YAxis
                 {...axisProps}
                 allowDecimals={false}
@@ -88,10 +103,6 @@ export function CommitsRateChart({ dedup }: { dedup?: boolean }) {
                 isAnimationActive={false}
               />
             </BarChart>
-          </ResponsiveContainer>
-        </ChartState>
-      </div>
-      <SegmentedControl options={BUCKETS} value={bucket} onChange={setBucket} />
-    </Stack>
+    </ResponsiveContainer>
   );
 }

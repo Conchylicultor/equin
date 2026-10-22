@@ -1,7 +1,14 @@
 export { commitsConfig } from "./config";
 export {
-  getCommitsCumulative,
-  getCommitsRate,
-  getCommitsLinesCumulative,
-  getCommitsLinesRate,
-} from "./endpoints";
+  COMMIT_BUCKETS,
+  commitsCounts,
+  commitsCountsByCategory,
+  commitsLines,
+  commitsLinesByExt,
+} from "./values";
+export type {
+  CommitBucket,
+  CommitSeries,
+  CommitsQuery,
+  CommitsByCategoryQuery,
+} from "./values";

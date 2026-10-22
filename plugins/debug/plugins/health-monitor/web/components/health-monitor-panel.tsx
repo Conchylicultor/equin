@@ -90,7 +90,7 @@ function MetricChart({
 }): ReactElement {
   return (
     <div className="h-44 w-full">
-      <ChartState error={null} loading={false} empty={data.length === 0}>
+      <ChartState empty={data.length === 0} emptyText="No samples yet.">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={data}

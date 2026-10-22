@@ -9,6 +9,7 @@ import { costUsageDir } from "../../data-dirs";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 import { defineCorpusIndex } from "@plugins/infra/plugins/corpus-index/server";
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
+import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
 import { modelIdFromCliName } from "@plugins/conversations/plugins/model-provider/core";
 import {
   flushArchive,
@@ -40,19 +41,17 @@ import {
 
 export type { DailyRow } from "./usage-index";
 
-export type Scope = "all" | "singularity";
-
 /**
- * The conversation metadata a session row renders with. Every field is nullable
- * because an ARCHIVED session may have no surviving `_conversations` row at all
- * (rows live in the per-worktree DB fork and are deleted with their task) — its
- * title/conversationId then come from the archive snapshot, and its status is
- * genuinely unknown rather than defaulted to something that looks live.
+ * The conversation a session ran, as the ARCHIVE snapshotted it at capture
+ * (`mergeLive`). The read path never reads `_conversations`: the live
+ * conversation (title, status) is read on the web through
+ * `sessionConversations` and wins over this snapshot, which only fills in for
+ * a conversation since deleted (rows live in the per-worktree DB fork and go
+ * with their task) or one the live lookup has not answered.
  */
-export interface ConvMeta {
+export interface ArchivedMeta {
   conversationId: string | null;
   title: string | null;
-  status: string | null;
 }
 
 // Per-conversation token totals (one per JSONL file). `cost` is the exact sum of
@@ -72,19 +71,20 @@ export interface PerSession {
   modelsUsed: string[];
 }
 
-interface AggregateBundle {
+/** What the read path answers from — every `stats.cost.*` value (`./answers.ts`). */
+export interface AggregateBundle {
   daily: DailyRow[];
   sessions: PerSession[];
   // Encoded project dir → isSingularity?
   projectIsSingularity: Map<string, boolean>;
-  convBySession: Map<string, ConvMeta>;
+  archivedMeta: Map<string, ArchivedMeta>;
 }
 
 /**
  * `buildBundle`'s full result: the read-path bundle PLUS the two things only the
  * capture path (warm-up, daily job) consumes — the merged archive to flush and
- * the anomalies to report. Kept off `AggregateBundle` so a request handler cannot
- * accidentally reach for a durable-write payload.
+ * the anomalies to report. Kept off `AggregateBundle` so a value loader
+ * (`./answers.ts`) cannot accidentally reach for a durable-write payload.
  */
 interface BundleBuild {
   bundle: AggregateBundle;
@@ -205,24 +205,30 @@ async function ensureArchive(): Promise<Map<string, ArchiveEntry>> {
 }
 
 /**
- * The read path. Pure with respect to disk: it loads, merges and prices, and
- * writes NOTHING — `buildBundle` runs on every cost request, so the archive flush
- * lives in `captureCostHistory` (warm-up + daily job) instead.
+ * Load, merge and price. Pure with respect to disk: it writes NOTHING — the
+ * archive flush lives in `captureCostHistory` (warm-up + daily job).
+ *
+ * `conv` is the live conversation metadata the archive snapshots: the capture
+ * path reads it from `_conversations`; the read path passes `NO_CONV_META` and
+ * never touches Postgres (its values are served external — the snapshot a
+ * merge already holds is kept, `mergeLive` never overwrites a title with a
+ * missing one).
  */
-async function buildBundle(): Promise<BundleBuild> {
+async function buildBundle(
+  conv: Map<string, ArchiveConvMeta>,
+): Promise<BundleBuild> {
   await costIndex.ensureFresh();
-  const [table, banked, mainRoot, conv] = await Promise.all([
+  const [table, banked, mainRoot] = await Promise.all([
     ensurePriceTable(),
     ensureArchive(),
     ensureMainWorktreeRoot(),
-    loadConvMeta(),
   ]);
   const repoBasename = mainRoot.split("/").pop() ?? "";
 
   const { merged, shrunk } = mergeLive(
     banked,
     costIndex.entries(),
-    conv.forArchive,
+    conv,
     repoBasename,
   );
   // Adopt the merge: the in-memory archive is monotonic for the life of the
@@ -246,7 +252,7 @@ async function buildBundle(): Promise<BundleBuild> {
       daily,
       sessions: decorated,
       projectIsSingularity,
-      convBySession: withArchivedMeta(conv.display, merged),
+      archivedMeta: archivedMetaOf(merged),
     },
     merged,
     unpriced,
@@ -254,8 +260,171 @@ async function buildBundle(): Promise<BundleBuild> {
   };
 }
 
-export async function loadBundle(): Promise<AggregateBundle> {
-  return (await buildBundle()).bundle;
+const NO_CONV_META = new Map<string, ArchiveConvMeta>();
+
+// ─── The read path: one memoized bundle, and what invalidates it ─────────────
+//
+// Every `stats.cost.*` value (`./served.ts`) is answered from ONE bundle. Its
+// inputs are the transcripts (the corpus index), the price table and the
+// in-memory archive — none of them Postgres — and each has a change signal:
+//
+//   • a transcript written under `~/.claude/projects`: on main, the corpus
+//     index's own watcher (`costIndex.onChange`, one recursive watch for the
+//     process); where that watcher is not running (a worktree backend, or main
+//     before its warm-up), the directory watch a subscribed tuple holds
+//     (`watchCostInputs`);
+//   • a new price table: `onPriceTableUpdated` in the process that refreshed it
+//     (the daily job); every OTHER backend watches `price-table.json` itself
+//     and reloads it, since the job runs on main only;
+//   • the archive: only `buildBundle` changes it — a read's own merge, or a
+//     capture (`captureCostHistory` notifies after it). The capture runs on
+//     main only, so a worktree backend's archive is the one it loaded at its
+//     first read plus its own merges, for the life of the process: main's
+//     later captures (new title snapshots, a shrink banked) do not reach it.
+//
+// Each bumps `generation`; the bundle is rebuilt once per generation however
+// many values (and tuples) read it. Nothing watches while nobody subscribes,
+// so a first subscriber bumps the generation, and a read with no subscriber
+// at all (an HTTP read) never trusts the memo.
+//
+// Transcripts are written every few seconds while any agent runs, and a
+// rebuild re-walks the corpus index and re-prices every session (seconds of
+// work), so their signal is coalesced HERE, at the source: the first write
+// arms one trailing window, every write inside it folds into it, and the
+// window's end is one generation and one notify of every holder. The values'
+// `throttleMs` could not do it — the runtime drains a throttled entry early
+// whenever any other resource flushes, which on a busy server is always
+// (measured: ~18 rebuilds a minute behind a declared 30 s throttle).
+const TRANSCRIPT_COALESCE_MS = 30_000;
+let transcriptWindow: ReturnType<typeof setTimeout> | undefined;
+
+interface Holder {
+  notify: () => void;
+}
+const holders = new Set<Holder>();
+let generation = 0;
+let memo: MemoEntry | null = null;
+
+/** Every subscribed tuple re-reads, over a rebuilt bundle. */
+function costInputsChanged(): void {
+  generation++;
+  for (const h of holders) h.notify();
+}
+
+onPriceTableUpdated(costInputsChanged);
+
+/**
+ * Hear every change to what the bundle reads, for as long as a tuple is
+ * subscribed (`whileSubscribed`): a transcript written, a price-table update,
+ * a capture (see the block above for each signal). Returns the stop.
+ */
+export async function watchCostInputs(notify: () => void): Promise<() => void> {
+  const holder: Holder = { notify };
+  const first = holders.size === 0;
+  // Nothing watched the inputs until now: whatever the memo holds may be stale.
+  if (first) generation++;
+  holders.add(holder);
+  const releases: (() => void)[] = [];
+  try {
+    if (costIndex.watching()) {
+      // Main, past its warm-up: the index already watches the corpus, armed
+      // long before this subscriber — reuse its signal, no second watch.
+      releases.push(costIndex.onChange(transcriptsWritten));
+    } else {
+      releases.push(
+        await acquireDirWatch({
+          dir: CLAUDE_PROJECTS_DIR,
+          scope: "subtree",
+          onChange: (events) => {
+            if (!events.some((e) => e.path.endsWith(".jsonl"))) return;
+            transcriptsWritten();
+          },
+        }),
+      );
+    }
+    if (!isHostSingleton()) {
+      // The daily refresh runs in the host singleton only; another backend
+      // hears its new table through the file it saves.
+      releases.push(
+        await acquireDirWatch({
+          dir: costUsageDir.path,
+          scope: "children",
+          onChange: (events) => {
+            if (!events.some((e) => e.path === PRICE_TABLE_PATH)) return;
+            priceTable = null;
+            costInputsChanged();
+          },
+        }),
+      );
+    }
+  } catch (err) {
+    holders.delete(holder);
+    for (const release of releases) release();
+    throw err;
+  }
+  // A load that ran while the watches above were opening built the memo
+  // before a write in that gap could be heard: redo it against what is there
+  // now. (`memo.generation === generation` is exactly "a load ran since the
+  // bump"; nothing ran ⇒ nothing to redo.)
+  if (first && memo !== null && memo.generation === generation) {
+    costIndex.markDirty();
+    costInputsChanged();
+  }
+  return () => {
+    holders.delete(holder);
+    for (const release of releases) release();
+    if (holders.size === 0 && transcriptWindow !== undefined) {
+      clearTimeout(transcriptWindow);
+      transcriptWindow = undefined;
+    }
+  };
+}
+
+/**
+ * A transcript was written: fold it into the open coalescing window, or open
+ * one. Every holder's watch callback lands here, so one write is one window
+ * however many tuples are subscribed.
+ */
+function transcriptsWritten(): void {
+  // On main `ensureFresh` skips the walk until its own watcher marks the
+  // index dirty — which may not have fired yet for this batch.
+  costIndex.markDirty();
+  if (transcriptWindow !== undefined) return;
+  transcriptWindow = setTimeout(() => {
+    transcriptWindow = undefined;
+    costInputsChanged();
+  }, TRANSCRIPT_COALESCE_MS);
+}
+
+/** The read path's bundle: rebuilt once per input change, never touching Postgres. */
+export function loadBundle(): Promise<AggregateBundle> {
+  if (holders.size > 0 && memo !== null && memo.generation === generation) {
+    return memo.bundle;
+  }
+  const entry: MemoEntry = {
+    generation,
+    bundle: buildReadBundle(() => entry),
+  };
+  memo = entry;
+  return entry.bundle;
+}
+
+interface MemoEntry {
+  generation: number;
+  bundle: Promise<AggregateBundle>;
+}
+
+async function buildReadBundle(
+  self: () => MemoEntry,
+): Promise<AggregateBundle> {
+  try {
+    return (await buildBundle(NO_CONV_META)).bundle;
+  } catch (err) {
+    // A failed build is not an answer to keep: the next read retries. Only
+    // its OWN entry is dropped — a newer generation's build may hold the memo.
+    if (memo === self()) memo = null;
+    throw err;
+  }
 }
 
 /**
@@ -278,7 +447,9 @@ export async function loadBundle(): Promise<AggregateBundle> {
  * archive is written in dev only. See the deferred note on `costRefreshJob`.
  */
 export async function captureCostHistory(): Promise<void> {
-  const { merged, unpriced, shrunk } = await buildBundle();
+  const { merged, unpriced, shrunk } = await buildBundle(await loadConvMeta());
+  // The merge refreshed the archive's snapshots: the open charts re-read.
+  costInputsChanged();
   await reportCostAnomalies(unpriced, shrunk);
   if (!isHostSingleton()) return;
   await flushArchive(costUsageDir.path, merged);
@@ -316,64 +487,37 @@ async function warmAndWatch(): Promise<void> {
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
 /**
- * The live `_conversations` join, in the two shapes its two consumers need:
- * `display` for the session rows (carries `status`), `forArchive` for the archive
- * snapshot (title + id only — the archive is not a mirror of live state).
+ * The live `_conversations` metadata the archive snapshots (title + id —
+ * the archive is not a mirror of live state). CAPTURE PATH ONLY: the read
+ * path's values are external and read no Postgres.
  */
-async function loadConvMeta(): Promise<{
-  display: Map<string, ConvMeta>;
-  forArchive: Map<string, ArchiveConvMeta>;
-}> {
+async function loadConvMeta(): Promise<Map<string, ArchiveConvMeta>> {
   const rows = await db
     .select({
       id: _conversations.id,
       title: _conversations.title,
-      status: _conversations.status,
       claudeSessionId: _conversations.claudeSessionId,
     })
     .from(_conversations)
     .where(isNotNull(_conversations.claudeSessionId));
-  const display = new Map<string, ConvMeta>();
-  const forArchive = new Map<string, ArchiveConvMeta>();
+  const out = new Map<string, ArchiveConvMeta>();
   for (const r of rows) {
     if (!r.claudeSessionId) continue;
-    display.set(r.claudeSessionId, {
-      conversationId: r.id,
-      title: r.title,
-      status: r.status,
-    });
-    forArchive.set(r.claudeSessionId, { conversationId: r.id, title: r.title });
+    out.set(r.claudeSessionId, { conversationId: r.id, title: r.title });
   }
-  return { display, forArchive };
+  return out;
 }
 
-/**
- * The live DB join, backfilled from the archive's snapshotted titles.
- *
- * Conversation rows are deleted with their task, so a purely live join renders
- * every archived session as a bare UUID with no link. The live row still WINS
- * where it exists (it is current); the snapshot only fills a gap — a missing row,
- * or a surviving row whose title was never set.
- */
-function withArchivedMeta(
-  display: Map<string, ConvMeta>,
+/** Each archived session's snapshotted conversation, by Claude session id. */
+function archivedMetaOf(
   merged: Map<string, ArchiveEntry>,
-): Map<string, ConvMeta> {
-  const out = new Map(display);
+): Map<string, ArchivedMeta> {
+  const out = new Map<string, ArchivedMeta>();
   for (const entry of merged.values()) {
-    const sessionId = entry.partial.sessionId;
-    const live = out.get(sessionId);
-    if (live) {
-      if (live.title === null && entry.title !== null) {
-        out.set(sessionId, { ...live, title: entry.title });
-      }
-      continue;
-    }
     if (entry.title === null && entry.conversationId === null) continue;
-    out.set(sessionId, {
+    out.set(entry.partial.sessionId, {
       conversationId: entry.conversationId,
       title: entry.title,
-      status: null,
     });
   }
   return out;

@@ -2185,7 +2185,7 @@ never add one.
     - `serveCollectionOn`
     - `serveValueOn`
 - Cross-plugin:
-  - Imported by: 268 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 272 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×73
     - `conversations` ×49
     - `debug` ×27
@@ -2195,6 +2195,7 @@ never add one.
     - `page` ×12
     - `primitives` ×10
     - `build` ×6
+    - `stats` ×5
     - `code-explorer` ×4
     - `plugin-meta` ×4
     - `auth` ×3
@@ -2212,7 +2213,6 @@ never add one.
     - `reports`
     - `runs`
     - `shell/notifications`
-    - `stats/responsiveness`
 - Exemptions:
   - Exempts itself from:
     - `live/no-legacy-resource-spelling` — `.` (sanctioned)
@@ -2241,10 +2241,6 @@ never add one.
     - `primitives/live-state` (0 debt)
     - `primitives/optimistic-mutation` (0 debt)
     - `screenshot` (1 debt)
-    - `stats/commits` (4 debt)
-    - `stats/cost` (8 debt)
-    - `stats/pushes` (3 debt)
-    - `stats/tasks` (2 debt)
     - `ui/icons/sprites` (1 debt)
 - Machine:
   - Exports (values):

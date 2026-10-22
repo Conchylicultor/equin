@@ -10,7 +10,7 @@ import {
   YAxis,
 } from "recharts";
 import {
-  ChartState,
+  LiveChart,
   axisProps,
   barCursor,
   fillGaps,
@@ -19,11 +19,8 @@ import {
   tooltipLabelStyle,
   yAxisFormatter,
 } from "@plugins/stats/plugins/commits/web";
-import {
-  useEndpoint,
-  getEndpointErrorMessage,
-} from "@plugins/infra/plugins/endpoints/web";
-import { getCostTokenMix } from "../../shared/endpoints";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { costDaily, type CostDay } from "../../shared/values";
 import { useShowEmptyDays } from "@plugins/stats/web";
 import { formatTokens } from "../../core";
 import { useScope } from "./use-scope";
@@ -37,16 +34,32 @@ const SERIES = [
 
 export function TokenMixChart() {
   const { scope } = useScope();
-  const { showEmptyDays } = useShowEmptyDays();
-  const { data: resp, error } = useEndpoint(
-    getCostTokenMix,
-    {},
-    { query: { scope } },
+  const daily = useLive(costDaily, { scope });
+  return (
+    <LiveChart
+      read={daily}
+      subject="the daily token mix"
+      size="lg"
+      isEmpty={(d) => d.days.length === 0}
+      emptyText="No tokens recorded yet."
+    >
+      {(d) => <TokenMixBody days={d.days} />}
+    </LiveChart>
   );
+}
+
+function TokenMixBody({ days }: { days: readonly CostDay[] }) {
+  const { showEmptyDays } = useShowEmptyDays();
   const points = useMemo(() => {
-    const raw = resp?.points ?? [];
+    const raw = days.map((d) => ({
+      date: d.date,
+      input: d.input,
+      output: d.output,
+      cacheCreation: d.cacheCreation,
+      cacheRead: d.cacheRead,
+    }));
     return showEmptyDays ? fillGaps(raw, "date", "day") : raw;
-  }, [resp?.points, showEmptyDays]);
+  }, [days, showEmptyDays]);
   const [hidden, setHidden] = useState<Record<string, boolean>>({});
 
   const handleLegendClick = (payload: any) => {
@@ -72,12 +85,7 @@ export function TokenMixChart() {
   };
 
   return (
-    <div className="h-72 w-full">
-      <ChartState
-        error={error ? getEndpointErrorMessage(error) : null}
-        loading={resp === undefined}
-        empty={!!resp && resp.points.length === 0}
-      >
+    <>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={points}
@@ -114,7 +122,6 @@ export function TokenMixChart() {
             ))}
           </BarChart>
         </ResponsiveContainer>
-      </ChartState>
-    </div>
+    </>
   );
 }

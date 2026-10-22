@@ -193,7 +193,7 @@ function normalizeEntry(shardPath: string, key: string, value: unknown): Archive
  *
  * `metaBySessionId` is keyed by Claude session id (`FilePartial.sessionId`, which
  * is the transcript's basename). It is taken as a plain structural type rather
- * than `load-usage.ts`'s `ConvMeta` on purpose: `load-usage.ts` imports THIS
+ * than one of `load-usage.ts`'s types on purpose: `load-usage.ts` imports THIS
  * module, so importing back would close a cycle and drag `db` into every consumer.
  *
  * Fresh non-null metadata wins over the stored snapshot, but a stored non-null

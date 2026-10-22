@@ -17,6 +17,8 @@ export {
   gridProps,
   fillGaps,
 } from "./components/chart-primitives";
+export { LiveChart } from "./components/live-chart";
+export type { LiveChartSize } from "./components/live-chart";
 
 export default {
   description: "Commit-based stats: commits and lines of change over time.",

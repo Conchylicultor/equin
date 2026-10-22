@@ -1,29 +1,25 @@
 import type { ReactNode } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Loading } from "@plugins/primitives/plugins/loading/web";
 
+/**
+ * A chart's empty gate: `emptyText` (what this chart has none of — "No pushes
+ * yet.") when there is nothing to plot, else the chart. Loading and failure
+ * are not its business: a live read is framed by `LiveChart`, which renders
+ * those and passes only a ready answer through here.
+ */
 export function ChartState({
-  error,
   empty,
-  loading,
+  emptyText,
   children,
 }: {
-  error: string | null;
   empty: boolean;
-  loading: boolean;
+  emptyText: string;
   children: ReactNode;
 }) {
-  if (error)
-    return (
-      <Text as="div" variant="body" className="text-destructive">
-        Failed to load: {error}
-      </Text>
-    );
-  if (loading) return <Loading />;
   if (empty)
     return (
       <Text as="div" variant="body" className="text-muted-foreground">
-        No commits yet.
+        {emptyText}
       </Text>
     );
   return <>{children}</>;

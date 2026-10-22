@@ -10,7 +10,7 @@ import {
   YAxis,
 } from "recharts";
 import {
-  ChartState,
+  LiveChart,
   axisProps,
   barCursor,
   gridProps,
@@ -20,32 +20,14 @@ import {
 } from "@plugins/stats/plugins/commits/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { costSessionsDaily, type CostSessionDay } from "../../shared/values";
 import {
-  useEndpoint,
-  getEndpointErrorMessage,
-} from "@plugins/infra/plugins/endpoints/web";
-import { getCostAvgPerConversation } from "../../shared/endpoints";
+  avgPerConversation,
+  type AvgPerConversationPoint as Point,
+} from "../../shared/derive";
 import { formatUsd, formatUsdCompact, formatTokensCompact } from "../../core";
 import { useScope } from "./use-scope";
-
-interface ByFamilyEntry {
-  avgCost: number;
-  avgTokens: number;
-}
-
-interface Point {
-  date: string;
-  avgCost: number;
-  avgTokens: number;
-  sessionCount: number;
-  byFamily: Record<string, ByFamilyEntry>;
-  rolling7ByFamily: Record<
-    string,
-    { cost: number | null; tokens: number | null }
-  >;
-  rolling7Cost: number | null;
-  rolling7Tokens: number | null;
-}
 
 const FAMILY_PALETTE: Record<string, string> = {
   opus: "#7c3aed",
@@ -63,8 +45,8 @@ function colorFor(family: string, idx: number): string {
 }
 
 function flattenCost(
-  points: Point[],
-  families: string[],
+  points: readonly Point[],
+  families: readonly string[],
 ): Record<string, number | null>[] {
   return points.map((p) => {
     const row: Record<string, number | null> = {
@@ -80,8 +62,8 @@ function flattenCost(
 }
 
 function flattenTokens(
-  points: Point[],
-  families: string[],
+  points: readonly Point[],
+  families: readonly string[],
 ): Record<string, number | null>[] {
   return points.map((p) => {
     const row: Record<string, number | null> = {
@@ -98,14 +80,29 @@ function flattenTokens(
 
 export function AvgCostPerConversationChart() {
   const { scope } = useScope();
-  const { data: resp, error } = useEndpoint(
-    getCostAvgPerConversation,
-    {},
-    { query: { scope } },
+  // The same tuple as the sessions-per-day chart: the averages are derived here.
+  const sessions = useLive(costSessionsDaily, { scope });
+  return (
+    <LiveChart
+      read={sessions}
+      subject="the sessions per day"
+      size="content"
+      isEmpty={(d) => d.days.length === 0}
+      emptyText="No sessions recorded yet."
+    >
+      {(d) => <AvgCostBody days={d.days} families={d.families} />}
+    </LiveChart>
   );
+}
 
-  const points = resp?.points ?? [];
-  const families = resp?.families ?? [];
+function AvgCostBody({
+  days,
+  families,
+}: {
+  days: readonly CostSessionDay[];
+  families: readonly string[];
+}) {
+  const points = avgPerConversation(days, families);
   const costRows = flattenCost(points, families);
   const tokenRows = flattenTokens(points, families);
 
@@ -120,11 +117,7 @@ export function AvgCostPerConversationChart() {
           Avg cost / conversation by model
         </Text>
         <div className="h-56 w-full">
-          <ChartState
-            error={error ? getEndpointErrorMessage(error) : null}
-            loading={resp === undefined}
-            empty={!!resp && points.length === 0}
-          >
+          <>
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart
                 data={costRows}
@@ -190,7 +183,7 @@ export function AvgCostPerConversationChart() {
                 />
               </ComposedChart>
             </ResponsiveContainer>
-          </ChartState>
+          </>
         </div>
       </Stack>
 
@@ -203,11 +196,7 @@ export function AvgCostPerConversationChart() {
           Avg tokens / conversation by model
         </Text>
         <div className="h-56 w-full">
-          <ChartState
-            error={error ? getEndpointErrorMessage(error) : null}
-            loading={resp === undefined}
-            empty={!!resp && points.length === 0}
-          >
+          <>
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart
                 data={tokenRows}
@@ -271,7 +260,7 @@ export function AvgCostPerConversationChart() {
                 />
               </ComposedChart>
             </ResponsiveContainer>
-          </ChartState>
+          </>
         </div>
       </Stack>
     </Stack>

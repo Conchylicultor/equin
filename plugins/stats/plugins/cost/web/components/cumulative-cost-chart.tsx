@@ -9,7 +9,7 @@ import {
   YAxis,
 } from "recharts";
 import {
-  ChartState,
+  LiveChart,
   axisProps,
   fillGaps,
   gridProps,
@@ -17,34 +17,37 @@ import {
   tooltipContentStyle,
   tooltipLabelStyle,
 } from "@plugins/stats/plugins/commits/web";
-import {
-  useEndpoint,
-  getEndpointErrorMessage,
-} from "@plugins/infra/plugins/endpoints/web";
-import { getCostCumulative } from "../../shared/endpoints";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { costDaily, type CostDay } from "../../shared/values";
+import { cumulativeCost } from "../../shared/derive";
 import { useShowEmptyDays } from "@plugins/stats/web";
 import { formatUsd, formatUsdCompact } from "../../core";
 import { useScope } from "./use-scope";
 
 export function CumulativeCostChart() {
   const { scope } = useScope();
-  const { showEmptyDays } = useShowEmptyDays();
-  const { data: resp, error } = useEndpoint(
-    getCostCumulative,
-    {},
-    { query: { scope } },
-  );
-  const points = useMemo(() => {
-    const raw = resp?.points ?? [];
-    return showEmptyDays ? fillGaps(raw, "date", "day", "carry") : raw;
-  }, [resp?.points, showEmptyDays]);
+  // The same tuple as the daily chart: one read, the running sum derived here.
+  const daily = useLive(costDaily, { scope });
   return (
-    <div className="h-64 w-full">
-      <ChartState
-        error={error ? getEndpointErrorMessage(error) : null}
-        loading={resp === undefined}
-        empty={!!resp && resp.points.length === 0}
-      >
+    <LiveChart
+      read={daily}
+      subject="the daily cost"
+      isEmpty={(d) => d.days.length === 0}
+      emptyText="No cost recorded yet."
+    >
+      {(d) => <CumulativeCostBody days={d.days} />}
+    </LiveChart>
+  );
+}
+
+function CumulativeCostBody({ days }: { days: readonly CostDay[] }) {
+  const { showEmptyDays } = useShowEmptyDays();
+  const points = useMemo(() => {
+    const raw = cumulativeCost(days);
+    return showEmptyDays ? fillGaps(raw, "date", "day", "carry") : raw;
+  }, [days, showEmptyDays]);
+  return (
+    <>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={points}
@@ -71,7 +74,6 @@ export function CumulativeCostChart() {
             />
           </LineChart>
         </ResponsiveContainer>
-      </ChartState>
-    </div>
+    </>
   );
 }

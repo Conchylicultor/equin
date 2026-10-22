@@ -367,3 +367,38 @@ test("a cold index reports every file as added, never modified", async () => {
   );
   expect(secondDelta.addedPaths.length).toBe(3);
 });
+
+test("onChange fires after a refresh that moved a file, never on an empty one; watching() follows startWatcher", async () => {
+  let watcherOnChange: (() => Promise<unknown>) | undefined;
+  const idx = createCorpusIndex(
+    spec(),
+    env({
+      isMain: () => true,
+      startFileWatcher: async ({ onChange }) => {
+        watcherOnChange = onChange;
+      },
+    }),
+  );
+  let heard = 0;
+  const stop = idx.onChange(() => heard++);
+
+  expect(idx.watching()).toBe(false);
+  await idx.startWatcher();
+  expect(idx.watching()).toBe(true);
+
+  await idx.ensureFresh(); // cold: every file added ⇒ a moved refresh
+  expect(heard).toBe(1);
+  idx.markDirty();
+  await idx.ensureFresh(); // nothing moved
+  expect(heard).toBe(1);
+
+  await writeFile(join(corpusRoot, "a", "five.txt"), "five");
+  await watcherOnChange!(); // the watcher's pass
+  expect(heard).toBe(2);
+
+  stop();
+  await writeFile(join(corpusRoot, "a", "six.txt"), "six");
+  idx.markDirty();
+  await idx.ensureFresh();
+  expect(heard).toBe(2); // unsubscribed
+});

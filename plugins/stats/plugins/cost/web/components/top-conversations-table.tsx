@@ -1,123 +1,180 @@
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { useMemo } from "react";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { ChartState } from "@plugins/stats/plugins/commits/web";
+import { LiveChart } from "@plugins/stats/plugins/commits/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import {
-  useEndpoint,
-  getEndpointErrorMessage,
-} from "@plugins/infra/plugins/endpoints/web";
-import { getCostSessions } from "../../shared/endpoints";
+  DataView,
+  defineDataView,
+  type FieldDef,
+} from "@plugins/primitives/plugins/data-view/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { formatTokensCompact, formatUsd } from "../../core";
+import {
+  costTopSessions,
+  sessionConversations,
+  type CostTopSession,
+} from "../../shared/values";
 import { useScope } from "./use-scope";
 
-interface Row {
+const TOP_SESSIONS_VIEW = defineDataView("stats.cost.top-sessions");
+
+/**
+ * One of the dearest sessions, joined to its live conversation where it still
+ * exists (a rename or a status change reaches the row); a session whose
+ * conversation is gone keeps the archive's snapshot.
+ */
+interface TopRow {
   sessionId: string;
   conversationId: string | null;
   title: string | null;
+  /** The live conversation's status; null when it no longer exists. */
   status: string | null;
-  totalCost: number;
-  inputTokens: number;
-  outputTokens: number;
-  cacheCreationTokens: number;
-  cacheReadTokens: number;
+  models: string;
+  cost: number;
+  tokens: number;
   lastActivity: string;
-  modelsUsed: string[];
 }
+
+const FIELDS: FieldDef<TopRow>[] = [
+  {
+    id: "conversation",
+    label: "Conversation",
+    type: "text",
+    primary: true,
+    value: (r) => r.title ?? r.sessionId,
+    width: "minmax(0,1fr)",
+    cell: (r) => (
+      <Stack direction="row" gap="sm" align="baseline">
+        {r.title !== null ? (
+          <span className="truncate font-medium text-foreground">
+            {r.title}
+          </span>
+        ) : (
+          <span className="font-mono text-caption text-muted-foreground">
+            {r.sessionId.slice(0, 8)}…
+          </span>
+        )}
+        {r.status !== null && (
+          <span className="text-caption text-muted-foreground">{r.status}</span>
+        )}
+      </Stack>
+    ),
+  },
+  {
+    id: "models",
+    label: "Model(s)",
+    type: "text",
+    value: (r) => r.models,
+    width: "10rem",
+  },
+  {
+    id: "cost",
+    label: "Cost",
+    type: "number",
+    value: (r) => r.cost,
+    cell: (r) => (
+      <span className="font-mono tabular-nums">{formatUsd(r.cost)}</span>
+    ),
+    align: "end",
+    width: "6rem",
+  },
+  {
+    id: "tokens",
+    label: "Tokens",
+    type: "number",
+    value: (r) => r.tokens,
+    cell: (r) => (
+      <span className="font-mono tabular-nums text-muted-foreground">
+        {formatTokensCompact(r.tokens)}
+      </span>
+    ),
+    align: "end",
+    width: "5rem",
+  },
+  {
+    id: "lastActivity",
+    label: "Last activity",
+    type: "text",
+    value: (r) => r.lastActivity,
+    width: "7rem",
+  },
+];
 
 export function TopConversationsTable() {
   const { scope } = useScope();
-  const { data: resp, error } = useEndpoint(
-    getCostSessions,
-    {},
-    { query: { scope, limit: "50" } },
-  );
+  const top = useLive(costTopSessions, { scope });
   return (
-    <ChartState
-      error={error ? getEndpointErrorMessage(error) : null}
-      loading={resp === undefined}
-      empty={!!resp && resp.rows.length === 0}
+    <LiveChart
+      read={top}
+      subject="the top sessions"
+      size="content"
+      emptyText="No sessions recorded yet."
     >
-      <Scroll axis="x">
-        <table className="w-full text-body">
-          <thead>
-            <tr className="border-b text-left text-caption text-muted-foreground">
-              <th className="px-sm py-xs font-medium">Conversation</th>
-              <th className="px-sm py-xs font-medium">Model(s)</th>
-              <th className="px-sm py-xs text-right font-medium">Cost</th>
-              <th className="px-sm py-xs text-right font-medium">Tokens</th>
-              <th className="px-sm py-xs font-medium">Last activity</th>
-            </tr>
-          </thead>
-          <tbody>
-            {resp?.rows.map((r) => (
-              <TopRow key={r.sessionId} row={r} />
-            ))}
-          </tbody>
-        </table>
-      </Scroll>
-    </ChartState>
+      {({ rows }) => <TopSessions sessions={rows} />}
+    </LiveChart>
   );
 }
 
-function TopRow({ row }: { row: Row }) {
+function TopSessions({ sessions }: { sessions: readonly CostTopSession[] }) {
   const openPane = useOpenPane();
-  const totalTokens =
-    row.inputTokens +
-    row.outputTokens +
-    row.cacheCreationTokens +
-    row.cacheReadTokens;
-  const target =
-    row.conversationId === null
-      ? undefined
-      : openPane.to(
-          conversationPane,
-          { convId: row.conversationId },
-          { mode: "push" },
-        );
-  const isClickable = target !== undefined;
+  const conversations = useLive(sessionConversations, {
+    ids: sessions.map((s) => s.sessionId),
+  });
+  // The rows are joined above the DataView, which gates on the lookup's own
+  // state (`readiness`): they fold every state, only the ready arm renders.
+  const found = foldResource(conversations, {
+    loading: () => null,
+    error: () => null,
+    ready: (d) => d,
+  });
+  const rows = useMemo<TopRow[]>(() => {
+    const bySession = new Map<
+      string,
+      { id: string; title: string | null; status: string }
+    >();
+    for (const c of found ?? []) {
+      if (c.claudeSessionId !== null) bySession.set(c.claudeSessionId, c);
+    }
+    return sessions.map((s): TopRow => {
+      const live = bySession.get(s.sessionId) ?? null;
+      return {
+        sessionId: s.sessionId,
+        conversationId: live?.id ?? s.conversationId,
+        title: live?.title ?? s.title,
+        status: live?.status ?? null,
+        models: s.modelsUsed.join(", "),
+        cost: s.totalCost,
+        tokens:
+          s.inputTokens +
+          s.outputTokens +
+          s.cacheCreationTokens +
+          s.cacheReadTokens,
+        lastActivity: s.lastActivity,
+      };
+    });
+  }, [sessions, found]);
   return (
-    <tr
-      {...activationProps(target)}
-      className={cn(
-        "border-b border-border/50",
-        isClickable && "cursor-pointer hover:bg-muted/50",
-      )}
-    >
-      <td className="px-sm py-xs">
-        <Stack direction="row" gap="sm" align="baseline">
-          <span className="truncate font-medium text-foreground">
-            {row.title ?? <UntitledLabel sessionId={row.sessionId} />}
-          </span>
-          {row.status && (
-            <span className="text-caption text-muted-foreground">
-              {row.status}
-            </span>
-          )}
-        </Stack>
-      </td>
-      <td className="px-sm py-xs text-caption text-muted-foreground">
-        {row.modelsUsed.join(", ")}
-      </td>
-      <td className="px-sm py-xs text-right font-mono tabular-nums">
-        {formatUsd(row.totalCost)}
-      </td>
-      <td className="px-sm py-xs text-right font-mono tabular-nums text-muted-foreground">
-        {formatTokensCompact(totalTokens)}
-      </td>
-      <td className="px-sm py-xs text-caption text-muted-foreground">
-        {row.lastActivity}
-      </td>
-    </tr>
-  );
-}
-
-function UntitledLabel({ sessionId }: { sessionId: string }) {
-  return (
-    <span className="font-mono text-caption text-muted-foreground">
-      {sessionId.slice(0, 8)}…
-    </span>
+    <DataView<TopRow>
+      storageKey={TOP_SESSIONS_VIEW}
+      rows={rows}
+      readiness={conversations}
+      rowKey={(r) => r.sessionId}
+      fields={FIELDS}
+      views={["table"]}
+      defaultView="table"
+      density="compact"
+      rowActivation={(r) =>
+        r.conversationId === null
+          ? undefined
+          : openPane.to(
+              conversationPane,
+              { convId: r.conversationId },
+              { mode: "push" },
+            )
+      }
+      emptyState="No sessions recorded yet."
+    />
   );
 }

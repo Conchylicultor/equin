@@ -12,7 +12,7 @@ import {
   YAxis,
 } from "recharts";
 import {
-  ChartState,
+  LiveChart,
   axisProps,
   barCursor,
   fillGaps,
@@ -23,8 +23,12 @@ import {
   yAxisFormatter,
 } from "@plugins/stats/plugins/commits/web";
 import { useShowEmptyDays } from "@plugins/stats/web";
-import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
-import { getTasksDaily } from "../../shared/endpoints";
+import { useLive } from "@plugins/network/plugins/live/web";
+import {
+  tasksHistory,
+  velocitySeries,
+  type TaskHistoryDay,
+} from "../../shared";
 
 const ADDED_COLOR = "var(--chart-active, #f59e0b)";
 const COMPLETED_COLOR = "var(--chart-completed, #16a34a)";
@@ -33,18 +37,23 @@ const NET_COLOR = "var(--chart-total, #2563eb)";
 
 type SeriesKey = "added" | "completed" | "dropped" | "net";
 
-interface DailyPoint {
-  date: string;
-  added: number;
-  completed: number;
-  dropped: number;
-  net: number;
+export function TasksVelocityChart() {
+  const history = useLive(tasksHistory);
+  return (
+    <LiveChart
+      read={history}
+      subject="the task history"
+      isEmpty={(days) => days.length === 0}
+      emptyText="No tasks yet."
+    >
+      {(days) => <VelocityChart days={days} />}
+    </LiveChart>
+  );
 }
 
-export function TasksVelocityChart() {
+function VelocityChart({ days }: { days: readonly TaskHistoryDay[] }) {
   const { showEmptyDays } = useShowEmptyDays();
-  const { data: resp, error } = useEndpoint(getTasksDaily, {});
-  const rawPoints = useMemo(() => (resp?.points ?? []) as DailyPoint[], [resp]);
+  const rawPoints = useMemo(() => velocitySeries(days), [days]);
   const points = useMemo(
     () => (showEmptyDays ? fillGaps(rawPoints, "date", "day") : rawPoints),
     [rawPoints, showEmptyDays],
@@ -78,16 +87,16 @@ export function TasksVelocityChart() {
   };
 
   return (
-    <div className="h-64 w-full">
-      <ChartState
-        error={error ? getEndpointErrorMessage(error) : null}
-        loading={resp === undefined}
-        empty={!!resp && rawPoints.length === 0}
-      >
+    <>
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
             data={points}
             margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
+          // A daily series is ~5px a day. Recharts' default 4px gap between
+          // the two bar groups then leaves each bar a fraction of a pixel
+          // (it only drops the gap once it no longer fits at all), so the
+          // bars vanish at some history lengths.
+          barGap={1}
           >
             <CartesianGrid {...gridProps} />
             <XAxis dataKey="date" {...axisProps} minTickGap={48} />
@@ -152,7 +161,6 @@ export function TasksVelocityChart() {
             />
           </ComposedChart>
         </ResponsiveContainer>
-      </ChartState>
-    </div>
+    </>
   );
 }

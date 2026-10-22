@@ -2699,8 +2699,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSlots.Control` ← `primitives.data-view`
     - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
     - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-  - Contributes: 78 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.WebRegister` ×70
+  - Contributes: 79 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×71
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
     - `IdKinds.Kind` ×2
@@ -2917,8 +2917,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `useRowFilter`
     - `useSortController`
 - Server:
-  - Contributes: 72 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.Register` ×70
+  - Contributes: 73 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.Register` ×71
     - `ids.kind` ×2
   - Uses:
     - `config_v2.getConfig`
@@ -3062,7 +3062,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `ui/tokens/type-scale` ×5
     - `ui/tokens/shape` ×2
     - `ui/tokens/shadow --shadow`
-  - Imported by: 99 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 100 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×30
     - `apps` ×23
     - `debug` ×13
@@ -3079,6 +3079,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `plugin-meta/exhibits`
     - `runs`
     - `shell/notifications`
+    - `stats/cost`
     - `ui/theme-engine/theme-gallery`
 - Exemptions:
   - Exempts itself from:

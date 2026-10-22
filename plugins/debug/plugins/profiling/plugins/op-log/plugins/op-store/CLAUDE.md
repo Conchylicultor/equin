@@ -156,9 +156,7 @@ filesystem event; the 30 s tick is what notices it.
     - `WAIT_KIND_IDS`
     - `WAIT_RESULTS`
 - Cross-plugin:
-  - Imported by:
-    - `apps/agent-manager/demo`
-    - `stats/pushes`
+  - Imported by: `apps/agent-manager/demo`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/ingest.ts`, `server/internal/service.ts` (debt)
 

@@ -16,7 +16,7 @@
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
     - `stats.Stats`
-    - `stats/commits.ChartState`
+    - `stats/commits.LiveChart`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --background`

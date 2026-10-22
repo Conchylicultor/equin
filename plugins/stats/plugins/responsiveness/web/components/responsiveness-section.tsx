@@ -6,7 +6,7 @@ import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { ChartState } from "@plugins/stats/plugins/commits/web";
+import { LiveChart } from "@plugins/stats/plugins/commits/web";
 import {
   METRIC_LABELS,
   PRESSURE_DECOMPRESSIONS_PER_SEC,
@@ -49,13 +49,14 @@ export function ResponsivenessSection() {
           onChange={setWindow}
         />
       </Stack>
-      <ChartState
-        error={summary.status === "error" ? summary.error.message : null}
-        loading={summary.status === "loading"}
-        empty={false}
+      <LiveChart
+        read={summary}
+        subject="the responsiveness summary"
+        size="content"
+        emptyText="No measurements yet."
       >
-        {summary.status === "ready" && <SummaryView summary={summary.data} />}
-      </ChartState>
+        {(data) => <SummaryView summary={data} />}
+      </LiveChart>
     </Stack>
   );
 }

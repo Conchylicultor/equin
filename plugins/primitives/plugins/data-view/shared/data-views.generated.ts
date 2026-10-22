@@ -73,6 +73,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "runs", pluginId: "runs" },
   { id: "shell.notifications", pluginId: "shell.notifications" },
   { id: "sonata.library", pluginId: "apps.sonata.library" },
+  { id: "stats.cost.top-sessions", pluginId: "stats.cost" },
   { id: "studio.compositions", pluginId: "apps.studio.compositions" },
   { id: "studio.compositions.closure-tree", pluginId: "apps.studio.compositions.closure-tree" },
   { id: "studio.explorer.tree", pluginId: "apps.studio.explorer" },

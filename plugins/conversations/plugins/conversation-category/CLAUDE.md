@@ -150,6 +150,7 @@ on a host without the computer gets the unavailable arm instead of a 404.
   - DB schema: `plugins/conversations/plugins/conversation-category/server/internal/tables.ts`
   - Exports (types): `CategoriesConfigValue`
   - Exports (values):
+    - `conversationCategoriesEntity`
     - `conversationCategoryConfig`
     - `getItemMap`
     - `itemOrder`

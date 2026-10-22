@@ -15,6 +15,8 @@ export { conversationCategoryConfig } from "../shared/config";
 export { itemOrder } from "./internal/item-order";
 export type { CategoriesConfigValue } from "./internal/item-order";
 export { getItemMap } from "./internal/store";
+// The table `getItemMap` reads, for a live value that declares its reads.
+export { conversationCategoriesEntity } from "./internal/tables";
 
 export default {
   description:

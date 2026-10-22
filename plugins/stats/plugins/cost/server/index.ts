@@ -2,15 +2,12 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { ConfigV2 } from "@plugins/config_v2/server";
 import { costConfig } from "../shared/config";
 import {
-  handleAvgPerConversation,
-  handleCumulative,
-  handleDaily,
-  handleDailyByFamily,
-  handleDistribution,
-  handleSessions,
-  handleTokenMix,
-  handleTotals,
-} from "./internal/handlers";
+  costDailyServed,
+  costDistributionServed,
+  costSessionsDailyServed,
+  costTopSessionsServed,
+  sessionConversationsServed,
+} from "./internal/served";
 import { costUsageWarmup, costUsageWatcher } from "./internal/load-usage";
 
 // The price table, for a plugin that prices token buckets (`priceBucket`,
@@ -21,16 +18,6 @@ import {
   unpricedModelKind,
 } from "./internal/cost-report-kinds";
 import { costRefreshJob } from "./internal/refresh-job";
-import {
-  getCostDaily,
-  getCostDailyByFamily,
-  getCostCumulative,
-  getCostTokenMix,
-  getCostTotals,
-  getCostSessions,
-  getCostDistribution,
-  getCostAvgPerConversation,
-} from "../shared/endpoints";
 
 export default {
   description:
@@ -39,16 +26,11 @@ export default {
     ConfigV2.Register({ descriptor: costConfig }),
     unpricedModelKind,
     archiveShrinkKind,
+    ...costDailyServed.declare,
+    ...costSessionsDailyServed.declare,
+    ...costDistributionServed.declare,
+    ...costTopSessionsServed.declare,
+    ...sessionConversationsServed.declare,
   ],
   register: [costUsageWarmup, costUsageWatcher, costRefreshJob],
-  httpRoutes: {
-    [getCostDaily.route]: handleDaily,
-    [getCostDailyByFamily.route]: handleDailyByFamily,
-    [getCostCumulative.route]: handleCumulative,
-    [getCostTokenMix.route]: handleTokenMix,
-    [getCostTotals.route]: handleTotals,
-    [getCostSessions.route]: handleSessions,
-    [getCostDistribution.route]: handleDistribution,
-    [getCostAvgPerConversation.route]: handleAvgPerConversation,
-  },
 } satisfies ServerPluginDefinition;

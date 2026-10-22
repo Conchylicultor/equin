@@ -9,10 +9,10 @@ import {
   YAxis,
 } from "recharts";
 import { useShowEmptyDays } from "@plugins/stats/web";
-import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
-import { getCommitsCumulative } from "../../shared/endpoints";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { commitsCounts } from "../../shared";
+import { LiveChart } from "./live-chart";
 import {
-  ChartState,
   axisProps,
   fillGaps,
   gridProps,
@@ -24,34 +24,43 @@ import {
 } from "./chart-primitives";
 
 interface Point {
-  date: string;
+  x: string;
   count: number;
 }
 
 export function CumulativeCommitsChart({ dedup }: { dedup?: boolean }) {
+  const read = useLive(commitsCounts, {
+    series: { kind: "cumulative" },
+    dedup: dedup ?? false,
+  });
+  return (
+    <LiveChart
+      read={read}
+      subject="the commit counts"
+      isEmpty={(d) => d.points.length === 0}
+      emptyText="No commits yet."
+    >
+      {({ points }) => <CumulativeCommitsBody rawPoints={points} />}
+    </LiveChart>
+  );
+}
+
+function CumulativeCommitsBody({ rawPoints }: { rawPoints: Point[] }) {
   const valueLabel = "Commits";
   const { showEmptyDays } = useShowEmptyDays();
-  const { data: resp, error } = useEndpoint(getCommitsCumulative, {}, { query: { dedup: dedup ? "true" : "false" } });
-  // Plain (non-breakdown) call site — the response is always the plain branch.
-  const rawPoints = useMemo(() => (resp?.points ?? []) as Point[], [resp]);
   const points = useMemo(
-    () => (showEmptyDays ? fillGaps(rawPoints, "date", "day", "carry") : rawPoints),
+    () =>
+      showEmptyDays ? fillGaps(rawPoints, "x", "day", "carry") : rawPoints,
     [rawPoints, showEmptyDays],
   );
   return (
-    <div className="h-64 w-full">
-      <ChartState
-        error={error ? getEndpointErrorMessage(error) : null}
-        loading={resp === undefined}
-        empty={!!resp && rawPoints.length === 0}
-      >
-        <ResponsiveContainer width="100%" height="100%">
+    <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={points}
             margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
           >
             <CartesianGrid {...gridProps} />
-            <XAxis dataKey="date" {...axisProps} minTickGap={32} />
+        <XAxis dataKey="x" {...axisProps} minTickGap={32} />
             <YAxis
               {...axisProps}
               allowDecimals={false}
@@ -78,8 +87,6 @@ export function CumulativeCommitsChart({ dedup }: { dedup?: boolean }) {
               isAnimationActive={false}
             />
           </LineChart>
-        </ResponsiveContainer>
-      </ChartState>
-    </div>
+    </ResponsiveContainer>
   );
 }

@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { useConfig } from "@plugins/config_v2/web";
 import { useShowEmptyDays } from "@plugins/stats/web";
 import { commitsConfig } from "../../shared/config";
@@ -24,16 +23,14 @@ import {
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
-  useEndpoint,
-  getEndpointErrorMessage,
-} from "@plugins/infra/plugins/endpoints/web";
+  commitsLines,
+  commitsLinesByExt,
+  type CommitBucket,
+} from "../../shared";
+import { LiveChart } from "./live-chart";
 import {
-  getCommitsLinesCumulative,
-  getCommitsLinesRate,
-} from "../../shared/endpoints";
-import {
-  ChartState,
   axisProps,
   barCursor,
   fillGaps,
@@ -98,50 +95,51 @@ function useToggleable() {
   return { hidden, onLegendClick, legendFormatter };
 }
 
-interface CumulativePoint {
-  date: string;
+interface LinesPoint {
+  x: string;
   added: number;
   removed: number;
 }
 
 export function CumulativeLinesChart({ dedup }: { dedup?: boolean }) {
+  const read = useLive(commitsLines, {
+    series: { kind: "cumulative" },
+    dedup: dedup ?? false,
+  });
+  return (
+    <LiveChart
+      read={read}
+      subject="the lines changed"
+      isEmpty={(d) => d.points.length === 0}
+      emptyText="No commits yet."
+    >
+      {({ points }) => <CumulativeLinesBody rawPoints={points} />}
+    </LiveChart>
+  );
+}
+
+function CumulativeLinesBody({ rawPoints }: { rawPoints: LinesPoint[] }) {
   const { showEmptyDays } = useShowEmptyDays();
-  const { data: resp, error } = useEndpoint(
-    getCommitsLinesCumulative,
-    {},
-    { query: { dedup: dedup ? "true" : "false" } },
-  );
-  // Plain (non-breakdown) call site — the response is always the plain branch.
-  const rawPoints = useMemo(
-    () => (resp?.points ?? []) as CumulativePoint[],
-    [resp],
-  );
   const { hidden, onLegendClick, legendFormatter } = useToggleable();
   const points = useMemo(() => {
     const filled = showEmptyDays
-      ? fillGaps(rawPoints, "date", "day", "carry")
+      ? fillGaps(rawPoints, "x", "day", "carry")
       : rawPoints;
     return filled.map((p) => ({
-      date: p.date,
+      x: p.x,
       added: p.added,
       removed: -p.removed,
       net: p.added - p.removed,
     }));
   }, [rawPoints, showEmptyDays]);
   return (
-    <div className="h-64 w-full">
-      <ChartState
-        error={error ? getEndpointErrorMessage(error) : null}
-        loading={resp === undefined}
-        empty={!!resp && rawPoints.length === 0}
-      >
-        <ResponsiveContainer width="100%" height="100%">
+    <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
             data={points}
             margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
           >
             <CartesianGrid {...gridProps} />
-            <XAxis dataKey="date" {...axisProps} minTickGap={32} />
+        <XAxis dataKey="x" {...axisProps} minTickGap={32} />
             <YAxis
               {...axisProps}
               allowDecimals={false}
@@ -200,14 +198,11 @@ export function CumulativeLinesChart({ dedup }: { dedup?: boolean }) {
               hide={hidden.net}
             />
           </ComposedChart>
-        </ResponsiveContainer>
-      </ChartState>
-    </div>
+    </ResponsiveContainer>
   );
 }
 
-type Bucket = "hour" | "day" | "week" | "month" | "year";
-const BUCKETS: { id: Bucket; label: string }[] = [
+const BUCKETS: { id: CommitBucket; label: string }[] = [
   { id: "hour", label: "Hour" },
   { id: "day", label: "Day" },
   { id: "week", label: "Week" },
@@ -215,50 +210,52 @@ const BUCKETS: { id: Bucket; label: string }[] = [
   { id: "year", label: "Year" },
 ];
 
-interface RatePoint {
-  bucket: string;
-  added: number;
-  removed: number;
-}
-
 export function LinesRateChart({
   bucket,
   dedup,
 }: {
-  bucket: Bucket;
+  bucket: CommitBucket;
   dedup?: boolean;
 }) {
-  const { showEmptyDays } = useShowEmptyDays();
-  const { data: resp, error } = useEndpoint(
-    getCommitsLinesRate,
-    {},
-    { query: { bucket, dedup: dedup ? "true" : "false" } },
+  const read = useLive(commitsLines, {
+    series: { kind: "rate", bucket },
+    dedup: dedup ?? false,
+  });
+  return (
+    <LiveChart
+      read={read}
+      subject="the lines changed"
+      isEmpty={(d) => d.points.length === 0}
+      emptyText="No commits yet."
+    >
+      {({ points }) => <LinesRateBody rawPoints={points} bucket={bucket} />}
+    </LiveChart>
   );
-  // Plain (non-breakdown) call site — the response is always the plain branch.
-  const rawPoints = useMemo(() => (resp?.points ?? []) as RatePoint[], [resp]);
+}
+
+function LinesRateBody({
+  rawPoints,
+  bucket,
+}: {
+  rawPoints: LinesPoint[];
+  bucket: CommitBucket;
+}) {
+  const { showEmptyDays } = useShowEmptyDays();
   const { hidden, onLegendClick, legendFormatter } = useToggleable();
   const points = useMemo(() => {
-    const filled = showEmptyDays
-      ? fillGaps(rawPoints, "bucket", bucket)
-      : rawPoints;
+    const filled = showEmptyDays ? fillGaps(rawPoints, "x", bucket) : rawPoints;
     return filled.map((p) => ({ ...p, removed: -p.removed }));
   }, [rawPoints, showEmptyDays, bucket]);
 
   return (
-    <div className="h-64 w-full">
-      <ChartState
-        error={error ? getEndpointErrorMessage(error) : null}
-        loading={resp === undefined}
-        empty={!!resp && rawPoints.length === 0}
-      >
-        <ResponsiveContainer width="100%" height="100%">
+    <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={points}
             margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
             stackOffset="sign"
           >
             <CartesianGrid {...gridProps} />
-            <XAxis dataKey="bucket" {...axisProps} minTickGap={32} />
+        <XAxis dataKey="x" {...axisProps} minTickGap={32} />
             <YAxis
               {...axisProps}
               allowDecimals={false}
@@ -297,17 +294,14 @@ export function LinesRateChart({
               hide={hidden.removed}
             />
           </BarChart>
-        </ResponsiveContainer>
-      </ChartState>
-    </div>
+    </ResponsiveContainer>
   );
 }
 
 // --- Breakdown by extension ---
 
 interface ByExtPoint {
-  date?: string;
-  bucket?: string;
+  x: string;
   byExt: Record<string, { added: number; removed: number }>;
 }
 
@@ -327,21 +321,20 @@ function topExtensions(points: ByExtPoint[]): string[] {
 function flattenByExt(
   points: ByExtPoint[],
   exts: string[],
-  xKey: "date" | "bucket",
-): Record<string, number>[] {
+): Record<string, string | number>[] {
   const extSet = new Set(exts);
   return points.map((p) => {
-    const row: Record<string, number> = { [xKey]: (p as any)[xKey] };
+    const row: Record<string, string | number> = { x: p.x };
     let otherNet = 0;
     for (const [ext, s] of Object.entries(p.byExt)) {
       const net = s.added - s.removed;
       if (extSet.has(ext)) {
-        row[ext] = (row[ext] ?? 0) + net;
+        row[ext] = Number(row[ext] ?? 0) + net;
       } else {
         otherNet += net;
       }
     }
-    if (otherNet !== 0) row[OTHER_KEY] = (row[OTHER_KEY] ?? 0) + otherNet;
+    if (otherNet !== 0) row[OTHER_KEY] = Number(row[OTHER_KEY] ?? 0) + otherNet;
     return row;
   });
 }
@@ -355,21 +348,28 @@ function extColor(ext: string): string {
 }
 
 export function CumulativeLinesBreakdownChart({ dedup }: { dedup?: boolean }) {
+  const read = useLive(commitsLinesByExt, {
+    series: { kind: "cumulative" },
+    dedup: dedup ?? false,
+  });
+  return (
+    <LiveChart
+      read={read}
+      subject="the lines changed"
+      isEmpty={(d) => d.points.length === 0}
+      emptyText="No commits yet."
+    >
+      {({ points }) => <CumulativeLinesBreakdownBody points={points} />}
+    </LiveChart>
+  );
+}
+
+function CumulativeLinesBreakdownBody({ points }: { points: ByExtPoint[] }) {
   const { showEmptyDays } = useShowEmptyDays();
-  const { data: resp, error } = useEndpoint(
-    getCommitsLinesCumulative,
-    {},
-    { query: { breakdown: "ext", dedup: dedup ? "true" : "false" } },
-  );
-  // breakdown=ext call site — the response is always the byExt branch.
-  const points = useMemo(() => (resp?.points ?? []) as ByExtPoint[], [resp]);
   const exts = useMemo(() => topExtensions(points), [points]);
-  const rawFlat = useMemo(
-    () => flattenByExt(points, exts, "date"),
-    [points, exts],
-  );
+  const rawFlat = useMemo(() => flattenByExt(points, exts), [points, exts]);
   const flatPoints = useMemo(
-    () => (showEmptyDays ? fillGaps(rawFlat, "date", "day", "carry") : rawFlat),
+    () => (showEmptyDays ? fillGaps(rawFlat, "x", "day", "carry") : rawFlat),
     [rawFlat, showEmptyDays],
   );
   const allKeys = exts.includes(OTHER_KEY)
@@ -382,19 +382,13 @@ export function CumulativeLinesBreakdownChart({ dedup }: { dedup?: boolean }) {
       ];
 
   return (
-    <div className="h-64 w-full">
-      <ChartState
-        error={error ? getEndpointErrorMessage(error) : null}
-        loading={resp === undefined}
-        empty={!!resp && points.length === 0}
-      >
-        <ResponsiveContainer width="100%" height="100%">
+    <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
             data={flatPoints}
             margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
           >
             <CartesianGrid {...gridProps} />
-            <XAxis dataKey="date" {...axisProps} minTickGap={32} />
+        <XAxis dataKey="x" {...axisProps} minTickGap={32} />
             <YAxis
               {...axisProps}
               allowDecimals={false}
@@ -430,9 +424,7 @@ export function CumulativeLinesBreakdownChart({ dedup }: { dedup?: boolean }) {
               />
             ))}
           </ComposedChart>
-        </ResponsiveContainer>
-      </ChartState>
-    </div>
+    </ResponsiveContainer>
   );
 }
 
@@ -440,44 +432,53 @@ export function LinesRateBreakdownChart({
   bucket,
   dedup,
 }: {
-  bucket: Bucket;
+  bucket: CommitBucket;
   dedup?: boolean;
 }) {
+  const read = useLive(commitsLinesByExt, {
+    series: { kind: "rate", bucket },
+    dedup: dedup ?? false,
+  });
+  return (
+    <LiveChart
+      read={read}
+      subject="the lines changed"
+      isEmpty={(d) => d.points.length === 0}
+      emptyText="No commits yet."
+    >
+      {({ points }) => (
+        <LinesRateBreakdownBody points={points} bucket={bucket} />
+      )}
+    </LiveChart>
+  );
+}
+
+function LinesRateBreakdownBody({
+  points,
+  bucket,
+}: {
+  points: ByExtPoint[];
+  bucket: CommitBucket;
+}) {
   const { showEmptyDays } = useShowEmptyDays();
-  const { data: resp, error } = useEndpoint(
-    getCommitsLinesRate,
-    {},
-    { query: { bucket, breakdown: "ext", dedup: dedup ? "true" : "false" } },
-  );
-  // breakdown=ext call site — the response is always the byExt branch.
-  const points = useMemo(() => (resp?.points ?? []) as ByExtPoint[], [resp]);
   const exts = useMemo(() => topExtensions(points), [points]);
-  const rawFlat = useMemo(
-    () => flattenByExt(points, exts, "bucket"),
-    [points, exts],
-  );
+  const rawFlat = useMemo(() => flattenByExt(points, exts), [points, exts]);
   const flatPoints = useMemo(
-    () => (showEmptyDays ? fillGaps(rawFlat, "bucket", bucket) : rawFlat),
+    () => (showEmptyDays ? fillGaps(rawFlat, "x", bucket) : rawFlat),
     [rawFlat, showEmptyDays, bucket],
   );
   const hasOther = flatPoints.some((p) => OTHER_KEY in p);
   const allKeys = hasOther ? [...exts, OTHER_KEY] : exts;
 
   return (
-    <div className="h-64 w-full">
-      <ChartState
-        error={error ? getEndpointErrorMessage(error) : null}
-        loading={resp === undefined}
-        empty={!!resp && points.length === 0}
-      >
-        <ResponsiveContainer width="100%" height="100%">
+    <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={flatPoints}
             margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
             stackOffset="sign"
           >
             <CartesianGrid {...gridProps} />
-            <XAxis dataKey="bucket" {...axisProps} minTickGap={32} />
+        <XAxis dataKey="x" {...axisProps} minTickGap={32} />
             <YAxis
               {...axisProps}
               allowDecimals={false}
@@ -506,30 +507,16 @@ export function LinesRateBreakdownChart({
               />
             ))}
           </BarChart>
-        </ResponsiveContainer>
-      </ChartState>
-    </div>
+    </ResponsiveContainer>
   );
 }
 
 export function LinesChartsSection() {
   const [byType, setByType] = useState(false);
-  const [bucket, setBucket] = useState<Bucket>("day");
-  const { excludedPaths, filterRebases } = useConfig(commitsConfig);
-  const filterKey = JSON.stringify(excludedPaths);
-
-  // The lines endpoints derive their excluded-path filter from server config
-  // (not a query param), so toggling excluded paths does not change the
-  // useEndpoint query key. Refetch explicitly when the filter changes.
-  const queryClient = useQueryClient();
-  useEffect(() => {
-    void queryClient.invalidateQueries({
-      queryKey: ["endpoint", getCommitsLinesCumulative.route],
-    });
-    void queryClient.invalidateQueries({
-      queryKey: ["endpoint", getCommitsLinesRate.route],
-    });
-  }, [queryClient, filterKey]);
+  const [bucket, setBucket] = useState<CommitBucket>("day");
+  // The lines values read the excluded paths from server config and recompute
+  // when it changes, so a toggle needs no refetch here.
+  const { filterRebases } = useConfig(commitsConfig);
 
   return (
     <Stack gap="xl">

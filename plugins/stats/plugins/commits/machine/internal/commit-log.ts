@@ -1,14 +1,14 @@
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 
 import { GIT } from "@plugins/infra/plugins/paths/server";
-import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 
 // `git log --numstat` over the whole history is the heaviest read in this
-// plugin — real work, seconds of it, which is why the result is cached for
-// TTL_MS below. Two minutes is far above that and exists only to stop a wedged
-// child holding the stats pane's request open forever.
+// plugin — real work, seconds of it, which is why one parse is shared per
+// (HEAD, excluded paths) below. Two minutes is far above that and exists only
+// to stop a wedged child holding a stats read open forever.
 const GIT_LOG_TIMEOUT_MS = 120_000;
-const TTL_MS = 30_000;
+const REV_PARSE_TIMEOUT_MS = 10_000;
 
 export interface CommitInfo {
   sha: string;
@@ -20,9 +20,12 @@ export interface CommitInfo {
   byExt: Record<string, { added: number; removed: number }>;
 }
 
-async function parseGitLog(args: string[]): Promise<CommitInfo[]> {
-  const root = await ensureMainWorktreeRoot();
-  const result = await spawnCaptured(
+async function parseGitLog(
+  root: string,
+  head: string,
+  pathArgs: string[],
+): Promise<CommitInfo[]> {
+  const result = await spawnExpectOk(
     [
       GIT,
       "-C",
@@ -31,7 +34,8 @@ async function parseGitLog(args: string[]): Promise<CommitInfo[]> {
       "--format=__C__%H\x1f%cI\x1f%(trailers:key=Singularity-Push,valueonly)\x1f%(trailers:key=Singularity-Conversation,valueonly)",
       "--numstat",
       "--reverse",
-      ...args,
+      head,
+      ...pathArgs,
     ],
     { timeoutMs: GIT_LOG_TIMEOUT_MS },
   );
@@ -83,43 +87,86 @@ async function parseGitLog(args: string[]): Promise<CommitInfo[]> {
   return commits;
 }
 
-let cache: { expires: number; commits: CommitInfo[] } | null = null;
-const filteredCache = new Map<
-  string,
-  { expires: number; commits: CommitInfo[] }
->();
-
-export async function getCommits(): Promise<CommitInfo[]> {
-  if (cache && cache.expires > Date.now()) {
-    return cache.commits;
-  }
-  const commits = await parseGitLog([]);
-  cache = { expires: Date.now() + TTL_MS, commits };
-  return commits;
+/** The main checkout's HEAD — the history every series reads. */
+async function readHead(root: string): Promise<string> {
+  const result = await spawnExpectOk([GIT, "-C", root, "rev-parse", "HEAD"], {
+    timeoutMs: REV_PARSE_TIMEOUT_MS,
+  });
+  return result.stdout.trim();
 }
 
-export async function getCommitsExcludingPaths(
-  excludedPaths: string[],
+interface Parse {
+  head: string;
+  commits: Promise<CommitInfo[]>;
+}
+
+// One parse per filter, kept while HEAD stays where it was parsed at. Keyed by
+// the sha, not a TTL: the values recompute on every ref advance
+// (`recomputeOn: [refHeadServed]`), and a time-boxed cache would answer that
+// recompute with the history from before the advance. The promise is stored,
+// so charts reading at once share one `git log`; a failed parse is dropped so
+// the next read retries.
+//
+// Bounded: a read at a new HEAD drops every parse taken at another one (each
+// is a full-history copy nobody can be answered from again), and at most
+// MAX_FILTERED_PARSES excluded-path combinations are kept beside the
+// unfiltered one, least recently read dropped first — toggling the excluded
+// chips through many combinations cannot pin a history copy per combination.
+const parses = new Map<string, Parse>();
+const UNFILTERED_KEY = "";
+const MAX_FILTERED_PARSES = 2;
+
+function keepBounded(head: string): void {
+  for (const [key, parse] of parses) {
+    if (parse.head !== head) parses.delete(key);
+  }
+  // Map order is insertion order, and a read re-inserts its key: the first
+  // filtered keys are the least recently read.
+  const filtered = [...parses.keys()].filter((k) => k !== UNFILTERED_KEY);
+  for (const key of filtered.slice(0, -MAX_FILTERED_PARSES)) {
+    parses.delete(key);
+  }
+}
+
+/**
+ * Every commit of the main checkout's history, oldest first. `excludedPaths`
+ * leaves those path prefixes out of each commit's line stats (a commit that
+ * touched only excluded paths is left out).
+ */
+export async function getCommits(
+  excludedPaths: readonly string[] = [],
 ): Promise<CommitInfo[]> {
+  const root = await ensureMainWorktreeRoot();
+  const head = await readHead(root);
   const key = [...excludedPaths].sort().join("|");
-  const cached = filteredCache.get(key);
-  if (cached && cached.expires > Date.now()) {
+  const cached = parses.get(key);
+  if (cached && cached.head === head) {
+    parses.delete(key);
+    parses.set(key, cached); // most recently read
     return cached.commits;
   }
-  const excludeArgs = excludedPaths.map((p) => `:(exclude)${p}`);
-  const commits = await parseGitLog(["--", ".", ...excludeArgs]);
-  filteredCache.set(key, { expires: Date.now() + TTL_MS, commits });
-  return commits;
-}
-
-export async function getCommitTimestamps(): Promise<string[]> {
-  return (await getCommits()).map((c) => c.iso);
+  const pathArgs =
+    excludedPaths.length === 0
+      ? []
+      : ["--", ".", ...excludedPaths.map((p) => `:(exclude)${p}`)];
+  const entry: Parse = {
+    head,
+    commits: parseGitLog(root, head, pathArgs).catch((err: unknown) => {
+      if (parses.get(key) === entry) parses.delete(key);
+      throw err;
+    }),
+  };
+  parses.delete(key);
+  parses.set(key, entry);
+  keepBounded(head);
+  return entry.commits;
 }
 
 /**
  * Collapses commits sharing a Singularity-Push trailer into one representative
  * commit per push group: timestamp of the last commit, line stats summed.
- * Commits without a push id are kept as-is.
+ * Commits without a push id are kept as-is. Never mutates its input (the
+ * cached parse).
  */
 export function deduplicateByPushId(commits: CommitInfo[]): CommitInfo[] {
   const result: CommitInfo[] = [];
@@ -132,7 +179,13 @@ export function deduplicateByPushId(commits: CommitInfo[]): CommitInfo[] {
     }
     const existing = byPushId.get(commit.pushId);
     if (!existing) {
-      const merged: CommitInfo = { ...commit, byExt: { ...commit.byExt } };
+      // A deep copy: the sums below must never write into the cached parse.
+      const merged: CommitInfo = {
+        ...commit,
+        byExt: Object.fromEntries(
+          Object.entries(commit.byExt).map(([ext, s]) => [ext, { ...s }]),
+        ),
+      };
       byPushId.set(commit.pushId, merged);
       result.push(merged);
     } else {

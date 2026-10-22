@@ -18,13 +18,10 @@ import {
   autoColorKey,
   useCategoryAvatars,
 } from "@plugins/conversations/plugins/conversation-category/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { commitsCountsByCategory, type CommitBucket } from "../../shared";
+import { LiveChart } from "./live-chart";
 import {
-  useEndpoint,
-  getEndpointErrorMessage,
-} from "@plugins/infra/plugins/endpoints/web";
-import { getCommitsCumulative, getCommitsRate } from "../../shared/endpoints";
-import {
-  ChartState,
   axisProps,
   barCursor,
   fillGaps,
@@ -91,8 +88,7 @@ function useToggleable() {
 }
 
 interface ByItemPoint {
-  date?: string;
-  bucket?: string;
+  x: string;
   byItem: Record<string, number>;
 }
 
@@ -101,9 +97,8 @@ interface CategoryResponse {
   items: string[];
 }
 
-function useOrderedKeys(data: CategoryResponse | undefined): string[] {
+function useOrderedKeys(data: CategoryResponse): string[] {
   return useMemo(() => {
-    if (!data) return [];
     const { points, items } = data;
     const present = new Set<string>();
     for (const p of points) {
@@ -125,10 +120,9 @@ function useOrderedKeys(data: CategoryResponse | undefined): string[] {
 function flattenByItem(
   points: ByItemPoint[],
   items: string[],
-  xKey: "date" | "bucket",
-): Record<string, number>[] {
+): Record<string, string | number>[] {
   return points.map((p) => {
-    const row: Record<string, number> = { [xKey]: (p as any)[xKey] };
+    const row: Record<string, string | number> = { x: p.x };
     for (const item of items) {
       row[item] = p.byItem[item] ?? 0;
     }
@@ -143,46 +137,51 @@ export function CumulativeCommitsCategoryChart({
   dedup?: boolean;
   categoryId: string;
 }) {
+  const read = useLive(commitsCountsByCategory, {
+    series: { kind: "cumulative" },
+    dedup: dedup ?? false,
+    categoryId,
+  });
+  return (
+    <LiveChart
+      read={read}
+      subject="the commit counts"
+      isEmpty={(d) => d.points.length === 0}
+      emptyText="No commits yet."
+    >
+      {(data) => (
+        <CumulativeCommitsCategoryBody data={data} categoryId={categoryId} />
+      )}
+    </LiveChart>
+  );
+}
+
+function CumulativeCommitsCategoryBody({
+  data,
+  categoryId,
+}: {
+  data: CategoryResponse;
+  categoryId: string;
+}) {
   const { showEmptyDays } = useShowEmptyDays();
   const colorFor = useItemColorFn(categoryId);
   const { hidden, onLegendClick, legendFormatter } = useToggleable();
-  const { data: raw, error } = useEndpoint(
-    getCommitsCumulative,
-    {},
-    {
-      query: {
-        breakdown: "category",
-        categoryId,
-        dedup: dedup ? "true" : "false",
-      },
-    },
-  );
-  // breakdown=category call site — response is always the byItem branch.
-  const data = raw as CategoryResponse | undefined;
   const allKeys = useOrderedKeys(data);
-  const rawFlat = flattenByItem(data?.points ?? [], allKeys, "date");
-  const flatPoints = useMemo(
-    () =>
-      showEmptyDays && rawFlat.length >= 2
-        ? fillGaps(rawFlat, "date", "day", "carry")
-        : rawFlat,
-    [rawFlat, showEmptyDays],
-  );
+  const flatPoints = useMemo(() => {
+    const rawFlat = flattenByItem(data.points, allKeys);
+    return showEmptyDays && rawFlat.length >= 2
+      ? fillGaps(rawFlat, "x", "day", "carry")
+      : rawFlat;
+  }, [data.points, allKeys, showEmptyDays]);
 
   return (
-    <div className="h-64 w-full">
-      <ChartState
-        error={error ? getEndpointErrorMessage(error) : null}
-        loading={data === undefined}
-        empty={!!data && data.points.length === 0}
-      >
-        <ResponsiveContainer width="100%" height="100%">
+    <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
             data={flatPoints}
             margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
           >
             <CartesianGrid {...gridProps} />
-            <XAxis dataKey="date" {...axisProps} minTickGap={32} />
+        <XAxis dataKey="x" {...axisProps} minTickGap={32} />
             <YAxis
               {...axisProps}
               allowDecimals={false}
@@ -222,14 +221,11 @@ export function CumulativeCommitsCategoryChart({
               />
             ))}
           </ComposedChart>
-        </ResponsiveContainer>
-      </ChartState>
-    </div>
+    </ResponsiveContainer>
   );
 }
 
-type Bucket = "hour" | "day" | "week" | "month" | "year";
-const BUCKETS: { id: Bucket; label: string }[] = [
+const BUCKETS: { id: CommitBucket; label: string }[] = [
   { id: "hour", label: "Hour" },
   { id: "day", label: "Day" },
   { id: "week", label: "Week" },
@@ -244,49 +240,61 @@ export function CommitsRateCategoryChart({
   dedup?: boolean;
   categoryId: string;
 }) {
-  const [bucket, setBucket] = useState<Bucket>("day");
+  const [bucket, setBucket] = useState<CommitBucket>("day");
+  const read = useLive(commitsCountsByCategory, {
+    series: { kind: "rate", bucket },
+    dedup: dedup ?? false,
+    categoryId,
+  });
+  return (
+    <Stack gap="md">
+      <LiveChart
+        read={read}
+        subject="the commit counts"
+        isEmpty={(d) => d.points.length === 0}
+        emptyText="No commits yet."
+      >
+        {(data) => (
+          <CommitsRateCategoryBody
+            data={data}
+            categoryId={categoryId}
+            bucket={bucket}
+          />
+        )}
+      </LiveChart>
+      <SegmentedControl options={BUCKETS} value={bucket} onChange={setBucket} />
+    </Stack>
+  );
+}
+
+function CommitsRateCategoryBody({
+  data,
+  categoryId,
+  bucket,
+}: {
+  data: CategoryResponse;
+  categoryId: string;
+  bucket: CommitBucket;
+}) {
   const { showEmptyDays } = useShowEmptyDays();
   const colorFor = useItemColorFn(categoryId);
   const { hidden, onLegendClick, legendFormatter } = useToggleable();
-  const { data: raw, error } = useEndpoint(
-    getCommitsRate,
-    {},
-    {
-      query: {
-        bucket,
-        breakdown: "category",
-        categoryId,
-        dedup: dedup ? "true" : "false",
-      },
-    },
-  );
-  // breakdown=category call site — response is always the byItem branch.
-  const data = raw as CategoryResponse | undefined;
   const allKeys = useOrderedKeys(data);
-  const rawFlat = flattenByItem(data?.points ?? [], allKeys, "bucket");
-  const flatPoints = useMemo(
-    () =>
-      showEmptyDays && rawFlat.length >= 2
-        ? fillGaps(rawFlat, "bucket", bucket)
-        : rawFlat,
-    [rawFlat, showEmptyDays, bucket],
-  );
+  const flatPoints = useMemo(() => {
+    const rawFlat = flattenByItem(data.points, allKeys);
+    return showEmptyDays && rawFlat.length >= 2
+      ? fillGaps(rawFlat, "x", bucket)
+      : rawFlat;
+  }, [data.points, allKeys, showEmptyDays, bucket]);
 
   return (
-    <Stack gap="md">
-      <div className="h-64 w-full">
-        <ChartState
-          error={error ? getEndpointErrorMessage(error) : null}
-          loading={data === undefined}
-          empty={!!data && data.points.length === 0}
-        >
-          <ResponsiveContainer width="100%" height="100%">
+    <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={flatPoints}
               margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
             >
               <CartesianGrid {...gridProps} />
-              <XAxis dataKey="bucket" {...axisProps} minTickGap={32} />
+        <XAxis dataKey="x" {...axisProps} minTickGap={32} />
               <YAxis
                 {...axisProps}
                 allowDecimals={false}
@@ -320,10 +328,6 @@ export function CommitsRateCategoryChart({
                 />
               ))}
             </BarChart>
-          </ResponsiveContainer>
-        </ChartState>
-      </div>
-      <SegmentedControl options={BUCKETS} value={bucket} onChange={setBucket} />
-    </Stack>
+    </ResponsiveContainer>
   );
 }

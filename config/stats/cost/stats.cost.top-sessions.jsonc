@@ -1,0 +1,20 @@
+// @hash 6ec84829688d
+{
+  // One table, dearest first: the value already answers the top 50 by cost,
+  // so the sort only restates it (and a header click re-sorts by tokens or
+  // last activity).
+  "views": [
+    {
+      "id": "all",
+      "name": "Top by cost",
+      "icon": "payments",
+      "view": {
+        "type": "table",
+        "sort": [{ "fieldId": "cost", "direction": "desc" }]
+      }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

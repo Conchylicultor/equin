@@ -956,3 +956,130 @@ All 15 verified findings were applied. None was skipped. The two duplicates (the
 - **`useLive(c, { ids })` should keep the previous rows itself** while the id set changes. Mail search does it by hand for now (task-1792607420-9mxb97; the hold in `mail-search-body.tsx` points to it).
 - **The `mail-core/account.test.ts` isolation failure** in a multi-file bun run: host-service state leaks across files. B8 did not cause it (task-1792607424-fx037r).
 - `./singularity exempt list --rule live/no-endpoint-read --debt`: **31** exemptions remain (38 before B8), all debt.
+
+## Result (B9)
+
+Batch B9 covers the interim Stats values: Cost (8 sites), Commits (4), Pushes (3) and Tasks (2). All 17 sites now read through `useLive`; their 17 GET endpoints, handlers and `shared/endpoints.ts` files are deleted, and so are the `exempt/` manifests of commits, pushes and tasks (cost keeps its manifest for the unrelated `boundaries/no-platform-api` debt). Verdicts:
+
+- **Check:** after `regen-generated` and `format` (16 files reformatted), `./singularity check` failed only `web-artifacts:map-in-sync` (the deployed dist was stale). The build fixed it.
+- **Test:** `./singularity test plugins/stats plugins/conversations/plugins/conversation-category plugins/network/plugins/live` gave 701 bun:test passes, 1 fail and 107 vitest passes (10 files). A re-run of `plugins/stats` after the integration fixes gave 71 passes and the same 1 fail.
+  - The failure is `stats/cost/server/internal/price-table.test.ts` › "every baseline model resolves by exact key": the vendored `litellm-fallback.json` has no exact key for one baseline model. **B9 did not cause it**: the test and the JSON are untouched since the merge-base, and nothing B9 changed is on its path.
+- **Build:** green with checks (build-1792631420-89m8i0). The builds after the integration fixes are also green with checks: build-1792634367-0amwn9, then build-1792635198-tdhtcv (final).
+
+### Per site
+
+| Site(s) | Value key | Source / changes | Endpoint | Debt |
+|---|---|---|---|---|
+| cost: `daily-cost-chart`, `token-mix-chart`, `cumulative-cost-chart`, `cost-kpis` | `stats.cost.daily` `{scope}` | external `notified` (transcript dir watch coalesced to one notify per 30 s, `onPriceTableUpdated`, capture) | `/daily`, `/token-mix`, `/cumulative`, `/totals` deleted | removed |
+| cost: `model-usage-chart`, `avg-cost-per-conversation-chart` | `stats.cost.sessions-daily` `{scope}` | same | `/daily-by-family`, `/avg-per-conversation` deleted | removed |
+| cost: `cost-distribution-chart` | `stats.cost.distribution` `{scope}` | same | `/distribution` deleted | removed |
+| cost: `top-conversations-table` | `stats.cost.top-sessions` `{scope}` (top 50), plus the lookup collection `stats.cost.session-conversations:rows` | same; the lookup is routed (identity) on `conversations` | `/sessions` deleted | removed |
+| commits: `cumulative-chart`, `rate-chart` | `stats.commits.counts` (typed query `{series, dedup}`, on-demand, `needsMachine`) | external `notified`, `recomputeOn: [refHeadServed]` | `GET /api/stats/commits/cumulative`, `/rate` deleted | removed (manifest deleted) |
+| commits: `commits-category-charts` | `stats.commits.counts-by-category` (`+ categoryId`) | same, plus `reads: conversation_categories` (full) and a category-config watch | (same endpoints) | removed |
+| commits: `lines-charts` (4 charts) | `stats.commits.lines`, `stats.commits.lines-by-ext` | same, plus a commits-config watch (excluded paths); the manual `invalidateQueries` is gone | `/lines/cumulative`, `/lines/rate` deleted | removed |
+| pushes: `wait-time-chart`, `throughput-chart`, `step-breakdown-chart` | `stats.pushes.wait-time` / `.throughput` / `.step-breakdown` `{bucket}` (`needsMachine`, served from `machine/`) | `db`, routed `full` on `op_log_ops`, `throttleMs: 5000` | 3 GETs deleted | removed (manifest deleted) |
+| tasks: `tasks-cumulative-chart`, `tasks-velocity-chart` | `stats.tasks.history` (one row per UTC day, `unbounded` with a reason) | `db`, relation read `tasks_v` (bases: tasks, attempts, attempt_deliveries, conversations, pushes, task_dependencies), `throttleMs: 1000` | `/cumulative`, `/daily` deleted | removed (manifest deleted) |
+
+### Integration fixes
+
+- **Cost rebuilt its bundle about 18 times a minute; now about once per 30 s.** The implementer bounded the rebuild with `throttleMs: 30_000` on the four cost values. But the runtime's `debounceMs` (which `throttleMs` compiles to) is drained early by any other entry's flush (`drainEntry`'s piggyback, documented on `debounceMs`). On a busy server that happens constantly, so the throttle bounded nothing.
+  - Measured on the first build: `stats.cost.daily` had 135 loads in about 7.5 min (`ratePerMin` 18.1) and 267 hand notifies; the slowest load took 6.4 s.
+  - Each holder's dir-watch callback also bumped the generation on its own, so one transcript write invalidated the memo once per subscribed value.
+  - **Fix** (`cost/server/internal/load-usage.ts`): transcript writes are coalesced at the source. Every holder's watch callback lands in one `transcriptsWritten()`, which marks the corpus index dirty and arms one trailing 30 s window. When the window ends, the generation bumps once and every holder is notified. The window is cleared at the last unsubscribe. The `throttleMs` is removed from `served.ts`, and the comments and the plugin's `CLAUDE.md` say why.
+  - **After the fix:** 2 hand notifies and 3 loads in 2.5 min (`ratePerMin` 0.9) while agents were writing transcripts.
+- **The Tasks velocity bars had vanished; they are visible again.** Each bar was 0.033 px wide: about 157 days on an 800 px axis gives a 5.08 px band, and recharts' default 4 px gap between the two bar groups then leaves each bar `(5.08 − 2·0.51 − 4) / 2` px. Recharts drops the gap only once it no longer fits at all. Main's old chart was saved by chance: its 167 days give a 4.78 px band, which is past that threshold, so its bars draw at 1 px. The fix is `barGap={1}` on the velocity `ComposedChart`; bars now draw at 1 px, as on main.
+- **Out-of-scope edit accepted:** the commits implementer exported `conversationCategoriesEntity` from `conversations/conversation-category/server` so the by-category value can declare `reads`. It is a one-line barrel export with no other consumer.
+
+### Live evidence
+
+Everything below ran on `http://att-1791598784-yegtlr.localhost:9000/agents/stats`, using the `browser_*` session. Shots are in `/tmp/live-migration-shots/B9-*`. Before main's endpoints were touched, its old answers were captured by curl into `/tmp/b9-main/`.
+
+- **Cost (verified, numbers equal main).** The KPI cards under "Singularity only" show Total spent $27,196.91, Total tokens 36.9B (2,139 sessions), Last 7 days $2,433.33, Avg / active day $251.82 over 108 days, Input 4.4M, Output 111.2M, Cache creation 967.8M and Cache read 35.9B. These are byte-equal to main's `GET /api/stats/cost/totals?scope=singularity`.
+  - The distribution buckets are identical to main's, all 16 (for example `< $0.01` 96, `$2–5` 405, `$500–1k` 1).
+  - The top table's first rows match main's `/sessions`: $951.67, $279.64, $252.68, each with its title and status.
+  - The daily-by-model, sessions-per-family, cumulative, token-mix and average-per-conversation charts all render with data (`B9-cost-kpis-daily-cumulative.png`, `B9-cost-tokenmix-avg.png`, `B9-cost-distribution-top.png`).
+- **Commits (verified, numbers equal main up to today's new commits).** The cumulative series has 171 days, identical to main's `/commits/cumulative` except 2026-10-22: 4,942 here against main's 4,939, because 3 commits landed on main between the two captures.
+  - Lines cumulative on 2026-10-21 is +2,562,925 / −823,826 on both.
+  - Shots: `B9-commits.png` (over time and per day), `B9-commits-by-category.png` (Type and Category stacked areas, the per-period stack) and `B9-lines.png`.
+  - The first load showed "Loading…" for over 20 s. Its four HTTP reads answered **502** at the gateway, and the client's retry succeeded. `loaderStats.maxMs` was 91 s for `git log` under host duress (see Open).
+- **Pushes (verified, numbers equal main on every shared day).** Throughput, wait time and step breakdown with `bucket=day` equal main's old endpoints on all 29 shared days except today (3 newer pushes) (`B9-pushes.png`). The worktree also holds 2026-09-09 → 09-21, which main's 30-day retention has already pruned (see Open).
+- **Tasks (verified, day counts equal main before the fork).** The values equal main's old `/tasks/daily` on 153 of 155 shared days. The two that differ, 2026-10-09 and 10-10, are at the fork boundary: tasks completed on main after this DB was forked.
+  - Totals: 5,198 added, 3,608 completed, 1,202 dropped.
+  - Shots: `B9-tasks.png` (before the velocity fix, bars invisible), `B9-tasks-velocity-fixed.png` (after), and main's chart for reference in `B9-main-tasks-reference.png`.
+- **Freshness:**
+  - **Tasks (driven, verified in the UI).** With Stats open, a task was created in a second tab (`task-1792635028-w9tk95`, "Untitled"). Without a reload, both charts' x axis moved from ending 2026-10-12 to ending 2026-10-22 (`B9-tasks-after-create.png`). `_debug` showed `stats-tasks.history` with `feed: 1` and version 1 → 2.
+  - **Commits, config edge (driven, verified).** Toggling the `research/` excluded-path chip off re-read both lines tuples without a reload: the cumulative axis moved 2.7M → 3.2M, and added on 2026-10-21 went 2,562,925 → 3,000,346 (`B9-lines-after-config-toggle.png`). The chip was toggled back.
+  - **Commits, ref advance (inferred, not seen in the UI).** `stats.commits.counts` reached version 2 on its two tuples while main advanced (ecc26a7716). It has no other change source, so the bump came from its only edge, `git-watcher.refHead`. No advance happened while the final build's page was open.
+  - **Cost (verified through `_debug`).** With agents writing transcripts, the four values took 2 hand notifies in 2.5 min (versions 1 → 3). The singularity-scope numbers do not move between captures, because a new session is classified by the archive, which is captured daily. This was already true before B9: main's old endpoint shows the same frozen total. The `all` scope moves: today's cost went 158.12 → 170.99 between two reads.
+  - **Pushes (verified through `_debug`).** `routed`, route `op_log_ops` (`full`, with its reason), 14 feed notifies and versions 1 → 14 while pushes landed.
+- **`/api/resources/_debug` (verified).** Every new key is present with its declared freshness:
+  - `stats.cost.{daily,sessions-daily,distribution,top-sessions}`: `push`, external, `{kind: "notified"}`.
+  - `stats.cost.session-conversations:rows`: `keyed`, routed, identity on `conversations`.
+  - `stats.commits.{counts,counts-by-category,lines,lines-by-ext}`: `invalidate` (on-demand), external, `notified`, `dependsOn: ["git-watcher.refHead"]`. By-category also has `full` on `conversation_categories`.
+  - `stats-pushes.*`: `push`, routed, `full` on `op_log_ops`.
+  - `stats-tasks.history`: `push`, routed, relation read `tasks_v` with its six bases.
+- **State left behind:** the "Untitled" task `task-1792635028-w9tk95` in this worktree's DB.
+
+### Deviations (from the implementers, accepted)
+
+- **Cost:**
+  - It is 4 values plus a lookup collection, not one value per chart.
+  - Titles come from a new lookup collection keyed by `claudeSessionId`.
+  - Cumulative, KPI and 7-day averages are derived in the browser (`shared/derive.ts`).
+  - `scope` is now required.
+  - It stays in `server/` rather than `machine/` (existing split debt task-1792338443-riwqev).
+  - The metrics P2 doc says P2 deletes these keys.
+- **Commits:**
+  - It is 4 typed-query values, not 2.
+  - Point keys are `x`.
+  - Serving moved to a new `machine/` folder (`server/` only registers the config).
+  - The `git log` cache is keyed by HEAD sha and excluded paths.
+  - `git log` failures are loud (`spawnExpectOk`).
+  - A bug that predates B9 is fixed: `deduplicateByPushId` wrote rebase-filtered sums back into the cached parse.
+- **Pushes:**
+  - Served from `machine/` (`server/` deleted).
+  - `bucket` is a required typed param.
+  - A new 5 s throttle.
+- **Tasks:** the cumulative chart is now one point per day (it was one per minute). The end-of-day totals equal the old chart's. This is deliberate, and the `tasksHistory` doc says so.
+- **Integration:** the cost throttle is replaced by the source-side coalescing above.
+
+### Open (B9)
+
+- **`throttleMs` is no rate limit on a busy server** (task-1792636104-uyhq3k). The runtime drains a throttled entry whenever any other entry flushes. Cost now coalesces at the source. The pushes (5 s), tasks (1 s) and commits-by-category (2 s) throttles have the same weakness; their loaders are cheap (≤ 300 ms), so it costs little there.
+- **Commits under host duress:** a cold `git log` parse took 91 s, and the gateway answered the first on-demand HTTP reads with 502 before the client's retry succeeded. The old endpoint paid the same parse, but behind a 30 s TTL. A memo warmed on ref advance would keep the first read from paying for it (task-1792636107-t4nqnp).
+- **Cost "Singularity only" freshness is daily:** classification comes from the archive capture. This predates B9.
+- **The `price-table.test.ts` baseline failure** predates B9 and is unrelated to it.
+- `./singularity exempt list --rule live/no-endpoint-read --debt`: **14** exemptions remain (31 before B9), all debt.
+
+### Review fixes (B9)
+
+The review's 15 findings were all applied. Verdicts after the fixes:
+
+- **Check:** `./singularity check` green.
+- **Test:** `./singularity test plugins/stats plugins/infra/plugins/corpus-index plugins/debug/plugins/health-monitor` gave 97 passes and 1 fail across 12 files. The fail is the same `price-table.test.ts` › "every baseline model resolves by exact key", which predates B9. A new corpus-index test covers `onChange` / `watching()`.
+- **Build:** green with checks (build-1792636798-sgqfv0). The first build failed on two things this review introduced: the seeded DataView config, and a `status === "ready"` collapse that `no-ready-negation` / `no-pending-data-collapse` rejected. Both were fixed.
+- **Screenshot:** `/tmp/live-migration-shots/B9-review-top-dataview.png` shows Top conversations as a DataView table. Its first rows are $951.67, $279.64 and $252.68, the same as before. With the page open for 45 s, every Stats chart rendered with no "Loading…" and no error. The KPIs read Total $27,202.98 and Last 7 days $2,439.40.
+  - The headless `screenshot.ts` run failed on its network-idle wait: the four commits reads were still on the cold `git log` parse just after the restart (task-1792636107-t4nqnp). The page itself was then checked through the `browser_*` session.
+
+What changed, per finding:
+
+- **Tasks are now one point per day.** This is kept, and written down as a deliberate shape change in the `tasksHistory` doc (`tasks/shared/values.ts`) and under Deviations.
+- **The Cost "Last 7 days" window moves with the date.** `cost-kpis.tsx` now reads `useUtcDay()` (new, `cost/web/components/use-utc-day.ts`). It is UTC midnight, re-armed by one timer at the next UTC midnight. Before, the cutoff was frozen when the card mounted.
+- **A failed cost build drops only its own memo entry.** `buildReadBundle` clears the memo only when it still holds its own entry (`memo === self()`), so a newer generation's build is kept.
+- **One corpus watch per process on main.** `infra/corpus-index` gains `watching()` and `onChange(listener)`. A listener fires after any `ensureFresh` whose delta moved a file. While the index's watcher runs, `watchCostInputs` subscribes to that instead of opening a second recursive dir-hub watch. Worktrees, and main before its warm-up, still use `acquireDirWatch`.
+- **The first-subscriber gap is closed.** Once the watches are open, if this holder was the first and a load ran since the bump (`memo.generation === generation`), the index is marked dirty and every holder is notified. A write landing while the watches were opening is no longer missed.
+- **The price table is now tracked on every backend; the archive is documented.**
+  - A backend other than the host singleton now watches `price-table.json` (dir hub, `children` scope on the cost-usage dir). When it changes, the backend reloads the table and notifies.
+  - The read-path block in `load-usage.ts` states that a worktree's archive is fixed for the life of the process. Main's later captures do not reach it.
+- **The metrics plan doc is corrected.** The P2 row now deletes the interim values: `stats.tasks.history`, `stats.commits.*` and `stats.cost.*`. The old endpoints are already gone. The interim row lists every key per sub-plugin. P3 deletes `stats.pushes.*`. Each row has a "no key remains" acceptance criterion.
+- **Top conversations is a DataView.** It uses `defineDataView("stats.cost.top-sessions")`, a table view authored in `config/stats/cost/stats.cost.top-sessions.jsonc` (sorted by cost, descending), `readiness` = the conversations lookup, and `rowActivation` = a link to the conversation pane.
+- **There is one Stats chart frame.**
+  - `LiveChart` (exported from `stats/commits/web`) takes `read`, `subject`, `isEmpty?`, `emptyText` and `size`. It is now used by all 17 sites and by Responsiveness.
+  - `ChartState` lost its dead `error` / `loading` props. It is now an empty gate with a required `emptyText`; `LiveChart` and health-monitor use it. The empty text is per chart ("No pushes yet.", "No tasks yet.", "No cost recorded yet.", …), which fixes "No commits yet." on the Cost and Tasks charts.
+  - `PushChartFrame` no longer frames the read itself. It is the title plus the gap fill over `LiveChart`.
+- **No more duplicate scope types.** `Scope` is deleted from `load-usage.ts`, and `use-scope.ts` is typed with `CostScope`.
+- **Stale comments are fixed.** `archive.ts` no longer names `ConvMeta`, and `load-usage.ts` says "a value loader", not "a request handler".
+- **The pushes bound text is corrected.** It now says one point per bucket within the op store's retention sweep, with no exact maximum (a fork lags its own sweep). This was fixed in `shared/values.ts` and the plugin's CLAUDE.md, and the item is removed from Open.
+- **The new debt is tracked.** The `throttleMs` drain is task-1792636104-uyhq3k and the commits cold parse is task-1792636107-t4nqnp. Both are cited in Open.
+- **The keys and modules are consistent.** The keys are now `stats.pushes.*` and `stats.tasks.history`; the span labels follow. The value modules are `shared/values.ts` in all four sub-plugins (cost's `live.ts` and tasks' `history.ts` were renamed).
+- **The commits parse cache is bounded.** A read at a new HEAD drops every parse taken at another HEAD. At most 2 excluded-path combinations are kept (least recently read dropped first), plus the unfiltered parse.

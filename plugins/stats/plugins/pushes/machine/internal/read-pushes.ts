@@ -1,7 +1,6 @@
 import { sql, type SQL } from "drizzle-orm";
 import { _opLogOps } from "@plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/server";
-
-export type Bucket = "day" | "week" | "month";
+import type { PushBucket as Bucket } from "../../shared/values";
 
 const t = _opLogOps;
 

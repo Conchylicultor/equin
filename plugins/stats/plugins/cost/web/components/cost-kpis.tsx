@@ -1,58 +1,51 @@
-import { ChartState } from "@plugins/stats/plugins/commits/web";
-import {
-  useEndpoint,
-  getEndpointErrorMessage,
-} from "@plugins/infra/plugins/endpoints/web";
-import { getCostTotals } from "../../shared/endpoints";
+import { LiveChart } from "@plugins/stats/plugins/commits/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { costDaily, type CostDay } from "../../shared/values";
+import { costTotals, type CostTotals } from "../../shared/derive";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ScopeToggle } from "./scope-toggle";
 import { useScope } from "./use-scope";
+import { useUtcDay } from "./use-utc-day";
 import { formatTokensCompact, formatUsd } from "../../core";
-
-interface Totals {
-  totalCost: number;
-  totalTokens: number;
-  byTokenKind: {
-    input: number;
-    output: number;
-    cacheCreation: number;
-    cacheRead: number;
-  };
-  last7Cost: number;
-  avgDailyCost: number;
-  activeDays: number;
-  sessionCount: number;
-}
 
 export function CostKpis() {
   const { scope } = useScope();
-  const { data: resp, error } = useEndpoint(
-    getCostTotals,
-    {},
-    { query: { scope } },
-  );
+  // The same tuple as the daily charts: the totals are derived from its days.
+  const daily = useLive(costDaily, { scope });
   return (
     <Stack gap="lg">
       <Stack direction="row" align="center" justify="between" gap="none">
         <Text as="p" variant="caption" className="text-muted-foreground">
-          Sourced from <code>ccusage</code>: parses{" "}
-          <code>~/.claude/projects</code> on each load.
+          Parsed from <code>~/.claude/projects</code> and the permanent archive;
+          updates as transcripts are written.
         </Text>
         <ScopeToggle />
       </Stack>
-      <ChartState
-        error={error ? getEndpointErrorMessage(error) : null}
-        loading={resp === undefined}
-        empty={!!resp && resp.sessionCount === 0}
+      <LiveChart
+        read={daily}
+        subject="the cost totals"
+        size="content"
+        isEmpty={(d) => d.sessionCount === 0}
+        emptyText="No sessions recorded yet."
       >
-        {resp && <KpiGrid totals={resp} />}
-      </ChartState>
+        {(d) => <KpiGrid days={d.days} sessionCount={d.sessionCount} />}
+      </LiveChart>
     </Stack>
   );
 }
 
-function KpiGrid({ totals }: { totals: Totals }) {
+function KpiGrid({
+  days,
+  sessionCount,
+}: {
+  days: readonly CostDay[];
+  sessionCount: number;
+}) {
+  // "The last 7 days" counts back from today (UTC, as the days are keyed),
+  // moving at each UTC midnight while the card stays open.
+  const today = useUtcDay();
+  const totals: CostTotals = costTotals(days, new Date(today));
   return (
     // eslint-disable-next-line layout/no-adhoc-layout -- responsive col-count KPI grid (2-up → 4-up at the sm breakpoint); a fixed breakpoint count the Grid minCellWidth/cols surface deliberately doesn't express
     <div className="grid grid-cols-2 gap-md sm:grid-cols-4">
@@ -60,7 +53,7 @@ function KpiGrid({ totals }: { totals: Totals }) {
       <Kpi
         label="Total tokens"
         value={formatTokensCompact(totals.totalTokens)}
-        sub={`${totals.sessionCount} sessions`}
+        sub={`${sessionCount} sessions`}
       />
       <Kpi
         label="Last 7 days"

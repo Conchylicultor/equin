@@ -4,16 +4,16 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { WaitTimeChart } from "./wait-time-chart";
 import { ThroughputChart } from "./throughput-chart";
 import { StepBreakdownChart } from "./step-breakdown-chart";
+import type { PushBucket } from "../../shared/values";
 
-type Bucket = "day" | "week" | "month";
-const BUCKETS: { id: Bucket; label: string }[] = [
+const BUCKETS: { id: PushBucket; label: string }[] = [
   { id: "day", label: "Day" },
   { id: "week", label: "Week" },
   { id: "month", label: "Month" },
 ];
 
 export function PushesSection() {
-  const [bucket, setBucket] = useState<Bucket>("day");
+  const [bucket, setBucket] = useState<PushBucket>("day");
 
   return (
     <Stack gap="xl">

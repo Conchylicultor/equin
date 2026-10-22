@@ -118,6 +118,22 @@ export interface CorpusIndex<TPartial> {
    */
   startWatcher(): Promise<void>;
   /**
+   * Whether this process's {@link startWatcher} watch is open (main, after the
+   * warm-up started it). A consumer that needs to hear corpus changes asks
+   * this first: while it is true, {@link onChange} is a complete change signal
+   * and opening a second watch of the same roots would only duplicate it.
+   */
+  watching(): boolean;
+  /**
+   * Hear every refresh that moved a file — any {@link ensureFresh} whose delta
+   * is non-empty, the watcher's (each change it hears) or a read's. Called
+   * synchronously after the pass: a listener must be cheap (enqueue its work)
+   * and must not throw. A complete signal of corpus changes only while
+   * {@link watching} is true; off it, nothing re-walks until a read does.
+   * Returns the unsubscribe.
+   */
+  onChange(listener: () => void): () => void;
+  /**
    * The index's declared file watcher (`corpus-index.<name>`, main-only),
    * opened by {@link startWatcher}. Mount it in `register: [...]` next to the
    * warm-up that calls `startWatcher()` — {@link warmup} does not include it.
@@ -392,6 +408,8 @@ export function createCorpusIndex<TPartial>(
   let dirty = true;
   let refreshInflight: Promise<CorpusDelta> | null = null;
   let watcherStarted = false;
+  let watchArmed = false;
+  const changeListeners = new Set<() => void>();
   const concurrency = spec.concurrency ?? DEFAULT_CONCURRENCY;
 
   // An omitted `parse` ⇒ an enumerate-only corpus: the partial is always `null`.
@@ -434,6 +452,12 @@ export function createCorpusIndex<TPartial>(
           index!,
           refreshDeps(),
         );
+        if (
+          addedPaths.length + modifiedPaths.length + removedPaths.length >
+          0
+        ) {
+          for (const listener of changeListeners) listener();
+        }
         return { addedPaths, modifiedPaths, removedPaths };
       } catch (err) {
         dirty = true;
@@ -474,6 +498,17 @@ export function createCorpusIndex<TPartial>(
         return runTracked("corpus-index:ensure-fresh", () => ensureFresh());
       },
     });
+    watchArmed = true;
+  }
+
+  function onChange(listener: () => void): () => void {
+    // A fresh wrapper per subscription: the same function subscribed twice is
+    // two subscriptions, each with its own unsubscribe.
+    const entry = () => listener();
+    changeListeners.add(entry);
+    return () => {
+      changeListeners.delete(entry);
+    };
   }
 
   function warmup(): Registration {
@@ -493,6 +528,8 @@ export function createCorpusIndex<TPartial>(
     entries,
     markDirty,
     startWatcher,
+    watching: () => watchArmed,
+    onChange,
     watcher: env.watcherRegistration,
     warmup,
   };

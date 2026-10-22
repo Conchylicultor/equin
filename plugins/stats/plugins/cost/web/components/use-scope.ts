@@ -1,10 +1,9 @@
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { costConfig } from "../../shared/config";
-
-export type Scope = "all" | "singularity";
+import type { CostScope } from "../../shared/values";
 
 export function useScope(): {
-  scope: Scope;
+  scope: CostScope;
   singularityOnly: boolean;
   toggle: () => void;
 } {

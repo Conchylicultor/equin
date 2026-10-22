@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   CartesianGrid,
   Legend,
@@ -10,7 +10,7 @@ import {
   YAxis,
 } from "recharts";
 import {
-  ChartState,
+  LiveChart,
   axisProps,
   gridProps,
   lineCursor,
@@ -19,8 +19,12 @@ import {
   tooltipNumberFormatter,
   yAxisFormatter,
 } from "@plugins/stats/plugins/commits/web";
-import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
-import { getTasksCumulative } from "../../shared/endpoints";
+import { useLive } from "@plugins/network/plugins/live/web";
+import {
+  cumulativeSeries,
+  tasksHistory,
+  type TaskHistoryDay,
+} from "../../shared";
 
 const TOTAL_COLOR = "var(--chart-total, #2563eb)";
 const ACTIVE_COLOR = "var(--chart-active, #f59e0b)";
@@ -29,17 +33,22 @@ const DROPPED_COLOR = "var(--chart-dropped, #dc2626)";
 
 type SeriesKey = "total" | "active" | "completed" | "dropped";
 
-interface Point {
-  date: string;
-  total: number;
-  active: number;
-  completed: number;
-  dropped: number;
+export function TasksCumulativeChart() {
+  const history = useLive(tasksHistory);
+  return (
+    <LiveChart
+      read={history}
+      subject="the task history"
+      isEmpty={(days) => days.length === 0}
+      emptyText="No tasks yet."
+    >
+      {(days) => <CumulativeChart days={days} />}
+    </LiveChart>
+  );
 }
 
-export function TasksCumulativeChart() {
-  const { data: resp, error } = useEndpoint(getTasksCumulative, {});
-  const points: Point[] = resp?.points ?? [];
+function CumulativeChart({ days }: { days: readonly TaskHistoryDay[] }) {
+  const points = useMemo(() => cumulativeSeries(days), [days]);
   const [hidden, setHidden] = useState<Record<SeriesKey, boolean>>({
     total: false,
     active: false,
@@ -69,12 +78,7 @@ export function TasksCumulativeChart() {
   };
 
   return (
-    <div className="h-64 w-full">
-      <ChartState
-        error={error ? getEndpointErrorMessage(error) : null}
-        loading={resp === undefined}
-        empty={!!resp && points.length === 0}
-      >
+    <>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={points}
@@ -149,7 +153,6 @@ export function TasksCumulativeChart() {
             />
           </LineChart>
         </ResponsiveContainer>
-      </ChartState>
-    </div>
+    </>
   );
 }

@@ -1,11 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { handleCumulative } from "./internal/handle-cumulative";
-import { handleDaily } from "./internal/handle-daily";
-import { getTasksCumulative, getTasksDaily } from "../shared/endpoints";
+import { tasksHistoryServed } from "./internal/history";
 
 export default {
-  httpRoutes: {
-    [getTasksCumulative.route]: handleCumulative,
-    [getTasksDaily.route]: handleDaily,
-  },
+  contributions: [...tasksHistoryServed.declare],
 } satisfies ServerPluginDefinition;

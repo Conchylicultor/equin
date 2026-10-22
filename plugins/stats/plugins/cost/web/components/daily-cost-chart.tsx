@@ -10,7 +10,7 @@ import {
   YAxis,
 } from "recharts";
 import {
-  ChartState,
+  LiveChart,
   axisProps,
   barCursor,
   fillGaps,
@@ -18,11 +18,8 @@ import {
   tooltipContentStyle,
   tooltipLabelStyle,
 } from "@plugins/stats/plugins/commits/web";
-import {
-  useEndpoint,
-  getEndpointErrorMessage,
-} from "@plugins/infra/plugins/endpoints/web";
-import { getCostDaily } from "../../shared/endpoints";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { costDaily, type CostDay } from "../../shared/values";
 import { useShowEmptyDays } from "@plugins/stats/web";
 import { formatUsd, formatUsdCompact } from "../../core";
 import { useScope } from "./use-scope";
@@ -52,28 +49,35 @@ function colorFor(model: string, idx: number): string {
 
 export function DailyCostChart() {
   const { scope } = useScope();
-  const { showEmptyDays } = useShowEmptyDays();
-  const { data: resp, error } = useEndpoint(
-    getCostDaily,
-    {},
-    { query: { scope } },
+  const daily = useLive(costDaily, { scope });
+  return (
+    <LiveChart
+      read={daily}
+      subject="the daily cost"
+      size="lg"
+      isEmpty={(d) => d.days.length === 0}
+      emptyText="No cost recorded yet."
+    >
+      {(d) => <DailyCostBody days={d.days} models={d.models} />}
+    </LiveChart>
   );
-  const models = resp?.models ?? [];
+}
+
+function DailyCostBody({
+  days,
+  models,
+}: {
+  days: readonly CostDay[];
+  models: readonly string[];
+}) {
+  const { showEmptyDays } = useShowEmptyDays();
   const rows = useMemo(() => {
-    const raw = (resp?.points ?? []).map((p) => ({
-      date: p.date,
-      ...p.byModel,
-    }));
+    const raw = days.map((p) => ({ date: p.date, ...p.byModel }));
     return showEmptyDays ? fillGaps(raw, "date", "day") : raw;
-  }, [resp?.points, showEmptyDays]);
+  }, [days, showEmptyDays]);
 
   return (
-    <div className="h-72 w-full">
-      <ChartState
-        error={error ? getEndpointErrorMessage(error) : null}
-        loading={resp === undefined}
-        empty={!!resp && rows.length === 0}
-      >
+    <>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={rows}
@@ -105,7 +109,6 @@ export function DailyCostChart() {
             ))}
           </BarChart>
         </ResponsiveContainer>
-      </ChartState>
-    </div>
+    </>
   );
 }
