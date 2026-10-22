@@ -20,6 +20,14 @@ const setItem = defineEndpoint({
   body: z.object({ id: z.string() }),
 });
 
+/** A JSON reply, as a server would send it (built by hand: this is a client test). */
+function jsonReply(value: unknown, status = 200): Response {
+  return new Response(JSON.stringify(value), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
 const realFetch = globalThis.fetch;
 let calls: { url: string; init: RequestInit }[] = [];
 
@@ -37,7 +45,7 @@ afterEach(() => {
 
 describe("callEndpoint", () => {
   test("builds the URL from origin, params and query, and decodes the answer", async () => {
-    answer(() => Response.json({ id: "a", n: 1 }));
+    answer(() => jsonReply({ id: "a", n: 1 }));
     const got = await callEndpoint(
       getItem,
       { id: "a b" },
@@ -49,7 +57,7 @@ describe("callEndpoint", () => {
   });
 
   test("a reply the response schema rejects throws", async () => {
-    answer(() => Response.json({ ok: true }));
+    answer(() => jsonReply({ ok: true }));
     let caught: unknown;
     try {
       await callEndpoint(getItem, { id: "a" }, { origin: ORIGIN, query: {} });
@@ -92,13 +100,13 @@ describe("callEndpoint", () => {
 
   test("main's agent-write refusal is refined", async () => {
     answer(() =>
-      Response.json(
+      jsonReply(
         {
           reason: "agent-write-refused",
           route: setItem.route,
           message: "main is read-only for agents",
         },
-        { status: 403 },
+        403,
       ),
     );
     let caught: unknown;
