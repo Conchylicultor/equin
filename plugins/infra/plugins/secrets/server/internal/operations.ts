@@ -17,7 +17,8 @@ interface ListResponse {
   keys: string[];
 }
 
-async function postJson<T>(path: string, body: unknown): Promise<T> {
+/** POST to central's secrets API; the response once it is a 2xx. */
+async function post(path: string, body: unknown): Promise<Response> {
   const url = `${GATEWAY_BASE}${path}`;
   const init: RequestInit = {
     method: "POST",
@@ -52,7 +53,19 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
     }
     throw new Error(`secrets api ${path}: ${res.status} ${text}`);
   }
-  return (await res.json()) as T;
+  return res;
+}
+
+/** A read: central answers with a JSON body. */
+async function postJson<T>(path: string, body: unknown): Promise<T> {
+  return (await (await post(path, body)).json()) as T;
+}
+
+/** A write: central answers 204 (its handler returns nothing), no body. */
+async function postVoid(path: string, body: unknown): Promise<void> {
+  const res = await post(path, body);
+  if (res.status !== 204)
+    throw new Error(`secrets api ${path}: expected 204, got ${res.status}`);
 }
 
 export async function getSecret(ref: SecretRef): Promise<string | undefined> {
@@ -61,11 +74,11 @@ export async function getSecret(ref: SecretRef): Promise<string | undefined> {
 }
 
 export async function setSecret(ref: SecretRef, value: string): Promise<void> {
-  await postJson<{ ok: true }>("/api/secrets/set", { ...ref, value });
+  await postVoid("/api/secrets/set", { ...ref, value });
 }
 
 export async function deleteSecret(ref: SecretRef): Promise<void> {
-  await postJson<{ ok: true }>("/api/secrets/delete", ref);
+  await postVoid("/api/secrets/delete", ref);
 }
 
 export async function hasSecret(ref: SecretRef): Promise<boolean> {
