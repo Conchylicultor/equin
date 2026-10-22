@@ -21,7 +21,9 @@ import {
 //
 // So the advanced filter builder shows the same rules ("Tags has any of (incl.
 // nested) …") and a rule the user writes there with these operators at the top
-// level is the sidebar's to show and edit.
+// level is the sidebar's to show and edit. A row click only includes; an
+// exclusion is written in the advanced filter (the sidebar shows it, and a
+// click or its chip's × drops it).
 
 /** The places field id the sidebar's rules test. */
 export const TAGS_FIELD_ID = "tags";
@@ -36,11 +38,11 @@ export type IncludeMode = "any" | "all";
 export interface SidebarState {
   include: string[];
   exclude: string[];
-  /** `all` only when several include rules are present; else `any`. */
+  /** `any` only when one include rule holds several tags; else `all` (the default). */
   mode: IncludeMode;
 }
 
-/** A tree row's own filter state, as the click cycle walks it. */
+/** A tree row's own filter state. */
 export type TagFilterState = "include" | "exclude" | "off";
 
 type MintId = () => string;
@@ -82,7 +84,7 @@ export function sidebarState(filter: FilterGroup | null): SidebarState {
   return {
     include,
     exclude: exclude.filter((id) => !include.includes(id)),
-    mode: includeRules.length > 1 ? "all" : "any",
+    mode: includeRules.length === 1 && include.length > 1 ? "any" : "all",
   };
 }
 
@@ -161,42 +163,31 @@ export function applySidebarState(
 }
 
 /**
- * A click on a tree row: off → include → exclude → off. Including a tag
- * replaces any included tag it subsumes (one nested under it) and any
- * included ancestor it narrows, so the include list never says the same
- * thing twice.
+ * A click on a tree row: off → include, and a picked tag (included, or
+ * excluded through the advanced filter) → off. Including a tag replaces any
+ * included tag it subsumes (one nested under it) and any included ancestor it
+ * narrows, so the include list never says the same thing twice.
  */
-export function cycleTag(
+export function toggleTag(
   state: SidebarState,
   tagId: string,
   tags: readonly TagNode[],
 ): SidebarState {
-  switch (tagFilterState(state, tagId)) {
-    case "include":
-      return {
-        ...state,
-        include: state.include.filter((t) => t !== tagId),
-        exclude: [...state.exclude, tagId],
-      };
-    case "exclude":
-      return { ...state, exclude: state.exclude.filter((t) => t !== tagId) };
-    case "off": {
-      const ancestors = new Set(
-        tagPath(tagId, tags)
-          .map((t) => t.id)
-          .filter((id) => id !== tagId),
-      );
-      return {
-        ...state,
-        include: [
-          ...state.include.filter(
-            (t) => !isTagUnder(t, tagId, tags) && !ancestors.has(t),
-          ),
-          tagId,
-        ],
-      };
-    }
-  }
+  if (tagFilterState(state, tagId) !== "off") return removeTag(state, tagId);
+  const ancestors = new Set(
+    tagPath(tagId, tags)
+      .map((t) => t.id)
+      .filter((id) => id !== tagId),
+  );
+  return {
+    ...state,
+    include: [
+      ...state.include.filter(
+        (t) => !isTagUnder(t, tagId, tags) && !ancestors.has(t),
+      ),
+      tagId,
+    ],
+  };
 }
 
 /** Drop a tag from both lists (its chip's ×). */
@@ -208,7 +199,7 @@ export function removeTag(state: SidebarState, tagId: string): SidebarState {
   };
 }
 
-/** The click cycle applied to the filter in one step. */
+/** A row click applied to the filter in one step. */
 export function applySidebarClick(
   filter: FilterGroup | null,
   tagId: string,
@@ -217,7 +208,7 @@ export function applySidebarClick(
 ): FilterGroup | null {
   return applySidebarState(
     filter,
-    cycleTag(sidebarState(filter), tagId, tags),
+    toggleTag(sidebarState(filter), tagId, tags),
     mintId,
   );
 }

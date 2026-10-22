@@ -47,7 +47,7 @@ import {
 import { TagMark } from "@plugins/apps/plugins/places/plugins/tag-manager/web";
 import {
   applySidebarState,
-  cycleTag,
+  toggleTag,
   hasPickedDescendant,
   removeTag,
   sidebarState,
@@ -81,8 +81,8 @@ const tuneIcon = symbol("tune");
 const INDENT_PX = 14;
 
 const MODE_OPTIONS = [
-  { id: "any", label: "any", title: "A place with any of these tags" },
   { id: "all", label: "all", title: "A place with every one of these tags" },
+  { id: "any", label: "any", title: "A place with any of these tags" },
 ] as const satisfies readonly {
   id: IncludeMode;
   label: string;
@@ -112,8 +112,8 @@ export interface TagSidebarProps {
  * any / all switch and Clear (once anything is picked), shown folded too, so
  * an active tag filter never hides. Body: a tag search and the tree, each
  * row's count being how many places the REST of the filter keeps that carry
- * the tag or a tag nested under it. A click cycles
- * include → exclude → off. Footer: + New tag, Manage tags.
+ * the tag or a tag nested under it. A click includes a tag, or drops a picked
+ * one (an exclusion is written in the advanced filter). Footer: + New tag, Manage tags.
  */
 export function TagSidebar({
   places,
@@ -197,7 +197,7 @@ export function TagSidebar({
                 tags={tags}
                 onRemove={(id) => write(removeTag(state, id))}
                 onMode={(mode) => write({ ...state, mode })}
-                onClear={() => write({ include: [], exclude: [], mode: "any" })}
+                onClear={() => write({ include: [], exclude: [], mode: "all" })}
               />
             ) : null}
           </Stack>
@@ -208,7 +208,7 @@ export function TagSidebar({
               tags={tags}
               counts={counts}
               state={state}
-              onCycle={(id) => write(cycleTag(state, id, tags))}
+              onPick={(id) => write(toggleTag(state, id, tags))}
             />
           </CollapsibleContent>
         }
@@ -285,11 +285,7 @@ function FilterSummary(props: {
           </Cluster>
         ) : null}
         <Line>
-          <Fill>
-            <Text variant="caption" tone="faint">
-              Click to include · again to exclude
-            </Text>
-          </Fill>
+          <Fill />
           <Button variant="link" onClick={onClear}>
             Clear
           </Button>
@@ -304,7 +300,7 @@ function TagTree(props: {
   /** Null while the rest of the view filter cannot run: no counts drawn. */
   counts: ReadonlyMap<string, number> | null;
   state: SidebarState;
-  onCycle: (tagId: string) => void;
+  onPick: (tagId: string) => void;
 }): ReactNode {
   const { tags } = props;
   const [query, setQuery] = useState("");
@@ -379,7 +375,7 @@ interface TagBranchContext {
   tags: readonly PlaceTag[];
   counts: ReadonlyMap<string, number> | null;
   state: SidebarState;
-  onCycle: (tagId: string) => void;
+  onPick: (tagId: string) => void;
   childrenOf: ReadonlyMap<string | null, readonly PlaceTag[]>;
   /** The tags a search keeps, or null when not searching. */
   shown: ReadonlySet<string> | null;
@@ -411,7 +407,7 @@ function TagBranch(props: {
         count={ctx.counts === null ? null : (ctx.counts.get(tag.id) ?? 0)}
         filterState={tagFilterState(ctx.state, tag.id)}
         partial={hasPickedDescendant(ctx.state, tag.id, ctx.tags)}
-        onCycle={() => ctx.onCycle(tag.id)}
+        onPick={() => ctx.onPick(tag.id)}
       />
       {visible.length > 0 ? (
         <CollapsibleContent>
@@ -439,7 +435,7 @@ function TagTreeRow(props: {
   count: number | null;
   filterState: TagFilterState;
   partial: boolean;
-  onCycle: () => void;
+  onPick: () => void;
 }): ReactNode {
   const { tag, tags, depth, leaf, count, filterState, partial } = props;
   // The branch's fold: this row's disclosure is its trigger.
@@ -448,7 +444,7 @@ function TagTreeRow(props: {
   return (
     <Line className="gap-2xs" style={{ paddingLeft: depth * INDENT_PX }}>
       {/* The disclosure is its own button beside the row, never inside it:
-          the row is itself the include / exclude button. */}
+          the row is itself the include button. */}
       <button
         type="button"
         aria-label={fold.open ? `Collapse ${tag.name}` : `Expand ${tag.name}`}
@@ -466,8 +462,7 @@ function TagTreeRow(props: {
         <Row
           size="sm"
           selected={filterState === "include"}
-          onClick={props.onCycle}
-          title="Click to include, again to exclude"
+          onClick={props.onPick}
           className={cn(filterState === "exclude" && "bg-destructive/10")}
           icon={
             <Line className="gap-xs">

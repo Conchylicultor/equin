@@ -68,14 +68,16 @@ root on the tags field with `has-nested` (include) / `lacks-nested` (exclude)
 one exclude rule with every excluded id — and keeps every other node as it
 was (an `or` root is wrapped, never rewritten). All of it is pure and
 unit-tested in `web/internal/sidebar-filter.ts` (`sidebarState`,
-`applySidebarState`, `cycleTag`, `applySidebarClick`, `withoutSidebarRules`).
+`applySidebarState`, `toggleTag`, `applySidebarClick`, `withoutSidebarRules`).
 
 The header always says how many places show: the total alone, or `shown /
 total` while the filter or search narrows the view (`useFlatRows` over the
 active view state with the same `placeSearchText` the DataView searches by) —
 the one place a view narrowed to nothing is explained; the map stays bare.
 
-A row click cycles include → exclude → off; including a tag replaces any
+A row click toggles a tag off ↔ include (a tag excluded through the advanced
+filter is shown, and a click drops it); several included tags default to `all`;
+including a tag replaces any
 included tag it subsumes or narrows. A row's count is `tagPlaceCounts` over the
 places the REST of the filter keeps (`withoutSidebarRules` → `useRowFilter`),
 nested tags included. The quick-search text is not applied to the counts.

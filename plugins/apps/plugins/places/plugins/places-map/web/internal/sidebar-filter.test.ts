@@ -4,10 +4,10 @@ import type { TagNode } from "@plugins/apps/plugins/places/plugins/places-core/c
 import {
   applySidebarClick,
   applySidebarState,
-  cycleTag,
   hasPickedDescendant,
   removeTag,
   sidebarState,
+  toggleTag,
   withoutSidebarRules,
 } from "./sidebar-filter";
 
@@ -47,10 +47,10 @@ const CITY_RULE = {
 } as const;
 
 test("an empty filter reads as nothing picked", () => {
-  expect(sidebarState(null)).toEqual({ include: [], exclude: [], mode: "any" });
+  expect(sidebarState(null)).toEqual({ include: [], exclude: [], mode: "all" });
 });
 
-test("clicking cycles off → include → exclude → off, keeping other rules", () => {
+test("clicking toggles off ↔ include, keeping other rules", () => {
   const mint = minter();
   const start: FilterGroup = {
     kind: "group",
@@ -74,26 +74,33 @@ test("clicking cycles off → include → exclude → off, keeping other rules",
       CITY_RULE,
     ],
   });
-  const excluded = applySidebarClick(included, "food", TAGS, mint);
-  expect(sidebarState(excluded)).toEqual({
+  expect(applySidebarClick(included, "food", TAGS, mint)).toEqual(start);
+});
+
+test("a second included tag defaults to all: one rule per tag", () => {
+  const mint = minter();
+  const one = applySidebarClick(null, "food", TAGS, mint);
+  const two = applySidebarClick(one, "culture", TAGS, mint);
+  expect(two?.children.map((c) => c.kind === "rule" && c.value)).toEqual([
+    ["food"],
+    ["culture"],
+  ]);
+  expect(sidebarState(two).mode).toBe("all");
+});
+
+test("clicking a tag excluded in the advanced filter drops it", () => {
+  const s = { include: [], exclude: ["been"], mode: "all" as const };
+  expect(toggleTag(s, "been", TAGS)).toEqual({
     include: [],
-    exclude: ["food"],
-    mode: "any",
+    exclude: [],
+    mode: "all",
   });
-  // The include rule's id is reused for the exclude rule: one rule, re-shaped.
-  expect(excluded?.children[0]).toMatchObject({
-    id: "id1",
-    operatorId: "lacks-nested",
-  });
-  const off = applySidebarClick(excluded, "food", TAGS, mint);
-  expect(off).toEqual({ ...start });
 });
 
 test("the last sidebar rule removed from a sidebar-only filter clears it", () => {
   const mint = minter();
   const one = applySidebarClick(null, "culture", TAGS, mint);
-  const two = applySidebarClick(one, "culture", TAGS, mint);
-  expect(applySidebarClick(two, "culture", TAGS, mint)).toBeNull();
+  expect(applySidebarClick(one, "culture", TAGS, mint)).toBeNull();
 });
 
 test("any = one rule with every id; all = one rule per id", () => {
@@ -165,9 +172,9 @@ test("including a tag replaces the included tags it subsumes or narrows", () => 
     exclude: [],
     mode: "any" as const,
   };
-  expect(cycleTag(s0, "food", TAGS).include).toEqual(["culture", "food"]);
+  expect(toggleTag(s0, "food", TAGS).include).toEqual(["culture", "food"]);
   const s1 = { include: ["food"], exclude: [], mode: "any" as const };
-  expect(cycleTag(s1, "coffee", TAGS).include).toEqual(["coffee"]);
+  expect(toggleTag(s1, "coffee", TAGS).include).toEqual(["coffee"]);
 });
 
 test("withoutSidebarRules keeps the rest, null when nothing is left", () => {
