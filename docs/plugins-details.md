@@ -5524,7 +5524,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
               - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
               - `JsonlViewerTool.Renderer` "mcp__equin__places_show_picks" → `PicksToolView`
-            - Uses: 115 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+            - Uses: 121 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `apps/places/places-core` ×9
               - `conversations/agent-thread` ×8
               - `map` ×8
@@ -5533,6 +5533,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live` ×5
               - `primitives/live-state` ×5
               - `primitives/css/ui-kit` ×4
+              - `primitives/overlay/image-viewer` ×4
+              - `primitives/link-gesture/new-tab` ×3
               - `primitives/persistent-draft` ×3
               - `ui/icons` ×3
               - `apps/places/tag-manager` ×2
@@ -5576,7 +5578,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/dom/web-storage.defineStore`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useEventCallback`
-              - `primitives/link-gesture/new-tab.NewTabButton`
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
               - `primitives/overlay/tooltip.Kbd`
@@ -5584,8 +5585,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/shortcuts.useSurfaceShortcuts`
               - `shell/toast.showToast`
           - Cross-plugin:
-            - Uses tokens: 28 vars — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
-              - `ui/tokens/color-palette` ×11
+            - Uses tokens: 29 vars — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+              - `ui/tokens/color-palette` ×12
               - `ui/tokens/type-scale` ×7
               - `ui/tokens/density` ×5
               - `ui/tokens/shape` ×3
@@ -40833,6 +40834,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family --font-mono`
             - Imported by:
               - `apps/pages/page-tree`
+              - `apps/places/places-map`
               - `conversations/conversation-view/artifacts/screenshot`
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/attachment/attached-file`

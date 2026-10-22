@@ -139,7 +139,23 @@ scrolls, its footer stays):
   previous / next on hover, the author credited — Google's terms), else the
   tag colours' wash with the place's icon as a watermark, or a placeholder
   while a Google place's details load (never the wash, then a photo). The
-  scaled drop stands on its foot.
+  scaled drop stands on its foot. A click on a photo (or its `1 / n`) opens
+  the photos panel.
+- **Photos** (`place-photos.tsx`, prototype `proto-1792628021-7wrhf5`):
+  `PhotoThumbs` — the next four photos as square thumbnails under the head,
+  the last veiled with "+N"; a thumbnail opens that photo in the
+  `image-viewer` (← / → through all), "See all" or the veiled one opens
+  the photos panel: the SAME card element (local `photosOpen` state, in both
+  `PlaceCard` and `GooglePlaceCard`) swaps its header / body / footer for
+  `PhotosHeader` / `PhotosGrid` and glides to `PLACE_PHOTOS_WIDTH` (760px,
+  `cardWidthProps` — one element, so the width transitions), showing every photo Google shares — at most ten, Google's cap, no
+  categories — in two columns at their own shape, each credited on hover
+  (the place's own uploads marked Owner: the author is named as the place),
+  then a "More on Google Maps" tile to the full album; a photo opens the
+  viewer (an `ImageGallery`). Back returns to the card. Both share the
+  Column's one scroller, so each resets it on mount (`ScrollTopOnMount`). The screen's reach
+  constants still assume the 340px card, so the wider panel overlays the map
+  (and a Gallery / List view) while it is open.
 - **Head**: the name, edited in place (`PlaceTitleInput`: on a Google place it
   writes `title`, and blank or Google's own name clears it, with "On Google:
   <name>" under a title; on a custom place it renames, blank reverts) —
@@ -275,7 +291,7 @@ away closes it — a click in the thread is not away (`useClickAway`'s
     - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
     - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
     - `JsonlViewerTool.Renderer` "mcp__equin__places_show_picks" → `PicksToolView`
-  - Uses: 115 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 121 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/places/places-core` ×9
     - `conversations/agent-thread` ×8
     - `map` ×8
@@ -284,6 +300,8 @@ away closes it — a click in the thread is not away (`useClickAway`'s
     - `network/live` ×5
     - `primitives/live-state` ×5
     - `primitives/css/ui-kit` ×4
+    - `primitives/overlay/image-viewer` ×4
+    - `primitives/link-gesture/new-tab` ×3
     - `primitives/persistent-draft` ×3
     - `ui/icons` ×3
     - `apps/places/tag-manager` ×2
@@ -327,7 +345,6 @@ away closes it — a click in the thread is not away (`useClickAway`'s
     - `primitives/dom/web-storage.defineStore`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
-    - `primitives/link-gesture/new-tab.NewTabButton`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
     - `primitives/overlay/tooltip.Kbd`
@@ -335,8 +352,8 @@ away closes it — a click in the thread is not away (`useClickAway`'s
     - `primitives/shortcuts.useSurfaceShortcuts`
     - `shell/toast.showToast`
 - Cross-plugin:
-  - Uses tokens: 28 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/color-palette` ×11
+  - Uses tokens: 29 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/color-palette` ×12
     - `ui/tokens/type-scale` ×7
     - `ui/tokens/density` ×5
     - `ui/tokens/shape` ×3

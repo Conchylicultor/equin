@@ -1,4 +1,4 @@
-import type { ComponentProps, ReactNode } from "react";
+import { useState, type ComponentProps, type ReactNode } from "react";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { clipClasses } from "@plugins/primitives/plugins/css/plugins/clip/web";
@@ -29,6 +29,13 @@ import {
   RatingLine,
 } from "./place-facts";
 import { PlaceHero } from "./place-hero";
+import {
+  cardWidthProps,
+  PhotosGrid,
+  PhotosHeader,
+  PhotoThumbs,
+  ScrollTopOnMount,
+} from "./place-photos";
 import { PickSources } from "./pick-sources";
 
 const closeIcon = symbol("close");
@@ -65,6 +72,7 @@ export function GooglePlaceCard({
   onSave: () => Promise<void>;
 }): ReactNode {
   const details = usePlaceDetails(hit.placeId);
+  const [photosOpen, setPhotosOpen] = useState(false);
   const rich: PlaceRichDetails | null =
     details.status === "ready" && details.data.kind === "ok"
       ? details.data.details
@@ -82,103 +90,128 @@ export function GooglePlaceCard({
     result.businessStatus !== undefined &&
     result.businessStatus !== "OPERATIONAL";
   const ink = washInk(visual.mainColor);
+  const mapsPlace = {
+    googlePlaceId: hit.placeId,
+    name: hit.name,
+    address: result.address ?? "",
+    location: { lat: result.lat, lng: result.lng },
+  };
+  // The card and its photos panel are one element, so its width glides.
+  const showPhotos = photosOpen && rich !== null;
+  const width = cardWidthProps(PLACE_CARD_WIDTH, showPhotos);
   return (
     <Column
       as={OverlayCard}
       className={cn(
         "pointer-events-auto max-h-full",
         clipClasses({ axis: "both", fill: false }),
+        width.className,
       )}
-      style={{ width: PLACE_CARD_WIDTH }}
+      style={width.style}
+      header={
+        showPhotos ? (
+          <PhotosHeader
+            place={mapsPlace}
+            count={rich.photos.length}
+            onBack={() => setPhotosOpen(false)}
+          />
+        ) : undefined
+      }
       body={
-        <>
-          <PlaceHero
-            photos={
-              details.status === "loading"
-                ? "loading"
-                : rich !== null
-                  ? rich.photos
-                  : []
-            }
-            visual={{
-              colors: [visual.mainColor],
-              mainColor: visual.mainColor,
-              icon: visual.icon,
-            }}
-          >
-            <IconButton
-              icon={closeIcon}
-              label="Close"
-              onClick={onClose}
-              variant="floating"
-              className="rounded-full"
-            />
-          </PlaceHero>
-          <Stack gap="lg" className="p-md">
-            <Stack gap="2xs">
-              <Text variant="title" tone="strong">
-                {hit.name}
-              </Text>
-              {hit.line === undefined ? null : (
-                <Text variant="caption" tone="muted">
-                  {hit.line}
-                </Text>
-              )}
-              <RatingLine details={facts ?? result} />
-              {closed ? (
-                <Cluster>
-                  <Badge
-                    variant={
-                      result.businessStatus === "CLOSED_PERMANENTLY"
-                        ? "destructive"
-                        : "warning"
-                    }
-                    shape="pill"
-                  >
-                    {result.businessStatus === "CLOSED_PERMANENTLY"
-                      ? "Permanently closed"
-                      : "Temporarily closed"}
-                  </Badge>
-                </Cluster>
-              ) : details.status === "loading" ? (
-                <Loading variant="text" label="Asking Google…" />
-              ) : (
-                <OpenNowLine details={facts ?? result} />
-              )}
-            </Stack>
-            {pick === null ? null : <PickNote pick={pick} />}
-            <DetailsNotice details={details} />
-            {rich?.summary !== undefined ? (
-              <Text variant="body" tone="muted">
-                {rich.summary}
-              </Text>
-            ) : null}
-            <Stack gap="none">
-              <GoogleFactRows
-                rich={rich}
-                address={result.address ?? ""}
-                closed={closed}
+        showPhotos ? (
+          <PhotosGrid photos={rich.photos} place={mapsPlace} />
+        ) : (
+          <>
+            <ScrollTopOnMount />
+            <PlaceHero
+              photos={
+                details.status === "loading"
+                  ? "loading"
+                  : rich !== null
+                    ? rich.photos
+                    : []
+              }
+              visual={{
+                colors: [visual.mainColor],
+                mainColor: visual.mainColor,
+                icon: visual.icon,
+              }}
+              onShowAll={() => setPhotosOpen(true)}
+            >
+              <IconButton
+                icon={closeIcon}
+                label="Close"
+                onClick={onClose}
+                variant="floating"
+                className="rounded-full"
               />
+            </PlaceHero>
+            <Stack gap="lg" className="p-md">
+              <Stack gap="2xs">
+                <Text variant="title" tone="strong">
+                  {hit.name}
+                </Text>
+                {hit.line === undefined ? null : (
+                  <Text variant="caption" tone="muted">
+                    {hit.line}
+                  </Text>
+                )}
+                <RatingLine details={facts ?? result} />
+                {closed ? (
+                  <Cluster>
+                    <Badge
+                      variant={
+                        result.businessStatus === "CLOSED_PERMANENTLY"
+                          ? "destructive"
+                          : "warning"
+                      }
+                      shape="pill"
+                    >
+                      {result.businessStatus === "CLOSED_PERMANENTLY"
+                        ? "Permanently closed"
+                        : "Temporarily closed"}
+                    </Badge>
+                  </Cluster>
+                ) : details.status === "loading" ? (
+                  <Loading variant="text" label="Asking Google…" />
+                ) : (
+                  <OpenNowLine details={facts ?? result} />
+                )}
+              </Stack>
+              {pick === null ? null : <PickNote pick={pick} />}
+              <DetailsNotice details={details} />
+              {rich !== null ? (
+                <PhotoThumbs
+                  photos={rich.photos}
+                  onShowAll={() => setPhotosOpen(true)}
+                />
+              ) : null}
+              {rich?.summary !== undefined ? (
+                <Text variant="body" tone="muted">
+                  {rich.summary}
+                </Text>
+              ) : null}
+              <Stack gap="none">
+                <GoogleFactRows
+                  rich={rich}
+                  address={result.address ?? ""}
+                  closed={closed}
+                />
+              </Stack>
+              {rich !== null ? <GoogleCredit /> : null}
             </Stack>
-            {rich !== null ? <GoogleCredit /> : null}
-          </Stack>
-        </>
+          </>
+        )
       }
       footer={
-        <MapsActions
-          place={{
-            googlePlaceId: hit.placeId,
-            name: hit.name,
-            address: result.address ?? "",
-            location: { lat: result.lat, lng: result.lng },
-          }}
-          ink={ink}
-        >
-          <Button variant="outline" onClick={onSave}>
-            <Icon icon={saveIcon} />
-            Save
-          </Button>
-        </MapsActions>
+        showPhotos ? undefined : (
+          <MapsActions place={mapsPlace} ink={ink}>
+            <Button variant="outline" onClick={onSave}>
+              <Icon icon={saveIcon} />
+              Save
+            </Button>
+          </MapsActions>
+        )
       }
     />
   );

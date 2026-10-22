@@ -192,6 +192,7 @@ handler, the `?` sheet and the button tooltips all read.
     - `ui/tokens/font-family --font-mono`
   - Imported by:
     - `apps/pages/page-tree`
+    - `apps/places/places-map`
     - `conversations/conversation-view/artifacts/screenshot`
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/attachment/attached-file`

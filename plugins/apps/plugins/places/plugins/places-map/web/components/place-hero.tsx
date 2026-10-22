@@ -33,15 +33,19 @@ type HeroVisual = Pick<PlaceVisual, "colors" | "mainColor" | "icon">;
  * (`photos: []` — a custom place, one Google no longer knows, or one without
  * photos), or a placeholder while a Google place's details are still loading
  * (`photos: "loading"`), so the hero never swaps from wash to photo.
- * `children` overlay its top-right corner (the close button).
+ * `children` overlay its top-right corner (the close button); the photo
+ * photo and its counter open every photo (`onShowAll`, the card's photos
+ * panel).
  */
 export function PlaceHero({
   photos,
   visual,
+  onShowAll,
   children,
 }: {
   photos: readonly PlacePhoto[] | "loading";
   visual: HeroVisual;
+  onShowAll: () => void;
   children: ReactNode;
 }): ReactNode {
   return (
@@ -49,7 +53,7 @@ export function PlaceHero({
       {photos === "loading" ? (
         <Loading variant="block" className="h-52 rounded-none" />
       ) : photos.length > 0 ? (
-        <PhotoStrip photos={photos} />
+        <PhotoStrip photos={photos} onShowAll={onShowAll} />
       ) : (
         <Wash visual={visual} />
       )}
@@ -99,7 +103,13 @@ function Wash({ visual }: { visual: HeroVisual }): ReactNode {
  * "1 / n", previous / next on hover, and the shown photo's author — Google's
  * terms require crediting it, linked to the author's page when Google gives one.
  */
-function PhotoStrip({ photos }: { photos: readonly PlacePhoto[] }): ReactNode {
+function PhotoStrip({
+  photos,
+  onShowAll,
+}: {
+  photos: readonly PlacePhoto[];
+  onShowAll: () => void;
+}): ReactNode {
   const strip = useRef<HTMLElement>(null);
   const [index, setIndex] = useState(0);
   const show = (i: number) =>
@@ -128,9 +138,10 @@ function PhotoStrip({ photos }: { photos: readonly PlacePhoto[] }): ReactNode {
               src={placePhotoUrl(p.name, PHOTO_FETCH_PX)}
               alt=""
               loading={i === 0 ? "eager" : "lazy"}
+              onClick={onShowAll}
               className={cn(
                 rigidClass(),
-                "h-full w-full snap-start object-cover",
+                "h-full w-full cursor-zoom-in snap-start object-cover",
               )}
             />
           ))}
@@ -139,10 +150,17 @@ function PhotoStrip({ photos }: { photos: readonly PlacePhoto[] }): ReactNode {
       {photos.length > 1 ? (
         <>
           <Pin to="top-left" offset="sm" layer="float">
-            <Line className="gap-2xs rounded-full bg-black/45 px-xs py-2xs text-caption text-white backdrop-blur-sm">
-              <Icon icon={photosIcon} className="size-3.5" />
-              {`${index + 1} / ${photos.length}`}
-            </Line>
+            <button
+              type="button"
+              onClick={onShowAll}
+              aria-label={`All ${photos.length} photos`}
+              className="rounded-full bg-black/45 px-xs py-2xs text-caption text-white backdrop-blur-sm hover:bg-black/60"
+            >
+              <Line className="gap-2xs">
+                <Icon icon={photosIcon} className="size-3.5" />
+                {`${index + 1} / ${photos.length}`}
+              </Line>
+            </button>
           </Pin>
           {index > 0 ? (
             <Pin

@@ -1,4 +1,4 @@
-import type { ComponentProps, ReactNode } from "react";
+import { useState, type ComponentProps, type ReactNode } from "react";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { clipClasses } from "@plugins/primitives/plugins/css/plugins/clip/web";
@@ -53,6 +53,13 @@ import {
   RatingLine,
 } from "./place-facts";
 import { PlaceHero } from "./place-hero";
+import {
+  cardWidthProps,
+  PhotosGrid,
+  PhotosHeader,
+  PhotoThumbs,
+  ScrollTopOnMount,
+} from "./place-photos";
 import { TagChip } from "./tag-chip";
 import { TagPicker } from "./tag-picker";
 
@@ -112,6 +119,7 @@ export function PlaceCard({
 }) {
   const updatePlace = useUpdatePlace();
   const deletePlace = useDeletePlace();
+  const [photosOpen, setPhotosOpen] = useState(false);
   const details = usePlaceDetails(place.googlePlaceId);
   const visual = placeVisual(place, tags);
   const params = { id: place.id };
@@ -134,180 +142,214 @@ export function PlaceCard({
   const closed =
     place.businessStatus !== null && place.businessStatus !== "OPERATIONAL";
 
+  // The card and its photos panel are one element, so its width glides.
+  const showPhotos = photosOpen && rich !== null;
+  const width = cardWidthProps(PLACE_CARD_WIDTH, showPhotos);
+
   return (
     <Column
       as={OverlayCard}
       className={cn(
         "pointer-events-auto max-h-full",
         clipClasses({ axis: "both", fill: false }),
+        width.className,
       )}
-      style={{ width: PLACE_CARD_WIDTH }}
+      style={width.style}
+      header={
+        showPhotos ? (
+          <PhotosHeader
+            place={place}
+            count={rich.photos.length}
+            onBack={() => setPhotosOpen(false)}
+          />
+        ) : undefined
+      }
       body={
-        <>
-          <PlaceHero
-            photos={richPending ? "loading" : rich !== null ? rich.photos : []}
-            visual={visual}
-          >
-            <IconButton
-              icon={closeIcon}
-              label="Close"
-              onClick={onClose}
-              variant="floating"
-              className="rounded-full"
-            />
-          </PlaceHero>
-          <Stack direction="row" align="start" gap="md" className="px-md">
-            <HeroDrop visual={visual} />
-            <Fill>
-              <Stack gap="2xs" className="pt-sm">
-                <PlaceTitleInput
-                  place={place}
-                  onCommit={(title) =>
-                    updatePlace.mutateAsync({ params, body: { title } })
-                  }
-                />
-                {place.title !== null && place.googlePlaceId !== null ? (
-                  <Text variant="caption" tone="faint">
-                    {`On Google: ${place.name}`}
-                  </Text>
-                ) : null}
-                {isCustomPlace(place) ? (
-                  <Cluster gap="xs" align="center">
-                    <Text variant="caption" tone="faint">
-                      Custom pin — no Google place
-                    </Text>
-                    <Button variant="link" aspect="inline" onClick={onMovePin}>
-                      <Icon icon={moveIcon} />
-                      Move
-                    </Button>
-                  </Cluster>
-                ) : null}
-                <KindLine place={place} visual={visual} />
-                {richPending ? (
-                  <Loading variant="text" label="Asking Google…" />
-                ) : rich !== null ? (
-                  <>
-                    <RatingLine details={rich} />
-                    {closed ? null : <OpenNowLine details={rich} />}
-                  </>
-                ) : null}
-                <ClosedLine status={place.businessStatus} />
-                <LostLine lostAt={place.googleLostAt} />
-              </Stack>
-            </Fill>
-          </Stack>
-          <Stack gap="lg" className="p-md">
-            <DetailsNotice details={details} />
-            {rich?.summary !== undefined ? (
-              <Text variant="body" tone="muted">
-                {rich.summary}
-              </Text>
-            ) : null}
-            <Line className="gap-xs">
-              {ROLE_TOGGLES.map((role) => {
-                const tag = roleTag(role, byId, tags);
-                const on = place.tags.includes(tag.id);
-                return (
-                  <Fill key={role}>
-                    <RoleToggle
-                      tag={tag}
-                      tags={tags}
-                      on={on}
-                      onToggle={() =>
-                        void setTags(
-                          on
-                            ? place.tags.filter((id) => id !== tag.id)
-                            : [...place.tags, tag.id],
-                        )
-                      }
-                    />
-                  </Fill>
-                );
-              })}
-            </Line>
-            <Section label="Tags">
-              <Cluster gap="xs">
-                {shownTags.map((t) => (
-                  <TagChip
-                    key={t.id}
-                    tag={t}
-                    tags={tags}
-                    tinted
-                    auto={place.autoTags.includes(t.id)}
-                    onRemove={() =>
-                      void setTags(place.tags.filter((id) => id !== t.id))
+        showPhotos ? (
+          <PhotosGrid photos={rich.photos} place={place} />
+        ) : (
+          <>
+            <ScrollTopOnMount />
+            <PlaceHero
+              photos={
+                richPending ? "loading" : rich !== null ? rich.photos : []
+              }
+              visual={visual}
+              onShowAll={() => setPhotosOpen(true)}
+            >
+              <IconButton
+                icon={closeIcon}
+                label="Close"
+                onClick={onClose}
+                variant="floating"
+                className="rounded-full"
+              />
+            </PlaceHero>
+            <Stack direction="row" align="start" gap="md" className="px-md">
+              <HeroDrop visual={visual} />
+              <Fill>
+                <Stack gap="2xs" className="pt-sm">
+                  <PlaceTitleInput
+                    place={place}
+                    onCommit={(title) =>
+                      updatePlace.mutateAsync({ params, body: { title } })
                     }
                   />
-                ))}
-                <TagPicker
-                  tags={tags}
-                  exclude={place.tags}
-                  onPick={(tagId) =>
-                    // A tag replaces the ancestors of it the place carried:
-                    // "Restaurants › French" says "Restaurants" already.
-                    void setTags([
-                      ...place.tags.filter(
-                        (id) => !isTagUnder(tagId, id, tags),
-                      ),
-                      tagId,
-                    ])
-                  }
-                />
-              </Cluster>
-            </Section>
-            <NoteSlip
-              place={place}
-              onCommit={(note) =>
-                updatePlace.mutateAsync({ params, body: { note } })
-              }
-            />
-            <Stack gap="none">
-              <GoogleFactRows
-                rich={rich}
-                address={place.address}
-                closed={closed}
-              />
-              <InfoRow icon={savedIcon}>
-                <Stack gap="none">
-                  <Text variant="body">
-                    {`Saved ${place.createdAt.toLocaleDateString(undefined, {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })}`}
-                  </Text>
-                  {place.primaryType !== null ? (
+                  {place.title !== null && place.googlePlaceId !== null ? (
                     <Text variant="caption" tone="faint">
-                      {`Google type · ${place.primaryType.replaceAll("_", " ")}`}
+                      {`On Google: ${place.name}`}
                     </Text>
                   ) : null}
+                  {isCustomPlace(place) ? (
+                    <Cluster gap="xs" align="center">
+                      <Text variant="caption" tone="faint">
+                        Custom pin — no Google place
+                      </Text>
+                      <Button
+                        variant="link"
+                        aspect="inline"
+                        onClick={onMovePin}
+                      >
+                        <Icon icon={moveIcon} />
+                        Move
+                      </Button>
+                    </Cluster>
+                  ) : null}
+                  <KindLine place={place} visual={visual} />
+                  {richPending ? (
+                    <Loading variant="text" label="Asking Google…" />
+                  ) : rich !== null ? (
+                    <>
+                      <RatingLine details={rich} />
+                      {closed ? null : <OpenNowLine details={rich} />}
+                    </>
+                  ) : null}
+                  <ClosedLine status={place.businessStatus} />
+                  <LostLine lostAt={place.googleLostAt} />
                 </Stack>
-              </InfoRow>
-              <IconRow place={place} ownIcon={visual.ownIcon} />
+              </Fill>
             </Stack>
-            {rich !== null ? <GoogleCredit /> : null}
-          </Stack>
-        </>
+            <Stack gap="lg" className="p-md">
+              <DetailsNotice details={details} />
+              {rich !== null ? (
+                <PhotoThumbs
+                  photos={rich.photos}
+                  onShowAll={() => setPhotosOpen(true)}
+                />
+              ) : null}
+              {rich?.summary !== undefined ? (
+                <Text variant="body" tone="muted">
+                  {rich.summary}
+                </Text>
+              ) : null}
+              <Line className="gap-xs">
+                {ROLE_TOGGLES.map((role) => {
+                  const tag = roleTag(role, byId, tags);
+                  const on = place.tags.includes(tag.id);
+                  return (
+                    <Fill key={role}>
+                      <RoleToggle
+                        tag={tag}
+                        tags={tags}
+                        on={on}
+                        onToggle={() =>
+                          void setTags(
+                            on
+                              ? place.tags.filter((id) => id !== tag.id)
+                              : [...place.tags, tag.id],
+                          )
+                        }
+                      />
+                    </Fill>
+                  );
+                })}
+              </Line>
+              <Section label="Tags">
+                <Cluster gap="xs">
+                  {shownTags.map((t) => (
+                    <TagChip
+                      key={t.id}
+                      tag={t}
+                      tags={tags}
+                      tinted
+                      auto={place.autoTags.includes(t.id)}
+                      onRemove={() =>
+                        void setTags(place.tags.filter((id) => id !== t.id))
+                      }
+                    />
+                  ))}
+                  <TagPicker
+                    tags={tags}
+                    exclude={place.tags}
+                    onPick={(tagId) =>
+                      // A tag replaces the ancestors of it the place carried:
+                      // "Restaurants › French" says "Restaurants" already.
+                      void setTags([
+                        ...place.tags.filter(
+                          (id) => !isTagUnder(tagId, id, tags),
+                        ),
+                        tagId,
+                      ])
+                    }
+                  />
+                </Cluster>
+              </Section>
+              <NoteSlip
+                place={place}
+                onCommit={(note) =>
+                  updatePlace.mutateAsync({ params, body: { note } })
+                }
+              />
+              <Stack gap="none">
+                <GoogleFactRows
+                  rich={rich}
+                  address={place.address}
+                  closed={closed}
+                />
+                <InfoRow icon={savedIcon}>
+                  <Stack gap="none">
+                    <Text variant="body">
+                      {`Saved ${place.createdAt.toLocaleDateString(undefined, {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}`}
+                    </Text>
+                    {place.primaryType !== null ? (
+                      <Text variant="caption" tone="faint">
+                        {`Google type · ${place.primaryType.replaceAll("_", " ")}`}
+                      </Text>
+                    ) : null}
+                  </Stack>
+                </InfoRow>
+                <IconRow place={place} ownIcon={visual.ownIcon} />
+              </Stack>
+              {rich !== null ? <GoogleCredit /> : null}
+            </Stack>
+          </>
+        )
       }
       footer={
-        <MapsActions place={place} ink={washInk(visual.mainColor)}>
-          <IconButton
-            icon={deleteIcon}
-            label="Delete place"
-            onClick={() =>
-              void confirmDialog({
-                title: `Delete “${name}”?`,
-                description:
-                  "It leaves your map, with its tags and note. Saving it again starts afresh.",
-                confirmLabel: "Delete place",
-                onConfirm: async () => {
-                  await deletePlace.mutateAsync({ params });
-                  onClose();
-                },
-              })
-            }
-          />
-        </MapsActions>
+        showPhotos ? undefined : (
+          <MapsActions place={place} ink={washInk(visual.mainColor)}>
+            <IconButton
+              icon={deleteIcon}
+              label="Delete place"
+              onClick={() =>
+                void confirmDialog({
+                  title: `Delete “${name}”?`,
+                  description:
+                    "It leaves your map, with its tags and note. Saving it again starts afresh.",
+                  confirmLabel: "Delete place",
+                  onConfirm: async () => {
+                    await deletePlace.mutateAsync({ params });
+                    onClose();
+                  },
+                })
+              }
+            />
+          </MapsActions>
+        )
       }
     />
   );
