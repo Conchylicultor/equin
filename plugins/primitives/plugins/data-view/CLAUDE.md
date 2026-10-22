@@ -893,6 +893,20 @@ const { pages, paging } = useLivePagesPaging(conversationsGone, {}); // data-vie
 <DataView rows={rows} paging={paging === null ? undefined : { ...paging, isPaged }} … />
 ```
 
+- **Narrowed by the view (`narrowBy`, `total`).** Rows filtered in memory
+  over a paged read stop at its first page when the filter hides the read's
+  tail (the next page waits on the tail being on screen — the hold below). A
+  merged surface's source receives the active view (`DataViewSourceProps.view`)
+  and hands it to `useLivePagesPaging(c, query, { narrowBy: view })`
+  (`web/internal/narrow-pages.ts`): the view's filter is lowered onto the
+  collection's columns like a live source's, as a WIDENING — a rule no column
+  backs (a list's synthetic field) is dropped, never refused, since the rows
+  are still filtered in memory — and ANDed into `query`. `total: true` also
+  reads the narrowed query's count as `paging.total`, `underFilter` when no
+  rule was dropped, so the section count stays exact under that filter. The
+  search box is not lowered (in memory it matches any searchable field's
+  text). The Queue's Done section is the consumer.
+
 - **The viewport (`paging.viewport`, required).** The body measures which rows
   it has on screen and reports each paged read's share to its sink, in the
   read's own order (`DataViewVisibleRows`: the first and last of its rows on

@@ -1252,12 +1252,18 @@ function DataViewBodyInner<TRow>(
           // In memory without paging the rows are the whole set; a paged read
           // says when it has read to the end, which of the held rows it
           // pages, and — while no search or filter hides rows of it (a live
-          // source asks for one only then) — its total.
+          // source asks for one only then), or the filter is one it was
+          // narrowed by whole — its total.
           rowsComplete: (!paging || paging.complete
             ? true
             : {
                 growable: paging.isPaged ?? ALL_ROWS,
-                total: matchesView === null ? (paging.total ?? null) : null,
+                total:
+                  matchesView === null ||
+                  (paging.total?.underFilter === true &&
+                    activeState.query.trim() === "")
+                    ? (paging.total ?? null)
+                    : null,
               }) as DataViewRenderProps<unknown>["rowsComplete"],
           sectioning: sectioning as DataViewRenderProps<unknown>["sectioning"],
           collapsedSections: viewModel.collapsedSectionsFor(activeViewId),

@@ -9,7 +9,6 @@ import {
 } from "@plugins/tasks/plugins/tasks-core/core";
 import {
   combineResources,
-  foldResource,
   type ResourceReadiness,
 } from "@plugins/primitives/plugins/live-state/web";
 import { useOptimisticResource } from "@plugins/primitives/plugins/optimistic-mutation/web";
@@ -18,6 +17,7 @@ import {
   useLivePagesPaging,
   type DataViewPaging,
 } from "@plugins/primitives/plugins/data-view/web";
+import type { ViewState } from "@plugins/primitives/plugins/data-view/core";
 import {
   queueRanks,
   reorderQueue,
@@ -100,8 +100,10 @@ type HeldDisplay = { from: QueueDisplay; display: QueueDisplay };
  * Queue, Working, Lost, Unranked, Disconnected, Done).
  * Task-group members are emitted representative-first so the aggregate entry's key
  * equals the representative id (selection-highlight parity with the classic view).
+ * `view` is the active view the rows are shown under: the Done read pages by
+ * its filter.
  */
-export function useQueueRows(): {
+export function useQueueRows(view: ViewState): {
   rows: QueueRow[];
   dispatchReorder: (vars: ReorderVars) => void;
   /** The state of the reads behind `rows` — hand it to DataView's `readiness`. */
@@ -118,6 +120,12 @@ export function useQueueRows(): {
   const { pages: gonePages, paging: gonePaging } = useLivePagesPaging(
     conversationsGone,
     GONE_QUERY,
+    // Paged by the view's filter (the Track filter of a sidequest view), so
+    // every page holds Done rows the view shows: filtered only in memory, a
+    // first page whose tail the filter hides would be the last one read. And
+    // how many match in all — the Done section's exact count before every
+    // page is loaded (`uniform`: every ended conversation is a "done" row).
+    { narrowBy: view, total: true },
   );
   const goneResult = useMemo(
     () =>
@@ -126,17 +134,6 @@ export function useQueueRows(): {
         : gonePages,
     [gonePages],
   );
-  // How many have ended in all — the Done section's exact count before every
-  // page is loaded: every ended conversation is a "done" row, so grouped by
-  // `section` the unloaded ones land in Done (`uniform`).
-  const goneCount = useLive(conversationsGone, GONE_COUNT);
-  // Not known yet (or failed with nothing seen): no total, so Done reads as
-  // the lower bound it still is.
-  const goneTotal = foldResource(goneCount, {
-    ready: (n) => n,
-    loading: () => null,
-    error: (_error, stale) => stale ?? null,
-  });
   const paging = useMemo(
     (): DataViewPaging<QueueRow> | undefined =>
       gonePaging === null
@@ -145,11 +142,11 @@ export function useQueueRows(): {
             ...gonePaging,
             isPaged: (r: QueueRow) => r.section === "done",
             total:
-              goneTotal === null
+              gonePaging.total == null
                 ? null
-                : { count: goneTotal, uniform: GONE_UNIFORM },
+                : { ...gonePaging.total, uniform: GONE_UNIFORM },
           },
-    [gonePaging, goneTotal],
+    [gonePaging],
   );
   const tasksResult = useLive(taskRows);
 
@@ -402,8 +399,6 @@ export function useQueueRows(): {
 
 // The pages' query: the collection's default order, every ended conversation.
 const GONE_QUERY = {};
-// The same set's total.
-const GONE_COUNT = { count: true } as const;
 // The fields every Done row shares a value of.
 const GONE_UNIFORM: readonly string[] = ["section"];
 

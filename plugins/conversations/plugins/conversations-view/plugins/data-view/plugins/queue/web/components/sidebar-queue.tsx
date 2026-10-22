@@ -29,10 +29,11 @@ import {
  */
 export function QueueSource({
   hostProps,
+  view,
   render,
 }: DataViewSourceProps<ConversationSidebarProps>): ReactElement {
   const { activeId, linkTo, onCloseConversation } = hostProps;
-  const { rows, dispatchReorder, readiness, paging } = useQueueRows();
+  const { rows, dispatchReorder, readiness, paging } = useQueueRows(view);
   // Every accessor below keeps its identity across renders (module constants,
   // or memoized on what they close over): the list view memoizes each row on
   // them, so a fresh closure here would re-render every row of the queue.

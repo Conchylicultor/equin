@@ -141,6 +141,7 @@ export function DataViewSwitcher<THostProps>(
           activeSource as unknown as Contribution,
           {
             hostProps,
+            view: readyModel.stateFor(activeInstance.instance.id),
             // The host consumes the bundle at `unknown` row space — the same
             // documented cast boundary as field extensions (the contributor keeps
             // full `TRow` typing; the shared body machinery is row-type-erased).

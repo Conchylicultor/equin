@@ -17279,7 +17279,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/data-view.useLivePagesPaging`
                   - `primitives/icon-button.IconButton`
                   - `primitives/live-state.combineResources`
-                  - `primitives/live-state.foldResource`
                   - `primitives/live-state.ResourceReadiness`
                   - `primitives/optimistic-mutation.useOptimisticResource`
         - **`grouped`** — Registers the conversation-group id kind (`cgrp-…`) in the browser's id registry, the twin of the server registration. Conversation-group persistence (tables + addMemberToGroup) backing the improve plugin's group-on-launch. No UI.

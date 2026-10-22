@@ -172,3 +172,43 @@ export function useViewFilter<TRow>(args: {
       : { kind: "error", error: r.error };
   }, [group, fields, resolveOperatorSet, filterable, now]);
 }
+
+/**
+ * The view's filter lowered as a WIDENING of it, for a paged read whose rows
+ * the view still filters in memory: a rule the read's columns cannot run is
+ * dropped (an `and` keeps its other children, an `or` holding one keeps
+ * nothing), so the read returns every row the view shows and fewer of those
+ * it hides. `whole` — no rule was dropped: the read IS the view's filter. A
+ * tree the language refuses widens to nothing.
+ */
+export interface WidenedViewFilter {
+  filter: Filter | undefined;
+  whole: boolean;
+}
+
+/** {@link useViewFilter}'s widening twin — same clock, same lowering. */
+export function useWidenedViewFilter<TRow>(args: {
+  group: FilterGroup | null;
+  fields: FieldDef<TRow>[];
+  resolveOperatorSet: ResolveOperatorSet;
+  filterable: Filterable;
+}): WidenedViewFilter {
+  const { group, fields, resolveOperatorSet, filterable } = args;
+  const readsClock = useMemo(
+    () => lowerFilterGroup(group, fields, resolveOperatorSet, 0).readsClock,
+    [group, fields, resolveOperatorSet],
+  );
+  const now = useFilterClock(readsClock);
+  return useMemo(() => {
+    const lowered = lowerFilterGroup(group, fields, resolveOperatorSet, now);
+    try {
+      return {
+        filter: canonicalizeFilter(lowered.filter, filterable),
+        whole: lowered.unavailable.length === 0,
+      };
+    } catch (err) {
+      if (!(err instanceof FilterError)) throw err;
+      return { filter: undefined, whole: false };
+    }
+  }, [group, fields, resolveOperatorSet, filterable, now]);
+}

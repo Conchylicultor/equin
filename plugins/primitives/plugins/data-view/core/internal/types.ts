@@ -1636,6 +1636,12 @@ export interface DataViewPagingTotal {
    * always do.
    */
   uniform?: readonly string[];
+  /**
+   * The read was narrowed by the view's whole filter (`useLivePagesPaging`'s
+   * `narrowBy`), so `count` is how many rows the view shows — it stands
+   * under that filter too, until a search hides rows of it.
+   */
+  underFilter?: boolean;
 }
 
 /** A read failing under rows that stay on screen — a notice above them, with its own Retry. */
@@ -1726,7 +1732,8 @@ export interface DataViewPaging<TRow> {
   /**
    * The read's known total, if any: section counts holding its rows read
    * exact rather than "N+" before every page is loaded (while no search or
-   * filter hides rows of it). Absent or `null`: unknown.
+   * filter hides rows of it — a filter the total is `underFilter` of does
+   * not). Absent or `null`: unknown.
    */
   total?: DataViewPagingTotal | null;
   /**

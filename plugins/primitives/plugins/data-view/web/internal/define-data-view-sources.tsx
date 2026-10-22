@@ -4,6 +4,7 @@ import {
   defineRenderSlot,
   type RenderSlot,
 } from "@plugins/primitives/plugins/slot-render/web";
+import type { ViewState } from "../../core";
 import type { DataViewSourceBundle } from "./body-types";
 
 /**
@@ -15,6 +16,12 @@ export interface DataViewSourceProps<THostProps> {
   /** The host surface's own props, threaded verbatim to every source (ids,
    *  callbacks, selection — whatever the consumer's sources need). */
   hostProps: THostProps;
+  /**
+   * The active view's state (sort, filter, search, …). A source deriving its
+   * rows in memory from a paged read hands it to `useLivePagesPaging`'s
+   * `narrowBy`, so the read pages by the view's filter.
+   */
+  view: ViewState;
   /**
    * Hand the host this source's data bundle. **MUST always be called** — while
    * data is loading pass `{ rows: [], loading: true, … }`; never early-return
