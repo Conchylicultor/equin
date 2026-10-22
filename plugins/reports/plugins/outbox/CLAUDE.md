@@ -71,8 +71,14 @@ report is about. Main runs `git diff --name-only <mergeBase> main -- <paths>`:
   regression a report should name.
 - **Something changed** → dropped, with one log line naming the files: main may
   already have fixed it.
-- **git fails** (a merge-base main does not have, a timeout) → a crash-style
-  report. "Cannot tell" is never evidence for either verdict.
+- **The merge-base is not a commit of this repository** → dropped, with one log
+  line. Main's history never loses a commit and every worktree shares main's
+  refs, so the writer's `main` was another repository's: the outbox is
+  host-global, and a temp clone (`upstream`'s migration-journey e2e runs
+  `./singularity check` in one) or a second clone writes into it too. Main can
+  judge, and fix, only its own code. Checked first (`git cat-file -e`).
+- **git fails** otherwise (a git error, a timeout) → a crash-style report.
+  "Cannot tell" is never evidence for either verdict.
 - **Empty `paths`** → filed. No code is named, so there is nothing to compare.
 
 Blind spot: a fix made OUTSIDE the named files (say, in a shared runner) still
@@ -86,7 +92,7 @@ pass the same `code` field.
 
 ## Plugin reference
 
-- Description: Report outbox drain: on main only, records every report a process with no server (a CLI run, a supervised child) wrote into the host-global outbox — once at boot, then on each file change (no polling). An entry whose code main has changed since the writer's branch point (git diff of its paths) is dropped and logged; an entry that cannot be filed (bad JSON, unknown kind, rejected payload, undecidable staleness) becomes a server-caught crash report and is deleted.
+- Description: Report outbox drain: on main only, records every report a process with no server (a CLI run, a supervised child) wrote into the host-global outbox — once at boot, then on each file change (no polling). An entry whose code main has changed since the writer's branch point (git diff of its paths) is dropped and logged, as is one whose branch point is not a commit of this repository (written from another clone); an entry that cannot be filed (bad JSON, unknown kind, rejected payload, undecidable staleness) becomes a server-caught crash report and is deleted.
 - Server:
   - Uses:
     - `infra/file-watcher.defineFileWatcher`

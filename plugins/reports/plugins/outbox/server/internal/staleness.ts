@@ -7,9 +7,16 @@ const DIFF_TIMEOUT_MS = 30_000;
 /** Whether an entry's code still stands on main as its writer saw it. */
 export type StalenessVerdict =
   /** Main has not touched the entry's files since its branch point: file it. */
-  | { stale: false }
+  | { kind: "current" }
   /** Main changed these of the entry's files since its branch point: drop it. */
-  | { stale: true; changed: string[] };
+  | { kind: "stale"; changed: string[] }
+  /**
+   * The branch point is not a commit of this repository, so the writer's
+   * `main` is another repository's (an e2e's temp clone, a second clone on the
+   * machine — the outbox is host-global): drop it. Main can judge, and fix,
+   * only its own code.
+   */
+  | { kind: "foreign" };
 
 /**
  * The staleness rule: has main changed any of `code.paths` between the writer's
@@ -25,10 +32,13 @@ export type StalenessVerdict =
  * an older branch file, until that branch rebases — the rule errs toward
  * reporting, never toward silence.
  *
+ * A merge-base this repository does not have is not "cannot tell": main's
+ * history never loses a commit and every worktree shares main's refs, so it was
+ * read in ANOTHER repository — `foreign`, decided before the diff.
+ *
  * `--name-only` rather than `--quiet`: the same question, and the answer names
- * the files a drop is logged with. Any failure — an unknown commit (a merge-base
- * main's repo does not have), a timeout — THROWS: "cannot tell" is never
- * evidence for either verdict.
+ * the files a drop is logged with. Any other failure — a git error, a timeout —
+ * THROWS: "cannot tell" is never evidence for either verdict.
  */
 export async function checkStaleness(
   code: OutboxCode,
@@ -36,7 +46,8 @@ export async function checkStaleness(
 ): Promise<StalenessVerdict> {
   // No paths name no code: nothing to compare. (An empty pathspec would diff
   // the whole tree, and drop nearly everything.)
-  if (code.paths.length === 0) return { stale: false };
+  if (code.paths.length === 0) return { kind: "current" };
+  if (!(await hasObject(code.mergeBase, repo.root))) return { kind: "foreign" };
   const argv = [
     "git",
     "diff",
@@ -64,5 +75,29 @@ export async function checkStaleness(
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
-  return changed.length === 0 ? { stale: false } : { stale: true, changed };
+  return changed.length === 0
+    ? { kind: "current" }
+    : { kind: "stale", changed };
+}
+
+/**
+ * Whether `repo` holds object `sha`: `git cat-file -e` exits 0 when it does and
+ * 1 — silently — when it does not. Anything else is a git failure, and throws.
+ */
+async function hasObject(sha: string, root: string): Promise<boolean> {
+  const argv = ["git", "cat-file", "-e", sha];
+  const result = await spawnCaptured(argv, {
+    cwd: root,
+    timeoutMs: DIFF_TIMEOUT_MS,
+  });
+  if (result.timedOut) {
+    throw new Error(
+      `staleness check timed out after ${DIFF_TIMEOUT_MS} ms: ${argv.join(" ")}`,
+    );
+  }
+  if (result.exitCode === 0) return true;
+  if (result.exitCode === 1 && result.stderr.trim() === "") return false;
+  throw new Error(
+    `staleness check failed (exit ${result.exitCode}): ${argv.join(" ")}\n${result.stderr.trim()}`,
+  );
 }

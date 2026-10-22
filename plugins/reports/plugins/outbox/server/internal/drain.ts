@@ -151,8 +151,16 @@ async function settleEntry(
 
   const staleness = entry.code
     ? await deps.checkStaleness(entry.code)
-    : ({ stale: false } as const);
-  if (staleness.stale) {
+    : ({ kind: "current" } as const);
+  if (staleness.kind === "foreign") {
+    deps.log(
+      `[report-outbox] dropped a "${entry.kind}" report from ${entry.writer.checkout} ` +
+        `(pid ${entry.writer.pid}): its branch point ${entry.code?.mergeBase.slice(0, 12)} ` +
+        "is not a commit of this repository, so it is about another repository's code",
+    );
+    return "dropped";
+  }
+  if (staleness.kind === "stale") {
     deps.log(
       `[report-outbox] dropped a "${entry.kind}" report from ${entry.writer.checkout} ` +
         `(pid ${entry.writer.pid}): main changed ${staleness.changed.join(", ")} ` +

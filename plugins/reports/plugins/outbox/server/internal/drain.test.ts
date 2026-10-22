@@ -52,7 +52,7 @@ function harness(
         }),
       isKnownKind: (kind) => (overrides.knownKinds ?? ["k"]).includes(kind),
       checkStaleness:
-        overrides.staleness ?? (async () => ({ stale: false }) as const),
+        overrides.staleness ?? (async () => ({ kind: "current" }) as const),
       log: (line) => logs.push(line),
       now: overrides.now,
     },
@@ -99,12 +99,33 @@ describe("drainOutbox", () => {
       { dir },
     );
     const { deps, recorded, logs } = harness({
-      staleness: async () => ({ stale: true, changed: ["a.ts"] }),
+      staleness: async () => ({ kind: "stale", changed: ["a.ts"] }),
     });
     const summary = await drainOutbox(deps);
     expect(summary.dropped).toHaveLength(1);
     expect(recorded).toHaveLength(0);
     expect(logs.join("\n")).toContain("main changed a.ts");
+    expect(await readdir(dir)).toHaveLength(0);
+  });
+
+  test("an entry from another repository is dropped, never a failure report", async () => {
+    await fileReportFromProcess(
+      {
+        kind: "k",
+        message: "m",
+        data: {},
+        code: { mergeBase: MERGE_BASE, paths: ["a.ts"] },
+      },
+      { dir },
+    );
+    const { deps, recorded, failures, logs } = harness({
+      staleness: async () => ({ kind: "foreign" }),
+    });
+    const summary = await drainOutbox(deps);
+    expect(summary.dropped).toHaveLength(1);
+    expect(recorded).toHaveLength(0);
+    expect(failures).toHaveLength(0);
+    expect(logs.join("\n")).toContain("not a commit of this repository");
     expect(await readdir(dir)).toHaveLength(0);
   });
 

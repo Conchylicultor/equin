@@ -66,13 +66,13 @@ describe("checkStaleness", () => {
         { mergeBase, paths: ["untouched.ts", "stack.ts"] },
         repo(),
       ),
-    ).toEqual({ stale: true, changed: ["stack.ts"] });
+    ).toEqual({ kind: "stale", changed: ["stack.ts"] });
   });
 
   test("main left the stack's files alone → filed", async () => {
     expect(
       await checkStaleness({ mergeBase, paths: ["untouched.ts"] }, repo()),
-    ).toEqual({ stale: false });
+    ).toEqual({ kind: "current" });
   });
 
   test("a change only the writer's branch made (even a new file) → filed", async () => {
@@ -81,21 +81,30 @@ describe("checkStaleness", () => {
         { mergeBase, paths: ["branch-only.ts", "new.ts"] },
         repo(),
       ),
-    ).toEqual({ stale: false });
+    ).toEqual({ kind: "current" });
   });
 
   test("no paths → filed, never a whole-tree diff", async () => {
     expect(await checkStaleness({ mergeBase, paths: [] }, repo())).toEqual({
-      stale: false,
+      kind: "current",
     });
   });
 
-  test("a merge-base main does not have → throws, never a verdict", async () => {
-    let thrown: unknown = null;
-    try {
+  test("a merge-base this repository does not have → foreign, never a diff", async () => {
+    expect(
       await checkStaleness(
         { mergeBase: "c".repeat(40), paths: ["stack.ts"] },
         repo(),
+      ),
+    ).toEqual({ kind: "foreign" });
+  });
+
+  test("a git failure → throws, never a verdict", async () => {
+    let thrown: unknown = null;
+    try {
+      await checkStaleness(
+        { mergeBase, paths: ["stack.ts"] },
+        { root, mainRef: "no-such-ref" },
       );
     } catch (error) {
       thrown = error;
