@@ -54,8 +54,9 @@ presentation (flipping frames keeps them); they are not saved.
 `internal/use-pointer-idle.ts`): after 0.8 s with no pointer move, press, wheel
 or key over the presentation it fades out, so what it covers can be seen —
 the video-player rule. The frame is an iframe, whose events never reach our
-document, so every same-origin document loaded under the box is watched too
-(attached on its `load`, captured at the box). It stays up while the pointer
+document, so every same-origin document loaded under the box is watched too,
+at any depth — a prototype's own nested iframe included (attached on its
+`load`, captured at the box and at every watched document). It stays up while the pointer
 rests on the chrome itself, while a chrome control holds keyboard focus, and
 while a popup opened from it (the version list, the size menu) is showing.
 

@@ -28,11 +28,13 @@ const IN_USE = `[${PRESENT_CHROME_ATTR}]:hover, [${PRESENT_CHROME_ATTR}]:has(:fo
  *
  * The frame is a prototype document in an iframe, and pointer events inside an
  * iframe never reach its parent document. So besides `root`, every same-origin
- * document loaded under it is watched too — found on its `load` (captured at
- * `root`: `load` does not bubble, but it does pass through ancestors' capture
- * phase), which also re-attaches when a frame swaps or reloads its document. A
- * cross-origin frame (a source frame on another origin) cannot be watched; over
- * it the chrome wakes again when the pointer leaves it.
+ * document loaded under it is watched too, at any depth (a prototype that opens
+ * a full-page iframe of its own) — found on its `load` (captured at `root` and
+ * at every watched document: `load` does not bubble, but it does pass through
+ * ancestors' capture phase within one document), which also re-attaches when a
+ * frame swaps or reloads its document. A cross-origin frame (a source frame on
+ * another origin) cannot be watched; over it the chrome wakes again when the
+ * pointer leaves it.
  *
  * Never idle while `hold` (a popup opened from the chrome is showing) or while
  * the chrome is in use (`IN_USE`); the next activity re-arms the countdown.
@@ -57,30 +59,34 @@ export function usePointerIdle(
       timer = setTimeout(settle, IDLE_MS);
     };
 
-    const targets = new Set<EventTarget>();
-    const listen = (target: EventTarget) => {
+    const targets = new Set<HTMLElement | Document>();
+    // `contentDocument` is null for a cross-origin frame: nothing to watch.
+    const watchFrame = (frame: HTMLIFrameElement) => {
+      if (frame.contentDocument) listen(frame.contentDocument);
+    };
+    // Not `instanceof HTMLIFrameElement`: a nested frame's element belongs to
+    // its own document's realm, whose constructor is not ours.
+    const onLoad = (e: Event) => {
+      const frame = e.target as Element | null;
+      if (frame?.tagName === "IFRAME") watchFrame(frame as HTMLIFrameElement);
+    };
+    // Watches `target` and, recursively, every frame loaded under it.
+    function listen(target: HTMLElement | Document) {
       if (targets.has(target)) return;
       targets.add(target);
       for (const type of ACTIVITY) {
         target.addEventListener(type, wake, { capture: true, passive: true });
       }
-    };
-    // `contentDocument` is null for a cross-origin frame: nothing to watch.
-    const watchFrame = (frame: HTMLIFrameElement) => {
-      if (frame.contentDocument) listen(frame.contentDocument);
-    };
-    const onLoad = (e: Event) => {
-      if (e.target instanceof HTMLIFrameElement) watchFrame(e.target);
-    };
+      target.addEventListener("load", onLoad, true);
+      target.querySelectorAll("iframe").forEach(watchFrame);
+    }
 
     listen(root);
-    root.querySelectorAll("iframe").forEach(watchFrame);
-    root.addEventListener("load", onLoad, true);
     wake();
     return () => {
       clearTimeout(timer);
-      root.removeEventListener("load", onLoad, true);
       for (const target of targets) {
+        target.removeEventListener("load", onLoad, true);
         for (const type of ACTIVITY) {
           target.removeEventListener(type, wake, { capture: true });
         }
