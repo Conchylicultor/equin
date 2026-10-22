@@ -182,7 +182,16 @@ function PopoverContent({
           side={side}
           sideOffset={sideOffset}
           anchor={anchor}
-          {...(collisionAvoidance === undefined ? {} : { collisionAvoidance })}
+          // Never fall back to the perpendicular axis. base-ui's default
+          // (`fallbackAxisSide: "end"`) re-flips a panel clamped to its
+          // `--available-height` whenever its content grows (a row expanding),
+          // and a bottom popover under a top-bar trigger then jumps beside the
+          // trigger at full viewport height. The panel always fits and scrolls
+          // (`OverlayPanel`), so it keeps its side and scrolls instead.
+          collisionAvoidance={{
+            fallbackAxisSide: "none",
+            ...collisionAvoidance,
+          }}
         >
           {/* The popup IS the shared panel: base-ui owns the state machine, and
             `render` hands it `OverlayPanel` as the element to clone its merged
