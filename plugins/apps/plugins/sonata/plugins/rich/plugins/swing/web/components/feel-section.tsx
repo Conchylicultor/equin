@@ -34,8 +34,10 @@ export function useFeelAvailable(): boolean {
 }
 
 /**
- * Header action: swing on / off. Off plays straight but keeps the feel; on
- * plays it again — the last one chosen, else the song's own, else 8ths 2:1.
+ * Header action: the feel playing now, and swing on / off. Off plays straight
+ * but keeps the feel; on plays it again — the last one chosen, else the song's
+ * own, else 8ths 2:1. The section's only header item, so the inspector chrome
+ * shows it collapsed and open alike — the switch never hides behind a click.
  */
 export function FeelSwitch() {
   const swing = useSwing();
@@ -52,30 +54,24 @@ export function FeelSwitch() {
     );
   const { on, feel } = swing;
   return (
-    <WithTooltip
-      content={
-        on
-          ? "Playing swung. Turn off to hear the song straight."
-          : "Swing the off-beats when playing. The notation stays straight."
-      }
-    >
-      <Switch
-        checked={on}
-        onCheckedChange={(next) => swing.set(next, feel)}
-        aria-label="Swing"
-      />
-    </WithTooltip>
-  );
-}
-
-/** Header summary: the feel playing now. */
-export function FeelSummary() {
-  const swing = useSwing();
-  if (swing.kind !== "ready") return null;
-  return (
-    <Text variant="caption" tone="muted">
-      {swing.on ? swingLabel(swing.feel) : "Straight"}
-    </Text>
+    <Stack direction="row" gap="sm" align="center">
+      <Text variant="caption" tone="muted">
+        {on ? swingLabel(feel) : "Straight"}
+      </Text>
+      <WithTooltip
+        content={
+          on
+            ? "Playing swung. Turn off to hear the song straight."
+            : "Swing the off-beats when playing. The notation stays straight."
+        }
+      >
+        <Switch
+          checked={on}
+          onCheckedChange={(next) => swing.set(next, feel)}
+          aria-label="Swing"
+        />
+      </WithTooltip>
+    </Stack>
   );
 }
 
