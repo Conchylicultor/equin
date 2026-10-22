@@ -43,6 +43,28 @@ const BUDGET_FIELD: Record<PlacesSku, keyof MapsUsageBudgets | null> = {
   "place-photo": "placePhoto",
 };
 
+/** This month's Places budget, as a reader asks it (`useMapsBudget` / `mapsBudgetNow`). */
+export interface MapsBudget {
+  /** Whether one more call of `sku` stays within this month's budget. */
+  withinBudget: (sku: PlacesSku) => boolean;
+  /** When the month — and every count — starts over (ISO). */
+  resetsAt: string;
+}
+
+/** `sku`'s budget field, or `null` for an IDs-only SKU (free, no cap). */
+export function budgetField(sku: PlacesSku): keyof MapsUsageBudgets | null {
+  return BUDGET_FIELD[sku];
+}
+
+/** This month's count of `sku` — zero once `resetsAt` has passed. */
+export function monthCalls(
+  usage: MapsMonthUsage,
+  sku: PlacesSku,
+  now: Date,
+): number {
+  return now >= new Date(usage.resetsAt) ? 0 : (usage.calls[sku] ?? 0);
+}
+
 /** Whether one more call of `sku` stays within this month's budget. */
 export function withinBudget(
   usage: MapsMonthUsage,
@@ -52,6 +74,5 @@ export function withinBudget(
 ): boolean {
   const field = BUDGET_FIELD[sku];
   if (field === null) return true;
-  const calls = now >= new Date(usage.resetsAt) ? 0 : (usage.calls[sku] ?? 0);
-  return calls < budgets[field];
+  return monthCalls(usage, sku, now) < budgets[field];
 }

@@ -44,7 +44,7 @@ export const searchTextTool = Mcp.tool({
   async handler({ query }, { conversationId }) {
     const bias = await boundsOf(conversationId);
     // The same downgrade ladder as the search bar: never past the month's free allowance.
-    const rung = searchRung(await mapsBudgetNow());
+    const rung = searchRung((await mapsBudgetNow()).withinBudget);
     if (rung === "names") {
       throw new Error(
         "This month's free Google search quota is used up: tell the user you cannot search Google until next month.",

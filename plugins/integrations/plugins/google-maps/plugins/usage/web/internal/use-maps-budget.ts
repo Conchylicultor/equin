@@ -7,15 +7,12 @@ import {
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import type { PlacesSku } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
-import { mapsMonthUsage, mapsUsageConfig, withinBudget } from "../../core";
-
-/** This month's Places budget, as a reader asks it. */
-export interface MapsBudget {
-  /** Whether one more call of `sku` stays within this month's budget. */
-  withinBudget: (sku: PlacesSku) => boolean;
-  /** When the month — and every count — starts over (ISO). */
-  resetsAt: string;
-}
+import {
+  mapsMonthUsage,
+  mapsUsageConfig,
+  withinBudget,
+  type MapsBudget,
+} from "../../core";
 
 /**
  * This month's live Places counts held against the configured budgets —

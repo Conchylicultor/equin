@@ -90,6 +90,7 @@ and the editor.
     - `conversations/conversation-view/launch-prompts`
     - `conversations/conversation-view/prompt-templates`
     - `conversations/preprompts`
+    - `integrations/google-maps/usage`
     - `stats/commits`
     - `tasks/launch-options`
 

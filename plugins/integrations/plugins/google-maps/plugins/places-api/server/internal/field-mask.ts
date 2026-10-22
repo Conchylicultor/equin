@@ -34,36 +34,5 @@ export const PLACE_DETAILS_FIELD_MASK = [
   "businessStatus",
 ].join(",");
 
-/**
- * The RICH Place Details field mask — what a place card shows beyond the
- * snapshot: photos, the regular week (and the place's UTC offset to read it
- * in), rating and its count, price level, phone, website, Google's summary.
- *
- * **Enterprise tier** (with Atmosphere for `editorialSummary`): the most
- * expensive Place Details SKU, so it is its own call, made only when a card
- * opens and cached by the caller for a day — never folded into
- * `PLACE_DETAILS_FIELD_MASK`, which save and the monthly refresh pay for.
- * Each photo's bytes are a separate Place Photo call on top. Re-check Google's
- * SKU table before relying on these tiers.
- */
-export const PLACE_RICH_DETAILS_FIELD_MASK = [
-  "id",
-  "photos",
-  "regularOpeningHours",
-  "utcOffsetMinutes",
-  "rating",
-  "userRatingCount",
-  "priceLevel",
-  "internationalPhoneNumber",
-  "websiteUri",
-  "editorialSummary",
-].join(",");
-
-/**
- * The PHOTOS-ONLY Place Details field mask — what a gallery thumbnail needs:
- * the place's photo names, nothing else. `photos` sits in the **IDs Only**
- * tier (no charge), so asking it for every saved place is free; only the
- * Place Photo call that follows is billed. Re-check Google's SKU table before
- * relying on this tier.
- */
-export const PLACE_PHOTOS_FIELD_MASK = ["id", "photos"].join(",");
+// The rich-details masks (a place card's tiers) and the photos-only mask live
+// in core (`RICH_DETAILS_MASKS`), where the budget ladder derives their SKUs.

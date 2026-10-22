@@ -69,6 +69,14 @@ export function GooglePlaceCard({
     details.status === "ready" && details.data.kind === "ok"
       ? details.data.details
       : null;
+  // Past the details budget the answer is photos alone: the search hit's own
+  // rating and hours (from a rich search) stand in for them.
+  const facts =
+    details.status === "ready" &&
+    details.data.kind === "ok" &&
+    details.data.tier !== "photos"
+      ? details.data.details
+      : null;
   const { result, visual } = hit;
   const closed =
     result.businessStatus !== undefined &&
@@ -116,7 +124,7 @@ export function GooglePlaceCard({
                   {hit.line}
                 </Text>
               )}
-              <RatingLine details={rich ?? result} />
+              <RatingLine details={facts ?? result} />
               {closed ? (
                 <Cluster>
                   <Badge
@@ -135,7 +143,7 @@ export function GooglePlaceCard({
               ) : details.status === "loading" ? (
                 <Loading variant="text" label="Asking Google…" />
               ) : (
-                <OpenNowLine details={rich ?? result} />
+                <OpenNowLine details={facts ?? result} />
               )}
             </Stack>
             {pick === null ? null : <PickNote pick={pick} />}

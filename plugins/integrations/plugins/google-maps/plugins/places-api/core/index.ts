@@ -18,6 +18,10 @@ export {
   type PlacePhoto,
   PlaceRichDetailsSchema,
   type PlaceRichDetails,
+  RICH_DETAILS_TIERS,
+  RICH_DETAILS_MASKS,
+  richDetailsSku,
+  type RichDetailsTier,
 } from "./internal/rich-details";
 export { openState, type OpenState } from "./internal/open-state";
 export {

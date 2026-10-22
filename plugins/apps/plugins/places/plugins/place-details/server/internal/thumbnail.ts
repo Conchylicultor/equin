@@ -6,6 +6,7 @@ import {
   placeFirstPhotoName,
   placePhoto,
 } from "@plugins/integrations/plugins/google-maps/plugins/places-api/server";
+import { mapsBudgetNow } from "@plugins/integrations/plugins/google-maps/plugins/usage/server";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import { GOOGLE_PLACE_ID_PATTERN } from "../../core";
 import { placeThumbnailDir } from "../../data-dirs";
@@ -26,6 +27,7 @@ const EXTENSIONS: Record<string, string> = {
 type Thumbnail =
   | { kind: "image"; file: ReturnType<typeof Bun.file> }
   | { kind: "no-photo" }
+  | { kind: "photos-paused" }
   | { kind: "maps-not-configured" };
 
 // Concurrent asks for one place (a gallery opened in two tabs) share one fetch.
@@ -53,6 +55,11 @@ export async function handlePlaceThumbnail(req: Request): Promise<Response> {
         status: 404,
         headers: { "cache-control": "private, max-age=86400" },
       });
+    case "photos-paused":
+      // Not kept (no `.none`, no browser cache): next month it is fetched.
+      return new Response("this month's free Google photo quota is used", {
+        status: 429,
+      });
     case "maps-not-configured":
       return new Response("Google Maps is not set up", { status: 503 });
   }
@@ -64,6 +71,9 @@ async function thumbnail(id: string): Promise<Thumbnail> {
 
   const maps = await getPlacesClient();
   if (!maps.ok) return { kind: "maps-not-configured" };
+  if (!(await mapsBudgetNow()).withinBudget("place-photo")) {
+    return { kind: "photos-paused" };
+  }
   let image: Response;
   try {
     const name = await placeFirstPhotoName(maps.client, id);

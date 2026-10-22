@@ -53,6 +53,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "events.sources", pluginId: "apps.events.sources" },
   { id: "file-explorer.places", pluginId: "apps.file-explorer.places" },
   { id: "file-explorer.tree", pluginId: "apps.file-explorer.browser" },
+  { id: "google-maps.usage", pluginId: "integrations.google-maps.usage" },
   { id: "history.versions", pluginId: "history.dialog" },
   { id: "home.apps", pluginId: "apps.home.app-cards" },
   { id: "infra.background.catalog", pluginId: "infra.background.catalog" },

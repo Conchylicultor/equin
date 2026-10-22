@@ -10,10 +10,7 @@ export {
 } from "./internal/search-text";
 export { placeRichDetails } from "./internal/rich-details";
 export { placePhoto, placeFirstPhotoName } from "./internal/photo";
-export {
-  PLACE_DETAILS_FIELD_MASK,
-  PLACE_RICH_DETAILS_FIELD_MASK,
-} from "./internal/field-mask";
+export { PLACE_DETAILS_FIELD_MASK } from "./internal/field-mask";
 
 export default {
   description:

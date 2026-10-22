@@ -3,7 +3,7 @@ import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 
 /**
  * How many calls of each billed Places SKU a month may make before a caller
- * that asks (`placesMonthUsage(...).withinBudget`) steps down to a cheaper
+ * that asks (`MapsBudget.withinBudget`) steps down to a cheaper
  * call. Each default is Google's free monthly allowance for that SKU minus a
  * margin — for the calls made with the same key outside this app, and for the
  * billing month being Pacific time. Google's IDs-only SKUs are free without a
@@ -37,14 +37,15 @@ export const mapsUsageConfig = defineConfig({
       default: 950,
       min: 0,
       label: "Place Details Enterprise / month",
-      description: "Google's free allowance: 1,000.",
+      description:
+        "Google's free allowance: 1,000. A place card's rating, hours, price, phone and website; past it the card shows photos and its stored facts.",
     }),
     placeDetailsEnterpriseAtmosphere: intField({
       default: 950,
       min: 0,
       label: "Place Details Enterprise + Atmosphere / month",
       description:
-        "Google's free allowance: 1,000. A place card's rich details (photos, hours, rating, summary).",
+        "Google's free allowance: 1,000. A place card's rich details with Google's summary; past it the card drops the summary.",
     }),
     textSearchPro: intField({
       default: 4800,
@@ -58,7 +59,7 @@ export const mapsUsageConfig = defineConfig({
       min: 0,
       label: "Text Search Enterprise / month",
       description:
-        "Google's free allowance: 1,000. The Places search with ratings, prices and opening hours.",
+        "Google's free allowance: 1,000. The Places search with ratings, prices and opening hours; past it the search drops them.",
     }),
     textSearchEnterpriseAtmosphere: intField({
       default: 950,
@@ -70,7 +71,8 @@ export const mapsUsageConfig = defineConfig({
       default: 950,
       min: 0,
       label: "Place Photos / month",
-      description: "Google's free allowance: 1,000.",
+      description:
+        "Google's free allowance: 1,000. Card photos and new gallery thumbnails; past it no new photo is fetched.",
     }),
   },
 });

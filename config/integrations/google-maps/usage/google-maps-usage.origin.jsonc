@@ -6,16 +6,16 @@
   "placeDetailsEssentials": 9500,
   // Google's free allowance: 5,000. Saving a place, the monthly refresh, the page place block.
   "placeDetailsPro": 4800,
-  // Google's free allowance: 1,000.
+  // Google's free allowance: 1,000. A place card's rating, hours, price, phone and website; past it the card shows photos and its stored facts.
   "placeDetailsEnterprise": 950,
-  // Google's free allowance: 1,000. A place card's rich details (photos, hours, rating, summary).
+  // Google's free allowance: 1,000. A place card's rich details with Google's summary; past it the card drops the summary.
   "placeDetailsEnterpriseAtmosphere": 950,
   // Google's free allowance: 5,000. The Places search without ratings, and the Mapstr import.
   "textSearchPro": 4800,
-  // Google's free allowance: 1,000. The Places search with ratings, prices and opening hours.
+  // Google's free allowance: 1,000. The Places search with ratings, prices and opening hours; past it the search drops them.
   "textSearchEnterprise": 950,
   // Google's free allowance: 1,000.
   "textSearchEnterpriseAtmosphere": 950,
-  // Google's free allowance: 1,000.
+  // Google's free allowance: 1,000. Card photos and new gallery thumbnails; past it no new photo is fetched.
   "placePhoto": 950
 }

@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { skuFor } from "./sku";
+import { richDetailsSku } from "./rich-details";
 
 test("a mask is billed at its highest field tier", () => {
   expect(skuFor("place-details", "id,photos")).toBe("place-details-ids");
@@ -27,4 +28,10 @@ test("text search has no Essentials SKU, and sub-fields bill as their parent", (
 
 test("an unknown field throws rather than guessing its price", () => {
   expect(() => skuFor("place-details", "id,reviews")).toThrow(/reviews/);
+});
+
+test("a place card's rich-details tiers step down to free", () => {
+  expect(richDetailsSku("full")).toBe("place-details-enterprise-atmosphere");
+  expect(richDetailsSku("no-summary")).toBe("place-details-enterprise");
+  expect(richDetailsSku("photos")).toBe("place-details-ids");
 });

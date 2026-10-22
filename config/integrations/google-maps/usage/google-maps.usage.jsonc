@@ -1,0 +1,24 @@
+// @hash 6ec84829688d
+{
+  "views": [
+    {
+      "id": "all",
+      "name": "This month",
+      "icon": "speed",
+      // Config order (the SKUs as the budgets list them), free SKUs last.
+      "view": {
+        "type": "table",
+        "properties": [{ "id": "label" }, { "id": "calls" }, { "id": "state" }]
+      }
+    },
+    {
+      "id": "list",
+      "name": "List",
+      "icon": "list",
+      "view": { "type": "list" }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

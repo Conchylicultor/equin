@@ -13,3 +13,4 @@ export {
   placeThumbnailUrl,
   GOOGLE_PLACE_ID_PATTERN,
 } from "./internal/photo";
+export { detailsTier } from "./internal/details-tier";

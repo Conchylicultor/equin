@@ -1,10 +1,10 @@
 import {
   PHOTO_NAME_PATTERN,
   PlacesApiError,
-  skuFor,
+  RICH_DETAILS_MASKS,
+  richDetailsSku,
   type PlacesClient,
 } from "../../core";
-import { PLACE_PHOTOS_FIELD_MASK } from "./field-mask";
 import { PLACES_BASE, placesFetch } from "./request";
 
 /**
@@ -42,7 +42,7 @@ export async function placePhoto(
 /**
  * The name of one place's first photo (Google's own pick, the one its Maps
  * card leads with), or `null` when Google has no photo of it. Asks only for
- * `PLACE_PHOTOS_FIELD_MASK` (IDs Only — free). A refused id throws
+ * the `photos` tier's mask (IDs Only — free). A refused id throws
  * `PlacesApiError`.
  */
 export async function placeFirstPhotoName(
@@ -55,8 +55,8 @@ export async function placeFirstPhotoName(
     client,
     {
       method: "GET",
-      sku: skuFor("place-details", PLACE_PHOTOS_FIELD_MASK),
-      fieldMask: PLACE_PHOTOS_FIELD_MASK,
+      sku: richDetailsSku("photos"),
+      fieldMask: RICH_DETAILS_MASKS.photos,
     },
   );
   const name = body.photos?.[0]?.name;

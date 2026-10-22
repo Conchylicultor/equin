@@ -32,6 +32,7 @@ import {
   mapsHref,
   type MapsLinkPlace,
 } from "../internal/maps-links";
+import { untilDay } from "../internal/until-day";
 import {
   compactCount,
   openLine,
@@ -336,6 +337,29 @@ export function DetailsNotice({
         </Text>
         <MapsAccessAction />
       </Stack>
+    );
+  }
+  if (
+    details.status === "ready" &&
+    details.data.kind === "ok" &&
+    details.data.resumesAt !== undefined
+  ) {
+    const left = [
+      ...(details.data.tier === "photos"
+        ? ["ratings", "hours"]
+        : details.data.tier === "no-summary"
+          ? ["summary"]
+          : []),
+      ...(details.data.photosPaused ? ["photos"] : []),
+    ];
+    const what =
+      left.length === 1
+        ? left[0]!
+        : `${left.slice(0, -1).join(", ")} and ${left.at(-1)!}`;
+    return (
+      <Text variant="caption" tone="muted">
+        {`${what.charAt(0).toUpperCase()}${what.slice(1)} paused until ${untilDay(details.data.resumesAt)} · this month's free Google quota is used`}
+      </Text>
     );
   }
   return null;

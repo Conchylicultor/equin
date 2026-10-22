@@ -14,16 +14,28 @@ own calls.
   `recordPlacesCall`. Places-api records before each request, so the count
   errs high (a margin), never low (a bill). The Mapstr CLI import counts on
   the same table through its DB connection.
-- **`placesMonthUsage(sku)`** → `{ calls, budget, withinBudget, resetsAt }`.
-  The budgets are the `google-maps-usage` config (Settings → Config): each
-  SKU's free allowance minus a margin (calls made with the key outside the
-  app; the PT month). IDs-only SKUs are free without a cap (`budget: null`).
-  `BUDGET_FIELD` is a `Record` over every SKU, so a SKU added to places-api is
-  a type error here until it has a budget.
+- **`MapsBudget`** — `{ withinBudget(sku), resetsAt }`, read live in the
+  browser (`useMapsBudget`) or once on the server (`mapsBudgetNow`). The
+  budgets are the `google-maps-usage` config (Settings → Config): each SKU's
+  free allowance minus a margin (calls made with the key outside the app; the
+  PT month). IDs-only SKUs are free without a cap. `BUDGET_FIELD` is a
+  `Record` over every SKU, so a SKU added to places-api is a type error here
+  until it has a budget.
+- **`budgetRung(ladder, floor, withinBudget)`** — a downgrade ladder as data:
+  the first `{ rung, sku }` step still within budget, else the free floor.
+  Readers: the Places search (`places-core`'s `searchRung`: Text Search
+  Enterprise → Pro → autocomplete names) and the place card's rich details
+  (`place-details`' `detailsTier`: Enterprise + Atmosphere → Enterprise →
+  photos only, each step's SKU derived from its mask). The place photo routes
+  refuse once Place Photo is spent.
 
-The first reader is the Places search bar's downgrade ladder
-(`places-core`'s `searchRung`: Text Search Enterprise → Pro → autocomplete
-names). The place card's rich details are counted but not yet downgraded.
+## The readout
+
+Settings → Accounts → Google Maps → **Usage this month** (an `Auth.Integration`
+row; its badge: within budget / near / N downgraded): a DataView
+(`google-maps.usage`) of every budgeted SKU's calls against its budget, plus
+each free SKU called this month, live, with the month's reset and Edit budgets
+(the config's pane, through `config-link`).
 
 A daily quota cap on the Places API in the Google Cloud console is still the
 hard stop if this count is ever wrong.
@@ -32,17 +44,31 @@ hard stop if this count is ever wrong.
 
 ## Plugin reference
 
-- Description: Registers the Google Maps usage budgets (per-SKU monthly call budgets inside Google's free allowance) for Settings → Config, and reads them against this month's live counts (useMapsBudget). Owns google_maps_usage: every Places call counted per billing month (Pacific time, as Google bills) and SKU, by placesMeter — the meter every server-side PlacesClient carries — and served live as this month's counts (google-maps.usage), which a caller holds against the per-SKU budgets (the google-maps-usage config: Google's free allowance minus a margin) to step down to a cheaper call before it is billed; mapsBudgetNow is the same check read on the server (for a caller with no live value, an agent's tool).
+- Description: Registers the Google Maps usage budgets (per-SKU monthly call budgets inside Google's free allowance) for Settings → Config, and reads them against this month's live counts (useMapsBudget). Contributes the Google Maps 'Usage this month' row of Settings → Accounts: every billed Places SKU's calls against its budget, live, with the month's reset and a link to edit the budgets. Owns google_maps_usage: every Places call counted per billing month (Pacific time, as Google bills) and SKU, by placesMeter — the meter every server-side PlacesClient carries — and served live as this month's counts (google-maps.usage), which a caller holds against the per-SKU budgets (the google-maps-usage config: Google's free allowance minus a margin) to step down to a cheaper call before it is billed; mapsBudgetNow is the same check read on the server (for a caller with no live value, an agent's tool).
 - Web:
-  - Contributes: `ConfigV2.WebRegister` "google-maps-usage"
+  - Contributes:
+    - `ConfigV2.WebRegister` "google-maps-usage"
+    - `Auth.Integration` "Usage this month"
   - Uses:
+    - `auth.Auth`
     - `config_v2.ConfigV2`
     - `config_v2.useConfigResult`
+    - `config_v2/config-link.useConfigLink`
     - `network/live.useLive`
+    - `primitives/css/badge.Badge`
+    - `primitives/css/clip.Clip`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/css/ui-kit.cn`
+    - `primitives/data-view.DataView`
+    - `primitives/data-view.defineDataView`
+    - `primitives/data-view.FieldDef`
+    - `primitives/link-gesture.activationProps`
+    - `primitives/live-state.foldResource`
     - `primitives/live-state.mapResource`
     - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useCombinedResources`
-  - Exports (types): `MapsBudget`
   - Exports (values): `useMapsBudget`
 - Server:
   - Contributes:
@@ -57,6 +83,7 @@ hard stop if this count is ever wrong.
   - Exports (values):
     - `_googleMapsUsage`
     - `mapsBudgetNow`
+    - `mapsBudgetReads`
     - `placesMeter`
   - Resources: `google-maps.usage` (push)
 - Core:
@@ -68,17 +95,30 @@ hard stop if this count is ever wrong.
     - `packages/wall-clock.zoneWallClock`
   - Exports (types):
     - `BillingMonth`
+    - `BudgetStep`
+    - `MapsBudget`
     - `MapsMonthUsage`
     - `MapsUsageBudgets`
   - Exports (values):
     - `billingMonth`
+    - `budgetField`
+    - `budgetRung`
     - `mapsMonthUsage`
     - `MapsMonthUsageSchema`
     - `mapsUsageConfig`
+    - `monthCalls`
     - `withinBudget`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --muted`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/color-palette --warning`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/places/ask`
+    - `apps/places/place-details`
+    - `apps/places/places-core`
     - `apps/places/places-map`
     - `integrations/google-maps`
 

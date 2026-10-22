@@ -3,7 +3,7 @@ import { ConfigV2 } from "@plugins/config_v2/server";
 import { mapsUsageConfig } from "../core";
 import { mapsMonthUsageServed } from "./internal/resource";
 
-export { mapsBudgetNow } from "./internal/resource";
+export { mapsBudgetNow, mapsBudgetReads } from "./internal/resource";
 
 export { _googleMapsUsage } from "./internal/tables";
 export { placesMeter } from "./internal/ledger";

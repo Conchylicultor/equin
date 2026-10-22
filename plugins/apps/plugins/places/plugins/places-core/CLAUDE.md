@@ -113,7 +113,7 @@
     - `PATCH /api/places/tags/:id`
     - `DELETE /api/places/tags/:id`
 - Core:
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×4
     - `integrations/google-maps/places-api` ×4
     - `fields/text/config` ×3
@@ -127,6 +127,7 @@
     - `fields/tags/config.tagsField`
     - `infra/endpoints.defineEndpoint`
     - `infra/entities.entityRef`
+    - `integrations/google-maps/usage.budgetRung`
   - Exports (types):
     - `ChildColorMode`
     - `CreateCustomPlaceBody`

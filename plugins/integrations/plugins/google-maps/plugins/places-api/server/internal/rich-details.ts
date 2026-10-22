@@ -1,10 +1,11 @@
 import {
   PlaceRichDetailsSchema,
-  skuFor,
+  RICH_DETAILS_MASKS,
+  richDetailsSku,
   type PlaceRichDetails,
   type PlacesClient,
+  type RichDetailsTier,
 } from "../../core";
-import { PLACE_RICH_DETAILS_FIELD_MASK } from "./field-mask";
 import { PLACES_BASE, placesFetch } from "./request";
 import { priceLevel } from "./price-level";
 import { openingHours, type OpeningHoursResponse } from "./opening-hours";
@@ -12,7 +13,7 @@ import { openingHours, type OpeningHoursResponse } from "./opening-hours";
 /** At most this many photos are kept: a card shows a strip, not an album. */
 const MAX_PHOTOS = 10;
 
-/** Raw `places.get` response, limited to `PLACE_RICH_DETAILS_FIELD_MASK`. */
+/** Raw `places.get` response, limited to a `RICH_DETAILS_MASKS` mask. */
 interface PlaceRichDetailsResponse {
   photos?: {
     name?: string;
@@ -31,20 +32,22 @@ interface PlaceRichDetailsResponse {
 }
 
 /**
- * The richer details of one place (see `PLACE_RICH_DETAILS_FIELD_MASK` for
- * what they cost). Billed on its own — no session: it is never part of a
- * search. Validated against `PlaceRichDetailsSchema`, so a malformed answer
+ * The richer details of one place, at `tier` (`RICH_DETAILS_TIERS` says what
+ * each asks for and costs). The tier is required: a call cannot default to the
+ * most expensive one. Billed on its own — no session: it is never part of a
+ * search. A field the tier does not ask for is absent. Validated against `PlaceRichDetailsSchema`, so a malformed answer
  * throws rather than drawing a half-true card.
  */
 export async function placeRichDetails(
   client: PlacesClient,
   placeId: string,
+  tier: RichDetailsTier,
 ): Promise<PlaceRichDetails> {
   const url = new URL(`${PLACES_BASE}/places/${encodeURIComponent(placeId)}`);
   const body = await placesFetch<PlaceRichDetailsResponse>(url, client, {
     method: "GET",
-    sku: skuFor("place-details", PLACE_RICH_DETAILS_FIELD_MASK),
-    fieldMask: PLACE_RICH_DETAILS_FIELD_MASK,
+    sku: richDetailsSku(tier),
+    fieldMask: RICH_DETAILS_MASKS[tier],
   });
   return PlaceRichDetailsSchema.parse({
     photos: (body.photos ?? []).slice(0, MAX_PHOTOS).map((p) => ({

@@ -5286,7 +5286,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`mapstr-import`** — `./singularity places import-mapstr <export>` — matches a Mapstr export's places to Google places (Text Search, scored by name, distance and area extent; hand decisions via --overrides and the search-place lookup verb) into a reviewable mapstr-matches.json, then with --apply replaces every place and tag with the seed tree and the matched places (Mapstr tags mapped onto seed tags, comments as notes, original save dates), in one transaction.
           - Cli:
             - Uses: `framework/server-core.runExec`
-        - **`place-details`** — Reads Google's rich details of a saved place (usePlaceDetails) for the place card. Serves Google's rich details of a saved place (photos, opening hours, rating, price level, phone, website, summary) as the places.details value — one Enterprise Place Details call per place per day, kept in memory, never stored — and proxies its photos (GET /api/places/photo) so the Places key stays on the server; and serves each Google place's gallery thumbnail (its first photo, fetched once and cached on disk; GET /api/places/thumbnail).
+        - **`place-details`** — Reads Google's rich details of a saved place (usePlaceDetails) for the place card. Serves Google's rich details of a saved place (photos, opening hours, rating, price level, phone, website, summary) as the places.details value — at the richest tier this month's Google budget allows (with summary → without → photos only, free), one call per place per tier per day, kept in memory, never stored — and proxies its photos (GET /api/places/photo, refused once the Place Photo budget is spent) so the Places key stays on the server; and serves each Google place's gallery thumbnail (its first photo, fetched once and cached on disk; GET /api/places/thumbnail).
           - Server:
             - Contributes: `resource.declare` "places.details"
             - Uses:
@@ -5294,9 +5294,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `integrations/google-maps/places-api.placeFirstPhotoName`
               - `integrations/google-maps/places-api.placePhoto`
               - `integrations/google-maps/places-api.placeRichDetails`
+              - `integrations/google-maps/usage.mapsBudgetNow`
+              - `integrations/google-maps/usage.mapsBudgetReads`
               - `network/live.serveValue`
               - `primitives/log-channels.Log`
-            - Resources: `places.details` (invalidate, fixed)
+            - Resources: `places.details` (invalidate, notified)
             - Routes:
               - `GET /api/places/photo`
               - `GET /api/places/thumbnail`
@@ -5310,11 +5312,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints.defineEndpoint`
               - `integrations/google-maps/places-api.PHOTO_NAME_PATTERN`
               - `integrations/google-maps/places-api.PlaceRichDetailsSchema`
+              - `integrations/google-maps/places-api.PlacesSku`
+              - `integrations/google-maps/places-api.RICH_DETAILS_TIERS`
+              - `integrations/google-maps/places-api.richDetailsSku`
+              - `integrations/google-maps/places-api.RichDetailsTier`
+              - `integrations/google-maps/usage.budgetRung`
               - `network/live.liveValue`
             - Exports (types):
               - `PlaceDetailsQuery`
               - `PlaceDetailsResult`
             - Exports (values):
+              - `detailsTier`
               - `GOOGLE_PLACE_ID_PATTERN`
               - `PHOTO_WIDTH`
               - `placeDetails`
@@ -5411,7 +5419,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PATCH /api/places/tags/:id`
               - `DELETE /api/places/tags/:id`
           - Core:
-            - Uses: 25 symbols — full list in [`plugins/apps/plugins/places/plugins/places-core/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-core/REFERENCE.md)
+            - Uses: 26 symbols — full list in [`plugins/apps/plugins/places/plugins/places-core/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-core/REFERENCE.md)
               - `fields` ×4
               - `integrations/google-maps/places-api` ×4
               - `fields/text/config` ×3
@@ -5425,6 +5433,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields/tags/config.tagsField`
               - `infra/endpoints.defineEndpoint`
               - `infra/entities.entityRef`
+              - `integrations/google-maps/usage.budgetRung`
             - Exports (types):
               - `ChildColorMode`
               - `CreateCustomPlaceBody`
@@ -10684,6 +10693,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Auth.Provider` ← `auth.notion`
       - `Auth.Integration` ← `auth.apple-signing.setup-wizard`
       - `Auth.Integration` ← `integrations.google-maps`
+      - `Auth.Integration` ← `integrations.google-maps.usage`
       - `Auth.ScopeRequirement` ← `backup.targets.google-drive`
       - `Auth.ScopeRequirement` ← `integrations.gmail`
       - `accountsPane.Actions` ← `primitives.pane`
@@ -10850,6 +10860,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `backup/targets/google-drive`
       - `integrations/gmail`
       - `integrations/google-maps`
+      - `integrations/google-maps/usage`
       - `integrations/hooktheory`
     - Endpoint callers: `setup-wizard`
   - Exemptions:
@@ -12457,6 +12468,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/launch-prompts`
           - `conversations/conversation-view/prompt-templates`
           - `conversations/preprompts`
+          - `integrations/google-maps/usage`
           - `stats/commits`
           - `tasks/launch-options`
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
@@ -29822,7 +29834,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `autocomplete`
               - `PLACE_DETAILS_FIELD_MASK`
-              - `PLACE_RICH_DETAILS_FIELD_MASK`
               - `placeDetails`
               - `placeFirstPhotoName`
               - `placePhoto`
@@ -29843,6 +29854,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PlaceSnapshot`
               - `PlacesSku`
               - `PlaceSuggestion`
+              - `RichDetailsTier`
             - Exports (values):
               - `BUSINESS_STATUSES`
               - `OpeningHoursSchema`
@@ -29855,18 +29867,35 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PlacesApiError`
               - `PlaceSnapshotSchema`
               - `PlaceSuggestionSchema`
+              - `RICH_DETAILS_MASKS`
+              - `RICH_DETAILS_TIERS`
+              - `richDetailsSku`
               - `skuFor`
-        - **`usage`** — Registers the Google Maps usage budgets (per-SKU monthly call budgets inside Google's free allowance) for Settings → Config, and reads them against this month's live counts (useMapsBudget). Owns google_maps_usage: every Places call counted per billing month (Pacific time, as Google bills) and SKU, by placesMeter — the meter every server-side PlacesClient carries — and served live as this month's counts (google-maps.usage), which a caller holds against the per-SKU budgets (the google-maps-usage config: Google's free allowance minus a margin) to step down to a cheaper call before it is billed; mapsBudgetNow is the same check read on the server (for a caller with no live value, an agent's tool).
+        - **`usage`** — Registers the Google Maps usage budgets (per-SKU monthly call budgets inside Google's free allowance) for Settings → Config, and reads them against this month's live counts (useMapsBudget). Contributes the Google Maps 'Usage this month' row of Settings → Accounts: every billed Places SKU's calls against its budget, live, with the month's reset and a link to edit the budgets. Owns google_maps_usage: every Places call counted per billing month (Pacific time, as Google bills) and SKU, by placesMeter — the meter every server-side PlacesClient carries — and served live as this month's counts (google-maps.usage), which a caller holds against the per-SKU budgets (the google-maps-usage config: Google's free allowance minus a margin) to step down to a cheaper call before it is billed; mapsBudgetNow is the same check read on the server (for a caller with no live value, an agent's tool).
           - Web:
-            - Contributes: `ConfigV2.WebRegister` "google-maps-usage"
+            - Contributes:
+              - `ConfigV2.WebRegister` "google-maps-usage"
+              - `Auth.Integration` "Usage this month"
             - Uses:
+              - `auth.Auth`
               - `config_v2.ConfigV2`
               - `config_v2.useConfigResult`
+              - `config_v2/config-link.useConfigLink`
               - `network/live.useLive`
+              - `primitives/css/badge.Badge`
+              - `primitives/css/clip.Clip`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/data-view.DataView`
+              - `primitives/data-view.defineDataView`
+              - `primitives/data-view.FieldDef`
+              - `primitives/link-gesture.activationProps`
+              - `primitives/live-state.foldResource`
               - `primitives/live-state.mapResource`
               - `primitives/live-state.ResourceResult`
               - `primitives/live-state.useCombinedResources`
-            - Exports (types): `MapsBudget`
             - Exports (values): `useMapsBudget`
           - Server:
             - Contributes:
@@ -29881,6 +29910,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `_googleMapsUsage`
               - `mapsBudgetNow`
+              - `mapsBudgetReads`
               - `placesMeter`
             - Resources: `google-maps.usage` (push)
           - Core:
@@ -29892,17 +29922,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/wall-clock.zoneWallClock`
             - Exports (types):
               - `BillingMonth`
+              - `BudgetStep`
+              - `MapsBudget`
               - `MapsMonthUsage`
               - `MapsUsageBudgets`
             - Exports (values):
               - `billingMonth`
+              - `budgetField`
+              - `budgetRung`
               - `mapsMonthUsage`
               - `MapsMonthUsageSchema`
               - `mapsUsageConfig`
+              - `monthCalls`
               - `withinBudget`
           - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --destructive`
+              - `ui/tokens/color-palette --muted`
+              - `ui/tokens/color-palette --primary`
+              - `ui/tokens/color-palette --warning`
+              - `ui/tokens/shape --spacing`
             - Imported by:
               - `apps/places/ask`
+              - `apps/places/place-details`
+              - `apps/places/places-core`
               - `apps/places/places-map`
               - `integrations/google-maps`
     - **`hooktheory`** — Hooktheory (TheoryTab) API client: getTrendNodes / getTrendSongs (signed-in account, token read from auth/central) and getTheorytabSection (public), every body zod-parsed at the fetch boundary; plus GET /api/hooktheory/{trends/nodes,trends/songs,sections/:id} wrappers. Core adds pure readers: sectionFromHookpadDoc (a Hookpad document to a section) and hookpadChordSound (a chord to its root pitch class and intervals, ported from Sheet Sage and checked against its whole dataset).
@@ -35938,7 +35981,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density` ×6
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 164 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 165 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×37
               - `debug` ×35
               - `conversations` ×24
@@ -35957,6 +36000,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `backup/runs-arm`
               - `config_v2/settings`
               - `database/query-deadline`
+              - `integrations/google-maps/usage`
               - `release/runs-arm`
               - `reorder/edit-mode`
               - `shell/notifications`
@@ -36047,19 +36091,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `clipClasses`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Imported by: 65 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
+            - Imported by: 66 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
               - `apps` ×21
               - `primitives` ×11
               - `conversations` ×8
               - `debug` ×8
               - `page` ×5
               - `fields` ×2
+              - `integrations` ×2
               - `review` ×2
               - `active-data/go`
               - `apps-core/surface`
               - `build/build-logs`
               - `config_v2/settings`
-              - `integrations/google-maps`
               - `plugin-meta/plugin-view/file-tree`
               - `screenshot`
               - `tasks/task-graph`
@@ -36818,7 +36862,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 404 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 405 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×105
               - `conversations` ×64
               - `primitives` ×54
@@ -36834,13 +36878,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `auth` ×4
               - `infra` ×4
               - `review` ×4
+              - `integrations` ×3
               - `reorder` ×3
               - `shell` ×3
               - `active-data` ×2
               - `backup` ×2
               - `code-explorer` ×2
               - `config_v2` ×2
-              - `integrations` ×2
               - `layouts` ×2
               - `screenshot` ×2
               - `framework/web-core`
@@ -37038,7 +37082,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×36
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 375 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 376 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×105
               - `conversations` ×72
               - `primitives` ×43
@@ -37052,8 +37096,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build` ×5
               - `auth` ×4
               - `infra` ×4
+              - `integrations` ×4
               - `review` ×4
-              - `integrations` ×3
               - `reorder` ×3
               - `active-data` ×2
               - `apps-core` ×2
@@ -37325,7 +37369,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family` ×4
               - `ui/tokens/material` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 423 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 424 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×109
               - `apps` ×95
               - `conversations` ×54
@@ -37342,8 +37386,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `auth` ×4
               - `config_v2` ×4
               - `infra` ×4
+              - `integrations` ×4
               - `shell` ×4
-              - `integrations` ×3
               - `active-data` ×2
               - `backup` ×2
               - `framework` ×2
@@ -37565,8 +37609,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ← `primitives.data-view`
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-        - Contributes: 77 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.WebRegister` ×69
+        - Contributes: 78 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.WebRegister` ×70
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
@@ -37783,8 +37827,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useRowFilter`
           - `useSortController`
       - Server:
-        - Contributes: 71 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.Register` ×69
+        - Contributes: 72 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.Register` ×70
           - `ids.kind` ×2
         - Uses:
           - `config_v2.getConfig`
@@ -37928,7 +37972,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×5
           - `ui/tokens/shape` ×2
           - `ui/tokens/shadow --shadow`
-        - Imported by: 98 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Imported by: 99 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `fields` ×30
           - `apps` ×23
           - `debug` ×13
@@ -37940,6 +37984,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `auth`
           - `config_v2/settings`
           - `history/dialog`
+          - `integrations/google-maps/usage`
           - `page/links`
           - `plugin-meta/exhibits`
           - `runs`
@@ -39612,7 +39657,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/text-editor`
     - **`link-gesture`** — The browser's link gestures as spreadable handler props: plain click opens here, ⌘/Ctrl- and middle-click open the destination's URL in a new browser tab. A <button> gets none of this for free, so every navigating control reads it from one place.
       - Cross-plugin:
-        - Imported by: 43 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
+        - Imported by: 44 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
           - `primitives` ×13
           - `conversations` ×11
           - `apps-core` ×3
@@ -39623,6 +39668,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build`
           - `code-explorer/file-resolve`
           - `config_v2/config-link`
+          - `integrations/google-maps/usage`
           - `plugin-meta/plugin-view`
           - `shell/notifications`
           - `stats/cost`
@@ -48475,7 +48521,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 500 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 501 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×110
               - `conversations` ×89
               - `primitives` ×77
@@ -48495,10 +48541,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `review` ×5
               - `auth` ×4
               - `shell` ×4
+              - `integrations` ×3
               - `backup` ×2
               - `code-explorer` ×2
               - `improve` ×2
-              - `integrations` ×2
               - `runs` ×2
               - `screenshot` ×2
               - `config_v2/settings`
@@ -48886,7 +48932,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 421 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 422 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×93
               - `apps` ×83
               - `primitives` ×70
@@ -48909,9 +48955,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `code-explorer` ×2
               - `config_v2` ×2
               - `framework` ×2
+              - `integrations` ×2
               - `screenshot` ×2
               - `history/dialog`
-              - `integrations/google-maps`
               - `layouts/miller`
               - `map/pin-layer`
               - `reports/launch-fix`

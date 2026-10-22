@@ -4,6 +4,7 @@ import {
   PlacesApiError,
 } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
 import { placePhoto } from "@plugins/integrations/plugins/google-maps/plugins/places-api/server";
+import { mapsBudgetNow } from "@plugins/integrations/plugins/google-maps/plugins/usage/server";
 import { PHOTO_WIDTH } from "../../core";
 
 /**
@@ -11,7 +12,9 @@ import { PHOTO_WIDTH } from "../../core";
  * `implement`): it answers with the image's own bytes and type, cached
  * privately for a day — the browser then never asks twice for the same photo
  * at the same width. 404 when Google refuses the name (it expired: the card's
- * next details fetch brings fresh ones), 503 when no Places key is stored.
+ * next details fetch brings fresh ones), 503 when no Places key is stored,
+ * 429 once this month's Place Photo budget is spent (a card holding names
+ * from before then must not bill past the free allowance).
  */
 export async function handlePlacePhoto(req: Request): Promise<Response> {
   const q = new URL(req.url).searchParams;
@@ -27,6 +30,11 @@ export async function handlePlacePhoto(req: Request): Promise<Response> {
   const maps = await getPlacesClient();
   if (!maps.ok)
     return new Response("Google Maps is not set up", { status: 503 });
+  if (!(await mapsBudgetNow()).withinBudget("place-photo")) {
+    return new Response("this month's free Google photo quota is used", {
+      status: 429,
+    });
+  }
   let image: Response;
   try {
     image = await placePhoto(maps.client, name, width);

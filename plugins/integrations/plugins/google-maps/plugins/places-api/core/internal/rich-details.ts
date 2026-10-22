@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { skuFor, type PlacesSku } from "./sku";
 
 /**
  * What a photo is called in the Places API: `places/<placeId>/photos/<ref>`.
@@ -67,3 +68,46 @@ export const PlaceRichDetailsSchema = z.object({
 });
 
 export type PlaceRichDetails = z.infer<typeof PlaceRichDetailsSchema>;
+
+/**
+ * How much of a place's rich details a card asks for, richest first — the
+ * steps of its downgrade ladder (`place-details`), each a Place Details SKU of
+ * its own (`richDetailsSku`):
+ *
+ * - `full` — everything below plus Google's summary: **Enterprise +
+ *   Atmosphere** (`editorialSummary`), the most expensive Place Details SKU.
+ * - `no-summary` — photos, the regular week (and the UTC offset to read it
+ *   in), rating and its count, price level, phone, website: **Enterprise**.
+ * - `photos` — the photo names alone: **IDs Only**, free. Only the Place Photo
+ *   call that fetches a photo's bytes is billed.
+ *
+ * Each is its own call, made only when a card opens and cached by the caller
+ * for a day — never folded into the snapshot mask save and the monthly refresh
+ * pay for. Re-check Google's SKU table before relying on these tiers.
+ */
+export const RICH_DETAILS_TIERS = ["full", "no-summary", "photos"] as const;
+export type RichDetailsTier = (typeof RICH_DETAILS_TIERS)[number];
+
+const NO_SUMMARY_FIELDS = [
+  "id",
+  "photos",
+  "regularOpeningHours",
+  "utcOffsetMinutes",
+  "rating",
+  "userRatingCount",
+  "priceLevel",
+  "internationalPhoneNumber",
+  "websiteUri",
+];
+
+/** The Place Details field mask of each tier. */
+export const RICH_DETAILS_MASKS: Record<RichDetailsTier, string> = {
+  full: [...NO_SUMMARY_FIELDS, "editorialSummary"].join(","),
+  "no-summary": NO_SUMMARY_FIELDS.join(","),
+  photos: ["id", "photos"].join(","),
+};
+
+/** What one call of a tier is billed as — derived from its mask. */
+export function richDetailsSku(tier: RichDetailsTier): PlacesSku {
+  return skuFor("place-details", RICH_DETAILS_MASKS[tier]);
+}

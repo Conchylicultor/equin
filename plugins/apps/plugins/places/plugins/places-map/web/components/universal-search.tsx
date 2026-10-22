@@ -29,6 +29,7 @@ import {
 import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { placeSearchText } from "../internal/fields";
 import { looksLikeQuestion } from "../internal/question";
+import { untilDay } from "../internal/until-day";
 import { placeVisual } from "../internal/place-visual";
 import type { GoogleSearchState } from "../internal/use-google-search";
 import { GoogleResultCard, type GoogleHit } from "./google-result-card";
@@ -252,14 +253,6 @@ function YourPlaces({
       )}
     </ControlPanel.Section>
   );
-}
-
-/** "Ratings paused until Nov 1" — the date a downgrade lifts. */
-function untilDay(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  });
 }
 
 function GoogleSection({
