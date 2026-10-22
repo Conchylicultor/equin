@@ -1,5 +1,6 @@
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import {
   hoverRevealGroup,
   hoverRevealTarget,
@@ -69,31 +70,38 @@ export function TagChip({
       }
       className={cn(tinted && hoverRevealGroup)}
     >
-      <span className={cn(excluded && "line-through")}>{tag.name}</span>
-      {auto && tinted ? (
-        <Icon icon={autoIcon} className="size-3 opacity-60" />
-      ) : auto ? (
-        <Badge
-          variant="warning"
-          tooltip="Set automatically from the Google place type"
-        >
-          AUTO
-        </Badge>
-      ) : null}
-      {onRemove ? (
-        <button
-          type="button"
-          aria-label={`Remove ${tag.name}`}
-          onClick={onRemove}
-          className={
-            tinted
-              ? cn("text-current", hoverRevealTarget)
-              : "text-muted-foreground hover:text-foreground"
-          }
-        >
-          <Icon icon={closeIcon} className="size-3" />
-        </button>
-      ) : null}
+      {/*
+       * One inline row for the name and its trailing marks: the badge's label
+       * span is a nowrap text box, and an <svg> is block-level (preflight), so a
+       * bare ✨ or × in it broke onto a second line.
+       */}
+      <Inline gap="2xs">
+        <span className={cn(excluded && "line-through")}>{tag.name}</span>
+        {auto && tinted ? (
+          <Icon icon={autoIcon} className="size-3 opacity-60" />
+        ) : auto ? (
+          <Badge
+            variant="warning"
+            tooltip="Set automatically from the Google place type"
+          >
+            AUTO
+          </Badge>
+        ) : null}
+        {onRemove ? (
+          <button
+            type="button"
+            aria-label={`Remove ${tag.name}`}
+            onClick={onRemove}
+            className={
+              tinted
+                ? cn("text-current", hoverRevealTarget)
+                : "text-muted-foreground hover:text-foreground"
+            }
+          >
+            <Icon icon={closeIcon} className="size-3" />
+          </button>
+        ) : null}
+      </Inline>
     </Badge>
   );
 }

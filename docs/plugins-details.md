@@ -5515,7 +5515,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
               - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
               - `JsonlViewerTool.Renderer` "mcp__equin__places_show_picks" → `PicksToolView`
-            - Uses: 114 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+            - Uses: 115 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `apps/places/places-core` ×9
               - `conversations/agent-thread` ×8
               - `map` ×8
@@ -5548,6 +5548,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/coords.Placed`
               - `primitives/css/fill.Fill`
               - `primitives/css/grid.Grid`
+              - `primitives/css/inline.Inline`
               - `primitives/css/line.Line`
               - `primitives/css/pin.Pin`
               - `primitives/css/placeholder.Placeholder`
@@ -36357,8 +36358,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 85 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
-              - `apps` ×16
+            - Imported by: 86 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+              - `apps` ×17
               - `debug` ×14
               - `reports` ×13
               - `conversations` ×9
