@@ -72,14 +72,13 @@ import type { CpuWindow } from "./cpu-profile";
 import type { BrowserTrack, BrowserTrackInput } from "./browser-track";
 
 // The page-side accumulators the init script fills: long tasks from the very
-// start of the load, and when each React commit happened. Declared here so the
-// augmentation travels with the module.
-declare global {
-  interface Window {
-    __coldStartLongTasks?: { startMs: number; durationMs: number }[];
-    __coldStartCommits?: number[];
-  }
-}
+// start of the load, and when each React commit happened. A cast where they
+// are read and written, not a `Window` augmentation: a global declaration here
+// would make every edit to this script re-check the whole repo.
+type ColdStartWindow = Window & {
+  __coldStartLongTasks?: { startMs: number; durationMs: number }[];
+  __coldStartCommits?: number[];
+};
 
 const iterations = numArg("iterations", 5);
 const busy = numArg("busy", 0);
@@ -248,9 +247,9 @@ async function instrument(context: BrowserContext): Promise<void> {
   await context.addInitScript(() => {
     performance.setResourceTimingBufferSize(100_000);
     const tasks: { startMs: number; durationMs: number }[] = [];
-    window.__coldStartLongTasks = tasks;
+    (window as ColdStartWindow).__coldStartLongTasks = tasks;
     const commits: number[] = [];
-    window.__coldStartCommits = commits;
+    (window as ColdStartWindow).__coldStartCommits = commits;
     document.addEventListener("readystatechange", () => {
       if (document.readyState !== "interactive") return;
       const hook = (
@@ -499,7 +498,7 @@ async function loadPage(page: Page): Promise<{
         firstContentfulPaintMs: fcp ? fcp.startTime : null,
         entries,
         slotReads,
-        commits: window.__coldStartCommits ?? [],
+        commits: (window as ColdStartWindow).__coldStartCommits ?? [],
         track: {
           documentTransfer: nav?.transferSize ?? 0,
           documentDecoded: nav?.decodedBodySize ?? 0,
@@ -508,7 +507,7 @@ async function loadPage(page: Page): Promise<{
               ?.length ?? 0,
           domContentLoadedMs: stamp(nav?.domContentLoadedEventEnd),
           resources,
-          longTasks: window.__coldStartLongTasks ?? [],
+          longTasks: (window as ColdStartWindow).__coldStartLongTasks ?? [],
           pluginLoads,
           loadPlugins: span("load-plugins"),
           firstDataMs: at("first-data-commit"),

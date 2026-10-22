@@ -1,15 +1,18 @@
 import { useSyncExternalStore } from "react";
 
-declare global {
-  interface Window {
-    /**
-     * Google's one signal that the browser key was refused (wrong HTTP
-     * referrer, Maps JavaScript API not enabled, key deleted or billing off).
-     * Without a handler the map just goes grey with a watermark.
-     */
-    gm_authFailure?: () => void;
-  }
-}
+/**
+ * The window Google's Maps script calls back on. A cast where it is used, not
+ * a `Window` augmentation: a global declaration makes every edit to the file
+ * holding it re-check the whole repo.
+ */
+type MapsAuthWindow = Window & {
+  /**
+   * Google's one signal that the browser key was refused (wrong HTTP
+   * referrer, Maps JavaScript API not enabled, key deleted or billing off).
+   * Without a handler the map just goes grey with a watermark.
+   */
+  gm_authFailure?: () => void;
+};
 
 /**
  * Whether Google has refused the key in THIS page. It is page-global state
@@ -31,8 +34,9 @@ let installed = false;
 function install(): void {
   if (installed) return;
   installed = true;
-  const previous = window.gm_authFailure;
-  window.gm_authFailure = () => {
+  const w = window as MapsAuthWindow;
+  const previous = w.gm_authFailure;
+  w.gm_authFailure = () => {
     refused = true;
     for (const listener of listeners) listener();
     previous?.();

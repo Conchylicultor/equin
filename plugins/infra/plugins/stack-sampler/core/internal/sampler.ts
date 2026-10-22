@@ -32,14 +32,7 @@ import {
 //   in the event loop drained zero samples.
 //
 // `samplingProfilerStackTraces` exists at runtime but is absent from bun-types
-// (1.3.x), so it is declared here. Its return is declared `unknown` on purpose:
-// the observed shape is `{ interval, traces: [{ timestamp, frames: [{ sourceID,
-// name, location, sourceURL?, line, column, category, flags }] }] }`, but no
-// type verifies it, so the one path from it to a typed value is
-// `normalizeTraces`, which checks what it reads.
-declare module "bun:jsc" {
-  export function samplingProfilerStackTraces(): unknown;
-}
+// (1.3.x), so it is declared in `./bun-jsc.d.ts`.
 
 // JSC marks "no line / no column" with this sentinel (0xFFFFFFFF). Normalized
 // to `null` here so no caller compares against a magic number.

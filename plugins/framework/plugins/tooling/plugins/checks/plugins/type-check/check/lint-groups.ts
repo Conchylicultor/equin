@@ -66,7 +66,7 @@ import { LINT_GROUP_ALL, LINT_GROUP_BASE } from "../core";
 import { lockfileLintDigest } from "../shared/lockfile";
 import type { TypeAwareGroups } from "../shared/lint-results";
 import type { RepoView } from "../shared/repo-view";
-import { engineSources } from "../shared/tsc-engine";
+import { producerSources } from "../shared/tsc-engine";
 import {
   extractImportSpecifiers,
   isLintable,
@@ -93,13 +93,18 @@ function groupHash(s: string): string {
  * modules. The root tsconfigs only — every other `tsconfig*.json` in the tree
  * is a rule test's fixture (`lint/**\/tsconfig.case.json`), which no rule reads
  * at check time.
+ *
+ * Not the repo's `.d.ts`: a syntactic rule reads the file's own text, and a
+ * typed part is keyed on the file's result key, which holds every `.d.ts` the
+ * file can see — a global one through the global hash, an ambient or module
+ * one as a use (`../shared/name-check.ts` `declScope`). As engine, an edit to
+ * any `.d.ts` re-linted every group on every file.
  */
 function isEngineConfigFile(rel: string): boolean {
   if (!rel.includes("/")) {
     if (rel === "package.json") return true;
     if (rel.startsWith("tsconfig") && rel.endsWith(".json")) return true;
   }
-  if (rel.endsWith(".d.ts")) return true;
   if (rel.startsWith("patches/")) return true;
   return false;
 }
@@ -142,14 +147,15 @@ function ownSources(files: readonly string[]): string[] {
 const WORKER_SOURCES = ["../shared/worker.ts"];
 
 /**
- * The typed engine: the two-program check, whose result key decides when a
- * typed result is reused and whose programs the typed rules run in, and the
- * emit options, which decide what the `.d.ts` it reads says — its own
- * `engineSources()`, listed from the directory. (Each result key folds in the
- * same files through the compiler's engine, `tscEngineFp`; naming them here
- * keeps the rules half honest on its own.)
+ * The typed engine: what decides the types a typed rule reads — the modules
+ * that build the programs it runs in and the `.d.ts` they serve, and the emit
+ * options (`producerSources()`, derived from their imports). Not the walk:
+ * which results are reused is the result key's business, and the walk's
+ * plumbing does not change a type. (Each result key folds in the same files
+ * through the compiler's engine, `tscEngineFp`; naming them here keeps the
+ * rules half honest on its own.)
  */
-const TYPED_ENGINE_SOURCES = engineSources().map((f) => `../shared/${f}`);
+const TYPED_ENGINE_SOURCES = producerSources().map((f) => `../shared/${f}`);
 
 export interface LintGroups {
   /**

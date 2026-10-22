@@ -127,10 +127,14 @@ export function fileImports(
   );
 }
 
-/** A file's uses as name keys: its named imports, through its resolution targets. */
+/**
+ * A file's uses as name keys: its named imports, through its resolution
+ * targets, and the ambient `.d.ts` its specifiers match (`ambientUses`).
+ */
 export function usesOf(
   imports: readonly FileImport[],
   targets: readonly [string, number, string][],
+  ambient: AmbientModules,
 ): string[] {
   const at = new Map(targets.map(([s, m, t]) => [`${s}\0${m}`, t]));
   const out = new Set<string>();
@@ -145,6 +149,7 @@ export function usesOf(
     if (t === "-" || t === "<dep>") continue;
     out.add(nameKey(t, name));
   }
+  for (const k of ambientUses(imports, ambient)) out.add(k);
   return [...out].sort();
 }
 
@@ -174,6 +179,19 @@ export function isGlobalFile(sf: ts.SourceFile): boolean {
       ts.isModuleDeclaration(s) &&
       (ts.isStringLiteral(s.name) ||
         (s.flags & ts.NodeFlags.GlobalAugmentation) !== 0),
+  );
+}
+
+/**
+ * Whether the checker sees a declaration file as global: `isGlobalFile`, or
+ * a reference directive (it loads more declarations into the program).
+ */
+function isGlobalDecl(sf: ts.SourceFile): boolean {
+  return (
+    sf.referencedFiles.length > 0 ||
+    sf.typeReferenceDirectives.length > 0 ||
+    sf.libReferenceDirectives.length > 0 ||
+    isGlobalFile(sf)
   );
 }
 
@@ -430,6 +448,104 @@ export function declaresGlobals(text: string, fileName: string): boolean {
   return visit(sf.statements);
 }
 
+/**
+ * What a repo `.d.ts` root of the program (every program holds them all) can
+ * reach, from its SYNTAX:
+ *
+ *   - `global`: every file sees it without naming it — a script (no import or
+ *     export) declaring anything but string-named modules, a `declare global`,
+ *     an augmentation (`declare module "x"` in a module), or a `/// <reference>`
+ *     (it loads more declarations into every program). Its version is in the
+ *     global hash.
+ *   - `ambient`: only string-named module declarations, in a script — each an
+ *     AMBIENT MODULE (`declare module "@browser-host/*"`), seen only by a file
+ *     whose specifier it matches. Such a file uses it (`ambientUses`).
+ *   - `module`: an ordinary module, seen through an import of its path (a
+ *     `decl` owner in the walk).
+ *
+ * Checked against the checker's own `isGlobalFile` in every program
+ * (`runProgram`), as `declaresGlobals` is for source files.
+ */
+export type DeclScope =
+  | { kind: "global" }
+  | { kind: "ambient"; patterns: string[] }
+  | { kind: "module" };
+
+export function declScope(text: string, fileName: string): DeclScope {
+  const sf = ts.createSourceFile(fileName, text, ts.ScriptTarget.Latest, false);
+  if (
+    sf.referencedFiles.length > 0 ||
+    sf.typeReferenceDirectives.length > 0 ||
+    sf.libReferenceDirectives.length > 0
+  ) {
+    return { kind: "global" };
+  }
+  const named = (
+    s: ts.Statement,
+  ): s is ts.ModuleDeclaration & {
+    name: ts.StringLiteral;
+  } => ts.isModuleDeclaration(s) && ts.isStringLiteral(s.name);
+  const declaresGlobal = sf.statements.some(
+    (s) =>
+      ts.isModuleDeclaration(s) &&
+      (s.flags & ts.NodeFlags.GlobalAugmentation) !== 0,
+  );
+  if (declaresGlobal) return { kind: "global" };
+  if (ts.isExternalModule(sf)) {
+    return sf.statements.some(named)
+      ? { kind: "global" } // an augmentation
+      : { kind: "module" };
+  }
+  if (sf.statements.length === 0 || !sf.statements.every(named)) {
+    return { kind: "global" };
+  }
+  return {
+    kind: "ambient",
+    patterns: [
+      ...new Set(sf.statements.filter(named).map((s) => s.name.text)),
+    ].sort(),
+  };
+}
+
+/** Whether a specifier matches an ambient module name (one `*` at most, as TypeScript's). */
+function ambientMatches(pattern: string, specifier: string): boolean {
+  const star = pattern.indexOf("*");
+  if (star < 0) return pattern === specifier;
+  const pre = pattern.slice(0, star);
+  const post = pattern.slice(star + 1);
+  return (
+    specifier.length >= pre.length + post.length &&
+    specifier.startsWith(pre) &&
+    specifier.endsWith(post)
+  );
+}
+
+/** The ambient-module `.d.ts` roots of a run: path → the module names it declares. */
+export type AmbientModules = ReadonlyMap<string, readonly string[]>;
+
+/**
+ * The ambient `.d.ts` a file's imports can reach: every one declaring a module
+ * name one of its specifiers matches, whatever the specifier resolved to (an
+ * exact ambient name wins over resolution, a pattern applies where it fails
+ * — matching either way over-approximates, never misses). Each is a use of
+ * the whole `.d.ts`, so its version keys exactly these files.
+ */
+export function ambientUses(
+  imports: readonly FileImport[],
+  ambient: AmbientModules,
+): string[] {
+  if (ambient.size === 0) return [];
+  const out = new Set<string>();
+  for (const [spec] of imports) {
+    for (const [decl, patterns] of ambient) {
+      if (patterns.some((pat) => ambientMatches(pat, spec))) {
+        out.add(nameKey(decl, WHOLE));
+      }
+    }
+  }
+  return [...out];
+}
+
 /** One source file's check: its diagnostics, signature, and raw `.d.ts`. */
 export interface FileCheck {
   /** Syntactic, semantic and declaration diagnostics, formatted. */
@@ -559,6 +675,10 @@ export function runProgram(input: {
   declRoots: readonly string[];
   /** Global source files: their `.d.ts` is in every program they are not sources of. */
   globals: readonly string[];
+  /** The repo `.d.ts` roots' scopes (`declScope`), checked against the checker's. */
+  declScopes: ReadonlyMap<string, DeclScope>;
+  /** The ambient-module `.d.ts` roots, for each checked file's uses. */
+  ambient: AmbientModules;
   contractOf(path: string): string;
   cache: SourceFileCache;
   resolver: RecordingResolver;
@@ -615,6 +735,15 @@ export function runProgram(input: {
       byPath.set(p, sf);
     } else {
       stats.repoDecls++;
+      const scope = input.declScopes.get(p);
+      if (
+        scope !== undefined &&
+        (scope.kind === "global") !== isGlobalDecl(sf)
+      ) {
+        throw new Error(
+          `type-check: ${p} is ${scope.kind === "global" ? "" : "not "}global by its syntax (declScope), and the checker says otherwise — declScope is missing a case`,
+        );
+      }
     }
   }
 
@@ -648,7 +777,7 @@ export function runProgram(input: {
       global: isGlobalFile(sf),
       imports,
       res,
-      uses: usesOf(imports, res.targets),
+      uses: usesOf(imports, res.targets, input.ambient),
       names,
       star: cn.star,
       diagnostics: fc.diagnostics,

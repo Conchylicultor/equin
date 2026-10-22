@@ -9,4 +9,5 @@ export type {
   EmitStatus,
   EmitStartOptions,
   LiveStateEmitGlobal,
+  LiveStateEmitWindow,
 } from "./global-api";

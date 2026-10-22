@@ -428,8 +428,31 @@ test("a global flip walks every file", async () => {
       'declare module "./g" { interface G { z?: boolean } }\nexport {};\n',
   };
   const steps = await series([CHAIN, withAug, CHAIN]);
-  expect(steps[1]!.inc.report.walk.mode).toContain("global hash moved");
-  expect(steps[2]!.inc.report.walk.mode).toContain("global hash moved");
+  expect(steps[1]!.inc.report.walk.mode).toContain("global hash");
+  expect(steps[2]!.inc.report.walk.mode).toContain("global hash");
+});
+
+test("an ambient module declared walks every file; its edit walks from the base", async () => {
+  const ambient = {
+    ...CHAIN,
+    "virt.d.ts": 'declare module "virt:*" {\n  export const v: number;\n}\n',
+    "use-virt.ts": 'import { v } from "virt:x";\nexport const w: number = v;\n',
+  };
+  const edited = {
+    ...ambient,
+    "virt.d.ts": 'declare module "virt:*" {\n  export const v: string;\n}\n',
+  };
+  const steps = await series([
+    { ...CHAIN, "use-virt.ts": ambient["use-virt.ts"]! },
+    ambient,
+    edited,
+  ]);
+  // A new ambient name changes which files use the `.d.ts`: every file walks.
+  expect(steps[1]!.inc.report.walk.mode).toContain("ambient module names");
+  expect(steps[1]!.inc.checked).toEqual(["use-virt.ts"]);
+  // An edit moves only its readers' keys: incremental, the one importer.
+  expect(steps[2]!.inc.report.walk.mode).toContain("incremental");
+  expect(steps[2]!.inc.checked).toEqual(["use-virt.ts"]);
 });
 
 test("added and removed files", async () => {

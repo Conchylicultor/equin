@@ -84,12 +84,15 @@ export interface YTNamespace {
   loaded?: number;
 }
 
-declare global {
-  interface Window {
-    YT?: YTNamespace;
-    onYouTubeIframeAPIReady?: () => void;
-  }
-}
+/**
+ * The window the IFrame API script defines `YT` on and calls back. A cast
+ * where it is used, not a `Window` augmentation: a global declaration makes
+ * every edit to the file holding it re-check the whole repo.
+ */
+type YouTubeWindow = Window & {
+  YT?: YTNamespace;
+  onYouTubeIframeAPIReady?: () => void;
+};
 
 const IFRAME_API_SRC = "https://www.youtube.com/iframe_api";
 
@@ -116,16 +119,17 @@ let apiPromise: Promise<YTNamespace> | undefined;
  */
 export function loadYouTubeIframeApi(): Promise<YTNamespace> {
   apiPromise ??= new Promise<YTNamespace>((resolve, reject) => {
-    const ready = window.YT;
+    const w = window as YouTubeWindow;
+    const ready = w.YT;
     if (ready?.loaded === 1) {
       resolve(ready);
       return;
     }
 
-    const previous = window.onYouTubeIframeAPIReady;
-    window.onYouTubeIframeAPIReady = () => {
+    const previous = w.onYouTubeIframeAPIReady;
+    w.onYouTubeIframeAPIReady = () => {
       previous?.();
-      const yt = window.YT;
+      const yt = w.YT;
       if (yt === undefined) {
         reject(
           new YouTubeIframeApiLoadError(

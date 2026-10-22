@@ -33,10 +33,13 @@ import ts from "typescript";
 import type { TscPredictionMiss } from "../core";
 import {
   declaresGlobals,
+  declScope,
   fileImports,
   runProgram,
   usesOf,
+  type AmbientModules,
   type CheckedFile,
+  type DeclScope,
   type ProgramRun,
   type ProgramStats,
 } from "./name-check";
@@ -225,6 +228,10 @@ export interface FileFinal {
 export interface WalkOutcome {
   /** The base walked from (undefined: a full walk — `files` holds every file). */
   base: WalkBase | undefined;
+  /**
+   * What the base holds under: the global hash and the ambient modules'
+   * names (a fixed file's uses depend on both).
+   */
   global: string;
   globals: string[];
   listings: Listings;
@@ -301,6 +308,19 @@ export async function runNameCheck(
     return v;
   };
   const versions = new Map(sources.map((p) => [p, version(p)]));
+  // What each repo `.d.ts` can reach: only a global one is in the global
+  // hash; an ambient-module one is a use of the files whose specifiers it
+  // matches (`ambientUses`); a module one, of the files importing its path.
+  const declScopes = new Map<string, DeclScope>(
+    declRoots
+      .filter((d) => /\.d\.[mc]?ts$/.test(d))
+      .map((d) => [d, declScope(view.readText(d), d)]),
+  );
+  const ambient: AmbientModules = new Map(
+    [...declScopes].flatMap(([d, s]) =>
+      s.kind === "ambient" ? [[d, s.patterns] as const] : [],
+    ),
+  );
   const listings = listingsOf(view);
   ms.versions = performance.now() - t0;
 
@@ -329,6 +349,8 @@ export async function runNameCheck(
         sources,
         sourceSet,
         declRoots,
+        declScopes,
+        ambient,
         versions,
         version,
         listings,
@@ -396,6 +418,8 @@ interface Attempt {
   sources: readonly string[];
   sourceSet: ReadonlySet<string>;
   declRoots: readonly string[];
+  declScopes: ReadonlyMap<string, DeclScope>;
+  ambient: AmbientModules;
   versions: ReadonlyMap<string, string>;
   version(p: string): string;
   listings: Listings;
@@ -407,8 +431,17 @@ interface Attempt {
 }
 
 async function walkAndCheck(a: Attempt): Promise<NameRunOutput> {
-  const { input, sources, sourceSet, declRoots, versions, version, demoted } =
-    a;
+  const {
+    input,
+    sources,
+    sourceSet,
+    declRoots,
+    declScopes,
+    ambient,
+    versions,
+    version,
+    demoted,
+  } = a;
   const { view, options, store, cache } = input;
   const ms = a.ms;
   ms.reads = ms.listings = ms.walk = ms.write = 0;
@@ -477,11 +510,25 @@ async function walkAndCheck(a: Attempt): Promise<NameRunOutput> {
     [
       `engine\0${input.engine}`,
       ...globals.map((p) => `global\0${p}\0${versions.get(p)}`),
-      ...declRoots.map((p) => `decl\0${p}\0${version(p)}`),
+      ...[...declScopes]
+        .filter(([, s]) => s.kind === "global")
+        .map(([p]) => `decl\0${p}\0${version(p)}`),
     ].join("\n"),
   );
-  if (inc !== undefined && inc.base.root.global !== global) {
-    throw new WalkFallback("the global hash moved since the base");
+  // The walk base holds under the global hash AND the ambient modules' names:
+  // a file's uses include the ambient `.d.ts` its specifiers match, and a
+  // fixed file's uses are the base's — so a name declared or dropped walks
+  // every file (a `.d.ts`'s version alone moves only its readers' keys).
+  const baseGlobal = sha(
+    [
+      global,
+      ...[...ambient].map(([d, pats]) => `ambient\0${d}\0${pats.join("\0")}`),
+    ].join("\n"),
+  );
+  if (inc !== undefined && inc.base.root.global !== baseGlobal) {
+    throw new WalkFallback(
+      "the global hash or the ambient module names moved since the base",
+    );
   }
 
   // ── Resolutions: keyed on what they probed ──
@@ -536,7 +583,11 @@ async function walkAndCheck(a: Attempt): Promise<NameRunOutput> {
         version: versions.get(p)!,
         uses:
           demoted.has(p) && entries.get(p) !== undefined
-            ? usesOf(entries.get(p)!.imports, entries.get(p)!.res.targets)
+            ? usesOf(
+                entries.get(p)!.imports,
+                entries.get(p)!.res.targets,
+                ambient,
+              )
             : undefined,
         variants: [],
       };
@@ -553,7 +604,7 @@ async function walkAndCheck(a: Attempt): Promise<NameRunOutput> {
     }
     return {
       version: versions.get(p)!,
-      uses: usesOf(e.imports, e.res.targets),
+      uses: usesOf(e.imports, e.res.targets, ambient),
       variants,
     };
   };
@@ -692,6 +743,8 @@ async function walkAndCheck(a: Attempt): Promise<NameRunOutput> {
       check: p0.first,
       declRoots,
       globals,
+      declScopes,
+      ambient,
       contractOf: (p) => {
         const f = files.get(p);
         if (f === undefined) return fixedContract(p);
@@ -779,6 +832,8 @@ async function walkAndCheck(a: Attempt): Promise<NameRunOutput> {
       check: p1.second,
       declRoots,
       globals,
+      declScopes,
+      ambient,
       contractOf: (p) => {
         const f = fresh.get(p);
         if (f !== undefined && p1.confirmed.has(p)) return f.contract;
@@ -941,6 +996,8 @@ async function walkAndCheck(a: Attempt): Promise<NameRunOutput> {
           check: new Set(),
           declRoots,
           globals,
+          declScopes,
+          ambient,
           contractOf: finalContract,
           cache,
           resolver,
@@ -1079,6 +1136,8 @@ async function walkAndCheck(a: Attempt): Promise<NameRunOutput> {
         check: new Set(),
         declRoots,
         globals,
+        declScopes,
+        ambient,
         contractOf: finalContract,
         cache,
         resolver,
@@ -1125,7 +1184,7 @@ async function walkAndCheck(a: Attempt): Promise<NameRunOutput> {
     report,
     walk: {
       base,
-      global,
+      global: baseGlobal,
       globals,
       listings: a.listings,
       files: states,

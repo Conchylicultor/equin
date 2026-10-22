@@ -465,6 +465,54 @@ test("an augmentation is global: its edit checks everything, in one program", as
   expect(out.report.p2).toBeNull();
 });
 
+// A repo `.d.ts` is global only when every file can see it (`declScope`).
+
+const AMBIENT: Record<string, string> = {
+  ...CHAIN,
+  "virt.d.ts": 'declare module "virt:*" {\n  export const v: number;\n}\n',
+  "use-virt.ts": 'import { v } from "virt:x";\nexport const w: number = v;\n',
+  "side.d.ts": "export declare const s: number;\n",
+  "use-side.ts": 'import { s } from "./side";\nexport const t: number = s;\n',
+};
+
+test("an ambient-module .d.ts edit checks the files whose specifiers it matches", async () => {
+  const [, edited] = await walk([
+    AMBIENT,
+    {
+      ...AMBIENT,
+      "virt.d.ts": 'declare module "virt:*" {\n  export const v: string;\n}\n',
+    },
+  ]);
+  expect(edited).toEqual(["use-virt.ts"]);
+});
+
+test("an ambient module declared where an import did not resolve checks that importer", async () => {
+  const { "virt.d.ts": _, ...without } = AMBIENT;
+  const [, added] = await walk([without, AMBIENT]);
+  expect(added).toEqual(["use-virt.ts"]);
+});
+
+test("a module .d.ts edit checks its importers", async () => {
+  const [, edited] = await walk([
+    AMBIENT,
+    { ...AMBIENT, "side.d.ts": "export declare const s: string;\n" },
+  ]);
+  expect(edited).toEqual(["use-side.ts"]);
+});
+
+test("a global .d.ts edit checks everything", async () => {
+  const files = { ...AMBIENT, "env.d.ts": "declare const ENV: number;\n" };
+  const [, edited] = await walk([
+    files,
+    { ...files, "env.d.ts": "declare const ENV: string;\n" },
+  ]);
+  expect(edited).toEqual(
+    Object.keys(files)
+      .filter((f) => !f.endsWith(".d.ts") || f === "d.ts")
+      .sort(),
+  );
+});
+
 // ─── 3. Resolutions ─────────────────────────────────────────────────────────
 
 test("an added file that shadows a resolution re-checks its importers", async () => {

@@ -22,34 +22,12 @@ import {
   formatProfilerReport,
   RENDER_PROFILER_GLOBAL,
   type ProfilerReport,
-  type ProfilerStartOptions,
+  type RenderProfilerWindow,
 } from "@plugins/debug/plugins/render-profiler/core";
-
-/**
- * The window-level imperative API this plugin's `Core.Root` installer exposes.
- *
- * Structurally identical to `web/internal/react-types.ts`'s own declaration on
- * purpose: both augment the same `Window` key, and TypeScript accepts that only
- * while the two types match exactly (TS2717). The sibling `live-state-churn/emit`
- * plugin already publishes its equivalent contract from `core/` for exactly this
- * reason — this one should follow.
- */
-interface RenderProfilerGlobal {
-  start: (opts?: ProfilerStartOptions) => void;
-  stop: () => void;
-  getReport: () => ProfilerReport;
-  isRunning: () => boolean;
-}
-
-declare global {
-  interface Window {
-    [RENDER_PROFILER_GLOBAL]?: RenderProfilerGlobal;
-  }
-}
 
 // An annotated alias: the imported const has a *widening* literal type, so
 // passing it straight to `page.evaluate` would infer the arg as plain `string`
-// and `window[g]` would no longer resolve to the API above.
+// and `w[g]` would no longer resolve to the profiler's API.
 const PROFILER: typeof RENDER_PROFILER_GLOBAL = RENDER_PROFILER_GLOBAL;
 
 const url = pageUrl();
@@ -64,7 +42,8 @@ const ok = await withBrowser(async (h) => {
   await page.waitForTimeout(3000);
 
   const hasApi = await page.evaluate(
-    (g: typeof RENDER_PROFILER_GLOBAL) => typeof window[g] !== "undefined",
+    (g: typeof RENDER_PROFILER_GLOBAL) =>
+      typeof (window as RenderProfilerWindow)[g] !== "undefined",
     PROFILER,
   );
   if (!hasApi) {
@@ -79,7 +58,7 @@ const ok = await withBrowser(async (h) => {
   const maxDurationMs = seconds * 1000 + 5000;
   await page.evaluate(
     ({ g, ms }: { g: typeof RENDER_PROFILER_GLOBAL; ms: number }) =>
-      window[g]?.start({ maxDurationMs: ms }),
+      (window as RenderProfilerWindow)[g]?.start({ maxDurationMs: ms }),
     { g: PROFILER, ms: maxDurationMs },
   );
   console.log(`profiling for ${seconds}s at ${url}`);
@@ -87,7 +66,7 @@ const ok = await withBrowser(async (h) => {
 
   const report: ProfilerReport = await page.evaluate(
     (g: typeof RENDER_PROFILER_GLOBAL) => {
-      const api = window[g];
+      const api = (window as RenderProfilerWindow)[g];
       if (!api) throw new Error(`window.${g} disappeared mid-session`);
       api.stop();
       return api.getReport();

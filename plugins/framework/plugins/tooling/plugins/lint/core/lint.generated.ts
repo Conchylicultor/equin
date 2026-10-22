@@ -27,6 +27,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "database/plugins/sql-rows", id: "database.sql-rows", loader: () => import("@plugins/database/plugins/sql-rows/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/hook-value", id: "framework.hook-value", loader: () => import("@plugins/framework/plugins/hook-value/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/boundaries", id: "framework.tooling.boundaries", loader: () => import("@plugins/framework/plugins/tooling/plugins/boundaries/lint"), dependsOn: [] },
+  { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/type-check", id: "framework.tooling.checks.type-check", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/e2e-harness", id: "framework.tooling.e2e-harness", loader: () => import("@plugins/framework/plugins/tooling/plugins/e2e-harness/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/exempt", id: "framework.tooling.exempt", loader: () => import("@plugins/framework/plugins/tooling/plugins/exempt/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/agent-origin-safety", id: "framework.tooling.lint.agent-origin-safety", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/agent-origin-safety/lint"), dependsOn: [] },

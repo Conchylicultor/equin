@@ -30,17 +30,18 @@ import { listedPins } from "@plugins/map/e2e";
 const out = arg("out", "/tmp/map-zoom-profile");
 const steps = numArg("steps", 6);
 
-declare global {
-  interface Window {
-    __zoomProbe?: {
-      frames: number[];
-      added: number;
-      removed: number;
-      running: boolean;
-      ops: Record<string, number>;
-    };
-  }
-}
+// The probe the init script parks on the page: a cast where it is read and
+// written, not a `Window` augmentation — a global declaration would make every
+// edit to this script re-check the whole repo.
+type ZoomWindow = Window & {
+  __zoomProbe?: {
+    frames: number[];
+    added: number;
+    removed: number;
+    running: boolean;
+    ops: Record<string, number>;
+  };
+};
 
 interface ProfileNode {
   id: number;
@@ -93,7 +94,7 @@ await withBrowser(async (h) => {
       running: true,
       ops: {} as Record<string, number>,
     };
-    window.__zoomProbe = probe;
+    (window as ZoomWindow).__zoomProbe = probe;
     let last = performance.now();
     const tick = (t: number) => {
       probe.frames.push(t - last);
@@ -197,7 +198,7 @@ await withBrowser(async (h) => {
   const after = await metrics();
   if (tracing && browser !== null) await browser.stopTracing();
   const probe = await page.evaluate(() => {
-    const p = window.__zoomProbe;
+    const p = (window as ZoomWindow).__zoomProbe;
     if (p === undefined) throw new Error("probe missing");
     p.running = false;
     return p;

@@ -19991,6 +19991,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `EmitStartOptions`
               - `EmitStatus`
               - `LiveStateEmitGlobal`
+              - `LiveStateEmitWindow`
             - Exports (values):
               - `DEFAULT_EMIT_DURATION_MS`
               - `EmitStatusSchema`
@@ -21093,6 +21094,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ProfilerStartOptions`
           - `RemountCause`
           - `RemountStat`
+          - `RenderProfilerGlobal`
+          - `RenderProfilerWindow`
         - Exports (values):
           - `formatProfilerReport`
           - `RENDER_PROFILER_CHANNEL`

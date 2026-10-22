@@ -47,6 +47,7 @@
     - `EmitStartOptions`
     - `EmitStatus`
     - `LiveStateEmitGlobal`
+    - `LiveStateEmitWindow`
   - Exports (values):
     - `DEFAULT_EMIT_DURATION_MS`
     - `EmitStatusSchema`

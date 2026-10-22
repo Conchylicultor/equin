@@ -7,27 +7,8 @@ import {
 } from "@plugins/infra/plugins/spawn/core";
 import { readBrowserExecutables } from "@plugins/infra/plugins/deps/plugins/playwright-browser/core";
 import type { FixtureMutation } from "@plugins/primitives/plugins/css/plugins/layout-harness/plugins/geometry/core";
+import type { HarnessWindow } from "./harness-window";
 import type { MeasuredFixture } from "@plugins/primitives/plugins/css/plugins/layout-harness/core";
-
-// The browser-side globals the measurer page (`entry.tsx`) installs on `window`
-// and this driver reads. Declared in this module (not a bare ambient `.d.ts`) so
-// the augmentation travels with the import graph — it is therefore present in
-// BOTH the web tsconfig program (which includes `entry.tsx` + this file) AND the
-// test tsconfig program (which only sees this file transitively via the suite).
-declare global {
-  interface Window {
-    /** True once `loadExhibits()` resolved and the globals below are installed. */
-    __fixturesReady: boolean;
-    /** Mount a fixture at `width`, optionally applying a falsification mutation. */
-    __renderFixture: (
-      id: string,
-      width: number,
-      falsify?: FixtureMutation,
-    ) => void;
-    /** Read the `[data-geo]` boxes of the currently mounted fixture. */
-    __measure: () => MeasuredFixture;
-  }
-}
 
 // One headless Chromium + one Page reused across the whole catalog (as the
 // bespoke geometry tests already do in beforeAll/afterAll). `measure` re-renders
@@ -180,15 +161,19 @@ export async function openMeasurer(outDir: string): Promise<Measurer> {
   // The entry sets `window.__fixturesReady` after loadExhibits() resolves and the
   // globals are installed; wait for it rather than the bare function existence so
   // we never race the async fixture load.
-  await page.waitForFunction(() => window.__fixturesReady === true, undefined, {
-    timeout: 30_000,
-  });
+  await page.waitForFunction(
+    () => (window as HarnessWindow).__fixturesReady === true,
+    undefined,
+    {
+      timeout: 30_000,
+    },
+  );
 
   return {
     async measure(id, width, falsify) {
       return page.evaluate(
         ({ id, width, falsify }) => {
-          window.__renderFixture(id, width, falsify);
+          (window as HarnessWindow).__renderFixture(id, width, falsify);
           return new Promise<MeasuredFixture>((resolve) => {
             // Settle by OBSERVATION, not by a frame count.
             //
@@ -212,7 +197,7 @@ export async function openMeasurer(outDir: string): Promise<Measurer> {
             let previous: string | null = null;
             let frames = 0;
             const settle = (): void => {
-              const measured = window.__measure();
+              const measured = (window as HarnessWindow).__measure();
               const signature = JSON.stringify(measured);
               if (signature === previous || frames >= MAX_SETTLE_FRAMES) {
                 resolve(measured);

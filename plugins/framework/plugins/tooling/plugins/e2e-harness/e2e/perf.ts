@@ -41,13 +41,10 @@ interface ResourceEntry {
 type NavigationTiming = Record<string, number | string> | null;
 
 // The observers below run in the page, so the accumulator they fill is a
-// browser-side global. Declared here (not in a .d.ts) so the augmentation
-// travels with this module into whichever TS program compiles it.
-declare global {
-  interface Window {
-    __perf?: Vitals;
-  }
-}
+// browser-side global: cast where it is read and written, not a `Window`
+// augmentation — a global declaration would make every edit to this script
+// re-check the whole repo.
+type PerfWindow = Window & { __perf?: Vitals };
 
 const url = pageUrl();
 const out = arg("out", "/tmp/perf");
@@ -65,7 +62,7 @@ const { perfData, consoleErrors } = await withBrowser(async (h) => {
   // Install PerformanceObservers BEFORE navigation so buffered entries are seen.
   await page.addInitScript(() => {
     const perf: Vitals = { lcp: 0, cls: 0, longTasks: [] };
-    window.__perf = perf;
+    (window as PerfWindow).__perf = perf;
 
     // Each observer is independently optional: a browser that doesn't support
     // one entry type must not cost us the other two. Feature-DETECT via
@@ -131,7 +128,11 @@ const { perfData, consoleErrors } = await withBrowser(async (h) => {
     return {
       navigation: (nav ? nav.toJSON() : null) as NavigationTiming,
       resources,
-      vitals: window.__perf ?? { lcp: 0, cls: 0, longTasks: [] },
+      vitals: (window as PerfWindow).__perf ?? {
+        lcp: 0,
+        cls: 0,
+        longTasks: [],
+      },
     };
   });
 

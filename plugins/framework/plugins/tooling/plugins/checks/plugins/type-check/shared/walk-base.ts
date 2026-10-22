@@ -54,6 +54,7 @@ import { openPassSet, type PassSetBounds } from "./pass-set";
 import type { RepoView } from "./repo-view";
 import { dayNumber, listingHash, shardOf, TOUCH_AFTER_DAYS } from "./run-base";
 import { forEachComponent } from "./keys";
+import { engineSources, sourcesFp } from "./tsc-engine";
 
 /** Bump when the meaning of a stored root or shard changes (its key would not). */
 export const WALK_BASE_FORMAT = 1;
@@ -228,10 +229,15 @@ const hintSchema = z.object({ treeHash: z.string() });
 export function openWalkBaseStore(): WalkBaseStore {
   const roots = openPassSet(walkBaseRootsDir, ROOT_BOUNDS);
   const shards = openPassSet(walkBaseShardsDir, SHARD_BOUNDS);
-  const pointerKey = (t: string) => `tree\0${WALK_BASE_FORMAT}\0${t}`;
-  const rootKey = (h: string) => `root\0${WALK_BASE_FORMAT}\0${h}`;
-  const shardKey = (h: string) => `shard\0${WALK_BASE_FORMAT}\0${h}`;
-  const hintKey = (w: string) => `hint\0${WALK_BASE_FORMAT}\0${w}`;
+  // Under the walk code that wrote them: a base is the state THIS walk
+  // ended in, so one written by other walk code is not found — the run walks
+  // every file (cheap, no TypeScript) instead of re-checking any. The result
+  // store is keyed by the producer alone (`tscEngineFp`).
+  const ns = `${WALK_BASE_FORMAT}\0${sourcesFp(engineSources()).slice(0, 16)}`;
+  const pointerKey = (t: string) => `tree\0${ns}\0${t}`;
+  const rootKey = (h: string) => `root\0${ns}\0${h}`;
+  const shardKey = (h: string) => `shard\0${ns}\0${h}`;
+  const hintKey = (w: string) => `hint\0${ns}\0${w}`;
   // Every entry is written below and renamed into place whole: a shape a
   // schema rejects is a bug in this file, surfaced.
   return {
@@ -426,7 +432,7 @@ export function openWalkBase(
   if (root === undefined) {
     return {
       kind: "none",
-      reason: `${label}: root ${rootHash.slice(0, 12)} pruned`,
+      reason: `${label}: root ${rootHash.slice(0, 12)} pruned, or written by other walk code`,
     };
   }
   const refs = Object.values(root.shards);

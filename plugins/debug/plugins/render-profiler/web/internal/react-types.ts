@@ -3,8 +3,6 @@
 // by React DevTools / bippy, but private. Centralized here with loose `any`
 // where the real shape is irrelevant to us.
 
-import type { ProfilerReport, ProfilerStartOptions } from "../../core";
-
 /** `PerformedWork` — set when a component runs its render fn (not on bailout). */
 export const PerformedWork = 0b1;
 
@@ -57,14 +55,6 @@ export interface FiberRoot {
   current: Fiber;
 }
 
-/** The window-level imperative API installed by global-api.ts. */
-export interface RenderProfilerGlobal {
-  start: (opts?: ProfilerStartOptions) => void;
-  stop: () => void;
-  getReport: () => ProfilerReport;
-  isRunning: () => boolean;
-}
-
 /** The passive commit bridge installed by index.html, before React loads. */
 export interface ReactDevtoolsHook {
   __commitSubscribers?: Set<(root: FiberRoot) => void>;
@@ -72,9 +62,7 @@ export interface ReactDevtoolsHook {
   [key: string]: any;
 }
 
-declare global {
-  interface Window {
-    __REACT_DEVTOOLS_GLOBAL_HOOK__?: ReactDevtoolsHook;
-    __reactRenderProfiler?: RenderProfilerGlobal;
-  }
-}
+/** The window index.html's commit bridge lives on (a cast, not a `Window` augmentation). */
+export type DevtoolsWindow = Window & {
+  __REACT_DEVTOOLS_GLOBAL_HOOK__?: ReactDevtoolsHook;
+};

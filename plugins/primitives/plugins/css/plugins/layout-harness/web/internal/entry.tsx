@@ -15,6 +15,7 @@ import {
   type MeasurableExhibit,
 } from "./measurable-exhibits";
 import { RAIL_MARKER_ATTR } from "./region-children";
+import type { HarnessWindow } from "./harness-window";
 // The ONLY place the real Tailwind stylesheet is imported — the exhibits
 // themselves never import it (so they stay Bun-safe). Bundling it here means the
 // measured page paints with the exact tokens/utilities the live app uses.
@@ -581,7 +582,7 @@ void loadExhibits().then((loaded) => {
   const exhibits = measurableExhibits(loaded);
   byId = new Map(exhibits.map((f) => [f.id, f]));
 
-  window.__renderFixture = (id, width, falsify) => {
+  (window as HarnessWindow).__renderFixture = (id, width, falsify) => {
     const fixture = byId.get(id);
     if (!fixture)
       throw new Error(`__renderFixture: unknown exhibit id "${id}"`);
@@ -641,7 +642,7 @@ void loadExhibits().then((loaded) => {
     }
   };
 
-  window.__measure = () => {
+  (window as HarnessWindow).__measure = () => {
     // Prefer the INNERMOST `[data-geo="container"]` so a fixture that authors its
     // own container (e.g. pin/menu-indicator-over-label's relative div) measures
     // against it rather than the harness width wrapper.
@@ -705,5 +706,5 @@ void loadExhibits().then((loaded) => {
     };
   };
 
-  window.__fixturesReady = true;
+  (window as HarnessWindow).__fixturesReady = true;
 });

@@ -140,6 +140,8 @@ React-internals coupling (fiber `flags` / `memoizedState` / `dependencies` /
     - `ProfilerStartOptions`
     - `RemountCause`
     - `RemountStat`
+    - `RenderProfilerGlobal`
+    - `RenderProfilerWindow`
   - Exports (values):
     - `formatProfilerReport`
     - `RENDER_PROFILER_CHANNEL`

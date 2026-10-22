@@ -4,18 +4,8 @@ import {
   type FetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
 import { LIVE_STATE_EMIT_GLOBAL } from "../../core";
-import type { LiveStateEmitGlobal } from "../../core";
+import type { LiveStateEmitWindow } from "../../core";
 import { startEmit, stopEmit, getEmitStatus } from "../../shared/endpoints";
-
-// The interface itself lives in core/global-api.ts so the headless e2e driver —
-// which may import core but not web — augments Window with the SAME type this
-// installer does. Two structurally-identical local copies would be distinct
-// types on one Window key, which TypeScript rejects (TS2717).
-declare global {
-  interface Window {
-    [LIVE_STATE_EMIT_GLOBAL]?: LiveStateEmitGlobal;
-  }
-}
 
 let installed = false;
 
@@ -26,7 +16,7 @@ let installed = false;
 export function installGlobalApi(fetchEndpoint: FetchEndpoint): void {
   if (installed) return;
   installed = true;
-  window[LIVE_STATE_EMIT_GLOBAL] = {
+  (window as LiveStateEmitWindow)[LIVE_STATE_EMIT_GLOBAL] = {
     start: ({ key, rate, durationMs }) =>
       fetchEndpoint(startEmit, {}, { body: { key, rate, durationMs } }),
     stop: () => fetchEndpoint(stopEmit, {}),

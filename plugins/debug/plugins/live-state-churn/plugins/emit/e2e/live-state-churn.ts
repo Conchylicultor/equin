@@ -26,44 +26,32 @@ import {
   formatProfilerReport,
   RENDER_PROFILER_GLOBAL,
   type ProfilerReport,
-  type ProfilerStartOptions,
+  type RenderProfilerWindow,
 } from "@plugins/debug/plugins/render-profiler/core";
 import {
   LIVE_STATE_EMIT_GLOBAL,
   type EmitStatus,
-  type LiveStateEmitGlobal,
+  type LiveStateEmitWindow,
 } from "@plugins/debug/plugins/live-state-churn/plugins/emit/core";
 
 /**
- * The window-level imperative API render-profiler's `Core.Root` installer exposes.
- *
- * Structurally identical to that plugin's `web/internal/react-types.ts`
- * declaration on purpose: both augment the same `Window` key, and TypeScript
- * accepts that only while the two match exactly (TS2717). Unlike this plugin's
- * own `LiveStateEmitGlobal`, render-profiler does not yet publish the contract
- * from `core/`, so it has to be restated here.
+ * The window this driver reads: both Debug plugins' imperative APIs (each
+ * published from its plugin's `core/`), and the DOM-mutation count the init
+ * script below keeps. A cast where it is used, not a `Window` augmentation: a
+ * global declaration would make every edit to this script re-check the whole
+ * repo. Over `typeof window`, so the cast is a narrowing: `__domMutations` is
+ * required.
  */
-interface RenderProfilerGlobal {
-  start: (opts?: ProfilerStartOptions) => void;
-  stop: () => void;
-  getReport: () => ProfilerReport;
-  isRunning: () => boolean;
-}
-
-declare global {
-  interface Window {
-    [RENDER_PROFILER_GLOBAL]?: RenderProfilerGlobal;
-    // Same contract the web installer augments Window with — one definition in
-    // this plugin's core/, referenced by both sides (see core/global-api.ts).
-    [LIVE_STATE_EMIT_GLOBAL]?: LiveStateEmitGlobal;
+type ChurnWindow = typeof window &
+  RenderProfilerWindow &
+  LiveStateEmitWindow & {
     /** Added+removed node count since the init script ran (see addInitScript below). */
     __domMutations: number;
-  }
-}
+  };
 
 // Annotated aliases: the imported consts have *widening* literal types, so
 // passing one straight to `page.evaluate` would infer the arg as plain `string`
-// and `window[g]` would no longer resolve to the APIs above.
+// and `w[g]` would no longer resolve to the APIs above.
 const PROFILER: typeof RENDER_PROFILER_GLOBAL = RENDER_PROFILER_GLOBAL;
 const EMIT: typeof LIVE_STATE_EMIT_GLOBAL = LIVE_STATE_EMIT_GLOBAL;
 
@@ -81,11 +69,12 @@ const ok = await withBrowser(async (h) => {
   // Install a MutationObserver BEFORE page JS so we count every added/removed
   // node from the very first paint (the perf.ts addInitScript pattern).
   await page.addInitScript(() => {
-    window.__domMutations = 0;
+    (window as ChurnWindow).__domMutations = 0;
     try {
       new MutationObserver((records) => {
         for (const r of records) {
-          window.__domMutations += r.addedNodes.length + r.removedNodes.length;
+          (window as ChurnWindow).__domMutations +=
+            r.addedNodes.length + r.removedNodes.length;
         }
       }).observe(document.documentElement, { childList: true, subtree: true });
       // eslint-disable-next-line promise-safety/no-bare-catch -- pre-move behavior: MutationObserver is best-effort instrumentation; a document that refuses it must not abort the run.
@@ -104,8 +93,8 @@ const ok = await withBrowser(async (h) => {
       emitGlobal: typeof LIVE_STATE_EMIT_GLOBAL;
       profilerGlobal: typeof RENDER_PROFILER_GLOBAL;
     }) =>
-      typeof window[emitGlobal] !== "undefined" &&
-      typeof window[profilerGlobal] !== "undefined",
+      typeof (window as ChurnWindow)[emitGlobal] !== "undefined" &&
+      typeof (window as ChurnWindow)[profilerGlobal] !== "undefined",
     { emitGlobal: EMIT, profilerGlobal: PROFILER },
   );
   if (!hasApi) {
@@ -131,7 +120,7 @@ const ok = await withBrowser(async (h) => {
       key: string;
       rate: number;
       durationMs: number;
-    }) => window[g]?.start({ key, rate, durationMs }),
+    }) => (window as ChurnWindow)[g]?.start({ key, rate, durationMs }),
     { g: EMIT, key, rate, durationMs: emitDurationMs },
   );
 
@@ -148,7 +137,7 @@ const ok = await withBrowser(async (h) => {
   const maxDurationMs = (seconds + 2) * 1000;
   await page.evaluate(
     ({ g, ms }: { g: typeof RENDER_PROFILER_GLOBAL; ms: number }) =>
-      window[g]?.start({ maxDurationMs: ms }),
+      (window as ChurnWindow)[g]?.start({ maxDurationMs: ms }),
     { g: PROFILER, ms: maxDurationMs },
   );
 
@@ -159,7 +148,7 @@ const ok = await withBrowser(async (h) => {
 
   const report: ProfilerReport = await page.evaluate(
     (g: typeof RENDER_PROFILER_GLOBAL) => {
-      const api = window[g];
+      const api = (window as ChurnWindow)[g];
       if (!api) throw new Error(`window.${g} disappeared mid-session`);
       api.stop();
       return api.getReport();
@@ -167,10 +156,12 @@ const ok = await withBrowser(async (h) => {
     PROFILER,
   );
   await page.evaluate(
-    (g: typeof LIVE_STATE_EMIT_GLOBAL) => window[g]?.stop(),
+    (g: typeof LIVE_STATE_EMIT_GLOBAL) => (window as ChurnWindow)[g]?.stop(),
     EMIT,
   );
-  const mutations: number = await page.evaluate(() => window.__domMutations);
+  const mutations: number = await page.evaluate(
+    () => (window as ChurnWindow).__domMutations,
+  );
 
   // stop() dumps the ranked report to the `render-profiler` JSONL via clientLog,
   // which debounces ~250ms before POSTing. Give it time to flush before closing.

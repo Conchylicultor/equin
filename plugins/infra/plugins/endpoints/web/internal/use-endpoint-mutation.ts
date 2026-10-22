@@ -14,16 +14,8 @@ import { unavailableMessage } from "../../core";
 import { EndpointError } from "../../core";
 import { useFetchEndpoint } from "./fetch-endpoint";
 
-// Global mutation meta type — available on any useMutation/useEndpointMutation call.
-// suppressError: true  → silence the global auto-toast (handle locally instead).
-// When onError is provided, suppressError defaults to true automatically.
-declare module "@tanstack/react-query" {
-  interface Register {
-    mutationMeta: {
-      suppressError?: boolean;
-    };
-  }
-}
+// The global mutation meta type (`suppressError`) is react-query's `Register`,
+// augmented in `./react-query-register.d.ts`.
 
 type MutationVariables<TParams, TBody> =
   TParams extends Record<string, never>

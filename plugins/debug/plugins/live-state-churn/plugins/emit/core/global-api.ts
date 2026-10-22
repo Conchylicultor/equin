@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { LIVE_STATE_EMIT_GLOBAL } from "./constants";
 
 /**
  * The contract of the window-level imperative emit API.
@@ -8,10 +9,10 @@ import { z } from "zod";
  * headless e2e driver that CALLS it. (The global exists for the driver's sake;
  * see LIVE_STATE_EMIT_GLOBAL's comment in ./constants.) `e2e` may import `core`
  * but never `web` or `shared`, so a contract defined in `web/internal/` is
- * unreachable from the only other party to it — and duplicating the interface on
- * the e2e side produces two structurally-identical-but-distinct types augmenting
- * the same `Window` key, which TypeScript rejects (TS2717). One definition here,
- * referenced by both `declare global` blocks, is the single source of truth.
+ * unreachable from the only other party to it. One definition here, which both
+ * sides cast `window` to (`LiveStateEmitWindow`) — a type, not a `Window`
+ * augmentation: a global declaration makes every edit to the file holding it
+ * re-check the whole repo (`type-check/no-global-declaration-in-source`).
  */
 
 /** Snapshot of the in-memory emit controller. */
@@ -43,3 +44,8 @@ export interface LiveStateEmitGlobal {
   stop: () => Promise<EmitStatus>;
   status: () => Promise<EmitStatus>;
 }
+
+/** The window the emit API lives on. */
+export type LiveStateEmitWindow = Window & {
+  [LIVE_STATE_EMIT_GLOBAL]?: LiveStateEmitGlobal;
+};

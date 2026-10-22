@@ -9,7 +9,7 @@ import {
   type ProfilerStartOptions,
   type RemountStat,
 } from "../../core";
-import type { Fiber, FiberRoot } from "./react-types";
+import type { DevtoolsWindow, Fiber, FiberRoot } from "./react-types";
 import {
   collectCommit,
   getComponentName,
@@ -276,7 +276,8 @@ function onCommit(root: FiberRoot): void {
 }
 
 function bridgeSubscribers(): Set<(root: FiberRoot) => void> | undefined {
-  return window.__REACT_DEVTOOLS_GLOBAL_HOOK__?.__commitSubscribers;
+  return (window as DevtoolsWindow).__REACT_DEVTOOLS_GLOBAL_HOOK__
+    ?.__commitSubscribers;
 }
 
 export function startSession(opts?: ProfilerStartOptions): void {

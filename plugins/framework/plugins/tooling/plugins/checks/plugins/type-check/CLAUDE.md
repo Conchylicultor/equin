@@ -105,9 +105,23 @@ A thread, not a helper process, because the session must survive the worker:
 the record phase reuses the prepare phase's lint entries, versions and
 directive flags, which a process would have to serialize.
 
-New files go FLAT in `shared/`: the engine (`tscEngineFp`, and lint's typed
-engine) is every top-level non-test `.ts` there (`engineSources()`), listed
-from the directory — a subdirectory would silently fall out of every key.
+New files go FLAT in `shared/`. Two engine hashes are read from there, both
+derived, never listed by hand:
+
+- **The producer** (`producerSources()`): the import closure, inside
+  `shared/`, of what PRODUCES a stored result — the per-file check and its
+  records (`name-check`), the store's format (`name-store`), the emit options.
+  It is in `tscEngineFp` (so in the global hash: moving it re-checks every
+  file) and in lint's typed engine.
+- **The walk** (`engineSources()`: every top-level non-test `.ts` but the
+  worker's plumbing and the oracle). It keys only the WALK BASE store's
+  namespace (`openWalkBaseStore`): a base written by other walk code is not
+  found and the run walks every file — no TypeScript, ~1–3 CPU-s — instead of
+  re-checking any. Editing the walk, the bases or `name-run` re-checks
+  nothing: a change to a key's formula misses by itself, and every other one
+  is held by `walk-replay`, `dual-check` and the backstop.
+
+A subdirectory would fall out of both.
 
 ## The input is the git tree plus an overlay, read through one view
 
@@ -209,8 +223,8 @@ they are built**, against a host-wide per-file store — never the whole repo
    run and no program holds), the rest as stored `.d.ts`.
 
 A body edit is program 1 alone (program 2 empty). A global change — a
-`declare global`, a module augmentation, any repo `.d.ts`, the engine — misses
-every key, so program 1 is the whole tree: one program.
+global `.d.ts`, the producer engine, a dependency, the compiler options —
+misses every key, so program 1 is the whole tree: one program.
 
 **Keys, name by name.** Each exported name's record (`shared/name-records.ts`)
 is its canonical `.d.ts` text hash `t` and its **name-use edges** `d` (what that
@@ -221,12 +235,31 @@ file — first hop; a barrel's name is an alias edge to the next). Its meaning:
     R(F)   = H( global, F's path and version, (use, M(use)) of every name F's source uses )
 
 `global` is the engine (`tscEngineFp`: compiler, options, lockfile, patches,
-`engineSources()`), every global source file's version and every repo `.d.ts`'s.
+`producerSources()`), every global source file's version and every GLOBAL repo
+`.d.ts`'s. A repo `.d.ts` root is in every program, but its reach is read from
+its syntax (`declScope`, checked against the checker in every program): a
+script, a `declare global`, an augmentation or a `/// <reference>` is global;
+a script holding only `declare module "pattern"` is an AMBIENT module, a use
+(of the whole `.d.ts`) of each file whose specifiers it matches
+(`ambientUses`), so its edit re-checks those files; an ordinary module is
+reached through imports of its path. Adding or dropping an ambient module
+name walks every file (it is in the walk base's hash with the global one),
+re-checking only the files whose keys moved.
+
 A stored result of F is valid iff its R is today's — what F's check reads is
 its text, the `.d.ts` of what it imports and everything those name, and the
 global scope: exactly what R hashes. So `f(r: PluginRegistry)`, whose text does
 not move when `PluginRegistry` does, moves through its d-edge, and so does
 every user of `f`.
+
+**No `.ts` source file declares globals** — the
+`type-check/no-global-declaration-in-source` lint (this plugin's `lint/`): a
+`declare global` there made every edit to the file (a 1,128-line e2e script
+around a 4-line `interface Window` block) re-check the repo. A value parked on
+`window` is a cast where it is used (`(window as Window & { __x?: T }).__x`,
+or a `…Window` type a plugin's `core/` publishes for both its installer and
+its e2e driver); a real augmentation is a declaration-only `.d.ts`.
+`declaresGlobals` still handles a source global, the way tsc does.
 
 Inside an import cycle (the `check/` registries, the lint rules, the exhibits:
 100–175 files each) a member's key needs its cycle-mates' names, whose records
@@ -337,8 +370,9 @@ and the result key that replaced the type fingerprint
 files hashed by their versions, each folding in the **engine**: the config
 builder's import closure (`LINT_CONFIG_SOURCE`, generated registries not
 followed), `shared/worker.ts`,
-the root tsconfigs and `package.json`,
-ambient `.d.ts`, `patches/**`, the lockfile **minus its workspace entries**
+the root tsconfigs and `package.json`
+(not the `.d.ts`: a typed part's result key holds every one the file sees),
+`patches/**`, the lockfile **minus its workspace entries**
 (`lockfileLintDigest`), and the declared `@utility` set (`lintDataKey`). The
 **base** group is the builder's own rules (typescript-eslint, react-hooks,
 eslint core); each **contribution** (`lintContributionPaths()`) is the import
@@ -353,8 +387,9 @@ type-aware rule (`typeAwareLintGroups`, learned by loading every contribution
 through the same classifier, ~1.2 CPU-s — so stored in the lint result store
 under `typeAwareKey`, every group's fp and the typed engine, and loaded only
 when one moved) has a **typed group fp** (`typedGroupFps`): its
-group fp plus the **typed engine** — the type check's `engineSources()`, which
-only parts that read types depend on. So a syntactic-only rule edit stales no
+group fp plus the **typed engine** — the type check's `producerSources()` (what
+builds the programs typed rules run in and the `.d.ts` they serve), which only
+parts that read types depend on. So a syntactic-only rule edit stales no
 typed part, one type-aware rule edit stales its group's typed part only, and
 editing the type check's code re-runs no syntactic result. A file whose result
 key moved runs all its stale typed parts in ONE pass, in its program.
@@ -403,8 +438,8 @@ change — the file plus the typed parts of the files using the names that moved
 exemption, or an app.css token edit — nothing; one syntactic rule — that group
 on every file (directive files whole); one type-aware rule — that group's typed
 part on every file, in one program 2 over the whole tree; the type check's code
-— every typed part; the lint core, a tsconfig, a `.d.ts`, a real dependency
-bump — everything.
+— the producer's code: every typed part, the walk's code: nothing; the lint
+core, a tsconfig, a global `.d.ts`, a real dependency bump — everything.
 
 Each entry keeps a few keys per part, most recently USED first: a key a run
 reused moves up beside the fresh ones, so two
@@ -491,8 +526,9 @@ a run that returned (a crash writes none):
 
 **Which base**: the lint root's `walk` (bound: `walkBase: root`), else — only
 with no lint base — this checkout's last walk (`hint`), else none. A base whose
-global hash differs, or that names a missing shard, is not walked from (full
-walk, the reason in the walk line).
+global hash (or ambient module names) differ, that names a missing shard, or
+that other walk code wrote (it is not found) is not walked from (full walk,
+the reason in the walk line).
 
 **The walk** (`name-run.ts`): D₀ = sources whose version moved or that are
 new; readers of a removed file or of a changed non-source (JSON); files whose

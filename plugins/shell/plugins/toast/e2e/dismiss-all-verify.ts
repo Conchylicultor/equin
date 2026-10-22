@@ -25,15 +25,16 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
-declare global {
-  interface Window {
-    /**
-     * Titles of every distinct toast this run has watched enter the DOM.
-     * Installed by `startToastProbe()` for the burst check, absent otherwise.
-     */
-    __toastProbe?: { seen: Set<string>; stop: () => void };
-  }
-}
+// A cast where the probe is read and written, not a `Window` augmentation — a
+// global declaration would make every edit to this script re-check the whole
+// repo.
+type ToastProbeWindow = Window & {
+  /**
+   * Titles of every distinct toast this run has watched enter the DOM.
+   * Installed by `startToastProbe()` for the burst check, absent otherwise.
+   */
+  __toastProbe?: { seen: Set<string>; stop: () => void };
+};
 
 const OUT = "/tmp/toast-dismiss-all";
 const SEEDED = 3;
@@ -151,7 +152,10 @@ await withBrowser(async (h) => {
   const burst = await seed(BURST, { tight: true });
   await page
     .waitForFunction(
-      (want) => want.every((title) => window.__toastProbe?.seen.has(title)),
+      (want) =>
+        want.every((title) =>
+          (window as ToastProbeWindow).__toastProbe?.seen.has(title),
+        ),
       burst,
       { timeout: 20_000 },
     )
@@ -161,13 +165,13 @@ await withBrowser(async (h) => {
       if (!(err instanceof Error) || err.name !== "TimeoutError") throw err;
     });
   const missing = await page.evaluate((want) => {
-    const probe = window.__toastProbe;
+    const probe = (window as ToastProbeWindow).__toastProbe;
     if (probe === undefined) {
       throw new Error("toast probe is gone — did the page reload mid-burst?");
     }
     return want.filter((title) => !probe.seen.has(title));
   }, burst);
-  await page.evaluate(() => window.__toastProbe?.stop());
+  await page.evaluate(() => (window as ToastProbeWindow).__toastProbe?.stop());
   r.ok(
     `every toast in a ${BURST}-toast burst reaches the DOM`,
     missing.length === 0,
@@ -295,7 +299,10 @@ await withBrowser(async (h) => {
         }
       });
       observer.observe(document, { childList: true, subtree: true });
-      window.__toastProbe = { seen, stop: () => observer.disconnect() };
+      (window as ToastProbeWindow).__toastProbe = {
+        seen,
+        stop: () => observer.disconnect(),
+      };
     });
   }
 

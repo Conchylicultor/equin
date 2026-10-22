@@ -62,20 +62,67 @@ export function tscEngineFp(root: string, options: ts.CompilerOptions): string {
       );
     }
   }
-  for (const own of engineSources()) {
-    parts.push(
-      `source ${own} ${sha256(readFileSync(join(import.meta.dir, own), "utf8"))}`,
-    );
-  }
+  parts.push(`code ${sourcesFp(producerSources())}`);
   return sha256(parts.join("\n"));
 }
 
+/** The hash of some of this directory's sources, by name and content. */
+export function sourcesFp(files: readonly string[]): string {
+  return sha256(
+    files
+      .map(
+        (own) =>
+          `source ${own} ${sha256(readFileSync(join(import.meta.dir, own), "utf8"))}`,
+      )
+      .join("\n"),
+  );
+}
+
 /**
- * This engine's code: what decides a key, a check, and a `.d.ts` — every
- * top-level source of `shared/` but the worker's process plumbing and the
- * dual-mode oracle. Listed from the directory, never by hand: a new module the
- * check reads would otherwise fall out of every key in silence. (Which is why
- * new files go FLAT in `shared/`.)
+ * The modules that PRODUCE what the store keeps under a result key: a file's
+ * check (diagnostics, the `.d.ts` and its canonical form), its per-name
+ * records, imports and resolutions, the program's host, and the store's own
+ * format — the import closure, inside this directory, of `PRODUCERS`.
+ * Derived from the imports, never listed, so a module the producer starts
+ * importing is in it the moment it is.
+ *
+ * Only these move the global hash. The walk, the bases and the run's plumbing
+ * (`name-walk`, `walk-*`, `run-base`, `name-run`) decide WHICH stored results
+ * are read and under what key: an edit that changes a key's formula misses
+ * by itself, and every other one is held by the replay oracle and the
+ * backstop — so editing them re-checks nothing, it only re-walks
+ * (`engineSources`, which keys the walk base).
+ */
+export function producerSources(): string[] {
+  const seen = new Set<string>();
+  const stack = [...PRODUCERS];
+  while (stack.length > 0) {
+    const f = stack.pop()!;
+    if (seen.has(f)) continue;
+    seen.add(f);
+    const text = readFileSync(join(import.meta.dir, f), "utf8");
+    for (const imp of ts.preProcessFile(text, true, true).importedFiles) {
+      const m = /^\.\/([^/]+?)(\.ts)?$/.exec(imp.fileName);
+      if (m !== null) stack.push(`${m[1]}.ts`);
+    }
+  }
+  return [...seen].sort();
+}
+
+/**
+ * The roots of the producer closure: the per-file check and its records
+ * (`name-check`), the store and its format (`name-store`), and the options
+ * every program is built with (`emit-options`).
+ */
+const PRODUCERS = ["name-check.ts", "name-store.ts", "emit-options.ts"];
+
+/**
+ * This engine's code: what decides a key, a walk, a check, and a `.d.ts` —
+ * every top-level source of `shared/` but the worker's process plumbing and
+ * the dual-mode oracle. It keys the WALK BASE (`./walk-base.ts`): a base
+ * written by other walk code is not walked from. Listed from the directory,
+ * never by hand: a new module the check reads would otherwise fall out of the
+ * key in silence. (Which is why new files go FLAT in `shared/`.)
  */
 export function engineSources(): string[] {
   return readdirSync(import.meta.dir)

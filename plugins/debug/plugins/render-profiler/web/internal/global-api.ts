@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { RENDER_PROFILER_GLOBAL } from "../../core";
+import type { RenderProfilerWindow } from "../../core";
 import type { Fiber } from "./react-types";
 import { isComponentFiber } from "./fiber-walk";
 import { startSession, stopSession, getReport, isRunning } from "./session";
@@ -44,7 +45,7 @@ let installed = false;
 export function installGlobalApi(): void {
   if (installed) return;
   installed = true;
-  window[RENDER_PROFILER_GLOBAL] = {
+  (window as RenderProfilerWindow)[RENDER_PROFILER_GLOBAL] = {
     start: (opts) => startSession(opts),
     stop: () => stopSession(),
     getReport: () => getReport(),
