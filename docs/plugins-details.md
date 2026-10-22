@@ -22413,6 +22413,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Contributes: `DataViewSlots.Cell` "bool" → `BoolCell`
             - Uses:
+              - `primitives/css/inline.Inline`
               - `primitives/data-view.DataViewSlots`
               - `ui/icons.Icon`
           - Cross-plugin:
@@ -36352,7 +36353,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 85 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 86 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `apps` ×16
               - `debug` ×14
               - `reports` ×13
@@ -36367,6 +36368,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `backup/runs-arm`
               - `config_v2/settings`
               - `database/query-deadline`
+              - `fields/bool/table`
               - `reorder/editor`
               - `runs/run-outcome`
               - `shell/notifications`

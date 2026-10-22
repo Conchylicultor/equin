@@ -592,6 +592,51 @@ function subtitleSeparator(
   return prevIsChip || subtitleIsChip[fi] ? " " : " · ";
 }
 
+/**
+ * One term of the subtitle run: its separator, then its cell.
+ *
+ * The run is inline flow, but a cell is free to lay itself out as a block —
+ * a chip group is typically a wrapping flex row (`Cluster`, a clipped `Stack`)
+ * — and a block inside the run breaks the line: the row grows a line per such
+ * term. A chip term is therefore drawn in an inline-flex box (`Inline`), where
+ * whatever box the cell draws is a flex item on the run's line. A text term
+ * stays bare inline content, so it still ellipsizes with the run.
+ */
+function SubtitleTerm({
+  config,
+  row,
+  fi,
+  precededByTitle,
+}: {
+  config: ListRowConfig;
+  row: unknown;
+  fi: number;
+  precededByTitle: boolean;
+}): ReactNode {
+  const field = config.subtitleFields[fi]!;
+  const cell = (
+    <FieldCell
+      field={field}
+      row={row}
+      resolveCell={config.resolveCell}
+      resolveEditor={config.resolveEditor}
+      display="inline"
+    />
+  );
+  return (
+    <span>
+      {subtitleSeparator(config, fi, precededByTitle)}
+      {config.subtitleIsChip[fi] ? (
+        <Inline gap="none" className="max-w-full">
+          {cell}
+        </Inline>
+      ) : (
+        cell
+      )}
+    </span>
+  );
+}
+
 // The trailing cell — `align: "end"` fields plus the aggregate `×N` badge —
 // is identical in both row shapes, so it is written once. It is a rigid leaf:
 // it renders what it renders and never gives width back to the title. Only
@@ -814,16 +859,13 @@ function listRowNode(props: ListEntryProps): ReactNode {
                 className="truncate text-muted-foreground"
               >
                 {subtitleFields.map((field, fi) => (
-                  <span key={field.id}>
-                    {subtitleSeparator(config, fi, false)}
-                    <FieldCell
-                      field={field}
-                      row={row}
-                      resolveCell={config.resolveCell}
-                      resolveEditor={config.resolveEditor}
-                      display="inline"
-                    />
-                  </span>
+                  <SubtitleTerm
+                    key={field.id}
+                    config={config}
+                    row={row}
+                    fi={fi}
+                    precededByTitle={false}
+                  />
                 ))}
               </Text>
             ) : null}
@@ -861,18 +903,13 @@ function listRowNode(props: ListEntryProps): ReactNode {
           {subtitleFields.length > 0 ? (
             <Text variant="caption" className="text-muted-foreground">
               {subtitleFields.map((field, fi) => (
-                <span key={field.id}>
-                  {/* The same join, extended to the seam with the title: on one
-                      line the title is simply the run's first term. */}
-                  {subtitleSeparator(config, fi, titleField != null)}
-                  <FieldCell
-                    field={field}
-                    row={row}
-                    resolveCell={config.resolveCell}
-                    resolveEditor={config.resolveEditor}
-                    display="inline"
-                  />
-                </span>
+                <SubtitleTerm
+                  key={field.id}
+                  config={config}
+                  row={row}
+                  fi={fi}
+                  precededByTitle={titleField != null}
+                />
               ))}
             </Text>
           ) : null}

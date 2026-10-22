@@ -13,6 +13,7 @@ Contributes `DataViewSlots.Cell({ match: "bool", ... })` — a read-only
 - Web:
   - Contributes: `DataViewSlots.Cell` "bool" → `BoolCell`
   - Uses:
+    - `primitives/css/inline.Inline`
     - `primitives/data-view.DataViewSlots`
     - `ui/icons.Icon`
 - Cross-plugin:
