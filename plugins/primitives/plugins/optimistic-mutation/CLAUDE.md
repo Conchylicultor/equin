@@ -587,29 +587,30 @@ that drops it from the overlay — is emitted on `clientLatencySink`
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.getEndpointErrorMessage`
     - `primitives/latest-ref.useLatestRef`
-    - `primitives/live-state.ensureNotificationsClient`
     - `primitives/live-state.LiveRegistries`
     - `primitives/live-state.queryKeyFor`
     - `primitives/live-state.ResourceError`
     - `primitives/live-state.useLiveRegistries`
     - `primitives/live-state.useLiveSocketKindOf`
+    - `primitives/live-state.useNotificationsClient`
     - `primitives/live-state.useResource`
     - `primitives/live-state.useResourceAcks`
     - `primitives/networking.subscribeWsStatus`
     - `primitives/sync-status.useReportSync`
   - Exports (types):
+    - `AwaitResourceWrite`
     - `OptimisticDivergenceReport`
     - `OptimisticOptions`
     - `OptimisticRejectionReport`
     - `OptimisticResult`
     - `OptimisticSettled`
   - Exports (values):
-    - `awaitResourceWrite`
     - `enqueueDetachedWrite`
     - `enqueueResourceWrite`
     - `OpNoLongerApplies`
     - `optimisticDivergenceReportSink`
     - `optimisticRejectionSink`
+    - `useAwaitResourceWrite`
     - `useOptimisticResource`
 - Cross-plugin:
   - Imported by:

@@ -4,14 +4,15 @@
 
 ## Plugin reference
 
-- Description: Bookmark block type: a link pasted into an empty block can become one (via the pasted-link menu), scraping OG metadata server-side to render a rich preview card (title, description, site, favicon, og:image cached same-origin). Link-preview scraper for the bookmark block (the live bookmark.link-preview value): fetches a URL (SSRF-guarded), extracts OG/Twitter metadata via HTMLRewriter, and caches og:image + favicon as same-origin attachments. Also serves a title-only lookup (/api/link-meta, no image downloads) for the pasted-link Mention, and registers the bookmark `data` schema at the server write boundary.
+- Description: Bookmark block type: a link pasted into an empty block can become one (via the pasted-link menu), scraping OG metadata server-side to render a rich preview card (title, description, site, favicon, og:image cached same-origin). Registers the bookmark block's `data` schema at the server write boundary. Its link scraping (the bookmark.link-preview value, /api/link-meta) is the machine half's.
 - Web:
   - Contributes: `Editor.Block` "bookmark" → `BookmarkBlock`
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `page/editor` ×3
     - `primitives/css/ui-kit` ×3
     - `primitives/css/spacing` ×2
     - `primitives/hover-reveal` ×2
+    - `infra/endpoints.useAssetSrc`
     - `network/live.useLive`
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`
@@ -33,16 +34,12 @@
   - Contributes:
     - `page.block-data` "bookmark"
     - `resource.declare` "bookmark.link-preview"
-  - Uses:
-    - `infra/attachments.createAttachment`
-    - `infra/endpoints.HttpError`
-    - `infra/endpoints.implement`
-    - `infra/safe-fetch.parsePublicUrl`
-    - `infra/safe-fetch.safeFetch`
-    - `infra/safe-fetch.SsrfError`
-    - `network/live.serveValue`
-    - `page/editor.Editor`
+  - Uses: `page/editor.Editor`
   - Resources: `bookmark.link-preview` (invalidate, fixed)
+- Machine:
+  - Uses:
+    - `infra/endpoints.implementMachine`
+    - `network/live.serveValue`
   - Routes: `GET /api/link-meta`
 - Core:
   - Uses:

@@ -1158,6 +1158,7 @@ keeps every row's identity rather than re-minting each moved row.
     - `httpStaleDropReportSink`
     - `hydrateResource`
     - `liveStateSocketKind`
+    - `liveStateSocketUrl`
     - `mapResource`
     - `matchResource`
     - `NotificationsProvider`
@@ -1249,7 +1250,7 @@ keeps every row's identity rather than re-minting each moved row.
     - `unresolved`
 - Test helpers:
   - Web: `@plugins/primitives/plugins/live-state/web/testing`
-    - `createLiveStateHarness` — A fresh `NotificationsClient` and the `QueryClient` it owns, for ONE test — what the app's `NotificationsProvider` mounts, minus the tab singleton (which keeps the first cache it was built with, so a second test would mount a cache nothing writes).
+    - `createLiveStateHarness` — A fresh `NotificationsClient` and the `QueryClient` it owns, under a transport, for ONE test — what the app's `TransportProvider` + `NotificationsProvider` mount, minus the page's pipeline (which keeps the first cache it was built with, so a second test would mount a cache nothing writes).
     - `markResourceContractMismatch` — Record that the server refused `key` for this tab.
     - `mergeKeyedDelta` — Merge a row-keyed delta into the prior cached array.
     - `noteResourceTxAcks` — Record the server-acknowledged source-transaction ids for (key, params), then notify subscribers (emit-after-note: a listener reading `hasResourceTxAck` inside its callback already sees the freshly-noted acks).

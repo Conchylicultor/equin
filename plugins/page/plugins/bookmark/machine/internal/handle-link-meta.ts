@@ -12,8 +12,7 @@ export const handleLinkMeta = implementMachine(
       return { title };
     } catch (err) {
       if (err instanceof SsrfError) throw new HttpError(400, err.message);
-      if (err instanceof PageFetchError)
-        throw new HttpError(502, err.message);
+      if (err instanceof PageFetchError) throw new HttpError(502, err.message);
       throw err;
     }
   },

@@ -49,9 +49,11 @@ Consumes only barrel APIs: `mail-core` (`_mailAttachments`, `requireGmailToken`)
 - Description: Reading-pane attachment UI: the useMailAttachment() lazy-download hook (deduped, cached) and the AttachmentChip component (filename + size + MIME icon; downloads on click and opens in a new tab). Lazy Gmail attachment blob download: fetches an attachment's bytes on demand (reading-pane chip click or inline cid: image), caches them via infra/attachments, stamps mail_attachments.stored_attachment_id, and serves the same-origin URL.
 - Web:
   - Uses:
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `primitives/css/badge.Badge`
     - `primitives/css/spinner.Spinner`
+    - `primitives/networking.transportScoped`
+    - `primitives/networking.useTransport`
     - `ui/icons.Icon`
   - Exports (types):
     - `AttachmentChipProps`

@@ -12,7 +12,7 @@ import type { ConversationModel } from "@plugins/conversations/plugins/model-pro
 import type { EffortLevel } from "@plugins/conversations/plugins/effort-provider/core";
 import { agentLaunchHooks } from "@plugins/conversations/plugins/agent-launch/server";
 import { requireClaudeBin } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
-import { recordReport } from "@plugins/reports/server";
+import { recordReport } from "@plugins/reports/plugins/engine/server";
 import {
   AgentLaunchOptionsSchema,
   DismissReplySchema,

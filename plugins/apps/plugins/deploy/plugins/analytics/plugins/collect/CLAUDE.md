@@ -112,7 +112,8 @@ The dashboard's Events panel expands an event into these rows.
     - `GET /api/host-only/analytics/query`
 - Web:
   - Uses:
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.fetchEndpointOver`
+    - `primitives/networking/page-transport.pageTransport`
     - `primitives/pane.currentRoutePath`
     - `primitives/pane.usePathname`
   - Exports (values):
@@ -250,6 +251,7 @@ The dashboard's Events panel expands an event into these rows.
   - Exempts itself from:
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - `boundaries/no-platform-api` — `server/internal/collect.ts`, `server/internal/request-context.ts` (debt)
+    - `networking/no-page-transport` — `web/internal/instance.ts` (sanctioned)
 - Test helpers:
   - Core: `@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core/testing`
     - `ZERO_METRICS`

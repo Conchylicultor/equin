@@ -18,7 +18,10 @@ export default {
     ...savedIconSpritesServed.declare,
   ],
   httpRoutes: {
-    [spriteEndpoint.route]: machineHandler(handleSprite),
-    [runtimeSymbolsEndpoint.route]: machineHandler(handleRuntimeSymbols),
+    [spriteEndpoint.route]: machineHandler(spriteEndpoint, handleSprite),
+    [runtimeSymbolsEndpoint.route]: machineHandler(
+      runtimeSymbolsEndpoint,
+      handleRuntimeSymbols,
+    ),
   },
 } satisfies MachinePluginDefinition;

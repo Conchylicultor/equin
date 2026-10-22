@@ -148,6 +148,7 @@ yields no latency sample by construction.
   - Imported by:
     - `framework/resource-runtime`
     - `framework/server-core`
+    - `framework/tooling/codegen`
     - `network/live`
     - `page/place`
 

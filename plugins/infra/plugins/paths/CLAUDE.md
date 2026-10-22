@@ -311,14 +311,14 @@ run everywhere.
     - `worktreeDataDir`
     - `worktreesDir`
 - Cross-plugin:
-  - Imported by: 49 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `debug` ×9
+  - Imported by: 44 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `debug` ×8
     - `infra` ×8
-    - `build` ×7
+    - `build` ×5
     - `backup` ×4
     - `framework` ×4
-    - `conversations` ×3
     - `release` ×3
+    - `conversations` ×2
     - `plugin-meta` ×2
     - `primitives` ×2
     - `apps/deploy/deployments`
@@ -326,7 +326,6 @@ run everywhere.
     - `reports/outbox`
     - `review/plugin-changes`
     - `stats/cost`
-    - `tasks`
     - `toolchain`
 - Exemptions:
   - Exempts itself from:

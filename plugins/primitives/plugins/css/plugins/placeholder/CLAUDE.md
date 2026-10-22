@@ -19,12 +19,13 @@
     - `ui/tokens/type-scale --font-size-body`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-body`
-  - Imported by: 86 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 88 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×29
     - `debug` ×19
     - `primitives` ×13
     - `page` ×6
     - `conversations` ×5
+    - `auth` ×2
     - `build` ×2
     - `config_v2` ×2
     - `plugin-meta` ×2

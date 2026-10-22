@@ -678,6 +678,7 @@ export const hostReads: readonly {
   { key: "background.central-catalog", needsMachine: true },
   { key: "background.central-recent-runs", needsMachine: true },
   { key: "background.recent-runs", needsMachine: false },
+  { key: "bookmark.link-preview", needsMachine: true },
   { key: "build.chain-from", needsMachine: true },
   { key: "build.deployment", needsMachine: true },
   { key: "build.history", needsMachine: false },

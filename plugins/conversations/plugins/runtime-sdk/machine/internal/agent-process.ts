@@ -27,7 +27,7 @@ import {
 } from "@plugins/infra/plugins/claude-cli/plugins/accounts/machine";
 import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
 import { PGREP, PS } from "@plugins/infra/plugins/paths/server";
-import { recordReport } from "@plugins/reports/server";
+import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { backgroundPrefix } from "@plugins/packages/plugins/spawn-priority/server";
 import { launchAccount, type AgentLaunchOptions } from "../../core";
 import { liveAgentIds } from "./agent-processes";

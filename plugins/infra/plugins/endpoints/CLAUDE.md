@@ -324,24 +324,29 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
 
 ## Plugin reference
 
-- Description: Typed endpoint contract primitive. fetchEndpoint, useEndpoint, and useEndpointMutation consume endpoint definitions on the client. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; fetchEndpoint/useEndpoint consume on the client.
+- Description: Typed endpoint contract primitive. useFetchEndpoint (a FetchEndpoint bound to the subtree's transport; fetchEndpointOver(t) for sanctioned page-level code), useEndpoint, and useEndpointMutation consume endpoint definitions on the client; useAssetSrc turns an AssetPath (a GET endpoint's asset) into what an element loads over the subtree's transport (the path, a blob URL, or unavailable). Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; fetchEndpoint/useEndpoint consume on the client.
 - Load-bearing: yes
 - Web:
   - Uses:
     - `primitives/networking.fetchWithRetry`
     - `primitives/networking.FetchWithRetryOptions`
-    - `primitives/networking.originTransport`
     - `primitives/networking.Transport`
+    - `primitives/networking.transportScoped`
     - `primitives/networking.useTransport`
-  - Exports (types): `EndpointErrorInfo`
+    - `primitives/networking.useTransportScoped`
+  - Exports (types):
+    - `AssetSrc`
+    - `EndpointErrorInfo`
+    - `FetchEndpoint`
   - Exports (values):
     - `EndpointAgentWriteRefusedError`
     - `EndpointError`
     - `endpointErrorSink`
     - `endpointQueryKey`
-    - `EndpointUnsupportedError`
-    - `fetchEndpoint`
+    - `fetchEndpointOver`
     - `getEndpointErrorMessage`
+    - `useAssetSrc`
+    - `useAssetSrcs`
     - `useEndpoint`
     - `useEndpointMutation`
     - `useFetchEndpoint`
@@ -356,6 +361,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `packages/semaphore.createSemaphore`
   - Exports (types):
     - `AgentWrite`
+    - `AssetPath`
     - `Codec`
     - `EndpointDef`
     - `ExtractParams`
@@ -366,6 +372,8 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `MachineUnavailable`
   - Exports (values):
     - `agentWriteRefusedMessage`
+    - `ASSET_PATH`
+    - `assetPath`
     - `blob`
     - `dateString`
     - `defineEndpoint`
@@ -377,38 +385,35 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `interpolatePath`
     - `isAgentWriteRefusal`
     - `isCodec`
-    - `isUnsupportedEndpointBody`
-    - `isUnsupportedEndpointRefusal`
-    - `isUnsupportedEndpointResponse`
     - `multipart`
     - `rawEndpointHandler`
     - `unavailableMessage`
     - `unmatchedApiResponse`
     - `unsupportedEndpointResponse`
 - Cross-plugin:
-  - Imported by: 193 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×51
-    - `conversations` ×30
+  - Imported by: 219 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×55
+    - `conversations` ×31
+    - `page` ×20
+    - `debug` ×18
     - `infra` ×18
-    - `debug` ×17
-    - `page` ×13
-    - `tasks` ×13
-    - `primitives` ×10
+    - `tasks` ×17
+    - `primitives` ×16
     - `build` ×8
+    - `reports` ×6
     - `ui` ×6
     - `auth` ×5
-    - `reports` ×4
     - `active-data` ×2
     - `code-explorer` ×2
     - `config_v2` ×2
     - `history` ×2
     - `integrations` ×2
+    - `screenshot` ×2
     - `apps-core/app-usage`
     - `backup`
     - `database/fork`
     - `plugin-meta/plugin-health`
     - `release`
-    - `screenshot`
     - `search/engine`
     - `shell/notifications`
 - Exemptions:
@@ -421,10 +426,13 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `apps/sonata/rich/key-mode` (0 debt)
     - `apps/sonata/rich/swing` (0 debt)
     - `apps/sonata/transpose` (0 debt)
+    - `conversations/compaction-context` (0 debt)
     - `infra/endpoints` (0 debt)
+    - `infra/mcp/browser` (0 debt)
     - `infra/ndjson-stream` (0 debt)
     - `primitives/live-state` (0 debt)
     - `primitives/networking` (0 debt)
+    - `primitives/networking/page-transport` (0 debt)
     - `shell/notifications` (0 debt)
     - `tasks/task-graph` (0 debt)
 - Server:
@@ -436,5 +444,10 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
   - Exports (values):
     - `implementMachine`
     - `machineHandler`
+- Test helpers:
+  - Web: `@plugins/infra/plugins/endpoints/web/testing`
+    - `fakeFetchEndpoint` — A fake `FetchEndpoint` that records each call and answers it with `answer` (default: `undefined`, a void response) — and a transport that hands it to every component under it.
+    - `withTransport` — A `wrapper` (`render` / `renderHook`) mounting `target`'s transport above the tree — a fake's, so every endpoint client under it answers from the fake.
+    - Types: `FakeEndpointAnswer`, `FakeFetchEndpoint`, `FakeFetchEndpointOptions`, `FetchEndpointCall`
 
 <!-- AUTOGENERATED:END -->

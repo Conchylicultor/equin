@@ -177,9 +177,7 @@ on a host without the computer gets the unavailable arm instead of a 404.
     - `conversationCategoriesEntityRef`
     - `ConversationCategorySchema`
 - Cross-plugin:
-  - Imported by:
-    - `apps/agent-manager/demo`
-    - `stats/commits`
+  - Imported by: `stats/commits`
 - Exemptions:
   - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
 - Shared:

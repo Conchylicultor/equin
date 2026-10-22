@@ -98,7 +98,6 @@ client sees them at connect (Claude Code connects once per conversation).
     - `apps/places/ask`
     - `apps/sonata/transcription`
     - `conversations/conversation-view/push-and-exit`
-    - `conversations/summary`
     - `conversations/workspace/scratch`
     - `database/query`
     - `debug/profiling/boot-bench`
@@ -108,7 +107,6 @@ client sees them at connect (Claude Code connects once per conversation).
     - `infra/mcp/browser`
     - `page/annotations/agent-access`
     - `plugin-meta/plugin-health`
-    - `tasks`
   - Endpoint callers: `scratch`
 - Shared:
   - Exports (values): `mcpRequest`

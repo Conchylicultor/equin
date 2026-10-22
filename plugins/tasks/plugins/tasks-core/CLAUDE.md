@@ -524,13 +524,13 @@ serves them.
     - `TaskStatusSchema`
     - `TRAILER_LOG_FORMAT`
 - Cross-plugin:
-  - Imported by: 71 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×30
+  - Imported by: 66 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×26
     - `tasks` ×17
     - `active-data` ×5
     - `debug` ×4
-    - `apps` ×3
     - `page` ×3
+    - `apps` ×2
     - `infra` ×2
     - `stats` ×2
     - `backup/sources/transcripts`

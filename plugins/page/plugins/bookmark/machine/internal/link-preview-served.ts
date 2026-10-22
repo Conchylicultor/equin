@@ -1,4 +1,4 @@
-import { serveValue } from "@plugins/network/plugins/live/server";
+import { serveValue } from "@plugins/network/plugins/live/machine";
 import { SsrfError } from "@plugins/infra/plugins/safe-fetch/server";
 import { linkPreview } from "../../core";
 import { PageFetchError, scrapeLinkPreview } from "./scrape";

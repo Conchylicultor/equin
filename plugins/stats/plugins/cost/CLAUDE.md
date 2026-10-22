@@ -249,8 +249,8 @@ it survives, the snapshot fills in where it does not.
     - `network/live.serveCollection`
     - `network/live.serveValue`
     - `primitives/log-channels.Log`
-    - `reports.recordReport`
     - `reports.ReportKind`
+    - `reports/engine.recordReport`
     - `tasks/tasks-core._conversations`
   - DB schema: `plugins/stats/plugins/cost/server/internal/price-table.ts`
   - Exports (values):
@@ -281,7 +281,6 @@ it survives, the snapshot fills in where it does not.
     - `ui/tokens/type-scale --font-weight-medium`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-caption`
-  - Imported by: `conversations/usage`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/archive.ts`, `server/internal/price-table.ts`, `server/internal/usage-index.ts` (debt)
 - Core:

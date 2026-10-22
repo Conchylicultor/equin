@@ -24,7 +24,7 @@
     - `conversations/conversations-view/queue.classifyQueue`
     - `conversations/conversations-view/queue.ReorderVars`
     - `conversations/conversations-view/queue.TaskGroup`
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`
     - `primitives/data-view.DataViewPaging`
     - `primitives/data-view.defineItemActions`

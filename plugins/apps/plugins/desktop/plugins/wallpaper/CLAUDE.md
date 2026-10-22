@@ -41,7 +41,7 @@ entry carries the move — `server/internal/store.ts` spells neither path.
     - `config_v2` ×3
     - `primitives/css/ui-kit` ×3
     - `primitives/overlay/cursor-menu` ×2
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`
     - `primitives/css/grid.Grid`
     - `primitives/css/placeholder.Placeholder`

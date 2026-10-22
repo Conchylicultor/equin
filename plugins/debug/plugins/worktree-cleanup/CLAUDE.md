@@ -78,7 +78,7 @@ the panel until it is given something to say.
   - Contributes:
     - `Pane.Register` "worktree-cleanup"
     - `DebugApp.Sidebar` "Worktree Cleanup"
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×3
     - `primitives/pane` ×3
     - `infra/endpoints` ×2
@@ -94,6 +94,7 @@ the panel until it is given something to say.
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
+    - `primitives/networking.useTransport`
     - `ui/icons.Icon`
   - Exports (values): `worktreeCleanupPane`
 - Server:

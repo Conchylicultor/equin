@@ -81,14 +81,14 @@ result.
     - `ui/tokens/type-scale --font-size-body`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-body`
-  - Imported by: 194 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 197 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×64
     - `ui` ×21
     - `debug` ×19
+    - `primitives` ×19
     - `conversations` ×18
-    - `primitives` ×18
     - `tasks` ×13
-    - `page` ×8
+    - `page` ×10
     - `build` ×4
     - `plugin-meta` ×4
     - `review` ×4

@@ -8,6 +8,7 @@ import {
   hostFsExtract,
   hostFsMove,
   hostFsOpen,
+  hostFsRaw,
   hostFsStat,
 } from "../../core";
 import { completeHostDir, splitPrefix } from "../../server/internal/complete";
@@ -32,7 +33,7 @@ export const handleComplete = implementMachine(hostFsComplete, ({ query }) => {
 });
 
 /** The bytes: a raw handler (its own status and headers — 200 / 206 / 416). */
-export const handleRaw = machineHandler(rawBytes);
+export const handleRaw = machineHandler(hostFsRaw, rawBytes);
 
 export const handleOpen = implementMachine(hostFsOpen, ({ body, req }) => {
   if (!isAppOrigin(req.headers.get("origin"))) {

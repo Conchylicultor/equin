@@ -97,16 +97,11 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
     - `GET /api/attachments/:id`
     - `DELETE /api/attachments/:id`
     - `PUT /api/attachments/holds`
-- Web:
-  - Uses: `infra/endpoints.fetchEndpoint`
-  - Exports (types): `UploadedAttachment`
-  - Exports (values):
-    - `getAttachmentFile`
-    - `holdAttachments`
-    - `uploadAttachment`
 - Core:
   - Uses:
+    - `infra/endpoints.blob`
     - `infra/endpoints.dateString`
+    - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
   - Exports (types):
     - `Attachment`
@@ -116,6 +111,7 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
     - `AttachmentFileSchema`
     - `attachmentsByOwner`
     - `AttachmentSchema`
+    - `getAttachmentFile`
 - Cross-plugin:
   - Imported by:
     - `apps/mail/attachments`
@@ -130,7 +126,6 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
     - `infra/attachments/memory-blobs`
     - `page/attachment-block`
     - `page/audio`
-    - `page/bookmark`
     - `page/file`
     - `page/image`
     - `page/video`
@@ -138,11 +133,15 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
     - `screenshot/draw-on-app`
     - `tasks`
     - `tasks/tasks-core`
-  - Endpoint callers: `task-attachments`
 - Exemptions:
   - Exempts itself from:
     - `paths:no-hardcoded-paths` — `server/index.ts` (sanctioned)
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)
+- Web:
+  - Exports (types): `UploadedAttachment`
+  - Exports (values):
+    - `holdAttachments`
+    - `uploadAttachment`
 - Sub-plugins:
   - **`memory-blobs`** (excluded) — Attachment bytes in memory: provides the AttachmentBlobs host service for a host without a filesystem (the browser composition, the portable boot test), the bytes lost with the process. Never booted…
 

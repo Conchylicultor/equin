@@ -1,4 +1,5 @@
 import { machineHandler } from "@plugins/infra/plugins/endpoints/machine";
+import { getImageContent } from "@plugins/code-explorer/plugins/code-api/core";
 import { handleImageContent } from "../../server/internal/image-handler";
 
 /**
@@ -6,4 +7,4 @@ import { handleImageContent } from "../../server/internal/image-handler";
  * checkout file's raw bytes — a raw handler (its own status and headers), so
  * branded here rather than implemented.
  */
-export const handleImage = machineHandler(handleImageContent);
+export const handleImage = machineHandler(getImageContent, handleImageContent);

@@ -38,7 +38,7 @@ curl -sX POST http://<ns>.localhost:9000/api/events-test/queue-saturate \
     - `DebugApp.Sidebar` "Events Test"
   - Uses:
     - `apps/debug/shell.DebugApp`
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/scroll.Scroll`
@@ -52,7 +52,8 @@ curl -sX POST http://<ns>.localhost:9000/api/events-test/queue-saturate \
     - `primitives/icon-button.IconButton`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
-    - `shell/notifications.toast`
+    - `shell/notifications.Toast`
+    - `shell/notifications.useToast`
     - `ui/icons.Icon`
   - Exports (values): `eventsTestPane`
 - Server:

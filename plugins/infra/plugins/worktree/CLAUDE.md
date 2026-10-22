@@ -162,17 +162,26 @@ pid liveness.
     - `worktreePathFor`
     - `writeWorktreeSpec`
 - Cross-plugin:
-  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `debug` ×5
-    - `infra` ×5
-    - `tasks` ×3
-    - `build` ×2
+  - Imported by:
     - `backup/sources/databases`
+    - `build/serve-composition`
     - `code-explorer`
     - `conversations/workspace/worktree`
+    - `debug/broadcasts`
+    - `debug/memory`
+    - `debug/profiling/op-log`
+    - `debug/profiling/op-log/op-store`
+    - `debug/worktree-cleanup`
+    - `infra/deps/sweep`
+    - `infra/git/git-watcher`
+    - `infra/launcher`
+    - `infra/worktree/reclaim`
+    - `infra/worktree/spare-pool`
     - `plugin-meta/plugin-health`
     - `release/source-checkout`
     - `stats/cost`
+    - `tasks/attempt-work`
+    - `tasks/sidequest-autopilot`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/composition-namespace.ts`, `server/internal/spare-name.ts`, `server/internal/spare.ts`, `server/internal/spec.ts`, `server/internal/worktree-op.ts`, `server/internal/worktree.ts` (debt)
 - Core:
