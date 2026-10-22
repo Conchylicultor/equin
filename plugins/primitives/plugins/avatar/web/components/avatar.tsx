@@ -117,6 +117,13 @@ const TILE_GEOMETRY: Geometry = {
   ring: "",
 };
 
+/** Tile relief: the flat fill lit from above — a white→black veil over the
+ *  slot (lighter top, deeper bottom, no hue drift, so the tile stays its own
+ *  colour), a hairline lit top edge and rim that hold its shape on a dark page,
+ *  and a faint shadow under the glyph so it sits on the surface. */
+const TILE_RELIEF =
+  "bg-linear-to-b from-white/12 to-black/12 shadow-[inset_0_1px_0_oklch(1_0_0/18%),inset_0_0_0_1px_oklch(1_0_0/6%)] [&>svg]:drop-shadow-[0_1px_1.5px_oklch(0_0_0/28%)]";
+
 /** Gradient-tile geometry: the tile's box with a larger glyph (54%, the
  *  share an app icon's glyph takes on a store card), and its relief — a 1px
  *  inset highlight along the top edge and a soft drop shadow. */
@@ -172,12 +179,12 @@ export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
       : null;
   const paint = custom
     ? presentation === "tile"
-      ? AVATAR_FILL_FLAT_CLASS
+      ? cn(AVATAR_FILL_FLAT_CLASS, TILE_RELIEF)
       : presentation === "gradient-tile"
         ? cn(AVATAR_FILL_FLAT_CLASS, GRADIENT_TILE_RELIEF)
         : AVATAR_FILL_SOFT_CLASS
     : presentation === "tile"
-      ? avatarFlatClass(pick)
+      ? cn(avatarFlatClass(pick), pick && TILE_RELIEF)
       : presentation === "gradient-tile"
         ? cn(avatarGradientClass(pick), GRADIENT_TILE_RELIEF)
         : avatarSoftClass(pick);

@@ -5,7 +5,7 @@ import {
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { APP_TILE_PALETTE, type AppIcon } from "../../core";
 
-/** The app-tile palette as the `--categorical-*` vars the avatar's flat tile
+/** The app-tile palette as the `--categorical-*` vars the avatar's tile
  *  fill reads, set on the tile itself — so the tile is the colour the Home
  *  gallery paints it, whatever theme scope the launcher sits in. */
 const TILE_PALETTE_VARS = Object.fromEntries(

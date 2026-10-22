@@ -8,7 +8,7 @@
  * separate; a tile's second shade adds 0.13 on top (the avatar primitive's
  * rule). Slot 10 is the neutral slate an app can ask for by name (Settings).
  *
- * The same in both modes: a tile is a flat fill under a white glyph, which
+ * The same in both modes: a tile is its fill (lit from above) under a white glyph, which
  * needs this lightness whatever the page behind it.
  */
 export const APP_TILE_PALETTE = {
