@@ -146,6 +146,7 @@ export type ExemptableRuleId =
   | "timer/no-unlisted-timer"
   | "trigger-render-safety/no-provider-trigger-render"
   | "turn-send-safety/no-adhoc-turn-send"
+  | "type-check/no-global-declaration-in-source"
   | "type-scale-tokens/no-arbitrary-font-size"
   | "type-scale:closed-role-ladder:raw-vars"
   | "ui-kit/class-field-must-be-branded"
