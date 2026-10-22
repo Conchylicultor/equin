@@ -1,5 +1,11 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import {
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  writeFileSync,
+} from "node:fs";
+import { dirname, join } from "node:path";
 import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
 import { serveValue } from "@plugins/network/plugins/live/machine";
 import {
@@ -31,6 +37,18 @@ export function readClaudeUsage(): ClaudeUsageRead {
     byAccount[id] = ClaudeUsageSchema.parse(JSON.parse(text));
   }
   return { byAccount };
+}
+
+/**
+ * Overwrite an account's usage file whole, through a rename, so a reader never
+ * sees half of it — what an on-demand read records (the agent writes the same
+ * way from its own process, `bin/agent.ts`).
+ */
+export function writeClaudeUsageFile(path: string, usage: ClaudeUsage): void {
+  mkdirSync(dirname(path), { recursive: true });
+  const tmp = `${path}.${process.pid}.tmp`;
+  writeFileSync(tmp, JSON.stringify(usage));
+  renameSync(tmp, path);
 }
 
 /**

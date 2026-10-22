@@ -17835,13 +17835,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `infra/claude-cli/accounts.readClaudeAccounts`
           - `infra/claude-cli/accounts.selectClaudeAccountById`
+          - `infra/endpoints.implementMachine`
           - `network/live.serveValue`
         - Register:
           - `defineFileWatcher('runtime-sdk.events')`
           - `defineDaemon('runtime-sdk.agent')`
           - `defineJob('runtime-sdk.attempt-ended')`
+        - Routes: `POST /api/claude-usage/refresh`
       - Core:
-        - Uses: `network/live.liveValue`
+        - Uses:
+          - `infra/endpoints.defineEndpoint`
+          - `network/live.liveValue`
         - Exports (types):
           - `AgentAnswer`
           - `AgentCommand`
@@ -17851,6 +17855,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AgentProcesses`
           - `ClaudeUsage`
           - `ClaudeUsageRead`
+          - `ClaudeUsageRefresh`
           - `ClaudeUsageWindow`
           - `CommandReply`
           - `HelloReply`
@@ -17874,7 +17879,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `claudeUsage`
           - `claudeUsageFileName`
           - `claudeUsageOf`
+          - `claudeUsageOfReply`
           - `ClaudeUsageReadSchema`
+          - `ClaudeUsageRefreshSchema`
           - `ClaudeUsageSchema`
           - `CommandReplySchema`
           - `DismissReplySchema`
@@ -17886,6 +17893,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PartialFrameSchema`
           - `PartialStreamLineSchema`
           - `PROTOCOL_VERSION`
+          - `refreshClaudeUsage`
           - `roomiestAccount`
           - `sameMajorMinor`
           - `sdkAgentProcesses`

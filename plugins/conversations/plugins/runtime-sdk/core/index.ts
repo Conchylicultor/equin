@@ -30,12 +30,16 @@ export {
   claudeUsage,
   claudeUsageFileName,
   claudeUsageOf,
+  claudeUsageOfReply,
   ClaudeUsageReadSchema,
+  ClaudeUsageRefreshSchema,
   ClaudeUsageSchema,
+  refreshClaudeUsage,
 } from "./claude-usage";
 export type {
   ClaudeUsage,
   ClaudeUsageRead,
+  ClaudeUsageRefresh,
   ClaudeUsageWindow,
 } from "./claude-usage";
 export {

@@ -85,8 +85,20 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   (`state/claude-usage/<accountId>.json`, `--usage-file`; the limits are the
   account's), which `machine/` watches and serves, every account's at once, as
   `runtime-sdk.claude-usage`. `core/usage-limits.ts` reads a report against
-  now (limit reached, weekly room, the roomiest account). Current only while agents run: a
-  window reset since the last report shows as such, never as empty.
+  now (limit reached, weekly room, the roomiest account). A window reset since
+  the last report shows as such, never as empty.
+- Usage limits on demand (`machine/internal/usage-probe.ts`): an SDK session
+  that sends no prompt asks Claude Code its `get_usage` control request (what
+  `/usage` shows — no model call, ~1 s) under the account's sign-in, and writes
+  the same file (`writeClaudeUsageFile`, beside the reader).
+  Triggered by `POST /api/claude-usage/refresh` (the account picker, after
+  adding or picking an account) and by every fresh Claude Code probe (Check
+  again, a launch's re-check) for the active account — a `claude auth login`
+  as someone else changes the system account's limits and announces nothing
+  else. A reply without plan limits (an API key, a token without the profile
+  scope) is `unavailable`, shown as such, never written. The SDK method is
+  experimental (`usage_EXPERIMENTAL_…`): an SDK bump that renames it fails
+  tsc. Design: [`research/2026-10-22-conversations-claude-usage-on-demand.md`](../../../../research/2026-10-22-conversations-claude-usage-on-demand.md).
 
 Gotchas the spike hit:
 
@@ -148,13 +160,17 @@ Gotchas the spike hit:
   - Uses:
     - `infra/claude-cli/accounts.readClaudeAccounts`
     - `infra/claude-cli/accounts.selectClaudeAccountById`
+    - `infra/endpoints.implementMachine`
     - `network/live.serveValue`
   - Register:
     - `defineFileWatcher('runtime-sdk.events')`
     - `defineDaemon('runtime-sdk.agent')`
     - `defineJob('runtime-sdk.attempt-ended')`
+  - Routes: `POST /api/claude-usage/refresh`
 - Core:
-  - Uses: `network/live.liveValue`
+  - Uses:
+    - `infra/endpoints.defineEndpoint`
+    - `network/live.liveValue`
   - Exports (types):
     - `AgentAnswer`
     - `AgentCommand`
@@ -164,6 +180,7 @@ Gotchas the spike hit:
     - `AgentProcesses`
     - `ClaudeUsage`
     - `ClaudeUsageRead`
+    - `ClaudeUsageRefresh`
     - `ClaudeUsageWindow`
     - `CommandReply`
     - `HelloReply`
@@ -187,7 +204,9 @@ Gotchas the spike hit:
     - `claudeUsage`
     - `claudeUsageFileName`
     - `claudeUsageOf`
+    - `claudeUsageOfReply`
     - `ClaudeUsageReadSchema`
+    - `ClaudeUsageRefreshSchema`
     - `ClaudeUsageSchema`
     - `CommandReplySchema`
     - `DismissReplySchema`
@@ -199,6 +218,7 @@ Gotchas the spike hit:
     - `PartialFrameSchema`
     - `PartialStreamLineSchema`
     - `PROTOCOL_VERSION`
+    - `refreshClaudeUsage`
     - `roomiestAccount`
     - `sameMajorMinor`
     - `sdkAgentProcesses`

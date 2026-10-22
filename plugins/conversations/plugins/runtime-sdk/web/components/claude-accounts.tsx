@@ -40,6 +40,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
   limitReached,
+  refreshClaudeUsage,
   roomiestAccount,
   usageLevel,
   weekRoom,
@@ -51,7 +52,8 @@ import { UsageBar } from "./claude-usage-glance";
 // The Claude Code row's accounts: which Claude account new agents launch on.
 // Each account shows its weekly room only — the 5-hour session resets too
 // often to choose an account by. Picking one switches; agents already running
-// keep theirs until their process restarts.
+// keep theirs until their process restarts. Adding or picking one reads its
+// limits at once (no agent turn needed), so its room shows straight away.
 
 const addIcon = symbol("add");
 const removeIcon = symbol("close");
@@ -83,24 +85,50 @@ function accountViews(
   ];
 }
 
+/**
+ * Where this tab's own read of an account's limits stands: `reading` while it
+ * runs, `unreadable` (with why) when Claude Code had no plan limits for it.
+ */
+type UsageRead =
+  | { kind: "idle" }
+  | { kind: "reading" }
+  | { kind: "unreadable"; reason: string };
+
 /** One account's weekly room, as words and a bar. */
 function WeekRoomGlance({
   accountId,
   usage,
+  read,
   now,
 }: {
   accountId: string;
   usage: ClaudeUsageRead;
+  read: UsageRead;
   now: number;
 }) {
   const reading = usage.byAccount[accountId];
   const room = weekRoom(reading, now);
   if (room.kind === "unknown") {
-    return (
-      <Text variant="caption" tone="faint">
-        No reading yet
-      </Text>
-    );
+    switch (read.kind) {
+      case "reading":
+        return (
+          <Text variant="caption" tone="faint">
+            Reading usage…
+          </Text>
+        );
+      case "unreadable":
+        return (
+          <Text variant="caption" tone="faint" title={read.reason}>
+            Usage not readable
+          </Text>
+        );
+      case "idle":
+        return (
+          <Text variant="caption" tone="faint">
+            No reading yet
+          </Text>
+        );
+    }
   }
   const used = 1 - room.left;
   const reached = limitReached(reading, now) !== null;
@@ -167,14 +195,21 @@ function LimitBanner({
 }
 
 /** Add a token account: `claude setup-token` in a terminal, then paste. */
-function AddAccountForm({ onDone }: { onDone: () => void }) {
+function AddAccountForm({
+  onAdded,
+  onCancel,
+}: {
+  onAdded: (id: string) => void;
+  onCancel: () => void;
+}) {
   const [token, setToken] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const add = async () => {
     setError(null);
+    let added;
     try {
-      await fetchEndpoint(
+      added = await fetchEndpoint(
         addClaudeAccount,
         {},
         { body: { name: name.trim(), token: token.trim() } },
@@ -185,7 +220,9 @@ function AddAccountForm({ onDone }: { onDone: () => void }) {
       setError(getEndpointErrorMessage(err));
       return;
     }
-    onDone();
+    // The form renders only where the account endpoints are available.
+    if (added.kind !== "ok") throw new Error(added.message);
+    onAdded(added.value.id);
   };
   return (
     <Stack gap="sm" className="rounded-md border p-sm">
@@ -226,7 +263,7 @@ function AddAccountForm({ onDone }: { onDone: () => void }) {
       ) : null}
       <Line className="gap-xs">
         <Fill />
-        <Button variant="ghost" onClick={onDone}>
+        <Button variant="ghost" onClick={onCancel}>
           Cancel
         </Button>
         <Button disabled={!token.trim() || !name.trim()} onClick={add}>
@@ -259,6 +296,9 @@ export function ClaudeAccountsSection({
   const selectAccount = useEndpointMutation(selectClaudeAccount);
   const removeAccount = useEndpointMutation(removeClaudeAccount);
   const autoSwitch = useEndpointMutation(setClaudeAccountAutoSwitch);
+  const refreshUsage = useEndpointMutation(refreshClaudeUsage);
+  // Accounts Claude Code reported no plan limits for, with why.
+  const [unreadable, setUnreadable] = useState<Record<string, string>>({});
   const views = accountViews(accounts, claude);
   const active = views.find((v) => v.id === accounts.active);
   if (!active) {
@@ -271,12 +311,45 @@ export function ClaudeAccountsSection({
   if (selectAccount.kind === "unavailable") {
     return <StepNote>{selectAccount.message}</StepNote>;
   }
-  if (removeAccount.kind === "unavailable" || autoSwitch.kind === "unavailable")
+  if (
+    removeAccount.kind === "unavailable" ||
+    autoSwitch.kind === "unavailable" ||
+    refreshUsage.kind === "unavailable"
+  )
     throw new Error("Claude accounts: endpoints disagree on the computer");
+  // Its last reading is missing, or from before the switch: read it now.
+  const readUsage = (accountId: string) =>
+    refreshUsage.mutate(
+      { body: { accountId } },
+      {
+        onSuccess: (result) =>
+          setUnreadable(({ [accountId]: _, ...rest }) =>
+            result.kind === "unavailable"
+              ? { ...rest, [accountId]: result.reason }
+              : rest,
+          ),
+      },
+    );
+  const usageRead = (accountId: string): UsageRead => {
+    if (
+      refreshUsage.isPending &&
+      refreshUsage.variables.body.accountId === accountId
+    )
+      return { kind: "reading" };
+    const reason = unreadable[accountId];
+    return reason === undefined
+      ? { kind: "idle" }
+      : { kind: "unreadable", reason };
+  };
   const switchTo = (id: string) =>
     selectAccount.mutate(
       { body: { id } },
-      { onSuccess: () => setSwitchedTo(id) },
+      {
+        onSuccess: () => {
+          setSwitchedTo(id);
+          readUsage(id);
+        },
+      },
     );
   return (
     <ControlSizeProvider size="sm">
@@ -326,12 +399,23 @@ export function ClaudeAccountsSection({
                 </Stack>
               </Fill>
               <Rigid>
-                <WeekRoomGlance accountId={v.id} usage={usage} now={now} />
+                <WeekRoomGlance
+                  accountId={v.id}
+                  usage={usage}
+                  read={usageRead(v.id)}
+                  now={now}
+                />
               </Rigid>
             </Row>
           ))}
           {adding ? (
-            <AddAccountForm onDone={() => setAdding(false)} />
+            <AddAccountForm
+              onAdded={(id) => {
+                setAdding(false);
+                readUsage(id);
+              }}
+              onCancel={() => setAdding(false)}
+            />
           ) : (
             <Row
               size="sm"

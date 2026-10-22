@@ -1,7 +1,9 @@
 import { z } from "zod";
+import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { liveValue } from "@plugins/network/plugins/live/core";
 
-// The claude.ai subscription's usage limits, as the agents last saw them.
+// The claude.ai subscription's usage limits, as last read: by an agent's turn,
+// or on demand (`refreshClaudeUsage`, below).
 //
 // Every turn of an SDK agent gets a `rate_limit_event` whose `rate_limit_info`
 // carries `unifiedWindows` — each limit window's utilization and reset time.
@@ -93,5 +95,78 @@ export function claudeUsageOf(
  */
 export const claudeUsage = liveValue("runtime-sdk.claude-usage", {
   schema: ClaudeUsageReadSchema,
+  needsMachine: { feature: "Reading the Claude usage limits" },
+});
+
+// The same limits read on demand — no agent turn, no model call: the SDK's
+// `get_usage` control request (what `/usage` shows), answered by Claude Code
+// from the claude.ai usage endpoint under the account's own sign-in. Its
+// windows are percentages and ISO times; only the fields read here are parsed.
+const ReplyWindowSchema = z
+  .object({
+    utilization: z.number().nonnegative().nullable(),
+    resets_at: z.string().nullable(),
+  })
+  .nullable()
+  .optional();
+export const UsageReplySchema = z.object({
+  rate_limits_available: z.boolean(),
+  rate_limits: z
+    .object({ five_hour: ReplyWindowSchema, seven_day: ReplyWindowSchema })
+    .nullable(),
+});
+
+const replyWindow = (
+  w: z.infer<typeof ReplyWindowSchema>,
+): ClaudeUsageWindow | null => {
+  if (!w || w.utilization === null || w.resets_at === null) return null;
+  const resetsAt = Date.parse(w.resets_at);
+  if (Number.isNaN(resetsAt))
+    throw new Error(`get_usage: unreadable resets_at "${w.resets_at}"`);
+  return { utilization: w.utilization / 100, resetsAt };
+};
+
+/**
+ * An account's limits as one `get_usage` reply reads them, or why there are
+ * none: plan limits do not apply to it (an API key, or a token without the
+ * profile scope), or the reply carries no window. Throws when the reply
+ * changed shape.
+ */
+export function claudeUsageOfReply(
+  reply: unknown,
+  observedAt: number,
+): ClaudeUsageRefresh {
+  const parsed = UsageReplySchema.parse(reply);
+  if (!parsed.rate_limits_available || !parsed.rate_limits)
+    return {
+      kind: "unavailable",
+      reason:
+        "Claude Code reports no plan limits for this account (an API key, or a token that cannot read usage)",
+    };
+  const session = replyWindow(parsed.rate_limits.five_hour);
+  const week = replyWindow(parsed.rate_limits.seven_day);
+  if (!session && !week)
+    return {
+      kind: "unavailable",
+      reason: "Claude Code's usage reply carries no session or weekly window",
+    };
+  return { kind: "read", usage: { observedAt, session, week } };
+}
+
+export const ClaudeUsageRefreshSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("read"), usage: ClaudeUsageSchema }),
+  z.object({ kind: z.literal("unavailable"), reason: z.string() }),
+]);
+export type ClaudeUsageRefresh = z.infer<typeof ClaudeUsageRefreshSchema>;
+
+/**
+ * Read `accountId`'s limits now and record them in its usage file (pushed
+ * through {@link claudeUsage}) — after adding or switching to an account, whose
+ * file no agent has written yet or wrote under another sign-in.
+ */
+export const refreshClaudeUsage = defineEndpoint({
+  route: "POST /api/claude-usage/refresh",
+  body: z.object({ accountId: z.string().min(1) }),
+  response: ClaudeUsageRefreshSchema,
   needsMachine: { feature: "Reading the Claude usage limits" },
 });
