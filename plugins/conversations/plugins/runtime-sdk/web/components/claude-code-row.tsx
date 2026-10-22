@@ -111,6 +111,7 @@ export function ClaudeCodeRowDetail() {
           accounts={result.data.accounts}
           usage={result.data.usage}
           claude={result.data.claude}
+          stopped={result.data.stopped}
           now={now}
         />
       ) : null}

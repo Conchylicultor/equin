@@ -44,6 +44,14 @@ export interface AgentProjection {
    * BEFORE it (null when the turn was the session's first).
    */
   rewindAnchorUuid: string | null;
+  /** The Claude account the agent process runs on (`started`); null before one says. */
+  account: string | null;
+  /**
+   * When the agent last stopped at its account's usage limit (the CLI's
+   * synthetic `error: "rate_limit"` assistant message), until a turn runs past
+   * it or a new process starts.
+   */
+  limitHitAt: Date | null;
 }
 
 export const EMPTY_PROJECTION: AgentProjection = {
@@ -61,6 +69,8 @@ export const EMPTY_PROJECTION: AgentProjection = {
   turnReplied: false,
   lastAssistantUuid: null,
   rewindAnchorUuid: null,
+  account: null,
+  limitHitAt: null,
 };
 
 /** What the consumer must do for the lines it applied, in order. */
@@ -130,6 +140,7 @@ interface SdkLike {
   subtype?: unknown;
   uuid?: unknown;
   parent_tool_use_id?: unknown;
+  error?: unknown;
   message?: { content?: unknown };
 }
 
@@ -180,6 +191,8 @@ export function reduceEvents(
             s.statusAt = at;
             s.openRequestId = null;
             s.openToolUseId = null;
+            s.account = p.account ?? null;
+            s.limitHitAt = null;
             break;
           case "ready":
             s.cliVersion = p.cliVersion;
@@ -191,6 +204,7 @@ export function reduceEvents(
             s.lastPromptUuid = p.promptUuid;
             s.lastPromptText = p.text;
             s.turnReplied = false;
+            s.limitHitAt = null;
             effects.push({ kind: "prompt-submitted", text: p.text, at });
             break;
           case "exited":
@@ -279,6 +293,8 @@ export function reduceEvents(
         ) {
           s.lastAssistantUuid = msg.uuid;
           s.turnReplied = true;
+          // The CLI's own notice that the account's usage limit stopped the turn.
+          if (msg.error === "rate_limit") s.limitHitAt = at;
         } else if (
           msg.type === "user" &&
           msg.parent_tool_use_id == null &&

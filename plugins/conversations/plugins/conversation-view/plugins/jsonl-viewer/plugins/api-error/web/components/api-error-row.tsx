@@ -2,6 +2,7 @@ import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-sourc
 import { EventLine } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { ResumeOnLimit } from "./resume-on-limit";
 
 const warningIcon = symbol("warning");
 
@@ -23,6 +24,7 @@ export function ApiErrorRow({ event }: { event: JsonlEvent }) {
       label={<span className="text-warning">{labelOf(e.error)}</span>}
     >
       <span className="text-foreground">{e.text}</span>
+      {e.error === "rate_limit" ? <ResumeOnLimit /> : null}
     </EventLine>
   );
 }

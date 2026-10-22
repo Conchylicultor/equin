@@ -108,3 +108,23 @@ export function rewindRelaunchOptions(
     resumeDropsTurn: rewind.promptUuid,
   };
 }
+
+/**
+ * The options of a relaunch that carries on the same session from its end —
+ * a new process (so a new account) for an agent whose turn stopped at its
+ * account's usage limit.
+ */
+export function continueRelaunchOptions(
+  previous: AgentLaunchOptions,
+  sessionId: string,
+): AgentLaunchOptions {
+  return {
+    ...previous,
+    fork: false,
+    prompt: null,
+    sessionId,
+    resume: sessionId,
+    resumeAt: null,
+    resumeDropsTurn: null,
+  };
+}

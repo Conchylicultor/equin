@@ -118,7 +118,8 @@ const envelope = { seq: z.number().int(), t: z.number() };
 
 /**
  * The agent's own lifecycle, as `agent` event payloads:
- * - `started` — the process is up (its pid, what it resumed);
+ * - `started` — the process is up (its pid, what it resumed, the Claude
+ *   account it runs on — absent from an agent started before it was written);
  * - `ready` — the CLI finished its initialize (its version);
  * - `turn_started` — the SDK took a user turn off the input queue: the turn is
  *   submitted (the ledger confirms it from this) and the agent is working;
@@ -131,6 +132,7 @@ export const AgentLifecycleSchema = z.discriminatedUnion("event", [
     resume: z.string().nullable(),
     resumeAt: z.string().nullable(),
     fork: z.boolean(),
+    account: z.string().optional(),
   }),
   z.object({ event: z.literal("ready"), cliVersion: z.string().nullable() }),
   z.object({

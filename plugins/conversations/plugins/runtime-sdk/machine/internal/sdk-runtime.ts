@@ -20,6 +20,7 @@ import {
   type AgentLaunchOptions,
 } from "../../core";
 import {
+  continueRelaunchOptions,
   rewindRelaunchOptions,
   sdkLaunchOptions,
 } from "../../server/internal/launch-options";
@@ -44,6 +45,7 @@ import {
   awaitAgentExit,
   forgetAgentProcess,
   killAgentProcess,
+  nextLaunchAccount,
   startAgentProcess,
   type StartedAgent,
 } from "./agent-process";
@@ -249,7 +251,28 @@ async function awaitStart(id: string, started: StartedAgent): Promise<void> {
   }
 }
 
+/**
+ * An agent whose last turn stopped at its account's usage limit keeps that
+ * account until its process restarts (the launch picks the account). So before
+ * a turn reaches it, restart it on the session's end when a launch now would
+ * pick another account — every turn (typed, Resume, Resume all) carries on
+ * where an account with room is. When none has room, the turn goes to the
+ * agent as is and the CLI answers with its limit notice again.
+ */
+async function moveOffSpentAccount(id: string): Promise<void> {
+  await catchUpNow(id);
+  const row = await readAgentRow(id);
+  if (!row?.limitHitAt || !row.sessionId || row.working) return;
+  if (nextLaunchAccount() === row.account) return;
+  const relaunch = continueRelaunchOptions(readOptions(id), row.sessionId);
+  await stopAgent(id);
+  writeOptions(id, relaunch);
+  await recordLaunchSession(id, relaunch.sessionId);
+  await awaitStart(id, await startAgentProcess(id, relaunch));
+}
+
 async function sendTurn(id: string, text: string): Promise<TypedTurn> {
+  await moveOffSpentAccount(id);
   await commandAgent(id, { type: "turn", turnId: null, text }, TurnReplySchema);
   // The agent queued it; the ledger confirms it on the `turn_started` event.
   return { verdict: { kind: "submitted" } };

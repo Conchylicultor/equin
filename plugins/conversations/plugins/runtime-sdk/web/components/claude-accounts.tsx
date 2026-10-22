@@ -39,15 +39,18 @@ import {
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
+  launchAccount,
   limitReached,
   refreshClaudeUsage,
   roomiestAccount,
   usageLevel,
   weekRoom,
   type ClaudeUsageRead,
+  type LimitStoppedConversation,
 } from "../../core";
 import { formatResets, USAGE_WINDOWS } from "../internal/claude-usage";
 import { UsageBar } from "./claude-usage-glance";
+import { LimitStoppedBanner } from "./limit-stopped";
 
 // The Claude Code row's accounts: which Claude account new agents launch on.
 // Each account shows its weekly room only — the 5-hour session resets too
@@ -278,17 +281,20 @@ function AddAccountForm({
 /**
  * The accounts section of the Claude Code row: every account with its weekly
  * room, the active one highlighted; a click switches. Plus the limit banner,
- * adding an account and the auto-switch toggle.
+ * the conversations a limit stopped (with Resume all), adding an account and
+ * the auto-switch toggle.
  */
 export function ClaudeAccountsSection({
   accounts,
   usage,
   claude,
+  stopped,
   now,
 }: {
   accounts: ClaudeAccounts;
   usage: ClaudeUsageRead;
   claude: ClaudeCodeStatus;
+  stopped: readonly LimitStoppedConversation[];
   now: number;
 }) {
   const [adding, setAdding] = useState(false);
@@ -342,6 +348,15 @@ export function ClaudeAccountsSection({
       ? { kind: "idle" }
       : { kind: "unreadable", reason };
   };
+  // Where a resumed agent restarts: the launch's own choice.
+  const launchId = launchAccount({
+    ids: claudeAccountIds(accounts),
+    active: accounts.active,
+    autoSwitch: accounts.autoSwitch,
+    byAccount: usage.byAccount,
+    now,
+  });
+  const launchView = views.find((v) => v.id === launchId) ?? active;
   const switchTo = (id: string) =>
     selectAccount.mutate(
       { body: { id } },
@@ -361,6 +376,13 @@ export function ClaudeAccountsSection({
           usage={usage}
           now={now}
           onSwitch={switchTo}
+        />
+        <LimitStoppedBanner
+          stopped={stopped}
+          launchAccountId={launchView.id}
+          launchAccountName={launchView.name}
+          usage={usage}
+          now={now}
         />
         <Stack gap="2xs">
           <Text variant="eyebrow" tone="muted">

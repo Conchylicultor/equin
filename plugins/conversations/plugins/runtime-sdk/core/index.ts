@@ -64,3 +64,13 @@ export {
   SubscribeReplySchema,
 } from "./partial";
 export type { PartialFrame, PartialMessage } from "./partial";
+export {
+  limitStoppedConversations,
+  RESUME_TURN_TEXT,
+  ResumeLimitedResultSchema,
+  resumeLimitedConversations,
+} from "./limit-stopped";
+export type {
+  LimitStoppedConversation,
+  ResumeLimitedResult,
+} from "./limit-stopped";

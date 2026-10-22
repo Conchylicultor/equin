@@ -1,0 +1,17 @@
+// @hash 6ec84829688d
+{
+  "views": [
+    {
+      "id": "stopped",
+      "name": "Stopped",
+      "icon": "hourglass-empty",
+      "view": {
+        "type": "list",
+        "sort": [{ "fieldId": "limitHitAt", "direction": "desc" }]
+      }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

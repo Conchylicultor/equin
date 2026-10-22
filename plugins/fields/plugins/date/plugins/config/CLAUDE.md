@@ -17,9 +17,9 @@
   - Exports (types): `DateFieldDef`
   - Exports (values): `dateField`
 - Cross-plugin:
-  - Imported by: 44 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 45 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×9
-    - `conversations` ×8
+    - `conversations` ×9
     - `debug` ×5
     - `infra` ×5
     - `page` ×4

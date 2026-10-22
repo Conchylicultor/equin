@@ -32,6 +32,8 @@ const sdkAgentShape = defineExtensionShape({
     turnReplied: boolField(),
     lastAssistantUuid: nullable(textField()),
     rewindAnchorUuid: nullable(textField()),
+    account: nullable(textField()),
+    limitHitAt: nullable(dateField()),
   },
 });
 

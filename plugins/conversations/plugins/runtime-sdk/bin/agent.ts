@@ -620,6 +620,7 @@ emit({
     resume: options.resume,
     resumeAt: options.resumeAt,
     fork: options.fork,
+    account: args.account,
   },
 });
 // The pid file is what says "running" to every backend counting agents; a

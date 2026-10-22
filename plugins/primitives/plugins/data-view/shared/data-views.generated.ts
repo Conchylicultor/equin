@@ -71,6 +71,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "prototypes.versions", pluginId: "apps.prototypes.canvas" },
   { id: "running-agents", pluginId: "conversations.conversation-view.running-agents" },
   { id: "runs", pluginId: "runs" },
+  { id: "runtime-sdk.limit-stopped", pluginId: "conversations.runtime-sdk" },
   { id: "shell.notifications", pluginId: "shell.notifications" },
   { id: "sonata.library", pluginId: "apps.sonata.library" },
   { id: "stats.cost.top-sessions", pluginId: "stats.cost" },

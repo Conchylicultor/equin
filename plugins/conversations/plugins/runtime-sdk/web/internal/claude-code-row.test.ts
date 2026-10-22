@@ -20,9 +20,10 @@ const loaded = (
   claude: ClaudeCodeStatus,
   agents: ClaudeCodeRowInputs["agents"] = none,
   usage: ClaudeCodeRowInputs["usage"] = noUsage,
+  stopped: ClaudeCodeRowInputs["stopped"] = [],
 ): ResourceResult<ClaudeCodeRowInputs> => ({
   status: "ready",
-  data: { claude, sdk, agents, usage, accounts: NO_CLAUDE_ACCOUNTS },
+  data: { claude, sdk, agents, usage, accounts: NO_CLAUDE_ACCOUNTS, stopped },
   refetch,
 });
 const ready = (
@@ -131,6 +132,30 @@ describe("usage limits", () => {
 });
 
 describe("agentsPhrase", () => {
+  test("conversations stopped at a usage limit are attention", () => {
+    const signedIn: ClaudeCodeStatus = {
+      kind: "ready",
+      version: "2.1.303",
+      authMethod: null,
+      email: null,
+    };
+    const stopped = [
+      {
+        id: "conv-1",
+        title: "Fix it",
+        status: "waiting",
+        account: "acct-a",
+        limitHitAt: new Date(NOW),
+      },
+    ] as const satisfies ClaudeCodeRowInputs["stopped"];
+    expect(
+      claudeCodeRowVerdict(OK, loaded(signedIn, none, noUsage, stopped), NOW),
+    ).toEqual({
+      state: "attention",
+      summary: "1 conversation stopped at a usage limit",
+    });
+  });
+
   test("none here, one here", () => {
     expect(agentsPhrase(none)).toBe("no agents here");
     expect(agentsPhrase({ here: 1, elsewhere: [] })).toBe("1 agent here");

@@ -98,16 +98,21 @@ const MAX_OUTPUT_CHARS = 4_000;
  * Read at every process start, so a switch reaches an agent at its next start.
  */
 function chooseLaunchAccount(): string {
+  const chosen = nextLaunchAccount();
+  if (chosen !== readClaudeAccounts().active) selectClaudeAccountById(chosen);
+  return chosen;
+}
+
+/** The account an agent process started now would run on — a read, selecting nothing. */
+export function nextLaunchAccount(): string {
   const state = readClaudeAccounts();
-  const chosen = launchAccount({
+  return launchAccount({
     ids: claudeAccountIds(state),
     active: state.active,
     autoSwitch: state.autoSwitch,
     byAccount: readClaudeUsage().byAccount,
     now: Date.now(),
   });
-  if (chosen !== state.active) selectClaudeAccountById(chosen);
-  return chosen;
 }
 
 /**

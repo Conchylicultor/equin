@@ -10,6 +10,7 @@ import {
   sameMajorMinor,
   type AgentProcesses,
   type ClaudeUsageRead,
+  type LimitStoppedConversation,
 } from "../../core";
 import { formatResets, USAGE_WINDOWS } from "./claude-usage";
 
@@ -24,6 +25,8 @@ export interface ClaudeCodeRowInputs {
   usage: ClaudeUsageRead;
   /** The Claude accounts and the one new agents launch on. */
   accounts: ClaudeAccounts;
+  /** The conversations whose agent stopped at a usage limit (latest first). */
+  stopped: readonly LimitStoppedConversation[];
 }
 
 const plural = (n: number, one: string, many = `${one}s`) =>
@@ -55,6 +58,8 @@ export function agentsPhrase(agents: AgentProcesses): string {
  *   under it.
  * - The active account's usage limit reached → `attention`: its agents wait
  *   until it resets (or run on another account).
+ * - Conversations stopped at a usage limit → `attention`: they wait for a
+ *   resume (the row's detail offers one).
  * - Otherwise `ok`, with the version and the agents running.
  *
  * The versions and the count not known yet → `unknown`, never `ok`; under a
@@ -78,7 +83,7 @@ export function claudeCodeRowVerdict(
         "Couldn't load the Agent SDK version, the running agents, the Claude accounts or their usage limits",
     };
   }
-  const { claude, sdk, agents, usage, accounts } = result.data;
+  const { claude, sdk, agents, usage, accounts, stopped } = result.data;
   if (claude.kind !== "ready") return cli;
   if (!sameMajorMinor(claude.version, sdk.cliVersion)) {
     return {
@@ -92,6 +97,12 @@ export function claudeCodeRowVerdict(
     return {
       state: "attention",
       summary: `${label} usage limit reached · ${formatResets(reached.id, reached.resetsAt, now)}`,
+    };
+  }
+  if (stopped.length > 0) {
+    return {
+      state: "attention",
+      summary: `${plural(stopped.length, "conversation")} stopped at a usage limit`,
     };
   }
   return {

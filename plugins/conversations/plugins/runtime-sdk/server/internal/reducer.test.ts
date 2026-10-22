@@ -50,6 +50,41 @@ const stream: AgentEvent[] = [
 ];
 
 describe("reduceEvents", () => {
+  test("records the account and a usage-limit stop until a turn runs past it", () => {
+    const limited = sdk(4, {
+      type: "assistant",
+      uuid: "a-limit",
+      parent_tool_use_id: null,
+      error: "rate_limit",
+      message: { content: [] },
+    });
+    const withAccount: AgentEvent = {
+      seq: 1,
+      t: at(),
+      kind: "agent",
+      payload: {
+        event: "started",
+        pid: 42,
+        resume: null,
+        resumeAt: null,
+        fork: false,
+        account: "acct-a",
+      },
+    };
+    const head = [withAccount, turnStarted(2, "go", "p-a"), init(3, "sid-1")];
+    const hit = reduceEvents(EMPTY_PROJECTION, [...head, limited, result(5)]);
+    expect(hit.state.account).toBe("acct-a");
+    expect(hit.state.limitHitAt).toEqual(new Date(limited.t));
+
+    const past = reduceEvents(hit.state, [turnStarted(6, "continue", "p-b")]);
+    expect(past.state.limitHitAt).toBeNull();
+
+    const restarted = reduceEvents(hit.state, [started(6)]);
+    expect(restarted.state.limitHitAt).toBeNull();
+    // An agent started before `started` named its account.
+    expect(restarted.state.account).toBeNull();
+  });
+
   test("projects session, busy/idle and the rewind anchor", () => {
     const { state, effects } = reduceEvents(EMPTY_PROJECTION, stream);
     expect(state).toMatchObject({
