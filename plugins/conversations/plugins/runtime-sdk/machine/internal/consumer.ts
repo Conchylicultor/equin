@@ -147,7 +147,7 @@ async function catchUp(id: string): Promise<void> {
   const path = agentEventsPath(id);
   const read = readAgentEvents(path, positions.get(id) ?? null);
   const { worktreePath: _path, ...projection } = row;
-  const { state, effects, gaps, malformed } = reduceEvents(
+  const { state, effects, gaps, malformed, stalls } = reduceEvents(
     projection,
     read.events,
   );
@@ -165,6 +165,27 @@ async function catchUp(id: string): Promise<void> {
       source: "server-caught",
       message: `SDK agent ${id}: event ${bad.seq} (system/${bad.subtype}) in ${path} did not parse, so it was skipped; the conversation's status may be wrong until a later event corrects it — ${bad.issue}`,
       data: { errorType: "SdkMalformedEvent", label: "runtime-sdk.events" },
+    });
+  }
+  for (const stall of stalls) {
+    // Everything goes in the message: the crash kind's payload keeps only its
+    // own fields.
+    const why = {
+      "exit-returned": "process.exit returned",
+      watchdog: "it was still running after the grace period",
+      sigterm: "a SIGTERM arrived before it was gone",
+    }[stall.trigger];
+    const cli = stall.cli
+      ? `CLI pid ${String(stall.cli.pid)} (exit ${String(stall.cli.exitCode)}, signal ${String(stall.cli.signalCode)})`
+      : "no CLI spawned";
+    const sample = stall.samplePath
+      ? `native stack sample: ${stall.samplePath}`
+      : `no stack sample: ${stall.sampleError ?? "no reason given"}`;
+    await recordReport({
+      kind: "crash",
+      source: "server-caught",
+      message: `SDK agent ${id}: its exit stalled after "${stall.reason}" — ${why}, at step "${stall.stage}" (${stall.runtime}; ${cli}) — so it SIGKILLed its CLI and itself; ${sample}`,
+      data: { errorType: "SdkAgentExitStalled", label: "runtime-sdk.exit" },
     });
   }
   // Side effects first, then the cursor: a crash in between replays the lines,

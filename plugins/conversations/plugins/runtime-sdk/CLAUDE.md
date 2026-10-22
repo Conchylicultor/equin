@@ -40,6 +40,20 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   `query()` in streaming-input mode, commands over its socket, every SDK
   message unchanged as a numbered line of its `events.jsonl`, its pid file, a
   readable log on stdout (`agent.log`, for debugging).
+- **The pid file exists exactly while the agent is alive, and one agent runs per
+  conversation.** The agent removes it only as it really exits (an `exit`
+  listener, or its hard exit just before self-SIGKILL); the backend only after
+  killing it. So "alive" is the pid file naming a live pid whose argv carries
+  that pid file, never the agent's `exited` line, written before the exit. The
+  exit always happens: `process.exit` returning, a 5 s watchdog, or a SIGTERM
+  mid-exit run the hard exit, which samples the process (`/usr/bin/sample` →
+  `exit-stall-*.txt`), writes `exit_stalled` (reported as
+  `SdkAgentExitStalled`), then SIGKILLs the CLI (spawned by the agent via
+  `spawnClaudeCodeProcess`, so it holds the handle) and itself. The backend's
+  `stopAgent` waits for the process (pid-file watch), not the event, and a kill
+  there (`SdkAgentKilled`) or a launch finding a live predecessor
+  (`SdkAgentDuplicate`) is reported too. Why:
+  [`research/2026-10-21-conversations-sdk-agent-exit-guarantee.md`](../../../../research/2026-10-21-conversations-sdk-agent-exit-guarantee.md).
 - `core/protocol.ts` — the wire: commands, replies, event lines, `PROTOCOL_VERSION`.
 - `core/partial.ts` — token streaming: the agent folds the SDK's
   `stream_event`s (`includePartialMessages`) into frames — never written to

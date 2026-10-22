@@ -140,6 +140,27 @@ export const AgentLifecycleSchema = z.discriminatedUnion("event", [
     text: z.string(),
   }),
   z.object({ event: z.literal("exited"), reason: z.string() }),
+  // After `exited`: process.exit returned, did not end the process within the
+  // grace period, or a SIGTERM came first. Written by the hard exit just
+  // before it SIGKILLs the CLI and the agent; the backend reports it.
+  z.object({
+    event: z.literal("exit_stalled"),
+    trigger: z.enum(["exit-returned", "watchdog", "sigterm"]),
+    reason: z.string(),
+    /** The shutdown step reached. */
+    stage: z.string(),
+    runtime: z.string(),
+    cli: z
+      .object({
+        pid: z.number().int().nullable(),
+        exitCode: z.number().int().nullable(),
+        signalCode: z.string().nullable(),
+      })
+      .nullable(),
+    /** A native stack sample of the stalled process (`/usr/bin/sample`). */
+    samplePath: z.string().nullable(),
+    sampleError: z.string().nullable(),
+  }),
 ]);
 export type AgentLifecycle = z.infer<typeof AgentLifecycleSchema>;
 

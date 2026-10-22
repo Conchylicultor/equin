@@ -28883,6 +28883,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RUN_ARTIFACTS_RETENTION`
           - `RUN_TERMINAL_SUFFIX`
           - `RUN_TRANSCRIPT_SUFFIX`
+          - `SAMPLE`
           - `SERVER_CORE_RELATIVE`
           - `setReleaseIdentity`
           - `WEB_CORE_RELATIVE`

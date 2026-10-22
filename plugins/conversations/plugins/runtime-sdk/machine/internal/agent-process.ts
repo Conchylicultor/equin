@@ -7,6 +7,7 @@ import {
   rmSync,
   statSync,
 } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { userInfo } from "node:os";
 import {
   agentSessionEnv,
@@ -24,6 +25,9 @@ import {
   readClaudeAccounts,
   selectClaudeAccountById,
 } from "@plugins/infra/plugins/claude-cli/plugins/accounts/machine";
+import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
+import { PGREP, PS } from "@plugins/infra/plugins/paths/server";
+import { recordReport } from "@plugins/reports/server";
 import { backgroundPrefix } from "@plugins/packages/plugins/spawn-priority/server";
 import { launchAccount, type AgentLaunchOptions } from "../../core";
 import { liveAgentIds } from "./agent-processes";
@@ -35,6 +39,7 @@ import {
   agentPidPath,
   agentSocketPath,
   claudeUsagePath,
+  ownAgentPidsDir,
 } from "./paths";
 
 // The agent process itself: started detached — its own session and process
@@ -42,6 +47,11 @@ import {
 // crash does not reach it — and followed by its pid file. Nothing hosts it: no
 // tmux, no supervisor of ours it would die with. Each one is an instance of
 // one daemon declaration, so Debug → Background activity lists the agents.
+//
+// The pid file exists exactly while the agent is alive: the agent removes it
+// only as it really exits, and this backend only after killing it. So "alive"
+// is always the pid file naming a live pid — never the agent's own `exited`
+// line, which it writes before it exits (and on 2026-10-20 did not exit).
 
 export const sdkAgentDaemon = defineDaemon({
   name: "runtime-sdk.agent",
@@ -109,11 +119,18 @@ export async function startAgentProcess(
   id: string,
   options: AgentLaunchOptions,
 ): Promise<StartedAgent> {
-  // A record left by an agent that exited: the declaration holds one instance
-  // per key.
-  await forget(id);
-  // A pid file a killed agent left behind would read as this launch's pid.
-  rmSync(agentPidPath(id), { force: true });
+  // At most one agent per conversation. A caller launches only when no agent
+  // answers its socket, so a live predecessor here is one whose exit stalled
+  // or that is wedged: it cannot be asked to stop, and is killed.
+  const predecessor = await killAgentProcess(id);
+  if (predecessor !== null) {
+    await recordReport({
+      kind: "crash",
+      source: "server-caught",
+      message: `SDK agent ${id}: a launch found its previous agent (pid ${String(predecessor)}) still alive without answering its socket, and killed it and its CLI first — something let an agent outlive its exit`,
+      data: { errorType: "SdkAgentDuplicate", label: "runtime-sdk.exit" },
+    });
+  }
   mkdirSync(agentDir(id), { recursive: true });
   const account = chooseLaunchAccount();
   const command =
@@ -180,19 +197,97 @@ export async function startAgentProcess(
 }
 
 /**
- * Kill an agent that would not stop on its own (it does not answer its socket,
- * or did not exit after `shutdown`), then drop its record. Idempotent: an agent
- * already gone is the goal.
+ * The agent's pid, while its pid file names a live process that is this
+ * conversation's agent — its argv carries this pid file. A file a killed agent
+ * left behind can name a pid the system has since given to another process,
+ * which must never be killed for it.
  */
-export async function killAgentProcess(id: string): Promise<void> {
-  const read = readPidFile(agentPidPath(id));
-  if (read.kind === "pid" && pidAlive(read.pid)) {
-    process.kill(read.pid, "SIGKILL");
+function livePid(id: string): number | null {
+  const pidFile = agentPidPath(id);
+  const read = readPidFile(pidFile);
+  if (read.kind !== "pid" || !pidAlive(read.pid)) return null;
+  const ps = spawnSync(PS, ["-ww", "-o", "command=", "-p", String(read.pid)], {
+    encoding: "utf8",
+  });
+  // ps exits 1 when the pid is gone (it exited since the liveness check).
+  if (ps.status === 1) return null;
+  if (ps.status !== 0) {
+    throw new Error(
+      `ps -p ${String(read.pid)} failed (${String(ps.status ?? ps.signal)}): ${ps.stderr.trim()}`,
+    );
+  }
+  return ps.stdout.includes(`--pid-file ${pidFile}`) ? read.pid : null;
+}
+
+/** The direct children of `pid` — an agent's CLI. */
+function childPids(pid: number): number[] {
+  const r = spawnSync(PGREP, ["-P", String(pid)], { encoding: "utf8" });
+  // pgrep exits 1 when nothing matches.
+  if (r.status === 1) return [];
+  if (r.status !== 0) {
+    throw new Error(
+      `pgrep -P ${String(pid)} failed (${String(r.status ?? r.signal)}): ${r.stderr.trim()}`,
+    );
+  }
+  return r.stdout.split("\n").filter(Boolean).map(Number);
+}
+
+/** SIGKILL `pid`; one that exited since it was looked up is the goal too. */
+function sigkill(pid: number): void {
+  try {
+    process.kill(pid, "SIGKILL");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ESRCH") throw err;
+  }
+}
+
+/**
+ * Kill an agent that would not stop on its own (it does not answer its socket,
+ * or did not exit after `shutdown`) — its CLI first, which would otherwise
+ * outlive it holding the session — then drop its record. Idempotent: an agent
+ * already gone is the goal. Returns the pid it killed, or null when none was
+ * alive.
+ */
+export async function killAgentProcess(id: string): Promise<number | null> {
+  const pid = livePid(id);
+  if (pid !== null) {
+    for (const child of childPids(pid)) sigkill(child);
+    sigkill(pid);
   }
   // What it would have removed on a clean exit.
   rmSync(agentPidPath(id), { force: true });
   rmSync(agentSocketPath(id), { force: true });
   await forget(id);
+  return pid;
+}
+
+/**
+ * Wait until `id`'s agent is gone — its pid file removed (it does so only as
+ * it really exits) or naming a dead pid — or `timeoutMs` passes. Woken by the
+ * watch on the pid files' directory.
+ */
+export async function awaitAgentExit(
+  id: string,
+  timeoutMs: number,
+): Promise<"exited" | "timeout"> {
+  if (livePid(id) === null) return "exited";
+  const { promise, resolve } = Promise.withResolvers<"exited" | "timeout">();
+  const timer = setTimeout(() => resolve("timeout"), timeoutMs);
+  const release = await acquireDirWatch({
+    dir: ownAgentPidsDir(),
+    scope: "children",
+    onChange: () => {
+      if (livePid(id) === null) resolve("exited");
+    },
+  });
+  // An exit between the first look and the watch opening sent no event.
+  if (livePid(id) === null) resolve("exited");
+  try {
+    return await promise;
+  } finally {
+    clearTimeout(timer);
+    release();
+  }
 }
 
 /** Drop the record of an agent that exited by itself (`shutdown`). */

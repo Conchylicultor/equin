@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { AgentEvent, OpenRequest } from "../../core";
+import type { AgentEvent, AgentLifecycle, OpenRequest } from "../../core";
 
 // Event lines → the conversation's projection, plus the side effects the
 // consumer must run for them. Pure: lines in, state and effects out, so replay
@@ -93,11 +93,20 @@ export interface MalformedEvent {
   issue: string;
 }
 
+/**
+ * The agent's exit stalled and it killed itself (`exit_stalled`): reported by
+ * the consumer, with the diagnosis the agent captured.
+ */
+export type ExitStall = Extract<AgentLifecycle, { event: "exit_stalled" }> & {
+  seq: number;
+};
+
 export interface ReduceResult {
   state: AgentProjection;
   effects: AgentEffect[];
   gaps: SeqGap[];
   malformed: MalformedEvent[];
+  stalls: ExitStall[];
 }
 
 /**
@@ -150,6 +159,7 @@ export function reduceEvents(
   const effects: AgentEffect[] = [];
   const gaps: SeqGap[] = [];
   const malformed: MalformedEvent[] = [];
+  const stalls: ExitStall[] = [];
   for (const e of events) {
     if (e.seq <= s.cursorSeq) continue;
     if (e.seq > s.cursorSeq + 1) {
@@ -198,6 +208,10 @@ export function reduceEvents(
             }
             s.openRequestId = null;
             s.openToolUseId = null;
+            break;
+          case "exit_stalled":
+            // Follows `exited`, which already cleared the state.
+            stalls.push({ ...p, seq: e.seq });
             break;
         }
         break;
@@ -281,5 +295,5 @@ export function reduceEvents(
       }
     }
   }
-  return { state: s, effects, gaps, malformed };
+  return { state: s, effects, gaps, malformed, stalls };
 }

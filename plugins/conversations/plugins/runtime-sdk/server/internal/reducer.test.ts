@@ -242,4 +242,35 @@ describe("reduceEvents", () => {
       working: false,
     });
   });
+
+  test("a stalled exit is reported once, after the exit it follows", () => {
+    const stalled: AgentEvent = {
+      seq: 8,
+      t: at(),
+      kind: "agent",
+      payload: {
+        event: "exit_stalled",
+        trigger: "exit-returned",
+        reason: "shutdown command",
+        stage: "process.exit",
+        runtime: "bun 1.4.3",
+        cli: { pid: 7, exitCode: null, signalCode: null },
+        samplePath: "/tmp/exit-stall-1.txt",
+        sampleError: null,
+      },
+    };
+    const exited: AgentEvent = {
+      seq: 7,
+      t: at(),
+      kind: "agent",
+      payload: { event: "exited", reason: "shutdown command" },
+    };
+    const first = reduceEvents(EMPTY_PROJECTION, [...stream, exited, stalled]);
+    expect(first.stalls).toMatchObject([
+      { seq: 8, trigger: "exit-returned", stage: "process.exit" },
+    ]);
+    expect(first.state).toMatchObject({ cursorSeq: 8, agentPid: null });
+    // Replayed from the cursor: not reported again.
+    expect(reduceEvents(first.state, [stalled]).stalls).toEqual([]);
+  });
 });

@@ -15,7 +15,7 @@
 // the log; the event file is the contract, so a backend that was down replays
 // from its cursor. Started detached (its own session and process group), so a
 // backend restart or crash does not reach it. It exits through `shutdown`, or
-// SIGTERM.
+// SIGTERM — and that exit always happens (see `shutdown`).
 import {
   query,
   type CanUseTool,
@@ -23,6 +23,7 @@ import {
   type SDKMessage,
   type SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
+import { spawn, spawnSync, type ChildProcessByStdio } from "node:child_process";
 import {
   mkdirSync,
   readFileSync,
@@ -31,7 +32,9 @@ import {
   writeFileSync,
 } from "node:fs";
 import { createServer, type Socket } from "node:net";
+import type { Readable, Writable } from "node:stream";
 import { defineFileSink } from "@plugins/infra/plugins/file-sink/core";
+import { SAMPLE } from "@plugins/infra/plugins/paths/server";
 import { basename, dirname, join } from "node:path";
 import { parseArgs } from "node:util";
 import { ZodError } from "zod";
@@ -325,6 +328,10 @@ const canUseTool: CanUseTool = async (
 };
 
 // ── the session ───────────────────────────────────────────────────────────
+// The CLI child, spawned here rather than by the SDK so the hard exit holds
+// its handle: a CLI running a background task keeps going after its stdin
+// closes (2026-10-20), so it would outlive an agent that SIGKILLs itself.
+let cli: ChildProcessByStdio<Writable, Readable, null> | null = null;
 const session = query({
   prompt: inputStream(),
   options: {
@@ -376,7 +383,17 @@ const session = query({
     ...(oauthToken
       ? { env: { ...process.env, CLAUDE_CODE_OAUTH_TOKEN: oauthToken } }
       : {}),
-    stderr: (data: string) => process.stderr.write(data),
+    // Same argv, cwd, env and abort signal the SDK would spawn with. Its
+    // stderr goes straight to ours (agent.log).
+    spawnClaudeCodeProcess: ({ command, args, cwd, env, signal }) => {
+      cli = spawn(command, args, {
+        cwd,
+        env,
+        signal,
+        stdio: ["pipe", "pipe", "inherit"],
+      });
+      return cli;
+    },
   },
 });
 
@@ -498,18 +515,102 @@ function serve(conn: Socket): void {
 rmSync(socketPath, { force: true });
 const server = createServer(serve).listen(socketPath);
 
+// ── exit ──────────────────────────────────────────────────────────────────
+// The pid file says "this process is alive" to every backend, so it goes
+// last: removed inside process.exit (its `exit` listeners are the point of no
+// return), or by the hard exit just before its self-SIGKILL — never earlier.
+//
+// On 2026-10-20 one agent logged "exiting", reached process.exit(0) and kept
+// running (no error, its read loop still relaying) — with its socket and pid
+// file already gone, so no backend could see or stop it. The cause did not
+// reproduce, so the exit cannot depend on it: a stalled exit is ended here, and
+// reported with what it takes to find the cause.
+
+/** How long process.exit may take before the hard exit ends the process. */
+const EXIT_GRACE_MS = 5_000;
+// `sample` records for 1 s, then symbolicates.
+const SAMPLE_TIMEOUT_MS = 5_000;
+/** The shutdown step reached, for an `exit_stalled` report. */
+let stage = "running";
+let exitReason = "";
+
 function shutdown(reason: string): void {
   if (closed) return;
   closed = true;
+  exitReason = reason;
+  setTimeout(() => hardExit("watchdog", reason), EXIT_GRACE_MS);
+  stage = "log";
   log(`● exiting: ${reason}`);
+  stage = "emit exited";
   emit({ kind: "agent", payload: { event: "exited", reason } });
+  stage = "close socket";
   server.close();
   rmSync(socketPath, { force: true });
-  rmSync(pidPath, { force: true });
+  stage = "close session";
   session.close();
-  process.exit(0);
+  stage = "process.exit";
+  // Typed `never`; on 2026-10-20 it returned.
+  (process.exit as (code: number) => void)(0);
+  hardExit("exit-returned", reason);
 }
-process.on("SIGTERM", () => shutdown("SIGTERM"));
+// A SIGTERM while exiting means the exit is taking too long: end it now. Not
+// the default action — that would leave the CLI running, orphaned. (JS too
+// stuck to run this is killed by the backend, CLI first.)
+process.on("SIGTERM", () =>
+  closed ? hardExit("sigterm", exitReason) : shutdown("SIGTERM"),
+);
+process.on("exit", () => rmSync(pidPath, { force: true }));
+
+/**
+ * End a process whose exit stalled — loudly: capture what it was doing, write
+ * an `exit_stalled` event (the backend reports it), then SIGKILL the CLI and
+ * this process. Whatever the capture does, the kill runs.
+ */
+function hardExit(
+  trigger: "exit-returned" | "watchdog" | "sigterm",
+  reason: string,
+): never {
+  try {
+    // A native stack sample of every thread, taken while still stalled.
+    const samplePath = join(dir, `exit-stall-${Date.now()}.txt`);
+    const sample = spawnSync(
+      SAMPLE,
+      [String(process.pid), "1", "-file", samplePath],
+      { timeout: SAMPLE_TIMEOUT_MS, encoding: "utf8" },
+    );
+    const sampleError = sample.error
+      ? sample.error.message
+      : sample.status !== 0
+        ? `sample exited ${String(sample.status ?? sample.signal)}: ${sample.stderr.trim()}`
+        : null;
+    const stalled = {
+      event: "exit_stalled" as const,
+      trigger,
+      reason,
+      stage,
+      runtime: `bun ${process.versions.bun ?? "?"}`,
+      cli: cli && {
+        pid: cli.pid ?? null,
+        exitCode: cli.exitCode,
+        signalCode: cli.signalCode,
+      },
+      samplePath: sampleError ? null : samplePath,
+      sampleError,
+    };
+    emit({ kind: "agent", payload: stalled });
+    log(
+      `● exit stalled (${trigger}, at ${stage}) — killing · ${sampleError ?? samplePath}`,
+    );
+  } finally {
+    try {
+      cli?.kill("SIGKILL");
+      rmSync(pidPath, { force: true });
+    } finally {
+      process.kill(process.pid, "SIGKILL");
+    }
+  }
+  throw new Error("SIGKILL did not end the agent process");
+}
 
 emit({
   kind: "agent",
@@ -529,6 +630,8 @@ log(`● agent ${process.pid} · ${dir}`);
 if (options.prompt !== null) pushInput(options.prompt, null);
 
 for await (const msg of session) {
+  // Nothing is numbered after `exited`.
+  if (closed) break;
   if (msg.type === "stream_event") {
     const frame = partialFrameOf(msg);
     if (frame) pushFrame(frame);

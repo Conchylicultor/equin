@@ -4,6 +4,8 @@ import { homedir } from "node:os";
 export const GIT = Bun.which("git") ?? "git";
 export const PGREP = Bun.which("pgrep") ?? "pgrep";
 export const PS = Bun.which("ps") ?? "ps";
+/** macOS `sample`: a native stack sample of a running process. */
+export const SAMPLE = Bun.which("sample") ?? "sample";
 
 /**
  * Where Claude Code is looked for when it is not on PATH: its own installer's

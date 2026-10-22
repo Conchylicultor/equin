@@ -12,6 +12,7 @@ import type { ConversationModel } from "@plugins/conversations/plugins/model-pro
 import type { EffortLevel } from "@plugins/conversations/plugins/effort-provider/core";
 import { agentLaunchHooks } from "@plugins/conversations/plugins/agent-launch/server";
 import { requireClaudeBin } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
+import { recordReport } from "@plugins/reports/server";
 import {
   AgentLaunchOptionsSchema,
   DismissReplySchema,
@@ -40,6 +41,7 @@ import {
 import { agentDir, agentEventsPath, agentOptionsPath } from "./paths";
 import {
   attachRunningAgents,
+  awaitAgentExit,
   forgetAgentProcess,
   killAgentProcess,
   startAgentProcess,
@@ -48,6 +50,7 @@ import {
 import { recountAgentProcesses } from "./agent-processes";
 import {
   AgentNotRunningError,
+  AgentUnresponsiveError,
   commandAgent,
   helloAgent,
 } from "./socket-client";
@@ -65,7 +68,8 @@ import { watchPartialMessage } from "./partial-stream";
 const READY_TIMEOUT_MS = 60_000;
 // Interrupt → the turn's `result`.
 const INTERRUPT_SETTLE_MS = 30_000;
-// `shutdown` → the agent's `exited`.
+// `shutdown` → the agent process gone. Above the agent's own hard exit (5 s),
+// so a kill here means even that did not run.
 const EXIT_TIMEOUT_MS = 15_000;
 
 const UnknownReplySchema = z.unknown();
@@ -100,31 +104,48 @@ function readOptions(id: string): AgentLaunchOptions {
 }
 
 /**
- * Ask the agent to exit and wait for it to; kill it when it does not answer or
- * does not exit.
+ * Ask the agent to exit and wait for the process to be gone; kill it when it
+ * is not — and report the kill, which the agent's own exit should have made
+ * unnecessary.
  */
 async function stopAgent(id: string): Promise<void> {
   try {
     await commandAgent(id, { type: "shutdown" }, UnknownReplySchema);
   } catch (err) {
-    if (!(err instanceof AgentNotRunningError)) throw err;
-    // Not answering: gone, or wedged — either way nothing will exit by itself.
-    await killAgentProcess(id);
-    return;
+    // No socket (gone, or already exiting) or no reply (exiting, or wedged):
+    // the wait below tells them apart.
+    if (
+      !(err instanceof AgentNotRunningError) &&
+      !(err instanceof AgentUnresponsiveError)
+    )
+      throw err;
   }
-  try {
-    await waitForProjection(
+  // Waits for the process, not its `exited` line: the agent writes that before
+  // it exits — and on 2026-10-20 one never did.
+  if ((await awaitAgentExit(id, EXIT_TIMEOUT_MS)) === "timeout") {
+    await reportKill(
       id,
-      (s) => s.agentPid === null,
-      EXIT_TIMEOUT_MS,
-      "exit after shutdown",
+      await killAgentProcess(id),
+      `it was still running ${String(EXIT_TIMEOUT_MS / 1000)} s after being told to stop`,
     );
-  } catch (err) {
-    if (!(err instanceof ProjectionTimeoutError)) throw err;
-    await killAgentProcess(id);
     return;
   }
   await forgetAgentProcess(id);
+}
+
+async function reportKill(
+  id: string,
+  pid: number | null,
+  why: string,
+): Promise<void> {
+  // Nothing alive: it was already gone, the normal case for "not answering".
+  if (pid === null) return;
+  await recordReport({
+    kind: "crash",
+    source: "server-caught",
+    message: `SDK agent ${id}: stopping it took a SIGKILL of pid ${String(pid)} and its CLI — ${why}. Its own exit (shutdown, then the hard exit) should have ended it; its agent.log may say where it stopped`,
+    data: { errorType: "SdkAgentKilled", label: "runtime-sdk.exit" },
+  });
 }
 
 /** The live state of each of `ids` that is this DB's sdk conversation. */

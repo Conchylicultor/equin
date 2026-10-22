@@ -221,8 +221,11 @@ down the 10 agents its live conversations had on the old paths:
   was hibernated. It then finished its turn, whose 8 events never reached the DB (the transcript
   has them). SIGTERM did nothing either: `shutdown()` sets `closed` before it stalls, and the
   SIGTERM handler returns when `closed` is set. It was killed by hand with SIGKILL. The current
-  `agent.ts` has the same `shutdown()` order, so the bug is still there. A stop from the backend is
-  covered by the 15 s SIGKILL fallback; the agent's own exit path is filed as a task.
+  `agent.ts` has the same `shutdown()` order, so the bug is still there. ~~A stop from the backend is
+  covered by the 15 s SIGKILL fallback~~ — it was not: that fallback waited for the `exited` line,
+  written before the stall, and looked the pid up in the pid file the agent had already deleted.
+  Fixed, both sides:
+  [`2026-10-21-conversations-sdk-agent-exit-guarantee.md`](2026-10-21-conversations-sdk-agent-exit-guarantee.md).
 - **Worktree agents on the old paths:** two remained, both Haiku latency-test agents from
   `att-1792445997-p8yemr` (its task done), idle since 2026-10-20 09:36. They exited on `shutdown`
   (sent by hand). Their tmux sessions were the last ones; the tmux server is gone.

@@ -21,6 +21,20 @@ export class AgentNotRunningError extends Error {
   }
 }
 
+/**
+ * The agent took the connection but did not reply: it is wedged, or exiting
+ * (a reply cut short by its exit). Its state is unknown — never "dead".
+ */
+export class AgentUnresponsiveError extends Error {
+  constructor(
+    readonly conversationId: string,
+    detail: string,
+  ) {
+    super(`SDK agent ${conversationId}: ${detail}`);
+    this.name = "AgentUnresponsiveError";
+  }
+}
+
 /** The agent answered a command with an error. */
 export class AgentCommandError extends Error {
   constructor(
@@ -40,8 +54,8 @@ const COMMAND_TIMEOUT_MS = 10_000;
 /**
  * Send `commands` on one connection, in order, and collect one reply per
  * command. ENOENT / ECONNREFUSED — no socket, or nobody listening on it — is
- * {@link AgentNotRunningError}; anything else throws as itself (the state is
- * unknown, not "dead").
+ * {@link AgentNotRunningError}; no reply is {@link AgentUnresponsiveError};
+ * anything else throws as itself (the state is unknown, not "dead").
  */
 function exchange(
   conversationId: string,
@@ -63,8 +77,9 @@ function exchange(
     const timer = setTimeout(
       () =>
         finish(
-          new Error(
-            `SDK agent ${conversationId}: no reply to ${commands.map((c) => c.type).join(", ")} within ${COMMAND_TIMEOUT_MS}ms`,
+          new AgentUnresponsiveError(
+            conversationId,
+            `no reply to ${commands.map((c) => c.type).join(", ")} within ${COMMAND_TIMEOUT_MS}ms`,
           ),
         ),
       COMMAND_TIMEOUT_MS,
@@ -95,8 +110,9 @@ function exchange(
     });
     conn.on("close", () => {
       finish(
-        new Error(
-          `SDK agent ${conversationId} closed the connection before replying`,
+        new AgentUnresponsiveError(
+          conversationId,
+          "closed the connection before replying",
         ),
       );
     });
