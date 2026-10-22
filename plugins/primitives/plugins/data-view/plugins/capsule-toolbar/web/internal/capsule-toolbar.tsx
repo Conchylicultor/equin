@@ -54,9 +54,14 @@ function CapsuleToolbar({
 
   return (
     <Center axis="horizontal" className="py-sm rail-follow">
+      {/* One padding on every side, and no fixed height: the pill is its
+          controls plus that padding, so each round control (the chip, the
+          circles, create) sits concentric in the pill — the same gap above,
+          below and at the ends. A fixed height with a narrower inline pad
+          left the chip's ends off-centre in the pill's round ends. */}
       <Surface
         level="raised"
-        className="@container/capsule h-12 w-[min(620px,100%)] rounded-full px-xs shadow-none transition-colors focus-within:border-input"
+        className="@container/capsule w-[min(620px,100%)] rounded-full p-sm shadow-none transition-colors focus-within:border-input"
       >
         <ControlSizeProvider size="md">
           <Line className="h-full gap-2xs">
