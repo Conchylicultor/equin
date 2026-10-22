@@ -26,6 +26,10 @@ on a full-bleed `<MapView>` (`plugins/map`), clustered by default.
   `onRowOpen` when the row does not activate. `selectedRowId` is the map's
   `activeId` (its pin renders active) and `focusId` (panned into view when
   off-screen).
+- **Kept rows.** The selected row is drawn even when the search or filter
+  hides it (its detail is open beside the map — the pin is what it points
+  at), and so is every row whose key is in the `keep` option
+  (`withKeptRows`, after the view's rows).
 - **Empty.** No pin at all → the map stays mounted (narrowing and widening a
   filter never unmounts or moves it), with a notice floated over it
   (`MapView`'s `empty`) only when there is something to explain: the host's
@@ -73,6 +77,9 @@ which decides which one draws on top).
   only on a first visit. Places passes `"places.map"`.
 - `rank?(row)` — the row's importance (`MapPin.rank`): draws above lower ranks
   where pins overlap and leads its spot. Default 0.
+- `keep?` — row keys drawn even where the search or filter hides them (a
+  search's hits that are rows — Places' saved Google hits). The selected row
+  is always kept.
 - `overlays?` — `{ items, onActivate }` (`MapExtraOverlays`): overlays that are
   not rows (search hits proposed on the map), drawn with the rows' pins; a
   click on one goes to its `onActivate`, never to the row activation. Mark

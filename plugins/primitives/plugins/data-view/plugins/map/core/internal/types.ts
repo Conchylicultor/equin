@@ -64,6 +64,12 @@ export interface MapViewOptions<TRow> {
    * only on a first visit. Absent = every visit frames the pins.
    */
   cameraKey?: string;
+  /**
+   * Row keys drawn even where the view's search or filter hides them — rows
+   * something beside the map stands for (a search's hits that are rows). The
+   * selected row is always drawn; it needs no entry here.
+   */
+  keep?: ReadonlySet<string>;
   /** Non-row overlays drawn with the rows' pins (`MapExtraOverlays`). */
   overlays?: MapExtraOverlays;
   /**

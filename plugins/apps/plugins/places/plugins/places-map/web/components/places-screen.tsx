@@ -220,7 +220,10 @@ function PlacesSurface({
     () => (google.kind === "answer" ? google.hits : []),
     [google],
   );
-  // Each hit not saved yet is proposed on the map; a saved one is its own pin.
+  // Each hit not saved yet is proposed on the map; a saved one is its own pin,
+  // kept on the map (`keepIds`) even where the view's search or filter hides
+  // it: Google matches names the view's substring search misses (a typo), and
+  // a hit the panel lists must be on the map.
   // Sonnet's picks first: a place both picked and searched is drawn as the
   // pick (one pin per place).
   const ghostPins = useMemo((): MapPin[] => {
@@ -260,6 +263,16 @@ function PlacesSurface({
     }
     return pins;
   }, [askPicks, googleHits, savedByGoogleId]);
+  const keepIds = useMemo(
+    (): ReadonlySet<string> =>
+      new Set(
+        [...askPicks.map((p) => p.hit), ...googleHits].flatMap((hit) => {
+          const saved = savedByGoogleId.get(hit.placeId);
+          return saved === undefined ? [] : [saved.id];
+        }),
+      ),
+    [askPicks, googleHits, savedByGoogleId],
+  );
 
   const extraFields = useMemo(() => placeExtraFields(tags), [tags]);
   const selected =
@@ -391,6 +404,7 @@ function PlacesSurface({
         // first visit frames every place (which, worldwide, is the globe).
         cameraKey: "places.map",
         ...(pick === undefined ? {} : { pick }),
+        keep: keepIds,
         overlays: {
           items: ghostPins,
           onActivate: activateGhost,
@@ -416,7 +430,15 @@ function PlacesSurface({
         leading: (p: Place) => <PlaceGlyph visual={placeVisual(p, tags)} />,
       },
     }),
-    [tags, fitPadding, pick, ghostPins, hoveredGoogleId, activateGhost],
+    [
+      tags,
+      fitPadding,
+      pick,
+      keepIds,
+      ghostPins,
+      hoveredGoogleId,
+      activateGhost,
+    ],
   );
 
   function openPlace(place: Place) {

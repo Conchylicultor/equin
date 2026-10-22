@@ -188,6 +188,12 @@ search field, controlled (`search={{ query, onQueryChange, suggestions }}`):
   Nov 1 …"); a `names` hit has no rating, no position (no pin), and its save
   carries the round's session. `maps-not-configured` (search or save) renders
   `MapsAccessAction`.
+- **Saved hits stay on the map.** A hit (or a Sonnet pick) that is already
+  one of your places is drawn as its own pin, kept by the map view's `keep`
+  even where the view's search or filter hides it — Google matches names the
+  substring search misses ("belleviloise" → La Bellevilloise), and a hit the
+  panel lists must be on the map. The selected place is always drawn too (the
+  map view's rule), so opening it pans to its pin.
 - **Ghost pins** (`web/components/google-result-pin.tsx`, `GeoMap.Pin` for
   `places.google-result`) — every hit with a position not saved yet, as the
   map view's extra `overlays` with `frame: false`, so the camera never frames

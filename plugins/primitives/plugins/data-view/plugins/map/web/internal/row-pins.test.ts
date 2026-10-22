@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
-import { pickLocationField, rowsToPins } from "./row-pins";
+import { pickLocationField, rowsToPins, withKeptRows } from "./row-pins";
 
 interface Place {
   id: string;
@@ -96,5 +96,32 @@ describe("pickLocationField", () => {
     expect(pickLocationField([nameField], undefined, chain)).toEqual({
       kind: "none",
     });
+  });
+});
+
+describe("withKeptRows", () => {
+  const key = (p: Place) => p.id;
+  const [a, b, c] = places as [Place, Place, Place];
+
+  it("returns the view's rows untouched when nothing is kept", () => {
+    const shown = [a];
+    expect(withKeptRows(shown, places, key, new Set())).toBe(shown);
+  });
+
+  it("adds a kept row the view hid, after the view's rows", () => {
+    expect(withKeptRows([b], places, key, new Set(["c", "a"]))).toEqual([
+      b,
+      a,
+      c,
+    ]);
+  });
+
+  it("never draws a kept row twice", () => {
+    const shown = [a, b];
+    expect(withKeptRows(shown, places, key, new Set(["a"]))).toBe(shown);
+  });
+
+  it("ignores a kept key that names no row", () => {
+    expect(withKeptRows([a], places, key, new Set(["zz"]))).toEqual([a]);
   });
 });

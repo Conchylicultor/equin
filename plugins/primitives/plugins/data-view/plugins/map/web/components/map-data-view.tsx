@@ -19,6 +19,7 @@ import {
   DEFAULT_ROW_PIN_TYPE,
   pickLocationField,
   rowsToPins,
+  withKeptRows,
 } from "../internal/row-pins";
 
 /** The per-instance options the view reads off the config row. */
@@ -38,7 +39,8 @@ function primaryLabel<TRow>(
 
 /**
  * Map view: every row (after search → filter → sort) holding a valid location
- * is one pin on a full-bleed map, clustered by default. Clicking a pin
+ * is one pin on a full-bleed map, clustered by default — plus the selected row
+ * and the `keep` rows, even where the search or filter hides them. Clicking a pin
  * activates its row — the same per-row activation the other views wire to a
  * click — and the selected row's pin renders active and is panned into view.
  * The map stays mounted when the filtered rows empty out, so narrowing and
@@ -50,7 +52,7 @@ function primaryLabel<TRow>(
 export function MapDataView(props: DataViewRenderProps<unknown>): ReactNode {
   const resolveOperatorSet = useResolveOperatorSet();
   const identities = useFieldIdentities();
-  const rows = useFlatRows(
+  const shown = useFlatRows(
     props.rows,
     props.fields,
     props.state,
@@ -61,6 +63,18 @@ export function MapDataView(props: DataViewRenderProps<unknown>): ReactNode {
   // arrive merged in one opaque bag.
   const options = (props.options ?? {}) as MapViewOptions<unknown> &
     MapInstanceOptions;
+  const selected = props.selectedRowId ?? null;
+  // The selected row is always on the map, whatever hides it from the view:
+  // its card is open, so its pin is what the card points at.
+  const keep = useMemo(() => {
+    const keys = new Set(options.keep);
+    if (selected !== null) keys.add(selected);
+    return keys;
+  }, [options.keep, selected]);
+  const rows = useMemo(
+    () => withKeptRows(shown, props.rows, props.rowKey, keep),
+    [shown, props.rows, props.rowKey, keep],
+  );
 
   const pick = pickLocationField(props.fields, options.locationField, (t) =>
     resolveTypeChain(t, identities),
@@ -131,7 +145,6 @@ export function MapDataView(props: DataViewRenderProps<unknown>): ReactNode {
     if (activation !== undefined) runActivation(activation);
     else props.onRowOpen?.(row);
   };
-  const selected = props.selectedRowId ?? null;
   const crowd =
     options.crowd === false
       ? undefined
@@ -167,7 +180,7 @@ export function MapDataView(props: DataViewRenderProps<unknown>): ReactNode {
             (props.emptyState ?? (
               <Placeholder>Nothing to show on the map.</Placeholder>
             ))
-          ) : rows.length === 0 ? null : (
+          ) : shown.length === 0 ? null : (
             <Placeholder>None of these have a location yet.</Placeholder>
           )
         }

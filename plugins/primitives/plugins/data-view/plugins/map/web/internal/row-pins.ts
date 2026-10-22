@@ -92,3 +92,23 @@ export function rowsToPins<TRow>(input: RowPinsInput<TRow>): RowPins<TRow> {
   });
   return { pins, rowById, missing };
 }
+
+/**
+ * The rows the map draws: the view's (after search → filter → sort), then
+ * every row of the whole list whose key is in `keep` and that the view hid —
+ * in the list's order, after the view's rows.
+ */
+export function withKeptRows<TRow>(
+  shown: readonly TRow[],
+  all: readonly TRow[],
+  rowKey: (row: TRow, index: number) => string,
+  keep: ReadonlySet<string>,
+): readonly TRow[] {
+  if (keep.size === 0) return shown;
+  const shownKeys = new Set(shown.map((row, i) => rowKey(row, i)));
+  const kept = all.filter((row, i) => {
+    const key = rowKey(row, i);
+    return keep.has(key) && !shownKeys.has(key);
+  });
+  return kept.length === 0 ? shown : [...shown, ...kept];
+}
