@@ -118,16 +118,15 @@ export interface SortableRow {
 }
 
 /**
- * The report's row order: info rows first (by `order`), then status rows worst
- * first — `not-applicable` ones last — ties broken by `order`, then by
- * registration order (the sort is stable). Returns a new array.
+ * The report's row order: info rows first, then status rows, each by `order`,
+ * then by registration order (the sort is stable). Returns a new array.
+ *
+ * Deliberately blind to status: a row keeps its place whatever it reports, so
+ * the report does not reshuffle the moment something turns red. The dot and
+ * the verdict already say what is wrong; the order says where to find it.
  */
-export function sortRows<R extends SortableRow>(
-  rows: ReadonlyArray<R>,
-  statusOf: (row: R) => ReportedStatus,
-): R[] {
-  const rank = (row: R): number =>
-    row.kind === "info" ? -1 : RANK[levelOf(statusOf(row))];
+export function sortRows<R extends SortableRow>(rows: ReadonlyArray<R>): R[] {
+  const rank = (row: R): number => (row.kind === "info" ? 0 : 1);
   return [...rows].sort((a, b) => rank(a) - rank(b) || a.order - b.order);
 }
 
@@ -136,14 +135,16 @@ export type ReportItem<R> =
   { kind: "row"; row: R } | { kind: "quiet"; rows: R[] };
 
 /**
- * Fold the quiet rows into ONE card, placed where the first of them sorts.
+ * Fold the quiet rows into ONE card, placed after every other row.
  *
  * A row is quiet when it is a status row with nothing to show beyond its
  * summary (`isPlain`: no glance, no detail, no actions) and it is `ok`: a line
  * that only says "fine". Several of them stacked are noise, so they collapse
  * into one card that lists them when expanded. The moment one is not `ok` it
  * leaves the card and sorts on its own, so a problem is never hidden behind a
- * chevron. Fewer than two quiet rows fold nothing — a card of one is a row.
+ * chevron. The card sits last so a row leaving or rejoining it never moves
+ * the rows around it. Fewer than two quiet rows fold nothing — a card of one
+ * is a row.
  */
 export function foldQuietRows<R extends SortableRow>(
   sorted: ReadonlyArray<R>,
@@ -154,10 +155,9 @@ export function foldQuietRows<R extends SortableRow>(
     row.kind === "status" && isPlain(row) && levelOf(statusOf(row)) === "ok";
   const quiet = sorted.filter(isQuiet);
   if (quiet.length < 2) return sorted.map((row) => ({ kind: "row", row }));
-  const items: ReportItem<R>[] = [];
-  for (const row of sorted) {
-    if (!isQuiet(row)) items.push({ kind: "row", row });
-    else if (row === quiet[0]) items.push({ kind: "quiet", rows: quiet });
-  }
+  const items: ReportItem<R>[] = sorted
+    .filter((row) => !isQuiet(row))
+    .map((row) => ({ kind: "row", row }));
+  items.push({ kind: "quiet", rows: quiet });
   return items;
 }

@@ -53,9 +53,10 @@ function BoundaryRow({
 }
 
 /**
- * The report: a header with the merged dot and the verdict, then every row —
- * info rows first, then status rows worst-first, ties by `order` — with the
- * plain rows that are fine folded into one expandable card (`foldQuietRows`). No footer:
+ * The report: a header with the merged dot and the verdict, then every row in
+ * a fixed order — info rows first, then status rows, each by `order`, never by
+ * status — with the plain rows that are fine folded into one expandable card
+ * at the end (`foldQuietRows`). No footer:
  * a row that has a pane to point at does so through its own `actions`, so the
  * report never names a contributor.
  *
@@ -72,7 +73,7 @@ export function HealthReportPanel() {
   const verdict = verdictOf(statusList);
   const statusOf = (row: SealedRow) =>
     row.kind === "status" ? statuses[row.id] : undefined;
-  const items = foldQuietRows(sortRows(rows, statusOf), statusOf, isPlain);
+  const items = foldQuietRows(sortRows(rows), statusOf, isPlain);
 
   return (
     <>

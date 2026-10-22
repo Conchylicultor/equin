@@ -51,7 +51,7 @@ HealthReport.Row({
   it": a machine-only check under a host without the computer (its read is
   `unavailable` — return `{ state: "not-applicable", summary: result.message }`).
   The merge leaves it out, so it neither greys nor greens the dot; the row is
-  listed last with a hollow dot and its summary saying why.
+  listed with a hollow dot and its summary saying why.
 - **Info rows cannot move the dot.** They have no field to declare a state
   through, so this holds by construction. Their `useInfo` runs only while the
   report is open.
@@ -85,13 +85,15 @@ status row with nothing beyond its summary (no `glance`, `component` or
 `actions`) that is `ok` only says "fine", so two or more of them collapse into
 one card — their titles, "All normal" — that lists each when expanded. A row
 leaves the card the moment it is not `ok`, so a problem is never behind a
-chevron. The rule reads only the row's shape and state, never its id.
+chevron. The card sits after every other row, so a row leaving or rejoining it
+never shifts the rest. The rule reads only the row's shape and state, never its
+id.
 
-Row order (`sortRows`): info rows first, then status rows worst-first
-(`not-applicable` last), ties by
-`order`, then registration order. This is why the slot is a plain `defineSlot`
-and not a render slot: the report owns the order, so reorder middleware would
-only fight it.
+Row order (`sortRows`): info rows first, then status rows, each by `order`,
+then registration order — never by status, so a row keeps its place when it
+turns red (the dot and verdict already say what is wrong). This is why the
+slot is a plain `defineSlot` and not a render slot: the report owns the order,
+so reorder middleware would only fight it.
 
 ## Host mechanics
 
@@ -117,7 +119,7 @@ detail is rendered through `renderIsolated`.
 
 ## Plugin reference
 
-- Description: Unified health report: one dot merging every HealthReport.Row contribution (critical > attention > unknown > ok, with a count of rows needing a look), opening a popover that lists info rows first and status rows worst-first. Owns the slot and the HealthReportButton; knows no contributor.
+- Description: Unified health report: one dot merging every HealthReport.Row contribution (critical > attention > unknown > ok, with a count of rows needing a look), opening a popover that lists info rows first, then status rows in a fixed order. Owns the slot and the HealthReportButton; knows no contributor.
 - Web:
   - Slots: `HealthReport.Row`
   - Slot contributors:

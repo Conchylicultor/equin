@@ -279,14 +279,14 @@ describe("the report", () => {
     expect(trigger.getAttribute("aria-expanded")).toBe("true");
   });
 
-  it("orders info rows first, then status rows worst first", async () => {
+  it("orders info rows first, then status rows in place whatever their state", async () => {
     renderReport([
       status("calm", { state: "ok", summary: "calm-summary" }),
       status("bad", { state: "critical", summary: "bad-summary" }),
       info("where", () => ({ title: "Worktree", summary: "where-summary" })),
     ]);
     await openReport();
-    const order = ["where-summary", "bad-summary", "calm-summary"].map(summary);
+    const order = ["where-summary", "calm-summary", "bad-summary"].map(summary);
     for (let i = 1; i < order.length; i++) {
       expect(
         order[i - 1]!.compareDocumentPosition(order[i]!) &
@@ -311,10 +311,10 @@ describe("the report", () => {
     expect(button().textContent).toBe("1");
   });
 
-  it("keeps a not-applicable row out of the dot, and lists it last, hollow", async () => {
+  it("keeps a not-applicable row out of the dot, and lists it hollow", async () => {
     renderReport([
-      status("machine", { state: "not-applicable", summary: "na-summary" }),
       status("calm", { state: "ok", summary: "calm-summary" }),
+      status("machine", { state: "not-applicable", summary: "na-summary" }),
     ]);
     expect(button().dataset.health).toBe("ok");
     expect(button().getAttribute("aria-label")).toBe("All systems normal");

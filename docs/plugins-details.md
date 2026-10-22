@@ -44822,7 +44822,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `reorder/edit-mode`
           - `shell/notifications`
-    - **`health-report`** — Unified health report: one dot merging every HealthReport.Row contribution (critical > attention > unknown > ok, with a count of rows needing a look), opening a popover that lists info rows first and status rows worst-first. Owns the slot and the HealthReportButton; knows no contributor.
+    - **`health-report`** — Unified health report: one dot merging every HealthReport.Row contribution (critical > attention > unknown > ok, with a count of rows needing a look), opening a popover that lists info rows first, then status rows in a fixed order. Owns the slot and the HealthReportButton; knows no contributor.
       - Web:
         - Slots: `HealthReport.Row`
         - Slot contributors:

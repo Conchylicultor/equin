@@ -148,7 +148,7 @@ describe("sortRows", () => {
     order: number,
     status?: ReportedStatus,
   ): R => ({ id, kind, order, status });
-  const ids = (rows: R[]) => sortRows(rows, (r) => r.status).map((r) => r.id);
+  const ids = (rows: R[]) => sortRows(rows).map((r) => r.id);
 
   it("puts info rows first, ordered by order", () => {
     expect(
@@ -160,19 +160,19 @@ describe("sortRows", () => {
     ).toEqual(["i1", "i2", "s"]);
   });
 
-  it("orders status rows worst first", () => {
+  it("ignores status, so a row keeps its place when it turns red", () => {
     expect(
       ids([
         row("ok", "status", 0, ok()),
-        row("unknown", "status", 0, undefined),
-        row("attention", "status", 0, attention()),
-        row("critical", "status", 0, critical()),
+        row("unknown", "status", 1, undefined),
+        row("attention", "status", 2, attention()),
+        row("critical", "status", 3, critical()),
         row("n/a", "status", -1, notApplicable()),
       ]),
-    ).toEqual(["critical", "attention", "unknown", "ok", "n/a"]);
+    ).toEqual(["n/a", "ok", "unknown", "attention", "critical"]);
   });
 
-  it("breaks severity ties by order, then keeps registration order", () => {
+  it("orders by order, then keeps registration order", () => {
     expect(
       ids([
         row("b", "status", 20, ok()),
@@ -184,7 +184,7 @@ describe("sortRows", () => {
 
   it("does not mutate its input", () => {
     const input = [row("b", "status", 2, ok()), row("a", "status", 1, ok())];
-    sortRows(input, (r) => r.status);
+    sortRows(input);
     expect(input.map((r) => r.id)).toEqual(["b", "a"]);
   });
 });
@@ -212,7 +212,7 @@ describe("foldQuietRows", () => {
       item.kind === "row" ? item.row.id : item.rows.map((r) => r.id),
     );
 
-  it("folds every plain ok status row into one card where the first sorts", () => {
+  it("folds every plain ok status row into one card after every other row", () => {
     expect(
       shape([
         row("info", undefined, true, "info"),
@@ -222,7 +222,7 @@ describe("foldQuietRows", () => {
         row("db", ok()),
         row("n/a", notApplicable()),
       ]),
-    ).toEqual(["info", "bad", ["conn", "db"], "queue", "n/a"]);
+    ).toEqual(["info", "bad", "queue", "n/a", ["conn", "db"]]);
   });
 
   it("leaves a plain row that is not ok on its own", () => {
@@ -233,7 +233,7 @@ describe("foldQuietRows", () => {
         row("reads", ok()),
         row("late", undefined),
       ]),
-    ).toEqual(["db", ["conn", "reads"], "late"]);
+    ).toEqual(["db", "late", ["conn", "reads"]]);
   });
 
   it("folds nothing when fewer than two rows are quiet", () => {
