@@ -13,6 +13,7 @@ import { assertHostServices } from "./host-service";
 import { collectContributions } from "./contributions";
 import { profilerStart, recordMemoryCheckpoint } from "./profiler";
 import {
+  assertDbReadsHaveChangeFeed,
   assertPreloadedResourcesDeclared,
   bindDeferredResources,
 } from "./resources";
@@ -20,15 +21,17 @@ import type { LoadedServerPlugin, ServerPluginDefinition } from "./types";
 
 // ── The boot sequence, once, for both boot MODES ────────────────────────────
 //
-// A backend process boots in one of two modes, and they share this file so they
-// cannot drift:
+// A backend process boots in one of three modes, and they share this file so
+// they cannot drift:
 //
 // - `serve` — the gateway-spawned, long-lived backend (`../bin/index.ts`). Runs
 //   every phase: this file's sequence, plus the socket bind interleaved into it
-//   and the post-serving phases (`onReady`, `onAllReady`, `drainWarmups`) after
-//   it.
+//   and the post-ready phases (`runPostReadyPhases`: `onReady`, `onAllReady`)
+//   and `drainWarmups` after it.
+// - `browser` — a page's Web Worker (`./browser-host.ts`), the other SERVING
+//   host: the sequence, its seed, then the same post-ready phases.
 // - `exec` — a short-lived process that runs ONE registered piece of work and
-//   exits (`../cli/run-exec.ts`). Runs the sequence in this file and nothing else.
+//   exits (`../cli/run-exec.ts`). Runs `bootPluginGraph` and nothing else.
 //
 // The mode split is stated as a discriminated union (`BootSpec`) rather than a
 // boolean, so the one phase that differs INSIDE the sequence — serve binding its
@@ -326,7 +329,7 @@ async function runRegisterPhase(ordered: LoadedServerPlugin[]): Promise<void> {
 // - `onReady` runs AFTER the server is already serving. Killing a live, serving
 //   backend because a background poller/watcher threw is reserved for genuinely
 //   critical plugins, so that phase stays gated on `loadBearing`.
-export async function runGraphPhase(
+async function runGraphPhase(
   ordered: LoadedServerPlugin[],
   hook: "onReadyBlocking" | "onReady",
 ): Promise<void> {
@@ -384,9 +387,7 @@ async function runReadyBarrier(ordered: LoadedServerPlugin[]): Promise<void> {
 // initialization must observe another plugin's onReady-produced state (without
 // a dependsOn edge — e.g. a schedule whose definition reads config) run here.
 // Parallel; a load-bearing plugin's rejection aborts boot.
-export async function runAllReadyPhase(
-  ordered: LoadedServerPlugin[],
-): Promise<void> {
+async function runAllReadyPhase(ordered: LoadedServerPlugin[]): Promise<void> {
   await Promise.all(
     ordered.map(async (p) => {
       if (!p.onAllReady) return;
@@ -402,6 +403,28 @@ export async function runAllReadyPhase(
     }),
   );
   recordMemoryCheckpoint("after-onAllReady");
+}
+
+/**
+ * The post-ready phases of a SERVING host (`serve`, `browser`): `onReady`
+ * (graph-driven: each plugin fires as soon as its `dependsOn` parents have
+ * resolved), then the `onAllReady` barrier. `exec` never runs them — a
+ * short-lived child has no subscribers, so no watcher, job runner or LISTEN
+ * belongs in it.
+ *
+ * First, D3: a serving host whose graph serves DB-backed live reads must have
+ * booted a change feed (`assertDbReadsHaveChangeFeed`) — without one, a write
+ * lands and no reader recomputes. Here, not in `bootPluginGraph`, so only a
+ * serving host is held to it: `exec` and partial-graph test boots never reach
+ * this point.
+ */
+export async function runPostReadyPhases(
+  ordered: LoadedServerPlugin[],
+): Promise<void> {
+  assertDbReadsHaveChangeFeed();
+  await runGraphPhase(ordered, "onReady");
+  recordMemoryCheckpoint("after-onReady");
+  await runAllReadyPhase(ordered);
 }
 
 /**

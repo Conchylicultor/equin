@@ -19,6 +19,8 @@ export {
   isTransientDbError,
   type DatabaseDriverImpl,
   type Db,
+  type ListenHandlers,
+  type ListenSession,
 } from "./internal/driver";
 export { dbLog } from "./internal/db-log";
 export {
@@ -60,17 +62,19 @@ export default {
     // (`bootDdl`). The wrap lives here, at the call site: the layer takes `db`
     // as a parameter precisely so it never imports this barrel (that would
     // cycle).
-    const layer = await driver.bootDdl(() =>
-      applySchemaLayer(
-        db,
-        MigrationSource.get().list(),
-        {
-          views: View.getContributions(),
-          derivedTables: DerivedTable.getContributions(),
-          updatedAtSpecs: registeredDerivedUpdatedAt(),
-        },
-        { commit: true },
-      ),
+    const layer = await driver.bootDdl(
+      () =>
+        applySchemaLayer(
+          db,
+          MigrationSource.get().list(),
+          {
+            views: View.getContributions(),
+            derivedTables: DerivedTable.getContributions(),
+            updatedAtSpecs: registeredDerivedUpdatedAt(),
+          },
+          { commit: true },
+        ),
+      "boot: schema layer",
     );
     // What each rollup's reconcile healed, published only now that the layer
     // has COMMITTED (C13) — `reconciledRollups()` readers (live-state-snapshot's

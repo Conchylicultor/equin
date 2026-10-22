@@ -1,5 +1,33 @@
 # change-feed
 
+## Portable: every host with a database runs it
+
+The server half is `portable: true`: the desktop's backend runs it on the
+Postgres cluster, a browser host's worker (the demo) on PGlite — same plpgsql,
+same fingerprints, same boot invariants, same consumer (burst router, end-marker
+ordering, `routeChange`, reconnect policy). The one thing that differs per host
+— opening a LISTEN session — is the host's `DatabaseDriver.listen`
+(`database/server`): the desktop's opens a dedicated connection on the direct
+socket (`database/connection`'s `openListenSession`), PGlite LISTENs on its one
+in-process connection (`database/pglite`). No `if (browser)` anywhere: which
+LISTEN runs is decided by which driver the host booted. The listener starts in
+`onReady`, which every serving host runs (`serve`, and a browser host after its
+seed) and an `exec` child does not. The trigger rebuild runs under the driver's
+`bootDdl` (the desktop's widened deadline; PGlite adds none). The changelog's
+fork exclusion is the desktop's concern and lives in `machine/`.
+
+On a host without `live-state-snapshot` (the browser host) nothing reads or
+prunes `live_state_changelog`: every write statement still appends its row,
+held in the worker's in-memory database for the tab's life. Bounded only by the
+session today (a follow-up: prune it, or skip the outbox, where no catch-up
+consumer is booted).
+
+A serving host whose graph serves DB-backed reads but boots no change feed fails
+at boot (server-core's `assertDbReadsHaveChangeFeed`, keyed on the relation
+bases this plugin sets in `onReadyBlocking`). The G0 spike that pins the
+Postgres behaviours the feed leans on, on PGlite, is
+`database/plugins/pglite/server/internal/notifications.test.ts`.
+
 ## The trigger rebuild: fingerprint fast-path, then single-relation transactions
 
 `rebuildTriggers` (`internal/triggers.ts`) installs the feed by `DROP+CREATE
@@ -277,8 +305,8 @@ the mounted `declare` contributions), and its writes route straight into
   produced table recomputes its whole aggregate on every flush touching the
   table — bounded by the window, one aggregate per open grouping.
 - **Guards.** A12: `mutate` on a producer whose `declare` is not mounted throws.
-  A13: `mutate` outside the serving backend (`bootMode !== "serve"`) throws — an
-  exec child files through the outbox. A2′: one producer per table (module eval);
+  A13: `mutate` outside a serving host (`bootMode` neither `"serve"` nor
+  `"browser"`) throws — an exec child files through the outbox. A2′: one producer per table (module eval);
   a produced table is neither `ExcludeFromChangeFeed`-ed nor a rollup, and no
   `live_state_*` trigger survives on it (catalog, after the rebuild). A3p: a route
   on a produced table carries no column (a producer emits ids only).
@@ -299,19 +327,23 @@ the mounted `declare` contributions), and its writes route straight into
 
 ## The LISTEN connection
 
-`listener.ts` opens one dedicated client with the connection plugin's
-`createDbClient({ name: "change-feed" })`, on the direct socket. It LISTENs on
+`listener.ts` opens one session through the host's `DatabaseDriver.listen` on
 two channels — `live_state` (every table change) and `live_state_end` (each
 transaction's end marker, below) — in ONE statement, `LISTEN live_state; LISTEN
 live_state_end`: both take effect at its commit, so no transaction is seen on one
-channel and not the other. Its connect and that statement each give up after 60 s
-with no reply, and that failure takes the same reconnect path as any other
-connect failure. The client it happened on is abandoned, never closed.
+channel and not the other. The policy is the listener's (reconnect with capped
+backoff, the liveness watchdog, first-connect vs `fullSweep`,
+`burst.close()`/`reopen()`); the session is the driver's.
 
-Its `error` / `end` handlers act only while that client is the current one. An
-attempt that failed, or a client already retired, can emit later — a late `end`,
-an `error` on an abandoned socket — and must not tear down the healthy client
-that replaced it or schedule a second reconnect.
+On the desktop the session is a dedicated client the connection plugin builds
+(`openListenSession`, `createDbClient({ name: "change-feed" })`) on the direct
+socket. Its connect and LISTEN statement each give up after 60 s with no reply,
+and that failure takes the same reconnect path as any other open failure; the
+client it happened on is abandoned, never closed. Its `error` / `end` reach the
+listener (`lost`) only while that session is established and current — a failed
+attempt's late `end`, or an `error` on an abandoned socket, must not tear down
+the healthy session that replaced it or schedule a second reconnect. On PGlite
+the session is never lost.
 
 An established LISTEN with no call pending has nothing waiting for a reply, so a
 silent socket is still not detected; that needs a heartbeat.
@@ -415,14 +447,11 @@ See `research/2026-09-29-global-scoped-change-routing.md`.
 - Server:
   - Contributes: `fork-data-exclusion` "live_state_changelog"
   - Uses:
+    - `database.DatabaseDriver`
+    - `database.DatabaseDriverImpl`
     - `database.db`
+    - `database.ListenSession`
     - `database.loadKnownRelations`
-    - `database/admin.connectionString`
-    - `database/admin.ExcludeFromFork`
-    - `database/connection.BOOT_DDL_QUERY_DEADLINE_MS`
-    - `database/connection.createDbClient`
-    - `database/connection.DbClient`
-    - `database/connection.withQueryDeadline`
     - `database/derived-tables.feedExemptTables`
     - `database/derived-tables.rollupSources`
     - `primitives/log-channels.defineLogSink`
@@ -462,14 +491,12 @@ See `research/2026-09-29-global-scoped-change-routing.md`.
     - `debug/trace/engine`
     - `infra/retention`
     - `reports/engine`
-- Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/producer.ts`, `server/internal/triggers.ts` (debt)
 - Test helpers:
   - Server: `@plugins/database/plugins/change-feed/server/testing`
     - `assertRouteLayoutsInstalled` — A3: throw (block boot) unless every routed table's installed triggers emit what its routes read.
     - `assertRouteTablesCovered` — Throw loudly (blocking boot) if any resource depends on a table with no change source: no trigger the change-feed installed, and no change producer.
     - `buildViewDeps` — Each public view → the relations it directly reads (sorted).
-    - `createChangeFeedListener`
+    - `createChangeFeedListener` — An isolated LISTEN consumer on a suite's own database: the real listener over the desktop driver's session (`openListenSession`, the one `DatabaseDriver.listen` opens), pointed at the suite's connection string rather than the worktree's.
     - `createChangeRouter` — The routing above, into ANY runtime's router — `routeChange` is it bound to server-core's process-global runtime.
     - `createRelationBases` — The memoized relation → bases function over `graph`.
     - `ensureChangelogTable`
@@ -480,6 +507,7 @@ See `research/2026-09-29-global-scoped-change-routing.md`.
     - `mountProducersForTest` — Mount `producers` without a booted plugin graph: each is live (A12 passes), runs as boot mode `mode` (default `"serve"`; pass `"exec"` to see A13), and routes through `route` (default the real `routeChange`).
     - `readInstalledTriggers` — Every installed `live_state_*` trigger on the given tables.
     - `rebuildTriggers`
+    - Types: `TestChangeFeedListenerOptions`
 
 <!-- AUTOGENERATED:END -->
 
@@ -500,9 +528,13 @@ trigger layer's concern, pinned by `triggers.test.ts` and `routed-trigger.test.t
 `burst.test.ts` drives every router case by hand (injected macrotask and timers).
 
 To make it testable, `listener.ts` is an injectable factory
-(`createChangeFeedListener({ connectionString, route, coveredTables, …timers })`)
-with all state per-instance; the production singleton is re-presented as the same
-`startListener`/`stopListener` exports. The shared `db-test-fixture` primitive
+(`createChangeFeedListener({ listen, route, coveredTables, …timers })`) with all
+state per-instance; the production singleton (listening through
+`DatabaseDriver.get().listen`) is re-presented as the same
+`startListener`/`stopListener` exports. `listener.test.ts` injects the desktop
+driver's session (`openListenSession`) on its throwaway database; the testing
+barrel's `createChangeFeedListener({ connectionString, … })` does the same for
+other plugins' suites. The shared `db-test-fixture` primitive
 (`createTestDb({ prefix: "cf_test" })`) provisions an isolated throwaway database
 on the running cluster via admin's public barrel
 (`ensureDatabase`/`openShortLivedClient`/`dropDatabase`) and drops it after.

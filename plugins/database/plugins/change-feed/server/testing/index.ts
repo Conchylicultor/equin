@@ -2,9 +2,12 @@
 // rebuilding every trigger.
 export { ensureChangelogTable } from "../internal/triggers";
 // An isolated LISTEN consumer on a suite's own database (the production one
-// reads the worktree's connection), routing through whatever `route` the suite
+// opens the host driver's session), routing through whatever `route` the suite
 // hands it — `routeChange` for the real runtime.
-export { createChangeFeedListener } from "../internal/listener";
+export {
+  createChangeFeedListener,
+  type TestChangeFeedListenerOptions,
+} from "./listener";
 // `routeChange`'s routing into a runtime of the suite's own
 // (`createResourceRuntime`) instead of server-core's global one — so a suite
 // registering REAL declarations (the tree oracle) never collides with the keys

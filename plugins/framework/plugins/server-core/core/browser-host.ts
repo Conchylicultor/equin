@@ -6,16 +6,24 @@
 // the live-state socket handler. Carrying them to the page (a MessagePort) is
 // the caller's — `framework/browser-server`'s `serveOverPort`.
 //
-// What `browser` runs today: load waves, contributions, the host-service
-// assert, `register`, the deferred bind, the preload assert and the
-// `onReadyBlocking` barrier (migrations and the schema layer on the host's
-// database) — exactly `exec`'s phases. The post-ready phases (`onReady`'s job
-// runners, `onAllReady`'s schedules) do not run yet: the first slice serves
-// seeded reads, and a background job firing in a demo is a write path the next
-// slice turns on deliberately.
+// What `browser` runs: load waves, contributions, the host-service assert,
+// `register`, the deferred bind, the preload assert and the `onReadyBlocking`
+// barrier (migrations and the schema layer on the host's database, the change
+// feed's triggers); then the seed, standing in for data present at boot; then
+// the post-ready phases a serving host runs (`runPostReadyPhases`: the
+// change-feed assertion, `onReady` — the feed's LISTEN, the in-process job
+// queue — and `onAllReady`'s schedules). The same order `serve` runs, the seed
+// in place of the socket bind: a write the page makes recomputes its readers
+// through the same trigger → NOTIFY → listener → router path as on the
+// desktop, and its event-driven effects run. Only `drainWarmups` (desktop
+// warm-ups) is not run.
 
 import { createRequestHandler } from "@plugins/framework/plugins/http-router/core";
-import { bootPluginGraph, type ServerRegistryEntry } from "./boot-stages";
+import {
+  bootPluginGraph,
+  runPostReadyPhases,
+  type ServerRegistryEntry,
+} from "./boot-stages";
 import { hostHttpRoutes } from "./host-routes";
 import { getProfilingData } from "./profiler";
 import {
@@ -28,8 +36,10 @@ export interface BrowserHostOptions {
   /** The host's plugin graph — its generated `browser-host.generated.ts`. */
   entries: ServerRegistryEntry[];
   /**
-   * Fill the freshly migrated database, after the ready barrier and before
-   * anything is served: a demo's seed rows. Absent: the database starts empty.
+   * Fill the freshly migrated database, after the ready barrier and before the
+   * post-ready phases (so their watchers and jobs start on it as on data
+   * present at boot) and anything is served: a demo's seed rows. Absent: the
+   * database starts empty.
    */
   seed?: () => Promise<void>;
   /**
@@ -58,9 +68,9 @@ export interface BrowserHost {
 export interface BrowserHostBoot {
   /** Graph nodes booted (a plugin's server and machine halves count apart). */
   plugins: number;
-  /** In order: `graph` (load → register → ready barrier, migrations included), `seed`. */
+  /** In order: `graph` (load → register → ready barrier, migrations included), `seed`, `ready` (`onReady` → `onAllReady`). */
   stages: { name: string; ms: number }[];
-  /** The slowest plugin hooks of the boot (`register` / `onReadyBlocking`), longest first. */
+  /** The slowest plugin hooks of the boot (`register` / `onReadyBlocking` / `onReady` / `onAllReady`), longest first. */
   slowest: { label: string; ms: number }[];
 }
 
@@ -97,6 +107,8 @@ export async function bootBrowserHost(
   const t1 = performance.now();
   await opts.seed?.();
   const t2 = performance.now();
+  await runPostReadyPhases(ordered);
+  const t3 = performance.now();
 
   const request = createRequestHandler({
     routes: hostHttpRoutes(ordered),
@@ -117,6 +129,7 @@ export async function bootBrowserHost(
       stages: [
         { name: "graph", ms: Math.round(t1 - t0) },
         { name: "seed", ms: Math.round(t2 - t1) },
+        { name: "ready", ms: Math.round(t3 - t2) },
       ],
       // Per-plugin spans only (a phase-wide span would repeat its slowest
       // plugin), and none that took no time.

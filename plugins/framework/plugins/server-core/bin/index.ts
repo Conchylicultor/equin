@@ -24,8 +24,7 @@ import type {
 // for the mode split and `cli/run-exec.ts` for what `exec` skips.
 import {
   bootPluginGraph,
-  runAllReadyPhase,
-  runGraphPhase,
+  runPostReadyPhases,
   runShutdownHooks,
 } from "../core/boot-stages";
 // The ACTIVE registry (which app is this backend?) and the on-disk plugins dir,
@@ -187,17 +186,12 @@ const ordered = await bootPluginGraph({
 });
 markServerReady();
 
-// ── onReady ─────────────────────────────────────────────────────
-// Phase 2 — onReady: eager graph-driven. Each plugin fires as soon as all
-// its `dependsOn` parents have resolved — no artificial layer barriers.
-// Plugins with no dependencies start immediately. `topoSortPlugins`
-// guarantees every plugin appears after its deps in `ordered`, so
-// `resolved.get(d.id)` is always defined when we reach a dependent.
-await runGraphPhase(ordered, "onReady");
-recordMemoryCheckpoint("after-onReady");
-
-// ── onAllReady ──────────────────────────────────────────────────
-await runAllReadyPhase(ordered);
+// ── onReady → onAllReady ────────────────────────────────────────
+// The serving host's post-ready phases, shared with the browser host
+// (`core/boot-stages.ts`'s `runPostReadyPhases`): the change-feed assertion
+// (D3), `onReady` (eager graph-driven: each plugin fires as soon as all its
+// `dependsOn` parents have resolved), then the `onAllReady` barrier.
+await runPostReadyPhases(ordered);
 
 // ── drainWarmups ────────────────────────────────────────────────
 // Declared heavy boot warm-ups (infra/warmup) run LAST, after every phase has

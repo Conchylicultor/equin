@@ -42,10 +42,13 @@
 // never both, or a scope call hidden in it would escape the endpoint arm.
 
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
-import { importClosure } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
+import {
+  importClosure,
+  loadTypescript,
+} from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
 import {
   isPlatformApi,
-  platformGlobalsIn,
+  platformValueUsesIn,
 } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
 import {
   asFsPath,
@@ -900,7 +903,7 @@ async function httpRoutes(
  * its static closure: the non-portable server barrels it reaches first (each
  * with its import chain — a frontier: one reached only through another is not
  * named), and its own plugin's modules that need the computer (the platform
- * APIs they import, the host globals they read) — the reading
+ * APIs they import, the host-only values they use) — the reading
  * `boundaries:portable-closure` makes of a portable barrel.
  */
 export async function serverBarrelBlockers(
@@ -909,6 +912,7 @@ export async function serverBarrelBlockers(
   barrel: string,
 ): Promise<string[]> {
   const closure = await importClosure(root, barrel, { dynamicImports: "cut" });
+  const ts = await loadTypescript();
   const own = barrel.replace(/server\/index\.ts$/, "");
   const blocked = new Set<string>();
   for (const module of closure.modules) {
@@ -934,7 +938,7 @@ export async function serverBarrelBlockers(
           .filter((ref) => !ref.typeOnly && isPlatformApi(ref.specifier))
           .map((ref) => ref.specifier),
       ),
-      ...platformGlobalsIn(maskSource(src)).map((g) => `global ${g}`),
+      ...platformValueUsesIn(ts, module, src),
     ];
     if (needs.length > 0) out.push(`${module} needs ${needs.join(", ")}`);
   }

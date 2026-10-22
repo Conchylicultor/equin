@@ -134,6 +134,12 @@ imports `server/`, so on the client every entry point is a transparent passthrou
   `loader` regardless of *why* the load runs. Unlike `chargeWait`, the walk does not skip
   closed ancestors (it only reads `kind`). Allocation-free; read it synchronously, before
   any await.
+- `runInRootContext(fn)` — run `fn` in the root async context, outside every request,
+  loader, lane and suppression scope, so a timer it arms (a change producer's coalescing
+  window and flush) is attributed to itself, not to whichever writer triggered it. The
+  server installs it over an `AsyncLocalStorage.snapshot()` taken at module eval
+  (`server/internal/install.ts`); with no runtime installed (a browser host) it runs `fn`
+  as is — attribution only, never correctness.
 - `runInBackgroundLane(fn)` — declare that `fn` is background work whatever triggered it,
   overriding the origin walk. Backed by its own AsyncLocalStorage (`server/internal/install.ts`),
   so it propagates through awaited DB work — including down to the `pool.connect()` a nested
@@ -351,6 +357,7 @@ remaining allocations are one flat band array per completed entry span, and what
     - `installClock`
     - `installLoaderReadSetSink`
     - `installProfilingSuppressionRuntime`
+    - `installRootContextRuntime`
     - `installSpanContextRuntime`
     - `onSlowSpan`
     - `profilerNowMs`
@@ -361,6 +368,7 @@ remaining allocations are one flat band array per completed entry span, and what
     - `registerGateGauge`
     - `resetRuntimeProfile`
     - `runInBackgroundLane`
+    - `runInRootContext`
     - `runTracked`
     - `runWithoutProfiling`
     - `SPAN_KINDS`

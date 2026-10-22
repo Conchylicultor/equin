@@ -6,13 +6,11 @@ import {
   routedTableRequirements,
   type ServerPluginDefinition,
 } from "@plugins/framework/plugins/server-core/core";
-import { db, loadKnownRelations } from "@plugins/database/server";
 import {
-  BOOT_DDL_QUERY_DEADLINE_MS,
-  withQueryDeadline,
-} from "@plugins/database/plugins/connection/server";
-import { ExcludeFromFork } from "@plugins/database/plugins/admin/server";
-import { LIVE_STATE_CHANGELOG_TABLE } from "@plugins/database/plugins/derived-views/core";
+  DatabaseDriver,
+  db,
+  loadKnownRelations,
+} from "@plugins/database/server";
 import {
   feedExemptTables,
   rollupSources,
@@ -73,25 +71,11 @@ export type {
 export default {
   description:
     "L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations structurally impossible and out-of-process writes visible. A table written only by this backend at high rate may instead declare an in-process change producer (defineChangeProducer): no trigger, its `mutate` owns the write and routes the returned ids, coalesced at the source and volatile.",
-  contributions: [
-    // The changelog is this feed's transactional OUTBOX — a bounded replay
-    // buffer the L2 cold-boot catch-up reads to find what changed while a
-    // backend was down. Its entries describe commits against the database that
-    // produced them, and it is pruned against that database's own snapshot
-    // watermark, so a fork inherits replay instructions for a history it does
-    // not share. It is excluded together with `live_state_snapshot` (declared by
-    // live-state-snapshot, which owns that table): catch-up compares the two, so
-    // emptying one and not the other would leave the pair disagreeing.
-    //
-    // A table name string rather than a table object: the changelog is created
-    // inside this plugin's own trigger-rebuild transaction, not by a drizzle
-    // migration, so there is no table object to pass.
-    ExcludeFromFork({
-      table: LIVE_STATE_CHANGELOG_TABLE,
-      reason:
-        "Replay outbox describing commits against the source database, pruned against its own watermark; excluded together with live_state_snapshot.",
-    }),
-  ],
+  // Runs on every host with a database: the desktop's backend, and a browser
+  // host's worker on PGlite. The one part that differs per host — opening the
+  // LISTEN session — is the host's `DatabaseDriver.listen`; the changelog's
+  // fork exclusion (forking is the desktop's) is `./machine`.
+  portable: true,
   // Triggers are deterministic, data-less DDL rebuilt from the live schema on
   // every boot (like derived-views), NOT a migration. This runs in the blocking
   // barrier so the feed's triggers exist before any traffic — and the listener
@@ -126,13 +110,11 @@ export default {
     // The trigger rebuild and the boot invariants it is checked against (A1′,
     // A2′, A3, A3p, D35 — see ./internal/install-feed). Per-table DROP+CREATE
     // TRIGGER can wait on the previous backend's readers during a hot-swap:
-    // widen the query deadline for the install's own queries.
-    await withQueryDeadline(
-      {
-        ms: BOOT_DDL_QUERY_DEADLINE_MS,
-        reason: "boot: change-feed trigger rebuild",
-      },
+    // the driver's boot DDL bound widens the query deadline for the install's
+    // own queries (the desktop's; PGlite adds none).
+    await DatabaseDriver.get().bootDdl(
       () => installFeed(db, inputs),
+      "boot: change-feed trigger rebuild",
     );
     // `installFeed` above creates `live_state_changelog`, which did not exist
     // yet when the database plugin took its own snapshot of the public relations.
@@ -154,7 +136,9 @@ export default {
     installRelationGraph(relations);
   },
   // The LISTEN consumer is a background watcher, so it starts after the ready
-  // barrier (same phase as git-watcher's startGitWatcher).
+  // barrier (same phase as git-watcher's startGitWatcher). Every serving host
+  // runs `onReady` (the desktop's `serve`, a browser host after its seed); an
+  // `exec` child does not, so it opens no LISTEN.
   onReady() {
     startListener();
   },

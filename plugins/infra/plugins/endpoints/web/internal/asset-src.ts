@@ -35,13 +35,20 @@ interface Entry {
 /**
  * The assets a transport no URL reaches has fetched: each path's bytes as a
  * blob URL, shared by every element showing it and revoked once the last lets
- * go (`acquire`'s release). A `version` bumps on every change, the one
- * snapshot readers subscribe to.
+ * go (`acquire`'s release).
+ *
+ * Readers read the states ONLY through the snapshot (`states`, a new map on
+ * every change): a render's answer then depends on the snapshot by data flow.
+ * A version number that only triggered the re-render while the answer was read
+ * off the store let the React Compiler memoize that answer on the asset list
+ * alone — an element that mounted while its bytes loaded stayed `loading` for
+ * good.
  */
 class BlobAssets {
   private readonly entries = new Map<string, Entry>();
   private readonly listeners = new Set<() => void>();
-  private version = 0;
+  /** Every settled entry's state; an absent path is `loading`. */
+  private states: ReadonlyMap<string, AssetSrc> = new Map();
 
   constructor(private readonly transport: Transport) {}
 
@@ -50,10 +57,15 @@ class BlobAssets {
     return () => this.listeners.delete(onChange);
   };
 
-  readonly snapshot = (): number => this.version;
+  readonly snapshot = (): ReadonlyMap<string, AssetSrc> => this.states;
 
-  state(path: string): AssetSrc {
-    return this.entries.get(path)?.state ?? LOADING;
+  /** Publish `path`'s state (`null`: forgotten) as a new snapshot. */
+  private publish(path: string, state: AssetSrc | null): void {
+    const next = new Map(this.states);
+    if (state === null) next.delete(path);
+    else next.set(path, state);
+    this.states = next;
+    for (const listener of this.listeners) listener();
   }
 
   /** Hold `path`'s blob URL, fetching it on the first hold. */
@@ -83,6 +95,7 @@ class BlobAssets {
         this.entries.delete(path);
         held.abort.abort();
         if (held.state.kind === "ready") URL.revokeObjectURL(held.state.src);
+        if (this.states.has(path)) this.publish(path, null);
       });
     };
   }
@@ -112,8 +125,7 @@ class BlobAssets {
       return;
     }
     entry.state = next;
-    this.version += 1;
-    for (const listener of this.listeners) listener();
+    this.publish(path, next);
   }
 }
 
@@ -145,8 +157,8 @@ export function useAssetSrcs(
 ): readonly AssetSrc[] {
   const transport = useTransport();
   const store = blobAssets.of(transport);
-  // Re-renders on every fetched asset; the states are read from the store.
-  useSyncExternalStore(store.subscribe, store.snapshot);
+  // The answer is read from this snapshot, never from the store: see BlobAssets.
+  const states = useSyncExternalStore(store.subscribe, store.snapshot);
   // The paths to fetch, as one string: the effect follows the paths, never the
   // identity of an array or of AssetPath objects a render rebuilt.
   const toFetch = assets
@@ -161,7 +173,8 @@ export function useAssetSrcs(
   return assets.map(
     (a) =>
       staticSrc(transport, a.needsMachine, a[ASSET_PATH]) ??
-      store.state(a[ASSET_PATH]),
+      states.get(a[ASSET_PATH]) ??
+      LOADING,
   );
 }
 

@@ -186,6 +186,30 @@ function relationBasesOf(relation: string): readonly string[] {
   return relationBasesHolder(relation);
 }
 
+/**
+ * D3: a serving host whose graph serves DB-backed live reads must have a change
+ * feed. Every such read recomputes on a table change only — the feed routes it
+ * (`routeTableChange`) — so on a host without one a write lands and no reader
+ * ever sees it. The feed's presence is its boot mark: it sets the relation
+ * bases in its `onReadyBlocking` (D34). Called at the start of the post-ready
+ * phases (`runPostReadyPhases`), which only a serving host runs — an `exec`
+ * child and a partial-graph test boot have no subscribers and never get here.
+ */
+export function assertDbReadsHaveChangeFeed(): void {
+  if (relationBasesHolder !== null) return;
+  const keys = [
+    ...new Set([
+      ...runtime.scopedResourceTables().map((r) => r.key),
+      ...runtime.relationResourceReads().map((r) => r.key),
+      ...runtime.unroutedResourceKeys(),
+    ]),
+  ].sort();
+  if (keys.length === 0) return;
+  throw new Error(
+    `[resources] DB-backed live reads on a host with no change feed never recompute: ${keys.length} resource(s) read the database (${keys.slice(0, 5).join(", ")}${keys.length > 5 ? ", …" : ""}), but nothing set the relation bases (setRelationBases) — boot \`database/change-feed\` in this host's graph.`,
+  );
+}
+
 // L2 persisted-materialization hooks — injected at boot by the
 // `live-state-snapshot` feature plugin (the same byte-for-byte pattern as
 // `setRelationBases`). server-core/core MUST NOT statically import that plugin

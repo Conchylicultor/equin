@@ -46,18 +46,29 @@ const ALLOWLIST_SRC_REL =
 // databases. A `*.test.ts` that reaches the real `db` — the only way a test could
 // create a table that actually persists — imports `@plugins/database/server`, not
 // this barrel, so it stays fully covered by the rule.
+//
+// The other throwaway database is an IN-MEMORY PGlite the test opens itself
+// (`createPgliteDriver()` / `new PGlite()` with no data dir): Postgres compiled
+// to WASM inside the test process, gone with it, and never the cluster the
+// worktree DB lives on — so `orphaned-db-tables` cannot see its tables either.
+// Only the argument-less call counts: a data dir is storage that outlives the
+// test.
 const TEST_FILE_RE = /\.test\.tsx?$/;
 const TEST_DB_FIXTURE_IMPORT_RE =
   /from\s+["']@plugins\/database\/plugins\/db-test-fixture\/server\/testing["']/;
+const IN_MEMORY_PGLITE_RE = /\b(?:createPgliteDriver|new\s+PGlite)\s*\(\s*\)/;
 
 /**
  * PURE helper (exported for unit testing): does this file create its tables in a
- * throwaway database provisioned by the db-test-fixture primitive? Takes the
- * file's own source so the decision is evidence-based (a real import), never a
- * path convention alone.
+ * throwaway database — one provisioned by the db-test-fixture primitive, or an
+ * in-memory PGlite it opens itself? Takes the file's own source so the decision
+ * is evidence-based (a real import or call), never a path convention alone.
  */
 export function usesThrowawayTestDb(path: string, src: string): boolean {
-  return TEST_FILE_RE.test(path) && TEST_DB_FIXTURE_IMPORT_RE.test(src);
+  return (
+    TEST_FILE_RE.test(path) &&
+    (TEST_DB_FIXTURE_IMPORT_RE.test(src) || IN_MEMORY_PGLITE_RE.test(src))
+  );
 }
 
 // A CREATE TABLE line that GENERATES its table name from data (derived-tables'

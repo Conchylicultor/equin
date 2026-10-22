@@ -4,7 +4,6 @@ import type { Pool, PoolClient } from "pg";
 import {
   createDbClient,
   queryDeadlineSink,
-  type DbClient,
 } from "@plugins/database/plugins/connection/server";
 import { QueryDeadlineExceededError } from "@plugins/database/plugins/connection/server/testing";
 import {
@@ -73,7 +72,9 @@ function deferred(): Deferred {
  * lease can subscribe to its lost signal. With no connection, a query issued
  * through its own `query` waits forever, and its deadline (`deadlineMs`) fires.
  */
-function unconnectedClient(deadlineMs = 60_000): DbClient {
+function unconnectedClient(
+  deadlineMs = 60_000,
+): ReturnType<typeof createDbClient> {
   return createDbClient({
     name: "app",
     connectionString: "postgres://nobody@127.0.0.1:1/never",

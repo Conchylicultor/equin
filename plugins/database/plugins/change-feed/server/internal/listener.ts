@@ -1,9 +1,9 @@
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
-import { connectionString } from "@plugins/database/plugins/admin/server";
 import {
-  createDbClient,
-  type DbClient,
-} from "@plugins/database/plugins/connection/server";
+  DatabaseDriver,
+  type DatabaseDriverImpl,
+  type ListenSession,
+} from "@plugins/database/server";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { parseLiveStatePayload, parseTxnEndPayload } from "./parse-payload";
 import { getCoveredTables } from "./triggers";
@@ -24,7 +24,12 @@ const RECONNECT_MIN_MS = 500;
 const RECONNECT_MAX_MS = 10_000;
 
 export interface ChangeFeedListenerOptions {
-  connectionString: () => string;
+  /**
+   * Open a LISTEN session — the host's `DatabaseDriver.listen` (the desktop:
+   * a dedicated connection on the direct socket; PGlite: its one in-process
+   * connection). The reconnect policy around it is this listener's.
+   */
+  listen: DatabaseDriverImpl["listen"];
   route: (change: FeedChange) => void;
   coveredTables: () => readonly string[];
   /** Told of a broken end-of-transaction assumption (default: logged and filed as a report). */
@@ -41,8 +46,8 @@ export interface ChangeFeedListenerOptions {
 
 // Build an isolated change-feed listener. ALL mutable state is per-instance
 // closure state, so two listeners (e.g. production + a test) never share a
-// socket, backoff counter, or firstConnect flag. The real deps
-// (connectionString / routeChange / getCoveredTables / the global timers) are
+// session, backoff counter, or firstConnect flag. The real deps
+// (the driver's listen / routeChange / getCoveredTables / the global timers) are
 // injected so tests can point a listener at a throwaway DB with a recording
 // route spy and deterministic timers.
 export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
@@ -56,7 +61,7 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
   const setIntervalFn = opts.setIntervalFn ?? globalThis.setInterval;
   const clearIntervalFn = opts.clearIntervalFn ?? globalThis.clearInterval;
 
-  let client: DbClient | null = null;
+  let session: ListenSession | null = null;
   let livenessTimer: ReturnType<typeof setInterval> | null = null;
   let started = false;
   let connecting = false;
@@ -72,103 +77,50 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
       : {}),
   });
 
-  // A single dedicated pg client on the DIRECT socket (connectionString()
-  // bypasses pgbouncer, which breaks LISTEN — the same path graphile-worker
-  // uses). Drizzle's pgbouncer-fronted pool can't carry a session-bound LISTEN,
-  // so this is its own dedicated connection.
+  // The session is the host's (`opts.listen`): the desktop's is a dedicated pg
+  // client on the DIRECT socket (pgbouncer breaks LISTEN), whose connect and
+  // LISTEN each carry the connection plugin's deadline — one that gets no reply
+  // rejects into the catch below, the same reconnect path as any other open
+  // failure, instead of leaving `connecting` true forever (which also silenced
+  // the liveness watchdog). Both channels are LISTENed in ONE statement, so no
+  // transaction is seen on one channel and not the other.
   //
-  // Built by `createDbClient` (`change-feed`): opening the connection and the
-  // `LISTEN` statement each carry the connection plugin's deadline. A connect or
-  // LISTEN that gets no reply rejects with `QueryDeadlineExceededError` into the
-  // catch below — the same reconnect path as any other connect failure — instead
-  // of leaving `connecting` true forever, which also silenced the liveness
-  // watchdog. The client it happened on is LOST: abandoned, never closed, and its
-  // `end()` is a no-op. An ESTABLISHED LISTEN with no call pending has nothing
-  // waiting for a reply, so no deadline sees that socket go silent; that needs a
-  // heartbeat.
+  // An established session reports its loss (`lost`: a dropped socket, a
+  // restarted Postgres, a clean end) once; that retires it and schedules a
+  // reconnect — but only while it IS the current session. A loss reported
+  // before the open resolved here (the window between the driver's resolve and
+  // this continuation) is held and acted on as soon as the session is current.
   async function connect(): Promise<void> {
-    if (connecting || client) return;
+    if (connecting || session) return;
     connecting = true;
-    let attempt: DbClient | null = null;
+    let opened: ListenSession | null = null;
+    // A loss reported before `opened` is set (see above).
+    const early: { lost: boolean; err: unknown } = {
+      lost: false,
+      err: undefined,
+    };
     try {
-      const c = createDbClient({
-        name: "change-feed",
-        connectionString: opts.connectionString(),
-      });
-      attempt = c;
-
-      // The two failure paths of an ESTABLISHED listener: a connection-level
-      // `error` (socket dropped, PG restarted) and a clean `end`. Both retire the
-      // client and schedule a reconnect.
-      //
-      // Both act only while `c` IS the current client. An attempt that never got
-      // there reaches the reconnect path through the catch below, once — and what
-      // its socket does afterwards (a late `end`; an `error` on a connection
-      // abandoned after a missed deadline and held open) must not tear down the
-      // healthy client that replaced it, nor schedule a second reconnect.
-      //
-      // The listeners stay attached for the client's whole life: pg emits `error`
-      // on its socket, and an `error` with no listener is an uncaught exception.
-      c.on("error", (err) => {
-        log.publish(
-          `[change-feed] LISTEN client error: ${String(err)}`,
-          "stderr",
-        );
-        retire(c);
-      });
-      c.on("end", () => {
-        retire(c);
-      });
-
-      c.on("notification", (n) => {
-        if (!n.payload) return;
-        if (n.channel === TXN_END_CHANNEL) {
-          const end = parseTxnEndPayload(n.payload);
-          if (!end) {
-            // Its transaction's changes are released by their deadline
-            // (reported there too), never dropped.
-            log.publish(
-              `[change-feed] skipping unparseable end marker: ${n.payload}`,
-              "stderr",
-            );
+      const s = await opts.listen([FEED_CHANNEL, TXN_END_CHANNEL], {
+        notification: (channel, payload) => onNotification(channel, payload),
+        lost: (err) => {
+          if (opened === null) {
+            early.lost = true;
+            early.err = err;
             return;
           }
-          burst.end(end);
-          return;
-        }
-        if (n.channel !== FEED_CHANNEL) {
-          log.publish(
-            `[change-feed] skipping a NOTIFY on unexpected channel "${n.channel}": ${n.payload}`,
-            "stderr",
-          );
-          return;
-        }
-        const change = parseLiveStatePayload(n.payload, (degraded) =>
-          // Routed unscoped (FULL for its readers), never dropped — the same
-          // rule the catch-up replay applies to the row.
-          log.publish(
-            `[change-feed] malformed key layout on a "${degraded.table}" change — routing it unscoped: ${n.payload}`,
-            "stderr",
-          ),
-        );
-        if (!change) {
-          // Defensive skip — a malformed payload must never crash the listener.
-          log.publish(
-            `[change-feed] skipping unparseable payload: ${n.payload}`,
-            "stderr",
-          );
-          return;
-        }
-        burst.change(feedChange(change));
+          retire(opened, err);
+        },
       });
-
-      await c.connect();
-      // Both channels in ONE statement: it carries the same deadline, and both
-      // LISTENs take effect at its commit — no transaction is seen on one
-      // channel and not the other.
-      await c.query(`LISTEN ${FEED_CHANNEL}; LISTEN ${TXN_END_CHANNEL}`);
-      client = c;
-      // This socket hears both channels from here: hold transactions again.
+      opened = s;
+      // `stop()` ran while this open was in flight: it found no session to
+      // close, so this one is closed here — never installed, nor the burst
+      // stop() closed reopened.
+      if (!started) {
+        await closeStopped(s);
+        return;
+      }
+      session = s;
+      // This session hears both channels from here: hold transactions again.
       burst.reopen();
       reconnectDelay = reconnectMinMs; // reset backoff on success
 
@@ -199,38 +151,79 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
       log.publish(
         `[change-feed] LISTEN ${FEED_CHANNEL}, ${TXN_END_CHANNEL} established`,
       );
+      if (early.lost) retire(s, early.err);
     } catch (err) {
+      // The driver closed the failed attempt; nothing of it is held here.
       log.publish(`[change-feed] connect failed: ${String(err)}`, "stderr");
-      // Close the failed attempt, so a connection whose LISTEN was refused does
-      // not linger open. A no-op on a client lost to a missed deadline.
-      if (attempt) endQuietly(attempt);
       scheduleReconnect();
     } finally {
       connecting = false;
     }
   }
 
-  // Drop `c` and reconnect — only if `c` is still the current client. Events
-  // from any other client (a failed attempt, an already-retired one) are
-  // ignored.
-  function retire(c: DbClient): void {
-    if (client !== c) return;
-    client = null;
+  function onNotification(channel: string, payload: string): void {
+    if (!payload) return;
+    if (channel === TXN_END_CHANNEL) {
+      const end = parseTxnEndPayload(payload);
+      if (!end) {
+        // Its transaction's changes are released by their deadline
+        // (reported there too), never dropped.
+        log.publish(
+          `[change-feed] skipping unparseable end marker: ${payload}`,
+          "stderr",
+        );
+        return;
+      }
+      burst.end(end);
+      return;
+    }
+    if (channel !== FEED_CHANNEL) {
+      log.publish(
+        `[change-feed] skipping a NOTIFY on unexpected channel "${channel}": ${payload}`,
+        "stderr",
+      );
+      return;
+    }
+    const change = parseLiveStatePayload(payload, (degraded) =>
+      // Routed unscoped (FULL for its readers), never dropped — the same
+      // rule the catch-up replay applies to the row.
+      log.publish(
+        `[change-feed] malformed key layout on a "${degraded.table}" change — routing it unscoped: ${payload}`,
+        "stderr",
+      ),
+    );
+    if (!change) {
+      // Defensive skip — a malformed payload must never crash the listener.
+      log.publish(
+        `[change-feed] skipping unparseable payload: ${payload}`,
+        "stderr",
+      );
+      return;
+    }
+    burst.change(feedChange(change));
+  }
+
+  // Drop `s` and reconnect — only if `s` is still the current session. A loss
+  // reported by any other session (an already-retired one) is ignored.
+  function retire(s: ListenSession, err: unknown): void {
+    if (session !== s) return;
+    log.publish(`[change-feed] LISTEN session lost: ${String(err)}`, "stderr");
+    session = null;
     // A transaction cut off mid-delivery can never get its end on the next
-    // socket (it only hears later commits; the reconnect sweep covers the gap):
-    // release it unreported, and hold nothing until a socket listens again.
+    // session (it only hears later commits; the reconnect sweep covers the gap):
+    // release it unreported, and hold nothing until a session listens again.
     burst.close();
-    endQuietly(c);
+    closeQuietly(s);
     scheduleReconnect();
   }
 
   // Not awaited: a socket that already died may never report its `end`.
-  function endQuietly(c: DbClient): void {
-    // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- trivial fire-and-forget close of an already-dead socket
-    void c.end().catch((err: unknown) => {
-      // Already-dead socket; surface rather than swallow.
+  function closeQuietly(s: ListenSession): void {
+    // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- trivial fire-and-forget close of an already-dead session
+    void s.close().catch((err: unknown) => {
+      // Already-dead session; surface rather than swallow.
       log.publish(
-        `[change-feed] error ending dead client: ${String(err)}`,
+        `[change-feed] error closing a lost LISTEN session: ${String(err)}`,
         "stderr",
       );
     });
@@ -256,7 +249,7 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
 
   function scheduleReconnect(): void {
     if (!started) return;
-    // The caller has already dropped the client it reconnects from (`retire`),
+    // The caller has already dropped the session it reconnects from (`retire`),
     // or never had one (a failed attempt), so the next connect() starts clean.
     const delay = reconnectDelay;
     reconnectDelay = Math.min(reconnectDelay * 2, reconnectMaxMs);
@@ -273,7 +266,7 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
     // Liveness watchdog: if the socket is gone (handlers missed, or a reconnect
     // attempt is overdue), re-establish it. Push-adjacent, not change-polling.
     livenessTimer = setIntervalFn(() => {
-      if (!client && !connecting) {
+      if (!session && !connecting) {
         void runTracked("change-feed:reconnect", () => connect());
       }
     }, livenessIntervalMs);
@@ -287,17 +280,19 @@ export function createChangeFeedListener(opts: ChangeFeedListenerOptions): {
       clearIntervalFn(livenessTimer);
       livenessTimer = null;
     }
-    const c = client;
-    client = null;
-    if (c) {
-      try {
-        await c.end();
-      } catch (err) {
-        log.publish(
-          `[change-feed] error closing LISTEN client: ${String(err)}`,
-          "stderr",
-        );
-      }
+    const s = session;
+    session = null;
+    if (s) await closeStopped(s);
+  }
+
+  async function closeStopped(s: ListenSession): Promise<void> {
+    try {
+      await s.close();
+    } catch (err) {
+      log.publish(
+        `[change-feed] error closing the LISTEN session: ${String(err)}`,
+        "stderr",
+      );
     }
   }
 
@@ -334,7 +329,8 @@ function reportTxnEndProblem(problem: TxnEndProblem): void {
 // change-feed's own server/index.ts calls (onReady / onShutdown). These are NOT
 // in the plugin's public barrel, so the factory refactor is fully contained.
 const defaultListener = createChangeFeedListener({
-  connectionString,
+  listen: (channels, handlers) =>
+    DatabaseDriver.get().listen(channels, handlers),
   route: routeChange,
   coveredTables: getCoveredTables,
 });

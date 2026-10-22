@@ -34,11 +34,45 @@ export interface DatabaseDriverImpl {
    */
   ready(): Promise<void>;
   /**
-   * Run boot DDL (the schema layer): on the desktop under the widened boot
-   * query deadline, since it can wait minutes on the previous backend's locks
-   * during a hot-swap.
+   * Run boot DDL (the schema layer, the change feed's trigger rebuild): on the
+   * desktop under the widened boot query deadline, since it can wait minutes on
+   * the previous backend's locks during a hot-swap. `reason` names the scope on
+   * a deadline report (default "boot DDL").
    */
-  bootDdl<T>(fn: () => Promise<T>): Promise<T>;
+  bootDdl<T>(fn: () => Promise<T>, reason?: string): Promise<T>;
+  /**
+   * Open a LISTEN session on `channels` — the one part of the change feed
+   * (`database/change-feed`) that differs per host. Resolves once LISTEN on
+   * every channel has taken effect, as ONE statement, so no transaction is
+   * heard on one channel and not another. Each NOTIFY on them reaches
+   * `handlers.notification` in delivery order (a host's notifications share
+   * one queue, so the order holds across channels).
+   *
+   * `handlers.lost` is told, at most once and only after the session was
+   * established, that it can deliver nothing more (its connection errored or
+   * ended); the caller reconnects. A host whose session cannot be lost (one
+   * in-process connection) never calls it. `close()` ends the session; nothing
+   * reaches either handler after it.
+   *
+   * The desktop opens a dedicated connection on the direct socket
+   * (`database/connection`'s `openListenSession`); PGlite listens on its one
+   * in-process connection.
+   */
+  listen(
+    channels: readonly string[],
+    handlers: ListenHandlers,
+  ): Promise<ListenSession>;
+}
+
+/** What a LISTEN session (`DatabaseDriverImpl.listen`) reports to its opener. */
+export interface ListenHandlers {
+  notification(channel: string, payload: string): void;
+  lost(err: unknown): void;
+}
+
+/** An open LISTEN session. */
+export interface ListenSession {
+  close(): Promise<void>;
 }
 
 export const DatabaseDriver =

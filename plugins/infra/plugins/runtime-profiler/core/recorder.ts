@@ -621,6 +621,32 @@ export function runInBackgroundLane<T>(fn: () => T): T {
   return backgroundLaneRuntime.run(fn);
 }
 
+// --- Root-context runtime ---
+// Same injection shape as the runtimes above, so core stays Node-free; the
+// server installs one that runs `fn` in an AsyncLocalStorage snapshot taken at
+// boot, outside every request, loader, lane and suppression scope.
+
+interface RootContextRuntime {
+  run<T>(fn: () => T): T;
+}
+
+let rootContextRuntime: RootContextRuntime = { run: (fn) => fn() };
+
+export function installRootContextRuntime(rt: RootContextRuntime): void {
+  rootContextRuntime = rt;
+}
+
+/**
+ * Run `fn` in the ROOT async context — outside whatever request, loader, lane
+ * or suppression scope the caller is in — so a timer it arms, or detached work
+ * it starts, is attributed to itself rather than to the caller that happened to
+ * trigger it. Attribution only, never correctness: a host with no ambient
+ * context (no runtime installed) runs `fn` as is.
+ */
+export function runInRootContext<T>(fn: () => T): T {
+  return rootContextRuntime.run(fn);
+}
+
 /**
  * Run detached/background `fn` as a first-class `bg` entry span so its cost is
  * ATTRIBUTED (get_runtime_profile / slow_ops / flight recorder) instead of

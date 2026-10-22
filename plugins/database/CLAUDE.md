@@ -31,7 +31,9 @@ Nothing in the SQL shows which.
 ## `db` over the host's driver: `DatabaseDriver`
 
 `db` (`server/internal/driver.ts`) is a forwarding Proxy over the booted host's
-**`DatabaseDriver`** host service (`{ db(), ready(), bootDdl(fn) }`): the boot
+**`DatabaseDriver`** host service (`{ db(), ready(), bootDdl(fn, reason?),
+listen(channels, handlers) }` — `listen` opens the change feed's LISTEN
+session, the one part of it that differs per host): the boot
 barrier calls `ready()` then runs the schema layer under `bootDdl`, over the
 migration texts of the host's `MigrationSource` (`database/migrations`). The
 read-set capture (`server/internal/read-set-capture.ts`) and `afterCommit(exec,
@@ -273,6 +275,8 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `DatabaseDriverImpl`
     - `Db`
     - `DbExecutor`
+    - `ListenHandlers`
+    - `ListenSession`
   - Exports (values):
     - `afterCommit`
     - `currentTxId`

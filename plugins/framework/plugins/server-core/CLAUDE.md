@@ -12,13 +12,14 @@ See the top-level [`CLAUDE.md`](../../../../CLAUDE.md) for overall architecture 
 
 ## Boot modes: `serve`, `exec` and `browser`
 
-A backend process boots in one of three modes. Both run the ONE sequence in
+A backend process boots in one of three modes. All run the ONE sequence in
 `core/boot-stages.ts` — a second copy is the thing that rots, so add a phase
 there, not in a composition root, unless it is genuinely serve-only.
 
 - **`serve`** — the gateway-spawned, long-lived backend (`bin/index.ts`). Runs
   everything: the shared sequence, with the socket bind interleaved into it, then
-  `onReady`, `onAllReady`, `drainWarmups`, signal handlers and the orphan poll.
+  the post-ready phases (`runPostReadyPhases`: the change-feed assertion,
+  `onReady`, `onAllReady`), `drainWarmups`, signal handlers and the orphan poll.
 - **`exec`** — a short-lived process that runs ONE registered piece of work and
   exits (`cli/run-exec.ts`, exported as `runExec` from
   `@plugins/framework/plugins/server-core/cli`). Runs load waves,
@@ -26,11 +27,14 @@ there, not in a composition root, unless it is genuinely serve-only.
   and the `onReadyBlocking` barrier, and nothing else.
 - **`browser`** — the portable graph in a page's Web Worker
   (`core/browser-host.ts`, `bootBrowserHost({ entries, seed? })`, called from a
-  plugin's `bin/browser-host.ts`). The same phases as `exec` — no socket, no
-  post-ready phases yet (job runners and schedules are the next slice's) — then
-  it asserts every booted plugin declares `portable: true` (plugins' own
-  `wsRoutes` are not served — the page's transport opens any socket but
-  `/ws/notifications` inert), runs `seed`, and hands back the request router
+  plugin's `bin/browser-host.ts`). A SERVING host like `serve`, minus the
+  socket: the shared sequence, then it asserts every booted plugin declares
+  `portable: true` (plugins' own `wsRoutes` are not served — the page's
+  transport opens any socket but `/ws/notifications` inert), runs `seed` (data
+  present at boot), then the same post-ready phases as `serve` — the change
+  feed's LISTEN, the in-process job queue and schedules start on the seeded
+  database, so a write recomputes its readers as on the desktop — and hands
+  back the request router
   (`hostHttpRoutes`, the one route table `bin/index.ts` mounts too), the
   live-state socket handler and the served keys. `framework/browser-server`'s
   `serveOverPort` carries them to the page. Hosts install no probes: no heap
@@ -44,8 +48,18 @@ there, not in a composition root, unless it is genuinely serve-only.
 | socket bind                                    | yes     | no     | no        |
 | `onReadyBlocking`                              | yes     | yes    | yes       |
 | `markServerReady()`                            | yes     | no     | no        |
-| `onReady` / `onAllReady` / `drainWarmups`      | yes     | no     | no        |
+| seed                                           | no      | no     | yes       |
+| change-feed assertion (D3), `onReady` / `onAllReady` | yes | no   | yes       |
+| `drainWarmups`                                 | yes     | no     | no        |
 | QoS boost, signal handlers, orphan-exit poll   | yes     | no     | no        |
+
+The **change-feed assertion** (`assertDbReadsHaveChangeFeed`, D3 of
+`research/2026-10-22-global-demo-writes-render-portable-change-feed.md`) opens
+the post-ready phases: a serving host whose graph registered a DB-backed
+resource must have booted `database/change-feed` (its mark: the relation
+bases it sets in `onReadyBlocking`), or boot throws "DB-backed live reads on a
+host with no change feed never recompute". Only serving hosts reach it — `exec`
+and partial-graph test boots (`bootPluginGraph` alone) do not.
 
 The **preload-declare assert** (`assertPreloadedResourcesDeclared`,
 `core/resources.ts`) throws when a resource registered with `preload` has no

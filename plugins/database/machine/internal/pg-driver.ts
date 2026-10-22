@@ -22,6 +22,7 @@ import {
   BOOT_DDL_QUERY_DEADLINE_MS,
   createDbPool,
   onClientLost,
+  openListenSession,
   queryText,
   withQueryDeadline,
 } from "@plugins/database/plugins/connection/server";
@@ -45,17 +46,20 @@ import { extractReadTablesFromSql } from "../../server/internal/read-set-capture
 // that declared no namespace throws here.
 
 const config = readDatabaseConfig();
+// The cluster's own socket. A session-bound LISTEN (`listen` below) must use it:
+// pgbouncer's transaction pooling breaks LISTEN.
+const direct = {
+  host: process.env.PGHOST ?? config.connection.host,
+  port: Number(process.env.PGPORT ?? config.connection.port),
+  user: process.env.PGUSER ?? config.connection.user,
+};
 const conn = config.pgbouncer
   ? {
       host: config.pgbouncer.host,
       port: config.pgbouncer.port,
       user: config.connection.user,
     }
-  : {
-      host: process.env.PGHOST ?? config.connection.host,
-      port: Number(process.env.PGPORT ?? config.connection.port),
-      user: process.env.PGUSER ?? config.connection.user,
-    };
+  : direct;
 
 export const POOL_MAX = 16;
 
@@ -543,9 +547,21 @@ export const pgDriver: DatabaseDriverImpl = {
   // Boot DDL can wait minutes on the previous backend's locks during a
   // hot-swap, so the schema layer widens the query deadline for its own
   // queries.
-  bootDdl: (fn) =>
-    withQueryDeadline(
-      { ms: BOOT_DDL_QUERY_DEADLINE_MS, reason: "boot: schema layer" },
-      fn,
-    ),
+  bootDdl: (fn, reason = "boot DDL") =>
+    withQueryDeadline({ ms: BOOT_DDL_QUERY_DEADLINE_MS, reason }, fn),
+  // A dedicated connection on the direct socket (the pool's connections are
+  // pgbouncer's, and shared). Named `change-feed`: the change feed's listener
+  // is the one session this driver opens.
+  listen: (channels, handlers) =>
+    openListenSession({
+      name: "change-feed",
+      connectionString: buildConnectionString(direct, runtimeNamespace()),
+      channels,
+      handlers,
+      endFailed: (err) =>
+        dbLog.publish(
+          `[database] error closing a failed LISTEN attempt: ${String(err)}`,
+          "stderr",
+        ),
+    }),
 };

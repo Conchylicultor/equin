@@ -1,3 +1,4 @@
+import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
 import type { TxnEnd } from "./parse-payload";
 import type { FeedChange } from "./route-change";
 
@@ -66,7 +67,7 @@ const REMEMBERED_XIDS = 1_024;
 export interface BurstRouterOptions {
   route: (change: FeedChange) => void;
   report: (problem: TxnEndProblem) => void;
-  /** Run `fn` on a later macrotask (default `setImmediate`). */
+  /** Run `fn` on a later macrotask (default `deferMacrotask`). */
   defer?: (fn: () => void) => void;
   /** Arm a one-shot timer; returns its cancel (default: an unref'd `setTimeout`). */
   arm?: (fn: () => void, ms: number) => () => void;
@@ -92,9 +93,20 @@ export interface BurstRouter {
 
 function armUnref(fn: () => void, ms: number): () => void {
   const timer = setTimeout(fn, ms);
-  // The deadline never keeps a stopping process alive.
-  timer.unref();
+  // The deadline never keeps a stopping process alive. Only a server's timer
+  // has `unref` (a browser's is a number).
+  (timer as { unref?: () => void }).unref?.();
   return () => clearTimeout(timer);
+}
+
+// A later macrotask on any host (`setImmediate` where there is one). A
+// scheduling primitive standing in for `setImmediate(fn)`: what `fn` routes is
+// spanned per change (`routeWithSpan`, the listener's `route`), and a throw
+// from it is an unhandled rejection — loud, as an uncaught `setImmediate`
+// callback was.
+function deferMacrotask(fn: () => void): void {
+  // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- a setImmediate stand-in; each routed change carries its own route span
+  void yieldMacrotask().then(fn);
 }
 
 // Insertion-ordered, oldest evicted first.
@@ -116,7 +128,7 @@ interface OpenXid {
 
 export function createBurstRouter(opts: BurstRouterOptions): BurstRouter {
   const { route, report } = opts;
-  const defer = opts.defer ?? setImmediate;
+  const defer = opts.defer ?? deferMacrotask;
   const arm = opts.arm ?? armUnref;
   const deadlineMs = opts.deadlineMs ?? TXN_END_DEADLINE_MS;
   const now = opts.now ?? (() => performance.now());

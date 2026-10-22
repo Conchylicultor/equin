@@ -17,7 +17,7 @@ import {
   createTestDb,
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
-import { createChangeFeedListener } from "./listener";
+import { createChangeFeedListener } from "../testing/listener";
 import { routeChange } from "./route-change";
 import { rebuildTriggers } from "./triggers";
 

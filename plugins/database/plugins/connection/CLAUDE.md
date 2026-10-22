@@ -12,8 +12,18 @@ import {
 } from "@plugins/database/plugins/connection/server";
 
 const pool = createDbPool({ name: "job-lock", connectionString, max: 4 });
-const listener = createDbClient({ name: "change-feed", connectionString });
+const client = createDbClient({ name: "events-test", connectionString });
 ```
+
+`openListenSession({ name, connectionString, channels, handlers, endFailed })`
+is a LISTEN session on its own `createDbClient` connection: connect, then
+`LISTEN a; LISTEN b` as ONE statement (both channels start together), each
+under the deadline; a failed attempt is closed and the open rejects. Once
+established, a connection `error` or `end` reaches `handlers.lost` once — and
+only while the session is current, so a failed attempt's late socket events
+never reach the caller. It is the desktop's `DatabaseDriver.listen`
+(`database#machine`), which the change feed's listener opens; the reconnect
+policy stays in the listener.
 
 Plan: [`research/2026-09-16-global-db-call-deadline-every-connection.md`](../../../../research/2026-09-16-global-db-call-deadline-every-connection.md).
 Background: [`research/2026-09-11-global-query-deadline-and-stall-health.md`](../../../../research/2026-09-11-global-query-deadline-and-stall-health.md)
@@ -110,7 +120,7 @@ runtimes read, not a slot:
 | `job-lock` | the advisory-lock pool behind `withJobLock` | `infra/jobs` `job-lock.ts` |
 | `admin` | the admin pool (fork, drop, list) | `database/admin` `pool.ts` `getAdminPool` |
 | `admin-short-lived` | one-off pools opened and closed around a single operation | `database/admin` `pool.ts` `openShortLivedClient` |
-| `change-feed` | the change-feed LISTEN client | `database/change-feed` `listener.ts` |
+| `change-feed` | the change-feed LISTEN client | this plugin's `listen-session.ts` (`openListenSession`), opened by `database#machine`'s `DatabaseDriver.listen` for `database/change-feed`'s `listener.ts` |
 | `events-test` | the events-test harness's stand-in worker sessions | `infra/events-test` `crash-recovery.ts`, `superseded.ts`, `queue-lock-no-steal.ts` |
 
 Whole-database DDL on `admin` (`CREATE` / `DROP` / `RENAME DATABASE`) runs under
@@ -168,7 +178,6 @@ deadline sees it go silent. That needs a heartbeat.
 - Cross-plugin:
   - Imported by:
     - `database/admin`
-    - `database/change-feed`
     - `database/query-deadline`
     - `infra/jobs`
 - Exemptions:
@@ -180,7 +189,8 @@ deadline sees it go silent. That needs a heartbeat.
   - Exports (types):
     - `CreateDbClientOptions`
     - `CreateDbPoolOptions`
-    - `DbClient`
+    - `ListenSessionHandlers`
+    - `OpenListenSessionOptions`
     - `QueryDeadlineEvent`
   - Exports (values):
     - `ABANDON_HOLD_CAP`
@@ -193,6 +203,7 @@ deadline sees it go silent. That needs a heartbeat.
     - `currentQueryDeadline`
     - `formatDeadlineLogLine`
     - `onClientLost`
+    - `openListenSession`
     - `QUERY_DEADLINE_MS`
     - `queryDeadlineSink`
     - `queryText`

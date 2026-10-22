@@ -111,7 +111,7 @@ graph's `Resource.Declare` set to them. Pinned by
 
 - Description: Plugin doc generation and registry codegen
 - Core:
-  - Uses: 108 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 109 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `plugin-meta/parse-utils` ×16
     - `config_v2` ×15
     - `framework/plugin-id` ×14
@@ -125,11 +125,11 @@ graph's `Resource.Declare` set to them. Pinned by
     - `config_v2/ledger` ×2
     - `framework/tooling/boundaries` ×2
     - `framework/tooling/format` ×2
+    - `framework/tooling/import-closure` ×2
     - `framework/tooling` ×2
     - `infra/namespace` ×2
     - `packages/macrotask-yield` ×2
     - `fields/reorder-tree.REORDER_NODE_LEGEND`
-    - `framework/tooling/import-closure.importClosure`
     - `framework/tooling/lint.loadLintContributions`
     - `framework/tooling/web-artifacts.COMPOSITION_SPECIFIERS`
     - `packages/resource-protocol.RESOURCE_HTTP_ROUTE`

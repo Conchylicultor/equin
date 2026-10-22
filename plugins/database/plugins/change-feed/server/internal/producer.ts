@@ -1,4 +1,3 @@
-import { AsyncLocalStorage } from "node:async_hooks";
 import { getTableName, is, type SQLWrapper } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
@@ -15,7 +14,10 @@ import {
   reportServerError,
   type BootMode,
 } from "@plugins/framework/plugins/server-core/core";
-import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import {
+  runInRootContext as inRoot,
+  runTracked,
+} from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   routeChange,
   type ProducerChange,
@@ -78,8 +80,9 @@ import { routeWithSpan } from "./route-span";
 // `PRODUCER_IDS_CAP` distinct ids the flush routes `ids: null` instead — one
 // bounded FULL per reading tuple.
 //
-// ROOT CONTEXT. The window's timer and every flush run in the async context
-// captured at module eval (`AsyncLocalStorage.snapshot()`), never the writer's:
+// ROOT CONTEXT. The window's timer and every flush run in the root async
+// context (`runInRootContext`: on the server, an AsyncLocalStorage snapshot
+// taken at boot by runtime-profiler), never the writer's:
 // a writer inside `runWithoutProfiling` (every observability write is) would
 // otherwise hide the `route` span and the whole flush cycle it schedules from
 // the profiler.
@@ -168,10 +171,6 @@ export type ChangeProducerContribution = ReturnType<typeof ChangeProducerDecl>;
 const PK_KEY = "__changeProducerPk";
 
 type Op = "U" | "D";
-
-// Captured once, at module eval — outside any request, loader, lane or
-// suppression scope — so the coalescing timer and every flush run there.
-const inRoot = AsyncLocalStorage.snapshot();
 
 // One producer per table (A2′, module eval): two producers would each believe
 // they are the table's only change source.
@@ -280,9 +279,11 @@ function liveRoute(tableName: string): (change: RoutedChange) => void {
     );
   }
   const mode = test?.mode ?? getBootMode();
-  if (mode !== "serve") {
+  // The two serving hosts: the desktop's backend and the browser host (a
+  // page's worker), each with its own change feed.
+  if (mode !== "serve" && mode !== "browser") {
     throw new Error(
-      `[change-feed] change producer for "${tableName}" refused a write in boot mode "${mode}": only the serving backend has the subscribers its change must reach (A13) — file the write through the outbox instead`,
+      `[change-feed] change producer for "${tableName}" refused a write in boot mode "${mode}": only a serving host has the subscribers its change must reach (A13) — file the write through the outbox instead`,
     );
   }
   return test?.route ?? routeChange;
@@ -320,8 +321,9 @@ function emit(
     }, ms),
   );
   // A pending window never holds the process open: losing it is the volatility
-  // contract, not a reason to delay an exit.
-  buffer.timer.unref();
+  // contract, not a reason to delay an exit. Only a server's timer has `unref`
+  // (a browser's is a number).
+  (buffer.timer as { unref?: () => void }).unref?.();
 }
 
 // Route everything buffered: the deletes, then the upserts (over the cap: one

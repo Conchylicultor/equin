@@ -7,10 +7,15 @@ export {
   createDbClient,
   onClientLost,
   queryText,
-  type DbClient,
   type CreateDbPoolOptions,
   type CreateDbClientOptions,
 } from "./internal/client";
+// A LISTEN session on its own connection (the desktop's `DatabaseDriver.listen`).
+export {
+  openListenSession,
+  type ListenSessionHandlers,
+  type OpenListenSessionOptions,
+} from "./internal/listen-session";
 // The deadline itself: the bound, its scope, the error, and the seam a missed
 // deadline is announced on.
 export {

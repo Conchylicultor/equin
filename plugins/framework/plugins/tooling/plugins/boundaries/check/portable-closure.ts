@@ -2,15 +2,18 @@ import type {
   Check,
   CheckResult,
 } from "@plugins/framework/plugins/tooling/core";
-import { importClosure } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
+import type TS from "typescript";
+import {
+  importClosure,
+  loadTypescript,
+} from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
 import {
   findImports,
   isPortableServerBarrel,
-  maskSource,
   type ImportRef,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-import { isPlatformApi, platformGlobalsIn } from "../core/platform-apis";
+import { isPlatformApi, platformValueUsesIn } from "../core/platform-apis";
 
 const PORTABLE_CLOSURE = "boundaries:portable-closure";
 
@@ -34,10 +37,10 @@ function loadsAtRuntime(ref: ImportRef): boolean {
   return bindings.length === 0 || !bindings.every((b) => /^type\s/.test(b));
 }
 
-/** One closure module that imports a platform API or reads a host global, with the chain to it. */
+/** One closure module that imports a platform API or uses a host-only value, with the chain to it. */
 interface Offender {
   module: string;
-  /** Platform modules it imports, and host globals it reads (`global Buffer`). */
+  /** Platform modules it imports, and host-only values it uses (`global Buffer`, `unguarded .unref()`). */
   specifiers: string[];
   chain: string[];
 }
@@ -45,35 +48,48 @@ interface Offender {
 /**
  * Measure `barrel`'s static closure (dynamic imports cut: the subject is what
  * evaluates before the barrel's first statement) and return every module in it
- * that imports a platform API, with the shortest chain from the barrel.
+ * that imports a platform API or uses a host-only value, with the shortest
+ * chain from the barrel. `needs` memoizes each module's reading across the
+ * run's barrels, whose closures overlap heavily (one parse per module).
  */
 async function platformOffenders(
   root: string,
   barrel: string,
   read: (path: string) => Promise<string | null>,
+  needs: Map<string, string[]>,
 ): Promise<{ modules: number; offenders: Offender[] }> {
   const closure = await importClosure(root, barrel, { dynamicImports: "cut" });
+  const ts = await loadTypescript();
   const offenders: Offender[] = [];
   for (const module of [...closure.modules].sort()) {
-    const src = await read(module);
-    if (src === null) {
-      throw new Error(
-        `${barrel}'s closure loads ${module}, which the run's file set cannot read.`,
-      );
+    let specifiers = needs.get(module);
+    if (specifiers === undefined) {
+      const src = await read(module);
+      if (src === null) {
+        throw new Error(
+          `${barrel}'s closure loads ${module}, which the run's file set cannot read.`,
+        );
+      }
+      specifiers = moduleNeeds(ts, module, src);
+      needs.set(module, specifiers);
     }
-    const specifiers = [
-      ...new Set(
-        findImports(src)
-          .filter((ref) => loadsAtRuntime(ref) && isPlatformApi(ref.specifier))
-          .map((ref) => ref.specifier),
-      ),
-      // An import-clean module can still read a host global the browser lacks.
-      ...platformGlobalsIn(maskSource(src)).map((g) => `global ${g}`),
-    ];
     if (specifiers.length === 0) continue;
     offenders.push({ module, specifiers, chain: closure.importChain(module) });
   }
   return { modules: closure.modules.size, offenders };
+}
+
+/** The platform modules `src` imports and the host-only values it uses. */
+function moduleNeeds(ts: typeof TS, module: string, src: string): string[] {
+  return [
+    ...new Set(
+      findImports(src)
+        .filter((ref) => loadsAtRuntime(ref) && isPlatformApi(ref.specifier))
+        .map((ref) => ref.specifier),
+    ),
+    // An import-clean module can still use a host global the browser lacks.
+    ...platformValueUsesIn(ts, module, src),
+  ];
 }
 
 /**
@@ -84,7 +100,9 @@ async function platformOffenders(
  * reaches `pg`. So this check measures the claim transitively, with the same
  * matcher: every module the barrel statically loads (`importClosure`, the
  * bundler's own resolution) is scanned for a platform import, and each offender
- * is reported with the chain that reaches it.
+ * is reported with the chain that reaches it. Each module is also read for the
+ * host-only VALUES it uses (`platformValueUsesIn`: a platform global read as a
+ * value, an unguarded `.unref()`), which no import names.
  *
  * Exemptable per barrel, for a plugin whose closure is being made portable in
  * steps: its debt exemption names the barrel, and goes stale (failing this
@@ -93,7 +111,7 @@ async function platformOffenders(
 export const portableClosureCheck: Check = {
   id: PORTABLE_CLOSURE,
   description:
-    "every server barrel declaring `portable: true` statically loads no module that imports a platform API (Node builtins, bun, pg, graphile-worker, @parcel/watcher, …) or reads a host global (Buffer, process, Bun, …) — its whole closure runs on every host",
+    "every server barrel declaring `portable: true` statically loads no module that imports a platform API (Node builtins, bun, pg, graphile-worker, @parcel/watcher, …) or uses a host-only value (Buffer, process, Bun, setImmediate, an unguarded .unref(), …) — its whole closure runs on every host",
   exemptable: {
     [PORTABLE_CLOSURE]:
       "declares `portable: true` while its server closure still reaches a platform API (the split into server/ + machine/ is in progress)",
@@ -110,15 +128,17 @@ export const portableClosureCheck: Check = {
     }
 
     const failures: string[] = [];
+    const needs = new Map<string, string[]>();
     for (const barrel of portable) {
       const { modules, offenders } = await platformOffenders(
         root,
         barrel,
         (p) => repo.read(p),
+        needs,
       );
       if (offenders.length === 0 || exempt.skips(barrel)) continue;
       failures.push(
-        `${barrel} statically loads ${modules} modules; ${offenders.length} import a platform API:\n` +
+        `${barrel} statically loads ${modules} modules; ${offenders.length} need the computer:\n` +
           offenders
             .map(
               (o) =>

@@ -18457,6 +18457,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `DatabaseDriverImpl`
       - `Db`
       - `DbExecutor`
+      - `ListenHandlers`
+      - `ListenSession`
     - Exports (values):
       - `afterCommit`
       - `currentTxId`
@@ -18547,13 +18549,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `listDatabases`
           - `openShortLivedClient`
       - Cross-plugin:
-        - Imported by: 21 plugins — full list in [`plugins/database/plugins/admin/REFERENCE.md`](../plugins/database/plugins/admin/REFERENCE.md)
-          - `debug` ×7
-          - `database` ×5
-          - `infra` ×4
-          - `apps` ×2
+        - Imported by:
+          - `apps/chord/song-index`
+          - `apps/mail/mail-core`
           - `backup/sources/databases`
           - `build/serve-composition`
+          - `database/db-test-fixture/sweep`
+          - `database/fork`
+          - `database/live-state-snapshot`
+          - `database/query`
+          - `debug/boot-profile`
+          - `debug/latency-ledger`
+          - `debug/slow-ops`
+          - `debug/slow-ops/cluster`
+          - `debug/timeline`
+          - `debug/trace/engine`
+          - `debug/worktree-cleanup`
+          - `infra/claude-cli`
+          - `infra/jobs/supervised-job`
+          - `infra/launcher`
+          - `infra/worktree/reclaim`
           - `reports/engine`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/backup.ts`, `server/internal/fork.ts`, `server/internal/pool.ts`, `server/internal/temp-name.ts` (debt)
@@ -18564,14 +18579,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes: `fork-data-exclusion` "live_state_changelog"
         - Uses:
+          - `database.DatabaseDriver`
+          - `database.DatabaseDriverImpl`
           - `database.db`
+          - `database.ListenSession`
           - `database.loadKnownRelations`
-          - `database/admin.connectionString`
-          - `database/admin.ExcludeFromFork`
-          - `database/connection.BOOT_DDL_QUERY_DEADLINE_MS`
-          - `database/connection.createDbClient`
-          - `database/connection.DbClient`
-          - `database/connection.withQueryDeadline`
           - `database/derived-tables.feedExemptTables`
           - `database/derived-tables.rollupSources`
           - `primitives/log-channels.defineLogSink`
@@ -18611,14 +18623,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/trace/engine`
           - `infra/retention`
           - `reports/engine`
-      - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/producer.ts`, `server/internal/triggers.ts` (debt)
       - Test helpers:
         - Server: `@plugins/database/plugins/change-feed/server/testing`
           - `assertRouteLayoutsInstalled` — A3: throw (block boot) unless every routed table's installed triggers emit what its routes read.
           - `assertRouteTablesCovered` — Throw loudly (blocking boot) if any resource depends on a table with no change source: no trigger the change-feed installed, and no change producer.
           - `buildViewDeps` — Each public view → the relations it directly reads (sorted).
-          - `createChangeFeedListener`
+          - `createChangeFeedListener` — An isolated LISTEN consumer on a suite's own database: the real listener over the desktop driver's session (`openListenSession`, the one `DatabaseDriver.listen` opens), pointed at the suite's connection string rather than the worktree's.
           - `createChangeRouter` — The routing above, into ANY runtime's router — `routeChange` is it bound to server-core's process-global runtime.
           - `createRelationBases` — The memoized relation → bases function over `graph`.
           - `ensureChangelogTable`
@@ -18629,6 +18639,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `mountProducersForTest` — Mount `producers` without a booted plugin graph: each is live (A12 passes), runs as boot mode `mode` (default `"serve"`; pass `"exec"` to see A13), and routes through `route` (default the real `routeChange`).
           - `readInstalledTriggers` — Every installed `live_state_*` trigger on the given tables.
           - `rebuildTriggers`
+          - Types: `TestChangeFeedListenerOptions`
     - **`client-tools`** — Postgres client tools (pg_dump, pg_restore) built from the same release as the embedded server: pgClientBin resolves the vendored binary, never the PATH.
       - Cross-plugin:
         - Imported by: `database/admin`
@@ -18643,7 +18654,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `database/admin`
-          - `database/change-feed`
           - `database/query-deadline`
           - `infra/jobs`
       - Exemptions:
@@ -18655,7 +18665,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `CreateDbClientOptions`
           - `CreateDbPoolOptions`
-          - `DbClient`
+          - `ListenSessionHandlers`
+          - `OpenListenSessionOptions`
           - `QueryDeadlineEvent`
         - Exports (values):
           - `ABANDON_HOLD_CAP`
@@ -18668,6 +18679,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `currentQueryDeadline`
           - `formatDeadlineLogLine`
           - `onClientLost`
+          - `openListenSession`
           - `QUERY_DEADLINE_MS`
           - `queryDeadlineSink`
           - `queryText`
@@ -24645,7 +24657,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `deny`
               - `isPlatformApi`
               - `parseRuntimeException`
-              - `platformGlobalsIn`
+              - `platformValueUsesIn`
               - `runtimeNames`
               - `zone`
           - Cross-plugin:
@@ -24706,7 +24718,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/workspace/worktree` (1 debt)
               - `database` (1 debt)
               - `database/admin` (4 debt)
-              - `database/change-feed` (2 debt)
               - `database/client-tools` (1 debt)
               - `database/connection` (2 debt)
               - `database/embedded` (1 debt)
@@ -25010,7 +25021,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Register: `defineSupervisedJob('type-check.backstop')`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 108 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 109 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `plugin-meta/parse-utils` ×16
               - `config_v2` ×15
               - `framework/plugin-id` ×14
@@ -25024,11 +25035,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2/ledger` ×2
               - `framework/tooling/boundaries` ×2
               - `framework/tooling/format` ×2
+              - `framework/tooling/import-closure` ×2
               - `framework/tooling` ×2
               - `infra/namespace` ×2
               - `packages/macrotask-yield` ×2
               - `fields/reorder-tree.REORDER_NODE_LEGEND`
-              - `framework/tooling/import-closure.importClosure`
               - `framework/tooling/lint.loadLintContributions`
               - `framework/tooling/web-artifacts.COMPOSITION_SPECIFIERS`
               - `packages/resource-protocol.RESOURCE_HTTP_ROUTE`
@@ -29166,6 +29177,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `installClock`
           - `installLoaderReadSetSink`
           - `installProfilingSuppressionRuntime`
+          - `installRootContextRuntime`
           - `installSpanContextRuntime`
           - `onSlowSpan`
           - `profilerNowMs`
@@ -29176,6 +29188,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `registerGateGauge`
           - `resetRuntimeProfile`
           - `runInBackgroundLane`
+          - `runInRootContext`
           - `runTracked`
           - `runWithoutProfiling`
           - `SPAN_KINDS`

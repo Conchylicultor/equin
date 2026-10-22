@@ -1,7 +1,7 @@
-import { createHash } from "node:crypto";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql as drizzleSql } from "drizzle-orm";
 import { z } from "zod";
+import { sha256Hex } from "@plugins/packages/plugins/string-hash/core";
 import {
   executeOne,
   executeRows,
@@ -592,8 +592,9 @@ export function resolveLayout(
 
 type CompiledTable = { table: string; stmts: string[]; signature: string };
 
-const sha256 = (text: string): string =>
-  createHash("sha256").update(text).digest("hex");
+// The same digest `node:crypto` gives, in plain JS so the feed runs on any
+// host — a stored signature from before the swap still matches.
+const sha256 = sha256Hex;
 
 // Bookkeeping for the trigger layer's content signatures — the twin of
 // derived-views' `derived_view_state`, created idempotently here (not via a

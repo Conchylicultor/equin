@@ -7,6 +7,11 @@
  * beside the scope) is either served by the booted graph or declares
  * `needsMachine`: the static and the runtime view of the host cannot drift.
  *
+ * And a write through the real mutations recomputes its readers through the
+ * worker's own change feed (PGlite triggers → NOTIFY → the listener `onReady`
+ * started → the router): a subscriber of the tasks collection and of one
+ * task's row gets the change, acked by the write's transaction id.
+ *
  * Two substitutions, one per provider whose data is bundled text (a vite
  * `import.meta.glob`, which Bun cannot evaluate): the migration history
  * (`migrations/bundled-source`) and the committed config layer
@@ -33,6 +38,7 @@ import {
   loadResourceByKey,
   Resource,
   type BrowserHost,
+  type ResourceParams,
   type ServerPluginDefinition,
 } from "@plugins/framework/plugins/server-core/core";
 import { unmatchedApiResponse } from "@plugins/infra/plugins/endpoints/core";
@@ -65,6 +71,14 @@ import {
 import { systemOrigin } from "@plugins/infra/plugins/request-origin/core";
 import { sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import {
+  createTask,
+  updateTask,
+} from "@plugins/tasks/plugins/tasks-core/server";
+import {
+  taskDescriptions,
+  taskRows,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import {
   DEMO_AGENTS,
   DEMO_STORIES,
@@ -171,6 +185,36 @@ if (!IN_CHILD) {
 }
 
 type Row = Record<string, unknown> & { id: string };
+
+/** A server frame, as far as these assertions read it. */
+interface Frame {
+  kind: string;
+  key?: string;
+  params?: ResourceParams;
+  ackTx?: string[];
+}
+
+function isFor(frame: Frame, key: string, params: ResourceParams): boolean {
+  return (
+    frame.key === key &&
+    JSON.stringify(frame.params ?? {}) === JSON.stringify(params)
+  );
+}
+
+/** Wait (bounded) until `probe` answers something truthy; fail loudly naming `what`. */
+async function until<T>(
+  probe: () => T | undefined | false,
+  what: string,
+  timeoutMs = 10_000,
+): Promise<T> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const got = probe();
+    if (got !== undefined && got !== false) return got;
+    if (Date.now() > deadline) throw new Error(`timed out waiting for ${what}`);
+    await new Promise((r) => setTimeout(r, 20));
+  }
+}
 
 describe.if(IN_CHILD)("the demo's browser host", () => {
   let host: BrowserHost;
@@ -456,5 +500,104 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
     };
     expect(catalog.versions.length).toBeGreaterThan(0);
     expect(catalog.probedAt).toBeNull();
+  });
+  test("a write recomputes its subscribers through the worker's change feed, acked by its xid", async () => {
+    const frames: Frame[] = [];
+    const socket = {
+      send(raw: string) {
+        const frame = JSON.parse(raw) as Frame;
+        if (frame.kind !== "ping") frames.push(frame);
+      },
+    };
+    const ws = host.notifications as unknown as {
+      open(ws: unknown): void;
+      message(ws: unknown, raw: string): void;
+      close(ws: unknown, code: number, reason: string): void;
+    };
+    ws.open(socket);
+    let nextId = 1;
+    const subscribe = async (key: string, params: ResourceParams) => {
+      ws.message(
+        socket,
+        JSON.stringify({ op: "sub", id: nextId++, key, params }),
+      );
+      await until(
+        () => frames.some((f) => isFor(f, key, params) && f.kind === "sub-ack"),
+        `sub-ack ${key}`,
+      );
+    };
+    // The write's own transaction, so its xid is known: the mutations join a
+    // transaction they are handed.
+    const inTx = async <T>(
+      fn: (
+        tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+      ) => Promise<T>,
+    ) => {
+      let xid = "";
+      const value = await db.transaction(async (tx) => {
+        const result = await fn(tx);
+        const rows = await tx.execute<{ x: string }>(
+          sql`SELECT pg_current_xact_id()::text AS x`,
+        );
+        xid = rows.rows[0]!.x;
+        return result;
+      });
+      return { value, xid };
+    };
+    try {
+      const all: ResourceParams = {};
+      await subscribe(taskRows.key, all);
+
+      const created = await inTx((tx) =>
+        createTask({ title: "demo write: created" }, tx),
+      );
+      const id = created.value.id;
+      // The created task reaches the collection's subscriber, acked by its xid.
+      const createdFrame = await until(
+        () =>
+          frames.find(
+            (f) =>
+              isFor(f, taskRows.key, all) &&
+              (f.kind === "delta" || f.kind === "update") &&
+              f.ackTx?.includes(created.xid) === true,
+          ),
+        "the created task's frame",
+      );
+      expect(JSON.stringify(createdFrame)).toContain("demo write: created");
+
+      const point = taskDescriptions.rows.point.encode([id]);
+      await subscribe(taskDescriptions.rows.key, point);
+      const updated = await inTx((tx) =>
+        updateTask(
+          id,
+          { title: "demo write: renamed", description: "now described" },
+          tx,
+        ),
+      );
+      const renamed = await until(
+        () =>
+          frames.find(
+            (f) =>
+              isFor(f, taskRows.key, all) &&
+              (f.kind === "delta" || f.kind === "update") &&
+              f.ackTx?.includes(updated.xid) === true,
+          ),
+        "the renamed task's frame",
+      );
+      expect(JSON.stringify(renamed)).toContain("demo write: renamed");
+      const described = await until(
+        () =>
+          frames.find(
+            (f) =>
+              isFor(f, taskDescriptions.rows.key, point) &&
+              (f.kind === "delta" || f.kind === "update") &&
+              f.ackTx?.includes(updated.xid) === true,
+          ),
+        "the task row's frame",
+      );
+      expect(JSON.stringify(described)).toContain("now described");
+    } finally {
+      ws.close(socket, 1000, "test");
+    }
   });
 });

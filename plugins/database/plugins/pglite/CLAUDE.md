@@ -16,6 +16,16 @@ the computer names it to take it back.
   and answers with the last statement's result — decided up front, because
   inside a transaction a failed attempt would abort it.
 - **`bootDdl` adds no bound**: one connection, nothing else holding locks.
+- **`listen` uses the root client's `onNotification`** (channel and payload,
+  one queue, so a transaction's `live_state` NOTIFYs arrive before its
+  `live_state_end`), filtered to the session's channels, after one `LISTEN a;
+  LISTEN b` through `exec`. It never reports `lost` (no socket), and `close`
+  issues no UNLISTEN — another session may share the channels. This is the
+  change feed's session on a browser host. What the feed leans on — statement
+  triggers with transition tables, `pg_current_xact_id()`, the deferred end
+  marker firing at commit, delivery only after commit and in order, nothing for
+  a rollback, `tgargs` as a `Uint8Array` — is pinned on this build by
+  `server/internal/notifications.test.ts`, which runs the real `rebuildTriggers`.
 
 Proven by `tasks/task-category`'s portable boot test, which boots that plugin's
 whole server closure on this driver.

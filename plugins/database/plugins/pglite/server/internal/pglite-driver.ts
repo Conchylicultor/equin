@@ -7,6 +7,9 @@ import {
 import { drizzle } from "drizzle-orm/pglite";
 import type { DatabaseDriverImpl, Db } from "@plugins/database/server";
 
+// A channel is spliced into the LISTEN statement as an identifier.
+const CHANNEL_RE = /^[a-z_][a-z0-9_]*$/;
+
 /** Where PGlite keeps its data: `undefined` is in memory (lost with the
  *  process), else a PGlite `dataDir` (`idb://…` in a browser). */
 export interface PgliteDriverOptions {
@@ -85,5 +88,41 @@ export function createPgliteDriver(
     // One connection, nothing else holding locks: boot DDL needs no wider
     // bound than any other query.
     bootDdl: (fn) => fn(),
+    // LISTEN on the one in-process connection: every NOTIFY a commit sends
+    // reaches the root client's `onNotification` (channel and payload, one
+    // queue, so the order holds across channels), filtered to this session's
+    // channels. Through the ROOT client — the `scriptQueries` proxy over a
+    // transaction has no listen. The session is never lost (there is no
+    // socket); `close` stops delivery and issues no UNLISTEN, which would
+    // silence another session sharing the connection's channels.
+    async listen(channels, handlers) {
+      const bad = channels.filter((c) => !CHANNEL_RE.test(c));
+      if (channels.length === 0 || bad.length > 0) {
+        throw new Error(
+          `[pglite] listen: channels must be one or more plain identifiers, got ${JSON.stringify(channels)}`,
+        );
+      }
+      const client = pg();
+      const wanted = new Set(channels);
+      let open = true;
+      const off = client.onNotification((channel, payload) => {
+        if (open && wanted.has(channel))
+          handlers.notification(channel, payload);
+      });
+      try {
+        // ONE statement, so every channel starts with the same commit.
+        await client.exec(channels.map((c) => `LISTEN ${c}`).join("; "));
+      } catch (err) {
+        off();
+        throw err;
+      }
+      return {
+        close() {
+          open = false;
+          off();
+          return Promise.resolve();
+        },
+      };
+    },
   };
 }

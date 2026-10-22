@@ -244,4 +244,26 @@ describe("usesThrowawayTestDb", () => {
     const src = `import { db } from "@plugins/database/server";`;
     expect(usesThrowawayTestDb(TEST_PATH, src)).toBe(false);
   });
+
+  test("accepts a test file that opens its own in-memory PGlite", () => {
+    expect(
+      usesThrowawayTestDb(TEST_PATH, "const d = createPgliteDriver();"),
+    ).toBe(true);
+    expect(usesThrowawayTestDb(TEST_PATH, "const c = new PGlite();")).toBe(
+      true,
+    );
+  });
+
+  test("rejects a PGlite opened on a data dir (storage that outlives the test)", () => {
+    expect(
+      usesThrowawayTestDb(
+        TEST_PATH,
+        `createPgliteDriver({ dataDir: "idb://x" })`,
+      ),
+    ).toBe(false);
+  });
+
+  test("rejects a NON-test file that opens an in-memory PGlite", () => {
+    expect(usesThrowawayTestDb(SRC_PATH, "createPgliteDriver();")).toBe(false);
+  });
 });

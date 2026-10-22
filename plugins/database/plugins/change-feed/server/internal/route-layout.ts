@@ -51,6 +51,8 @@ export interface InstalledLayout {
 }
 
 // `tgargs` is a `bytea` of NUL-terminated arguments; `tgnargs` counts them.
+// A `bytea` decodes to a `Uint8Array` on every driver (node-postgres's `Buffer`
+// is one; PGlite returns a plain `Uint8Array`).
 // `pk` is the table's primary key column when it has exactly one key column
 // (a scalar `name`, decoded to a string), else NULL.
 const TriggerArgsRowSchema = z.object({
@@ -58,13 +60,13 @@ const TriggerArgsRowSchema = z.object({
   tgname: z.string(),
   proname: z.string(),
   tgnargs: z.number(),
-  tgargs: z.instanceof(Buffer),
+  tgargs: z.instanceof(Uint8Array),
   pk: z.string().nullable(),
 });
 
 /** Decode `pg_trigger.tgargs` (NUL-terminated strings). */
-export function decodeTriggerArgs(raw: Buffer, count: number): string[] {
-  const parts = raw.toString("utf8").split("\u0000");
+export function decodeTriggerArgs(raw: Uint8Array, count: number): string[] {
+  const parts = new TextDecoder().decode(raw).split("\u0000");
   // Each argument is NUL-terminated, so the split leaves one trailing "".
   const args = parts.slice(0, count);
   if (args.length !== count) {

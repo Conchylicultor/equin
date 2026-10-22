@@ -9,6 +9,8 @@ import {
   createTestDb,
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
+import { openListenSession } from "@plugins/database/plugins/connection/server";
+import type { DatabaseDriverImpl } from "@plugins/database/server";
 
 // Real-DB listener suite: a throwaway database on the running cluster, a real raw
 // LISTEN client, and real `pg_notify` delivery over that socket. The listener's
@@ -25,6 +27,19 @@ import {
 // rather than silently skipping.
 
 let testDb: TestDb;
+
+// The desktop driver's LISTEN session (`DatabaseDriver.listen`), on the
+// throwaway database's direct connection.
+const listenOnTestDb: DatabaseDriverImpl["listen"] = (channels, handlers) =>
+  openListenSession({
+    name: "change-feed",
+    connectionString: testDb.connectionString,
+    channels,
+    handlers,
+    endFailed: (err) => {
+      throw err;
+    },
+  });
 
 // Large liveness interval everywhere so the reconnect WATCHDOG never fires during
 // a test — reconnect is driven only by the `error`/`end` handler (test 3), never
@@ -111,7 +126,7 @@ describe("change-feed listener (real DB + real NOTIFY)", () => {
   test("delivers INSERT and UPDATE NOTIFYs to the route spy", async () => {
     const routed: FeedChange[] = [];
     const listener = createChangeFeedListener({
-      connectionString: () => testDb.connectionString,
+      listen: listenOnTestDb,
       route: (c) => routed.push(c),
       coveredTables: () => ["demo"],
       livenessIntervalMs: QUIET_LIVENESS_MS,
@@ -139,7 +154,7 @@ describe("change-feed listener (real DB + real NOTIFY)", () => {
   test("a routed payload reaches the route with its layout; a malformed one routes unscoped, never skipped", async () => {
     const routed: FeedChange[] = [];
     const listener = createChangeFeedListener({
-      connectionString: () => testDb.connectionString,
+      listen: listenOnTestDb,
       route: (c) => routed.push(c),
       coveredTables: () => ["side"],
       livenessIntervalMs: QUIET_LIVENESS_MS,
@@ -197,7 +212,7 @@ describe("change-feed listener (real DB + real NOTIFY)", () => {
   test("first connect does NOT fullSweep", async () => {
     const routed: FeedChange[] = [];
     const listener = createChangeFeedListener({
-      connectionString: () => testDb.connectionString,
+      listen: listenOnTestDb,
       route: (c) => routed.push(c),
       coveredTables: () => ["demo"],
       livenessIntervalMs: QUIET_LIVENESS_MS,
@@ -231,7 +246,7 @@ describe("change-feed listener (real DB + real NOTIFY)", () => {
 
     const routed: FeedChange[] = [];
     const listener = createChangeFeedListener({
-      connectionString: () => testDb.connectionString,
+      listen: listenOnTestDb,
       route: (c) => routed.push(c),
       coveredTables: () => ["demo"],
       livenessIntervalMs: QUIET_LIVENESS_MS,
@@ -267,7 +282,7 @@ describe("change-feed listener (real DB + real NOTIFY)", () => {
   test("malformed NOTIFY payload is skipped, listener survives", async () => {
     const routed: FeedChange[] = [];
     const listener = createChangeFeedListener({
-      connectionString: () => testDb.connectionString,
+      listen: listenOnTestDb,
       route: (c) => routed.push(c),
       coveredTables: () => ["demo"],
       livenessIntervalMs: QUIET_LIVENESS_MS,
@@ -311,7 +326,7 @@ describe("change-feed listener (real DB + real NOTIFY)", () => {
 
     const routed: FeedChange[] = [];
     const listener = createChangeFeedListener({
-      connectionString: () => testDb.connectionString,
+      listen: listenOnTestDb,
       route: (c) => routed.push(c),
       coveredTables: () => ["demo"],
       livenessIntervalMs: QUIET_LIVENESS_MS,
@@ -391,7 +406,7 @@ describe("change-feed listener: the end-of-transaction marker (real triggers)", 
     const { routed, bursts, route } = burstRecorder();
     const problems: TxnEndProblem[] = [];
     const listener = createChangeFeedListener({
-      connectionString: () => testDb.connectionString,
+      listen: listenOnTestDb,
       route,
       report: (p) => problems.push(p),
       coveredTables: () => ["burst_rows"],
@@ -433,7 +448,7 @@ describe("change-feed listener: the end-of-transaction marker (real triggers)", 
     const { routed, route } = burstRecorder();
     const problems: TxnEndProblem[] = [];
     const listener = createChangeFeedListener({
-      connectionString: () => testDb.connectionString,
+      listen: listenOnTestDb,
       route,
       report: (p) => problems.push(p),
       coveredTables: () => ["burst_rows"],
@@ -460,7 +475,7 @@ describe("change-feed listener: the end-of-transaction marker (real triggers)", 
     const { routed, route } = burstRecorder();
     const problems: TxnEndProblem[] = [];
     const listener = createChangeFeedListener({
-      connectionString: () => testDb.connectionString,
+      listen: listenOnTestDb,
       route,
       report: (p) => problems.push(p),
       coveredTables: () => ["burst_rows"],
