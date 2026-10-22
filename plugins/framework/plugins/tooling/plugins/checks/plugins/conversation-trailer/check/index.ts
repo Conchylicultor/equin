@@ -29,13 +29,23 @@ async function currentBranch(): Promise<string> {
   return stdout;
 }
 
+// This branch's own commits: reachable from HEAD and from no `main` this
+// checkout knows of — local `main` or any `refs/remotes/<remote>/main` (the
+// published set, as `database/migrations`' `publishedMigrationRefs` reads it).
+// After `./singularity upstream merge` a clone's branch carries upstream's
+// commits, which sit on `<remote>/main` and not on local `main`: they were
+// authored in upstream's own sessions (or none), so their trailers are not
+// this pane's to have, and asking would fail every upstream update's push.
 async function commitsAheadOfMain(): Promise<
   { sha: string; trailer: string }[]
 > {
   const { stdout, exitCode } = await run([
     "git",
     "log",
-    "main..HEAD",
+    "HEAD",
+    "--not",
+    "main",
+    "--glob=refs/remotes/*/main",
     "--format=%H%x00%(trailers:key=Singularity-Conversation,valueonly,separator=%x2C)",
   ]);
   if (exitCode !== 0 || !stdout) return [];
@@ -56,9 +66,9 @@ async function hasStrayBodyTrailer(sha: string): Promise<boolean> {
 const check: Check = {
   id: "conversation-trailer",
   description:
-    "SINGULARITY_CONVERSATION_ID is set and every commit ahead of main carries the Singularity-Conversation trailer",
+    "SINGULARITY_CONVERSATION_ID is set and every commit ahead of every known main (local, and each <remote>/main) carries the Singularity-Conversation trailer",
   // Not a pure function of the working tree: reads SINGULARITY_CONVERSATION_ID
-  // env and `git log main..HEAD` trailers. Never cache.
+  // env and the trailers of this branch's own commits. Never cache.
   cacheSignature: () => null,
   async run() {
     const branch = await currentBranch();

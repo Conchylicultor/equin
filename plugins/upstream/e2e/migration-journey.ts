@@ -94,18 +94,36 @@ interface Ctx {
   cliSeq: number;
 }
 
-const GIT_ENV = {
-  GIT_AUTHOR_NAME: "t",
-  GIT_AUTHOR_EMAIL: "t@t.t",
-  GIT_COMMITTER_NAME: "t",
-  GIT_COMMITTER_EMAIL: "t@t.t",
-};
+/**
+ * The environment every fixture child runs in — what a real clone user's own
+ * session would have, set by this run rather than inherited from whoever runs
+ * the e2e (a plain shell, or an agent pane whose conversation is not this
+ * fixture's):
+ *
+ * - a commit identity;
+ * - `SINGULARITY_CONVERSATION_ID`: the session that authors the clone's work.
+ *   The repo's `prepare-commit-msg` hook (core.hooksPath, set as the `setup`
+ *   task sets it — see `configureCheckout`) stamps it on every commit, and
+ *   push's `conversation-trailer` check requires it;
+ * - `MISE_TRUSTED_CONFIG_PATHS`: the temp repos' `mise.toml` trusted, as a
+ *   user's own `mise trust` trusts their clone (docs/setup.md) — scoped to
+ *   these children instead of written to the machine's trust store, so a run
+ *   leaves no global entry for a directory it deletes.
+ */
+let fixtureEnv: Record<string, string> | null = null;
+function env(): Record<string, string | undefined> {
+  if (fixtureEnv === null)
+    throw new Error(
+      "unreachable: the fixture env is set at the start of the run",
+    );
+  return { ...process.env, ...fixtureEnv };
+}
 
 async function gitRaw(cwd: string, args: string[]): Promise<SpawnResult> {
   return await spawnCaptured(["git", ...args], {
     cwd,
     timeoutMs: GIT_TIMEOUT_MS,
-    env: { ...process.env, ...GIT_ENV },
+    env: env(),
   });
 }
 
@@ -129,7 +147,7 @@ async function cli(
   const started = Date.now();
   const r = await spawnCaptured(["./singularity", ...args], {
     cwd,
-    env: { ...process.env, ...GIT_ENV },
+    env: env(),
     timeoutMs,
   });
   ctx.cliSeq += 1;
@@ -255,12 +273,14 @@ function probeSource(
   const imports =
     note === "integer" ? "integer, pgTable, text" : "pgTable, text";
   const noteCol = note ? `\n  note: ${note}("note"),` : "";
+  // Keyed by a natural `key`, not an `id`: a probe row is no entity, so it has
+  // no id kind to declare (`ids:pk-declared` asks that of every `id` key).
   return (
     `import { ${imports} } from "drizzle-orm/pg-core";\n\n` +
     `// Throwaway probe table of plugins/upstream/e2e/clone-journey.ts. It exists\n` +
     `// only in that e2e's temp repositories and never lands anywhere else.\n` +
     `export const ${constName} = pgTable("${table}", {\n` +
-    `  id: text("id").primaryKey(),${noteCol}\n` +
+    `  key: text("key").primaryKey(),${noteCol}\n` +
     `});\n`
   );
 }
@@ -389,8 +409,14 @@ async function overlaySourceWorkingTree(ctx: Ctx): Promise<number> {
   return changed;
 }
 
-/** The three merge drivers `build` registers (register-merge-drivers.ts). */
-async function registerMergeDrivers(repo: string): Promise<void> {
+/**
+ * The per-clone git config a real checkout gets before its first push: the
+ * three merge drivers `build` registers (register-merge-drivers.ts), and the
+ * repo's hooks (`core.hooksPath`), which mise's `setup` task and every `build`
+ * set — without them no commit carries its conversation trailer.
+ */
+async function configureCheckout(repo: string): Promise<void> {
+  await git(repo, "config", "--local", "core.hooksPath", ".githooks");
   for (const name of [
     "regen-generated",
     "regen-claudemd",
@@ -472,7 +498,7 @@ async function setUp(ctx: Ctx, pristine: boolean): Promise<void> {
   await git(ctx.tmp, "clone", "-q", ctx.upstream, ctx.clone);
   await git(ctx.clone, "config", "--local", "user.name", "clone");
   await git(ctx.clone, "config", "--local", "user.email", "clone@e2e.invalid");
-  await registerMergeDrivers(ctx.clone);
+  await configureCheckout(ctx.clone);
   await git(
     ctx.clone,
     "worktree",
@@ -519,6 +545,14 @@ export async function runMigrationJourney(
     cliSeq: 0,
   };
   mkdirSync(ctx.logDir, { recursive: true });
+  fixtureEnv = {
+    GIT_AUTHOR_NAME: "t",
+    GIT_AUTHOR_EMAIL: "t@t.t",
+    GIT_COMMITTER_NAME: "t",
+    GIT_COMMITTER_EMAIL: "t@t.t",
+    SINGULARITY_CONVERSATION_ID: `conv-e2e-cj-${id}`,
+    MISE_TRUSTED_CONFIG_PATHS: realpathSync(opts.tmp),
+  };
   const { check } = ctx;
   const trunk = await realTrunk(ctx.source);
   try {
