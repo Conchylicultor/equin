@@ -189,11 +189,7 @@ function PresentedFrame({
               </Stack>
             ) : null}
           </Scroll>
-          <Movable
-            at={{ pin: "top-left", offset: "md" }}
-            bounds={root}
-            {...chrome}
-          >
+          <Movable at={{ pin: "top", offset: "md" }} bounds={root} {...chrome}>
             <FrameTag
               frame={frame}
               index={index}

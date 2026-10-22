@@ -34,7 +34,7 @@ page laid out at the screen's own width. When the frame is bigger than the room
 Hovering shows the chrome (`PresentStage`), each piece on the canvas's
 floating glass (`<Surface level="float">`):
 
-- top-left, the frame's **tag**: the canvas frame header's own box
+- top-centre, the frame's **tag**: the canvas frame header's own box
   (`FrameShowsBox` — the options chip | the version stepper, or a source
   frame's name), floated, so the two can never drift apart; then "2 of 3 ‹ ›"
   when the canvas has more than one frame — ‹ › flip to the previous / next
@@ -113,7 +113,7 @@ The page mounts a one-frame canvas (`PrototypeDetailProvider` with
 `initialVersion` and `initialPicks`) and draws the same `PresentStage`, with
 page chrome of its own instead of the overlays' Exit:
 
-- **Exit** (an icon at the start of the tag's pill, top-left) goes back to the
+- **Exit** (an icon at the start of the tag's pill, top-centre) goes back to the
   prototype's canvas (`proto/<id>`) in the full app — a document load, since
   this document was opened chromeless and stays so (`embedMode` is read once);
 - the right edge's `+` / Compare each compute the canvas the action leads to
