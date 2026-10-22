@@ -13,7 +13,10 @@ import {
   asNamespace,
   namespaceUrl,
 } from "@plugins/infra/plugins/namespace/core";
-import { runtimeProfileSchema } from "../../shared/endpoints";
+import {
+  getRuntimeProfile,
+  runtimeProfileSchema,
+} from "../../shared/endpoints";
 
 // The filter enum is SPAN_KINDS + the "all" sentinel, derived from the single
 // source so a new kind never drifts out of the tool's filter (see SPAN_KINDS).
@@ -107,7 +110,10 @@ Default: profiles the current conversation's worktree server. Pass \`worktree\` 
     // the worktree's live backend (`w.active`). Reading this process's own
     // in-memory recorder would silently report a stale/orphaned process
     // generation after a hot-swap restart.
-    const url = namespaceUrl(worktreeName, "/api/debug/profiling/runtime");
+    const url = namespaceUrl(worktreeName, getRuntimeProfile.path);
+    // Not callEndpoint: a stale target's reply is backfilled BEFORE the schema
+    // parses it (backfillStaleProfile), which a decoded answer cannot express.
+    // eslint-disable-next-line endpoints/no-raw-endpoint-call -- backfills a stale backend's reply before the contract's schema parses it
     const res = await fetch(url);
     if (!res.ok) {
       throw new Error(

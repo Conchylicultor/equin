@@ -52,6 +52,22 @@ On central's first boot after upgrade, `migrateLegacyAuthTokens` decrypts `~/.si
 
 - Description: Encrypted key-value primitive. AES-256-GCM blob at ~/.singularity/state/secrets/secrets.json.enc with the master key in the OS keychain (fallback to the .key beside it). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.
 - Load-bearing: yes
+- Server:
+  - Uses: `infra/endpoints.callEndpoint`
+  - Exports (types):
+    - `SecretMetadata`
+    - `SecretRef`
+  - Exports (values):
+    - `deleteSecret`
+    - `getSecret`
+    - `getSecretMetadata`
+    - `hasSecret`
+    - `listKeysInNamespace`
+    - `ready`
+    - `SecretsError`
+    - `SecretsKeychainLockedError`
+    - `SecretsMainOfflineError`
+    - `setSecret`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`
   - Exports (types):
@@ -76,21 +92,6 @@ On central's first boot after upgrade, `migrateLegacyAuthTokens` decrypts `~/.si
     - `infra/claude-cli/accounts`
 - Exemptions:
   - Exempts itself from: `paths:no-hardcoded-paths` — `central/index.ts` (sanctioned)
-- Server:
-  - Exports (types):
-    - `SecretMetadata`
-    - `SecretRef`
-  - Exports (values):
-    - `deleteSecret`
-    - `getSecret`
-    - `getSecretMetadata`
-    - `hasSecret`
-    - `listKeysInNamespace`
-    - `ready`
-    - `SecretsError`
-    - `SecretsKeychainLockedError`
-    - `SecretsMainOfflineError`
-    - `setSecret`
 - Central:
   - Exports (types):
     - `SecretMetadata`

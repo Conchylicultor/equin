@@ -4,7 +4,8 @@ import { defineEndpoint } from "../../core/define-endpoint";
 import { unsupportedEndpointResponse } from "../../core/unsupported";
 import { endpointErrorSink, type EndpointErrorInfo } from "./error-reporter";
 import type { Transport } from "@plugins/primitives/plugins/networking/web";
-import { EndpointError, fetchEndpointOver } from "./fetch-endpoint";
+import { EndpointError } from "../../core";
+import { fetchEndpointOver } from "./fetch-endpoint";
 
 const ping = defineEndpoint({
   route: "POST /api/ping",

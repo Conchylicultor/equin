@@ -7,10 +7,8 @@ import {
   forkDatabase,
 } from "@plugins/database/plugins/admin/server";
 import type { ForkExclusions } from "@plugins/database/plugins/admin/server";
-import {
-  getForkExclusions,
-  forkExclusionsSchema,
-} from "@plugins/database/plugins/fork/core";
+import { getForkExclusions } from "@plugins/database/plugins/fork/core";
+import { callEndpoint } from "@plugins/infra/plugins/endpoints/server";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import {
   asNamespace,
@@ -46,16 +44,12 @@ async function fetchForkExclusions(worktree: string): Promise<ForkExclusions> {
   );
   const failures: string[] = [];
   for (const ns of candidates) {
-    const url = namespaceUrl(ns, getForkExclusions.path);
+    const origin = namespaceUrl(ns);
     try {
-      const response = await fetch(url);
-      if (response.ok) {
-        return forkExclusionsSchema.parse(await response.json());
-      }
-      failures.push(`${url} → ${response.status}`);
+      return await callEndpoint(getForkExclusions, {}, { origin });
     } catch (err) {
       failures.push(
-        `${url} → ${err instanceof Error ? err.message : String(err)}`,
+        `${origin} → ${err instanceof Error ? err.message : String(err)}`,
       );
     }
   }

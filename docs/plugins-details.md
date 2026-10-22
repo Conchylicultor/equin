@@ -10716,6 +10716,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `startConnectFlow`
       - `useAccountStatus`
       - `useAuthState`
+  - Server:
+    - Uses: `infra/endpoints.callEndpoint`
+    - Exports (types):
+      - `GetAccessTokenArgs`
+      - `TokenFailure`
+      - `TokenNeedsConsent`
+      - `TokenResponse`
+      - `TokenSuccess`
+    - Exports (values):
+      - `AuthCentralOfflineError`
+      - `getTokenFromCentral`
   - Central:
     - Uses:
       - `infra/background/timer.defineTimer`
@@ -10843,16 +10854,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Endpoint callers: `setup-wizard`
   - Exemptions:
     - Exempts itself from: `timer/no-unlisted-timer` — `central/internal/refresh-loop.ts` (sanctioned)
-  - Server:
-    - Exports (types):
-      - `GetAccessTokenArgs`
-      - `TokenFailure`
-      - `TokenNeedsConsent`
-      - `TokenResponse`
-      - `TokenSuccess`
-    - Exports (values):
-      - `AuthCentralOfflineError`
-      - `getTokenFromCentral`
   - Plugins:
     - **`apple-signing`** — Apple code-signing config registration (web). The Accounts provider row + setup wizard UI live in the setup-wizard sub-plugin. Apple code-signing credentials: config fields + certificate upload + Tauri release env provider.
       - Web:
@@ -19519,10 +19520,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-3xs`
           - `ui/tokens/type-scale --line-height-caption`
-        - Endpoint callers:
-          - `queue-health`
-          - `runtime`
-          - `sentinel`
+        - Endpoint callers: `sentinel`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/broadcasts-file.ts`, `server/internal/entries-served.ts`, `server/internal/handle-write.ts` (debt)
       - Shared:
@@ -20393,6 +20391,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database/live-state-snapshot.clearPersistedSnapshots`
               - `infra/boot-snapshot.assembleBootSnapshot`
               - `infra/boot-snapshot.preloadedKeys`
+              - `infra/endpoints.callEndpoint`
               - `infra/endpoints.implement`
               - `infra/host/host-admission.defineHostPool`
               - `infra/host/host-read-pool.heavyReadSlotCount`
@@ -26938,7 +26937,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `utcDay`
           - Cli:
             - Exports (values): `upgradeThisWorktree`
-    - **`endpoints`** — Typed endpoint contract primitive. useFetchEndpoint (a FetchEndpoint bound to the subtree's transport; fetchEndpointOver(t) for sanctioned page-level code), useEndpoint, and useEndpointMutation consume endpoint definitions on the client; useAssetSrc turns an AssetPath (a GET endpoint's asset) into what an element loads over the subtree's transport (the path, a blob URL, or unavailable). Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; fetchEndpoint/useEndpoint consume on the client.
+    - **`endpoints`** — Typed endpoint contract primitive. useFetchEndpoint (a FetchEndpoint bound to the subtree's transport; fetchEndpointOver(t) for sanctioned page-level code), useEndpoint, and useEndpointMutation consume endpoint definitions on the client; useAssetSrc turns an AssetPath (a GET endpoint's asset) into what an element loads over the subtree's transport (the path, a blob URL, or unavailable). Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; callEndpoint() calls one from off the page (a backend, the CLI) through its contract; useFetchEndpoint/useEndpoint consume on the client.
       - Web:
         - Uses:
           - `primitives/networking.fetchWithRetry`
@@ -26966,6 +26965,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useMachineAvailability`
       - Core:
         - Uses:
+          - `infra/request-origin.AGENT_WRITE_HEADER`
           - `infra/request-origin.originOf`
           - `infra/runtime-identity.isMain`
           - `infra/runtime-profiler.chargeWait`
@@ -26976,7 +26976,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AgentWrite`
           - `AssetPath`
           - `Codec`
+          - `EndpointAnswer`
           - `EndpointDef`
+          - `EndpointRequestOpts`
           - `ExtractParams`
           - `MachineAvailability`
           - `MachineEndpointDef`
@@ -26990,6 +26992,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `blob`
           - `dateString`
           - `defineEndpoint`
+          - `EndpointAgentWriteRefusedError`
+          - `EndpointError`
+          - `endpointRequest`
           - `extractMethod`
           - `extractPath`
           - `getRouteSlowThresholdMs`
@@ -27000,16 +27005,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isCodec`
           - `multipart`
           - `rawEndpointHandler`
+          - `readEndpointResponse`
           - `unavailableMessage`
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 219 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 220 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×55
           - `conversations` ×31
           - `page` ×20
+          - `infra` ×19
           - `debug` ×18
-          - `infra` ×18
           - `tasks` ×17
           - `primitives` ×16
           - `build` ×8
@@ -27050,6 +27056,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-graph` (0 debt)
       - Server:
         - Exports (values):
+          - `callEndpoint`
           - `HttpError`
           - `implement`
           - `rawEndpointHandler`
@@ -27656,18 +27663,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Routes:
           - `GET /api/health`
           - `GET /api/health/ready`
+      - Core:
+        - Uses: `infra/endpoints.defineEndpoint`
+        - Exports (types): `HealthResponse`
+        - Exports (values):
+          - `getHealth`
+          - `getHealthReady`
+          - `HealthResponseSchema`
       - Cross-plugin:
         - Imported by: `reports/crash`
-        - Endpoint callers: `launcher`
       - Exemptions:
         - Exempts itself from:
           - `networking/no-page-transport` — `web/internal/client.ts` (sanctioned)
           - `networking/no-page-transport` — `web/components/wedge-watchdog.tsx` (sanctioned)
-      - Shared:
-        - Exports (types): `HealthResponse`
-        - Exports (values):
-          - `getHealth`
-          - `HealthResponseSchema`
     - **`host`** — How much of the shared host machine may I take right now, and is the box still healthy? — the host-wide admission pools (host-admission), the heavy git/filesystem read budget declared through them (host-read-pool), the box's load snapshot (contention), and the 'the box is in trouble' latch plus the shed engine that rides it (duress).
       - Plugins:
         - **`contention`** — Cached, cluster-wide system-contention snapshot (OS load average + Postgres backend counts) stamped onto slow ops.
@@ -28457,6 +28465,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/pgbouncer.PGBOUNCER_SOCKET_DIR`
           - `database/pgbouncer.pgbouncerPidFileUnder`
           - `infra/asset-mirror.seedAssetMirrorCache`
+          - `infra/endpoints.callEndpoint`
           - `infra/paths.ReleaseIdentity`
           - `infra/paths.setReleaseIdentity`
           - `infra/paths.worktreesDir`
@@ -29206,6 +29215,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `HeaderSource`
             - Exports (values): `detectBotMitigation`
     - **`secrets`** — Encrypted key-value primitive. AES-256-GCM blob at ~/.singularity/state/secrets/secrets.json.enc with the master key in the OS keychain (fallback to the .key beside it). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.
+      - Server:
+        - Uses: `infra/endpoints.callEndpoint`
+        - Exports (types):
+          - `SecretMetadata`
+          - `SecretRef`
+        - Exports (values):
+          - `deleteSecret`
+          - `getSecret`
+          - `getSecretMetadata`
+          - `hasSecret`
+          - `listKeysInNamespace`
+          - `ready`
+          - `SecretsError`
+          - `SecretsKeychainLockedError`
+          - `SecretsMainOfflineError`
+          - `setSecret`
       - Core:
         - Uses: `infra/endpoints.defineEndpoint`
         - Exports (types):
@@ -29230,21 +29255,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/claude-cli/accounts`
       - Exemptions:
         - Exempts itself from: `paths:no-hardcoded-paths` — `central/index.ts` (sanctioned)
-      - Server:
-        - Exports (types):
-          - `SecretMetadata`
-          - `SecretRef`
-        - Exports (values):
-          - `deleteSecret`
-          - `getSecret`
-          - `getSecretMetadata`
-          - `hasSecret`
-          - `listKeysInNamespace`
-          - `ready`
-          - `SecretsError`
-          - `SecretsKeychainLockedError`
-          - `SecretsMainOfflineError`
-          - `setSecret`
       - Central:
         - Exports (types):
           - `SecretMetadata`

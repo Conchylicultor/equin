@@ -166,6 +166,17 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `startConnectFlow`
     - `useAccountStatus`
     - `useAuthState`
+- Server:
+  - Uses: `infra/endpoints.callEndpoint`
+  - Exports (types):
+    - `GetAccessTokenArgs`
+    - `TokenFailure`
+    - `TokenNeedsConsent`
+    - `TokenResponse`
+    - `TokenSuccess`
+  - Exports (values):
+    - `AuthCentralOfflineError`
+    - `getTokenFromCentral`
 - Central:
   - Uses:
     - `infra/background/timer.defineTimer`
@@ -293,16 +304,6 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
   - Endpoint callers: `setup-wizard`
 - Exemptions:
   - Exempts itself from: `timer/no-unlisted-timer` — `central/internal/refresh-loop.ts` (sanctioned)
-- Server:
-  - Exports (types):
-    - `GetAccessTokenArgs`
-    - `TokenFailure`
-    - `TokenNeedsConsent`
-    - `TokenResponse`
-    - `TokenSuccess`
-  - Exports (values):
-    - `AuthCentralOfflineError`
-    - `getTokenFromCentral`
 - Sub-plugins:
   - **`apple-signing`** [exempt] — Apple code-signing config registration (web). The Accounts provider row + setup wizard UI live in the setup-wizard sub-plugin. Apple code-signing credentials: config fields + certificate upload +…
     - Plugins:

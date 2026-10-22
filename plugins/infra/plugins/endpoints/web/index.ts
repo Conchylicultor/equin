@@ -3,10 +3,9 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 export {
   fetchEndpointOver,
   useFetchEndpoint,
-  EndpointError,
-  EndpointAgentWriteRefusedError,
   getEndpointErrorMessage,
 } from "./internal/fetch-endpoint";
+export { EndpointError, EndpointAgentWriteRefusedError } from "../core";
 export type { FetchEndpoint } from "./internal/fetch-endpoint";
 export { useEndpoint } from "./internal/use-endpoint";
 export { endpointQueryKey } from "./internal/query-key";

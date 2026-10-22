@@ -30,7 +30,6 @@ import { serverHealth } from "@plugins/apps/plugins/deploy/plugins/health/server
 import { deployServerIdKind } from "@plugins/apps/plugins/deploy/plugins/servers/core";
 import {
   DEFAULT_LOOPBACK_PORT,
-  DeploymentSchema,
   createDeployment,
   deriveInstall,
   listDeployments,
@@ -44,10 +43,8 @@ import {
 } from "@plugins/infra/plugins/ssh/server";
 import { isPlatformTag, type PlatformTag } from "@plugins/release/core";
 import { assertCompositionName } from "@plugins/plugin-meta/plugins/composition/core";
-import {
-  extractMethod,
-  extractPath,
-} from "@plugins/infra/plugins/endpoints/core";
+import { callEndpoint } from "@plugins/infra/plugins/endpoints/server";
+import { EndpointError } from "@plugins/infra/plugins/endpoints/core";
 
 // ── Budgets ───────────────────────────────────────────────────────────────────
 //
@@ -133,44 +130,26 @@ async function backendBase(): Promise<string> {
 }
 
 /**
- * Call one of the deployments endpoints on this namespace's backend.
- *
- * The method and path come off the endpoint definition rather than being
- * written here, so the CLI cannot drift from the contract it consumes. A
- * non-2xx carries the server's own message through verbatim — those messages
- * (unknown composition, duplicate deployment, port taken) are the validation
- * this transport exists to keep as the single writer.
+ * One request to this namespace's backend (`callEndpoint`, so the method, path,
+ * body and answer come off the contract). A non-2xx carries the server's own
+ * message through verbatim — those messages (unknown composition, duplicate
+ * deployment, port taken) are the validation this transport exists to keep as
+ * the single writer.
  */
-async function callEndpoint(
-  endpoint: { route: string },
-  body?: unknown,
-): Promise<unknown> {
-  const url = `${await backendBase()}${extractPath(endpoint.route)}`;
-  let res: Response;
+async function toBackend<T>(send: (origin: string) => Promise<T>): Promise<T> {
+  const origin = await backendBase();
   try {
-    res = await fetch(url, {
-      method: extractMethod(endpoint.route),
-      ...(body === undefined
-        ? {}
-        : {
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body),
-          }),
-    });
+    return await send(origin);
   } catch (err) {
-    if (!(err instanceof TypeError)) throw err;
-    return refuse(
-      `cannot reach ${url} — the "${await deployNamespace()}" backend is not serving. ` +
-        `Run \`./singularity build\` first; deploy reads its deployment records from it.`,
-    );
+    if (err instanceof TypeError) {
+      return refuse(
+        `cannot reach ${origin} — the "${await deployNamespace()}" backend is not serving. ` +
+          `Run \`./singularity build\` first; deploy reads its deployment records from it.`,
+      );
+    }
+    if (err instanceof EndpointError) return refuse(err.message);
+    throw err;
   }
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    return refuse(
-      `${extractMethod(endpoint.route)} ${url} → ${res.status}: ${text}`,
-    );
-  }
-  return await res.json();
 }
 
 /**
@@ -182,17 +161,21 @@ async function ensureDeployment(
   compositionId: string,
   serverId: string,
 ): Promise<Deployment> {
-  const existing = DeploymentSchema.array()
-    .parse(await callEndpoint(listDeployments))
-    .find((d) => d.compositionId === compositionId && d.serverId === serverId);
+  const existing = (
+    await toBackend((origin) => callEndpoint(listDeployments, {}, { origin }))
+  ).find((d) => d.compositionId === compositionId && d.serverId === serverId);
   if (existing) return existing;
 
   console.log(
     `  • no deployment for "${compositionId}" on this server — creating one ` +
       `(no hostnames, loopback port ${DEFAULT_LOOPBACK_PORT})`,
   );
-  return DeploymentSchema.parse(
-    await callEndpoint(createDeployment, { compositionId, serverId }),
+  return toBackend((origin) =>
+    callEndpoint(
+      createDeployment,
+      {},
+      { origin, body: { compositionId, serverId } },
+    ),
   );
 }
 

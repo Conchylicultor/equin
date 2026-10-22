@@ -1,3 +1,7 @@
+import {
+  endpointRequest,
+  readEndpointResponse,
+} from "@plugins/infra/plugins/endpoints/core";
 import { agentOriginHeaders } from "@plugins/infra/plugins/request-origin/core";
 import { revertAgentWrites } from "@plugins/infra/plugins/request-origin/plugins/agent-write-ledger/core";
 import { browserSessionSource } from "./protocol";
@@ -19,20 +23,25 @@ export async function revertSessionWrites(
   conversationId: string,
 ): Promise<void> {
   const source = browserSessionSource(conversationId);
-  const res = await fetch(`${origin}${revertAgentWrites.path}`, {
-    method: revertAgentWrites.method,
-    headers: {
-      ...agentOriginHeaders(source),
-      "content-type": "application/json",
+  // Built and read through the endpoint's contract; sent with a raw fetch
+  // because this module also runs in the agent-browser host, which cannot
+  // import `endpoints/server`'s callEndpoint (see exempt/).
+  const { path, init } = endpointRequest(
+    revertAgentWrites,
+    {},
+    {
+      headers: agentOriginHeaders(source),
+      body: { scope: "source", source },
+      signal: AbortSignal.timeout(REVERT_MS),
     },
-    body: JSON.stringify({ scope: "source", source }),
-    signal: AbortSignal.timeout(REVERT_MS),
-  });
-  if (!res.ok) {
-    throw new Error(
-      `[agent-browser] reverting ${source}'s writes on ${origin} failed: HTTP ${res.status} ${await res.text()}`,
-    );
-  }
+  );
+  const res = await fetch(`${origin}${path}`, init);
+  await readEndpointResponse(
+    revertAgentWrites,
+    res,
+    (status, rawBody) =>
+      `[agent-browser] reverting ${source}'s writes on ${origin} failed: HTTP ${status} ${rawBody ?? ""}`,
+  );
 }
 
 /**

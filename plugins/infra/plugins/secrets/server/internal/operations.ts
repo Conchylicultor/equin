@@ -1,100 +1,106 @@
+import { callEndpoint } from "@plugins/infra/plugins/endpoints/server";
+import { EndpointError } from "@plugins/infra/plugins/endpoints/core";
 import type {
   SecretMetadata,
   SecretRef,
 } from "@plugins/infra/plugins/secrets/core";
-import { SecretsMainOfflineError } from "@plugins/infra/plugins/secrets/core";
+import {
+  secretsDelete,
+  secretsGet,
+  secretsHas,
+  secretsList,
+  secretsMeta,
+  secretsSet,
+  SecretsMainOfflineError,
+} from "@plugins/infra/plugins/secrets/core";
 
-const GATEWAY_BASE = "http://localhost:9000";
+/** Central's routes are served by the gateway on every host name. */
+const CENTRAL_ORIGIN = "http://localhost:9000";
 const RETRY_DELAY_MS = 250;
 
-interface GetResponse {
-  value: string | null;
-}
-interface HasResponse {
-  has: boolean;
-}
-interface ListResponse {
-  keys: string[];
-}
-
-/** POST to central's secrets API; the response once it is a 2xx. */
-async function post(path: string, body: unknown): Promise<Response> {
-  const url = `${GATEWAY_BASE}${path}`;
-  const init: RequestInit = {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  };
-  let res: Response;
+/**
+ * Send one request to central's secrets API; central being unreachable — no
+ * answer twice, a gateway 502/503/504, or the gateway's own 404 before the
+ * central-routes manifest has loaded — is `SecretsMainOfflineError`.
+ */
+async function toCentral<T>(send: () => Promise<T>): Promise<T> {
   try {
-    res = await fetch(url, init);
-  } catch (err) {
-    if (!(err instanceof TypeError)) throw err;
-    // One retry, then surface as offline. Mirrors the previous unix-socket
-    // client's behavior — "central is unreachable" is the failure mode that
-    // matters; transient blips collapse into one retry.
-    await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
     try {
-      res = await fetch(url, init);
-    } catch (retryErr) {
-      if (!(retryErr instanceof TypeError)) throw retryErr;
+      return await send();
+    } catch (err) {
+      if (!(err instanceof TypeError)) throw err;
+      // One retry, then surface as offline — "central is unreachable" is the
+      // failure mode that matters; transient blips collapse into one retry.
+      await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+      return await send();
+    }
+  } catch (err) {
+    if (err instanceof TypeError) throw new SecretsMainOfflineError();
+    if (err instanceof EndpointError && isCentralOffline(err)) {
       throw new SecretsMainOfflineError();
     }
+    throw err;
   }
-  if (res.status === 502 || res.status === 503 || res.status === 504) {
-    throw new SecretsMainOfflineError();
-  }
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    // Gateway returns this exact text when the central-routes manifest hasn't
-    // loaded yet — treat as offline so callers can degrade gracefully.
-    if (res.status === 404 && text.includes("Singularity gateway")) {
-      throw new SecretsMainOfflineError();
-    }
-    throw new Error(`secrets api ${path}: ${res.status} ${text}`);
-  }
-  return res;
 }
 
-/** A read: central answers with a JSON body. */
-async function postJson<T>(path: string, body: unknown): Promise<T> {
-  return (await (await post(path, body)).json()) as T;
-}
-
-/** A write: central answers 204 (its handler returns nothing), no body. */
-async function postVoid(path: string, body: unknown): Promise<void> {
-  const res = await post(path, body);
-  if (res.status !== 204)
-    throw new Error(`secrets api ${path}: expected 204, got ${res.status}`);
+function isCentralOffline(err: EndpointError): boolean {
+  if (err.status === 502 || err.status === 503 || err.status === 504) {
+    return true;
+  }
+  // The gateway answers this exact text while the central-routes manifest
+  // hasn't loaded yet.
+  return (
+    err.status === 404 &&
+    typeof err.body === "string" &&
+    err.body.includes("Singularity gateway")
+  );
 }
 
 export async function getSecret(ref: SecretRef): Promise<string | undefined> {
-  const { value } = await postJson<GetResponse>("/api/secrets/get", ref);
+  const { value } = await toCentral(() =>
+    callEndpoint(secretsGet, {}, { origin: CENTRAL_ORIGIN, body: ref }),
+  );
   return value ?? undefined;
 }
 
 export async function setSecret(ref: SecretRef, value: string): Promise<void> {
-  await postVoid("/api/secrets/set", { ...ref, value });
+  await toCentral(() =>
+    callEndpoint(
+      secretsSet,
+      {},
+      { origin: CENTRAL_ORIGIN, body: { ...ref, value } },
+    ),
+  );
 }
 
 export async function deleteSecret(ref: SecretRef): Promise<void> {
-  await postVoid("/api/secrets/delete", ref);
+  await toCentral(() =>
+    callEndpoint(secretsDelete, {}, { origin: CENTRAL_ORIGIN, body: ref }),
+  );
 }
 
 export async function hasSecret(ref: SecretRef): Promise<boolean> {
-  const { has } = await postJson<HasResponse>("/api/secrets/has", ref);
+  const { has } = await toCentral(() =>
+    callEndpoint(secretsHas, {}, { origin: CENTRAL_ORIGIN, body: ref }),
+  );
   return has;
 }
 
 export async function getSecretMetadata(
   ref: SecretRef,
 ): Promise<SecretMetadata> {
-  return postJson<SecretMetadata>("/api/secrets/meta", ref);
+  return toCentral(() =>
+    callEndpoint(secretsMeta, {}, { origin: CENTRAL_ORIGIN, body: ref }),
+  );
 }
 
 export async function listKeysInNamespace(namespace: string): Promise<string[]> {
-  const { keys } = await postJson<ListResponse>("/api/secrets/list", {
-    namespace,
-  });
+  const { keys } = await toCentral(() =>
+    callEndpoint(
+      secretsList,
+      {},
+      { origin: CENTRAL_ORIGIN, body: { namespace } },
+    ),
+  );
   return keys;
 }

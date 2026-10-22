@@ -50,6 +50,10 @@ async function fetchFlightWindow(name: Namespace): Promise<FleetFlightCell> {
     const res = await fetch(
       namespaceUrl(
         name,
+        // Not callEndpoint: the fan-out reads every backend, on whatever code
+        // it runs, so only `wallAnchor` is checked (see FleetFlightCellSchema)
+        // — the contract's full schema would fail a mixed generation.
+        // eslint-disable-next-line endpoints/no-raw-endpoint-call -- tolerates backends on older/newer profiler code
         `/api/debug/profiling/flight-window?windowMs=${FLIGHT_WINDOW_MS}`,
       ),
       { signal: AbortSignal.timeout(PER_BACKEND_TIMEOUT_MS) },

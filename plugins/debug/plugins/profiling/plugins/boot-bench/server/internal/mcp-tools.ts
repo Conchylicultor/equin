@@ -1,13 +1,9 @@
 import { z } from "zod";
 import { basename } from "path";
-import { extractPath } from "@plugins/infra/plugins/endpoints/core";
+import { callEndpoint } from "@plugins/infra/plugins/endpoints/server";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
-import {
-  bootBenchRun,
-  bootBenchRunResponseSchema,
-  type BootBenchRunBody,
-} from "../../shared/endpoints";
+import { bootBenchRun, type BootBenchRunBody } from "../../shared/endpoints";
 import {
   asNamespace,
   namespaceUrl,
@@ -116,18 +112,11 @@ Default: benchmarks the current conversation's worktree server. Pass \`worktree\
       attemptId,
       loadConcurrency,
     };
-    const url = namespaceUrl(worktreeName, extractPath(bootBenchRun.route));
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(reqBody),
-    });
-    if (!res.ok) {
-      throw new Error(
-        `boot-bench run failed (${res.status}) for worktree "${worktreeName}"`,
-      );
-    }
-    const response = bootBenchRunResponseSchema.parse(await res.json());
+    const response = await callEndpoint(
+      bootBenchRun,
+      {},
+      { origin: namespaceUrl(worktreeName), body: reqBody },
+    );
     const report = buildReport(response);
 
     return {

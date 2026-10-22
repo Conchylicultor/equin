@@ -56,6 +56,7 @@ function renderDescription(row: ReportRow): string {
     `2. Compare the epochs in this report: body \`${data.bodyEpoch ?? "null"}\`, entry \`${data.entryEpoch ?? "null"}\`, server \`${data.serverEpoch ?? "null"}\`. If the body epoch equals neither entry nor server, the guard's "no arbiter" branch should have *adopted* it — a drop here would be a guard-matrix bug.`,
   );
   lines.push(
+    // eslint-disable-next-line endpoints/no-raw-endpoint-call -- a curl line in the task prompt, never fetched here
     `3. Verify the endpoint forbids shared/browser caching: \`curl -is '${namespaceUrl(asNamespace(row.worktree), `/api/resources/${data.key}`)}?...'\` must show \`Cache-Control: no-store\` on both the 200 and any 304. A missing header lets the browser HTTP cache replay an old-boot body revalidated via a restart-stable ETag — the original poisoning bug.`,
   );
   lines.push(

@@ -1,7 +1,9 @@
 import { fetchEndpointOver } from "@plugins/infra/plugins/endpoints/web";
 import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";
-import type { HealthResponse } from "../../shared/protocol";
-import { getHealth as getHealthEndpoint } from "../../shared/endpoints";
+import {
+  getHealth as getHealthEndpoint,
+  type HealthResponse,
+} from "../../core";
 
 // Page-level health: probes the page's own server.
 const fetchEndpoint = fetchEndpointOver(pageTransport);

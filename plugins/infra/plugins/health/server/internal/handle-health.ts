@@ -1,7 +1,7 @@
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { releaseIdentity } from "@plugins/infra/plugins/paths/core";
-import { getHealth } from "../../shared/endpoints";
-import type { HealthResponse } from "../../shared/protocol";
+import { getHealth } from "../../core/endpoints";
+import type { HealthResponse } from "../../core/protocol";
 
 const startedAt = Date.now();
 // Which build this process IS — a property of the process, exactly like

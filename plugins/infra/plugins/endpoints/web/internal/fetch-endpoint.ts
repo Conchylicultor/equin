@@ -6,38 +6,20 @@ import {
   type Transport,
 } from "@plugins/primitives/plugins/networking/web";
 import type {
+  EndpointAnswer,
   EndpointDef,
+  EndpointRequestOpts,
   MachineEndpointDef,
   MachineResult,
 } from "../../core";
 import {
-  extractMethod,
-  interpolatePath,
-  isAgentWriteRefusal,
+  EndpointAgentWriteRefusedError,
+  EndpointError,
+  endpointRequest,
+  readEndpointResponse,
   unavailableMessage,
 } from "../../core";
-import { AGENT_WRITE_HEADER } from "@plugins/infra/plugins/request-origin/core";
 import { endpointErrorSink } from "./error-reporter";
-
-export class EndpointError extends Error {
-  constructor(
-    public readonly status: number,
-    public readonly body: unknown,
-  ) {
-    super(`HTTP ${status}`);
-  }
-}
-
-/**
- * Main refused the write because the request came from an agent session
- * (`agentWrite` in `endpoints/core` — main is read-only for agents). Not a bug
- * of the endpoint, nor of the caller: the message tells the agent to reproduce
- * on its own build. Nothing files it — `fetchEndpoint` skips
- * `endpointErrorSink`, the crash collector skips it as an unhandled rejection,
- * and an optimistic write's rejection is toasted but not reported — so an agent
- * clicking around main cannot raise a report storm.
- */
-export class EndpointAgentWriteRefusedError extends EndpointError {}
 
 export function getEndpointErrorMessage(error: unknown): string {
   if (error instanceof EndpointError) {
@@ -60,10 +42,7 @@ export function getEndpointErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-export type FetchOpts<TBody, TQuery> = {
-  signal?: AbortSignal;
-  /** RequestInit passthrough; lets a beacon survive page unload. */
-  keepalive?: boolean;
+export type FetchOpts<TBody, TQuery> = EndpointRequestOpts<TBody, TQuery> & {
   /** Default true. `false` skips endpointErrorSink.emit (e.g. the crash beacon). */
   report?: boolean;
   /**
@@ -75,15 +54,9 @@ export type FetchOpts<TBody, TQuery> = {
    * one the server dedupes) should ask for it.
    */
   retry?: FetchWithRetryOptions;
-  // `[T] extends [void]` (tuple-wrapped) keeps the conditional non-distributive
-  // so a union body type (e.g. a discriminated `BlockOp`) stays one `body: TBody`
-  // requirement instead of distributing into `{body: A} | {body: B} | …`, which
-  // would reject the whole-union value.
-} & ([TBody] extends [void] ? { body?: never } : { body: TBody }) &
-  ([TQuery] extends [void] ? { query?: never } : { query: TQuery });
+};
 
-/** What a request to an endpoint answers: its decoded response, `void` for none. */
-type Answer<TResponse> = TResponse extends void ? void : TResponse;
+type Answer<TResponse> = EndpointAnswer<TResponse>;
 
 /**
  * The typed endpoint client, bound to ONE transport — there is no
@@ -155,92 +128,33 @@ async function request<Route extends string, TParams, TBody, TResponse, TQuery>(
   params: TParams,
   opts?: FetchOpts<TBody, TQuery>,
 ): Promise<Answer<TResponse>> {
-  const method = extractMethod(endpoint.route);
-  let url = interpolatePath(
-    endpoint.path,
-    (params ?? {}) as Record<string, string>,
-  );
-
-  // Append query params
-  if (opts && "query" in opts && opts.query != null) {
-    const searchParams = new URLSearchParams();
-    for (const [key, value] of Object.entries(
-      opts.query as Record<string, unknown>,
-    )) {
-      if (value !== undefined && value !== null) {
-        searchParams.set(key, String(value));
-      }
-    }
-    const qs = searchParams.toString();
-    if (qs) url += `?${qs}`;
-  }
-
-  const headers: Record<string, string> = {};
-  // Advisory only (the server reads the endpoint's declaration): tells the
-  // agent browser's write drain this write need not be waited for.
-  if (endpoint.agentWrite !== undefined) {
-    headers[AGENT_WRITE_HEADER] = endpoint.agentWrite;
-  }
-  // Content-type comes only from the codec — no application/json fallback, so
-  // multipart stays header-less (the browser sets the boundary).
-  let body: BodyInit | undefined;
-  if (endpoint.bodyCodec && opts && "body" in opts && opts.body !== undefined) {
-    const enc = endpoint.bodyCodec.encodeRequest(opts.body);
-    body = enc.body;
-    if (enc.contentType) headers["Content-Type"] = enc.contentType;
-  }
-
-  const init: RequestInit = {
-    method,
-    headers,
-    body,
-    signal: opts?.signal,
-    keepalive: opts?.keepalive,
-  };
+  const { path, init } = endpointRequest(endpoint, params, opts);
   const res = opts?.retry
-    ? await fetchWithRetry(url, init, { ...opts.retry, fetch: transport.fetch })
-    : await transport.fetch(url, init);
+    ? await fetchWithRetry(path, init, {
+        ...opts.retry,
+        fetch: transport.fetch,
+      })
+    : await transport.fetch(path, init);
 
-  if (!res.ok) {
-    // Read the body ONCE, as text, then upgrade to JSON if it parses.
-    //
-    // The reverse order silently destroys plain-text errors: `res.json()`
-    // disturbs the body, so the `res.text()` in its catch throws "Body already
-    // used" and yields null. Every `HttpError(400, "…")` in the repo — which
-    // serializes as plain text — therefore arrived here as a null body and was
-    // rendered as the useless "HTTP 400".
-    const rawBody = await res.text().catch(() => null);
-    let errorBody: unknown = rawBody;
-    if (rawBody) {
-      try {
-        errorBody = JSON.parse(rawBody);
-      } catch (err) {
-        if (!(err instanceof SyntaxError)) throw err;
-        // Not JSON — keep the text, which is exactly what HttpError sends.
-      }
-    }
-    if (isAgentWriteRefusal(res.status, errorBody)) {
-      throw new EndpointAgentWriteRefusedError(res.status, errorBody);
-    }
+  try {
+    return await readEndpointResponse(endpoint, res);
+  } catch (err) {
     // Reported only where the subtree's telemetry is (`transport.telemetry`):
     // a scope set to drop it raises nothing for the page's server to file.
-    if (opts?.report !== false && transport.telemetry) {
+    if (
+      err instanceof EndpointError &&
+      !(err instanceof EndpointAgentWriteRefusedError) &&
+      opts?.report !== false &&
+      transport.telemetry
+    ) {
       endpointErrorSink.emit({
         route: endpoint.route,
-        status: res.status,
-        body: errorBody,
+        status: err.status,
+        body: err.body,
       });
     }
-    throw new EndpointError(res.status, errorBody);
+    throw err;
   }
-
-  // void response (204 or no response codec)
-  if (res.status === 204 || !endpoint.responseCodec) {
-    return undefined as Answer<TResponse>;
-  }
-
-  const parsed = await endpoint.responseCodec.decodeResponse(res);
-  return parsed as Answer<TResponse>;
 }
 
 /**

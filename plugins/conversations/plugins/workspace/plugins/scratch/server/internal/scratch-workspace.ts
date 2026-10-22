@@ -56,6 +56,7 @@ export function createScratchWorkspace(deps: {
 
     launch({ spec }, { conversationId }) {
       return scratchLaunchFragment({
+        // eslint-disable-next-line endpoints/no-raw-endpoint-call -- handed to the Claude CLI as its MCP server URL, never fetched here
         mcpUrl: namespaceUrl(runtimeNamespace(), `/api/mcp/${conversationId}`),
         permissions: ScratchProfile.get(spec.profile).permissions,
       });

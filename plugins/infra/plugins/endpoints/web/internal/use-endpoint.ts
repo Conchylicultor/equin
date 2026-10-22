@@ -8,7 +8,8 @@ import type {
   MachineEndpointDef,
   MachineResult,
 } from "../../core";
-import { useFetchEndpoint, EndpointError } from "./fetch-endpoint";
+import { EndpointError } from "../../core";
+import { useFetchEndpoint } from "./fetch-endpoint";
 import { endpointQueryKey } from "./query-key";
 
 /**

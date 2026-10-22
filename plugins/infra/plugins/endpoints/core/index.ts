@@ -12,6 +12,12 @@ export type {
 export type { ExtractParams } from "./route-params";
 export { extractMethod, extractPath, interpolatePath } from "./route-params";
 export { implement, rawEndpointHandler, HttpError } from "./implement";
+export { endpointRequest, readEndpointResponse } from "./request";
+export type { EndpointAnswer, EndpointRequestOpts } from "./request";
+export {
+  EndpointError,
+  EndpointAgentWriteRefusedError,
+} from "./endpoint-error";
 export type { AgentWrite } from "./agent-write";
 export { agentWriteRefusedMessage, isAgentWriteRefusal } from "./agent-write";
 export { getRouteSlowThresholdMs } from "./slow-threshold";

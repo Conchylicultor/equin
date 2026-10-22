@@ -39,6 +39,7 @@ export type ExemptableRuleId =
   | "e2e-harness/no-networkidle"
   | "element-type-safety/no-post-mount-element-type"
   | "endpoints/fetch-endpoint-binding-name"
+  | "endpoints/no-raw-endpoint-call"
   | "endpoints/no-raw-web-fetch"
   | "endpoints/no-void-fetch-endpoint"
   | "endpoints:no-raw-json-handlers"

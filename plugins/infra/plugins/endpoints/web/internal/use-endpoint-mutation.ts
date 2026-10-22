@@ -11,7 +11,8 @@ import type {
   MachineUnavailable,
 } from "../../core";
 import { unavailableMessage } from "../../core";
-import { EndpointError, useFetchEndpoint } from "./fetch-endpoint";
+import { EndpointError } from "../../core";
+import { useFetchEndpoint } from "./fetch-endpoint";
 
 // Global mutation meta type — available on any useMutation/useEndpointMutation call.
 // suppressError: true  → silence the global auto-toast (handle locally instead).

@@ -14,7 +14,8 @@ import {
   TOTAL_JOB_SLOTS,
   reachableSlots,
 } from "@plugins/infra/plugins/jobs/server";
-import { QueueHealthSummarySchema } from "../../core";
+import { callEndpoint } from "@plugins/infra/plugins/endpoints/server";
+import { queueHealthSummaryEndpoint } from "../../core";
 
 // The ladder, rendered from the jobs class table rather than restated in prose.
 // The description is what an agent reads to know WHICH QUESTION TO ASK about a
@@ -101,14 +102,11 @@ Default: reads the current conversation's own worktree. Pass \`worktree\` to tar
     // Always read through the gateway, which only ever proxies to the worktree's
     // live backend — reading this process's own DB would report the calling
     // worktree, not the requested target.
-    const url = namespaceUrl(worktreeName, "/api/debug/queue-health/summary");
-    const res = await fetch(url);
-    if (!res.ok) {
-      throw new Error(
-        `queue-health summary fetch failed (${res.status}) for worktree "${worktreeName}"`,
-      );
-    }
-    const summary = QueueHealthSummarySchema.parse(await res.json());
+    const summary = await callEndpoint(
+      queueHealthSummaryEndpoint,
+      {},
+      { origin: namespaceUrl(worktreeName) },
+    );
 
     return {
       content: [

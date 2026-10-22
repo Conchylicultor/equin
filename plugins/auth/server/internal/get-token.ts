@@ -2,8 +2,12 @@ import type {
   GetAccessTokenArgs,
   TokenResponse,
 } from "@plugins/auth/core";
+import { getToken } from "@plugins/auth/core";
+import { callEndpoint } from "@plugins/infra/plugins/endpoints/server";
+import { EndpointError } from "@plugins/infra/plugins/endpoints/core";
 
-const GATEWAY_BASE = "http://localhost:9000";
+/** Central's routes are served by the gateway on every host name. */
+const CENTRAL_ORIGIN = "http://localhost:9000";
 const RETRY_DELAY_MS = 250;
 
 export class AuthCentralOfflineError extends Error {
@@ -16,31 +20,24 @@ export class AuthCentralOfflineError extends Error {
 export async function getTokenFromCentral(
   args: GetAccessTokenArgs,
 ): Promise<TokenResponse> {
-  const url = `${GATEWAY_BASE}/api/auth/token`;
-  const init: RequestInit = {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(args),
-  };
-  let res: Response;
+  const send = () =>
+    callEndpoint(getToken, {}, { origin: CENTRAL_ORIGIN, body: args });
   try {
-    res = await fetch(url, init);
-  } catch (err) {
-    if (!(err instanceof TypeError)) throw err;
-    await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
     try {
-      res = await fetch(url, init);
-    } catch (retryErr) {
-      if (!(retryErr instanceof TypeError)) throw retryErr;
+      return await send();
+    } catch (err) {
+      if (!(err instanceof TypeError)) throw err;
+      await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+      return await send();
+    }
+  } catch (err) {
+    if (err instanceof TypeError) throw new AuthCentralOfflineError();
+    if (
+      err instanceof EndpointError &&
+      (err.status === 502 || err.status === 503 || err.status === 504)
+    ) {
       throw new AuthCentralOfflineError();
     }
+    throw err;
   }
-  if (res.status === 502 || res.status === 503 || res.status === 504) {
-    throw new AuthCentralOfflineError();
-  }
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`auth token bridge: ${res.status} ${text}`);
-  }
-  return (await res.json()) as TokenResponse;
 }

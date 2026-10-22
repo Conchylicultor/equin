@@ -25,6 +25,8 @@ import {
 import { seedAssetMirrorCache } from "@plugins/infra/plugins/asset-mirror/server";
 import { propagateOriginLayer } from "./config-propagate";
 import { retryUntil, exponential } from "@plugins/packages/plugins/retry/core";
+import { callEndpoint } from "@plugins/infra/plugins/endpoints/server";
+import { getHealthReady } from "@plugins/infra/plugins/health/core";
 // Canonical embedded-cluster constants — the single source of truth for where
 // PG/PgBouncer listen. Importing them (rather than re-deriving the paths here)
 // keeps database.json's connection host in lockstep with where the embedded
@@ -739,15 +741,17 @@ const HEALTH_READY_TIMEOUT_MS = 120_000;
  */
 async function awaitAppReady(name: Namespace, port: number): Promise<void> {
   // A packaged app listens on its own port, not the dev gateway's.
-  const url = namespaceUrl(name, "/api/health/ready", port);
+  const origin = namespaceUrl(name, "", port);
   let lastErr: unknown = null;
   await retryUntil(
     async () => {
       try {
-        const resp = await fetch(url, { signal: AbortSignal.timeout(2000) });
-        if (resp.ok) return true;
-        lastErr = new Error(`health/ready returned ${resp.status}`);
-        return null;
+        await callEndpoint(
+          getHealthReady,
+          {},
+          { origin, signal: AbortSignal.timeout(2000) },
+        );
+        return true;
         // eslint-disable-next-line promise-safety/no-absorbed-failure -- retryUntil probe: null signals "not ready yet, retry" (lastErr captured for the deadline); a genuine failure surfaces when the retry deadline elapses
       } catch (err) {
         lastErr = err;
@@ -759,7 +763,7 @@ async function awaitAppReady(name: Namespace, port: number): Promise<void> {
       deadline: HEALTH_READY_TIMEOUT_MS,
       onDeadline: () => {
         throw new Error(
-          `App "${name}" did not become ready at ${url} within ${HEALTH_READY_TIMEOUT_MS}ms`,
+          `App "${name}" did not become ready at ${origin} within ${HEALTH_READY_TIMEOUT_MS}ms`,
           { cause: lastErr },
         );
       },

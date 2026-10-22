@@ -1,6 +1,10 @@
 import os from "node:os";
 import { join, resolve } from "node:path";
+import { z } from "zod";
 import { fixed, retryUntil } from "@plugins/packages/plugins/retry/core";
+import { callEndpoint } from "@plugins/infra/plugins/endpoints/server";
+import { EndpointError } from "@plugins/infra/plugins/endpoints/core";
+import { getHealth } from "@plugins/infra/plugins/health/core";
 import { propagateConfigToUser } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { ensureDatabase } from "@plugins/database/plugins/admin/server";
 import {
@@ -142,14 +146,23 @@ async function getWorktreeState(
  */
 async function readHealthStartedAt(name: Namespace): Promise<number | null> {
   try {
-    const resp = await fetch(namespaceUrl(name, "/api/health"), {
-      signal: AbortSignal.timeout(5_000),
-    });
-    if (!resp.ok) return null;
-    const body = (await resp.json()) as { startedAt?: unknown };
-    return typeof body.startedAt === "number" ? body.startedAt : null;
+    const { startedAt } = await callEndpoint(
+      getHealth,
+      {},
+      { origin: namespaceUrl(name), signal: AbortSignal.timeout(5_000) },
+    );
+    return startedAt;
   } catch (err) {
-    if (!(err instanceof TypeError) && !(err instanceof DOMException))
+    // Unreachable (TypeError), timed out (DOMException), not serving (a
+    // non-2xx), or a previous backend whose reply predates this checkout's
+    // contract (ZodError) — none names a served startedAt. Anything else is
+    // unexpected — rethrow.
+    if (
+      !(err instanceof TypeError) &&
+      !(err instanceof DOMException) &&
+      !(err instanceof EndpointError) &&
+      !(err instanceof z.ZodError)
+    )
       throw err;
     return null;
   }
@@ -185,40 +198,36 @@ async function probeHealth(
   console.log(
     `Probing /api/health... (deadline ${Math.round(deadline / 1000)}s)`,
   );
-  const url = namespaceUrl(name, "/api/health");
   const site = namespaceUrl(name);
   let lastStatus: number | string = "no response";
   const result = await retryUntil<true, Promise<HealthOutcome>>(
     async () => {
       try {
-        const resp = await fetch(url, { signal: AbortSignal.timeout(5_000) });
-        if (resp.ok) {
-          // Cold start: any healthy backend is the one we just built.
-          if (!isRestart) return true;
-          // Hot restart: the gateway swaps `w.active` to the new backend only
-          // after it passes `waitReady`, so a served `startedAt` past the old
-          // one proves the new backend is live AND ready. Without this a failed
-          // hot-restart leaves the old backend answering ok and the build
-          // falsely passes.
-          // Block form: the declaration below exceeds the print width, so the
-          // format pass splits it and a positional directive would land on the
-          // fragment instead of the statement. A PAIR is a line range.
-          /* eslint-disable promise-safety/no-absorbed-failure -- health-probe body read; null means "no/unparseable startedAt", handled below as "stale backend, keep polling" — not a data result the caller trusts */
-          const body = (await resp.json().catch(() => null)) as {
-            startedAt?: unknown;
-          } | null;
-          /* eslint-enable promise-safety/no-absorbed-failure */
-          const startedAt =
-            typeof body?.startedAt === "number" ? body.startedAt : null;
-          if (startedAt != null && startedAt > previousStartedAt) return true;
-          lastStatus = `stale backend (startedAt ${startedAt} <= ${previousStartedAt})`;
-          return null;
-        }
-        lastStatus = resp.status;
+        const { startedAt } = await callEndpoint(
+          getHealth,
+          {},
+          { origin: site, signal: AbortSignal.timeout(5_000) },
+        );
+        // Cold start: any healthy backend is the one we just built.
+        if (!isRestart) return true;
+        // Hot restart: the gateway swaps `w.active` to the new backend only
+        // after it passes `waitReady`, so a served `startedAt` past the old
+        // one proves the new backend is live AND ready. Without this a failed
+        // hot-restart leaves the old backend answering ok and the build
+        // falsely passes.
+        if (startedAt > previousStartedAt) return true;
+        lastStatus = `stale backend (startedAt ${startedAt} <= ${previousStartedAt})`;
+        return null;
       } catch (err) {
-        // A per-attempt abort (DOMException) is just a slow request — record it
-        // and let retryUntil try again like any other failed attempt.
-        lastStatus = err instanceof Error ? err.message : String(err);
+        // A non-2xx, a per-attempt abort (DOMException — just a slow request)
+        // or a reply the contract rejects (a stale backend) — record it and let
+        // retryUntil try again like any other failed attempt.
+        lastStatus =
+          err instanceof EndpointError
+            ? err.status
+            : err instanceof Error
+              ? err.message
+              : String(err);
       }
       return null;
     },
