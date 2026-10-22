@@ -37,4 +37,11 @@ export default [
     task: "task-1792338443-riwqev",
     reason: "not yet split into server/ + machine/",
   },
+  {
+    rule: "marker-scan-safety/no-adhoc-marker-scan",
+    paths: ["core/browser-host-coverage.ts"],
+    kind: "sanctioned",
+    reason:
+      "Token-in-string: the browser-host coverage guard finds a raw `/api/<prefix>` URL a scoped page builds by hand, which lives inside a string literal (passed to fetch, or an element's src) with no enclosing marker call — a full mask would erase it. Comments are still masked, and only a literal STARTING with `/api/` counts, so a route string or prose naming one is no URL.",
+  },
 ] satisfies Exemptions;

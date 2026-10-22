@@ -9,4 +9,5 @@ export const dropDependents = defineEndpoint({
     z.object({ kind: z.literal("dropped"), count: z.number() }),
     z.object({ kind: z.literal("kept"), reason: z.literal("active-sibling") }),
   ]),
+  needsMachine: { feature: "Closing an agent's conversation" },
 });

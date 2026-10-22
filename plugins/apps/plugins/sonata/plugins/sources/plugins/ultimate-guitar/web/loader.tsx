@@ -27,7 +27,7 @@ import {
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { growClass } from "@plugins/primitives/plugins/css/plugins/grow/web";
 import { SourceLine } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/source-line/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   parseUgTab,
   UgParseError,
@@ -54,6 +54,7 @@ function asUgTab(raw: unknown): UgTab | null {
 }
 
 export function UltimateGuitarLoader({ raw, onRaw }: Props) {
+  const fetchEndpoint = useFetchEndpoint();
   const loaded = asUgTab(raw);
   // The URL box is local working state; pre-fill it with the loaded tab's URL so
   // editing/reloading is easy. The fetched `UgTab` is the persisted `raw`.

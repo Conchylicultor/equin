@@ -10,6 +10,7 @@ export type {
   ResolvedRenderer,
 } from "./slots";
 export { FileView } from "./components/file-view";
+export { UnloadedFile } from "./components/unloaded-file";
 export { FileContent } from "./components/file-content";
 export { FileTabs } from "./components/file-tabs";
 export {

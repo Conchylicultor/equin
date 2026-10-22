@@ -142,7 +142,7 @@ curl -s 'http://<wt>.localhost:9000/api/debug/timeline?fromMs=…&toMs=…'
 - Description: Timeline tab for the Slow Events pane: the unified cross-worktree wall-clock Gantt — per-worktree lanes of traces / slow-ops / reports / builds / boots with health heat strips and cross-worktree incident bands, streamed pull-only from the timeline endpoint. Cross-worktree unified timeline endpoint: fans out over every live worktree DB fork (traces, slow-op samples, reports, builds) plus the per-worktree disk logs (boot events, health series), normalizes everything to wall-clock TimelineEvents, and streams them as NDJSON — pull-only, never live or polled.
 - Web:
   - Contributes: `SlowEvents.View` "Timeline" → `TimelineView`
-  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug/profiling` ×7
     - `debug/trace/pane` ×5
     - `primitives/css/coords` ×2
@@ -165,6 +165,7 @@ curl -s 'http://<wt>.localhost:9000/api/debug/timeline?fromMs=…&toMs=…'
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/icon-button.IconButton`
+    - `primitives/networking.useTransport`
     - `primitives/pane.useOpenPane`
     - `primitives/syntax-highlight.HighlightedCode`
 - Server:

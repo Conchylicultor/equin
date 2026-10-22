@@ -6,6 +6,7 @@ import { ATTEMPT_CHIP_SURFACES } from "../core";
 import { resolveAttemptReferent } from "./internal/referent";
 
 export default {
+  portable: true,
   description:
     "The attempt id chip's server half (idChipServer): resolves an `att-<id>` to its task's title for the id registry and for model-read text, and registers the page-editor inline token so a page block holding the chip stays agent-readable.",
   contributions: [

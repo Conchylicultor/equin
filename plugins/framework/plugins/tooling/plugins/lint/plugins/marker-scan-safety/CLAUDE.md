@@ -84,6 +84,7 @@ The remaining allowlist entries are the parse-utils unit tests that exercise the
 - Exemptions:
   - Exempted by:
     - `framework/tooling/checks/plugin-boundaries` (0 debt)
+    - `framework/tooling/codegen` (0 debt)
     - `framework/tooling/test-layout` (0 debt)
     - `infra/launcher` (0 debt)
     - `plugin-meta/facets/routes` (0 debt)

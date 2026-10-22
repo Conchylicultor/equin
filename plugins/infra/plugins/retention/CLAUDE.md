@@ -149,12 +149,10 @@ check would have been a patch on a footgun.
     - `markCascadeBounded`
 - Cross-plugin:
   - Imported by:
-    - `apps-core/app-usage`
     - `apps/deploy/analytics/collect`
     - `apps/deploy/deployments`
     - `apps/events/refresh`
     - `apps/pages/agent-origin`
-    - `conversations/question-relay`
     - `debug/boot-profile`
     - `debug/latency-ledger`
     - `debug/profiling/op-log/op-store`
@@ -162,11 +160,7 @@ check would have been a patch on a footgun.
     - `debug/trace/engine`
     - `history/engine`
     - `infra/jobs/supervised-job`
-    - `infra/trash`
-    - `page/annotations/agent-notes/authorship`
-    - `page/annotations/instructions`
-    - `page/annotations/todo/task-link`
-    - `reports`
+    - `reports/engine`
 - Test helpers:
   - Server: `@plugins/infra/plugins/retention/server/testing`
     - `sweepExpired` — One sweep tick's body, extracted from the job for direct testing (the `findCascadeFk` precedent: barrel-private, exported only for its test). `beforeDelete` sees exactly the rows the DELETE predicate matches at select time; a row aging past the cutoff between the two statements waits for the next tick (the predicate is time-based, so the set can only grow, never lose a row the callback already handled).

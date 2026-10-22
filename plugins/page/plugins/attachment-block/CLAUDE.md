@@ -23,6 +23,7 @@
   - Uses:
     - `infra/attachments.uploadAttachment`
     - `infra/attachments.UploadedAttachment`
+    - `infra/endpoints.useFetchEndpoint`
     - `page/editor.useBlockActivate`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Stack`

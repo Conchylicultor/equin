@@ -6,7 +6,8 @@ export type {
   OptimisticResult,
   OptimisticSettled,
 } from "./internal/use-optimistic-resource";
-export { awaitResourceWrite } from "./internal/await-resource-write";
+export { useAwaitResourceWrite } from "./internal/await-resource-write";
+export type { AwaitResourceWrite } from "./internal/await-resource-write";
 export { OpNoLongerApplies } from "./internal/overlay";
 export {
   enqueueResourceWrite,

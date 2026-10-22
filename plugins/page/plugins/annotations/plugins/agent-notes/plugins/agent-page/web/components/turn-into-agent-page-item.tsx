@@ -1,5 +1,6 @@
 import type { MouseEvent } from "react";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import type { BlockEditorAPI } from "@plugins/page/plugins/editor/web";
 import type { Block } from "@plugins/page/plugins/editor/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -29,12 +30,15 @@ export function TurnIntoAgentPageItem({
   api: BlockEditorAPI;
   close: () => void;
 }) {
+  const fetchEndpoint = useFetchEndpoint();
   return (
     <Row
       icon={<Icon icon={autoAwesomeIcon} className="text-muted-foreground" />}
       onMouseDown={(e: MouseEvent) => {
         e.preventDefault();
-        void turnIntoAgentPage(block.id, { fromFirstChild: true });
+        void turnIntoAgentPage(fetchEndpoint, block.id, {
+          fromFirstChild: true,
+        });
         close();
       }}
     >

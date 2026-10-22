@@ -728,7 +728,6 @@ construction, and the job and the body it spawns cannot drift apart.
     - `apps/deploy/deployments`
     - `apps/sonata/sources/ultimate-guitar/alignment`
     - `backup`
-    - `build`
     - `database/fork`
     - `debug/worktree-cleanup`
     - `framework/cli/op-runtime`

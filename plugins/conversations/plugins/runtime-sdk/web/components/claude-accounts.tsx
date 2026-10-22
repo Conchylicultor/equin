@@ -1,9 +1,9 @@
 import { useState } from "react";
 import {
   EndpointError,
-  fetchEndpoint,
   getEndpointErrorMessage,
   useEndpointMutation,
+  useFetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
 import {
   addClaudeAccount,
@@ -205,6 +205,7 @@ function AddAccountForm({
   const [token, setToken] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const fetchEndpoint = useFetchEndpoint();
   const add = async () => {
     setError(null);
     let added;

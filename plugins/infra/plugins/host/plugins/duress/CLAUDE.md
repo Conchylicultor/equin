@@ -123,8 +123,8 @@ Settings → Config): `enabled`, `persistFirstN` (3), `bufferMaxEntries` (2000),
   sub-plugin so this parent's `server/` barrel holds only the config
   registration and is `portable: true`: the engine reads the latch (the host's
   filesystem), while the config must be served by every host whose page
-  registers it — a browser host's worker included
-  (`config-v2:host-registrations-paired`).
+  registers it — a browser host's worker included (the browser-host coverage
+  guard's config arm, run by `config-v2:registrations-paired`).
 - `core/` exists for the config descriptor (shared by the server registration,
   the web `ConfigV2.WebRegister` and the shed engine's `getConfig`);
   `server/index.ts` and `web/index.ts` are those two registrations only.

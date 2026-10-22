@@ -3,6 +3,7 @@ import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useConversationNote } from "../internal/use-conversation-note";
 import { setDraft, setOpen, useNoteUi } from "../internal/notes-ui-store";
 import { upsertNote, deleteNote } from "../internal/api";
@@ -17,6 +18,7 @@ export function NotesArea({
   conversation: ConversationRecord;
 }) {
   const conversationId = conversation.id;
+  const fetchEndpoint = useFetchEndpoint();
   const { read, serverNote } = useConversationNote(conversationId);
   const { open } = useNoteUi(conversationId);
   const [isFocused, setIsFocused] = useState(false);
@@ -24,12 +26,12 @@ export function NotesArea({
   const handleSave = useCallback(
     async (next: string) => {
       if (next.trim() === "") {
-        await deleteNote(conversationId);
+        await deleteNote(fetchEndpoint, conversationId);
       } else {
-        await upsertNote(conversationId, next);
+        await upsertNote(fetchEndpoint, conversationId, next);
       }
     },
-    [conversationId],
+    [conversationId, fetchEndpoint],
   );
 
   const { value, onChange, onFocus, onBlur, isSaving } =

@@ -31,6 +31,9 @@ export function CommitDiffView({
   if (result.status === "loading") {
     return <Loading />;
   }
+  if (result.status === "unavailable") {
+    return <Placeholder>{result.message}</Placeholder>;
+  }
   if (result.status === "error") {
     return (
       <ResourceErrorInline

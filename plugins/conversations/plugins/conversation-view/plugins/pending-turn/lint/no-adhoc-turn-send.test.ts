@@ -37,7 +37,7 @@ ruleTester.run(
       // The sanctioned entry point — what every surface should import.
       {
         filename: WEB,
-        code: `import { sendConversationTurn } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";`,
+        code: `import { useSendConversationTurn } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";`,
       },
       // Unrelated conversation endpoints are not turn deliveries.
       {

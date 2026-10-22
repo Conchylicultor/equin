@@ -10,6 +10,7 @@ import { CONV_CHIP_SURFACES } from "../core";
 import { resolveConversationReferent } from "./internal/referent";
 
 export default {
+  portable: true,
   description:
     "The conversation id chip's server half (idChipServer): resolves a `conv-<id>` to its conversation's title (else its task's) for the id registry and for model-read text, and registers the page-editor inline token so a page block holding the chip stays agent-readable.",
   contributions: [

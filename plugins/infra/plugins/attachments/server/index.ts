@@ -10,10 +10,10 @@ import { orphanSweepJob } from "./internal/orphan-sweep";
 import { AttachmentBlobs } from "./internal/blobs";
 import {
   uploadAttachment,
-  getAttachmentFile,
   deleteAttachmentEndpoint,
   holdAttachmentsEndpoint,
 } from "../shared/endpoints";
+import { getAttachmentFile } from "../core";
 
 export { _attachments } from "./internal/tables";
 export {

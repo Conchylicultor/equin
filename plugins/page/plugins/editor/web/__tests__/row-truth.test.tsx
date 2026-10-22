@@ -14,7 +14,8 @@
 // undo re-enters it at once — the same transitions a server push drives.
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { act, cleanup, render } from "@testing-library/react";
+import { act, cleanup } from "@testing-library/react";
+import { renderWithTransport } from "@plugins/primitives/plugins/networking/web/testing";
 import { useEffect, useMemo } from "react";
 import { PluginProvider } from "@plugins/framework/plugins/web-sdk/core";
 import { UndoRedoProvider } from "@plugins/primitives/plugins/undo-redo/web";
@@ -87,7 +88,7 @@ function RowsProbe({ onCtx }: { onCtx: (ctx: Ctx) => void }) {
 function mount(): { ctx: () => Ctx; id: (text: string) => string } {
   const sink: { ctx: Ctx | null } = { ctx: null };
   const initialBlocks = seed();
-  render(
+  renderWithTransport(
     <PluginProvider plugins={[]}>
       <UndoRedoProvider>
         <BlockEditorProvider

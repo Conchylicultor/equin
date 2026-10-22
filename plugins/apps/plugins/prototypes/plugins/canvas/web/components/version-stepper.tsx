@@ -13,7 +13,10 @@ import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popov
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { confirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import {
+  useFetchEndpoint,
+  type FetchEndpoint,
+} from "@plugins/infra/plugins/endpoints/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
@@ -153,6 +156,7 @@ function ReadyStepper({
   history: PrototypeHistory;
   narrow: boolean;
 }): ReactElement {
+  const fetchEndpoint = useFetchEndpoint();
   const [open, setOpen] = useState(false);
   const { model, current, prev, next, go, stepBack, stepForward } =
     useVersionStepping(history, { shown, show });
@@ -224,7 +228,7 @@ function ReadyStepper({
                 className="text-warning"
                 onClick={() => {
                   setOpen(false);
-                  confirmRestore(name, restorable, show);
+                  confirmRestore(fetchEndpoint, name, restorable, show);
                 }}
               >
                 <Icon icon={historyIcon} />
@@ -324,6 +328,7 @@ function StepTooltip({ step }: { step: VersionStep | null }) {
  * where the restored design now is.
  */
 function confirmRestore(
+  fetchEndpoint: FetchEndpoint,
   name: string,
   version: PrototypeVersion,
   show: (version: PrototypeVersion | null) => void,

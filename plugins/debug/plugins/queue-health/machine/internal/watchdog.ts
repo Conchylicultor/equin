@@ -15,7 +15,7 @@ import {
   type QueueClassBacklogStat,
 } from "@plugins/infra/plugins/jobs/machine";
 import { getConfig } from "@plugins/config_v2/server";
-import { recordReport } from "@plugins/reports/server";
+import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { getRuntimeProfile } from "@plugins/infra/plugins/runtime-profiler/core";
 import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/server";
 import { queueHealthConfig } from "../../core";
@@ -45,9 +45,9 @@ import { blockedTrip, sampleOf, type JobSpanSample } from "./profile-delta";
 // one (the sweeper's `sweepOnce`).
 //
 // WHY IT LIVES IN `debug/queue-health` AND NOT BESIDE THE SWEEPER IN `jobs`: the
-// plugin DAG forbids the other placement. `reports/server/internal/record-report.ts`
+// plugin DAG forbids the other placement. `reports/plugins/engine/server/internal/record-report.ts`
 // imports `recordNotification` from `shell/notifications`, whose barrel imports
-// a `defineJob` from `jobs` — so `jobs → reports → shell/notifications → jobs`
+// a `defineJob` from `jobs` — so `jobs → reports/engine → shell/notifications → jobs`
 // is a cycle, and `no cycles` is enforced by `./singularity check
 // plugin-boundaries`. This plugin already imports both `jobs` and `reports`, so
 // the placement adds zero new plugin edges, and it keeps queue INTERPRETATION

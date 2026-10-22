@@ -4,33 +4,23 @@
 
 ## Plugin reference
 
-- Description: Nested tasks with attempts linking to conversations.
+- Description: Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations: the task CRUD, chain, dependency and auto-start routes, portable (arming a task wakes the launcher through the tasks.autoStartArmed trigger event). Launching, the repo info, the add_task MCP tool and the auto-start catch-up are the machine half's.
 - Server:
   - Contributes: `resource.declare` "tasks.repo-info"
-  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `tasks/tasks-core` ×16
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks/tasks-core` ×15
     - `infra/endpoints` ×2
     - `primitives/rank` ×2
     - `tasks/auto-start` ×2
-    - `tasks/launch-options` ×2
     - `tasks/task-title` ×2
-    - `tasks/task-track` ×2
     - `conversations/model-provider/catalog.getModelCatalog`
-    - `conversations.maybeLaunchTaskJob`
     - `database.db`
     - `infra/attachments.getAttachment`
-    - `infra/claude-cli/availability.onClaudeCodeReady`
-    - `infra/mcp.Mcp`
-    - `infra/paths.GIT`
-    - `infra/warmup.defineWarmup`
-    - `infra/worktree.ensureMainWorktreeRoot`
-    - `network/live.serveValue`
+    - `tasks/launch-options.resolveLaunchOptions`
     - `tasks/task-category.setTaskCategory`
     - `tasks/task-source-url.setTaskSourceUrl`
+    - `tasks/task-track.listSidequestIds`
   - Exports (values): `armTaskAutoStart`
-  - Register:
-    - `mcpTool('add_task')`
-    - `defineWarmup('tasks.auto-start-reconcile')`
   - Resources: `tasks.repo-info` (invalidate, snapshot)
   - Routes:
     - `GET /api/tasks`
@@ -47,7 +37,6 @@
     - `POST /api/tasks/:id/deps-move`
 - Web:
   - Uses:
-    - `infra/endpoints.fetchEndpoint`
     - `network/live.useLive`
     - `primitives/live-state.mapResource`
     - `primitives/live-state.ResourceResult`
@@ -61,7 +50,12 @@
     - `useTask`
     - `useTasksById`
 - Machine:
-  - Uses: `infra/endpoints.implementMachine`
+  - Uses:
+    - `infra/endpoints.implementMachine`
+    - `network/live.serveValue`
+  - Register:
+    - `mcpTool('add_task')`
+    - `defineWarmup('tasks.auto-start-reconcile')`
   - Routes: `POST /api/tasks/launch`
 - Core:
   - Uses:

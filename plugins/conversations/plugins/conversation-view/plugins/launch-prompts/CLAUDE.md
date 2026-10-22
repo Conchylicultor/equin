@@ -18,15 +18,16 @@
     - `conversations/model-provider.familyClass`
     - `conversations/model-provider.useModelChoiceOptions`
     - `fields/dynamic-enum/config.DynamicEnum`
-    - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.getEndpointErrorMessage`
+    - `infra/endpoints.useFetchEndpoint`
+    - `infra/endpoints.useMachineAvailability`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.DropdownMenu`
     - `primitives/css/ui-kit.DropdownMenuItem`
     - `primitives/css/ui-kit.DropdownMenuTrigger`
-    - `shell/notifications.toast`
+    - `shell/notifications.useToast`
     - `ui/icons.Icon`
 - Server:
   - Contributes: `ConfigV2.Register` "config"

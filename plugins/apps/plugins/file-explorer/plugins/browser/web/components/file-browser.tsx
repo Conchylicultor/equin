@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
@@ -313,9 +314,10 @@ function Listing({
       rootName = undefined;
       break;
   }
+  const fetchEndpoint = useFetchEndpoint();
   const source = useMemo(
-    () => hostPathSource(home, rootName, root),
-    [home, rootName, root],
+    () => hostPathSource(fetchEndpoint, home, rootName, root),
+    [fetchEndpoint, home, rootName, root],
   );
   const { listings, request, setOpen, readers } = useListings(dir);
   const moveInto = useMoveInto();

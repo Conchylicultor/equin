@@ -5,7 +5,7 @@ import {
   pinQueue,
   queueRanks,
 } from "@plugins/conversations/plugins/conversations-view/plugins/queue/core";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useLiveRow } from "@plugins/network/plugins/live/web";
 import { hoverRevealTargetInAnchor } from "@plugins/primitives/plugins/hover-reveal/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -41,6 +41,7 @@ export function PinButton(): ReactElement | null {
 
 function QueuePin({ convId }: { convId: string }): ReactElement {
   const rank = useLiveRow(queueRanks, convId);
+  const fetchEndpoint = useFetchEndpoint();
   // Not known yet: the loading block, never an "unpinned" that might flip.
   if (rank.status === "loading") {
     return <Loading variant="block" className="size-6" />;

@@ -5,6 +5,7 @@ import { reportIdKind } from "@plugins/reports/core";
 import { REPORT_CHIP_SURFACES } from "../core";
 
 export default {
+  portable: true,
   description:
     "The report id chip's server half (idChipServer): resolves a `report-<id>` to its kind and message for the id registry and for model-read text.",
   contributions: [

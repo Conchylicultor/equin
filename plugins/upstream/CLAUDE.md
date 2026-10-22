@@ -106,10 +106,10 @@ reading as stale, the job should resolve the row when the count reaches zero.
   - Uses:
     - `infra/jobs.defineJob`
     - `primitives/log-channels.Log`
-    - `reports.linkReportsToTask`
-    - `reports.recordReport`
     - `reports.ReportKind`
-    - `reports.uninvestigatedReports`
+    - `reports/engine.linkReportsToTask`
+    - `reports/engine.recordReport`
+    - `reports/engine.uninvestigatedReports`
     - `tasks/automations.automationConfigRegistration`
     - `tasks/automations.defineAutomation`
     - `tasks/task-category.TaskCategory`

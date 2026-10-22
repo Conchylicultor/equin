@@ -21,8 +21,8 @@ import {
   type StepState,
 } from "@plugins/primitives/plugins/setup-steps/web";
 import {
-  fetchEndpoint,
   getEndpointErrorMessage,
+  useFetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
 import {
   BASEMAP_STYLE_JSON,
@@ -72,6 +72,7 @@ function LiveMapSetupSteps({
 }: {
   config: Exclude<MapsBrowserConfigState, { kind: "loading" | "error" }>;
 }) {
+  const fetchEndpoint = useFetchEndpoint();
   const saved = config.kind === "set";
   // A draft only exists once the user types; until then the inputs show what is
   // stored (the key is public config, so showing it back is fine).
@@ -246,6 +247,7 @@ function MapIdSetupSteps({
   mapId: string | null;
   browserKey: string;
 }) {
+  const fetchEndpoint = useFetchEndpoint();
   const [draft, setDraft] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   // Bumped by "Check again": a new key remounts the preview, a new map.

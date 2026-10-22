@@ -5,12 +5,12 @@ import {
   type DataViewSourceProps,
   type HierarchyConfig,
 } from "@plugins/primitives/plugins/data-view/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import type { TaskRow } from "@plugins/tasks/plugins/tasks-core/core";
 import { moveTaskInDepsTree } from "@plugins/tasks/core";
 import {
   Tasks,
-  taskFieldSchema,
+  useTaskFieldSchema,
   clusterTaskHierarchy,
   buildTreeOptions,
 } from "@plugins/tasks/plugins/task-list/web";
@@ -44,21 +44,28 @@ export const DepsSources = defineDataViewSources<DepsHostProps>();
 // the dependency relation. The drop's anchor is read as an edge intent rather
 // than a position: a drop ONTO a row (`targetId === null`) splices into the
 // chain; a sibling-zone drop branches. The server rewires the edges atomically.
-const depsHierarchy: HierarchyConfig<DepsTreeRow> = {
-  getParentId: (r) => r.depsParentId,
-  getRank: (r) => r.rank,
-  onMove: (id, dest) =>
-    fetchEndpoint(
-      moveTaskInDepsTree,
-      { id },
-      {
-        body: {
-          newParentId: dest.parentId,
-          mode: dest.targetId === null ? "splice" : "branch",
-        },
-      },
-    ),
-};
+// A hook: the move is sent through the enclosing subtree's transport.
+function useDepsHierarchy(): HierarchyConfig<DepsTreeRow> {
+  const fetchEndpoint = useFetchEndpoint();
+  return useMemo<HierarchyConfig<DepsTreeRow>>(
+    () => ({
+      getParentId: (r) => r.depsParentId,
+      getRank: (r) => r.rank,
+      onMove: (id, dest) =>
+        fetchEndpoint(
+          moveTaskInDepsTree,
+          { id },
+          {
+            body: {
+              newParentId: dest.parentId,
+              mode: dest.targetId === null ? "splice" : "branch",
+            },
+          },
+        ),
+    }),
+    [fetchEndpoint],
+  );
+}
 
 /**
  * The Dependencies source: the cluster organised by its `task_dependencies`
@@ -70,6 +77,8 @@ export function DepsSource({
   render,
 }: DataViewSourceProps<DepsHostProps>): ReactElement {
   const { taskId, allTasks, memberIds, linkTo } = hostProps;
+  const depsHierarchy = useDepsHierarchy();
+  const taskFieldSchema = useTaskFieldSchema();
   const rows = useMemo(
     () => buildDepsTree(allTasks, memberIds),
     [allTasks, memberIds],
@@ -102,6 +111,7 @@ export function CreatedSource({
   render,
 }: DataViewSourceProps<DepsHostProps>): ReactElement {
   const { taskId, allTasks, memberIds, linkTo } = hostProps;
+  const taskFieldSchema = useTaskFieldSchema();
   // The rows are already the exact member set, so no subtree scoping —
   // out-of-set parents make their children render as roots (the creation forest).
   const rows = useMemo(

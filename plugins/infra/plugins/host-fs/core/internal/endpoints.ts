@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { blob, defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import { HOST_FS_MACHINE } from "./machine-feature";
+import {
+  assetPath,
+  blob,
+  defineEndpoint,
+  type AssetPath,
+} from "@plugins/infra/plugins/endpoints/core";
 
 // ── Shared shapes ────────────────────────────────────────────────────────────
 
@@ -183,6 +189,7 @@ export const hostFsStat = defineEndpoint({
   route: "GET /api/host-fs/stat",
   query: z.object({ path: z.string() }),
   response: HostFsStatResultSchema,
+  needsMachine: HOST_FS_MACHINE,
 });
 
 // ── complete ─────────────────────────────────────────────────────────────────
@@ -215,6 +222,7 @@ export const hostFsComplete = defineEndpoint({
   route: "GET /api/host-fs/complete",
   query: z.object({ prefix: z.string() }),
   response: HostFsCompleteResultSchema,
+  needsMachine: HOST_FS_MACHINE,
 });
 
 // ── text ─────────────────────────────────────────────────────────────────────
@@ -260,11 +268,16 @@ export const hostFsRaw = defineEndpoint({
   route: "GET /api/host-fs/raw",
   query: z.object({ path: z.string() }),
   response: blob(),
+  needsMachine: HOST_FS_MACHINE,
 });
 
-/** The same-origin URL of a host file's raw bytes (for `<img src>`, `<video>`, iframes, links). */
-export function hostFileUrl(path: string): string {
-  return `${hostFsRaw.path}?${new URLSearchParams({ path }).toString()}`;
+/**
+ * A host file's raw bytes, as an asset an element loads (`<img src>`,
+ * `<video>`, iframes, links) — through `useAssetSrc` (`endpoints/web`), over
+ * the subtree's transport, never as a bare URL.
+ */
+export function hostFileUrl(path: string): AssetPath {
+  return assetPath(hostFsRaw, {}, { path });
 }
 
 // ── volume ───────────────────────────────────────────────────────────────────
@@ -315,6 +328,7 @@ export const hostFsOpen = defineEndpoint({
   route: "POST /api/host-fs/open",
   body: z.object({ path: z.string(), reveal: z.boolean().optional() }),
   response: HostFsOpenResultSchema,
+  needsMachine: HOST_FS_MACHINE,
 });
 
 // ── extract ──────────────────────────────────────────────────────────────────
@@ -356,6 +370,7 @@ export const hostFsExtract = defineEndpoint({
   route: "POST /api/host-fs/extract",
   body: z.object({ path: z.string() }),
   response: HostFsExtractResultSchema,
+  needsMachine: HOST_FS_MACHINE,
 });
 
 // ── move ─────────────────────────────────────────────────────────────────────
@@ -441,4 +456,5 @@ export const hostFsMove = defineEndpoint({
     resolutions: z.record(z.string(), HostFsMoveResolutionSchema).optional(),
   }),
   response: HostFsMoveResultSchema,
+  needsMachine: HOST_FS_MACHINE,
 });

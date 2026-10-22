@@ -104,8 +104,8 @@ rename.
   - Uses:
     - `config_v2.ConfigV2`
     - `debug/trace/engine.captureTrace`
-    - `reports.recordReport`
     - `reports.ReportKind`
+    - `reports/engine.recordReport`
   - Exports (values): `recordEventLoopStall`
 - Core:
   - Uses:

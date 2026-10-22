@@ -217,7 +217,7 @@ surfacing as crash tasks, not just toasts.
   open). Rendered through the imperative-dialog primitive.
 - `web/components/ug-create-option.tsx` — `ultimateGuitarCreateOption`: the
   `Library.Source` create affordance opening the import dialog.
-- `web/hydrate.ts` — `hydrate(songId)`: fetches the persisted `UgTab` and its
+- `web/hydrate.ts` — `hydrate(songId, { fetchEndpoint })`: fetches the persisted `UgTab` and its
   alignment row, and returns the `{ tab, alignment }` raw (the record
   `appliedAlignment` picks, else `null`).
 - `server/internal/tables.ts` — the `sonata_songs_ext_ultimate_guitar`

@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { useConfigResult, useSetConfig } from "@plugins/config_v2/web";
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { hostFsStat } from "@plugins/infra/plugins/host-fs/core";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { useHomeDir } from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
@@ -97,6 +97,7 @@ export function useFavorites(): {
   const config = useConfigResult(placesConfig);
   const setConfig = useSetConfig(placesConfig);
   const home = useHomeDir();
+  const fetchEndpoint = useFetchEndpoint();
   // A write needs the list as it is: none while it is not known, or unreadable.
   const current = foldResource(config, {
     loading: () => null,
@@ -143,10 +144,17 @@ export function useFavorites(): {
         throw new Error("file-explorer places: home directory not known yet");
       }
       const looked = await Promise.all(
-        paths.map(async (path) => ({
-          path,
-          stat: await fetchEndpoint(hostFsStat, {}, { query: { path } }),
-        })),
+        paths.map(async (path) => {
+          const answer = await fetchEndpoint(
+            hostFsStat,
+            {},
+            { query: { path } },
+          );
+          // Pinning reads the host's disk: with no computer behind the app
+          // there is nothing to pin, which says so rather than skipping.
+          if (answer.kind === "unavailable") throw new Error(answer.message);
+          return { path, stat: answer.value };
+        }),
       );
       const pins: Pin[] = [];
       const missing: string[] = [];
@@ -170,7 +178,7 @@ export function useFavorites(): {
       }
       return pins;
     },
-    [homeDir],
+    [homeDir, fetchEndpoint],
   );
 
   return { pin, unpin, lookUp };

@@ -54,7 +54,7 @@ It contributes to two generic seams and names nothing else:
     - `PageReference.Decoration` → `InstructionsPageChip`
     - `Editor.InsertAction` "Instructions page"
   - Uses:
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLiveRow`
     - `page/editor.Editor`
     - `page/page-reference.PageReference`

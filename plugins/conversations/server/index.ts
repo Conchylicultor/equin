@@ -1,26 +1,13 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { CONVERSATIONS_CATEGORY_ID } from "../core/task-category";
-import { handleClose } from "./internal/handle-close";
 import { handleList } from "./internal/handle-list";
-import { handleCreate } from "./internal/handle-create";
 import { handleDelete } from "./internal/handle-delete";
 import { handleGet } from "./internal/handle-get";
 import { handleListTurns } from "./internal/handle-list-turns";
-import { handlePostTurn } from "./internal/handle-post-turn";
-import { handleStop } from "./internal/handle-stop";
-import { handleRetryTurn } from "./internal/handle-retry-turn";
-import { handleWithdrawTurn } from "./internal/handle-withdraw-turn";
 import {
   listConversations,
   getConversation,
-  createConversation,
   deleteConversation,
-  postConversationTurn,
-  retryConversationTurn,
-  withdrawConversationTurn,
-  stopConversation,
   listConversationTurns,
-  closeConversation,
 } from "../core/endpoints";
 import {
   conversationsStatusSweepJob,
@@ -33,6 +20,7 @@ import {
 } from "./internal/turn-emitter";
 import {
   maybeLaunchTaskJob,
+  maybeLaunchOnArmedJob,
   maybeLaunchOnStatusJob,
 } from "./internal/auto-start-jobs";
 import { notifyConversationCreatedJob } from "./internal/notify-created-job";
@@ -53,7 +41,7 @@ import {
   taskStatusChanged,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { Trigger } from "@plugins/infra/plugins/events/server";
-import { TaskCategory } from "@plugins/tasks/plugins/task-category/server";
+import { taskAutoStartArmed } from "@plugins/tasks/plugins/auto-start/server";
 
 export { maybeLaunchTaskJob, launchTaskNow } from "./internal/auto-start-jobs";
 export type {
@@ -103,20 +91,20 @@ export default {
   httpRoutes: {
     [listConversations.route]: handleList,
     [getConversation.route]: handleGet,
-    [createConversation.route]: handleCreate,
     [deleteConversation.route]: handleDelete,
-    [postConversationTurn.route]: handlePostTurn,
-    [stopConversation.route]: handleStop,
-    [retryConversationTurn.route]: handleRetryTurn,
-    [withdrawConversationTurn.route]: handleWithdrawTurn,
     [listConversationTurns.route]: handleListTurns,
-    [closeConversation.route]: handleClose,
   },
   // The conversations live resources (active/system/gone/gone-stats) are mounted on tasks-core.
   contributions: [
     Trigger({
       on: taskStatusChanged,
       do: maybeLaunchOnStatusJob,
+      with: {},
+      oneShot: false,
+    }),
+    Trigger({
+      on: taskAutoStartArmed,
+      do: maybeLaunchOnArmedJob,
       with: {},
       oneShot: false,
     }),
@@ -138,12 +126,6 @@ export default {
       with: {},
       oneShot: false,
     }),
-    TaskCategory({
-      id: CONVERSATIONS_CATEGORY_ID,
-      label: "Conversations",
-      order: 0,
-    }),
-    TaskCategory({ id: "system", label: "System", order: 1 }),
     conversationSpawnFailedKind,
     claudeCodeUnavailableAtSpawnKind,
     autoStartModelUnavailableKind,
@@ -152,6 +134,7 @@ export default {
   register: [
     maybeLaunchTaskJob,
     maybeLaunchOnStatusJob,
+    maybeLaunchOnArmedJob,
     notifyConversationCreatedJob,
     turnEmitterReconcileJob,
     spawnConversationJob,

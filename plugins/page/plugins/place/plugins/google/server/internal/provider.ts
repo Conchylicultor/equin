@@ -14,7 +14,7 @@ import {
   type PlaceSuggestion,
 } from "@plugins/page/plugins/place/core";
 import { GOOGLE_PLACE_PROVIDER_ID } from "../../shared";
-import { recordReport } from "@plugins/reports/server";
+import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { googleTypeToKind } from "./type-to-kind";
 import { googleTypeToFamily } from "./type-to-family";
 import { PLACE_GOOGLE_UNKNOWN_TYPE } from "./unknown-type-kind";

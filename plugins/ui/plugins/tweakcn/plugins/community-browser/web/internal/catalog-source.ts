@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useCallback, useMemo } from "react";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   combineResources,
   mapResource,
@@ -13,7 +13,7 @@ import {
   type ThemeSourceEntry,
 } from "@plugins/ui/plugins/theme-engine/web";
 import { importedThemeId } from "@plugins/ui/plugins/theme-engine/plugins/saved-themes/core";
-import { awaitSavedThemesWrite } from "@plugins/ui/plugins/theme-engine/plugins/saved-themes/web";
+import { useAwaitSavedThemesWrite } from "@plugins/ui/plugins/theme-engine/plugins/saved-themes/web";
 import { tweakcnPalettePreview } from "@plugins/ui/plugins/tweakcn/core";
 import { applyCatalogTheme } from "../../core";
 import { communityCatalog } from "../../shared/resources";
@@ -68,16 +68,25 @@ function themesGate(pending: boolean): PortableGateInput {
 }
 
 /**
- * Save catalog theme `entryId` and resolve to its saved theme's id — once the
- * theme list the painter reads already has it, so the caller can select it
- * without a frame of "missing theme". Rejects with the endpoint's error.
+ * The catalog source's adopt, through the subtree's transport and live-state
+ * pipeline: save catalog theme `entryId` and resolve to its saved theme's id —
+ * once the theme list the painter reads already has it, so the caller can
+ * select it without a frame of "missing theme". Rejects with the endpoint's
+ * error.
  */
-export async function adoptCatalogTheme(entryId: string): Promise<ThemeId> {
-  const { theme, watermark } = await fetchEndpoint(
-    applyCatalogTheme,
-    {},
-    { body: { themeId: entryId } },
+export function useAdoptCatalogTheme(): (entryId: string) => Promise<ThemeId> {
+  const fetchEndpoint = useFetchEndpoint();
+  const awaitSavedThemesWrite = useAwaitSavedThemesWrite();
+  return useCallback(
+    async (entryId: string) => {
+      const { theme, watermark } = await fetchEndpoint(
+        applyCatalogTheme,
+        {},
+        { body: { themeId: entryId } },
+      );
+      await awaitSavedThemesWrite(watermark);
+      return theme.id;
+    },
+    [fetchEndpoint, awaitSavedThemesWrite],
   );
-  await awaitSavedThemesWrite(watermark);
-  return theme.id;
 }

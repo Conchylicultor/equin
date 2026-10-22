@@ -220,12 +220,13 @@ bar).
     - `apps-core/tabs.appLink`
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.fetchEndpointOver`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/live-state.slowResourceReportSink`
+    - `primitives/networking/page-transport.pageTransport`
     - `primitives/pane.currentRoutePath`
     - `primitives/perfs/boot-trace.getBootTrace`
     - `reports.Reports`
@@ -251,7 +252,6 @@ bar).
     - `config_v2` ×2
     - `infra/host/contention` ×2
     - `infra/host/duress/shed` ×2
-    - `reports` ×2
     - `database/admin.ExcludeFromFork`
     - `database/change-feed.defineChangeProducer`
     - `database.db`
@@ -261,6 +261,8 @@ bar).
     - `network/live.serveCollection`
     - `primitives/log-channels/log-files.readChannelJsonAsync`
     - `primitives/log-channels.defineLogSink`
+    - `reports/engine.recordReport`
+    - `reports.ReportKind`
   - DB schema: `plugins/debug/plugins/slow-ops/server/internal/tables.ts`
   - Exports (types): `RecordSlowOpInput`
   - Exports (values):
@@ -346,6 +348,7 @@ bar).
   - Exempts itself from:
     - `sink-safety/no-adhoc-profiler-seam` — `.` (sanctioned)
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)
+    - `networking/no-page-transport` — `web/internal/slow-op-queue.ts` (sanctioned)
 - Sub-plugins:
   - **`cluster`** [exempt] — Cross-worktree Cluster tab for the Slow Events pane: fans out across every worktree DB fork and merges them into one aggregate + a unified contention timeline. Cross-worktree fan-out endpoint…
   - **`pane`** — Aggregates tab of the Slow Events pane: a live, paged ranking of slow operations, and the per-operation detail pane (callers, waits, variants, measures, recent samples).

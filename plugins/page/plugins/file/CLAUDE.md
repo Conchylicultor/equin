@@ -9,6 +9,7 @@
   - Contributes: `Editor.Block` "file" → `FileBlock`
   - Uses:
     - `infra/attachments.uploadAttachment`
+    - `infra/endpoints.useAssetSrc`
     - `page/attachment-block.AttachmentUpload`
     - `page/editor.Editor`
     - `page/editor.registerBlockPasteHandler`

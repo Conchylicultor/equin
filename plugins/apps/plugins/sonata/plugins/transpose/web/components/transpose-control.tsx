@@ -34,6 +34,7 @@ import {
   transposeKey,
 } from "@plugins/apps/plugins/sonata/plugins/theory/core";
 import { saveTranspose } from "../actions";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -140,6 +141,7 @@ function TransposePopover({
   disabled: boolean;
 }) {
   const setStore = useWriteSongSetting(transposeSetting);
+  const fetchEndpoint = useFetchEndpoint();
   const { score } = useSession();
 
   // The score is already shifted (the document's pipeline applies the offset
@@ -159,7 +161,7 @@ function TransposePopover({
   const setTranspose = (next: number) => {
     const clamped = Math.max(MIN_SEMITONES, Math.min(MAX_SEMITONES, next));
     setStore(songId, clamped);
-    saveTranspose(songId, clamped);
+    saveTranspose(fetchEndpoint, songId, clamped);
   };
 
   const label =

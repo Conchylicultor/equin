@@ -1,12 +1,8 @@
 import type { Dirent } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
-import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
-import {
-  HOST_FS_COMPLETE_LIMIT,
-  hostFsComplete,
-  type HostFsCompleteResult,
-} from "../../core";
+import { HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { HOST_FS_COMPLETE_LIMIT, type HostFsCompleteResult } from "../../core";
 import { followLink } from "./entry";
 import { classifyFsError, isHiddenName, resolveHostPath } from "./path";
 
@@ -81,8 +77,3 @@ async function isDirLike(dir: string, d: Dirent): Promise<boolean> {
   const target = await followLink(join(dir, d.name));
   return target.kind === "resolved" && target.stats.isDirectory();
 }
-
-export const handleComplete = implement(hostFsComplete, ({ query }) => {
-  const { dir, fragment } = splitPrefix(query.prefix);
-  return completeHostDir(dir, fragment);
-});

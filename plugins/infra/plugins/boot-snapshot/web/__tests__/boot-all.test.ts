@@ -20,7 +20,7 @@ const reports: { message: string }[] = [];
 let snapshot: unknown;
 
 vi.mock("@plugins/infra/plugins/endpoints/web", () => ({
-  fetchEndpoint: async () => snapshot,
+  fetchEndpointOver: () => async () => snapshot,
 }));
 vi.mock("@plugins/primitives/plugins/perfs/plugins/boot-trace/web", () => ({
   recordBootSpan: () => {},

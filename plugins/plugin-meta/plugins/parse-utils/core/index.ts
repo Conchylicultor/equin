@@ -1,5 +1,6 @@
 export {
   defaultExportObjectBody,
+  hasField,
   matchBracket,
   parseBarrelExports,
   parseBoolField,
@@ -25,6 +26,8 @@ export type {
 } from "./helpers";
 export { maskSource } from "./mask-source";
 export { isPortableServerBarrel } from "./portable-barrel";
+export { endpointExports } from "./endpoint-exports";
+export type { EndpointExport } from "./endpoint-exports";
 export { findMarkerCalls, markerCallSpans, lineAt } from "./find-marker-calls";
 export type { MarkerCall, MarkerCallSpan } from "./find-marker-calls";
 export { findImports } from "./find-imports";

@@ -58,8 +58,6 @@ its own DB. The git heuristic (`classifyProgressJob`, on
     - `PHASE_ORDER`
     - `PHASE_STEPS`
     - `PROGRESS_SUMMARY`
-- Cross-plugin:
-  - Imported by: `apps/agent-manager/demo`
 - Machine:
   - Register: `defineJob('conversation-progress.classify')`
 

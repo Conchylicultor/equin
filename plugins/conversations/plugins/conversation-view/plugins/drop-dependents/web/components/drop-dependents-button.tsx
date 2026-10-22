@@ -1,7 +1,7 @@
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { useLiveConversation } from "@plugins/conversations/web";
-import { toast } from "@plugins/shell/plugins/notifications/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { useActiveDependentCount } from "@plugins/tasks/web";
 import { DropdownMenuItem } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { dropDependents } from "../../shared";
@@ -18,7 +18,8 @@ export function DropDependentsItem({
   const live = useLiveConversation(conversation);
   const blocked = useActiveDependentCount(conversation.taskId);
 
-  const { mutate, isPending } = useEndpointMutation(dropDependents, {
+  const toast = useToast();
+  const close = useEndpointMutation(dropDependents, {
     onSuccess: (data) => {
       toast(
         data.kind === "dropped"
@@ -57,7 +58,11 @@ export function DropDependentsItem({
     return null;
   const dependentCount = blocked.data;
 
+  // Closing stops the agent, which needs the computer: on a host without
+  // it (the demo) the entry is disabled and says why.
+  const isPending = close.kind === "available" && close.isPending;
   const disabled =
+    close.kind === "unavailable" ||
     isPending ||
     live.status === "gone" ||
     live.status === "done" ||
@@ -67,7 +72,11 @@ export function DropDependentsItem({
     <DropdownMenuItem
       variant="destructive"
       disabled={disabled}
-      onClick={() => mutate({ params: { id: conversation.id } })}
+      title={close.kind === "unavailable" ? close.message : undefined}
+      onClick={() => {
+        if (close.kind === "available")
+          close.mutate({ params: { id: conversation.id } });
+      }}
     >
       <Icon icon={deleteSweepIcon} className="size-4" />
       {isPending

@@ -33,6 +33,8 @@ export const backgroundCentralCatalog = liveValue(
   {
     schema: z.array(BackgroundEntrySchema),
     origin: "central",
+    // The central runtime is the computer's machine-wide process.
+    needsMachine: { feature: "Reading the central runtime's activity" },
   },
 );
 
@@ -43,6 +45,7 @@ export const backgroundCentralRecentRuns = liveValue(
     schema: BackgroundRecentRunsSchema,
     params: ["kind", "name"],
     origin: "central",
+    needsMachine: { feature: "Reading the central runtime's activity" },
   },
 );
 

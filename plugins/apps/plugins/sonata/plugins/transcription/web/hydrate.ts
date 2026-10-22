@@ -1,5 +1,7 @@
-import type { SourceHydration } from "@plugins/apps/plugins/sonata/plugins/library/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import type {
+  SourceContext,
+  SourceHydration,
+} from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { getSongTranscription } from "../shared/endpoints";
 import { TranscriptionBody } from "./components/transcription-body";
 
@@ -9,7 +11,10 @@ import { TranscriptionBody } from "./components/transcription-body";
  * Once ready — or for a song nobody transcribed — this source has nothing to
  * add (`absent`): the score is the MusicXML source's.
  */
-export async function hydrate(songId: string): Promise<SourceHydration> {
+export async function hydrate(
+  songId: string,
+  { fetchEndpoint }: SourceContext,
+): Promise<SourceHydration> {
   const row = await fetchEndpoint(getSongTranscription, { id: songId });
   if (row === null) return { kind: "absent" };
   switch (row.status) {

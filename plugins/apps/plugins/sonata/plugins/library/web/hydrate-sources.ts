@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import type { SourceHydration } from "./slots";
+import type { SourceContext, SourceHydration } from "./slots";
 
 /** A source that has content for a song that is not ready yet. */
 export interface PendingSource {
@@ -22,14 +22,15 @@ export interface SongHydration {
 export async function hydrateSources(
   sources: readonly {
     sourceId: string;
-    hydrate: (songId: string) => Promise<SourceHydration>;
+    hydrate: (songId: string, ctx: SourceContext) => Promise<SourceHydration>;
   }[],
   songId: string,
+  ctx: SourceContext,
 ): Promise<SongHydration> {
   const results = await Promise.all(
     sources.map(async (s) => ({
       sourceId: s.sourceId,
-      result: await s.hydrate(songId),
+      result: await s.hydrate(songId, ctx),
     })),
   );
   const rawMap: Record<string, unknown> = {};

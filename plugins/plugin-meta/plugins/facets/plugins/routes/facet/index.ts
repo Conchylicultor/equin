@@ -10,11 +10,11 @@ import type {
   PluginTree,
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
+  endpointExports,
   readIfExists,
   stripTypes,
   matchBracket,
   maskSource,
-  markerCallSpans,
   walkFiles,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { type RouteDef, type RoutesData, routesFacetDef } from "../core";
@@ -40,23 +40,10 @@ export default createFacet<RoutesData>({
       if (!file.endsWith(".ts")) continue;
       const raw = readIfExists(file);
       if (!raw) continue;
-      const src = stripTypes(raw);
-      // FULL-mask so a `defineEndpoint(` written inside a comment, string, or
-      // template literal can't register a phantom route. Genuine calls are
-      // located over the mask; the export name and the call body are read back
-      // from the ORIGINAL by offset (the mask preserves offsets 1:1) — the
-      // sanctioned marker contract, not a raw-source `const X = defineEndpoint(`
-      // regex.
-      const masked = maskSource(src);
-      for (const span of markerCallSpans(masked, "defineEndpoint")) {
-        // `export const <name> = ` immediately before the call identifier.
-        const decl = /export\s+const\s+(\w+)\s*=\s*$/.exec(
-          masked.slice(0, span.identifier),
-        );
-        if (!decl) continue;
-        const body = src.slice(span.open + 1, span.close);
-        const routeMatch = /route\s*:\s*"([^"]+)"/.exec(body);
-        if (routeMatch) endpointRoutes.set(decl[1]!, routeMatch[1]!);
+      // The one reading of an endpoint declaration (parse-utils), shared with
+      // the browser-host coverage guard.
+      for (const e of endpointExports(file, raw)) {
+        endpointRoutes.set(e.name, e.route);
       }
     }
 

@@ -41,13 +41,16 @@ pins both facts).
 composition the Agent Manager demo's browser host serves
 (`apps/agent-manager/demo/bin/browser-host.composition.ts`): it `extends:
 ["agent-manager"]` and only subtracts what means nothing without the computer
-— push-and-exit, the report-investigation and sidequest automations, `stats.**`
-and the file explorer. Its web plugins are the scope the demo page renders in
+— push-and-exit, automations (`tasks.automations.**`, every automation and the
+outcome-report card with it), `stats.**` and the file explorer — and, for
+now, Pages and Prototypes (D5). Its web plugins are the scope the demo page renders in
 (`web-sdk`'s `<PluginScope>`) and its portable server barrels the worker's
-graph, both derived by codegen (`browser-host-gen.ts`). A plugin in this scope
-whose config registrar is not portable crashes the use-config guard on render,
-so it is split or excluded here — a `host-registrations-paired` debt exemption
-is not an option for it.
+graph, both derived by codegen (`browser-host-gen.ts`). Everything a plugin in
+this scope reads, calls or registers must be served by the worker's graph or
+declared `needsMachine` (config has no such escape) — the browser-host coverage
+guard (`browser-host-coverage.ts`) fails `build` and `push` otherwise, and
+nothing exempts it — so a plugin whose server half cannot join the worker is
+split, or excluded here.
 
 ## Manifests are a config_v2 config — no codegen
 

@@ -1,12 +1,16 @@
 import { useState } from "react";
 import { LaunchControl, type LaunchRequest } from "@plugins/primitives/plugins/launch/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
-import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
+import {
+  useFetchEndpoint,
+  EndpointError,
+} from "@plugins/infra/plugins/endpoints/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { saveScreenshotFile } from "../../shared/endpoints";
 
 export function PromptForm({ id, getBlob }: { id: string; getBlob: () => Blob | null | Promise<Blob | null> }) {
+  const fetchEndpoint = useFetchEndpoint();
   const [text, setText] = useState("");
   const textRef = useLatestRef(text);
 
@@ -21,7 +25,14 @@ export function PromptForm({ id, getBlob }: { id: string; getBlob: () => Blob | 
     if (!blob) return { prompt: body || undefined };
     let path: string;
     try {
-      ({ path } = await fetchEndpoint(saveScreenshotFile, { id }, { body: blob }));
+      const answer = await fetchEndpoint(
+        saveScreenshotFile,
+        { id },
+        { body: blob },
+      );
+      // No computer to hold the file: launch without the @path suffix.
+      if (answer.kind === "unavailable") return { prompt: body || undefined };
+      ({ path } = answer.value);
     } catch (err) {
       // A server non-2xx (the old `!res.ok` path) degrades gracefully by
       // launching without the @path suffix; anything unexpected propagates.

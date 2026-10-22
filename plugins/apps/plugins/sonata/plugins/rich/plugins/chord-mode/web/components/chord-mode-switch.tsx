@@ -15,6 +15,7 @@ import { setTracksActive } from "@plugins/apps/plugins/sonata/plugins/track-mixe
 import { Switch } from "@plugins/primitives/plugins/css/plugins/switch/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { WithTooltip } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useSaveChordMode } from "../actions";
 
 const LABEL = "Accompaniment — play the song's chords";
@@ -49,6 +50,7 @@ export function ChordModeSwitch() {
   const mode = useSongSetting(chordModeSetting);
   const setChordMode = useWriteSongSetting(chordModeSetting);
   const saveChordMode = useSaveChordMode();
+  const fetchEndpoint = useFetchEndpoint();
   // Held while the awaited mixer write is in flight, so a second flip cannot
   // interleave the two directions.
   const [busy, setBusy] = useState(false);
@@ -75,7 +77,7 @@ export function ChordModeSwitch() {
     try {
       if (next) {
         if (originals.length > 0) {
-          await setTracksActive(songId, originals, false);
+          await setTracksActive(fetchEndpoint, songId, originals, false);
         }
         setChordMode(songId, true); // optimistic: the chord tracks appear at once
         saveChordMode(songId, true);
@@ -83,7 +85,7 @@ export function ChordModeSwitch() {
         setChordMode(songId, false); // optimistic: the chord tracks vanish at once
         saveChordMode(songId, false);
         if (originals.length > 0) {
-          await setTracksActive(songId, originals, true);
+          await setTracksActive(fetchEndpoint, songId, originals, true);
         }
       }
     } finally {

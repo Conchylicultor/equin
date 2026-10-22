@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { _conversations } from "@plugins/tasks/plugins/tasks-core/server";
@@ -117,65 +117,6 @@ export async function resolveQuestion(
     const row = await requireRow(conversationId, toolUseId);
     throw new HttpError(409, `the question is no longer open (${row.state})`);
   }
-}
-
-/** Is `pid` a live process on this host? */
-export function isPidAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
-    // EPERM: it exists, owned by someone else.
-    if (code === "EPERM") return true;
-    if (code === "ESRCH") return false;
-    throw err;
-  }
-}
-
-/** Each conversation's LATEST held question (state + holder). */
-export async function latestHolds(
-  conversationIds: readonly string[],
-): Promise<{ conversationId: string; state: RelayState; relayPid: number }[]> {
-  return db
-    .selectDistinctOn([t.conversationId], {
-      conversationId: t.conversationId,
-      state: t.state,
-      relayPid: t.relayPid,
-    })
-    .from(t)
-    .where(inArray(t.conversationId, [...conversationIds]))
-    .orderBy(t.conversationId, desc(t.createdAt));
-}
-
-/**
- * Retire the open questions of `conversationIds` whose holder is gone. Returns
- * the retired rows.
- */
-export async function abandonDeadHolds(
-  conversationIds: readonly string[],
-): Promise<{ toolUseId: string }[]> {
-  const open = await db
-    .select({ toolUseId: t.toolUseId, relayPid: t.relayPid })
-    .from(t)
-    .where(
-      and(inArray(t.conversationId, [...conversationIds]), eq(t.state, "open")),
-    );
-  const dead = open.filter((r) => !isPidAlive(r.relayPid));
-  if (dead.length === 0) return [];
-  return db
-    .update(t)
-    .set({ state: "abandoned", resolvedAt: sql`now()` })
-    .where(
-      and(
-        inArray(
-          t.toolUseId,
-          dead.map((r) => r.toolUseId),
-        ),
-        eq(t.state, "open"),
-      ),
-    )
-    .returning({ toolUseId: t.toolUseId });
 }
 
 /**

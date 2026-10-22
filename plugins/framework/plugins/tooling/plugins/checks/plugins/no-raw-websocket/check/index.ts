@@ -37,7 +37,7 @@ const check: Check = {
       ok: false,
       message: `raw \`new WebSocket(\` found in ${offenders.length} place(s):\n    ${offenders.join("\n    ")}`,
       hint:
-        "Use `new SharedWebSocket(...)` from `@plugins/primitives/plugins/networking/web` instead. It mirrors the native WebSocket API but transparently shares a single connection across all tabs of the origin, so opening 20 tabs doesn't open 20 sockets or leave follower tabs without live updates. " +
+        "Open the socket on the subtree's transport instead — `const t = useTransport(); t.openSocket(t.socketUrl(path))` (`@plugins/primitives/plugins/networking/web`), a socket shared across every tab of the origin, or `useReconnectingWebSocket({ path })` for a per-tab one — so a subtree pointed at another server (the demo's browser server) never opens a socket on the page's real one. " +
         "A file that genuinely must construct one declares it in its own plugin's `exempt/index.ts` (rule `no-raw-websocket`, with the reason).",
     };
   },

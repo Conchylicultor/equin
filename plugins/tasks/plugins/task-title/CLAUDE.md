@@ -57,7 +57,6 @@ task was filed with a placeholder) and a ≤3-word short title for narrow rows
     - `taskShortTitleShape`
 - Cross-plugin:
   - Imported by:
-    - `apps/agent-manager/demo`
     - `conversations/conversations-view/data-view`
     - `page/annotations/todo/task-link`
     - `page/prompt/link`

@@ -49,7 +49,40 @@ const { mutateAsync } = useEndpointMutation(updateAgent, { invalidates: [getAgen
 await mutateAsync({ id }, { body: { name: "new" } });
 ```
 
-Use `fetchEndpoint` for imperative fetches outside React. Non-2xx responses throw `EndpointError(status, body)`.
+Imperative calls go through a `FetchEndpoint` — the client bound to ONE transport (there is no transportless fetcher). Non-2xx responses throw `EndpointError(status, body)`.
+
+## The fetcher is bound to a transport
+
+```typescript
+import { useFetchEndpoint, type FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+
+// A component or hook: the subtree's transport (a demo scope's, else the page's).
+const fetchEndpoint = useFetchEndpoint();
+await fetchEndpoint(updateAgent, { id }, { body: { name } });
+
+// An exported helper takes it from its caller — never reaches for one itself.
+export async function patchAgent(fetchEndpoint: FetchEndpoint, id: string, patch: Patch) { … }
+
+// Page-level code sanctioned to name the page's server (telemetry, boot), under
+// a `networking/no-page-transport` exemption in its own exempt/index.ts:
+const fetchEndpoint = fetchEndpointOver(pageTransport);
+```
+
+- **Every binding is named `fetchEndpoint`.** The call-name lint rules
+  (`no-void-fetch-endpoint`, `live/no-endpoint-read`,
+  `page-editor/no-adhoc-structural-write`, `no-reactive-server-io`) recognise a
+  call by that name; `endpoints/fetch-endpoint-binding-name` rejects a
+  `useFetchEndpoint()` / `fetchEndpointOver(…)` result bound under another name
+  (or called inline / returned), a `FetchEndpoint`-typed binding named
+  otherwise, and an alias of one.
+- **One fetcher per transport** (`transportScoped`), so its identity is stable
+  across renders and safe in a deps array.
+- **Tests** (`web/testing`): `fakeFetchEndpoint(answer?, { machine?, transport? })`
+  records each call (`calls[].route / params / body`) and answers it;
+  `fake.fetchEndpoint` is passed to a helper, `withTransport(fake)` is a
+  `render` / `renderHook` wrapper under which `useFetchEndpoint`,
+  `useEndpoint` and `useEndpointMutation` all answer from the fake. Never
+  `vi.mock` the endpoints barrel to stub a call.
 
 **Endpoints are for writes, and for reads sanctioned to stay request/response.** A server read a surface renders is a live resource — a `liveValue` (`params`, a typed `query`, or cursor-`paged`) or a `liveCollection`, read with `useLive` (`plugins/network/plugins/live/CLAUDE.md`). The `live/no-endpoint-read` lint flags, in `web/` code, `useEndpoint`, `useEndpointResource`, TanStack's `useQuery` family, `fetchEndpoint` inside a `queryFn`, a GET `fetchEndpoint` / `readNdjson` that render, a hook or an effect runs, and `invalidateQueries` / `refetchQueries` over an endpoint read's key; imperative `fetchEndpoint` (a mutation, a handler) is untouched. The read hooks below remain for the existing sites — the rule's debt burndown (`./singularity exempt list --rule live/no-endpoint-read --debt`) — never for new code.
 
@@ -80,7 +113,8 @@ export const handleLaunchTask = implementMachine(launchTask, async ({ body }) =>
 
 // web/ — the answer is a result; gate the control before the click
 const availability = useMachineAvailability(launchTask);   // { available: true } | { available: false; message }
-const res = await fetchEndpoint(launchTask, {}, { body, transport });
+const fetchEndpoint = useFetchEndpoint();
+const res = await fetchEndpoint(launchTask, {}, { body });
 if (res.kind === "unavailable") …res.message; else …res.value;
 const m = useEndpointMutation(launchTask);                  // { kind: "unavailable"; message } | { kind: "available" } & UseMutationResult
 ```
@@ -90,10 +124,50 @@ const m = useEndpointMutation(launchTask);                  // { kind: "unavaila
   2. `implement` takes only a portable `EndpointDef` (whose `needsMachine` is `undefined`); `implementMachine` — exported only from the `machine` barrel — only a `MachineEndpointDef`, and brands its handler `MachineHttpHandler`.
   3. A `machine/` barrel's `httpRoutes` (`MachinePluginDefinition`) take only `MachineHttpHandler`s, and a `server/` barrel's (`ServerPluginDefinition`) refuse them — so a portable endpoint is never served by machine code alone (a silent 404 on every other host), and a machine one never by `server/`.
   4. Every client call site handles the unavailable arm: `fetchEndpoint` answers `MachineResult<T>` (`{ kind: "ok"; value } | { kind: "unavailable"; message }`), `useEndpoint` reads one, and `useEndpointMutation` is unavailable at the HOOK level, so `mutate` is unreachable without narrowing. Portable endpoints are unchanged.
-- **Decided by the transport.** `Transport.machine` (`primitives/networking`) is required: `originTransport` is `true`, `browserServerTransport` `false`. A subtree's transport is fixed, so the arm is stable across renders. Under `machine: false` nothing is sent.
+- **Decided by the transport.** `Transport.machine` (`primitives/networking`) is required: `pageTransport` is `true`, `browserServerTransport` `false`. A subtree's transport is fixed, so the arm is stable across renders. Under `machine: false` nothing is sent.
 - **One sentence** — `unavailableMessage(feature)` (core): "Launching an agent isn't available in this version of the app — it needs Singularity running on your computer."
 - **`useMachineAvailability(declaration)`** takes any `{ needsMachine }` declaration — an endpoint or a live read (`network/live`) — for a control that renders disabled with the message (Welcome's send button, the launch form).
 - **Residual gap:** an `await fetchEndpoint(machineDef, …)` whose value is never read ignores the arm silently. Prefer the hook form, or read the result.
+- **A browser host serves the rest — proven at build.** The browser-host coverage guard (codegen's `core/browser-host-coverage.ts`, run by `deriveBrowserHostGraph`, so a gap fails `build` and `push`; nothing exempts it) requires every endpoint a host's scoped page calls — a declaration it imports, or a raw `/api/<prefix>` URL it builds — to be routed by a `server/` barrel of the host's graph, or declared `needsMachine`. Its reading of a declaration is `endpointExports` (`plugin-meta/parse-utils`): the `route:` must be one string literal. So a host's `409 { reason: "unsupported" }` refusal (`unsupportedEndpointResponse`) is a gap the guard missed: the fetcher throws and reports it like any other failure.
+
+## Assets an element loads — `AssetPath` / `useAssetSrc`
+
+An `<img>`, `<a href download>`, `<video>` or `<iframe>` loading a server file
+(an attachment, a checkout image, a host file) never gets a bare `/api/…`
+string: inside a demo scope that string reaches the page's server, not the
+scope's. The builder returns an `AssetPath` and the element reads its `src`
+from `useAssetSrc`.
+
+```typescript
+// core/ — built from the GET endpoint that serves it (path and needsMachine derived)
+export const attachmentUrl = (id: string): AssetPath =>
+  assetPath(getAttachmentFile, { id });                 // query, when the route has one: 3rd arg
+
+// web/ — over the subtree's transport
+const src = useAssetSrc(attachmentUrl(id));             // loading | ready{src} | unavailable{message} | error{message}
+if (src.kind !== "ready") return <UnloadedAssetImage src={src} name={name} />;
+return <img src={src.src} />;
+```
+
+- **Opaque on purpose.** `AssetPath` is not a string, so `src={attachmentUrl(id)}`
+  is a tsc error — every sink resolves it — and it has no `path` field: the
+  path sits under the `ASSET_PATH` symbol, read only by `useAssetSrc`.
+  Persisting an address into a document (an attachment's markdown) spells it
+  from the route itself (`interpolatePath(endpoint.path, params)`).
+- **Decided by the transport.** `servesUrls` (the page's own server): `ready`
+  with the path itself, synchronously. Otherwise (an in-browser server):
+  fetched through `transport.fetch`, handed out as a blob URL shared by every
+  element showing that path and revoked when the last unmounts (one store per
+  transport, `transportScoped`). A route declared `needsMachine` on a transport
+  without the computer: `unavailable`, nothing fetched.
+- `useAssetSrcs(assets)` — the same for a set (a folder's images).
+- Image sinks: `AssetThumbnail` / `UnloadedAssetImage`
+  (`overlay/image-viewer`); file-viewer renderers: `UnloadedFile`.
+- Persisted markdown holding an `/api/…` address (`![](/api/attachments/<id>)`)
+  is converted to an asset by the conversation markdown's `img-enhancer`
+  (`conversation-view/markdown-extensions`); everywhere else the base
+  `<Markdown>` `img` / `a` (`primitives/markdown`) render such an address as
+  text under a transport no URL reaches, so it never loads from the page.
 
 ## Main is read-only for agent sessions — `agentWrite`
 
@@ -160,7 +234,7 @@ export const uploadAttachment = defineEndpoint({
 - `blob(contentType?)` — raw binary on the request (`body:`) or response (`response:`) side. The client encodes/decodes via `Blob`. A server handler that needs custom response headers (e.g. `cache-control`, `content-disposition`) may stay a raw handler instead of using `implement()` — `blob()` carries only the body.
 - `multipart()` — **request-only** FormData. No `Content-Type` is set so the browser supplies the multipart boundary; using it in a `response:` slot throws.
 
-`fetchEndpoint` also accepts two transport opts for fire-and-forget beacons:
+A `FetchEndpoint` call also accepts two transport opts for fire-and-forget beacons:
 
 ```typescript
 void fetchEndpoint(submitReport, {}, { body, keepalive: true, report: false });
@@ -228,8 +302,11 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
 ## Enforced invariants
 
 - **Web code must use `fetchEndpoint`/`useEndpoint`.** Raw `fetch(...)` /
-  `fetchWithRetry(...)` to `/api/...` from web code is forbidden — enforced by
-  the `no-raw-web-fetch` lint rule and the `endpoints:typed-web-fetches` check.
+  `fetchWithRetry(...)` / `sendBeacon(...)` / `new XMLHttpRequest()` from any
+  module a page can load (`web/`, and the `core/` / `shared/` helpers web
+  imports) is forbidden — enforced by the `no-raw-web-fetch` lint rule and the
+  `endpoints:typed-web-fetches` check. A module that runs outside any page (an
+  agent's hook script) is exempted in its own manifest.
 - **No `void fetchEndpoint(...)` for user-triggered mutations.** A discarded
   endpoint promise lets a non-2xx response escape to `window.onunhandledrejection`
   (a contextless `browser-rejection` crash, never a toast) — enforced by the

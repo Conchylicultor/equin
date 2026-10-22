@@ -18,7 +18,7 @@ task filing — and `jobs` owns mechanism. That is the same rule
 
 It is also a cycle if written the other way. `reports` already imports `jobs` by
 two independent routes (`record-report.ts` → `shell/notifications/server` →
-`ttl-cleanup.ts` → `jobs`, and `reports/server/internal/retention.ts` →
+`ttl-cleanup.ts` → `jobs`, and `reports/plugins/engine/server/internal/retention.ts` →
 `infra/retention/server` → `jobs`), because `reports` is a **user** of durable
 background work. A primitive cannot import its own user, and severing those two
 routes would only leave a standing rule that "reports must never use a background
@@ -168,8 +168,8 @@ surfaces as an unhandled rejection, which the reports plugin itself files.
     - `infra/jobs.JobDeadlineEvent`
     - `infra/jobs.jobDeadlineSink`
     - `infra/jobs.JobSlotFloorReport`
-    - `reports.recordReport`
     - `reports.ReportKind`
+    - `reports/engine.recordReport`
   - Exports (values):
     - `deadlineExceededKind`
     - `jobZombieKind`

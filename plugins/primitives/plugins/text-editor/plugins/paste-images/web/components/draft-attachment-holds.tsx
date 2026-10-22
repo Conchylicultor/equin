@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { holdAttachments } from "@plugins/infra/plugins/attachments/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   legacyDraftKeys,
   onDraftWritten,
@@ -44,6 +45,8 @@ function clientId(): string {
  * A clear (or an edit that drops an image) releases them.
  */
 export function DraftAttachmentHolds(): null {
+  // Mounted at `Core.Root`, so this is the page's transport.
+  const fetchEndpoint = useFetchEndpoint();
   useEffect(() => {
     const sent = new Map<string, { ids: string; at: number }>();
     return onDraftWritten(({ storageKey, value, ttl }) => {
@@ -59,11 +62,12 @@ export function DraftAttachmentHolds(): null {
       if (ids.length === 0) sent.delete(storageKey);
       else sent.set(storageKey, { ids: signature, at: now });
       void holdAttachments(
+        fetchEndpoint,
         `${clientId()}:${storageKey}`,
         ids,
         Number.isFinite(ttl) ? ttl + REFRESH_MS : null,
       );
     });
-  }, []);
+  }, [fetchEndpoint]);
   return null;
 }

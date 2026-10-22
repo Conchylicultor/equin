@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { attachFiles } from "../internal/attach-files";
@@ -20,6 +21,7 @@ export function AttachFilesButton({
   onError?: (msg: string) => void;
 }) {
   const [editor] = useLexicalComposerContext();
+  const fetchEndpoint = useFetchEndpoint();
   const inputRef = useRef<HTMLInputElement>(null);
   return (
     <>
@@ -33,7 +35,7 @@ export function AttachFilesButton({
           // Reset so picking the same file again still fires a change.
           e.target.value = "";
           if (files.length === 0) return;
-          attachFiles(editor, files).catch((err: unknown) => {
+          attachFiles(fetchEndpoint, editor, files).catch((err: unknown) => {
             if (!onError) throw err;
             onError(err instanceof Error ? err.message : String(err));
           });

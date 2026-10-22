@@ -456,13 +456,12 @@ See `research/2026-09-29-global-scoped-change-routing.md`.
     - `apps/chord/song-index`
     - `apps/chord/video-availability`
     - `apps/deploy/analytics/collect`
-    - `conversations/usage`
     - `database/live-state-snapshot`
     - `debug/latency-ledger`
     - `debug/slow-ops`
     - `debug/trace/engine`
     - `infra/retention`
-    - `reports`
+    - `reports/engine`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/producer.ts`, `server/internal/triggers.ts` (debt)
 - Test helpers:

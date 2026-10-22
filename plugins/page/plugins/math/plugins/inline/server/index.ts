@@ -3,6 +3,7 @@ import { Editor } from "@plugins/page/plugins/editor/server";
 import { INLINE_MATH_TOKEN_PATTERN, inlineMathNode } from "../core";
 
 export default {
+  portable: true,
   description:
     "Inline math token pattern at the server markdown boundary: protects `\\(<latex>\\)` spans from the marks-aware inline scan.",
   contributions: [

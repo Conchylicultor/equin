@@ -1,5 +1,8 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
-import { CONVERSATIONS_CATEGORY_ID } from "../../core/task-category";
+import {
+  CONVERSATIONS_CATEGORY_ID,
+  SYSTEM_CATEGORY_ID,
+} from "../../core/task-category";
 import { rename } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import {
@@ -49,6 +52,7 @@ import {
 } from "@plugins/conversations/plugins/workspace/core";
 import {
   Workspace,
+  parseWorkspaceSpec,
   workspaceOfAttempt,
   type WorkspaceAt,
 } from "@plugins/conversations/plugins/workspace/server";
@@ -433,7 +437,7 @@ export async function commitConversation(
       );
       await setTaskCategory(
         task.id,
-        p.kind === "system" ? "system" : CONVERSATIONS_CATEGORY_ID,
+        p.kind === "system" ? SYSTEM_CATEGORY_ID : CONVERSATIONS_CATEGORY_ID,
         tx,
       );
       taskId = task.id;
@@ -612,11 +616,6 @@ export class ResumeBlockedError extends Error {
 // The workspace a conversation runs in: its attempt's.
 function workspaceOf(row: Conversation): Promise<WorkspaceAt> {
   return workspaceOfAttempt(row.attemptId);
-}
-
-// A new attempt's spec, as its kind validates and stores it.
-function parseWorkspaceSpec(spec: WorkspaceSpec): WorkspaceSpec {
-  return Workspace.get(spec.kind).parseSpec(spec);
 }
 
 // Everything that must be true before a conversation can be handed to

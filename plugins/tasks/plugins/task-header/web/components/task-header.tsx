@@ -10,6 +10,7 @@ import {
   Text,
 } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { patchTask, useTask } from "@plugins/tasks/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useRegisterFlush } from "@plugins/tasks/plugins/task-detail/web";
 import { StatusSignal } from "@plugins/tasks/plugins/task-status/web";
 import { TaskTrackControl } from "@plugins/tasks/plugins/task-track/web";
@@ -19,6 +20,7 @@ import { AuthorDisplay } from "./author-display";
 
 export function TaskHeader({ taskId }: { taskId: string }) {
   const result = useTask(taskId);
+  const fetchEndpoint = useFetchEndpoint();
   const titleField = useEditableField({
     // The field renders only once the task is known, so the "" seed for the
     // other states is never shown or saved.
@@ -27,7 +29,8 @@ export function TaskHeader({ taskId }: { taskId: string }) {
       error: () => "",
       ready: (t) => t?.title ?? "",
     }),
-    onSave: (v) => patchTask(taskId, { title: v.trim() || "Untitled" }),
+    onSave: (v) =>
+      patchTask(fetchEndpoint, taskId, { title: v.trim() || "Untitled" }),
     label: "Task title",
   });
   useRegisterFlush(titleField.flush);
@@ -46,11 +49,11 @@ export function TaskHeader({ taskId }: { taskId: string }) {
   if (task === null) return null;
 
   const toggleDrop = () => {
-    void patchTask(taskId, { drop: task.status !== "dropped" });
+    void patchTask(fetchEndpoint, taskId, { drop: task.status !== "dropped" });
   };
 
   const toggleHold = () => {
-    void patchTask(taskId, { hold: task.status !== "held" });
+    void patchTask(fetchEndpoint, taskId, { hold: task.status !== "held" });
   };
 
   return (

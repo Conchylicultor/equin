@@ -5,13 +5,14 @@ import {
   useOpenPane,
   usePaneStore,
 } from "@plugins/primitives/plugins/pane/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { closeConversation } from "@plugins/conversations/core";
 import { ConversationsSidebarDataView } from "@plugins/conversations/plugins/conversations-view/plugins/data-view/web";
 
 export function ConversationList() {
   const openPane = useOpenPane();
   const store = usePaneStore();
+  const fetchEndpoint = useFetchEndpoint();
 
   // Highlight the conversation active in THIS surface's route — not the
   // focused window's URL. A background/secondary visible surface reflects its

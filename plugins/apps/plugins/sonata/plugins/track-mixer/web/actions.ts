@@ -1,4 +1,4 @@
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   enqueueDetachedWrite,
   enqueueResourceWrite,
@@ -46,6 +46,7 @@ function send(
 }
 
 export function setTrackColor(
+  fetchEndpoint: FetchEndpoint,
   songId: string,
   trackId: string,
   color: string | null,
@@ -60,6 +61,7 @@ export function setTrackColor(
 }
 
 export function setTrackInstrument(
+  fetchEndpoint: FetchEndpoint,
   songId: string,
   trackId: string,
   instrumentId: string | null,
@@ -74,6 +76,7 @@ export function setTrackInstrument(
 }
 
 export function setTrackMuted(
+  fetchEndpoint: FetchEndpoint,
   songId: string,
   trackId: string,
   muted: boolean,
@@ -88,6 +91,7 @@ export function setTrackMuted(
 }
 
 export function setTrackHidden(
+  fetchEndpoint: FetchEndpoint,
   songId: string,
   trackId: string,
   hidden: boolean,
@@ -108,6 +112,7 @@ export function setTrackHidden(
  * write its siblings are.
  */
 export function setTrackVolume(
+  fetchEndpoint: FetchEndpoint,
   songId: string,
   trackId: string,
   volume: number,
@@ -140,6 +145,7 @@ export function setTrackVolume(
  * user made at the same moment.
  */
 export function setTracksActive(
+  fetchEndpoint: FetchEndpoint,
   songId: string,
   trackIds: readonly string[],
   active: boolean,
@@ -153,6 +159,9 @@ export function setTracksActive(
   );
 }
 
-export function resetTrackViews(songId: string): void {
+export function resetTrackViews(
+  fetchEndpoint: FetchEndpoint,
+  songId: string,
+): void {
   send(songId, "reset", () => fetchEndpoint(resetTrackView, { songId }));
 }

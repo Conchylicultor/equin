@@ -72,14 +72,14 @@ each kind's bell variant), `minCount` (occurrences, default 3) and
   - Uses:
     - `network/live.serveValue`
     - `reports._reports`
-    - `reports.linkReportsToTask`
-    - `reports.renderReportTask`
     - `reports.reportInvestigationSink`
     - `reports.ReportKind`
     - `reports.reportRecordedSignal`
     - `reports.ReportRow`
-    - `reports.uninvestigatedReportCounts`
-    - `reports.uninvestigatedReports`
+    - `reports/engine.linkReportsToTask`
+    - `reports/engine.renderReportTask`
+    - `reports/engine.uninvestigatedReportCounts`
+    - `reports/engine.uninvestigatedReports`
     - `tasks/automations.automationConfigRegistration`
     - `tasks/automations.defineAutomation`
     - `tasks/task-category.setTaskCategory`

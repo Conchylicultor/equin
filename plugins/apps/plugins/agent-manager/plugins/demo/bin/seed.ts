@@ -1,5 +1,8 @@
 import { db } from "@plugins/database/server";
-import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
+import {
+  setTaskCategory,
+  TaskCategory,
+} from "@plugins/tasks/plugins/task-category/server";
 import {
   _attempts,
   _conversations,
@@ -40,6 +43,7 @@ import {
  * each story an agent filed.
  */
 export async function seed(): Promise<void> {
+  assertStoryCategoriesRegistered();
   const now = Date.now();
   const ago = (ms: number) => new Date(now - ms);
   const live = DEMO_STORIES.filter((s) => s.status !== "done");
@@ -120,4 +124,28 @@ export async function seed(): Promise<void> {
   }
   for (const [i, story] of live.entries())
     await upsertRank(demoConversationId(story), ranks[i]!);
+}
+
+/**
+ * Every story's category is one this host registers (`TaskCategory`): a task
+ * filed under a category no booted plugin registers renders as its raw id —
+ * the demo's task list would group under "apps" instead of a label. Loud, at
+ * seed, so the boot test fails the moment the composition drops a registrar.
+ */
+function assertStoryCategoriesRegistered(): void {
+  const registered = new Set(TaskCategory.getContributions().map((c) => c.id));
+  const missing = [
+    ...new Set(
+      DEMO_STORIES.flatMap((s) =>
+        s.category !== undefined && !registered.has(s.category)
+          ? [s.category]
+          : [],
+      ),
+    ),
+  ];
+  if (missing.length > 0) {
+    throw new Error(
+      `[demo seed] stories are filed under task categories this host does not register: ${missing.join(", ")} (registered: ${[...registered].sort().join(", ")}). File them under a category a graph member contributes (TaskCategory), or bring its registrar into the composition.`,
+    );
+  }
 }

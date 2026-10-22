@@ -2,6 +2,7 @@ import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web"
 import { FileTypeIcon } from "@plugins/primitives/plugins/file-type/web";
 import { openInBrowserTab } from "@plugins/primitives/plugins/link-gesture/web";
 import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
+import { useAssetSrc } from "@plugins/infra/plugins/endpoints/web";
 import { attachmentUrl } from "../internal/markdown";
 import {
   AttachmentSlots,
@@ -48,9 +49,15 @@ function OpenerLink({
   return <FileLink file={file} target={useTarget()(file)} />;
 }
 
-/** No preview to open: the raw file, in a tab — "here" and "elsewhere" alike. */
+/**
+ * No preview to open: the raw file, in a tab — "here" and "elsewhere" alike —
+ * loaded over the subtree's transport (`useAssetSrc`). Until it is loadable
+ * (or where it cannot be) the chip opens nothing.
+ */
 function RawFileLink({ file }: { file: AttachedFileRef }) {
-  const url = attachmentUrl(file.attachmentId);
+  const src = useAssetSrc(attachmentUrl(file.attachmentId));
+  if (src.kind !== "ready") return <FileLink file={file} target={null} />;
+  const url = src.src;
   return (
     <FileLink
       file={file}
@@ -64,11 +71,12 @@ function FileLink({
   target,
 }: {
   file: AttachedFileRef;
-  target: LinkTarget;
+  /** `null`: nothing to open (yet). */
+  target: LinkTarget | null;
 }) {
   return (
     <LinkChip
-      activation={target}
+      activation={target ?? undefined}
       tooltip={file.filename}
       leading={<FileTypeIcon name={file.filename} />}
     >

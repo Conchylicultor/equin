@@ -15,8 +15,11 @@ const unsupportedBody = z.object({
 /**
  * The one spelling of an endpoint refusal: `409 { reason: "unsupported",
  * method, path }`. A host (e.g. a browser server standing in for the real one)
- * answers it for an endpoint it does not serve, and tells the user itself — so
- * a client recognising it (`isUnsupportedEndpointBody`) reports nothing more.
+ * answers it for an endpoint it does not serve. The client treats it as any
+ * other failure — thrown and reported: a browser host's coverage guard
+ * (codegen's `browser-host-coverage.ts`) proves every endpoint its scoped page
+ * calls is served or declared `needsMachine` (answered `unavailable` without a
+ * request), so a refusal is a gap the guard missed.
  */
 export function unsupportedEndpointResponse(
   method: string,
@@ -42,42 +45,4 @@ export function unmatchedApiResponse(req: Request, pathname: string): Response {
     return unsupportedEndpointResponse(req.method, pathname);
   }
   return new Response(`Not found: ${pathname}`, { status: 404 });
-}
-
-/**
- * Whether a parsed error body is `unsupportedEndpointResponse`'s — a host's
- * refusal of an endpoint it does not serve, not a failure of the endpoint.
- */
-export function isUnsupportedEndpointBody(body: unknown): boolean {
-  return unsupportedBody.safeParse(body).success;
-}
-
-/** Whether a response's status and parsed body are an unsupported-endpoint refusal. */
-export function isUnsupportedEndpointRefusal(
-  status: number,
-  body: unknown,
-): boolean {
-  return status === UNSUPPORTED_STATUS && isUnsupportedEndpointBody(body);
-}
-
-/**
- * Whether a response is an unsupported-endpoint refusal — for a host boundary
- * that tells the user itself (a decorator over a server), without consuming
- * the body the caller still reads (it reads a clone). Any status but 409
- * answers `false` before touching the body; a body that is not JSON (a plain
- * `HttpError` text) is not a refusal.
- */
-export async function isUnsupportedEndpointResponse(
-  res: Response,
-): Promise<boolean> {
-  if (res.status !== UNSUPPORTED_STATUS) return false;
-  const raw = await res.clone().text();
-  let body: unknown;
-  try {
-    body = JSON.parse(raw);
-  } catch (err) {
-    if (!(err instanceof SyntaxError)) throw err;
-    return false;
-  }
-  return isUnsupportedEndpointRefusal(res.status, body);
 }

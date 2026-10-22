@@ -1,9 +1,6 @@
 import { serveValue } from "@plugins/network/plugins/live/server";
-import {
-  _reports,
-  ReportKind,
-  uninvestigatedReportCounts,
-} from "@plugins/reports/server";
+import { _reports, ReportKind } from "@plugins/reports/server";
+import { uninvestigatedReportCounts } from "@plugins/reports/plugins/engine/server";
 import { reportInvestigationsScope } from "../../shared/live";
 
 // The loader reads `reports` (the task link and noise flag that mark one

@@ -1,17 +1,25 @@
-import { attachmentsByOwner } from "@plugins/infra/plugins/attachments/core";
+import {
+  attachmentsByOwner,
+  getAttachmentFile,
+  type Attachment,
+} from "@plugins/infra/plugins/attachments/core";
+import {
+  assetPath,
+  type AssetPath,
+} from "@plugins/infra/plugins/endpoints/core";
+import { useAssetSrc } from "@plugins/infra/plugins/endpoints/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
   foldResource,
   ResourceErrorInline,
 } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { useTransport } from "@plugins/primitives/plugins/networking/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
+  AssetThumbnail,
   ImageGallery,
-  ViewerThumbnail,
 } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 
 function formatSize(bytes: number): string {
@@ -54,7 +62,6 @@ export function TaskAttachmentsCount({ taskId }: { taskId: string }) {
 
 export function TaskAttachments({ taskId }: { taskId: string }) {
   const result = useTaskAttachments(taskId);
-  const transport = useTransport();
   if (result.status === "loading") return <Loading variant="rows" />;
   if (result.status === "error") {
     return (
@@ -73,32 +80,50 @@ export function TaskAttachments({ taskId }: { taskId: string }) {
     // The task's images are one ← / → set in the viewer.
     <ImageGallery>
       <Stack direction="row" wrap gap="md">
-        {/* eslint-disable-next-line data-view/no-adhoc-row-list -- mixed inline-image + file-chip section; bespoke layout (DataView candidate tracked in follow-up task) */}
-        {attachments.map((a) =>
-          a.mime.startsWith("image/") ? (
-            <ViewerThumbnail
-              key={a.id}
-              image={{
-                src: transport.assetUrl(`/api/attachments/${a.id}`),
-                name: a.filename,
-                sourceLabel: "Attached",
-              }}
-            />
-          ) : (
-            <Row
-              key={a.id}
-              href={transport.assetUrl(`/api/attachments/${a.id}`)}
-              download={a.filename}
-              bordered
-            >
-              <span>{a.filename}</span>
-              <Text as="span" variant="caption" tone="muted">
-                {formatSize(a.size)}
-              </Text>
-            </Row>
-          ),
-        )}
+        {attachments.map((a) => (
+          <TaskAttachment key={a.id} attachment={a} />
+        ))}
       </Stack>
     </ImageGallery>
+  );
+}
+
+/**
+ * One attachment: an image as a thumbnail of the task's set, any other file a
+ * download row — its bytes loaded over the subtree's transport (`useAssetSrc`).
+ */
+function TaskAttachment({ attachment: a }: { attachment: Attachment }) {
+  const asset = assetPath(getAttachmentFile, { id: a.id });
+  if (a.mime.startsWith("image/")) {
+    return (
+      <AssetThumbnail
+        asset={asset}
+        image={{ name: a.filename, sourceLabel: "Attached" }}
+      />
+    );
+  }
+  return <TaskAttachmentFile attachment={a} asset={asset} />;
+}
+
+/** A non-image attachment: a row that downloads it once its bytes are loadable. */
+function TaskAttachmentFile({
+  attachment: a,
+  asset,
+}: {
+  attachment: Attachment;
+  asset: AssetPath;
+}) {
+  const src = useAssetSrc(asset);
+  return (
+    <Row
+      href={src.kind === "ready" ? src.src : undefined}
+      download={a.filename}
+      bordered
+    >
+      <span>{a.filename}</span>
+      <Text as="span" variant="caption" tone="muted">
+        {formatSize(a.size)}
+      </Text>
+    </Row>
   );
 }

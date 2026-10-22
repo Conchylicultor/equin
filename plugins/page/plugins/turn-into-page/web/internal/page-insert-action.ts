@@ -1,4 +1,5 @@
 import { plainOf } from "@plugins/page/plugins/editor/core";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import type {
   InsertAction,
   InsertActionRun,
@@ -13,9 +14,13 @@ const descriptionIcon = symbol("description");
 /** The `/page` runner: turn the line into the page, then open it. */
 function usePageInsertRun(): InsertActionRun {
   const openMadePage = useOpenMadePage();
+  const fetchEndpoint = useFetchEndpoint();
   return ({ blockId, text }) => {
     // The block keeps its id, which is the new page's id.
-    openMadePage(turnBlockIntoPage(blockId, plainOf(text).trim()), blockId);
+    openMadePage(
+      turnBlockIntoPage(fetchEndpoint, blockId, plainOf(text).trim()),
+      blockId,
+    );
   };
 }
 

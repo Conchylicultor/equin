@@ -73,7 +73,7 @@ semitones (±12), surfaced as a toolbar popover and remembered per song.
     - `primitives/css/ui-kit` ×2
     - `apps/sonata/library.sonataPlayerPane`
     - `apps/sonata/session.useSession`
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLiveRow`
     - `primitives/css/center.Center`
     - `primitives/css/grid.Grid`

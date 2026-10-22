@@ -1,4 +1,4 @@
-import { recordReport } from "@plugins/reports/server";
+import { recordReport } from "@plugins/reports/plugins/engine/server";
 import type { ArchiveShrink } from "./archive";
 import type { UnpricedModel } from "./usage-index";
 

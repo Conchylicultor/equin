@@ -116,6 +116,7 @@ export {
 } from "./internal/block-registry";
 
 export default {
+  portable: true,
   description: "Block-based document editor — tables, routes, and live state.",
   // Bring every sidebar group's `doc_rank` to document order before this
   // backend serves: the first boot of a database backfills the column, and any

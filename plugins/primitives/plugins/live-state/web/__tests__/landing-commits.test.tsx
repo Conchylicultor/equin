@@ -19,7 +19,10 @@ vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
   clientLog: () => {},
 }));
 
-import { render } from "@testing-library/react";
+import {
+  renderWithTransport,
+  testTransport,
+} from "@plugins/primitives/plugins/networking/web/testing";
 import { memo, Profiler } from "react";
 import { z } from "zod";
 import {
@@ -45,6 +48,9 @@ async function settle(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 30));
 }
 
+/** The page's transport, whose pipeline is the boot-hoisted one `hydrateResource` seeds. */
+const page = testTransport();
+
 describe("a landing's React cost", () => {
   let previousActEnv: boolean | undefined;
   beforeEach(() => {
@@ -57,9 +63,10 @@ describe("a landing's React cost", () => {
 
   it("a burst of first values is one commit, and a later landing renders only its own reader", async () => {
     // No cold-start HTTP prime: the values come from the writes below.
-    vi.spyOn(ensureNotificationsClient(), "hasEverBeenReady").mockReturnValue(
-      true,
-    );
+    vi.spyOn(
+      ensureNotificationsClient(page),
+      "hasEverBeenReady",
+    ).mockReturnValue(true);
     const renders = new Map<string, number>();
     const statuses = new Map<string, string>();
     let commits = 0;
@@ -69,7 +76,7 @@ describe("a landing's React cost", () => {
       statuses.set(id, r.status);
       return null;
     });
-    render(
+    renderWithTransport(
       <NotificationsProvider>
         <Profiler id="readers" onRender={() => (commits += 1)}>
           {IDS.map((id) => (
@@ -77,6 +84,7 @@ describe("a landing's React cost", () => {
           ))}
         </Profiler>
       </NotificationsProvider>,
+      { transport: page },
     );
     await settle();
     expect([...statuses.values()].every((s) => s === "loading")).toBe(true);

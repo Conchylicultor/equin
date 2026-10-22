@@ -21,6 +21,7 @@ import { coalesce, runsOf, xmlTextContentLength } from "../../core";
 import type { ProjectTextFn } from "./doc-sourced-runs";
 import type { RowTruth } from "./row-truth";
 import { buildSeedStateFor } from "./block-seed-state";
+import { useBlockDocs } from "./use-block-docs";
 import {
   IDLE_SAVE_STATE,
   type CollabSaveState,
@@ -325,7 +326,9 @@ interface CollabDocHold {
  * session and its unmount end — and the `content doc → data.text` PROJECTION,
  * which lives here because its final flush reads the canonical doc and must
  * therefore run inside this hook's own teardown, BEFORE the session ends.
- * `serverSync` selects the provider transport when the owner is created.
+ * The owner lives in the subtree's transport's registry (`useBlockDocs()`);
+ * `serverSync` selects its provider when it is created — synced with that
+ * transport's server, or purely local for the in-memory editor.
  */
 function useCollabDocHold(
   blockId: string,
@@ -334,6 +337,7 @@ function useCollabDocHold(
   serverSync: boolean,
   projectText: ProjectTextFn,
 ): CollabDocHold {
+  const docs = useBlockDocs();
   const dataTextRef = useLatestRef(dataText);
   // Render-accurate row truth for provider CONSTRUCTION (the server provider's
   // pre-seed discriminator and FK gate): an existing block renders `"present"`
@@ -523,6 +527,7 @@ function useCollabDocHold(
     // idempotent and no-ops on an already-ended session.
     current?.end();
     const next = CollabSession.start(
+      docs,
       id,
       buildSeedState,
       rowTruthRef.current,

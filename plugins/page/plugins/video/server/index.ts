@@ -3,6 +3,7 @@ import { Editor } from "@plugins/page/plugins/editor/server";
 import { videoBlock } from "../core";
 
 export default {
+  portable: true,
   description:
     "Video block type: registers its `data` schema (attachment) at the server write boundary.",
   contributions: [Editor.BlockData(videoBlock)],

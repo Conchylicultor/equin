@@ -5,8 +5,9 @@ import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
-  sendConversationTurn,
   useOptimisticConversationStatus,
+  useSendConversationTurn,
+  useTurnSendAvailability,
 } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { outcomeReportRows } from "../../core";
@@ -26,6 +27,9 @@ export function OutcomeReportCard({
 }): ReactElement | null {
   const result = useLiveRow(outcomeReportRows, conversation.taskId);
   const status = useOptimisticConversationStatus(conversation);
+  const sendConversationTurn = useSendConversationTurn();
+  // An answer is a turn: a host without the computer cannot send one.
+  const sendAvailability = useTurnSendAvailability();
   // Not loaded yet and "no report" both render nothing: an optional banner.
   if (result.status === "loading") return null;
   if (result.status === "error")
@@ -50,7 +54,7 @@ export function OutcomeReportCard({
           choose: (label) => {
             sendConversationTurn(conversation.id, { text: label });
           },
-          disabled: status !== "waiting",
+          disabled: !sendAvailability.available || status !== "waiting",
         }}
       />
     </Card>

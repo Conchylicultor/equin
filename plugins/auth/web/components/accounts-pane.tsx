@@ -1,6 +1,9 @@
 import { useMemo, type ReactElement } from "react";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import type {
+  ResourceResult,
+  ResourceUnavailable,
+} from "@plugins/primitives/plugins/live-state/web";
 import { SECRETS_DIR_DISPLAY } from "@plugins/infra/plugins/paths/plugins/display/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -48,7 +51,9 @@ interface AccountRow {
   icon: IconRef;
   service: string;
   description: string;
-  useStatus: Hook<() => ResourceResult<IntegrationStatus>>;
+  useStatus: Hook<
+    () => ResourceResult<IntegrationStatus> | ResourceUnavailable
+  >;
 }
 
 export function AccountsPane(): ReactElement {

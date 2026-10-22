@@ -1,6 +1,13 @@
 import { useMemo, type ReactNode } from "react";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
-import { ViewerThumbnail } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
+import {
+  AssetThumbnail,
+  ViewerThumbnail,
+} from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
+import {
+  attachmentUrl,
+  isAttachmentUrl,
+} from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import {
   MarkdownEnhancementContext,
   useMarkdownEnhancement,
@@ -55,22 +62,46 @@ export function ImgEnhancer({ children }: { children: ReactNode }) {
       components: {
         img: ({ src, alt }) => {
           if (typeof src !== "string" || !src) return null;
+          // THE place a persisted `/api/…` address in markdown becomes an
+          // asset: an attachment (`![](/api/attachments/<id>)`) loads over the
+          // subtree's transport like every other attachment image.
+          const attachmentId = isAttachmentUrl(src);
+          if (attachmentId !== null) {
+            return (
+              <AssetThumbnail
+                asset={attachmentUrl(attachmentId)}
+                image={{
+                  name: alt || "Attached image",
+                  sourceLabel: "Markdown",
+                  alt: alt || undefined,
+                }}
+              />
+            );
+          }
           const isImage = IMG_HREF_RE.test(src);
-          if (isImage) {
+          if (isImage && isExternalUrl(src)) {
             return (
               <ViewerThumbnail
                 image={{
-                  src: isExternalUrl(src)
-                    ? src
-                    : fileUrl(
-                        fileRefForPath(
-                          worktree,
-                          src,
-                          worktreePath !== undefined
-                            ? { root: worktreePath }
-                            : {},
-                        ),
-                      ),
+                  src,
+                  name: basename(src),
+                  sourceLabel: "Markdown",
+                  alt: alt || undefined,
+                }}
+              />
+            );
+          }
+          if (isImage) {
+            return (
+              <AssetThumbnail
+                asset={fileUrl(
+                  fileRefForPath(
+                    worktree,
+                    src,
+                    worktreePath !== undefined ? { root: worktreePath } : {},
+                  ),
+                )}
+                image={{
                   name: basename(src),
                   sourceLabel: "Markdown",
                   alt: alt || undefined,

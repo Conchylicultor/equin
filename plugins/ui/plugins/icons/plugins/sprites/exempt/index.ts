@@ -10,10 +10,10 @@ export default [
       "A request/response server read (a GET fetchEndpoint or NDJSON stream an effect, a hook or a function they call runs) not yet moved onto a liveValue or liveCollection read with useLive.",
   },
   {
-    rule: "boundaries/no-platform-api",
-    paths: ["server/internal/runtime-symbols.ts", "server/internal/sprites.ts"],
-    kind: "debt",
-    task: "task-1792338443-riwqev",
-    reason: "not yet split into server/ + machine/",
+    rule: "networking/no-page-transport",
+    paths: ["web/internal/sprite-host.tsx"],
+    kind: "sanctioned",
+    reason:
+      "The page's icon sprites are page chrome, loaded once per page from the page's own server.",
   },
 ] satisfies Exemptions;

@@ -19,7 +19,7 @@ import type {
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { isTurnRunning } from "@plugins/conversations/core";
 import { isSlashCommand, transcriptReachedAt, transcriptShows } from "./landed";
-import { settleSentTurns, useSentTurns, type SentTurn } from "./send";
+import { useSentTurns, useSettleSentTurns, type SentTurn } from "./send";
 
 /**
  * Where a turn the transcript should show a card for stands: a ledger state,
@@ -160,6 +160,7 @@ export function usePendingTurns(
 ): ResourceResult<PendingTurn[]> {
   const ledger = useLive(conversationTurns, { where: { conversationId } });
   const sent = useSentTurns(conversationId);
+  const settleSentTurns = useSettleSentTurns();
   // The rows this tab holds, to retire the sends they stand for: none yet
   // while loading, the last known ones over a failed read.
   const rows = foldResource(ledger, {
@@ -169,7 +170,7 @@ export function usePendingTurns(
   });
   useEffect(() => {
     if (rows) settleSentTurns(conversationId, new Set(rows.map((r) => r.id)));
-  }, [conversationId, rows]);
+  }, [conversationId, rows, settleSentTurns]);
   const both = useCombinedResources({ ledger, events });
   return useMemo(
     () =>

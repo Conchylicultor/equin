@@ -9,7 +9,8 @@
 // renders before any row does, so it needs none of that.
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, screen } from "@testing-library/react";
+import { renderWithTransport } from "@plugins/primitives/plugins/networking/web/testing";
 import { useEffect, useMemo } from "react";
 import {
   PluginProvider,
@@ -111,7 +112,7 @@ function mount() {
     if (!found) throw new Error(`no seeded block "${text}"`);
     return found;
   };
-  render(
+  renderWithTransport(
     <PluginProvider plugins={plugins}>
       <UndoRedoProvider>
         <BlockEditorProvider
@@ -268,7 +269,7 @@ describe("zoomed editor — writes that would leave the view are refused", () =>
 
 describe("zoomed editor — a root that is not there", () => {
   it("renders the gone state rather than an empty list", () => {
-    render(
+    renderWithTransport(
       <PluginProvider plugins={plugins}>
         <UndoRedoProvider>
           <BlockEditor

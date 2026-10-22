@@ -139,8 +139,8 @@ live-state-churn's accumulator + scheduled job.)
     - `debug/trace/engine.captureTrace`
     - `infra/jobs.defineJob`
     - `primitives/log-channels.Log`
-    - `reports.recordReport`
     - `reports.ReportKind`
+    - `reports/engine.recordReport`
   - Register: `defineJob('debug.op-rate-monitor')`
 - Core:
   - Uses:

@@ -3,6 +3,7 @@ import { Editor } from "@plugins/page/plugins/editor/server";
 import { toDoBlock } from "../core";
 
 export default {
+  portable: true,
   description:
     "To-do (checkbox) block type: registers its `data` schema at the server write boundary.",
   contributions: [Editor.BlockData(toDoBlock)],

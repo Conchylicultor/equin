@@ -49,7 +49,7 @@ list, push and resolve GET routes are deleted. Only the image route stays — an
 
 ## Plugin reference
 
-- Description: Worktree-scoped checkout reads by attempt id or the reserved `main` sentinel: the raw image route, the sha-addressed commit-info / commit-files live values, and push-files — one push's files, its range read from its ledger rows by ancestry.
+- Description: Worktree-scoped checkout reads by attempt id or the reserved `main` sentinel: push-files — one push's files, its range read from its ledger rows by ancestry. The raw image route is the machine half's.
 - Server:
   - Contributes:
     - `resource.declare` "code.commit-files"
@@ -69,10 +69,8 @@ list, push and resolve GET routes are deleted. Only the image route stays — an
     - `infra/paths.REPO_ROOT`
     - `infra/worktree.ensureMainWorktreeRoot`
     - `network/live.serveValue`
-    - `primitives/commit-list.LOG_FORMAT`
     - `primitives/commit-list.parseDiffNameStatusZ`
     - `primitives/commit-list.parseDiffNumstatZ`
-    - `primitives/commit-list.parseGitLog`
     - `primitives/commit-list.tryRunGit`
     - `tasks/tasks-core.getAttemptRow`
     - `tasks/tasks-core.pushes`
@@ -93,6 +91,7 @@ list, push and resolve GET routes are deleted. Only the image route stays — an
     - `code.push-files` (push, notified)
 - Machine:
   - Uses:
+    - `infra/endpoints.machineHandler`
     - `infra/host-fs.hostPathVersion`
     - `infra/host-fs.watchHostDir`
     - `infra/host-fs.watchHostPath`

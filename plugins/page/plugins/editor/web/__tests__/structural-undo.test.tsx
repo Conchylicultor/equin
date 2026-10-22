@@ -33,23 +33,23 @@
 //   `textBearingTypes`, which the merge cases need — see `textHandle`.
 // - `merge`/`mergeNext` run with no mounted focus handle, so `mergeBlock` takes
 //   the OFFSCREEN branch: one `spliceStoredBlockDoc` against the two doc
-//   endpoints, stubbed below with a stored doc that holds the target's row
+//   endpoints, answered by the fake fetcher the harness's transport carries
+//   (`withTransport(docServer)`), with a stored doc that holds the target's row
 //   text. Undo/redo then replay the entry's runs edit onto the ROW (memory mode
 //   with no live owner — `applyBlockRuns`' last arm), which is what lets the
 //   quadruple compare row snapshots. Merge into a MOUNTED target, and split
 //   with a live doc, are `text-undo-entries.test.tsx`'s.
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { act, cleanup, render } from "@testing-library/react";
 import { useEffect, useMemo } from "react";
 import { encodeStateAsUpdate } from "yjs";
 
-vi.mock("@plugins/infra/plugins/endpoints/web", async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  return { ...actual, fetchEndpoint: vi.fn() };
-});
-
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import {
+  fakeFetchEndpoint,
+  withTransport,
+  type FakeFetchEndpoint,
+} from "@plugins/infra/plugins/endpoints/web/testing";
 import {
   blockDocInit,
   blockDocUpdate,
@@ -73,6 +73,7 @@ import {
 } from "../../core";
 import { Editor } from "../slots";
 import { CollabSession } from "../internal/collab-session";
+import { blockDocsFor } from "../internal/use-block-docs";
 import {
   projectableRunsOf,
   type DocSourcedRuns,
@@ -116,9 +117,12 @@ Object.defineProperty(globalThis.crypto, "randomUUID", {
   writable: true,
 });
 
+// The editor's transport for each case: its fetcher answers the offscreen
+// merge's two doc endpoints (`fakeDocServer`).
+let docServer: FakeFetchEndpoint;
 beforeEach(() => {
   uuidCounter = 0;
-  installFakeDocServer();
+  docServer = fakeDocServer();
 });
 
 // Content owners a case started (`Harness.own`). Ended after every case: the
@@ -139,16 +143,16 @@ afterEach(async () => {
  * what makes the replay's row write (memory mode, no owner) reproduce exactly
  * the rows the patch pair restores.
  */
-function installFakeDocServer(): void {
+function fakeDocServer(): FakeFetchEndpoint {
   const stored = encodeStateAsUpdate(runsToXmlText([{ text: "B" }]).doc!);
   let bin = "";
   for (const byte of stored) bin += String.fromCharCode(byte);
   const state = btoa(bin);
-  vi.mocked(fetchEndpoint).mockImplementation((async (endpoint: unknown) => {
+  return fakeFetchEndpoint(({ endpoint }) => {
     if (endpoint === blockDocInit) return { state };
     if (endpoint === blockDocUpdate) return undefined;
     throw new Error("unexpected endpoint");
-  }) as unknown as typeof fetchEndpoint);
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -284,6 +288,7 @@ function mount(): Harness {
         </BlockEditorProvider>
       </UndoRedoProvider>
     </PluginProvider>,
+    { wrapper: withTransport(docServer) },
   );
   const ctx = () => {
     if (!sink.ctx) throw new Error("provider never rendered its child");
@@ -305,6 +310,7 @@ function mount(): Harness {
     id,
     own: async (text) => {
       const session = CollabSession.start(
+        blockDocsFor(docServer.transport),
         id(text),
         seedBytesFor([{ text }]),
         "present",
@@ -583,6 +589,7 @@ describe("undo of a delete restores the row with its content doc's runs", () => 
     // says "B" while the doc already says "B typed". Memory transport, so the
     // seed IS the doc's whole content and the owner is authoritative at once.
     const session = CollabSession.start(
+      blockDocsFor(docServer.transport),
       id,
       seedBytesFor([{ text: "B typed" }]),
       "present",

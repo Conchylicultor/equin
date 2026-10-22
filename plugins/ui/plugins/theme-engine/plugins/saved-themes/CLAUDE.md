@@ -4,29 +4,31 @@
 
 ## Plugin reference
 
-- Description: Saved themes (tweakcn imports and custom themes) as a resident theme source read live (saved-themes.list, hydrated before first paint), plus useEditTheme — the one place theme edits land, copying a read-only theme into a custom one on first edit — and awaitSavedThemesWrite, which resolves once the list has re-read a write. Stores tweakcn imports and custom themes in one table, with the create / edit / rename / delete endpoints (each answering its commit's ack token), serves the live saved-themes.list value, and serves them to the server's first-frame theme painter (ThemeEngine.Source). A delete refuses while any scope still selects the theme unless asked to reassign those scopes to Default.
+- Description: Saved themes (tweakcn imports and custom themes) as a resident theme source read live (saved-themes.list, hydrated before first paint), plus useEditTheme — the one place theme edits land, copying a read-only theme into a custom one on first edit — useAwaitSavedThemesWrite, which resolves once the list has re-read a write, and useRemoveSavedTheme. Stores tweakcn imports and custom themes in one table, with the create / edit / rename / delete endpoints (each answering its commit's ack token), serves the live saved-themes.list value, and serves them to the server's first-frame theme painter (ThemeEngine.Source). A delete refuses while any scope still selects the theme unless asked to reassign those scopes to Default.
 - Web:
   - Contributes: `ThemeEngine.ThemeSource` "saved"
   - Uses:
     - `config_v2.useConfigResult`
     - `config_v2.useSetConfig`
     - `infra/endpoints.EndpointError`
-    - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.useEndpointMutation`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`
     - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useResourceAcks`
-    - `primitives/optimistic-mutation.awaitResourceWrite`
+    - `primitives/optimistic-mutation.useAwaitResourceWrite`
     - `ui/theme-engine.ThemeEngine`
     - `ui/theme-engine.useThemes`
     - `ui/theme-engine.whenNoScopeSelects`
   - Exports (types):
+    - `AwaitSavedThemesWrite`
+    - `RemoveSavedTheme`
     - `RemoveSavedThemeResult`
     - `ThemeEdits`
   - Exports (values):
-    - `awaitSavedThemesWrite`
-    - `removeSavedTheme`
+    - `useAwaitSavedThemesWrite`
     - `useEditTheme`
+    - `useRemoveSavedTheme`
 - Server:
   - Contributes:
     - `resource.declare` "saved-themes.list"

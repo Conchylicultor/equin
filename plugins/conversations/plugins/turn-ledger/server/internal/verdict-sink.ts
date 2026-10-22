@@ -16,7 +16,7 @@ export interface TurnVerdict {
 /**
  * Where the ledger announces a merged or unverified turn. `machine/` maps it to
  * the `turn-merged` / `turn-unverified` reports. A sink, not a direct
- * `recordReport`: `reports/server` is not portable, and this barrel runs on
+ * `recordReport`: the reports engine is not portable, and this barrel runs on
  * every host (the `orphanedAttemptSink` precedent). On a host without the
  * computer nothing registers — no agent ever types a turn there — and the sink
  * holds what was emitted, bounded.

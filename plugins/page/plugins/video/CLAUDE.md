@@ -9,14 +9,17 @@
   - Contributes: `Editor.Block` "video" → `VideoBlock`
   - Uses:
     - `infra/attachments.uploadAttachment`
+    - `infra/endpoints.useAssetSrc`
     - `page/attachment-block.AttachmentUpload`
     - `page/editor.Editor`
     - `page/editor.registerBlockPasteHandler`
     - `primitives/css/center.Center`
     - `primitives/css/pin.Pin`
+    - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/hover-reveal.hoverRevealGroup`
     - `primitives/hover-reveal.hoverRevealTarget`
+    - `primitives/loading.Loading`
     - `primitives/text-editor/paste-images.attachmentUrl`
     - `ui/icons.Icon`
   - Exports (values):

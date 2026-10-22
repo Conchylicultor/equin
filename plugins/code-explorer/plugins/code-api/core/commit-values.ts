@@ -2,6 +2,7 @@ import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import { EditedFileSchema } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { CommitRowSchema } from "@plugins/primitives/plugins/commit-list/core";
+import { CODE_MACHINE } from "./endpoints";
 
 /**
  * Why a commit read can be refused, both values alike:
@@ -33,6 +34,8 @@ export const commitInfo = liveValue("code.commit-info", {
   schema: CommitRowSchema,
   params: ["worktree", "sha"],
   refusals: COMMIT_REFUSALS,
+  // Read with git from the repository's object store.
+  needsMachine: CODE_MACHINE,
 });
 
 export const CommitFilesSchema = z.object({
@@ -52,6 +55,8 @@ export const commitFiles = liveValue("code.commit-files", {
   schema: CommitFilesSchema,
   params: ["worktree", "sha"],
   refusals: COMMIT_REFUSALS,
+  // Read with git from the repository's object store.
+  needsMachine: CODE_MACHINE,
 });
 
 /**

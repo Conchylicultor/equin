@@ -21,6 +21,11 @@ import {
   mintPrototypeFolder,
   newPrototypePrompt,
 } from "@plugins/apps/plugins/prototypes/plugins/gallery/web";
+import {
+  useFetchEndpoint,
+  type FetchEndpoint,
+} from "@plugins/infra/plugins/endpoints/web";
+import { useToast, type Toast } from "@plugins/shell/plugins/notifications/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -90,7 +95,7 @@ function newAppPrompt(userText: string, prototypeId: string | null): string {
  *  from one callback. Launching files a task under the Apps category and starts
  *  it in the background; the bell announces the conversation, like "New
  *  prototype". */
-function newApp(): void {
+function newApp(fetchEndpoint: FetchEndpoint, toast: Toast): void {
   void openDialog(
     (close) => (
       <LaunchAgentForm
@@ -110,7 +115,7 @@ function newApp(): void {
           // Minted before launch, so the agent is handed a folder that exists;
           // a failed mint rejects and the launch never happens.
           const prototypeId = toggles[PROTOTYPE_FIRST]
-            ? await mintPrototypeFolder()
+            ? await mintPrototypeFolder(fetchEndpoint, toast)
             : null;
           return {
             prompt: newAppPrompt(userText, prototypeId),
@@ -127,6 +132,8 @@ function newApp(): void {
 }
 
 export function AppGrid() {
+  const fetchEndpoint = useFetchEndpoint();
+  const toast = useToast();
   const apps = Apps.App.useContributions();
   const currentId = useCurrentAppId();
   // Lands in the grid's OWN surface tab — in desktop mode multiple Home
@@ -142,7 +149,7 @@ export function AppGrid() {
       id: "new-app",
       label: "New app",
       icon: <Icon icon={addIcon} className="size-4" />,
-      onSelect: newApp,
+      onSelect: () => newApp(fetchEndpoint, toast),
     },
   ];
 
@@ -170,7 +177,11 @@ export function AppGrid() {
       emptyState={
         <>
           No app matches.{" "}
-          <Button variant="link" aspect="inline" onClick={newApp}>
+          <Button
+            variant="link"
+            aspect="inline"
+            onClick={() => newApp(fetchEndpoint, toast)}
+          >
             Build one?
           </Button>
         </>

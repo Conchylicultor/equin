@@ -55,18 +55,67 @@ others — there is no leader to lose. Design:
 ## `Transport` — where a subtree's server traffic goes
 
 `web/transport.ts`: a `Transport` is `{ socketUrl, openSocket, fetch,
-assetUrl }`. `originTransport` is the page's own server (same-origin
-`SharedWebSocket`, the global `fetch`, plain asset paths) and the default of
-`useTransport()`; `<TransportProvider transport>` (published from
-`web/testing` until the demo scope ships its first caller) points a subtree
-elsewhere — an in-browser backend (`framework/browser-server`'s
-`browserServerTransport`; `research/2026-10-12-global-in-app-demo-scope.md`).
-Every client that resolves its transport through `useTransport()` follows it:
-live-state's `NotificationsProvider` (a scoped pipeline per transport),
-endpoints' `useEndpoint` / `useEndpointMutation` / `useFetchEndpoint`, and asset
-URLs (`transport.assetUrl(path)`). `socketUrl` doubles as the socket's identity
-on the page-global ws-status bus, so two transports must never map one path to
+servesUrls, machine, telemetry }`. **There is no default transport**:
+`useTransport()` throws outside every `<TransportProvider>`. The app root
+(`framework/web-core`'s `App.tsx`) mounts the page's own server,
+`pageTransport` (leaf child plugin `plugins/page-transport`: same-origin
+`SharedWebSocket`, the global `fetch`, assets loaded by their own path); a
+`<TransportProvider>` points a subtree elsewhere — an in-browser backend
+(`framework/browser-server`'s `browserServerTransport`;
+`research/2026-10-22-global-demo-scope-sealed.md`). Every client resolves its
+transport through `useTransport()` (or is handed one): live-state's
+`NotificationsProvider` (one pipeline per transport), endpoints'
+`useFetchEndpoint` / `useEndpoint` / `useEndpointMutation`, and the assets
+elements load (`useAssetSrc(assetPath)`, `infra/endpoints`). `socketUrl` doubles as the socket's identity on
+the page-global ws-status bus, so two transports must never map one path to
 the same URL. `fetchWithRetry` takes the transport's `fetch` as an option.
+
+- **`machine`** — whether the computer is behind the transport (`needsMachine`
+  declarations answer `unavailable` without asking when it is not).
+- **`servesUrls`** — whether an element can load the transport's `/api/…`
+  paths by URL itself (the page's own server). `false` (an in-browser server):
+  `useAssetSrc` fetches an asset through `fetch` and hands out a blob URL,
+  ref-counted per transport (`transportScoped`) and revoked with its last
+  holder.
+- **`telemetry: boolean`** — whether the telemetry this subtree's server
+  traffic raises is reported (to the page's own server, the one receiver).
+  A flag, never a transport: nothing in a subtree can reach the page's server
+  through its context. Each emission site checks the transport its traffic
+  went over — the fetcher's `endpointErrorSink` (and `readNdjson`'s),
+  live-state's client (`resourceErrorReportSink`, `httpStaleDropReportSink`,
+  the `update` latency sample — `NotificationsClient` takes it as a hook) and
+  the optimistic overlay (divergence reports, `confirm` samples; a rejection
+  is the user's notice, raised regardless). The page's is `true`; a browser
+  server's is the enclosing page's (`useTransport().telemetry` where the
+  scope mounts); `false` drops it at the source. Page-wide handlers (reports'
+  `report()`, latency, slow-ops, usage, analytics, logs, the UI's own
+  observers) send through `pageTransport` under a sanctioned exemption.
+- **`pageTransport` is lint-guarded.** `networking/no-page-transport` (this
+  plugin's `lint/`) flags every import of the page-transport barrel — and of
+  live-state's page-pipeline accessors (`getNotificationsClient`,
+  `ensureNotificationsClient`), which reach the same server without naming
+  it; each sanctioned importer declares a `kind: "sanctioned"` entry in its
+  own `exempt/index.ts`. **No inline opt-out**: the
+  `networking:no-inline-page-transport-disable` check (`check/`) fails any
+  `eslint-disable` naming the rule, so every page-bound module is in a
+  manifest — which is what the browser-host coverage guard trusts when it
+  reads a page-bound module's endpoints as the page's.
+- **Per-tab sockets go through the transport too.**
+  `useReconnectingWebSocket({ path })` opens its socket by URL on the
+  subtree's transport and throws under one no URL reaches (`servesUrls:
+  false`), so a consumer that may render in a scope checks `servesUrls` first
+  (`LiveLogChannel` says "not available"). There is no exported `wsUrl`: a
+  socket URL built from `window.location` would reach the page's server from
+  inside a scope.
+- **`transportScoped(make)` / `useTransportScoped(scoped)`** — one value per
+  transport (a `WeakMap`), for a module that needs one store / cache / client
+  per server it talks to: the endpoints fetcher, live-state's pipeline, the
+  pending-turn store, the page editor's content-doc registry, the asset blob
+  store.
+- **Tests.** `web/testing`: `testTransport(overrides?)` (page-shaped, the
+  global `fetch` read at call time, so a stubbed fetch answers),
+  `transportWrapper(t)` (a `render` / `renderHook` wrapper) and
+  `renderWithTransport(ui, { transport? })`.
 
 ## Transport injection seams + deterministic fakes
 
@@ -117,13 +166,13 @@ built on them — see
     - `SharedWebSocketOptions`
     - `SharedWorkerLike`
     - `Transport`
+    - `TransportScoped`
     - `TransportSocket`
     - `UrlStatus`
     - `WsStatus`
     - `WsStatusEvent`
   - Exports (values):
     - `fetchWithRetry`
-    - `originTransport`
     - `probeUrlStatus`
     - `publishNetDiag`
     - `publishWsStatus`
@@ -132,36 +181,39 @@ built on them — see
     - `subscribeNetDiag`
     - `subscribeWsStatus`
     - `TransportProvider`
+    - `transportScoped`
     - `useReconnectingWebSocket`
     - `useTransport`
-    - `wsUrl`
+    - `useTransportScoped`
 - Cross-plugin:
-  - Imported by:
-    - `apps/events/event-list`
-    - `apps/pages/page-tree`
-    - `conversations/all-conversations`
-    - `conversations/conversation-view/jsonl-viewer`
-    - `conversations/conversations-view/data-view`
-    - `conversations/conversations-view/data-view/history`
-    - `framework/browser-server`
-    - `framework/browser-server/demo/scope`
-    - `infra/endpoints`
-    - `infra/health`
+  - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives` ×6
+    - `conversations` ×5
+    - `apps` ×4
+    - `debug` ×3
+    - `framework` ×3
+    - `infra` ×2
+    - `page` ×2
     - `network/live`
-    - `page/editor`
-    - `page/editor-collab`
-    - `primitives/live-state`
-    - `primitives/log-channels`
-    - `primitives/optimistic-mutation`
-    - `primitives/overlay/image-viewer`
     - `shell/notifications`
-    - `tasks/task-attachments`
     - `tasks/tasks-core`
+    - `ui/icons/emoji`
 - Exemptions:
   - Exempts itself from:
     - `no-raw-websocket` — `web/shared-ws.worker.ts`, `web/use-reconnecting-ws.ts` (sanctioned)
     - `no-raw-event-source` — `.` (sanctioned)
     - `endpoints/no-raw-web-fetch` — `web` (sanctioned)
+  - Exempted by:
+    - `apps-core/app-usage` (0 debt)
+    - `apps/deploy/analytics/collect` (0 debt)
+    - `debug/latency-ledger` (0 debt)
+    - `debug/slow-ops` (0 debt)
+    - `framework/web-core` (0 debt)
+    - `infra/boot-snapshot` (0 debt)
+    - `infra/health` (0 debt)
+    - `primitives/log-channels` (0 debt)
+    - `reports` (0 debt)
+    - `ui/icons/sprites` (0 debt)
 - Core:
   - Exports (types):
     - `WsTestControls`
@@ -179,6 +231,11 @@ built on them — see
     - `FakeSharedWorkers` — The browser's SharedWorker registry: one REAL `createSharedWsHost` per worker name (the production worker's logic, in-process), shared by every tab; `make(name)` is the `makeSharedWorker` factory, connecting a fresh `MessageChannel` to that host like the worker's `connect` event.
     - `FakeWebSocket` — A `WebSocketLike` with no network.
     - `FakeWsServer` — A no-network WebSocket server: `connect` is the bound `makeWebSocket` factory; every socket it ever handed out is retained for introspection (`all`), and the currently-OPEN subset (`openSockets`) is derived live from `readyState` so it is the single source of truth for the one-socket invariant.
-    - Types: `FakeWsServerOptions`, `TabHandle`, `TransportHub`
+    - `renderWithTransport` — `render(ui)` under a `<TransportProvider>` — what every component reading `useTransport()` (the endpoints hooks, `useLive`) needs, since the context has no default.
+    - `testTransport` — A page-shaped transport for a test: same-origin sockets (`SharedWebSocket`), the global `fetch` read at call time (so a fetch the test stubs answers), assets loaded by their own path, the computer behind it, and its telemetry reported — each overridable.
+    - `transportWrapper` — A `wrapper` (`render` / `renderHook`) mounting `transport` above the tree.
+    - Types: `FakeWsServerOptions`, `RenderWithTransportOptions`, `TabHandle`, `TransportHub`
+- Sub-plugins:
+  - **`page-transport`** — pageTransport: the page's own server as a Transport (same-origin SharedWebSocket, the global fetch, plain asset paths, machine, its telemetry reported). The app root mounts it; every other importer…
 
 <!-- AUTOGENERATED:END -->

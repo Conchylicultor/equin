@@ -38,7 +38,7 @@
     - Plugins:
       - **`boot`** — Server boot profiling for the Gantt debug pane. Server boot profiling data: the profiling.boot snapshot value, and its endpoint for the cold-start e2e.
       - **`boot-bench`** [exempt] — Cold-boot & live-state loader benchmark harness: a POST endpoint that runs the boot burst in-process and a benchmark_boot MCP tool that aggregates it.
-      - **`build`** [exempt] — Build step profiling: the Gantt detail pane of one build run (debug-profiling-build-detail). Build step profiling data endpoint: one build run's profile, by worktree and build id.
+      - **`build`** [exempt] — Build step profiling: the Gantt detail pane of one build run (debug-profiling-build-detail).
       - **`cold-start`** — Cold-start benchmark: stops the worktree's server, loads a page in a fresh browser and splits page request → first screen with data across the gateway, the server's boot phases and the browser's…
       - **`op-log`** — Unified op log: the one durable record for every host-contending op (build / push / check), its per-resource wait list, the writer, and the merged file reader. Its op-store child ingests it into the…
         - Plugins:

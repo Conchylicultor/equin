@@ -58,8 +58,8 @@ export interface ThemeSourceEntry {
  *   from both (the source's last-known themes — its `stale` — still paint, and
  *   the failure is carried on `ThemesState.failures` for a surface to render).
  * - `browse` — a catalog to pick from, read the same way. An entry becomes
- *   selectable only once `adopt` has saved it, which resolves to the resident
- *   theme's id.
+ *   selectable only once the source's adopt (`useAdopt()`) has saved it, which
+ *   resolves to the resident theme's id.
  */
 export type ThemeSourceContribution =
   | {
@@ -72,11 +72,12 @@ export type ThemeSourceContribution =
       id: string;
       useEntries: Hook<() => ResourceResult<ThemeSourceEntry[]>>;
       /**
-       * Save the entry and resolve to the resident theme it became — already
-       * in `useThemes()` when this settles, so the caller can select it
+       * The source's adopt, bound to the subtree's transport and live-state
+       * pipeline: save the entry and resolve to the resident theme it became —
+       * already in `useThemes()` when this settles, so the caller can select it
        * straight away. Rejects with the endpoint's error; the caller surfaces it.
        */
-      adopt: (entryId: string) => Promise<ThemeId>;
+      useAdopt: Hook<() => (entryId: string) => Promise<ThemeId>>;
     };
 
 /** A theme source whose read failed: which one, why, and how to retry it. */

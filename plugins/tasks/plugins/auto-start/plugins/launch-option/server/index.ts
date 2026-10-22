@@ -7,6 +7,7 @@ import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/p
 import { autoStartLaunchOption } from "../core";
 
 export default {
+  portable: true,
   description:
     "Applies a drafted auto-start model to a newly created task: arms the launch (enqueuing immediately when nothing blocks it), only records the model when the host starts the task inline itself, or clears the marker when the draft says Off.",
   contributions: [

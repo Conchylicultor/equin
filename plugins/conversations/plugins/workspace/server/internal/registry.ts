@@ -1,4 +1,3 @@
-import { basename, dirname, join } from "node:path";
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import type { EnqueueTx } from "@plugins/infra/plugins/jobs/server";
 import type { WorkspaceKind, WorkspaceSpec } from "../../core";
@@ -56,12 +55,6 @@ export interface LaunchContext {
 export interface WorkspaceImpl<K extends WorkspaceKind = WorkspaceKind> {
   readonly kind: K;
   /**
-   * Validates (and normalizes) a NEW attempt's spec, before anything is
-   * written: an unknown scratch profile, or an input its profile refuses,
-   * throws here. What it returns is what the attempt row stores.
-   */
-  parseSpec(spec: SpecOf<K>): SpecOf<K>;
-  /**
    * The directory every workspace of this kind lives DIRECTLY under. A
    * workspace's path is `<root>/<attemptId>` — derived by the registry, never
    * spelled by an impl, so `basename(path) === attemptId` holds for every kind.
@@ -86,6 +79,18 @@ export interface WorkspaceImpl<K extends WorkspaceKind = WorkspaceKind> {
 }
 
 const registry = new Map<WorkspaceKind, WorkspaceImpl>();
+
+// Workspace paths are host paths joined with "/" — no `node:path`, so this
+// barrel stays portable (the registry is empty on a host without the computer;
+// only a desktop's impls register, and only its launch path reads them).
+function parentOf(path: string): string {
+  const cut = path.lastIndexOf("/");
+  return cut <= 0 ? "/" : path.slice(0, cut);
+}
+
+function baseOf(path: string): string {
+  return path.slice(path.lastIndexOf("/") + 1);
+}
 
 function get<K extends WorkspaceKind>(kind: K): WorkspaceImpl<K> {
   const impl = registry.get(kind);
@@ -115,7 +120,8 @@ export const Workspace = {
   },
   /** Where the attempt's workspace of `kind` lives: `<root>/<attemptId>`. */
   async pathFor(kind: WorkspaceKind, attemptId: string): Promise<string> {
-    return join(await get(kind).root(), attemptId);
+    const root = await get(kind).root();
+    return root.endsWith("/") ? `${root}${attemptId}` : `${root}/${attemptId}`;
   },
   /**
    * The inverse of {@link Workspace.pathFor}: which registered kind's workspace
@@ -126,10 +132,11 @@ export const Workspace = {
   async resolvePath(
     path: string,
   ): Promise<{ kind: WorkspaceKind; attemptId: string } | "none"> {
-    const parent = dirname(path);
+    const trimmed = path.length > 1 ? path.replace(/\/+$/, "") : path;
+    const parent = parentOf(trimmed);
     for (const impl of registry.values()) {
       if (parent === (await impl.root())) {
-        return { kind: impl.kind, attemptId: basename(path) };
+        return { kind: impl.kind, attemptId: baseOf(trimmed) };
       }
     }
     return "none";

@@ -38,7 +38,8 @@ its shape (task-track, task-category, automations).
     - `Tasks.TaskActions` "delete" → `DeleteTaskAction`
     - `Tasks.TaskActions` "launch-agent" → `LaunchAgentAction`
   - Uses:
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.FetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
@@ -59,9 +60,9 @@ its shape (task-track, task-category, automations).
   - Exports (values):
     - `buildTreeOptions`
     - `clusterTaskHierarchy`
-    - `taskFieldSchema`
     - `Tasks`
     - `TasksListView`
+    - `useTaskFieldSchema`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`

@@ -7,4 +7,6 @@ import { CommitsGraphPayloadSchema } from "./protocol";
 export const commitsGraph = liveValue("commits-graph.graph", {
   schema: CommitsGraphPayloadSchema,
   params: ["attemptId"],
+  // Read with git from the attempt's checkout.
+  needsMachine: { feature: "Reading an agent's commits" },
 });

@@ -15,6 +15,7 @@ gallery of one) around the image.
   - Contributes: `Editor.Block` "image" → `ImageBlock`
   - Uses:
     - `infra/attachments.uploadAttachment`
+    - `infra/endpoints.useAssetSrc`
     - `page/attachment-block.AttachmentUpload`
     - `page/editor.BLOCK_INSET`
     - `page/editor.BlockRendererProps`
@@ -28,6 +29,7 @@ gallery of one) around the image.
     - `primitives/hover-reveal.hoverRevealTarget`
     - `primitives/overlay/image-viewer.ImageGallery`
     - `primitives/overlay/image-viewer.MissingImage`
+    - `primitives/overlay/image-viewer.UnloadedAssetImage`
     - `primitives/overlay/image-viewer.useImageLoad`
     - `primitives/overlay/image-viewer.useImageViewerTrigger`
     - `primitives/text-editor/paste-images.attachmentUrl`

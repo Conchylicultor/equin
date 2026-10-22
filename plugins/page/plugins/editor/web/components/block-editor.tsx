@@ -27,6 +27,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   buildTree,
   isDescendant,
@@ -74,6 +75,8 @@ import {
 } from "../../core";
 import { fromNodes, toNodes } from "../internal/optimistic-block-ops";
 import { liveRunsOf } from "../internal/live-runs";
+import { useBlockDocs } from "../internal/use-block-docs";
+import type { BlockDocs } from "../internal/collab-session";
 import type { CaretSurface, CaretSurfaceRef } from "../caret-surface";
 import { BlockEditorProvider, useBlockEditor } from "../block-editor-context";
 import {
@@ -324,6 +327,7 @@ export interface BlockEditorHandle extends CaretSurface {
  * user had to click a second time, once the projection landed, to get a line.
  */
 function openTrailingBlock(
+  docs: BlockDocs,
   lastBlock: Block | undefined,
   fallback: ReturnType<typeof defaultTextHandle>,
   focusBlockBoundary: (id: string, edge: "start" | "end") => boolean,
@@ -333,7 +337,7 @@ function openTrailingBlock(
   if (
     lastBlock &&
     lastBlock.type === fallback.type &&
-    runsLength(liveRunsOf(lastBlock)) === 0
+    runsLength(liveRunsOf(docs, lastBlock)) === 0
   ) {
     focusBlockBoundary(lastBlock.id, "end");
     return;
@@ -493,6 +497,9 @@ function BlockEditorInner({
   contentClassName?: ClassName;
   handleRef?: Ref<BlockEditorHandle>;
 }) {
+  // The editor's transport's content docs: "is this block empty NOW" reads
+  // its owner's doc (`liveRunsOf`).
+  const docs = useBlockDocs();
   // `blocks` come from the provider's optimistic resource so `rowsRef` (set by
   // the effect below) tracks optimistic state — required for chained-op intent
   // resolution (e.g. Enter then Shift+Tab resolving against post-split). They
@@ -565,7 +572,7 @@ function BlockEditorInner({
         if (
           first &&
           first.type === fallback.type &&
-          runsLength(liveRunsOf(first)) === 0
+          runsLength(liveRunsOf(docs, first)) === 0
         ) {
           focusBlock(first.id);
           return;
@@ -574,6 +581,7 @@ function BlockEditorInner({
       },
       focusEnd() {
         openTrailingBlock(
+          docs,
           flat.at(-1)?.block,
           defaultTextHandle(contributions.map((c) => c.block)),
           focusBlockBoundary,
@@ -595,7 +603,15 @@ function BlockEditorInner({
       // No `focusAtColumn`: an empty page has no block to measure a column
       // against, and a host entering from above wants the body's start anyway.
     }),
-    [contributions, flat, focusBlock, focusBlockBoundary, insert, insertFirst],
+    [
+      contributions,
+      flat,
+      focusBlock,
+      focusBlockBoundary,
+      insert,
+      insertFirst,
+      docs,
+    ],
   );
 
   if (gone) {
@@ -622,6 +638,7 @@ function SelectionLayer({
   flat: FlatBlock[];
   contentClassName?: ClassName;
 }) {
+  const docs = useBlockDocs();
   const {
     move,
     indentBlocks,
@@ -645,6 +662,9 @@ function SelectionLayer({
     replaceSpan,
   } = useBlockEditor();
   const { selectedIds } = useMultiSelect();
+  // The editor's own transport: a pasted / dropped file uploads to the host
+  // this subtree is served by (a demo scope's browser server, else the page's).
+  const fetchEndpoint = useFetchEndpoint();
   // ONE `type → handle` view of the `Editor.Block` registry (`useBlockHandles`),
   // shared by the per-type lookups below and the list consumers (markdown
   // serialize/parse, `defaultTextHandle`). Both derive from the same
@@ -1041,7 +1061,7 @@ function SelectionLayer({
         clearSelection();
         deleteSpan(span.from, span.to);
         void (async () => {
-          const data = await handler.build(file);
+          const data = await handler.build(file, { fetchEndpoint });
           paste({
             blocks: [
               { type: handler.type, data, expanded: false, children: [] },
@@ -1077,7 +1097,15 @@ function SelectionLayer({
       clearSelection();
       replaceSpan(span.from, span.to, { blocks, granularity });
     },
-    [allowAttachments, handles, paste, clearSelection, deleteSpan, replaceSpan],
+    [
+      allowAttachments,
+      handles,
+      paste,
+      clearSelection,
+      deleteSpan,
+      replaceSpan,
+      fetchEndpoint,
+    ],
   );
 
   const writeClipboard = useCallback(
@@ -1250,7 +1278,7 @@ function SelectionLayer({
         const { file, handler } = picked!;
         const anchor = afterId();
         void (async () => {
-          const data = await handler.build(file);
+          const data = await handler.build(file, { fetchEndpoint });
           paste({
             blocks: [
               { type: handler.type, data, expanded: false, children: [] },
@@ -1296,6 +1324,7 @@ function SelectionLayer({
       allowAttachments,
       textSpanRef,
       pasteOverSpan,
+      fetchEndpoint,
     ],
   );
 
@@ -1391,7 +1420,13 @@ function SelectionLayer({
         return;
       }
       if (y > lastEl.getBoundingClientRect().bottom) {
-        openTrailingBlock(lastBlock, fallback, focusBlockBoundary, insert);
+        openTrailingBlock(
+          docs,
+          lastBlock,
+          fallback,
+          focusBlockBoundary,
+          insert,
+        );
         return;
       }
       const row = rowAt(y);
@@ -1413,6 +1448,7 @@ function SelectionLayer({
       focusBlockBoundary,
       content,
       rowAt,
+      docs,
     ],
   );
 
@@ -2024,7 +2060,7 @@ function SelectionLayer({
           const blocks = await Promise.all(
             picks.map(async ({ file, handler }) => ({
               type: handler.type,
-              data: await handler.build(file),
+              data: await handler.build(file, { fetchEndpoint }),
               expanded: false,
               children: [],
             })),
@@ -2078,6 +2114,7 @@ function SelectionLayer({
       handles,
       allowAttachments,
       rowAt,
+      fetchEndpoint,
     ],
   );
 

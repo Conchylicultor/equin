@@ -1,7 +1,8 @@
 import {
   EndpointError,
-  fetchEndpoint,
+  fetchEndpointOver,
 } from "@plugins/infra/plugins/endpoints/web";
+import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";
 import {
   HISTOGRAM_SCHEME,
   addSample,
@@ -14,6 +15,9 @@ import {
   type HistogramAcc,
   type Interaction,
 } from "../../core";
+
+// Page-wide telemetry: latency samples always reach the page's own server (D3).
+const fetchEndpoint = fetchEndpointOver(pageTransport);
 
 // The browser's half of the ledger. Samples are added to a per-minute histogram in
 // memory and posted at most once a minute, so a tab receiving hundreds of updates

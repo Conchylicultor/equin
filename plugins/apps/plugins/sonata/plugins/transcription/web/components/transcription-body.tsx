@@ -4,7 +4,7 @@ import {
   songIdKind,
   songLibrary,
 } from "@plugins/apps/plugins/sonata/plugins/library/core";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
@@ -33,6 +33,7 @@ const PENDING_THREAD_HEIGHT = "min(40rem, 75vh)";
  */
 export function TranscriptionBody({ songId }: { songId: string }) {
   const song = useLiveRow(songLibrary, songIdKind.key(songId));
+  const fetchEndpoint = useFetchEndpoint();
   if (song.status === "loading") return <Loading />;
   if (song.status === "error") {
     return (

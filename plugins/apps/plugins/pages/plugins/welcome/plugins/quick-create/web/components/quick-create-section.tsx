@@ -4,6 +4,7 @@ import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   createPageWithSeed,
   pageDetailPane,
@@ -11,11 +12,12 @@ import {
 import { PAGE_TEMPLATES, type PageTemplate } from "../internal/templates";
 
 export function QuickCreateSection(): ReactElement {
+  const fetchEndpoint = useFetchEndpoint();
   const openPane = useOpenPane();
 
   const create = (template: PageTemplate) => {
     void (async () => {
-      const id = await createPageWithSeed({
+      const id = await createPageWithSeed(fetchEndpoint, {
         parentId: null,
         page: template.page,
         seed: template.seed,

@@ -24,7 +24,8 @@ committed `theme.jsonc` does it in git (the website's: `{ "theme": "equin" }`).
   - `resident`: themes that can be painted now. `saved-themes` is the only one:
     tweakcn imports and custom themes, hydrated before the first paint.
   - `browse`: a catalog (tweakcn's community themes). An entry becomes a theme
-    once its `adopt` saves it into a resident source.
+    once its adopt (`useAdopt()`, bound to the subtree's transport) saves it
+    into a resident source.
 
 Each source's hook (`useThemes` / `useEntries`) returns a `ResourceResult`
 (`useLive` over the source's live value), so a failed read is its own

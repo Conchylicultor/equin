@@ -83,7 +83,6 @@ A persistent global trigger on `conversationTurnCompleted` (contributed by this 
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
-  - Imported by: `apps/agent-manager/demo`
 - Shared:
   - Exports (types): `TurnSummary`
   - Exports (values):

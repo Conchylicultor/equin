@@ -6,10 +6,6 @@ import {
 } from "@plugins/page/plugins/editor/server";
 import { reindexLinksJob } from "./internal/reindex-job";
 import {
-  backfillPageLinksJob,
-  pageLinksBackfillWarmup,
-} from "./internal/backfill-job";
-import {
   pageBacklinksServed,
   pageLinkSourcesServed,
 } from "./internal/resources";
@@ -26,11 +22,12 @@ export { loadBacklinkSources } from "./internal/backlink-sources";
 export type { BacklinkSource } from "./internal/backlink-sources";
 
 export default {
+  portable: true,
   description:
-    "Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource.",
-  // The backfill warm-up rebuilds every page's edges off the serving-critical
-  // boot path; the jobs back both it and the steady-state reindex trigger.
-  register: [reindexLinksJob, backfillPageLinksJob, pageLinksBackfillWarmup],
+    "Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource (the boot backfill is the machine half's).",
+  // The steady-state reindex trigger's job (the boot backfill is the machine
+  // half's).
+  register: [reindexLinksJob],
   contributions: [
     ...pageBacklinksServed.declare,
     ...pageLinkSourcesServed.declare,

@@ -4,7 +4,7 @@ import {
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   taskRows,
   TaskGraph,
@@ -26,11 +26,16 @@ export type TaskPatch = Partial<{
 
 export type AutoStartModel = ModelChoice | "none";
 
-export async function patchTask(id: string, patch: TaskPatch): Promise<void> {
+export async function patchTask(
+  fetchEndpoint: FetchEndpoint,
+  id: string,
+  patch: TaskPatch,
+): Promise<void> {
   await fetchEndpoint(updateTask, { id }, { body: patch });
 }
 
 export async function setAutoStart(
+  fetchEndpoint: FetchEndpoint,
   id: string,
   model: AutoStartModel,
 ): Promise<void> {

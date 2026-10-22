@@ -2,6 +2,7 @@ import {
   mapResource,
   useCombinedResources,
   type ResourceResult,
+  type ResourceUnavailable,
 } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { configValues } from "@plugins/config_v2/core";
@@ -14,7 +15,8 @@ import { configSecretMeta } from "@plugins/fields/plugins/secret/plugins/config/
  * the App Store Connect key and the three text fields are all set, incomplete
  * once any is.
  */
-export function useAppleSigningStatus(): ResourceResult<IntegrationStatus> {
+export function useAppleSigningStatus():
+  ResourceResult<IntegrationStatus> | ResourceUnavailable {
   const registrations = useConfigRegistrations();
   const reg = registrations.find((r) => r.descriptor.name === "apple-signing");
   // The config is registered by apple-signing itself, so a missing

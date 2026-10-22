@@ -123,15 +123,26 @@ it, so both scanners throw rather than guess.
 - Description: The closed set of ways a plugin declares a live-state resource, as data every build-time resource scanner reads. Its key set is DERIVED from the barrels' own module types, so a factory that exists but is unlisted is a type error.
 - Core:
   - Uses:
+    - `plugin-meta/parse-utils.findImports`
+    - `plugin-meta/parse-utils.hasField`
+    - `plugin-meta/parse-utils.lineAt`
+    - `plugin-meta/parse-utils.markerCallSpans`
     - `plugin-meta/parse-utils.maskSource`
     - `plugin-meta/parse-utils.matchBracket`
+    - `plugin-meta/parse-utils.parseBoolField`
+    - `plugin-meta/parse-utils.parseStaticCallId`
     - `plugin-meta/parse-utils.parseStringField`
+    - `plugin-meta/parse-utils.unresolvableCallIdMessage`
   - Exports (types):
     - `DescriptorFactory`
     - `DescriptorFactoryName`
+    - `DescriptorInfo`
     - `DescriptorShapeIsWidening`
+    - `FileBindings`
+    - `ImportedDescriptorResolver`
     - `MintedResource`
     - `PreloadFlag`
+    - `RegisterCallTarget`
     - `RegisterMarker`
     - `RegisterMarkerName`
     - `ResourceMembership`
@@ -140,13 +151,17 @@ it, so both scanners throw rather than guess.
     - `ServedResource`
     - `ServedResourceFnNames`
     - `ServingPrimitive`
+    - `SourceFile`
   - Exports (values):
+    - `buildDescriptorIndex`
     - `isResourceVocabularyOwner`
     - `LIVE_CORE`
     - `LIVE_SERVER`
     - `LIVE_STATE_CORE`
     - `mintsOf`
+    - `parseFileBindings`
     - `QUERY_RESOURCE_SERVER`
+    - `registerCallTarget`
     - `resourceDescriptorFactories`
     - `resourceRegisterMarkers`
     - `resourceServingPrimitives`

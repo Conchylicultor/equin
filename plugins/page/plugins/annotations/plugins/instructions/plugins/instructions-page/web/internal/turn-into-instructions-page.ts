@@ -1,4 +1,4 @@
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   plainOf,
   turnIntoPage,
@@ -17,6 +17,7 @@ import { textBlock } from "@plugins/page/plugins/text/core";
  * may not import a concrete block type.
  */
 export async function turnIntoInstructionsPage(
+  fetchEndpoint: FetchEndpoint,
   blockId: string,
   text: RichText,
 ): Promise<void> {

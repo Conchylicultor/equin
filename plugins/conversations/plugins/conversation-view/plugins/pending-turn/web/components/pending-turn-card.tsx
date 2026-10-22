@@ -5,12 +5,15 @@ import { WorkingText } from "@plugins/primitives/plugins/css/plugins/working-dot
 import { UserMessageText } from "@plugins/conversations/plugins/conversation-view/plugins/user-message/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useReportSync } from "@plugins/primitives/plugins/sync-status/web";
-import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import {
+  getEndpointErrorMessage,
+  useFetchEndpoint,
+} from "@plugins/infra/plugins/endpoints/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { writeDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { conversationPromptDraft } from "../internal/prompt-draft";
 import type { PendingTurn } from "../internal/pending";
-import { dismissSentTurn, resendTurn } from "../internal/send";
+import { useDismissSentTurn, useResendTurn } from "../internal/send";
 import { retryLedgerTurn, withdrawLedgerTurn } from "../internal/delivery";
 
 // Restore the turn's text into the conversation's shared prompt draft — the
@@ -33,25 +36,45 @@ async function act(verb: string, run: () => Promise<void>): Promise<void> {
   }
 }
 
-function retry(conversationId: string, turn: PendingTurn): Promise<void> {
-  if (turn.state === "unsent") {
-    resendTurn(conversationId, turn.id);
-    return Promise.resolve();
-  }
-  // A retry that fails again is written on the row (`failed`, with its
-  // error), which this card then shows; the toast says the click did nothing.
-  return act("Retry", () => retryLedgerTurn(conversationId, turn.id));
+/** What a card's Retry / Copy to draft run, bound to the card's transport. */
+interface CardActions {
+  retry(turn: PendingTurn): Promise<void>;
+  takeBack(turn: PendingTurn): Promise<void>;
 }
 
-function takeBack(conversationId: string, turn: PendingTurn): Promise<void> {
-  copyToDraft(conversationId, turn.text);
-  if (turn.state === "unsent") {
-    dismissSentTurn(conversationId, turn.id);
-    return Promise.resolve();
-  }
-  return act("Copy to draft", () =>
-    withdrawLedgerTurn(conversationId, turn.id),
-  );
+/**
+ * The card's actions over the subtree's transport: a turn that never reached
+ * the server goes through the tab's own store (re-sent under its id, or
+ * forgotten), a ledger row through the server's retry / withdraw endpoints.
+ */
+function useCardActions(conversationId: string): CardActions {
+  const fetchEndpoint = useFetchEndpoint();
+  const resendTurn = useResendTurn();
+  const dismissSentTurn = useDismissSentTurn();
+  return {
+    retry(turn) {
+      if (turn.state === "unsent") {
+        resendTurn(conversationId, turn.id);
+        return Promise.resolve();
+      }
+      // A retry that fails again is written on the row (`failed`, with its
+      // error), which this card then shows; the toast says the click did
+      // nothing.
+      return act("Retry", () =>
+        retryLedgerTurn(fetchEndpoint, conversationId, turn.id),
+      );
+    },
+    takeBack(turn) {
+      copyToDraft(conversationId, turn.text);
+      if (turn.state === "unsent") {
+        dismissSentTurn(conversationId, turn.id);
+        return Promise.resolve();
+      }
+      return act("Copy to draft", () =>
+        withdrawLedgerTurn(fetchEndpoint, conversationId, turn.id),
+      );
+    },
+  };
 }
 
 const WAITING_FOR_START = "Waiting for the agent to start…";
@@ -124,13 +147,14 @@ export function PendingTurnCard({
   /** The host's own user row, so the echo cannot look unlike the message it becomes. */
   renderEcho: RenderEcho;
 }) {
+  const actions = useCardActions(conversationId);
   const card = turn.card;
   const inFlight = card === "echo";
   const failed = card === "failure";
   useReportSync({
     phase: failed ? "error" : inFlight ? "syncing" : "idle",
     label: "message",
-    retry: failed ? () => void retry(conversationId, turn) : undefined,
+    retry: failed ? () => void actions.retry(turn) : undefined,
     savedAt: null,
   });
 
@@ -179,13 +203,10 @@ export function PendingTurnCard({
           {caption}
         </Text>
         <Stack direction="row" gap="sm">
-          <Button variant="outline" onClick={() => retry(conversationId, turn)}>
+          <Button variant="outline" onClick={() => actions.retry(turn)}>
             Retry
           </Button>
-          <Button
-            variant="ghost"
-            onClick={() => takeBack(conversationId, turn)}
-          >
+          <Button variant="ghost" onClick={() => actions.takeBack(turn)}>
             Copy to draft
           </Button>
         </Stack>

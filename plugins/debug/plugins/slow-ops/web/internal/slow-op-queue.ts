@@ -1,9 +1,13 @@
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { fetchEndpointOver } from "@plugins/infra/plugins/endpoints/web";
+import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";
 import { MAX_CLIENT_SLOW_OP_ITEMS } from "../../core";
 import {
   submitClientSlowOp,
   type SlowOpClientItem,
 } from "../../shared/endpoints";
+
+// Page-wide telemetry: slow-op samples always reach the page's own server (D3).
+const fetchEndpoint = fetchEndpointOver(pageTransport);
 
 // The browser-side queue behind the client slow-op signals (page-load,
 // element-settle, and the client latency signals). The collector used to POST once per slow element, so a boot

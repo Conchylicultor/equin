@@ -50,7 +50,7 @@ export type {
   ListTurnsQuery,
   DeleteConversationQuery,
 } from "./endpoints";
-export { CONVERSATIONS_CATEGORY_ID } from "./task-category";
+export { CONVERSATIONS_CATEGORY_ID, SYSTEM_CATEGORY_ID } from "./task-category";
 export { canSendTurn, QUESTION_WAITING_FOR } from "./turn-gate";
 export {
   conversationPartialMessage,

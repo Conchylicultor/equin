@@ -57,7 +57,7 @@ nothing. Which plan the planner picks is its own call.
 
 - `useBlockPromptTasks(blockId)` → `LiveListResult<PromptTaskLink>` (newest-first)
 - `usePromptTaskLink(taskId)` → `LiveRowResult<PromptTaskLink>`
-- `createPromptTask({ pageId, blockId, prompt })` → `{ taskId }`
+- `createPromptTask(fetchEndpoint, { pageId, blockId, prompt })` → `{ taskId }` (the caller's `useFetchEndpoint()`)
 
 `shared/` is plugin-private (boundary rule R10) — the collection declaration
 and endpoint contract are consumed by this plugin's own `web` and `server` only.
@@ -97,7 +97,6 @@ and endpoint contract are consumed by this plugin's own `web` and `server` only.
   - Routes: `POST /api/prompt-blocks/tasks`
 - Web:
   - Uses:
-    - `infra/endpoints.fetchEndpoint`
     - `network/live.LiveListResult`
     - `network/live.LiveRowResult`
     - `network/live.useLive`

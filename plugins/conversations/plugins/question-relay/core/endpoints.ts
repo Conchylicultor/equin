@@ -5,4 +5,5 @@ import { AnswerQuestionBodySchema } from "./schemas";
 export const answerRelayQuestion = defineEndpoint({
   route: "POST /api/conversations/:id/questions/:toolUseId/answer",
   body: AnswerQuestionBodySchema,
+  needsMachine: { feature: "Answering an agent's question" },
 });

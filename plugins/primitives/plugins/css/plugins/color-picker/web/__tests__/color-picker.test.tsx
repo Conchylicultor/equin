@@ -20,7 +20,7 @@ const usage = vi.hoisted(() => ({
 }));
 
 vi.mock("@plugins/primitives/plugins/usage-rank/web", () => ({
-  recordUsage: (namespace: string, key: string) => {
+  useRecordUsage: () => (namespace: string, key: string) => {
     usage.recorded.push({ namespace, key });
   },
   useRecentUsage: () => ({

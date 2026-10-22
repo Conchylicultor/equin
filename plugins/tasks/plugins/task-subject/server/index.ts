@@ -9,6 +9,7 @@ export {
 } from "./internal/subject-task";
 
 export default {
+  portable: true,
   description:
     "Owns the tasks_ext_subject side-table: the record a task is about (a failed build run, a job run — a caller-named kind and id), so a launch about a subject that already has a live task reuses it, and a surface reads that task back live by subject.",
   contributions: [...subjectTaskServed.declare],

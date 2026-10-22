@@ -9,7 +9,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Library } from "../slots";
+import { useSourceCreators } from "../internal/use-source-creators";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -37,9 +37,7 @@ export function SonataOnboarding() {
 
   // Only sources with a create affordance become cards; a source that only
   // hydrates (no `createOption`) can't seed a first song, so it's skipped.
-  const creators = Library.Source.useContributions()
-    .map((s) => s.createOption)
-    .filter((c): c is CreateOption => Boolean(c));
+  const creators = useSourceCreators();
 
   const run = async (c: CreateOption): Promise<void> => {
     setBusy(true);

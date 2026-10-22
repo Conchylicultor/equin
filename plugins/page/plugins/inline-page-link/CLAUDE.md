@@ -61,7 +61,7 @@ cannot paint itself outside Lexical is a tsc error.
     - `page/editor` ×9
     - `primitives/live-state` ×3
     - `primitives/text-editor/caret-trigger` ×3
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLiveRow`
     - `page/page-reference.usePageNavigation`
     - `primitives/css/center.Center`

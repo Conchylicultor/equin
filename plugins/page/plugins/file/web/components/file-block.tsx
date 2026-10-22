@@ -1,5 +1,6 @@
 import { AttachmentUpload } from "@plugins/page/plugins/attachment-block/web";
 import { attachmentUrl } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
+import { useAssetSrc } from "@plugins/infra/plugins/endpoints/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
@@ -77,6 +78,35 @@ export function FileBlock({ block, isFocused, editor }: BlockRendererProps) {
     );
   }
 
+  return (
+    <FilledFileBlock
+      attachmentId={attachmentId}
+      filename={filename}
+      mime={mime}
+      size={size}
+      editor={editor}
+    />
+  );
+}
+
+/**
+ * A file block with its file: a card that downloads it once its bytes are
+ * loadable over the subtree's transport (`useAssetSrc`).
+ */
+function FilledFileBlock({
+  attachmentId,
+  filename,
+  mime,
+  size,
+  editor,
+}: {
+  attachmentId: string;
+  filename?: string;
+  mime?: string;
+  size?: number;
+  editor: BlockRendererProps["editor"];
+}) {
+  const src = useAssetSrc(attachmentUrl(attachmentId));
   const iconEl = (
     <Icon
       icon={iconForMime(mime)}
@@ -91,7 +121,7 @@ export function FileBlock({ block, isFocused, editor }: BlockRendererProps) {
         <Card
           as="a"
           interactive
-          href={attachmentUrl(attachmentId)}
+          href={src.kind === "ready" ? src.src : undefined}
           download={name}
         >
           <Stack direction="row" align="center" gap="md">

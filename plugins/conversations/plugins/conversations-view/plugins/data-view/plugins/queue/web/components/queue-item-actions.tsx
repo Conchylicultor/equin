@@ -3,7 +3,7 @@ import { createContext, useContext, type ReactElement } from "react";
 import { defineItemActions } from "@plugins/primitives/plugins/data-view/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   promoteQueue,
   demoteQueue,
@@ -47,6 +47,7 @@ export const CloseConversationContext = createContext<
 export function PinAction({
   row,
 }: ItemActionProps<QueueRow>): ReactElement | null {
+  const fetchEndpoint = useFetchEndpoint();
   // A lost conversation is never ranked, so a pin would have nothing to lift.
   if (
     row.section === "done" ||
@@ -78,6 +79,7 @@ export function PinAction({
 export function PromoteAction({
   row,
 }: ItemActionProps<QueueRow>): ReactElement | null {
+  const fetchEndpoint = useFetchEndpoint();
   if ((row.section !== "queued" && row.section !== "pinned") || row.isTop)
     return null;
   return (
@@ -100,6 +102,7 @@ export function PromoteAction({
 export function StepDownAction({
   row,
 }: ItemActionProps<QueueRow>): ReactElement | null {
+  const fetchEndpoint = useFetchEndpoint();
   if (!row.canStepDown) return null;
   return (
     <IconButton
@@ -121,6 +124,7 @@ export function StepDownAction({
 export function DemoteAction({
   row,
 }: ItemActionProps<QueueRow>): ReactElement | null {
+  const fetchEndpoint = useFetchEndpoint();
   if ((row.section !== "pinned" && row.section !== "queued") || row.isBottom)
     return null;
   return (
@@ -143,6 +147,7 @@ export function DemoteAction({
 export function AddToQueueAction({
   row,
 }: ItemActionProps<QueueRow>): ReactElement | null {
+  const fetchEndpoint = useFetchEndpoint();
   if (row.section !== "unranked") return null;
   return (
     <IconButton

@@ -3,7 +3,7 @@ import { z } from "zod";
 // The jsonb payload for a `report-storm` report: one report kind's collapse
 // accounting for one storm, filed by the reports engine when a kind blows past
 // its per-window distinct-fingerprint ceiling (see
-// plugins/reports/server/internal/fan-out.ts). Structurally the engine's
+// plugins/reports/plugins/engine/server/internal/fan-out.ts). Structurally the engine's
 // StormSummary (it files `data: { ...summary }` verbatim — the server kind file
 // carries a compile-time drift guard against the reports type). One report per
 // (collapsed kind, window): the fingerprint keys on both, so a ten-minute stall

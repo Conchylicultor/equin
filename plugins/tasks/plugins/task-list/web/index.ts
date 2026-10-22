@@ -7,7 +7,7 @@ import { LaunchAgentAction } from "./components/launch-agent-action";
 export { Tasks } from "./slots";
 export { TasksListView } from "./components/tasks-list-view";
 export {
-  taskFieldSchema,
+  useTaskFieldSchema,
   clusterTaskHierarchy,
   buildTreeOptions,
 } from "./internal/tasks-data-view";

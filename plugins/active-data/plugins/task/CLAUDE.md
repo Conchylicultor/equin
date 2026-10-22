@@ -30,7 +30,7 @@ gets a `useId()`-derived Lexical namespace.
     - `conversations/conversation-ui/row.ConversationRow`
     - `conversations/conversation-view.conversationPane`
     - `conversations.useConversationById`
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`
     - `primitives/css/card.Card`
     - `primitives/css/link-chip.LinkChip`

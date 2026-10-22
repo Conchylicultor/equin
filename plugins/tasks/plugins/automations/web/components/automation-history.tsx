@@ -99,6 +99,7 @@ export function AutomationHistory({
       foldResource(filings, {
         loading: () => [],
         error: () => [],
+        unavailable: () => [],
         ready: (rows) => rows.map((r) => r.taskId),
       }),
     [filings],
@@ -113,6 +114,7 @@ export function AutomationHistory({
       foldResource(result, {
         loading: () => NO_ROWS,
         error: () => NO_ROWS,
+        unavailable: () => NO_ROWS,
         ready: (d) => d.filings,
       }),
     [result],

@@ -76,7 +76,7 @@ export async function listSavedThemes(): Promise<SavedTheme[]> {
  *
  * Answers the commit's ack token beside the theme (`SavedThemeWrite`): an
  * endpoint wrapping this returns it as is, so its web caller can wait for the
- * live list to have the theme (`awaitSavedThemesWrite`) before selecting it.
+ * live list to have the theme (`useAwaitSavedThemesWrite`) before selecting it.
  */
 export async function saveTheme(
   input: SaveThemeInput,

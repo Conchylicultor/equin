@@ -34,6 +34,7 @@ import {
   type MidiSongMeta,
 } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/midi/web";
 import { navigate } from "@plugins/apps-core/plugins/tabs/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
@@ -241,13 +242,18 @@ function Facts({
 function OpenInSonata({ file, bytes }: { file: FileRef; bytes: ArrayBuffer }) {
   const { score, stop } = useSession();
   const cursor = useCursorApi();
+  const fetchEndpoint = useFetchEndpoint();
   const open = async () => {
     stop();
     // Anywhere in the first bar (or its lead-in) is "the start": no bar.
     const at = barPositionAt(score, cursor.getBeat()).bar;
     const bar = at > 1 ? at : undefined;
     try {
-      const song = await importMidiBytes(bytes, fileRefName(file));
+      const song = await importMidiBytes(
+        fetchEndpoint,
+        bytes,
+        fileRefName(file),
+      );
       navigate(sonataSongLink(song.id, bar));
     } catch (err) {
       showToast({

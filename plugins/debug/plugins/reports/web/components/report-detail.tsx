@@ -8,6 +8,7 @@ import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
 import { useStaleFrontend } from "@plugins/build/web";
 import { reportsList, type Report } from "@plugins/reports/core";
 import { Reports, investigate } from "@plugins/reports/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
@@ -197,6 +198,7 @@ function TimeField({ label, date }: { label: string; date: Date }) {
 }
 
 function Investigate({ report }: { report: Report }) {
+  const fetchEndpoint = useFetchEndpoint();
   // A report owns its own report → task link (`report.taskId`, written by
   // `investigate()`), so the action runs in link mode: View task once linked.
   return (
@@ -213,7 +215,12 @@ function Investigate({ report }: { report: Report }) {
         }
         placeholder="Extra context (optional) — e.g. what you were doing, expected behaviour…"
         resolve={async (userText) => {
-          const { taskId } = await investigate(report.id);
+          const answer = await investigate(fetchEndpoint, report.id);
+          // Investigating needs the computer (`needsMachine`): a host without
+          // it records no report to investigate, so this is not reached there
+          // — said, if it ever is, never swallowed.
+          if (answer.kind === "unavailable") throw new Error(answer.message);
+          const { taskId } = answer.value;
           const parts: string[] = [];
           parts.push(`## Report (${report.kind})\n`);
           parts.push(`**Source:** ${report.source}`);

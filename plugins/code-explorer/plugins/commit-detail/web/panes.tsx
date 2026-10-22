@@ -39,6 +39,8 @@ function CommitDetailBody() {
     <PaneChrome pane={commitDetailPane}>
       {info.kind === "not-found" ? (
         <Placeholder>{info.reason}</Placeholder>
+      ) : info.kind === "unavailable" ? (
+        <Placeholder>{info.message}</Placeholder>
       ) : (
         <CommitDiffView worktree={worktree} sha={sha} />
       )}

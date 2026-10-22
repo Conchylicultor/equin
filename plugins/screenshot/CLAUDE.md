@@ -4,19 +4,20 @@
 
 ## Plugin reference
 
-- Description: Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
+- Description: Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots (in memory) so a freshly opened tab can fetch them. Writing one to a file for an agent is the machine half's.
 - Web:
   - Slots: `screenshotPane.Actions`
   - Slot contributors: `screenshotPane.Actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "screenshot"
     - `ActionBar.Item` → `ScreenshotButton`
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/endpoints` ×3
     - `primitives/pane` ×3
     - `screenshot/draw-canvas` ×3
-    - `infra/endpoints` ×2
     - `primitives/css/ui-kit` ×2
     - `primitives/launch` ×2
+    - `shell/notifications` ×2
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/coords.Placed`
@@ -29,7 +30,6 @@
     - `primitives/loading.Loading`
     - `primitives/text-editor.TextEditor`
     - `shell/action-bar.ActionBar`
-    - `shell/notifications.toast`
     - `ui/icons.Icon`
   - Exports (values):
     - `captureApp`
@@ -41,7 +41,9 @@
   - Routes:
     - `POST /api/screenshots/:id`
     - `GET /api/screenshots/:id`
-    - `POST /api/screenshots/:id/file`
+- Machine:
+  - Uses: `infra/endpoints.implementMachine`
+  - Routes: `POST /api/screenshots/:id/file`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --background`
@@ -58,9 +60,7 @@
     - `ui/tokens/type-scale --line-height-3xs`
   - Imported by: `screenshot/draw-on-app`
 - Exemptions:
-  - Exempts itself from:
-    - `live/no-endpoint-read` — `web/components/screenshot-view.tsx` (debt)
-    - `boundaries/no-platform-api` — `server/internal/handle-save-file.ts` (debt)
+  - Exempts itself from: `live/no-endpoint-read` — `web/components/screenshot-view.tsx` (debt)
 - Shared:
   - Exports (values):
     - `createScreenshot`

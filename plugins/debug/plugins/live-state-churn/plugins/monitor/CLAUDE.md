@@ -39,8 +39,8 @@ The `live-state-noop` report kind renders a one-line Debug → Reports summary
     - `config_v2.ConfigV2`
     - `config_v2.getConfig`
     - `infra/jobs.defineJob`
-    - `reports.recordReport`
     - `reports.ReportKind`
+    - `reports/engine.recordReport`
   - Register: `defineJob('debug.live-state-churn-monitor')`
 - Core:
   - Uses:

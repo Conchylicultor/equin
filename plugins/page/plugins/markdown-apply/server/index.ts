@@ -19,6 +19,7 @@ export type { BlockScope, BlockScopePageRow } from "./internal/read";
 export { serverMarkdownContext } from "./internal/markdown-context";
 
 export default {
+  portable: true,
   description:
     "Apply an edited markdown document onto an existing page's block forest without re-minting block ids: the block-scoped read, the structural patch, and the per-block text edits (written through page/block-text-write). Audience-agnostic — the agent-facing tools over it are page/annotations/agent-access.",
 } satisfies ServerPluginDefinition;

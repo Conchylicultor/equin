@@ -5,7 +5,11 @@ import {
   fileRefName,
   fileUrl,
 } from "@plugins/primitives/plugins/file-viewer/core";
-import type { FileRendererProps } from "@plugins/primitives/plugins/file-viewer/web";
+import {
+  UnloadedFile,
+  type FileRendererProps,
+} from "@plugins/primitives/plugins/file-viewer/web";
+import { useAssetSrc } from "@plugins/infra/plugins/endpoints/web";
 import {
   ImageViewer,
   MissingImage,
@@ -33,7 +37,16 @@ function previewSrc(image: ViewerImage | undefined, src: string): string {
  * does not load shows the missing-image box, with nothing to open.
  */
 export function ImageView({ file }: FileRendererProps) {
-  const src = fileUrl(file);
+  // The file's bytes over the subtree's transport (`useAssetSrc`).
+  const asset = useAssetSrc(fileUrl(file));
+  if (asset.kind !== "ready") return <UnloadedFile src={asset} />;
+  return <LoadedImageView file={file} src={asset.src} />;
+}
+
+function LoadedImageView({
+  file,
+  src,
+}: Pick<FileRendererProps, "file"> & { src: string }) {
   const name = fileRefName(file);
   const { images, pending } = useFolderImages(file);
   const [img, setImg] = useState<HTMLImageElement | null>(null);

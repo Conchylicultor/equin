@@ -340,6 +340,44 @@ export function parseStringField(
 }
 
 /**
+ * Whether an object body declares `field` at all — as a `field:` key (any
+ * value) or a shorthand member (`{ field, … }`) — for a field whose value is a
+ * runtime object only its PRESENCE says anything about (`needsMachine`). Same
+ * masking + `depth0` scoping as `parseStringField`.
+ */
+export function hasField(
+  src: string,
+  field: string,
+  opts?: { depth0?: boolean },
+): boolean {
+  const masked = maskSource(src);
+  const depth0 = opts?.depth0 ?? false;
+  if (keyValueOffset(masked, field, depth0) !== null) return true;
+  // A member starts the body or follows a `,` (or, anywhere, a `{`).
+  const shorthand = new RegExp(
+    `[{,]?\\s*${escapeRe(field)}\\s*(?:[,}]|$)`,
+    "y",
+  );
+  let i = 0;
+  while (i < masked.length) {
+    const c = masked[i]!;
+    if (depth0 && (c === "{" || c === "[" || c === "(")) {
+      // Depth 0 only: a nested object's shorthand is not this body's member.
+      const close = matchBracket(masked, i, c, CLOSERS[c]!);
+      if (close < 0) return false;
+      i = close + 1;
+      continue;
+    }
+    if (i === 0 || c === "," || (!depth0 && c === "{")) {
+      shorthand.lastIndex = i;
+      if (shorthand.test(masked)) return true;
+    }
+    i++;
+  }
+  return false;
+}
+
+/**
  * Read a static boolean field. Same masking + `depth0` scoping as
  * `parseStringField`. A boolean field's only valid literal forms are the bare
  * `true`/`false` tokens, so the return stays a plain `boolean`.

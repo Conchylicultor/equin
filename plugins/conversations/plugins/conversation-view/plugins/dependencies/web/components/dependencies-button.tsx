@@ -19,10 +19,10 @@ import {
   type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import {
-  fetchEndpoint,
   EndpointError,
+  useFetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
-import { toast } from "@plugins/shell/plugins/notifications/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { hoverRevealTargetInAnchor } from "@plugins/primitives/plugins/hover-reveal/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { DepSection } from "./dep-section";
@@ -86,6 +86,8 @@ function DependenciesButtonInner({
 }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const fetchEndpoint = useFetchEndpoint();
+  const toast = useToast();
 
   const graph = useMemo(() => TaskGraph.from(allTasks), [allTasks]);
   const byId = useMemo(
@@ -148,7 +150,7 @@ function DependenciesButtonInner({
         setBusy(null);
       }
     },
-    [],
+    [toast],
   );
 
   const up = after.filter((t) => !isSettled(t.status)).length;

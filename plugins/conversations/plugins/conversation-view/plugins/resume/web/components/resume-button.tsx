@@ -1,7 +1,7 @@
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { useLiveConversation } from "@plugins/conversations/web";
-import { toast } from "@plugins/shell/plugins/notifications/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import {
   useEndpointMutation,
   getEndpointErrorMessage,
@@ -17,6 +17,7 @@ export function ResumeButton({
   conversation: ConversationRecord;
 }) {
   const live = useLiveConversation(conversation);
+  const toast = useToast();
   const resume = useEndpointMutation(resumeConversationEndpoint, {
     onSuccess: () =>
       toast({
@@ -38,14 +39,20 @@ export function ResumeButton({
   const hasSession = !!live.claudeSessionId;
   const canResume = isNotRunning && hasSession;
 
-  const tooltip = !isNotRunning
-    ? "Resume is available once the session has exited"
-    : !hasSession
-      ? "No saved Claude session to resume"
-      : "Resume conversation (claude --resume)";
+  // Resuming respawns the agent, which needs the computer: on a host without
+  // it (the demo) the button is disabled and says why.
+  const pending = resume.kind === "available" && resume.isPending;
+  const tooltip =
+    resume.kind === "unavailable"
+      ? resume.message
+      : !isNotRunning
+        ? "Resume is available once the session has exited"
+        : !hasSession
+          ? "No saved Claude session to resume"
+          : "Resume conversation (claude --resume)";
 
   function onClick() {
-    if (resume.isPending || !canResume) return;
+    if (resume.kind === "unavailable" || resume.isPending || !canResume) return;
     resume.mutate({ params: { id: conversation.id } });
   }
 
@@ -53,10 +60,10 @@ export function ResumeButton({
     <IconButton
       icon={replayIcon}
       label="Resume"
-      tooltip={resume.isPending ? "Resuming…" : tooltip}
+      tooltip={pending ? "Resuming…" : tooltip}
       variant="outline"
-      loading={resume.isPending}
-      disabled={!canResume}
+      loading={pending}
+      disabled={resume.kind === "unavailable" || !canResume}
       onClick={onClick}
     />
   );

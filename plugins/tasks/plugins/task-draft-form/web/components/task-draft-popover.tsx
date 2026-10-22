@@ -8,7 +8,8 @@ import {
   useRef,
   useState,
 } from "react";
-import { toast } from "@plugins/shell/plugins/notifications/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
@@ -244,6 +245,8 @@ function TaskDraftFormContent({
   // The live launch-option registry: reading it is a hook, so it happens here
   // and `submitChain` / `describeOutcome` stay pure over an explicit list.
   const launchOptions = TaskLaunch.Option.useContributions();
+  const fetchEndpoint = useFetchEndpoint();
+  const toast = useToast();
 
   const submit = async () => {
     if (submitting) return;
@@ -271,7 +274,7 @@ function TaskDraftFormContent({
           ? { kind: "folder", folderTaskId: activeRelate!.taskId }
           : target;
 
-      const outcome = await submitChain({
+      const outcome = await submitChain(fetchEndpoint, {
         cards,
         target: effectiveTarget,
         relate: effectiveRelate,

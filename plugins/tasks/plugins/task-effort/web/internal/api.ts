@@ -1,8 +1,9 @@
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import type { EffortLevel } from "@plugins/conversations/plugins/effort-provider/core";
 import { putTaskEffort, deleteTaskEffort } from "../../shared/endpoints";
 
 export async function setTaskEffortRemote(
+  fetchEndpoint: FetchEndpoint,
   taskId: string,
   level: EffortLevel | null,
 ): Promise<void> {

@@ -6,7 +6,6 @@ import {
   defineDataView,
   fieldOverrides,
 } from "@plugins/primitives/plugins/data-view/web";
-import type { CreateOption } from "@plugins/primitives/plugins/data-view/web";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -16,6 +15,7 @@ import { songLibrary, updateSong } from "../../core";
 import type { Song } from "../../core";
 import { Library } from "../slots";
 import { useSongLink } from "../hooks";
+import { useSourceCreators } from "../internal/use-source-creators";
 import { songLibrarySource } from "../source";
 import { formatDuration } from "../format-duration";
 import { NowPlayingBar } from "./now-playing-bar";
@@ -71,7 +71,7 @@ export function SongLibrary() {
   // the live collection, so the edited cell settles from server truth; a failed
   // write surfaces via the global mutation toast (no local onError).
   const { mutate: saveSong } = useEndpointMutation(updateSong);
-  const sources = Library.Source.useContributions();
+  const creators = useSourceCreators();
 
   // The list's fields are derived — the songs entity's, its saved-view ids
   // (`duration`, `added`), and every field an extension exposes on a song
@@ -145,9 +145,7 @@ export function SongLibrary() {
             // mapped from the `Library.Source` registry into the data-view "+"
             // menu. The library stays source-agnostic — it threads an opaque
             // `createOption` and never names MIDI.
-            creators={sources
-              .map((s) => s.createOption)
-              .filter((c): c is CreateOption => Boolean(c))}
+            creators={creators}
             rowActivation={songLink}
             emptyState={<>No songs match.</>}
             viewOptions={{

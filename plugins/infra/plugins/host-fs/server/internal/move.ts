@@ -8,17 +8,14 @@ import {
   stat,
 } from "node:fs/promises";
 import { basename, dirname, join, sep } from "node:path";
-import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
 import {
-  hostFsMove,
   type HostFsMoveOutcome,
   type HostFsMoveResolution,
   type HostFsMoveResult,
 } from "../../core";
 import { locateHostPath } from "./archive/locate";
 import { freePath, isTaken } from "./free-path";
-import { isAppOrigin } from "./open";
-import { classifyFsError, resolveHostPath } from "./path";
+import { classifyFsError } from "./path";
 
 /** `rename(2)`, injectable so a test can stand in a cross-volume (`EXDEV`) one. */
 export type RenameFn = (from: string, to: string) => Promise<void>;
@@ -170,22 +167,3 @@ export async function moveHostPaths(
   }
   return { kind: "ok", destDir, results };
 }
-
-export const handleMove = implement(hostFsMove, ({ body, req }) => {
-  if (!isAppOrigin(req.headers.get("origin"))) {
-    throw new HttpError(
-      403,
-      "Move is only accepted from the app's own *.localhost origin",
-    );
-  }
-  const resolutions = new Map(
-    Object.entries(body.resolutions ?? {}).map(
-      ([source, resolution]) => [resolveHostPath(source), resolution] as const,
-    ),
-  );
-  return moveHostPaths(
-    body.sources.map((source) => resolveHostPath(source)),
-    resolveHostPath(body.destDir),
-    resolutions,
-  );
-});

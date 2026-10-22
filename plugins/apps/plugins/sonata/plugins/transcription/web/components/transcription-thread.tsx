@@ -3,7 +3,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { AgentThread } from "@plugins/conversations/plugins/agent-thread/web";
 import { transcriptionScore } from "../../core";
 import { retryTranscription } from "../../shared/endpoints";
@@ -38,6 +38,7 @@ export function TranscriptionThread({
   height,
   titled,
 }: TranscriptionThreadProps) {
+  const fetchEndpoint = useFetchEndpoint();
   return (
     <div style={{ height }}>
       <AgentThread

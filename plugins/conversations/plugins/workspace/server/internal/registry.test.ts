@@ -12,7 +12,6 @@ function fakeImpl<K extends "worktree" | "scratch">(
   return {
     kind,
     root: async () => root,
-    parseSpec: (spec) => spec,
     onCommit: async () => {},
     prepare: async () => {},
     onFinish: async () => {},

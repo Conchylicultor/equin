@@ -1,3 +1,10 @@
+import {
+  assetPath,
+  interpolatePath,
+  type AssetPath,
+} from "@plugins/infra/plugins/endpoints/core";
+import { getAttachmentFile } from "@plugins/infra/plugins/attachments/core";
+
 const ATTACHMENT_URL_RE = /^\/api\/attachments\/([A-Za-z0-9_-]+)$/;
 
 /**
@@ -13,17 +20,30 @@ export const ATTACHMENT_IMAGE_MARKDOWN_RE = /!\[([^\]]*)\]\(([^)\s]+)\)/g;
 /** A non-image file attachment reference only: `[name](url)`, no leading `!`. */
 export const ATTACHMENT_FILE_MARKDOWN_RE = /(?<!!)\[([^\]]*)\]\(([^)\s]+)\)/g;
 
-export function attachmentUrl(id: string): string {
-  return `/api/attachments/${id}`;
+/**
+ * An attachment's bytes as an asset an element loads — through `useAssetSrc`
+ * (`endpoints/web`), over the subtree's transport, never as a bare URL.
+ */
+export function attachmentUrl(id: string): AssetPath {
+  return assetPath(getAttachmentFile, { id });
+}
+
+/**
+ * The address an attachment is PERSISTED under in markdown — the route it is
+ * served at (`/api/attachments/<id>`), written into a document, never handed to
+ * an element (the reader converts it back: `isAttachmentUrl` → `attachmentUrl`).
+ */
+function persistedAttachmentAddress(id: string): string {
+  return interpolatePath(getAttachmentFile.path, { id });
 }
 
 export function attachmentMarkdown(id: string, alt = ""): string {
-  return `![${label(alt)}](${attachmentUrl(id)})`;
+  return `![${label(alt)}](${persistedAttachmentAddress(id)})`;
 }
 
 /** A non-image file reference: `[name](/api/attachments/<id>)`. */
 export function attachmentFileMarkdown(id: string, filename: string): string {
-  return `[${label(filename)}](${attachmentUrl(id)})`;
+  return `[${label(filename)}](${persistedAttachmentAddress(id)})`;
 }
 
 /**

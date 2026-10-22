@@ -13,6 +13,7 @@ export { tasksWorkspace } from "./internal/tables";
 export { getTaskWorkspace, setTaskWorkspace } from "./internal/mutations";
 
 export default {
+  portable: true,
   description:
     "Owns the tasks_ext_workspace side-table: the workspace (worktree, or a scratch profile) a task's next attempt runs in, read when the attempt is created.",
   contributions: [

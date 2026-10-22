@@ -64,10 +64,10 @@ function storePathFor(owner: string, descriptorName: string): string {
  * server/machine one is a `ServerContribution` whose `_kind` symbol is
  * `ConfigV2.Register` (web contributions carry a `_slot`, never that symbol).
  *
- * The one reading both pairing checks share — `config-v2:registrations-paired`
- * (web ⇄ server/machine, over the app's bundle) and
- * `config-v2:host-registrations-paired` (a browser host's scope ⇄ its worker
- * graph) — so the two cannot disagree on what a registration is.
+ * The one reading both pairings share — web ⇄ server/machine over the app's
+ * bundle, and the browser-host coverage guard's config arm (a host's scope ⇄
+ * its worker graph), both run by `config-v2:registrations-paired` — so the
+ * two cannot disagree on what a registration is.
  */
 export function collectConfigRegistrations(
   barrels: readonly RegistrationBarrel[],

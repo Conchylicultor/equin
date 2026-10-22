@@ -2,6 +2,12 @@ import { z } from "zod";
 import { blob, defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { liveValue } from "@plugins/network/plugins/live/core";
 
+// The sprites are built from the icon sets installed on the computer (and the
+// manifest compiled into the desktop's backend), so every declaration here
+// needs it: a host without the computer answers them unavailable. The page's
+// sprites come from the page's own server (`web/internal/sprite-host.tsx`).
+const SPRITES = { feature: "Icon sprites" } as const;
+
 export const IconSpritesSchema = z.object({
   /**
    * What the sprites are a function of: the manifest's names and the installed
@@ -25,6 +31,7 @@ export type IconSprites = z.infer<typeof IconSpritesSchema>;
 export const residentSprites = liveValue("icons.sprites", {
   schema: IconSpritesSchema,
   preload: "boot-and-keep",
+  needsMachine: SPRITES,
 });
 
 /**
@@ -35,6 +42,7 @@ export const residentSprites = liveValue("icons.sprites", {
 export const spriteEndpoint = defineEndpoint({
   route: "GET /api/icons/sprite/:hash/:key",
   response: blob("image/svg+xml"),
+  needsMachine: SPRITES,
 });
 
 export const SavedIconSpritesSchema = z.object({
@@ -64,6 +72,7 @@ export type SavedIconSprites = z.infer<typeof SavedIconSpritesSchema>;
 export const savedIconSprites = liveValue("icons.saved-sprites", {
   schema: SavedIconSpritesSchema,
   preload: "boot-and-keep",
+  needsMachine: SPRITES,
 });
 
 /**
@@ -73,6 +82,7 @@ export const savedIconSprites = liveValue("icons.saved-sprites", {
  */
 export const savedIconsChanged = liveValue("icons.saved-icons-changed", {
   schema: z.number(),
+  needsMachine: SPRITES,
 });
 
 /**
@@ -85,4 +95,5 @@ export const runtimeSymbolsEndpoint = defineEndpoint({
   route: "GET /api/icons/symbols/:hash/:key",
   query: z.object({ names: z.string() }),
   response: blob("image/svg+xml"),
+  needsMachine: SPRITES,
 });

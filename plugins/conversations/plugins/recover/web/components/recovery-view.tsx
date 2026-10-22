@@ -14,7 +14,11 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { conversationsGone } from "@plugins/tasks/plugins/tasks-core/core";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import {
+  useFetchEndpoint,
+  useMachineAvailability,
+} from "@plugins/infra/plugins/endpoints/web";
+import type { MachineAvailability } from "@plugins/infra/plugins/endpoints/core";
 import { restoreBatch } from "../../shared/endpoints";
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -58,6 +62,10 @@ function formatTime(date: Date): string {
 
 export function RecoveryView() {
   const gone = useLive(conversationsGone, { limit: GONE_PAGE_SIZE });
+  const fetchEndpoint = useFetchEndpoint();
+  // Restoring respawns agents, which needs the computer: on a host without it
+  // (the demo) every Restore is disabled and says why.
+  const availability = useMachineAvailability(restoreBatch);
   // What to list: the window (already newest-first by `endedAt`), or — when a
   // re-read failed — the rows last seen; `undefined` while nothing is known.
   const items = foldResource(gone, {
@@ -94,7 +102,9 @@ export function RecoveryView() {
         return next;
       });
       try {
-        const data = await fetchEndpoint(restoreBatch, {}, { body: { ids } });
+        const result = await fetchEndpoint(restoreBatch, {}, { body: { ids } });
+        if (result.kind === "unavailable") throw new Error(result.message);
+        const data = result.value;
         setRowErrors((prev) => {
           const next = new Map(prev);
           for (const r of data.results) {
@@ -113,7 +123,7 @@ export function RecoveryView() {
         setPendingFor(ids, false);
       }
     },
-    [setPendingFor],
+    [fetchEndpoint, setPendingFor],
   );
 
   return (
@@ -175,6 +185,7 @@ export function RecoveryView() {
                   group={group}
                   pending={pending}
                   rowErrors={rowErrors}
+                  availability={availability}
                   onRestore={restore}
                 />
               );
@@ -190,11 +201,13 @@ function ClusterGroup({
   group,
   pending,
   rowErrors,
+  availability,
   onRestore,
 }: {
   group: Conversation[];
   pending: Set<string>;
   rowErrors: Map<string, string>;
+  availability: MachineAvailability;
   onRestore: (ids: string[]) => Promise<void>;
 }) {
   const first = group[0];
@@ -222,6 +235,10 @@ function ClusterGroup({
               variant="outline"
               onClick={() => onRestore(groupIds)}
               loading={anyPending}
+              disabled={!availability.available}
+              tooltip={
+                availability.available ? undefined : availability.message
+              }
             >
               {/* eslint-disable-next-line spacing/no-adhoc-spacing -- leading-icon offset inside button label */}
               <Icon icon={historyIcon} className="size-3.5 mr-1" />
@@ -236,6 +253,7 @@ function ClusterGroup({
           conversation={conversation}
           pending={pending.has(conversation.id)}
           error={rowErrors.get(conversation.id) ?? null}
+          availability={availability}
           onRestore={() => onRestore([conversation.id])}
         />
       ))}
@@ -247,11 +265,13 @@ function ConversationRow({
   conversation,
   pending,
   error,
+  availability,
   onRestore,
 }: {
   conversation: Conversation;
   pending: boolean;
   error: string | null;
+  availability: MachineAvailability;
   onRestore: () => void;
 }) {
   return (
@@ -279,7 +299,13 @@ function ConversationRow({
           </Stack>
         </Stack>
         <ControlSizeProvider size="sm">
-          <Button variant="outline" onClick={onRestore} loading={pending}>
+          <Button
+            variant="outline"
+            onClick={onRestore}
+            loading={pending}
+            disabled={!availability.available}
+            tooltip={availability.available ? undefined : availability.message}
+          >
             {/* eslint-disable-next-line spacing/no-adhoc-spacing -- leading-icon offset inside button label */}
             <Icon icon={historyIcon} className="size-3.5 mr-1" />
             Restore

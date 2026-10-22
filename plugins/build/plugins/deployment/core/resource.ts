@@ -27,4 +27,6 @@ import { DeploymentStateSchema } from "./model";
 export const deployment = liveValue("build.deployment", {
   schema: DeploymentStateSchema,
   preload: "boot",
+  // Read with git from this checkout and its served dist.
+  needsMachine: { feature: "Reading what is deployed" },
 });

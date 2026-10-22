@@ -5,6 +5,7 @@ import { calloutBlock } from "../core";
 import "./internal/saved-icons";
 
 export default {
+  portable: true,
   description:
     "Callout block type: registers its `data` schema (icon + semantic color) at the server write boundary.",
   contributions: [Editor.BlockData(calloutBlock)],

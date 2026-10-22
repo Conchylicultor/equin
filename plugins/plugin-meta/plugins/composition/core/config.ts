@@ -304,26 +304,49 @@ export const compositionsConfig = defineConfig({
         //
         // - Push & Close (`push-and-exit`): pushes the agent's worktree to main
         //   and closes the session;
-        // - the two automations whose whole job is launching real agents on the
-        //   user's tasks (report investigations, the sidequest autopilot);
-        // - Stats (`stats.**`, and `conversations.usage` that imports it): cost
-        //   and commit history read off this computer's transcripts and git;
+        // - automations (`tasks.automations.**`, and with it every automation
+        //   and the outcome-report card that imports it): each one files tasks
+        //   and launches real agents on the user's machine on its own, its
+        //   catalog and history are the machine half's, and its registry
+        //   (defineAutomation, the warm-ups, the config watch) needs the
+        //   computer — so a demo has no automation to show (each automation,
+        //   and the outcome-report card, named too: a pattern positive the
+        //   profile extends would otherwise keep them);
         // - the file explorer (`apps.file-explorer.**`, and the conversation's
         //   Explorer tab that embeds it): browses a checkout on disk.
         //
-        // The rule they also satisfy: a plugin in a browser host's scope whose
-        // config the worker cannot serve crashes the use-config guard the
-        // moment it reads it (`config-v2:host-registrations-paired`).
+        // And, for now, the other apps the agent manager reaches into — Pages
+        // and Prototypes (and, with them, the surfaces that import them: the
+        // page-link chip, Pages nav, the page and prototype artifacts, the
+        // page tool-call renderers) — so the demo's scope is the agent manager
+        // alone while its host is sealed (every read and endpoint answered or
+        // `needsMachine`). Pages and Prototypes return later, for the
+        // cross-app integration (research/2026-10-22-global-demo-scope-sealed.md, D5).
+        // Events, Places and Stats are not in the bundle at all (Stats left
+        // with `conversations.usage`'s cost scan, now in its `machine/`), so a
+        // negative for them would trim nothing — a dead negative. Debug cannot leave yet: the
+        // bell (`shell.notifications`), build, recover and two debug tools
+        // register their panes into the Debug app by importing its shell, so
+        // `!apps.debug.**` would cascade ~280 plugins out and leave
+        // `apps.debug.shell` re-added through `shell.notifications`.
+        //
+        // The rule they also satisfy: everything a plugin in a browser host's
+        // scope reads, calls or registers is served by the worker's graph or
+        // declared `needsMachine` — the build's coverage guard
+        // (codegen's `browser-host-coverage.ts`) fails otherwise.
         {
           id: "agent-manager-demo",
           name: "agent-manager-demo",
           category: "profile",
           entryPoints: [
             "!conversations.conversation-view.push-and-exit.**",
+            "!tasks.automations.**",
             "!tasks.reports-investigation.**",
             "!tasks.sidequest-autopilot.**",
-            "!stats.**",
+            "!tasks.outcome-report.**",
             "!apps.file-explorer.**",
+            "!apps.pages.**",
+            "!apps.prototypes.**",
           ],
           selectedContributors: [] as string[],
           extends: ["agent-manager"],

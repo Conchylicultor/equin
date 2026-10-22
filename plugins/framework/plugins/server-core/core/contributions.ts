@@ -38,6 +38,14 @@ export interface ServerContributionToken<P, I = P> {
   ): P[];
 }
 
+/**
+ * A contribution kind a host may run without some of its contributors (see
+ * `defineServerContribution`): why nothing the host serves reads it.
+ */
+export interface AbsentOnHost {
+  reason: string;
+}
+
 // `null` until `collectContributions` runs: "not collected" is its own state,
 // never an empty map.
 let byKind: Map<symbol, ServerContribution[]> | null = null;
@@ -54,10 +62,25 @@ function stripKind<P>({ _kind: _, ...rest }: ServerContribution): P {
  * Pass `project` instead — the contributor then passes an `I`, and the kind
  * stores (and every read returns) `project(input)`: `Resource.Declare` takes a
  * whole `Resource` and keeps `{ key, mode, preload }`.
+ *
+ * `absentOnHost` declares that a host which does not boot a contributor of
+ * this kind still answers everything it serves correctly — the kind is its
+ * contributor's own reaction or bookkeeping, never part of an answer (a
+ * `Trigger` is the contributor reacting to an event: a host without it does
+ * not react). Read statically by the browser-host coverage guard
+ * (`codegen/core/browser-host-coverage.ts`, its contributions arm): a kind
+ * WITHOUT it, declared by a plugin a browser host boots, must have every
+ * contributor its scoped page renders booted too — else the host would answer
+ * without the contribution (a task list without a category's label, a list
+ * without an exposed column). The reason is required: it is the claim the
+ * guard takes on trust.
  */
 export function defineServerContribution<P>(
   debugName: string,
-  opts?: { docLabel?: (props: P) => string | undefined },
+  opts?: {
+    docLabel?: (props: P) => string | undefined;
+    absentOnHost?: AbsentOnHost;
+  },
 ): ServerContributionToken<P>;
 export function defineServerContribution<P, I>(
   debugName: string,
@@ -65,6 +88,7 @@ export function defineServerContribution<P, I>(
     docLabel?: (props: P) => string | undefined;
     /** The payload a contributor's input declares. */
     project: (input: I) => P;
+    absentOnHost?: AbsentOnHost;
   },
 ): ServerContributionToken<P, I>;
 export function defineServerContribution<P, I>(
@@ -72,6 +96,7 @@ export function defineServerContribution<P, I>(
   opts?: {
     docLabel?: (props: P) => string | undefined;
     project?: (input: I) => P;
+    absentOnHost?: AbsentOnHost;
   },
 ): ServerContributionToken<P, I> {
   const kind = Symbol(debugName);

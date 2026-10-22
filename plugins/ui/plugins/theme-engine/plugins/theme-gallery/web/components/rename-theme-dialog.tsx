@@ -14,7 +14,7 @@ import {
 } from "@plugins/infra/plugins/endpoints/web";
 import type { Theme } from "@plugins/ui/plugins/theme-engine/core";
 import { renameSavedTheme } from "@plugins/ui/plugins/theme-engine/plugins/saved-themes/core";
-import { awaitSavedThemesWrite } from "@plugins/ui/plugins/theme-engine/plugins/saved-themes/web";
+import { useAwaitSavedThemesWrite } from "@plugins/ui/plugins/theme-engine/plugins/saved-themes/web";
 
 /**
  * The rename dialog's body (opened through `openDialog`, which owns the
@@ -31,6 +31,7 @@ export function RenameThemeDialog({
   const [label, setLabel] = useState(theme.label);
   const [error, setError] = useState<string | null>(null);
   const rename = useEndpointMutation(renameSavedTheme);
+  const awaitSavedThemesWrite = useAwaitSavedThemesWrite();
   const next = label.trim();
   const canSave = next.length > 0 && next !== theme.label;
 

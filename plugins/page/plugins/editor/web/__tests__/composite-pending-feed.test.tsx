@@ -16,7 +16,8 @@
 // feed is settled exactly when the test says — the composite is the unit.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, screen } from "@testing-library/react";
+import { renderWithTransport } from "@plugins/primitives/plugins/networking/web/testing";
 import { useEffect } from "react";
 import { PluginProvider } from "@plugins/framework/plugins/web-sdk/core";
 import { UndoRedoProvider } from "@plugins/primitives/plugins/undo-redo/web";
@@ -148,7 +149,7 @@ function Probe({ onCtx }: { onCtx: (ctx: Ctx) => void }) {
 
 function mount(): { ctx: () => Ctx | null } {
   const sink: { ctx: Ctx | null } = { ctx: null };
-  render(
+  renderWithTransport(
     <PluginProvider plugins={[]}>
       <UndoRedoProvider>
         <CompositeServerProviderHost pageId={BASE} rootId={null}>

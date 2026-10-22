@@ -36,10 +36,10 @@ import {
   act,
   cleanup,
   fireEvent,
-  render,
   screen,
   waitFor,
 } from "@testing-library/react";
+import { renderWithTransport } from "@plugins/primitives/plugins/networking/web/testing";
 import { useEffect, useMemo } from "react";
 import { PluginProvider } from "@plugins/framework/plugins/web-sdk/core";
 import { UndoRedoProvider } from "@plugins/primitives/plugins/undo-redo/web";
@@ -166,7 +166,7 @@ function mount(persistMs = 60_000): Harness {
   const sink: { ctx: Ctx | null } = { ctx: null };
   const initialBlocks = seed();
   const blockId = initialBlocks[0]!.id;
-  render(
+  renderWithTransport(
     <PluginProvider plugins={[]}>
       <UndoRedoProvider>
         <BlockEditorProvider

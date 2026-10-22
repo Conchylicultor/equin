@@ -5,7 +5,7 @@ import {
   runInBackgroundLane,
   runWithoutProfiling,
 } from "@plugins/infra/plugins/runtime-profiler/core";
-import { recordReport } from "@plugins/reports/server";
+import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import {
   getContentionSnapshot,

@@ -41,6 +41,7 @@
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted-foreground`
   - Imported by:
+    - `apps/agent-manager/demo`
     - `improve/element-picker`
     - `screenshot/draw-on-app`
 - Core:

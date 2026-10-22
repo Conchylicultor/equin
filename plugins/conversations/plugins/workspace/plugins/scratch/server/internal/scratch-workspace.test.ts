@@ -39,42 +39,6 @@ beforeEach(async () => {
   await ScratchProfile.define(profile).register();
 });
 
-describe("scratchWorkspace.parseSpec", () => {
-  test("stores the input as its profile parses it", () => {
-    expect(
-      scratchWorkspace.parseSpec({
-        kind: "scratch",
-        profile: "test.scratch",
-        input: {},
-      }),
-    ).toEqual({
-      kind: "scratch",
-      profile: "test.scratch",
-      input: { note: "hi" },
-    });
-  });
-
-  test("an input the profile refuses throws", () => {
-    expect(() =>
-      scratchWorkspace.parseSpec({
-        kind: "scratch",
-        profile: "test.scratch",
-        input: { note: 3 },
-      }),
-    ).toThrow();
-  });
-
-  test("an unknown profile throws", () => {
-    expect(() =>
-      scratchWorkspace.parseSpec({
-        kind: "scratch",
-        profile: "nope",
-        input: {},
-      }),
-    ).toThrow('Unknown scratch profile "nope"');
-  });
-});
-
 describe("scratchWorkspace.prepare", () => {
   test("writes CLAUDE.md, then runs the profile's prepare; idempotent", async () => {
     const path = join(tmp, "att-1");

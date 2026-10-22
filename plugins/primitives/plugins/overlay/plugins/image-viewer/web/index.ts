@@ -16,6 +16,10 @@ export {
   type MissingImageProps,
 } from "./components/missing-image";
 export {
+  AssetThumbnail,
+  UnloadedAssetImage,
+} from "./components/asset-thumbnail";
+export {
   useImageLoad,
   useImageProbe,
   type ImageFailure,

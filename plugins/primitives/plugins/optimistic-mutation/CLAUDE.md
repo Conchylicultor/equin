@@ -450,15 +450,19 @@ picks.dispatch(change);                  // the ready arm: data, serverData, err
   self-healing push.
 - Op insertion order is preserved, so fast chained ops compose deterministically.
 
-## Awaiting a write without an overlay: `awaitResourceWrite`
+## Awaiting a write without an overlay: `useAwaitResourceWrite`
 
 A caller that writes but predicts nothing — it only must not act (select, close,
-report) before the page's live read has the write — awaits
-`awaitResourceWrite(value, [params,] watermark)` with the endpoint's ack token.
-It is the same causal confirmation as an op's (Rule A: the tuple's `ackTx` names
-the commit, or a full frame's snapshot watermark is strictly past it), as a
-promise, so it works outside React (saved-themes' `awaitSavedThemesWrite`, the
-tweakcn catalog adopt). It **rejects** with the read's error when the tuple's
+report) before its live read has the write — awaits
+`awaitResourceWrite(value, [params,] watermark)` with the endpoint's ack token,
+the function `useAwaitResourceWrite()` returns bound to the enclosing live-state
+pipeline (`useNotificationsClient()`: the page's, or a demo scope's — never a
+module-global one). It is the same causal confirmation as an op's (Rule A: the
+tuple's `ackTx` names the commit, or a full frame's snapshot watermark is
+strictly past it), as a promise, so a hook binds it once and an async handler
+awaits it (saved-themes' `useAwaitSavedThemesWrite`, the tweakcn catalog's
+`useAdopt`). `awaitWriteOn(pipeline, key, params, watermark)` is the testable
+core over an explicit pipeline. It **rejects** with the read's error when the tuple's
 query is, or turns, failed before confirming — never a silent hang. It does not
 subscribe the tuple: a mounted reader must, and for a write that may change
 nothing that reader must ask for acks (`useResourceAcks`; any

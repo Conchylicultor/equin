@@ -83,6 +83,9 @@ function CentralRecentRuns({ entry }: { entry: BackgroundEntry }) {
     kind: entry.kind,
     name: entry.name,
   });
+  // No central runtime behind this subtree (the demo).
+  if (result.status === "unavailable")
+    return <Placeholder>{result.message}</Placeholder>;
   return <RecentRunsList entry={entry} result={result} />;
 }
 

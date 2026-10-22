@@ -62,6 +62,7 @@ the join and the order: oldest run first.
   - Contributes: `Editor.Block` "prompt" → `BlockTextRenderer`
   - Uses:
     - `conversations/conversation-ui/chip.ConversationChip`
+    - `infra/endpoints.useFetchEndpoint`
     - `page/editor.BLOCK_INSET`
     - `page/editor.Editor`
     - `page/prompt/link.createPromptTask`

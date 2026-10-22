@@ -17,7 +17,6 @@
     - `apps/mail/remote-images`
     - `apps/sonata/sources/ultimate-guitar`
     - `infra/safe-fetch/browser-fetch`
-    - `page/bookmark`
     - `stats/cost`
 - Exemptions:
   - Exempts itself from:

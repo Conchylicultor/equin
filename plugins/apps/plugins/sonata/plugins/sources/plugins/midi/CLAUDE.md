@@ -31,9 +31,8 @@ MIDI for playback is the `getSongMidi` endpoint.
     - `apps/sonata/document.SonataDocument`
     - `apps/sonata/library.Library`
     - `apps/sonata/library.openSongImperative`
-    - `infra/attachments.getAttachmentFile`
+    - `apps/sonata/library.SourceCreateOption`
     - `infra/attachments.uploadAttachment`
-    - `infra/endpoints.fetchEndpoint`
     - `network/live.FieldPresentation`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`

@@ -24,8 +24,8 @@ import {
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   EndpointError,
-  fetchEndpoint,
   getEndpointErrorMessage,
+  useFetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import {
@@ -201,6 +201,7 @@ function discreteUpdate<T>(
 export function UrlPastePlugin({ block, editor }: BlockTextPluginProps) {
   const [lexical] = useLexicalComposerContext();
   const { recordDocEdit, serverSync } = useBlockEditor();
+  const fetchEndpoint = useFetchEndpoint();
 
   // The React copy drives the render; the ref is what the update listener reads.
   // Written together (only in `setMenu`), so a text change landing between the
@@ -349,14 +350,20 @@ export function UrlPastePlugin({ block, editor }: BlockTextPluginProps) {
   const mention = useEventCallback(async (url: string, linkKey: NodeKey) => {
     let title: string | undefined;
     try {
-      ({ title } = await fetchEndpoint(
+      const answer = await fetchEndpoint(
         linkMetaEndpoint,
         {},
         // A dead or unreachable page is an expected answer about the user's
         // link, not an app defect — the toast below is where it goes, so it
         // files no endpoint-error report.
         { query: { url }, report: false },
-      ));
+      );
+      // No computer behind the app to fetch the page: the link keeps its URL.
+      if (answer.kind === "unavailable") {
+        showToast({ description: answer.message, variant: "info" });
+        return;
+      }
+      ({ title } = answer.value);
     } catch (err) {
       if (!(err instanceof EndpointError)) throw err;
       showToast({

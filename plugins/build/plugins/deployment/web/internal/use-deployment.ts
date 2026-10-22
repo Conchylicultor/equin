@@ -2,6 +2,7 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import {
   mapResource,
   type ResourceResult,
+  type ResourceUnavailable,
 } from "@plugins/primitives/plugins/live-state/web";
 import { deployment, type Carrier, type DeploymentState } from "../../core";
 import { tabCarrier } from "./tab-carrier";
@@ -14,11 +15,15 @@ import { tabCarrier } from "./tab-carrier";
  * A resource result rather than nullable fields, so a consumer cannot read
  * `state` before it exists, and a failed read is its own `error` arm (with the
  * typed `ResourceError` and a `refetch`) rather than a flavour of loading.
+ * `unavailable`: the deployment is read with git off the computer
+ * (`needsMachine`), and this subtree has none behind it (the demo).
  */
-export type DeploymentReading = ResourceResult<{
-  state: DeploymentState;
-  carriers: Carrier[];
-}>;
+export type DeploymentReading =
+  | ResourceResult<{
+      state: DeploymentState;
+      carriers: Carrier[];
+    }>
+  | ResourceUnavailable;
 
 /**
  * The one client-side read of the deployment.

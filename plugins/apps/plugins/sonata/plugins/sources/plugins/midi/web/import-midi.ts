@@ -1,5 +1,5 @@
 import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { deriveMidiSongMeta } from "../shared/parse";
 import { createMidiSong } from "../shared/endpoints";
 
@@ -20,11 +20,13 @@ export interface ImportedMidiSong {
  * Malformed MIDI throws from `deriveMidiSongMeta` before anything is uploaded.
  */
 export async function importMidiBytes(
+  fetchEndpoint: FetchEndpoint,
   bytes: ArrayBuffer,
   filename: string,
 ): Promise<ImportedMidiSong> {
   const meta = deriveMidiSongMeta(bytes, filename);
   const up = await uploadAttachment(
+    fetchEndpoint,
     new Blob([bytes], { type: "audio/midi" }),
     filename,
     "audio/midi",

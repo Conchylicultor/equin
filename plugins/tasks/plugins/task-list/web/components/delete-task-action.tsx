@@ -3,6 +3,7 @@ import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import type { TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 import { patchTask } from "@plugins/tasks/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const deleteIcon = symbol("delete");
@@ -14,6 +15,7 @@ export function DeleteTaskAction({
   hasChildren,
 }: ItemActionProps<TaskListItem>) {
   const taskId = row.id;
+  const fetchEndpoint = useFetchEndpoint();
   const disabled = hasChildren;
   const title = disabled
     ? "Only leaf tasks can be dropped here — drop the children first"
@@ -22,7 +24,7 @@ export function DeleteTaskAction({
   const onClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (disabled) return;
-    return patchTask(taskId, { drop: true });
+    return patchTask(fetchEndpoint, taskId, { drop: true });
   };
 
   return (

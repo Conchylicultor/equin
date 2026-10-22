@@ -3,6 +3,7 @@ import { Editor } from "@plugins/page/plugins/editor/server";
 import { bulletedListBlock } from "../core";
 
 export default {
+  portable: true,
   description:
     "Bulleted-list block type: registers its `data` schema at the server write boundary.",
   contributions: [Editor.BlockData(bulletedListBlock)],

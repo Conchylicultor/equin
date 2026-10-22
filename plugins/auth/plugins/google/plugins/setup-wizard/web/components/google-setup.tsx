@@ -12,7 +12,7 @@ import {
   startConnectFlow,
   currentWorktreeName,
 } from "@plugins/auth/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { setConfigField } from "@plugins/config_v2/core";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
@@ -28,6 +28,7 @@ import {
   StepCommand,
 } from "@plugins/primitives/plugins/setup-steps/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 
 const REDIRECT_URI = "http://localhost:9000/api/auth/callback/google";
 
@@ -38,6 +39,7 @@ function extractProjectId(raw: string): string {
 
 /** Google's setup, rendered inline in the Google Accounts pane (`setup: { kind: "steps" }`). */
 export function GoogleSetup() {
+  const fetchEndpoint = useFetchEndpoint();
   const [projectId, setProjectId] = useState("");
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
@@ -67,6 +69,9 @@ export function GoogleSetup() {
   }
   const storePath = reg.storePath;
   if (reads.status === "loading") return <Loading />;
+  // The secrets are the computer's: a subtree with none (the demo) says so.
+  if (reads.status === "unavailable")
+    return <Placeholder>{reads.message}</Placeholder>;
   if (reads.status === "error") {
     return (
       <ResourceErrorInline

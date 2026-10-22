@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useState } from "react";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { fetchEndpointOver } from "@plugins/infra/plugins/endpoints/web";
+import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
   isSpriteKey,
@@ -26,6 +27,9 @@ import {
 } from "../../core";
 import { createRuntimeSymbolLoader } from "./runtime-symbol-loader";
 
+// The page's icon sprites: page chrome, always loaded from the page's own server.
+const fetchEndpoint = fetchEndpointOver(pageTransport);
+
 function spriteKey(key: string): SpriteKey {
   if (isSpriteKey(key)) return key;
   throw new Error(`[icons] the server sent an unknown sprite key "${key}"`);
@@ -36,13 +40,16 @@ function spriteKey(key: string): SpriteKey {
 const inflight = new Set<SpriteKey>();
 
 async function fetchSprite(key: SpriteKey, hash: string): Promise<string> {
-  const svg = await fetchEndpoint(
+  const answer = await fetchEndpoint(
     spriteEndpoint,
     { hash, key },
     // Idempotent and content-addressed: a retry cannot land twice.
     { retry: { retries: 3, backoffMs: 300 } },
   );
-  return await svg.text();
+  // Only reached once the resident sprites loaded, which they only do with the
+  // computer behind the page — so this is a broken assumption, said.
+  if (answer.kind === "unavailable") throw new Error(answer.message);
+  return await answer.value.text();
 }
 
 /**
@@ -54,11 +61,21 @@ export function IconSpriteHost() {
   const resident = useLive(residentSprites);
   const saved = useLive(savedIconSprites);
   // A failed read renders the empty sheet too (icons draw as empty boxes);
-  // live-state's resource-error sink reports the failure.
-  if (resident.status === "loading" || resident.status === "error") {
+  // live-state's resource-error sink reports the failure. So does a page with
+  // no computer behind it (`unavailable`): the sprites are built from the icon
+  // sets installed on the computer, so it has none to draw.
+  if (
+    resident.status === "loading" ||
+    resident.status === "error" ||
+    resident.status === "unavailable"
+  ) {
     return <IconSpriteSheet />;
   }
-  if (saved.status === "loading" || saved.status === "error") {
+  if (
+    saved.status === "loading" ||
+    saved.status === "error" ||
+    saved.status === "unavailable"
+  ) {
     return <IconSpriteSheet />;
   }
   return <LoadedSprites resident={resident.data} saved={saved.data} />;
@@ -69,7 +86,7 @@ async function fetchRuntimeSymbols(
   key: StyleKey,
   names: readonly string[],
 ): Promise<string> {
-  const svg = await fetchEndpoint(
+  const answer = await fetchEndpoint(
     runtimeSymbolsEndpoint,
     { hash, key },
     // Idempotent and content-addressed, like a sprite.
@@ -78,7 +95,10 @@ async function fetchRuntimeSymbols(
       retry: { retries: 3, backoffMs: 300 },
     },
   );
-  return await svg.text();
+  // Only reached once the saved sprites loaded (the computer is behind the
+  // page) — a broken assumption if not, said.
+  if (answer.kind === "unavailable") throw new Error(answer.message);
+  return await answer.value.text();
 }
 
 /**

@@ -1,5 +1,6 @@
 import { Core } from "@plugins/framework/plugins/web-sdk/core";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { fetchEndpointOver } from "@plugins/infra/plugins/endpoints/web";
+import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";
 import {
   hydrateResource,
   resourceDescriptorByKey,
@@ -7,6 +8,9 @@ import {
 import { recordBootSpan } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
 import { report } from "@plugins/reports/web";
 import { bootSnapshot } from "../../core";
+
+// Boot belongs to the page: the snapshot always hydrates from the page's own server.
+const fetchEndpoint = fetchEndpointOver(pageTransport);
 
 // Boot-readiness task: fetch every boot-critical resource in ONE request and seed the
 // live-state cache before first paint (no `pending` flash, no WS round-trip).

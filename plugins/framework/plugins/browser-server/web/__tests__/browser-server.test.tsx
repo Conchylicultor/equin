@@ -45,8 +45,7 @@ import {
 } from "@plugins/primitives/plugins/networking/web";
 import {
   EndpointError,
-  EndpointUnsupportedError,
-  fetchEndpoint,
+  fetchEndpointOver,
 } from "@plugins/infra/plugins/endpoints/web";
 import type {
   BrowserServer,
@@ -179,7 +178,7 @@ function setup() {
       };
     },
   };
-  const base = browserServerTransport(observed);
+  const base = browserServerTransport(observed, { telemetry: false });
   const sockets = new Map<string, TransportSocket>();
   const transport: Transport = {
     ...base,
@@ -371,7 +370,8 @@ describe("browser server ⇄ the real live-state client", () => {
 
   it("an implement() route answers through transport.fetch, its args parsed by the endpoint's schemas", async () => {
     const { transport, server } = setup();
-    const opts = { transport, report: false } as const;
+    const fetchEndpoint = fetchEndpointOver(transport);
+    const opts = { report: false } as const;
     expect(
       await fetchEndpoint(echo, { id: "x7" }, { ...opts, body: { n: 21 } }),
     ).toEqual({ id: "x7", doubled: 42 });
@@ -388,9 +388,9 @@ describe("browser server ⇄ the real live-state client", () => {
 
   it("an unmatched API request is 409 unsupported; any other path a 404", async () => {
     const { transport, server } = setup();
-    const opts = { transport, report: false } as const;
+    const fetchEndpoint = fetchEndpointOver(transport);
+    const opts = { report: false } as const;
     const api = await endpointError(fetchEndpoint(notHere, {}, opts));
-    expect(api).toBeInstanceOf(EndpointUnsupportedError);
     expect(api.status).toBe(409);
     expect(api.body).toEqual({
       reason: "unsupported",

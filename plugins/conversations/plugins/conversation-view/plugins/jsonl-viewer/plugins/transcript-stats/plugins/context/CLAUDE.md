@@ -7,12 +7,12 @@
 - Description: The context window as a transcript stat: a ring at the end of the strip showing how full the agent's window is against where the harness compacts it (the harness's own measure, conversations.context-usage), opening a card with the breakdown — the conversation's messages, the setup it starts with (system prompt, tools, memory files, skills, MCP) and what is free — and a Compact action that sends /compact with optional compaction instructions.
 - Web:
   - Contributes: `TranscriptStats.Item` "context" → `ContextStat`
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×4
     - `conversations/conversation-view/jsonl-viewer/transcript-stats` ×3
     - `conversations/conversation-view/jsonl-viewer` ×3
+    - `conversations/conversation-view/pending-turn` ×2
     - `primitives/css/spacing` ×2
-    - `conversations/conversation-view/pending-turn.sendConversationTurn`
     - `network/live.useLive`
     - `primitives/collapsible.FoldMotion`
     - `primitives/css/clip.Clip`

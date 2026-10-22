@@ -15,4 +15,11 @@ export default [
     task: "task-1792338443-riwqev",
     reason: "not yet split into server/ + machine/",
   },
+  {
+    rule: "networking/no-page-transport",
+    paths: ["web/App.tsx"],
+    kind: "sanctioned",
+    reason:
+      "The page root: it mounts the page's transport (<TransportProvider transport={pageTransport}>) above everything, and hoists that transport's live-state pipeline at boot.",
+  },
 ] satisfies Exemptions;

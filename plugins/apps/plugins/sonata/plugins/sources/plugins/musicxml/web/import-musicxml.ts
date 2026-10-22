@@ -1,5 +1,5 @@
 import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { parseMusicXml } from "../shared/parse";
 import { MUSICXML_MIME } from "../shared/constants";
 import { createMusicXmlSong } from "../shared/endpoints";
@@ -17,11 +17,13 @@ export interface ImportedMusicXmlSong {
  * answers the existing song when the same document is already in the library.
  */
 export async function importMusicXmlFile(
+  fetchEndpoint: FetchEndpoint,
   file: File,
 ): Promise<ImportedMusicXmlSong> {
   const xml = await file.text();
   parseMusicXml(xml);
   const up = await uploadAttachment(
+    fetchEndpoint,
     new Blob([xml], { type: MUSICXML_MIME }),
     file.name,
     MUSICXML_MIME,

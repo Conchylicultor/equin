@@ -4,7 +4,7 @@ The Theme DataView: where a user picks the theme a scope shows. It lists every
 selectable theme (code themes and every resident source's) plus every browse
 source's catalog entries not saved yet. Clicking one selects it for the scope
 of the surrounding `ThemeScopeProvider`; a catalog entry is saved first (its
-source's `adopt`).
+source's `useAdopt()`).
 
 Mounted through each host's own slot, so neither host names this plugin:
 
@@ -54,14 +54,14 @@ draws `ThemeCard`, `list` draws `ThemeSwatch`.
     - `QuickTheme.Section` "Theme" → `QuickThemePicker`
     - `item-actions` "rename" → `RenameThemeAction`
     - `item-actions` "delete" → `DeleteThemeAction`
-  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×7
     - `ui/theme-engine` ×7
     - `primitives/css/ui-kit` ×4
     - `infra/endpoints` ×3
     - `primitives/live-state` ×3
+    - `ui/theme-engine/saved-themes` ×3
     - `config_v2` ×2
-    - `ui/theme-engine/saved-themes` ×2
     - `apps-core.Apps`
     - `primitives/css/fill.Fill`
     - `primitives/css/grid.Grid`

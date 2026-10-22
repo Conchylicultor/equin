@@ -17,6 +17,8 @@ export const previewRewindEndpoint = defineEndpoint({
   route: "POST /api/conversations/:id/rewind/preview",
   body: RewindBodySchema,
   response: RewindPreviewSchema,
+  // It reads the agent's transcript off the computer.
+  needsMachine: { feature: "Rewinding a conversation" },
 });
 
 /**
@@ -28,4 +30,5 @@ export const rewindConversationEndpoint = defineEndpoint({
   route: "POST /api/conversations/:id/rewind",
   body: RewindBodySchema,
   response: RewindOutcomeSchema,
+  needsMachine: { feature: "Rewinding a conversation" },
 });

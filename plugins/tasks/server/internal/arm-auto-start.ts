@@ -1,8 +1,16 @@
-import { setTaskAutoStart } from "@plugins/tasks/plugins/auto-start/server";
-import { maybeLaunchTaskJob } from "@plugins/conversations/server";
+import {
+  setTaskAutoStart,
+  taskAutoStartArmed,
+} from "@plugins/tasks/plugins/auto-start/server";
 import type { ModelChoice } from "@plugins/conversations/plugins/model-provider/core";
 
 // Mark a task as queued for auto-launch, then wake the launcher.
+//
+// The wake-up is the `tasks.autoStartArmed` trigger event: the launcher (the
+// conversations plugin's `maybeLaunchTaskJob`, through its static trigger)
+// subscribes, as it does to `tasks.statusChanged`, so this plugin never names
+// it — and a host with no launcher (an in-browser server) arms the task and
+// wakes nothing.
 //
 // The wake-up is unconditional. `maybeLaunchTaskJob` already checks whether
 // anything is blocking the task (along with dropped/held, the marker, the CAS
@@ -11,7 +19,7 @@ import type { ModelChoice } from "@plugins/conversations/plugins/model-provider/
 // for a task that turns out to be blocked costs one indexed read and stops.
 //
 // Setting the marker first is load-bearing: the job bails when it finds no
-// marker, so enqueuing before the write would race a fast worker.
+// marker, so waking it before the write would race a fast worker.
 //
 // From this point on, the task is re-checked whenever its derived status
 // changes, via the static `tasks.statusChanged` → `tasks.maybe-launch-on-status`
@@ -30,5 +38,5 @@ export async function armTaskAutoStart(args: {
 }): Promise<void> {
   const { taskId, model, prompt, cause } = args;
   await setTaskAutoStart(taskId, { model, prompt });
-  await maybeLaunchTaskJob.enqueue({ taskId, cause });
+  await taskAutoStartArmed.emit({ taskId, cause });
 }

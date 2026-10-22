@@ -36,6 +36,7 @@ import {
 import { useStoredTracks } from "@plugins/tasks/plugins/task-track/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { patchTask } from "@plugins/tasks/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   automationsCatalog,
   decideLaunchEndpoint,
@@ -424,6 +425,7 @@ function RowAction({
   row: LaunchListRow;
   setDecision: (decision: LaunchDecision | null) => Promise<void>;
 }): ReactElement | null {
+  const fetchEndpoint = useFetchEndpoint();
   const stop =
     (run: () => Promise<void>) => (e: { stopPropagation(): void }) => {
       e.stopPropagation();
@@ -446,7 +448,9 @@ function RowAction({
       return (
         <Button
           variant="ghost"
-          onClick={stop(() => patchTask(row.task.id, { drop: true }))}
+          onClick={stop(() =>
+            patchTask(fetchEndpoint, row.task.id, { drop: true }),
+          )}
         >
           Drop task
         </Button>

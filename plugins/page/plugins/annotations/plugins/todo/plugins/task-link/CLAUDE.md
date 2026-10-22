@@ -172,7 +172,6 @@ card, not a collection.
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `infra/entity-extensions.defineExtension`
-    - `infra/retention.markCascadeBounded`
     - `network/live.serveCollection`
     - `page/editor._blocks`
     - `page/editor.Editor`
@@ -198,7 +197,7 @@ card, not a collection.
   - Uses:
     - `conversations/conversation-ui/chip.ConversationChip`
     - `conversations/conversation-ui/row.ConversationRow`
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.LiveRowResult`
     - `network/live.mapRow`
     - `network/live.useLive`

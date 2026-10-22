@@ -24,15 +24,12 @@
     - `apps/pages/content-search`
     - `apps/places/places-core`
     - `apps/sonata/sources/midi/folders`
-    - `conversations/usage`
     - `infra/corpus-index`
     - `infra/warmup/background-arm`
     - `infra/worktree/spare-pool`
-    - `page/links`
     - `plugin-meta/plugin-tree`
-    - `reports`
+    - `reports/engine`
     - `stats/cost`
-    - `tasks`
     - `tasks/automations`
     - `tasks/sidequest-autopilot`
 - Sub-plugins:

@@ -1,6 +1,6 @@
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import type { ReactNode } from "react";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useLiveRow } from "@plugins/network/plugins/live/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -50,6 +50,7 @@ export function DeploymentOverview({
 }
 
 function OverviewBody({ deployment }: { deployment: Deployment }): ReactNode {
+  const fetchEndpoint = useFetchEndpoint();
   const save = async (body: UpdateDeploymentBody): Promise<void> => {
     await fetchEndpoint(updateDeployment, { id: deployment.id }, { body });
   };

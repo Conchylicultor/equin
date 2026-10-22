@@ -3,6 +3,7 @@ import { Editor } from "@plugins/page/plugins/editor/server";
 import { audioBlock } from "../core";
 
 export default {
+  portable: true,
   description:
     "Audio block type: registers its `data` schema (attachment) at the server write boundary.",
   contributions: [Editor.BlockData(audioBlock)],

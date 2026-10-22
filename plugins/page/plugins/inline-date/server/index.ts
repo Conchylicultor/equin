@@ -6,6 +6,7 @@ import { reminderReconcileJob } from "./internal/reconcile-job";
 import { reminderFireJob } from "./internal/fire-job";
 
 export default {
+  portable: true,
   description:
     "Schedules and fires reminder notifications for inline `[[reminder:<id>:<iso>]]` tokens; reconciled from block text on every page.blocksChanged.",
   register: [reminderReconcileJob, reminderFireJob],

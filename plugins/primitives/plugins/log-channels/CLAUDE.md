@@ -175,7 +175,7 @@ count accumulates across drops.
     - `/ws/logs (WS)`
 - Web:
   - Uses:
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.fetchEndpointOver`
     - `primitives/collapsible.CollapsibleContent`
     - `primitives/collapsible.CollapsibleProvider`
     - `primitives/copy-to-clipboard.CopyButton`
@@ -193,7 +193,8 @@ count accumulates across drops.
     - `primitives/dom/auto-scroll.useStickyScroll`
     - `primitives/networking.subscribeWsStatus`
     - `primitives/networking.useReconnectingWebSocket`
-    - `primitives/networking.wsUrl`
+    - `primitives/networking.useTransport`
+    - `primitives/networking/page-transport.pageTransport`
   - Exports (types): `LiveLogChannelProps`
   - Exports (values):
     - `clientLog`
@@ -225,13 +226,13 @@ count accumulates across drops.
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
-  - Imported by: 53 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 52 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×11
     - `debug` ×9
     - `database` ×7
     - `infra` ×7
-    - `conversations` ×3
     - `build` ×2
+    - `conversations` ×2
     - `framework` ×2
     - `primitives` ×2
     - `tasks` ×2
@@ -244,6 +245,8 @@ count accumulates across drops.
     - `stats/cost`
     - `upstream`
   - Endpoint callers: `log-files`
+- Exemptions:
+  - Exempts itself from: `networking/no-page-transport` — `web/client-log.ts` (sanctioned)
 - Machine:
   - Register: `log-file-sinks`
 - Sub-plugins:

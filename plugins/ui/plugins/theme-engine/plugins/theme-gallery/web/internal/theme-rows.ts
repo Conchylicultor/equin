@@ -16,7 +16,7 @@ export interface ThemeUse {
 /**
  * What activating a row does. A `resident` row is a theme that exists and can
  * be selected as it is; a `browse` row is a catalog entry that must be saved
- * (its source's `adopt`) before it can be selected.
+ * (its source's `useAdopt()`) before it can be selected.
  */
 export type ThemeRowTarget =
   | { kind: "resident"; theme: Theme }

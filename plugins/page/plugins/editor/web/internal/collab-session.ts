@@ -6,6 +6,7 @@ import { BindingReplica, CanonicalConnection } from "./binding-replica";
 import {
   LiveStateYjsProvider,
   type CollabSaveState,
+  type ContentDocTransport,
 } from "./live-state-yjs-provider";
 import { LocalYjsProvider } from "./local-yjs-provider";
 import { projectableRunsOf, type DocSourcedRuns } from "./doc-sourced-runs";
@@ -23,7 +24,8 @@ import { BlockRunTracker, type BlockRunsEdit } from "./block-run-tracker";
  * Two objects, one each for the two questions that used to be answered by
  * three overlapping lifetimes layered under React mount ordering:
  *
- * - **{@link BlockDocOwner}** — one per BLOCK id, in the module registry. It
+ * - **{@link BlockDocOwner}** — one per BLOCK id, in its transport's
+ *   {@link BlockDocs} registry. It
  *   owns the canonical `Y.Doc`, the transport provider and the run tracker
  *   that turns local transactions into DATA undo entries
  *   (`block-run-tracker.ts`). Three consumers need the union across every
@@ -48,6 +50,12 @@ import { BlockRunTracker, type BlockRunsEdit } from "./block-run-tracker";
  * - **{@link CollabSession}** — one per (block, BINDING): one hook instance's
  *   hold on the owner plus the {@link BindingReplica} it hands
  *   `CollaborationPlugin`. It owns both lifetimes and the ONE retention policy.
+ *
+ * The registry is per TRANSPORT ({@link BlockDocs}, one per server the editor
+ * talks to — `use-block-docs.ts`): an editor inside a scope (the demo's
+ * browser server) holds its blocks' docs beside that server's, so the same
+ * block id open under two transports is two owners, each seeding, flushing and
+ * resuming against its own host.
  *
  * ## One lifetime, one retention policy
  *
@@ -335,12 +343,53 @@ export interface BlockDocProvider extends Provider {
 }
 
 /**
- * THE block → owner map. Private to this module: the only id-keyed reads are
+ * One transport's block → owner map, and the transport its server-synced docs
+ * seed and flush over. The map is private: the only id-keyed reads are
  * {@link CollabSession.start} (which acquires) and {@link blockDocOwnerOf}
  * (for the editor context's mutation chokepoints, which know a block id and
- * nothing else). Nothing releases by id — see the module comment.
+ * nothing else). Nothing releases by id — see the module comment. Editors get
+ * their transport's through `useBlockDocs()` (`use-block-docs.ts`).
  */
-const registry = new Map<string, BlockDocOwner>();
+export class BlockDocs {
+  /** Where this registry's server-synced docs seed, flush and resume. */
+  readonly server: ContentDocTransport;
+  private readonly owners = new Map<string, BlockDocOwner>();
+
+  constructor(server: ContentDocTransport) {
+    this.server = server;
+  }
+
+  /** The owner of `blockId`, minting it on the first ask. */
+  acquire(
+    blockId: string,
+    buildSeedState: () => Uint8Array,
+    rowTruth: RowTruth,
+    serverSync: boolean,
+  ): BlockDocOwner {
+    let owner = this.owners.get(blockId);
+    if (!owner) {
+      owner = new BlockDocOwner(
+        blockId,
+        buildSeedState,
+        rowTruth,
+        serverSync ? this.server : null,
+        this.owners,
+      );
+      this.owners.set(blockId, owner);
+    }
+    return owner;
+  }
+
+  /** The live owner of `blockId`, or `null` (see {@link blockDocOwnerOf}). */
+  ownerOf(blockId: string): BlockDocOwner | null {
+    return this.owners.get(blockId) ?? null;
+  }
+
+  /** Every live owner of this registry. */
+  liveOwners(): Iterable<BlockDocOwner> {
+    return this.owners.values();
+  }
+}
 
 /**
  * A block's content owner: ONE canonical `Y.Doc` + transport provider + run
@@ -404,15 +453,20 @@ export class BlockDocOwner {
   private readonly renderedListeners = new Set<() => void>();
   /** Fired once, from {@link finalize}, when this owner's doc is destroyed. */
   private readonly destroyedListeners = new Set<() => void>();
+  /** The registry ({@link BlockDocs}) this owner is the entry of. */
+  private readonly registry: Map<string, BlockDocOwner>;
 
+  /** Minted by {@link BlockDocs.acquire} only, into `registry`. */
   constructor(
     blockId: string,
     buildSeedState: () => Uint8Array,
     rowTruth: RowTruth,
-    serverSync: boolean,
+    server: ContentDocTransport | null,
+    registry: Map<string, BlockDocOwner>,
   ) {
     this.blockId = blockId;
-    this.serverSync = serverSync;
+    this.registry = registry;
+    this.serverSync = server !== null;
     this.doc = new Doc();
     // Transport seam: a server-synced editor gets the live-state provider
     // (the `blockDocs` row in, doc-init/doc-update out); the in-memory editor
@@ -421,10 +475,18 @@ export class BlockDocOwner {
     // view (see useCollabBlockDoc and `row-truth.ts`) — construction-accurate,
     // so the server provider's pre-seed discriminator never depends on the
     // later `markBlockRowConfirmed` parent effect having run (irrelevant for
-    // local, which ignores it).
-    this.provider = serverSync
-      ? new LiveStateYjsProvider(this.doc, blockId, buildSeedState, rowTruth)
-      : new LocalYjsProvider(this.doc, buildSeedState, rowTruth);
+    // local, which ignores it). `server` is the minting editor's transport:
+    // the doc seeds and flushes to the host that editor is served by.
+    this.provider =
+      server !== null
+        ? new LiveStateYjsProvider(
+            this.doc,
+            blockId,
+            buildSeedState,
+            rowTruth,
+            server,
+          )
+        : new LocalYjsProvider(this.doc, buildSeedState, rowTruth);
     this.replicaConnection = new CanonicalConnection(this.provider);
     // The content generation behind `runsNow()`'s memo. `update` fires only for
     // a transaction that integrated something, so a redundant re-apply of state
@@ -444,7 +506,7 @@ export class BlockDocOwner {
 
   /** Is this still the registry's live owner for its block? */
   get isLive(): boolean {
-    return registry.get(this.blockId) === this;
+    return this.registry.get(this.blockId) === this;
   }
 
   /**
@@ -598,7 +660,7 @@ export class BlockDocOwner {
       this.provider.setTeardownReadyListener(() => this.finalize());
       return;
     }
-    registry.delete(this.blockId);
+    this.registry.delete(this.blockId);
     this.tracker.dispose();
     this.provider.destroy();
     this.doc.destroy();
@@ -613,8 +675,8 @@ export class BlockDocOwner {
  * undo/redo turn so the run the user is in the middle of is the entry popped,
  * not the one below it.
  */
-export function closeAllOpenTextRuns(): void {
-  for (const owner of registry.values()) owner.closeTextRun();
+export function closeAllOpenTextRuns(docs: BlockDocs): void {
+  for (const owner of docs.liveOwners()) owner.closeTextRun();
 }
 
 /**
@@ -626,8 +688,11 @@ export function closeAllOpenTextRuns(): void {
  * capture of the doc's runs, never a reference an entry holds — an entry
  * outlives any owner.
  */
-export function blockDocOwnerOf(blockId: string): BlockDocOwner | null {
-  return registry.get(blockId) ?? null;
+export function blockDocOwnerOf(
+  docs: BlockDocs,
+  blockId: string,
+): BlockDocOwner | null {
+  return docs.ownerOf(blockId);
 }
 
 /**
@@ -694,18 +759,20 @@ export class CollabSession {
    * as (on the first session) the provider's pre-seed discriminator — an
    * existing block is `"present"` from its very first render, a client-minted
    * one `"unseen"`, a re-created one `"removed"`.
+   *
+   * `docs` is the editor's transport's registry (`useBlockDocs()`); a minted
+   * owner syncs with its server when `serverSync`, and is purely local (the
+   * in-memory editor, whose docs never network) otherwise. Both are read only
+   * when this start mints the owner.
    */
   static start(
+    docs: BlockDocs,
     blockId: string,
     buildSeedState: () => Uint8Array,
     rowTruth: RowTruth,
     serverSync: boolean,
   ): CollabSession {
-    let owner = registry.get(blockId);
-    if (!owner) {
-      owner = new BlockDocOwner(blockId, buildSeedState, rowTruth, serverSync);
-      registry.set(blockId, owner);
-    }
+    const owner = docs.acquire(blockId, buildSeedState, rowTruth, serverSync);
     return new CollabSession(owner, !serverSync || rowTruth === "unseen");
   }
 

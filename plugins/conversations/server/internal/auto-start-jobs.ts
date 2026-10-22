@@ -330,3 +330,25 @@ export const maybeLaunchOnStatusJob = defineJob({
     });
   },
 });
+
+// Static trigger target for `tasks.autoStartArmed`: the task plugins arm a task
+// (`armTaskAutoStart`) and emit the event rather than naming this plugin's
+// launcher, so a host with no launcher arms and wakes nothing. Intermediary for
+// the same reason as `maybeLaunchOnStatusJob`: a Trigger's `with` is static
+// and `taskId` arrives on the event.
+export const maybeLaunchOnArmedJob = defineJob({
+  name: "tasks.maybe-launch-on-armed",
+  description:
+    "Wakes the auto-launcher when a task is armed for auto-launch, so it starts at once if nothing blocks it.",
+  hold: "instant",
+  input: z.object({}),
+  dedup: "none",
+  event: z.object({ taskId: z.string(), cause: z.string() }).passthrough(),
+  run: async ({ event }) => {
+    if (!event) return;
+    await maybeLaunchTaskJob.enqueue({
+      taskId: event.taskId,
+      cause: event.cause,
+    });
+  },
+});

@@ -3,16 +3,12 @@ import {
   type UseQueryResult,
   type UseQueryOptions,
 } from "@tanstack/react-query";
-import {
-  useTransport,
-  type Transport,
-} from "@plugins/primitives/plugins/networking/web";
 import type {
   EndpointDef,
   MachineEndpointDef,
   MachineResult,
 } from "../../core";
-import { fetchEndpoint, EndpointError } from "./fetch-endpoint";
+import { useFetchEndpoint, EndpointError } from "./fetch-endpoint";
 import { endpointQueryKey } from "./query-key";
 
 /**
@@ -54,22 +50,15 @@ export function useEndpoint<Route extends string, TParams, TResponse, TQuery>(
   >,
 ): UseQueryResult<TResponse> | UseQueryResult<MachineResult<TResponse>> {
   const { query, ...queryOptions } = opts ?? {};
-  const transport = useTransport();
+  const fetchEndpoint = useFetchEndpoint();
 
   return useQuery({
     queryKey: endpointQueryKey(endpoint, params, query),
     queryFn: async ({ signal }) => {
       const fetchOpts =
         query != null
-          ? ({ query, signal, transport } as {
-              query: TQuery;
-              signal: AbortSignal;
-              transport: Transport;
-            })
-          : ({ signal, transport } as {
-              signal: AbortSignal;
-              transport: Transport;
-            });
+          ? ({ query, signal } as { query: TQuery; signal: AbortSignal })
+          : { signal };
       // A machine endpoint's answer is its `MachineResult`, kept whole.
       const result = await fetchEndpoint(
         endpoint as EndpointDef<Route, TParams, void, TResponse, TQuery>,

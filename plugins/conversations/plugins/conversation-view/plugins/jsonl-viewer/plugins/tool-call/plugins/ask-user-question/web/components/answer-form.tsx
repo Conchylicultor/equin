@@ -10,6 +10,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import type { MachineAvailability } from "@plugins/infra/plugins/endpoints/core";
 import { FieldRow, OptionBody, OptionRow } from "./option-row";
 import {
   type AnswerSelections,
@@ -108,6 +109,7 @@ export function AnswerForm({
   draftScope,
   onSubmit,
   secondaryAction,
+  availability,
 }: {
   questions: Question[];
   /** Scopes the persisted draft — `answerDraftScope(convId, toolUseId)`. */
@@ -115,6 +117,12 @@ export function AnswerForm({
   onSubmit: (answer: FormAnswer) => boolean | Promise<boolean>;
   /** A secondary action shown beside Submit. */
   secondaryAction?: ReactNode;
+  /**
+   * Whether the answer's endpoint can be asked here — it reaches the agent,
+   * which needs the computer (`needsMachine`). Unavailable (the demo), Submit
+   * is disabled and its tooltip says why; the picks still work.
+   */
+  availability: MachineAvailability;
 }) {
   // Persist the in-progress answer like the prompt draft (see answer-draft.ts
   // for the scope). A rewind from the answered card writes this same draft, so
@@ -175,8 +183,9 @@ export function AnswerForm({
   };
 
   const canSubmit =
-    response !== null ||
-    answers.every((a, qi) => isAnswered(a, questions[qi]!));
+    availability.available &&
+    (response !== null ||
+      answers.every((a, qi) => isAnswered(a, questions[qi]!)));
 
   const handleSubmit = async () => {
     const selections = selectionsOf(questions, answers, response !== null);
@@ -288,7 +297,11 @@ export function AnswerForm({
         )}
         <Stack direction="row" gap="sm">
           {secondaryAction}
-          <Button disabled={!canSubmit} onClick={handleSubmit}>
+          <Button
+            disabled={!canSubmit}
+            tooltip={availability.available ? undefined : availability.message}
+            onClick={handleSubmit}
+          >
             Submit
           </Button>
         </Stack>

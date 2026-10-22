@@ -6,6 +6,7 @@ import { TASK_CHIP_SURFACES } from "../core";
 import { resolveTaskReferent } from "./internal/referent";
 
 export default {
+  portable: true,
   description:
     "The task id chip's server half (idChipServer): resolves a `task-<id>` to its task's title for the id registry and for model-read text, and registers the page-editor inline token so a page block holding the chip stays agent-readable.",
   contributions: [

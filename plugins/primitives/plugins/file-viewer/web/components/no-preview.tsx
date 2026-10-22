@@ -57,9 +57,15 @@ export function useOpenHostFile(): (
   path: string,
   opts?: { reveal?: boolean },
 ) => Promise<void> {
-  const { mutateAsync } = useEndpointMutation(hostFsOpen);
+  const open = useEndpointMutation(hostFsOpen);
   return async (path, opts) => {
-    const result = await mutateAsync({
+    // Opening hands the file to the computer's default app: a host without
+    // the computer says so instead.
+    if (open.kind === "unavailable") {
+      showToast({ title: open.message, description: path, variant: "error" });
+      return;
+    }
+    const result = await open.mutateAsync({
       body: opts?.reveal ? { path, reveal: true } : { path },
     });
     if (result.kind === "missing") {

@@ -1,4 +1,4 @@
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { moveAgent, updateAgent } from "@plugins/conversations/plugins/agents/core";
 
 // No `rank`: repositioning goes through `moveAgentTo` below, which carries
@@ -9,12 +9,17 @@ type AgentPatch = {
   parentId?: string | null;
 };
 
-export async function patchAgent(id: string, patch: AgentPatch) {
+export async function patchAgent(
+  fetchEndpoint: FetchEndpoint,
+  id: string,
+  patch: AgentPatch,
+) {
   await fetchEndpoint(updateAgent, { id }, { body: patch });
 }
 
 /** Reposition an agent: positional intent (`targetId`/`zone`), never a rank. */
 export async function moveAgentTo(
+  fetchEndpoint: FetchEndpoint,
   id: string,
   dest: {
     parentId: string | null;

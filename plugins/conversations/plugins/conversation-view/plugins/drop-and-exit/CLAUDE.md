@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Exit-menu entry that marks the top task as dropped and closes the conversation.
+- Description: Exit-menu entry that marks the top task as dropped and closes the conversation. The one exit-drop policy every conversation-close path that can drop a task shares (dropTaskOnExit): the Drop & Close endpoint (its machine half) and the agent-driven exit_clean finalize.
 - Web:
   - Contributes: `ExitMenu.Item` "drop-and-exit" → `DropAndExitItem`
   - Uses:
@@ -17,18 +17,15 @@
     - `primitives/live-state.foldResource`
     - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useCombinedResources`
-    - `shell/notifications.toast`
+    - `shell/notifications.useToast`
     - `ui/icons.Icon`
 - Server:
   - Uses:
-    - `conversations.deleteConversation`
-    - `infra/endpoints.HttpError`
-    - `infra/endpoints.implement`
     - `tasks/attempt-work.getAttemptWork`
     - `tasks/tasks-core.dropTaskIfNoActiveSibling`
-    - `tasks/tasks-core.getConversation`
-    - `tasks/tasks-core.markConversationClosed`
   - Exports (values): `dropTaskOnExit`
+- Machine:
+  - Uses: `infra/endpoints.implementMachine`
   - Routes: `POST /api/conversations/:id/drop-and-exit`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`

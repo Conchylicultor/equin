@@ -65,7 +65,7 @@ sidequest's ops at low host-admission priority, behind the main track.
 - Web:
   - Contributes: `FieldPresentation.Register` "exposure:tasks_ext_track"
   - Uses:
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.FieldPresentation`
     - `network/live.mapRow`
     - `network/live.useLive`
@@ -73,7 +73,7 @@ sidequest's ops at low host-admission priority, behind the main track.
     - `primitives/css/badge.Badge`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
-    - `shell/notifications.toast`
+    - `shell/notifications.useToast`
   - Exports (values):
     - `TaskTrackControl`
     - `useStoredTracks`
@@ -134,7 +134,6 @@ sidequest's ops at low host-admission priority, behind the main track.
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
   - Imported by:
-    - `apps/agent-manager/demo`
     - `conversations/conversation-view/track`
     - `framework/cli/op-runtime`
     - `tasks`

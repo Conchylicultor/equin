@@ -3,7 +3,10 @@ import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import type { ComponentType } from "react";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
-import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import type {
+  ResourceResult,
+  ResourceUnavailable,
+} from "@plugins/primitives/plugins/live-state/web";
 import type { BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge/web";
 
 export interface AuthProviderContribution {
@@ -97,8 +100,14 @@ export interface AuthIntegrationContribution {
    * set up.
    */
   setup: ComponentType;
-  /** The row's status, as a read — loading and failure are states, never a guessed badge. */
-  useStatus: Hook<() => ResourceResult<IntegrationStatus>>;
+  /**
+   * The row's status, as a read — loading and failure are states, never a
+   * guessed badge; `unavailable` when it is read off the computer
+   * (`needsMachine`) and this subtree has none (the demo).
+   */
+  useStatus: Hook<
+    () => ResourceResult<IntegrationStatus> | ResourceUnavailable
+  >;
 }
 
 export interface AuthScopeRequirement {

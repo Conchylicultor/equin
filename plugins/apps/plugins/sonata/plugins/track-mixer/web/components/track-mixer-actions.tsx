@@ -2,6 +2,7 @@ import { useLibrarySong } from "@plugins/apps/plugins/sonata/plugins/document/we
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { resetTrackViews } from "../actions";
 import { useTrackMixerEntries } from "../hooks";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -22,6 +23,7 @@ const restartAltIcon = symbol("restart-alt");
 export function TrackMixerActions() {
   const song = useLibrarySong();
   const entries = useTrackMixerEntries();
+  const fetchEndpoint = useFetchEndpoint();
   if (song.kind === "none") return null;
   if (entries.kind === "pending") return <Loading variant="spinner" />;
   if (entries.kind === "failed")
@@ -40,7 +42,7 @@ export function TrackMixerActions() {
       icon={restartAltIcon}
       label="Reset tracks to defaults"
       disabled={!anyCustomized}
-      onClick={() => resetTrackViews(song.songId)}
+      onClick={() => resetTrackViews(fetchEndpoint, song.songId)}
     />
   );
 }

@@ -5,6 +5,7 @@ import { pageLinkBlock } from "../core";
 import { resolvePageLinkTitles } from "./internal/annotations";
 
 export default {
+  portable: true,
   description:
     "Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Also registers the page-link `data` schema at the server write boundary, and supplies the target page's title to the `<page>` tag an agent reads.",
   contributions: [

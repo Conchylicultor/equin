@@ -33,8 +33,8 @@ link the user edited while the title was loading keeps their edit.
 - Web:
   - Uses:
     - `infra/endpoints.EndpointError`
-    - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.getEndpointErrorMessage`
+    - `infra/endpoints.useFetchEndpoint`
     - `page/editor.BlockTextPluginProps`
     - `page/editor.readTransferText`
     - `page/editor.registerBlockTextExtension`

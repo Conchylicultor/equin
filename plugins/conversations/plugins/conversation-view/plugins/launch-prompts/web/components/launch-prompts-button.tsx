@@ -10,10 +10,11 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { useConfig } from "@plugins/config_v2/web";
-import { toast } from "@plugins/shell/plugins/notifications/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import {
-  fetchEndpoint,
   getEndpointErrorMessage,
+  useFetchEndpoint,
+  useMachineAvailability,
 } from "@plugins/infra/plugins/endpoints/web";
 import { createConversation } from "@plugins/conversations/core";
 import {
@@ -35,6 +36,11 @@ export function LaunchPromptsButton({
 }) {
   const { prompts } = useConfig(launchPromptsConfig);
   const [launching, setLaunching] = useState(false);
+  const fetchEndpoint = useFetchEndpoint();
+  // Launching needs the computer: on a host without it (the demo) the button
+  // is disabled and its tooltip says why.
+  const availability = useMachineAvailability(createConversation);
+  const toast = useToast();
 
   if (prompts.length === 0) return null;
 
@@ -42,7 +48,7 @@ export function LaunchPromptsButton({
     if (launching) return;
     setLaunching(true);
     try {
-      await fetchEndpoint(
+      const result = await fetchEndpoint(
         createConversation,
         {},
         {
@@ -57,6 +63,7 @@ export function LaunchPromptsButton({
           },
         },
       );
+      if (result.kind === "unavailable") throw new Error(result.message);
       toast({
         type: "conversation",
         title: "Conversation launched",
@@ -81,6 +88,8 @@ export function LaunchPromptsButton({
           <Button
             variant="outline"
             loading={launching}
+            disabled={!availability.available}
+            tooltip={availability.available ? undefined : availability.message}
             aria-label="Launch prompts"
           />
         }

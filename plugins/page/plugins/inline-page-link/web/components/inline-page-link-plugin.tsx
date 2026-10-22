@@ -5,6 +5,7 @@ import {
   $isTextNode,
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   foldResource,
   matchResource,
@@ -41,6 +42,7 @@ const NO_OPTIONS: readonly PageOption[] = [];
  */
 export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
   const [lexicalEditor] = useLexicalComposerContext();
+  const fetchEndpoint = useFetchEndpoint();
 
   function insertLink(pageId: string) {
     lexicalEditor.update(() => {
@@ -69,7 +71,9 @@ export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
     if (option.kind === "page") {
       insertLink(option.page.id);
     } else {
-      void createLinkedPage(option.title).then((id) => insertLink(id));
+      void createLinkedPage(fetchEndpoint, option.title).then((id) =>
+        insertLink(id),
+      );
     }
   }
 

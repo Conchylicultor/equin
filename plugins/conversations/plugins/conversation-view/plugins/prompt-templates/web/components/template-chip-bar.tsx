@@ -17,7 +17,7 @@ import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { ConfigGearButton } from "@plugins/config_v2/plugins/config-link/web";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import {
-  recordUsage,
+  useRecordUsage,
   useUsageOrder,
 } from "@plugins/primitives/plugins/usage-rank/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -83,6 +83,7 @@ export function TemplateChipBar({
   // anything never used, so an untouched install looks exactly as before.
   const ids = useMemo(() => templates.map((t) => t.id), [templates]);
   const order = useUsageOrder(usageNamespace, ids, freezeKey);
+  const recordUsage = useRecordUsage();
 
   // ONE derived array feeds both surfaces — the pinned strip is its head and
   // the panel is the whole of it, so the two can never disagree on the order.

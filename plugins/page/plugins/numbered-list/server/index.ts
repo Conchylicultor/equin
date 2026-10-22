@@ -3,6 +3,7 @@ import { Editor } from "@plugins/page/plugins/editor/server";
 import { numberedListBlock } from "../core";
 
 export default {
+  portable: true,
   description:
     "Numbered-list block type: registers its `data` schema at the server write boundary.",
   contributions: [Editor.BlockData(numberedListBlock)],

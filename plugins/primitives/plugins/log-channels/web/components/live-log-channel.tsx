@@ -22,8 +22,9 @@ import {
 } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import {
   useReconnectingWebSocket,
-  wsUrl,
+  useTransport,
 } from "@plugins/primitives/plugins/networking/web";
+import { unavailableMessage } from "@plugins/infra/plugins/endpoints/core";
 import type { ClientMessage, LogEntryWire, ServerMessage } from "../../core";
 import { textVariantClass } from "@plugins/primitives/plugins/css/plugins/text/web";
 
@@ -99,7 +100,8 @@ export type LiveLogChannelProps = LiveLogChannelBaseProps &
  * panel, the Studio release-log section, the debug log viewer's backend branch),
  * each with its own `lastSeq` de-dup and its own timestamped row markup — three
  * places for the same off-by-one to be wrong in. (The socket-URL derivation they
- * also each repeated now lives in `wsUrl` from the networking primitive.)
+ * also each repeated now lives in the networking primitive's
+ * `useReconnectingWebSocket`, opened at a path on the subtree's transport.)
  *
  * The buffer is per-mount, so **switching channels means remounting**
  * (`<LiveLogChannel key={channel} …/>`): a channel switch must not leave the
@@ -110,7 +112,23 @@ export type LiveLogChannelProps = LiveLogChannelBaseProps &
  * wants the section on screen but shut by default says so with `disclosure`,
  * which drops the subscription for exactly as long as the section is closed.
  */
-export function LiveLogChannel({
+export function LiveLogChannel(props: LiveLogChannelProps): ReactNode {
+  // The feed is a per-tab socket opened by URL, which only the page's own
+  // server answers: under an in-browser server (the demo) there is no live log
+  // to show, and saying so beats opening a socket that would reach the real
+  // server's logs instead.
+  const { servesUrls } = useTransport();
+  if (!servesUrls) {
+    return (
+      <Text as="div" variant="caption" tone="muted">
+        {unavailableMessage({ feature: "Following logs live" })}
+      </Text>
+    );
+  }
+  return <LiveLogFeed {...props} />;
+}
+
+function LiveLogFeed({
   channel,
   label,
   emptyState,
@@ -129,7 +147,7 @@ export function LiveLogChannel({
     useStickyScroll();
 
   useReconnectingWebSocket({
-    url: wsUrl(LOGS_WS_PATH),
+    path: LOGS_WS_PATH,
     // The socket IS the cost of the section, so it lives and dies with the
     // section being open.
     enabled: open,

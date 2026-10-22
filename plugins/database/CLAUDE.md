@@ -283,27 +283,27 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
     - `loadKnownRelations`
     - `quotedRelationsIn`
 - Cross-plugin:
-  - Imported by: 122 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 120 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×33
     - `page` ×15
-    - `conversations` ×14
     - `infra` ×13
+    - `conversations` ×12
     - `tasks` ×9
     - `active-data` ×8
     - `debug` ×6
     - `database` ×4
     - `primitives` ×4
-    - `build` ×2
+    - `reports` ×2
     - `stats` ×2
     - `apps-core/app-usage`
     - `backup`
+    - `build/build-commits`
     - `code-explorer`
     - `history/engine`
     - `improve`
     - `integrations/google-maps/usage`
     - `plugin-meta/plugin-health`
     - `release`
-    - `reports`
     - `search/engine`
     - `shell/notifications`
     - `ui/theme-engine/saved-themes`

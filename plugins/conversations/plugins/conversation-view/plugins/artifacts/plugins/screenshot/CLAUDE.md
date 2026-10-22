@@ -46,8 +46,8 @@ address of a worktree image; nothing here can reach the other two.
     - `conversations/conversation-view/artifacts.ConversationArtifacts`
     - `primitives/css/grid.Grid`
     - `primitives/loading.Loading`
+    - `primitives/overlay/image-viewer.AssetThumbnail`
     - `primitives/overlay/image-viewer.ImageGallery`
-    - `primitives/overlay/image-viewer.ViewerThumbnail`
 - Server:
   - Contributes: `conversations.artifacts.extractor` "screenshot"
   - Uses: `conversations/conversation-view/artifacts.ConversationArtifactExtractor`

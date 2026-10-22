@@ -60,6 +60,8 @@ export function BackgroundView({
   const centralRows = foldResource(central, {
     loading: () => NO_ENTRIES,
     error: () => NO_ENTRIES,
+    // No central runtime behind this subtree (the demo): it runs nothing here.
+    unavailable: () => NO_ENTRIES,
     ready: (d) => d,
   });
   const rows = useMemo(
@@ -161,6 +163,10 @@ export function BackgroundView({
           error={central.error}
           refetch={central.refetch}
         />
+      ) : central.status === "unavailable" ? (
+        <Text variant="caption" tone="muted">
+          {central.message}
+        </Text>
       ) : null}
       <DataView<BackgroundEntry>
         rows={rows}

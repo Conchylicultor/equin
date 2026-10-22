@@ -11,7 +11,7 @@
     - `PluginViewSlots.Section` "Health" → `HealthSection`
   - Uses:
     - `ids.IdKinds`
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`
     - `plugin-meta/plugin-view.PluginNode`
     - `plugin-meta/plugin-view.PluginViewSlots`

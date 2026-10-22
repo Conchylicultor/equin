@@ -1,10 +1,10 @@
-import { createHash } from "node:crypto";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { db, type DbExecutor } from "@plugins/database/server";
 import { readBlockAsMarkdown } from "@plugins/page/plugins/markdown-apply/server";
 import { humanAudienceTypes } from "@plugins/page/plugins/annotations/server";
 import type { InstructionsRef } from "./scope";
 import { _pageInstructionsDeliveries } from "./tables";
+import { sha256Hex } from "@plugins/packages/plugins/string-hash/core";
 
 /** An instructions block, rendered as the markdown an agent receives. */
 export interface RenderedInstructions extends InstructionsRef {
@@ -48,7 +48,7 @@ function redactHumanAudience<R extends { type: string }>(rows: R[]): R[] {
 
 /** Hex `sha256` of a rendered block — the {@link RenderedInstructions.contentHash}. */
 export function instructionsContentHash(markdown: string): string {
-  return createHash("sha256").update(markdown).digest("hex");
+  return sha256Hex(markdown);
 }
 
 /**

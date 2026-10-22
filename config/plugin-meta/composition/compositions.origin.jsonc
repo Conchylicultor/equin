@@ -1,4 +1,4 @@
-// @hash 7f4afacd4d72
+// @hash dddad945ed0a
 {
   "manifests": [
     {
@@ -133,10 +133,13 @@
       "category": "profile",
       "entryPoints": [
         "!conversations.conversation-view.push-and-exit.**",
+        "!tasks.automations.**",
         "!tasks.reports-investigation.**",
         "!tasks.sidequest-autopilot.**",
-        "!stats.**",
-        "!apps.file-explorer.**"
+        "!tasks.outcome-report.**",
+        "!apps.file-explorer.**",
+        "!apps.pages.**",
+        "!apps.prototypes.**"
       ],
       "selectedContributors": [],
       "extends": [

@@ -7,16 +7,6 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const calls = vi.hoisted(() => ({ routes: [] as string[] }));
-
-vi.mock("@plugins/infra/plugins/endpoints/web", async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  fetchEndpoint: (endpoint: { route: string }) => {
-    calls.routes.push(endpoint.route);
-    return Promise.resolve({});
-  },
-}));
-
 // The real message chrome walks every inline-text renderer; the card's own
 // choices are what this suite pins.
 vi.mock(
@@ -30,13 +20,18 @@ vi.mock(
 );
 
 import type React from "react";
+import type { ReactElement } from "react";
 import {
   cleanup,
   fireEvent,
-  render,
+  render as renderUi,
   screen,
   waitFor,
 } from "@testing-library/react";
+import {
+  fakeFetchEndpoint,
+  withTransport,
+} from "@plugins/infra/plugins/endpoints/web/testing";
 import {
   PendingTurnCard,
   type RenderEcho,
@@ -49,6 +44,15 @@ import {
 import { conversationPromptDraft } from "../internal/prompt-draft";
 
 const CONV = "conv-card";
+
+/** The card's endpoint client: records each call, answers it void. */
+const fake = fakeFetchEndpoint();
+const routes = () => fake.calls.map((c) => c.route);
+
+/** Renders under the fake's transport, so the card's actions reach the fake. */
+function render(ui: ReactElement) {
+  return renderUi(ui, { wrapper: withTransport(fake) });
+}
 
 /** A host's user row: the text, then the status the card hands it. */
 const renderEcho: RenderEcho = (t, status) => (
@@ -76,7 +80,7 @@ function turn(state: PendingTurnState, over: Partial<PendingTurn> = {}) {
 
 afterEach(() => {
   cleanup();
-  calls.routes = [];
+  fake.calls.length = 0;
   localStorage.clear();
 });
 
@@ -165,7 +169,7 @@ describe("PendingTurnCard", () => {
     ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
     await waitFor(() =>
-      expect(calls.routes).toEqual([
+      expect(routes()).toEqual([
         "POST /api/conversations/:id/turns/:turnId/retry",
       ]),
     );
@@ -183,7 +187,7 @@ describe("PendingTurnCard", () => {
     expect(screen.getByText(/Not confirmed/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Copy to draft" }));
     await waitFor(() =>
-      expect(calls.routes).toEqual([
+      expect(routes()).toEqual([
         "POST /api/conversations/:id/turns/:turnId/withdraw",
       ]),
     );
@@ -202,7 +206,7 @@ describe("PendingTurnCard", () => {
     );
     expect(screen.getByText(/Failed to send — offline/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Copy to draft" }));
-    expect(calls.routes).toEqual([]);
+    expect(routes()).toEqual([]);
   });
 
   it("draws the echo as the host's own row, undimmed, the status under it", () => {

@@ -1,7 +1,7 @@
 import {
   recordReportDebounced,
   DEFAULT_REPORT_DEBOUNCE_MS,
-} from "@plugins/reports/server";
+} from "@plugins/reports/plugins/engine/server";
 import type { ForeignSessionPayload } from "@plugins/conversations/plugins/transcript-source/core";
 
 /**

@@ -17,7 +17,7 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
-  recordUsage,
+  useRecordUsage,
   useRecentUsage,
 } from "@plugins/primitives/plugins/usage-rank/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -90,6 +90,7 @@ export function ColorPicker({
   defaultValue,
   className,
 }: ColorPickerProps) {
+  const recordUsage = useRecordUsage();
   const lastEmitted = useRef(value);
   const [color, setColor] = useState(() => Color.fromCss(value) ?? FALLBACK);
   // The value the picker opened with — the "before" half of the header swatch.

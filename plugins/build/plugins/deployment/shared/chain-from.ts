@@ -49,4 +49,6 @@ export type ChainFrom = z.infer<typeof ChainFromSchema>;
 export const chainFrom = liveValue("build.chain-from", {
   schema: ChainFromSchema,
   params: { commit: z.string().regex(/^[0-9a-f]{7,40}$/) },
+  // A git walk in this checkout.
+  needsMachine: { feature: "Reading what is deployed" },
 });

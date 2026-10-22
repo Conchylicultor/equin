@@ -4,7 +4,7 @@ import { defineAutomation } from "@plugins/tasks/plugins/automations/server";
 import {
   linkReportsToTask,
   uninvestigatedReports,
-} from "@plugins/reports/server";
+} from "@plugins/reports/plugins/engine/server";
 import { fetchUpstreamStatus } from "@plugins/upstream/core";
 import { upstreamMergeConfig, UPSTREAM_MERGE_ID } from "../../shared/config";
 import {

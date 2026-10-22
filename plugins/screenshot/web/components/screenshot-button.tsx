@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { flushSync } from "react-dom";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { toast } from "@plugins/shell/plugins/notifications/web";
+import { useToast, type Toast } from "@plugins/shell/plugins/notifications/web";
 import {
   EndpointError,
-  fetchEndpoint,
+  useFetchEndpoint,
+  type FetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
 import { createScreenshot } from "../../shared/endpoints";
 import { captureApp } from "../capture";
@@ -13,6 +14,8 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 const photoCameraIcon = symbol("photo-camera");
 
 export function ScreenshotButton() {
+  const fetchEndpoint = useFetchEndpoint();
+  const toast = useToast();
   const [busy, setBusy] = useState(false);
 
   async function handleClick() {
@@ -56,7 +59,7 @@ export function ScreenshotButton() {
       // Stop listening after the tab has had time to receive the blob.
       setTimeout(() => ch.close(), 15_000);
 
-      void upload(id, blob);
+      void upload(fetchEndpoint, toast, id, blob);
     } catch (err) {
       toast({
         type: "screenshot",
@@ -79,7 +82,12 @@ export function ScreenshotButton() {
   );
 }
 
-async function upload(id: string, blob: Blob): Promise<void> {
+async function upload(
+  fetchEndpoint: FetchEndpoint,
+  toast: Toast,
+  id: string,
+  blob: Blob,
+): Promise<void> {
   // Fire clipboard copy and server upload in parallel. A clipboard permission
   // prompt must not block the upload — otherwise the just-opened tab sits on
   // "Loading…" until the user dismisses it.

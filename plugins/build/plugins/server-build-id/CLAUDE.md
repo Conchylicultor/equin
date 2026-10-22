@@ -48,9 +48,8 @@ So it is read once at boot. See `resource-protocol` / `resource-runtime`.
     - `getServerGraphHash`
 - Cross-plugin:
   - Imported by:
-    - `build/deployment`
-    - `reports`
     - `reports/crash`
+    - `reports/engine`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/get-server-commit.ts`, `server/internal/get-server-graph-hash.ts` (debt)
 

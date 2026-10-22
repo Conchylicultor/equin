@@ -1,4 +1,4 @@
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { createBlock, PAGE_BLOCK_TYPE } from "@plugins/page/plugins/editor/core";
 import { textBlock } from "@plugins/page/plugins/text/core";
 
@@ -11,7 +11,10 @@ import { textBlock } from "@plugins/page/plugins/text/core";
  * editor's `createBlock` with the `text` block lives in the consumer. `parentId:
  * null` makes it top-level; rank is omitted so the server appends it.
  */
-export async function createLinkedPage(title: string): Promise<string> {
+export async function createLinkedPage(
+  fetchEndpoint: FetchEndpoint,
+  title: string,
+): Promise<string> {
   const page = await fetchEndpoint(
     createBlock,
     {},

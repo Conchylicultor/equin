@@ -128,13 +128,13 @@ directives establish); the selected voicing strategy from the shared
     - `Sonata.Section` "Chord Grid" → `ChordGridEditorSection`
     - `Sonata.Effect` "chord-grid-persist" → `ChordGridPersistObserver`
   - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/sonata/library` ×3
     - `primitives/persistent-draft` ×3
     - `apps/sonata/document` ×2
-    - `apps/sonata/library` ×2
     - `apps/sonata/shell` ×2
-    - `infra/endpoints` ×2
     - `primitives/collapsible` ×2
     - `primitives/css/ui-kit` ×2
+    - `infra/endpoints.useEndpointMutation`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/fill.Fill`

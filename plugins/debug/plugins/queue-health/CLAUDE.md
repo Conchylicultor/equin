@@ -83,9 +83,9 @@ below the subsystem it watches, and no lower.
 
 ### Why it lives here and not beside the sweeper in `jobs`
 
-The plugin DAG forbids the other placement. `reports/server/internal/record-report.ts`
+The plugin DAG forbids the other placement. `reports/plugins/engine/server/internal/record-report.ts`
 imports `recordNotification` from `shell/notifications`, whose barrel imports a
-`defineJob` from `jobs` — so `jobs → reports → shell/notifications → jobs` is a
+`defineJob` from `jobs` — so `jobs → reports/engine → shell/notifications → jobs` is a
 cycle, and `no cycles` is enforced by `./singularity check plugin-boundaries`.
 This plugin already imports both `jobs` and `reports`, so the placement adds
 **zero new plugin edges**, and it keeps queue *interpretation* (thresholds,

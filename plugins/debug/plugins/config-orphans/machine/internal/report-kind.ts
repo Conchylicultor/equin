@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { recordReport, ReportKind } from "@plugins/reports/server";
+import { ReportKind } from "@plugins/reports/server";
+import { recordReport } from "@plugins/reports/plugins/engine/server";
 import type { ReportRow } from "@plugins/reports/server";
 import { auditUserConfigOrphans } from "./orphan-audit";
 

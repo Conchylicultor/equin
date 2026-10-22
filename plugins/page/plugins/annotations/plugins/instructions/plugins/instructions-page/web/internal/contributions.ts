@@ -1,4 +1,5 @@
 import type { PageData } from "@plugins/page/plugins/editor/core";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import type {
   InsertAction,
   InsertActionRun,
@@ -36,8 +37,12 @@ export const instructionsPageDecoration: PageReferenceDecorationContribution = {
 /** Turn the line into the page, then open it (`useOpenMadePage`). */
 function useInstructionsPageInsertRun(): InsertActionRun {
   const openMadePage = useOpenMadePage();
+  const fetchEndpoint = useFetchEndpoint();
   return ({ blockId, text }) => {
-    openMadePage(turnIntoInstructionsPage(blockId, text), blockId);
+    openMadePage(
+      turnIntoInstructionsPage(fetchEndpoint, blockId, text),
+      blockId,
+    );
   };
 }
 

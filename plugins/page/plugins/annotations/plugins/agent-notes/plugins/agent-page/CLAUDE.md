@@ -93,7 +93,7 @@ ones.
   - Uses:
     - `conversations.useConversation`
     - `conversations/conversation-ui/chip.ConversationChip`
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `page/annotations/agent-notes/authorship.useAgentNotesCreator`
     - `page/editor.Editor`
     - `page/page-reference.PageReference`

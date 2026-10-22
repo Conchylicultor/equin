@@ -1,4 +1,5 @@
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { LINK_FETCH } from "./endpoints";
 import { LinkPreviewSchema } from "./schemas";
 
 /**
@@ -19,4 +20,6 @@ export const linkPreview = liveValue("bookmark.link-preview", {
   params: ["url"],
   refusals: ["blocked", "unreachable"],
   load: "on-demand",
+  // Scraped over the computer's network (SSRF-guarded, dial pinned).
+  needsMachine: LINK_FETCH,
 });

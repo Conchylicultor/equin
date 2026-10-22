@@ -4,7 +4,8 @@ import {
   mapResource,
 } from "@plugins/primitives/plugins/live-state/web";
 import { mapRow, useLiveRow } from "@plugins/network/plugins/live/web";
-import { toast } from "@plugins/shell/plugins/notifications/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { useTaskAttempts } from "@plugins/tasks/plugins/tasks-core/web";
 import type { LaunchBinding } from "@plugins/tasks/plugins/launch-options/web";
 import type { WorkspaceSpec } from "@plugins/conversations/plugins/workspace/core";
@@ -26,19 +27,23 @@ export function useTaskWorkspaceBinding(
     row ? row.spec : null,
   );
   const attempts = useTaskAttempts(taskId);
+  const fetchEndpoint = useFetchEndpoint();
+  const toast = useToast();
 
   const onChange = useCallback(
     (next: WorkspaceSpec | null) => {
-      setTaskWorkspaceRemote(taskId, next).catch((err: unknown) => {
-        toast({
-          type: "task",
-          title: "Failed to set workspace",
-          description: err instanceof Error ? err.message : String(err),
-          variant: "error",
-        });
-      });
+      setTaskWorkspaceRemote(fetchEndpoint, taskId, next).catch(
+        (err: unknown) => {
+          toast({
+            type: "task",
+            title: "Failed to set workspace",
+            description: err instanceof Error ? err.message : String(err),
+            variant: "error",
+          });
+        },
+      );
     },
-    [taskId],
+    [fetchEndpoint, taskId, toast],
   );
 
   return mapResource(

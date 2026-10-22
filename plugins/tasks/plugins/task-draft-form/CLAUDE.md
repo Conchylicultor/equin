@@ -117,14 +117,14 @@ silently destroy work in progress — hence a request type rather than an `initi
   - Slots: `TaskDraftFormSlots.Action`
   - Slot contributors: `TaskDraftFormSlots.Action` ← `improve.element-picker`
   - Contributes: `ConfigV2.WebRegister` "config"
-  - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/launch-options` ×5
+    - `infra/endpoints` ×3
     - `primitives/css/ui-kit` ×3
     - `primitives/persistent-draft` ×3
     - `primitives/sortable-list` ×3
     - `primitives/text-editor/composer` ×3
     - `config_v2` ×2
-    - `infra/endpoints` ×2
     - `primitives/overlay/tooltip` ×2
     - `primitives/shortcuts` ×2
     - `apps-core.useCurrentAppId`
@@ -142,7 +142,7 @@ silently destroy work in progress — hence a request type rather than an `initi
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/text-editor/composer/picker-pill.PickerPill`
     - `primitives/text-editor/paste-images.extractAttachmentIds`
-    - `shell/notifications.toast`
+    - `shell/notifications.useToast`
     - `ui/icons.Icon`
   - Exports (types):
     - `ActiveRelateContext`

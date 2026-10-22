@@ -84,6 +84,7 @@ remove the overwrite trade-off.
     - `apps/sonata/session.useSession`
     - `apps/sonata/track-mixer.setTracksActive`
     - `infra/endpoints.useEndpointMutation`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLiveRow`
     - `primitives/css/switch.Switch`
     - `primitives/css/ui-kit.WithTooltip`

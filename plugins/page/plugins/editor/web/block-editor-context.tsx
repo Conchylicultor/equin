@@ -19,6 +19,7 @@ import {
   useScopedUndoRedo,
 } from "@plugins/primitives/plugins/undo-redo/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { resolveDropParent } from "@plugins/primitives/plugins/tree/core";
@@ -67,7 +68,9 @@ import {
   blockDocOwnerOf,
   closeAllOpenTextRuns,
   type BlockDocOwner,
+  type BlockDocs,
 } from "./internal/collab-session";
+import { useBlockDocs } from "./internal/use-block-docs";
 import { spliceOpenBlockDoc } from "./internal/block-text-write";
 import type { ProjectTextFn } from "./internal/doc-sourced-runs";
 import type { RowTruth } from "./internal/row-truth";
@@ -209,6 +212,7 @@ function opFocusId(
  * unreachable today and kept only so the rule reads whole.)
  */
 function pinRestoredText(
+  docs: BlockDocs,
   undoPatch: BlockPatch,
   before: readonly Block[],
   after: readonly Block[],
@@ -217,7 +221,7 @@ function pinRestoredText(
   const afterIds = new Set(after.map((b) => b.id));
   for (const b of before) {
     if (afterIds.has(b.id) || !hasTextKey(b.data)) continue;
-    const owner = blockDocOwnerOf(b.id);
+    const owner = blockDocOwnerOf(docs, b.id);
     if (owner && owner.docAuthoritative) pins.set(b.id, owner.runsNow());
   }
   if (pins.size === 0) return undoPatch;
@@ -254,6 +258,7 @@ function pinRestoredText(
  * op still lands somewhere sane.
  */
 function derivePatchEntry(
+  docs: BlockDocs,
   before: Block[],
   after: Block[],
   focusId: string | null,
@@ -265,7 +270,7 @@ function derivePatchEntry(
 } | null {
   const patches = patchesFromDiff(diffBlocks(before, after));
   const redoPatch = patches.redo;
-  const undoPatch = pinRestoredText(patches.undo, before, after);
+  const undoPatch = pinRestoredText(docs, patches.undo, before, after);
   if (isEmptyPatch(undoPatch) && isEmptyPatch(redoPatch)) return null;
   // Order mirrors the patch's own precedence: redo's first write is its creates
   // (a split's new block), undo's is its updates (the surviving origin row).
@@ -284,8 +289,8 @@ function derivePatchEntry(
  * the row alone would leave the doc (the text's owner) holding the whole line
  * while the row says half of it.
  */
-function spliceOwnerOf(blockId: string): BlockDocOwner {
-  const owner = blockDocOwnerOf(blockId);
+function spliceOwnerOf(docs: BlockDocs, blockId: string): BlockDocOwner {
+  const owner = blockDocOwnerOf(docs, blockId);
   if (!owner) {
     throw new Error(
       `splice: block "${blockId}" has no live content owner, so its text ` +
@@ -959,6 +964,13 @@ export function BlockEditorProviderInner({
   rootId,
   children,
 }: ProviderInnerProps) {
+  // The editor subtree's transport: stored-doc text writes (an offscreen
+  // merge's append, a replay onto a block with no editor) go to the host this
+  // editor is served by.
+  const fetchEndpoint = useFetchEndpoint();
+  // The same transport's content docs: the owners the mutation chokepoints
+  // read and splice, and the host a replay with no open editor writes through.
+  const docs = useBlockDocs();
   const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null);
   const [blockMenuDraftId, setBlockMenuDraftId] = useState<string | null>(null);
   // Block-type facts the pure reducer and `convertTo` cannot derive from the
@@ -1262,7 +1274,7 @@ export function BlockEditorProviderInner({
   );
   // Seal every block's open typing run before an undo/redo pops: the run the
   // user is in the middle of is then the entry on top, not the one below it.
-  usePendingFlush(closeAllOpenTextRuns);
+  usePendingFlush(() => closeAllOpenTextRuns(docs));
 
   // Dispatch a minimal patch through the store's overlay pipeline (instant
   // overlay + server reconcile on the persistent path; a synchronous state write
@@ -1309,6 +1321,7 @@ export function BlockEditorProviderInner({
         liveRowsRef.current.find((b) => b.id === blockId) ??
         rowsRef.current.find((b) => b.id === blockId);
       await applyBlockRuns({
+        docs,
         blockId,
         runs: direction === "undo" ? edit.before : edit.after,
         expected: direction === "undo" ? edit.after : edit.before,
@@ -1342,7 +1355,14 @@ export function BlockEditorProviderInner({
         waitRowPresent: () => waitRowPresent(blockId),
       });
     },
-    [serverSync, liveRowsRef, dispatchPatch, serverIdsRef, waitRowPresent],
+    [
+      serverSync,
+      liveRowsRef,
+      dispatchPatch,
+      serverIdsRef,
+      waitRowPresent,
+      docs,
+    ],
   );
 
   // THE recorder. Every undo entry this editor puts on the stack — structural,
@@ -1376,8 +1396,8 @@ export function BlockEditorProviderInner({
       coalesceKey,
       id,
     }: RecordEntryArgs) => {
-      closeAllOpenTextRuns();
-      const derived = derivePatchEntry(before, after, focusId);
+      closeAllOpenTextRuns(docs);
+      const derived = derivePatchEntry(docs, before, after, focusId);
       if (!derived && runsEdits.length === 0) return;
       const { undoPatch, redoPatch, undoFocus, redoFocus } = derived ?? {
         undoPatch: EMPTY_PATCH,
@@ -1418,7 +1438,7 @@ export function BlockEditorProviderInner({
         },
       });
     },
-    [record, dispatchPatch, focusBlock, replayRunsEdit],
+    [record, dispatchPatch, focusBlock, replayRunsEdit, docs],
   );
 
   // A structural op is a patch-only entry. Never coalesces (each is a distinct
@@ -1464,7 +1484,7 @@ export function BlockEditorProviderInner({
   const recordDocEdit = useCallback(
     (blockId: string, label: string, edit: () => void) => {
       queueMicrotask(() => {
-        const owner = blockDocOwnerOf(blockId);
+        const owner = blockDocOwnerOf(docs, blockId);
         if (!owner) {
           edit();
           return;
@@ -1483,7 +1503,7 @@ export function BlockEditorProviderInner({
         });
       });
     },
-    [recordEntry],
+    [recordEntry, docs],
   );
 
   // The row model's ONE text rule, enforced where every direct row write lands:
@@ -1936,7 +1956,7 @@ export function BlockEditorProviderInner({
       if (originRow && plan.blocks.every((b) => beforeIds.has(b.id))) {
         const target = runsOfNode(originRow);
         recordDocEdit(args.blockId, OP_LABELS.splice, () =>
-          spliceOpenBlockDoc(spliceOwnerOf(args.blockId), target),
+          spliceOpenBlockDoc(spliceOwnerOf(docs, args.blockId), target),
         );
         queueMicrotask(() => focusBlock(caret.blockId, caret.offset));
         return;
@@ -1970,7 +1990,7 @@ export function BlockEditorProviderInner({
           return;
         }
         const target = runsOfNode(originRow);
-        const owner = spliceOwnerOf(args.blockId);
+        const owner = spliceOwnerOf(docs, args.blockId);
         const originBefore = owner.runsNow();
         owner.untracked(() => spliceOpenBlockDoc(owner, target));
         recordEntry({
@@ -1986,6 +2006,7 @@ export function BlockEditorProviderInner({
       });
     },
     [
+      docs,
       scope,
       paste,
       planSpliceOn,
@@ -2289,7 +2310,7 @@ export function BlockEditorProviderInner({
           // run tracker must not ALSO record it as typing on top of this
           // entry. A throw propagates out of the microtask BEFORE the
           // dispatch — the source row is never removed.
-          const targetOwner = blockDocOwnerOf(target.id);
+          const targetOwner = blockDocOwnerOf(docs, target.id);
           const targetBefore = targetOwner
             ? targetOwner.runsNow()
             : runsOfNode(target);
@@ -2327,8 +2348,11 @@ export function BlockEditorProviderInner({
         const targetId = target.id;
         const targetDataText = () =>
           runsOfNode(rowsRef.current.find((b) => b.id === targetId) ?? target);
-        void spliceStoredBlockDoc(targetId, targetDataText(), (current) =>
-          mergeRuns(current, mergingRuns),
+        void spliceStoredBlockDoc(
+          fetchEndpoint,
+          targetId,
+          targetDataText(),
+          (current) => mergeRuns(current, mergingRuns),
         ).then(({ before: targetBefore, after: targetAfter }) => {
           const applied = applyOverlay(op);
           // Admitted above, against the rows of that turn. A refusal now means
@@ -2358,6 +2382,7 @@ export function BlockEditorProviderInner({
       }
     },
     [
+      docs,
       store,
       dropRejectedEntry,
       applyOverlay,
@@ -2367,6 +2392,7 @@ export function BlockEditorProviderInner({
       isAnchorNode,
       authority,
       admitsRows,
+      fetchEndpoint,
     ],
   );
 
@@ -2428,7 +2454,7 @@ export function BlockEditorProviderInner({
   // nothing changed, nothing was recorded.
   const commitSpanEdit = useCallback(
     (from: SpanPoint, to: SpanPoint, runs: RichText, label: string) => {
-      const owner = spliceOwnerOf(from.blockId);
+      const owner = spliceOwnerOf(docs, from.blockId);
       const fromBefore = owner.runsNow();
       const before = rowsRef.current;
       const runsEdits = runsEqual(fromBefore, runs)
@@ -2469,7 +2495,15 @@ export function BlockEditorProviderInner({
       });
       return true;
     },
-    [opCtx, admitsRows, advanceRows, store, dropRejectedEntry, recordEntry],
+    [
+      opCtx,
+      admitsRows,
+      advanceRows,
+      store,
+      dropRejectedEntry,
+      recordEntry,
+      docs,
+    ],
   );
 
   // Enter over a span: the span deleted and the join line split there, as
@@ -2538,7 +2572,7 @@ export function BlockEditorProviderInner({
       const keepsOrigin =
         !intent.asChild && joinAt === 0 && runsLength(joined) > 0;
       const target = keepsOrigin ? joined : splitRuns(joined, joinAt)[0];
-      const owner = spliceOwnerOf(from.blockId);
+      const owner = spliceOwnerOf(docs, from.blockId);
       const fromBefore = owner.runsNow();
       owner.untracked(() => spliceOpenBlockDoc(owner, target));
       advanceRows(second.after);
@@ -2562,6 +2596,7 @@ export function BlockEditorProviderInner({
       return true;
     },
     [
+      docs,
       spanEndRuns,
       opCtx,
       scope,
@@ -2672,7 +2707,7 @@ export function BlockEditorProviderInner({
       const second = predictOp(op, base, opCtx);
       if (second.written.length === 0) return;
       if (!admitsRows(before, second.after)) return;
-      const owner = spliceOwnerOf(from.blockId);
+      const owner = spliceOwnerOf(docs, from.blockId);
       const fromBefore = owner.runsNow();
       // A CONSUMED join line (an empty plain paragraph the forest replaced)
       // has no text to edit: its row goes, and its doc — untouched — is what
@@ -2698,6 +2733,7 @@ export function BlockEditorProviderInner({
       });
     },
     [
+      docs,
       spanEndRuns,
       scope,
       commitSpanEdit,
@@ -2934,7 +2970,7 @@ export function BlockEditorProviderInner({
             const cut = (): void => {
               authority.surgeryOf(blockId)?.deleteRange?.(0, deleteTo);
             };
-            const owner = blockDocOwnerOf(blockId);
+            const owner = blockDocOwnerOf(docs, blockId);
             const originBefore = owner?.runsNow();
             if (owner) owner.untracked(cut);
             else cut();
@@ -2992,7 +3028,7 @@ export function BlockEditorProviderInner({
         // the doc holds by the time the cut lands. No owner ⇒ no doc to edit
         // and nothing to replay: the entry stays structural.
         queueMicrotask(() => {
-          const owner = blockDocOwnerOf(blockId);
+          const owner = blockDocOwnerOf(docs, blockId);
           const truncate = (): void => {
             authority.surgeryOf(blockId)?.truncateAt?.(position);
           };
@@ -3125,6 +3161,7 @@ export function BlockEditorProviderInner({
       },
     }),
     [
+      docs,
       dispatchOp,
       indentBlocks,
       outdentBlocks,

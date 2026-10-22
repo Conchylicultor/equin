@@ -6,7 +6,7 @@ import {
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import {
-  fetchEndpoint,
+  useFetchEndpoint,
   EndpointError,
 } from "@plugins/infra/plugins/endpoints/web";
 import {
@@ -51,6 +51,7 @@ export interface ActiveDataBindingHandle<T> {
 export function useActiveDataBinding<T>(
   schema: ZodParser<T>,
 ): ActiveDataBindingHandle<T> {
+  const fetchEndpoint = useFetchEndpoint();
   const identity = useActiveDataIdentity();
   // Without an identity there is no conversation to read: the read is skipped
   // (nothing subscribed), and the handle below reports `loading` with
@@ -94,7 +95,7 @@ export function useActiveDataBinding<T>(
         throw err;
       }
     },
-    [identity],
+    [fetchEndpoint, identity],
   );
 
   const clear = useCallback(async () => {
@@ -110,7 +111,7 @@ export function useActiveDataBinding<T>(
       }
       throw err;
     }
-  }, [identity]);
+  }, [fetchEndpoint, identity]);
 
   return { enabled: identity !== null, value, set, clear };
 }

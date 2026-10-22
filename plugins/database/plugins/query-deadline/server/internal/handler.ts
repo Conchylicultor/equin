@@ -2,7 +2,7 @@ import {
   formatDeadlineLogLine,
   type QueryDeadlineEvent,
 } from "@plugins/database/plugins/connection/server";
-import type { recordReport } from "@plugins/reports/server";
+import type { recordReport } from "@plugins/reports/plugins/engine/server";
 import {
   DB_ABANDON_CAP_KIND,
   DB_QUERY_DEADLINE_KIND,

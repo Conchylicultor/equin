@@ -3,15 +3,8 @@ import { z } from "zod";
 import { defineEndpoint } from "../../core/define-endpoint";
 import { unsupportedEndpointResponse } from "../../core/unsupported";
 import { endpointErrorSink, type EndpointErrorInfo } from "./error-reporter";
-import {
-  originTransport,
-  type Transport,
-} from "@plugins/primitives/plugins/networking/web";
-import {
-  EndpointError,
-  EndpointUnsupportedError,
-  fetchEndpoint,
-} from "./fetch-endpoint";
+import type { Transport } from "@plugins/primitives/plugins/networking/web";
+import { EndpointError, fetchEndpointOver } from "./fetch-endpoint";
 
 const ping = defineEndpoint({
   route: "POST /api/ping",
@@ -24,6 +17,19 @@ const ping = defineEndpoint({
 const RETRY = { retries: 2, backoffMs: 1 };
 
 const realFetch = globalThis.fetch;
+
+/** A page-shaped transport over the global fetch (read at call time, so a stub answers). */
+const page: Transport = {
+  socketUrl: (path) => path,
+  openSocket: () => {
+    throw new Error("these tests open no socket");
+  },
+  fetch: (input, init) => globalThis.fetch(input, init),
+  servesUrls: true,
+  machine: true,
+  telemetry: true,
+};
+const fetchEndpoint = fetchEndpointOver(page);
 
 /** Install a fetch that answers each call with the next step, in order. */
 function stubFetch(steps: (() => Response)[]) {
@@ -130,30 +136,24 @@ describe("fetchEndpoint unsupported refusal", () => {
     return emitted;
   }
 
-  test("a host's unsupported refusal throws EndpointUnsupportedError, unreported", async () => {
+  // A host's refusal is a gap the coverage guard missed — never hidden.
+  test("a host's unsupported refusal is a plain EndpointError, reported", async () => {
     stubFetch([() => unsupportedEndpointResponse("POST", "/api/ping")]);
     let err: unknown;
     const emitted = await sinkDuring(async () => {
       err = await rejection(fetchEndpoint(ping, {}, { body: { n: 1 } }));
     });
-    expect(err).toBeInstanceOf(EndpointUnsupportedError);
+    expect(err).toBeInstanceOf(EndpointError);
     expect(err).toMatchObject({
       status: 409,
       body: { reason: "unsupported", method: "POST", path: "/api/ping" },
     });
-    expect(emitted).toEqual([]);
-  });
-
-  test("any other 409 is a plain EndpointError, reported", async () => {
-    stubFetch([() => Response.json({ reason: "conflict" }, { status: 409 })]);
-    let err: unknown;
-    const emitted = await sinkDuring(async () => {
-      err = await rejection(fetchEndpoint(ping, {}, { body: { n: 1 } }));
-    });
-    expect(err).toBeInstanceOf(EndpointError);
-    expect(err).not.toBeInstanceOf(EndpointUnsupportedError);
     expect(emitted).toEqual([
-      { route: "POST /api/ping", status: 409, body: { reason: "conflict" } },
+      {
+        route: "POST /api/ping",
+        status: 409,
+        body: { reason: "unsupported", method: "POST", path: "/api/ping" },
+      },
     ]);
   });
 });
@@ -168,16 +168,9 @@ describe("fetchEndpoint needsMachine", () => {
 
   test("under a transport with no computer it answers unavailable, without a request", async () => {
     const fn = mock(() => Promise.resolve(Response.json({ ok: true })));
-    const inBrowser: Transport = {
-      ...originTransport,
-      fetch: fn,
-      machine: false,
-    };
-    const res = await fetchEndpoint(
-      launch,
-      {},
-      { body: { n: 1 }, transport: inBrowser },
-    );
+    const inBrowser: Transport = { ...page, fetch: fn, machine: false };
+    const fetchEndpoint = fetchEndpointOver(inBrowser);
+    const res = await fetchEndpoint(launch, {}, { body: { n: 1 } });
     expect(res).toEqual({
       kind: "unavailable",
       message:
@@ -199,5 +192,12 @@ describe("fetchEndpoint needsMachine", () => {
     // @ts-expect-error — a portable endpoint's answer has no `kind`
     expect(res.kind).toBeUndefined();
     expect(res).toEqual({ ok: true });
+  });
+});
+
+describe("fetchEndpointOver", () => {
+  test("is one fetcher per transport", () => {
+    expect(fetchEndpointOver(page)).toBe(fetchEndpoint);
+    expect(fetchEndpointOver({ ...page })).not.toBe(fetchEndpoint);
   });
 });

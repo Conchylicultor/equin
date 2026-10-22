@@ -1,4 +1,4 @@
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   importWallpaperUrl,
   uploadWallpaper,
@@ -13,6 +13,7 @@ import {
  * config from the result — this helper persists bytes only.
  */
 export async function saveCandidate(
+  fetchEndpoint: FetchEndpoint,
   candidate: Exclude<WallpaperCandidate, { kind: "builtin" }>,
 ): Promise<SavedWallpaper> {
   if (candidate.kind === "file") {

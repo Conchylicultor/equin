@@ -37,6 +37,8 @@ function AttemptCommitsGraph({ attemptId }: { attemptId: string }) {
   const result = useLive(commitsGraph, { attemptId });
 
   if (result.status === "loading") return <Loading />;
+  if (result.status === "unavailable")
+    return <Placeholder>{result.message}</Placeholder>;
   if (result.status === "error")
     return (
       <ResourceErrorInline

@@ -68,7 +68,7 @@ e.g. "every contribution names a collection served here"); a throw from a bind
 or a check fails boot, so such a
 graph never serves.
 
-### Both modes declare their namespace FIRST
+### Every mode declares its namespace FIRST
 
 A process has no ambient identity: which namespace it serves is stated by
 whoever spawned it, and read back through `runtimeNamespace()`
@@ -84,6 +84,12 @@ whoever spawned it, and read back through `runtimeNamespace()`
   before the dynamic `import("../bin/active-runtime")`. Its caller reads it off
   its own required `--namespace <ns>` option (`supervised-exec`), which the
   spawning backend appends from `runtimeNamespace()`.
+- **`browser`** — a browser host is no gateway namespace: it runs as the
+  composition it serves. Its worker entry (`bin/browser-host.ts`) imports a
+  `declare-namespace` module as its literal first statement (before its seed
+  statically loads portable server barrels), e.g.
+  `agent-manager/demo/bin/declare-namespace.ts`. Not `bootBrowserHost`'s job:
+  a suite booting a host in Bun already runs as its checkout (the test preload).
 
 It used to ride in a `SINGULARITY_WORKTREE` environment variable, inherited by
 every descendant forever; `namespace-identity/no-ambient-worktree-env` keeps it

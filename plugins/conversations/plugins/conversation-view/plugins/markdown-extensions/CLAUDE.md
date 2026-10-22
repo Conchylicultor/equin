@@ -27,23 +27,17 @@ safely detect whether they're inside a conversation (no-op outside):
     - `MarkdownEnhancerSlot`
     - `MarkdownEnhancerSlot`
     - `InlineTextWalkerSlot`
-  - Uses:
-    - `conversations.useConversationById`
-    - `conversations/conversation-view.conversationPane`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/inline-text` ×4
+    - `primitives/markdown` ×4
+    - `primitives/file-links` ×2
+    - `primitives/overlay/image-viewer` ×2
+    - `primitives/text-editor/paste-images` ×2
     - `conversations/conversation-view/code/file-pane.filePeekPane`
+    - `conversations/conversation-view.conversationPane`
+    - `conversations.useConversationById`
     - `primitives/css/link-chip.LinkChip`
-    - `primitives/file-links.linkifyChildren`
-    - `primitives/file-links.parseFileLinks`
-    - `primitives/inline-text.InlineTextWalker`
-    - `primitives/inline-text.InlineTextWalkerContext`
-    - `primitives/inline-text.InlineTextWalkerSlot`
-    - `primitives/inline-text.useInlineTextWalker`
     - `primitives/link-gesture.activationProps`
-    - `primitives/markdown.MarkdownEnhancement`
-    - `primitives/markdown.MarkdownEnhancementContext`
-    - `primitives/markdown.MarkdownEnhancerSlot`
-    - `primitives/markdown.useMarkdownEnhancement`
-    - `primitives/overlay/image-viewer.ViewerThumbnail`
     - `primitives/pane.useOpenPane`
     - `tasks/task-detail.taskDetailPane`
 - Cross-plugin:

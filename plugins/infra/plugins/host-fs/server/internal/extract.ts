@@ -1,19 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, rename, rm, stat, utimes } from "node:fs/promises";
 import { basename, dirname, extname, join } from "node:path";
-import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
-import {
-  hostFsExtract,
-  type HostFsArchiveReason,
-  type HostFsExtractResult,
-} from "../../core";
+import { type HostFsArchiveReason, type HostFsExtractResult } from "../../core";
 import { locateHostPath } from "./archive/locate";
 import { isCorruptStream } from "./archive/read";
 import { archiveFormatFor } from "./archive/registry";
 import { archiveTree } from "./archive/tree";
 import { freePath } from "./free-path";
-import { isAppOrigin } from "./open";
-import { classifyFsError, resolveHostPath } from "./path";
+import { classifyFsError } from "./path";
 
 /**
  * What an extraction leaves out, as the Finder does: macOS's `__MACOSX/` tree
@@ -119,13 +113,3 @@ export async function extractHostArchive(
     await rm(staging, { recursive: true, force: true });
   }
 }
-
-export const handleExtract = implement(hostFsExtract, ({ body, req }) => {
-  if (!isAppOrigin(req.headers.get("origin"))) {
-    throw new HttpError(
-      403,
-      "Extract is only accepted from the app's own *.localhost origin",
-    );
-  }
-  return extractHostArchive(resolveHostPath(body.path));
-});

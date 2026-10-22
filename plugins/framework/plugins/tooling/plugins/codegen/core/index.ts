@@ -242,6 +242,7 @@ export {
 export {
   deriveBrowserHostGraph,
   discoverBrowserHosts,
+  inferBrowserHostGraph,
   generateBrowserHosts,
   renderBrowserHost,
   renderBrowserHostScope,
@@ -249,7 +250,25 @@ export {
 export type {
   BrowserHostDecl,
   DerivedBrowserHostGraph,
+  InferredBrowserHostGraph,
 } from "./browser-host-gen";
+// The browser host's coverage guard: everything its scoped page reads, calls
+// or registers has an answer on the host (served, or `needsMachine`). The
+// static arms run inside `deriveBrowserHostGraph`; the config and
+// contributions arms read the barrels' contributions, so checks run them
+// (`config-v2:registrations-paired`, `browser-host:contributions-covered`).
+export {
+  parseServerContributionDeclarations,
+  resolveHostConfigCoverage,
+  resolveHostContributionCoverage,
+  serverBarrelBlockers,
+} from "./browser-host-coverage";
+export type {
+  HostConfigRegistration,
+  HostContributionBarrel,
+  HostRead,
+  ServerContributionKindDecl,
+} from "./browser-host-coverage";
 // Host services read statically — the browser-host derivation's reading,
 // shared with `host-services:provider-placement`.
 export {

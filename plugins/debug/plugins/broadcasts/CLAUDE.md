@@ -21,7 +21,7 @@
     - `primitives/css/ui-kit` ×3
     - `primitives/pane` ×3
     - `apps/debug/shell.DebugApp`
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`

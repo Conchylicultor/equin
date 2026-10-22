@@ -1,4 +1,3 @@
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import type { TurnDelivery } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { startPushAndExit } from "../../shared/endpoints";
 
@@ -11,7 +10,7 @@ import { startPushAndExit } from "../../shared/endpoints";
  */
 export const pushAndExitDelivery: TurnDelivery = {
   kind: "push-and-exit",
-  async send(conversationId, _text, turnId, signal) {
+  async send(fetchEndpoint, conversationId, _text, turnId, signal) {
     await fetchEndpoint(
       startPushAndExit,
       { id: conversationId },

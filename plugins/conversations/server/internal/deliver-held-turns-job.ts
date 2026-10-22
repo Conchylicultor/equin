@@ -1,10 +1,7 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
-import {
-  recordReport,
-  ReportKind,
-  type ReportRow,
-} from "@plugins/reports/server";
+import { ReportKind, type ReportRow } from "@plugins/reports/server";
+import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { hasHeldTurns } from "@plugins/conversations/plugins/turn-ledger/server";
 import { waitUntilReady } from "./runtime";
 import { deliverHeldTurns } from "./turns";

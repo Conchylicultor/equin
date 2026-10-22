@@ -22,15 +22,6 @@ export function createScratchWorkspace(deps: {
   return {
     kind: "scratch",
 
-    parseSpec(spec) {
-      const profile = ScratchProfile.get(spec.profile);
-      return {
-        kind: "scratch",
-        profile: spec.profile,
-        input: profile.inputSchema.parse(spec.input),
-      };
-    },
-
     async root() {
       return scratchWorkspacesDir.path;
     },

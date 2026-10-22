@@ -3,10 +3,9 @@ import { Awareness } from "y-protocols/awareness";
 import type { Provider, ProviderAwareness } from "@lexical/yjs";
 import {
   EndpointError,
-  fetchEndpoint,
+  type FetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
 import { subscribeWsStatus } from "@plugins/primitives/plugins/networking/web";
-import { liveStateSocketKind } from "@plugins/primitives/plugins/live-state/web";
 import {
   blockDocInit,
   blockDocUpdate,
@@ -111,6 +110,24 @@ import type { RowTruth } from "./row-truth";
  * but never emitted (no doc reload in this transport).
  */
 
+/**
+ * Where a server-synced content doc's bytes go: the transport of the editor
+ * that minted its owner, handed in at construction so a doc inside a scope (the
+ * demo's browser server) seeds and flushes to THAT host, and resumes when THAT
+ * host comes back — never the page's.
+ */
+export interface ContentDocTransport {
+  /** The editor subtree's endpoint client — doc-init / doc-update. */
+  readonly fetchEndpoint: FetchEndpoint;
+  /**
+   * The URL of the transport's live-state worktree socket
+   * (`liveStateSocketUrl(transport, "worktree")`): its reopening on the
+   * ws-status bus is the reconnect edge an interrupted seed or flush resumes
+   * on.
+   */
+  readonly socketUrl: string;
+}
+
 /** Debounce window for batching local updates into one doc-update POST. */
 const FLUSH_DEBOUNCE_MS = 300;
 
@@ -154,6 +171,8 @@ export class LiveStateYjsProvider implements Provider {
   private readonly blockId: string;
   /** Builds the seed `Y.encodeStateAsUpdate` bytes from the block's `data.text`. */
   private readonly buildSeedState: () => Uint8Array;
+  /** The endpoint client of the editor that minted this doc's owner. */
+  private readonly fetchEndpoint: FetchEndpoint;
   // Real Awareness so CollaborationPlugin's initLocalState/focus tracking has
   // functional local state; it never leaves this client (nothing broadcasts it).
   private readonly _awareness: Awareness;
@@ -289,10 +308,12 @@ export class LiveStateYjsProvider implements Provider {
     blockId: string,
     buildSeedState: () => Uint8Array,
     rowTruth: RowTruth,
+    transport: ContentDocTransport,
   ) {
     this.doc = doc;
     this.blockId = blockId;
     this.buildSeedState = buildSeedState;
+    this.fetchEndpoint = transport.fetchEndpoint;
     this.blockRowConfirmed = rowTruth === "present";
     this.mayHaveStoredDoc = rowTruth !== "unseen";
     this._awareness = new Awareness(doc);
@@ -300,14 +321,14 @@ export class LiveStateYjsProvider implements Provider {
     // Reconnect signals (push-based, no polling): resume whatever an outage
     // interrupted — an incomplete seed or a buffered local-edit queue — on
     // either network-back edge:
-    //  - the live-state worktree socket reopening (covers server restarts,
+    //  - the transport's live-state worktree socket reopening (covers server restarts,
     //    where navigator.onLine never changed; HTTP and the WS ride the same
     //    gateway, so "socket reopened" implies endpoints are reachable again);
     //  - the browser's `online` event (covers actual connectivity loss, where
     //    an idle WS may not surface a close promptly).
+    const { socketUrl } = transport;
     this.unsubscribeWsStatus = subscribeWsStatus((ev) => {
-      if (ev.status !== "open" || liveStateSocketKind(ev.url) !== "worktree")
-        return;
+      if (ev.status !== "open" || ev.url !== socketUrl) return;
       this.onTransportReconnected();
     });
     window.addEventListener("online", this.onBrowserOnline);
@@ -683,6 +704,7 @@ export class LiveStateYjsProvider implements Provider {
    */
   private async flushLoop(): Promise<void> {
     if (this.flushInFlight || this.flushHeld) return;
+    const { fetchEndpoint } = this;
     this.flushInFlight = true;
     /** Did any doc-update POST land? Gates the `lastFlushedAt` stamp. */
     let posted = false;
@@ -811,6 +833,7 @@ export class LiveStateYjsProvider implements Provider {
   }
 
   private async initDoc(): Promise<void> {
+    const { fetchEndpoint } = this;
     const recovering = this.reinitFromLocalDoc;
     const rowVanished = this.docRowVanished;
     let seed: Uint8Array;

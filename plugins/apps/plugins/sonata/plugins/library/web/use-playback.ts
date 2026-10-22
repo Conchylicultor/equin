@@ -1,4 +1,5 @@
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import { useLoadDocument } from "@plugins/apps/plugins/sonata/plugins/document/web";
 import { useSonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/web";
@@ -29,6 +30,7 @@ export function useSonataPlayback(): {
   const { isPlaying, requestPlayOnLoad, play, stop } = useSession();
   const loadDocument = useLoadDocument();
   const sources = Library.Source.useContributions();
+  const fetchEndpoint = useFetchEndpoint();
 
   const togglePlaySong = useEventCallback(
     (song: { id: string; title: string }) => {
@@ -38,7 +40,9 @@ export function useSonataPlayback(): {
         return;
       }
       void (async () => {
-        const { rawMap, pending } = await hydrateSources(sources, song.id);
+        const { rawMap, pending } = await hydrateSources(sources, song.id, {
+          fetchEndpoint,
+        });
         // A source still preparing this song: open the pane (which renders its
         // Body) rather than play a score composed without it.
         if (pending.length > 0) {

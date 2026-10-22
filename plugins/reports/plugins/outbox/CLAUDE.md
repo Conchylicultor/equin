@@ -92,7 +92,7 @@ pass the same `code` field.
     - `infra/file-watcher.defineFileWatcher`
     - `infra/file-watcher.FileWatcher`
     - `reports.isReportKindRegistered`
-    - `reports.recordReport`
+    - `reports/engine.recordReport`
   - Register: `defineFileWatcher('reports-outbox.outbox-dir')`
 - Core:
   - Uses:

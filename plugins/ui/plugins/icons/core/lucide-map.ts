@@ -392,7 +392,7 @@ export function lucideNameOf(name: string): LucideName | undefined {
 
 /**
  * The Lucide family: each mapped symbol's Lucide drawing, from the server-built
- * `lucide` sprite (`sprites/server/internal/lucide.ts`). Contributed to
+ * `lucide` sprite (`sprites/machine/internal/lucide.ts`). Contributed to
  * `Icons.Family` by icons web like any other family; a symbol with no
  * counterpart keeps its Material drawing.
  */

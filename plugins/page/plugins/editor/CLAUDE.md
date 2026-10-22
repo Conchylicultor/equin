@@ -3294,9 +3294,19 @@ touching any of it):
   unmount cannot destroy a replica a live binding still relays through. Order
   inside one end is load-bearing: replica first (its disconnect's eager flush
   queues the last bytes), owner second (so `readyForTeardown` sees them).
+- **One registry per transport** (`BlockDocs`, `internal/use-block-docs.ts`'s
+  `useBlockDocs()` over `transportScoped`): an editor's owners live beside the
+  server it is served by, and that registry carries where they seed, flush and
+  resume (`ContentDocTransport`: the transport's `fetchEndpoint` and its
+  live-state worktree `socketUrl`, handed to `LiveStateYjsProvider` at
+  construction). The same block id open under two transports (a demo scope
+  and the page) is two owners. Every id-keyed read names its registry:
+  `CollabSession.start(docs, …)`, `blockDocOwnerOf(docs, id)`,
+  `closeAllOpenTextRuns(docs)`, `liveRunsOf(docs, block)`, and
+  `applyBlockRuns({ docs, … })` (host B writes over `docs.server`).
 - **Nothing releases by block id** — a session holds the owner *reference*, so a
   stale hold can never decrement the owner that replaced its own.
-  `blockDocOwnerOf(id)` is the one id-keyed READ left, for the editor context's
+  `blockDocOwnerOf(docs, id)` is the one id-keyed READ left, for the editor context's
   mutation chokepoints (which read `runsNow()` and run their surgery inside
   `untracked`) and the replay host selection. A read at record time is a
   *capture* of the doc's runs, never a reference an entry holds.
@@ -4441,12 +4451,14 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `Editor.TurnInto` ×2
     - `Editor.BlockMenuItem` ← `page.open-as-page`
   - Contributes: `IdKinds.Kind` "block"
-  - Uses: 86 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 91 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/text-editor/caret-trigger` ×5
+    - `infra/endpoints` ×4
     - `primitives/css/spacing` ×4
     - `primitives/css/ui-kit` ×4
     - `primitives/dom/dom-selection` ×4
     - `primitives/live-state` ×4
+    - `primitives/networking` ×4
     - `primitives/persistent-draft` ×4
     - `primitives/slot-render` ×4
     - `primitives/undo-redo` ×4
@@ -4457,7 +4469,6 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives/optimistic-mutation` ×3
     - `primitives/text-editor/caret-motion` ×3
     - `reorder` ×3
-    - `infra/endpoints` ×2
     - `primitives/latest-ref` ×2
     - `ids.IdKinds`
     - `primitives/announce.announce`
@@ -4477,7 +4488,6 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `primitives/dom/web-storage.defineStore`
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
-    - `primitives/networking.subscribeWsStatus`
     - `primitives/scope/dom-scope.defineDomScope`
     - `primitives/scope/scoped-store.defineScopedStore`
     - `primitives/select-scope.ContentScope`
@@ -4498,6 +4508,7 @@ one `(block, attribute)` pair. `markdown-apply`'s read resolves it *after*
     - `BlockFootProps`
     - `BlockFrameMeta`
     - `BlockFrameProps`
+    - `BlockPasteContext`
     - `BlockPasteHandler`
     - `BlockPlainText`
     - `BlockPlainTextControl`

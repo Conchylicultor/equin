@@ -133,6 +133,8 @@ bun run test:dom plugins/framework/plugins/web-core/web/__tests__/plugin-render.
     - `primitives/error-boundary.PluginErrorBoundary`
     - `primitives/live-state.ensureNotificationsClient`
     - `primitives/live-state.NotificationsProvider`
+    - `primitives/networking.TransportProvider`
+    - `primitives/networking/page-transport.pageTransport`
     - `primitives/perfs/boot-trace.markBootInstant`
     - `primitives/perfs/boot-trace.markBootInstantAtNextCommit`
     - `primitives/perfs/boot-trace.startBootSpan`
@@ -154,6 +156,7 @@ bun run test:dom plugins/framework/plugins/web-core/web/__tests__/plugin-render.
   - Exempts itself from:
     - `plugin-boundaries` — `web/__tests__/plugin-render.test.tsx` (sanctioned)
     - `boundaries/no-platform-api` — `core/vite-contributions.ts` (debt)
+    - `networking/no-page-transport` — `web/App.tsx` (sanctioned)
 - Core:
   - Exports (types):
     - `BabelPluginItem`

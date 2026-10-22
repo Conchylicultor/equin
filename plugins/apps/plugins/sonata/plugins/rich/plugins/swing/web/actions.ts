@@ -1,4 +1,4 @@
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import type { SwingOverride } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { setSwingEndpoint } from "../shared/endpoints";
 
@@ -6,6 +6,10 @@ import { setSwingEndpoint } from "../shared/endpoints";
 // setting is written optimistically (`useWriteSongSetting(swingSetting)`) and
 // the `swings` row push reaffirms it. A genuine network failure still surfaces
 // loudly as an unhandled rejection.
-export function saveSwing(songId: string, override: SwingOverride): void {
+export function saveSwing(
+  fetchEndpoint: FetchEndpoint,
+  songId: string,
+  override: SwingOverride,
+): void {
   void fetchEndpoint(setSwingEndpoint, { id: songId }, { body: override });
 }

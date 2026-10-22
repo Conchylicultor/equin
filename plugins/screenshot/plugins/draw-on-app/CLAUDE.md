@@ -14,6 +14,7 @@ The floating tools chrome (color swatches, width slider, Undo/Clear, Cancel/Done
   - Uses:
     - `improve.insertIntoImproveDraft`
     - `infra/attachments.uploadAttachment`
+    - `infra/endpoints.useFetchEndpoint`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
@@ -26,7 +27,7 @@ The floating tools chrome (color swatches, width slider, Undo/Clear, Cancel/Done
     - `screenshot/draw-canvas.DrawCanvas`
     - `screenshot/draw-canvas.Stroke`
     - `shell/action-bar.ActionBar`
-    - `shell/notifications.toast`
+    - `shell/notifications.useToast`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --background`

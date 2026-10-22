@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { defineEndpoint } from "../../core/define-endpoint";
 import { useEndpointMutation } from "./use-endpoint-mutation";
-import { fetchEndpoint } from "./fetch-endpoint";
+import type { FetchEndpoint } from "./fetch-endpoint";
 
 // What does not compile for a desktop-only endpoint's client: its answer and
 // its mutation are reached only through the unavailable arm. The bodies are
@@ -22,7 +22,7 @@ function useMutateWithoutNarrowing() {
   if (mutation.kind === "available") mutation.mutate({ body: { n: 1 } });
 }
 
-async function _valueWithoutNarrowing() {
+async function _valueWithoutNarrowing(fetchEndpoint: FetchEndpoint) {
   const res = await fetchEndpoint(launch, {}, { body: { n: 1 } });
   // @ts-expect-error — the value is only on the `ok` arm
   void res.ok;

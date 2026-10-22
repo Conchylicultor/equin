@@ -10,6 +10,7 @@ export { resolveLaunchOptions } from "./internal/resolve";
 export type { ResolvedLaunchOption } from "./internal/resolve";
 
 export default {
+  portable: true,
   description:
     "Server half of the task launch-option registry: each option contributes how its value is written onto a task — applied from a draft, and whether it is inherited by a spawned subtask — so the chain endpoint and the task-filing MCP tools stay generic.",
   contributions: [],

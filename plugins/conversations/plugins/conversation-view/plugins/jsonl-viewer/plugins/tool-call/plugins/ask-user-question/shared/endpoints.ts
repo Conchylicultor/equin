@@ -12,4 +12,5 @@ export const answerAskUserQuestion = defineEndpoint({
   route: "POST /api/conversations/:id/answer-question",
   body: AnswerAskUserQuestionBodySchema,
   response: z.object({ turnId: z.string() }),
+  needsMachine: { feature: "Answering an agent's question" },
 });

@@ -2,7 +2,7 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { addTaskDependency, type TaskChainTarget } from "@plugins/tasks/core";
 import {
   taskRows,
@@ -52,6 +52,7 @@ function targetForSibling(
 export function TaskDependenciesActions({ taskId }: { taskId: string }) {
   const tasksResult = useLive(taskRows);
   const categoryResult = useTaskCategoryMap();
+  const fetchEndpoint = useFetchEndpoint();
 
   // No header actions until the task list and the categories are known (the
   // draft's target is the task's category — an unknown one is not "root"). A

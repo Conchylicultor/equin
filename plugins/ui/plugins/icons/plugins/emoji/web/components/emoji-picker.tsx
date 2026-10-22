@@ -18,6 +18,9 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { EmojiSchema, type Emoji } from "../../core";
 import { EmojiGlyph } from "./emoji-glyph";
+import { useTransport } from "@plugins/primitives/plugins/networking/web";
+import { unavailableMessage } from "@plugins/infra/plugins/endpoints/core";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { EMOJIBASE_LOCALE, EMOJIBASE_MIRROR_ID } from "../../shared/mirror";
 
 /** Today's grid: nine columns. A caller may ask for another count. */
@@ -213,8 +216,25 @@ export interface EmojiPickerProps {
  *
  * Mount it only while visible (e.g. inside an open popover): it loads its data
  * on mount.
+ *
+ * The mirror is the page's own server's, reached by URL (frimousse fetches
+ * `<base>/<locale>/data.json` itself): under a transport no URL reaches (an
+ * in-browser server — the demo) that URL would load from the page's real
+ * server, so the picker says it is unavailable instead.
  */
-export function EmojiPicker({
+export function EmojiPicker(props: EmojiPickerProps) {
+  const { servesUrls } = useTransport();
+  if (!servesUrls) {
+    return (
+      <Text as="div" variant="caption" tone="muted">
+        {unavailableMessage({ feature: "The emoji picker" })}
+      </Text>
+    );
+  }
+  return <MirroredEmojiPicker {...props} />;
+}
+
+function MirroredEmojiPicker({
   value,
   onSelect,
   variant = "compact",

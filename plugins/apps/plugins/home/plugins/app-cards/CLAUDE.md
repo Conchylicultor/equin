@@ -22,20 +22,16 @@ create-app flow is designed.
 - Description: Launcher grid of one card per installed app (a DataView of the installedApp row kind; plugins add fields to it as client fields of that kind), plus the new-app placeholder.
 - Web:
   - Contributes: `Home.Section` "Apps" → `AppGrid`
-  - Uses:
-    - `apps-core.Apps`
-    - `apps-core.useCurrentAppId`
-    - `apps-core/app-launcher.appRow`
-    - `apps-core/app-launcher.AppRow`
-    - `apps-core/app-launcher.appRowOverrides`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps-core/app-launcher` ×3
+    - `primitives/data-view` ×3
+    - `apps-core` ×2
+    - `apps/prototypes/gallery` ×2
+    - `infra/endpoints` ×2
+    - `shell/notifications` ×2
     - `apps-core/tabs.useActivateApp`
     - `apps/home/shell.Home`
-    - `apps/prototypes/gallery.mintPrototypeFolder`
-    - `apps/prototypes/gallery.newPrototypePrompt`
     - `primitives/css/ui-kit.Button`
-    - `primitives/data-view.CreateOption`
-    - `primitives/data-view.DataView`
-    - `primitives/data-view.defineDataView`
     - `primitives/data-view/capsule-toolbar.capsuleToolbar`
     - `primitives/launch.LaunchAgentForm`
     - `primitives/overlay/imperative-dialog.openDialog`

@@ -1,4 +1,4 @@
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   useEditableField,
   type EditableField,
@@ -32,6 +32,7 @@ function fieldProps(field: EditableField<string>) {
  * No padding of its own: the section card supplies the body's inset.
  */
 export function ServerEditForm({ server }: { server: Server }) {
+  const fetchEndpoint = useFetchEndpoint();
   const save = async (body: UpdateServerBody): Promise<void> => {
     await fetchEndpoint(updateServer, { id: server.id }, { body });
   };

@@ -11,10 +11,12 @@ const SpanSchema = z.object({
   maxRssBytes: z.number().optional(),
 });
 
+// Read from the worktree's build artifacts on the computer's disk.
 export const getBuildRunProfileByWorktree = defineEndpoint({
   route: "GET /api/debug/profiling/build/:worktree/:buildId",
   response: z.object({
     spans: z.array(SpanSchema),
     totalMs: z.number(),
   }),
+  needsMachine: { feature: "Build profiles" },
 });

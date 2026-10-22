@@ -1,12 +1,11 @@
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { defineAutomation } from "@plugins/tasks/plugins/automations/server";
+import { ReportKind, type ReportRow } from "@plugins/reports/server";
 import {
   linkReportsToTask,
   renderReportTask,
-  ReportKind,
   uninvestigatedReports,
-  type ReportRow,
-} from "@plugins/reports/server";
+} from "@plugins/reports/plugins/engine/server";
 import {
   reportInvestigationsConfig,
   REPORT_INVESTIGATIONS_ID,

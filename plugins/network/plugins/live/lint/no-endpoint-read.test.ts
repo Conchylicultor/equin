@@ -11,9 +11,10 @@
  * that does not exist on disk (`web/case.tsx` beside this file — under a
  * `web/` folder, the rule's scope), under an inferred project whose options
  * come from `tsconfig.case.json` (`types: []` keeps it fast). The endpoints
- * barrel does not resolve there, so `fetchEndpoint` is `any` — the rule binds
- * it by its import, not its type — while {@link PRELUDE} declares endpoint
- * definitions with literal routes.
+ * barrel does not resolve there, so a case binds `fetchEndpoint` itself (a
+ * `declare const`, a `useFetchEndpoint()` result, a parameter) — the rule
+ * recognises the client by its binding NAME, not its type — while
+ * {@link PRELUDE} declares endpoint definitions with literal routes.
  */
 
 import { setDefaultTimeout } from "bun:test";
@@ -44,6 +45,8 @@ declare const save: Def<"POST /api/save">;
 declare const ack: Def<"POST /api/ack">;
 declare const remove: Def<"DELETE /api/remove">;
 declare const loose: { readonly route: string };
+declare const transport: unknown;
+type FetchEndpoint = (def: unknown, params?: unknown) => Promise<unknown>;
 declare function useEffect(fn: () => unknown, deps?: unknown[]): void;
 declare function useLayoutEffect(fn: () => unknown, deps?: unknown[]): void;
 declare function useCallback<T>(fn: T, deps: unknown[]): T;
@@ -112,7 +115,7 @@ ruleTester.run(
         code:
           PRELUDE +
           `
-          import { fetchEndpoint } from "${ENDPOINTS_WEB}";
+          declare const fetchEndpoint: FetchEndpoint;
           import { useMutation } from "${REACT_QUERY}";
           useMutation({ mutationFn: (b) => fetchEndpoint(save, { body: b }) });
           async function onClick() { await fetchEndpoint(save, {}); }
@@ -133,7 +136,7 @@ ruleTester.run(
       {
         filename: `${LINT_DIR}/${CORE_CASE}`,
         code: `
-          import { fetchEndpoint } from "${ENDPOINTS_WEB}";
+          declare const fetchEndpoint: (def: unknown, params?: unknown) => Promise<unknown>;
           const o = { queryFn: () => fetchEndpoint(read, {}) };
         `,
       },
@@ -157,23 +160,13 @@ ruleTester.run(
           const o = { queryFn: () => fetchEndpoint() };
         `,
       },
-      // A local shadowing the imported fetchEndpoint.
-      {
-        filename: WEB,
-        code:
-          PRELUDE +
-          `
-          import { fetchEndpoint } from "${ENDPOINTS_WEB}";
-          const o = { queryFn: (fetchEndpoint) => fetchEndpoint() };
-        `,
-      },
       // fetchEndpoint as a queryFn property's KEY side, or in a sibling.
       {
         filename: WEB,
         code:
           PRELUDE +
           `
-          import { fetchEndpoint } from "${ENDPOINTS_WEB}";
+          declare const fetchEndpoint: FetchEndpoint;
           const o = { queryFn: read, onSuccess: () => fetchEndpoint(ack, {}) };
         `,
       },
@@ -201,7 +194,7 @@ ruleTester.run(
       // ── GET fetchEndpoint / readNdjson by where it runs ──
       // A write in an effect is not a read.
       web(`
-        import { fetchEndpoint } from "${ENDPOINTS_WEB}";
+        declare const fetchEndpoint: FetchEndpoint;
         function Panel() {
           useEffect(() => { void fetchEndpoint(save, {}); }, []);
           return null;
@@ -209,7 +202,7 @@ ruleTester.run(
       `),
       // A GET in a JSX handler, a mutationFn, or an onSuccess.
       web(`
-        import { fetchEndpoint } from "${ENDPOINTS_WEB}";
+        declare const fetchEndpoint: FetchEndpoint;
         import { useMutation } from "${REACT_QUERY}";
         function Panel() {
           useMutation({ mutationFn: () => fetchEndpoint(read, {}) });
@@ -220,7 +213,7 @@ ruleTester.run(
       // A named function used only as a handler — even through useCallback,
       // a callback hook, and a deps array.
       web(`
-        import { fetchEndpoint } from "${ENDPOINTS_WEB}";
+        declare const fetchEndpoint: FetchEndpoint;
         async function download() { return fetchEndpoint(read, {}); }
         function Panel() {
           const load = useCallback(async () => fetchEndpoint(read, {}), []);
@@ -231,7 +224,7 @@ ruleTester.run(
       `),
       // A callback an effect registers for an event runs on the event.
       web(`
-        import { fetchEndpoint } from "${ENDPOINTS_WEB}";
+        declare const fetchEndpoint: FetchEndpoint;
         function Panel() {
           useEffect(() => {
             const onKey = () => void fetchEndpoint(read, {});
@@ -244,7 +237,7 @@ ruleTester.run(
       // A function stored in an object, passed as a non-on* prop, or
       // returned escapes the file's view.
       web(`
-        import { fetchEndpoint } from "${ENDPOINTS_WEB}";
+        declare const fetchEndpoint: FetchEndpoint;
         export const api = { status: () => fetchEndpoint(read, {}) };
         function useThing() {
           const refetch = useCallback(() => fetchEndpoint(read, {}), []);
@@ -258,7 +251,7 @@ ruleTester.run(
       // `return`), an `on*` handler property assigned in an effect, and the
       // latest-ref `ref.current = fn` all escape — named or anonymous alike.
       web(`
-        import { fetchEndpoint } from "${ENDPOINTS_WEB}";
+        declare const fetchEndpoint: FetchEndpoint;
         declare const es: { onmessage: unknown };
         declare const handlerRef: { current: unknown };
         function useOpenFile() {
@@ -284,7 +277,7 @@ ruleTester.run(
         import { readNdjson } from "${NDJSON_WEB}";
         function Panel() {
           useEffect(() => {
-            void (async () => { for await (const f of readNdjson(remove.route, "/x")) void f; })();
+            void (async () => { for await (const f of readNdjson(transport, remove.route, "/x")) void f; })();
           }, []);
           return null;
         }
@@ -299,6 +292,37 @@ ruleTester.run(
       `),
     ],
     invalid: [
+      // The transport-bound client, recognised by its binding name: a hook's
+      // `const fetchEndpoint = useFetchEndpoint()`, a parameter, a
+      // destructured dependency.
+      {
+        filename: WEB,
+        code:
+          PRELUDE +
+          `
+          import { useFetchEndpoint } from "${ENDPOINTS_WEB}";
+          function useThing() {
+            const fetchEndpoint = useFetchEndpoint();
+            return { queryFn: () => fetchEndpoint(read, {}) };
+          }
+          const o = { queryFn: (fetchEndpoint) => fetchEndpoint() };
+          function make({ fetchEndpoint }) {
+            return { queryFn: () => fetchEndpoint(read, {}) };
+          }
+        `,
+        errors: [queryFnFetch, queryFnFetch, queryFnFetch],
+      },
+      {
+        ...web(`
+          import { useFetchEndpoint } from "${ENDPOINTS_WEB}";
+          function Panel() {
+            const fetchEndpoint = useFetchEndpoint();
+            useEffect(() => { void fetchEndpoint(read, {}); }, []);
+            return null;
+          }
+        `),
+        errors: [effectFetch()],
+      },
       {
         filename: WEB,
         code: PRELUDE + `import { useEndpoint } from "${ENDPOINTS_WEB}";`,
@@ -375,7 +399,7 @@ ruleTester.run(
         code:
           PRELUDE +
           `
-          import { fetchEndpoint } from "${ENDPOINTS_WEB}";
+          declare const fetchEndpoint: FetchEndpoint;
           useQueryResource({ queryKey: ["x"], queryFn: () => fetchEndpoint(read, {}) });
           const a = { queryFn: async function () { return await fetchEndpoint(read, {}); } };
           const b = { "queryFn": async ({ pageParam }) => {
@@ -385,27 +409,12 @@ ruleTester.run(
         `,
         errors: [queryFnFetch, queryFnFetch, queryFnFetch],
       },
-      // Aliased, off a namespace, or destructured off the module object.
-      {
-        filename: WEB,
-        code:
-          PRELUDE +
-          `
-          import { fetchEndpoint as get } from "${ENDPOINTS_WEB}";
-          import * as endpoints from "${ENDPOINTS_WEB}";
-          const { fetchEndpoint: f } = endpoints;
-          const o = { queryFn: () => get(read, {}) };
-          const p = { queryFn: () => endpoints.fetchEndpoint(read, {}) };
-          const q = { queryFn: () => f(read, {}) };
-        `,
-        errors: [queryFnFetch, queryFnFetch, queryFnFetch],
-      },
       // ── GET fetchEndpoint / readNdjson by where it runs ──
       // An effect, a layout effect (through a then-chain and an IIFE),
       // useMemo, a hook body, a component body, and module top level.
       {
         ...web(`
-          import { fetchEndpoint } from "${ENDPOINTS_WEB}";
+          declare const fetchEndpoint: FetchEndpoint;
           void fetchEndpoint(read, {});
           function useThing() { void fetchEndpoint(read, {}); }
           function Panel() {
@@ -432,7 +441,7 @@ ruleTester.run(
       // function, a useCallback refresh also bound to a handler.
       {
         ...web(`
-          import { fetchEndpoint } from "${ENDPOINTS_WEB}";
+          declare const fetchEndpoint: FetchEndpoint;
           async function loadOne() { return (await fetchEndpoint(read, {})); }
           function Panel() {
             const refresh = useCallback(async () => { await fetchEndpoint(readOther, {}); }, []);
@@ -450,9 +459,9 @@ ruleTester.run(
       // A route whose type is not a literal may be a GET.
       {
         ...web(`
-          import * as endpoints from "${ENDPOINTS_WEB}";
+          declare const fetchEndpoint: FetchEndpoint;
           function Panel() {
-            useEffect(() => { void endpoints.fetchEndpoint(loose, {}); }, []);
+            useEffect(() => { void fetchEndpoint(loose, {}); }, []);
             return null;
           }
         `),
@@ -464,7 +473,7 @@ ruleTester.run(
           import { readNdjson as stream } from "${NDJSON_WEB}";
           function useFeed() {
             useEffect(() => {
-              void (async () => { for await (const f of stream(read.route, "/api/read")) void f; })();
+              void (async () => { for await (const f of stream(transport, read.route, "/api/read")) void f; })();
             }, []);
           }
         `),

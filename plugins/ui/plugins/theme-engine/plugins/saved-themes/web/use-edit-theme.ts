@@ -18,7 +18,7 @@ import {
   patchSavedThemeFragment,
   type FragmentEdit,
 } from "../core";
-import { awaitSavedThemesWrite } from "./await-saved-themes-write";
+import { useAwaitSavedThemesWrite } from "./await-saved-themes-write";
 
 export interface ThemeEdits {
   /**
@@ -73,6 +73,7 @@ export function useEditTheme(scopeId: string | undefined): ThemeEdits {
   const create = useEndpointMutation(createSavedTheme);
   const patchFragment = useEndpointMutation(patchSavedThemeFragment);
   const patchColorAdjust = useEndpointMutation(patchSavedThemeColorAdjust);
+  const awaitSavedThemesWrite = useAwaitSavedThemesWrite();
 
   // The scope now selects the copy its first edit made: later edits see a
   // custom theme and patch it directly, so the queue entry is done.

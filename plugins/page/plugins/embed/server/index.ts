@@ -3,6 +3,7 @@ import { Editor } from "@plugins/page/plugins/editor/server";
 import { embedBlock } from "../core";
 
 export default {
+  portable: true,
   description:
     "Embed block type: registers its `data` schema (external URL) at the server write boundary.",
   contributions: [Editor.BlockData(embedBlock)],

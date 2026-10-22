@@ -3,6 +3,7 @@ import { Editor } from "@plugins/page/plugins/editor/server";
 import { codeBlock } from "../core";
 
 export default {
+  portable: true,
   description:
     "Code block type: registers its `data` schema (code + language) at the server write boundary.",
   contributions: [Editor.BlockData(codeBlock)],

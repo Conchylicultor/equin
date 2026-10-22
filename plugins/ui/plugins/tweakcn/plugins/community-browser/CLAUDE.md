@@ -12,8 +12,8 @@
   - Uses:
     - `config_v2.useSetConfig`
     - `infra/endpoints.EndpointError`
-    - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.useEndpointMutation`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`
     - `primitives/css/fill.fillClasses`
     - `primitives/css/spacing.Stack`
@@ -28,7 +28,7 @@
     - `ui/theme-engine.ThemeSourceEntry`
     - `ui/theme-engine.useThemes`
     - `ui/theme-engine.useThemeScopeId`
-    - `ui/theme-engine/saved-themes.awaitSavedThemesWrite`
+    - `ui/theme-engine/saved-themes.useAwaitSavedThemesWrite`
     - `ui/theme-engine/theme-customizer.ThemeCustomizer`
 - Server:
   - Contributes: `resource.declare` "tweakcn.community-catalog"

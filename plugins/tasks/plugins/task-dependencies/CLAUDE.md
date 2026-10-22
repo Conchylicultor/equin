@@ -8,7 +8,7 @@
 - Web:
   - Contributes: `TaskDetailSlots.Section` "Dependencies" → `TaskDependencies`
   - Uses:
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/row.Row`

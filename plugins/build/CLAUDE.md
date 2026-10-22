@@ -3,13 +3,13 @@
 Auto-build is a **convergence loop on "this checkout's HEAD is what is
 deployed"**, not a queue of push events: a request that arrives while a build is
 in flight is DROPPED — its claiming INSERT loses the in-flight index — so the
-request is re-derived rather than remembered. `reconcileDeployment` (`internal/reconcile.ts`) is that
+request is re-derived rather than remembered. `reconcileDeployment` (`machine/internal/reconcile.ts`) is that
 re-derivation, and it **takes no argument** — there is no baseline to carry, so
 nothing is lost when a build kills the process that would have carried one.
 
 It runs at five edges: the target moving (`buildRunJob`, on the durable
 `refAdvanced` trigger), a build reaching terminal (the build job's `onEnded`,
-`internal/run-state.ts`), this backend starting (`onReady`), the
+`machine/internal/run-state.ts`), this backend starting (`onReady`), the
 `compositions` config changing (`watchConfig`), and the `build.composition-tick`
 cron. The decision is stateless and idempotent,
 so an extra edge is free and a missed edge degrades to "converges at the next
@@ -18,10 +18,27 @@ the debounce a coalescing optimisation rather than a correctness mechanism.
 
 The decision itself is NOT here — it is the pure `wantsBuild` in
 `plugins/deployment/core`, over the pins that plugin owns, plus the pure
-`compositionWantsRebuild` in `internal/composition-trigger.ts` for the served
-compositions. `internal/wants-build.ts` only binds them to db/config and to the
+`compositionWantsRebuild` in `machine/internal/composition-trigger.ts` for the served
+compositions. `machine/internal/wants-build.ts` only binds them to db/config and to the
 main-only scope, in ONE `decideBuilds(now)` so every edge re-derives both halves
 from one read. Read `plugins/deployment/CLAUDE.md` before touching any of it.
+
+## Two halves: what every host serves, and what runs builds
+
+`server/` is **portable** (`portable: true`): the build-run id kind, the build
+config (`ConfigV2.Register`), the Build task category and the `build.history`
+collection — reads a host without the computer (the in-browser demo) serves on
+its own database. Everything that RUNS a build is `machine/`: the Build and
+Serve routes (both endpoints declared `needsMachine`, so a host without the
+computer answers them "not available" and the Build button renders disabled),
+the jobs, the `refs/heads/main` trigger, the boot and config-watch reconcile
+(`onReady`), and the run-terminal watcher (`onRunTerminal`, the machine
+barrel's one export). The claim-time settle of a dead in-flight holder is
+`run-ledger/machine`'s, for the same reason: it reads the disk.
+
+`build.history` scopes to `runtimeNamespace()` at module eval, which a browser
+host answers too: its worker entry declares its composition as its namespace
+(`agent-manager/demo/bin/declare-namespace.ts`).
 
 ## The composition arm of the same loop
 
@@ -84,7 +101,7 @@ moved. Do not "fix" it by scoping the index per target.
 
 `./singularity build` is a **supervised job**
 (`@plugins/infra/plugins/jobs/plugins/supervised-job`) named
-`build.run.supervised`, declared once in `internal/run-build.ts`. There is no
+`build.run.supervised`, declared once in `machine/internal/run-build.ts`. There is no
 `triggerBuild` any more and nothing calls a spawner directly: every request —
 the Build button, the Serve button, the auto-build debounce — is
 `buildJob.enqueue({ trigger, compositions? })`.
@@ -96,7 +113,7 @@ jobs plugin's suspend sentinel, so a 20-minute build holds a worker slot for
 milliseconds and the workflow comes back as a fresh dispatch when the child's
 exit marker lands. Read `supervised-job/CLAUDE.md` before changing any of it.
 
-What each arm of `internal/run-build.ts` owns, and why the split is where it is:
+What each arm of `machine/internal/run-build.ts` owns, and why the split is where it is:
 
 - **`claim`** — `claimBuildRun`, and the claiming INSERT against
   `build_runs_inflight_uniq` IS the lock. A request that loses returns `null`,
@@ -238,7 +255,7 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
 
 ## Plugin reference
 
-- Description: Trigger `./singularity build` from the toolbar.
+- Description: Trigger `./singularity build` from the toolbar. Build, portable half: the build-run id kind, the build config, the Build task category and the build.history collection over build_runs — what a host without the computer serves too. Running builds (the jobs, the routes, the auto-build reconcile) is build/machine.
 - Web:
   - Slots:
     - `BuildDetailSlots.Section`
@@ -261,10 +278,10 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `Pane.Register` "build-detail"
     - `DebugApp.Sidebar` "Builds"
     - `ConfigV2.WebRegister` "config"
-  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×4
     - `primitives/live-state` ×4
-    - `infra/endpoints` ×2
+    - `infra/endpoints` ×3
     - `primitives/log-channels` ×2
     - `primitives/pane` ×2
     - `apps-core/tabs.appLink`
@@ -287,7 +304,7 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `primitives/relative-time.ElapsedTime`
     - `runs.RunsDataView`
     - `shell/action-bar.ActionBar`
-    - `shell/notifications.toast`
+    - `shell/notifications.useToast`
     - `ui/icons.Icon`
   - Exports (types): `ReloadAdvice`
   - Exports (values):
@@ -305,24 +322,22 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `resource.declare` "build.history:groups"
     - `resource.declare` "build.history:rows"
     - `trigger` "build.run"
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra/paths` ×4
-    - `config_v2` ×3
-    - `build/deployment` ×2
-    - `build/run-ledger` ×2
-    - `infra/endpoints` ×2
-    - `database.db`
+  - Uses:
+    - `build/run-ledger._buildRuns`
+    - `config_v2.ConfigV2`
     - `ids.IdKinds`
-    - `infra/events.Trigger`
-    - `infra/file-watcher.defineFileWatcher`
-    - `infra/git/git-watcher.refAdvanced`
-    - `infra/jobs/supervised-job.defineSupervisedJob`
-    - `infra/jobs.defineJob`
-    - `infra/worktree.readCompositionMarker`
     - `network/live.serveCollection`
-    - `primitives/log-channels.Log`
-    - `shell/notifications.recordNotification`
     - `tasks/task-category.TaskCategory`
+  - Resources:
+    - `build.history` (keyed, window)
+    - `build.history:groups` (push)
+    - `build.history:rows` (keyed, point)
+- Machine:
+  - Uses:
+    - `build/deployment.deploymentServed`
+    - `build/deployment.readDeployment`
+    - `build/run-ledger.settleDeadInflightRun`
+    - `infra/endpoints.implementMachine`
   - Exports (values): `onRunTerminal`
   - Register:
     - `defineJob('build.run')`
@@ -330,10 +345,6 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `defineJob('build.composition-tick')`
     - `defineSupervisedJob('build.run.supervised')`
     - `defineFileWatcher('build.run-terminal')`
-  - Resources:
-    - `build.history` (keyed, window)
-    - `build.history:groups` (push)
-    - `build.history:rows` (keyed, point)
   - Routes:
     - `POST /api/build`
     - `POST /api/build/serve`
@@ -373,6 +384,7 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
     - `active-data/build-run`
+    - `apps/agent-manager/demo`
     - `build/build-commits`
     - `build/build-fix`
     - `build/build-info`
@@ -380,10 +392,6 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `build/build-profiling`
     - `build/runs-arm`
     - `debug/reports`
-- Exemptions:
-  - Exempts itself from:
-    - `boundaries/no-platform-api` — `server/internal/run-terminal.ts` (debt)
-    - `config-v2:host-registrations-paired` — `server/index.ts` (debt)
 - Shared:
   - Exports (types): `BuildRun`
   - Exports (values):

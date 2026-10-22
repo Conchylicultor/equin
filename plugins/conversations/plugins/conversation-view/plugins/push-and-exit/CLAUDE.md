@@ -9,8 +9,8 @@
   - Contributes:
     - `PromptEditorSlots.FloatingAction` → `PushAndExitButton`
     - `ConfigV2.WebRegister` "config"
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations/conversation-view/pending-turn` ×3
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations/conversation-view/pending-turn` ×4
     - `conversations/conversation-view` ×3
     - `infra/endpoints` ×3
     - `config_v2` ×2
@@ -22,7 +22,7 @@
     - `primitives/live-state.combineResources`
     - `primitives/persistent-draft.useDraft`
     - `primitives/prompt-editor.PromptEditorSlots`
-    - `shell/notifications.toast`
+    - `shell/notifications.useToast`
     - `ui/icons.Icon`
 - Server:
   - Contributes: `ConfigV2.Register` "config"

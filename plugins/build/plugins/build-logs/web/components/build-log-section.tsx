@@ -4,7 +4,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useCallback, type ReactElement } from "react";
-import { toast } from "@plugins/shell/plugins/notifications/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { LiveLogChannel } from "@plugins/primitives/plugins/log-channels/web";
 import {
   Collapsible,
@@ -45,6 +45,7 @@ export function BuildLogSection({ runId }: { runId: string }): ReactElement {
 }
 
 function PersistedLogs({ steps }: { steps: BuildStepLog[] }): ReactElement {
+  const toast = useToast();
   const copyAll = useCallback(async () => {
     const text = steps
       .map((s) => {
@@ -60,7 +61,7 @@ function PersistedLogs({ steps }: { steps: BuildStepLog[] }): ReactElement {
       description: "Build logs copied to clipboard",
       variant: "info",
     });
-  }, [steps]);
+  }, [steps, toast]);
 
   return (
     <Stack gap="xs">
@@ -148,6 +149,7 @@ function StepSection({ step }: { step: BuildStepLog }): ReactElement {
  * used to carry its own copy of them.
  */
 function LiveLogs(): ReactElement {
+  const toast = useToast();
   return (
     <LiveLogChannel
       channel={BUILD_LOG_CHANNEL}

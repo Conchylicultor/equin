@@ -1,5 +1,6 @@
 import type { MouseEvent } from "react";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import type { BlockEditorAPI } from "@plugins/page/plugins/editor/web";
 import { textOf, type Block } from "@plugins/page/plugins/editor/core";
 import { turnBlockIntoPage } from "../internal/turn-block-into-page";
@@ -26,12 +27,13 @@ export function TurnIntoPageItem({
   api: BlockEditorAPI;
   close: () => void;
 }) {
+  const fetchEndpoint = useFetchEndpoint();
   return (
     <Row
       icon={<Icon icon={descriptionIcon} className="text-muted-foreground" />}
       onMouseDown={(e: MouseEvent) => {
         e.preventDefault();
-        void turnBlockIntoPage(block.id, textOf(block));
+        void turnBlockIntoPage(fetchEndpoint, block.id, textOf(block));
         close();
       }}
     >

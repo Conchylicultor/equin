@@ -1,36 +1,33 @@
 # reports
 
-## Two throttles, on two axes
+Two halves. This plugin's `server/` barrel is the PORTABLE one (`portable:
+true`, so the demo's browser worker boots it): the `reports` table, its live
+read `reports.list`, the `ReportKind` / `ReportNoiseRule` slots every kind and
+rule contributes to, the fan-out ceiling config, and the two contracts the
+engine and the investigations automation meet on (`reportInvestigationSink`,
+`reportRecordedSignal`). Everything that WRITES reports — `recordReport`, the
+routes, the crash hooks and buffer, the change producer, retention, the noise
+backfill, investigation — is the engine,
+[`plugins/engine`](plugins/engine/CLAUDE.md), a non-portable `server/` barrel.
+So a kind's own server code imports `ReportKind` / `ReportRow` from here and
+`recordReport` from `@plugins/reports/plugins/engine/server`.
 
-`recordReport` gates every occurrence on both, and they are not
-interchangeable:
+`ReportKind` is declared `absentOnHost`: it is how the engine records,
+renders and files a kind, read by nothing `reports.list` answers, so a host
+without a kind's contributor (the demo's worker) is not missing anything it
+serves. Investigating a report (`investigateReport`,
+`POST /api/reports/:id/investigate`) files a task for an agent on the
+computer: it is `needsMachine`, served by the engine's `machine/` half, and
+the web helper `investigate(fetchEndpoint, id)` (`web/investigate.ts`, the
+scope's — `web/report.ts` is the page's telemetry) answers the unavailable
+arm, which the Fix button gates on.
 
-- **Per fingerprint** (`server/internal/velocity.ts`) — one fingerprint firing
-  repeatedly still gets its row and its count; only the bell churn is skipped.
-- **Across fingerprints, per kind** (`server/internal/fan-out.ts`) — how many
-  DISTINCT fingerprints of one kind may each raise their own alert per window
-  (`reports.fanOutPerWindow`, default 20). Past the budget a newly-alerting
-  fingerprint writes no row and no notification; it folds into one
-  `report-storm` rollup (kind owned by `plugins/debug/plugins/report-storm`).
-  A repeat of an already-alerting fingerprint is NOT fan-out and passes
-  through untouched, and the budget refills every window — so collapse is
-  temporary. A kind may raise its own ceiling via `meta.fanOutPerWindow`;
-  there is deliberately no way to remove one.
+The report contract every runtime shares — the HTTP body (`ReportBody`, and
+`recordReport`'s `ReportInput`), the result, and the two endpoint declarations
+— is `core/`, because the engine that serves the routes is a child plugin and
+cannot reach a plugin-private `shared/`.
 
-`recordReport` therefore returns a discriminated `RecordReportResult`
-(`recorded` | `shed` | `collapsed`) — "the engine took ownership" must never
-read as "recorded with no id".
-
-## The bell re-alerts; a kind cannot opt out
-
-A report IS a problem, and a problem that recurs after you dismissed it is news.
-So the bell's re-alert window has a floor (`RENOTIFY_FLOOR_MS`, 10 min in
-`record-report.ts`) and `meta.notifCooldownMs` is only ever a RAISE above it —
-same shape as `meta.fanOutPerWindow`, and deliberately no spelling for "never".
-A dismissed row comes back unread on the next occurrence past the window;
-occurrences inside it only bump `count`.
-
-## Readers are live; the table's change source is a producer
+## Readers are live
 
 Every reader reads `reports.list` (`core/resources.ts`), a
 `liveCollection` served by `serveCollection` (`server/internal/list-resource.ts`):
@@ -38,50 +35,20 @@ the Reports DataView's window, the detail pane's by-id row (`useLiveRow`, its
 `:rows`) and the kind / source filter options (its `:groups`, read as DataView
 facets). There are no endpoints and no revision tick.
 
-`reports` has no change-feed trigger. A crash loop UPDATEs its hot row thousands
-of times a minute, and a per-statement trigger + changelog row + NOTIFY would
-amplify load during the very storms it records. Instead the table has an
-in-process **change producer** (`server/internal/producer.ts`,
-change-feed's `defineChangeProducer`): every write is
-`reportsProducer.mutate(db, (q, t) => <builder on t>, { latency })`, which runs
-the statement, reads the PKs it returned and routes them to the tuples reading
-them — coalesced to one flush per 2 s, so a storm costs each reader one scoped
-refill per window. The four writers: `recordReport` (`writeReport`, background —
-the rate-limited path routes too), `investigateReport` (interactive: flushes at
-once), the boot noise backfill (one statement per flip) and the nightly
-retention sweep (retention deletes through the producer when the table has one).
-
-Rules that follow:
-
-- **A new writer goes through `reportsProducer.mutate`.** A bare
-  `db.update(_reports)` — or raw SQL writing `reports` — reaches no live reader;
-  the `change-feed:producer-writes` check fails on it.
-- **Only the serving backend writes.** `mutate` throws in an exec child (a
-  supervised job body) or a CLI: its change would reach no subscriber. Such a
-  process files through the outbox (below).
-- **Volatile.** A change still pending in the 2 s window is lost on a restart;
-  an open reader reloads in full when it resubscribes. Within one subscription a
-  lost change heals the window's membership but not the values of rows already
-  shown. No reader of `reports` may be L2-persisted (A6, live-state-snapshot).
-- **The bell and the pane disagree during a burst, by design.** While a
-  fingerprint is rate-limited the bell stays quiet, but its row's count keeps
-  moving in an open pane (every 2 s).
-
-## Filing from a process with no server
-
-`recordReport` runs inside a backend. A process with no server — a
-`./singularity` CLI run, a supervised child — files through the **report
-outbox** instead (`plugins/reports/plugins/outbox`): `fileReportFromProcess`
-writes one JSON file into a host-global directory, and main's backend records it
-under the server-only `cli` source. An entry may carry the writer's merge-base
-and the files it is about; main drops it when it has changed those files since,
-so out-of-date code does not file reports. See that plugin's CLAUDE.md.
+Its change source is the engine's in-process change producer, never a
+change-feed trigger — see the engine's *Every write goes through the producer*.
+On a host without the computer (the browser worker over PGlite) neither exists:
+no change feed runs there and the engine is not booted. That is consistent, not
+a gap, because every writer of `reports` is the engine's — the worker graph
+holds no code that can write the table, so the window is the seed and nothing
+can move it. A portable writer of `reports` would need a change source on that
+host first.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.
+- Description: Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
 - Web:
   - Slots: `Reports.KindView`
   - Slot contributors: 28 contributors — full list in [REFERENCE.md](./REFERENCE.md)
@@ -92,7 +59,8 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
   - Uses:
     - `config_v2.ConfigV2`
     - `ids.IdKinds`
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.fetchEndpointOver`
+    - `primitives/networking/page-transport.pageTransport`
     - `primitives/scope/tab-id.getTabId`
     - `primitives/slot-render.defineDispatchSlot`
   - Exports (types): `ReportContext`
@@ -107,63 +75,33 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `resource.declare` "reports.list:groups"
     - `resource.declare` "reports.list:rows"
     - `ConfigV2.Register` "reports"
-    - `change-producer` "reports"
-    - `fork-data-exclusion` "reports"
   - Uses:
-    - `build/server-build-id.getServerGraphHash`
     - `config_v2.ConfigV2`
-    - `config_v2.getConfig`
     - `database.db`
-    - `database/admin.ExcludeFromFork`
-    - `database/change-feed.defineChangeProducer`
     - `ids.IdKinds`
-    - `infra/endpoints.HttpError`
-    - `infra/endpoints.implement`
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`
-    - `infra/host/duress/shed.createShedBuffer`
-    - `infra/host/duress/shed.ShedSummary`
-    - `infra/retention.defineRetention`
-    - `infra/warmup.defineWarmup`
     - `network/live.serveCollection`
-    - `shell/notifications.recordNotification`
-    - `shell/notifications.setMutedByMetadata`
   - DB schema: `plugins/reports/server/internal/tables.ts`
   - Exports (types):
     - `InvestigationTaskRequest`
-    - `RecordReportResult`
     - `ReportKindSpec`
     - `ReportKindVariant`
     - `ReportNoiseInput`
     - `ReportNoiseRuleSpec`
     - `ReportRow`
-    - `StormRosterEntry`
-    - `StormSummary`
   - Exports (values):
     - `_reports`
-    - `DEFAULT_REPORT_DEBOUNCE_MS`
     - `getReportTitle`
     - `isReportKindRegistered`
-    - `linkReportsToTask`
-    - `recordReport`
-    - `recordReportDebounced`
-    - `renderReportTask`
     - `reportInvestigationSink`
     - `ReportKind`
     - `ReportNoiseRule`
     - `reportRecordedSignal`
-    - `uninvestigatedReportCounts`
-    - `uninvestigatedReports`
-  - Register:
-    - `defineWarmup('reports.backfill-noise')`
-    - `defineJob('retention.reports')`
   - Resources:
     - `reports.list` (keyed, window)
     - `reports.list:groups` (push)
     - `reports.list:rows` (keyed, point)
-  - Routes:
-    - `POST /api/reports`
-    - `POST /api/reports/:id/investigate`
 - Core:
   - Uses:
     - `config_v2.defineConfig`
@@ -177,16 +115,21 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `ids.defineIdKind`
     - `ids.idKindField`
     - `ids.IdOf`
+    - `infra/endpoints.defineEndpoint`
     - `infra/entities.entityRef`
     - `network/live.liveCollection`
     - `primitives/pane.defineRoute`
   - Exports (types):
     - `Report`
+    - `ReportBody`
     - `ReportFingerprintContext`
     - `ReportId`
+    - `ReportInput`
+    - `ReportResult`
     - `ReportSource`
   - Exports (values):
     - `CLIENT_REPORT_SOURCES`
+    - `investigateReport`
     - `reportDetailRoute`
     - `reportFields`
     - `reportIdKind`
@@ -196,10 +139,11 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `reportsList`
     - `reportsRootRoute`
     - `SERVER_REPORT_SOURCES`
+    - `submitReport`
 - Cross-plugin:
   - Imported by: 52 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `reports` ×22
-    - `debug` ×14
+    - `reports` ×23
+    - `debug` ×13
     - `conversations` ×3
     - `database` ×3
     - `framework` ×2
@@ -211,10 +155,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `tasks/reports-investigation`
     - `upstream`
 - Exemptions:
-  - Exempts itself from:
-    - `sink-safety/no-adhoc-file-sink` — `server/internal/buffer.ts` (sanctioned)
-    - `boundaries/no-platform-api` — `server/internal/buffer.ts` (debt)
-    - `config-v2:host-registrations-paired` — `server/index.ts` (debt)
+  - Exempts itself from: `networking/no-page-transport` — `web/report.ts` (sanctioned)
 - Sub-plugins:
   - **`adaptive-bar`** — Adaptive-bar collector: drains the adaptive-bar primitive's adaptiveBarReportSink into a deduped report whenever a bar's layout contract is violated (it was given no slack, it was written inside…
   - **`caret-flight`** — Caret-flight collector: drains the page editor's caretFlightReportSink into a report whenever a claimed caret landing is abandoned and the keystrokes it was holding had to be replayed into the…
@@ -222,6 +163,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
   - **`collab-hydration`** — Collab-hydration collector: drains the page editor's collabHydrationReportSink into a report whenever a block's rendered text stops agreeing with its content doc (a binding that never hydrated) or…
   - **`crash`** — Crash report kind: browser crash collector and the Debug → Reports summary view. Crash report kind: validates crash payloads, fingerprints by error + stack, and renders per-crash tasks.
   - **`endpoint-errors`** — Files crash tasks for bug-shaped handled endpoint errors (validation 400s and 5xx).
+  - **`engine`** [exempt] — Records server/frontend crashes as deduped reports (recordReport: per-fingerprint velocity, per-kind fan-out ceiling, duress shedding, bell notifications), files investigation tasks on demand…
   - **`launch-fix`** — Adds a Fix button to the plugin crash banner that launches an agent on the auto-created crash task with optional freeform context.
   - **`live-state-stale-drop`** — Live-state stale-drop collector: drains the live-state primitive's httpStaleDropReportSink into a deduped report when a resource wedges on a stale HTTP body (3 consecutive drops, never applied — the…
   - **`mutation-errors`** — Warning toast and persistent notification for unhandled TanStack Query mutation errors.

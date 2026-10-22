@@ -2,11 +2,15 @@ import { useEffect, useState } from "react";
 import { useFocusedAppId } from "@plugins/apps-core/web";
 import {
   EndpointError,
-  fetchEndpoint,
+  fetchEndpointOver,
 } from "@plugins/infra/plugins/endpoints/web";
+import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";
 import { flushAppUsageEndpoint } from "../../core";
 import { createUsageTracker } from "../internal/usage-tracker";
 import { readLastApp, writeLastApp } from "../internal/last-app";
+
+// Page-wide telemetry: app usage always reaches the page's own server (D3).
+const fetchEndpoint = fetchEndpointOver(pageTransport);
 
 // Input that proves the user is here. `pointermove` included: reading while
 // nudging the mouse is use. Listened to passively, in capture, on the window.

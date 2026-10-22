@@ -4,10 +4,11 @@ import { normalizeModel } from "@plugins/conversations/plugins/model-provider/co
 import { useLaunchConversation } from "@plugins/primitives/plugins/launch/web";
 import { confirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
 import {
-  fetchEndpoint,
   getEndpointErrorMessage,
+  useFetchEndpoint,
+  useMachineAvailability,
 } from "@plugins/infra/plugins/endpoints/web";
-import { toast } from "@plugins/shell/plugins/notifications/web";
+import { useToast, type Toast } from "@plugins/shell/plugins/notifications/web";
 import { previewRewindEndpoint, rewindConversationEndpoint } from "../../core";
 import { LossList } from "../components/loss-list";
 import { describeLosses, type RewindMode } from "../internal/describe-losses";
@@ -25,7 +26,9 @@ export type { RewindMode };
  * (the prompt editor, a question's answer form, …).
  *
  * `available` is false when there is nothing to go back to: no message uuid
- * (text that merely arrived in a user-role line) or no session to resume.
+ * (text that merely arrived in a user-role line) or no session to resume —
+ * and on a host without the computer (the demo): the cut reads the agent's
+ * transcript off it (`needsMachine`).
  */
 export function useGoBackToMessage({
   convId,
@@ -41,6 +44,9 @@ export function useGoBackToMessage({
   run: (mode: RewindMode) => Promise<void>;
 } {
   const conversation = useConversationById(convId);
+  const fetchEndpoint = useFetchEndpoint();
+  const machine = useMachineAvailability(previewRewindEndpoint);
+  const toast = useToast();
   const [busy, setBusy] = useState(false);
   // The text to hand the FORK: known once the preview answers, used once the
   // new conversation exists.
@@ -54,32 +60,40 @@ export function useGoBackToMessage({
     onLaunched: (created) => onBack(created.id, forkText),
   });
 
-  const available = uuid != null && !!conversation?.claudeSessionId;
+  const available =
+    machine.available && uuid != null && !!conversation?.claudeSessionId;
 
   const run = async (mode: RewindMode) => {
-    if (busy || uuid == null || !conversation?.claudeSessionId) return;
+    if (!available || busy || uuid == null || !conversation?.claudeSessionId)
+      return;
     const model = normalizeModel(conversation.model);
 
     const rewind = async () => {
-      const outcome = await fetchEndpoint(
+      const result = await fetchEndpoint(
         rewindConversationEndpoint,
         { id: convId },
         { body: { uuid } },
       );
+      if (result.kind === "unavailable") throw new Error(result.message);
+      const outcome = result.value;
       if (!outcome.ok) throw new Error(outcome.message);
       onBack(convId, outcome.rewindText);
     };
 
     setBusy(true);
     try {
-      const preview = await fetchEndpoint(
+      const previewed = await fetchEndpoint(
         previewRewindEndpoint,
         { id: convId },
         { body: { uuid } },
       );
-      if (!preview.ok) return refused(preview.message);
+      if (previewed.kind === "unavailable")
+        return refused(toast, previewed.message);
+      const preview = previewed.value;
+      if (!preview.ok) return refused(toast, preview.message);
       if (mode === "rewind" && !preview.inPlace) {
         return refused(
+          toast,
           "This message predates a fork, so the conversation cannot be rewound to it in place. Fork from it instead.",
         );
       }
@@ -98,7 +112,7 @@ export function useGoBackToMessage({
         onConfirm: act,
       });
     } catch (err) {
-      refused(getEndpointErrorMessage(err));
+      refused(toast, getEndpointErrorMessage(err));
     } finally {
       setBusy(false);
     }
@@ -107,7 +121,7 @@ export function useGoBackToMessage({
   return { available, busy, run };
 }
 
-function refused(message: string): void {
+function refused(toast: Toast, message: string): void {
   toast({
     type: "conversation",
     title: "Cannot go back to this message",

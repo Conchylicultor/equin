@@ -2,7 +2,7 @@ import { type ReactElement } from "react";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { toast } from "@plugins/shell/plugins/notifications/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import {
   getBootTrace,
   refreshBootTrace,
@@ -25,6 +25,7 @@ export function BootProfileLive(): ReactElement {
   // paint timing (FCP / first-paint), the first React commit, and new boot spans
   // (push-based PerformanceObserver + subscriber set, no polling). The Refresh
   // button calls refreshBootTrace() to re-pull the lazily-read timing.
+  const toast = useToast();
   const trace = useBootTrace();
 
   const save = useEndpointMutation(saveBootTrace);

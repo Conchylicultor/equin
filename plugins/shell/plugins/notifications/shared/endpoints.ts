@@ -16,6 +16,10 @@ export const createNotification = defineEndpoint({
     dedupeKey: z.string().nullable().optional(),
   }),
   response: z.object({ id: z.string() }),
+  // Persisting a browser toast is the desktop's bell (D4,
+  // research/2026-10-22-global-demo-scope-sealed.md): on a host without the
+  // computer (the demo) `useToast` keeps the toast ephemeral.
+  needsMachine: { feature: "Saving notifications" },
 });
 
 export const dismissAllNotifications = defineEndpoint({

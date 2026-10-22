@@ -3,6 +3,7 @@ import { Editor } from "@plugins/page/plugins/editor/server";
 import { heading3Block } from "../core";
 
 export default {
+  portable: true,
   description:
     "Heading 3 block type: registers its `data` schema at the server write boundary.",
   contributions: [Editor.BlockData(heading3Block)],

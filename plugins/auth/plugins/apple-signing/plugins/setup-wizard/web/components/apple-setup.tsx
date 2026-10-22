@@ -3,7 +3,7 @@ import {
   Input,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   ResourceErrorInline,
   useCombinedResources,
@@ -22,6 +22,7 @@ import {
   StepNote,
 } from "@plugins/primitives/plugins/setup-steps/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { setAppleCertificateEndpoint } from "@plugins/auth/plugins/apple-signing/core";
 
 async function fileToBase64(file: File): Promise<string> {
@@ -30,6 +31,7 @@ async function fileToBase64(file: File): Promise<string> {
 
 /** Apple signing's setup, the body of its Accounts pane (the integration's `setup`). */
 export function AppleSetup() {
+  const fetchEndpoint = useFetchEndpoint();
   const [password, setPassword] = useState("");
   const [p12Base64, setP12Base64] = useState("");
   const [p12FileName, setP12FileName] = useState("");
@@ -60,6 +62,9 @@ export function AppleSetup() {
 
   const both = useCombinedResources({ meta: metaResult, cfg: cfgResult });
   if (both.status === "loading") return <Loading />;
+  // The secrets are the computer's: a subtree with none (the demo) says so.
+  if (both.status === "unavailable")
+    return <Placeholder>{both.message}</Placeholder>;
   if (both.status === "error") {
     return (
       <ResourceErrorInline

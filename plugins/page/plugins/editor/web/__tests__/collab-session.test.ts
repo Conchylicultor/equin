@@ -22,24 +22,22 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import * as Y from "yjs";
 
-vi.mock("@plugins/infra/plugins/endpoints/web", async (importOriginal) => {
-  // Keep the REAL EndpointError (the provider does instanceof checks on it);
-  // only the network call is stubbed.
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  return { ...actual, fetchEndpoint: vi.fn() };
-});
-
 const wsStatusListeners: Array<(ev: { status: string; url: string }) => void> =
   [];
-vi.mock("@plugins/primitives/plugins/networking/web", () => ({
-  subscribeWsStatus: (cb: (ev: { status: string; url: string }) => void) => {
-    wsStatusListeners.push(cb);
-    return () => {
-      const i = wsStatusListeners.indexOf(cb);
-      if (i >= 0) wsStatusListeners.splice(i, 1);
-    };
-  },
-}));
+// Spread the real module: the endpoints barrel calls `transportScoped` at load.
+vi.mock(
+  "@plugins/primitives/plugins/networking/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<Record<string, unknown>>()),
+    subscribeWsStatus: (cb: (ev: { status: string; url: string }) => void) => {
+      wsStatusListeners.push(cb);
+      return () => {
+        const i = wsStatusListeners.indexOf(cb);
+        if (i >= 0) wsStatusListeners.splice(i, 1);
+      };
+    },
+  }),
+);
 
 vi.mock("@plugins/primitives/plugins/live-state/web", () => ({
   liveStateSocketKind: () => "worktree",
@@ -51,10 +49,22 @@ vi.mock("@plugins/network/plugins/live/web", () => ({
   })),
 }));
 
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { blockDocOwnerOf, CollabSession } from "../internal/collab-session";
+import {
+  fakeFetchEndpoint,
+  type FakeEndpointAnswer,
+} from "@plugins/infra/plugins/endpoints/web/testing";
+import {
+  BlockDocs,
+  blockDocOwnerOf,
+  CollabSession,
+} from "../internal/collab-session";
 
-const fetchEndpointMock = vi.mocked(fetchEndpoint);
+// The owners' endpoint client, handed in at `start` (the editor's transport): a
+// plain test double, so each case scripts its server.
+const server = vi.fn<FakeEndpointAnswer>();
+const { fetchEndpoint } = fakeFetchEndpoint(server);
+/** The owners' registry: its server is the double, its socket the one the bus reopens. */
+const docs = new BlockDocs({ fetchEndpoint, socketUrl: "ws://x/worktree" });
 
 function encodedState(clientID: number, text: string): Uint8Array {
   const d = new Y.Doc();
@@ -79,7 +89,7 @@ const buildSeedState = () => encodedState(111, "seed");
 
 beforeEach(() => {
   vi.useFakeTimers();
-  fetchEndpointMock.mockReset();
+  server.mockReset();
 });
 
 afterEach(() => {
@@ -91,14 +101,20 @@ afterEach(() => {
 test("deferred end retains an owner with buffered edits and finalizes after the queue drains", async () => {
   const blockId = "blk-session-teardown";
 
-  const session = CollabSession.start(blockId, buildSeedState, "present", true);
+  const session = CollabSession.start(
+    docs,
+    blockId,
+    buildSeedState,
+    "present",
+    true,
+  );
   const owner = session.owner;
   await owner.provider.connect();
   owner.provider.onServerState(toBase64(encodedState(222, "stored")));
   await flushMicrotasks();
 
   // A local edit whose flush fails at the network level (transient outage).
-  fetchEndpointMock.mockRejectedValueOnce(new TypeError("network down"));
+  server.mockRejectedValueOnce(new TypeError("network down"));
   const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
   owner.doc.transact(() => {
     const root = owner.doc.get("root", Y.XmlText);
@@ -116,6 +132,7 @@ test("deferred end retains an owner with buffered edits and finalizes after the 
   // RETAINED: a new session over the block gets the SAME owner (nothing was
   // destroyed while unflushed bytes remained).
   const reopened = CollabSession.start(
+    docs,
     blockId,
     buildSeedState,
     "present",
@@ -126,14 +143,20 @@ test("deferred end retains an owner with buffered edits and finalizes after the 
   await vi.advanceTimersByTimeAsync(1);
 
   // The tab reconnects; the retained provider drains its queue…
-  fetchEndpointMock.mockResolvedValue(undefined);
+  server.mockResolvedValue(undefined);
   for (const cb of [...wsStatusListeners])
     cb({ status: "open", url: "ws://x/worktree" });
   await flushMicrotasks();
 
   // …and the owner is finalized push-based: a fresh session now mints a NEW
   // owner (the old one was destroyed once safe).
-  const fresh = CollabSession.start(blockId, buildSeedState, "present", true);
+  const fresh = CollabSession.start(
+    docs,
+    blockId,
+    buildSeedState,
+    "present",
+    true,
+  );
   expect(fresh.owner).not.toBe(owner);
   fresh.end();
   await vi.advanceTimersByTimeAsync(1);
@@ -147,16 +170,28 @@ test("a spent session's end never decrements the owner that replaced it", async 
   // the owner reference, so there is no id left to resolve wrongly.
   const blockId = "blk-session-identity";
 
-  const first = CollabSession.start(blockId, buildSeedState, "present", false);
+  const first = CollabSession.start(
+    docs,
+    blockId,
+    buildSeedState,
+    "present",
+    false,
+  );
   const firstOwner = first.owner;
   first.end();
   await vi.advanceTimersByTimeAsync(1);
   // Nothing buffered on the local transport, so the owner really is gone.
-  expect(blockDocOwnerOf(blockId)).toBeNull();
+  expect(blockDocOwnerOf(docs, blockId)).toBeNull();
   expect(firstOwner.doc.isDestroyed).toBe(true);
 
   // A second editor opens the same block: a genuinely different owner.
-  const second = CollabSession.start(blockId, buildSeedState, "present", false);
+  const second = CollabSession.start(
+    docs,
+    blockId,
+    buildSeedState,
+    "present",
+    false,
+  );
   expect(second.owner).not.toBe(firstOwner);
 
   // The stale session tears down again (a late cleanup, a double release).
@@ -165,7 +200,7 @@ test("a spent session's end never decrements the owner that replaced it", async 
   await flushMicrotasks();
 
   // The LIVE owner is untouched: still registered, still usable.
-  expect(blockDocOwnerOf(blockId)).toBe(second.owner);
+  expect(blockDocOwnerOf(docs, blockId)).toBe(second.owner);
   expect(second.owner.doc.isDestroyed).toBe(false);
   second.owner.doc.transact(() => {
     second.owner.doc.get("root", Y.XmlText).insert(0, "alive");
@@ -185,6 +220,7 @@ test("a restart racing an unmount never destroys a replica whose binding is stil
   const blockId = "blk-session-restart-race";
 
   const session = CollabSession.start(
+    docs,
     blockId,
     buildSeedState,
     "present",
@@ -195,7 +231,7 @@ test("a restart racing an unmount never destroys a replica whose binding is stil
 
   const successor = session.restart();
   expect(successor.owner).toBe(session.owner); // the block's owner survives
-  expect(blockDocOwnerOf(blockId)).toBe(successor.owner);
+  expect(blockDocOwnerOf(docs, blockId)).toBe(successor.owner);
 
   await vi.advanceTimersByTimeAsync(1); // retention window expires…
 
@@ -215,7 +251,7 @@ test("a restart racing an unmount never destroys a replica whose binding is stil
   replica.disconnect();
   expect(replica.replicaDoc.isDestroyed).toBe(true);
   // The successor is unaffected and still owns the block.
-  expect(blockDocOwnerOf(blockId)).toBe(successor.owner);
+  expect(blockDocOwnerOf(docs, blockId)).toBe(successor.owner);
   expect(successor.owner.doc.isDestroyed).toBe(false);
 
   successor.end();

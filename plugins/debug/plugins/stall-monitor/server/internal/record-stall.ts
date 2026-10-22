@@ -1,5 +1,5 @@
 import { captureTrace } from "@plugins/debug/plugins/trace/plugins/engine/server";
-import { recordReport } from "@plugins/reports/server";
+import { recordReport } from "@plugins/reports/plugins/engine/server";
 import {
   captureFlightWindow,
   profilerNowMs,

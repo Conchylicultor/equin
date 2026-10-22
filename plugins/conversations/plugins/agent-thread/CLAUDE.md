@@ -45,7 +45,7 @@ newest turn's finished steps, its running step, its accepted results, and
   `useOptimisticConversationStatus`; the composer's draft is the conversation's
   own prompt draft (`CONVERSATION_PROMPT_DRAFT_KEY`, shared with the Agent
   Manager and with Copy to draft); every turn goes through
-  `sendConversationTurn`; an ended conversation (`gone` / `done`) is resumed
+  `useSendConversationTurn`; an ended conversation (`gone` / `done`) is resumed
   (`resumeConversationEndpoint`) and the turn sent once it is back; Stop while
   working (its rewound text goes back to the draft). A pending question mounts
   the `JsonlViewer.PendingPrompt` dispatch; sent turns show as
@@ -116,8 +116,8 @@ waking a hibernated agent with nothing new to show. A refused resume is a toast.
     - `AgentThreadSlots.StepLabel` "TodoWrite" → `TodoWriteStepLabel`
     - `AgentThreadSlots.StepLabel` "AskUserQuestion" → `AskUserQuestionStepLabel`
     - `AgentThreadSlots.StepLabel` "^(Agent|Task)$" → `AgentStepLabel`
-  - Uses: 59 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations/conversation-view/pending-turn` ×8
+  - Uses: 60 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations/conversation-view/pending-turn` ×9
     - `primitives/live-state` ×7
     - `conversations/conversation-view/jsonl-viewer` ×3
     - `conversations/conversation-view/user-message` ×2

@@ -2,12 +2,11 @@ import { describe, expect, it } from "bun:test";
 import {
   buildDescriptorIndex,
   parseFileBindings,
-  parseRegisterCalls,
-  resolveRegisterCall,
   type DescriptorInfo,
   type FileBindings,
   type SourceFile,
-} from "./parse-resources";
+} from "@plugins/framework/plugins/tooling/plugins/resource-vocabulary/core";
+import { parseRegisterCalls, resolveRegisterCall } from "./parse-resources";
 import { resourceModeLabel } from "../core";
 
 const NOTHING_IMPORTED = () => null;
@@ -56,15 +55,35 @@ describe("buildDescriptorIndex", () => {
         membership: null,
       },
     ]);
-    // A central value is an ordinary `liveValue` to the scanner: which runtime
-    // serves it is where its `serveValue` call sits.
+    // A central value mints like any `liveValue`; the declaration's
+    // `origin: "central"` is read too (a browser host runs no central, so the
+    // coverage guard requires such a read to be `needsMachine`). Which runtime
+    // serves it is still where its `serveValue` call sits.
     expect(index.get("authState")).toEqual([
       {
         key: "auth-state",
         keyed: false,
         membership: null,
+        origin: "central",
       },
     ]);
+  });
+
+  it("reads needsMachine's presence (a key with any value, or a shorthand) on every mint", () => {
+    const src = `
+      export const repoInfo = liveValue("tasks.repo-info", {
+        schema: S,
+        needsMachine: { feature: "Reading the repository" },
+      });
+      export const files = liveCollection("code.files", {
+        row: R, id: "id", needsMachine,
+      });
+    `;
+    const index = buildDescriptorIndex([file(src)], { ownerPlugin: false });
+    expect(index.get("repoInfo")?.map((i) => i.needsMachine)).toEqual([true]);
+    expect(index.get("files")?.every((i) => i.needsMachine === true)).toBe(
+      true,
+    );
   });
 
   it("indexes a collection's bounded memberships, and a lookup-only one's :rows alone", () => {

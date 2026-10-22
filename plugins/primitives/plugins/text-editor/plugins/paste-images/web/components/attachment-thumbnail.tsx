@@ -1,9 +1,10 @@
-import { ViewerThumbnail } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
+import { AssetThumbnail } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import { attachmentUrl } from "../internal/markdown";
 
 /**
  * A pasted image: the capped thumbnail that opens the full-window viewer. In an
- * editor its node wraps it in `TokenFrame` (selection ring, Remove).
+ * editor its node wraps it in `TokenFrame` (selection ring, Remove). Its bytes
+ * load over the subtree's transport (`AssetThumbnail`).
  */
 export function AttachmentThumbnail({
   attachmentId,
@@ -13,10 +14,10 @@ export function AttachmentThumbnail({
   alt?: string;
 }) {
   return (
-    <ViewerThumbnail
+    <AssetThumbnail
       size="chip"
+      asset={attachmentUrl(attachmentId)}
       image={{
-        src: attachmentUrl(attachmentId),
         name: alt || "Pasted image",
         sourceLabel: "Pasted",
         alt: alt || undefined,

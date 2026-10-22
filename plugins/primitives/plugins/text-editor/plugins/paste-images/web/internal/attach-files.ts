@@ -7,6 +7,7 @@ import {
   type LexicalNode,
 } from "lexical";
 import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
+import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { $createImageNode } from "./image-node";
 import { $createFileNode } from "./file-node";
 import { isImageMime } from "./markdown";
@@ -18,15 +19,18 @@ import { isImageMime } from "./markdown";
  *
  * The ONE path every way of attaching takes — paste, drop, the "+" picker — so
  * they cannot disagree on what a file becomes. A failed upload rejects; the
- * caller reports it.
+ * caller reports it. Uploads over the caller's transport (`fetchEndpoint`, its
+ * `useFetchEndpoint()`), so a field inside a scope stores to that scope's host.
  */
 export async function attachFiles(
+  fetchEndpoint: FetchEndpoint,
   editor: LexicalEditor,
   files: readonly File[],
 ): Promise<void> {
   const uploaded = await Promise.all(
     files.map((file) =>
       uploadAttachment(
+        fetchEndpoint,
         file,
         file.name.length > 0 ? file.name : `paste.${mimeToExt(file.type)}`,
         file.type || "application/octet-stream",

@@ -1,5 +1,9 @@
+import { useMemo } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import {
+  useFetchEndpoint,
+  type FetchEndpoint,
+} from "@plugins/infra/plugins/endpoints/web";
 import {
   fieldOverrides,
   type HierarchyConfig,
@@ -23,10 +27,13 @@ const addIcon = symbol("add");
 // The generic tree primitive speaks `parentId`; the tasks domain stores the
 // display hierarchy as `folderId`. Map at this boundary so the primitive stays
 // domain-neutral and the folder concept never leaks into it.
-export async function createTaskRow(args: {
-  parentId: string | null;
-  afterId?: string;
-}): Promise<string> {
+async function createTaskRow(
+  fetchEndpoint: FetchEndpoint,
+  args: {
+    parentId: string | null;
+    afterId?: string;
+  },
+): Promise<string> {
   const task = await fetchEndpoint(
     createTask,
     {},
@@ -44,59 +51,76 @@ export async function createTaskRow(args: {
  * exposes — its track, category and automation (`origin`) — so a new
  * exposure joins every task list with no code here. The list says only how
  * three of them present (`fieldOverrides`, by id).
+ *
+ * A hook: the title edit writes through the enclosing subtree's transport (a
+ * demo scope's worker, else the page's server). Stable per transport.
  */
-export const taskFieldSchema = {
-  collection: taskRows,
-  overrides: fieldOverrides(taskRows, {
-    title: {
-      onEdit: (t, next) =>
-        patchTask(t.id, { title: String(next ?? "").trim() || "Untitled" }),
-    },
-    status: {
-      align: "end",
-      cell: (t) => <StatusBadge status={t.status} />,
-    },
-    updatedAt: { align: "end" },
-  }),
-};
+export function useTaskFieldSchema() {
+  const fetchEndpoint = useFetchEndpoint();
+  return useMemo(
+    () => ({
+      collection: taskRows,
+      overrides: fieldOverrides(taskRows, {
+        title: {
+          onEdit: (t, next) =>
+            patchTask(fetchEndpoint, t.id, {
+              title: String(next ?? "").trim() || "Untitled",
+            }),
+        },
+        status: {
+          align: "end",
+          cell: (t) => <StatusBadge status={t.status} />,
+        },
+        updatedAt: { align: "end" },
+      }),
+    }),
+    [fetchEndpoint],
+  );
+}
 
 // No expand hooks. Expand/collapse is per-(surface, view-instance, row) device-
 // local render state owned by the data-view primitive — never a domain field —
 // so a collapse gesture costs no DB write and never touches `updatedAt`.
-export const taskHierarchy: HierarchyConfig<TaskListItem> = {
-  getParentId: (t) => t.folderId,
-  getRank: (t) => t.rank,
-  // Positional intent only. These rows are a projection of the tasks table
-  // (filtered, searched, grouped by the view), so the rank is `moveTask`'s to
-  // mint against the complete `folderId` sibling set.
-  onMove: (id, dest) =>
-    fetchEndpoint(
-      moveTask,
-      { id },
-      {
-        body: {
-          folderId: dest.parentId,
-          targetId: dest.targetId,
-          zone: dest.zone,
-        },
-      },
-    ),
-  onCreate: createTaskRow,
-};
-
-// Cluster variant: drop the two mutating hooks for a scoped inspection tree (a
+// Cluster variant: the read-only shape alone, for a scoped inspection tree (a
 // dependency+creation cluster). Omitting `onMove` disables drag in the tree
 // primitive; omitting `onCreate` removes the root "Add" and per-row add
 // affordances. Isolation from the main Tasks list is automatic — the primitive
 // keys its expand map by view instance — so nothing has to be stripped for it.
 // Pairs with `buildTreeOptions({ defaultExpanded: true })`.
-const {
-  onMove: _onMove,
-  onCreate: _onCreate,
-  ...clusterHierarchy
-} = taskHierarchy;
-export const clusterTaskHierarchy: HierarchyConfig<TaskListItem> =
-  clusterHierarchy;
+export const clusterTaskHierarchy: HierarchyConfig<TaskListItem> = {
+  getParentId: (t) => t.folderId,
+  getRank: (t) => t.rank,
+};
+
+/**
+ * The editable task hierarchy: the cluster shape plus the two mutating hooks,
+ * which write through the enclosing subtree's transport. Stable per transport.
+ */
+export function useTaskHierarchy(): HierarchyConfig<TaskListItem> {
+  const fetchEndpoint = useFetchEndpoint();
+  return useMemo<HierarchyConfig<TaskListItem>>(
+    () => ({
+      ...clusterTaskHierarchy,
+      // Positional intent only. These rows are a projection of the tasks table
+      // (filtered, searched, grouped by the view), so the rank is `moveTask`'s
+      // to mint against the complete `folderId` sibling set.
+      onMove: (id, dest) =>
+        fetchEndpoint(
+          moveTask,
+          { id },
+          {
+            body: {
+              folderId: dest.parentId,
+              targetId: dest.targetId,
+              zone: dest.zone,
+            },
+          },
+        ),
+      onCreate: (args) => createTaskRow(fetchEndpoint, args),
+    }),
+    [fetchEndpoint],
+  );
+}
 
 export function buildTreeOptions({
   readOnly,

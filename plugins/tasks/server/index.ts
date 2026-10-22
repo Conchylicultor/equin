@@ -13,13 +13,6 @@ import {
 } from "./internal/handle-dependencies";
 import { handleInsertBetween } from "./internal/handle-insert-between";
 import { handleDepsMove } from "./internal/handle-deps-move";
-import { repoInfoServed } from "./internal/repo-info";
-import {
-  autoStartReconcileWarmup,
-  startRelaunchOnClaudeReady,
-  stopRelaunchOnClaudeReady,
-} from "./internal/auto-start-reconcile";
-import { addTaskTool } from "./internal/mcp-tools";
 import {
   listTasks,
   createTask,
@@ -38,8 +31,9 @@ import {
 export { armTaskAutoStart } from "./internal/arm-auto-start";
 
 export default {
-  description: "Nested tasks with attempts linking to conversations.",
-  contributions: [...repoInfoServed.declare],
+  portable: true,
+  description:
+    "Nested tasks with attempts linking to conversations: the task CRUD, chain, dependency and auto-start routes, portable (arming a task wakes the launcher through the tasks.autoStartArmed trigger event). Launching, the repo info, the add_task MCP tool and the auto-start catch-up are the machine half's.",
   httpRoutes: {
     [listTasks.route]: handleList,
     [createTask.route]: handleCreate,
@@ -53,13 +47,6 @@ export default {
     [addTaskDependency.route]: handleAddDependency,
     [removeTaskDependency.route]: handleRemoveDependency,
     [moveTaskInDepsTree.route]: handleDepsMove,
-  },
-  register: [addTaskTool, autoStartReconcileWarmup],
-  onReady: () => {
-    startRelaunchOnClaudeReady();
-  },
-  onShutdown: () => {
-    stopRelaunchOnClaudeReady();
   },
   // The `pushes` ledger used to be filled from here, by a `tasks.push-ingest`
   // job hung off the `git.refAdvanced` trigger plus a host-scoped boot warm-up.

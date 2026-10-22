@@ -84,6 +84,7 @@ export const createConversation = defineEndpoint({
   // durable job). If this endpoint's in-process time creeps back over 1 s, the
   // slow-ops pipeline files a report — catching any re-introduced blocking work.
   slowThresholdMs: 1000,
+  needsMachine: { feature: "Launching an agent" },
 });
 
 export const deleteConversation = defineEndpoint({
@@ -105,6 +106,7 @@ export const postConversationTurn = defineEndpoint({
     held: z.boolean(),
     turnId: z.string(),
   }),
+  needsMachine: { feature: "Sending a message to an agent" },
 });
 
 /**
@@ -114,6 +116,7 @@ export const postConversationTurn = defineEndpoint({
 export const retryConversationTurn = defineEndpoint({
   route: "POST /api/conversations/:id/turns/:turnId/retry",
   response: z.object({ turnId: z.string(), state: TurnStateSchema }),
+  needsMachine: { feature: "Sending a message to an agent" },
 });
 
 /**
@@ -124,11 +127,13 @@ export const retryConversationTurn = defineEndpoint({
 export const withdrawConversationTurn = defineEndpoint({
   route: "POST /api/conversations/:id/turns/:turnId/withdraw",
   response: z.object({ turnId: z.string(), state: TurnStateSchema }),
+  needsMachine: { feature: "Sending a message to an agent" },
 });
 
 export const stopConversation = defineEndpoint({
   route: "POST /api/conversations/:id/stop",
   response: z.object({ ok: z.boolean(), rewindText: z.string().nullable() }),
+  needsMachine: { feature: "Stopping an agent" },
 });
 
 const TurnSchema = z.object({

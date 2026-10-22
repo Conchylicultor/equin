@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { mapRow } from "@plugins/network/plugins/live/web";
-import { toast } from "@plugins/shell/plugins/notifications/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import type { LaunchBinding } from "@plugins/tasks/plugins/launch-options/web";
 import { useTaskPreprompt } from "../hooks";
 import { setTaskPrepromptRemote } from "./api";
@@ -10,19 +11,23 @@ export function useTaskPrepromptBinding(
   taskId: string,
 ): LaunchBinding<string | null> {
   const result = useTaskPreprompt(taskId);
+  const fetchEndpoint = useFetchEndpoint();
+  const toast = useToast();
 
   const onChange = useCallback(
     (prepromptId: string | null) => {
-      setTaskPrepromptRemote(taskId, prepromptId).catch((err: unknown) => {
-        toast({
-          type: "task",
-          title: "Failed to set preprompt",
-          description: err instanceof Error ? err.message : String(err),
-          variant: "error",
-        });
-      });
+      setTaskPrepromptRemote(fetchEndpoint, taskId, prepromptId).catch(
+        (err: unknown) => {
+          toast({
+            type: "task",
+            title: "Failed to set preprompt",
+            description: err instanceof Error ? err.message : String(err),
+            variant: "error",
+          });
+        },
+      );
     },
-    [taskId],
+    [taskId, fetchEndpoint, toast],
   );
 
   // An absent row is "no preprompt"; loading / error pass through.

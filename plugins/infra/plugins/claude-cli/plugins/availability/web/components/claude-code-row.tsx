@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import {
-  fetchEndpoint,
+  useFetchEndpoint,
   useMachineAvailability,
+  type FetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
 import {
   foldResource,
@@ -24,7 +25,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const refreshIcon = symbol("refresh");
 
-function recheck(): Promise<unknown> {
+function recheck(fetchEndpoint: FetchEndpoint): Promise<unknown> {
   return fetchEndpoint(recheckClaudeCode, {});
 }
 
@@ -34,8 +35,13 @@ function recheck(): Promise<unknown> {
  */
 export function ClaudeCodeActions() {
   const availability = useMachineAvailability(recheckClaudeCode);
+  const fetchEndpoint = useFetchEndpoint();
   return availability.available ? (
-    <IconButton icon={refreshIcon} label="Check again" onClick={recheck} />
+    <IconButton
+      icon={refreshIcon}
+      label="Check again"
+      onClick={() => recheck(fetchEndpoint)}
+    />
   ) : (
     <IconButton
       icon={refreshIcon}
@@ -117,6 +123,7 @@ export function ClaudeCodeDetail() {
  */
 export function RecheckOnReturn() {
   const result = useClaudeCodeStatus();
+  const fetchEndpoint = useFetchEndpoint();
   // Only a KNOWN block re-checks on return; a status still loading, that
   // failed to load, or that no computer here can answer has nothing to
   // re-check against.
@@ -132,10 +139,10 @@ export function RecheckOnReturn() {
   useEffect(() => {
     if (!blocked) return;
     const onFocus = () => {
-      void recheck();
+      void recheck(fetchEndpoint);
     };
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
-  }, [blocked]);
+  }, [blocked, fetchEndpoint]);
   return null;
 }

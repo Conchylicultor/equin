@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { readNdjson } from "@plugins/infra/plugins/ndjson-stream/web";
+import { useTransport } from "@plugins/primitives/plugins/networking/web";
 import { interpolatePath } from "@plugins/infra/plugins/endpoints/core";
 import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import {
@@ -39,6 +40,7 @@ export function useClusterStream(): ClusterStream {
   const [error, setError] = useState<string | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
+  const transport = useTransport();
 
   const reload = useCallback(async () => {
     abortRef.current?.abort();
@@ -58,6 +60,7 @@ export function useClusterStream(): ClusterStream {
     let flushEvery = 1;
     try {
       for await (const frame of readNdjson(
+        transport,
         getSlowOpsCluster.route,
         interpolatePath(getSlowOpsCluster.path, {}),
         { signal: ctrl.signal },
@@ -89,7 +92,7 @@ export function useClusterStream(): ClusterStream {
       setStatus("error");
       setError(getEndpointErrorMessage(e));
     }
-  }, []);
+  }, [transport]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- NDJSON streaming accumulator: reload() drives setWorktrees/setTotal/setStatus/setError from the cluster fan-out's {total}→{worktree}…→{end} frames with a total-scaled batched flush; the AbortController guards stale/unmount writes. No request/response primitive (useEndpoint) handles a progressive NDJSON stream, so this can't be derived in render.

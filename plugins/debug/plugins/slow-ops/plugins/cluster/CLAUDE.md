@@ -52,6 +52,7 @@ so the pane never imports this component directly.
     - `primitives/data-view.DataView`
     - `primitives/data-view.defineDataView`
     - `primitives/data-view.FieldDef`
+    - `primitives/networking.useTransport`
     - `primitives/relative-time.RelativeTime`
 - Server:
   - Uses:

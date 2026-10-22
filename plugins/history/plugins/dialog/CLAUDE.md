@@ -22,7 +22,7 @@
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
-    - `shell/notifications.toast`
+    - `shell/notifications.useToast`
   - Exports (types): `VersionHistoryDialogProps`
   - Exports (values): `VersionHistoryDialog`
 - Cross-plugin:

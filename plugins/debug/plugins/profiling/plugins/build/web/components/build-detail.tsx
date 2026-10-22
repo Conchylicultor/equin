@@ -17,10 +17,12 @@ import { getBuildRunProfileByWorktree } from "../../shared/endpoints";
 
 export function BuildProfileDetailBody(): ReactElement {
   const { worktree, buildId } = buildProfileDetailPane.useParams();
-  const { data, error } = useEndpoint(getBuildRunProfileByWorktree, {
+  const { data: answer, error } = useEndpoint(getBuildRunProfileByWorktree, {
     worktree,
     buildId,
   });
+  // The profile is read from the computer's disk: a host without it says so.
+  const data = answer?.kind === "ok" ? answer.value : undefined;
   const [hovered, setHovered] = useState<Span | null>(null);
   const ctxValue = useMemo(
     () => ({ hovered, setHovered, refreshKey: 0 }),
@@ -29,7 +31,9 @@ export function BuildProfileDetailBody(): ReactElement {
 
   return (
     <PaneChrome pane={buildProfileDetailPane}>
-      {!data ? (
+      {answer?.kind === "unavailable" ? (
+        <Placeholder tone="muted">{answer.message}</Placeholder>
+      ) : !data ? (
         <Placeholder tone={error ? "error" : "muted"}>
           {error ? "Build profile unavailable." : "Loading…"}
         </Placeholder>

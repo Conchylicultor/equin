@@ -150,8 +150,8 @@ run no `onReady`, so no watchdog.
   - Uses:
     - `debug/trace/engine.captureTrace`
     - `infra/background/timer.defineTimer`
-    - `reports.recordReport`
     - `reports.ReportKind`
+    - `reports/engine.recordReport`
   - Register: `defineTimer('stuck-spans.watchdog')`
 - Exemptions:
   - Exempts itself from:

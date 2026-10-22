@@ -9,7 +9,7 @@ import {
   setConversationHibernated,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
-import { recordReport } from "@plugins/reports/server";
+import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { spawnFailures } from "@plugins/conversations/plugins/spawn-failure/server";
 import { describeSpawnFailure } from "@plugins/conversations/plugins/spawn-failure/core";
 import { isTransientDbError } from "@plugins/database/server";

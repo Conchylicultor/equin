@@ -39,7 +39,7 @@ On submit, in order:
   conversation that submitted it (`report.conversationId`), so a sibling
   conversation of the same task never answers for it. An answer button sends
   its label as the next user turn through `pending-turn`'s
-  `sendConversationTurn`; buttons are live only while the optimistic status is
+  `useSendConversationTurn`; buttons are live only while the optimistic status is
   `waiting`. The answer itself is not stored: the transcript carries it, and the
   agent's next report replaces the question.
 - `OutcomeReportDetail({ taskId })` (web barrel) — the same report read-only,
@@ -56,8 +56,9 @@ On submit, in order:
     - `Automations.TaskDetail` → `OutcomeReportDetail`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
-    - `conversations/conversation-view/pending-turn.sendConversationTurn`
     - `conversations/conversation-view/pending-turn.useOptimisticConversationStatus`
+    - `conversations/conversation-view/pending-turn.useSendConversationTurn`
+    - `conversations/conversation-view/pending-turn.useTurnSendAvailability`
     - `network/live.useLiveRow`
     - `primitives/css/badge.Badge`
     - `primitives/css/badge.BadgeVariant`
@@ -98,8 +99,6 @@ On submit, in order:
     - `OutcomeReportSchema`
     - `outcomeReportShape`
     - `REPORT_STANDINGS`
-- Cross-plugin:
-  - Imported by: `apps/agent-manager/demo`
 - Machine:
   - Register:
     - `mcpTool('submit_outcome_report')`

@@ -1,6 +1,6 @@
 import {
-  fetchEndpoint,
   getEndpointErrorMessage,
+  type FetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
 import { extractAttachmentIds } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import type { CardDraft } from "../components/task-draft-form";
@@ -37,7 +37,10 @@ export interface SubmitOutcome {
   totalCount: number;
 }
 
-export async function submitChain(args: SubmitArgs): Promise<SubmitOutcome> {
+export async function submitChain(
+  fetchEndpoint: FetchEndpoint,
+  args: SubmitArgs,
+): Promise<SubmitOutcome> {
   const trimmed = args.cards.map((c) => ({ ...c, text: c.text.trim() }));
   const totalCount = trimmed.length;
 

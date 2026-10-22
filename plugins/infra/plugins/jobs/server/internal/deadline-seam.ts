@@ -17,10 +17,10 @@ import type { HoldClass } from "../../core/hold";
  * containing `jobs` to also contain `reports`, `shell/notifications` and
  * `tasks`.
  *
- * And it would be a cycle. `reports` already reaches `jobs` by two independent
- * routes today — `reports/server/internal/record-report.ts:15` →
+ * And it would be a cycle. `reports` (its engine) already reaches `jobs` by two independent
+ * routes today — `reports/plugins/engine/server/internal/record-report.ts` →
  * `shell/notifications/server` → `ttl-cleanup.ts:4` → `jobs`, and
- * `reports/server/internal/retention.ts:2` → `infra/retention/server` → `jobs`.
+ * `reports/plugins/engine/server/internal/retention.ts` → `infra/retention/server` → `jobs`.
  * Both are there because `reports` is a *user* of durable background work, which
  * is exactly the relationship a primitive cannot invert. Severing the two routes
  * would leave a standing rule that "reports must never use a background job" —

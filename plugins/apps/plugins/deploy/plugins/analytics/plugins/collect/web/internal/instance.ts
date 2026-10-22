@@ -1,4 +1,5 @@
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { fetchEndpointOver } from "@plugins/infra/plugins/endpoints/web";
+import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";
 import { currentRoutePath } from "@plugins/primitives/plugins/pane/web";
 import {
   EVENT_NAME_PATTERN,
@@ -7,6 +8,9 @@ import {
 } from "../../core";
 import { landingSource } from "./landing";
 import { createTracker, type Tracker } from "./tracker";
+
+// Page-wide telemetry: page-view analytics always reach the page's own server (D3).
+const fetchEndpoint = fetchEndpointOver(pageTransport);
 
 /**
  * Posts one collect body. `keepalive` lets the engagement beacon sent on

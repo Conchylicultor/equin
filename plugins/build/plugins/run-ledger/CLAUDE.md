@@ -34,7 +34,9 @@ it; the runs union's build arm is declared `from` it and picks `targets`,
 recorder — and never `run-ledger/server`. Every statement the CLI runs
 (`shared/recorder.ts`, `shared/stale-holder.ts`) is hand SQL naming only its own
 columns, which the schema-skew rule below demands anyway. The backend shares
-`settleDeadInflightRun` through the server barrel.
+`settleDeadInflightRun` through the machine barrel (`run-ledger/machine`): it
+reads the build's terminal record off disk and probes the holder's pid, so the
+server barrel — the entity alone — is portable.
 
 ## One invocation is one row, with N targets
 
@@ -163,9 +165,7 @@ from `build`, so both sides of an otherwise-cyclic edge can reach them.
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`
   - DB schema: `plugins/build/plugins/run-ledger/server/internal/tables.ts`
-  - Exports (values):
-    - `_buildRuns`
-    - `settleDeadInflightRun`
+  - Exports (values): `_buildRuns`
 - Core:
   - Uses:
     - `fields.FieldsRecord`
@@ -195,6 +195,8 @@ from `build`, so both sides of an otherwise-cyclic edge can reach them.
     - `framework/cli/build`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `shared/stale-holder.ts` (debt)
+- Machine:
+  - Exports (values): `settleDeadInflightRun`
 - Cli:
   - Exports (types): `BuildRunRecorder`
   - Exports (values): `createBuildRunRecorder`

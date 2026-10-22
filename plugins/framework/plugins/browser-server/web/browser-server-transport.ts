@@ -91,8 +91,18 @@ function inertSocket(url: string): TransportSocket {
   };
 }
 
-/** The transport of a browser server: its sockets, its requests and (unloadable) asset URLs. */
-export function browserServerTransport(server: BrowserServer): Transport {
+/**
+ * The transport of a browser server: its sockets and its requests (an asset
+ * included — no URL reaches it, so elements get blob URLs). `telemetry` says
+ * whether the telemetry its traffic raises is reported (to the page's own
+ * server — a browser server has nowhere of its own to keep it): the enclosing
+ * page's setting (`useTransport().telemetry` where the scope is mounted), or
+ * `false` to drop it.
+ */
+export function browserServerTransport(
+  server: BrowserServer,
+  { telemetry }: { telemetry: boolean },
+): Transport {
   const prefix = `browser:${server.id}:`;
   return {
     socketUrl: (path) => `${prefix}${path}`,
@@ -113,8 +123,11 @@ export function browserServerTransport(server: BrowserServer): Transport {
         new Request(new URL(String(input), REQUEST_BASE), init),
       );
     },
-    assetUrl: (path) => `${prefix}${path}`,
+    // No URL reaches a server in the page: an element's asset is fetched
+    // through `fetch` above and handed over as a blob URL (`useAssetSrc`).
+    servesUrls: false,
     // A server in the page: the computer is not behind it.
     machine: false,
+    telemetry,
   };
 }

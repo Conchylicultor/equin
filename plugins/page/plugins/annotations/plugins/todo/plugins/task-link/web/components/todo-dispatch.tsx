@@ -1,4 +1,5 @@
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -32,6 +33,7 @@ export function TodoDispatch({
   close: () => void;
 }) {
   const state = useTodoTaskState(blockId);
+  const fetchEndpoint = useFetchEndpoint();
 
   // Whether the card was dispatched decides what the panel offers ("Dispatch"
   // vs "Dispatch another" under its task), so neither is claimed before the
@@ -63,7 +65,9 @@ export function TodoDispatch({
         // and the prompt it composed from the card's CURRENT contents. Composing
         // the prompt here would mean re-deriving the card's markdown from rows
         // whose `data.text` projection lags their content docs.
-        getRequest={(context) => dispatchTodoAgent(blockId, context)}
+        getRequest={(context) =>
+          dispatchTodoAgent(fetchEndpoint, blockId, context)
+        }
         openAfterLaunch
         openMode="push"
         // The launched conversation opens in a column beside the page, so the

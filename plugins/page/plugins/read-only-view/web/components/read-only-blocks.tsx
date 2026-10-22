@@ -16,9 +16,11 @@ import {
 import { CheckboxIndicator } from "@plugins/primitives/plugins/css/plugins/selection-indicator/web";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { attachmentUrl } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
+import { useAssetSrc } from "@plugins/infra/plugins/endpoints/web";
 import {
   ImageGallery,
   MissingImage,
+  UnloadedAssetImage,
   useImageLoad,
   useImageViewerTrigger,
 } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
@@ -270,7 +272,27 @@ function ReadOnlyImage({
   alt: string;
   width: number | undefined;
 }) {
-  const src = attachmentUrl(attachmentId);
+  // The bytes over the subtree's transport (`useAssetSrc`).
+  const asset = useAssetSrc(attachmentUrl(attachmentId));
+  if (asset.kind !== "ready") {
+    return (
+      <Inset x={BLOCK_INSET} y="xs">
+        <UnloadedAssetImage src={asset} name={alt || "Image"} />
+      </Inset>
+    );
+  }
+  return <LoadedReadOnlyImage src={asset.src} alt={alt} width={width} />;
+}
+
+function LoadedReadOnlyImage({
+  src,
+  alt,
+  width,
+}: {
+  src: string;
+  alt: string;
+  width: number | undefined;
+}) {
   const name = alt || "Image";
   const viewerTrigger = useImageViewerTrigger<HTMLImageElement>({
     src,

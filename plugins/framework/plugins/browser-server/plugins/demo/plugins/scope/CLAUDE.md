@@ -29,14 +29,24 @@ seed — so the unchanged app reads demo data through `useLive` /
   `config_v2/bundled-layer`), and every other key (real portable server code,
   or a `needsMachine` read answered unavailable). There is no page-side server
   and no backend slot.
-- **Unserved keys** fail `loader-failed` naming the key (the host's key set is
-  closed → `unserved`), terminal, never as skew.
-- **Unsupported requests**: `toastingRefusals` decorates the worker's server
-  and toasts "Not available in the demo" only on its real 409 refusal
-  (`isUnsupportedEndpointResponse`) — never on a request it answers; at most
-  one toast from a scope while the last is still up (sonner's default 4 s, a
-  timestamp, no timer). The response passes through, so the caller still sees
-  `EndpointUnsupportedError`.
+- **Nothing unanswered, by construction**: the build's browser-host coverage
+  guard (codegen's `core/browser-host-coverage.ts`, run by
+  `deriveBrowserHostGraph`) proves every live read, endpoint and config
+  document the scoped plugins use is served by the worker's graph or declared
+  `needsMachine` — answered `unavailable` without a request, rendered "not
+  available". Nothing exempts it.
+- **A gap the guard missed fails loudly**, never quietly: an unserved key
+  fails `loader-failed` naming it (the host's key set is closed →
+  `unserved`), terminal, never as skew; an unsupported endpoint is the host's
+  409 refusal, thrown and reported like any other endpoint failure. There is
+  no "not available in the demo" toast.
+- **Telemetry** (D3 of `research/2026-10-22-global-demo-scope-sealed.md`):
+  the scope's transport inherits the enclosing page's `telemetry` flag, so the
+  reports and timings the demo's own traffic raises (endpoint errors, live
+  read errors, latency samples) reach the page's own server; strict mode is
+  `{ telemetry: false }`, which every emission site honours. Page-wide
+  handlers (`window.onerror`, boot, the UI's observers) are the page's either
+  way.
 - **Boot time** — every host boot writes one line to the `demo-host-boot` client log
   (`~/.singularity/worktrees/<wt>/logs/demo-host-boot.jsonl`, also the page console): the wait
   the page saw, the worker's ready instant on its own clock, its stages (`graph`: load →
@@ -50,7 +60,7 @@ in-realm `MessageChannel` standing in for the worker).
 
 ## Plugin reference
 
-- Description: <DemoScope scenario>: renders its subtree against the scenario's browser host — real server code in a worker, on the scenario's seed — and scoped to the host's composition (<PluginScope>), so the page shows exactly the plugins the worker serves. A key the host does not serve fails loader-failed naming it; an /api request it refuses as unsupported shows one deduped 'Not available in the demo' toast; a host that fails to boot throws to the error boundary.
+- Description: <DemoScope scenario>: renders its subtree against the scenario's browser host — real server code in a worker, on the scenario's seed — and scoped to the host's composition (<PluginScope>), so the page shows exactly the plugins the worker serves. Everything inside reaches the host only (the scope's transport): the build's coverage guard holds the host to serving every read, endpoint and config the scope uses, or declaring it needsMachine (answered unavailable); a key or endpoint it still does not serve fails loudly. A host that fails to boot throws to the error boundary.
 - Web:
   - Uses:
     - `framework/browser-server.browserServerTransport`
@@ -58,7 +68,7 @@ in-realm `MessageChannel` standing in for the worker).
     - `primitives/loading.Loading`
     - `primitives/log-channels.clientLog`
     - `primitives/networking.TransportProvider`
-    - `shell/toast.showToast`
+    - `primitives/networking.useTransport`
   - Exports (values): `DemoScope`
 - Cross-plugin:
   - Imported by: `apps/demo/shell`

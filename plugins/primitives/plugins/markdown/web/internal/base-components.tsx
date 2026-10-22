@@ -1,6 +1,7 @@
 import type { ComponentType, ReactNode } from "react";
 import type { Components } from "react-markdown";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { useTransport } from "@plugins/primitives/plugins/networking/web";
 import { langFromClassName, nodeToText } from "./helpers";
 import { InlineCode } from "./inline-code";
 import { FencedCode } from "./fenced-code";
@@ -26,6 +27,67 @@ export function stripNodeProp(components: Components): Components {
     );
   }
   return out as Components;
+}
+
+/**
+ * Whether `url` addresses the page's own server's `/api` — a relative
+ * `/api/…` path, or an absolute URL on this page's origin. Persisted markdown
+ * holds such addresses (an attachment's `![](/api/attachments/<id>)`).
+ */
+function isPageApiUrl(url: string): boolean {
+  if (url.startsWith("/api/")) return true;
+  if (!/^https?:\/\//.test(url) || typeof window === "undefined") return false;
+  const parsed = new URL(url);
+  return (
+    parsed.origin === window.location.origin &&
+    parsed.pathname.startsWith("/api/")
+  );
+}
+
+/**
+ * The base image: an element loads its `src` by URL, which only the page's own
+ * server answers (`servesUrls`). Under any other transport (an in-browser
+ * server — the demo) an `/api` address would load from the page's REAL
+ * server, so it renders as its alt text instead; an enhancer that can resolve
+ * the address over the transport (the conversation markdown's
+ * `img-enhancer`, turning an attachment into an `AssetPath`) overrides this.
+ */
+function BaseImg({
+  src,
+  alt,
+  ...p
+}: {
+  src?: string | Blob;
+  alt?: string;
+} & Record<string, unknown>) {
+  const { servesUrls } = useTransport();
+  if (typeof src === "string" && !servesUrls && isPageApiUrl(src)) {
+    return (
+      <Text as="span" variant="caption" tone="muted">
+        {alt || "Image"}
+      </Text>
+    );
+  }
+  return (
+    <img src={typeof src === "string" ? src : undefined} alt={alt} {...p} />
+  );
+}
+
+/** The base link: as {@link BaseImg}, an `/api` address only the page serves by URL. */
+function BaseLink({ href, ...p }: { href?: string } & Record<string, unknown>) {
+  const { servesUrls } = useTransport();
+  const pageApi = href !== undefined && !servesUrls && isPageApiUrl(href);
+  return (
+    <a
+      className="text-primary-text underline"
+      href={pageApi ? undefined : href}
+      target={href?.startsWith("http") && !pageApi ? "_blank" : undefined}
+      rel={
+        href?.startsWith("http") && !pageApi ? "noopener noreferrer" : undefined
+      }
+      {...p}
+    />
+  );
 }
 
 // `transform` and `getInlineCodeHandlers` are stable accessors that read the
@@ -67,15 +129,8 @@ export function buildBaseComponents(
         {transform(children)}
       </p>
     ),
-    a: ({ href, ...p }) => (
-      <a
-        className="text-primary-text underline"
-        href={href}
-        target={href?.startsWith("http") ? "_blank" : undefined}
-        rel={href?.startsWith("http") ? "noopener noreferrer" : undefined}
-        {...p}
-      />
-    ),
+    a: (p) => <BaseLink {...p} />,
+    img: (p) => <BaseImg {...p} />,
     // eslint-disable-next-line spacing/no-adhoc-spacing -- markdown block rhythm (my-2); list indent kept as pl-xl
     ul: (p) => <ul className="my-2 list-disc pl-xl" {...p} />,
     // eslint-disable-next-line spacing/no-adhoc-spacing -- markdown block rhythm (my-2); list indent kept as pl-xl

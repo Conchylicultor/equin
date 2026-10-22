@@ -6,6 +6,7 @@ import {
   HostFsWithinSchema,
   type HostFsArchiveReason,
 } from "./endpoints";
+import { HOST_FS_MACHINE } from "./machine-feature";
 
 // The host filesystem as live values — each answering a question the old list /
 // peek / stat / text / volume endpoints answered (reusing the result schemas in
@@ -14,14 +15,6 @@ import {
 // served by host-fs's `machine/` half and pushed from the shared dir hub while
 // read. Plan: research/2026-10-11-global-endpoint-reads-onto-live.md (B5).
 
-/**
- * What every read of this machine's disk needs — its `needsMachine` — so a
- * sibling read (an image sub-plugin's) states the same feature, and every
- * reader in one viewer shows the same unavailable message.
- */
-export const HOST_FS_MACHINE = {
-  feature: "Browsing this computer's files",
-} as const;
 const MACHINE = HOST_FS_MACHINE;
 
 // Why a host-fs read cannot answer, as the read's refusal code (each value

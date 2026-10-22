@@ -7,15 +7,24 @@ runtime's submit check: see [`turn-ledger/CLAUDE.md`](../../../turn-ledger/CLAUD
 and `research/2026-10-15-conversations-turn-ledger.md`. This plugin only
 sends, echoes and draws.
 
-## Sending — `sendConversationTurn(conversationId, { text, delivery? })`
+## Sending — `useSendConversationTurn()` → `(conversationId, { text, delivery? })`
 
+- **One store per transport** (`transportScoped`, `internal/send.ts`): a turn
+  sent inside a demo scope is that scope's server's turn — its echo, its
+  in-flight guard and its Retry live beside that scope's ledger, never the
+  page's, even under the same conversation id. Every hook reads the subtree's
+  store: `useSendConversationTurn`, `useResendTurn`, `useDismissSentTurn`,
+  `useSentTurns`, `useTurnSendInFlight`. Each entry keeps the fetcher it was
+  sent with (its store's transport), which its delivery receives as
+  `send(fetchEndpoint, …)`; the ledger row's Retry / Copy to draft
+  (`retryLedgerTurn` / `withdrawLedgerTurn`) take the card's.
 - Mints the turn's id (`turnIdKind`) — the id the server writes its ledger row
   under, so a repeated request is the same turn and the live row replaces the
   echo exactly, never by matching text.
-- Records the turn in a per-tab in-memory store (`internal/send.ts`) so the echo
+- Records the turn in the transport's in-memory store so the echo
   shows at once, then runs the delivery. A failed request leaves the entry
   `unsent`: Retry re-sends the same id, Copy to draft drops it. Once the tab
-  holds the turn's live row, the entry is dropped (`settleSentTurns`).
+  holds the turn's live row, the entry is dropped (`useSettleSentTurns`).
 - A **delivery** (`TurnDelivery`, `internal/delivery.ts`) is the one thing that
   differs between surfaces: which endpoint carries the turn, and the ledger
   `kind` it makes (`turn` — the default, `POST …/turn`; `push-and-exit`;
@@ -27,6 +36,14 @@ sends, echoes and draws.
   with no ledger id (a repeated request types it twice), no echo and no card.
 - `useTurnSendInFlight` — a request this tab sent is still open: the
   double-click guard of Push & Close's turn modes.
+- **Sending needs the computer.** The turn endpoints (turn, retry, withdraw;
+  the answer and Push & Close deliveries too) are `needsMachine`, so a
+  delivery under a transport without one would answer `unavailable`.
+  `useTurnSendAvailability()` (beside the deliveries, so a composer never names
+  a turn endpoint) is what every composer gates on BEFORE a send: disabled,
+  with its sentence as the placeholder (prompt input, the agent thread's
+  composer, Push & Close). A delivery that reaches an `unavailable` answer
+  anyway rejects with it — the send's failure card, never a recorded turn.
 
 ## Reading — `usePendingTurns` and `PendingTurnCard`
 
@@ -101,26 +118,20 @@ render (`reports/turn-unconfirmed`).
 
 ## Plugin reference
 
-- Description: The single entry point for sending a turn from the browser (sendConversationTurn: mints the turn's ledger id, shows its echo at once, then runs its delivery), and the view of the server's turn ledger (conversations/turn-ledger): usePendingTurns merges a conversation's live ledger rows with this tab's sends whose row has not arrived, PendingTurnCard renders each by state (echo while held or being typed, a warning when the CLI merged it with leftover text, Retry + Copy to draft when it failed), and useOptimisticConversationStatus reads a conversation as working from the instant a turn is sent. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) calls sendConversationTurn and differs only in its delivery. Contributes the turn-send-safety lint rule.
+- Description: The single entry point for sending a turn from the browser (useSendConversationTurn, bound to the subtree's transport: mints the turn's ledger id, shows its echo at once, then runs its delivery), and the view of the server's turn ledger (conversations/turn-ledger): usePendingTurns merges a conversation's live ledger rows with this tab's sends whose row has not arrived, PendingTurnCard renders each by state (echo while held or being typed, a warning when the CLI merged it with leftover text, Retry + Copy to draft when it failed), and useOptimisticConversationStatus reads a conversation as working from the instant a turn is sent. Every surface (prompt input, template chips, Send/Queue/Go, Push & Close, AskUserQuestion answers) sends through it and differs only in its delivery. Contributes the turn-send-safety lint rule.
 - Web:
-  - Uses:
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/endpoints` ×5
+    - `primitives/live-state` ×4
+    - `primitives/persistent-draft` ×3
+    - `primitives/css/ui-kit` ×2
+    - `primitives/networking` ×2
     - `conversations/conversation-view/user-message.UserMessageText`
-    - `infra/endpoints.fetchEndpoint`
-    - `infra/endpoints.getEndpointErrorMessage`
     - `network/live.useLive`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.cn`
     - `primitives/css/working-dots.WorkingText`
     - `primitives/dom/web-storage.defineStore`
-    - `primitives/live-state.foldResource`
-    - `primitives/live-state.mapResource`
-    - `primitives/live-state.ResourceResult`
-    - `primitives/live-state.useCombinedResources`
-    - `primitives/persistent-draft.DEFAULT_DRAFT_TTL`
-    - `primitives/persistent-draft.legacyDraftKeys`
-    - `primitives/persistent-draft.writeDraft`
     - `primitives/sync-status.useReportSync`
     - `shell/toast.showToast`
   - Exports (types):
@@ -133,10 +144,11 @@ render (`reports/turn-unconfirmed`).
   - Exports (values):
     - `conversationPromptDraft`
     - `PendingTurnCard`
-    - `sendConversationTurn`
     - `useOptimisticConversationStatus`
     - `usePendingTurns`
+    - `useSendConversationTurn`
     - `useTurnRunning`
+    - `useTurnSendAvailability`
     - `useTurnSendInFlight`
 - Cross-plugin:
   - Uses tokens:

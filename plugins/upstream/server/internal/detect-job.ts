@@ -2,7 +2,7 @@ import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
-import { recordReport } from "@plugins/reports/server";
+import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { fetchUpstreamStatus } from "@plugins/upstream/core";
 import { UPSTREAM_UPDATES_KIND, upstreamUpdatesTitle } from "./report-kind";
 

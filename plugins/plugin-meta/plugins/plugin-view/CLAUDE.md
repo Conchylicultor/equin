@@ -116,9 +116,9 @@ an empty titled card); a count goes in `summary`, via the shared `SectionCount`.
     - `ui/tokens/density` ×5
     - `ui/tokens/color-palette` ×3
     - `ui/tokens/shape --spacing`
-  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `plugin-meta` ×19
-    - `apps` ×3
+    - `apps` ×2
     - `active-data/plugin-link`
     - `debug/mcp-tools`
 - Sub-plugins:

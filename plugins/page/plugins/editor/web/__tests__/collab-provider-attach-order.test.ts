@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { Doc, applyUpdate, encodeStateAsUpdate, XmlText } from "yjs";
 import { LiveStateYjsProvider } from "../internal/live-state-yjs-provider";
+import { fakeFetchEndpoint } from "@plugins/infra/plugins/endpoints/web/testing";
+
+// Every case binds an existing block to a delivered state: nothing here may
+// reach the server, so any endpoint call fails the case loudly.
+const { fetchEndpoint } = fakeFetchEndpoint((call) => {
+  throw new Error(`unexpected endpoint call: ${call.route}`);
+});
 
 /**
  * THE binding-attach-order invariant of the content-doc transport.
@@ -44,6 +51,7 @@ describe("LiveStateYjsProvider — server state reaches the binding", () => {
       "block-1",
       () => new Uint8Array(),
       "present",
+      { fetchEndpoint, socketUrl: "ws://x/worktree" },
     );
 
     // Warm nav: the subscription is already settled, so the owning hook's effect
@@ -69,6 +77,7 @@ describe("LiveStateYjsProvider — server state reaches the binding", () => {
       "block-2",
       () => new Uint8Array(),
       "present",
+      { fetchEndpoint, socketUrl: "ws://x/worktree" },
     );
     const binding = attachBinding(doc);
 
@@ -88,6 +97,7 @@ describe("LiveStateYjsProvider — server state reaches the binding", () => {
       "block-3",
       () => new Uint8Array(),
       "present",
+      { fetchEndpoint, socketUrl: "ws://x/worktree" },
     );
     const state = storedState("once");
     provider.onServerState(state);
@@ -113,6 +123,7 @@ describe("LiveStateYjsProvider — server state reaches the binding", () => {
       "block-4",
       () => seed,
       "unseen",
+      { fetchEndpoint, socketUrl: "ws://x/worktree" },
     );
     const binding = attachBinding(doc);
     provider.connect();

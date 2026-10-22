@@ -40,15 +40,17 @@ import { useEffect, useMemo } from "react";
 import * as Y from "yjs";
 import { LinkNode } from "@lexical/link";
 
-vi.mock("@plugins/infra/plugins/endpoints/web", async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  return { ...actual, fetchEndpoint: vi.fn() };
-});
-vi.mock("@plugins/primitives/plugins/networking/web", () => ({
-  subscribeWsStatus: () => () => {},
-}));
+// Spread the real module: the endpoints barrel calls `transportScoped` at load.
+vi.mock(
+  "@plugins/primitives/plugins/networking/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<Record<string, unknown>>()),
+    subscribeWsStatus: () => () => {},
+  }),
+);
 vi.mock("@plugins/primitives/plugins/live-state/web", () => ({
   liveStateSocketKind: () => "worktree",
+  liveStateSocketUrl: () => "ws://x/worktree",
 }));
 vi.mock("@plugins/network/plugins/live/web", () => ({
   useLiveRow: vi.fn(() => ({
@@ -61,6 +63,10 @@ import {
   PluginProvider,
   type LoadedPlugin,
 } from "@plugins/framework/plugins/web-sdk/core";
+import {
+  fakeFetchEndpoint,
+  withTransport,
+} from "@plugins/infra/plugins/endpoints/web/testing";
 import { UndoRedoProvider } from "@plugins/primitives/plugins/undo-redo/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { editYDocState } from "@plugins/primitives/plugins/collab-doc/core";
@@ -84,6 +90,7 @@ import {
   CollabSession,
   type BlockDocOwner,
 } from "../internal/collab-session";
+import { blockDocsFor } from "../internal/use-block-docs";
 import { blockTextRunsOptions } from "../internal/block-text-extensions";
 import { buildSeedStateFor } from "../internal/block-seed-state";
 import {
@@ -95,6 +102,13 @@ import { fromNodes } from "../internal/optimistic-block-ops";
 import { BlockEditorProvider, useBlockEditor } from "../block-editor-context";
 
 const PAGE_ID = "page-1";
+
+// The editor's transport, and the server-synced owner's: every call answers
+// as an accepting server with nothing to say (the doc-update a synced owner
+// flushes). Every replay lands on a live owner or the row, never host B.
+const server = fakeFetchEndpoint();
+/** The editor's registry: an owner opened here is the one the editor reads. */
+const docs = blockDocsFor(server.transport);
 const TEXT = "page/text";
 /** A binding-shaped origin: not the provider, not the replay origin ⇒ the user. */
 const BINDING = { binding: true };
@@ -240,6 +254,7 @@ function mount(): Harness {
         </BlockEditorProvider>
       </UndoRedoProvider>
     </PluginProvider>,
+    { wrapper: withTransport(server) },
   );
   const ctx = () => {
     if (!sink.ctx) throw new Error("provider never rendered its child");
@@ -265,6 +280,7 @@ function mount(): Harness {
     has: (id) => row(id) !== undefined,
     open: (id, runs) => {
       const session = CollabSession.start(
+        docs,
         id,
         () => buildSeedStateFor(runs),
         "present",
@@ -391,7 +407,7 @@ describe("the incident: type, delete, undo, undo", () => {
     // The editor unmounts and the owner finalizes: the pointer model's silent
     // no-op arm. There is no doc left in process.
     await b.close();
-    expect(blockDocOwnerOf(id)).toBeNull();
+    expect(blockDocOwnerOf(docs, id)).toBeNull();
 
     await act(async () => h.ctx().bulkDelete([id]));
     expect(h.has(id)).toBe(false);
@@ -642,6 +658,7 @@ describe("a flush during an in-flight replay lands", () => {
     // mounted (`useLiveRow` is stubbed pending), and the state is delivered by
     // hand below.
     const xSession = CollabSession.start(
+      docs,
       x,
       () => buildSeedStateFor([{ text: "X" }]),
       "present",

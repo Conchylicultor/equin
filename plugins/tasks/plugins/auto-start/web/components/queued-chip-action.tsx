@@ -9,6 +9,7 @@ import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web"
 import type { TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 import { useTaskAutoStart } from "../hooks";
 import { setAutoStart } from "@plugins/tasks/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const scheduleIcon = symbol("schedule");
@@ -17,6 +18,7 @@ export function QueuedChipAction({ row }: ItemActionProps<TaskListItem>) {
   const taskId = row.id;
   const autoStart = useTaskAutoStart(taskId);
   const catalog = useModelCatalog();
+  const fetchEndpoint = useFetchEndpoint();
   // Nothing while loading, nor for an unarmed task (no marker row): the chip
   // appears once the task is known to be armed. A failed read is a small error
   // icon whose click retries — never silently "not armed".
@@ -55,7 +57,7 @@ export function QueuedChipAction({ row }: ItemActionProps<TaskListItem>) {
         aria-label={`Cancel auto-start (${label}, ${resolution.reason})`}
         onClick={(e: React.MouseEvent) => {
           e.stopPropagation();
-          void setAutoStart(taskId, "none");
+          void setAutoStart(fetchEndpoint, taskId, "none");
         }}
       >
         {label} {resolution.reason}
@@ -72,7 +74,7 @@ export function QueuedChipAction({ row }: ItemActionProps<TaskListItem>) {
       aria-label={`Cancel auto-start (${label})`}
       onClick={(e: React.MouseEvent) => {
         e.stopPropagation();
-        void setAutoStart(taskId, "none");
+        void setAutoStart(fetchEndpoint, taskId, "none");
       }}
     >
       Queued · {label}

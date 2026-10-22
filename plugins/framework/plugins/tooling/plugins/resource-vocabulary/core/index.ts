@@ -11,6 +11,18 @@ export {
   resourceVocabularyOwnerPaths,
 } from "./vocabulary";
 export { mintsOf } from "./mints";
+export {
+  buildDescriptorIndex,
+  parseFileBindings,
+  registerCallTarget,
+} from "./descriptor-index";
+export type {
+  DescriptorInfo,
+  FileBindings,
+  ImportedDescriptorResolver,
+  RegisterCallTarget,
+  SourceFile,
+} from "./descriptor-index";
 export type {
   DescriptorFactory,
   DescriptorFactoryName,

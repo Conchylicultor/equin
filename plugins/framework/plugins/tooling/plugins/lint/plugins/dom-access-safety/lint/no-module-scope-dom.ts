@@ -131,8 +131,8 @@ export default createRule({
         "runtime without a DOM — `bun test` and the docgen barrel walk both die " +
         "with `ReferenceError: {{name}} is not defined` before any component " +
         "renders. Move the read inside the function, hook, or component that " +
-        "needs it (for a socket URL use `wsUrl` from " +
-        "@plugins/primitives/plugins/networking/web), or guard it with " +
+        "needs it (for a socket, open it on the subtree's transport — " +
+        "`useTransport()` from @plugins/primitives/plugins/networking/web), or guard it with " +
         '`typeof {{name}} !== "undefined"` if it is a fire-and-forget ' +
         "module-scope side effect.",
     },

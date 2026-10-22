@@ -2,7 +2,7 @@
 
 Generic "most-used first" ordering for any set of things named by a
 `(namespace, key)` pair — prompt templates, launch prompts, preprompts, command
-palette entries. Consumers call `recordUsage(namespace, key)` on use and
+palette entries. Consumers call `recordUsage(namespace, key)` (from `useRecordUsage()`) on use and
 `useUsageOrder(namespace, keys, resnapshotKey)` at render; nothing else is
 needed, and the primitive knows nothing about what it ranks.
 
@@ -65,7 +65,7 @@ browser host.
 
 ## Plugin reference
 
-- Description: Frecency usage ranking for any (namespace, key) set: recordUsage() fires one atomic decay-and-increment, useUsageOrder() returns the most-used-first order — one coalesced id-set subscription, frozen per context so chips never move under the cursor, seeded from a local cache so the first paint does not re-sort — and useRecentUsage() lists a namespace's most recently used keys (a bounded window), for a Recent row with no candidate set to rank. Owns the usage_stats table: one frecency rollup per (namespace, key), updated by a single atomic decay-and-increment upsert, served as a lookup-only live collection read by id set (the nightly 1-year retention sweep is the machine half).
+- Description: Frecency usage ranking for any (namespace, key) set: useRecordUsage() returns the recorder that fires one atomic decay-and-increment, useUsageOrder() returns the most-used-first order — one coalesced id-set subscription, frozen per context so chips never move under the cursor, seeded from a local cache so the first paint does not re-sort — and useRecentUsage() lists a namespace's most recently used keys (a bounded window), for a Recent row with no candidate set to rank. Owns the usage_stats table: one frecency rollup per (namespace, key), updated by a single atomic decay-and-increment upsert, served as a lookup-only live collection read by id set (the nightly 1-year retention sweep is the machine half).
 - Server:
   - Contributes:
     - `resource.declare` "usage-stats"
@@ -85,7 +85,7 @@ browser host.
   - Routes: `POST /api/usage-rank/record`
 - Web:
   - Uses:
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`
     - `primitives/dom/web-storage.defineStore`
     - `primitives/live-state.mapResource`
@@ -93,9 +93,10 @@ browser host.
     - `primitives/persistent-draft.legacyDraftKeys`
     - `primitives/persistent-draft.readDraft`
     - `primitives/persistent-draft.writeDraft`
+  - Exports (types): `RecordUsage`
   - Exports (values):
-    - `recordUsage`
     - `useRecentUsage`
+    - `useRecordUsage`
     - `useUsageOrder`
 - Core:
   - Uses:
@@ -124,7 +125,6 @@ browser host.
     - `UsageStatSchema`
 - Cross-plugin:
   - Imported by:
-    - `apps/agent-manager/demo`
     - `apps/pages/page-tree`
     - `conversations/conversation-view/prompt-templates`
     - `primitives/css/color-picker`

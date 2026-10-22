@@ -106,10 +106,10 @@ honest — the prototype does exist — and it self-corrects.
     - `prototypeDetailPane.Actions` "done" → `DoneHeaderAction`
     - `PrototypeCardActions` "pin" → `PinCardAction`
     - `PrototypeCardActions` "done" → `DoneCardAction`
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/endpoints` ×4
     - `primitives/data-view` ×4
     - `apps/prototypes/canvas` ×3
-    - `infra/endpoints` ×3
     - `primitives/live-state` ×3
     - `primitives/pane` ×3
     - `apps/prototypes/thumbnails` ×2
@@ -121,7 +121,7 @@ honest — the prototype does exist — and it self-corrects.
     - `primitives/icon-button.IconButton`
     - `primitives/launch.LaunchAgentPopover`
     - `primitives/relative-time.RelativeTime`
-    - `shell/notifications.toast`
+    - `shell/notifications.useToast`
     - `ui/icons.Icon`
   - Exports (types): `PrototypeGalleryRow`
   - Exports (values):

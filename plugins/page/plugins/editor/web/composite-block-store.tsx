@@ -15,7 +15,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { enqueueDetachedWrite } from "@plugins/primitives/plugins/optimistic-mutation/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
@@ -152,6 +152,9 @@ export function CompositeServerProviderHost({
   enabledBlockTypes?: readonly string[];
   children: ReactNode;
 } & ProviderHostViewProps) {
+  // The detached writes (cross-page moves, patches to an unsettled page) go to
+  // the host this editor is served by, like every feed's own writes.
+  const fetchEndpoint = useFetchEndpoint();
   const [feeds, setFeeds] = useState<ReadonlyMap<string, FeedSnapshot>>(
     () => new Map<string, FeedSnapshot>(),
   );
@@ -347,7 +350,7 @@ export function CompositeServerProviderHost({
           ),
       );
     },
-    [],
+    [fetchEndpoint],
   );
 
   const dispatch = useCallback(
@@ -430,7 +433,7 @@ export function CompositeServerProviderHost({
         );
       }
     },
-    [basePageId, dispatchFor, moveAcrossPages],
+    [basePageId, dispatchFor, moveAcrossPages, fetchEndpoint],
   );
 
   // There are no routed write members left. Every structural mutation is a

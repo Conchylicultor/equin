@@ -4,6 +4,7 @@ import {
   parseStringField,
   parseBoolField,
   defaultExportObjectBody,
+  hasField,
   parseStaticCallId,
   readStaticCallId,
   unresolvableCallIdMessage,
@@ -362,4 +363,29 @@ test("unresolvableCallIdMessage says so when there are no arguments", () => {
     hint: "h",
   });
   expect(msg).toContain("the call has no arguments");
+});
+
+// ── hasField: presence as a key or a shorthand member ──────────────
+
+test("hasField sees a key with any value, and a shorthand member", () => {
+  const o = { depth0: true };
+  expect(
+    hasField(` route: "x", needsMachine: FEATURE `, "needsMachine", o),
+  ).toBe(true);
+  expect(hasField(` needsMachine, route: "x" `, "needsMachine", o)).toBe(true);
+  expect(hasField(` route: "x", needsMachine `, "needsMachine", o)).toBe(true);
+  expect(hasField(`{ route: "x", needsMachine }`, "needsMachine")).toBe(true);
+});
+
+test("hasField ignores a nested member at depth 0, a comment, a string and a longer name", () => {
+  const o = { depth0: true };
+  expect(
+    hasField(` spec: { needsMachine }, route: "x" `, "needsMachine", o),
+  ).toBe(false);
+  expect(
+    hasField(` route: "needsMachine, " // needsMachine,\n`, "needsMachine", o),
+  ).toBe(false);
+  expect(hasField(` needsMachineToo, route: "x" `, "needsMachine", o)).toBe(
+    false,
+  );
 });

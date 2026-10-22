@@ -10,7 +10,7 @@ import {
   parseTestDbName,
   TEST_DB_TTL_MS,
 } from "@plugins/database/plugins/db-test-fixture/core";
-import { recordReport } from "@plugins/reports/server";
+import { recordReport } from "@plugins/reports/plugins/engine/server";
 
 /**
  * Reclaims throwaway test databases whose test process died before its

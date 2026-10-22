@@ -11,12 +11,9 @@
     - `infra/endpoints.getEndpointErrorMessage`
     - `infra/endpoints.useEndpointMutation`
     - `primitives/icon-button.IconButton`
-    - `shell/notifications.toast`
-- Server:
-  - Uses:
-    - `conversations.resumeConversation`
-    - `infra/endpoints.HttpError`
-    - `infra/endpoints.implement`
+    - `shell/notifications.useToast`
+- Machine:
+  - Uses: `infra/endpoints.implementMachine`
   - Routes: `POST /api/conversations/:id/resume`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`

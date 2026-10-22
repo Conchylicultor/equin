@@ -25,7 +25,7 @@ serveOverPort(port, async () => {
 
 // page — one transport per server, kept for its lifetime
 const { server } = await portBrowserServer(worker);
-<TransportProvider transport={browserServerTransport(server)}>…the unchanged app…</TransportProvider>
+<TransportProvider transport={browserServerTransport(server, { telemetry })}>…the unchanged app…</TransportProvider>
 ```
 
 ## core/: the `BrowserServer` interface
@@ -38,9 +38,10 @@ Two implementations:
   - `request` is the host's router: the graph's routes plus
     `/api/resources/:key`; an unmatched `/api/…` path is
     `unmatchedApiResponse` (`infra/endpoints/core`) —
-    `409 { reason: "unsupported", method, path }`, which `fetchEndpoint`
-    throws as `EndpointUnsupportedError` without reporting it
-    (`/api/central-resources/*` included); any other path is a 404 naming it.
+    `409 { reason: "unsupported", method, path }`, which the fetcher throws
+    and reports like any other endpoint failure — under a browser host it is
+    a gap the build's coverage guard missed (`/api/central-resources/*`
+    included); any other path is a 404 naming it.
   - `connect(peer)` — one in-memory notifications socket: a stable
     `RuntimeSocket` (the runtime keys its state by it) whose `send` calls
     `peer.deliver(frame)`; the returned end's `send(frame)` is the runtime's
@@ -96,8 +97,11 @@ Tests cannot start a real Web Worker:
 A `Transport` (`primitives/networking`). Make ONE per server: the scoped
 live-state pipeline is keyed by transport identity.
 
-- `socketUrl(p)` / `assetUrl(p)` → `browser:<server.id>:<p>` (an asset is
-  unloadable; the routes it serves need none).
+- `socketUrl(p)` → `browser:<server.id>:<p>` (the socket's identity on the
+  ws-status bus, distinct from the page's).
+- `servesUrls: false` — no URL reaches a server in the page, so an element's
+  asset (`AssetPath`) is fetched through `fetch` below and handed over as a
+  blob URL by `useAssetSrc` (`infra/endpoints`).
 - `openSocket(url)` — the worktree notifications path is a socket over
   `server.connect`: `onopen` on a microtask after `publishWsStatus(open)`,
   frames delivered to `onmessage` on a microtask (a reply never re-enters the
@@ -107,6 +111,9 @@ live-state pipeline is keyed by transport identity.
   that publishes "closed".
 - `fetch(input, init)` → `server.request(new Request(new URL(input,
   "http://browser-server.invalid"), init))` (a `Request` input is routed as is).
+- `telemetry` — whether the telemetry its traffic raises is reported (to the
+  page's own server: a browser server keeps none); the caller passes the
+  enclosing page's setting, or `false` to drop it.
 
 Tests: `web/__tests__/browser-server.test.tsx` drives the real
 `NotificationsClient` through `<TransportProvider>` + `<NotificationsProvider>`.
@@ -115,7 +122,7 @@ Tests: `web/__tests__/browser-server.test.tsx` drives the real
 
 ## Plugin reference
 
-- Description: A server that runs in the page's realm or across a worker's port — a third host of the unified live API (core: the BrowserServer interface; runtimeBrowserServer over a resource runtime booted in this realm; serveOverPort / portBrowserServer carrying one across a MessageChannel or a Web Worker). Web: browserServerTransport(server), the Transport a <TransportProvider> points a subtree at — in-memory sockets to its runtime, requests through its router, an inert central socket.
+- Description: A server that runs in the page's realm or across a worker's port — a third host of the unified live API (core: the BrowserServer interface; runtimeBrowserServer over a resource runtime booted in this realm; serveOverPort / portBrowserServer carrying one across a MessageChannel or a Web Worker). Web: browserServerTransport(server, { telemetry }), the Transport a <TransportProvider> points a subtree at — in-memory sockets to its runtime, requests through its router, an inert central socket.
 - Web:
   - Uses:
     - `primitives/networking.publishWsStatus`

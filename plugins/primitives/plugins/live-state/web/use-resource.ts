@@ -46,7 +46,7 @@ import { canonicalParams } from "@plugins/packages/plugins/canonical-params/core
 import type { FailingResource } from "./resource-error-reporter";
 import type { ResourceDescriptor, ResourceError } from "../core";
 import {
-  originTransport,
+  transportScoped,
   useTransport,
   type Transport,
   type WsStatus,
@@ -89,38 +89,24 @@ function createLiveQueryClient(): QueryClient {
 }
 
 /**
- * Mounts a live-state pipeline — a NotificationsClient and the QueryClient it
- * owns — for `children`. Under the page's own transport (no
- * `<TransportProvider>` above) it is the tab's one client
- * (`ensureNotificationsClient`, unless boot already hoisted it). Under any
- * other transport it is a pipeline of that transport's own: a fresh
- * QueryClient, a NotificationsClient opening the transport's sockets and
- * fetching through it, and its own causal-floor registries — so nothing read
- * inside the subtree is cached, confirmed or reported against the page's
- * server, and the reverse. It takes no client: a cache handed in beside the
- * singleton was mounted for React while the client went on writing the one it
- * was built with. A test mounts its own pair through `web/testing`'s
- * `createLiveStateHarness`.
+ * Mounts the live-state pipeline of the enclosing transport — a
+ * NotificationsClient and the QueryClient it owns, opening that transport's
+ * sockets and fetching through it — for `children`. One pipeline per
+ * transport (`transportScoped`), shared by every provider under it: the
+ * page's is the one boot hoisted (`ensureNotificationsClient(pageTransport)`,
+ * kept for the tab's life); any other transport's (a demo backend) is built on
+ * first mount with its own causal-floor registries and torn down when its last
+ * provider leaves — so nothing read inside the subtree is cached, confirmed or
+ * reported against another server, and the reverse. It takes no client: a
+ * cache handed in beside the pipeline was mounted for React while the client
+ * went on writing the one it was built with. A test mounts its own pair
+ * through `web/testing`'s `createLiveStateHarness`.
  */
 export function NotificationsProvider({ children }: { children: ReactNode }) {
   const transport = useTransport();
-  if (transport === originTransport)
-    return createElement(NotificationsClientProvider, {
-      client: ensureNotificationsClient(),
-      children,
-    });
-  return createElement(ScopedPipeline, { transport, children });
-}
-
-function ScopedPipeline({
-  transport,
-  children,
-}: {
-  transport: Transport;
-  children: ReactNode;
-}) {
-  const pipeline = scopedPipelineFor(transport);
-  useEffect(() => retainScopedPipeline(transport), [transport]);
+  const slot = pipelines.of(transport);
+  const pipeline = slot.get();
+  useEffect(() => slot.retain(), [slot]);
   return createElement(NotificationsClientProvider, {
     client: pipeline.client,
     children,
@@ -129,9 +115,8 @@ function ScopedPipeline({
 
 /**
  * Mount `client` and the cache it owns — one value, so the two cannot be
- * mismatched. Internal: the providers above pass the tab singleton or a scoped
- * pipeline's client, and the test harness (`web/testing`) a fresh client per
- * test.
+ * mismatched. Internal: the provider above passes its transport's pipeline,
+ * and the test harness (`web/testing`) a fresh client per test.
  */
 export function NotificationsClientProvider({
   client,
@@ -147,51 +132,86 @@ export function NotificationsClientProvider({
   );
 }
 
-interface ScopedPipelineEntry {
+interface Pipeline {
   queryClient: QueryClient;
   client: NotificationsClient;
-  holders: number;
 }
 
-// One pipeline per non-origin transport, shared by every provider under it and
-// torn down when the last one unmounts. Created during render (children read it
-// on their first render) and retained by an effect; the teardown is deferred a
-// microtask so StrictMode's unmount→remount of the same commit re-retains the
-// live pipeline instead of reading a destroyed one.
-const scopedPipelines = new Map<Transport, ScopedPipelineEntry>();
+/**
+ * One transport's pipeline, built on first `get()`. A kept slot (the page's,
+ * pinned by the boot hoist) lives for the tab; any other is destroyed when its
+ * last holder releases it, and rebuilt by the next `get()`. The teardown is
+ * deferred a microtask so StrictMode's unmount→remount of the same commit
+ * re-retains the live pipeline instead of reading a destroyed one.
+ */
+class PipelineSlot {
+  private pipeline: Pipeline | null = null;
+  private holders = 0;
+  private kept = false;
 
-function scopedPipelineFor(transport: Transport): ScopedPipelineEntry {
-  let entry = scopedPipelines.get(transport);
-  if (!entry) {
-    const queryClient = createLiveQueryClient();
+  constructor(private readonly transport: Transport) {}
+
+  get(): Pipeline {
+    this.pipeline ??= this.build(
+      createLiveQueryClient(),
+      createLiveRegistries(),
+    );
+    return this.pipeline;
+  }
+
+  /**
+   * Make this the page's pipeline: built on the default query client (the one
+   * `hydrateResource` seeds) and the root registries, and never torn down.
+   */
+  keep(): Pipeline {
+    if (this.kept) return this.pipeline!;
+    if (this.pipeline !== null)
+      throw new Error(
+        "ensureNotificationsClient: this transport's pipeline was built before boot hoisted it as the page's",
+      );
+    this.kept = true;
+    this.pipeline = this.build(getDefaultQueryClient(), rootLiveRegistries);
+    return this.pipeline;
+  }
+
+  retain(): () => void {
+    this.holders++;
+    return () => {
+      this.holders--;
+      queueMicrotask(() => {
+        if (this.kept || this.holders > 0 || this.pipeline === null) return;
+        const { client, queryClient } = this.pipeline;
+        this.pipeline = null;
+        client.destroy();
+        queryClient.clear();
+      });
+    };
+  }
+
+  private build(
+    queryClient: QueryClient,
+    registries: LiveRegistries,
+  ): Pipeline {
+    const { transport } = this;
     const client = new NotificationsClient(queryClient, {
       makeSocket: (url, options) => transport.openSocket(url, options),
       socketUrl: (path) => transport.socketUrl(path),
       fetchImpl: (input, init) => transport.fetch(input, init),
-      registries: {
-        watermarks: createWatermarkRegistry(),
-        txAcks: createTxAckRegistry(),
-      },
+      registries,
+      telemetry: transport.telemetry,
     });
-    entry = { queryClient, client, holders: 0 };
-    scopedPipelines.set(transport, entry);
+    return { queryClient, client };
   }
-  return entry;
 }
 
-function retainScopedPipeline(transport: Transport): () => void {
-  const entry = scopedPipelineFor(transport);
-  entry.holders++;
-  return () => {
-    entry.holders--;
-    queueMicrotask(() => {
-      if (entry.holders > 0 || scopedPipelines.get(transport) !== entry) return;
-      scopedPipelines.delete(transport);
-      entry.client.destroy();
-      entry.queryClient.clear();
-    });
+function createLiveRegistries(): LiveRegistries {
+  return {
+    watermarks: createWatermarkRegistry(),
+    txAcks: createTxAckRegistry(),
   };
 }
+
+const pipelines = transportScoped((transport) => new PipelineSlot(transport));
 
 /**
  * The causal-floor registries of the enclosing live-state pipeline — the
@@ -218,28 +238,37 @@ export function useLiveSocketKindOf(): (
   );
 }
 
-let singleton: NotificationsClient | null = null;
+let pageSlot: PipelineSlot | null = null;
 
-// Transport hoist: construct the singleton NotificationsClient at the VERY start
+// Transport hoist: construct the page's NotificationsClient at the VERY start
 // of boot — before any plugin chunk is evaluated — so its leader-election
 // `navigator.locks.request` is queued at t≈0. The lock grant callback (which
 // calls `new WebSocket()` inside SharedWebSocket) then fires during the first
 // main-thread yield (a `loadPlugins` await gap) and the socket opens *during*
-// boot instead of ~8s later, after the full app mount. NotificationsProvider
-// later calls this same function, so it reuses THIS singleton — the
-// one-socket-per-origin invariant is preserved (no eager second socket, no
-// per-tab WS regression). It owns the default QueryClient, the one
-// `hydrateResource` seed, so seeded cache entries line up.
-export function ensureNotificationsClient(): NotificationsClient {
-  singleton ??= new NotificationsClient(getDefaultQueryClient());
-  return singleton;
+// boot instead of ~8s later, after the full app mount. It is the pipeline of
+// the page's transport, so the root `NotificationsProvider` (under that
+// transport) reuses THIS client — the one-socket-per-origin invariant is
+// preserved (no eager second socket, no per-tab WS regression). It owns the
+// default QueryClient, the one `hydrateResource` seeds, so seeded cache
+// entries line up. Called by the page root only, with the page's transport; a
+// second, different transport throws.
+export function ensureNotificationsClient(
+  transport: Transport,
+): NotificationsClient {
+  const slot = pipelines.of(transport);
+  if (pageSlot !== null && pageSlot !== slot)
+    throw new Error(
+      "ensureNotificationsClient: the page's pipeline is already bound to another transport",
+    );
+  pageSlot = slot;
+  return slot.keep().client;
 }
 
-// Context-free accessor for the singleton — usable from Core.Root watchers that
-// may mount outside NotificationsProvider (the wedge watchdog). Returns null
-// until the provider has created the client (i.e. before first render).
+// Context-free accessor for the page's client — usable from Core.Root watchers
+// that may mount outside NotificationsProvider (the wedge watchdog). Returns
+// null until boot hoisted it.
 export function getNotificationsClient(): NotificationsClient | null {
-  return singleton;
+  return pageSlot?.get().client ?? null;
 }
 
 export function useNotificationsStatus(): WsStatus {
@@ -281,9 +310,10 @@ export function useFailingResources(): readonly FailingResource[] {
   );
 }
 
-// Accessor for the singleton NotificationsClient — consumers (the live-state
-// health pane, the wedge watchdog) use it to reach probeMissedUpdates()/
-// debugSnapshot()/subscribeDebug(). Must be called inside NotificationsProvider.
+// Accessor for the enclosing pipeline's NotificationsClient — consumers (the
+// live-state health pane, the wedge watchdog) use it to reach
+// probeMissedUpdates()/debugSnapshot()/subscribeDebug(). Must be called inside
+// NotificationsProvider.
 export function useNotificationsClient(): NotificationsClient {
   const client = useContext(NotificationsContext);
   if (!client)

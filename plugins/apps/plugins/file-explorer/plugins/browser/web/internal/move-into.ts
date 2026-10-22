@@ -72,9 +72,15 @@ export function useMoveInto(): (
   destDir: string,
 ) => Promise<readonly string[]> {
   const move = useEndpointMutation(hostFsMove);
-  const { mutateAsync } = move;
   return useCallback(
     async (sources, destDir) => {
+      // Moving renames paths on the computer's disk: a host without the
+      // computer says so and moves nothing.
+      if (move.kind === "unavailable") {
+        showToast({ variant: "error", description: move.message });
+        return [];
+      }
+      const { mutateAsync } = move;
       const send = async (
         batch: readonly string[],
         resolutions?: Record<string, HostFsMoveResolution>,
@@ -161,6 +167,6 @@ export function useMoveInto(): (
       }
       return moved;
     },
-    [mutateAsync],
+    [move],
   );
 }

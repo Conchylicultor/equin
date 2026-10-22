@@ -13,6 +13,8 @@ import { chainFrom, type ChainFrom } from "../../shared/chain-from";
 export type ChainFromReading =
   | { kind: "idle" }
   | { kind: "pending" }
+  // The walk needs the computer (git, `needsMachine`) and there is none here.
+  | { kind: "unavailable"; message: string }
   | { kind: "failed"; error: ResourceError; refetch: () => Promise<void> }
   | ChainFrom;
 
@@ -29,6 +31,8 @@ export function useChainFrom(commit: string | null): ChainFromReading {
   switch (result.status) {
     case "loading":
       return { kind: "pending" };
+    case "unavailable":
+      return { kind: "unavailable", message: result.message };
     // A failed read is not "unplaceable" — the commit may be perfectly
     // placeable and the read simply did not land — so it gets its own arm.
     case "error":

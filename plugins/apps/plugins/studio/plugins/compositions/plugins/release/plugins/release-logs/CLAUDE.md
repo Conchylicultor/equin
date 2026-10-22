@@ -23,7 +23,7 @@
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/log-channels.LiveLogChannel`
-    - `shell/notifications.toast`
+    - `shell/notifications.useToast`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`

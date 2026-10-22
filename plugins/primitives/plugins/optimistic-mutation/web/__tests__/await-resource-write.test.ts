@@ -2,7 +2,8 @@
  * `awaitResourceWrite`'s confirmation arms, on a harness pipeline: the exact
  * ack (a standalone ack frame — no cache write), the snapshot-watermark floor
  * strictly past the write, the already-reflected fast path, and the reject arm
- * (a read that fails before confirming rejects instead of hanging).
+ * (a read that fails before confirming rejects instead of hanging) — and
+ * `useAwaitResourceWrite` binding it to the enclosing pipeline.
  */
 
 import { describe, expect, it, vi } from "vitest";
@@ -11,13 +12,27 @@ vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
   clientLog: () => {},
 }));
 
+import { renderHook } from "@testing-library/react";
+import { z } from "zod";
+import { liveValue } from "@plugins/network/plugins/live/core";
 import { queryKeyFor } from "@plugins/primitives/plugins/live-state/web";
 import {
   createLiveStateHarness,
   noteResourceTxAcks,
   noteResourceWatermark,
 } from "@plugins/primitives/plugins/live-state/web/testing";
-import { awaitWriteOn } from "../internal/await-resource-write";
+import {
+  awaitWriteOn,
+  useAwaitResourceWrite,
+} from "../internal/await-resource-write";
+
+const plainValue = liveValue("test.await-write.plain", {
+  schema: z.array(z.number()),
+});
+const namedValue = liveValue("test.await-write.named", {
+  schema: z.array(z.number()),
+  params: ["name"],
+});
 
 // The page's registries are module-global: each test names its own tuple.
 let n = 0;
@@ -112,5 +127,32 @@ describe("awaitResourceWrite", () => {
     expect(await stateOf(awaitWriteOn(pipeline, key, undefined, "600"))).toBe(
       "rejected: down",
     );
+  });
+});
+
+describe("useAwaitResourceWrite", () => {
+  it("awaits on the enclosing pipeline, with and without params", async () => {
+    const h = createLiveStateHarness();
+    const { result } = renderHook(() => useAwaitResourceWrite(), {
+      wrapper: h.Wrapper,
+    });
+    const plain = result.current(plainValue, "700");
+    const named = result.current(namedValue, { name: "x" }, "701");
+    expect(await stateOf(plain)).toBe("pending");
+    expect(await stateOf(named)).toBe("pending");
+    noteResourceTxAcks(plainValue.key, undefined, ["700"]);
+    noteResourceTxAcks(namedValue.key, { name: "x" }, ["701"]);
+    expect(await stateOf(plain)).toBe("resolved");
+    expect(await stateOf(named)).toBe("resolved");
+  });
+
+  it("is stable across renders of one pipeline", () => {
+    const h = createLiveStateHarness();
+    const { result, rerender } = renderHook(() => useAwaitResourceWrite(), {
+      wrapper: h.Wrapper,
+    });
+    const first = result.current;
+    rerender();
+    expect(result.current).toBe(first);
   });
 });

@@ -35,9 +35,8 @@ Swing (`meta.swing`) is read here but applied at playback only — see
     - `apps/sonata/document.SonataDocument`
     - `apps/sonata/library.Library`
     - `apps/sonata/library.openSongImperative`
-    - `infra/attachments.getAttachmentFile`
+    - `apps/sonata/library.SourceCreateOption`
     - `infra/attachments.uploadAttachment`
-    - `infra/endpoints.fetchEndpoint`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`

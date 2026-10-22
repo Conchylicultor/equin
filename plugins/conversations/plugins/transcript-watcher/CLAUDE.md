@@ -100,9 +100,9 @@ memo degrades to a full chain re-read on every push.
     - `infra/file-watcher.defineFileWatcher`
     - `infra/file-watcher.FileWatcher`
     - `infra/paths.CLAUDE_PROJECTS_DIR`
-    - `reports.DEFAULT_REPORT_DEBOUNCE_MS`
-    - `reports.recordReportDebounced`
     - `reports.ReportKind`
+    - `reports/engine.DEFAULT_REPORT_DEBOUNCE_MS`
+    - `reports/engine.recordReportDebounced`
     - `tasks/tasks-core.getConversationClaudeSessionId`
   - Exports (types):
     - `AnchoredChain`
@@ -132,10 +132,8 @@ memo degrades to a full chain re-read on every push.
     - `apps/prototypes/checkpoints`
     - `backup/sources/transcripts`
     - `conversations`
-    - `conversations/conversation-view/jsonl-viewer/subagents`
     - `conversations/transcript-api`
     - `conversations/transcript-retention`
-    - `conversations/usage`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/anchor.ts`, `server/internal/chain-signature.ts`, `server/internal/session-writes.ts`, `server/internal/watcher.ts` (debt)
 

@@ -11,8 +11,9 @@
     - `auth.startConnectFlow`
     - `auth.useAccountStatus`
     - `config_v2.useConfigRegistrations`
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`
+    - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`

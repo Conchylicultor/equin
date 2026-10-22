@@ -1,4 +1,6 @@
 export { defineEndpoint } from "./define-endpoint";
+export { ASSET_PATH, assetPath } from "./asset-path";
+export type { AssetPath } from "./asset-path";
 export type { EndpointDef, MachineEndpointDef } from "./define-endpoint";
 export { unavailableMessage } from "./needs-machine";
 export type {
@@ -19,7 +21,4 @@ export { dateString } from "./schemas";
 export {
   unsupportedEndpointResponse,
   unmatchedApiResponse,
-  isUnsupportedEndpointBody,
-  isUnsupportedEndpointRefusal,
-  isUnsupportedEndpointResponse,
 } from "./unsupported";

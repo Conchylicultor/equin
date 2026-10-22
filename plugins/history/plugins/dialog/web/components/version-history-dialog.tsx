@@ -29,7 +29,7 @@ import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { toast } from "@plugins/shell/plugins/notifications/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import {
   historyVersions,
   restoreVersion,
@@ -110,6 +110,7 @@ export function VersionHistoryDialog({
 
   // No invalidation: the timeline is live, so the restore's "Before restore"
   // point and its new version land in it through the change feed.
+  const toast = useToast();
   const restore = useEndpointMutation(restoreVersion, {
     onSuccess: () => {
       toast({

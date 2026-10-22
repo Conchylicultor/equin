@@ -9,8 +9,8 @@ import {
 import { taskRows, type TaskRow } from "@plugins/tasks/plugins/tasks-core/core";
 import { Tasks } from "../slots";
 import {
-  taskFieldSchema,
-  taskHierarchy,
+  useTaskFieldSchema,
+  useTaskHierarchy,
   buildTreeOptions,
 } from "../internal/tasks-data-view";
 
@@ -25,6 +25,8 @@ export function TasksListView({
   linkTo: (id: string) => LinkTarget;
 }) {
   const result = useLive(taskRows);
+  const taskFieldSchema = useTaskFieldSchema();
+  const taskHierarchy = useTaskHierarchy();
   return (
     <ResourceView resource={result} fallback={<Loading variant="rows" />}>
       {(rows) => (

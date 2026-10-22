@@ -11,7 +11,7 @@ import type {
   MachineUnavailable,
 } from "../../core";
 import { unavailableMessage } from "../../core";
-import { EndpointError, fetchEndpoint } from "./fetch-endpoint";
+import { EndpointError, useFetchEndpoint } from "./fetch-endpoint";
 
 // Global mutation meta type — available on any useMutation/useEndpointMutation call.
 // suppressError: true  → silence the global auto-toast (handle locally instead).
@@ -105,6 +105,7 @@ export function useEndpointMutation<
   | MachineEndpointMutation<TParams, TBody, TResponse> {
   const queryClient = useQueryClient();
   const transport = useTransport();
+  const fetchEndpoint = useFetchEndpoint();
   const suppressError =
     opts?.meta?.suppressError ?? opts?.onError !== undefined;
 
@@ -117,8 +118,7 @@ export function useEndpointMutation<
     mutationFn: async (variables) => {
       const params = (variables.params ?? {}) as TParams;
       const body = "body" in variables ? variables.body : undefined;
-      const fetchOpts =
-        body !== undefined ? { body, transport } : { transport };
+      const fetchOpts = body !== undefined ? { body } : {};
       if (endpoint.needsMachine === undefined) {
         return fetchEndpoint(
           endpoint,

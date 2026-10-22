@@ -10,6 +10,7 @@ import { conversationGroupIdKind } from "../core";
 export { addMemberToGroup } from "./internal/repo";
 
 export default {
+  portable: true,
   description:
     "Conversation-group persistence (tables + addMemberToGroup) backing the improve plugin's group-on-launch. No UI.",
   contributions: [IdKinds.Kind({ kind: conversationGroupIdKind })],

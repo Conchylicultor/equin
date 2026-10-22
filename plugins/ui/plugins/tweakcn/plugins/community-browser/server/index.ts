@@ -4,6 +4,7 @@ import { handleApply } from "./internal/handle-apply";
 import { communityCatalogServed } from "./internal/resource";
 
 export default {
+  portable: true,
   description:
     "Serves the tweakcn community catalog (the live tweakcn.community-catalog value), and the endpoint that saves one of its themes as a saved theme.",
   contributions: [...communityCatalogServed.declare],

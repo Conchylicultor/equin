@@ -11,8 +11,9 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// The endpoints barrel is replaced whole: clientLog uses only `fetchEndpoint`,
-// and the tests reject it with an `EndpointError` for a plain failure.
+// The endpoints barrel is replaced whole: clientLog uses only the page's
+// fetcher (`fetchEndpointOver(pageTransport)`), and the tests reject it with an
+// `EndpointError` for a plain failure.
 const mocks = vi.hoisted(() => ({
   fetchEndpoint: vi.fn(),
   wsListeners: [] as ((ev: { url: string; status: string }) => void)[],
@@ -31,7 +32,7 @@ const ACCEPTED = { status: "accepted" };
 const PAUSED = { status: "paused", reason: "duress" };
 
 vi.mock("@plugins/infra/plugins/endpoints/web", () => ({
-  fetchEndpoint: mocks.fetchEndpoint,
+  fetchEndpointOver: () => mocks.fetchEndpoint,
   EndpointError: mocks.EndpointError,
 }));
 

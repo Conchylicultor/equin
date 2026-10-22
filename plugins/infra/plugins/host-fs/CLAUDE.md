@@ -183,7 +183,7 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
 
 ## Plugin reference
 
-- Description: The one host-filesystem API: stat / complete / raw reads of any path the user account can read (filesystem permissions are the boundary; missing / denied / not-a-dir are typed results), POST open (Open with default app, Reveal in Finder) and POST extract (an archive beside itself, its single top-level entry as itself or several in a new folder) and POST move (paths into a folder, a taken name answered `exists` until the caller resolves it: replace / keep-both / skip), all three refused unless the Origin is the app's own *.localhost.
+- Description: The host-filesystem readers other plugins build on: resolveHostPath, openHostFile (a disk file or an archive member), serveHostPath (the one byte server), readHostPathText / decodeTextBytes (the size + binary gate) and the archive-format registry (defineArchiveFormat). Its routes — stat / complete / raw reads of any path the user account can read, POST open / extract / move — are the machine half's, each needsMachine.
 - Server:
   - Contributes:
     - `resource.declare` "host-fs.list"
@@ -195,7 +195,6 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `resource.declare` "host-fs.volume"
   - Uses:
     - `infra/endpoints.HttpError`
-    - `infra/endpoints.implement`
     - `infra/host/host-read-pool.withHeavyReadSlot`
     - `infra/paths.HOME_DIR`
   - Exports (types):
@@ -221,15 +220,11 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `host-fs.text` (invalidate, notified)
     - `host-fs.version` (push, notified)
     - `host-fs.volume` (invalidate, snapshot)
-  - Routes:
-    - `GET /api/host-fs/stat`
-    - `GET /api/host-fs/complete`
-    - `GET /api/host-fs/raw`
-    - `POST /api/host-fs/open`
-    - `POST /api/host-fs/extract`
-    - `POST /api/host-fs/move`
 - Machine:
-  - Uses: `network/live.serveValue`
+  - Uses:
+    - `infra/endpoints.implementMachine`
+    - `infra/endpoints.machineHandler`
+    - `network/live.serveValue`
   - Exports (types): `HostFsFailure`
   - Exports (values):
     - `hostPathVersion`
@@ -239,8 +234,17 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `resolveOrRefuse`
     - `watchHostDir`
     - `watchHostPath`
+  - Routes:
+    - `GET /api/host-fs/stat`
+    - `GET /api/host-fs/complete`
+    - `GET /api/host-fs/raw`
+    - `POST /api/host-fs/open`
+    - `POST /api/host-fs/extract`
+    - `POST /api/host-fs/move`
 - Core:
   - Uses:
+    - `infra/endpoints.assetPath`
+    - `infra/endpoints.AssetPath`
     - `infra/endpoints.blob`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`

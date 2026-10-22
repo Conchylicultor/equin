@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
-import { recordReport } from "@plugins/reports/server";
+import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { WorkspaceSpecSchema } from "@plugins/conversations/plugins/workspace/core";
 import { Workspace } from "@plugins/conversations/plugins/workspace/server";
 import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/core";

@@ -10,7 +10,10 @@ import {
   isBuiltInThemeId,
   type Theme,
 } from "@plugins/ui/plugins/theme-engine/core";
-import { removeSavedTheme } from "@plugins/ui/plugins/theme-engine/plugins/saved-themes/web";
+import {
+  useRemoveSavedTheme,
+  type RemoveSavedTheme,
+} from "@plugins/ui/plugins/theme-engine/plugins/saved-themes/web";
 import type { ThemeRow } from "../internal/theme-rows";
 import { useScopeLabel } from "../internal/use-theme-gallery";
 import { RenameThemeDialog } from "./rename-theme-dialog";
@@ -44,8 +47,10 @@ function fallbackSentence(scopeNames: readonly string[]): string {
  * The server can still know of a scope this page does not (an app this
  * composition does not include). Then the delete comes back "in use" with the
  * server's own list, and the user is asked again, naming those scopes.
+ * `removeSavedTheme` is the row's (bound to its subtree's transport).
  */
 function confirmDelete(
+  removeSavedTheme: RemoveSavedTheme,
   theme: Theme,
   scopeNames: readonly string[],
   scopeLabel: (scopeId: string | undefined) => string,
@@ -60,6 +65,7 @@ function confirmDelete(
       });
       if (result.kind === "in-use") {
         confirmDelete(
+          removeSavedTheme,
           theme,
           result.usedBy.map((u) => scopeLabel(u.scopeId)),
           scopeLabel,
@@ -78,6 +84,7 @@ export function DeleteThemeAction({
   row,
 }: ItemActionProps<ThemeRow>): ReactElement | null {
   const scopeLabel = useScopeLabel();
+  const removeSavedTheme = useRemoveSavedTheme();
   const { target } = row;
   if (target.kind !== "resident" || isBuiltInThemeId(target.theme.id)) {
     return null;
@@ -90,6 +97,7 @@ export function DeleteThemeAction({
       onClick={(e) => {
         e.stopPropagation();
         confirmDelete(
+          removeSavedTheme,
           theme,
           row.usedBy.map((u) => u.label),
           scopeLabel,

@@ -75,7 +75,13 @@ export interface ReportKindSpec<TData = unknown> {
 
 export const ReportKind = defineServerContribution<ReportKindSpec>(
   "report-kind",
-  { docLabel: (k) => k.kind },
+  {
+    docLabel: (k) => k.kind,
+    absentOnHost: {
+      reason:
+        "how the report engine records, renders and files a kind — read where reports are written (`reports/engine`, desktop-only) and by the investigations automation, never by `reports.list`: a host without the engine writes no report, so it never needs a kind",
+    },
+  },
 );
 
 /**

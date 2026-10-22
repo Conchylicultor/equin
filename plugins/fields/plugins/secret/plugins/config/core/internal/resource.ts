@@ -17,4 +17,6 @@ export type ConfigV2SecretMeta = z.infer<typeof configV2SecretMetaSchema>;
 export const configSecretMeta = liveValue("config-v2.secret-meta", {
   schema: configV2SecretMetaSchema,
   params: ["path"],
+  // The secrets store is the computer's.
+  needsMachine: { feature: "Reading saved secrets" },
 });

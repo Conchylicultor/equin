@@ -12,6 +12,7 @@ import {
   type SwingOverride,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { DEFAULT_SWING } from "../core";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { saveSwing } from "./actions";
 
 export type SwingState =
@@ -46,6 +47,7 @@ export function useSwing(): SwingState {
   const setting = useSongSetting(swingSetting);
   const write = useWriteSongSetting(swingSetting);
   const { score } = useSession();
+  const fetchEndpoint = useFetchEndpoint();
   if (song.kind === "none") return { kind: "none" };
   if (setting.kind === "pending") return { kind: "pending" };
   if (setting.kind === "failed")
@@ -62,7 +64,7 @@ export function useSwing(): SwingState {
     DEFAULT_SWING;
   const apply = (next: SwingOverride) => {
     write(songId, next); // optimistic: playback follows at once
-    saveSwing(songId, next);
+    saveSwing(fetchEndpoint, songId, next);
   };
   return {
     kind: "ready",

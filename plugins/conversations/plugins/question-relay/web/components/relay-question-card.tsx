@@ -82,9 +82,13 @@ function HeldQuestion({
   // Not a turn: the answer is the tool's own input, so there is no pending-turn
   // record — the tool result landing in the transcript is the confirmation. A
   // failed POST is reported by the mutation's global toast, and the form keeps
-  // the user's picks (it clears its draft only on `true`).
-  const submit = ({ selections, response }: FormAnswer): Promise<boolean> =>
-    answer
+  // the user's picks (it clears its draft only on `true`). The answer reaches
+  // the agent's runtime, which needs the computer: on a host without it (the
+  // demo) the form's Submit is disabled and says why.
+  const submit = ({ selections, response }: FormAnswer): Promise<boolean> => {
+    // Unreachable: Submit is disabled while unavailable.
+    if (answer.kind === "unavailable") throw new Error(answer.message);
+    return answer
       .mutateAsync({
         params,
         body: { selections, ...(response ? { response } : {}) },
@@ -96,6 +100,7 @@ function HeldQuestion({
         },
         () => false,
       );
+  };
 
   // The same card the transcript draws an AskUserQuestion with, so the held
   // question reads as the tool call it is.
@@ -108,6 +113,11 @@ function HeldQuestion({
           question.toolUseId,
         )}
         onSubmit={submit}
+        availability={
+          answer.kind === "unavailable"
+            ? { available: false, message: answer.message }
+            : { available: true }
+        }
       />
     </QuestionCard>
   );

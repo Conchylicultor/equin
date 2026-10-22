@@ -6,6 +6,7 @@ import {
   queryKeyFor,
   useLiveRegistries,
   useLiveSocketKindOf,
+  useNotificationsClient,
 } from "@plugins/primitives/plugins/live-state/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import type {
@@ -371,6 +372,11 @@ function useOptimisticCore<Data, Vars>(
   // the page's own, or a scoped transport's (live-state `NotificationsProvider`).
   const { watermarks, txAcks } = useLiveRegistries();
   const socketKindOf = useLiveSocketKindOf();
+  // Whether this tuple's server-confirmation telemetry is reported (the
+  // divergence reports and the `confirm` latency samples) — its transport's
+  // setting, as its pipeline holds it. A rejection is the user's notice first,
+  // so it is raised anyway.
+  const { telemetry } = useNotificationsClient();
   const result = useResource(resource, params);
   // Every optimistic reader asks for standalone ack frames on its tuple: a
   // write that changes nothing this tuple can see (a net-zero diff, a row
@@ -460,6 +466,7 @@ function useOptimisticCore<Data, Vars>(
   // primitive must not import `reports`. `emit` never throws.
   const reportDivergence = useCallback(
     (kind: "superseded" | "stalled", ops: ReadonlyArray<PendingOp<Vars>>) => {
+      if (!telemetry) return;
       const describe = describeOpRef.current;
       optimisticDivergenceReportSink.emit({
         kind,
@@ -471,7 +478,7 @@ function useOptimisticCore<Data, Vars>(
       });
     },
     // The latest-ref handles are stable; only the resource key participates.
-    [resource.key],
+    [resource.key, telemetry],
   );
   // Every edge's outcomes: the divergence reports, and one `confirm` latency
   // sample per confirmed op (skipped wholesale when nobody listens).
@@ -479,7 +486,11 @@ function useOptimisticCore<Data, Vars>(
     (next: ReconcileResult<Vars>, edge: ConfirmEdge) => {
       if (next.dropped.length > 0) reportDivergence("superseded", next.dropped);
       if (next.stalled.length > 0) reportDivergence("stalled", next.stalled);
-      if (next.confirmed.length > 0 && clientLatencySink.hasSubscribers()) {
+      if (
+        telemetry &&
+        next.confirmed.length > 0 &&
+        clientLatencySink.hasSubscribers()
+      ) {
         const confirmedAt = performance.now();
         const params = paramsRef.current ?? {};
         for (const confirmed of next.confirmed)
@@ -489,7 +500,7 @@ function useOptimisticCore<Data, Vars>(
       }
     },
     // The latest-ref handles are stable; only these participate.
-    [reportDivergence, resource.key],
+    [reportDivergence, resource.key, telemetry],
   );
 
   // Exact-ack membership probe against the pipeline's tx-ack registry,

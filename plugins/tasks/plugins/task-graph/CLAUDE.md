@@ -20,7 +20,7 @@ disagreeing is the design, not drift.
 - Web:
   - Contributes: `TaskDetailSlots.Section` "Graph" → `TaskGraph`
   - Uses:
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`

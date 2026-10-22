@@ -11,11 +11,11 @@ import {
   primeSubagentTranscript,
   subagentTranscriptMemo,
   transcriptMemoKey,
-} from "../../server/internal/caches";
+} from "./caches";
 import {
   readSubagentTranscript,
   resolveTranscriptTargets,
-} from "../../server/internal/transcript-read";
+} from "./transcript-read";
 
 /**
  * The ref a subscription names. Every value param reaches the server as a plain

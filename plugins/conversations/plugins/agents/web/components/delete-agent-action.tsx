@@ -1,7 +1,7 @@
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { deleteAgent } from "@plugins/conversations/plugins/agents/core";
 import type { Agent } from "../../core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -13,6 +13,7 @@ export function DeleteAgentAction({
   hasChildren,
 }: ItemActionProps<Agent>) {
   const agentId = row.id;
+  const fetchEndpoint = useFetchEndpoint();
   const disabled = hasChildren;
   const title = disabled
     ? "Delete (only leaf agents can be deleted)"

@@ -93,7 +93,7 @@ export default createRule({
         "produced flight-recorder.jsonl / stall-profiles.jsonl. If this is perf " +
         "EVIDENCE, use captureTrace() / defineTraceEventClass() " +
         "(@plugins/debug/plugins/trace/plugins/engine/server). If it is a perf " +
-        "ALERT, use recordReport() (@plugins/reports/server). If it is a genuine " +
+        "ALERT, use recordReport() (@plugins/reports/plugins/engine/server). If it is a genuine " +
         "durable log or artifact, declare it with defineLogSink() " +
         "(@plugins/primitives/plugins/log-channels/server) or defineFileSink() " +
         "(@plugins/infra/plugins/file-sink/core) — both register a rotate bound " +

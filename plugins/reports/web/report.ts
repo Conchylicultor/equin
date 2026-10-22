@@ -1,22 +1,9 @@
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { fetchEndpointOver } from "@plugins/infra/plugins/endpoints/web";
+import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";
 import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
-import type { ReportBody } from "../shared/types";
-import {
-  submitReport,
-  investigateReport,
-  type ReportResult,
-} from "../shared/endpoints";
+import { submitReport, type ReportBody, type ReportResult } from "../core";
 
 export type { ReportResult };
-
-// On-demand: turn a recorded report into an investigation task. Idempotent on
-// the server (re-calling returns the existing live task). Resolves to the task
-// id, which the caller binds a launched conversation to.
-export async function investigate(
-  reportId: string,
-): Promise<{ taskId: string }> {
-  return await fetchEndpoint(investigateReport, { id: reportId });
-}
 
 // The caller-supplied portion of a report: the browser picks the kind, the
 // source (client-reportable only — enforced by ReportBodySchema's enum), the
@@ -51,6 +38,10 @@ const REPORT_RETRY = { retries: 6, backoffMs: 500 };
 export async function report(
   body: ClientReportBody,
 ): Promise<ReportResult | null> {
+  // Reports are page-wide telemetry (window.onerror, boot, the crash beacon):
+  // they belong to the page and always reach the page's own server, whatever
+  // subtree raised them.
+  const fetchEndpoint = fetchEndpointOver(pageTransport);
   try {
     const stamped = {
       ...body,

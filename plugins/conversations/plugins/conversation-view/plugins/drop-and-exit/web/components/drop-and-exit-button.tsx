@@ -13,7 +13,7 @@ import {
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { toast } from "@plugins/shell/plugins/notifications/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import {
   attemptWork,
   standingOf,
@@ -87,7 +87,8 @@ function DropAndExitEntry({
   );
   const landed = standing !== null && !dropsTask(standing, "unless-landed");
 
-  const { mutate, isPending } = useEndpointMutation(dropAndExit, {
+  const toast = useToast();
+  const close = useEndpointMutation(dropAndExit, {
     onSuccess: (data) => {
       const title = data.dropped ? "Task dropped" : "Conversation closed";
       const description = data.dropped
@@ -125,7 +126,11 @@ function DropAndExitEntry({
   )
     return null;
 
+  // Closing stops the agent, which needs the computer: on a host without
+  // it (the demo) the entry is disabled and says why.
+  const isPending = close.kind === "available" && close.isPending;
   const disabled =
+    close.kind === "unavailable" ||
     isPending ||
     live.status === "gone" ||
     live.status === "done" ||
@@ -147,7 +152,11 @@ function DropAndExitEntry({
     <DropdownMenuItem
       variant={variant}
       disabled={disabled}
-      onClick={() => mutate({ params: { id: conversation.id } })}
+      title={close.kind === "unavailable" ? close.message : undefined}
+      onClick={() => {
+        if (close.kind === "available")
+          close.mutate({ params: { id: conversation.id } });
+      }}
     >
       <Icon icon={icon} className="size-4" />
       {label}

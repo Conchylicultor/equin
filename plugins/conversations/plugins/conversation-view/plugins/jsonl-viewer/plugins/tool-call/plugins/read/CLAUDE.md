@@ -23,7 +23,7 @@ Expanded: syntax-highlighted code block with line numbers derived from the `cat 
     - `primitives/css/badge.Badge`
     - `primitives/css/line.Line`
     - `primitives/css/text.Text`
-    - `primitives/overlay/image-viewer.ViewerThumbnail`
+    - `primitives/overlay/image-viewer.AssetThumbnail`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`

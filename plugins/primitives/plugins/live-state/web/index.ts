@@ -62,6 +62,7 @@ export type {
 export {
   queryKeyFor,
   liveStateSocketKind,
+  liveStateSocketUrl,
   ResourceStaleReadError,
 } from "./notifications-client";
 export { httpStaleDropReportSink } from "./stale-drop-reporter";

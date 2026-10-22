@@ -48,8 +48,8 @@ would close an import cycle. Same split, same reason, as its sibling
     - `database/admin.dropDatabase`
     - `database/admin.listDatabases`
     - `infra/jobs.defineJob`
-    - `reports.recordReport`
     - `reports.ReportKind`
+    - `reports/engine.recordReport`
   - Exports (values): `leakedTestDbKind`
   - Register: `defineJob('database.test-db-sweep')`
 - Core:

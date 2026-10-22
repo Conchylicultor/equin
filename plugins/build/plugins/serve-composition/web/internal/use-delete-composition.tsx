@@ -1,8 +1,8 @@
 import { useCallback } from "react";
 import { useManifestActions } from "@plugins/plugin-meta/plugins/composition/web";
 import {
-  fetchEndpoint,
   getEndpointErrorMessage,
+  useFetchEndpoint,
   useEndpointMutation,
 } from "@plugins/infra/plugins/endpoints/web";
 import { confirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
@@ -55,6 +55,7 @@ export interface DeleteCompositionRequest {
 export function useDeleteComposition(): {
   deleteComposition: (req: DeleteCompositionRequest) => Promise<void>;
 } {
+  const fetchEndpoint = useFetchEndpoint();
   const { remove } = useManifestActions();
   // The dialog shows the failure inline and re-enables its confirm button, so it
   // IS the error surface; a global toast on top of it would say the same thing
@@ -147,7 +148,7 @@ export function useDeleteComposition(): {
         },
       });
     },
-    [latest],
+    [fetchEndpoint, latest],
   );
 
   return { deleteComposition };

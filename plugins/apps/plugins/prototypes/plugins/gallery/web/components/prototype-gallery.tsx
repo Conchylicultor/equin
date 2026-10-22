@@ -9,6 +9,8 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
@@ -85,6 +87,8 @@ function CoverSwatch({ meta }: { meta: PrototypeMeta }) {
  * agent it fires is handed a folder that already exists.
  */
 export function PrototypeGallery() {
+  const fetchEndpoint = useFetchEndpoint();
+  const toast = useToast();
   // Both subscriptions are taken HERE, side by side, and the cards wait for
   // both. A value is filled by its subscription's first answer, asked for when
   // its first subscriber mounts, so a card that subscribed to its own thumbnail
@@ -165,7 +169,7 @@ export function PrototypeGallery() {
       placeholder="Extra context (optional) — e.g. desired style, layout, reference…"
       align="end"
       getRequest={async (userText) => {
-        const id = await mintPrototypeFolder();
+        const id = await mintPrototypeFolder(fetchEndpoint, toast);
         const parts = [newPrototypePrompt(id)];
         if (userText.trim())
           parts.push(`Additional context: ${userText.trim()}`);

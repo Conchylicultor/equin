@@ -77,8 +77,9 @@ plus a per-song reset.
 - **The upsert addresses many tracks at once.** Its body carries `trackIds`
   (a single-track edit passes `[trackId]`) and the handler writes every row in
   one transaction — so a whole-arrangement flip is one commit and one push. The
-  barrel exports one write for other plugins, `setTracksActive(songId,
-  trackIds, active)`: hidden + muted together, returning the promise so a caller
+  barrel exports one write for other plugins, `setTracksActive(fetchEndpoint,
+  songId, trackIds, active)` (the caller's `useFetchEndpoint()`, like every
+  setter here): hidden + muted together, returning the promise so a caller
   swapping sound layers (the **chord-mode** plugin deactivating the original
   tracks before its chord tracks appear) can sequence on it.
 - **Synthesia colors, with a white-key / black-key pair per track.** `palette.ts`
@@ -116,7 +117,7 @@ plus a per-song reset.
     - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
     - `config_v2.useConfig`
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`
     - `primitives/css/color-picker.SwatchGrid`
     - `primitives/css/fill.Fill`

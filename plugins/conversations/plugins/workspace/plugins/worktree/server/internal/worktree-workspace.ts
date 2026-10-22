@@ -19,11 +19,6 @@ import { compositionsConfig } from "@plugins/plugin-meta/plugins/composition/cor
 export const worktreeWorkspace: WorkspaceImpl<"worktree"> = {
   kind: "worktree",
 
-  // A worktree is fully described by its kind.
-  parseSpec(spec) {
-    return spec;
-  },
-
   async root() {
     return gitWorktreesDir(await ensureMainWorktreeRoot());
   },

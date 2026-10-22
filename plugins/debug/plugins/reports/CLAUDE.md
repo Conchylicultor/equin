@@ -50,12 +50,13 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
     - `Pane.Register` "report-detail"
     - `Pane.Register` "reports"
     - `DebugApp.Sidebar` "Reports"
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×5
     - `primitives/data-view` ×4
     - `reports` ×2
     - `apps/debug/shell.DebugApp`
     - `build.useStaleFrontend`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLiveRow`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`

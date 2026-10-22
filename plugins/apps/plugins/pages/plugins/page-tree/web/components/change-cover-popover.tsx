@@ -5,6 +5,7 @@ import {
   ControlPanelPopover,
 } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
@@ -36,6 +37,7 @@ export function ChangeCoverPopover({
   current: PageCover | null | undefined;
   onPick: (cover: PageCover) => void | Promise<void>;
 }) {
+  const fetchEndpoint = useFetchEndpoint();
   const [open, setOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +58,12 @@ export function ChangeCoverPopover({
     setError(null);
     setUploading(true);
     try {
-      const res = await uploadAttachment(file, file.name, file.type);
+      const res = await uploadAttachment(
+        fetchEndpoint,
+        file,
+        file.name,
+        file.type,
+      );
       commit({ type: "image", attachmentId: res.id, positionY: 50 });
     } catch (e) {
       // Fail loud — surface the upload error, never swallow it.

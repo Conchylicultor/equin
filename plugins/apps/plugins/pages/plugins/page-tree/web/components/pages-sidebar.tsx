@@ -1,6 +1,9 @@
 import { useMemo } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import {
+  useFetchEndpoint,
+  type FetchEndpoint,
+} from "@plugins/infra/plugins/endpoints/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
@@ -76,31 +79,42 @@ function inDocOrder(pages: readonly PagesTreeRow[]): PagesTreeRow[] {
  * `tags`), each presented by its owner; the sidebar names none of them.
  *
  * The title, the one field the sidebar computes itself: the page payload's
- * `title`, renamed in place (the tree's inline editor).
+ * `title`, renamed in place (the tree's inline editor) through the subtree's
+ * `fetchEndpoint`.
  */
-const TITLE_FIELD: FieldDef<PagesTreeRow> = {
-  id: "title",
-  label: "Title",
-  primary: true,
-  value: (b) => pageData(b).title,
-  onEdit: async (b, next) => {
-    await fetchEndpoint(
-      updateBlock,
-      { id: b.id },
-      {
-        body: {
-          data: {
-            ...pageData(b),
-            title: String(next ?? "").trim() || "Untitled",
+function titleField(fetchEndpoint: FetchEndpoint): FieldDef<PagesTreeRow> {
+  return {
+    id: "title",
+    label: "Title",
+    primary: true,
+    value: (b) => pageData(b).title,
+    onEdit: async (b, next) => {
+      await fetchEndpoint(
+        updateBlock,
+        { id: b.id },
+        {
+          body: {
+            data: {
+              ...pageData(b),
+              title: String(next ?? "").trim() || "Untitled",
+            },
           },
         },
-      },
-    );
-  },
-};
-const SIDEBAR_EXTRA_FIELDS = [TITLE_FIELD];
+      );
+    },
+  };
+}
+
+/** The sidebar's own fields, bound to the subtree's transport; stable per it. */
+function useSidebarExtraFields(
+  fetchEndpoint: FetchEndpoint,
+): FieldDef<PagesTreeRow>[] {
+  return useMemo(() => [titleField(fetchEndpoint)], [fetchEndpoint]);
+}
 
 export function PagesSidebar() {
+  const fetchEndpoint = useFetchEndpoint();
+  const sidebarExtraFields = useSidebarExtraFields(fetchEndpoint);
   const result = useLive(pagesTree, { select: inDocOrder });
   const links = useLive(pageLinkSources);
   const openPane = useOpenPane();
@@ -213,7 +227,7 @@ export function PagesSidebar() {
 
   const creators = useMemo<CreateOption[]>(() => {
     const createRootPage = async () => {
-      const id = await createPageWithSeed({ parentId: null });
+      const id = await createPageWithSeed(fetchEndpoint, { parentId: null });
       openPane(pageDetailPane, { pageId: id }, { mode: openMode });
     };
     return [
@@ -227,7 +241,7 @@ export function PagesSidebar() {
         views: ["pages"],
       },
     ];
-  }, [openPane, openMode]);
+  }, [fetchEndpoint, openPane, openMode]);
 
   // The DataView's section headers ARE the sidebar chrome (no
   // SidebarPaneSection): every view instance stacks in config order under its
@@ -248,7 +262,7 @@ export function PagesSidebar() {
           rows={rows}
           readiness={result}
           collection={pagesTree}
-          extraFields={SIDEBAR_EXTRA_FIELDS}
+          extraFields={sidebarExtraFields}
           rowKey={(b) => b.id}
           views={["table", "list"]}
           storageKey={PAGES_SIDEBAR_VIEW}
@@ -324,11 +338,13 @@ export function PagesSidebar() {
                   ? undefined
                   : pagesById.get(args.afterId);
               return after
-                ? createPageWithSeed({
+                ? createPageWithSeed(fetchEndpoint, {
                     parentId: after.parentId,
                     afterId: after.id,
                   })
-                : createPageWithSeed({ parentId: args.parentId });
+                : createPageWithSeed(fetchEndpoint, {
+                    parentId: args.parentId,
+                  });
             },
           }}
           viewOptions={viewOptions}

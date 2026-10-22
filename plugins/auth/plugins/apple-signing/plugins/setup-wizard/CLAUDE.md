@@ -10,8 +10,9 @@
   - Uses:
     - `auth.Auth`
     - `config_v2.useConfigRegistrations`
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`
+    - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
@@ -19,6 +20,7 @@
     - `primitives/live-state.mapResource`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/live-state.ResourceResult`
+    - `primitives/live-state.ResourceUnavailable`
     - `primitives/live-state.useCombinedResources`
     - `primitives/loading.Loading`
     - `primitives/setup-steps.Step`

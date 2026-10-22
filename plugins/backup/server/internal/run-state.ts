@@ -7,7 +7,7 @@ import {
   isRunAlive,
   type RunTerminal,
 } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
-import { recordReport } from "@plugins/reports/server";
+import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { _backupRuns } from "./tables";
 import { backupGapSummary } from "./report-kind";
 

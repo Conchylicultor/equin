@@ -329,13 +329,16 @@ Pinned by `web/__tests__/notifications-update-latency.test.ts`.
 
 ## Scoped pipelines — a subtree talking to another backend
 
-`NotificationsProvider` reads `useTransport()` (`primitives/networking`). Under
-the page's own transport (`originTransport` — no `<TransportProvider>` above)
-it is the page's singleton pipeline, exactly as before. Under any other
-transport it mounts a pipeline of that transport's own: a fresh QueryClient, a
+`NotificationsProvider` reads `useTransport()` (`primitives/networking`) and
+mounts that transport's pipeline (`transportScoped`, one per transport): a
 `NotificationsClient` opening `transport.openSocket(transport.socketUrl(path))`
-and fetching through `transport.fetch`, and its own causal-floor registries
-(`LiveRegistries`: watermarks + tx acks). So a subtree rendered against an
+and fetching through `transport.fetch`, with the QueryClient it owns and its
+causal-floor registries (`LiveRegistries`: watermarks + tx acks). The page's
+transport's pipeline is the one boot hoists
+(`ensureNotificationsClient(pageTransport)`, `web-core`'s `App.tsx`): built on
+the default QueryClient (the one `hydrateResource` seeds) and the root
+registries, and kept for the tab's life. Any other transport's gets a fresh
+QueryClient and registries of its own. So a subtree rendered against an
 in-browser backend (the demo scope,
 `research/2026-10-12-global-in-app-demo-scope.md`) never caches, confirms or
 reports against the page's server, and the page never sees its tuples.
@@ -353,6 +356,11 @@ reports against the page's server, and the page never sees its tuples.
   driving the optimistic overlay without a provider reads). The module-level
   `noteResource…` / `getResourceWatermark` / `hasResourceTxAck` functions are
   the page pipeline's registries only — test support, not a read path.
+- **Telemetry follows the transport.** The pipeline's client takes the
+  transport's `telemetry` flag (`NotificationsClient`'s `telemetry` hook) and
+  emits a read's error, its stale drops and the `update` latency sample to the
+  page-wide sinks only when it is set; the failing set itself stays the
+  scope's own UI state.
 - **Not scoped:** boot hydration (`hydrateResource` seeds the
   page's own client), the contract-mismatch store (version skew is about the
   page's bundle) and the pending-mount counters (page diagnostics).

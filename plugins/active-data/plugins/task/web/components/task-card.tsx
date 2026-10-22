@@ -7,7 +7,7 @@ import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { useActiveDataBinding } from "@plugins/active-data/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   foldResource,
   ResourceErrorInline,
@@ -37,6 +37,7 @@ export function TaskCard({
   attrs: Record<string, string>;
   content: string;
 }) {
+  const fetchEndpoint = useFetchEndpoint();
   const initial = content.trim();
   const editorNs = useId();
   const { convId } = conversationPane.useParams();

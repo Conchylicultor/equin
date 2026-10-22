@@ -43,40 +43,43 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import * as Y from "yjs";
 
-vi.mock("@plugins/infra/plugins/endpoints/web", async (importOriginal) => {
-  // Keep the REAL EndpointError (the provider does instanceof checks on it);
-  // only the network call is stubbed.
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  return { ...actual, fetchEndpoint: vi.fn() };
-});
-
 const wsStatusListeners: Array<(ev: { status: string; url: string }) => void> =
   [];
-vi.mock("@plugins/primitives/plugins/networking/web", () => ({
-  subscribeWsStatus: (cb: (ev: { status: string; url: string }) => void) => {
-    wsStatusListeners.push(cb);
-    return () => {
-      const i = wsStatusListeners.indexOf(cb);
-      if (i >= 0) wsStatusListeners.splice(i, 1);
-    };
-  },
-}));
+// Spread the real module: the endpoints barrel (EndpointError) calls
+// `transportScoped` at load.
+vi.mock(
+  "@plugins/primitives/plugins/networking/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<Record<string, unknown>>()),
+    subscribeWsStatus: (cb: (ev: { status: string; url: string }) => void) => {
+      wsStatusListeners.push(cb);
+      return () => {
+        const i = wsStatusListeners.indexOf(cb);
+        if (i >= 0) wsStatusListeners.splice(i, 1);
+      };
+    },
+  }),
+);
 
 vi.mock("@plugins/primitives/plugins/live-state/web", () => ({
   liveStateSocketKind: () => "worktree",
 }));
 
+import { EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import {
-  EndpointError,
-  fetchEndpoint,
-} from "@plugins/infra/plugins/endpoints/web";
+  fakeFetchEndpoint,
+  type FakeEndpointAnswer,
+} from "@plugins/infra/plugins/endpoints/web/testing";
 import {
   blockDocInit,
   blockDocUpdate,
 } from "@plugins/page/plugins/editor-collab/core";
 import { LiveStateYjsProvider } from "../internal/live-state-yjs-provider";
 
-const fetchEndpointMock = vi.mocked(fetchEndpoint);
+// The provider's endpoint client, injected at construction (the editor's
+// transport): a plain test double, so each case scripts its answers.
+const server = vi.fn<FakeEndpointAnswer>();
+const { fetchEndpoint } = fakeFetchEndpoint(server);
 
 /** Deterministic full-state encoding: one XmlText "root" holding `text`. */
 function encodedState(clientID: number, text: string): Uint8Array {
@@ -130,7 +133,7 @@ async function runFlush(): Promise<void> {
 
 beforeEach(() => {
   vi.useFakeTimers();
-  fetchEndpointMock.mockReset();
+  server.mockReset();
 });
 
 afterEach(() => {
@@ -151,6 +154,7 @@ describe("finding #1 — reopen of an existing block must not pre-seed", () => {
       "blk-existing",
       buildSeedState,
       "present",
+      { fetchEndpoint, socketUrl: "ws://x/worktree" },
     );
 
     // The legal worst-case order: connect fires before markBlockRowConfirmed
@@ -180,6 +184,7 @@ describe("finding #1 — reopen of an existing block must not pre-seed", () => {
       "blk-fresh",
       buildSeedState,
       "unseen",
+      { fetchEndpoint, socketUrl: "ws://x/worktree" },
     );
 
     provider.connect();
@@ -204,6 +209,7 @@ describe("finding #3 — a doc-update 409 must not wedge the provider", () => {
       blockId,
       () => encodedState(111, "seed"),
       "present",
+      { fetchEndpoint, socketUrl: "ws://x/worktree" },
     );
     provider.connect();
     provider.onServerState(toBase64(encodedState(222, "stored")));
@@ -218,9 +224,9 @@ describe("finding #3 — a doc-update 409 must not wedge the provider", () => {
     localEdit(doc, " typed");
     // First flush 409s (doc row gone); the doc-init probe then SUCCEEDS
     // (block alive) — echoing back whatever state was posted.
-    fetchEndpointMock
+    server
       .mockRejectedValueOnce(new EndpointError(409, null))
-      .mockImplementationOnce(async (_endpoint, _params, opts) => {
+      .mockImplementationOnce(async ({ opts }) => {
         const body = (opts as unknown as { body: Blob }).body;
         const buf = await body.arrayBuffer();
         return { state: toBase64(new Uint8Array(buf)) };
@@ -233,8 +239,8 @@ describe("finding #3 — a doc-update 409 must not wedge the provider", () => {
     // POST #1: the failed doc-update. POST #2: the doc-init probe, seeded
     // from the FULL local doc state (never the stale data.text seed — that
     // would re-encode content the doc already holds and duplicate).
-    expect(fetchEndpointMock.mock.calls.length).toBeGreaterThanOrEqual(2);
-    const initBody = fetchEndpointMock.mock.calls[1]![2] as { body: Blob };
+    expect(server.mock.calls.length).toBeGreaterThanOrEqual(2);
+    const initBody = server.mock.calls[1]![0].opts as { body: Blob };
     const initBytes = new Uint8Array(await initBody.body.arrayBuffer());
     const replay = new Y.Doc();
     Y.applyUpdate(replay, initBytes);
@@ -245,10 +251,10 @@ describe("finding #3 — a doc-update 409 must not wedge the provider", () => {
     // The queue drains (full-state safety update + the requeued batch) and
     // the loop is live again: a NEW edit flushes — not wedged.
     await runFlush();
-    const callsBefore = fetchEndpointMock.mock.calls.length;
+    const callsBefore = server.mock.calls.length;
     localEdit(doc, " more");
     await runFlush();
-    expect(fetchEndpointMock.mock.calls.length).toBeGreaterThan(callsBefore);
+    expect(server.mock.calls.length).toBeGreaterThan(callsBefore);
     expect(provider.readyForTeardown).toBe(true);
     provider.destroy();
   });
@@ -256,7 +262,7 @@ describe("finding #3 — a doc-update 409 must not wedge the provider", () => {
   test("409 with the block really deleted (doc-init 404): quiet terminal stop, ready for teardown", async () => {
     const { doc, provider } = await syncedProvider("blk-deleted");
     localEdit(doc, " typed");
-    fetchEndpointMock
+    server
       .mockRejectedValueOnce(new EndpointError(409, null))
       .mockRejectedValueOnce(new EndpointError(404, null));
 
@@ -279,6 +285,7 @@ describe("finding #4 — teardown must not lose buffered edits over a transient 
       "blk-teardown",
       () => encodedState(111, "seed"),
       "present",
+      { fetchEndpoint, socketUrl: "ws://x/worktree" },
     );
     provider.connect();
     provider.onServerState(toBase64(encodedState(222, "stored")));
@@ -288,7 +295,7 @@ describe("finding #4 — teardown must not lose buffered edits over a transient 
     // rejects at the network level.
     localEdit(doc, " last words");
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    fetchEndpointMock.mockRejectedValueOnce(new TypeError("network down"));
+    server.mockRejectedValueOnce(new TypeError("network down"));
     provider.disconnect();
     await flushMicrotasks();
     expect(warnSpy).toHaveBeenCalled(); // offline buffering surfaced once
@@ -301,7 +308,7 @@ describe("finding #4 — teardown must not lose buffered edits over a transient 
 
     // The tab reconnects (live-state socket reopens). Even though the editor
     // is disconnected, the retained provider drains its queue…
-    fetchEndpointMock.mockResolvedValue(undefined);
+    server.mockResolvedValue(undefined);
     for (const cb of [...wsStatusListeners])
       cb({ status: "open", url: "ws://x/worktree" });
     await flushMicrotasks();
@@ -309,7 +316,7 @@ describe("finding #4 — teardown must not lose buffered edits over a transient 
     // …and signals the registry push-based that destroying is now safe.
     expect(onReady).toHaveBeenCalled();
     expect(provider.readyForTeardown).toBe(true);
-    const flushed = fetchEndpointMock.mock.calls.at(-1)![2] as { body: Blob };
+    const flushed = server.mock.calls.at(-1)![0].opts as { body: Blob };
     const bytes = new Uint8Array(await flushed.body.arrayBuffer());
     const replay = new Y.Doc();
     Y.applyUpdate(replay, toBytesSafe(encodedState(222, "stored")));
@@ -364,6 +371,7 @@ describe("finding #5 — the save state reported to the sync-status cloud", () =
       blockId,
       () => encodedState(111, "seed"),
       "present",
+      { fetchEndpoint, socketUrl: "ws://x/worktree" },
     );
     provider.connect();
     provider.onServerState(toBase64(encodedState(222, "stored")));
@@ -381,7 +389,7 @@ describe("finding #5 — the save state reported to the sync-status cloud", () =
       lastFlushedAt: null,
     });
 
-    fetchEndpointMock.mockResolvedValue(undefined);
+    server.mockResolvedValue(undefined);
     localEdit(doc, " typed");
     // The bytes are owed to the server from the keystroke edge — NOT only once
     // the 300ms debounce expires.
@@ -405,7 +413,7 @@ describe("finding #5 — the save state reported to the sync-status cloud", () =
     const { doc, provider } = await syncedProvider("blk-offline");
     vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    fetchEndpointMock.mockRejectedValue(new TypeError("network down"));
+    server.mockRejectedValue(new TypeError("network down"));
     localEdit(doc, " typed");
     await runFlush();
 
@@ -417,8 +425,8 @@ describe("finding #5 — the save state reported to the sync-status cloud", () =
     });
 
     // The reconnect edge drains them and only then is the save stamped.
-    fetchEndpointMock.mockReset();
-    fetchEndpointMock.mockResolvedValue(undefined);
+    server.mockReset();
+    server.mockResolvedValue(undefined);
     for (const cb of [...wsStatusListeners])
       cb({ status: "open", url: "ws://x/worktree" });
     await flushMicrotasks();
@@ -432,7 +440,7 @@ describe("finding #5 — the save state reported to the sync-status cloud", () =
   test("a durable (non-409) HTTP rejection on flush → `error`, thrown loudly; retryFlush recovers", async () => {
     const { doc, provider } = await syncedProvider("blk-rejected");
 
-    fetchEndpointMock.mockRejectedValueOnce(new EndpointError(500, null));
+    server.mockRejectedValueOnce(new EndpointError(500, null));
     localEdit(doc, " typed");
     const rejections = await withUnhandledRejections(() => runFlush());
 
@@ -444,14 +452,14 @@ describe("finding #5 — the save state reported to the sync-status cloud", () =
     });
 
     // Retry clears the error and re-runs the flush over the SAME re-queued bytes.
-    fetchEndpointMock.mockResolvedValue(undefined);
+    server.mockResolvedValue(undefined);
     provider.retryFlush();
     await flushMicrotasks();
 
     const saved = provider.getSaveState();
     expect(saved.phase).toBe("idle");
     expect(saved.lastFlushedAt).toBeGreaterThan(0);
-    const flushed = fetchEndpointMock.mock.calls.at(-1)![2] as { body: Blob };
+    const flushed = server.mock.calls.at(-1)![0].opts as { body: Blob };
     const bytes = new Uint8Array(await flushed.body.arrayBuffer());
     const replay = new Y.Doc();
     Y.applyUpdate(replay, encodedState(222, "stored"));
@@ -463,7 +471,7 @@ describe("finding #5 — the save state reported to the sync-status cloud", () =
   test("blockGone (409 → doc-init 404) is `idle`, not `error`: the bytes were deliberately dropped", async () => {
     const { doc, provider } = await syncedProvider("blk-gone");
     localEdit(doc, " typed");
-    fetchEndpointMock
+    server
       .mockRejectedValueOnce(new EndpointError(409, null))
       .mockRejectedValueOnce(new EndpointError(404, null));
 
@@ -481,7 +489,7 @@ describe("finding #5 — the save state reported to the sync-status cloud", () =
 describe('finding #2 — a re-created row (RowTruth "removed") binds to its surviving doc', () => {
   /** Bytes of a doc-init POST body, as the server would read them. */
   async function postedBytes(call: number): Promise<Uint8Array> {
-    const opts = fetchEndpointMock.mock.calls[call]![2] as { body: Blob };
+    const opts = server.mock.calls[call]![0].opts as { body: Blob };
     return new Uint8Array(await opts.body.arrayBuffer());
   }
 
@@ -493,6 +501,7 @@ describe('finding #2 — a re-created row (RowTruth "removed") binds to its surv
       "blk-removed-cold",
       buildSeedState,
       "removed",
+      { fetchEndpoint, socketUrl: "ws://x/worktree" },
     );
     expect(provider.mayHaveStoredDoc).toBe(true);
 
@@ -514,7 +523,7 @@ describe('finding #2 — a re-created row (RowTruth "removed") binds to its surv
     // synced, so there is nothing to init.
     provider.markBlockRowConfirmed();
     await flushMicrotasks();
-    expect(fetchEndpointMock).not.toHaveBeenCalled();
+    expect(server).not.toHaveBeenCalled();
     expect(buildSeedState).not.toHaveBeenCalled();
     expect(count(docText(doc), "hello world")).toBe(1);
     provider.destroy();
@@ -528,6 +537,7 @@ describe('finding #2 — a re-created row (RowTruth "removed") binds to its surv
       "blk-removed-warm",
       buildSeedState,
       "removed",
+      { fetchEndpoint, socketUrl: "ws://x/worktree" },
     );
 
     // Warm navigation: the cached subscription value lands before the binding
@@ -541,7 +551,7 @@ describe('finding #2 — a re-created row (RowTruth "removed") binds to its surv
 
     provider.markBlockRowConfirmed();
     await flushMicrotasks();
-    expect(fetchEndpointMock).not.toHaveBeenCalled();
+    expect(server).not.toHaveBeenCalled();
     expect(count(docText(doc), "hello world")).toBe(1);
     provider.destroy();
   });
@@ -554,6 +564,7 @@ describe('finding #2 — a re-created row (RowTruth "removed") binds to its surv
       "blk-unseen",
       () => seed,
       "unseen",
+      { fetchEndpoint, socketUrl: "ws://x/worktree" },
     );
     expect(provider.mayHaveStoredDoc).toBe(false);
 
@@ -563,11 +574,11 @@ describe('finding #2 — a re-created row (RowTruth "removed") binds to its surv
     // The subscription answers "no doc" and the row is confirmed: ONE doc-init,
     // carrying exactly the bytes already in the doc, whose echo merges as a
     // no-op.
-    fetchEndpointMock.mockResolvedValue({ state: toBase64(seed) });
+    server.mockResolvedValue({ state: toBase64(seed) });
     provider.onServerState(null);
     provider.markBlockRowConfirmed();
     await flushMicrotasks();
-    expect(fetchEndpointMock).toHaveBeenCalledTimes(1);
+    expect(server).toHaveBeenCalledTimes(1);
     expect(await postedBytes(0)).toEqual(seed);
     expect(count(docText(doc), "split tail")).toBe(1);
     expect(provider.isSynced).toBe(true);
@@ -582,6 +593,7 @@ describe('finding #2 — a re-created row (RowTruth "removed") binds to its surv
       "blk-removed-no-doc",
       () => seed,
       "removed",
+      { fetchEndpoint, socketUrl: "ws://x/worktree" },
     );
 
     provider.connect();
@@ -593,12 +605,12 @@ describe('finding #2 — a re-created row (RowTruth "removed") binds to its surv
     // still unconfirmed (FK gate).
     provider.onServerState(null);
     expect(docText(doc)).toBe("restored");
-    expect(fetchEndpointMock).not.toHaveBeenCalled();
+    expect(server).not.toHaveBeenCalled();
 
     // Confirmation lifts the gate: exactly one doc-init, and the seed was
     // ALREADY in the doc when it was posted.
     let textAtPost: string | null = null;
-    fetchEndpointMock.mockImplementation(async (_endpoint, _params, opts) => {
+    server.mockImplementation(async ({ opts }) => {
       textAtPost = docText(doc);
       const body = (opts as unknown as { body: Blob }).body;
       const buf = await body.arrayBuffer();
@@ -606,7 +618,7 @@ describe('finding #2 — a re-created row (RowTruth "removed") binds to its surv
     });
     provider.markBlockRowConfirmed();
     await flushMicrotasks();
-    expect(fetchEndpointMock).toHaveBeenCalledTimes(1);
+    expect(server).toHaveBeenCalledTimes(1);
     expect(textAtPost).toBe("restored");
     expect(await postedBytes(0)).toEqual(seed);
     // The authoritative response (our own seed) merged as a no-op: one copy.
@@ -623,6 +635,7 @@ describe('finding #2 — a re-created row (RowTruth "removed") binds to its surv
       "blk-removed-typed",
       () => seed,
       "removed",
+      { fetchEndpoint, socketUrl: "ws://x/worktree" },
     );
     provider.connect();
     expect(docText(doc)).toBe(""); // may have a stored doc: wait
@@ -638,7 +651,7 @@ describe('finding #2 — a re-created row (RowTruth "removed") binds to its surv
     // HOLDS, not `data.text`: the server creates the doc from the proposal
     // and answers with it, and that answer is merged back into this doc.
     const inits: Uint8Array[] = [];
-    fetchEndpointMock.mockImplementation(async (endpoint, _params, opts) => {
+    server.mockImplementation(async ({ endpoint, opts }) => {
       const body = (opts as unknown as { body: Blob }).body;
       const bytes = new Uint8Array(await body.arrayBuffer());
       if (endpoint === blockDocInit) {

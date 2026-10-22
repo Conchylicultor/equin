@@ -1,16 +1,27 @@
+import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import type { RowData } from "../../core";
+
+/**
+ * What the invoking paste path hands `build`: the fetcher bound to the
+ * editor's own transport (its `useFetchEndpoint()`), so an upload from inside
+ * a scope (the demo's browser server) lands on that scope's host, never the
+ * page's.
+ */
+export interface BlockPasteContext {
+  fetchEndpoint: FetchEndpoint;
+}
 
 /**
  * Generic block-paste-handler registry, owned by the editor plugin.
  *
  * Each attachment block type (image, video, audio, file) registers a handler
- * mapping a pasted file's MIME to a block type plus a `build(file)` that uploads
- * the file and returns the new block's data payload. The editor consumes this
- * registry in its two paste paths (the per-block Lexical paste plugin and the
- * block-selection-mode container paste) so it can create attachment blocks from
- * pasted files without naming any specific block type — collection-consumer
- * separation: the editor owns the generic interface, each block contributes the
- * internal details.
+ * mapping a pasted file's MIME to a block type plus a `build(file, ctx)` that
+ * uploads the file and returns the new block's data payload. The editor
+ * consumes this registry in its two paste paths (the per-block Lexical paste
+ * plugin and the block-selection-mode container paste) so it can create
+ * attachment blocks from pasted files without naming any specific block type —
+ * collection-consumer separation: the editor owns the generic interface, each
+ * block contributes the internal details.
  */
 export interface BlockPasteHandler {
   /** Stable id (e.g. "image"). */
@@ -25,7 +36,7 @@ export interface BlockPasteHandler {
    * EXISTING empty block in place — a payload naming `text` would be writing
    * over a projection of that block's content doc.
    */
-  build: (file: File) => Promise<RowData>;
+  build: (file: File, ctx: BlockPasteContext) => Promise<RowData>;
 }
 
 const handlers: BlockPasteHandler[] = [];

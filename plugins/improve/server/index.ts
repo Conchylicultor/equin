@@ -8,6 +8,7 @@ import { applyGroupJob } from "./internal/apply-group-job";
 export { _improvePendingGroups } from "./internal/tables";
 
 export default {
+  portable: true,
   description:
     'Toolbar button and category for app-improvement feedback. Files tasks stamped "Improvements" via the shared task-draft-form primitive.',
   register: [applyGroupJob],

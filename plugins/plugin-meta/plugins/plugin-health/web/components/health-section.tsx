@@ -12,7 +12,7 @@ import {
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getPluginStaleness, getPluginHealthTasks } from "../../core";
 import { pluginHealthReviews } from "../../shared/schemas";
 import type {
@@ -53,6 +53,7 @@ function HealthSectionInner({
   reviews: PluginHealthReview[];
   node: PluginNode;
 }) {
+  const fetchEndpoint = useFetchEndpoint();
   const [enriched, setEnriched] = useState<ReviewWithMeta[]>([]);
 
   useEffect(() => {
@@ -95,7 +96,7 @@ function HealthSectionInner({
       cancelled = true;
     };
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [node.id, reviews]);
+  }, [fetchEndpoint, node.id, reviews]);
 
   return (
     <Scroll axis="x">

@@ -39,8 +39,10 @@ An emoji as a stored value, and the picker that picks one — the sibling of
     - `primitives/css/fill.fillClasses`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`
+    - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/loading.Loading`
+    - `primitives/networking.useTransport`
     - `primitives/search.SearchInput`
   - Exports (types):
     - `EmojiPickerLeadingCategory`

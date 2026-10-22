@@ -8,8 +8,10 @@ import {
 } from "@plugins/primitives/plugins/file-viewer/core";
 import {
   NoPreview,
+  UnloadedFile,
   type FileRendererProps,
 } from "@plugins/primitives/plugins/file-viewer/web";
+import { useAssetSrc } from "@plugins/infra/plugins/endpoints/web";
 import { FileTypeIcon } from "@plugins/primitives/plugins/file-type/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import type { MediaKind } from "../internal/supports";
@@ -34,8 +36,18 @@ function spaceClaimedBy(target: EventTarget | null): boolean {
  * browser cannot decode (unsupported codec, unreadable) shows the "No preview"
  * body, with Open with default app.
  */
-function MediaView({ file, kind }: FileRendererProps & { kind: MediaKind }) {
-  const src = fileUrl(file);
+function MediaView(props: FileRendererProps & { kind: MediaKind }) {
+  // The file's bytes over the subtree's transport (`useAssetSrc`).
+  const asset = useAssetSrc(fileUrl(props.file));
+  if (asset.kind !== "ready") return <UnloadedFile src={asset} />;
+  return <LoadedMediaView {...props} src={asset.src} />;
+}
+
+function LoadedMediaView({
+  file,
+  kind,
+  src,
+}: FileRendererProps & { kind: MediaKind; src: string }) {
   const name = fileRefName(file);
   const [media, setMedia] = useState<HTMLMediaElement | null>(null);
   // Keyed by address so a failure on one file never sticks to the next.

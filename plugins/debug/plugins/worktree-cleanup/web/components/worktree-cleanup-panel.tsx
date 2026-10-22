@@ -12,9 +12,10 @@ import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
-  fetchEndpoint,
   getEndpointErrorMessage,
+  useFetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
+import { useTransport } from "@plugins/primitives/plugins/networking/web";
 import { interpolatePath } from "@plugins/infra/plugins/endpoints/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
@@ -105,6 +106,8 @@ function DirtyIndicator({ entry }: { entry: WorktreeEntry }) {
 }
 
 export function WorktreeCleanupPanel() {
+  const transport = useTransport();
+  const fetchEndpoint = useFetchEndpoint();
   const [entries, setEntries] = useState<WorktreeEntry[] | null>(null);
   const [listError, setListError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -132,6 +135,7 @@ export function WorktreeCleanupPanel() {
     let sinceFlush = 0;
     try {
       for await (const frame of readNdjson(
+        transport,
         listWorktrees.route,
         interpolatePath(listWorktrees.path, {}),
         { signal: ctrl.signal },
@@ -158,7 +162,7 @@ export function WorktreeCleanupPanel() {
     } finally {
       if (!ctrl.signal.aborted) setLoading(false);
     }
-  }, []);
+  }, [transport]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- async NDJSON stream load: load() flushes setEntries in mid-stream batches as worktree rows arrive and sets loading/listError around the fan-out, with an AbortController (loadAbort ref) guarding stale/unmount writes. useEndpoint/useResource can't consume a progressive NDJSON stream, so this can't be derived in render.
@@ -178,6 +182,7 @@ export function WorktreeCleanupPanel() {
       });
       try {
         for await (const frame of readNdjson(
+          transport,
           deleteWorktree.route,
           interpolatePath(deleteWorktree.path, { id }),
           { method: "DELETE" },
@@ -200,7 +205,7 @@ export function WorktreeCleanupPanel() {
       }
       await load();
     },
-    [load],
+    [transport, load],
   );
 
   const deleteSafe = useCallback(async () => {
@@ -230,7 +235,7 @@ export function WorktreeCleanupPanel() {
       setLoading(false);
     }
     await load();
-  }, [entries, load]);
+  }, [fetchEndpoint, entries, load]);
 
   // Server streams rows in completion order; sort for display (was a server sort).
   const sortedEntries = useMemo(

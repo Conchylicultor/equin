@@ -6,6 +6,7 @@ import { BUILD_RUN_CHIP_SURFACES } from "../core";
 import { resolveBuildRunReferent } from "./internal/referent";
 
 export default {
+  portable: true,
   description:
     "The build-run id chip's server half (idChipServer): resolves a `build-<id>` to `Build <short commit>` for the id registry and for model-read text.",
   contributions: [

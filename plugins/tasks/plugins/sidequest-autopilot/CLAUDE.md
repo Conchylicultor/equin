@@ -129,13 +129,13 @@ finish and report.
     - `Automations.Section` "sidequest-autopilot" → `LaunchListSection`
     - `Automations.Section` "sidequest-autopilot" → `RunUntilSection`
     - `Automations.Section` "sidequest-autopilot" → `TriageSection`
-  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×7
+    - `infra/endpoints` ×3
     - `primitives/data-view` ×3
     - `primitives/live-state` ×3
     - `tasks/automations` ×3
     - `config_v2` ×2
-    - `infra/endpoints` ×2
     - `primitives/css/control-panel` ×2
     - `network/live.useLive`
     - `primitives/css/badge.Badge`

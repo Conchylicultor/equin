@@ -1,4 +1,4 @@
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { createTodoBlockTask } from "../../shared/endpoints";
 
 /**
@@ -10,6 +10,7 @@ import { createTodoBlockTask } from "../../shared/endpoints";
  * before it can launch. A non-2xx throws `EndpointError`; nothing is swallowed.
  */
 export async function dispatchTodoAgent(
+  fetchEndpoint: FetchEndpoint,
   blockId: string,
   context: string,
 ): Promise<{ taskId: string; prompt: string }> {

@@ -14,13 +14,15 @@ import {
 } from "@plugins/conversations/web";
 import { stopConversation } from "@plugins/conversations/core";
 import {
-  fetchEndpoint,
   getEndpointErrorMessage,
   EndpointError,
+  useFetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
+import type { MachineResult } from "@plugins/infra/plugins/endpoints/core";
 import {
   conversationPromptDraft,
-  sendConversationTurn,
+  useSendConversationTurn,
+  useTurnSendAvailability,
   useTurnSendInFlight,
 } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { useConfig } from "@plugins/config_v2/web";
@@ -29,7 +31,7 @@ import { pushAndExitDelivery } from "../internal/delivery";
 import { resumeConversationEndpoint } from "@plugins/conversations/plugins/conversation-view/plugins/resume/core";
 import { exitConversation } from "@plugins/conversations/plugins/conversation-view/plugins/exit/core";
 import { dropAndExit } from "@plugins/conversations/plugins/conversation-view/plugins/drop-and-exit/core";
-import { toast } from "@plugins/shell/plugins/notifications/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { combineResources } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
@@ -62,7 +64,7 @@ const stopIcon = symbol("stop");
 // try/toast duplication.
 //
 // The turn-sending modes (send / queue / go / push-and-exit) return
-// SYNCHRONOUSLY: they hand the turn to `sendConversationTurn` and the
+// SYNCHRONOUSLY: they hand the turn to `useSendConversationTurn`'s send and the
 // pending-turn card owns the echo, the failure state and Retry from there.
 // Awaiting a turn POST here would give the button a private, weaker lifecycle
 // than the Enter key's — which is exactly how these three drifted into
@@ -72,6 +74,15 @@ type ActionSpec = {
   successToast?: string;
   run: () => void | Promise<void>;
 };
+
+// Every action here drives the agent, which needs the computer
+// (`needsMachine`): on a host without it the button is disabled before a
+// click, so an unavailable answer reaching a run is a bug — it fails like any
+// other refusal (the runner's toast), never as a success.
+function machineValue<T>(result: MachineResult<T>): T {
+  if (result.kind === "unavailable") throw new Error(result.message);
+  return result.value;
+}
 
 // Resume's handler throws HttpError(409, msg) → the server serializes the bare
 // message string as the response body. getEndpointErrorMessage only reads
@@ -161,6 +172,10 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   // it. The open request only, so queueing further messages stays open once
   // the request has landed.
   const sendInFlight = useTurnSendInFlight(convId);
+  const sendConversationTurn = useSendConversationTurn();
+  const machine = useTurnSendAvailability();
+  const fetchEndpoint = useFetchEndpoint();
+  const toast = useToast();
 
   // Restore / Send / Stop work in every workspace; the edited-files read feeds
   // only a git workspace's exit decision, so it runs only where there is git.
@@ -247,11 +262,12 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
     mode === "go" ||
     mode === "push-and-exit";
   const disabled =
-    mode === "restore"
+    !machine.available ||
+    (mode === "restore"
       ? !hasSession
       : live.status === "starting" ||
         provisional ||
-        (sendsATurn && sendInFlight);
+        (sendsATurn && sendInFlight));
 
   function specFor(m: Mode): ActionSpec | null {
     switch (m) {
@@ -259,7 +275,11 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
         return {
           verb: "Resume",
           successToast: "Resuming conversation…",
-          run: () => fetchEndpoint(resumeConversationEndpoint, { id: convId }),
+          run: async () => {
+            machineValue(
+              await fetchEndpoint(resumeConversationEndpoint, { id: convId }),
+            );
+          },
         };
       case "send":
       case "queue": {
@@ -288,8 +308,10 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
         return {
           verb: "Stop",
           run: async () => {
-            const data = await fetchEndpoint(stopConversation, { id: convId });
-            if (data?.rewindText) setDraft(data.rewindText);
+            const data = machineValue(
+              await fetchEndpoint(stopConversation, { id: convId }),
+            );
+            if (data.rewindText) setDraft(data.rewindText);
           },
         };
       case "push-and-exit":
@@ -313,14 +335,16 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
         return {
           verb: "Close",
           successToast: "Conversation closed",
-          run: () => fetchEndpoint(exitConversation, { id: convId }),
+          run: async () => {
+            machineValue(await fetchEndpoint(exitConversation, { id: convId }));
+          },
         };
       case "drop-and-exit":
         return {
           verb: "Drop & Close",
           successToast: "Task dropped and conversation closed",
           run: async () => {
-            await fetchEndpoint(dropAndExit, { id: convId });
+            machineValue(await fetchEndpoint(dropAndExit, { id: convId }));
           },
         };
     }

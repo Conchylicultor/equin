@@ -18,6 +18,7 @@ export {
 } from "./internal/doc-store";
 
 export default {
+  portable: true,
   description:
     "Per-block content-CRDT server (content-agnostic): the page_block_docs state store, the per-block lookup-only live collection (page-block-doc:rows), the first-writer-wins doc-init seed, and the doc-update Yjs merge endpoint.",
   contributions: [

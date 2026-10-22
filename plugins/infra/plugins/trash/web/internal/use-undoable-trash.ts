@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useUndoRedo } from "@plugins/primitives/plugins/undo-redo/web";
 import { restoreTrash } from "../../core";
 import type { TrashOutcome } from "../../core";
@@ -55,6 +55,7 @@ export type UndoableTrash = (args: UndoableTrashArgs) => Promise<TrashOutcome>;
  */
 export function useUndoableTrash(): UndoableTrash {
   const { record } = useUndoRedo();
+  const fetchEndpoint = useFetchEndpoint();
 
   return useCallback(
     async ({ label, trash, onUndo }: UndoableTrashArgs) => {
@@ -87,6 +88,6 @@ export function useUndoableTrash(): UndoableTrash {
 
       return outcome;
     },
-    [record],
+    [record, fetchEndpoint],
   );
 }

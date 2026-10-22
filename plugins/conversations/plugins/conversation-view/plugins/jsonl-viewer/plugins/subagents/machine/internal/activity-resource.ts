@@ -11,11 +11,8 @@ import {
   evictSubagentActivity,
   primeSubagentActivity,
   subagentActivityMemo,
-} from "../../server/internal/caches";
-import {
-  resolveActivityTargets,
-  scanActivity,
-} from "../../server/internal/activity-scan";
+} from "./caches";
+import { resolveActivityTargets, scanActivity } from "./activity-scan";
 
 // Pushed (the declaration's default) as a delivery choice: the payload is a
 // handful of small rows, the same for every subscriber, and observed by every

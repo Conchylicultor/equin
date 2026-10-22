@@ -1,4 +1,5 @@
 import type { PageData } from "@plugins/page/plugins/editor/core";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import type {
   InsertAction,
   InsertActionRun,
@@ -38,8 +39,12 @@ export const agentPageDecoration: PageReferenceDecorationContribution = {
 /** Turn the line into the page, then open it (`useOpenMadePage`). */
 function useAgentPageInsertRun(): InsertActionRun {
   const openMadePage = useOpenMadePage();
+  const fetchEndpoint = useFetchEndpoint();
   return ({ blockId, text }) => {
-    openMadePage(turnIntoAgentPage(blockId, agentPageTitle(text)), blockId);
+    openMadePage(
+      turnIntoAgentPage(fetchEndpoint, blockId, agentPageTitle(text)),
+      blockId,
+    );
   };
 }
 

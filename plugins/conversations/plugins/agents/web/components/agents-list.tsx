@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
@@ -20,7 +21,10 @@ import {
   fieldOverrides,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import {
+  useFetchEndpoint,
+  type FetchEndpoint,
+} from "@plugins/infra/plugins/endpoints/web";
 import {
   createAgent,
   deleteAgent,
@@ -43,15 +47,21 @@ export { patchAgent } from "./patch-agent";
 const AGENTS_LIST_VIEW = defineDataView("agents-list");
 
 // The name is the entity's field (label and title flag included); the list says
-// only that it edits in place.
-const overrides = fieldOverrides(agentRows, {
-  name: {
-    onEdit: (a, next) =>
-      patchAgent(a.id, {
-        name: String(next ?? "").trim() || "Untitled",
+// only that it edits in place — over the subtree's transport, so a hook.
+function useAgentOverrides(fetchEndpoint: FetchEndpoint) {
+  return useMemo(
+    () =>
+      fieldOverrides(agentRows, {
+        name: {
+          onEdit: (a, next) =>
+            patchAgent(fetchEndpoint, a.id, {
+              name: String(next ?? "").trim() || "Untitled",
+            }),
+        },
       }),
-  },
-});
+    [fetchEndpoint],
+  );
+}
 
 // The agent's avatar is a field, not a tree option: every view that has a
 // leading slot draws it there, ahead of `leadingIcon`'s status dot. It is
@@ -76,10 +86,13 @@ function randomFrom<T>(arr: readonly T[]): T {
 // Fields are listed explicitly rather than spread: a key the body schema doesn't
 // declare is silently stripped at the boundary, which is exactly how `rank` used
 // to vanish here — the new agent always landed at the end of the sibling list.
-async function createAgentRow(args: {
-  parentId: string | null;
-  afterId?: string;
-}): Promise<string | null> {
+async function createAgentRow(
+  fetchEndpoint: FetchEndpoint,
+  args: {
+    parentId: string | null;
+    afterId?: string;
+  },
+): Promise<string | null> {
   const agent = await fetchEndpoint(
     createAgent,
     {},
@@ -98,6 +111,7 @@ async function createAgentRow(args: {
 
 function DeleteSelectedAction() {
   const { selectedIds, clearAll } = useMultiSelect();
+  const fetchEndpoint = useFetchEndpoint();
   const onClick = async () => {
     await Promise.all(
       [...selectedIds].map((id) => fetchEndpoint(deleteAgent, { id })),
@@ -123,6 +137,8 @@ export function AgentsList({
 }) {
   const result = useLive(agentRows);
   const openPane = useOpenPane();
+  const fetchEndpoint = useFetchEndpoint();
+  const overrides = useAgentOverrides(fetchEndpoint);
 
   if (result.status === "loading") return <Loading variant="rows" />;
   if (result.status === "error")
@@ -163,8 +179,8 @@ export function AgentsList({
           getRank: (a) => a.rank,
           // Positional intent only — the rows are a projection of the agents
           // table, so `moveAgent` mints the rank against the complete sibling set.
-          onMove: (id, dest) => moveAgentTo(id, dest),
-          onCreate: createAgentRow,
+          onMove: (id, dest) => moveAgentTo(fetchEndpoint, id, dest),
+          onCreate: (args) => createAgentRow(fetchEndpoint, args),
         }}
         selection={{ bulkActions: <DeleteSelectedAction /> }}
         itemActions={AgentsSlots.AgentActions}

@@ -1,6 +1,6 @@
 import { runsOfNode } from "../../core";
 import type { RichText } from "../../core";
-import { blockDocOwnerOf } from "./collab-session";
+import { blockDocOwnerOf, type BlockDocs } from "./collab-session";
 
 /**
  * A block's text as it stands NOW, for a decision about what the user sees —
@@ -15,8 +15,12 @@ import { blockDocOwnerOf } from "./collab-session";
  * owner whose doc is AUTHORITATIVE. An owner still waiting on its subscription
  * holds an empty doc because nothing arrived, not because the block is empty,
  * so that case (and a block never opened here) falls back to the row.
+ * `docs` is the editor's transport's registry (`useBlockDocs()`).
  */
-export function liveRunsOf(block: { id: string; data?: unknown }): RichText {
-  const owner = blockDocOwnerOf(block.id);
+export function liveRunsOf(
+  docs: BlockDocs,
+  block: { id: string; data?: unknown },
+): RichText {
+  const owner = blockDocOwnerOf(docs, block.id);
   return owner && owner.docAuthoritative ? owner.runsNow() : runsOfNode(block);
 }

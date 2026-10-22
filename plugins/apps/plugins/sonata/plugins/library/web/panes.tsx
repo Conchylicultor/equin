@@ -20,6 +20,7 @@ import { useSession } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import { barStartBeat } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useDeferredLoadComplete } from "@plugins/framework/plugins/web-sdk/core";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   PlayerDisplay,
   PlayerDisplayBinding,
@@ -193,6 +194,7 @@ function useSongHydration({
   const songId = songIdKind.key(songIdParam);
   const song = useLiveRow(songLibrary, songId);
   const sources = Library.Source.useContributions();
+  const fetchEndpoint = useFetchEndpoint();
   // The sources are an open contributed set, and most of them load in the
   // deferred tier: hydrating before that tier settles reads an incomplete set,
   // and the loaded song then never re-hydrates (the effect below keeps a song
@@ -238,7 +240,9 @@ function useSongHydration({
     if (!deferredComplete || sourcesVersion === undefined) return;
     let cancelled = false;
     void (async () => {
-      const { rawMap, pending } = await hydrateSources(sources, songId);
+      const { rawMap, pending } = await hydrateSources(sources, songId, {
+        fetchEndpoint,
+      });
       if (cancelled) return;
       // A source has content for this song that is not ready: keep it for the
       // surface to render and load NOTHING — never a score composed without it.
@@ -266,6 +270,7 @@ function useSongHydration({
   }, [
     songId,
     sources,
+    fetchEndpoint,
     deferredComplete,
     loadDocument,
     requestSeekOnLoad,

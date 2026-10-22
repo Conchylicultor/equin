@@ -7,7 +7,7 @@ import {
   ResourceErrorInline,
   foldResource,
 } from "@plugins/primitives/plugins/live-state/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { setConfigField } from "@plugins/config_v2/core";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
@@ -51,6 +51,7 @@ export function OAuthClientSetup({
   setup: Extract<ProviderSetup, { kind: "oauth-client" }>;
   status: AuthAccountState;
 }) {
+  const fetchEndpoint = useFetchEndpoint();
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
   const [saving, setSaving] = useState(false);
@@ -75,6 +76,8 @@ export function OAuthClientSetup({
   const credentialsSaved = foldResource(meta, {
     loading: () => false,
     error: () => false,
+    // No computer behind this subtree (the demo): nothing is claimed saved.
+    unavailable: () => false,
     ready: (m) => !!m.clientId?.set && !!m.clientSecret?.set,
   });
 

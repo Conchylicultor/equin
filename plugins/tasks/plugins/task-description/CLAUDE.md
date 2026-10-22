@@ -17,7 +17,7 @@
     - `primitives/hover-reveal` ×2
     - `tasks/launch-options` ×2
     - `tasks` ×2
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
     - `primitives/editable-field.useEditableField`

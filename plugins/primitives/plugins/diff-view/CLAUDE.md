@@ -8,10 +8,11 @@ Generic side-by-side / text diff renderer. The domain-agnostic diff-rendering cl
 
 - Description: Generic side-by-side / text diff renderer primitive. Exposes TextDiff (two in-memory strings), DiffView/DiffOrImageView (worktree file vs a git ref), DiffRenderer, and the shiki token helpers.
 - Web:
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/overlay/image-viewer` ×5
     - `primitives/syntax-highlight` ×5
     - `primitives/live-state` ×2
+    - `infra/endpoints.useAssetSrc`
     - `network/live.useLive`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`

@@ -7,13 +7,15 @@ import { commitInfo } from "@plugins/code-explorer/plugins/code-api/core";
  * the read as `missing` ("this sha names no commit in that repository") is a
  * determinate fact about the repository, while any other failure is an absence
  * of an answer. Folding the second into the first would let a dead backend read
- * as "that commit doesn't exist".
+ * as "that commit doesn't exist". `unavailable`: the read needs the computer
+ * (git, `needsMachine`) and this subtree has none (the demo) — nothing is asked.
  */
 export type CommitInfoState =
   | { kind: "loading" }
   | { kind: "found"; commit: CommitRow }
   | { kind: "not-found"; reason: string }
-  | { kind: "error"; message: string };
+  | { kind: "error"; message: string }
+  | { kind: "unavailable"; message: string };
 
 /**
  * One commit's metadata, read live from `code.commit-info` — immutable per
@@ -24,6 +26,8 @@ export function useCommitInfo(worktree: string, sha: string): CommitInfoState {
   switch (result.status) {
     case "loading":
       return { kind: "loading" };
+    case "unavailable":
+      return { kind: "unavailable", message: result.message };
     case "error":
       return result.error.kind === "refused" && result.error.code === "missing"
         ? { kind: "not-found", reason: result.error.message }

@@ -11,6 +11,7 @@
     - `apps/pages/page-tree.createPageWithSeed`
     - `apps/pages/page-tree.pageDetailPane`
     - `apps/pages/welcome.PagesWelcome`
+    - `infra/endpoints.useFetchEndpoint`
     - `primitives/css/card.Card`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`

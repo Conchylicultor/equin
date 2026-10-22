@@ -11,7 +11,7 @@
     - `Conversation.PromptBar` "Notes" → `NotesToggleButton`
   - Uses:
     - `conversations/conversation-view.Conversation`
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.LiveRowResult`
     - `network/live.useLiveRow`
     - `primitives/css/pin.Pin`
@@ -59,7 +59,6 @@
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-3xs`
     - `ui/tokens/type-scale --line-height-caption`
-  - Imported by: `apps/agent-manager/demo`
 - Shared:
   - Exports (types): `ConversationNote`
   - Exports (values):

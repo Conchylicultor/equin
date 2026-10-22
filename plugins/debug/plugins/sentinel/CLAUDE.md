@@ -349,10 +349,11 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
     - `database/embedded` ×3
     - `debug/trace/engine` ×2
     - `infra/file-watcher` ×2
-    - `reports` ×2
     - `infra/paths.isHostSingleton`
     - `network/live.serveValue`
     - `primitives/log-channels.defineLogSink`
+    - `reports/engine.recordReport`
+    - `reports.ReportKind`
   - Exports (values): `readDuressEpisodes`
   - Register:
     - `defineFileWatcher('sentinel.status')`

@@ -152,7 +152,10 @@ export { registerBlockPasteHandler } from "./internal/block-paste-handlers";
 // `text/uri-list` fallback Lexical's own insert does (url-paste's bare-URL
 // gate would otherwise miss a link dragged out of another tab).
 export { readTransferText } from "./internal/transfer";
-export type { BlockPasteHandler } from "./internal/block-paste-handlers";
+export type {
+  BlockPasteContext,
+  BlockPasteHandler,
+} from "./internal/block-paste-handlers";
 export { OPEN_LINK_POPOVER_COMMAND } from "./internal/link-command";
 export { isValidLinkUrl, normalizeLinkUrl } from "./internal/link-url";
 export { $setLinkText } from "./internal/link-text";

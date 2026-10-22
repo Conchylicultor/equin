@@ -103,7 +103,7 @@ unbounded.
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
-    - `shell/notifications.toast`
+    - `shell/notifications.useToast`
     - `ui/icons.Icon`
   - Exports (values): `BootProfileGantt`
 - Server:

@@ -12,7 +12,7 @@
 //     reducer), so op/patch semantics are byte-identical.
 
 import { useCallback, useMemo, useRef, useState } from "react";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   OpNoLongerApplies,
   useOptimisticResource,
@@ -137,6 +137,9 @@ export const NOTHING_FAILED: ReadonlyMap<string, BelowFailure> = new Map();
 // ---------------------------------------------------------------------------
 
 export function useServerBlockStore(pageId: string): BlockStore {
+  // The page's writes go to the host this editor is served by (its subtree's
+  // transport), never a page-global one.
+  const fetchEndpoint = useFetchEndpoint();
   // Structural keystroke ops apply optimistically: the client runs the SAME
   // `applyBlockOp` reducer the server runs, overlaid on live-state truth and
   // reconciled by the WS push. The captured `effect` drives both the idempotency

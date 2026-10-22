@@ -121,7 +121,7 @@ cutMessageAt)` plus `returnTurnByText` for the cut message itself make them
   fact is learned: the merge by the confirmation, the unverified verdict by the
   transition write. They replace the browser's `turn-unconfirmed`. The store
   announces both on `turnVerdictSink` (`server/internal/verdict-sink.ts`), and
-  `machine/` maps it to `recordReport`: `reports/server` is not portable, and
+  `machine/` maps it to `recordReport`: the reports engine is not portable, and
   the server half runs on every host (it is `portable: true`, so the demo's
   browser worker serves `turn-ledger.turns` over PGlite).
 
@@ -215,9 +215,7 @@ withdrawn).
     - `TurnKindSchema`
     - `TurnStateSchema`
 - Cross-plugin:
-  - Imported by:
-    - `apps/agent-manager/demo`
-    - `conversations`
+  - Imported by: `conversations`
 - Exemptions:
   - Exempts itself from: `ids:pk-declared` — `server/internal/tables-user-turn-sent-event.ts` (debt)
 - Machine:

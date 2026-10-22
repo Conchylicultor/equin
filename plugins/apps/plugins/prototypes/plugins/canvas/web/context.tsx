@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   useOptimisticResource,
   type OptimisticSettled,
@@ -252,6 +252,7 @@ export function PrototypeDetailProvider(
 
 function DetailGate(props: PrototypeDetailProviderProps): ReactNode {
   const { name } = props;
+  const fetchEndpoint = useFetchEndpoint();
   // The whole list, and this prototype's declared size looked up in it once it
   // has loaded. A list change re-renders this gate and `DetailProvider`, but
   // not the canvas: `size` only SEEDS a canvas (the `useState` initializer, and

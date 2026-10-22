@@ -41,9 +41,9 @@ gardens, which Google files under "Entertainment and Recreation", are `nature`
     - `integrations/google-maps/places-api.autocomplete`
     - `integrations/google-maps/places-api.placeDetails`
     - `page/place.definePlaceProvider`
-    - `reports.recordReport`
     - `reports.ReportKind`
     - `reports.ReportRow`
+    - `reports/engine.recordReport`
   - DB schema: `plugins/page/plugins/place/plugins/google/server/internal/table-a.ts`
   - Register: `definePlaceProvider('google')`
 - Shared:

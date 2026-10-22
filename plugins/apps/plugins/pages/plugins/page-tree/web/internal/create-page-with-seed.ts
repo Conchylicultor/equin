@@ -1,4 +1,4 @@
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { createBlock, PAGE_BLOCK_TYPE } from "@plugins/page/plugins/editor/core";
 import { textBlock } from "@plugins/page/plugins/text/core";
 
@@ -31,17 +31,23 @@ export type PageSeedBlock = { type: string; data: unknown };
  * created sequentially (await each, in order) with no explicit rank, so the
  * server appends them in caller order.
  *
+ * Both requests go through the caller's `fetchEndpoint` (its subtree's
+ * transport, `useFetchEndpoint()`).
+ *
  * Returns the new page id so the caller can open it.
  */
-export async function createPageWithSeed(args: {
-  parentId: string | null;
-  /** Position the new page immediately after this existing sibling block. The
-   *  server resolves it against the true sibling set (page rows AND the content
-   *  rows sharing their `(parent_id, rank)` space); omit to append at the end. */
-  afterId?: string;
-  page?: { title?: string };
-  seed?: PageSeedBlock[];
-}): Promise<string> {
+export async function createPageWithSeed(
+  fetchEndpoint: FetchEndpoint,
+  args: {
+    parentId: string | null;
+    /** Position the new page immediately after this existing sibling block. The
+     *  server resolves it against the true sibling set (page rows AND the content
+     *  rows sharing their `(parent_id, rank)` space); omit to append at the end. */
+    afterId?: string;
+    page?: { title?: string };
+    seed?: PageSeedBlock[];
+  },
+): Promise<string> {
   const page = await fetchEndpoint(
     createBlock,
     {},

@@ -253,6 +253,20 @@ export function liveStateSocketKind(url: string): LiveStateSocketKind | null {
   return null;
 }
 
+/**
+ * The URL the live-state pipeline over `transport` opens its `kind` socket at —
+ * the url the ws-status bus reports that socket under. For a client that must
+ * react to ITS transport's live-state socket reopening (a content-doc provider
+ * resuming an interrupted flush), never to another transport's:
+ * `liveStateSocketKind` knows only the page's own.
+ */
+export function liveStateSocketUrl(
+  transport: { socketUrl(path: string): string },
+  kind: LiveStateSocketKind,
+): string {
+  return transport.socketUrl(WS_URLS[kind]);
+}
+
 function socketKindFor(origin: ResourceOrigin | undefined): SocketKind {
   return origin === "central" ? "central" : "worktree";
 }
@@ -622,6 +636,15 @@ export class NotificationsClient {
    */
   private tabId: string;
   /**
+   * Whether this client's read telemetry is reported — the transport's
+   * `telemetry`: a scope set to drop it emits nothing to the page-wide sinks
+   * (`resourceErrorReportSink`, `httpStaleDropReportSink`, the update sample
+   * on `clientLatencySink`). The failing set itself (`useFailingResources`)
+   * is the scope's own UI state, kept regardless. Read by the readers built
+   * on this client's pipeline (the optimistic overlay's own samples).
+   */
+  readonly telemetry: boolean;
+  /**
    * `${key}\0${paramsKey}` → the live read currently failing on that tuple (its
    * query holds an error). Kept from the query cache's own events — never from
    * the hooks — so N observers of one tuple are one entry, one report, one
@@ -686,6 +709,12 @@ export class NotificationsClient {
         ...args: Parameters<typeof fetch>
       ) => ReturnType<typeof fetch>;
       registries?: LiveRegistries;
+      /**
+       * Whether the telemetry this client's reads raise is reported (a live
+       * read's error, a stale drop, the update latency sample): its
+       * transport's `telemetry`. Default true — the page's.
+       */
+      telemetry?: boolean;
     },
   ) {
     // Socket factory must be set before channelFor (openChannel reads it).
@@ -703,6 +732,7 @@ export class NotificationsClient {
     this.registries = hooks?.registries ?? rootLiveRegistries;
     this.fetchImpl = hooks?.fetchImpl ?? ((...a) => fetch(...a));
     this.tabId = hooks?.tabId ?? REALM_HOLDER_ID;
+    this.telemetry = hooks?.telemetry ?? true;
     // Open the worktree channel eagerly (always used). Central stays lazy —
     // opened on the first central-origin observe() via channelFor.
     this.channelFor("worktree");
@@ -1070,7 +1100,7 @@ export class NotificationsClient {
     trace(
       `error key=${tuple.key} params=${paramsKey(tuple.params)} kind=${typed.kind} error=${typed.message}`,
     );
-    resourceErrorReportSink.emit(entry);
+    if (this.telemetry) resourceErrorReportSink.emit(entry);
     this.emitFailing();
   }
 
@@ -1694,6 +1724,7 @@ export class NotificationsClient {
     const id = `${key}\0${paramsKey(params)}`;
     const consecutiveDrops = (this.staleDropCounts.get(id) ?? 0) + 1;
     this.staleDropCounts.set(id, consecutiveDrops);
+    if (!this.telemetry) return;
     httpStaleDropReportSink.emit({
       key,
       params,
@@ -2450,7 +2481,12 @@ export class NotificationsClient {
     timing: FrameTiming | undefined,
     receivedAt: number,
   ): void {
-    if (timing === undefined || !clientLatencySink.hasSubscribers()) return;
+    if (
+      timing === undefined ||
+      !this.telemetry ||
+      !clientLatencySink.hasSubscribers()
+    )
+      return;
     const appliedAt = Date.now();
     const { changedAt, sentAt, deliverMs } = timing;
     clientLatencySink.emit({

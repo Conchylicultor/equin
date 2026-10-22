@@ -2,6 +2,7 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 import { useState } from "react";
 import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
 import { useSetConfig } from "@plugins/config_v2/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { DialogTitle } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -27,6 +28,7 @@ export function openWallpaperPicker(): void {
 function WallpaperPickerDialog({ onClose }: { onClose: () => void }) {
   const providers = Wallpaper.Provider.useContributions();
   const setConfig = useSetConfig(wallpaperConfig);
+  const fetchEndpoint = useFetchEndpoint();
   const [activeId, setActiveId] = useState(providers[0]?.id ?? "");
   const [saving, setSaving] = useState(false);
 
@@ -47,7 +49,7 @@ function WallpaperPickerDialog({ onClose }: { onClose: () => void }) {
     }
     setSaving(true);
     try {
-      const saved = await saveCandidate(candidate);
+      const saved = await saveCandidate(fetchEndpoint, candidate);
       // The picker is the single owner of the config write — providers/endpoints
       // never touch config. Global write (no scopeId).
       setConfig("state", {

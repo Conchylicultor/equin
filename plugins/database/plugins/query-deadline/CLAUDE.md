@@ -183,9 +183,9 @@ effect with no timer to fire again.
     - `database/embedded.PG_LOG_FILE`
     - `database/pgbouncer.PGBOUNCER_LOG_FILE`
     - `network/live.serveValue`
-    - `reports.recordReport`
     - `reports.ReportKind`
     - `reports.ReportRow`
+    - `reports/engine.recordReport`
   - Exports (values):
     - `abandonCapKind`
     - `queryDeadlineKind`

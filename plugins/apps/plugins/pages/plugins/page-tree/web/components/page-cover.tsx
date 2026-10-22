@@ -1,7 +1,11 @@
 import { useRef, useState } from "react";
 
 import { useLiveRow } from "@plugins/network/plugins/live/web";
-import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import {
+  useAssetSrc,
+  useEndpointMutation,
+  type AssetSrc,
+} from "@plugins/infra/plugins/endpoints/web";
 import {
   pagesTree,
   updateBlock,
@@ -23,6 +27,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import {
   MissingImage,
+  UnloadedAssetImage,
   useImageLoad,
   type ImageLoadState,
 } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
@@ -78,7 +83,10 @@ function PageCoverInner({ page, pageId }: { page: Block; pageId: string }) {
   );
 }
 
-/** An image cover: its load state decides whether it can be repositioned. */
+/**
+ * An image cover: its bytes over the subtree's transport (`useAssetSrc`), then
+ * its load state, which decides whether it can be repositioned.
+ */
 function ImageCover({
   cover,
   onPick,
@@ -88,10 +96,41 @@ function ImageCover({
   onPick: (cover: PageCover) => void;
   onSave: (cover: PageCover | null) => Promise<void>;
 }) {
-  const image = useImageLoad(attachmentUrl(cover.attachmentId));
+  const asset = useAssetSrc(attachmentUrl(cover.attachmentId));
+  if (asset.kind !== "ready") {
+    return (
+      <FilledCover
+        band={{ kind: "unloaded", cover, asset }}
+        onPick={onPick}
+        onSave={onSave}
+      />
+    );
+  }
+  return (
+    <LoadedImageCover
+      cover={cover}
+      src={asset.src}
+      onPick={onPick}
+      onSave={onSave}
+    />
+  );
+}
+
+function LoadedImageCover({
+  cover,
+  src,
+  onPick,
+  onSave,
+}: {
+  cover: ImageCoverValue;
+  src: string;
+  onPick: (cover: PageCover) => void;
+  onSave: (cover: PageCover | null) => Promise<void>;
+}) {
+  const image = useImageLoad(src);
   return (
     <FilledCover
-      band={{ kind: "image", cover, image }}
+      band={{ kind: "image", cover, src, image }}
       onPick={onPick}
       onSave={onSave}
     />
@@ -100,10 +139,23 @@ function ImageCover({
 
 type ImageCoverValue = Extract<PageCover, { type: "image" }>;
 
-/** What the band paints: a gradient, or an image cover with its load state. */
+/**
+ * What the band paints: a gradient, an image cover not loadable yet (or here),
+ * or an image cover with its load state.
+ */
 type CoverBand =
   | { kind: "gradient"; cover: Exclude<PageCover, ImageCoverValue> }
-  | { kind: "image"; cover: ImageCoverValue; image: ImageLoadState };
+  | {
+      kind: "unloaded";
+      cover: ImageCoverValue;
+      asset: Exclude<AssetSrc, { kind: "ready" }>;
+    }
+  | {
+      kind: "image";
+      cover: ImageCoverValue;
+      src: string;
+      image: ImageLoadState;
+    };
 
 function FilledCover({
   band,
@@ -132,6 +184,8 @@ function FilledCover({
           className="size-full"
           style={{ background: gradientCss(band.cover.preset) }}
         />
+      ) : band.kind === "unloaded" ? (
+        <UnloadedAssetImage src={band.asset} name="Cover image" size="fill" />
       ) : band.image.load.kind === "failed" ? (
         <MissingImage
           name="Cover image"
@@ -142,6 +196,7 @@ function FilledCover({
       ) : (
         <CoverImage
           cover={band.cover}
+          src={band.src}
           image={band.image}
           repositioning={repositioning}
           onSave={onSave}
@@ -193,12 +248,14 @@ function FilledCover({
  */
 function CoverImage({
   cover,
+  src,
   image,
   repositioning,
   onSave,
   onDone,
 }: {
   cover: ImageCoverValue;
+  src: string;
   image: ImageLoadState;
   repositioning: boolean;
   onSave: (cover: PageCover | null) => Promise<void>;
@@ -265,7 +322,7 @@ function CoverImage({
       >
         <img
           key={image.imgKey}
-          src={attachmentUrl(cover.attachmentId)}
+          src={src}
           alt=""
           {...image.imgProps}
           draggable={false}

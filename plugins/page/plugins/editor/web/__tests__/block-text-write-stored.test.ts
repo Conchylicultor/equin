@@ -17,16 +17,15 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import * as Y from "yjs";
 
-vi.mock("@plugins/infra/plugins/endpoints/web", async (importOriginal) => {
-  // Keep the REAL EndpointError (host B wraps it as the replay error's cause);
-  // only the network call is stubbed.
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  return { ...actual, fetchEndpoint: vi.fn() };
-});
-
-vi.mock("@plugins/primitives/plugins/networking/web", () => ({
-  subscribeWsStatus: () => () => {},
-}));
+// Spread the real module: the endpoints barrel (EndpointError) calls
+// `transportScoped` at load.
+vi.mock(
+  "@plugins/primitives/plugins/networking/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<Record<string, unknown>>()),
+    subscribeWsStatus: () => () => {},
+  }),
+);
 
 vi.mock("@plugins/primitives/plugins/live-state/web", () => ({
   liveStateSocketKind: () => "worktree",
@@ -38,10 +37,11 @@ vi.mock("@plugins/network/plugins/live/web", () => ({
   })),
 }));
 
+import { EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import {
-  EndpointError,
-  fetchEndpoint,
-} from "@plugins/infra/plugins/endpoints/web";
+  fakeFetchEndpoint,
+  type FakeEndpointAnswer,
+} from "@plugins/infra/plugins/endpoints/web/testing";
 import { yDocContent } from "@plugins/primitives/plugins/collab-doc/core";
 import {
   blockDocInit,
@@ -55,7 +55,11 @@ import {
 } from "../../core";
 import { blockTextRunsOptions } from "../internal/block-text-extensions";
 import { buildSeedStateFor } from "../internal/block-seed-state";
-import { CollabSession, blockDocOwnerOf } from "../internal/collab-session";
+import {
+  BlockDocs,
+  CollabSession,
+  blockDocOwnerOf,
+} from "../internal/collab-session";
 import {
   applyBlockRuns,
   BlockTextReplayError,
@@ -67,7 +71,12 @@ import {
   type UndoConflictReport,
 } from "../internal/undo-conflict-report";
 
-const fetchEndpointMock = vi.mocked(fetchEndpoint);
+// The editor's endpoint client, handed to host B and to every server-synced
+// owner: a plain test double, so each case scripts its server.
+const server = vi.fn<FakeEndpointAnswer>();
+const { fetchEndpoint } = fakeFetchEndpoint(server);
+/** The owners' registry, whose server is the double. */
+const docs = new BlockDocs({ fetchEndpoint, socketUrl: "ws://x/worktree" });
 
 function toBase64(bytes: Uint8Array): string {
   let bin = "";
@@ -101,12 +110,7 @@ function fakeServer(
 ) {
   const inits: Uint8Array[] = [];
   const deltas: Uint8Array[] = [];
-  const impl = async (
-    endpoint: unknown,
-    _params: unknown,
-    init?: { body?: unknown },
-  ): Promise<unknown> => {
-    const body = init?.body;
+  const impl: FakeEndpointAnswer = async ({ endpoint, body }) => {
     const bytes =
       body instanceof Blob
         ? new Uint8Array(await body.arrayBuffer())
@@ -125,7 +129,7 @@ function fakeServer(
     }
     throw new Error("unexpected endpoint");
   };
-  fetchEndpointMock.mockImplementation(impl as typeof fetchEndpoint);
+  server.mockImplementation(impl);
   return { inits, deltas };
 }
 
@@ -135,7 +139,7 @@ const nextId = (): string => `stored-${(blockSeq += 1)}`;
 
 beforeEach(() => {
   vi.useFakeTimers();
-  fetchEndpointMock.mockReset();
+  server.mockReset();
   reports.length = 0;
   undoConflictReportSink.register((r) => {
     reports.push(r);
@@ -153,8 +157,11 @@ describe("spliceStoredBlockDoc", () => {
     const stored = stateOf([{ text: "hello", marks: ["bold"] }]);
     const { inits, deltas } = fakeServer(stored);
     const rowRuns: RichText = [{ text: "lagged row" }];
-    const result = await spliceStoredBlockDoc("b", rowRuns, (current) =>
-      mergeRuns(current, [{ text: " world" }]),
+    const result = await spliceStoredBlockDoc(
+      fetchEndpoint,
+      "b",
+      rowRuns,
+      (current) => mergeRuns(current, [{ text: " world" }]),
     );
     expect(result.before).toEqual([{ text: "hello", marks: ["bold"] }]);
     expect(result.after).toEqual([
@@ -172,32 +179,48 @@ describe("spliceStoredBlockDoc", () => {
   test("splicing back to `before` un-appends exactly the suffix", async () => {
     const stored = stateOf([{ text: "hello" }]);
     const { deltas } = fakeServer(stored);
-    const forward = await spliceStoredBlockDoc("b", [], (current) =>
-      mergeRuns(current, [{ text: " world" }]),
+    const forward = await spliceStoredBlockDoc(
+      fetchEndpoint,
+      "b",
+      [],
+      (current) => mergeRuns(current, [{ text: " world" }]),
     );
     // The un-append reads the server (now holding the append) and splices back.
     const afterForward = new Y.Doc();
     Y.applyUpdate(afterForward, stored);
     Y.applyUpdate(afterForward, deltas[0]!);
     fakeServer(Y.encodeStateAsUpdate(afterForward));
-    const back = await spliceStoredBlockDoc("b", [], () => forward.before);
+    const back = await spliceStoredBlockDoc(
+      fetchEndpoint,
+      "b",
+      [],
+      () => forward.before,
+    );
     expect(back.before).toEqual([{ text: "hello world" }]);
     expect(back.after).toEqual([{ text: "hello" }]);
   });
 
   test("equal runs post no doc-update", async () => {
     const { deltas } = fakeServer(stateOf([{ text: "same" }]));
-    const result = await spliceStoredBlockDoc("b", [], (current) => current);
+    const result = await spliceStoredBlockDoc(
+      fetchEndpoint,
+      "b",
+      [],
+      (current) => current,
+    );
     expect(result.before).toEqual(result.after);
     expect(deltas).toHaveLength(0);
-    expect(fetchEndpointMock).toHaveBeenCalledTimes(1);
+    expect(server).toHaveBeenCalledTimes(1);
   });
 
   test("a purged block's doc-init 404 is a BlockTextReplayError with the cause", async () => {
     fakeServer(null, { purged: true });
-    const err = await spliceStoredBlockDoc("gone", [], () => []).catch(
-      (e: unknown) => e,
-    );
+    const err = await spliceStoredBlockDoc(
+      fetchEndpoint,
+      "gone",
+      [],
+      () => [],
+    ).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(BlockTextReplayError);
     const replayErr = err as BlockTextReplayError;
     expect(replayErr.blockId).toBe("gone");
@@ -208,7 +231,7 @@ describe("spliceStoredBlockDoc", () => {
 
   test("a rejected doc-update is a BlockTextReplayError too", async () => {
     fakeServer(stateOf([{ text: "a" }]), { rejectUpdate: 409 });
-    const err = await spliceStoredBlockDoc("b", [], () => [
+    const err = await spliceStoredBlockDoc(fetchEndpoint, "b", [], () => [
       { text: "ab" },
     ]).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(BlockTextReplayError);
@@ -223,6 +246,7 @@ function argsFor(
 ): ApplyBlockRunsArgs & { rowWrites: RichText[] } {
   const rowWrites: RichText[] = [];
   return {
+    docs,
     blockId,
     direction: "undo",
     serverSync: true,
@@ -260,7 +284,7 @@ describe("applyBlockRuns", () => {
     });
     await applyBlockRuns(args);
     expect(args.rowWrites).toEqual([[{ text: "row" }]]);
-    expect(fetchEndpointMock).not.toHaveBeenCalled();
+    expect(server).not.toHaveBeenCalled();
   });
 
   test("no owner, row present ⇒ host B, checked against the authoritative runs", async () => {
@@ -316,7 +340,7 @@ describe("applyBlockRuns", () => {
     const done = applyBlockRuns(args);
     await Promise.resolve();
     // Nothing is doc-inited for a row the server may not have.
-    expect(fetchEndpointMock).not.toHaveBeenCalled();
+    expect(server).not.toHaveBeenCalled();
     present = true;
     confirm();
     await done;
@@ -391,18 +415,19 @@ describe("applyBlockRuns", () => {
       }),
     );
     await Promise.resolve();
-    expect(fetchEndpointMock).not.toHaveBeenCalled();
+    expect(server).not.toHaveBeenCalled();
     // The push that denies the create: the row left the client's rows without
     // ever entering server truth. The editor context rejects its waiters.
     reject(new Error(`row "${id}" create rolled back`));
     await expect(pending).rejects.toThrow("rolled back");
-    expect(fetchEndpointMock).not.toHaveBeenCalled();
+    expect(server).not.toHaveBeenCalled();
   });
 
   test("a live owner whose doc holds content ⇒ host A, no transport", async () => {
     fakeServer(null);
     const id = nextId();
     const session = CollabSession.start(
+      docs,
       id,
       () => buildSeedStateFor([{ text: "seeded" }]),
       "present",
@@ -421,7 +446,7 @@ describe("applyBlockRuns", () => {
       expect(owner.runsNow() as RichText).toEqual([
         { text: "replayed", marks: ["italic"] },
       ]);
-      expect(fetchEndpointMock).not.toHaveBeenCalled();
+      expect(server).not.toHaveBeenCalled();
       expect(args.rowWrites).toHaveLength(0);
       expect(reports).toHaveLength(0);
 
@@ -448,7 +473,7 @@ describe("applyBlockRuns", () => {
       owner.replicaConnection.release();
       session.end();
       await vi.runOnlyPendingTimersAsync();
-      expect(blockDocOwnerOf(id)).toBeNull();
+      expect(blockDocOwnerOf(docs, id)).toBeNull();
     }
   });
 
@@ -456,6 +481,7 @@ describe("applyBlockRuns", () => {
     fakeServer(null);
     const id = nextId();
     const session = CollabSession.start(
+      docs,
       id,
       () => buildSeedStateFor([{ text: "row" }]),
       "present",
@@ -473,7 +499,7 @@ describe("applyBlockRuns", () => {
         }),
       );
       await Promise.resolve();
-      expect(fetchEndpointMock).not.toHaveBeenCalled();
+      expect(server).not.toHaveBeenCalled();
       expect(owner.runsNow() as RichText).toEqual([]);
       // The subscription answers: the doc hydrates, `sync` fires, host A runs.
       owner.provider.onServerState(toBase64(stateOf([{ text: "stored" }])));
@@ -492,6 +518,7 @@ describe("applyBlockRuns", () => {
     const { deltas } = fakeServer(stored);
     const id = nextId();
     const session = CollabSession.start(
+      docs,
       id,
       () => buildSeedStateFor([{ text: "row" }]),
       "present",
@@ -508,7 +535,7 @@ describe("applyBlockRuns", () => {
     session.owner.replicaConnection.release();
     session.end();
     await vi.runOnlyPendingTimersAsync();
-    expect(blockDocOwnerOf(id)).toBeNull();
+    expect(blockDocOwnerOf(docs, id)).toBeNull();
     await done;
     expect(runsOfState(stored, deltas)).toEqual([{ text: "undone" }]);
   });
@@ -516,6 +543,7 @@ describe("applyBlockRuns", () => {
   test("a live owner whose transport learns the block was PURGED while a replay waits on its sync ⇒ host B's 404, not a hang", async () => {
     const id = nextId();
     const session = CollabSession.start(
+      docs,
       id,
       () => buildSeedStateFor([{ text: "row" }]),
       "present",
@@ -537,7 +565,7 @@ describe("applyBlockRuns", () => {
         }),
       ).catch((e: unknown) => e);
       await Promise.resolve();
-      expect(fetchEndpointMock).not.toHaveBeenCalled();
+      expect(server).not.toHaveBeenCalled();
       // The subscription answers "no doc"; the provider's own doc-init then
       // 404s and latches `blockGone` — `sync` will never fire.
       owner.provider.onServerState(null);

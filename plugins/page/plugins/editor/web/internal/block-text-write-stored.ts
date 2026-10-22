@@ -1,6 +1,6 @@
 import { applyUpdate, Doc } from "yjs";
 import { LinkNode } from "@lexical/link";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   editYDocState,
   yDocContent,
@@ -20,7 +20,11 @@ import {
 import { blockTextRunsOptions } from "./block-text-extensions";
 import { buildSeedStateFor } from "./block-seed-state";
 import { base64ToBytes } from "./live-state-yjs-provider";
-import { blockDocOwnerOf, type BlockDocOwner } from "./collab-session";
+import {
+  blockDocOwnerOf,
+  type BlockDocOwner,
+  type BlockDocs,
+} from "./collab-session";
 import { spliceOpenBlockDoc } from "./block-text-write";
 import { undoConflictReportSink } from "./undo-conflict-report";
 
@@ -50,7 +54,8 @@ import { undoConflictReportSink } from "./undo-conflict-report";
  * The un-append is then simply a splice back to the recorded `before`, whose
  * prefix alignment removes exactly the appended suffix — no positional cut.
  *
- * This is the one file of the pair that imports `fetchEndpoint`; host A
+ * This is the one file of the pair that talks to the server — over the
+ * caller's `fetchEndpoint` (the editor's own transport); host A
  * (`block-text-write.ts`) stays pure so the bun suite can load it.
  */
 
@@ -84,10 +89,12 @@ export interface StoredSpliceResult {
  * Bring a block's STORED content doc to `runs(current)`, where `current` is
  * the authoritative runs the server holds right now. `seedRuns` is the row's
  * `data.text`, used as the doc-init proposal only when no doc exists yet.
- * Resolves with the runs read and written; throws {@link BlockTextReplayError}
- * when either endpoint refuses.
+ * Both requests go over `fetchEndpoint` — the editor's transport. Resolves with
+ * the runs read and written; throws {@link BlockTextReplayError} when either
+ * endpoint refuses.
  */
 export async function spliceStoredBlockDoc(
+  fetchEndpoint: FetchEndpoint,
   blockId: string,
   seedRuns: RichText,
   runs: (current: RichText) => RichText,
@@ -141,6 +148,11 @@ function currentRunsOf(state: Uint8Array): RichText {
 // ---------------------------------------------------------------------------
 
 export interface ApplyBlockRunsArgs {
+  /**
+   * The editor's transport's content docs: host A is its owner of the block,
+   * host B's doc-init / doc-update go over its server's endpoint client.
+   */
+  readonly docs: BlockDocs;
   readonly blockId: string;
   /** The runs the block must hold after this replay. */
   readonly runs: RichText;
@@ -210,7 +222,7 @@ export interface ApplyBlockRunsArgs {
  * one 404s into {@link BlockTextReplayError}, the designed loud path.
  */
 export async function applyBlockRuns(args: ApplyBlockRunsArgs): Promise<void> {
-  const owner = liveOwnerOf(args.blockId);
+  const owner = liveOwnerOf(args.docs, args.blockId);
   if (owner) return applyThroughOwner(owner, args);
   if (!args.serverSync) {
     args.writeRow(args.runs);
@@ -218,14 +230,14 @@ export async function applyBlockRuns(args: ApplyBlockRunsArgs): Promise<void> {
   }
   if (!args.rowPresent() && args.rowLive()) {
     await args.waitRowPresent();
-    const appeared = liveOwnerOf(args.blockId);
+    const appeared = liveOwnerOf(args.docs, args.blockId);
     if (appeared) return applyThroughOwner(appeared, args);
   }
   await applyThroughStore(args);
 }
 
-function liveOwnerOf(blockId: string): BlockDocOwner | null {
-  const owner = blockDocOwnerOf(blockId);
+function liveOwnerOf(docs: BlockDocs, blockId: string): BlockDocOwner | null {
+  const owner = blockDocOwnerOf(docs, blockId);
   return owner && owner.isLive ? owner : null;
 }
 
@@ -251,10 +263,16 @@ async function applyThroughOwner(
 
 /** Host B. The `expected` check runs against the AUTHORITATIVE runs it reads. */
 async function applyThroughStore(args: ApplyBlockRunsArgs): Promise<void> {
-  await spliceStoredBlockDoc(args.blockId, args.rowRuns(), (current) => {
-    reportIfStale(args, current);
-    return args.runs;
-  });
+  const { fetchEndpoint } = args.docs.server;
+  await spliceStoredBlockDoc(
+    fetchEndpoint,
+    args.blockId,
+    args.rowRuns(),
+    (current) => {
+      reportIfStale(args, current);
+      return args.runs;
+    },
+  );
 }
 
 function docHoldsContent(owner: BlockDocOwner): boolean {

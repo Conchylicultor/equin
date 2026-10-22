@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { removeTaskDependency, insertTaskBetween } from "@plugins/tasks/core";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -24,6 +24,7 @@ export function EdgeActions({
 }: EdgeActionsProps) {
   const [inserting, setInserting] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const fetchEndpoint = useFetchEndpoint();
 
   const handleInsert = useCallback(
     async (e: React.MouseEvent) => {
@@ -41,7 +42,14 @@ export function EdgeActions({
         setInserting(false);
       }
     },
-    [inserting, sourceTaskId, targetTaskId, targetFolderId, onNavigate],
+    [
+      inserting,
+      sourceTaskId,
+      targetTaskId,
+      targetFolderId,
+      onNavigate,
+      fetchEndpoint,
+    ],
   );
 
   const handleDelete = useCallback(
@@ -58,7 +66,7 @@ export function EdgeActions({
         setDeleting(false);
       }
     },
-    [deleting, targetTaskId, sourceTaskId],
+    [deleting, targetTaskId, sourceTaskId, fetchEndpoint],
   );
 
   return (

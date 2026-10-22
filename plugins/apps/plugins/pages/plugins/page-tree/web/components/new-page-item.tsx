@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { PagesSidebarRow } from "@plugins/apps/plugins/pages/plugins/shell/web";
@@ -18,12 +19,13 @@ const addIcon = symbol("add");
  * cannot mint two pages.
  */
 export function NewPageItem() {
+  const fetchEndpoint = useFetchEndpoint();
   const openPane = useOpenPane();
   const [busy, setBusy] = useState(false);
   const create = async () => {
     setBusy(true);
     try {
-      const id = await createPageWithSeed({ parentId: null });
+      const id = await createPageWithSeed(fetchEndpoint, { parentId: null });
       openPane(pageDetailPane, { pageId: id }, { mode: "push" });
     } finally {
       setBusy(false);

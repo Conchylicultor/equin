@@ -1,5 +1,7 @@
-import type { SourceHydration } from "@plugins/apps/plugins/sonata/plugins/library/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import type {
+  SourceContext,
+  SourceHydration,
+} from "@plugins/apps/plugins/sonata/plugins/library/web";
 import {
   appliedAlignment,
   getUgAlignment,
@@ -19,7 +21,10 @@ import { getSongUltimateGuitar } from "../shared/endpoints";
  * Returns `absent` for a song that carries no UG tab, so it's skipped in the
  * library's generic collection — and the UG editor section stays hidden for it.
  */
-export async function hydrate(songId: string): Promise<SourceHydration> {
+export async function hydrate(
+  songId: string,
+  { fetchEndpoint }: SourceContext,
+): Promise<SourceHydration> {
   const [tab, alignment] = await Promise.all([
     fetchEndpoint(getSongUltimateGuitar, { id: songId }),
     fetchEndpoint(getUgAlignment, { id: songId }),

@@ -1,7 +1,7 @@
 # prompt-input
 
 Draft management only. Enter clears the draft **synchronously** and hands the
-text to `sendConversationTurn` (the `pending-turn` plugin), the one entry point
+text to `useSendConversationTurn` (the `pending-turn` plugin), the one entry point
 for every turn send — it owns delivery, retry, transcript-verified confirmation,
 and failure surfacing. There is no local POST, no `sending` disable (the editor stays
 typable so messages can queue), and no send-failure toast here: a failed send
@@ -21,12 +21,13 @@ renders as a pending-turn card in the transcript, never as a restored draft.
     - `conversations/conversation-view.useAttemptWorkspaceKind`
     - `conversations/conversation-view.useRegisterPromptComposer`
     - `conversations/conversation-view/pending-turn.conversationPromptDraft`
-    - `conversations/conversation-view/pending-turn.sendConversationTurn`
+    - `conversations/conversation-view/pending-turn.useSendConversationTurn`
+    - `conversations/conversation-view/pending-turn.useTurnSendAvailability`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/persistent-draft.useDraft`
     - `primitives/persistent-draft.writeDraft`
     - `primitives/prompt-editor.PromptEditor`
-    - `shell/notifications.toast`
+    - `shell/notifications.useToast`
   - Exports (values): `setConversationPromptDraft`
 - Cross-plugin:
   - Imported by: `conversations/conversation-view/rewind`

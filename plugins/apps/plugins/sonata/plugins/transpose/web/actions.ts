@@ -1,4 +1,4 @@
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { setTransposeEndpoint } from "../shared/endpoints";
 
 // Fire-and-forget write: the UI never reads the response — state refreshes via
@@ -8,7 +8,11 @@ import { setTransposeEndpoint } from "../shared/endpoints";
 // Named `save*` (not `set*`) to stay distinct from the in-memory write of the
 // loaded song's setting (`useWriteSongSetting(transposeSetting)`), which the
 // control makes optimistically alongside this persistence call.
-export function saveTranspose(songId: string, semitones: number): void {
+export function saveTranspose(
+  fetchEndpoint: FetchEndpoint,
+  songId: string,
+  semitones: number,
+): void {
   void fetchEndpoint(
     setTransposeEndpoint,
     { id: songId },

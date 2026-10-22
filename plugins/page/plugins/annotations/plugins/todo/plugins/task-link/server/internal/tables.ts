@@ -41,7 +41,7 @@ import { todoTaskShape } from "../../shared/schemas";
 // ## Growth bound
 //
 // The `parent_id` CASCADE is the reclaim: rows die with the card. Asserted at
-// boot by `markCascadeBounded` (see ./growth-bound.ts) rather than trusted. Note
+// boot by `markCascadeBounded` (see ../../machine/internal/growth-bound.ts) rather than trusted. Note
 // `page_blocks` SOFT-deletes (trash), so that cascade fires at purge, not at the
 // user's delete — a restored card keeps its task.
 //

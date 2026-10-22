@@ -27,7 +27,7 @@ Watches this page's connection to its backends and says so.
     - `Core.Root` → `WedgeWatchdog`
     - `HealthReport.Row` "Connection"
   - Uses:
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.fetchEndpointOver`
     - `primitives/live-state.getNotificationsClient`
     - `primitives/live-state.liveStateSocketKind`
     - `primitives/live-state.unansweredSubReportSink`
@@ -35,13 +35,11 @@ Watches this page's connection to its backends and says so.
     - `primitives/networking.NetDiagEvent`
     - `primitives/networking.subscribeNetDiag`
     - `primitives/networking.subscribeWsStatus`
+    - `primitives/networking/page-transport.pageTransport`
     - `shell/health-report.HealthReport`
     - `shell/toast.showToast`
   - Exports (types): `WedgeReport`
-  - Exports (values):
-    - `getHealth`
-    - `waitForRestart`
-    - `wedgeReportSink`
+  - Exports (values): `wedgeReportSink`
 - Server:
   - Uses:
     - `infra/endpoints.HttpError`
@@ -52,6 +50,10 @@ Watches this page's connection to its backends and says so.
 - Cross-plugin:
   - Imported by: `reports/crash`
   - Endpoint callers: `launcher`
+- Exemptions:
+  - Exempts itself from:
+    - `networking/no-page-transport` — `web/internal/client.ts` (sanctioned)
+    - `networking/no-page-transport` — `web/components/wedge-watchdog.tsx` (sanctioned)
 - Shared:
   - Exports (types): `HealthResponse`
   - Exports (values):

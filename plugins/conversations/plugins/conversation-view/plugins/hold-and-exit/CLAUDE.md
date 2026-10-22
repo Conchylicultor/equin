@@ -12,16 +12,10 @@
     - `conversations/conversation-view/exit-menu.ExitMenu`
     - `infra/endpoints.useEndpointMutation`
     - `primitives/css/ui-kit.DropdownMenuItem`
-    - `shell/notifications.toast`
+    - `shell/notifications.useToast`
     - `ui/icons.Icon`
-- Server:
-  - Uses:
-    - `conversations.deleteConversation`
-    - `infra/endpoints.HttpError`
-    - `infra/endpoints.implement`
-    - `tasks/tasks-core.getConversation`
-    - `tasks/tasks-core.markConversationClosed`
-    - `tasks/tasks-core.updateTask`
+- Machine:
+  - Uses: `infra/endpoints.implementMachine`
   - Routes: `POST /api/conversations/:id/hold-and-exit`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`

@@ -1,4 +1,4 @@
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { turnIntoPage } from "@plugins/page/plugins/editor/core";
 import { textBlock } from "@plugins/page/plugins/text/core";
 
@@ -21,6 +21,7 @@ import { textBlock } from "@plugins/page/plugins/text/core";
  * as `createPageWithSeed` does for the sidebar's create paths.
  */
 export async function turnBlockIntoPage(
+  fetchEndpoint: FetchEndpoint,
   blockId: string,
   title: string,
 ): Promise<void> {

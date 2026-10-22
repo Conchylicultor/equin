@@ -6,6 +6,7 @@ import {
   uploadAttachment,
   type UploadedAttachment,
 } from "@plugins/infra/plugins/attachments/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useBlockActivate } from "@plugins/page/plugins/editor/web";
@@ -51,6 +52,7 @@ export function AttachmentUpload({
   isFocused: boolean;
   onUploaded: (res: UploadedAttachment) => void;
 }) {
+  const fetchEndpoint = useFetchEndpoint();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -76,7 +78,12 @@ export function AttachmentUpload({
       setUploading(true);
       try {
         const filename = file instanceof File ? file.name : "file";
-        const res = await uploadAttachment(file, filename, file.type);
+        const res = await uploadAttachment(
+          fetchEndpoint,
+          file,
+          filename,
+          file.type,
+        );
         onUploaded(res);
       } catch (e) {
         // Fail loud — surface the upload error, never swallow it.
@@ -85,7 +92,7 @@ export function AttachmentUpload({
         setUploading(false);
       }
     },
-    [accept, onUploaded],
+    [accept, onUploaded, fetchEndpoint],
   );
 
   // Paste listener, armed only while this empty block is focused. Keyed by the

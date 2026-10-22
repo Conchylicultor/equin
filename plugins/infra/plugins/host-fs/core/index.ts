@@ -42,8 +42,8 @@ export {
   type FileVersion,
 } from "./internal/version";
 export { compareHostFsNames } from "./internal/names";
+export { HOST_FS_MACHINE } from "./internal/machine-feature";
 export {
-  HOST_FS_MACHINE,
   HostFsListingQuerySchema,
   hostFsArchiveReasonMessage,
   hostFsDirPeek,

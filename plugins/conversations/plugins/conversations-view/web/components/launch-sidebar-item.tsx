@@ -46,7 +46,7 @@ const playArrowIcon = symbol("play-arrow");
  * rather than the wrap (the exact trap `no-clip-without-nowrap` describes).
  */
 export function LaunchSidebarItem() {
-  const { launch, launching } = useLaunchConversation({});
+  const { launch, launching, availability } = useLaunchConversation({});
   const defaultModel = useDefaultModel();
   const label = choiceLabel(defaultModel);
 
@@ -76,7 +76,10 @@ export function LaunchSidebarItem() {
             icon={playArrowIcon}
             label={`Launch ${label}`}
             variant="ghost"
-            disabled={launching !== null}
+            // No computer behind this subtree (the demo): nothing can launch,
+            // and the tooltip says why.
+            tooltip={availability.available ? undefined : availability.message}
+            disabled={!availability.available || launching !== null}
             onClick={() => launch(defaultModel)}
             // The nav rows' `rounded-md`, in the picker's fill, with the
             // accent on the glyph only. As tall as the picker beside it (the md

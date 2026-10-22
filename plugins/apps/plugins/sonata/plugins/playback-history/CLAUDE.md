@@ -32,7 +32,7 @@ tuples that read the join.
     - `apps/sonata/session.useSession`
     - `apps/sonata/shell.Sonata`
     - `apps/sonata/shell.useSonataApp`
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.FieldPresentation`
     - `primitives/relative-time.formatRelativeTime`
 - Server:

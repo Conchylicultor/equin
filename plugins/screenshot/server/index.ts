@@ -1,14 +1,14 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { handleCreate } from "./internal/handle-create";
 import { handleGet } from "./internal/handle-get";
-import { handleSaveFile } from "./internal/handle-save-file";
-import { createScreenshot, getScreenshot, saveScreenshotFile } from "../shared/endpoints";
+import { createScreenshot, getScreenshot } from "../shared/endpoints";
 
 export default {
-  description: "Stores in-flight screenshots so a freshly opened tab can fetch them.",
+  portable: true,
+  description:
+    "Stores in-flight screenshots (in memory) so a freshly opened tab can fetch them. Writing one to a file for an agent is the machine half's.",
   httpRoutes: {
     [createScreenshot.route]: handleCreate,
     [getScreenshot.route]: handleGet,
-    [saveScreenshotFile.route]: handleSaveFile,
   },
 } satisfies ServerPluginDefinition;

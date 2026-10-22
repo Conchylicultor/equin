@@ -24,7 +24,7 @@
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/icon-button.IconButton`
     - `primitives/log-channels.LiveLogChannel`
-    - `shell/notifications.toast`
+    - `shell/notifications.useToast`
     - `ui/icons.Icon`
 - Server:
   - Uses:

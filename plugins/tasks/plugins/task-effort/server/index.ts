@@ -13,6 +13,7 @@ export { tasksEffort } from "./internal/tables";
 export { getTaskEffort, setTaskEffort } from "./internal/mutations";
 
 export default {
+  portable: true,
   description:
     "Owns the tasks_ext_effort side-table: the per-task thinking mode (effort level), applied to Claude Code at launch via --effort / --settings ultracode.",
   contributions: [

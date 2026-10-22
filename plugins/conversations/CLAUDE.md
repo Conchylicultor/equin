@@ -11,9 +11,8 @@
     - `trigger` "conversations.notify-created"
     - `trigger` "conversations.turn-emitter.reconcile"
     - `trigger` "conversations.turn-emitter.reconcile"
+    - `trigger` "tasks.maybe-launch-on-armed"
     - `trigger` "tasks.maybe-launch-on-status"
-    - `taskCategory` "conversations"
-    - `taskCategory` "system"
     - `report-kind` "auto-start-model-unavailable"
     - `report-kind` "claude-code-unavailable-at-spawn"
     - `report-kind` "conversation-spawn-failed"
@@ -21,26 +20,27 @@
     - `resource.declare` "conversations.context-usage"
     - `resource.declare` "conversations.partial-message"
   - Uses: 78 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `tasks/tasks-core` ×25
+    - `tasks/tasks-core` ×24
     - `conversations/turn-ledger` ×11
     - `conversations/transcript-watcher` ×7
+    - `conversations/workspace` ×4
     - `conversations/conversation-preprompt` ×3
     - `conversations/spawn-failure` ×3
-    - `conversations/workspace` ×3
     - `infra/claude-cli/availability` ×3
-    - `reports` ×3
+    - `tasks/auto-start` ×3
     - `conversations/session-chain` ×2
     - `database` ×2
     - `infra/endpoints` ×2
     - `infra/events` ×2
-    - `tasks/auto-start` ×2
-    - `tasks/task-category` ×2
+    - `reports` ×2
     - `conversations/model-provider/catalog.getModelCatalog`
     - `conversations/preprompts.resolvePrepromptItem`
     - `conversations/workspace/launch-option.getTaskWorkspace`
     - `infra/attachments.getAttachment`
     - `infra/jobs.defineJob`
+    - `reports/engine.recordReport`
     - `shell/notifications.recordNotification`
+    - `tasks/task-category.setTaskCategory`
     - `tasks/task-effort.getTaskEffort`
     - `tasks/task-preprompt.getTaskPreprompt`
   - DB schema: `plugins/conversations/server/internal/tables-turn-completed-event.ts`
@@ -81,6 +81,7 @@
   - Register:
     - `defineJob('tasks.maybe-launch')`
     - `defineJob('tasks.maybe-launch-on-status')`
+    - `defineJob('tasks.maybe-launch-on-armed')`
     - `defineJob('conversations.notify-created')`
     - `defineJob('conversations.turn-emitter.reconcile')`
     - `defineJob('conversations.spawn')`
@@ -93,14 +94,8 @@
   - Routes:
     - `GET /api/conversations`
     - `GET /api/conversations/:id`
-    - `POST /api/conversations`
     - `DELETE /api/conversations`
-    - `POST /api/conversations/:id/turn`
-    - `POST /api/conversations/:id/stop`
-    - `POST /api/conversations/:id/turns/:turnId/retry`
-    - `POST /api/conversations/:id/turns/:turnId/withdraw`
     - `GET /api/conversations/:id/turns`
-    - `POST /api/conversations/:id/close`
 - Web:
   - Uses:
     - `network/live.mapRow`
@@ -120,7 +115,15 @@
     - `useHasActiveSiblings`
     - `useLiveConversation`
 - Machine:
-  - Uses: `network/live.serveValue`
+  - Uses:
+    - `infra/endpoints.implementMachine`
+    - `network/live.serveValue`
+  - Routes:
+    - `POST /api/conversations`
+    - `POST /api/conversations/:id/turn`
+    - `POST /api/conversations/:id/turns/:turnId/retry`
+    - `POST /api/conversations/:id/turns/:turnId/withdraw`
+    - `POST /api/conversations/:id/stop`
 - Core:
   - Uses:
     - `config_v2.defineConfig`
@@ -192,18 +195,20 @@
     - `RewindPreviewSchema`
     - `RewindRefusalSchema`
     - `stopConversation`
+    - `SYSTEM_CATEGORY_ID`
     - `withdrawConversationTurn`
 - Cross-plugin:
-  - Imported by: 55 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×41
-    - `apps` ×3
+  - Imported by: 52 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×38
+    - `apps` ×4
     - `review` ×3
-    - `tasks` ×3
     - `active-data` ×2
+    - `tasks` ×2
     - `debug/profiling/ops`
     - `infra/mcp/browser`
     - `page/annotations/agent-notes/agent-page`
   - Endpoint callers:
+    - `close`
     - `compaction-context`
     - `transcript-api`
 - Exemptions:
@@ -215,6 +220,7 @@
   - **`agent-thread`** — Agent thread: the embedded conversation view apps host for the background agents they start — <AgentThread> (user bubbles, the agent's tool calls as a live step list labelled through the…
   - **`agents`** — Named agent definitions that launch conversations. Named agent definitions that launch conversations: the agents roster and launches (tables, live collections, CRUD and move routes), portable; the…
   - **`all-conversations`** — All-conversations app pane: a live DataView over the `conversations.all` collection (filter/sort/search over every conversation, kept fresh by the routed change feed) reachable from the…
+  - **`close`** — Closing a conversation, portable half: POST /api/conversations/:id/close marks it done on every host (markConversationClosed) — the demo's in-browser server included — then runs every CloseTeardown…
   - **`commit-conversation`** — The commit row action that opens the conversation which wrote a commit (its Singularity-Conversation trailer) in a new browser tab.
   - **`compaction-context`** [exempt] — The compaction-context backend: the CompactionContext contribution (a plugin's restore(conversationId) — re-record what the compacted agent no longer holds, return the text to hand back) and the…
   - **`conversation-category`** [exempt] — Per-conversation categories: the sidebar row avatar painted from the category chosen for it. Auto-classified by Haiku after each turn. The conversation-category assignments, portable half: the…
@@ -242,7 +248,7 @@
       - **`commits-graph`** — Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
       - **`dependencies`** — The task's links in the conversation header: ↑ open blockers · ↓ open dependents (shown only on header hover when none is open: a faint ↕ when all are resolved, a link icon when there are none), one…
       - **`dependent-count`** — Per-row "N blocked" chip on a conversation item: how many tasks are transitively blocked by that conversation's task. The conversation toolbar shows the same count inside its Tasks button instead of…
-      - **`drop-and-exit`** — Exit-menu entry that marks the top task as dropped and closes the conversation.
+      - **`drop-and-exit`** — Exit-menu entry that marks the top task as dropped and closes the conversation. The one exit-drop policy every conversation-close path that can drop a task shares (dropTaskOnExit): the Drop & Close…
       - **`drop-dependents`** — Exit-menu entry that drops the task and all its transitive dependents, then closes the conversation.
       - **`exit`** — Exit-menu entry that closes the conversation without changing any task state.
       - **`exit-menu`** — Ghost icon button next to Push & Exit that opens a menu of exit actions (hold, exit, drop, drop dependents). Hosts the ExitMenu.Item slot each action contributes to.
@@ -273,7 +279,7 @@
           - **`queued-prompt-card`** — Shared appearance for a queued prompt (a message the user parked while the agent was busy). Used by both the queued_command attachment and the prompt-queue enqueue row so the two never diverge.
           - **`request-shape`** — Renders the system prompt and tool set Claude Code logs for model calls (api-request-shape): the agent's tools and prompt on first use, then one row per change — a deferred tool loaded, a tool…
           - **`row-actions`** — Owns WHICH actions a JSONL transcript row carries: the JsonlRowActions.Item slot, the per-event context, and the shared action-button styling. The cluster itself (reveal, guards, popup-hold) is…
-          - **`subagents`** [exempt] — The sub-agent surfaces: how one sub-agent is going (state, elapsed, the one thing it most recently did) for the card that launched it, and the pane body that shows its write-up and its own live…
+          - **`subagents`** — The sub-agent surfaces: how one sub-agent is going (state, elapsed, the one thing it most recently did) for the card that launched it, and the pane body that shows its write-up and its own live…
           - **`summary`** — Renders summary separator events in the JSONL viewer.
           - **`system`** — Renders system events in the JSONL viewer; an informational notice folds with the harness context around it.
           - **`task-notification`** — Renders background task completion notifications in the JSONL viewer, with a button onto the finished task that the owning plugin contributes through TaskNotification.Open (first claim wins).
@@ -293,7 +299,7 @@
       - **`notes`** — Free-form per-conversation notes, auto-saved to the server. A note with text always shows, with a dot on the note button that follows the draft as it is typed; the button opens and hides an empty…
       - **`op-status`** — Banner above the prompt input showing the worktree's in-flight op (build / push / check / test / e2e) from the op-store in-flight collection: the wait it is parked in (reason, requeue cycle, its own…
       - **`open-app`** — Opens the conversation's namespace (`http://<id>.localhost:9000`) on the page its task was filed from when one was attached (else `/`) — in a new browser tab by default, or framed in a pane beside…
-      - **`pending-turn`** [exempt] — The single entry point for sending a turn from the browser (sendConversationTurn: mints the turn's ledger id, shows its echo at once, then runs its delivery), and the view of the server's turn…
+      - **`pending-turn`** [exempt] — The single entry point for sending a turn from the browser (useSendConversationTurn, bound to the subtree's transport: mints the turn's ledger id, shows its echo at once, then runs its delivery)…
       - **`pin`** — Pin / unpin button beside the conversation title in the pane header — the same queue pin as the sidebar Queue row's, lifting the conversation's task group into the Pinned section.
       - **`prompt-input`** — Free-form text input at the bottom of the conversation view. Enter sends a turn; fork buttons reuse the draft as the new conversation's initial prompt.
       - **`prompt-templates`** — Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Exports the chip bar itself (TemplateChipBar: usage-ranked…
@@ -301,7 +307,7 @@
       - **`push-counter`**
       - **`push-profiling`** — Toolbar button showing the op Gantt scoped to the conversation's worktree.
       - **`resume`** — Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`.
-      - **`rewind`** [exempt] — Row actions on each of the user's own messages: go back to just before it, in this conversation (Rewind to here) or in a new one (Fork from here). Warns first about what cannot be brought back.…
+      - **`rewind`** — Row actions on each of the user's own messages: go back to just before it, in this conversation (Rewind to here) or in a new one (Fork from here). Warns first about what cannot be brought back.…
       - **`running-agents`** — The sub-agents working for this conversation, in a card above the prompt box: a summary line (how many are working, how long the longest has been going) that folds the list, and one row per agent…
       - **`selection-actions`** — Selecting text in an agent's reply pops a toolbar above it: Quote puts the selection in the prompt as a quote, and the quick answers (Go, Explain — a setting of its own) are the prompt templates'…
       - **`status`** — Displays the conversation status as a colored badge in the toolbar.
@@ -328,12 +334,13 @@
   - **`pane-restore`** — Saves and restores the pane route per conversation in the budgeted web storage.
   - **`preprompts`** — Settings library of system-prompt snippets and a reusable picker for selecting a task's preprompt. Library of named instruction snippets added to a task's agent system prompt, after Claude Code's…
   - **`question-relay`** — Answers a held AskUserQuestion from the web: owns the transcript's `"question"` pending prompt — the held question's form, answered as the tool's real result. The AskUserQuestion relay's backend…
-  - **`recover`** — Sidebar entry + pane listing recently-closed conversations with restore buttons. Batch-restore recently-closed conversations that were killed by a crash.
+  - **`recover`** — Sidebar entry + pane listing recently-closed conversations with restore buttons.
   - **`runtime-catalog`**
   - **`runtime-sdk`** — The health report's Claude Code row: Claude Code itself (critical while missing or signed out, with the install / sign-in commands and Check again), attention when it differs in major.minor from the…
   - **`session-chain`** — Registers the session-chain row id kind (sess) with the web id registry — the server barrel registers the same kind. Append-only mapping of a conversation to the ordered Claude session ids it has…
   - **`spawn-failure`** — Per-conversation spawn failure: the latest error of a conversation's spawn job (the failed step and its message), stored in conversations_ext_spawn_failure by the job on every failed attempt and…
-  - **`summary`** [exempt] — Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags…
+  - **`summary`** — Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags…
+  - **`task-categories`** — The task categories a conversation's own task is filed under (Conversations, System), registered from a portable barrel so every host labels them — the browser host included, which does not boot the…
   - **`transcript-api`** — Agent API: GET /api/conversations/:id/transcript returns the ordered on-disk JSONL paths of a conversation's Claude session chain.
   - **`transcript-retention`** [exempt] — Keeps retained conversations' Claude session JSONL alive by refreshing their mtime daily — active rows plus every conversation of a held task — so Claude Code's cleanupPeriodDays sweep never deletes…
   - **`transcript-source`** — A conversation's transcript as a host service: TranscriptSource (its events, a signature that moves with them, and a watch), with the Claude Code JSONL parser every provider runs. The desktop's…
@@ -341,8 +348,8 @@
       - **`memory`** (excluded) — Transcripts in memory: provides the TranscriptSource host service for a host without Claude Code's session files (the browser composition), from JSONL text written to it. Never booted by the desktop.
   - **`transcript-watcher`** [exempt] — Foreign-session report renderer: a one-line Debug, Reports summary for the conversation-foreign-session kind — which conversation holds a session id that belongs to another, and how it was seen.…
   - **`turn-ledger`** [exempt] — Registers the turn id kind (turn) with the web id registry — the server barrel registers the same kind. The turn ledger's backend: the conversation_turns table (one row per turn sent to an agent…
-  - **`usage`** [exempt] — Cost, Tokens and Agents fields on every conversation list whose rows are conversations (the usage extension's exposed fields), sorting and filtering server-side. Per-conversation usage — cost…
-  - **`workspace`** [test helpers] [exempt] — Workspace web presence: eagerly registers the boot-preloaded workspace.catalog live value (every workspace a task can name) so boot-snapshot can hydrate it before first paint. Agent workspaces…
+  - **`usage`** — Cost, Tokens and Agents fields on every conversation list whose rows are conversations (the usage extension's exposed fields), sorting and filtering server-side. Per-conversation usage — cost…
+  - **`workspace`** [test helpers] — Workspace web presence: eagerly registers the boot-preloaded workspace.catalog live value (every workspace a task can name) so boot-snapshot can hydrate it before first paint. Agent workspaces…
     - Plugins:
       - **`launch-option`** — Workspace picker as a launch option: where the task's agent runs — the worktree, or one of the registered scratch profiles — on the task-draft composer (a pill whose menu lists every workspace…
       - **`scratch`** [exempt] — The scratch workspace: a conversation runs in a plain directory (`state/workspaces/<attemptId>`) holding only its scratch profile's CLAUDE.md and inputs — no git, DB fork or build. Launched with the…

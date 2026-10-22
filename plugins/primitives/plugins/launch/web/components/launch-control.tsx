@@ -16,7 +16,10 @@ import {
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { type Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { createConversation } from "@plugins/conversations/core";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import {
+  useFetchEndpoint,
+  useMachineAvailability,
+} from "@plugins/infra/plugins/endpoints/web";
 import {
   choiceIconSize,
   choiceLabel,
@@ -90,6 +93,11 @@ export type LaunchControlProps = {
  * version, resolved by the server at spawn. This is the common action the
  * launch plugin exposes; custom UIs (rewind, the launch sidebar item) consume
  * it directly.
+ *
+ * Launching needs the computer (`createConversation` is `needsMachine`):
+ * `availability` says so before a click, and a surface renders its control
+ * disabled with the message. `launch` under an unavailable answer rejects
+ * with it — never resolves as if a conversation started.
  */
 export function useLaunchConversation({
   getRequest,
@@ -100,6 +108,8 @@ export function useLaunchConversation({
   LaunchControlProps,
   "getRequest" | "openAfterLaunch" | "openMode" | "onLaunched"
 >) {
+  const fetchEndpoint = useFetchEndpoint();
+  const availability = useMachineAvailability(createConversation);
   const [launching, setLaunching] = useState<ModelChoice | null>(null);
   const openPane = useOpenPane();
 
@@ -109,11 +119,13 @@ export function useLaunchConversation({
     setLaunching(model);
     try {
       const request = (await getRequest?.()) ?? {};
-      const conversation = await fetchEndpoint(
+      const result = await fetchEndpoint(
         createConversation,
         {},
         { body: { model, ...request } },
       );
+      if (result.kind === "unavailable") throw new Error(result.message);
+      const conversation = result.value;
       onLaunched?.(conversation);
       if (openAfterLaunch)
         openPane(
@@ -126,7 +138,7 @@ export function useLaunchConversation({
     }
   };
 
-  return { launch, launching };
+  return { launch, launching, availability };
 }
 
 /**
@@ -199,16 +211,20 @@ export function LaunchControl({
   className,
   action,
 }: LaunchControlProps) {
-  const { launch, launching } = useLaunchConversation({
+  const { launch, launching, availability } = useLaunchConversation({
     getRequest,
     openAfterLaunch,
     openMode,
     onLaunched,
   });
   const defaultModel = useDefaultModel();
-  // Claude Code missing or signed out: no agent can start, so the control says
-  // why (and how to fix it) instead of launching one that dies.
-  const claudeBlock = useClaudeCodeLaunchBlock();
+  // No computer behind this subtree (the demo), or Claude Code missing or
+  // signed out: no agent can start, so the control says why (and how to fix
+  // it) instead of launching one that dies.
+  const claudeCodeBlock = useClaudeCodeLaunchBlock();
+  const claudeBlock = availability.available
+    ? claudeCodeBlock
+    : availability.message;
   const off = disabled || claudeBlock !== null;
   const launchTitle = claudeBlock ?? `Launch ${choiceLabel(defaultModel)}`;
 

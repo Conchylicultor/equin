@@ -65,13 +65,22 @@ shell mounts `<FullPane/>`, which paints the active pane full-surface.
 ## Create affordances (`Library.Source.createOption`)
 
 Each input source contributes its "add a song" affordance as a plain-data
-`createOption: CreateOption` (the data-view create type) on its `Library.Source`
-contribution — **not** a React component. `SongLibrary` maps every source's
-`createOption` into the `DataView`'s `creators` prop, which renders them as a
-toolbar "+" menu (N sources → menu, not a trailing card). The library stays
-source-agnostic: it threads an opaque `s.createOption` and never names MIDI.
+`createOption: SourceCreateOption` (the data-view `CreateOption` whose
+`onSelect` takes a `SourceContext`) on its `Library.Source` contribution —
+**not** a React component. `useSourceCreators` binds every source's
+`createOption` to the surface's fetcher and hands them to the `DataView`'s
+`creators` prop (a toolbar "+" menu: N sources → menu, not a trailing card) and
+to the onboarding cards. The library stays source-agnostic: it threads an
+opaque `s.createOption` and never names MIDI.
 
-Because a `CreateOption.onSelect` is plain data (no component, no hooks), the
+**The `SourceContext`.** A source's `hydrate(songId, ctx)` and
+`createOption.onSelect(ctx)` run outside React, so they cannot call
+`useFetchEndpoint()`; the library passes `ctx.fetchEndpoint` — the fetcher
+bound to the transport the library renders under — so a source's reads and
+writes stay on that transport (a demo scope's, else the page's) instead of
+reaching for one itself.
+
+Because a `createOption.onSelect` is plain data (no component, no hooks), the
 open-after-create step can't use the `useSongLink` hook. Sources call
 `openSongImperative(song)` instead — the imperative twin exported from this
 plugin's web barrel (`open-song.ts`), which writes to the live pane store via the
@@ -226,7 +235,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `Library.SongActions` "delete" → `DeleteSongAction`
     - `Pane.Register` "sonata-library"
     - `Pane.Register` "sonata-player"
-  - Uses: 81 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 82 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×13
     - `apps/sonata/shell` ×6
     - `network/live` ×6
@@ -236,6 +245,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `apps/sonata/document` ×4
     - `primitives/persistent-draft` ×3
     - `apps/sonata/view-options` ×2
+    - `infra/endpoints` ×2
     - `primitives/css/spacing` ×2
     - `primitives/latest-ref` ×2
     - `primitives/live-state` ×2
@@ -243,7 +253,6 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `apps/sonata/session.useSession`
     - `fullscreen.FullscreenButton`
     - `ids.IdKinds`
-    - `infra/endpoints.useEndpointMutation`
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
@@ -263,7 +272,10 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `primitives/loading.Loading`
     - `primitives/relative-time.formatRelativeTime`
     - `ui/icons.Icon`
-  - Exports (types): `SourceHydration`
+  - Exports (types):
+    - `SourceContext`
+    - `SourceCreateOption`
+    - `SourceHydration`
   - Exports (values):
     - `Library`
     - `openSongImperative`

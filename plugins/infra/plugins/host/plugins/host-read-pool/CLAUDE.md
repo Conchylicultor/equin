@@ -112,7 +112,6 @@ froze). Pinned by `server/internal/pool.test.ts`. See
     - `apps/file-explorer/git`
     - `code-explorer`
     - `conversations/conversation-view/code`
-    - `conversations/conversation-view/commits-graph`
     - `debug/health-monitor`
     - `debug/profiling/boot-bench`
     - `debug/worktree-cleanup`

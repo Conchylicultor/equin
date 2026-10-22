@@ -1,8 +1,7 @@
-import { useMemo } from "react";
 import {
   fetchWithRetry,
-  originTransport,
-  useTransport,
+  transportScoped,
+  useTransportScoped,
   type FetchWithRetryOptions,
   type Transport,
 } from "@plugins/primitives/plugins/networking/web";
@@ -15,7 +14,6 @@ import {
   extractMethod,
   interpolatePath,
   isAgentWriteRefusal,
-  isUnsupportedEndpointRefusal,
   unavailableMessage,
 } from "../../core";
 import { AGENT_WRITE_HEADER } from "@plugins/infra/plugins/request-origin/core";
@@ -29,15 +27,6 @@ export class EndpointError extends Error {
     super(`HTTP ${status}`);
   }
 }
-
-/**
- * The host refused the endpoint as one it does not serve
- * (`unsupportedEndpointResponse` — e.g. a browser server standing in for the
- * real one). Not a failure of the endpoint: the refusing host already told
- * the user, so `fetchEndpoint` reports nothing to `endpointErrorSink` and the
- * mutation-error toast skips it.
- */
-export class EndpointUnsupportedError extends EndpointError {}
 
 /**
  * Main refused the write because the request came from an agent session
@@ -71,14 +60,8 @@ export function getEndpointErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-type FetchOpts<TBody, TQuery> = {
+export type FetchOpts<TBody, TQuery> = {
   signal?: AbortSignal;
-  /**
-   * The server the request goes to — the caller's `useTransport()`. Omitted =
-   * the page's own server; a component reaches its subtree's through
-   * `useFetchEndpoint()` instead of passing it by hand.
-   */
-  transport?: Transport;
   /** RequestInit passthrough; lets a beacon survive page unload. */
   keepalive?: boolean;
   /** Default true. `false` skips endpointErrorSink.emit (e.g. the crash beacon). */
@@ -103,72 +86,72 @@ type FetchOpts<TBody, TQuery> = {
 type Answer<TResponse> = TResponse extends void ? void : TResponse;
 
 /**
- * Typed fetch wrapper for endpoint definitions.
+ * The typed endpoint client, bound to ONE transport — there is no
+ * transportless fetcher. A component gets its subtree's with
+ * `useFetchEndpoint()`; a helper takes one from its caller as a parameter
+ * named `fetchEndpoint` (the call-name lints read that name, and
+ * `endpoints/fetch-endpoint-binding-name` keeps every binding of it so);
+ * sanctioned page-level code binds `fetchEndpointOver(pageTransport)`.
  *
  * - Interpolates params into the URL
  * - Appends query params if query schema exists
- * - JSON-serializes body for mutation methods
- * - Parses response through responseSchema if provided
- * - Throws EndpointError on non-2xx (EndpointUnsupportedError, unreported,
- *   when the host refuses the endpoint as one it does not serve)
+ * - Encodes the body through the endpoint's codec
+ * - Decodes the response through the endpoint's codec
+ * - Throws EndpointError on non-2xx — reported to `endpointErrorSink`, a
+ *   host's unsupported refusal (`unsupportedEndpointResponse`) included: under
+ *   a browser host the coverage guard proves every endpoint the page calls is
+ *   served or `needsMachine` (answered `unavailable` without a request), so a
+ *   refusal is a gap the guard missed — a bug, never a state to hide
  *
  * A desktop-only endpoint (`needsMachine`) answers a `MachineResult`: `ok` with
  * the value, or — when the transport has no computer behind it
  * (`transport.machine` false: an in-browser server) — `unavailable` with the
  * sentence to show, without making a request.
  */
-export async function fetchEndpoint<
-  Route extends string,
-  TParams,
-  TBody,
-  TResponse,
-  TQuery,
->(
-  endpoint: MachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
-  params: TParams,
-  opts?: FetchOpts<TBody, TQuery>,
-): Promise<MachineResult<Answer<TResponse>>>;
-export async function fetchEndpoint<
-  Route extends string,
-  TParams,
-  TBody,
-  TResponse,
-  TQuery,
->(
-  endpoint: EndpointDef<Route, TParams, TBody, TResponse, TQuery>,
-  params: TParams,
-  opts?: FetchOpts<TBody, TQuery>,
-): Promise<Answer<TResponse>>;
-export async function fetchEndpoint<
-  Route extends string,
-  TParams,
-  TBody,
-  TResponse,
-  TQuery,
->(
-  endpoint:
-    | EndpointDef<Route, TParams, TBody, TResponse, TQuery>
-    | MachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
+export interface FetchEndpoint {
+  <Route extends string, TParams, TBody, TResponse, TQuery>(
+    endpoint: MachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
+    params: TParams,
+    opts?: FetchOpts<TBody, TQuery>,
+  ): Promise<MachineResult<Answer<TResponse>>>;
+  <Route extends string, TParams, TBody, TResponse, TQuery>(
+    endpoint: EndpointDef<Route, TParams, TBody, TResponse, TQuery>,
+    params: TParams,
+    opts?: FetchOpts<TBody, TQuery>,
+  ): Promise<Answer<TResponse>>;
+}
+
+/** Either kind of endpoint, as the internal dispatch sees it. */
+type AnyEndpoint<Route extends string, TParams, TBody, TResponse, TQuery> =
+  | EndpointDef<Route, TParams, TBody, TResponse, TQuery>
+  | MachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>;
+
+/** One call over `transport`, dispatched on the endpoint's kind. */
+async function call<Route extends string, TParams, TBody, TResponse, TQuery>(
+  transport: Transport,
+  endpoint: AnyEndpoint<Route, TParams, TBody, TResponse, TQuery>,
   params: TParams,
   opts?: FetchOpts<TBody, TQuery>,
 ): Promise<Answer<TResponse> | MachineResult<Answer<TResponse>>> {
   if (endpoint.needsMachine === undefined) {
-    return request(endpoint, params, opts);
+    return request(transport, endpoint, params, opts);
   }
-  if (!(opts?.transport ?? originTransport).machine) {
+  if (!transport.machine) {
     return {
       kind: "unavailable",
       message: unavailableMessage(endpoint.needsMachine),
     };
   }
-  return { kind: "ok", value: await request(endpoint, params, opts) };
+  return {
+    kind: "ok",
+    value: await request(transport, endpoint, params, opts),
+  };
 }
 
-/** One request to an endpoint over the caller's transport, decoded. */
+/** One request to an endpoint over `transport`, decoded. */
 async function request<Route extends string, TParams, TBody, TResponse, TQuery>(
-  endpoint:
-    | EndpointDef<Route, TParams, TBody, TResponse, TQuery>
-    | MachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
+  transport: Transport,
+  endpoint: AnyEndpoint<Route, TParams, TBody, TResponse, TQuery>,
   params: TParams,
   opts?: FetchOpts<TBody, TQuery>,
 ): Promise<Answer<TResponse>> {
@@ -214,7 +197,6 @@ async function request<Route extends string, TParams, TBody, TResponse, TQuery>(
     signal: opts?.signal,
     keepalive: opts?.keepalive,
   };
-  const transport = opts?.transport ?? originTransport;
   const res = opts?.retry
     ? await fetchWithRetry(url, init, { ...opts.retry, fetch: transport.fetch })
     : await transport.fetch(url, init);
@@ -237,13 +219,12 @@ async function request<Route extends string, TParams, TBody, TResponse, TQuery>(
         // Not JSON — keep the text, which is exactly what HttpError sends.
       }
     }
-    if (isUnsupportedEndpointRefusal(res.status, errorBody)) {
-      throw new EndpointUnsupportedError(res.status, errorBody);
-    }
     if (isAgentWriteRefusal(res.status, errorBody)) {
       throw new EndpointAgentWriteRefusedError(res.status, errorBody);
     }
-    if (opts?.report !== false) {
+    // Reported only where the subtree's telemetry is (`transport.telemetry`):
+    // a scope set to drop it raises nothing for the page's server to file.
+    if (opts?.report !== false && transport.telemetry) {
       endpointErrorSink.emit({
         route: endpoint.route,
         status: res.status,
@@ -263,25 +244,47 @@ async function request<Route extends string, TParams, TBody, TResponse, TQuery>(
 }
 
 /**
- * `fetchEndpoint` bound to the enclosing subtree's transport — what a
- * component calls instead of the bare function, so a request it makes inside a
- * `<TransportProvider>` (a demo backend) reaches that transport, never the
- * page's server.
+ * The fetcher a fake transport answers with (`web/testing`'s
+ * `fakeFetchEndpoint`), registered before the transport is first used. Internal
+ * to this plugin: production transports never appear here.
  */
-export function useFetchEndpoint(): typeof fetchEndpoint {
-  const transport = useTransport();
-  return useMemo(
-    () =>
-      ((
-        endpoint: EndpointDef<string, unknown, unknown, unknown, unknown>,
-        params: unknown,
-        opts?: FetchOpts<unknown, unknown>,
-      ) =>
-        // Either kind of endpoint: the bare function dispatches on it.
-        fetchEndpoint(endpoint, params, {
-          ...opts,
-          transport,
-        } as typeof opts)) as typeof fetchEndpoint,
-    [transport],
-  );
+const fakeFetchers = new WeakMap<Transport, FetchEndpoint>();
+
+/** @internal — `web/testing` only. */
+export function installFakeFetcher(
+  transport: Transport,
+  fetchEndpoint: FetchEndpoint,
+): void {
+  fakeFetchers.set(transport, fetchEndpoint);
+}
+
+/** One fetcher per transport, so a bound fetcher's identity is stable. */
+const fetchers = transportScoped<FetchEndpoint>(
+  (transport) =>
+    fakeFetchers.get(transport) ??
+    (((
+      endpoint: AnyEndpoint<string, unknown, unknown, unknown, unknown>,
+      params: unknown,
+      opts?: FetchOpts<unknown, unknown>,
+    ) => call(transport, endpoint, params, opts)) as FetchEndpoint),
+);
+
+/**
+ * The fetcher over an explicit transport — for page-level code that is
+ * sanctioned to name one (`fetchEndpointOver(pageTransport)`, under a
+ * `networking/no-page-transport` exemption) and for a store holding the
+ * transport it was made for. Bind it as `const fetchEndpoint = …`.
+ */
+export function fetchEndpointOver(transport: Transport): FetchEndpoint {
+  return fetchers.of(transport);
+}
+
+/**
+ * The fetcher of the enclosing subtree's transport — what a component or hook
+ * calls (`const fetchEndpoint = useFetchEndpoint()`), so a request it makes
+ * inside a `<TransportProvider>` (a demo backend) reaches that transport, never
+ * the page's server. Stable per transport.
+ */
+export function useFetchEndpoint(): FetchEndpoint {
+  return useTransportScoped(fetchers);
 }

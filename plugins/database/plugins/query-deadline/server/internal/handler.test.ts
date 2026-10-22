@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { QueryDeadlineEvent } from "@plugins/database/plugins/connection/server";
-import type { recordReport } from "@plugins/reports/server";
+import type { recordReport } from "@plugins/reports/plugins/engine/server";
 import {
   DbAbandonCapPayloadSchema,
   DbQueryDeadlinePayloadSchema,

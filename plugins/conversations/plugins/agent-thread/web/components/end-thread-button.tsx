@@ -21,14 +21,16 @@ export interface EndThreadButtonProps {
  *
  * Renders nothing until the conversation's row has arrived, and nothing once
  * it is closed (`done`) or gone — there is nothing left to end. A failure is
- * a toast; the thread stays as it was.
+ * a toast; the thread stays as it was. Closing stops the agent, which needs
+ * the computer: on a host without it (the demo) the button is disabled and
+ * its tooltip says why.
  */
 export function EndThreadButton({
   conversationId,
   onEnded,
 }: EndThreadButtonProps) {
   const row = useConversation(conversationId);
-  const { mutate, isPending } = useEndpointMutation(dropAndExit, {
+  const close = useEndpointMutation(dropAndExit, {
     onSuccess: () => onEnded?.(),
     onError: (err) =>
       showToast({
@@ -40,12 +42,19 @@ export function EndThreadButton({
   if (row.status !== "ready" || row.data === null) return null;
   const { status } = row.data;
   if (status === "done" || status === "gone") return null;
+  if (close.kind === "unavailable") {
+    return (
+      <Button variant="ghost" tooltip={close.message} disabled>
+        Done
+      </Button>
+    );
+  }
   return (
     <Button
       variant="ghost"
       tooltip="Close the conversation and drop its task"
-      loading={isPending}
-      onClick={() => mutate({ params: { id: conversationId } })}
+      loading={close.isPending}
+      onClick={() => close.mutate({ params: { id: conversationId } })}
     >
       Done
     </Button>

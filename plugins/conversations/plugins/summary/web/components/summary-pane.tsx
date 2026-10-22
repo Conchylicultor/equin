@@ -1,7 +1,7 @@
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEffect, useRef, useState } from "react";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { toast } from "@plugins/shell/plugins/notifications/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import {
   useEndpointMutation,
@@ -54,6 +54,7 @@ function SummaryPaneInner({
   convId: string;
   latest: ConversationSummary | null;
 }) {
+  const toast = useToast();
   const generate = useEndpointMutation(generateConversationSummary, {
     onError: (err) =>
       toast({
@@ -88,7 +89,7 @@ function SummaryPaneInner({
         variant: "success",
       });
     }
-  }, [latest, pendingSince]);
+  }, [latest, pendingSince, toast]);
 
   // Timeout fallback so a stuck spawn surfaces.
   useEffect(() => {
@@ -116,10 +117,12 @@ function SummaryPaneInner({
     }, remaining);
     /* eslint-enable react-hooks/set-state-in-effect */
     return () => clearTimeout(t);
-  }, [pendingSince]);
+  }, [pendingSince, toast]);
 
+  // Summarising launches a Sonnet conversation, which needs the computer: on
+  // a host without it (the demo) the button is disabled and says why.
   async function onSummarize() {
-    if (pendingSince !== null) return;
+    if (generate.kind === "unavailable" || pendingSince !== null) return;
     setPendingSince(Date.now());
     try {
       await generate.mutateAsync({ params: { conversationId: convId } });
@@ -137,6 +140,8 @@ function SummaryPaneInner({
         variant="outline"
         onClick={onSummarize}
         loading={isPending}
+        disabled={generate.kind === "unavailable"}
+        tooltip={generate.kind === "unavailable" ? generate.message : undefined}
         className={cn("gap-xs", selfClass("start"), "text-caption")}
         aria-label={latest ? "Re-summarise" : "Summarise"}
       >

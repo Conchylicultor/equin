@@ -1,11 +1,5 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import {
-  commitFilesServed,
-  commitInfoServed,
-  pushFilesServed,
-} from "./internal/commit-values";
-import { handleImageContent } from "./internal/image-handler";
-import { getImageContent } from "@plugins/code-explorer/plugins/code-api/core";
+import { pushFilesServed } from "./internal/commit-values";
 
 export {
   resolveWorkspaceRoot,
@@ -20,13 +14,6 @@ export {
 
 export default {
   description:
-    "Worktree-scoped checkout reads by attempt id or the reserved `main` sentinel: the raw image route, the sha-addressed commit-info / commit-files live values, and push-files — one push's files, its range read from its ledger rows by ancestry.",
-  contributions: [
-    ...commitInfoServed.declare,
-    ...commitFilesServed.declare,
-    ...pushFilesServed.declare,
-  ],
-  httpRoutes: {
-    [getImageContent.route]: handleImageContent,
-  },
+    "Worktree-scoped checkout reads by attempt id or the reserved `main` sentinel: push-files — one push's files, its range read from its ledger rows by ancestry. The raw image route is the machine half's.",
+  contributions: [...pushFilesServed.declare],
 } satisfies ServerPluginDefinition;

@@ -3,14 +3,16 @@ import { relative, sep } from "node:path";
 import type { RuntimeSignal } from "@plugins/conversations/server";
 import { defineFileWatcher } from "@plugins/infra/plugins/file-watcher/server";
 import { createKeyedCoalescer } from "@plugins/packages/plugins/coalesce/core";
-import { recordReport } from "@plugins/reports/server";
+import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { resolvePromptSubmit } from "@plugins/conversations/plugins/turn-ledger/server";
 import {
-  holdQuestion,
   onQuestionResolved,
-  retireQuestion,
   type ResolvedQuestion,
 } from "@plugins/conversations/plugins/question-relay/server";
+import {
+  holdQuestion,
+  retireQuestion,
+} from "@plugins/conversations/plugins/question-relay/machine";
 import {
   AGENT_EVENTS_FILE,
   DismissReplySchema,

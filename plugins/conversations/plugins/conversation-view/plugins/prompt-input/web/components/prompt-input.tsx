@@ -14,11 +14,12 @@ import {
 } from "@plugins/conversations/core";
 import {
   conversationPromptDraft,
-  sendConversationTurn,
+  useSendConversationTurn,
+  useTurnSendAvailability,
 } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { PromptEditor } from "@plugins/primitives/plugins/prompt-editor/web";
-import { toast } from "@plugins/shell/plugins/notifications/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 
 export function PromptInput({
   conversation,
@@ -27,6 +28,9 @@ export function PromptInput({
 }) {
   const live = useLiveConversation(conversation);
   const workspace = useAttemptWorkspaceKind(conversation.attemptId);
+  const sendConversationTurn = useSendConversationTurn();
+  const sendAvailability = useTurnSendAvailability();
+  const toast = useToast();
   const [draft, setDraft, clearDraft] = useDraft(conversationPromptDraft, "", {
     scope: conversation.id,
   });
@@ -34,7 +38,8 @@ export function PromptInput({
   // The gate every turn-sending surface shares (canSendTurn): `starting` and
   // `working` stay sendable (the server holds or queues the turn), and so does a
   // waiting question — sending dismisses it and the message goes in its place.
-  const disabled = !canSendTurn(live);
+  // A host without the computer (the demo) cannot send at all.
+  const disabled = !sendAvailability.available || !canSendTurn(live);
 
   const insertRef = useRef<((text: string) => void) | null>(null);
 
@@ -54,7 +59,7 @@ export function PromptInput({
       if (disabled) return;
       sendConversationTurn(conversation.id, { text });
     },
-    [conversation.id, disabled],
+    [conversation.id, disabled, sendConversationTurn],
   );
   useRegisterPromptComposer({ insert, send: sendText, canSend: !disabled });
 
@@ -69,19 +74,21 @@ export function PromptInput({
     if (isDraftEmpty(current) || disabled) return;
     clearDraft();
     sendConversationTurn(conversation.id, { text: current });
-  }, [conversation.id, disabled, clearDraft]);
+  }, [conversation.id, disabled, clearDraft, sendConversationTurn]);
 
-  const placeholder = disabled
-    ? live.status === "done"
-      ? "Conversation is done"
-      : "Conversation is disconnected"
-    : live.waitingFor === QUESTION_WAITING_FOR
-      ? "Answer above, or send a message to skip the question"
-      : live.status === "starting"
-        ? "Agent starting — send now, it gets your message when ready"
-        : isTurnRunning(live)
-          ? "Queue a message — Enter to queue, Shift+Enter for newline"
-          : "Send a message — Enter to send, Shift+Enter for newline";
+  const placeholder = !sendAvailability.available
+    ? sendAvailability.message
+    : disabled
+      ? live.status === "done"
+        ? "Conversation is done"
+        : "Conversation is disconnected"
+      : live.waitingFor === QUESTION_WAITING_FOR
+        ? "Answer above, or send a message to skip the question"
+        : live.status === "starting"
+          ? "Agent starting — send now, it gets your message when ready"
+          : isTurnRunning(live)
+            ? "Queue a message — Enter to queue, Shift+Enter for newline"
+            : "Send a message — Enter to send, Shift+Enter for newline";
 
   return (
     <PromptEditor

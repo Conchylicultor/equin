@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { getConfig } from "@plugins/config_v2/server";
-import { recordReport } from "@plugins/reports/server";
+import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { readBootEvents } from "@plugins/debug/plugins/boot-events/server";
 import { listWorktreeDirs } from "@plugins/infra/plugins/paths/server";
 import { bootWatchdogConfig } from "../../core";

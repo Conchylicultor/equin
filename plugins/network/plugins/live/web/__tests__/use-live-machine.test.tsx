@@ -14,7 +14,6 @@ vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
 }));
 
 import { renderHook } from "@testing-library/react";
-import { createElement, type ReactNode } from "react";
 import { z } from "zod";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
@@ -22,11 +21,8 @@ import {
   createLiveStateHarness,
   NotificationsClient,
 } from "@plugins/primitives/plugins/live-state/web/testing";
-import {
-  originTransport,
-  TransportProvider,
-  type Transport,
-} from "@plugins/primitives/plugins/networking/web";
+import type { Transport } from "@plugins/primitives/plugins/networking/web";
+import { testTransport } from "@plugins/primitives/plugins/networking/web/testing";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
 import { useLive, useLiveRow, type LiveRowResult } from "../internal/use-live";
 
@@ -52,15 +48,10 @@ function machineCollection() {
 
 /** The harness's pipeline under `transport`. */
 function wrapperFor(transport: Transport) {
-  const { Wrapper } = createLiveStateHarness();
-  return ({ children }: { children: ReactNode }) =>
-    createElement(TransportProvider, {
-      transport,
-      children: createElement(Wrapper, null, children),
-    });
+  return createLiveStateHarness({ transport }).Wrapper;
 }
 
-const inBrowser: Transport = { ...originTransport, machine: false };
+const inBrowser: Transport = testTransport({ machine: false });
 
 describe("useLive of a needsMachine declaration", () => {
   afterEach(() => vi.restoreAllMocks());
@@ -119,7 +110,7 @@ describe("useLive of a needsMachine declaration", () => {
     const observe = vi.spyOn(NotificationsClient.prototype, "observe");
     const value = machineValue();
     const read = renderHook(() => useLive(value), {
-      wrapper: wrapperFor(originTransport),
+      wrapper: wrapperFor(testTransport()),
     });
     expect(read.result.current.status).toBe("loading");
     expect(

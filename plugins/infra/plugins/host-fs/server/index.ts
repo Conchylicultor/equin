@@ -1,18 +1,4 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import {
-  hostFsComplete,
-  hostFsExtract,
-  hostFsMove,
-  hostFsOpen,
-  hostFsRaw,
-  hostFsStat,
-} from "../core";
-import { handleComplete } from "./internal/complete";
-import { handleExtract } from "./internal/extract";
-import { handleMove } from "./internal/move";
-import { handleOpen } from "./internal/open";
-import { handleRaw } from "./internal/raw";
-import { handleStat } from "./internal/stat";
 
 export { inertHeaders, serveHostPath } from "./internal/raw";
 export { readHostPathText } from "./internal/text";
@@ -29,13 +15,5 @@ export {
 
 export default {
   description:
-    "The one host-filesystem API: stat / complete / raw reads of any path the user account can read (filesystem permissions are the boundary; missing / denied / not-a-dir are typed results), POST open (Open with default app, Reveal in Finder) and POST extract (an archive beside itself, its single top-level entry as itself or several in a new folder) and POST move (paths into a folder, a taken name answered `exists` until the caller resolves it: replace / keep-both / skip), all three refused unless the Origin is the app's own *.localhost.",
-  httpRoutes: {
-    [hostFsStat.route]: handleStat,
-    [hostFsComplete.route]: handleComplete,
-    [hostFsRaw.route]: handleRaw,
-    [hostFsOpen.route]: handleOpen,
-    [hostFsExtract.route]: handleExtract,
-    [hostFsMove.route]: handleMove,
-  },
+    "The host-filesystem readers other plugins build on: resolveHostPath, openHostFile (a disk file or an archive member), serveHostPath (the one byte server), readHostPathText / decodeTextBytes (the size + binary gate) and the archive-format registry (defineArchiveFormat). Its routes — stat / complete / raw reads of any path the user account can read, POST open / extract / move — are the machine half's, each needsMachine.",
 } satisfies ServerPluginDefinition;

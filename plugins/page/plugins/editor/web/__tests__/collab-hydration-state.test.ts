@@ -39,22 +39,22 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import * as Y from "yjs";
 
-vi.mock("@plugins/infra/plugins/endpoints/web", async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  return { ...actual, fetchEndpoint: vi.fn() };
-});
-
 const wsStatusListeners: Array<(ev: { status: string; url: string }) => void> =
   [];
-vi.mock("@plugins/primitives/plugins/networking/web", () => ({
-  subscribeWsStatus: (cb: (ev: { status: string; url: string }) => void) => {
-    wsStatusListeners.push(cb);
-    return () => {
-      const i = wsStatusListeners.indexOf(cb);
-      if (i >= 0) wsStatusListeners.splice(i, 1);
-    };
-  },
-}));
+// Spread the real module: the endpoints barrel calls `transportScoped` at load.
+vi.mock(
+  "@plugins/primitives/plugins/networking/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<Record<string, unknown>>()),
+    subscribeWsStatus: (cb: (ev: { status: string; url: string }) => void) => {
+      wsStatusListeners.push(cb);
+      return () => {
+        const i = wsStatusListeners.indexOf(cb);
+        if (i >= 0) wsStatusListeners.splice(i, 1);
+      };
+    },
+  }),
+);
 
 // The block's `blockDocs` row as `useLiveRow` hands it over: pending until the
 // test delivers a stored state.
@@ -71,22 +71,34 @@ let rowValue:
 };
 vi.mock("@plugins/primitives/plugins/live-state/web", () => ({
   liveStateSocketKind: () => "worktree",
+  liveStateSocketUrl: () => "ws://x/worktree",
 }));
 vi.mock("@plugins/network/plugins/live/web", () => ({
   useLiveRow: () => rowValue,
 }));
 
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import {
+  fakeFetchEndpoint,
+  withTransport,
+  type FakeEndpointAnswer,
+} from "@plugins/infra/plugins/endpoints/web/testing";
 import { runsToXmlText, xmlTextContentLength, type RichText } from "../../core";
 import type { BindingReplica } from "../internal/binding-replica";
 import { CollabSession } from "../internal/collab-session";
+import { blockDocsFor } from "../internal/use-block-docs";
 import type {
   DocSourcedRuns,
   ProjectTextFn,
 } from "../internal/doc-sourced-runs";
 import { useCollabBlockDoc } from "../internal/use-collab-block-doc";
 
-const fetchEndpointMock = vi.mocked(fetchEndpoint);
+// The server's answers, scripted per case. The fake fetcher over it is what a
+// directly-started owner is handed, and what `useCollabBlockDoc` reads from the
+// rendered tree's transport (`withTransport(server)`).
+const answer = vi.fn<FakeEndpointAnswer>();
+const server = fakeFetchEndpoint(answer);
+/** The registry the rendered hooks read, so a directly-started owner is theirs. */
+const docs = blockDocsFor(server.transport);
 
 /** A block's content doc as the wire carries it, built the way the app builds it. */
 function docStateFor(runs: RichText): Uint8Array {
@@ -113,8 +125,8 @@ const blockId = (): string => `blk-hydration-${(nextId += 1)}`;
 
 beforeEach(() => {
   vi.useFakeTimers();
-  fetchEndpointMock.mockReset();
-  fetchEndpointMock.mockResolvedValue({ state: EMPTY_DOC_STATE });
+  answer.mockReset();
+  answer.mockResolvedValue({ state: EMPTY_DOC_STATE });
   rowValue = { status: "loading", refetch: () => Promise.resolve() };
 });
 
@@ -131,7 +143,7 @@ test("a client-minted block reaches hydrated synchronously inside connect(), wit
   // `"unseen"` — a freshly split/inserted block, rendering from the optimistic
   // overlay before its `_blocks` row exists server-side; this client has never
   // seen the id in server truth, so nothing can be stored for it.
-  const session = CollabSession.start(id, buildSeedState, "unseen", true);
+  const session = CollabSession.start(docs, id, buildSeedState, "unseen", true);
   expect(session.locallyAuthoritative).toBe(true);
   expect(session.state.kind).toBe("attaching");
 
@@ -142,7 +154,7 @@ test("a client-minted block reaches hydrated synchronously inside connect(), wit
   // answer that could be missing and nothing to wait for.
   expect(session.state.kind).toBe("hydrated");
   expect(session.writeAllowed).toBe(true);
-  expect(fetchEndpointMock).not.toHaveBeenCalled();
+  expect(answer).not.toHaveBeenCalled();
 
   // …and the later confirmation is a RE-ASSERT: it must not walk the state
   // back, reset anything, or re-close the gate.
@@ -160,20 +172,26 @@ test("a re-created row (removed) is server-authoritative: hydrating until its su
   // unconfirmed like a split tail, but its stored doc SURVIVED the delete
   // (every delete is a trash), so the seed must NOT be applied and the arm is
   // the server's: wait for the subscription, exactly like an existing block.
-  const session = CollabSession.start(id, buildSeedState, "removed", true);
+  const session = CollabSession.start(
+    docs,
+    id,
+    buildSeedState,
+    "removed",
+    true,
+  );
   expect(session.locallyAuthoritative).toBe(false);
   const replica = session.replicaForBinding();
   replica.connect();
   expect(session.state.kind).toBe("hydrating");
   expect(session.writeAllowed).toBe(false);
-  expect(fetchEndpointMock).not.toHaveBeenCalled();
+  expect(answer).not.toHaveBeenCalled();
 
   // The surviving doc arrives; here it renders nothing, so the transport's own
   // sync announcement is the exit.
   session.owner.provider.onServerState(EMPTY_DOC_STATE);
   expect(session.state.kind).toBe("hydrated");
   expect(session.writeAllowed).toBe(true);
-  expect(fetchEndpointMock).not.toHaveBeenCalled();
+  expect(answer).not.toHaveBeenCalled();
 
   session.end();
   vi.advanceTimersByTime(1);
@@ -181,7 +199,13 @@ test("a re-created row (removed) is server-authoritative: hydrating until its su
 
 test("the in-memory transport is locally authoritative for its whole life", () => {
   const id = blockId();
-  const session = CollabSession.start(id, buildSeedState, "present", false);
+  const session = CollabSession.start(
+    docs,
+    id,
+    buildSeedState,
+    "present",
+    false,
+  );
   expect(session.locallyAuthoritative).toBe(true);
   session.replicaForBinding().connect();
   expect(session.state.kind).toBe("hydrated");
@@ -198,7 +222,13 @@ test("the in-memory transport is locally authoritative for its whole life", () =
 
 test("an empty catch-up is trivially hydrated rather than waiting for a commit that never comes", () => {
   const id = blockId();
-  const session = CollabSession.start(id, buildSeedState, "present", true);
+  const session = CollabSession.start(
+    docs,
+    id,
+    buildSeedState,
+    "present",
+    true,
+  );
   const replica = session.replicaForBinding();
 
   // Nothing delivered yet: the server's answer is still coming.
@@ -220,7 +250,13 @@ test("an empty catch-up is trivially hydrated rather than waiting for a commit t
 
 test("an answer that DOES carry content stays hydrating until a commit proves it", () => {
   const id = blockId();
-  const session = CollabSession.start(id, buildSeedState, "present", true);
+  const session = CollabSession.start(
+    docs,
+    id,
+    buildSeedState,
+    "present",
+    true,
+  );
   const replica = session.replicaForBinding();
   replica.connect();
 
@@ -245,7 +281,13 @@ test("an answer that DOES carry content stays hydrating until a commit proves it
 
 test("a verification mismatch yields stalled, and a late probe may not conclude one", () => {
   const id = blockId();
-  const session = CollabSession.start(id, buildSeedState, "present", true);
+  const session = CollabSession.start(
+    docs,
+    id,
+    buildSeedState,
+    "present",
+    true,
+  );
   const replica = session.replicaForBinding();
   session.owner.provider.onServerState(
     toBase64(docStateFor([{ text: "hello" }])),
@@ -280,7 +322,13 @@ test("a verification mismatch yields stalled, and a late probe may not conclude 
 
 test("hydrating holds the transport flush, and ending it releases the bytes", async () => {
   const id = blockId();
-  const session = CollabSession.start(id, buildSeedState, "present", true);
+  const session = CollabSession.start(
+    docs,
+    id,
+    buildSeedState,
+    "present",
+    true,
+  );
   const replica = session.replicaForBinding();
   replica.connect();
   // Sync WITH content, so the session stays hydrating (no commit can arrive:
@@ -291,13 +339,13 @@ test("hydrating holds the transport flush, and ending it releases the bytes", as
   expect(session.state.kind).toBe("hydrating");
 
   // A local edit while the gate is closed: queued, never posted.
-  fetchEndpointMock.mockClear();
+  answer.mockClear();
   replica.replicaDoc.transact(() => {
     const root = replica.replicaDoc.get("root", Y.XmlText);
     root.insert(root.length, "!");
   }, "binding");
   await vi.advanceTimersByTimeAsync(500);
-  expect(fetchEndpointMock).not.toHaveBeenCalled();
+  expect(answer).not.toHaveBeenCalled();
   // …but the cloud still says the bytes are owed.
   expect(session.owner.provider.getSaveState().phase).toBe("syncing");
 
@@ -305,19 +353,21 @@ test("hydrating holds the transport flush, and ending it releases the bytes", as
   // flush is never swallowed.
   session.end();
   await vi.advanceTimersByTimeAsync(5);
-  expect(fetchEndpointMock).toHaveBeenCalled();
+  expect(answer).toHaveBeenCalled();
 });
 
 test("hydrating suppresses the data.text projection, and opening the gate replays it", async () => {
   const id = blockId();
   const projectText = vi.fn();
-  const { result, unmount } = renderHook(() =>
-    useCollabBlockDoc(
-      id,
-      [],
-      "present",
-      projectText as unknown as ProjectTextFn,
-    ),
+  const { result, unmount } = renderHook(
+    () =>
+      useCollabBlockDoc(
+        id,
+        [],
+        "present",
+        projectText as unknown as ProjectTextFn,
+      ),
+    { wrapper: withTransport(server) },
   );
 
   // Mount the binding the way `CollaborationPlugin` does.
@@ -373,7 +423,13 @@ test("hydrating suppresses the data.text projection, and opening the gate replay
 
 test("a genuinely empty block never latches everRendered", () => {
   const id = blockId();
-  const session = CollabSession.start(id, buildSeedState, "present", true);
+  const session = CollabSession.start(
+    docs,
+    id,
+    buildSeedState,
+    "present",
+    true,
+  );
   session.replicaForBinding().connect();
   session.owner.provider.onServerState(EMPTY_DOC_STATE);
 
@@ -392,7 +448,13 @@ test("a genuinely empty block never latches everRendered", () => {
 
 test("the first commit carrying text latches it, and every later window inherits it", () => {
   const id = blockId();
-  const session = CollabSession.start(id, buildSeedState, "present", true);
+  const session = CollabSession.start(
+    docs,
+    id,
+    buildSeedState,
+    "present",
+    true,
+  );
   const replica = session.replicaForBinding();
   replica.connect();
   session.owner.provider.onServerState(
@@ -426,7 +488,13 @@ test("the first commit carrying text latches it, and every later window inherits
 
 test("even a probe that may not conclude agreement still latches what it saw", () => {
   const id = blockId();
-  const session = CollabSession.start(id, buildSeedState, "present", true);
+  const session = CollabSession.start(
+    docs,
+    id,
+    buildSeedState,
+    "present",
+    true,
+  );
   const replica = session.replicaForBinding();
   session.owner.provider.onServerState(
     toBase64(docStateFor([{ text: "hello" }])),
@@ -446,7 +514,13 @@ test("even a probe that may not conclude agreement still latches what it saw", (
 
 test("the flip reaches the session's own state listeners", () => {
   const id = blockId();
-  const session = CollabSession.start(id, buildSeedState, "present", true);
+  const session = CollabSession.start(
+    docs,
+    id,
+    buildSeedState,
+    "present",
+    true,
+  );
   session.replicaForBinding().connect();
   session.owner.provider.onServerState(EMPTY_DOC_STATE);
 
@@ -474,13 +548,15 @@ test("the flip reaches the session's own state listeners", () => {
 test("refetch() re-reads the server without dropping the session or re-attaching the binding", async () => {
   const id = blockId();
   const projectText = vi.fn();
-  const { result, rerender, unmount } = renderHook(() =>
-    useCollabBlockDoc(
-      id,
-      [],
-      "present",
-      projectText as unknown as ProjectTextFn,
-    ),
+  const { result, rerender, unmount } = renderHook(
+    () =>
+      useCollabBlockDoc(
+        id,
+        [],
+        "present",
+        projectText as unknown as ProjectTextFn,
+      ),
+    { wrapper: withTransport(server) },
   );
 
   let replica!: BindingReplica;
@@ -515,14 +591,14 @@ test("refetch() re-reads the server without dropping the session or re-attaching
   expect(result.current.everRendered).toBe(true);
 
   const generationBefore = result.current.attachGeneration;
-  fetchEndpointMock.mockClear();
+  answer.mockClear();
   await act(async () => {
     result.current.refetch();
     await vi.advanceTimersByTimeAsync(5);
   });
 
   // A re-read was requested…
-  expect(fetchEndpointMock).toHaveBeenCalled();
+  expect(answer).toHaveBeenCalled();
   // …and NOTHING on screen moved: same binding (no re-attach key bump), same
   // replica, same proven session. This is the whole difference between a cure
   // and the symptom the user reported.
@@ -539,13 +615,15 @@ test("refetch() re-reads the server without dropping the session or re-attaching
 test("rehydrate() DOES re-attach — and the everRendered latch survives it", async () => {
   const id = blockId();
   const projectText = vi.fn();
-  const { result, rerender, unmount } = renderHook(() =>
-    useCollabBlockDoc(
-      id,
-      [],
-      "present",
-      projectText as unknown as ProjectTextFn,
-    ),
+  const { result, rerender, unmount } = renderHook(
+    () =>
+      useCollabBlockDoc(
+        id,
+        [],
+        "present",
+        projectText as unknown as ProjectTextFn,
+      ),
+    { wrapper: withTransport(server) },
   );
 
   let replica!: BindingReplica;

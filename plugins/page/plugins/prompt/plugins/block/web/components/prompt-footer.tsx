@@ -3,6 +3,7 @@ import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { plainOf } from "@plugins/page/plugins/editor/core";
 import type { BlockRegionProps } from "@plugins/page/plugins/editor/web";
 import { createPromptTask } from "@plugins/page/plugins/prompt/plugins/link/web";
@@ -32,6 +33,7 @@ import { LaunchedConversations } from "./launched-conversations";
  * looks like a prompt in a snapshot, it just cannot be launched from one.
  */
 export function PromptFooter({ id, pageId, data, editor }: BlockRegionProps) {
+  const fetchEndpoint = useFetchEndpoint();
   if (!editor) return null;
 
   // What the user SEES rendered. The launch sends this, never the server's own
@@ -68,7 +70,7 @@ export function PromptFooter({ id, pageId, data, editor }: BlockRegionProps) {
                   `Prompt block ${id} has no page — cannot stamp provenance`,
                 );
               }
-              const { taskId } = await createPromptTask({
+              const { taskId } = await createPromptTask(fetchEndpoint, {
                 pageId,
                 blockId: id,
                 prompt,

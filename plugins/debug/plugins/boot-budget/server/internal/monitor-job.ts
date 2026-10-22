@@ -6,7 +6,7 @@ import {
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { getConfig } from "@plugins/config_v2/server";
 import type { ConfigValues } from "@plugins/config_v2/core";
-import { recordReport } from "@plugins/reports/server";
+import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { bootBudgetConfig } from "../../core";
 
 type Budgets = ConfigValues<(typeof bootBudgetConfig)["fields"]>;

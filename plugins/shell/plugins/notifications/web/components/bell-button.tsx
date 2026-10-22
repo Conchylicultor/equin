@@ -4,7 +4,7 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 import { useEffect, useRef, useState } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -22,6 +22,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 const notificationsIcon = symbol("notifications");
 
 export function BellButton() {
+  const fetchEndpoint = useFetchEndpoint();
   const [open, setOpen] = useState(false);
   // The default window (newest 200 undismissed) — boot-preloaded, so the bell
   // paints settled. It drives the toasts and the panel's `empty`; the popover

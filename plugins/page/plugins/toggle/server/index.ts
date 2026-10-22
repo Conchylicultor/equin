@@ -3,6 +3,7 @@ import { Editor } from "@plugins/page/plugins/editor/server";
 import { toggleBlock } from "../core";
 
 export default {
+  portable: true,
   description:
     "Toggle (collapsible) block type: registers its `data` schema at the server write boundary.",
   contributions: [Editor.BlockData(toggleBlock)],

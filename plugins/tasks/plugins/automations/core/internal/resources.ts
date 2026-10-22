@@ -75,6 +75,10 @@ export const automationTasks = liveCollection("automations.tasks", {
   sortable: ["filedAt"],
   default: { orderBy: [["filedAt", "desc"]], limit: 50 },
   maxLimit: 2000,
+  // Served by the machine half, like the catalog it is a history of: the
+  // automations are the computer's (their registry and jobs), so a reader
+  // under an in-browser server gets `unavailable`.
+  needsMachine: { feature: "Automations" },
 });
 
 // What a person decided about launching a task with a launch-kind automation:

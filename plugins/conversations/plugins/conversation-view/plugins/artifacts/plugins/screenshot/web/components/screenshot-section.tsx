@@ -1,8 +1,8 @@
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
+  AssetThumbnail,
   ImageGallery,
-  ViewerThumbnail,
 } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import {
   fileRefForPath,
@@ -53,16 +53,13 @@ export function ScreenshotSection({ items }: { items: ArtifactItem[] }) {
           const name = screenshotName(item.key);
           return (
             <span key={item.key} title={item.key} className="block">
-              <ViewerThumbnail
-                image={{
-                  src: fileUrl(
-                    fileRefForPath(conversation.attemptId, item.key, {
-                      root: conversation.worktreePath,
-                    }),
-                  ),
-                  name,
-                  sourceLabel: "Screenshot",
-                }}
+              <AssetThumbnail
+                asset={fileUrl(
+                  fileRefForPath(conversation.attemptId, item.key, {
+                    root: conversation.worktreePath,
+                  }),
+                )}
+                image={{ name, sourceLabel: "Screenshot" }}
                 size="chip"
               />
             </span>

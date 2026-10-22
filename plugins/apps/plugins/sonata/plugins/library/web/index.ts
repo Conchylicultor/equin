@@ -13,7 +13,11 @@ import { sonataLibraryPane, sonataPlayerPane } from "./panes";
 import { songPresentation } from "./internal/presentation";
 
 export { Library } from "./slots";
-export type { SourceHydration } from "./slots";
+export type {
+  SourceContext,
+  SourceCreateOption,
+  SourceHydration,
+} from "./slots";
 // The player pane is the OWNER of the player's header slot
 // (`sonataPlayerPane.Actions`), so every plugin contributing a control to that
 // header — transport, volume, metronome, transpose, … — reaches it through here.

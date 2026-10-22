@@ -5,24 +5,16 @@
  * Web Worker speaks — jsdom cannot start one): a served value and collection
  * render through `useLive`, and a `notify()` lands; a key the host does not
  * serve fails `loader-failed` and never reaches the contract-mismatch store;
- * unsupported POSTs throw `EndpointUnsupportedError` with ONE toast and
- * nothing on the error sink; a POST the host serves toasts nothing; a host
- * whose boot throws reaches the error boundary; a page pipeline beside the
- * scope reading the same tuple sees its own backend only.
+ * an unsupported POST is a plain `EndpointError`, reported (a gap the build's
+ * coverage guard missed — nothing hides it); a POST the host serves is
+ * answered; a host whose boot throws reaches the error boundary; a page
+ * pipeline beside the scope reading the same tuple sees its own backend only.
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
   clientLog: () => {},
-}));
-const toasts = vi.hoisted(
-  () => [] as { title?: string; description: string }[],
-);
-vi.mock("@plugins/shell/plugins/toast/web", () => ({
-  showToast: (args: { title?: string; description: string }) => {
-    toasts.push(args);
-  },
 }));
 
 import { act, cleanup, render, waitFor } from "@testing-library/react";
@@ -45,7 +37,7 @@ import {
   implement,
 } from "@plugins/infra/plugins/endpoints/core";
 import {
-  EndpointUnsupportedError,
+  EndpointError,
   endpointErrorSink,
   useFetchEndpoint,
   type EndpointErrorInfo,
@@ -68,6 +60,7 @@ import {
   type Transport,
   type TransportSocket,
 } from "@plugins/primitives/plugins/networking/web";
+import { renderWithTransport } from "@plugins/primitives/plugins/networking/web/testing";
 import { DemoScope } from "../components/demo-scope";
 
 let seq = 0;
@@ -217,7 +210,6 @@ const textOf = (r: { status: string; data?: { text: string } }) =>
 const consoleError = console.error;
 afterEach(() => {
   cleanup();
-  toasts.length = 0;
   endpointErrorSink.register(null);
   console.error = consoleError;
 });
@@ -226,7 +218,8 @@ afterEach(() => {
 async function renderAsync(ui: ReactElement) {
   let view: ReturnType<typeof render> | undefined;
   await act(async () => {
-    view = render(ui);
+    // The page's transport, as the app root mounts one above every scope.
+    view = renderWithTransport(ui);
   });
   return view!;
 }
@@ -315,31 +308,30 @@ describe("<DemoScope>", () => {
     },
   );
 
-  it("unsupported POSTs throw EndpointUnsupportedError, toast once, report nothing", async () => {
+  it("an unsupported POST is a plain EndpointError, reported", async () => {
     const reported: EndpointErrorInfo[] = [];
     endpointErrorSink.register((r) => reported.push(r));
     const fetchIn = await scopedFetch(scenarioOf());
-    for (let i = 0; i < 2; i++) {
-      await expect(fetchIn(notHere, {})).rejects.toBeInstanceOf(
-        EndpointUnsupportedError,
-      );
-    }
-    expect(toasts).toEqual([
+    await expect(fetchIn(notHere, {})).rejects.toBeInstanceOf(EndpointError);
+    expect(reported).toEqual([
       {
-        title: "Not available in the demo",
-        description: "POST /api/test-demo-scope/nope is not part of this demo.",
+        route: "POST /api/test-demo-scope/nope",
+        status: 409,
+        body: {
+          reason: "unsupported",
+          method: "POST",
+          path: "/api/test-demo-scope/nope",
+        },
       },
     ]);
-    expect(reported).toEqual([]);
   });
 
-  it("a POST the host serves is answered and toasts nothing", async () => {
+  it("a POST the host serves is answered", async () => {
     const fetchIn = await scopedFetch(scenarioOf());
     expect(await fetchIn(echo, { id: "x" }, { body: { n: 2 } })).toEqual({
       id: "x",
       doubled: 6,
     });
-    expect(toasts).toEqual([]);
   });
 
   it("a host whose boot throws reaches the error boundary", async () => {
@@ -445,7 +437,8 @@ function pageBackend(): Transport {
           headers: { "Content-Type": "application/json" },
         }),
       ),
-    assetUrl: (path) => `test-page:${path}`,
+    servesUrls: true,
     machine: true,
+    telemetry: false,
   };
 }

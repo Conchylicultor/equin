@@ -1,6 +1,6 @@
-import { DEPLOY_CATEGORY_ID } from "@plugins/apps/plugins/deploy/core";
-import { APPS_CATEGORY_ID } from "@plugins/apps/plugins/home/core";
-import { PROTOTYPES_CATEGORY_ID } from "@plugins/apps/plugins/prototypes/core";
+import { BUILD_CATEGORY_ID } from "@plugins/build/core";
+import { CONVERSATIONS_CATEGORY_ID } from "@plugins/conversations/core";
+import { IMPROVEMENTS_CATEGORY_ID } from "@plugins/improve/core";
 import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/core";
 import {
   agentIdKind,
@@ -81,7 +81,7 @@ export const STORIES: readonly Story[] = [
     shortTitle: "Dark mode reload",
     phase: "implementation",
     note: "Repro: switch to dark, reload, it comes back light. Check that the fix survives a hard reload too.",
-    category: APPS_CATEGORY_ID,
+    category: IMPROVEMENTS_CATEGORY_ID,
     task: "Dark mode resets after a reload",
     title: "Persist the theme choice across reloads",
     status: "waiting",
@@ -93,7 +93,7 @@ export const STORIES: readonly Story[] = [
     key: "csv-export",
     shortTitle: "CSV export",
     phase: "implementation",
-    category: APPS_CATEGORY_ID,
+    category: IMPROVEMENTS_CATEGORY_ID,
     task: "Export a notebook as CSV",
     title: "Add CSV export to the notebook menu",
     status: "working",
@@ -107,7 +107,7 @@ export const STORIES: readonly Story[] = [
     track: "sidequest",
     phase: "research",
     agent: "ci-triage",
-    category: DEPLOY_CATEGORY_ID,
+    category: BUILD_CATEGORY_ID,
     task: "Date picker test fails on CI once a week",
     title: "Pin the clock in the date picker test",
     status: "working",
@@ -119,7 +119,7 @@ export const STORIES: readonly Story[] = [
     key: "offline",
     shortTitle: "Offline edit queue",
     phase: "design",
-    category: PROTOTYPES_CATEGORY_ID,
+    category: CONVERSATIONS_CATEGORY_ID,
     task: "Queue edits while offline",
     title: "Design an offline edit queue",
     status: "waiting",
@@ -144,7 +144,7 @@ export const STORIES: readonly Story[] = [
     key: "search-speed",
     shortTitle: "Faster search",
     phase: "pushed",
-    category: APPS_CATEGORY_ID,
+    category: IMPROVEMENTS_CATEGORY_ID,
     task: "Search takes 2 s on large notebooks",
     title: "Index note titles for search",
     status: "done",

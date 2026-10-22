@@ -1,6 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { wsUrl } from "./ws-url";
 export { useReconnectingWebSocket } from "./use-reconnecting-ws";
 export type {
   ReconnectingWsOptions,
@@ -20,8 +19,10 @@ export type {
   MessagePortLike,
   SharedWorkerLike,
 } from "./transport-types";
-export { originTransport, TransportProvider, useTransport } from "./transport";
+export { TransportProvider, useTransport } from "./transport";
 export type { Transport, TransportSocket } from "./transport";
+export { transportScoped, useTransportScoped } from "./transport-scoped";
+export type { TransportScoped } from "./transport-scoped";
 export { fetchWithRetry } from "./fetch-with-retry";
 export type { FetchWithRetryOptions } from "./fetch-with-retry";
 export { probeUrlStatus, type UrlStatus } from "./probe-url-status";

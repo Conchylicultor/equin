@@ -4,7 +4,7 @@ import {
   foldResource,
   ResourceErrorInline,
 } from "@plugins/primitives/plugins/live-state/web";
-import { toast } from "@plugins/shell/plugins/notifications/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { useAccountStatus } from "../hooks";
 import { currentWorktreeName, startConnectFlow } from "../connect";
 import { mergeScopes } from "../scopes";
@@ -28,6 +28,7 @@ export function GrantAccessButton(props: {
     label = "Grant access",
     variant = "outline",
   } = props;
+  const toast = useToast();
   const status = useAccountStatus(providerId);
   const [busy, setBusy] = useState(false);
   // The already-granted scopes, once known (`[]`-equivalent `undefined` when

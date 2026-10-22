@@ -80,8 +80,8 @@ inside one `browser_batch` (one frame per call).
     - `primitives/css/text.Text`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
+    - `primitives/overlay/image-viewer.AssetThumbnail`
     - `primitives/overlay/image-viewer.ImageGallery`
-    - `primitives/overlay/image-viewer.ViewerThumbnail`
 - Server:
   - Contributes:
     - `resource.declare` "browser-recordings.runs"

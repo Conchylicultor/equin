@@ -16,18 +16,8 @@ vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
 }));
 
 const spy = vi.hoisted(() => ({
-  /** Every `fetchEndpoint` call's route (the bell's mark-all-read). */
-  fetched: [] as string[],
   /** Every app link opened. */
   opened: [] as string[],
-}));
-
-vi.mock("@plugins/infra/plugins/endpoints/web", async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  fetchEndpoint: (endpoint: { route: string }) => {
-    spy.fetched.push(endpoint.route);
-    return Promise.resolve();
-  },
 }));
 
 vi.mock("@plugins/apps-core/plugins/tabs/web", async (importOriginal) => ({
@@ -52,14 +42,28 @@ import {
   createLiveStateHarness,
   type LiveStateHarness,
 } from "@plugins/primitives/plugins/live-state/web/testing";
+import {
+  fakeFetchEndpoint,
+  type FakeFetchEndpoint,
+} from "@plugins/infra/plugins/endpoints/web/testing";
 import { notifications, notificationsUnread } from "../../shared/resources";
 import { BellButton } from "../components/bell-button";
 
 afterEach(() => {
   cleanup();
-  spy.fetched = [];
   spy.opened = [];
 });
+
+/** The fetcher every harness's transport hands the bell (its mark-all-read). */
+let fake: FakeFetchEndpoint;
+/** Every endpoint route the bell called. */
+const fetched = () => fake.calls.map((c) => c.route);
+
+/** A harness whose endpoint clients answer from a fresh `fake`. */
+function harness(): LiveStateHarness {
+  fake = fakeFetchEndpoint();
+  return createLiveStateHarness({ transport: fake.transport });
+}
 
 function mount(live: LiveStateHarness) {
   vi.spyOn(live.notifications, "hasEverBeenReady").mockReturnValue(true);
@@ -82,7 +86,7 @@ function settled(unread: {
   errors: number;
   warnings: number;
 }): LiveStateHarness {
-  const live = createLiveStateHarness();
+  const live = harness();
   live.queryClient.setQueryData(windowKey(), []);
   live.queryClient.setQueryData(unreadKey(), unread);
   return live;
@@ -90,7 +94,7 @@ function settled(unread: {
 
 describe("BellButton — unread badge", () => {
   it("paints a neutral bell (no count) while the unread value is pending", () => {
-    const live = createLiveStateHarness();
+    const live = harness();
     const client = live.queryClient;
     client.setQueryData(windowKey(), []);
     mount(live);
@@ -143,7 +147,7 @@ describe("BellButton — leaving the popover", () => {
     await waitFor(() => {
       expect(screen.queryByText("View all")).toBeNull();
     });
-    expect(spy.fetched).not.toContain(MARK_ALL_READ);
+    expect(fetched()).not.toContain(MARK_ALL_READ);
   });
 
   it("dismissing the popover itself (Escape) marks all read", async () => {
@@ -152,7 +156,7 @@ describe("BellButton — leaving the popover", () => {
       key: "Escape",
     });
     await waitFor(() => {
-      expect(spy.fetched).toContain(MARK_ALL_READ);
+      expect(fetched()).toContain(MARK_ALL_READ);
     });
   });
 });

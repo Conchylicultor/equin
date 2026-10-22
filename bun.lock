@@ -1549,6 +1549,10 @@
       "name": "@singularity/plugin-conversations-all-conversations",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/close": {
+      "name": "@singularity/plugin-conversations-close",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/commit-conversation": {
       "name": "@singularity/plugin-conversations-commit-conversation",
       "version": "0.0.1",
@@ -2161,6 +2165,10 @@
     },
     "plugins/conversations/plugins/summary": {
       "name": "@singularity/plugin-conversations-summary",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/task-categories": {
+      "name": "@singularity/plugin-conversations-task-categories",
       "version": "0.0.1",
     },
     "plugins/conversations/plugins/transcript-api": {
@@ -5310,6 +5318,10 @@
       "name": "@singularity/plugin-primitives-networking",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/networking/plugins/page-transport": {
+      "name": "@singularity/plugin-primitives-networking-page-transport",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/optimistic-mutation": {
       "name": "@singularity/plugin-primitives-optimistic-mutation",
       "version": "0.0.1",
@@ -5727,6 +5739,10 @@
     },
     "plugins/reports/plugins/endpoint-errors": {
       "name": "@singularity/plugin-reports-endpoint-errors",
+      "version": "0.0.1",
+    },
+    "plugins/reports/plugins/engine": {
+      "name": "@singularity/plugin-reports-engine",
       "version": "0.0.1",
     },
     "plugins/reports/plugins/launch-fix": {
@@ -7716,6 +7732,8 @@
 
     "@singularity/plugin-conversations-all-conversations": ["@singularity/plugin-conversations-all-conversations@workspace:plugins/conversations/plugins/all-conversations"],
 
+    "@singularity/plugin-conversations-close": ["@singularity/plugin-conversations-close@workspace:plugins/conversations/plugins/close"],
+
     "@singularity/plugin-conversations-commit-conversation": ["@singularity/plugin-conversations-commit-conversation@workspace:plugins/conversations/plugins/commit-conversation"],
 
     "@singularity/plugin-conversations-compaction-context": ["@singularity/plugin-conversations-compaction-context@workspace:plugins/conversations/plugins/compaction-context"],
@@ -8021,6 +8039,8 @@
     "@singularity/plugin-conversations-spawn-failure": ["@singularity/plugin-conversations-spawn-failure@workspace:plugins/conversations/plugins/spawn-failure"],
 
     "@singularity/plugin-conversations-summary": ["@singularity/plugin-conversations-summary@workspace:plugins/conversations/plugins/summary"],
+
+    "@singularity/plugin-conversations-task-categories": ["@singularity/plugin-conversations-task-categories@workspace:plugins/conversations/plugins/task-categories"],
 
     "@singularity/plugin-conversations-transcript-api": ["@singularity/plugin-conversations-transcript-api@workspace:plugins/conversations/plugins/transcript-api"],
 
@@ -9498,6 +9518,8 @@
 
     "@singularity/plugin-primitives-networking": ["@singularity/plugin-primitives-networking@workspace:plugins/primitives/plugins/networking"],
 
+    "@singularity/plugin-primitives-networking-page-transport": ["@singularity/plugin-primitives-networking-page-transport@workspace:plugins/primitives/plugins/networking/plugins/page-transport"],
+
     "@singularity/plugin-primitives-optimistic-mutation": ["@singularity/plugin-primitives-optimistic-mutation@workspace:plugins/primitives/plugins/optimistic-mutation"],
 
     "@singularity/plugin-primitives-outline": ["@singularity/plugin-primitives-outline@workspace:plugins/primitives/plugins/outline"],
@@ -9685,6 +9707,8 @@
     "@singularity/plugin-reports-crash": ["@singularity/plugin-reports-crash@workspace:plugins/reports/plugins/crash"],
 
     "@singularity/plugin-reports-endpoint-errors": ["@singularity/plugin-reports-endpoint-errors@workspace:plugins/reports/plugins/endpoint-errors"],
+
+    "@singularity/plugin-reports-engine": ["@singularity/plugin-reports-engine@workspace:plugins/reports/plugins/engine"],
 
     "@singularity/plugin-reports-launch-fix": ["@singularity/plugin-reports-launch-fix@workspace:plugins/reports/plugins/launch-fix"],
 

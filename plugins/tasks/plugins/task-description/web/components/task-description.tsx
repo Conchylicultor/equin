@@ -6,7 +6,7 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 import { mapRow, useLiveRow } from "@plugins/network/plugins/live/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import { patchTask, useTask } from "@plugins/tasks/web";
 import { getTask as getTaskEndpoint } from "@plugins/tasks/core";
@@ -32,10 +32,11 @@ function TaskDescriptionInner({
   description: string | null;
 }) {
   const flushAll = useFlushAll();
+  const fetchEndpoint = useFetchEndpoint();
 
   const descField = useEditableField({
     value: description ?? "",
-    onSave: (v) => patchTask(taskId, { description: v }),
+    onSave: (v) => patchTask(fetchEndpoint, taskId, { description: v }),
   });
   useRegisterFlush(descField.flush);
 
@@ -50,7 +51,7 @@ function TaskDescriptionInner({
       taskId,
       prompt: buildTaskPrompt(fresh ?? { ...task, description }),
     };
-  }, [taskId, task, description, flushAll]);
+  }, [taskId, task, description, flushAll, fetchEndpoint]);
 
   return (
     <Stack gap="md">

@@ -14,7 +14,7 @@ import { SavedThemeSchema } from "../core";
  * first injection paints the selected theme, and never collected.
  *
  * A write answers its commit's ack token (`SavedThemeWrite`); a caller waits
- * for this list to have re-read it with `awaitSavedThemesWrite` (web).
+ * for this list to have re-read it with `useAwaitSavedThemesWrite` (web).
  */
 export const savedThemesList = liveValue("saved-themes.list", {
   schema: z.array(SavedThemeSchema),

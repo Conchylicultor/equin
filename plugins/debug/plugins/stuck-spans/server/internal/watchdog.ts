@@ -1,7 +1,7 @@
 import { captureFlightWindow } from "@plugins/infra/plugins/runtime-profiler/core";
 import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/server";
 import { captureTrace } from "@plugins/debug/plugins/trace/plugins/engine/server";
-import { recordReport } from "@plugins/reports/server";
+import { recordReport } from "@plugins/reports/plugins/engine/server";
 import type { ReportSource } from "@plugins/reports/core";
 import { SPAN_STUCK_KIND, type StuckSpanPayload } from "../../core";
 import { stuckSpanMessage } from "../../shared/message";

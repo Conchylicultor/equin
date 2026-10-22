@@ -10,8 +10,8 @@
   - Uses:
     - `auth.Auth`
     - `auth.useAccountStatus`
-    - `infra/endpoints.fetchEndpoint`
     - `infra/endpoints.getEndpointErrorMessage`
+    - `infra/endpoints.useFetchEndpoint`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`

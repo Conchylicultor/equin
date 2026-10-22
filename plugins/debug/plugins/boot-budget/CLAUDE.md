@@ -108,8 +108,8 @@ half-building a loop sampler. See the plan's "Enforcement / visibility" section.
     - `config_v2.ConfigV2`
     - `config_v2.getConfig`
     - `infra/jobs.defineJob`
-    - `reports.recordReport`
     - `reports.ReportKind`
+    - `reports/engine.recordReport`
   - Register: `defineJob('debug.boot-budget-monitor')`
 - Core:
   - Uses:

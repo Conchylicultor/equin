@@ -90,7 +90,6 @@ gap in that plugin.
     - `page.editor.block.onCopy`
   - Uses:
     - `database.db`
-    - `infra/retention.markCascadeBounded`
     - `network/live.serveValue`
     - `page/editor._blocks`
     - `page/editor.BlockLifecycle`

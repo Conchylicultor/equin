@@ -23,6 +23,8 @@ import {
   NotificationsProvider,
   ensureNotificationsClient,
 } from "@plugins/primitives/plugins/live-state/web";
+import { TransportProvider } from "@plugins/primitives/plugins/networking/web";
+import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";
 import { yieldToMain } from "@plugins/primitives/plugins/perfs/plugins/scheduler/web";
 import {
   startBootSpan,
@@ -244,7 +246,20 @@ type BootState =
       coreErrors: PluginLoadError[];
     };
 
+/**
+ * The page root: everything below resolves the page's own server through
+ * `useTransport()` — the context has no default, so this is the one place the
+ * page's transport is mounted (a demo scope points its subtree elsewhere).
+ */
 export default function App() {
+  return (
+    <TransportProvider transport={pageTransport}>
+      <PageApp />
+    </TransportProvider>
+  );
+}
+
+function PageApp() {
   const [state, setState] = useState<BootState>({ phase: "loading-code" });
   // The plugin set lives in the registry, NOT in React state: appending a batch
   // re-renders only the readers of the slots it changed, never App and never
@@ -313,11 +328,12 @@ export default function App() {
     };
 
     void (async () => {
-      // Layer 1 — Transport hoist. Construct the notifications singleton NOW,
-      // before any plugin evaluation, so its leader-election lock request is
-      // queued at t≈0 and the socket opens during a loadPlugins await gap instead
-      // of ~8s later. NotificationsProvider reuses this same singleton.
-      ensureNotificationsClient();
+      // Layer 1 — Transport hoist. Construct the page transport's live-state
+      // pipeline NOW, before any plugin evaluation, so its leader-election lock
+      // request is queued at t≈0 and the socket opens during a loadPlugins await
+      // gap instead of ~8s later. The root NotificationsProvider (under the
+      // same transport) reuses this pipeline.
+      ensureNotificationsClient(pageTransport);
 
       // Layer 3 — partition the registry into the eager substrate (chrome,
       // providers, app shells) and deferred app content.

@@ -1,5 +1,5 @@
 import { queryDeadlineSink } from "@plugins/database/plugins/connection/server";
-import { recordReport } from "@plugins/reports/server";
+import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { dbLog } from "@plugins/database/server";
 import { createQueryDeadlineHandler } from "./handler";
 import { dbQueryDeadlinesServed, deadlineHitRing } from "./resource";

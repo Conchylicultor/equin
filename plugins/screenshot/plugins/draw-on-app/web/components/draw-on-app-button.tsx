@@ -2,7 +2,8 @@ import { useState } from "react";
 import { flushSync } from "react-dom";
 import { captureApp } from "@plugins/screenshot/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { toast } from "@plugins/shell/plugins/notifications/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
 import { attachmentMarkdown } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import { insertIntoImproveDraft } from "@plugins/improve/web";
@@ -13,6 +14,8 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 const gestureIcon = symbol("gesture");
 
 export function DrawOnAppButton() {
+  const fetchEndpoint = useFetchEndpoint();
+  const toast = useToast();
   const [active, setActive] = useState(false);
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const [color, setColor] = useState("#ef4444");
@@ -53,7 +56,12 @@ export function DrawOnAppButton() {
         setChromeVisible(true);
         return;
       }
-      const uploaded = await uploadAttachment(blob, "drawing.png", "image/png");
+      const uploaded = await uploadAttachment(
+        fetchEndpoint,
+        blob,
+        "drawing.png",
+        "image/png",
+      );
       teardown();
       insertIntoImproveDraft(attachmentMarkdown(uploaded.id, "drawing.png"));
     } catch (err) {

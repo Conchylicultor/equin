@@ -30,5 +30,8 @@ export function useCommitClaim(sha: string): CodeClaim<CommitRow> {
       return declined(state.reason);
     case "error":
       return declined(`commit lookup unavailable: ${state.message}`);
+    // No computer to ask (the demo): the token is not claimed as a commit.
+    case "unavailable":
+      return declined(state.message);
   }
 }

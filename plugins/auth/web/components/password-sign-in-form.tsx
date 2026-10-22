@@ -10,7 +10,7 @@ import {
   useEndpointMutation,
 } from "@plugins/infra/plugins/endpoints/web";
 import { signIn } from "@plugins/auth/core";
-import { toast } from "@plugins/shell/plugins/notifications/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 
 /**
  * The sign-in form of any `kind: "password"` provider, inline in its Accounts
@@ -29,6 +29,7 @@ export function PasswordSignInForm({
   usernameLabel?: string;
   signUpUrl?: string;
 }): ReactElement {
+  const toast = useToast();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 

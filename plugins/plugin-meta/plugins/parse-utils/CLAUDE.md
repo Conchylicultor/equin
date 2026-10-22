@@ -150,6 +150,7 @@ caller**. Omitting `path` keeps the `ts` loader — correct only for `.ts`-only 
   - Exports (types):
     - `BarrelExport`
     - `DefaultExportObject`
+    - `EndpointExport`
     - `FsSnapshot`
     - `ImportRef`
     - `MarkerCall`
@@ -159,8 +160,10 @@ caller**. Omitting `path` keeps the `ts` loader — correct only for `.ts`-only 
     - `StringLiteralResult`
   - Exports (values):
     - `defaultExportObjectBody`
+    - `endpointExports`
     - `findImports`
     - `findMarkerCalls`
+    - `hasField`
     - `isPortableServerBarrel`
     - `lineAt`
     - `markerCallSpans`

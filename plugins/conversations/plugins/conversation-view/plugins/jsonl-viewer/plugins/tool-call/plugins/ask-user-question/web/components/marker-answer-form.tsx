@@ -1,5 +1,8 @@
-import { sendConversationTurn } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
-import { answerQuestionDelivery } from "../internal/delivery";
+import { useSendConversationTurn } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
+import {
+  answerQuestionDelivery,
+  useAnswerQuestionAvailability,
+} from "../internal/delivery";
 import { AnswerForm } from "./answer-form";
 import { answerDraftScope } from "./answer-draft";
 import {
@@ -23,6 +26,8 @@ export function MarkerAnswerForm({
   convId: string;
   toolUseId: string;
 }) {
+  const sendConversationTurn = useSendConversationTurn();
+  const availability = useAnswerQuestionAvailability();
   // An answer is a turn: it reaches the agent through the same input box, so it
   // goes through the one send entry point and gets a ledger row and, should it
   // fail, the Retry card. An `answer` draws no in-flight echo — the question
@@ -39,6 +44,7 @@ export function MarkerAnswerForm({
       questions={questions}
       draftScope={answerDraftScope(convId, toolUseId)}
       onSubmit={submit}
+      availability={availability}
     />
   );
 }

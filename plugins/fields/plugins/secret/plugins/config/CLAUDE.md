@@ -26,7 +26,7 @@ The **secret** type's config capability, spanning all four runtimes:
 
 ## Plugin reference
 
-- Description: Secret field type: config-render capability (password input for config-v2.fields.renderer) plus the secretField factory. Secret field type: encrypted storage with set/not-set metadata. Central-side secret config reader for auth providers.
+- Description: Secret field type: config-render capability (password input for config-v2.fields.renderer) plus the secretField factory. Central-side secret config reader for auth providers.
 - Web:
   - Contributes:
     - `Fields.Renderer` "secret" → `Rendered`
@@ -47,16 +47,9 @@ The **secret** type's config capability, spanning all four runtimes:
     - `ui/icons.Icon`
 - Server:
   - Contributes: `resource.declare` "config-v2.secret-meta"
-  - Uses:
-    - `config_v2.getAllDescriptors`
-    - `config_v2.hasFieldStorageProvider`
-    - `config_v2.registerFieldStorageProvider`
-    - `infra/secrets.deleteSecret`
-    - `infra/secrets.getSecret`
-    - `infra/secrets.getSecretMetadata`
-    - `infra/secrets.setSecret`
-    - `network/live.serveValue`
   - Resources: `config-v2.secret-meta` (push, notified)
+- Machine:
+  - Uses: `network/live.serveValue`
 - Central:
   - Uses: `infra/secrets.getSecret`
   - Exports (values): `readSecretConfig`

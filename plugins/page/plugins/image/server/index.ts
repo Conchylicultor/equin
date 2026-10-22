@@ -3,6 +3,7 @@ import { Editor } from "@plugins/page/plugins/editor/server";
 import { imageBlock } from "../core";
 
 export default {
+  portable: true,
   description:
     "Image block type: registers its `data` schema (attachment + width) at the server write boundary.",
   contributions: [Editor.BlockData(imageBlock)],

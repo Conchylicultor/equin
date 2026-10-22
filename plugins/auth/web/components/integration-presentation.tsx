@@ -9,20 +9,31 @@ import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import {
   ResourceErrorInline,
   type ResourceResult,
+  type ResourceUnavailable,
 } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { IntegrationStatus } from "../slots";
 
-/** An integration's status badge: a spinner while unknown, the error control on a failed read. */
+/**
+ * An integration's status badge: a spinner while unknown, the error control on
+ * a failed read, and a muted "Unavailable" (its sentence as the tooltip) where
+ * the status is read off a computer this subtree has none of.
+ */
 export function IntegrationStatusBadge({
   result,
 }: {
-  result: ResourceResult<IntegrationStatus>;
+  result: ResourceResult<IntegrationStatus> | ResourceUnavailable;
 }) {
   switch (result.status) {
     case "loading":
       return <Loading variant="spinner" />;
+    case "unavailable":
+      return (
+        <Badge variant="muted" tooltip={result.message}>
+          Unavailable
+        </Badge>
+      );
     case "error":
       return (
         <ResourceErrorInline

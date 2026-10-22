@@ -16,6 +16,7 @@ export { tasksPreprompt } from "./internal/tables";
 export { getTaskPreprompt, setTaskPreprompt } from "./internal/mutations";
 
 export default {
+  portable: true,
   description:
     "Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, added to the agent's system prompt at launch, after Claude Code's own, as a <special_instructions> block.",
   contributions: [

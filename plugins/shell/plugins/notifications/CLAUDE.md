@@ -27,6 +27,15 @@
   go through the one op table the filter plugin's parity suite pins.
 - `e2e/bell-filter.ts` drives all of it on a deployed build, "View all" included.
 
+## Toasts persist only where there is a bell (`useToast`)
+
+`useToast()` shows the toast at once, then persists it as a notification over
+the subtree's transport (`POST /api/notifications`, served by the machine
+half). That endpoint is `needsMachine` (D4,
+`research/2026-10-22-global-demo-scope-sealed.md`): under a transport with no
+computer behind it (the demo) the toast stays ephemeral — shown, written
+nowhere, no request made.
+
 ## The pane: Debug → Notifications
 
 The popover's **"View all"** (its header) opens `notificationsPane`
@@ -59,7 +68,7 @@ DataView (`web/components/notifications-view.tsx`):
 
 ## Plugin reference
 
-- Description: Persistent bell-button notifications backed by the DB, and Debug → Notifications: every undismissed notification as a DataView (the bell popover's View all). Persistent bell-button notifications backed by the DB.
+- Description: Persistent bell-button notifications backed by the DB, and Debug → Notifications: every undismissed notification as a DataView (the bell popover's View all). Persistent bell-button notifications backed by the DB (the fork exclusion of its table is the machine half's).
 - Web:
   - Slots:
     - `notifications.actions`
@@ -74,9 +83,9 @@ DataView (`web/components/notifications-view.tsx`):
     - `DebugApp.Sidebar` "Notifications"
     - `notification-actions` "open" → `OpenNotificationAction`
     - `notification-actions` "dismiss" → `DismissNotificationAction`
-  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×5
-    - `infra/endpoints` ×2
+    - `infra/endpoints` ×3
     - `primitives/css/coords` ×2
     - `primitives/css/ui-kit` ×2
     - `primitives/cursor-pagination` ×2
@@ -105,8 +114,10 @@ DataView (`web/components/notifications-view.tsx`):
     - `primitives/scope/tab-id.getTabId`
     - `shell/action-bar.ActionBar`
     - `shell/toast.showToast`
-  - Exports (types): `ToastArgs`
-  - Exports (values): `toast`
+  - Exports (types):
+    - `Toast`
+    - `ToastArgs`
+  - Exports (values): `useToast`
 - Server:
   - Contributes:
     - `ids.kind` "notif"
@@ -117,7 +128,6 @@ DataView (`web/components/notifications-view.tsx`):
     - `fork-data-exclusion` "notifications"
   - Uses:
     - `database.db`
-    - `database/admin.ExcludeFromFork`
     - `ids.IdKinds`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
@@ -140,10 +150,12 @@ DataView (`web/components/notifications-view.tsx`):
     - `notifications:rows` (keyed, point)
     - `notifications.unread` (push)
   - Routes:
-    - `POST /api/notifications`
     - `POST /api/notifications/dismiss-all`
     - `POST /api/notifications/mark-all-read`
     - `POST /api/notifications/:id/dismiss`
+- Machine:
+  - Uses: `infra/endpoints.implementMachine`
+  - Routes: `POST /api/notifications`
 - Core:
   - Uses:
     - `fields.FieldsRecord`
@@ -172,10 +184,10 @@ DataView (`web/components/notifications-view.tsx`):
     - `ui/tokens/type-scale` ×7
     - `ui/tokens/density` ×4
     - `ui/tokens/shape --spacing`
-  - Imported by: 31 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 32 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×13
     - `tasks` ×5
-    - `apps` ×2
+    - `apps` ×3
     - `build` ×2
     - `reports` ×2
     - `screenshot` ×2

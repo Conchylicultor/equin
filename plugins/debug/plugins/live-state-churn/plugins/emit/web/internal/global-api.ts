@@ -1,5 +1,8 @@
 import { useEffect } from "react";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import {
+  useFetchEndpoint,
+  type FetchEndpoint,
+} from "@plugins/infra/plugins/endpoints/web";
 import { LIVE_STATE_EMIT_GLOBAL } from "../../core";
 import type { LiveStateEmitGlobal } from "../../core";
 import { startEmit, stopEmit, getEmitStatus } from "../../shared/endpoints";
@@ -16,8 +19,11 @@ declare global {
 
 let installed = false;
 
-/** Install the window-level imperative API. Idempotent. */
-export function installGlobalApi(): void {
+/**
+ * Install the window-level imperative API, over `fetchEndpoint` — the page
+ * root's (the installer is a `Core.Root`, under the page transport). Idempotent.
+ */
+export function installGlobalApi(fetchEndpoint: FetchEndpoint): void {
   if (installed) return;
   installed = true;
   window[LIVE_STATE_EMIT_GLOBAL] = {
@@ -30,8 +36,9 @@ export function installGlobalApi(): void {
 
 /** Invisible component mounted via Core.Root to install the global API once. */
 export function EmitInstaller(): null {
+  const fetchEndpoint = useFetchEndpoint();
   useEffect(() => {
-    installGlobalApi();
-  }, []);
+    installGlobalApi(fetchEndpoint);
+  }, [fetchEndpoint]);
   return null;
 }

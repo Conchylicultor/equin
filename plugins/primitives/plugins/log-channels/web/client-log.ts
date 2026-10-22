@@ -1,6 +1,10 @@
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { fetchEndpointOver } from "@plugins/infra/plugins/endpoints/web";
+import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";
 import { subscribeWsStatus } from "@plugins/primitives/plugins/networking/web";
 import { emitLogs, MAX_EMIT_LINES } from "../core";
+
+// Page-wide telemetry: persisted client logs always reach the page's own server (D3).
+const fetchEndpoint = fetchEndpointOver(pageTransport);
 
 // Browser console.log-style logging that persists to a per-worktree JSONL file
 // the agent can read with `tail`/`cat` — no browser/Playwright needed. Lines are

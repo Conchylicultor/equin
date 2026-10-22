@@ -247,7 +247,7 @@ expandable JSON.
     - `infra/host/duress/shed.ShedSummary`
     - `infra/retention.defineRetention`
     - `network/live.serveCollection`
-    - `reports.recordReport`
+    - `reports/engine.recordReport`
   - DB schema: `plugins/debug/plugins/trace/plugins/engine/server/internal/tables.ts`
   - Exports (types):
     - `TraceEventClassHandle`

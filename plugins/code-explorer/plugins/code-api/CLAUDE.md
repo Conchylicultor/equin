@@ -30,9 +30,10 @@ on the endpoints primitive and `EditedFileSchema` (a pure schema sink in the
 - Core:
   - Uses:
     - `conversations/conversation-view/code.EditedFileSchema`
+    - `infra/endpoints.assetPath`
+    - `infra/endpoints.AssetPath`
     - `infra/endpoints.blob`
     - `infra/endpoints.defineEndpoint`
-    - `infra/endpoints.interpolatePath`
     - `network/live.liveValue`
     - `primitives/commit-list.CommitRowSchema`
   - Exports (types):

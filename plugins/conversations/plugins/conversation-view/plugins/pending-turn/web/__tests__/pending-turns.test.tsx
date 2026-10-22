@@ -12,34 +12,15 @@ const ledger = vi.hoisted(() => ({
   result: { status: "loading", refetch: () => Promise.resolve() } as unknown,
 }));
 
-const posts = vi.hoisted(() => ({
-  /** Every turn request: its route, path params and body. */
-  calls: [] as { route: string; params: unknown; body: unknown }[],
-  /** How the next request settles; `null` keeps it open. */
-  next: "ok" as "ok" | "fail" | null,
-  open: [] as (() => void)[],
-}));
-
 vi.mock("@plugins/network/plugins/live/web", () => ({
   useLive: () => ledger.result,
 }));
 
-vi.mock("@plugins/infra/plugins/endpoints/web", async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  fetchEndpoint: (
-    endpoint: { route: string },
-    params: unknown,
-    init?: { body?: unknown },
-  ) => {
-    posts.calls.push({ route: endpoint.route, params, body: init?.body });
-    if (posts.next === "fail") return Promise.reject(new Error("offline"));
-    if (posts.next === null)
-      return new Promise<void>((resolve) => posts.open.push(resolve));
-    return Promise.resolve({});
-  },
-}));
-
-import { act, renderHook } from "@testing-library/react";
+import { act, renderHook as renderRawHook } from "@testing-library/react";
+import {
+  fakeFetchEndpoint,
+  withTransport,
+} from "@plugins/infra/plugins/endpoints/web/testing";
 import type {
   LedgerTurn,
   TurnId,
@@ -54,10 +35,47 @@ import {
   usePendingTurns,
 } from "../internal/pending";
 import {
-  resendTurn,
-  sendConversationTurn,
+  useResendTurn,
+  useSendConversationTurn,
   useTurnSendInFlight,
 } from "../internal/send";
+
+const posts = {
+  /** How the next request settles; `null` keeps it open. */
+  next: "ok" as "ok" | "fail" | null,
+  open: [] as (() => void)[],
+};
+
+/** The turn requests' endpoint client: records each, settles it per `posts`. */
+const fake = fakeFetchEndpoint(() => {
+  if (posts.next === "fail") return Promise.reject(new Error("offline"));
+  if (posts.next === null)
+    return new Promise<void>((resolve) => posts.open.push(resolve));
+  return undefined;
+});
+
+/** Every turn request: its route, path params and body. */
+const sentRequests = () =>
+  fake.calls.map((c) => ({ route: c.route, params: c.params, body: c.body }));
+
+/** `renderHook` under the fake's transport — the subtree every hook reads. */
+function renderHook<R, P>(
+  hook: (props: P) => R,
+  options: { initialProps?: P } = {},
+) {
+  return renderRawHook(hook, { ...options, wrapper: withTransport(fake) });
+}
+
+/**
+ * The send / Retry of a surface under the fake's transport: they reach the
+ * same store as every hook `renderHook` mounts, so a send shows there.
+ */
+function turnActions() {
+  return renderHook(() => ({
+    send: useSendConversationTurn(),
+    resend: useResendTurn(),
+  })).result.current;
+}
 
 let seq = 0;
 function freshConversation(): string {
@@ -132,7 +150,7 @@ async function settle(): Promise<void> {
 
 afterEach(() => {
   ledger.result = { status: "loading", refetch: () => Promise.resolve() };
-  posts.calls = [];
+  fake.calls.length = 0;
   posts.next = "ok";
   posts.open = [];
 });
@@ -256,6 +274,7 @@ describe("pendingTurnsOf — which ledger states draw a card", () => {
 
 describe("send → optimistic echo → live row", () => {
   it("echoes at once, then hands over to the row written under its id", async () => {
+    const turns = turnActions();
     const conv = freshConversation();
     ready([]);
     posts.next = null;
@@ -267,10 +286,10 @@ describe("send → optimistic echo → live row", () => {
 
     let turnId = "";
     act(() => {
-      turnId = sendConversationTurn(conv, { text: "fix the build" });
+      turnId = turns.send(conv, { text: "fix the build" });
     });
     // The request carries the browser's id: the server writes its row under it.
-    expect(posts.calls).toEqual([
+    expect(sentRequests()).toEqual([
       {
         route: "POST /api/conversations/:id/turn",
         params: { id: conv },
@@ -330,6 +349,7 @@ describe("send → optimistic echo → live row", () => {
   });
 
   it("keeps a failed request as `unsent`, and Retry re-sends the same id", async () => {
+    const turns = turnActions();
     const conv = freshConversation();
     ready([]);
     posts.next = "fail";
@@ -338,7 +358,7 @@ describe("send → optimistic echo → live row", () => {
     );
     let turnId = "";
     act(() => {
-      turnId = sendConversationTurn(conv, { text: "hello" });
+      turnId = turns.send(conv, { text: "hello" });
     });
     await settle();
     const failed = result.current;
@@ -351,9 +371,9 @@ describe("send → optimistic echo → live row", () => {
     ]);
 
     posts.next = "ok";
-    act(() => resendTurn(conv, turnId));
+    act(() => turns.resend(conv, turnId));
     expect(
-      posts.calls.map((c) => (c.body as { turnId: string }).turnId),
+      sentRequests().map((c) => (c.body as { turnId: string }).turnId),
     ).toEqual([turnId, turnId]);
     await settle();
     const resent = result.current;
@@ -383,13 +403,14 @@ describe("useOptimisticConversationStatus", () => {
   });
 
   it("reads working from the instant a turn is sent, until the server can know", async () => {
+    const turns = turnActions();
     const conv = freshConversation();
     ready([]);
     const before = new Date(Date.now() - 1000);
     const { result, rerender } = render(conv, "waiting", before);
     let turnId = "";
     act(() => {
-      turnId = sendConversationTurn(conv, { text: "go" });
+      turnId = turns.send(conv, { text: "go" });
     });
     expect(result.current).toBe("working");
     await settle();
@@ -414,22 +435,24 @@ describe("useOptimisticConversationStatus", () => {
   });
 
   it("does not override statuses other than waiting", () => {
+    const turns = turnActions();
     const conv = freshConversation();
     ready([]);
     const { result } = render(conv, "starting", new Date(Date.now() - 1000));
     act(() => {
-      sendConversationTurn(conv, { text: "go" });
+      turns.send(conv, { text: "go" });
     });
     expect(result.current).toBe("starting");
   });
 
   it("retracts the override when the send fails", async () => {
+    const turns = turnActions();
     const conv = freshConversation();
     ready([]);
     const { result } = render(conv, "waiting", new Date(Date.now() - 1000));
     posts.next = "fail";
     act(() => {
-      sendConversationTurn(conv, { text: "go" });
+      turns.send(conv, { text: "go" });
     });
     expect(result.current).toBe("working");
     await settle();

@@ -10,7 +10,7 @@
   - Uses:
     - `conversations.useConversationById`
     - `conversations/conversation-view.conversationPane`
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLiveRow`
     - `primitives/hover-reveal.hoverRevealTargetInAnchor`
     - `primitives/icon-button.IconButton`

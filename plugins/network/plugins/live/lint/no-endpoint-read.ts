@@ -30,9 +30,11 @@ const createRule = ESLintUtils.RuleCreator<LintRuleDocs>(
  *   read of one off that barrel's module object (a namespace import or an
  *   awaited dynamic import, by member or by destructuring), resolved as
  *   `no-legacy-resource-spelling` does;
- * - a `fetchEndpoint(...)` call (imported from the endpoints barrel, by name
- *   or off its module object) lexically inside a `queryFn` property's value;
- * - a `fetchEndpoint(def, …)` of a GET endpoint, or a `readNdjson(route, …)`
+ * - a `fetchEndpoint(...)` call (the transport-bound client, recognised by the
+ *   name of its binding — `const fetchEndpoint = useFetchEndpoint()`, a
+ *   `fetchEndpoint` parameter; `endpoints/fetch-endpoint-binding-name` keeps
+ *   every binding so named) lexically inside a `queryFn` property's value;
+ * - a `fetchEndpoint(def, …)` of a GET endpoint, or a `readNdjson(transport, route, …)`
  *   over a GET route, that runs as a READ (see "Read context" below);
  * - `invalidateQueries` / `refetchQueries` whose argument names an endpoint
  *   read's query key — `endpointQueryKey(...)`, or the raw
@@ -43,7 +45,7 @@ const createRule = ESLintUtils.RuleCreator<LintRuleDocs>(
  *
  * Decided by the type checker, not by name: the `route` of an `EndpointDef` is
  * its literal route type (`"GET /api/…"`, the `Route` parameter
- * `defineEndpoint` infers), and `readNdjson`'s first argument is the
+ * `defineEndpoint` infers), and `readNdjson`'s second argument (after the transport) is the
  * `.route` of one. A route whose type is not a string literal (a generic
  * wrapper's `EndpointDef<Route, …>`, a widened `string`) cannot be told apart
  * from a GET, so it counts as one: the rule fails toward flagging, and the
@@ -101,9 +103,13 @@ const FETCH_ENDPOINT = "fetchEndpoint";
 const READ_NDJSON = "readNdjson";
 const ENDPOINT_QUERY_KEY = "endpointQueryKey";
 
-/** Each barrel → the plain functions the rule follows calls of. */
+/**
+ * Each barrel → the plain functions the rule follows calls of. The endpoint
+ * client is not one: no barrel exports a fetcher, it is a value bound per
+ * transport and recognised by its binding name (`boundFunction`).
+ */
 const TRACKED_FUNCTIONS: Readonly<Record<string, readonly string[]>> = {
-  [ENDPOINTS_WEB]: [FETCH_ENDPOINT, ENDPOINT_QUERY_KEY],
+  [ENDPOINTS_WEB]: [ENDPOINT_QUERY_KEY],
   [NDJSON_WEB]: [READ_NDJSON],
 };
 
@@ -380,6 +386,18 @@ export default createRule({
       const def = definitionOf(local);
       if (def === undefined) return null;
       const node: TSESTree.Node = def.node;
+      // The transport-bound endpoint client is a VALUE — `const fetchEndpoint
+      // = useFetchEndpoint()`, a `fetchEndpoint: FetchEndpoint` parameter, a
+      // destructured `{ fetchEndpoint }` — and every binding of it carries
+      // that name (`endpoints/fetch-endpoint-binding-name`), so any local
+      // binding of the name is the client.
+      if (
+        local.name === FETCH_ENDPOINT &&
+        node.type !== "ImportSpecifier" &&
+        def.type !== "FunctionName" &&
+        def.type !== "ClassName"
+      )
+        return FETCH_ENDPOINT;
       if (node.type === "ImportSpecifier") {
         if (node.parent.type !== "ImportDeclaration") return null;
         const imported = propertyName(node.imported);
@@ -596,9 +614,9 @@ export default createRule({
       );
     };
 
-    /** Whether a `readNdjson(route, …)` call's route may be a GET. */
+    /** Whether a `readNdjson(transport, route, …)` call's route may be a GET. */
     const streamMayBeGet = (call: TSESTree.CallExpression): boolean => {
-      const route = call.arguments[0];
+      const route = call.arguments[1];
       if (route === undefined || route.type === "SpreadElement") return true;
       const { program, esTreeNodeToTSNodeMap } = typeServices();
       const checker = program.getTypeChecker();
@@ -651,6 +669,9 @@ export default createRule({
 
     return {
       Program(node) {
+        // The endpoint client is recognised by its binding name wherever it
+        // is bound (see `boundFunction`).
+        functionLocals.add(FETCH_ENDPOINT);
         // Imports are always top-level, so every namespace / tracked-function
         // local is known before any read of it is visited.
         for (const stmt of node.body) {

@@ -1,10 +1,9 @@
 import { basename } from "node:path";
-import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { hostFsStat, type HostFsStatResult } from "../../core";
+import type { HostFsStatResult } from "../../core";
 import { locateHostPath } from "./archive/locate";
 import { statArchiveMember } from "./archive/read";
 import { describeEntry } from "./entry";
-import { classifyFsError, parentOf, resolveHostPath } from "./path";
+import { classifyFsError, parentOf } from "./path";
 
 /** Describe the absolute host path `path` (the root `/` is named `/`). */
 export async function statHostPath(path: string): Promise<HostFsStatResult> {
@@ -25,7 +24,3 @@ export async function statHostOrArchivePath(
     ? statArchiveMember(path, located)
     : statHostPath(path);
 }
-
-export const handleStat = implement(hostFsStat, ({ query }) =>
-  statHostOrArchivePath(resolveHostPath(query.path)),
-);

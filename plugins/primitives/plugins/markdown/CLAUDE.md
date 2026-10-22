@@ -20,6 +20,15 @@ element, whose pad, corners, hairline and type are theme tokens (density
 caption look. It has no notion of a span's *kind* (path, keyword, removed
 token), so a theme can border every chip but cannot tint one kind.
 
+**`/api` addresses are the page's.** The base `img` and `a` render an
+`/api/…` address (relative, or absolute on the page's origin) as plain text
+when the subtree's transport serves no URL (`useTransport().servesUrls` —
+an in-browser server, the demo), so persisted markdown never loads from the
+page's real server inside a scope; an enhancer that can resolve the address
+over the transport (`markdown-extensions`' `img-enhancer`: an attachment →
+`AssetPath`) overrides them. So `<Markdown>` renders under a
+`<TransportProvider>`, like every server-backed primitive.
+
 Design rationale lives in:
 
 - `research/2026-05-07-primitives-shared-markdown.md`
@@ -43,6 +52,7 @@ Design rationale lives in:
     - `primitives/css/ui-kit.ControlSizeProvider`
     - `primitives/latest-ref.useLatestRef`
     - `primitives/lazy-component.lazyComponent`
+    - `primitives/networking.useTransport`
     - `primitives/syntax-highlight.HighlightedCode`
     - `primitives/syntax-highlight/code-preview.useCodePreviewRenderer`
     - `primitives/view-switcher.ViewSwitcher`

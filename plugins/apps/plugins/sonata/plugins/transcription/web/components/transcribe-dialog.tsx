@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { DialogTitle } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { LaunchAgentForm } from "@plugins/primitives/plugins/launch/web";
 import { workspaceLaunchOption } from "@plugins/conversations/plugins/workspace/plugins/launch-option/core";
 import { openSongImperative } from "@plugins/apps/plugins/sonata/plugins/library/web";
@@ -19,6 +19,7 @@ const OWNED_OPTIONS = [workspaceLaunchOption];
  * transcribing until the agent submits its score.
  */
 export function TranscribeDialog({ onClose }: { onClose: () => void }) {
+  const fetchEndpoint = useFetchEndpoint();
   // The song `getRequest` prepared, opened once the launch is filed.
   const prepared = useRef<{ id: string; title: string } | null>(null);
   return (

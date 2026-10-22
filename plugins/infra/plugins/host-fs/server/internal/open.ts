@@ -1,10 +1,9 @@
 import { stat } from "node:fs/promises";
-import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
 import { namespaceFromHost } from "@plugins/infra/plugins/namespace/core";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
-import { hostFsOpen, type HostFsOpenResult } from "../../core";
+import type { HostFsOpenResult } from "../../core";
 import { locateHostPath } from "./archive/locate";
-import { classifyFsError, resolveHostPath } from "./path";
+import { classifyFsError } from "./path";
 
 // `open` hands the path to LaunchServices and returns at once; ten seconds is
 // far past any healthy answer, so only a wedged child reaches it.
@@ -47,19 +46,3 @@ export async function openHostPath(
   await spawnExpectOk(openArgv(target, reveal), { timeoutMs: OPEN_TIMEOUT_MS });
   return { kind: "opened", path: target };
 }
-
-export const handleOpen = implement(hostFsOpen, ({ body, req }) => {
-  if (!isAppOrigin(req.headers.get("origin"))) {
-    throw new HttpError(
-      403,
-      "Open is only accepted from the app's own *.localhost origin",
-    );
-  }
-  if (process.platform !== "darwin") {
-    throw new HttpError(
-      501,
-      `Open with default app is macOS-only (this host is ${process.platform})`,
-    );
-  }
-  return openHostPath(resolveHostPath(body.path), body.reveal ?? false);
-});

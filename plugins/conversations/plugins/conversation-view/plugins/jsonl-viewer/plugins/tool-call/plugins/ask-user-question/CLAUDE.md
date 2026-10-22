@@ -91,11 +91,11 @@ answer lives inside the tool result, not in a message a rewind can cut at.
     - `conversations/conversation-view/jsonl-viewer/row-actions` ×2
     - `conversations/conversation-view/jsonl-viewer` ×2
     - `primitives/css/selection-indicator` ×2
-    - `conversations/conversation-view/pending-turn.sendConversationTurn`
+    - `conversations/conversation-view/pending-turn.useSendConversationTurn`
     - `conversations/conversation-view/rewind.useGoBackToMessage`
     - `conversations/conversation-view.conversationPane`
     - `conversations.useConversation`
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useMachineAvailability`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
@@ -113,11 +113,8 @@ answer lives inside the tool result, not in a message a rewind can cut at.
     - `answerDraftScope`
     - `AnswerForm`
     - `QuestionCard`
-- Server:
-  - Uses:
-    - `conversations.submitTurn`
-    - `infra/endpoints.HttpError`
-    - `infra/endpoints.implement`
+- Machine:
+  - Uses: `infra/endpoints.implementMachine`
   - Routes: `POST /api/conversations/:id/answer-question`
 - Cross-plugin:
   - Uses tokens:

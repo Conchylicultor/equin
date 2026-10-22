@@ -1,7 +1,10 @@
 import { useState, type ReactNode } from "react";
 import type { ContextReading, ContextUsage } from "@plugins/conversations/core";
 import { formatTokenCount } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
-import { sendConversationTurn } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
+import {
+  useSendConversationTurn,
+  useTurnSendAvailability,
+} from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import {
   Inset,
   Stack,
@@ -62,7 +65,11 @@ export function ContextCard({
   onCompacted: () => void;
 }) {
   const [instructions, setInstructions] = useState("");
+  const sendConversationTurn = useSendConversationTurn();
+  // Compacting is a turn: on a host without the computer it is disabled.
+  const sendAvailability = useTurnSendAvailability();
   const compact = () => {
+    if (!sendAvailability.available) return;
     const focus = instructions.trim();
     sendConversationTurn(conversationId, {
       text: focus ? `/compact ${focus}` : "/compact",
@@ -96,7 +103,13 @@ export function ContextCard({
           }}
         />
         <Stack direction="row" justify="end" gap="none">
-          <Button onClick={compact}>
+          <Button
+            onClick={compact}
+            disabled={!sendAvailability.available}
+            tooltip={
+              sendAvailability.available ? undefined : sendAvailability.message
+            }
+          >
             <Icon icon={compactIcon} />
             Compact
           </Button>

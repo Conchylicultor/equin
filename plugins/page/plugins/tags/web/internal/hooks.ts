@@ -5,7 +5,7 @@ import {
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import { useOptimisticResource } from "@plugins/primitives/plugins/optimistic-mutation/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   pageTagAssignments,
   pageTagVocabulary,
@@ -120,6 +120,7 @@ type SetTags = { tagIds: string[] };
 export function usePageTagsEditor(
   pageId: string,
 ): ResourceResult<PageTagsEditor> {
+  const fetchEndpoint = useFetchEndpoint();
   const assignment = useOptimisticResource(
     pageTagAssignments,
     { ids: [pageId] },

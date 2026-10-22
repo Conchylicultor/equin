@@ -7,4 +7,5 @@ export const generateConversationSummary = defineEndpoint({
     spawnedConversationId: z.string(),
     turnCount: z.number(),
   }),
+  needsMachine: { feature: "Summarising a conversation" },
 });

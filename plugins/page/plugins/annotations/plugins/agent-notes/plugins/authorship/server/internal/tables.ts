@@ -31,7 +31,7 @@ import { _blocks } from "@plugins/page/plugins/editor/server";
 // ## Growth bound
 //
 // The `block_id` FK CASCADE is the reclaim: rows die with the card. Asserted at
-// boot by `markCascadeBounded` (see ../internal/growth-bound.ts) rather than
+// boot by `markCascadeBounded` (see ../../machine/internal/growth-bound.ts) rather than
 // trusted. Note `page_blocks` SOFT-deletes (trash), so the cascade fires at
 // purge, not at the user's delete — the provenance survives a restore.
 //

@@ -135,9 +135,11 @@ function OffChain({
                 <Text as="span" variant="caption" tone="muted">
                   {reading.kind === "unplaceable"
                     ? reading.reason
-                    : truncated
-                      ? `more than ${CHAIN_CAP} commits behind`
-                      : "not among the commits above"}
+                    : reading.kind === "unavailable"
+                      ? reading.message
+                      : truncated
+                        ? `more than ${CHAIN_CAP} commits behind`
+                        : "not among the commits above"}
                 </Text>
               )}
             </>
@@ -428,6 +430,8 @@ function DeploymentChainBody() {
   const reading = useDeployment();
 
   if (reading.status === "loading") return <Loading variant="rows" count={2} />;
+  if (reading.status === "unavailable")
+    return <Placeholder>{reading.message}</Placeholder>;
   if (reading.status === "error") {
     return (
       <ResourceErrorInline

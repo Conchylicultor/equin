@@ -55,7 +55,7 @@ fields read.
     - `primitives/css/ui-kit` ×2
     - `primitives/live-state` ×2
     - `tasks/task-detail` ×2
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`

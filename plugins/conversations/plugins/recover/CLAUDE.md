@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Sidebar entry + pane listing recently-closed conversations with restore buttons. Batch-restore recently-closed conversations that were killed by a crash.
+- Description: Sidebar entry + pane listing recently-closed conversations with restore buttons.
 - Web:
   - Slots: `recoveryPane.Actions`
   - Slot contributors: `recoveryPane.Actions` ← `primitives.pane`
@@ -13,7 +13,8 @@
     - `DebugApp.Sidebar` "Recovery"
   - Uses:
     - `apps/debug/shell.DebugApp`
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
+    - `infra/endpoints.useMachineAvailability`
     - `network/live.useLive`
     - `primitives/css/fill.fillClasses`
     - `primitives/css/placeholder.Placeholder`
@@ -30,10 +31,8 @@
     - `primitives/pane.Pane`
     - `ui/icons.Icon`
   - Exports (values): `recoveryPane`
-- Server:
-  - Uses:
-    - `conversations.resumeConversation`
-    - `infra/endpoints.implement`
+- Machine:
+  - Uses: `infra/endpoints.implementMachine`
   - Routes: `POST /api/conversations-recover/restore-batch`
 - Cross-plugin:
   - Uses tokens:

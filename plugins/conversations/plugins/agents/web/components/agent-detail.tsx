@@ -27,9 +27,9 @@ import {
 } from "@plugins/primitives/plugins/avatar/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import {
-  fetchEndpoint,
   useFetchEndpoint,
   useMachineAvailability,
+  type FetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
 import {
   launchAgent,
@@ -53,7 +53,11 @@ type Patch = Partial<{
   iconColor: string | null;
 }>;
 
-async function patchAgent(id: string, patch: Patch) {
+async function patchAgent(
+  fetchEndpoint: FetchEndpoint,
+  id: string,
+  patch: Patch,
+) {
   await fetchEndpoint(updateAgent, { id }, { body: patch });
 }
 
@@ -89,13 +93,13 @@ function AgentDetailInner({
   const unavailable = launchAvailability.available
     ? null
     : launchAvailability.message;
-  const fetchMachineEndpoint = useFetchEndpoint();
+  const fetchEndpoint = useFetchEndpoint();
 
   const save = useCallback(
     async (patch: Patch) => {
-      await patchAgent(agentId, patch);
+      await patchAgent(fetchEndpoint, agentId, patch);
     },
-    [agentId],
+    [agentId, fetchEndpoint],
   );
 
   // The avatar's status dot. A failed launches read draws no dot, the same as
@@ -136,7 +140,7 @@ function AgentDetailInner({
     setLaunching(true);
     try {
       await promptField.flush();
-      const result = await fetchMachineEndpoint(
+      const result = await fetchEndpoint(
         launchAgent,
         { id: agentId },
         { body: {} },

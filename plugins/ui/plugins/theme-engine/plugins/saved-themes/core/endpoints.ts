@@ -9,7 +9,7 @@ import { FragmentEditSchema } from "./fragment-edit";
 
 // The list is read live (`saved-themes.list`, shared/resources.ts); every write
 // below answers its commit's ack token, so a caller can wait for that list to
-// have it (`awaitSavedThemesWrite`, web).
+// have it (`useAwaitSavedThemesWrite`, web).
 
 const createFields = {
   label: z.string().min(1),

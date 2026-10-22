@@ -1,30 +1,48 @@
 // Await a server write on a live read the caller does not overlay: resolve once
-// the page's live tuple has re-read the write's commit — the same causal
-// confirmation `useOptimisticResource` applies to its ops (Rule A, the `ackTx`
+// the enclosing pipeline's live tuple has re-read the write's commit — the same
+// causal confirmation `useOptimisticResource` applies to its ops (Rule A, the `ackTx`
 // channel, and the snapshot-watermark floor), as a promise.
 
+import { useMemo } from "react";
 import type { QueryCache } from "@tanstack/react-query";
 import {
-  ensureNotificationsClient,
   queryKeyFor,
   ResourceError,
+  useNotificationsClient,
   type LiveRegistries,
 } from "@plugins/primitives/plugins/live-state/web";
 import { compareTxWatermark } from "@plugins/primitives/plugins/live-state/core";
 import type { LiveValue } from "@plugins/network/plugins/live/core";
 import { resolveOptimisticSource } from "./source";
 
-/** The pipeline a wait listens on — the page's own, or a test's. */
+/** The pipeline a wait listens on — the subtree's own, or a test's. */
 export interface AwaitWritePipeline {
   registries: LiveRegistries;
   queryCache: QueryCache;
 }
 
 /**
- * Resolve once the page's live read of `value` (at `params`) has re-read the
- * write whose ack token is `watermark` — so a caller that wrote can act on the
- * result (select a saved theme, report a row gone) without a frame where the
- * read disagrees.
+ * `awaitResourceWrite`, bound to a pipeline: resolve once that pipeline's live
+ * read of `value` (at `params`) has re-read the write whose ack token is
+ * `watermark`.
+ */
+export interface AwaitResourceWrite {
+  <Data>(
+    value: LiveValue<Data, Record<string, never>>,
+    watermark: string,
+  ): Promise<void>;
+  <Data, P extends Record<string, string>>(
+    value: LiveValue<Data, P>,
+    params: P,
+    watermark: string,
+  ): Promise<void>;
+}
+
+/**
+ * The enclosing live-state pipeline's `awaitResourceWrite` — the one whose
+ * registries and cache the subtree's live reads go through (the page's, or a
+ * demo scope's), so a caller that wrote can act on the result (select a saved
+ * theme, report a row gone) without a frame where the read disagrees.
  *
  * Confirmed when a frame for the tuple named the commit in its `ackTx` (the
  * change feed's recompute), or a frame's snapshot watermark is strictly past
@@ -36,39 +54,39 @@ export interface AwaitWritePipeline {
  * failed before the write is confirmed: a read that cannot recompute will
  * never confirm, and the caller reports that rather than hanging. Push-based:
  * it listens to the ack registry and the query cache, never polls. It does not
- * subscribe the tuple — the caller's mounted read does.
+ * subscribe the tuple — the caller's mounted read does. Stable per pipeline.
  */
-export function awaitResourceWrite<Data>(
-  value: LiveValue<Data, Record<string, never>>,
-  watermark: string,
-): Promise<void>;
-export function awaitResourceWrite<Data, P extends Record<string, string>>(
-  value: LiveValue<Data, P>,
-  params: P,
-  watermark: string,
-): Promise<void>;
-export function awaitResourceWrite(
-  value: object,
-  second: Record<string, string> | string,
-  third?: string,
-): Promise<void> {
-  const client = ensureNotificationsClient();
-  const { resource, params } =
-    typeof second === "string"
-      ? resolveOptimisticSource(value, undefined)
-      : resolveOptimisticSource(value, second);
-  return awaitWriteOn(
-    {
-      registries: client.registries,
-      queryCache: client.queryClient.getQueryCache(),
-    },
-    resource.key,
-    params,
-    typeof second === "string" ? second : third!,
-  );
+export function useAwaitResourceWrite(): AwaitResourceWrite {
+  const client = useNotificationsClient();
+  return useMemo(() => awaitResourceWriteOn(client), [client]);
 }
 
-/** `awaitResourceWrite` on an explicit pipeline (the testable core). */
+function awaitResourceWriteOn(
+  client: ReturnType<typeof useNotificationsClient>,
+): AwaitResourceWrite {
+  const pipeline: AwaitWritePipeline = {
+    registries: client.registries,
+    queryCache: client.queryClient.getQueryCache(),
+  };
+  return ((
+    value: object,
+    second: Record<string, string> | string,
+    third?: string,
+  ): Promise<void> => {
+    const { resource, params } =
+      typeof second === "string"
+        ? resolveOptimisticSource(value, undefined)
+        : resolveOptimisticSource(value, second);
+    const watermark = typeof second === "string" ? second : third;
+    if (watermark === undefined)
+      throw new Error(
+        `awaitResourceWrite(${resource.key}): params given without a watermark`,
+      );
+    return awaitWriteOn(pipeline, resource.key, params, watermark);
+  }) as AwaitResourceWrite;
+}
+
+/** `useAwaitResourceWrite` on an explicit pipeline (the testable core). */
 export function awaitWriteOn(
   pipeline: AwaitWritePipeline,
   key: string,

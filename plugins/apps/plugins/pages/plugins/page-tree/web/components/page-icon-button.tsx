@@ -13,8 +13,8 @@ import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
-  recordUsage,
   useRecentUsage,
+  useRecordUsage,
 } from "@plugins/primitives/plugins/usage-rank/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -64,6 +64,7 @@ export function PageIconPicker({
   footerActions?: PageIconFooterActions;
 }) {
   const [open, setOpen] = useState(false);
+  const recordUsage = useRecordUsage();
   const hasIcon = value.icon != null;
   const close = () => setOpen(false);
 

@@ -9,8 +9,13 @@ registerBlockPasteHandler({
   id: "file",
   type: fileBlock.type,
   accept: "*",
-  build: async (file) => {
-    const res = await uploadAttachment(file, file.name, file.type);
+  build: async (file, { fetchEndpoint }) => {
+    const res = await uploadAttachment(
+      fetchEndpoint,
+      file,
+      file.name,
+      file.type,
+    );
     return {
       attachmentId: res.id,
       filename: res.filename,

@@ -10,7 +10,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { themeSelectionConfig } from "@plugins/ui/plugins/theme-engine/core";
 import { useThemeScopeId } from "@plugins/ui/plugins/theme-engine/web";
-import { awaitSavedThemesWrite } from "@plugins/ui/plugins/theme-engine/plugins/saved-themes/web";
+import { useAwaitSavedThemesWrite } from "@plugins/ui/plugins/theme-engine/plugins/saved-themes/web";
 import { importTweakcnTheme } from "@plugins/ui/plugins/tweakcn/core";
 
 /** Extract a bare theme ID from a tweakcn URL or raw ID string. */
@@ -54,6 +54,7 @@ export function ImportByUrlSection() {
   const [input, setInput] = useState("");
 
   const importMutation = useEndpointMutation(importTweakcnTheme);
+  const awaitSavedThemesWrite = useAwaitSavedThemesWrite();
 
   const handleImport = async () => {
     const themeId = parseThemeId(input);

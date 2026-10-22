@@ -12,7 +12,7 @@ import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import {
@@ -129,6 +129,7 @@ function defaultForm() {
 }
 
 export function BroadcastsPanel() {
+  const fetchEndpoint = useFetchEndpoint();
   // Live: the file's own watch pushes every change, the pane's saves included.
   const result = useLive(broadcastEntries);
   // The loaded file, for the edits: each rewrites it whole, so neither a
@@ -178,7 +179,7 @@ export function BroadcastsPanel() {
         setSaving(false);
       }
     },
-    [],
+    [fetchEndpoint],
   );
 
   // Every edit rewrites the file from the entries on screen, so it waits for

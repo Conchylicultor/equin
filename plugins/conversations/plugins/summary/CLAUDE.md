@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags, next action. Curated by Sonnet via MCP. Append-only history.
+- Description: Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags, next action, served live. Curated by Sonnet via MCP (the tool is the machine half's). Append-only history.
 - Web:
   - Slots: `conv-summary.actions`
   - Slot contributors: `conv-summary.actions` ← `primitives.pane`
@@ -23,7 +23,7 @@
     - `primitives/css/badge.Badge`
     - `primitives/css/text.Text`
     - `primitives/loading.Loading`
-    - `shell/notifications.toast`
+    - `shell/notifications.useToast`
     - `ui/icons.Icon`
 - Server:
   - Contributes:
@@ -32,28 +32,19 @@
     - `resource.declare` "conversation-summaries:groups"
     - `resource.declare` "conversation-summaries:rows"
   - Uses:
-    - `conversations.createConversation`
-    - `conversations.deleteConversation`
-    - `conversations.readConversationTurns`
-    - `conversations.Turn`
-    - `conversations/model-provider/catalog.getModelCatalog`
-    - `database.db`
     - `ids.IdKinds`
-    - `infra/endpoints.HttpError`
-    - `infra/endpoints.implement`
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`
-    - `infra/mcp.Mcp`
     - `network/live.serveCollection`
-    - `tasks/tasks-core.getConversation`
-    - `tasks/tasks-core.getTask`
   - DB schema: `plugins/conversations/plugins/summary/server/internal/tables.ts`
   - Exports (values): `_conversationSummaries`
-  - Register: `mcpTool('submit_conversation_summary')`
   - Resources:
     - `conversation-summaries` (keyed, window)
     - `conversation-summaries:groups` (push)
     - `conversation-summaries:rows` (keyed, point)
+- Machine:
+  - Uses: `infra/endpoints.implementMachine`
+  - Register: `mcpTool('submit_conversation_summary')`
   - Routes: `POST /api/conversation-summary/:conversationId/generate`
 - Core:
   - Uses:
@@ -101,8 +92,6 @@
     - `ui/tokens/type-scale --line-height-3xs`
     - `ui/tokens/type-scale --line-height-body`
     - `ui/tokens/type-scale --line-height-caption`
-- Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/handle-generate.ts` (debt)
 - Shared:
   - Exports (values): `generateConversationSummary`
 

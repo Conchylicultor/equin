@@ -1,6 +1,6 @@
 import {
-  fetchEndpoint,
   EndpointError,
+  type FetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
 import { disconnect as disconnectEndpoint } from "@plugins/auth/core";
 import {
@@ -92,7 +92,9 @@ export function startConnectFlow(args: ConnectArgs): Promise<ConnectResult> {
   });
 }
 
+/** Disconnect `providerId`, through the caller's `fetchEndpoint` (`useFetchEndpoint()`). */
 export async function disconnect(
+  fetchEndpoint: FetchEndpoint,
   providerId: string,
   accountId?: string,
 ): Promise<void> {

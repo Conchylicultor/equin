@@ -3,6 +3,7 @@ import { Editor } from "@plugins/page/plugins/editor/server";
 import { dividerBlock } from "../core";
 
 export default {
+  portable: true,
   description:
     "Divider block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like injected text.",
   contributions: [Editor.BlockData(dividerBlock)],

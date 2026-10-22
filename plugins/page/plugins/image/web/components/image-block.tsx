@@ -4,9 +4,11 @@ import { attachmentUrl } from "@plugins/primitives/plugins/text-editor/plugins/p
 import {
   ImageGallery,
   MissingImage,
+  UnloadedAssetImage,
   useImageLoad,
   useImageViewerTrigger,
 } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
+import { useAssetSrc } from "@plugins/infra/plugins/endpoints/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -60,20 +62,35 @@ export function ImageBlock({ block, isFocused, editor }: BlockRendererProps) {
   );
 }
 
-function FilledImageBlock({
-  attachmentId,
-  width,
-  alt,
-  editor,
-}: {
+interface FilledImageBlockProps {
   attachmentId: string;
   width: number;
   alt?: string;
   editor: BlockRendererProps["editor"];
-}) {
+}
+
+/** The image's bytes, over the subtree's transport (`useAssetSrc`), then the block. */
+function FilledImageBlock(props: FilledImageBlockProps) {
+  const src = useAssetSrc(attachmentUrl(props.attachmentId));
+  if (src.kind !== "ready") {
+    return (
+      <Inset x={BLOCK_INSET} y="xs">
+        <UnloadedAssetImage src={src} name={props.alt || "Image"} />
+      </Inset>
+    );
+  }
+  return <LoadedImageBlock {...props} src={src.src} />;
+}
+
+function LoadedImageBlock({
+  attachmentId,
+  width,
+  alt,
+  editor,
+  src,
+}: FilledImageBlockProps & { src: string }) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [liveWidth, setLiveWidth] = useState<number | null>(null);
-  const src = attachmentUrl(attachmentId);
   // A click on the resizable <img> opens the full-window viewer.
   const viewerTrigger = useImageViewerTrigger<HTMLImageElement>({
     src,

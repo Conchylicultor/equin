@@ -32,7 +32,8 @@
 // unfixed code. Registering the fixtures IS the test.
 
 import { afterEach, describe, expect, it } from "vitest";
-import { act, cleanup, render } from "@testing-library/react";
+import { act, cleanup } from "@testing-library/react";
+import { renderWithTransport } from "@plugins/primitives/plugins/networking/web/testing";
 import { useEffect, useMemo } from "react";
 import { z } from "zod";
 import {
@@ -204,7 +205,7 @@ function mount(initialBlocks: Block[]): Harness {
     );
   }
 
-  render(
+  renderWithTransport(
     <PluginProvider plugins={plugins}>
       <UndoRedoProvider>
         <Host />

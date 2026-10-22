@@ -127,6 +127,11 @@ export function useThemeGallery(): ThemeGallery {
   const selection = useConfigResult(themeSelectionConfig, { scopeId });
   const scopeLabel = useScopeLabel();
   const sources = ThemeEngine.ThemeSource.useContributions();
+  // ThemeSource contributions are static slot entries; the count never
+  // changes, so calling each browse source's hook here keeps hook order stable.
+  const adopters = sources.flatMap((s) =>
+    s.kind === "browse" ? [{ id: s.id, adopt: s.useAdopt() }] : [],
+  );
   const selectTheme = useSetConfig(themeSelectionConfig, { scopeId });
   const [adoptingKey, setAdoptingKey] = useState<string | null>(null);
 
@@ -181,10 +186,8 @@ export function useThemeGallery(): ThemeGallery {
       selectTheme("theme", target.theme.id);
       return;
     }
-    const source = sources.find(
-      (s) => s.kind === "browse" && s.id === target.sourceId,
-    );
-    if (source?.kind !== "browse") {
+    const source = adopters.find((s) => s.id === target.sourceId);
+    if (source === undefined) {
       throw new Error(
         `[theme-gallery] row "${row.key}" comes from browse source "${target.sourceId}", which is not registered`,
       );

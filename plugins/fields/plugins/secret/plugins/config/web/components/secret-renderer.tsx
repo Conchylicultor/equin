@@ -71,6 +71,19 @@ const SecretRenderer = defineFieldShape({
           ),
         };
       }
+      // A host without the computer (the demo's browser worker) holds no
+      // secrets store: say so instead of offering an input it cannot keep.
+      if (metaResult.status === "unavailable") {
+        return {
+          kind: "value",
+          fit: "field",
+          control: (
+            <Text variant="caption" tone="muted">
+              {metaResult.message}
+            </Text>
+          ),
+        };
+      }
       isSet = metaResult.data[ctx.fieldKey]?.set ?? false;
     }
     if (isSet && !editing) {

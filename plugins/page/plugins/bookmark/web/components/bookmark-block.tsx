@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { useAssetSrc } from "@plugins/infra/plugins/endpoints/web";
 import { attachmentUrl } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
@@ -178,6 +179,12 @@ function FetchingBookmarkBlock({
           </Text>
           {preview.status === "error" ? (
             <ResourceErrorInline error={preview.error} variant="inline" />
+          ) : preview.status === "unavailable" ? (
+            // No computer behind the app to fetch the page: say so, and leave
+            // the block unfetched so a host with one fills it in.
+            <Text variant="caption" tone="muted">
+              {preview.message}
+            </Text>
           ) : (
             <Loading variant="text" label="Fetching preview…" />
           )}
@@ -199,7 +206,21 @@ function PreviewImage({
   attachmentId: string;
   className: string;
 }) {
-  const src = attachmentUrl(attachmentId);
+  // Decoration: until its bytes are loadable over the subtree's transport
+  // (`useAssetSrc`), or where they cannot be, the card reads as a link
+  // without one.
+  const asset = useAssetSrc(attachmentUrl(attachmentId));
+  if (asset.kind !== "ready") return null;
+  return <LoadedPreviewImage src={asset.src} className={className} />;
+}
+
+function LoadedPreviewImage({
+  src,
+  className,
+}: {
+  src: string;
+  className: string;
+}) {
   const { load, imgKey, imgProps } = useImageLoad(src);
   if (load.kind === "failed") return null;
   return (

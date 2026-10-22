@@ -73,7 +73,7 @@ That is working as designed, not a bug to fix by weakening termination.
 ## Why it is a leaf
 
 `deployment/**` must NEVER import `build/server`. The reconciler
-(`build/server/internal/reconcile.ts`) lives where `triggerBuild` already is and
+(`build/machine/internal/reconcile.ts`) lives where `triggerBuild` already is and
 imports DOWN into this plugin. That direction is what keeps the plugin graph a
 DAG. If you find yourself wanting the reverse edge, the thing you want belongs
 in the reconciler.
@@ -211,29 +211,11 @@ convergence mechanisms all missing it) and the design.
 
 ## Plugin reference
 
-- Description: The client half of the deployment description: `useDeployment()` composes THIS tab's own baked pin in beside the server's two deployable carriers, and `<DeploymentChain/>` renders the four arms — one commit row when converged, the chain with a carrier chip on each carrier's own commit when behind, and the raw pins plus the reason when there is no line to draw. Also eagerly registers the boot-critical build.deployment resource descriptor so boot-snapshot can hydrate it before first paint. The deployment description: this checkout's HEAD (the target) plus a pin per deployable carrier — the backend process and the frontend bundle it serves — and the one derived verdict (converged / behind / diverged / unknown) both the Build button and the auto-build decision read. A leaf: it never imports build/server, so the reconciler that owns triggerBuild can import DOWN into it.
+- Description: The client half of the deployment description: `useDeployment()` composes THIS tab's own baked pin in beside the server's two deployable carriers, and `<DeploymentChain/>` renders the four arms — one commit row when converged, the chain with a carrier chip on each carrier's own commit when behind, and the raw pins plus the reason when there is no line to draw. Also eagerly registers the boot-critical build.deployment resource descriptor so boot-snapshot can hydrate it before first paint.
 - Server:
   - Contributes:
     - `resource.declare` "build.chain-from"
     - `resource.declare` "build.deployment"
-  - Uses:
-    - `build/server-build-id.getServerCommit`
-    - `build/server-build-id.getServerGraphHash`
-    - `infra/git/git-read-cache.createSignedMemo`
-    - `infra/git/git-watcher.refHeadServed`
-    - `infra/paths.GIT`
-    - `infra/paths.REPO_ROOT`
-    - `network/live.serveValue`
-    - `primitives/commit-list.LOG_FORMAT`
-    - `primitives/commit-list.parseGitLog`
-    - `primitives/commit-list.runGit`
-    - `primitives/commit-list.tryRunGit`
-    - `primitives/commit-list.WorktreeGoneError`
-  - Exports (values):
-    - `deploymentServed`
-    - `readDeployment`
-    - `readDeploymentState`
-    - `serverPin`
   - Resources:
     - `build.chain-from` (push, notified)
     - `build.deployment` (push, notified)
@@ -255,12 +237,20 @@ convergence mechanisms all missing it) and the design.
     - `primitives/live-state.mapResource`
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/live-state.ResourceResult`
+    - `primitives/live-state.ResourceUnavailable`
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
   - Exports (types): `DeploymentReading`
   - Exports (values):
     - `DeploymentChain`
     - `useDeployment`
+- Machine:
+  - Uses: `network/live.serveValue`
+  - Exports (values):
+    - `deploymentServed`
+    - `readDeployment`
+    - `readDeploymentState`
+    - `serverPin`
 - Core:
   - Uses:
     - `network/live.liveValue`

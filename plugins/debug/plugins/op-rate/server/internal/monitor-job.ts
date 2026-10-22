@@ -7,7 +7,7 @@ import {
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { getConfig } from "@plugins/config_v2/server";
 import type { ConfigValues } from "@plugins/config_v2/core";
-import { recordReport } from "@plugins/reports/server";
+import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { captureTrace } from "@plugins/debug/plugins/trace/plugins/engine/server";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { opRateConfig } from "../../core";

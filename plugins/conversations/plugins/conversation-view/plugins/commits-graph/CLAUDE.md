@@ -49,23 +49,9 @@ The chip renders a muted `—` (reason as tooltip) both for an unresolved payloa
     - `ui/icons.Icon`
 - Server:
   - Contributes: `resource.declare` "commits-graph.graph"
-  - Uses:
-    - `infra/git/git-watcher.refHeadServed`
-    - `infra/host/host-read-pool.withHeavyReadSlot`
-    - `network/live.serveValue`
-    - `primitives/commit-list.LOG_FORMAT`
-    - `primitives/commit-list.parseGitLog`
-    - `primitives/commit-list.runGit`
-    - `primitives/commit-list.WorktreeGoneError`
-    - `tasks/attempt-work.probeHeadMain`
-    - `tasks/attempt-work.readBranch`
-    - `tasks/attempt-work.readLandedShas`
-    - `tasks/attempt-work.readMergeBase`
-    - `tasks/tasks-core._attempts`
-    - `tasks/tasks-core._conversations`
-    - `tasks/tasks-core.getAttemptRow`
-    - `tasks/tasks-core.pushes`
   - Resources: `commits-graph.graph` (push)
+- Machine:
+  - Uses: `network/live.serveValue`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`

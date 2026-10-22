@@ -6,7 +6,7 @@ import {
   useImportByUrlMatchesSearch,
 } from "./components/import-by-url";
 import {
-  adoptCatalogTheme,
+  useAdoptCatalogTheme,
   useCatalogEntries,
 } from "./internal/catalog-source";
 
@@ -18,7 +18,7 @@ export default {
       kind: "browse",
       id: "community",
       useEntries: useCatalogEntries,
-      adopt: adoptCatalogTheme,
+      useAdopt: useAdoptCatalogTheme,
     }),
     ThemeCustomizer.Section({
       id: "import-by-url",

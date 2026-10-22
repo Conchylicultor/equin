@@ -3,7 +3,7 @@ import { StatusIcon } from "@plugins/tasks/plugins/task-status/web";
 import type { DepsTreeRow } from "@plugins/tasks/plugins/task-deps-tree/core";
 import { AlsoAfterChips } from "./deps-actions";
 
-// Fields are NOT defined here: both sources spread task-list's `taskFieldSchema`,
+// Fields are NOT defined here: both sources spread task-list's `useTaskFieldSchema()`,
 // so this tree carries exactly the columns of every other task view (track,
 // category, … included). Only the tree chrome is deps-specific.
 export const depsTreeOptions = {

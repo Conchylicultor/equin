@@ -1,4 +1,4 @@
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { setKeyAutoDetectEndpoint } from "../shared/endpoints";
 
 // Fire-and-forget write: the UI never reads the response — state refreshes via
@@ -8,7 +8,11 @@ import { setKeyAutoDetectEndpoint } from "../shared/endpoints";
 // Named `save*` (not `set*`) to stay distinct from the in-memory write of the
 // loaded song's setting (`useWriteSongSetting(keyAutoDetectSetting)`), which a
 // toggle handler makes optimistically alongside this persistence call.
-export function saveKeyAutoDetect(songId: string, enabled: boolean): void {
+export function saveKeyAutoDetect(
+  fetchEndpoint: FetchEndpoint,
+  songId: string,
+  enabled: boolean,
+): void {
   void fetchEndpoint(
     setKeyAutoDetectEndpoint,
     { id: songId },

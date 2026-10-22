@@ -1,7 +1,7 @@
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { removeTaskDependency } from "@plugins/tasks/core";
 import {
@@ -78,6 +78,7 @@ export function RelationChip({
   const title = other?.title ?? otherId;
   const isTerminal = other ? isSettled(other.status) : false;
   const openPane = useOpenPane();
+  const fetchEndpoint = useFetchEndpoint();
 
   const remove = async (e: React.MouseEvent) => {
     e.stopPropagation();

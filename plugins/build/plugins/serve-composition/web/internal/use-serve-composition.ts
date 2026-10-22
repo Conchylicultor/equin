@@ -27,6 +27,27 @@ export function useServeComposition(): {
   const build = useEndpointMutation(serveCompositionEndpoint);
 
   /**
+   * Start a serve build of `id`; `false` when this host cannot build at all.
+   *
+   * The endpoint is desktop-only (a build spawns `./singularity build` in this
+   * checkout), so under a transport with no computer behind it the mutation is
+   * unavailable — said in a toast, never a silent no-op behind a "Building…"
+   * one.
+   */
+  const startBuild = (id: string): boolean => {
+    if (build.kind === "unavailable") {
+      showToast({
+        title: `Can't build “${id}”`,
+        description: build.message,
+        variant: "error",
+      });
+      return false;
+    }
+    build.mutate({ body: { composition: id } });
+    return true;
+  };
+
+  /**
    * Write the mode, and build only on the edge that mints the namespace.
    *
    * Coming off `"off"` is the FIRST claim of the namespace: nothing is there
@@ -51,7 +72,7 @@ export function useServeComposition(): {
     const claimsNamespace = !isServed(item.serve) && isServed(mode);
     setServeMode(id, mode);
     if (!claimsNamespace) return;
-    build.mutate({ body: { composition: id } });
+    if (!startBuild(id)) return;
     showToast({
       title: `Building & serving “${id}”…`,
       description:
@@ -71,7 +92,7 @@ export function useServeComposition(): {
    * for exactly that, which is why no mode hides it.
    */
   const rebuildNow = (id: string): void => {
-    build.mutate({ body: { composition: id } });
+    if (!startBuild(id)) return;
     showToast({
       title: `Rebuilding “${id}”…`,
       description:

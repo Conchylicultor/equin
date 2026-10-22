@@ -1,4 +1,4 @@
-import { recordReport } from "@plugins/reports/server";
+import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { orphanedAttemptSink } from "@plugins/tasks/plugins/tasks-core/server";
 
 // tasks-core's boot sweep deletes attempts that have no conversation. A launch

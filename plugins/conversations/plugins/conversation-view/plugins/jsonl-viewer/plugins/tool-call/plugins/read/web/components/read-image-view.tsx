@@ -1,4 +1,4 @@
-import { ViewerThumbnail } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
+import { AssetThumbnail } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import {
   fileRefForPath,
   fileUrl,
@@ -19,10 +19,10 @@ export function ReadImageView({
   worktreePath: string;
   filePath: string;
 }) {
-  const src = fileUrl(
+  const asset = fileUrl(
     fileRefForPath(worktree, filePath, { root: worktreePath }),
   );
   const name = filePath.slice(filePath.lastIndexOf("/") + 1);
 
-  return <ViewerThumbnail image={{ src, name, sourceLabel: "Read" }} />;
+  return <AssetThumbnail asset={asset} image={{ name, sourceLabel: "Read" }} />;
 }

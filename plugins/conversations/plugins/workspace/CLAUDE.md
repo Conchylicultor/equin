@@ -11,14 +11,28 @@ scratch profile provides. Design:
   `WORKSPACE_KINDS` (what each kind offers), `WorkspaceSpecSchema`, and the
   capability reads (`hasCapability`, `assertCapability` for a server git read's
   boundary, `workspaceAllows` for a web slot host).
-- `server/` — the `WorkspaceImpl` contract and the `Workspace` registry
-  (`define` / `get` / `all`, like `Runtime`). The conversation lifecycle calls
-  through it and never names a kind: `parseSpec` (a new attempt's spec, before
-  any write), `onCommit` (writes on the launch transaction), `prepare` (in the
-  durable spawn job), `onFinish` (after commit), `launch` (the `LaunchFragment`
-  — typed setting sources, MCP servers and a settings fragment each runtime renders its own way), `checkResumable`.
-  Also the open set: `ScratchProfile.define(defineScratchProfile({…}))`, and
-  `workspaceOfConversation` for a profile's MCP tools.
+- `server/` — **portable** (`portable: true`): it runs on every host, the
+  demo's in-browser server included.
+  - The open set: `ScratchProfile.define(defineScratchProfile({…}))`, and
+    `workspaceOfConversation` for a profile's MCP tools.
+  - `parseWorkspaceSpec(spec)` — a new attempt's spec, validated (and
+    normalized) before any write: an unknown scratch profile, or an input its
+    profile refuses, throws. Pure over the scratch-profile registry, so a
+    task's workspace is set and refused where the task is filed (the launch
+    option) as well as at launch.
+  - The `WorkspaceImpl` contract and the `Workspace` registry (`define` /
+    `get` / `all`, like `Runtime`). The conversation lifecycle calls through it
+    and never names a kind: `onCommit` (writes on the launch transaction),
+    `prepare` (in the durable spawn job), `onFinish` (after commit), `launch`
+    (the `LaunchFragment` — typed setting sources, MCP servers and a settings
+    fragment each runtime renders its own way), `checkResumable`. Its impls
+    are desktop-only (the kind sub-plugins register them from non-portable
+    barrels), so on a host without the computer the registry is empty and a
+    launch path reaching it throws `Unknown workspace kind` — loudly. The
+    registry itself is still here, not in a `machine/` half, because its
+    caller, the conversation lifecycle (`conversations/server`), is a `server/`
+    barrel, which may not import a `machine/` one; it moves once the launch
+    lifecycle does.
 - `workspace.catalog` (core declaration, served here) — every workspace a task
   can name: the worktree, then one choice per scratch profile (label, owner
   plugin via `registeringPlugin()`, MCP tool count, `unavailable` when its
@@ -52,7 +66,7 @@ Orthogonal to the runtime (tmux | sdk): a runtime sees only the cwd and the
 
 ## Plugin reference
 
-- Description: Workspace web presence: eagerly registers the boot-preloaded workspace.catalog live value (every workspace a task can name) so boot-snapshot can hydrate it before first paint. Agent workspaces — where a conversation runs (a git worktree, or a scratch directory): the WorkspaceImpl contract and the per-kind registry the conversation lifecycle calls through (path, commit, prepare, finish, launch fragment, resumability), the scratch-profile registry feature plugins contribute to, the workspace.catalog live value (every workspace a task can name), and the conversation → workspace lookup.
+- Description: Workspace web presence: eagerly registers the boot-preloaded workspace.catalog live value (every workspace a task can name) so boot-snapshot can hydrate it before first paint. Agent workspaces — where a conversation runs (a git worktree, or a scratch directory): the WorkspaceImpl contract and the per-kind registry the conversation lifecycle calls through (path, commit, prepare, finish, launch fragment, resumability), the scratch-profile registry feature plugins contribute to and parseWorkspaceSpec over it (a new attempt's spec, validated before any write), the workspace.catalog live value (every workspace a task can name), and the conversation → workspace lookup.
 - Server:
   - Contributes: `resource.declare` "workspace.catalog"
   - Uses:
@@ -70,6 +84,7 @@ Orthogonal to the runtime (tmux | sdk): a runtime sees only the cwd and the
   - Exports (values):
     - `defineScratchProfile`
     - `findWorkspaceOfConversation`
+    - `parseWorkspaceSpec`
     - `ScratchProfile`
     - `Workspace`
     - `workspaceOfAttempt`
@@ -106,8 +121,6 @@ Orthogonal to the runtime (tmux | sdk): a runtime sees only the cwd and the
     - `conversations/workspace/worktree`
     - `debug/scratch-hello`
     - `tasks/tasks-core`
-- Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/registry.ts` (debt)
 - Test helpers:
   - Server: `@plugins/conversations/plugins/workspace/server/testing`
     - `installWorkspaceImpl` — Sets `impl` as its kind's workspace, replacing any registered one — for a test, which runs without the plugin register phase and may share the module with other suites.

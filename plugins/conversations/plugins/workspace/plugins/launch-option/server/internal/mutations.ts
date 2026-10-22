@@ -3,7 +3,7 @@ import {
   DEFAULT_WORKSPACE,
   type WorkspaceSpec,
 } from "@plugins/conversations/plugins/workspace/core";
-import { Workspace } from "@plugins/conversations/plugins/workspace/server";
+import { parseWorkspaceSpec } from "@plugins/conversations/plugins/workspace/server";
 import { tasksWorkspace } from "./tables";
 
 /** The workspace the task's next attempt runs in — the worktree when unset. */
@@ -19,7 +19,7 @@ export async function getTaskWorkspace(taskId: string): Promise<WorkspaceSpec> {
  */
 export function parseTaskWorkspace(spec: WorkspaceSpec): WorkspaceSpec {
   try {
-    return Workspace.get(spec.kind).parseSpec(spec);
+    return parseWorkspaceSpec(spec);
   } catch (err) {
     throw new HttpError(
       400,

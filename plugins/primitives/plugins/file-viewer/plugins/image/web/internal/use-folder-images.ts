@@ -22,6 +22,7 @@ import {
   type FileRef,
 } from "@plugins/primitives/plugins/file-viewer/core";
 import type { ViewerImage } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
+import { useAssetSrcs } from "@plugins/infra/plugins/endpoints/web";
 import { supportsImage } from "./supports";
 
 /** The folder a file sits in, in the same spelling as the file's path. */
@@ -49,8 +50,12 @@ interface HostFacts {
   size: { width: number; height: number } | null;
 }
 
-function viewerImage(file: FileRef, host: HostFacts | null): ViewerImage {
-  const image: ViewerImage = { src: fileUrl(file), name: fileRefName(file) };
+function viewerImage(
+  file: FileRef,
+  src: string,
+  host: HostFacts | null,
+): ViewerImage {
+  const image: ViewerImage = { src, name: fileRefName(file) };
   if (host === null || file.source !== "host") return image;
   const { path } = file;
   return {
@@ -170,12 +175,19 @@ export function useFolderImages(file: FileRef): {
 
   // Memoized by the React Compiler (a manual useMemo here cannot be kept).
   const self = fileRefName(file);
-  const images =
+  const members: readonly { ref: FileRef; name: string }[] =
     names === null || !names.includes(self)
-      ? [viewerImage(file, facts?.get(self) ?? null)]
-      : names.map((name) =>
-          viewerImage(siblingRef(file, dir, name), facts?.get(name) ?? null),
-        );
+      ? [{ ref: file, name: self }]
+      : names.map((name) => ({ ref: siblingRef(file, dir, name), name }));
+  // Each image's bytes over the subtree's transport (`useAssetSrcs`); one not
+  // loadable yet (or here) joins the set once it is.
+  const srcs = useAssetSrcs(members.map((m) => fileUrl(m.ref)));
+  const images = members.flatMap((m, i) => {
+    const src = srcs[i];
+    return src?.kind === "ready"
+      ? [viewerImage(m.ref, src.src, facts?.get(m.name) ?? null)]
+      : [];
+  });
   // A refusal (missing, denied, …) is the folder's answer — the file alone;
   // any other failure is a bug to surface.
   if (host.status === "error" && host.error.kind !== "refused")

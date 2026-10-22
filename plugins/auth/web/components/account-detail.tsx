@@ -19,7 +19,8 @@ import {
   type ProviderSetup,
 } from "../slots";
 import { useAuthState } from "../hooks";
-import { toast } from "@plugins/shell/plugins/notifications/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { currentWorktreeName, disconnect, startConnectFlow } from "../connect";
 import { ScopeGrantNotice } from "./scope-grant-notice";
 import { PasswordSignInForm } from "./password-sign-in-form";
@@ -231,6 +232,8 @@ function AccountControls({
   provider: AuthProviderContribution;
   status: AuthAccountState;
 }) {
+  const toast = useToast();
+  const fetchEndpoint = useFetchEndpoint();
   const providerId = provider.id;
   const [busy, setBusy] = useState(false);
 
@@ -273,7 +276,7 @@ function AccountControls({
   async function handleDisconnect() {
     setBusy(true);
     try {
-      await disconnect(providerId);
+      await disconnect(fetchEndpoint, providerId);
       toast({
         type: "auth",
         title: "Disconnected",

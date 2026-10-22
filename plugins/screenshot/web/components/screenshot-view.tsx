@@ -6,7 +6,7 @@ import {
 } from "@plugins/screenshot/plugins/draw-canvas/web";
 import {
   EndpointError,
-  fetchEndpoint,
+  useFetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -20,6 +20,7 @@ import { CropOverlay, type CropRect } from "./crop-overlay";
 import { PromptForm } from "./prompt-form";
 
 export function ScreenshotView({ id }: { id: string }) {
+  const fetchEndpoint = useFetchEndpoint();
   const [imageBlob, setImageBlob] = useState<Blob | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tool, setTool] = useState<Tool>("none");
@@ -95,7 +96,7 @@ export function ScreenshotView({ id }: { id: string }) {
         return;
       }
     }
-  }, [id]);
+  }, [fetchEndpoint, id]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- poll-on-mount: reload() is a self-contained 30s poll-with-retry (BroadcastChannel-raced, 404-backoff) that writes imageBlob/error; no data-fetching primitive (useEndpoint/useResource) covers this retry-loop pattern, and the fetch must be kicked off on mount/reload

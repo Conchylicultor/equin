@@ -49,6 +49,23 @@ import {
 } from "@plugins/primitives/plugins/live-state/web/testing";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import { useLive, useLiveRow } from "@plugins/network/plugins/live/web";
+import {
+  testTransport,
+  transportWrapper,
+} from "@plugins/primitives/plugins/networking/web/testing";
+
+/** The page's transport, whose pipeline is the boot-hoisted one `hydrateResource` seeds. */
+const page = testTransport();
+const PageTransport = transportWrapper(page);
+
+/** The app's root mount: the page's transport, then its `NotificationsProvider`. */
+function PagePipeline({ children }: { children: ReactNode }) {
+  return (
+    <PageTransport>
+      <NotificationsProvider>{children}</NotificationsProvider>
+    </PageTransport>
+  );
+}
 
 const ROW_FIELDS = {
   id: textField({ label: "Id" }),
@@ -75,8 +92,8 @@ const ROWS: Row[] = [
 
 /**
  * Mount with a render log under `wrapper`: a harness's own pair, or the app's
- * `NotificationsProvider` (the tab singleton over the default client — the
- * one `hydrateResource` seeds).
+ * root mount (`PagePipeline`: the page transport's boot-hoisted pipeline over
+ * the default client — the one `hydrateResource` seeds).
  */
 function mount<R>(
   wrapper: (props: { children: ReactNode }) => ReactElement,
@@ -142,13 +159,13 @@ describe("useLive(all)", () => {
     // `defaultParams`).
     hydrateResource(plain.all, undefined, ROWS);
     hydrateResource(selected.all, undefined, ROWS);
-    const notifications = ensureNotificationsClient();
+    const notifications = ensureNotificationsClient(page);
     const fetchOverHttp = vi.spyOn(notifications, "fetchOverHttp");
     const primeFromHttp = vi.spyOn(notifications, "primeFromHttp");
     const observe = vi.spyOn(notifications, "observe");
 
-    const p = mount(NotificationsProvider, () => useLive(plain));
-    const s = mount(NotificationsProvider, () =>
+    const p = mount(PagePipeline, () => useLive(plain));
+    const s = mount(PagePipeline, () =>
       useLive(selected, { select: titleOfA }),
     );
     await settleNotifications();

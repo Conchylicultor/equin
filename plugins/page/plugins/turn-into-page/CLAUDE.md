@@ -10,7 +10,7 @@
     - `Editor.TurnInto` → `TurnIntoPageItem`
     - `Editor.InsertAction` "Page"
   - Uses:
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `page/editor.Editor`
     - `page/page-reference.useOpenMadePage`
     - `primitives/css/row.Row`

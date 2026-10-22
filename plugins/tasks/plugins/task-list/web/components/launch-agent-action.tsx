@@ -1,4 +1,4 @@
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { buildTaskPrompt } from "@plugins/tasks/plugins/tasks-core/core";
@@ -7,6 +7,7 @@ import type { TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 
 export function LaunchAgentAction({ row }: ItemActionProps<TaskListItem>) {
   const taskId = row.id;
+  const fetchEndpoint = useFetchEndpoint();
   const getRequest = async () => {
     try {
       const task = await fetchEndpoint(getTask, { id: taskId });

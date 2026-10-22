@@ -95,6 +95,7 @@ itself) / `fileUrl(file)` — a renderer never branches on the source to read.
     - `primitives/css/ui-kit.Button`
     - `primitives/file-type.FileTypeIcon`
     - `primitives/filepath-breadcrumb.FilepathBreadcrumb`
+    - `primitives/loading.Loading`
     - `primitives/select-scope.ContentScope`
     - `primitives/slot-render.renderIsolated`
     - `shell/toast.showToast`
@@ -119,6 +120,7 @@ itself) / `fileUrl(file)` — a renderer never branches on the source to read.
     - `FileViewer`
     - `NoPreview`
     - `resolveRenderers`
+    - `UnloadedFile`
     - `useArchiveMembership`
     - `useFileBytes`
     - `useFileRenderers`

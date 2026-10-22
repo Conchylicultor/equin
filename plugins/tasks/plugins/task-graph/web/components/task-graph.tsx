@@ -2,7 +2,7 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, useMemo, useState } from "react";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   GraphCanvas,
@@ -63,6 +63,7 @@ const GROUP_PALETTE = [
 /** Hover-revealed soft-drop button rendered as a node `actions` overlay. */
 function DeleteTaskButton({ taskId }: { taskId: string }) {
   const [deleting, setDeleting] = useState(false);
+  const fetchEndpoint = useFetchEndpoint();
   // "Delete" is a soft drop — marks the task dropped (reversible), never removing
   // the row. Tasks are never hard-deleted.
   const handleDelete = useCallback(
@@ -70,9 +71,11 @@ function DeleteTaskButton({ taskId }: { taskId: string }) {
       e.stopPropagation();
       if (deleting) return;
       setDeleting(true);
-      void patchTask(taskId, { drop: true }).finally(() => setDeleting(false));
+      void patchTask(fetchEndpoint, taskId, { drop: true }).finally(() =>
+        setDeleting(false),
+      );
     },
-    [taskId, deleting],
+    [taskId, deleting, fetchEndpoint],
   );
   return (
     <button
@@ -188,6 +191,7 @@ function buildGraph(
 
 export function TaskGraph({ taskId }: { taskId: string }) {
   const closure = useTaskClosure(taskId);
+  const fetchEndpoint = useFetchEndpoint();
   // Clicking a node re-roots this pane in place, keeping the URL truthful.
   const openPane = useOpenPane();
   const taskTarget = useCallback(
@@ -201,13 +205,16 @@ export function TaskGraph({ taskId }: { taskId: string }) {
     (id: string) => taskTarget(id).open(),
     [taskTarget],
   );
-  const onConnect = useCallback((source: string, target: string) => {
-    void fetchEndpoint(
-      addTaskDependency,
-      { id: target },
-      { body: { dependsOnTaskId: source } },
-    );
-  }, []);
+  const onConnect = useCallback(
+    (source: string, target: string) => {
+      void fetchEndpoint(
+        addTaskDependency,
+        { id: target },
+        { body: { dependsOnTaskId: source } },
+      );
+    },
+    [fetchEndpoint],
+  );
   const graph = useMemo(
     () =>
       closure &&

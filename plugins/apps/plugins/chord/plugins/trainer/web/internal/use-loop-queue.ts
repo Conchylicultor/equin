@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   findLoopsEndpoint,
   type ChordToken,
@@ -191,6 +191,7 @@ export function useLoopQueue(opts: {
   desired: ResourceResult<DesiredShares>;
 }): LoopQueue {
   const { playable, practised, extras, blanks } = opts;
+  const fetchEndpoint = useFetchEndpoint();
   // Nothing is asked or dealt until each chord's share is known: while the
   // progress loads, or after its read failed (the panel shows that failure).
   const desired = foldResource(opts.desired, {
@@ -322,6 +323,7 @@ export function useLoopQueue(opts: {
     // `inFlight` gates a second refill while one is out; the pool growing (or
     // its fetch leaving `idle`) turns `wantsMore` off when it lands.
   }, [
+    fetchEndpoint,
     wantsMore,
     desired,
     palette,

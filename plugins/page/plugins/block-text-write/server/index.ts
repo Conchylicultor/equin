@@ -7,6 +7,7 @@ export { writeBlockTexts } from "./internal/write-block-texts";
 export type { BlockTextEdit } from "./internal/write-block-texts";
 
 export default {
+  portable: true,
   description:
     "Server-side text writes for a block's content doc — read a stored doc's true runs, splice it to target runs (or seed it first-writer-wins), then write the row's data.text projection: the one text channel every server-side content writer goes through.",
 } satisfies ServerPluginDefinition;

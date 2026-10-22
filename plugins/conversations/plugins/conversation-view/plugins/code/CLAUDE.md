@@ -85,7 +85,6 @@ in `server/`: `review/plugin-changes` shares them (and recomputes on
     - `ui/tokens/color-palette --success`
     - `ui/tokens/color-palette --warning`
   - Imported by:
-    - `apps/agent-manager/demo`
     - `code-explorer/code-api`
     - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/push-and-exit`

@@ -8,6 +8,8 @@
 - Web:
   - Contributes: `ErrorBoundary.Action` → `LaunchFixButton`
   - Uses:
+    - `infra/endpoints.useFetchEndpoint`
+    - `infra/endpoints.useMachineAvailability`
     - `primitives/css/spacing.Stack`
     - `primitives/error-boundary.ErrorBoundary`
     - `primitives/launch.LaunchAgentPopover`

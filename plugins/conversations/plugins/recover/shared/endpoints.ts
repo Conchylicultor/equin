@@ -15,4 +15,5 @@ export const restoreBatch = defineEndpoint({
   route: "POST /api/conversations-recover/restore-batch",
   body: RestoreBatchBodySchema,
   response: z.object({ results: z.array(RestoreResultSchema) }),
+  needsMachine: { feature: "Restoring conversations" },
 });

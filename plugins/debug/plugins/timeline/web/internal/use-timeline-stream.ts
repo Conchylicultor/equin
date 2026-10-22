@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { readNdjson } from "@plugins/infra/plugins/ndjson-stream/web";
+import { useTransport } from "@plugins/primitives/plugins/networking/web";
 import { interpolatePath } from "@plugins/infra/plugins/endpoints/core";
 import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import {
@@ -46,6 +47,7 @@ export function useTimelineStream(lookbackMs: number): TimelineStream {
   const [error, setError] = useState<string | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
+  const transport = useTransport();
 
   const reload = useCallback(async () => {
     abortRef.current?.abort();
@@ -74,7 +76,7 @@ export function useTimelineStream(lookbackMs: number): TimelineStream {
     let flushEvery = 1;
     try {
       const url = `${interpolatePath(getTimeline.path, {})}?fromMs=${win.fromMs}&toMs=${win.toMs}`;
-      for await (const raw of readNdjson(getTimeline.route, url, {
+      for await (const raw of readNdjson(transport, getTimeline.route, url, {
         signal: ctrl.signal,
       })) {
         const frame = TimelineFrameSchema.parse(raw);
@@ -110,7 +112,7 @@ export function useTimelineStream(lookbackMs: number): TimelineStream {
       setStatus("error");
       setError(getEndpointErrorMessage(e));
     }
-  }, [lookbackMs]);
+  }, [lookbackMs, transport]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- NDJSON streaming accumulator (the cluster-tab pattern): reload() drives the state from the {total}→{chunk}/{health}…→{end} frames with a total-scaled batched flush; the AbortController guards stale/unmount writes. No request/response primitive (useEndpoint) handles a progressive NDJSON stream, so this can't be derived in render. Re-fires on lookback change by design (fetch on preset change).

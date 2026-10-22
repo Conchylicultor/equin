@@ -1,9 +1,6 @@
 import { z } from "zod";
-import {
-  recordReport,
-  ReportKind,
-  type ReportRow,
-} from "@plugins/reports/server";
+import { ReportKind, type ReportRow } from "@plugins/reports/server";
+import { recordReport } from "@plugins/reports/plugins/engine/server";
 import {
   choiceLabel,
   selectableChoices,

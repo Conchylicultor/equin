@@ -28,7 +28,8 @@
 //   replayed `KEY_ENTER_COMMAND`.
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { act, cleanup, fireEvent, render } from "@testing-library/react";
+import { act, cleanup, fireEvent } from "@testing-library/react";
+import { renderWithTransport } from "@plugins/primitives/plugins/networking/web/testing";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PluginProvider } from "@plugins/framework/plugins/web-sdk/core";
 import { UndoRedoProvider } from "@plugins/primitives/plugins/undo-redo/web";
@@ -194,7 +195,7 @@ function mount() {
     );
   }
 
-  render(
+  renderWithTransport(
     <PluginProvider plugins={[]}>
       <UndoRedoProvider>
         <Host

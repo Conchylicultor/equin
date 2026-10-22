@@ -89,7 +89,7 @@ Manual check: `scripts/smoke.sh` (needs the dep installed).
     - `apps/sonata/library.useCurrentSong`
     - `apps/sonata/shell.Sonata`
     - `conversations/agent-thread.AgentThread`
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.FieldPresentation`
     - `network/live.useLiveRow`
     - `primitives/css/inline.Inline`

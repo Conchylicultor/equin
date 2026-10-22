@@ -1,7 +1,7 @@
 import { hostFileUrl } from "@plugins/infra/plugins/host-fs/core";
 import {
+  AssetThumbnail,
   ImageGallery,
-  ViewerThumbnail,
 } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
@@ -44,10 +44,10 @@ export function RunStrip({ run }: { run: BrowserRecordingRun }) {
                     : undefined
                 }
               >
-                <ViewerThumbnail
+                <AssetThumbnail
                   size="chip"
+                  asset={hostFileUrl(frame)}
                   image={{
-                    src: hostFileUrl(frame),
                     name: `${index + 1}/${steps.length} · ${step.title}`,
                     sourceLabel: source,
                   }}

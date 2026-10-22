@@ -32,7 +32,7 @@ export default createRule({
     docs: {
       description:
         "Disallow calling a turn-delivery endpoint directly from web code — " +
-        "every send must route through sendConversationTurn so it gets a " +
+        "every send must route through useSendConversationTurn so it gets a " +
         "ledger id, the optimistic echo and its card.",
     },
     schema: [],
@@ -41,8 +41,8 @@ export default createRule({
         "'{{name}}' delivers a turn to the agent, so calling it directly from " +
         "web code silently opts this surface out of the send lifecycle: no " +
         "client-minted ledger id (a repeated request types the turn twice), " +
-        "no optimistic echo, and no card when it fails. Call " +
-        "sendConversationTurn from " +
+        "no optimistic echo, and no card when it fails. Send through " +
+        "useSendConversationTurn from " +
         "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web " +
         "instead — if your turn does not travel over POST /turn, build a " +
         "TurnDelivery and pass it as `delivery`.",

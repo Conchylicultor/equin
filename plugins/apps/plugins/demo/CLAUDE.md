@@ -3,18 +3,25 @@
 **Temporary.** A sandbox app at `/demo` that hosts the in-app demo while it is
 prototyped: the real Agent Manager rendered in-process on made-up data —
 `<DemoScope scenario={agentManagerDemo}>` (`framework/browser-server/demo/scope`)
-around `<AppEmbed>` (`apps-core/app-embed`). Every live read is answered by the
-scenario's pack in the page.
+around `<AppEmbed>` (`apps-core/app-embed`). Every live read and endpoint call
+inside the scope is answered by the scenario's browser worker (the
+`agent-manager-demo` composition's portable server barrels over PGlite), or is
+`needsMachine` and renders its unavailable state.
 
 It exists so the equin website stays demo-free until the demo is ready. When it
 is, the frame moves into a website landing band and this app is deleted.
 
-**Ship gate.** Clicks on write affordances (close, reorder, push) still reach
-bare `fetchEndpoint` calls that bypass the scope (the leak ledger,
-`research/2026-10-13-global-in-app-demo-scope-v2.md` §7). The demo ids do not
-exist on the real server, so such a click fails there instead of mutating data —
-fine on a private instance, but the demo must not ship on a publicly served
-website until the ledger is empty.
+**Sealed.** Nothing inside the scope reaches the real server: there is no
+transportless fetcher (every call goes through the scope's transport), and the
+build's coverage guard (codegen's `browser-host-coverage.ts`) fails when the
+scope uses a read or endpoint its worker cannot answer
+(`research/2026-10-22-global-demo-scope-sealed.md`). Only the page's own
+telemetry (logs, latency samples, crash reports, …) still goes to the page's
+server, a sanctioned exception. `e2e/no-leak.ts` drives the demo's write
+affordances (new task, title edit, prerequisite, launch options, image paste, a
+send) and asserts no other `/api` request left the page and no row landed in
+this deploy's database:
+`./singularity run plugins/apps/plugins/demo/e2e/no-leak.ts`.
 
 - [`shell`](plugins/shell/CLAUDE.md) — the app entry and its one page.
 

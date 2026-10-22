@@ -46,7 +46,6 @@ inferred key.
     - `apps/sonata/document.useFailSongSetting`
     - `apps/sonata/document.useMountedSongId`
     - `apps/sonata/document.useWriteSongSetting`
-    - `infra/endpoints.fetchEndpoint`
     - `network/live.useLiveRow`
   - Exports (values): `saveKeyAutoDetect`
 - Server:

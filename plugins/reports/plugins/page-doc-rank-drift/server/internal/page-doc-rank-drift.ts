@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { recordReport } from "@plugins/reports/server";
+import { recordReport } from "@plugins/reports/plugins/engine/server";
 import type { ReportRow } from "@plugins/reports/server";
 import { docRankDriftSink } from "@plugins/page/plugins/editor/server";
 

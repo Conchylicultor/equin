@@ -5,7 +5,7 @@ import { listSavedThemes } from "./store";
 
 // Push over `saved_themes`: a write to it recomputes the list on the next
 // flush (the declared `reads`); the change feed's frame carries the write's
-// ackTx, which `awaitSavedThemesWrite` (web) waits on.
+// ackTx, which `useAwaitSavedThemesWrite` (web) waits on.
 export const savedThemesListServed = serveValue(savedThemesList, {
   source: "db",
   reads: {

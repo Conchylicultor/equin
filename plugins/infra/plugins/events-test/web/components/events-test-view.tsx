@@ -14,8 +14,8 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { toast } from "@plugins/shell/plugins/notifications/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useToast, type Toast } from "@plugins/shell/plugins/notifications/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   subscribeEventsTest,
   emitEventsTest,
@@ -52,12 +52,15 @@ interface LogEntry {
   firedAt: string;
 }
 
-function toastErr(e: unknown, prefix: string) {
+function toastErr(toast: Toast, e: unknown, prefix: string) {
   const msg = e instanceof Error ? e.message : String(e);
   toast({ type: "debug", title: prefix, description: msg, variant: "error" });
 }
 
 export function EventsTestView() {
+  const fetchEndpoint = useFetchEndpoint();
+  const toast = useToast();
+
   // Subscribe form
   const [subUserId, setSubUserId] = useState("");
   const [subLabel, setSubLabel] = useState("");
@@ -93,9 +96,9 @@ export function EventsTestView() {
       setTriggers(t.rows as unknown as TriggerRow[]);
       setLog(l.entries);
     } catch (e) {
-      toastErr(e, "refresh failed");
+      toastErr(toast, e, "refresh failed");
     }
-  }, []);
+  }, [fetchEndpoint, toast]);
 
   // Initial load + light poll so oneShot deletions and new log entries show.
   useEffect(() => {
@@ -153,7 +156,7 @@ export function EventsTestView() {
       });
       await refresh();
     } catch (e) {
-      toastErr(e, "subscribe failed");
+      toastErr(toast, e, "subscribe failed");
     } finally {
       setSubBusy(false);
     }
@@ -189,7 +192,7 @@ export function EventsTestView() {
       });
       await refresh();
     } catch (e) {
-      toastErr(e, "emit failed");
+      toastErr(toast, e, "emit failed");
     } finally {
       setEmitBusy(false);
     }
@@ -206,7 +209,7 @@ export function EventsTestView() {
       });
       await refresh();
     } catch (e) {
-      toastErr(e, "delete failed");
+      toastErr(toast, e, "delete failed");
     }
   };
 
@@ -238,7 +241,7 @@ export function EventsTestView() {
       setDtLabel("");
       await refresh();
     } catch (e) {
-      toastErr(e, "delete-targeting failed");
+      toastErr(toast, e, "delete-targeting failed");
     } finally {
       setDtBusy(false);
     }
@@ -273,7 +276,7 @@ export function EventsTestView() {
       });
       await refresh();
     } catch (e) {
-      toastErr(e, "direct-enqueue failed");
+      toastErr(toast, e, "direct-enqueue failed");
     } finally {
       setDeBusy(false);
     }
@@ -289,7 +292,7 @@ export function EventsTestView() {
       });
       await refresh();
     } catch (e) {
-      toastErr(e, "reset failed");
+      toastErr(toast, e, "reset failed");
     }
   };
 

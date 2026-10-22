@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
-import { CodeDirEntrySchema } from "./endpoints";
+import { CODE_MACHINE, CodeDirEntrySchema } from "./endpoints";
 
 // A workspace's files as live values — each answering a question one of the
 // deleted `/api/code/:worktree/*` GET routes used to answer — served by
@@ -23,11 +23,6 @@ import { CodeDirEntrySchema } from "./endpoints";
 //   escaping through `..`, empty, a NUL);
 // - `invalid-ref` — a ref other than the three spellings above;
 // - `missing` — nothing there (at that ref).
-
-/** What every read of a checkout on this computer needs. */
-export const CODE_MACHINE = {
-  feature: "Reading this computer's checkouts",
-} as const;
 
 export const CodeFileSchema = z.object({ content: z.string() });
 export type CodeFile = z.infer<typeof CodeFileSchema>;

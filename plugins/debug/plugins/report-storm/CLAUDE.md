@@ -2,7 +2,7 @@
 
 The **`report-storm` report kind**: what a burst of alerts becomes once the
 reports engine's cross-fingerprint fan-out ceiling collapses it
-(`plugins/reports/server/internal/fan-out.ts`,
+(`plugins/reports/plugins/engine/server/internal/fan-out.ts`,
 `research/2026-09-02-global-alert-fan-out-ceiling.md`).
 
 Every other guard on the report path keys on the *fingerprint* (the `ON

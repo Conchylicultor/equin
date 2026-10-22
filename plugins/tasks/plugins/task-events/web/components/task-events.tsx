@@ -22,6 +22,7 @@ import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { navIcons } from "@plugins/ui/plugins/icons/core";
 import { NewTabGlyph } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
+import type { ReactNode } from "react";
 
 function formatDate(value: Date | string): string {
   const d = typeof value === "string" ? new Date(value) : value;
@@ -154,17 +155,6 @@ export function TaskPushes({ taskId }: { taskId: string }) {
       />
     );
   }
-  if (repo.status === "error") {
-    return (
-      <ResourceErrorInline
-        variant="block"
-        subject="the repository's GitHub address"
-        error={repo.error}
-        refetch={repo.refetch}
-      />
-    );
-  }
-  const githubBase = repo.data.githubBase;
   if (attempts.data.length === 0) {
     return (
       <Text as="p" variant="body" tone="muted">
@@ -172,12 +162,47 @@ export function TaskPushes({ taskId }: { taskId: string }) {
       </Text>
     );
   }
+  // The links are an enhancement of the list, never a condition for it: with
+  // no repository on this host (the demo's in-browser server) or a failed
+  // read, the pushes are still listed — their shas unlinked, the reason said
+  // once above them.
+  let githubBase: string | null = null;
+  let notice: ReactNode = null;
+  switch (repo.status) {
+    case "ready":
+      githubBase = repo.data.githubBase;
+      break;
+    case "unavailable":
+      notice = (
+        <Text as="p" variant="caption" tone="muted">
+          No repository on this host — commits are not linked.
+        </Text>
+      );
+      break;
+    case "error":
+      notice = (
+        <ResourceErrorInline
+          variant="inline"
+          subject="the repository's GitHub address"
+          error={repo.error}
+          refetch={repo.refetch}
+        />
+      );
+      break;
+  }
 
   return (
-    <Stack as="ul" gap="xs">
-      {attempts.data.map((a) => (
-        <AttemptPushList key={a.id} attemptId={a.id} githubBase={githubBase} />
-      ))}
+    <Stack gap="sm">
+      {notice}
+      <Stack as="ul" gap="xs">
+        {attempts.data.map((a) => (
+          <AttemptPushList
+            key={a.id}
+            attemptId={a.id}
+            githubBase={githubBase}
+          />
+        ))}
+      </Stack>
     </Stack>
   );
 }

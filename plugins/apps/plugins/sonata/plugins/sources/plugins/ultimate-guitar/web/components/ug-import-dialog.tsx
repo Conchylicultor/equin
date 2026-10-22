@@ -17,7 +17,7 @@ import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   beatToSeconds,
   scoreEndBeat,
@@ -93,6 +93,7 @@ const TYPE_OPTIONS = [
  * (which would crash the dialog mid-import).
  */
 export function UgImportDialog({ onClose }: { onClose: () => void }) {
+  const fetchEndpoint = useFetchEndpoint();
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("chords");
   const [error, setError] = useState<string | null>(null);
@@ -145,7 +146,7 @@ export function UgImportDialog({ onClose }: { onClose: () => void }) {
       });
     return () => controller.abort();
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [debouncedQuery]);
+  }, [debouncedQuery, fetchEndpoint]);
 
   // Client-side type filter: "Chords" keeps anything whose UG type contains
   // "Chords" (covers both "Chords" and "Ukulele Chords" — the two that compile
@@ -198,7 +199,7 @@ export function UgImportDialog({ onClose }: { onClose: () => void }) {
         setError(err instanceof Error ? err.message : String(err));
       }
     },
-    [onClose],
+    [onClose, fetchEndpoint],
   );
 
   const importResult = useCallback(

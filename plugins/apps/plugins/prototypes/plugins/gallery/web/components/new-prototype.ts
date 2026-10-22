@@ -1,8 +1,8 @@
 import {
-  fetchEndpoint,
   getEndpointErrorMessage,
+  type FetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
-import { toast } from "@plugins/shell/plugins/notifications/web";
+import type { Toast } from "@plugins/shell/plugins/notifications/web";
 import { PROTOTYPES_DIR_DISPLAY } from "@plugins/infra/plugins/paths/plugins/display/core";
 import { createPrototype } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { OPTIONS_RULE } from "./launch-rules";
@@ -55,8 +55,13 @@ export function newPrototypePrompt(id: string): string {
  * point — an agent must never be handed a prompt naming a folder that is not
  * there. The toast is what the user sees at the button; re-throwing is what
  * aborts the launch (and reaches the crash collector, which files a report).
+ * The mint goes through the caller's `fetchEndpoint` (`useFetchEndpoint()`), and
+ * the failure is toasted through the caller's `toast` (`useToast()`).
  */
-export async function mintPrototypeFolder(): Promise<string> {
+export async function mintPrototypeFolder(
+  fetchEndpoint: FetchEndpoint,
+  toast: Toast,
+): Promise<string> {
   try {
     const { id } = await fetchEndpoint(createPrototype, {}, { body: {} });
     return id;

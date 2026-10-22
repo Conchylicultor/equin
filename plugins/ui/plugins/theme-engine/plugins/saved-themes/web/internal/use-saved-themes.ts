@@ -13,7 +13,7 @@ import { savedThemesList } from "../../shared/resources";
 // state, so the gallery can say so instead of spinning forever.
 //
 // It also asks for standalone ack frames on the list for as long as it is
-// mounted: `awaitSavedThemesWrite` confirms a write by its ack, and a write
+// mounted: `useAwaitSavedThemesWrite` confirms a write by its ack, and a write
 // that leaves the list unchanged (an identical re-import) ships no value frame.
 export function useSavedThemes(): ResourceResult<Theme[]> {
   useResourceAcks(savedThemesList);

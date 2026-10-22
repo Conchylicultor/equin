@@ -1,4 +1,4 @@
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   defineItemActions,
   type ItemActionProps,
@@ -30,6 +30,7 @@ export const DepsActions = defineItemActions<DepsTreeRow<TaskRow>>();
  * which have no rendered parent edge to cut.
  */
 export function DetachAction({ row }: ItemActionProps<DepsTreeRow>) {
+  const fetchEndpoint = useFetchEndpoint();
   const parentId = row.depsParentId;
   if (parentId == null) return null;
 
@@ -68,6 +69,7 @@ export function AlsoAfterChips({ row }: { row: DepsTreeRow }) {
 }
 
 function AlsoAfterChip({ taskId, dep }: { taskId: string; dep: TaskListItem }) {
+  const fetchEndpoint = useFetchEndpoint();
   const title = dep.title || "Untitled";
   const remove = (e: React.MouseEvent) => {
     e.stopPropagation();

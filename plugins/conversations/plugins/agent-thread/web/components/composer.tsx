@@ -16,7 +16,8 @@ import type { ConversationEntry } from "@plugins/conversations/core";
 import { isDraftEmpty } from "@plugins/conversations/plugins/conversation-view/web";
 import {
   conversationPromptDraft,
-  sendConversationTurn,
+  useSendConversationTurn,
+  useTurnSendAvailability,
 } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { resumeConversationEndpoint } from "@plugins/conversations/plugins/conversation-view/plugins/resume/core";
 import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
@@ -103,7 +104,7 @@ function failed(title: string, err: unknown): void {
  * draft (the Agent Manager's prompt reads the same key), so a turn sent back
  * to the draft — Copy to draft, a Stop's rewound text — lands here too.
  *
- * Every turn goes through `sendConversationTurn`. A conversation whose process
+ * Every turn goes through `useSendConversationTurn`. A conversation whose process
  * ended (gone, done) is resumed first and the turn sent once it is back, so
  * the user can always reply — unless it has no Claude session to resume.
  */
@@ -125,6 +126,8 @@ export function ThreadComposer({
     scope: id,
   });
   const draftRef = useLatestRef(draft);
+  const sendConversationTurn = useSendConversationTurn();
+  const sendAvailability = useTurnSendAvailability();
   const resume = useEndpointMutation(resumeConversationEndpoint, {
     onError: (err) => failed("Couldn't resume the conversation", err),
   });
@@ -137,9 +140,14 @@ export function ThreadComposer({
 
   const ended = status === "gone" || status === "done";
   const resumable = ended && conversation.claudeSessionId !== null;
-  const disabled = ended
-    ? !resumable || resume.isPending
-    : !canSendTurn({ status });
+  const resumePending = resume.kind === "available" && resume.isPending;
+  const stopPending = stop.kind === "available" && stop.isPending;
+  // Sending, resuming and stopping all drive the agent, which needs the
+  // computer: on a host without it (the demo) the composer is disabled and
+  // its placeholder says why.
+  const disabled =
+    !sendAvailability.available ||
+    (ended ? !resumable || resumePending : !canSendTurn({ status }));
 
   const send = useCallback(() => {
     const text = draftRef.current;
@@ -151,6 +159,9 @@ export function ThreadComposer({
       sendConversationTurn(id, { text });
       return;
     }
+    // Resume needs the computer like a send does, so the gate above already
+    // holds whenever this is unavailable.
+    if (resume.kind === "unavailable") throw new Error(resume.message);
     resume.mutate(
       { params: { id } },
       {
@@ -159,7 +170,16 @@ export function ThreadComposer({
         onError: () => setDraft(text),
       },
     );
-  }, [draftRef, disabled, clearDraft, ended, id, resume, setDraft]);
+  }, [
+    draftRef,
+    disabled,
+    clearDraft,
+    ended,
+    id,
+    resume,
+    setDraft,
+    sendConversationTurn,
+  ]);
 
   const working = turnRunning || status === "starting";
   return (
@@ -168,11 +188,19 @@ export function ThreadComposer({
       onChange={setDraft}
       onSubmit={send}
       placeholder={
-        ended && !resumable ? "This conversation can't be resumed" : placeholder
+        !sendAvailability.available
+          ? sendAvailability.message
+          : ended && !resumable
+            ? "This conversation can't be resumed"
+            : placeholder
       }
       disabled={disabled}
-      onStop={working ? () => stop.mutate({ params: { id } }) : undefined}
-      busy={resume.isPending || stop.isPending}
+      onStop={
+        working && stop.kind === "available"
+          ? () => stop.mutate({ params: { id } })
+          : undefined
+      }
+      busy={resumePending || stopPending}
       namespace={`agent-thread-${id}`}
     />
   );

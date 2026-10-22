@@ -25,9 +25,12 @@ export function useStaleFrontend(): {
   // stale (or fresh) — both answer "not stale, graph unknown". A failed read
   // renders its own error where it is shown; if it failed because this tab is
   // out of date, that is the contract-mismatch signal's to say, not this one's.
+  // Unavailable (a subtree with no computer behind it, the demo) is the same
+  // "graph unknown": the page's own staleness is the page transport's read.
   return foldResource(res, {
     loading: () => ({ stale: false, serverGraph: null }),
     error: () => ({ stale: false, serverGraph: null }),
+    unavailable: () => ({ stale: false, serverGraph: null }),
     ready: (data) => {
       // An unresolved pin (no dist yet, or one published before the trailer
       // existed) means the graph is UNKNOWN, and unknown must not arm the

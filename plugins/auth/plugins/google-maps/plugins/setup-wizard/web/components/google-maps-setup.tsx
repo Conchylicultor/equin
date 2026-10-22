@@ -13,8 +13,8 @@ import {
   StepNote,
 } from "@plugins/primitives/plugins/setup-steps/web";
 import {
-  fetchEndpoint,
   getEndpointErrorMessage,
+  useFetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
 import { setApiKey } from "@plugins/auth/core";
 import { useAccountStatus } from "@plugins/auth/web";
@@ -38,6 +38,7 @@ function extractProjectId(raw: string): string {
 
 /** The Places key setup, rendered inline in its Accounts pane (`setup: { kind: "steps" }`). */
 export function GoogleMapsSetup() {
+  const fetchEndpoint = useFetchEndpoint();
   const [projectId, setProjectId] = useState("");
   const [apiKey, setApiKeyInput] = useState("");
   const [saving, setSaving] = useState(false);

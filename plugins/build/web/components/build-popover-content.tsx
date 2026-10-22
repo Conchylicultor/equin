@@ -1,7 +1,8 @@
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback } from "react";
 import {
-  fetchEndpoint,
+  useFetchEndpoint,
+  useMachineAvailability,
   EndpointError,
 } from "@plugins/infra/plugins/endpoints/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -10,7 +11,7 @@ import {
   triggerBuildEndpoint,
   BUILD_LOG_CHANNEL,
 } from "../../core";
-import { toast } from "@plugins/shell/plugins/notifications/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { LiveLogChannel } from "@plugins/primitives/plugins/log-channels/web";
@@ -48,6 +49,10 @@ function BuildControls({
   building: boolean;
   onBuild: () => void | Promise<void>;
 }) {
+  // A build spawns `./singularity build` in this checkout: under a host without
+  // the computer (the in-browser demo) the button is disabled, its tooltip
+  // saying why.
+  const availability = useMachineAvailability(triggerBuildEndpoint);
   return (
     <Stack
       direction="row"
@@ -55,7 +60,13 @@ function BuildControls({
       gap="sm"
       className="border-b px-md py-sm"
     >
-      <Button variant="default" loading={building} onClick={() => onBuild()}>
+      <Button
+        variant="default"
+        loading={building}
+        disabled={!availability.available}
+        tooltip={availability.available ? undefined : availability.message}
+        onClick={() => onBuild()}
+      >
         <Icon icon={playArrowIcon} className="size-4" />
         Build
       </Button>
@@ -80,6 +91,7 @@ function BuildControls({
  * every line showed up twice.
  */
 function BuildLogView({ building }: { building: boolean }) {
+  const toast = useToast();
   return (
     <LiveLogChannel
       channel={BUILD_LOG_CHANNEL}
@@ -121,12 +133,26 @@ function BuildPopoverContentInner({
   selectedRunId?: string;
   onRowActivate?: () => void;
 }) {
+  const fetchEndpoint = useFetchEndpoint();
+  const toast = useToast();
   const latestRun = buildRuns[0];
   const building = latestRun?.finishedAt === null;
 
   const handleBuild = useCallback(async () => {
     try {
-      await fetchEndpoint(triggerBuildEndpoint, {});
+      const result = await fetchEndpoint(triggerBuildEndpoint, {});
+      if (result.kind === "unavailable") {
+        // The Build button is disabled under a transport with no computer
+        // behind it, so this is not expected — but if it is reached, it says
+        // why rather than claiming a build started.
+        toast({
+          type: "build",
+          title: "Build failed to start",
+          description: result.message,
+          variant: "error",
+        });
+        return;
+      }
       toast({
         type: "build",
         title: "Build started",
@@ -150,7 +176,7 @@ function BuildPopoverContentInner({
         });
       }
     }
-  }, []);
+  }, [fetchEndpoint, toast]);
 
   return (
     <Stack gap="none" className={cn(variant === "pane" && "h-full")}>

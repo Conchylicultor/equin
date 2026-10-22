@@ -16,4 +16,11 @@ export default [
     task: "task-1792338443-riwqev",
     reason: "not yet split into server/ + machine/",
   },
+  {
+    rule: "networking/no-page-transport",
+    paths: ["web/internal/instance.ts"],
+    kind: "sanctioned",
+    reason:
+      "Page-wide telemetry: page-view analytics belong to the page and reach the page's own server (D3).",
+  },
 ] satisfies Exemptions;

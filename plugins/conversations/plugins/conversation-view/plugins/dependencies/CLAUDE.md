@@ -25,7 +25,7 @@
     - `primitives/css/spacing.Stack`
     - `primitives/hover-reveal.hoverRevealTargetInAnchor`
     - `primitives/icon-button.IconButton`
-    - `shell/notifications.toast`
+    - `shell/notifications.useToast`
     - `tasks/task-status.StatusIcon`
     - `ui/icons.Icon`
 - Cross-plugin:

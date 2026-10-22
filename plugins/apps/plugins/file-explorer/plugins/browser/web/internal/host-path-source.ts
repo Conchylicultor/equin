@@ -1,4 +1,4 @@
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   hostFsComplete,
   hostFsStat,
@@ -64,6 +64,7 @@ export function crumbLabel(path: string, rootName: string | undefined): string {
  * path outside it is invalid.
  */
 export function hostPathSource(
+  fetchEndpoint: FetchEndpoint,
   home: string,
   rootName: string | undefined,
   root?: string,
@@ -81,11 +82,15 @@ export function hostPathSource(
           path: p,
         })),
     complete: async (prefix) => {
-      const result = await fetchEndpoint(
+      const answer = await fetchEndpoint(
         hostFsComplete,
         {},
         { query: { prefix } },
       );
+      // No computer behind the app: nothing can be listed, which is a
+      // failure of the completion, not an empty answer.
+      if (answer.kind === "unavailable") throw new Error(answer.message);
+      const result = answer.value;
       switch (result.kind) {
         case "ok":
           return result.matches
@@ -101,7 +106,11 @@ export function hostPathSource(
       }
     },
     validate: async (path): Promise<PathResolution> => {
-      const result = await fetchEndpoint(hostFsStat, {}, { query: { path } });
+      const answer = await fetchEndpoint(hostFsStat, {}, { query: { path } });
+      if (answer.kind === "unavailable") {
+        return { kind: "invalid", path, reason: answer.message };
+      }
+      const result = answer.value;
       switch (result.kind) {
         case "ok":
           if (!inRoot(result.path)) {

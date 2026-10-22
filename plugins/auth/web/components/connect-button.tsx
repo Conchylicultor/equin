@@ -1,6 +1,6 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
-import { toast } from "@plugins/shell/plugins/notifications/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { currentWorktreeName, startConnectFlow } from "../connect";
 
 export interface ConnectButtonProps {
@@ -16,6 +16,7 @@ export function ConnectButton({
   label = "Connect",
   onConnected,
 }: ConnectButtonProps) {
+  const toast = useToast();
   const [busy, setBusy] = useState(false);
   return (
     <Button

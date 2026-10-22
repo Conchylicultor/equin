@@ -6,7 +6,7 @@ import {
   requireClaudeBin,
 } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
 import { catalogLog as log } from "./log";
-import { recordReport } from "@plugins/reports/server";
+import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 import {
   choiceLabel,

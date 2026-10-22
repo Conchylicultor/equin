@@ -22,7 +22,6 @@ It is not a `sprites/core` export: `SavedIconSource.tables` names
     - `conversations/preprompts`
     - `page/callout`
     - `primitives/data-view`
-    - `ui/icons/sprites`
 - Server:
   - Exports (types): `SavedIconSource`
   - Exports (values):

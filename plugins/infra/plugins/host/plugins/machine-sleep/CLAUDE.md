@@ -59,7 +59,6 @@ reaches the browser within one tick.
     - `SleepNowSchema`
 - Cross-plugin:
   - Imported by:
-    - `apps/agent-manager/demo`
     - `conversations/conversation-view/op-status`
     - `debug/health-monitor`
     - `debug/profiling/ops`

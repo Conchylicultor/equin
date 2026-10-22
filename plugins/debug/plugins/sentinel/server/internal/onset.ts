@@ -1,5 +1,5 @@
 import { captureTrace } from "@plugins/debug/plugins/trace/plugins/engine/server";
-import { recordReport } from "@plugins/reports/server";
+import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { sentinelLog } from "./log-sink";
 import type { WorkerToMainFrame } from "./worker/protocol";
 

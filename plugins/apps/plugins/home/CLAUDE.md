@@ -38,8 +38,6 @@ Entry-point app: a phone-home-screen launcher of every installed app, shown at
 - Server:
   - Contributes: `taskCategory` "apps"
   - Uses: `tasks/task-category.TaskCategory`
-- Cross-plugin:
-  - Imported by: `apps/agent-manager/demo`
 - Core:
   - Exports (values): `APPS_CATEGORY_ID`
 - Sub-plugins:

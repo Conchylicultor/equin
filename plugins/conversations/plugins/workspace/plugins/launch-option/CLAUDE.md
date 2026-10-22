@@ -21,7 +21,7 @@ default, stored as no row) or one registered scratch profile. Design:
 - Web:
   - Contributes: `TaskLaunch.Option` "Workspace" → `WorkspaceLaunchControl`
   - Uses:
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.mapRow`
     - `network/live.useLive`
     - `network/live.useLiveRow`
@@ -34,7 +34,7 @@ default, stored as no row) or one registered scratch profile. Design:
     - `primitives/live-state.mapResource`
     - `primitives/loading.Loading`
     - `primitives/text-editor/composer/picker-pill.PickerPill`
-    - `shell/notifications.toast`
+    - `shell/notifications.useToast`
     - `tasks/launch-options.TaskLaunch`
     - `tasks/tasks-core.useTaskAttempts`
     - `ui/icons.Icon`
@@ -43,7 +43,7 @@ default, stored as no row) or one registered scratch profile. Design:
     - `resource.declare` "task-workspaces:rows"
     - `taskLaunchServer` "workspace"
   - Uses:
-    - `conversations/workspace.Workspace`
+    - `conversations/workspace.parseWorkspaceSpec`
     - `infra/endpoints.implement`
     - `infra/entity-extensions.defineExtension`
     - `network/live.serveCollection`

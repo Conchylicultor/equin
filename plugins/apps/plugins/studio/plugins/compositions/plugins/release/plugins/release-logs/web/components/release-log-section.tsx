@@ -3,7 +3,7 @@ import {
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ReactElement } from "react";
-import { toast } from "@plugins/shell/plugins/notifications/web";
+import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
@@ -64,6 +64,7 @@ export function ReleaseLogSection({ runId }: { runId: string }): ReactElement {
  * of the body the deploy panel and the debug viewer carry too.
  */
 function LiveLogs(): ReactElement {
+  const toast = useToast();
   return (
     <LiveLogChannel
       channel={RELEASE_LOG_CHANNEL}

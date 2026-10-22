@@ -4,11 +4,12 @@
 
 ## Plugin reference
 
-- Description: Owns the tasks_ext_auto_start side-table via the entity-extensions primitive; the model picker over it is the launch-option sub-plugin. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.
+- Description: Owns the tasks_ext_auto_start side-table via the entity-extensions primitive; the model picker over it is the launch-option sub-plugin. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart, and the tasks.autoStartArmed trigger event whatever launches agents subscribes to.
 - Web:
   - Contributes: `Tasks.TaskActions` "queued-chip" → `QueuedChipAction`
   - Uses:
     - `conversations/model-provider.useModelCatalog`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.LiveRowResult`
     - `network/live.useLiveRow`
     - `primitives/css/badge.Badge`
@@ -25,19 +26,27 @@
     - `database.db`
     - `database.DbExecutor`
     - `infra/entity-extensions.defineExtension`
+    - `infra/events.defineTriggerEvent`
     - `infra/events.Trigger`
     - `infra/jobs.defineJob`
     - `network/live.serveCollection`
     - `tasks/tasks-core._tasks`
     - `tasks/tasks-core.taskStatusChanged`
-  - DB schema: `plugins/tasks/plugins/auto-start/server/internal/tables.ts`
+  - DB schema:
+    - `plugins/tasks/plugins/auto-start/server/internal/tables-events.ts`
+    - `plugins/tasks/plugins/auto-start/server/internal/tables.ts`
   - Entity extension of: `tasks/tasks-core` (table `tasks_ext_auto_start`)
+  - Exports (types): `TaskAutoStartArmedPayload`
   - Exports (values):
+    - `_taskAutoStartArmedTriggers`
     - `claimAutoStart`
     - `getTaskAutoStart`
     - `listArmedTaskIds`
     - `setTaskAutoStart`
-  - Register: `defineJob('tasks.auto-start-cancel-on-drop')`
+    - `taskAutoStartArmed`
+  - Register:
+    - `defineTriggerEvent('tasks.autoStartArmed')`
+    - `defineJob('tasks.auto-start-cancel-on-drop')`
   - Resources: `tasks-auto-start:rows` (keyed, point)
 - Core:
   - Uses:
@@ -58,11 +67,12 @@
     - `ui/tokens/color-palette --warning`
     - `ui/tokens/shape --spacing`
   - Imported by:
-    - `apps/agent-manager/demo`
     - `conversations`
     - `tasks`
     - `tasks/auto-start/launch-option`
     - `tasks/automations`
+- Exemptions:
+  - Exempts itself from: `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
 - Machine:
   - Register: `defineWarmup('tasks.auto-start-dropped-sweep')`
 - Sub-plugins:

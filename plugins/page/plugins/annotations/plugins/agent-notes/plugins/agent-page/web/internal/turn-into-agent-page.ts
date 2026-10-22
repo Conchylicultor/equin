@@ -1,4 +1,4 @@
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   turnIntoPage,
   type TurnIntoPageBody,
@@ -27,6 +27,7 @@ import { textBlock } from "@plugins/page/plugins/text/core";
  * typeable.
  */
 export async function turnIntoAgentPage(
+  fetchEndpoint: FetchEndpoint,
   blockId: string,
   title: TurnIntoPageBody["title"],
 ): Promise<void> {

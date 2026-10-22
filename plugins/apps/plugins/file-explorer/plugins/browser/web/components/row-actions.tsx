@@ -56,7 +56,9 @@ function extractToast(result: HostFsExtractResult): void {
  */
 export function ExtractAction({ row }: ItemActionProps<EntryRow>): ReactNode {
   const extract = useEndpointMutation(hostFsExtract);
-  if (row.archive === undefined) return null;
+  // Extracting writes beside the archive on the computer's disk: with no
+  // computer behind the app there is no action to offer.
+  if (row.archive === undefined || extract.kind === "unavailable") return null;
   return (
     <IconButton
       icon={unarchiveIcon}

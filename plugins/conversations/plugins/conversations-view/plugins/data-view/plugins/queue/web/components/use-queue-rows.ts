@@ -12,7 +12,7 @@ import {
   type ResourceReadiness,
 } from "@plugins/primitives/plugins/live-state/web";
 import { useOptimisticResource } from "@plugins/primitives/plugins/optimistic-mutation/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   useLivePagesPaging,
   type DataViewPaging,
@@ -111,6 +111,7 @@ export function useQueueRows(view: ViewState): {
   /** How the Done section pages — hand it to DataView's `paging`. */
   paging: DataViewPaging<QueueRow> | undefined;
 } {
+  const fetchEndpoint = useFetchEndpoint();
   const activeResult = useLive(conversationsActive);
   // The ended conversations (the Done section), newest first, as live pages:
   // the first page is the default window, the rest load as the user scrolls

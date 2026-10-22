@@ -10,6 +10,7 @@
     - `FileViewer.Renderer` "Video" → `VideoView`
     - `FileViewer.Renderer` "Audio" → `AudioView`
   - Uses:
+    - `infra/endpoints.useAssetSrc`
     - `primitives/css/center.Center`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
@@ -17,6 +18,7 @@
     - `primitives/file-viewer.FileRendererProps`
     - `primitives/file-viewer.FileViewer`
     - `primitives/file-viewer.NoPreview`
+    - `primitives/file-viewer.UnloadedFile`
     - `primitives/shortcuts.useSurfaceShortcuts`
 - Cross-plugin:
   - Uses tokens:

@@ -102,6 +102,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/live-state", id: "primitives.live-state", loader: () => import("@plugins/primitives/plugins/live-state/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/loading", id: "primitives.loading", loader: () => import("@plugins/primitives/plugins/loading/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/log-channels", id: "primitives.log-channels", loader: () => import("@plugins/primitives/plugins/log-channels/lint"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/networking", id: "primitives.networking", loader: () => import("@plugins/primitives/plugins/networking/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/overlay/plugins/imperative-dialog", id: "primitives.overlay.imperative-dialog", loader: () => import("@plugins/primitives/plugins/overlay/plugins/imperative-dialog/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/pane", id: "primitives.pane", loader: () => import("@plugins/primitives/plugins/pane/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/passthrough", id: "primitives.passthrough", loader: () => import("@plugins/primitives/plugins/passthrough/lint"), dependsOn: [] },

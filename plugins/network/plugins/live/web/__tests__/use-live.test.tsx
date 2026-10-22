@@ -16,10 +16,15 @@ import { type ReactNode } from "react";
 import { z } from "zod";
 import {
   NotificationsProvider,
+  ensureNotificationsClient,
   hydrateResource,
   pendingMountSnapshot,
   queryKeyFor,
 } from "@plugins/primitives/plugins/live-state/web";
+import {
+  testTransport,
+  transportWrapper,
+} from "@plugins/primitives/plugins/networking/web/testing";
 import {
   NotificationsClient,
   createLiveStateHarness,
@@ -899,6 +904,11 @@ describe("useLive — value", () => {
         schema: Unread,
         preload: "boot",
       });
+      // The page's transport, its pipeline hoisted as boot does — the one
+      // over the app's default client.
+      const page = testTransport();
+      ensureNotificationsClient(page);
+      const PageTransport = transportWrapper(page);
       // What the boot snapshot does, on the app's default client.
       hydrateResource(kept, { path: "a" }, { errors: 1, warnings: 0 });
       hydrateResource(plain, {}, { errors: 2, warnings: 0 });
@@ -916,7 +926,9 @@ describe("useLive — value", () => {
         },
         {
           wrapper: ({ children }: { children: ReactNode }) => (
-            <NotificationsProvider>{children}</NotificationsProvider>
+            <PageTransport>
+              <NotificationsProvider>{children}</NotificationsProvider>
+            </PageTransport>
           ),
         },
       );

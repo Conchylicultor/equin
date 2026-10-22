@@ -12,12 +12,12 @@
     - `conversations/preprompts.prepromptsConfig`
     - `conversations/preprompts.PrepromptSelect`
     - `conversations/preprompts.usePrepromptItems`
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `network/live.LiveRowResult`
     - `network/live.mapRow`
     - `network/live.useLiveRow`
     - `primitives/text-editor/composer/picker-pill.PickerPill`
-    - `shell/notifications.toast`
+    - `shell/notifications.useToast`
     - `tasks/launch-options.TaskLaunch`
   - Exports (values): `useTaskPreprompt`
 - Server:

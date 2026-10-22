@@ -16,7 +16,7 @@ import { buildBarrelFreeTree } from "./barrel-free-tree";
 /**
  * Generates the icon manifest — every icon name the code draws, collected from
  * its `symbol("…")` / `brand("…")` / `seti("…")` literals — into
- * `plugins/ui/plugins/icons/plugins/sprites/server/internal/icon-manifest.generated.ts`,
+ * `plugins/ui/plugins/icons/plugins/sprites/machine/internal/icon-manifest.generated.ts`,
  * next to the sprite builder, its only reader. (Not in the icons `core/`:
  * the CLI loads that barrel — through the icons checks — in the same process
  * that regenerates this file, which would freeze the stale copy.)
@@ -36,7 +36,7 @@ import { buildBarrelFreeTree } from "./barrel-free-tree";
  */
 
 const MANIFEST_REL_PATH =
-  "plugins/ui/plugins/icons/plugins/sprites/server/internal/icon-manifest.generated.ts";
+  "plugins/ui/plugins/icons/plugins/sprites/machine/internal/icon-manifest.generated.ts";
 
 /** Cheap pre-filter: a file with no `symbol(` / `brand(` / `seti(` text draws no icon. */
 const MARKER_CALL_RE = /\b(?:symbol|brand|seti)\s*\(/;

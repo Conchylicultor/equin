@@ -18,9 +18,12 @@ is no recorded-answer pack (`research/2026-10-19-global-demo-story-from-browser-
   that composition's portable server graph on PGlite, seeded with the story.
 
 One derivation writes both halves, so page and worker agree by construction.
-`host` is required: the host answers every read and request in the demo (a key
-it does not serve fails `loader-failed` — a browser host's key set is closed;
-an endpoint it does not implement is refused unsupported). There is no
+`host` is required: the host answers every read and request in the demo, and
+the same derivation proves it can — the coverage guard
+(`browser-host-coverage.ts`) fails the build unless everything the scoped
+page reads, calls or registers is served by the graph or declared
+`needsMachine`; it also emits the reads it found (`hostReads`, beside
+`browserHost`), which the owner's boot test holds the booted graph to. There is no
 page-side backend slot any more (`Demo.Resource` and `DemoMissingError` were
 deleted once config moved into the worker:
 `research/2026-10-21-global-demo-config-from-worker.md`).

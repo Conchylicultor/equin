@@ -2,9 +2,10 @@
  * The demo's browser host, booted in Bun: its generated plugin graph
  * (`./browser-host.generated.ts`) on PGlite with the real migrations, seeded by
  * the real `./seed`, then read back through the real served resources — the
- * story the page renders, with no pack behind it — and every read the demo
- * renders (`DEMO_READS`) is either served by that graph or declares
- * `needsMachine`.
+ * story the page renders, with no pack behind it — and every read the scoped
+ * page references (`hostReads`, the build's coverage guard's answer, generated
+ * beside the scope) is either served by the booted graph or declares
+ * `needsMachine`: the static and the runtime view of the host cannot drift.
  *
  * Two substitutions, one per provider whose data is bundled text (a vite
  * `import.meta.glob`, which Bun cannot evaluate): the migration history
@@ -71,7 +72,7 @@ import {
   demoConversationId,
   demoTaskId,
 } from "../core";
-import { DEMO_READS } from "../core/internal/demo-reads";
+import { hostReads } from "../core/browser-host.generated";
 import { conversationTurns } from "@plugins/conversations/plugins/turn-ledger/core";
 import { DEMO_CONVERSATION_ID } from "../core/internal/scenario";
 import { hostEntries, hostProviders } from "./browser-host.generated";
@@ -253,19 +254,22 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
     expect(events.at(-1)?.kind).toBe("assistant-text");
   });
 
-  test("every read the demo renders is served by the host or declares needsMachine", () => {
+  test("every read the coverage guard derived is served by the booted host or declares needsMachine", () => {
     const served = new Set(
       Resource.Declare.getContributions().map((c) => c.key),
     );
-    const uncovered = DEMO_READS.filter(
-      (read) =>
-        read.needsMachine === undefined &&
-        !served.has(read.key) &&
-        !served.has(`${read.key}:rows`),
-    ).map(
-      (read) =>
-        `${read.key} is neither served by the demo host nor needsMachine`,
+    // A collection's mints share its key (`k`, `k:rows`, `k:groups`…), and a
+    // read names the declaration's key.
+    const servedBase = new Set(
+      [...served].map((k) => k.replace(/:[^:.]+$/, "")),
     );
+    expect(hostReads.length).toBeGreaterThan(0);
+    const uncovered = hostReads
+      .filter((read) => !read.needsMachine && !servedBase.has(read.key))
+      .map(
+        (read) =>
+          `${read.key} is neither served by the booted host nor needsMachine`,
+      );
     expect(uncovered).toEqual([]);
   });
 

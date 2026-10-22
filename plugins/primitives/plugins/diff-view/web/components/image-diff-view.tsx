@@ -13,6 +13,7 @@ import {
   type ImageProbeState,
 } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import { codeImageUrl } from "@plugins/code-explorer/plugins/code-api/core";
+import { useAssetSrc } from "@plugins/infra/plugins/endpoints/web";
 
 /** Still finding out: not loaded yet, or failed and asking the server why. */
 function isSettling(load: ImageLoad): boolean {
@@ -117,10 +118,41 @@ export function ImageDiffView({
   base?: string;
 }) {
   const ref = base ?? "HEAD";
-  const oldSrc = codeImageUrl(worktree, path, { ref });
-  const newSrc = codeImageUrl(worktree, path);
-  const name = path.slice(path.lastIndexOf("/") + 1);
+  // Both sides' bytes over the subtree's transport (`useAssetSrc`).
+  const oldAsset = useAssetSrc(codeImageUrl(worktree, path, { ref }));
+  const newAsset = useAssetSrc(codeImageUrl(worktree, path));
+  if (oldAsset.kind === "ready" && newAsset.kind === "ready") {
+    return (
+      <ImageDiffSides
+        refLabel={ref}
+        oldSrc={oldAsset.src}
+        newSrc={newAsset.src}
+        name={path.slice(path.lastIndexOf("/") + 1)}
+      />
+    );
+  }
+  const notReady = oldAsset.kind !== "ready" ? oldAsset : newAsset;
+  if (notReady.kind === "loading") {
+    return <Loading className="px-md py-sm" />;
+  }
+  return (
+    <Text as="div" variant="body" className="px-md py-sm text-muted-foreground">
+      {notReady.kind === "ready" ? null : notReady.message}
+    </Text>
+  );
+}
 
+function ImageDiffSides({
+  refLabel: ref,
+  oldSrc,
+  newSrc,
+  name,
+}: {
+  refLabel: string;
+  oldSrc: string;
+  newSrc: string;
+  name: string;
+}) {
   const oldProbe = useImageProbe(oldSrc);
   const newProbe = useImageProbe(newSrc);
 

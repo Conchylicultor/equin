@@ -13,7 +13,7 @@ import { IdKinds } from "@plugins/ids/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { notificationIdKind } from "../core";
 
-export { toast, type ToastArgs } from "./internal/toast";
+export { useToast, type Toast, type ToastArgs } from "./internal/toast";
 
 export default {
   description:

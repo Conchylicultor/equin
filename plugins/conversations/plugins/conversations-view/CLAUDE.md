@@ -18,7 +18,7 @@
     - `conversations/conversations-view/data-view.ConversationsSidebarDataView`
     - `conversations/model-provider.useDefaultModel`
     - `conversations/pane-restore.loadRouteForConversation`
-    - `infra/endpoints.fetchEndpoint`
+    - `infra/endpoints.useFetchEndpoint`
     - `primitives/css/line.Line`
     - `primitives/css/spacing.insetClass`
     - `primitives/css/status-dot.StatusDot`

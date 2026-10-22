@@ -159,8 +159,8 @@ row with a rising count and a new source starting to fail mints its own.
     - `infra/jobs/supervised-job.defineSupervisedJob`
     - `infra/paths.BACKUPS_DIR`
     - `primitives/log-channels.Log`
-    - `reports.recordReport`
     - `reports.ReportKind`
+    - `reports/engine.recordReport`
     - `tasks/task-category.TaskCategory`
   - DB schema: `plugins/backup/server/internal/tables.ts`
   - Exports (types): `BackupIncompletePayload`

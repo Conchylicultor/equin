@@ -30,12 +30,14 @@ a hook conditionally inside one component.
   - Uses:
     - `infra/attachments.holdAttachments`
     - `infra/attachments.uploadAttachment`
+    - `infra/endpoints.useAssetSrc`
+    - `infra/endpoints.useFetchEndpoint`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/dom/web-storage.defineStore`
     - `primitives/file-type.FileTypeIcon`
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture.openInBrowserTab`
-    - `primitives/overlay/image-viewer.ViewerThumbnail`
+    - `primitives/overlay/image-viewer.AssetThumbnail`
     - `primitives/persistent-draft.legacyDraftKeys`
     - `primitives/persistent-draft.onDraftWritten`
     - `primitives/persistent-draft.readDraft`
@@ -60,7 +62,12 @@ a hook conditionally inside one component.
     - `isImageRef`
     - `rewriteAttachmentMarkdown`
 - Core:
-  - Uses: `primitives/text-editor/token-extension/node.defineInlineTokenNode`
+  - Uses:
+    - `infra/attachments.getAttachmentFile`
+    - `infra/endpoints.assetPath`
+    - `infra/endpoints.AssetPath`
+    - `infra/endpoints.interpolatePath`
+    - `primitives/text-editor/token-extension/node.defineInlineTokenNode`
   - Exports (types):
     - `FileFields`
     - `ImageFields`
@@ -85,6 +92,7 @@ a hook conditionally inside one component.
     - `apps/file-explorer/attachment-preview`
     - `apps/pages/page-tree`
     - `conversations/conversation-view`
+    - `conversations/conversation-view/markdown-extensions`
     - `page/audio`
     - `page/bookmark`
     - `page/file`

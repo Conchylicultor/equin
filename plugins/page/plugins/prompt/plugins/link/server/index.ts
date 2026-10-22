@@ -13,6 +13,7 @@ export {
 } from "./internal/mutations";
 
 export default {
+  portable: true,
   description:
     "Owns the tasks_ext_prompt_block side-table: the page/block a task was launched from, the live link collection over it (block-side window, task-side row lookup), the create-task endpoint, and the Pages task category.",
   contributions: [

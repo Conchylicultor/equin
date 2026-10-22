@@ -107,8 +107,9 @@ function backend(who: string, watermark: string) {
         ),
       );
     },
-    assetUrl: (path) => `test-${who}:${path}`,
+    servesUrls: true,
     machine: true,
+    telemetry: false,
   };
   return { transport, opened, closed: () => closed };
 }
