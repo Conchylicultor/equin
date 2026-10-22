@@ -99,6 +99,7 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/mail/plugins/mail-html",
   "apps/plugins/mail/plugins/reading-pane",
   "apps/plugins/mail/plugins/search",
+  "apps/plugins/mail/plugins/sync",
   "apps/plugins/mail/plugins/sync-status",
   "apps/plugins/mail/plugins/sync/plugins/auto-resume",
   "apps/plugins/mail/plugins/threads",

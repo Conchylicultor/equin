@@ -214,6 +214,7 @@ imports `@plugins/auth/*` directly — all Gmail auth flows through
     - `MailThread`
   - Exports (values):
     - `deriveMailSyncView`
+    - `GmailTokenUnavailableError`
     - `MAIL_LABEL_TYPES`
     - `MAIL_OUTBOX_OP_TYPES`
     - `MAIL_OUTBOX_STATUSES`

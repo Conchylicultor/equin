@@ -9,8 +9,8 @@ import { threadMessages } from "../../core";
 // polling; `mail_messages_thread_id_idx` covers the filter.
 //
 // Envelope-only: the projection is the wire row schema, and bodies are null on
-// the stub rows — the pane hydrates each message on first expand via `sync`'s
-// `mailHydrateMessageEndpoint`.
+// the stub rows — the pane reads each expanded message's body through `sync`'s
+// `mail.message-body` value.
 export const threadMessagesServed = serveCollection(threadMessages, {
   from: _mailMessages,
 });

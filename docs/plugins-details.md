@@ -1825,9 +1825,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`dashboard`** — Analytics section of a deployment's page, shown only when the deployment's composition ships the collect plugin: range and comparison controls, KPI tiles choosing a trend line with a dashed previous period, ranked Pages / Sources / Locations / Devices / Events panels whose rows filter the whole dashboard (one filter on ranges past the raw window), and what one visit records. Reads the report over SSH on demand, with explicit states for every failure. Reads a deployment's analytics report over SSH: resolves the deployment's server and pinned SSH target, curls the install's host-only report through its own gateway on the loopback port, and answers a discriminated result (report, refused, or which of SSH, the request or the answer failed).
               - Web:
                 - Contributes: `DeploymentDetail.Section` "Analytics" → `AnalyticsSection`
-                - Uses: 30 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md)
-                  - `infra/endpoints` ×2
-                  - `network/live` ×2
+                - Uses: 29 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md)
+                  - `network/live` ×3
                   - `primitives/css/coords` ×2
                   - `primitives/css/text` ×2
                   - `primitives/css/ui-kit` ×2
@@ -1852,28 +1851,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/loading.Loading`
                   - `primitives/relative-time.RelativeTime`
               - Server:
+                - Contributes: `resource.declare` "deploy-analytics.report"
                 - Uses:
                   - `apps/deploy/deployments._deployDeployments`
                   - `apps/deploy/health.resolveServerSshTarget`
                   - `database.db`
-                  - `infra/endpoints.HttpError`
-                  - `infra/endpoints.implement`
                   - `infra/ssh.sshRun`
-                - Routes: `POST /api/deploy/analytics/query`
+                  - `network/live.serveValue`
+                - Resources: `deploy-analytics.report` (invalidate, snapshot)
               - Core:
                 - Uses:
+                  - `apps/deploy/analytics/collect.AnalyticsFilter`
                   - `apps/deploy/analytics/collect.AnalyticsQueryResultSchema`
                   - `apps/deploy/analytics/collect.AnalyticsQuerySchema`
-                  - `infra/endpoints.defineEndpoint`
                   - `infra/ssh.SshFailureKindSchema`
-                - Exports (types):
-                  - `DeploymentAnalyticsBody`
-                  - `DeploymentAnalyticsResult`
+                  - `network/live.liveValue`
+                  - `packages/canonical-params.canonicalJson`
+                - Exports (types): `DeploymentAnalyticsResult`
                 - Exports (values):
                   - `CURL_EXIT`
-                  - `DeploymentAnalyticsBodySchema`
-                  - `DeploymentAnalyticsResultSchema`
-                  - `queryDeploymentAnalytics`
+                  - `deploymentAnalytics`
+                  - `filtersFit`
               - Cross-plugin:
                 - Uses tokens:
                   - `ui/tokens/chart --chart-1`
@@ -1890,8 +1888,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/density --space-sm`
                   - `ui/tokens/shape --radius`
                   - `ui/tokens/shape --spacing`
-              - Exemptions:
-                - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-deployment-analytics.ts` (debt)
               - Test helpers:
                 - Web: `@plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/web/testing`
                   - `metrics`
@@ -2748,7 +2744,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-weight-semibold`
-        - **`wallpaper`** — Floating desktop wallpaper: the Wallpaper.Provider source registry, the picker dialog + shared search panel, the desktop right-click context menu, the corner attribution credit, and the global wallpaper config web registration. Floating desktop wallpaper: provider registry, search/import/upload endpoints, the machine-global wallpaper store, and the global wallpaper config registration.
+        - **`wallpaper`** — Floating desktop wallpaper: the Wallpaper.Provider source registry, the picker dialog + shared search panel, the desktop right-click context menu, the corner attribution credit, and the global wallpaper config web registration. Floating desktop wallpaper: provider registry, the live wallpaper.search value, import/upload endpoints, the machine-global wallpaper store, and the global wallpaper config registration.
           - Web:
             - Slots: `Wallpaper.Provider`
             - Slot contributors:
@@ -2759,15 +2755,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `ConfigV2.WebRegister` "wallpaper"
             - Uses: 21 symbols — full list in [`plugins/apps/plugins/desktop/plugins/wallpaper/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/wallpaper/REFERENCE.md)
               - `config_v2` ×3
-              - `infra/endpoints` ×3
               - `primitives/css/ui-kit` ×3
               - `primitives/overlay/cursor-menu` ×2
+              - `infra/endpoints.fetchEndpoint`
+              - `network/live.useLive`
               - `primitives/css/grid.Grid`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/toggle-chip.SegmentedControl`
+              - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog.openDialog`
               - `primitives/search.SearchInput`
@@ -2781,7 +2779,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `WallpaperAttribution`
               - `WallpaperSearchPanel`
           - Server:
-            - Contributes: `ConfigV2.Register` "wallpaper"
+            - Contributes:
+              - `ConfigV2.Register` "wallpaper"
+              - `resource.declare` "wallpaper.search"
             - Uses:
               - `config_v2.ConfigV2`
               - `infra/endpoints.HttpError`
@@ -2789,12 +2789,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/safe-fetch.parsePublicUrl`
               - `infra/safe-fetch.safeFetch`
               - `infra/safe-fetch.SsrfError`
+              - `network/live.serveValue`
             - Exports (types): `WallpaperSearchProvider`
             - Exports (values):
               - `defineWallpaperProvider`
               - `getWallpaperProvider`
+            - Resources: `wallpaper.search` (invalidate, fixed)
             - Routes:
-              - `GET /api/wallpaper/search`
               - `POST /api/wallpaper/import-url`
               - `POST /api/wallpaper/upload`
               - `GET /api/wallpaper/image`
@@ -2808,6 +2809,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints.blob`
               - `infra/endpoints.defineEndpoint`
               - `infra/endpoints.multipart`
+              - `network/live.liveValue`
             - Exports (types):
               - `BuiltinWallpaper`
               - `SavedWallpaper`
@@ -2822,12 +2824,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `importWallpaperUrl`
               - `isDefaultWallpaper`
               - `SavedWallpaperSchema`
-              - `searchWallpaper`
               - `uploadWallpaper`
+              - `WALLPAPER_QUERY_MAX`
               - `WallpaperAttributionSchema`
               - `wallpaperConfig`
               - `wallpaperImage`
               - `WallpaperResultSchema`
+              - `wallpaperSearch`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --muted`
@@ -2841,9 +2844,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/desktop/windows`
             - Endpoint callers: `windows`
           - Exemptions:
-            - Exempts itself from:
-              - `live/no-endpoint-read` — `web/components/wallpaper-search-panel.tsx` (debt)
-              - `boundaries/no-platform-api` — `server/internal/handle-image.ts`, `server/internal/store.ts` (debt)
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/handle-image.ts`, `server/internal/store.ts` (debt)
           - Plugins:
             - **`builtin`** — Built-in wallpaper source: contributes the Built-in tab to the desktop wallpaper picker, a grid of the bundled wallpapers (and the theme-following gradient); picking one writes its id to the wallpaper config with no server upload.
               - Web:
@@ -2881,7 +2882,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Server:
                 - Uses:
                   - `apps/desktop/wallpaper.defineWallpaperProvider`
-                  - `infra/endpoints.HttpError`
                   - `infra/safe-fetch.parsePublicUrl`
                   - `infra/safe-fetch.safeFetch`
                   - `infra/safe-fetch.SsrfError`
@@ -4150,7 +4150,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: `apps/mail/reading-pane`
             - Endpoint callers:
               - `remote-images`
-              - `search`
               - `sync`
         - **`gmail-api`** — Stateless typed Gmail REST API v1 client (profile, messages, history, labels) with concurrency-bounded batched gets and exponential backoff. Takes an access token per call; never touches auth or storage.
           - Cross-plugin:
@@ -4282,6 +4281,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `MailThread`
             - Exports (values):
               - `deriveMailSyncView`
+              - `GmailTokenUnavailableError`
               - `MAIL_LABEL_TYPES`
               - `MAIL_OUTBOX_OP_TYPES`
               - `MAIL_OUTBOX_STATUSES`
@@ -4358,7 +4358,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spacing` ×2
               - `primitives/css/ui-kit` ×2
               - `apps/mail/mail-html.MailHtml`
-              - `infra/endpoints.fetchEndpoint`
+              - `apps/mail/sync.MessageBodyState`
               - `network/live.useLive`
               - `primitives/avatar.Avatar`
               - `primitives/css/center.Center`
@@ -4398,8 +4398,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family --font-sans`
               - `ui/tokens/shape --radius`
             - Imported by: `apps/mail/threads`
-          - Exemptions:
-            - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-hydrated-message.ts` (debt)
         - **`remote-images`** — SSRF-guarded, image-content-type-restricted proxy for remote email images (GET /api/mail/image?url=). Same-origin; fetches through safeFetch, refuses non-image responses (415), and only ever hit after the user opts into 'Display images' — so it is neither a tracking-pixel leak nor an open proxy.
           - Server:
             - Uses:
@@ -4409,7 +4407,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `MAIL_IMAGE_PROXY_ROUTE`
               - `mailImageProxyUrl`
-        - **`search`** — Mail on-demand search: a Search sidebar entry opening a query surface over GET /api/mail/search (Gmail relevance order, reaching mail older than the sync window), plus a lazily-hydrated reader pane for a selected message.
+        - **`search`** — Mail on-demand search: a Search sidebar entry opening a query surface over the mail.search paged value (Gmail's ranked threads, reaching mail older than the sync window), drawn as a DataView of the hits' live mail.threads rows, plus a reader pane for a hit's newest matched message (its live row + its mail.message-body value).
           - Web:
             - Slots:
               - `mail-search.actions`
@@ -4421,21 +4419,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Mail.Sidebar` "Search"
               - `Pane.Register` "mail-message"
               - `Pane.Register` "mail-search"
-            - Uses: 27 symbols — full list in [`plugins/apps/plugins/mail/plugins/search/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/search/REFERENCE.md)
-              - `primitives/pane` ×5
-              - `infra/endpoints` ×3
-              - `primitives/cursor-pagination` ×3
+            - Uses: 31 symbols — full list in [`plugins/apps/plugins/mail/plugins/search/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/search/REFERENCE.md)
+              - `primitives/pane` ×4
+              - `integrations/gmail` ×3
+              - `primitives/data-view` ×3
+              - `primitives/live-state` ×3
+              - `network/live` ×2
               - `primitives/css/spacing` ×2
               - `apps/mail/shell.Mail`
+              - `apps/mail/sync.MessageBodyState`
+              - `apps/mail/threads.ThreadRow`
               - `primitives/css/badge.Badge`
+              - `primitives/css/center.Center`
               - `primitives/css/cluster.Cluster`
-              - `primitives/css/fill.Fill`
-              - `primitives/css/line.Line`
+              - `primitives/css/column.Column`
               - `primitives/css/placeholder.Placeholder`
-              - `primitives/css/row.Row`
-              - `primitives/css/status-dot.StatusDot`
-              - `primitives/css/sticky.Sticky`
               - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
               - `primitives/loading.Loading`
               - `primitives/relative-time.RelativeTime`
               - `primitives/search.SearchInput`
@@ -4443,11 +4443,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --muted-foreground`
-              - `ui/tokens/color-palette --primary`
-              - `ui/tokens/color-palette --primary-text`
-              - `ui/tokens/density --space-sm`
-          - Exemptions:
-            - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-mail-search.ts` (debt)
+              - `ui/tokens/color-palette --warning`
         - **`shell`** — App shell for Mail. Registers the /mail app entry, defines the Mail.Sidebar slot, and renders the capability-driven landing pane.
           - Web:
             - Slots:
@@ -4490,44 +4486,72 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/mail/search`
               - `apps/mail/sync-status`
               - `apps/mail/sync/auto-resume`
-        - **`sync`** — Gmail sync engine (on-demand model): a bounded, metadata-only backfill mirrors a recent window of message envelopes; history.list incremental delta keeps them fresh (with a bounded full-resync fallback on historyId expiry) via a scheduled main-only delta tick (the documented no-polling exception). Message bodies + attachments are hydrated lazily on first open and cached (POST /api/mail/hydrate). Mirrors threads/messages/labels into the mail-core tables.
+        - **`sync`** — MessageBodyState: one message's mail.message-body value with its loading and failed-fetch (Retry) states drawn once, for every pane that shows a body. Gmail sync engine (on-demand model): a bounded, metadata-only backfill mirrors a recent window of message envelopes; history.list incremental delta keeps them fresh (with a bounded full-resync fallback on historyId expiry) via a scheduled main-only delta tick (the documented no-polling exception). Message bodies + attachments are hydrated lazily on first open by the mail.hydrate job (asked for by a mail.message-body subscriber, or POST /api/mail/hydrate to retry) and cached; the mail.message-body value reads one message's body state from the mirror. The mail.search paged value answers a Gmail search as ranked thread ids, mirroring the envelopes it sees. Mirrors threads/messages/labels into the mail-core tables.
           - Server:
-            - Contributes: `resource.declare` "mail-sync-state"
-            - Uses: 21 symbols — full list in [`plugins/apps/plugins/mail/plugins/sync/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/sync/REFERENCE.md)
+            - Contributes:
+              - `resource.declare` "mail-sync-state"
+              - `resource.declare` "mail.message-body"
+              - `resource.declare` "mail.search"
+            - Uses: 22 symbols — full list in [`plugins/apps/plugins/mail/plugins/sync/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/sync/REFERENCE.md)
               - `apps/mail/mail-core` ×8
               - `apps/mail/gmail-api` ×5
               - `infra/endpoints` ×2
               - `infra/jobs` ×2
+              - `network/live` ×2
               - `database.db`
               - `integrations/gmail.isGmailEnabled`
-              - `network/live.serveValue`
               - `primitives/log-channels.defineLogSink`
             - Register:
               - `defineJob('mail.backfill')`
               - `defineJob('mail.delta')`
               - `defineJob('mail.sync-tick')`
               - `defineJob('mail.attachment-scan')`
-            - Resources: `mail-sync-state` (push, unbounded: one row per connected mail account — the app is single-account today)
+              - `defineJob('mail.hydrate')`
+            - Resources:
+              - `mail-sync-state` (push, unbounded: one row per connected mail account — the app is single-account today)
+              - `mail.message-body` (push)
+              - `mail.search` (keyed, window, fixed)
             - Routes:
               - `POST /api/mail/sync`
               - `POST /api/mail/hydrate`
-              - `GET /api/mail/search`
+          - Web:
+            - Uses:
+              - `infra/endpoints.useEndpointMutation`
+              - `network/live.useLive`
+              - `primitives/css/row.Row`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/live-state.matchResource`
+              - `primitives/loading.Loading`
+            - Exports (types): `ReadyMailMessageBody`
+            - Exports (values): `MessageBodyState`
           - Core:
             - Uses:
+              - `apps/mail/mail-core.mailAccountIdKind`
               - `apps/mail/mail-core.MailAttachmentSchema`
-              - `apps/mail/mail-core.MailLabelRefSchema`
-              - `apps/mail/mail-core.MailMessageSchema`
               - `infra/endpoints.defineEndpoint`
-            - Exports (types): `MailSearchResult`
+              - `network/live.liveValue`
+            - Exports (types):
+              - `MailMessageBody`
+              - `MailSearchHit`
+              - `MailSearchQuery`
+              - `MailSearchRefusal`
             - Exports (values):
               - `ATTACHMENT_SCAN_DELTA_WINDOW_DAYS`
               - `BACKFILL_WINDOW_DAYS`
+              - `MAIL_SEARCH_MAX_CHARS`
               - `mailHydrateMessageEndpoint`
-              - `mailSearchEndpoint`
-              - `MailSearchResultSchema`
+              - `mailMessageBody`
+              - `mailSearch`
               - `mailSyncEndpoint`
               - `MAX_ATTACHMENT_SCAN_PAGES`
               - `MAX_BACKFILL_MESSAGES`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/mail/reading-pane`
+              - `apps/mail/search`
+          - Exemptions:
+            - Exempts itself from: `no-db-backed-notify` — `server/internal/search-value.ts` (sanctioned)
           - Plugins:
             - **`auto-resume`** — Auto-resumes Mail sync when the Gmail scope is (re)granted: an app-wide headless listener that POSTs the sync kick endpoint on the connect edge.
               - Web:
@@ -4596,7 +4620,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/pane.useOpenPane`
               - `primitives/relative-time.RelativeTime`
               - `ui/icons.Icon`
-            - Exports (values): `mailThreadsPane`
+            - Exports (values):
+              - `mailThreadsPane`
+              - `ThreadRow`
           - Server:
             - Contributes:
               - `resource.declare` "mail.threads"
@@ -4622,6 +4648,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --warning`
               - `ui/tokens/type-scale --font-weight-semibold`
+            - Imported by: `apps/mail/search`
     - **`pages`** — Notion-like pages app.
       - Plugins:
         - **`agent-origin`** — Agent-origin provenance for pages: presents the exposed `origin` field (Private / Scratch) of the Pages sidebar DataView, so pages written by an automated session land in their own Scratch section of the sidebar. Agent-origin provenance for pages (page_blocks_ext_origin): a create-hook contributor stamps every page written by an automated session (x-singularity-origin: agent) with the script that minted it, the marker's presence is exposed as the `origin` field (agent | user) of every list whose rows are blocks — the Pages sidebar's Private / Scratch sections — and a 24h retention sweep trashes the marked pages.
@@ -24944,6 +24971,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`no-db-backed-notify`**
               - Exemptions:
                 - Exempted by:
+                  - `apps/mail/sync` (0 debt)
                   - `apps/studio/contributions/tables/columns` (0 debt)
                   - `apps/studio/contributions/tables/foreign-keys` (0 debt)
                   - `apps/studio/contributions/tables/indexes` (0 debt)
@@ -27013,12 +27041,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 199 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×54
+        - Imported by: 194 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×50
           - `conversations` ×30
           - `debug` ×17
           - `infra` ×17
-          - `page` ×14
+          - `page` ×13
           - `tasks` ×13
           - `primitives` ×10
           - `build` ×8
@@ -29684,6 +29712,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `apps/mail/mail-core`
+          - `apps/mail/search`
           - `apps/mail/shell`
           - `apps/mail/sync`
           - `apps/mail/sync-status`
@@ -30706,14 +30735,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
-        - Imported by: 264 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `apps` ×71
+        - Imported by: 268 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `apps` ×73
           - `conversations` ×49
           - `debug` ×27
           - `tasks` ×27
           - `infra` ×16
           - `active-data` ×12
-          - `page` ×10
+          - `page` ×12
           - `primitives` ×10
           - `build` ×6
           - `code-explorer` ×4
@@ -30740,10 +30769,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `live/no-endpoint-read` — `web` (sanctioned)
           - `no-raw-websocket` — `e2e/narrowing.ts` (sanctioned)
         - Exempted by:
-          - `apps/deploy/analytics/dashboard` (1 debt)
-          - `apps/desktop/wallpaper` (1 debt)
-          - `apps/mail/reading-pane` (1 debt)
-          - `apps/mail/search` (1 debt)
           - `build/build-commits` (1 debt)
           - `build/build-fix` (1 debt)
           - `build/build-info` (1 debt)
@@ -30761,8 +30786,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/events-test` (1 debt)
           - `infra/query-resource` (0 debt)
           - `network/live` (0 debt)
-          - `page/bookmark` (1 debt)
-          - `page/place` (2 debt)
           - `plugin-meta/plugin-health` (1 debt)
           - `primitives/data-view` (0 debt)
           - `primitives/live-state` (0 debt)
@@ -30862,6 +30885,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`canonical-params`** — One spelling per live-resource params tuple: canonicalParams drops an undefined param and a "" for a declared-optional one, and canonicalJson spells a structured param (a typed-query value's q) one way — keys sorted at every depth, non-JSON refused. The single rule both ends of the live-state wire apply (the browser's useResource and the resource runtime), so they cannot drift.
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/analytics/dashboard`
           - `framework/resource-runtime`
           - `network/live`
       - Core:
@@ -31005,6 +31029,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/resource-runtime`
           - `framework/server-core`
           - `network/live`
+          - `page/place`
     - **`retry`**
       - Core:
         - Exports (types): `DelayStrategy`
@@ -31676,7 +31701,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/pages/history`
           - `page/markdown-apply`
-    - **`bookmark`** — Bookmark block type: a link pasted into an empty block can become one (via the pasted-link menu), scraping OG metadata server-side to render a rich preview card (title, description, site, favicon, og:image cached same-origin). Link-preview scraper for the bookmark block: fetches a URL (SSRF-guarded), extracts OG/Twitter metadata via HTMLRewriter, and caches og:image + favicon as same-origin attachments. Also serves a title-only lookup (/api/link-meta, no image downloads) for the pasted-link Mention, and registers the bookmark `data` schema at the server write boundary.
+    - **`bookmark`** — Bookmark block type: a link pasted into an empty block can become one (via the pasted-link menu), scraping OG metadata server-side to render a rich preview card (title, description, site, favicon, og:image cached same-origin). Link-preview scraper for the bookmark block (the live bookmark.link-preview value): fetches a URL (SSRF-guarded), extracts OG/Twitter metadata via HTMLRewriter, and caches og:image + favicon as same-origin attachments. Also serves a title-only lookup (/api/link-meta, no image downloads) for the pasted-link Mention, and registers the bookmark `data` schema at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "bookmark" → `BookmarkBlock`
         - Uses: 24 symbols — full list in [`plugins/page/plugins/bookmark/REFERENCE.md`](../plugins/page/plugins/bookmark/REFERENCE.md)
@@ -31684,15 +31709,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit` ×3
           - `primitives/css/spacing` ×2
           - `primitives/hover-reveal` ×2
-          - `infra/endpoints.fetchEndpoint`
+          - `network/live.useLive`
           - `primitives/css/card.Card`
           - `primitives/css/center.Center`
           - `primitives/css/clip.Clip`
           - `primitives/css/fill.Fill`
           - `primitives/css/pin.Pin`
-          - `primitives/css/placeholder.Placeholder`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/text.Text`
+          - `primitives/live-state.ResourceErrorInline`
           - `primitives/loading.Loading`
           - `primitives/overlay/image-viewer.useImageLoad`
           - `primitives/text-editor/paste-images.attachmentUrl`
@@ -31702,7 +31727,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BOOKMARK_TYPE`
           - `bookmarkBlock`
       - Server:
-        - Contributes: `page.block-data` "bookmark"
+        - Contributes:
+          - `page.block-data` "bookmark"
+          - `resource.declare` "bookmark.link-preview"
         - Uses:
           - `infra/attachments.createAttachment`
           - `infra/endpoints.HttpError`
@@ -31710,13 +31737,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/safe-fetch.parsePublicUrl`
           - `infra/safe-fetch.safeFetch`
           - `infra/safe-fetch.SsrfError`
+          - `network/live.serveValue`
           - `page/editor.Editor`
-        - Routes:
-          - `GET /api/link-preview`
-          - `GET /api/link-meta`
+        - Resources: `bookmark.link-preview` (invalidate, fixed)
+        - Routes: `GET /api/link-meta`
       - Core:
         - Uses:
           - `infra/endpoints.defineEndpoint`
+          - `network/live.liveValue`
           - `page/editor.defineBlock`
           - `ui/icons.symbol`
         - Exports (types):
@@ -31727,7 +31755,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `bookmarkBlock`
           - `linkMetaEndpoint`
           - `LinkMetaSchema`
-          - `linkPreviewEndpoint`
+          - `linkPreview`
           - `LinkPreviewSchema`
       - Cross-plugin:
         - Uses tokens:
@@ -31736,8 +31764,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-weight-semibold`
-      - Exemptions:
-        - Exempts itself from: `live/no-endpoint-read` — `web/components/bookmark-block.tsx` (debt)
     - **`bulleted-list`** — Bulleted-list block type for the page editor. Bulleted-list block type: registers its `data` schema at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "bulleted-list" → `BlockTextRenderer`
@@ -33257,17 +33283,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/page-reference.usePageNavigation`
               - `primitives/icon-button.IconButton`
               - `primitives/link-gesture.linkProps`
-    - **`place`** — Place block type: search an address or business through a registered place provider and render it as a card (name, address, category, link out to the provider's map). Owns the Place.Provider registry, so the block names no provider. Place block server half: the definePlaceProvider registry plus the two provider-agnostic lookup endpoints (search, resolve), which dispatch by `providerId` and name no provider. Also registers the place `data` schema at the server write boundary.
+    - **`place`** — Place block type: search an address or business through a registered place provider and render it as a card (name, address, category, link out to the provider's map). Owns the Place.Provider registry, so the block names no provider. Place block server half: the definePlaceProvider registry plus the two provider-agnostic live lookups (place.search, place.resolve), which dispatch by `providerId` and name no provider. Also registers the place `data` schema at the server write boundary.
       - Web:
         - Slots: `Place.Provider`
         - Slot contributors: `Place.Provider` ← `page.place.google`
         - Contributes: `Editor.Block` "place" → `PlaceBlock`
         - Uses: 30 symbols — full list in [`plugins/page/plugins/place/REFERENCE.md`](../plugins/page/plugins/place/REFERENCE.md)
           - `page/editor` ×4
-          - `infra/endpoints` ×3
           - `primitives/avatar` ×2
           - `primitives/css/spacing` ×2
           - `primitives/css/ui-kit` ×2
+          - `primitives/live-state` ×2
+          - `network/live.useLive`
           - `primitives/copy-to-clipboard.useCopyToClipboard`
           - `primitives/css/card.Card`
           - `primitives/css/center.Center`
@@ -33294,31 +33321,36 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `placeKindGlyph`
           - `usePlaceProviders`
       - Server:
-        - Contributes: `page.block-data` "place"
+        - Contributes:
+          - `page.block-data` "place"
+          - `resource.declare` "place.resolve"
+          - `resource.declare` "place.search"
         - Uses:
-          - `infra/endpoints.HttpError`
-          - `infra/endpoints.implement`
+          - `network/live.serveValue`
           - `page/editor.Editor`
         - Exports (types): `PlaceProvider`
         - Exports (values):
           - `definePlaceProvider`
           - `getPlaceProvider`
-        - Routes:
-          - `GET /api/place/search`
-          - `GET /api/place/resolve`
+        - Resources:
+          - `place.resolve` (invalidate, fixed)
+          - `place.search` (invalidate, fixed)
       - Core:
         - Uses:
-          - `infra/endpoints.defineEndpoint`
+          - `network/live.liveValue`
+          - `packages/resource-protocol.ResourceRefusal`
           - `page/editor.defineBlock`
           - `ui/icons.symbol`
         - Exports (types):
           - `PlaceData`
           - `PlaceFamily`
           - `PlaceKind`
+          - `PlaceLookupRefusalCode`
           - `PlaceSnapshot`
           - `PlaceSnapshotState`
           - `PlaceSuggestion`
         - Exports (values):
+          - `PLACE_LOOKUP_REFUSALS`
           - `PLACE_SNAPSHOT_TTL_MS`
           - `PLACE_TYPE`
           - `placeBlock`
@@ -33326,9 +33358,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PlaceDataSchema`
           - `PlaceFamilySchema`
           - `PlaceKindSchema`
+          - `PlaceLookupRefusal`
           - `placeNeedsResolve`
-          - `placeResolveEndpoint`
-          - `placeSearchEndpoint`
+          - `placeResolve`
+          - `placeSearch`
           - `PlaceSnapshotSchema`
           - `placeSnapshotState`
           - `PlaceSuggestionSchema`
@@ -33343,10 +33376,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `page/place/google`
           - `page/place/map-layer`
-      - Exemptions:
-        - Exempts itself from:
-          - `live/no-endpoint-read` — `web/components/place-search.tsx` (debt)
-          - `live/no-endpoint-read` — `web/internal/use-place-resolve.ts` (debt)
       - Plugins:
         - **`google`** — Google Maps as a place-lookup source for the /place block: contributes the provider's name, icon, and the 'set up Google Maps' affordance the block renders while no API key is configured. Google Places provider for the /place block: adapts the Places API client (autocomplete + details) onto the place-provider registry, reading the API key through the Google Maps integration. Colours a place by the Table A heading of its type (a vendored copy of Google's place-type table), filing a place-google-unknown-type report when Google returns a type the copy lacks.
           - Web:
@@ -35991,8 +36020,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 116 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
-              - `apps` ×33
+            - Imported by: 117 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+              - `apps` ×34
               - `primitives` ×25
               - `page` ×17
               - `conversations` ×7
@@ -36130,8 +36159,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ColumnProps`
             - Exports (values): `Column`
           - Cross-plugin:
-            - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/css/plugins/column/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/column/REFERENCE.md)
-              - `apps` ×10
+            - Imported by: 25 plugins — full list in [`plugins/primitives/plugins/css/plugins/column/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/column/REFERENCE.md)
+              - `apps` ×11
               - `primitives` ×5
               - `debug` ×4
               - `conversations` ×2
@@ -36250,8 +36279,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 163 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
-              - `apps` ×48
+            - Imported by: 162 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+              - `apps` ×47
               - `primitives` ×29
               - `conversations` ×25
               - `debug` ×17
@@ -36417,8 +36446,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 119 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
-              - `apps` ×34
+            - Imported by: 118 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+              - `apps` ×33
               - `primitives` ×19
               - `conversations` ×18
               - `debug` ×8
@@ -36538,11 +36567,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-size-body`
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-body`
-            - Imported by: 87 plugins — full list in [`plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md)
+            - Imported by: 86 plugins — full list in [`plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md)
               - `apps` ×29
               - `debug` ×19
               - `primitives` ×13
-              - `page` ×7
+              - `page` ×6
               - `conversations` ×5
               - `build` ×2
               - `config_v2` ×2
@@ -36871,8 +36900,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --status-dot-md`
               - `ui/tokens/density --status-dot-sm`
               - `ui/tokens/density --status-dot-xs`
-            - Imported by: 43 plugins — full list in [`plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md)
-              - `apps` ×12
+            - Imported by: 42 plugins — full list in [`plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md)
+              - `apps` ×11
               - `conversations` ×10
               - `debug` ×8
               - `active-data` ×3
@@ -36899,7 +36928,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens: `ui/tokens/color-palette --background`
             - Imported by:
               - `apps/chord/curriculum`
-              - `apps/mail/search`
               - `code-explorer/commit-detail`
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversations-view/data-view`
@@ -37013,8 +37041,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×36
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 374 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `apps` ×104
+            - Imported by: 375 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+              - `apps` ×105
               - `conversations` ×72
               - `primitives` ×43
               - `debug` ×36
@@ -37300,9 +37328,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family` ×4
               - `ui/tokens/material` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 421 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 423 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×109
-              - `apps` ×93
+              - `apps` ×95
               - `conversations` ×54
               - `page` ×25
               - `debug` ×23
@@ -37454,7 +37482,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useInfiniteScroll`
       - Cross-plugin:
         - Imported by:
-          - `apps/mail/search`
           - `primitives/data-view`
           - `shell/notifications`
     - **`data-table`** — Sortable/filterable flex-layout data table primitive.
@@ -37541,8 +37568,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ← `primitives.data-view`
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-        - Contributes: 76 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.WebRegister` ×68
+        - Contributes: 77 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.WebRegister` ×69
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
@@ -37759,8 +37786,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useRowFilter`
           - `useSortController`
       - Server:
-        - Contributes: 70 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.Register` ×68
+        - Contributes: 71 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.Register` ×69
           - `ids.kind` ×2
         - Uses:
           - `config_v2.getConfig`
@@ -37904,9 +37931,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×5
           - `ui/tokens/shape` ×2
           - `ui/tokens/shadow --shadow`
-        - Imported by: 97 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Imported by: 98 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `fields` ×30
-          - `apps` ×22
+          - `apps` ×23
           - `debug` ×13
           - `primitives` ×9
           - `conversations` ×7
@@ -39757,13 +39784,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 257 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
-          - `apps` ×69
+        - Imported by: 262 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+          - `apps` ×72
           - `conversations` ×49
           - `debug` ×24
           - `ui` ×24
           - `tasks` ×22
-          - `page` ×12
+          - `page` ×14
           - `primitives` ×12
           - `active-data` ×7
           - `infra` ×7
@@ -39848,8 +39875,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 194 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
-          - `apps` ×63
+        - Imported by: 195 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+          - `apps` ×64
           - `ui` ×21
           - `debug` ×19
           - `conversations` ×18
@@ -48510,9 +48537,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 322 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
-              - `apps` ×67
+            - Tokens used by: 321 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `primitives` ×67
+              - `apps` ×66
               - `conversations` ×49
               - `debug` ×28
               - `page` ×20

@@ -1,5 +1,11 @@
 export { placeBlock, PLACE_TYPE } from "./place-block";
-export { placeSearchEndpoint, placeResolveEndpoint } from "./endpoints";
+export {
+  placeSearch,
+  placeResolve,
+  PlaceLookupRefusal,
+  PLACE_LOOKUP_REFUSALS,
+  type PlaceLookupRefusalCode,
+} from "./resources";
 export {
   PlaceSuggestionSchema,
   PlaceSnapshotSchema,

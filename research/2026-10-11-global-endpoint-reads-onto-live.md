@@ -38,7 +38,7 @@ They also form a second read path beside `useLive`. That path keeps attracting n
   Each needs an honest arm (below). The check itself gets the same fix in P0.
 - **Read-set is per resource key, not per tuple.** A `db` value keyed by a table name (studio sample-rows / row-count) unions every table ever read into one read-set. A write to any of them recomputes every open tuple. That is acceptable with `throttleMs`, and the design records it.
 - **The lint misses ~12 reads.**
-  - Effect / async-state `fetchEndpoint`: log-viewer, plugin-health, events-test, bookmark preview, place-resolve, diff tokens / expand-lines, the screenshot 30 s poll.
+  - Effect / async-state `fetchEndpoint`: log-viewer, plugin-health, events-test, bookmark preview (done in B8), place-resolve (done in B8), diff tokens / expand-lines, the screenshot 30 s poll.
   - Three NDJSON streams: timeline, slow-ops cluster, worktree-cleanup.
   - `review/plugin-changes` (excluded plugin, inline disable).
 - **`useCursorPagination` has no callers.** Its scroll/footer UI (`useInfiniteScroll`, `InfiniteScrollFooter`) is fed by `useLive(...).loadMore` everywhere and stays.
@@ -190,7 +190,7 @@ Each batch:
   - **pushes:** `db` over `op_log_ops`, typed `bucket` param.
   - **tasks:** `db`, one `stats-tasks.history` value.
 - **B10:**
-  - Migrate the P0.2 hidden reads: log channels (registry `subscribe`), plugin-health, bookmark preview (`fixed` per URL), place-resolve, events-test, screenshot (replace the poll).
+  - Migrate the P0.2 hidden reads: log channels (registry `subscribe`), plugin-health, bookmark preview (done in B8), place-resolve (done in B8), events-test, screenshot (replace the poll).
   - The three NDJSON streams become paged or `"notified"` values, or are recorded as an explicit decision in this doc if a stream form is needed. In that case it is added to `useLive` per P0.1, not as a new hook.
   - Then delete `useEndpoint`, `useEndpointResource`, `query-result.ts`'s endpoint use, the `invalidates:` option, and the `endpointQueryKey` export.
   - The lint becomes a flat ban outside `network/live` / `live-state` internals. `useQueryResource` stays only for `exhibits`' local module loads, as its doc already says.
@@ -846,3 +846,113 @@ Everything below ran on `http://att-1791598784-yegtlr.localhost:9000` (build-179
 - **Delete-with-reassign ordering** between the config push and the list push is assumed, not guaranteed (task-1792600740-e0u219).
 - ~~No automated test covers `awaitSavedThemesWrite`~~ — done in review: `optimistic-mutation/web/__tests__/await-resource-write.test.ts`.
 - `./singularity exempt list --rule live/no-endpoint-read --debt`: **38** exemptions remain (41 before B7), all debt.
+
+## Result (B8)
+
+Batch B8 covers third-party lookups: the wallpaper search, the place search and resolve, the bookmark link preview, the deploy analytics report, and mail search and message body. Each now reads through `useLive`. The five GET endpoints (`GET /api/wallpaper/search`, `GET /api/place/search`, `GET /api/place/resolve`, `GET /api/link-preview`, `GET /api/mail/search`), the analytics POST and their handlers are deleted. Mail's hydrate POST stays, but only as the Retry write. Verdicts:
+
+- **Check:** after `regen-generated` and `format` (6 files reformatted), `./singularity check` failed three checks:
+  - `migrations-in-sync`: the new `mail_messages.body_fetch_error` column needed a migration.
+  - `web-artifacts:map-in-sync`: the deployed dist was stale.
+  - `no-db-backed-notify`: the deploy-analytics sanctioned exemption suppressed nothing (see Integration fixes).
+
+  The build fixed the first two.
+- **Test:** `./singularity test` over wallpaper, place, bookmark, the deploy-analytics dashboard, mail and network/live gave 725 bun:test passes and 1 fail, plus 165 vitest passes (16 files).
+  - The one failure is `mail-core/server/internal/account.test.ts`: "`database.migration-source` has no provider".
+  - **B8 did not cause it.** The file is untouched, and it passes alone (4/4). It fails only inside the multi-file run: host-service state leaks between files in one bun process. `places-all.test.ts`, which uses the same `runMigrations` fixture, also passes alone.
+- **Build:** green with checks. The first green build (build-1792604494-rdq9ef) generated migration `20261021_174208_76c9b60e__mail_body_fetch_error.sql` (expand: `ADD COLUMN "body_fetch_error" text`). The final build after the Openverse fix is build-1792606114-ucks4l.
+
+### Per site
+
+| Site | Value key | Source / changes | Endpoint | Debt entry |
+|---|---|---|---|---|
+| wallpaper `web/components/wallpaper-search-panel.tsx` | `wallpaper.search` `{provider, q}` (one provider page, at most 20) | external, `fixed` | `GET /api/wallpaper/search` deleted | removed |
+| place `web/components/place-search.tsx` | `place.search` `{providerId, q, session}` (at most 5 suggestions) | external, `fixed` | `GET /api/place/search` deleted | removed (manifest deleted) |
+| place `web/internal/use-place-resolve.ts` | `place.resolve` `{providerId, placeId, session}` | external, `fixed` | `GET /api/place/resolve` deleted | removed |
+| bookmark `web/components/bookmark-block.tsx` | `bookmark.link-preview` `{url}` | external, `fixed` | `GET /api/link-preview` deleted (`/api/link-meta` kept: an event-handler read for url-paste) | removed (manifest deleted) |
+| deploy analytics `web/internal/use-deployment-analytics.ts` (deleted) | `deploy-analytics.report` `{deploymentId, query}` | external, `snapshot` | `POST /api/deploy/analytics/query` deleted | removed |
+| mail reading-pane `web/internal/use-hydrated-message.ts` (deleted) | `mail.message-body` `["messageId"]` (`fetching` / `failed` / `ready`) | `db`, routed on `mail_messages` + `mail_attachments`; `whileSubscribed` enqueues `mail.hydrate` | `POST /api/mail/hydrate` kept as the Retry write | removed (manifest deleted) |
+| mail search `web/internal/use-mail-search.ts` (deleted) | `mail.search` paged `{q, accountId}` (50 per page, `maxLimit` 300; at most 1000 hits per question, 32 questions held) | external, `fixed` (true only while the question stays in the server's LRU) | `GET /api/mail/search` deleted | removed (manifest deleted) |
+
+### Integration fixes
+
+- **The deploy-analytics `no-db-backed-notify` exemption was dead, so it is removed.** The plugin's `exempt/index.ts` is deleted, and the stale references in `server/internal/served.ts` and the plugin's `CLAUDE.md` are fixed. The loader does read Postgres (the deployment row, then `resolveServerSshTarget`), but the scan cannot see it. `resolveDeployment` reaches the loader as an injected dependency (`queryAnalyticsOverSsh({ resolveDeployment, sshRun }, …)`), not as a call the scan follows. So the exemption suppressed nothing, and the check required deleting it. The `CLAUDE.md` now records why the read is invisible. This is a blind spot in the scan (see Open).
+- **Openverse `PAGE_SIZE` changed from 30 to 20. This bug predates B8; the code at HEAD already asked for 30.** Openverse answers `page_size=30` from an anonymous client with `401 {"detail":"page_size may not exceed 20 for anonymous requests"}`, which a curl confirmed. The provider maps 401 to the `rate-limited` refusal. So the picker always said "Openverse is rate-limiting anonymous requests…", and no search had ever worked. The `wallpaper.search` doc comment now says 20.
+
+### Live evidence
+
+Everything below ran on `http://att-1791598784-yegtlr.localhost:9000`, using the `browser_*` session. Shots are in `/tmp/live-migration-shots/B8-*`.
+
+- **Place search (verified, happy path).** Google Maps is configured in this worktree. In a new page, a `/place` block was added and "Louvre Museum" typed into it (`B8-place-search.png`). The list showed five suggestions: Louvre Museum (Paris, France), Louvre Abu Dhabi, Japon Louvre Sculpture Museum, The Museum of Fine Arts Houston, and Museum Café Louvre. The network log has one `GET /api/resources/place.search?providerId=google&q=Louvre+Museum&session=…`, so the debounce held.
+- **Place resolve (verified).** Picking the first suggestion made one `GET /api/resources/place.resolve?…placeId=ChIJD3uTd9hx5kcR1IQvGfr8dbk&session=<same>`. The block shows "Louvre Museum · Art museum · 75001 Paris, France" with the museum icon (`B8-place-resolved.png`). There was no second resolve after the session rotated.
+- **Bookmark preview (verified).** A `/bookmark` block was given `https://github.com/anthropics/claude-code` and made one `GET /api/resources/bookmark.link-preview?url=…`. The card shows the GitHub favicon and site name, the title "GitHub - anthropics/claude-code: Claude Code is an agentic coding tool…", the description, `github.com`, and the og:image (`B8-bookmark-preview.png`). The `blocked` refusal was checked by curl: `url=http://127.0.0.1/` returns `{"reason":"refused","code":"blocked","detail":"URL host is not allowed: 127.0.0.1"}`.
+- **Fixed lookups do not refetch on remount (verified for place and bookmark).** The network log was cleared, then the page was navigated away from and back to. After 5 s it showed zero `place.*` or `bookmark.link-preview` requests, and both blocks rendered from their copied data (`B8-page-remount.png`).
+- **Deploy analytics (verified: the read and Refresh; the report itself did not render).** Expanding Analytics on `/deploy/dep/dpl-1785501087837-xkt5u5` made one `GET /api/resources/deploy-analytics.report?q={deploymentId, query:{compare:true, filters:[], range:"30d"}}`. The SSH read reached the box. The answer is the `unreadable-answer` arm: "The site answered, but not with an analytics report. Not an analytics result: report.rows.event_prop: Required" (`B8-deploy-analytics.png`).
+  - **B8 did not cause this.** `event_prop` came in 888f81ccce (2026-10-20, collect plugin, untouched by B8), and the deployed site predates it.
+  - Clicking Refresh (↻) made exactly one new `GET` of the same key after 12 s. A snapshot re-reads when asked.
+  - The happy path (charts drawn) was **not exercised**.
+- **Mail: only the refusal and missing UI were exercised. The Gmail happy path was not.** The worktree's Gmail token is unavailable: the banner says "Gmail token unavailable: Unable to connect…", and `mail_messages` has 0 rows (the corpus is left out of forks).
+  - `/mail/search`, searching "invoice", gives a DataView chrome (Results tab, search, filter, sort) and "Couldn't load: Connect Gmail to search your mailbox." This is the `not-connected` refusal, with no Retry (`B8-mail-search-not-connected.png`).
+  - `/mail/search/m/msg-doesnotexist` shows "This message is not in the local mailbox." (`B8-mail-message-missing.png`). It is rendered by the `threadMessages` row lookup's not-found branch (`mail-message-reader.tsx`); the `mail.message-body` `missing` refusal is unreachable from this pane (its only reader mounts only when the row is found) and was not exercised.
+  - **Not verified:** a search returning threads, page 2 on scroll, opening a message body (`fetching` → `ready`), and starred/read toggles updating a result row without a re-search.
+- **Wallpaper search: the happy path was not exercised.**
+  - Before the `PAGE_SIZE` fix, typing "mountain lake" in the Openverse tab gave "Couldn't load: Openverse is rate-limiting anonymous requests right now…" with no Retry (`B8-wallpaper-ratelimited.png`), which is the 401 above.
+  - After the fix, the read failed with "Couldn't load: Resource wallpaper.search fetch failed: 500 (loader-failed)" plus a Retry button, and a "loader failed for wallpaper.search: The operation timed out" crash toast (`B8-wallpaper-timeout.png`).
+  - Openverse itself was not answering from this host: three direct curls with `page_size=20` each timed out at 25 s.
+  - The `unknown-provider` refusal was checked by curl (`provider=nope` returns `{"reason":"refused","code":"unknown-provider",…}`).
+- **Freshness.** Every new external value is `fixed` (no change signal), except deploy analytics, which is `snapshot` (re-read on Refresh, verified above). `mail.message-body` is `db`-routed. The planned live freshness check, a `fetching` → `ready` push when the hydrate job writes the body, needs a Gmail connection and **was not driven**.
+- **`/api/resources/_debug`** (verified): every new key is present, with its declared freshness:
+  - `wallpaper.search`, `place.search`, `place.resolve` and `bookmark.link-preview`: `policy: external`, `externalSource: true`, freshness `{kind: "fixed", reason: …}`.
+  - `mail.search`: `mode: keyed`, external, `fixed`.
+  - `deploy-analytics.report`: external, freshness `{kind: "snapshot", reason: "the deployed site's report, read over SSH…"}`.
+  - `mail.message-body`: `mode: push`, `policy: routed`, routes `mail_messages` and `mail_attachments` (full map, with a reason).
+- **State left behind:** a scratch page `block-14311e05-b7a6-4fc9-9ed2-00eb8d986bd7` ("Untitled") in this worktree's DB, holding the Louvre place block and the github bookmark block.
+
+### Deviations (from the implementers, accepted)
+
+- Place resolve and bookmark preview are `fixed`, not snapshot + refresh. Place has three new refusals (`not-configured`, `quota`, `not-found`), which used to arrive as 500s. When search is refused `not-configured`, it renders the provider's `AccessAction`.
+- Deploy analytics keeps its Postgres read inside the external snapshot loader. The SSH key and the pinned host key may only be read server-side at SSH time. The core file is renamed `endpoints.ts` → `analytics.ts`. Questions are bounded by `FILTERS_MAX_BYTES` (1536) and `MAX_FILTERS` (8).
+- Mail search rows are now thread-level (`ThreadRow` over `useLive(mailThreads, { ids })`). The per-row label chips and the matched-count pill are gone. The question carries `accountId`. The search loader upserts the envelopes it sees, under a **sanctioned** `no-db-backed-notify` exemption in `mail/sync/exempt/index.ts`: the write helper's `recomputeThread` re-reads message rows, but the answer itself comes only from Gmail. The search body keeps the previous rows on screen while the id set changes.
+- New column `mail_messages.body_fetch_error`, and a new `mail.hydrate` job (one attempt).
+- **Bookmark preview and place resolve were pulled forward from B10** (the P0.2 hidden reads), since they are third-party lookups like the rest of B8.
+- **Mail search does not follow the planned page-token design.** The plan said each page returns ranked thread ids plus Gmail's page token, and a thread on two pages is folded on the client over the live rows. Instead `remote-search.ts` holds each question's answer server-side in an in-process LRU (32 × at most 1000 hits), cuts pages by a synthetic zero-padded `rank` (a key-range page needs a position to cut at, which Gmail's opaque forward-only token is not), folds a thread on two Gmail pages on the server (the `seen` set, ranked where it first appeared), and never exposes the page token. Caveat as landed: `fixed` held only while the question stayed in that process's LRU — after an eviction or a restart a later page re-walked Gmail and ranks could shift. The review fixes scope the held answer to a per-search `round` and refuse an evicted round's later page `expired` (see Review fixes (B8)).
+
+### Review fixes (B8)
+
+All 15 verified findings were applied. None was skipped. The two duplicates (the `openverse-panel.tsx` comment) were fixed once.
+
+- **Throttling is a failure, not a refusal.** The Openverse 401/429 and the Google Places 429 now throw a plain Error, so the read's error offers Retry. Before, they were refusals: never retried, cached as refused, and drawn with no Retry. `rate-limited` is dropped from `wallpaper.search`'s refusals, and `quota` from `PLACE_LOOKUP_REFUSALS`. Place now has two new refusals (`not-configured`, `not-found`), not three as the Deviations above say. Trade-off: Openverse's message no longer reaches the reader, since only `loader-failed` crosses the wire, and a throttle is reported as a server failure (task-1792607427-a4c7li).
+- **Place `not-configured` always shows its message.** `place-search.tsx` draws `ResourceErrorInline` with the provider's `AccessAction` beside it, never in its place. `MapsAccessAction` draws nothing while the client believes Places ready, which used to leave the refusal invisible.
+- **`mail.search` is scoped to a search round.** `MailSearchQuery` gains `round`, a token `SearchResults` mints with `crypto.randomUUID()` on mount and on "Search again". It is part of the server's `questionKey`, so the same query typed again is a new tuple and asks Gmail again. The deleted endpoint asked on every call, and the round restores that; before this fix a held answer was served until restart or LRU eviction. The `fixed` reason now says the answer is held per round.
+- **An evicted round's later page is refused `expired`.** It is no longer silently re-ranked: `answerFor(key, after)` throws when `after` is set and the round is no longer held. `expired` is a new declared refusal.
+- **Mail search refusals with a fix get their fix.** `not-connected` renders the server's message, `GmailAccessAction reconnect` and "Search again". `expired` renders the message and "Search again". `SearchResults` is also keyed on `useGmailAccess().ready`, so a reconnect that flips it starts a new round. `invalid-cut` stays the list's error.
+- **One body-state component.** The new `mail/sync/web` barrel exports `MessageBodyState({ messageId, loadingLabel?, ready })`: the `mail.message-body` loading, fetching and failed (Retry) states. The reading pane's `MessageBody` and the search reader's `MessageText` both render through it, and both copies of `FetchFailed` are deleted.
+- **Typed token error.** `GmailTokenUnavailableError` lives in `mail-core/core`, so the pure `classify-error.ts` can import it without the server barrel. `requireGmailToken` throws it. `classify-error.ts` and `remote-search.ts` test it with `instanceof` instead of matching the message prefix, and the test builds one.
+- **Deploy analytics' undeclared read.** No exemption can be restored until the check follows injected dependencies (task-1792607417-zpzsb4). The `served.ts` comment now says the read is undeclared, that only `snapshot` keeps it honest, not to copy the loader into a `fixed` value, and points to the task.
+- **Doc fixes:**
+  - "four GET endpoints" is now the five, named.
+  - Bookmark preview and place resolve are marked "done in B8" in P0.2 and B10, with a Deviations line.
+  - The mail-search page-token deviation is recorded (server-held answer, rank-cut paging, server-side thread fold, and the caveat as landed).
+  - The "not in the local mailbox" hedge is resolved: it is the `threadMessages` row lookup's not-found branch, and the `missing` refusal is unreachable from that pane.
+  - Each Open item cites its task.
+  - The `openverse-panel.tsx` comment names the `wallpaperSearch` live read.
+- **Verdicts:**
+  - **Build:** the first build failed `type-check`: `SearchResults` typed `accountId` as `string` instead of the branded id, and `switch-exhaustiveness-check` caught a `default`. After fixing both, the build is green with checks (build-1792607789-eik0rn). A standalone `./singularity check` run after the doc edits failed only `web-artifacts:map-in-sync` (stale dist). The final rebuild, build-1792608479-obyvop, is green with checks.
+  - **Check:** the standalone `./singularity check` is green after the first green build, and green again inside the final build.
+  - **Test:** `./singularity test` over mail, wallpaper, place and the deploy-analytics dashboard gave 108 bun:test passes and 1 fail, plus 58 vitest passes (6 files).
+    - The one failure is the known `mail-core/account.test.ts` multi-file isolation failure ("`database.migration-source` has no provider"). It passes alone (4/4) (task-1792607424-fx037r).
+- **Live:**
+  - `/mail/search` with "invoice", on this worktree's unavailable Gmail token, now shows "Connect Gmail to search your mailbox." with Grant Gmail access and Search again (`B8-review-mail-search-not-connected.png`).
+  - The read carries `round` (`GET /api/resources/mail.search?q={accountId,q:"invoice",round:"2eb2…"}` returns 422). Clicking Search again issued a new GET with another round (`52f2…`).
+  - Wallpaper search: Openverse still times out from this host (a direct curl timed out at 25 s), so `wallpaper.search` answers 500 `loader-failed`, which is the Retry arm. The throttle path itself was not exercised.
+  - Place search with a `not-configured` refusal was not exercised: Maps is configured here.
+
+### Open (B8)
+
+- **`no-db-backed-notify` cannot see a DB read reached through an injected dependency** (deploy-analytics `resolveDeployment` passed as `{ resolveDeployment, sshRun }`). The read is honest here, but the scan has a blind spot. It should follow a function passed by reference as a property, or the value should declare its reads (task-1792607417-zpzsb4; `served.ts` points to it).
+- **Openverse:** the happy path is still unverified (Openverse timed out from this host). The provider still treats any 401 as throttling (now a failure, not the `rate-limited` refusal — see Review fixes). That is wrong for other 401 causes, such as a missing User-Agent or this page-size cap (task-1792607422-4xya4k).
+- **Gmail happy paths unverified:** search results and paging, the message body, and freshness on starred/read toggles. They need a connected Gmail account.
+- **Deploy analytics:** the deployed site's collect predates `event_prop`, so the report is `unreadable-answer` until the site is redeployed.
+- **`useLive(c, { ids })` should keep the previous rows itself** while the id set changes. Mail search does it by hand for now (task-1792607420-9mxb97; the hold in `mail-search-body.tsx` points to it).
+- **The `mail-core/account.test.ts` isolation failure** in a multi-file bun run: host-service state leaks across files. B8 did not cause it (task-1792607424-fx037r).
+- `./singularity exempt list --rule live/no-endpoint-read --debt`: **31** exemptions remain (38 before B8), all debt.

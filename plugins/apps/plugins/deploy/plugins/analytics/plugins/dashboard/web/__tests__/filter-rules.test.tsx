@@ -6,12 +6,19 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import {
+  MAX_FILTERS,
   NONE_VALUE,
+  VISIT_DIMENSIONS,
   type AnalyticsFilter,
   type AnalyticsReport,
 } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
 import { IP_COUNTRY_SOURCE } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/ip-country/core";
-import { STACKED_FILTERS_NOTE, clickRow } from "../internal/filters";
+import {
+  FILTERS_TOO_LONG_NOTE,
+  MAX_FILTERS_NOTE,
+  STACKED_FILTERS_NOTE,
+  clickRow,
+} from "../internal/filters";
 import { PANELS } from "../internal/panels";
 import { RankedPanel } from "../components/ranked-panel";
 import { FilterBar } from "../components/filter-bar";
@@ -50,8 +57,34 @@ describe("clickRow", () => {
     });
   });
 
-  it("stacks any number of filters on a raw report", () => {
+  it("stacks filters on a raw report, up to the query's cap", () => {
     expect(clickRow([SEARCH], "raw", "page", "/").kind).toBe("add");
+    const full = VISIT_DIMENSIONS.slice(0, MAX_FILTERS).map((dimension) => ({
+      dimension,
+      value: "x",
+    }));
+    expect(clickRow(full, "raw", "page", "/")).toEqual({
+      kind: "blocked",
+      reason: MAX_FILTERS_NOTE,
+    });
+  });
+
+  it("refuses an add or a replace whose filters would not fit one question", () => {
+    const long = "/" + "a".repeat(600);
+    const two = [
+      { dimension: "page" as const, value: long },
+      { dimension: "entry_page" as const, value: long },
+    ];
+    expect(clickRow(two, "raw", "exit_page", long)).toEqual({
+      kind: "blocked",
+      reason: FILTERS_TOO_LONG_NOTE,
+    });
+    expect(
+      clickRow([two[0]!, SEARCH], "raw", "channel", "b".repeat(1000)),
+    ).toEqual({ kind: "blocked", reason: FILTERS_TOO_LONG_NOTE });
+    // Removing still works, and a short value still fits.
+    expect(clickRow(two, "raw", "page", long).kind).toBe("remove");
+    expect(clickRow(two, "raw", "exit_page", "/").kind).toBe("add");
   });
 
   it("refuses a second filter on a totals report, but still replaces and removes", () => {

@@ -5,7 +5,6 @@ import {
   blob,
 } from "@plugins/infra/plugins/endpoints/core";
 import {
-  WallpaperResultSchema,
   SavedWallpaperSchema,
   WallpaperAttributionSchema,
   type WallpaperAttribution,
@@ -21,20 +20,6 @@ export type WallpaperCandidate =
   | { kind: "file"; file: File; attribution?: WallpaperAttribution }
   // A bundled wallpaper: no server save, the picker writes its id to config.
   | { kind: "builtin"; id: string; attribution?: undefined };
-
-/**
- * Generic, provider-agnostic search dispatch. Routes by `provider` id to the
- * server-side wallpaper provider registry; an unknown id is a 404. Returns the
- * provider's results (thumbnail + full url + attribution) for the picker grid.
- */
-export const searchWallpaper = defineEndpoint({
-  route: "GET /api/wallpaper/search",
-  query: z.object({
-    provider: z.string(),
-    q: z.string().min(1).max(200),
-  }),
-  response: z.array(WallpaperResultSchema),
-});
 
 /**
  * Import a remote image URL (an Openverse pick OR a pasted URL) into the store.

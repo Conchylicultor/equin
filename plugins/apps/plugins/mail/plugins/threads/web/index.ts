@@ -4,6 +4,7 @@ import { mailThreadsPane } from "./panes";
 import { mailThreadsPresentation } from "./internal/presentation";
 
 export { mailThreadsPane } from "./panes";
+export { ThreadRow } from "./components/thread-row";
 
 export default {
   description:

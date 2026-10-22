@@ -12,20 +12,20 @@ import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
-import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Switch } from "@plugins/primitives/plugins/css/plugins/switch/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
-import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { clickRow, removeFilter } from "../internal/filters";
 import { RANGE_OPTIONS } from "../internal/format";
 import { kpiById, type KpiId } from "../internal/kpis";
 import { PANELS } from "../internal/panels";
-import { useDeploymentAnalytics } from "../internal/use-deployment-analytics";
+import { deploymentAnalytics } from "../../core";
 import { FilterBar } from "./filter-bar";
 import { KpiTiles } from "./kpi-tiles";
 import { RankedPanel } from "./ranked-panel";
@@ -66,7 +66,10 @@ export function AnalyticsDashboard({
   // Decided client-side with the same function the server uses, so a second
   // filter is disabled BEFORE asking rather than refused after.
   const source = reportSourceFor(query, new Date());
-  const answer = useDeploymentAnalytics(deploymentId, query);
+  // One snapshot per (deployment, query): every range, compare or filter
+  // change is a new question; nothing re-asks on its own — each measure is an
+  // SSH session to the box — so Refresh (`refresh()`) is the only re-ask.
+  const answer = useLive(deploymentAnalytics, { deploymentId, query });
 
   const onFilterRow = (dimension: Dimension, value: string) => {
     const click = clickRow(filters, source, dimension, value);
@@ -96,7 +99,7 @@ export function AnalyticsDashboard({
           </Text>
         </Inline>
         <Inline gap="xs">
-          {answer.data?.kind === "report" && (
+          {answer.status === "ready" && answer.data.kind === "report" && (
             <Text variant="caption" tone="muted">
               Updated{" "}
               <RelativeTime date={new Date(answer.data.report.generatedAt)} />
@@ -105,8 +108,8 @@ export function AnalyticsDashboard({
           <IconButton
             icon={refreshIcon}
             label="Refresh"
-            loading={answer.isFetching}
-            onClick={() => void answer.refetch()}
+            loading={answer.status === "loading"}
+            onClick={() => answer.refresh()}
           />
         </Inline>
       </Cluster>
@@ -118,13 +121,15 @@ export function AnalyticsDashboard({
         onClear={() => setFilters([])}
       />
 
-      {answer.isPending ? (
+      {answer.status === "loading" ? (
         <Loading variant="cards" count={6} />
-      ) : answer.isError ? (
-        <Placeholder tone="error">
-          Could not ask for this deployment's analytics:{" "}
-          {getEndpointErrorMessage(answer.error)}
-        </Placeholder>
+      ) : answer.status === "error" ? (
+        <ResourceErrorInline
+          variant="block"
+          subject="this deployment's analytics"
+          error={answer.error}
+          refetch={answer.refresh}
+        />
       ) : answer.data.kind === "report" ? (
         <ReportView
           report={answer.data.report}

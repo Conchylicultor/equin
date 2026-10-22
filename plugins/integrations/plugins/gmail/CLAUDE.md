@@ -74,6 +74,7 @@ for themselves.
 - Cross-plugin:
   - Imported by:
     - `apps/mail/mail-core`
+    - `apps/mail/search`
     - `apps/mail/shell`
     - `apps/mail/sync`
     - `apps/mail/sync-status`

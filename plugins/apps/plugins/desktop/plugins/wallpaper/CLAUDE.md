@@ -28,7 +28,7 @@ entry carries the move — `server/internal/store.ts` spells neither path.
 
 ## Plugin reference
 
-- Description: Floating desktop wallpaper: the Wallpaper.Provider source registry, the picker dialog + shared search panel, the desktop right-click context menu, the corner attribution credit, and the global wallpaper config web registration. Floating desktop wallpaper: provider registry, search/import/upload endpoints, the machine-global wallpaper store, and the global wallpaper config registration.
+- Description: Floating desktop wallpaper: the Wallpaper.Provider source registry, the picker dialog + shared search panel, the desktop right-click context menu, the corner attribution credit, and the global wallpaper config web registration. Floating desktop wallpaper: provider registry, the live wallpaper.search value, import/upload endpoints, the machine-global wallpaper store, and the global wallpaper config registration.
 - Web:
   - Slots: `Wallpaper.Provider`
   - Slot contributors:
@@ -39,15 +39,17 @@ entry carries the move — `server/internal/store.ts` spells neither path.
   - Contributes: `ConfigV2.WebRegister` "wallpaper"
   - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `config_v2` ×3
-    - `infra/endpoints` ×3
     - `primitives/css/ui-kit` ×3
     - `primitives/overlay/cursor-menu` ×2
+    - `infra/endpoints.fetchEndpoint`
+    - `network/live.useLive`
     - `primitives/css/grid.Grid`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.SegmentedControl`
+    - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog.openDialog`
     - `primitives/search.SearchInput`
@@ -61,7 +63,9 @@ entry carries the move — `server/internal/store.ts` spells neither path.
     - `WallpaperAttribution`
     - `WallpaperSearchPanel`
 - Server:
-  - Contributes: `ConfigV2.Register` "wallpaper"
+  - Contributes:
+    - `ConfigV2.Register` "wallpaper"
+    - `resource.declare` "wallpaper.search"
   - Uses:
     - `config_v2.ConfigV2`
     - `infra/endpoints.HttpError`
@@ -69,12 +73,13 @@ entry carries the move — `server/internal/store.ts` spells neither path.
     - `infra/safe-fetch.parsePublicUrl`
     - `infra/safe-fetch.safeFetch`
     - `infra/safe-fetch.SsrfError`
+    - `network/live.serveValue`
   - Exports (types): `WallpaperSearchProvider`
   - Exports (values):
     - `defineWallpaperProvider`
     - `getWallpaperProvider`
+  - Resources: `wallpaper.search` (invalidate, fixed)
   - Routes:
-    - `GET /api/wallpaper/search`
     - `POST /api/wallpaper/import-url`
     - `POST /api/wallpaper/upload`
     - `GET /api/wallpaper/image`
@@ -88,6 +93,7 @@ entry carries the move — `server/internal/store.ts` spells neither path.
     - `infra/endpoints.blob`
     - `infra/endpoints.defineEndpoint`
     - `infra/endpoints.multipart`
+    - `network/live.liveValue`
   - Exports (types):
     - `BuiltinWallpaper`
     - `SavedWallpaper`
@@ -102,12 +108,13 @@ entry carries the move — `server/internal/store.ts` spells neither path.
     - `importWallpaperUrl`
     - `isDefaultWallpaper`
     - `SavedWallpaperSchema`
-    - `searchWallpaper`
     - `uploadWallpaper`
+    - `WALLPAPER_QUERY_MAX`
     - `WallpaperAttributionSchema`
     - `wallpaperConfig`
     - `wallpaperImage`
     - `WallpaperResultSchema`
+    - `wallpaperSearch`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted`
@@ -121,9 +128,7 @@ entry carries the move — `server/internal/store.ts` spells neither path.
     - `apps/desktop/windows`
   - Endpoint callers: `windows`
 - Exemptions:
-  - Exempts itself from:
-    - `live/no-endpoint-read` — `web/components/wallpaper-search-panel.tsx` (debt)
-    - `boundaries/no-platform-api` — `server/internal/handle-image.ts`, `server/internal/store.ts` (debt)
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/handle-image.ts`, `server/internal/store.ts` (debt)
 - Sub-plugins:
   - **`builtin`** — Built-in wallpaper source: contributes the Built-in tab to the desktop wallpaper picker, a grid of the bundled wallpapers (and the theme-following gradient); picking one writes its id to the…
   - **`from-url`** — From-URL wallpaper source: contributes the From URL tab to the desktop wallpaper picker, emitting a pasted image URL the picker imports (and the server validates) via the import-url endpoint.

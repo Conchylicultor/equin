@@ -18,9 +18,9 @@ export type {
   SavedWallpaper,
 } from "./config";
 export {
-  searchWallpaper,
   importWallpaperUrl,
   uploadWallpaper,
   wallpaperImage,
 } from "./endpoints";
 export type { WallpaperCandidate } from "./endpoints";
+export { wallpaperSearch, WALLPAPER_QUERY_MAX } from "./resources";

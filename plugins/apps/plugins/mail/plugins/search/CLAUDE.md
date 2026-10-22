@@ -1,51 +1,55 @@
 # search
 
 On-demand mail search — the UI half of the Mail app's escape hatch for the
-bounded 30-day sync window. Web-only; it consumes `sync`'s two endpoints and
-composes primitives.
+bounded 30-day sync window. Web-only; it reads `sync`'s `mail.search` and
+`mail.message-body` live values and composes primitives.
 
 ## What it adds
 
-- A **Search** entry in the `Mail.Sidebar` slot (`MdSearch`). Clicking it opens
-  the search pane as the surface root (`mode: "root"`).
-- **`mailSearchPane`** (`segment: "search"`, `/mail/search`) — a sticky
-  `SearchInput` over a live result list. The query is debounced locally (~250ms)
-  and drives `GET /api/mail/search` via `useMailSearch` (a `useInfiniteQuery`
-  wrapper — see Pagination below). Results are Gmail relevance-ordered,
-  **thread-collapsed** rows (multiple hits in one thread fold into one row, with
-  a message-count pill when >1; server folds them into the local mirror), so this
-  reaches mail OLDER than the sync window. Each row carries an attachment
-  paperclip (the pre-populated `hasAttachments` flag) and its thread's
-  **user-label chips** (Gmail's own hex colors, via `MailLabelChip`). Empty /
-  loading / no-match / error states are explicit; a `409` (Gmail not connected)
-  surfaces its message.
-- **Pagination** (`internal/use-mail-search.ts`) — Gmail returns an opaque
-  `nextPageToken` (not a keyset cursor derived from an item). It consumes the shared
-  `useInfiniteScroll` primitive (from `primitives/cursor-pagination`): a
-  `useInfiniteQuery` keyed by the query accumulates pages, and `useInfiniteScroll`
-  owns the error-gated `IntersectionObserver`, exposed as a `scroll` handle. The
-  body renders `<InfiniteScrollFooter handle={scroll} />` — the shared load-more
-  spinner + Retry + sentinel, so the `!isFetchNextPageError` hot-loop gate lives
-  in the primitive, not here.
-- **`mailMessagePane`** (over `mailMessageRoute`: `segment: "m/:messageId"`,
-  `parent: mailSearchRoute`) — the reader. Opened to the right of a row with the
-  row's envelope handed in as a `hint` for an instant header — a display mirror
-  of server-owned state, never a write source, absent on a deep link; the body +
-  attachments hydrate on mount via `POST /api/mail/hydrate` (idempotent,
-  cache-first). Only `bodyText` is rendered — **`bodyHtml` is never rendered**
-  (no sanitizer).
+- A **Search** entry in the `Mail.Sidebar` slot. Clicking it opens the search
+  pane as the surface root (`mode: "root"`).
+- **`mailSearchPane`** (`segment: "search"`, `/mail/search`) — a query input
+  over a DataView (`defineDataView("mail-search")`, list view, authored in
+  `config/apps/mail/search/mail-search.jsonc`). The query is debounced locally
+  (~250ms) and, with the connected account's id (`mailAccount`, stated as data
+  the way the threads list states its scope), is the question of `sync`'s
+  `mail.search` paged value: Gmail's ranked **thread ids**, read from Gmail as
+  far as the list scrolls (`useLivePagedValuePaging` — the DataView's viewport
+  pages it), with every matching envelope folded into the local mirror — so it
+  reaches mail OLDER than the sync window. Each hit is drawn as its **live
+  `mail.threads` row** (`useLive(mailThreads, { ids })`, `ThreadRow` from
+  `threads/web`, fields derived from the collection), so read / starred /
+  label changes show without a new search. A grown or released id set is a new
+  read: the rows the previous set read stay on screen until it lands (no blink
+  per page). States: not connected (`GmailAccessEmptyState`, as the threads
+  list), empty query (a prompt), loading, a refused search drawn with its fix
+  (`not-connected`: the message, `GmailAccessAction reconnect` and Search
+  again; `expired`: the message and Search again), no matches. Every search
+  is a new `round` (minted on mount and by Search again, and on a reconnect
+  that flips Gmail's readiness), so the same query typed again asks Gmail
+  afresh.
+- **`mailMessagePane`** (`segment: "m/:messageId"`, `parent: mailSearchRoute`) —
+  the reader, opened for the hit's newest matched message. Its header is the
+  message's live row in the mirror (`useLiveRow(threadMessages, messageId)`),
+  its body and attachments the `mail.message-body` value: not fetched yet is
+  the loading state (the subscription asks `sync`'s `mail.hydrate` job for
+  it), a failed fetch shows why with a Retry — both drawn by `sync/web`'s
+  `MessageBodyState`, shared with the reading pane. Only
+  `bodyText` is rendered — **`bodyHtml` is never rendered** here (no
+  sanitizer on this pane).
 
 ## Consumes
 
-- `GET /api/mail/search` and `POST /api/mail/hydrate` from
-  `@plugins/apps/plugins/mail/plugins/sync/core`.
-- `MailMessage` / `MailAttachment` from
-  `@plugins/apps/plugins/mail/plugins/mail-core/core`.
+- `mailSearch` / `mailMessageBody` (live values) and `mailHydrateMessageEndpoint`
+  (the Retry) from `@plugins/apps/plugins/mail/plugins/sync/core`.
+- `mailThreads` (`threads/core`) and `ThreadRow` (`threads/web`);
+  `threadMessages` (`reading-pane/core`); `mailAccount` (`mail-core/core`).
 
 ## Deferred follow-ups
 
 - **Attachment download** — attachments render as filename `Badge` chips only.
-- **HTML rendering** — needs a sanitizer before `bodyHtml` can be shown.
+- **HTML rendering** — needs a sanitizer before `bodyHtml` can be shown here
+  (the reading pane's `MailHtml` could be reused).
 - **`useDebounced` primitive** — the local `setTimeout` debounce could be
   promoted to a shared primitive.
 
@@ -53,7 +57,7 @@ composes primitives.
 
 ## Plugin reference
 
-- Description: Mail on-demand search: a Search sidebar entry opening a query surface over GET /api/mail/search (Gmail relevance order, reaching mail older than the sync window), plus a lazily-hydrated reader pane for a selected message.
+- Description: Mail on-demand search: a Search sidebar entry opening a query surface over the mail.search paged value (Gmail's ranked threads, reaching mail older than the sync window), drawn as a DataView of the hits' live mail.threads rows, plus a reader pane for a hit's newest matched message (its live row + its mail.message-body value).
 - Web:
   - Slots:
     - `mail-search.actions`
@@ -65,21 +69,23 @@ composes primitives.
     - `Mail.Sidebar` "Search"
     - `Pane.Register` "mail-message"
     - `Pane.Register` "mail-search"
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/pane` ×5
-    - `infra/endpoints` ×3
-    - `primitives/cursor-pagination` ×3
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×4
+    - `integrations/gmail` ×3
+    - `primitives/data-view` ×3
+    - `primitives/live-state` ×3
+    - `network/live` ×2
     - `primitives/css/spacing` ×2
     - `apps/mail/shell.Mail`
+    - `apps/mail/sync.MessageBodyState`
+    - `apps/mail/threads.ThreadRow`
     - `primitives/css/badge.Badge`
+    - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`
-    - `primitives/css/fill.Fill`
-    - `primitives/css/line.Line`
+    - `primitives/css/column.Column`
     - `primitives/css/placeholder.Placeholder`
-    - `primitives/css/row.Row`
-    - `primitives/css/status-dot.StatusDot`
-    - `primitives/css/sticky.Sticky`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.Button`
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
     - `primitives/search.SearchInput`
@@ -87,10 +93,6 @@ composes primitives.
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/color-palette --primary`
-    - `ui/tokens/color-palette --primary-text`
-    - `ui/tokens/density --space-sm`
-- Exemptions:
-  - Exempts itself from: `live/no-endpoint-read` — `web/internal/use-mail-search.ts` (debt)
+    - `ui/tokens/color-palette --warning`
 
 <!-- AUTOGENERATED:END -->

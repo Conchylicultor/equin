@@ -1,11 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  fetchEndpoint,
-  getEndpointErrorMessage,
-} from "@plugins/infra/plugins/endpoints/web";
+import { useEffect, useRef, useState } from "react";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
   placeNeedsResolve,
-  placeResolveEndpoint,
+  placeResolve,
   type PlaceData,
   type PlaceSnapshot,
 } from "../../core";
@@ -22,10 +19,12 @@ export interface UsePlaceResolveArgs {
   /** The current search-round token, handed to the provider with the request. */
   session: string;
   /**
-   * Called once, with the provider that answered and its answer. The provider
-   * id is handed BACK rather than re-read by the caller: it is the id this hook
-   * actually asked, so the write can never stamp a snapshot with a different
-   * one, and the caller needs no non-null assertion to name it.
+   * Called once per answer, with the provider that answered and its answer. The
+   * provider id is handed BACK rather than re-read by the caller: it is the id
+   * this hook actually asked, so the write can never stamp a snapshot with a
+   * different one, and the caller needs no non-null assertion to name it.
+   * The caller ends the round (a new `session`), so the next ask is a new
+   * question.
    */
   onResolved: (providerId: string, snapshot: PlaceSnapshot) => void;
 }
@@ -42,14 +41,19 @@ export interface PlaceResolveState {
   refresh: () => void;
 }
 
+/** The question being asked: the read's params, or `null` while nothing is. */
+type ResolveQuestion = { providerId: string; placeId: string; session: string };
+
 /**
- * Resolve one place, at most once per place (or once per `refresh`). Called UNCONDITIONALLY from every
- * render state — the hook itself decides whether there is anything to ask — so
- * the block's three states share one hook order.
+ * Resolve one place, at most once per place (or once per `refresh`). Called
+ * UNCONDITIONALLY from every render state — the hook itself decides whether
+ * there is anything to ask — so the block's three states share one hook order.
  *
- * The returned `error` is rendered by the caller and never swallowed: a
- * provider that could not answer is a card that says so, next to whatever
- * snapshot it already had.
+ * The ask is a `place.resolve` read held only while there is a question; the
+ * answer is handed to `onResolved` (which copies it into the block) and the
+ * read is dropped. The returned `error` is rendered by the caller and never
+ * swallowed: a provider that could not answer is a card that says so, next to
+ * whatever snapshot it already had.
  */
 export function usePlaceResolve({
   providerId,
@@ -58,17 +62,16 @@ export function usePlaceResolve({
   session,
   onResolved,
 }: UsePlaceResolveArgs): PlaceResolveState {
-  const [error, setError] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
-  // Bumped by `refresh`: a dep of the effect, so a refresh re-runs it.
+  const [question, setQuestion] = useState<ResolveQuestion | null>(null);
+  // Bumped by `refresh`: a dep of the deciding effect, so a refresh re-runs it.
   const [attempt, setAttempt] = useState(0);
-  // Set by `refresh`, consumed by the effect run it triggers: the one request
-  // that goes out although the snapshot is still fresh.
+  // Set by `refresh`, consumed by the effect run it triggers: the one ask that
+  // goes out although the snapshot is still fresh.
   const forceRef = useRef(false);
-  // Guard against a double-resolve — React StrictMode double-mounts, and a
-  // re-render while the request is in flight would otherwise fire a second one.
-  // Keyed on the place, so replacing the place resolves again.
-  const startedRef = useRef<string | null>(null);
+  // The place the current question is about. The round ends (a new `session`)
+  // in the same update that writes the answer; should the snapshot land a
+  // render later, that new session must not ask about the same place again.
+  const askedRef = useRef<string | null>(null);
 
   const { name, fetchedAt } = snapshot;
 
@@ -82,43 +85,50 @@ export function usePlaceResolve({
     const needsResolve =
       forceRef.current || placeNeedsResolve({ name, fetchedAt }, Date.now());
     if (!needsResolve || providerId === undefined || placeId === undefined) {
-      // Nothing to ask right now. Clearing the key is what lets a snapshot that
-      // goes stale under a long-lived mount refresh itself; it cannot loop,
-      // because a successful resolve stamps `fetchedAt`, which keeps this branch
-      // taken for the whole TTL.
-      startedRef.current = null;
+      // Nothing to ask right now. It cannot loop: a successful resolve stamps
+      // `fetchedAt`, which keeps this branch taken for the whole TTL.
+      askedRef.current = null;
+      setQuestion(null);
       return;
     }
-    if (startedRef.current === placeId) return;
-    startedRef.current = placeId;
+    if (!forceRef.current && askedRef.current === placeId) return;
+    askedRef.current = placeId;
     forceRef.current = false;
-    setError(null);
-    setRefreshing(true);
+    // One tuple per (place, round): a re-run with the same values asks the same
+    // question again — the read is shared, never a second request — and a
+    // failed one stays failed until `refresh` or a replaced place.
+    setQuestion({ providerId, placeId, session });
+  }, [name, fetchedAt, providerId, placeId, session, attempt]);
 
-    async function run(provider: string, place: string) {
-      try {
-        const resolved = await fetchEndpoint(
-          placeResolveEndpoint,
-          {},
-          { query: { providerId: provider, placeId: place, session } },
-        );
-        onResolved(provider, resolved);
-      } catch (e) {
-        // Fail loud: surface the provider's own reason. The key stays set, so
-        // this does not retry in a loop — `refresh`, a remount or a replaced place does.
-        setError(getEndpointErrorMessage(e));
-      } finally {
-        setRefreshing(false);
-      }
+  const read = useLive(placeResolve, question);
+
+  // Hand each answer over exactly once (a re-render with the same answer does
+  // not write the block again).
+  const handedRef = useRef<PlaceSnapshot | null>(null);
+  useEffect(() => {
+    if (question === null) return;
+    if (read.status === "ready" && handedRef.current !== read.data) {
+      handedRef.current = read.data;
+      onResolved(question.providerId, read.data);
     }
-    void run(providerId, placeId);
-  }, [name, fetchedAt, providerId, placeId, session, onResolved, attempt]);
+  }, [question, read, onResolved]);
 
-  const refresh = useCallback(() => {
+  function refresh() {
+    // A failed question is asked again as the same question (the provider's
+    // answer may have changed: a rate limit passed, a key added); otherwise a new
+    // ask of the current round.
+    if (question !== null && read.status === "error") {
+      void read.refetch();
+      return;
+    }
     forceRef.current = true;
-    startedRef.current = null;
     setAttempt((n) => n + 1);
-  }, []);
+  }
 
-  return { error, refreshing, refresh };
+  return {
+    error:
+      question !== null && read.status === "error" ? read.error.message : null,
+    refreshing: question !== null && read.status === "loading",
+    refresh,
+  };
 }

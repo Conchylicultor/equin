@@ -1,4 +1,3 @@
-import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { createAttachment } from "@plugins/infra/plugins/attachments/server";
 import {
   decodeHtmlText,
@@ -15,6 +14,18 @@ const MAX_HTML_BYTES = 512 * 1024; // cap the HTML we parse
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // cap downloaded images
 const USER_AGENT =
   "Mozilla/5.0 (compatible; SingularityBot/1.0; +link-preview)";
+
+/**
+ * The page answered with a non-2xx status: a determinate answer about that
+ * url, which each reader maps to its own wire form (the link-meta endpoint's
+ * 502, the link-preview value's `unreachable` refusal).
+ */
+export class PageFetchError extends Error {
+  constructor(readonly status: number) {
+    super(`Failed to fetch URL (status ${status})`);
+    this.name = "PageFetchError";
+  }
+}
 
 interface ScrapedMeta {
   title?: string;
@@ -225,9 +236,7 @@ export async function scrapeLinkMeta(url: string): Promise<ScrapedMeta> {
   const res = await safeFetch(target, {
     headers: { "user-agent": USER_AGENT },
   });
-  if (!res.ok) {
-    throw new HttpError(502, `Failed to fetch URL (status ${res.status})`);
-  }
+  if (!res.ok) throw new PageFetchError(res.status);
 
   // The final URL after redirects, used to resolve relative image/favicon paths.
   const finalUrl = res.url || target.toString();

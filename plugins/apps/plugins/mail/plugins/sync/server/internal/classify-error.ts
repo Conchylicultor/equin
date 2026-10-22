@@ -1,6 +1,9 @@
 import { GmailApiError } from "@plugins/apps/plugins/mail/plugins/gmail-api/core";
 import { RetryDeadlineError } from "@plugins/packages/plugins/retry/core";
-import type { MailSyncErrorCode } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
+import {
+  GmailTokenUnavailableError,
+  type MailSyncErrorCode,
+} from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 
 // Maps any thrown sync failure to a user-facing classification: the error code
 // that drives the remediation copy, a short readable message, and whether it is
@@ -31,9 +34,9 @@ export function classifyMailSyncError(
     err instanceof Error ? err.message : String(err),
   );
 
-  // Token acquisition failure (`requireGmailToken` throws a plain Error) — the
+  // Token acquisition failure (`requireGmailToken`'s typed error) — the
   // account must be reconnected before any sync can resume.
-  if (err instanceof Error && err.message.startsWith("Gmail token unavailable")) {
+  if (err instanceof GmailTokenUnavailableError) {
     return { code: "auth", message, terminal: true };
   }
 

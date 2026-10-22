@@ -1,9 +1,10 @@
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { useId, useRef, useState, type KeyboardEvent } from "react";
+import { useLive } from "@plugins/network/plugins/live/web";
 import {
-  getEndpointErrorMessage,
-  useEndpoint,
-} from "@plugins/infra/plugins/endpoints/web";
+  foldResource,
+  ResourceErrorInline,
+} from "@plugins/primitives/plugins/live-state/web";
 import { cn, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   Inset,
@@ -20,7 +21,7 @@ import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { localUndoProps } from "@plugins/primitives/plugins/undo-redo/web";
 import { useBlockActivate } from "@plugins/page/plugins/editor/web";
-import { placeSearchEndpoint, type PlaceSuggestion } from "../../core";
+import { placeSearch, type PlaceSuggestion } from "../../core";
 import { useDebouncedValue } from "../internal/use-debounced-value";
 import type { PlaceProviderContribution } from "../slots";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -65,25 +66,28 @@ export function PlaceSearch({ provider, session, onPick }: PlaceSearchProps) {
   useBlockActivate(() => inputRef.current?.focus(), { onArrival: true });
   const debounced = useDebouncedValue(query.trim(), SEARCH_DEBOUNCE_MS);
 
-  const { data, error, isFetching } = useEndpoint(
-    placeSearchEndpoint,
-    {},
-    {
-      query: { providerId: provider.id, q: debounced, session },
-      enabled: debounced.length > 0,
-    },
-  );
-  const suggestions = data?.suggestions ?? [];
   const searching = debounced.length > 0;
+  // Nothing is read until there is a question: one tuple per settled query.
+  const search = useLive(
+    placeSearch,
+    searching ? { providerId: provider.id, q: debounced, session } : null,
+  );
+  // The suggestions the arrows walk: only an answered search has any — a
+  // search still asking or failed has none to walk (and renders its own state).
+  const suggestions = foldResource(search, {
+    ready: (answer) => answer.suggestions,
+    loading: () => null,
+    error: () => null,
+  });
 
   function choose(index: number) {
-    const suggestion = suggestions[index];
+    const suggestion = suggestions?.[index];
     if (!suggestion) return;
     onPick(suggestion);
   }
 
   function onKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (suggestions.length === 0) return;
+    if (suggestions === null || suggestions.length === 0) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setActive((i) => (i + 1) % suggestions.length);
@@ -97,7 +101,8 @@ export function PlaceSearch({ provider, session, onPick }: PlaceSearchProps) {
   }
 
   const icon = provider.icon ?? locationOnIcon;
-  const hasResults = suggestions.length > 0;
+  const AccessAction = provider.AccessAction;
+  const hasResults = suggestions !== null && suggestions.length > 0;
 
   return (
     <Stack gap="xs">
@@ -131,12 +136,26 @@ export function PlaceSearch({ provider, session, onPick }: PlaceSearchProps) {
       </Stack>
 
       {/* The lookup itself broke — say so. An empty list means "the provider
-          found nothing", and a failure must never be readable as that. */}
-      {error ? (
-        <Placeholder tone="error">{getEndpointErrorMessage(error)}</Placeholder>
+          found nothing", and a failure must never be readable as that. A
+          provider that says it is not set up gets its fix beside the message —
+          never in place of it: the fix may draw nothing when the client still
+          believes the provider ready (a key the server cannot read). */}
+      {searching && search.status === "error" ? (
+        <Stack gap="2xs">
+          <ResourceErrorInline
+            error={search.error}
+            refetch={search.refetch}
+            variant="inline"
+          />
+          {search.error.kind === "refused" &&
+          search.error.code === "not-configured" &&
+          AccessAction ? (
+            <AccessAction />
+          ) : null}
+        </Stack>
       ) : null}
 
-      {!error && searching && hasResults ? (
+      {searching && suggestions !== null && hasResults ? (
         <Surface level="overlay">
           <Scroll axis="y" className="max-h-64">
             <Inset pad="2xs">
@@ -172,12 +191,12 @@ export function PlaceSearch({ provider, session, onPick }: PlaceSearchProps) {
         </Surface>
       ) : null}
 
-      {!error && searching && !hasResults ? (
-        isFetching ? (
-          <Loading variant="text" label="Searching…" />
-        ) : (
-          <Placeholder>No place matched “{debounced}”.</Placeholder>
-        )
+      {searching && search.status === "loading" ? (
+        <Loading variant="text" label="Searching…" />
+      ) : null}
+
+      {searching && suggestions !== null && !hasResults ? (
+        <Placeholder>No place matched “{debounced}”.</Placeholder>
       ) : null}
     </Stack>
   );

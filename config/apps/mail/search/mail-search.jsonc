@@ -1,0 +1,18 @@
+// @hash 6ec84829688d
+{
+  // One list of the search's hits, in GMAIL'S order: no sort, so the rows stay
+  // ranked and paging follows the answer (a sort would reorder only the hits
+  // loaded so far). Each row is the hit's live thread, drawn by the threads
+  // list's row.
+  "views": [
+    {
+      "id": "results",
+      "name": "Results",
+      "icon": "search",
+      "view": { "type": "list" }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

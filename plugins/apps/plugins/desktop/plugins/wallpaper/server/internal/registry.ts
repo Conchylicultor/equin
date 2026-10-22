@@ -2,15 +2,20 @@ import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import type { WallpaperResult } from "../../core";
 
 /**
- * A registered wallpaper search provider. The handler owns the generic dispatch
- * (route → registry → results); each provider owns only how its source maps a
- * query string to candidate results. Collection-consumer separation: the handler
- * never names a provider — providers register themselves and the handler looks
- * them up by id.
+ * A registered wallpaper search provider. The served `wallpaper.search` value
+ * owns the generic dispatch (question → registry → results); each provider owns
+ * only how its source maps a query string to candidate results.
+ * Collection-consumer separation: the dispatch never names a provider —
+ * providers register themselves and it looks them up by id.
  */
 export interface WallpaperSearchProvider {
   id: string;
-  /** Map a free-text query to candidate results (thumbnail + full url + credit). */
+  /**
+   * Map a free-text query to ONE page of candidate results (thumbnail + full
+   * url + credit). Any failure — a source throttling requests for now
+   * included — throws an Error (the read's error, with Retry); an empty array
+   * means only "nothing matched".
+   */
   search: (q: string) => Promise<WallpaperResult[]>;
 }
 

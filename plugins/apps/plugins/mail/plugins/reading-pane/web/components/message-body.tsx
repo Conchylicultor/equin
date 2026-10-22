@@ -5,11 +5,10 @@ import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { MailHtml } from "@plugins/apps/plugins/mail/plugins/mail-html/web";
 import { AttachmentChip } from "@plugins/apps/plugins/mail/plugins/attachments/web";
 import type { MailAttachment } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
-import { useHydratedMessage } from "../internal/use-hydrated-message";
+import { MessageBodyState } from "@plugins/apps/plugins/mail/plugins/sync/web";
 import { useResolveCid } from "../internal/use-resolve-cid";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -17,20 +16,21 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 const imageIcon = symbol("image");
 
 // Renders a message body. Mounted only when its card is expanded (the collapsible
-// unmounts its content when closed), so the hydrate query fires on first open.
+// unmounts its content when closed), so its `mail.message-body` subscription —
+// which asks for the body's first fetch — starts on first open. Its loading and
+// failed-fetch states are sync's `MessageBodyState`, shared with every pane that
+// shows a body.
 export function MessageBody({ messageId }: { messageId: string }) {
-  const query = useHydratedMessage(messageId, true);
-
-  if (query.isPending) return <Loading variant="text" />;
-  if (query.isError) {
-    return <Placeholder tone="error">Couldn’t load this message.</Placeholder>;
-  }
-
   return (
-    <RenderedBody
-      html={query.data.message.bodyHtml}
-      text={query.data.message.bodyText}
-      attachments={query.data.attachments}
+    <MessageBodyState
+      messageId={messageId}
+      ready={(b) => (
+        <RenderedBody
+          html={b.bodyHtml}
+          text={b.bodyText}
+          attachments={b.attachments}
+        />
+      )}
     />
   );
 }

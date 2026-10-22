@@ -2,8 +2,8 @@ import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import type { PlaceSnapshot, PlaceSuggestion } from "../../core";
 
 /**
- * A registered place-lookup provider. The handlers own the generic dispatch
- * (route → registry → provider); each provider owns only how its source answers
+ * A registered place-lookup provider. The served lookups own the generic
+ * dispatch (question → registry → provider); each provider owns only how its source answers
  * two questions and how it reaches its own credential.
  *
  * Collection-consumer separation: nothing in this plugin names a provider, and
@@ -20,12 +20,16 @@ export interface PlaceProvider {
   id: string;
   /**
    * Candidates for a partial query. An EMPTY array means "this provider found
-   * nothing" and nothing else — a provider that cannot answer (missing
-   * credential, network failure, quota) must THROW, so the block reports a
-   * broken lookup instead of rendering "no results".
+   * nothing" and nothing else — a provider that cannot answer must THROW, so
+   * the block reports a broken lookup instead of rendering "no results": a
+   * `PlaceLookupRefusal` for a determinate answer (`not-configured`), a plain
+   * Error for a failure (network, a malformed answer, a quota or rate limit).
    */
   search(query: string, session: string): Promise<PlaceSuggestion[]>;
-  /** The full snapshot for one chosen `placeId`. Throws when it cannot resolve. */
+  /**
+   * The full snapshot for one chosen `placeId`. Throws when it cannot resolve —
+   * `PlaceLookupRefusal("not-found")` for an id the provider does not know.
+   */
   resolve(placeId: string, session: string): Promise<PlaceSnapshot>;
 }
 

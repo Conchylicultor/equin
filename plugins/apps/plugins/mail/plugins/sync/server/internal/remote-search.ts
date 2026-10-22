@@ -1,89 +1,165 @@
-import { and, eq, inArray } from "drizzle-orm";
-import { db } from "@plugins/database/server";
-import { HttpError } from "@plugins/infra/plugins/endpoints/core";
+import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import { listMessages } from "@plugins/apps/plugins/mail/plugins/gmail-api/server";
+import type { GmailMessage } from "@plugins/apps/plugins/mail/plugins/gmail-api/core";
 import {
-  _mailAccounts,
-  _mailMessages,
-  _mailLabels,
-  _mailMessageLabels,
-  requireGmailToken,
-} from "@plugins/apps/plugins/mail/plugins/mail-core/server";
-import type {
-  MailMessage,
-  MailLabelRef,
+  mailAccountIdKind,
+  type MailAccountId,
 } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
-import type { MailSearchResult } from "../../core";
+import { GmailTokenUnavailableError } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
+import { requireGmailToken } from "@plugins/apps/plugins/mail/plugins/mail-core/server";
+import {
+  mailSearch,
+  type MailSearchHit,
+  type MailSearchQuery,
+} from "../../core";
 import { markMessagesWithAttachments, upsertMessageEnvelope } from "./store";
 import { fetchEnvelopes } from "./fetch-envelopes";
 
 // On-demand server-side search — the escape hatch for the bounded window. The
 // backfill/delta only mirror envelopes `newer_than:${BACKFILL_WINDOW_DAYS}d`, so
-// older mail simply isn't in the local mirror. This takes an arbitrary Gmail
-// query, hits `messages.list?q=`, and FOLDS the matching envelopes into the same
-// Postgres mirror via the existing idempotent `upsertMessageEnvelope`
-// (list → metadata-fetch → upsert → read-back). Bodies still hydrate lazily on
-// first open. Because every write is idempotent, a retried/paged search is safe.
+// older mail simply isn't in the local mirror. A search takes an arbitrary Gmail
+// query and answers Gmail's ranked THREADS (`mail.search`, `search-value.ts`),
+// while FOLDING every matching envelope it sees into the same Postgres mirror via
+// the idempotent `upsertMessageEnvelope` — so the reader shows each hit as a live
+// `mail.threads` row. Bodies still hydrate lazily on first open.
 //
-// One page (25) per call; the caller pages via `nextPageToken`, and the `q`
-// filter rides across pages. Results are returned in Gmail's relevance/recency
-// order — the id order `messages.list` hands back, which a bare `inArray` read
-// would NOT preserve, so we reorder through a `Map` after the read-back. Finally
-// the ordered messages are folded into per-thread `MailSearchResult`s (Gmail-
-// style thread collapse) with their user-label chips.
+// Gmail pages its answer by an opaque, forward-only `pageToken`, which has no
+// position to cut a key-range page at. So each question's answer is held here,
+// in Gmail's order, as far as a page has asked: a hit's `rank` is its position in
+// it — a key any page can cut at. A page past the held hits walks the token chain
+// further.
+//
+// The answer is held per ROUND, not per question: the question carries a
+// `round` the reader mints for each search it starts (`MailSearchQuery`), so
+// typing the same query again is a new tuple and asks Gmail afresh — the held
+// answer never outlives the search that asked it (the value's `fixed`
+// freshness is true per round). Bounded by `MAX_QUESTIONS` rounds (least
+// recently read dropped first) and `MAX_HITS` per round. A later page whose
+// round was dropped is refused `expired` rather than re-ranked: a fresh walk of
+// Gmail could rank a different thread at the cut, and the reader would repeat
+// or skip threads silently.
 
-export async function remoteSearch(
-  q: string,
-  pageToken?: string,
-): Promise<{ results: MailSearchResult[]; nextPageToken?: string }> {
-  const query = q.trim();
-  if (!query) return { results: [] };
+/** Messages per Gmail `messages.list` page. */
+const GMAIL_PAGE = 50;
+/** The most hits one question holds: its answer ends there. */
+const MAX_HITS = 1000;
+/** Rounds held at once; the least recently read is dropped first. */
+const MAX_QUESTIONS = 32;
+const RANK_DIGITS = 6;
 
-  // Resolve the Gmail connection + the mirrored account it feeds. Search never
-  // bootstraps an account (that is `ensureAccount`'s job on connect); a missing
-  // token or account row means Gmail isn't set up, surfaced as a clean 409.
-  const { accessToken, email } = await requireGmailToken().catch(() => {
-    throw new HttpError(409, "Connect Gmail to search your mailbox.");
+interface SearchAnswer {
+  /** Ranked, one per thread, in Gmail's order. */
+  hits: MailSearchHit[];
+  seen: Set<string>;
+  /** Gmail's token for the next page; `null` once the answer is complete. */
+  nextPageToken: string | undefined | null;
+  /** Whether the first page's attachment flags were marked. */
+  attachmentsMarked: boolean;
+}
+
+const answers = new Map<string, SearchAnswer>();
+const growing = createKeyedMutex();
+
+function questionKey(q: MailSearchQuery): string {
+  return JSON.stringify([q.accountId, q.q, q.round]);
+}
+
+/**
+ * The round's held answer. Only a first page (`after === null`) may start one:
+ * a later page of a round no longer held is refused `expired`.
+ */
+function answerFor(key: string, after: string | null): SearchAnswer {
+  const held = answers.get(key);
+  if (held) {
+    // Most recently read last, so the first key is the one to drop.
+    answers.delete(key);
+    answers.set(key, held);
+    return held;
+  }
+  if (after !== null) {
+    throw mailSearch.refuse(
+      "expired",
+      "These search results expired — search again.",
+    );
+  }
+  const fresh: SearchAnswer = {
+    hits: [],
+    seen: new Set(),
+    nextPageToken: undefined,
+    attachmentsMarked: false,
+  };
+  answers.set(key, fresh);
+  while (answers.size > MAX_QUESTIONS) {
+    const oldest = answers.keys().next().value;
+    if (oldest === undefined) break;
+    answers.delete(oldest);
+  }
+  return fresh;
+}
+
+const rankOf = (index: number): string =>
+  String(index).padStart(RANK_DIGITS, "0");
+
+/** The hits a page starting after `after` needs held: through `after`, plus `limit`. */
+function heldNeeded(after: string | null, limit: number): number {
+  if (after === null) return limit;
+  if (!/^[0-9]+$/.test(after)) {
+    throw mailSearch.refuse("invalid-cut", `not a search rank: ${after}`);
+  }
+  return Number(after) + 1 + limit;
+}
+
+async function gmailToken(): Promise<string> {
+  try {
+    return (await requireGmailToken()).accessToken;
+  } catch (err) {
+    if (err instanceof GmailTokenUnavailableError) {
+      throw mailSearch.refuse(
+        "not-connected",
+        "Connect Gmail to search your mailbox.",
+      );
+    }
+    throw err;
+  }
+}
+
+/** The epoch-ms a Gmail message was received, or -1 when Gmail did not say. */
+const receivedAt = (m: GmailMessage): number =>
+  m.internalDate === undefined ? -1 : Number(m.internalDate);
+
+/**
+ * Read Gmail's next page of `q` into `answer`: mirror every matching envelope
+ * (metadata-only, 404-tolerant), then append each thread not seen yet, ranked
+ * where it first appears, represented by its newest matched message of the page.
+ */
+async function readNextPage(
+  answer: SearchAnswer,
+  q: MailSearchQuery,
+  accountId: MailAccountId,
+): Promise<void> {
+  const token = await gmailToken();
+  const list = await listMessages(token, {
+    q: q.q,
+    pageToken: answer.nextPageToken ?? undefined,
+    maxResults: GMAIL_PAGE,
   });
-  if (email == null) {
-    throw new HttpError(409, "Connect Gmail to search your mailbox.");
-  }
-  const [account] = await db
-    .select({ id: _mailAccounts.id })
-    .from(_mailAccounts)
-    .where(eq(_mailAccounts.email, email))
-    .limit(1);
-  if (!account) {
-    throw new HttpError(409, "Connect Gmail to search your mailbox.");
-  }
-  const accountId = account.id;
-
-  // Windowed `messages.list` with the caller's query — `q` rides every page.
-  const list = await listMessages(accessToken, {
-    q: query,
-    pageToken,
-    maxResults: 25,
-  });
-  const ids = (list.messages ?? []).map((m) => m.id);
-  if (ids.length === 0) {
-    return { results: [], nextPageToken: list.nextPageToken };
-  }
-
-  // Fetch envelopes (metadata-only, 404-tolerant) and fold each into the mirror.
-  const { fetched } = await fetchEnvelopes(accessToken, ids);
+  const refs = list.messages ?? [];
+  const ids = refs.map((m) => m.id);
+  const { fetched } =
+    ids.length === 0 ? { fetched: [] } : await fetchEnvelopes(token, ids);
   for (const m of fetched) {
     await upsertMessageEnvelope(accountId, m);
   }
 
   // Mark attachment-bearing results with Gmail's authoritative `has:attachment`
   // (matches the paperclip). One extra id-only list page for the same query,
-  // intersected with this page's ids — metadata-only, no body fetch. First page
-  // only: `has:attachment`'s first page spans a far wider recency range than the
-  // 25-result query page, so it reliably covers this page's attachment bearers;
-  // deep-page marking lands with real pagination.
-  if (!pageToken) {
-    const attachList = await listMessages(accessToken, {
-      q: `${query} has:attachment`,
+  // intersected with the first page's ids — metadata-only, no body fetch. First
+  // page only: `has:attachment`'s first page spans a far wider recency range than
+  // a query page, so it reliably covers its attachment bearers; deeper pages'
+  // flags fill on open (the sync CLAUDE.md's documented gap).
+  if (!answer.attachmentsMarked && ids.length > 0) {
+    const attachList = await listMessages(token, {
+      q: `${q.q} has:attachment`,
       maxResults: 100,
     });
     const attachIds = new Set((attachList.messages ?? []).map((m) => m.id));
@@ -92,87 +168,49 @@ export async function remoteSearch(
       ids.filter((id) => attachIds.has(id)),
     );
   }
+  answer.attachmentsMarked = true;
 
-  // Read the (now-mirrored) rows back and reorder to Gmail's `ids` order — a bare
-  // `inArray` select does not preserve it. An id with no row (a 404'd/vanished
-  // message that never landed) is dropped.
-  const rows = await db
-    .select()
-    .from(_mailMessages)
-    .where(inArray(_mailMessages.id, ids));
-  const byId = new Map<string, MailMessage>(rows.map((r) => [r.id, r]));
-  const orderedMessages = ids
-    .map((id) => byId.get(id))
-    .filter((r): r is MailMessage => r != null);
-
-  // Fetch the USER labels for the matched messages (system labels excluded — they
-  // are surfaced as flags, not chips) and index them by message id.
-  const messageIds = orderedMessages.map((m) => m.id);
-  const labelRows =
-    messageIds.length === 0
-      ? []
-      : await db
-          .select({
-            messageId: _mailMessageLabels.messageId,
-            id: _mailLabels.id,
-            name: _mailLabels.name,
-            color: _mailLabels.color,
-            textColor: _mailLabels.textColor,
-          })
-          .from(_mailMessageLabels)
-          .innerJoin(_mailLabels, eq(_mailMessageLabels.labelId, _mailLabels.id))
-          .where(
-            and(
-              inArray(_mailMessageLabels.messageId, messageIds),
-              eq(_mailLabels.type, "user"),
-            ),
-          );
-  const labelsByMessage = new Map<string, MailLabelRef[]>();
-  for (const row of labelRows) {
-    const label: MailLabelRef = {
-      id: row.id,
-      name: row.name,
-      color: row.color,
-      textColor: row.textColor,
-    };
-    const existing = labelsByMessage.get(row.messageId);
-    if (existing) existing.push(label);
-    else labelsByMessage.set(row.messageId, [label]);
+  // Thread order is Gmail's (first appearance in `refs`); a message that
+  // 404'd never landed in the mirror, so it represents nothing.
+  const byId = new Map(fetched.map((m) => [m.id, m]));
+  const newest = new Map<string, GmailMessage>();
+  for (const ref of refs) {
+    const m = byId.get(ref.id);
+    if (!m) continue;
+    const held = newest.get(m.threadId);
+    if (!held || receivedAt(m) > receivedAt(held)) newest.set(m.threadId, m);
   }
-
-  // Fold matched messages into per-thread results, preserving first-seen (Gmail-
-  // ranked) thread order. Each group's representative is the newest matched member
-  // by `internalDate`; flags OR across members; labels are the de-duped union.
-  const dateOf = (m: MailMessage): number => m.internalDate?.getTime() ?? 0;
-  const byThread = new Map<string, MailSearchResult>();
-  for (const message of orderedMessages) {
-    const existing = byThread.get(message.threadId);
-    const labels = labelsByMessage.get(message.id) ?? [];
-    if (!existing) {
-      byThread.set(message.threadId, {
-        threadId: message.threadId,
-        message,
-        messageCount: 1,
-        unread: message.unread,
-        starred: message.starred,
-        hasAttachments: message.hasAttachments,
-        labels: [...labels],
-      });
-      continue;
-    }
-    existing.messageCount += 1;
-    existing.unread = existing.unread || message.unread;
-    existing.starred = existing.starred || message.starred;
-    existing.hasAttachments = existing.hasAttachments || message.hasAttachments;
-    if (dateOf(message) > dateOf(existing.message)) existing.message = message;
-    const seen = new Set(existing.labels.map((l) => l.id));
-    for (const label of labels) {
-      if (!seen.has(label.id)) {
-        seen.add(label.id);
-        existing.labels.push(label);
-      }
-    }
+  for (const [threadId, m] of newest) {
+    if (answer.seen.has(threadId) || answer.hits.length >= MAX_HITS) continue;
+    answer.seen.add(threadId);
+    answer.hits.push({
+      id: threadId,
+      rank: rankOf(answer.hits.length),
+      messageId: m.id,
+    });
   }
+  answer.nextPageToken =
+    answer.hits.length >= MAX_HITS ? null : (list.nextPageToken ?? null);
+}
 
-  return { results: [...byThread.values()], nextPageToken: list.nextPageToken };
+/**
+ * The round's held answer to `q`, read from Gmail as far as a page needs `needed` hits
+ * (or the answer ends). Growth of one question is serialized, so two pages
+ * asking at once read each Gmail page once.
+ */
+export async function searchHits(
+  q: MailSearchQuery,
+  after: string | null,
+  limit: number,
+): Promise<readonly MailSearchHit[]> {
+  const needed = heldNeeded(after, limit);
+  const key = questionKey(q);
+  const accountId = mailAccountIdKind.key(q.accountId);
+  return growing.run(key, async () => {
+    const answer = answerFor(key, after);
+    while (answer.hits.length < needed && answer.nextPageToken !== null) {
+      await readNextPage(answer, q, accountId);
+    }
+    return answer.hits;
+  });
 }

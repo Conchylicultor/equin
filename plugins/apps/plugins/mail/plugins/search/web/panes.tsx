@@ -1,6 +1,5 @@
-import { Pane, type, defineRoute } from "@plugins/primitives/plugins/pane/web";
+import { Pane, defineRoute } from "@plugins/primitives/plugins/pane/web";
 import { mailApp } from "@plugins/apps/plugins/mail/plugins/shell/core";
-import type { MailMessage } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import { MailSearchBody } from "./components/mail-search-body";
 import {
   MailMessageBody,
@@ -28,15 +27,15 @@ export const mailSearchPane = Pane.define({
 
 /**
  * The reading pane for a single message. Opened to the right of a search row
- * (`mode: "push"`, `side: "right"`) with the row's envelope handed in as a
- * `hint` for an instant optimistic header; the body hydrates the full message
- * lazily on mount (self-fetch by `messageId`). Static prefix `m/` before the
- * `:messageId` param satisfies the pane router's "params need a static prefix"
- * rule.
+ * (`mode: "push"`, `side: "right"`) for the thread's newest matched message:
+ * the header is that message's live row in the mirror, the body its
+ * `mail.message-body` value (read by `messageId`). Static prefix `m/` before
+ * the `:messageId` param satisfies the pane router's "params need a static
+ * prefix" rule.
  *
- * `useResolve: false` opts out of route-resolution: the pane self-fetches by
- * `messageId` and owns its own loading / not-found / error states in the body,
- * so there is no live-state resource to gate reload/deep-link against.
+ * `useResolve: false` opts out of route-resolution: the pane reads its message
+ * by `messageId` and owns its own loading / not-found / error states in the
+ * body.
  */
 export const mailMessagePane = Pane.define({
   route: defineRoute({
@@ -46,15 +45,10 @@ export const mailMessagePane = Pane.define({
   }),
   app: mailApp,
   width: 640,
-  // The envelope the search row already holds, as an optimistic DISPLAY hint so
-  // the header paints before `POST /api/mail/hydrate` returns. Absent on a deep
-  // link / reload, where hydration fills the header instead. Never a write
-  // source: `Hint.pick` only ever yields it beside the hydrated value.
-  hint: type<MailMessage>(),
   useResolve: false,
   component: MailMessageBody,
-  // The subject is known only inside the body (the opener's envelope, refined
-  // by a hydration fired on mount), so the tab reads "Message" and the header's
-  // `component` — mounted under the body — paints the subject.
+  // The subject is known only inside the body (the message's live row), so
+  // the tab reads "Message" and the header's `component` — mounted under the
+  // body — paints the subject.
   title: { useText: "Message", component: MailMessageTitle },
 });

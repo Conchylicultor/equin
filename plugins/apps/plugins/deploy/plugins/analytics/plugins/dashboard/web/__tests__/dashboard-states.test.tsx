@@ -11,8 +11,8 @@ vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
 
 const answer = vi.hoisted(() => ({ current: {} as Record<string, unknown> }));
 
-vi.mock("../internal/use-deployment-analytics", () => ({
-  useDeploymentAnalytics: () => answer.current,
+vi.mock("@plugins/network/plugins/live/web", () => ({
+  useLive: () => answer.current,
 }));
 // Recharts measures a real layout jsdom does not have; the chart is not what
 // these states are about.
@@ -21,7 +21,7 @@ vi.mock("../components/trend-chart", () => ({
 }));
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { EndpointError } from "@plugins/infra/plugins/endpoints/web";
+import { ResourceError } from "@plugins/primitives/plugins/live-state/core";
 import type { AnalyticsReport } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
 import type { DeploymentAnalyticsResult } from "../../core";
 import { AnalyticsDashboard } from "../components/analytics-dashboard";
@@ -30,15 +30,10 @@ import { report, row } from "../testing";
 afterEach(cleanup);
 
 const refetch = vi.fn(() => Promise.resolve());
+const refresh = vi.fn(() => Promise.resolve());
 
 function settled(data: DeploymentAnalyticsResult) {
-  answer.current = {
-    isPending: false,
-    isError: false,
-    isFetching: false,
-    data,
-    refetch,
-  };
+  answer.current = { status: "ready", data, refetch, refresh };
 }
 
 function renderDashboard() {
@@ -52,13 +47,7 @@ function expectNoDashboard() {
 
 describe("AnalyticsDashboard states", () => {
   it("shows a loading state, not an empty dashboard, while pending", () => {
-    answer.current = {
-      isPending: true,
-      isError: false,
-      isFetching: true,
-      data: undefined,
-      refetch,
-    };
+    answer.current = { status: "loading", refetch, refresh };
     renderDashboard();
     expectNoDashboard();
     expect(screen.queryByRole("alert")).toBeNull();
@@ -67,14 +56,17 @@ describe("AnalyticsDashboard states", () => {
     expect(screen.getByText("What one visit records")).toBeTruthy();
   });
 
-  it("names a failed request", () => {
+  it("names a refused read (the deployment is gone)", () => {
     answer.current = {
-      isPending: false,
-      isError: true,
-      isFetching: false,
-      error: new EndpointError(404, "This deployment no longer exists."),
-      data: undefined,
+      status: "error",
+      error: new ResourceError(
+        "refused",
+        "This deployment no longer exists.",
+        null,
+        "missing",
+      ),
       refetch,
+      refresh,
     };
     renderDashboard();
     expectNoDashboard();
@@ -167,12 +159,12 @@ describe("AnalyticsDashboard states", () => {
     expect(screen.queryByText("Not collected yet.")).toBeNull();
   });
 
-  it("refreshes only when asked", () => {
+  it("re-measures only when asked", () => {
     settled({ kind: "report", report: report() });
-    refetch.mockClear();
+    refresh.mockClear();
     renderDashboard();
-    expect(refetch).not.toHaveBeenCalled();
+    expect(refresh).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
-    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(refresh).toHaveBeenCalledTimes(1);
   });
 });

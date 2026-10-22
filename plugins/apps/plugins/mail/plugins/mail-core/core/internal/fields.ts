@@ -198,6 +198,11 @@ export const mailMessageFields = {
   // Legacy rows from the pre-on-demand full backfill carry a body but a null
   // marker; `isMessageHydrated` treats a present body as hydrated too.
   bodyFetchedAt: nullable(dateField()),
+  // Why the last on-demand body fetch failed (Gmail refused, the connection is
+  // broken, …), so the `mail.message-body` value shows the failure instead of
+  // a body it does not have. Null while no fetch has failed since the last
+  // attempt began; cleared when a fetch starts and stays null once one lands.
+  bodyFetchError: nullable(textField()),
   internalDate: nullable(dateField()),
   unread: boolField(),
   starred: boolField(),

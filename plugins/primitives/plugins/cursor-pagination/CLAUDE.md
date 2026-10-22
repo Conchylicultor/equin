@@ -67,7 +67,6 @@ See `research/2026-07-03-infinite-scroll-error-gate.md` for the full rationale.
     - `useInfiniteScroll`
 - Cross-plugin:
   - Imported by:
-    - `apps/mail/search`
     - `primitives/data-view`
     - `shell/notifications`
 

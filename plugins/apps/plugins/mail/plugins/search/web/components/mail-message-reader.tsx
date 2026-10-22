@@ -1,7 +1,6 @@
 import {
   createContext,
   useContext,
-  useEffect,
   type ReactElement,
   type ReactNode,
 } from "react";
@@ -16,11 +15,10 @@ import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import {
-  useEndpointMutation,
-  getEndpointErrorMessage,
-} from "@plugins/infra/plugins/endpoints/web";
-import { mailHydrateMessageEndpoint } from "@plugins/apps/plugins/mail/plugins/sync/core";
+import { useLiveRow } from "@plugins/network/plugins/live/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
+import { MessageBodyState } from "@plugins/apps/plugins/mail/plugins/sync/web";
+import { threadMessages } from "@plugins/apps/plugins/mail/plugins/reading-pane/core";
 import type { MailAddress } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import { mailMessagePane } from "../panes";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -33,9 +31,9 @@ function formatAddress(a: MailAddress): string {
 }
 
 /**
- * The subject the body resolved (hydrated, else the opener's envelope), handed
- * to the header's title: the body wraps `PaneChrome`, so the title cell mounts
- * under it. `null` while neither is known.
+ * The subject of the message the body read, handed to the header's title: the
+ * body wraps `PaneChrome`, so the title cell mounts under it. `null` while it
+ * is not known.
  */
 const MessageSubjectContext = createContext<string | null>(null);
 
@@ -45,111 +43,110 @@ export function MailMessageTitle(): string {
 }
 
 /**
- * The reader pane for one message. The envelope (subject / from / date) comes
- * from the opener's `hint` so the header paints instantly; the full body +
- * attachments are hydrated on mount via `POST /api/mail/hydrate` (idempotent and
- * server cache-first, so re-opening is a pure Postgres hit).
+ * The reader pane for one message. Its envelope (subject / from / to / date) is
+ * the message's live row in the mirror (`threadMessages`' point read); its body
+ * and attachments are the `mail.message-body` value, whose subscription asks
+ * for a body not cached yet to be fetched — not fetched yet is the loading
+ * state, a failed fetch says why with a Retry.
  *
- * `bodyHtml` is deliberately NEVER rendered (XSS / no sanitizer) — only the
- * plain-text alternative is shown. (Follow-up: sanitized HTML rendering,
- * attachment download.)
+ * `bodyHtml` is deliberately NEVER rendered here (no sanitizer on this pane) —
+ * only the plain-text alternative is shown. (Follow-up: sanitized HTML
+ * rendering, attachment download.)
  */
 export function MailMessageBody(): ReactElement {
   const { messageId } = mailMessagePane.useParams();
-  const envelope = mailMessagePane.useHint();
+  const envelope = useLiveRow(threadMessages, messageId);
+  const subject =
+    envelope.status === "ready" && envelope.found
+      ? (envelope.row.subject ?? "")
+      : null;
 
-  const hydrate = useEndpointMutation(mailHydrateMessageEndpoint, {
-    meta: { suppressError: true },
-  });
-
-  // `mutate` is a stable reference from react-query, so depending on it re-fires
-  // the hydration only when the opened message actually changes.
-  const { mutate: hydrateMessage } = hydrate;
-  useEffect(() => {
-    hydrateMessage({ body: { messageId } });
-  }, [messageId, hydrateMessage]);
-
-  // Guard against a stale success/error from a previously-opened message: the
-  // response `message.id` equals the requested id, and the mutation's own
-  // `variables` carry the id it was fired for.
-  const hydrated = hydrate.data?.message.id === messageId ? hydrate.data : null;
-  const isErrorForThis =
-    hydrate.isError && hydrate.variables?.body?.messageId === messageId;
-
-  // Each field: the hydrated (canonical) value when it has arrived, else the
-  // opener's optimistic envelope. `pick` demands the canonical expression, so
-  // the hint is never readable on its own — and a hydrated `null` wins over a
-  // stale envelope rather than falling through to it.
-  const subject = envelope.pick("subject", hydrated?.message.subject) ?? null;
-  const from = envelope.pick("from", hydrated?.message.from);
-  const to = envelope.pick("to", hydrated?.message.to);
-  // Both sides are real Dates: the endpoint response coerces (`z.coerce.date()`),
-  // and a hint never survives a JSON round-trip (it is not persisted at all), so
-  // the old `instanceof Date` string-guard is unreachable and gone.
-  const internalDate =
-    envelope.pick("internalDate", hydrated?.message.internalDate) ?? null;
-
-  let body: ReactNode;
-  if (hydrated) {
-    if (hydrated.message.bodyText) {
-      body = (
-        <Text
-          as="pre"
-          variant="body"
-          className="whitespace-pre-wrap break-words"
-        >
-          {hydrated.message.bodyText}
-        </Text>
+  let content: ReactNode;
+  switch (envelope.status) {
+    case "loading":
+      content = <Loading variant="text" label="Loading message…" />;
+      break;
+    case "error":
+      content = (
+        <ResourceErrorInline
+          error={envelope.error}
+          refetch={envelope.refetch}
+          variant="block"
+        />
       );
-    } else if (hydrated.message.bodyHtml) {
-      body = (
-        <Placeholder tone="muted">Plain-text version unavailable.</Placeholder>
+      break;
+    case "ready":
+      content = envelope.found ? (
+        <Stack gap="lg">
+          <Stack gap="2xs">
+            <Text variant="heading">
+              {envelope.row.subject || "(no subject)"}
+            </Text>
+            <Text variant="label">{formatAddress(envelope.row.from)}</Text>
+            {envelope.row.to.length > 0 && (
+              <Text variant="caption" tone="muted">
+                to {envelope.row.to.map((a) => a.name ?? a.email).join(", ")}
+              </Text>
+            )}
+            {envelope.row.internalDate && (
+              <Text variant="caption" tone="muted">
+                <RelativeTime date={envelope.row.internalDate} />
+              </Text>
+            )}
+          </Stack>
+          <MessageText messageId={messageId} />
+        </Stack>
+      ) : (
+        <Placeholder tone="muted">
+          This message is not in the local mailbox.
+        </Placeholder>
       );
-    } else {
-      body = <Placeholder tone="muted">No message body.</Placeholder>;
-    }
-  } else if (isErrorForThis) {
-    body = (
-      <Placeholder tone="error">
-        {getEndpointErrorMessage(hydrate.error)}
-      </Placeholder>
-    );
-  } else {
-    body = <Loading variant="text" label="Loading message…" />;
+      break;
   }
 
   return (
     <MessageSubjectContext.Provider value={subject}>
       <PaneChrome pane={mailMessagePane}>
-        <Inset pad="lg">
-          <Stack gap="lg">
-            <Stack gap="2xs">
-              <Text variant="heading">{subject || "(no subject)"}</Text>
-              {from && <Text variant="label">{formatAddress(from)}</Text>}
-              {to && to.length > 0 && (
-                <Text variant="caption" tone="muted">
-                  to {to.map((a) => a.name ?? a.email).join(", ")}
-                </Text>
-              )}
-              {internalDate && (
-                <Text variant="caption" tone="muted">
-                  <RelativeTime date={internalDate} />
-                </Text>
-              )}
-            </Stack>
-            {hydrated && hydrated.attachments.length > 0 && (
-              <Cluster>
-                {hydrated.attachments.map((att) => (
-                  <Badge key={att.id} icon={<Icon icon={attachFileIcon} />}>
-                    {att.filename}
-                  </Badge>
-                ))}
-              </Cluster>
-            )}
-            {body}
-          </Stack>
-        </Inset>
+        <Inset pad="lg">{content}</Inset>
       </PaneChrome>
     </MessageSubjectContext.Provider>
+  );
+}
+
+/** The message's attachments and plain-text body, as the body value has them. */
+function MessageText({ messageId }: { messageId: string }): ReactNode {
+  return (
+    <MessageBodyState
+      messageId={messageId}
+      loadingLabel="Loading message…"
+      ready={(b) => (
+        <Stack gap="lg">
+          {b.attachments.length > 0 && (
+            <Cluster>
+              {b.attachments.map((att) => (
+                <Badge key={att.id} icon={<Icon icon={attachFileIcon} />}>
+                  {att.filename}
+                </Badge>
+              ))}
+            </Cluster>
+          )}
+          {b.bodyText ? (
+            <Text
+              as="pre"
+              variant="body"
+              className="whitespace-pre-wrap break-words"
+            >
+              {b.bodyText}
+            </Text>
+          ) : b.bodyHtml ? (
+            <Placeholder tone="muted">
+              Plain-text version unavailable.
+            </Placeholder>
+          ) : (
+            <Placeholder tone="muted">No message body.</Placeholder>
+          )}
+        </Stack>
+      )}
+    />
   );
 }

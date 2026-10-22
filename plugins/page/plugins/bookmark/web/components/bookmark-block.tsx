@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useLive } from "@plugins/network/plugins/live/web";
+import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { attachmentUrl } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
-import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -29,7 +29,7 @@ import {
   useBlockActivate,
   type BlockRendererProps,
 } from "@plugins/page/plugins/editor/web";
-import { bookmarkBlock, linkPreviewEndpoint } from "../../core";
+import { bookmarkBlock, linkPreview, type LinkPreview } from "../../core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -39,8 +39,8 @@ const refreshIcon = symbol("refresh");
 /**
  * Three states keyed on `(url, fetched)`:
  *  1. `!url` → URL-input empty state. Submit just sets the url (no fetch here).
- *  2. `url && !fetched` → loading card; auto-fetches the link preview once per
- *     url, then writes the metadata + `fetched: true`. This is the single fetch
+ *  2. `url && !fetched` → loading card; reads the link preview for the url,
+ *     then writes the metadata + `fetched: true`. This is the single fetch
  *     path shared by manual entry and `convertTo(BOOKMARK_TYPE, { url })` from
  *     paste-to-bookmark.
  *  3. `url && fetched` → the final preview card.
@@ -128,41 +128,33 @@ function FetchingBookmarkBlock({
   url: string;
   editor: BlockRendererProps["editor"];
 }) {
-  const [error, setError] = useState<string | null>(null);
-  // Guard against a double-fetch (StrictMode double-mount, re-render): only run
-  // once per url. Keyed on the url so a replaced url re-fetches.
-  const startedRef = useRef<string | null>(null);
+  const preview = useLive(linkPreview, { url });
 
+  // Copy the answer into the block once: the write turns this block into the
+  // filled card (state 3), which unmounts this read. A failure marks the block
+  // fetched too — a plain link card — so it never loops.
+  const copiedRef = useRef<LinkPreview | Error | null>(null);
   useEffect(() => {
-    if (startedRef.current === url) return;
-    startedRef.current = url;
-    setError(null);
-
-    async function run() {
-      try {
-        const meta = await fetchEndpoint(
-          linkPreviewEndpoint,
-          {},
-          { query: { url } },
-        );
-        editor.update({
-          url,
-          ...meta,
-          // Mirror the cached image ids into the shared attachment convention so
-          // the generic reconcile links them (otherwise the orphan sweep reclaims).
-          attachmentIds: [meta.imageId, meta.faviconId].filter(
-            (id): id is string => Boolean(id),
-          ),
-          fetched: true,
-        });
-      } catch (e) {
-        // Fail loud — surface the error inline and mark fetched so we don't loop.
-        setError(e instanceof Error ? e.message : String(e));
-        editor.update({ url, fetched: true });
-      }
+    if (preview.status === "ready") {
+      if (copiedRef.current === preview.data) return;
+      copiedRef.current = preview.data;
+      const meta = preview.data;
+      editor.update({
+        url,
+        ...meta,
+        // Mirror the cached image ids into the shared attachment convention so
+        // the generic reconcile links them (otherwise the orphan sweep reclaims).
+        attachmentIds: [meta.imageId, meta.faviconId].filter(
+          (id): id is string => Boolean(id),
+        ),
+        fetched: true,
+      });
+    } else if (preview.status === "error") {
+      if (copiedRef.current === preview.error) return;
+      copiedRef.current = preview.error;
+      editor.update({ url, fetched: true });
     }
-    void run();
-  }, [url, editor]);
+  }, [preview, url, editor]);
 
   let hostname = url;
   try {
@@ -184,8 +176,8 @@ function FetchingBookmarkBlock({
           <Text variant="label" className="truncate font-semibold">
             {hostname}
           </Text>
-          {error ? (
-            <Placeholder tone="error">{error}</Placeholder>
+          {preview.status === "error" ? (
+            <ResourceErrorInline error={preview.error} variant="inline" />
           ) : (
             <Loading variant="text" label="Fetching preview…" />
           )}

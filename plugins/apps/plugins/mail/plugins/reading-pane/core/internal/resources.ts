@@ -15,9 +15,9 @@ import { mailMessagesEntityRef } from "@plugins/apps/plugins/mail/plugins/mail-c
 // The `threadId` filter is immutable (a message never changes threads) and
 // `internalDate` is insert-immutable, so an in-place update — a flag flip, a
 // body hydration — keeps the window's order signature and ships as one row.
-// Bodies are null on the envelope stubs; the pane hydrates each message on
-// first expand via the sync plugin's `mailHydrateMessageEndpoint` (cached
-// thereafter).
+// Bodies are null on the envelope stubs; the pane reads each expanded message's
+// body through the sync plugin's `mail.message-body` value, whose subscription
+// asks for the body's first fetch (cached thereafter).
 export const threadMessages = liveCollection("mail-thread-messages", {
   // The one field the pane filters by is listed (so `where: { threadId }`
   // type-checks); the rest of the message row is carried.
@@ -38,6 +38,7 @@ export const threadMessages = liveCollection("mail-thread-messages", {
       "bodyText",
       "bodyHtml",
       "bodyFetchedAt",
+      "bodyFetchError",
       "internalDate",
       "unread",
       "starred",

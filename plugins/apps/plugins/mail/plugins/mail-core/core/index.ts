@@ -24,6 +24,7 @@ export {
   MAX_CONSECUTIVE_RESYNCS,
 } from "./internal/enums";
 export { mailAccount, mailSyncState, mailLabels } from "./internal/resources";
+export { GmailTokenUnavailableError } from "./internal/token-error";
 export {
   type MailSyncPhase,
   type MailSyncView,

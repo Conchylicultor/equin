@@ -1,15 +1,10 @@
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { MAIL_SYNC_REMEDIATION } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
-import {
-  mailSyncEndpoint,
-  mailHydrateMessageEndpoint,
-  mailSearchEndpoint,
-} from "../../core";
+import { mailSyncEndpoint, mailHydrateMessageEndpoint } from "../../core";
 import { ensureAccount } from "./bootstrap";
 import { classifyMailSyncError } from "./classify-error";
 import { kickSync } from "./record-error";
-import { hydrateMessage } from "./hydrate";
-import { remoteSearch } from "./remote-search";
+import { requestHydration } from "./hydrate";
 
 // Manual sync trigger: arm the account, then `kickSync` to clear any recorded
 // error and kick an immediate delta/backfill so "sync now" feels instant AND
@@ -45,16 +40,10 @@ export const handleMailSync = implement(mailSyncEndpoint, async () => {
   return result;
 });
 
-// On-demand body hydration: fetch + cache one message's full body on open (or
-// serve it straight from the mirror on a repeat open). See `hydrate.ts`.
+// Ask again for a message's body (the reader's Retry after a failed fetch):
+// enqueue the `mail.hydrate` job. The answer reaches the reader through the
+// `mail.message-body` value, never this response. See `hydrate.ts`.
 export const handleMailHydrate = implement(
   mailHydrateMessageEndpoint,
-  ({ body }) => hydrateMessage(body.messageId),
-);
-
-// On-demand server-side search: fold older-than-window envelopes matching the
-// Gmail query into the mirror and return them in Gmail's order. The 409-on-
-// disconnect surfaces from inside `remoteSearch`, so this stays a one-liner.
-export const handleMailSearch = implement(mailSearchEndpoint, ({ query }) =>
-  remoteSearch(query.q, query.pageToken),
+  async ({ body }) => ({ queued: await requestHydration(body.messageId) }),
 );

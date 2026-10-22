@@ -6,6 +6,7 @@
 
 - Exemptions:
   - Exempted by:
+    - `apps/mail/sync` (0 debt)
     - `apps/studio/contributions/tables/columns` (0 debt)
     - `apps/studio/contributions/tables/foreign-keys` (0 debt)
     - `apps/studio/contributions/tables/indexes` (0 debt)

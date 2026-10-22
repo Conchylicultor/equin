@@ -88,7 +88,6 @@ toggle, silently resetting any child component state (e.g. an inner
   - Uses tokens: `ui/tokens/color-palette --background`
   - Imported by:
     - `apps/chord/curriculum`
-    - `apps/mail/search`
     - `code-explorer/commit-detail`
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversations-view/data-view`

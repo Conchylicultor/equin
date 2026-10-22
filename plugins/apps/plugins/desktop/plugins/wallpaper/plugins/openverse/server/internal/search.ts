@@ -1,4 +1,3 @@
-import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import {
   parsePublicUrl,
   safeFetch,
@@ -13,8 +12,12 @@ const OPENVERSE_ENDPOINT = "https://api.openverse.org/v1/images/";
  * the app explicitly — see https://api.openverse.org/v1/#tag/auth.
  */
 const USER_AGENT = "Singularity/1.0 (+https://equin.ai; desktop wallpaper picker)";
-/** Cap the result grid — one page is plenty for picking a wallpaper. */
-const PAGE_SIZE = 30;
+/**
+ * Cap the result grid — one page is plenty for picking a wallpaper. 20 is the
+ * most Openverse serves an anonymous request: a larger `page_size` is answered
+ * 401 ("page_size may not exceed 20 for anonymous requests").
+ */
+const PAGE_SIZE = 20;
 
 /**
  * One result object from the Openverse `/v1/images/` response. Only the fields
@@ -60,10 +63,12 @@ function toResult(image: OpenverseImage): WallpaperResult {
 }
 
 /**
- * Search Openverse for open-license images matching `q`. Mirrors the
- * `page/bookmark/scrape.ts` error convention: SSRF / network conditions surface
- * as a 502 `HttpError` (the picker shows "Search failed"); unexpected errors
- * rethrow so they crash loudly rather than masquerade as "no results".
+ * Search Openverse for open-license images matching `q` — one page of at most
+ * {@link PAGE_SIZE}. SSRF / network conditions and a failed response throw an
+ * Error (the picker shows the failure, with Retry) — Openverse's rate limit
+ * included: it is a passing failure a Retry can heal, never a refusal (a
+ * refused question is never re-asked); unexpected errors rethrow so they crash loudly
+ * rather than masquerade as "no results".
  */
 export async function searchOpenverse(q: string): Promise<WallpaperResult[]> {
   const search = new URLSearchParams({
@@ -79,7 +84,7 @@ export async function searchOpenverse(q: string): Promise<WallpaperResult[]> {
     target = parsePublicUrl(url);
   } catch (err) {
     if (err instanceof SsrfError) {
-      throw new HttpError(502, "Openverse endpoint is unreachable.");
+      throw new Error("Openverse endpoint is unreachable.", { cause: err });
     }
     throw err;
   }
@@ -98,22 +103,22 @@ export async function searchOpenverse(q: string): Promise<WallpaperResult[]> {
       err instanceof TypeError ||
       (err instanceof DOMException && err.name === "AbortError")
     ) {
-      throw new HttpError(502, "Openverse search failed (network).");
+      throw new Error("Openverse search failed (network).", { cause: err });
     }
     throw err;
   }
 
   // Openverse's anonymous tier is heavily rate-limited (Cloudflare-fronted): once
-  // the small anonymous burst is spent it answers 401/429. Surface that as a clear,
-  // user-actionable message rather than a generic failure.
+  // the small anonymous burst is spent it answers 401/429. That passes, so it is
+  // a failure (the read's error, with Retry), not a refusal: a refusal is the
+  // answer to the question, and the same question is never asked again.
   if (res.status === 401 || res.status === 429) {
-    throw new HttpError(
-      429,
-      "Openverse is rate-limiting anonymous requests right now. Try again in a minute, or use Upload / From URL.",
+    throw new Error(
+      `Openverse is rate-limiting anonymous requests (status ${res.status}).`,
     );
   }
   if (!res.ok) {
-    throw new HttpError(502, `Openverse search failed (status ${res.status}).`);
+    throw new Error(`Openverse search failed (status ${res.status}).`);
   }
 
   const body = (await res.json()) as OpenverseResponse;

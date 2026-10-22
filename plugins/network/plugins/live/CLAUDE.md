@@ -2185,14 +2185,14 @@ never add one.
     - `serveCollectionOn`
     - `serveValueOn`
 - Cross-plugin:
-  - Imported by: 264 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×71
+  - Imported by: 268 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×73
     - `conversations` ×49
     - `debug` ×27
     - `tasks` ×27
     - `infra` ×16
     - `active-data` ×12
-    - `page` ×10
+    - `page` ×12
     - `primitives` ×10
     - `build` ×6
     - `code-explorer` ×4
@@ -2219,10 +2219,6 @@ never add one.
     - `live/no-endpoint-read` — `web` (sanctioned)
     - `no-raw-websocket` — `e2e/narrowing.ts` (sanctioned)
   - Exempted by:
-    - `apps/deploy/analytics/dashboard` (1 debt)
-    - `apps/desktop/wallpaper` (1 debt)
-    - `apps/mail/reading-pane` (1 debt)
-    - `apps/mail/search` (1 debt)
     - `build/build-commits` (1 debt)
     - `build/build-fix` (1 debt)
     - `build/build-info` (1 debt)
@@ -2240,8 +2236,6 @@ never add one.
     - `infra/events-test` (1 debt)
     - `infra/query-resource` (0 debt)
     - `network/live` (0 debt)
-    - `page/bookmark` (1 debt)
-    - `page/place` (2 debt)
     - `plugin-meta/plugin-health` (1 debt)
     - `primitives/data-view` (0 debt)
     - `primitives/live-state` (0 debt)

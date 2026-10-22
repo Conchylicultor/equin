@@ -1,12 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { GmailApiError } from "@plugins/apps/plugins/mail/plugins/gmail-api/core";
 import { RetryDeadlineError } from "@plugins/packages/plugins/retry/core";
+import { GmailTokenUnavailableError } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import { classifyMailSyncError } from "./classify-error";
 
 describe("classifyMailSyncError", () => {
   test("token-unavailable → auth/terminal", () => {
     const c = classifyMailSyncError(
-      new Error("Gmail token unavailable: not connected"),
+      new GmailTokenUnavailableError("not connected"),
     );
     expect(c.code).toBe("auth");
     expect(c.terminal).toBe(true);

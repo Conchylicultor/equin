@@ -6,7 +6,7 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-// A card hydrates its body through an endpoint; what it renders is not what
+// A card reads its body through the `mail.message-body` value; what it renders is not what
 // this list is about.
 vi.mock("../components/message-card", () => ({
   MessageCard: ({
@@ -50,6 +50,7 @@ function message(id: string): MailMessage {
     bodyText: null,
     bodyHtml: null,
     bodyFetchedAt: null,
+    bodyFetchError: null,
     internalDate: at,
     unread: false,
     starred: false,

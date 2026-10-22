@@ -14,7 +14,6 @@
 - Server:
   - Uses:
     - `apps/desktop/wallpaper.defineWallpaperProvider`
-    - `infra/endpoints.HttpError`
     - `infra/safe-fetch.parsePublicUrl`
     - `infra/safe-fetch.safeFetch`
     - `infra/safe-fetch.SsrfError`

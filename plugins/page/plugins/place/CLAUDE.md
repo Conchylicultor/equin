@@ -29,17 +29,18 @@ existed, draws a generic pin / neutral circle until the next refresh.
 
 ## Plugin reference
 
-- Description: Place block type: search an address or business through a registered place provider and render it as a card (name, address, category, link out to the provider's map). Owns the Place.Provider registry, so the block names no provider. Place block server half: the definePlaceProvider registry plus the two provider-agnostic lookup endpoints (search, resolve), which dispatch by `providerId` and name no provider. Also registers the place `data` schema at the server write boundary.
+- Description: Place block type: search an address or business through a registered place provider and render it as a card (name, address, category, link out to the provider's map). Owns the Place.Provider registry, so the block names no provider. Place block server half: the definePlaceProvider registry plus the two provider-agnostic live lookups (place.search, place.resolve), which dispatch by `providerId` and name no provider. Also registers the place `data` schema at the server write boundary.
 - Web:
   - Slots: `Place.Provider`
   - Slot contributors: `Place.Provider` ← `page.place.google`
   - Contributes: `Editor.Block` "place" → `PlaceBlock`
   - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `page/editor` ×4
-    - `infra/endpoints` ×3
     - `primitives/avatar` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/ui-kit` ×2
+    - `primitives/live-state` ×2
+    - `network/live.useLive`
     - `primitives/copy-to-clipboard.useCopyToClipboard`
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`
@@ -66,31 +67,36 @@ existed, draws a generic pin / neutral circle until the next refresh.
     - `placeKindGlyph`
     - `usePlaceProviders`
 - Server:
-  - Contributes: `page.block-data` "place"
+  - Contributes:
+    - `page.block-data` "place"
+    - `resource.declare` "place.resolve"
+    - `resource.declare` "place.search"
   - Uses:
-    - `infra/endpoints.HttpError`
-    - `infra/endpoints.implement`
+    - `network/live.serveValue`
     - `page/editor.Editor`
   - Exports (types): `PlaceProvider`
   - Exports (values):
     - `definePlaceProvider`
     - `getPlaceProvider`
-  - Routes:
-    - `GET /api/place/search`
-    - `GET /api/place/resolve`
+  - Resources:
+    - `place.resolve` (invalidate, fixed)
+    - `place.search` (invalidate, fixed)
 - Core:
   - Uses:
-    - `infra/endpoints.defineEndpoint`
+    - `network/live.liveValue`
+    - `packages/resource-protocol.ResourceRefusal`
     - `page/editor.defineBlock`
     - `ui/icons.symbol`
   - Exports (types):
     - `PlaceData`
     - `PlaceFamily`
     - `PlaceKind`
+    - `PlaceLookupRefusalCode`
     - `PlaceSnapshot`
     - `PlaceSnapshotState`
     - `PlaceSuggestion`
   - Exports (values):
+    - `PLACE_LOOKUP_REFUSALS`
     - `PLACE_SNAPSHOT_TTL_MS`
     - `PLACE_TYPE`
     - `placeBlock`
@@ -98,9 +104,10 @@ existed, draws a generic pin / neutral circle until the next refresh.
     - `PlaceDataSchema`
     - `PlaceFamilySchema`
     - `PlaceKindSchema`
+    - `PlaceLookupRefusal`
     - `placeNeedsResolve`
-    - `placeResolveEndpoint`
-    - `placeSearchEndpoint`
+    - `placeResolve`
+    - `placeSearch`
     - `PlaceSnapshotSchema`
     - `placeSnapshotState`
     - `PlaceSuggestionSchema`
@@ -115,10 +122,6 @@ existed, draws a generic pin / neutral circle until the next refresh.
   - Imported by:
     - `page/place/google`
     - `page/place/map-layer`
-- Exemptions:
-  - Exempts itself from:
-    - `live/no-endpoint-read` — `web/components/place-search.tsx` (debt)
-    - `live/no-endpoint-read` — `web/internal/use-place-resolve.ts` (debt)
 - Sub-plugins:
   - **`google`** — Google Maps as a place-lookup source for the /place block: contributes the provider's name, icon, and the 'set up Google Maps' affordance the block renders while no API key is configured. Google…
   - **`map-layer`** — Puts /place blocks on the /map block: a PageMap.Layer turning every located place on the page into a pin that points back at its block (picked places without coordinates are counted as unplaced, not…

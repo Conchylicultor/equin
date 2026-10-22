@@ -187,7 +187,8 @@ const mailMessages = defineEntity(mailMessagesEntityRef, {
   primaryKey: "id",
   // Which columns move `updatedAt` (derived by a DB trigger; a write to it
   // raises). Content, envelope and flags count; the `bodyFetchedAt` hydration
-  // marker and the sync `historyId` watermark are bookkeeping.
+  // marker, its `bodyFetchError` and the sync `historyId` watermark are
+  // bookkeeping.
   updatedAt: {
     touchedBy: {
       id: false,
@@ -204,6 +205,7 @@ const mailMessages = defineEntity(mailMessagesEntityRef, {
       bodyText: true,
       bodyHtml: true,
       bodyFetchedAt: false,
+      bodyFetchError: false,
       internalDate: true,
       unread: true,
       starred: true,

@@ -1,4 +1,5 @@
 import { getGmailToken } from "@plugins/integrations/plugins/gmail/server";
+import { GmailTokenUnavailableError } from "../../core";
 
 /** A usable Gmail connection: the access token plus the connected account email
  *  (from the OAuth identity, known without a Gmail API call). */
@@ -14,6 +15,6 @@ export interface GmailConnection {
  *  API failure has a real row to attach its classified error to. */
 export async function requireGmailToken(): Promise<GmailConnection> {
   const result = await getGmailToken();
-  if (!result.ok) throw new Error(`Gmail token unavailable: ${result.message}`);
+  if (!result.ok) throw new GmailTokenUnavailableError(result.message);
   return { accessToken: result.accessToken, email: result.email };
 }
