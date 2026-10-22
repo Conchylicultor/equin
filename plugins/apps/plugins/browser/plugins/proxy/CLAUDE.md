@@ -13,6 +13,7 @@
     - `primitives/icon-button.IconButton`
 - Server:
   - Uses:
+    - `infra/endpoints.rawEndpointHandler`
     - `infra/safe-fetch.safeFetch`
     - `infra/safe-fetch.SsrfError`
   - Routes:

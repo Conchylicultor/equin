@@ -21,6 +21,7 @@ import type {
   LiveValue,
 } from "@plugins/network/plugins/live/core";
 import {
+  EndpointAgentWriteRefusedError,
   EndpointError,
   getEndpointErrorMessage,
 } from "@plugins/infra/plugins/endpoints/web";
@@ -210,6 +211,7 @@ export function enqueueDetachedWrite(
         status: err.status,
         message: getEndpointErrorMessage(err).slice(0, REJECTION_MESSAGE_MAX),
         opSummary: info.describe,
+        agentWriteRefused: err instanceof EndpointAgentWriteRefusedError,
       });
       if (info.onRejected) info.onRejected();
     },

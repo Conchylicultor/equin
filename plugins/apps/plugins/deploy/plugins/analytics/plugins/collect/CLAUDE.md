@@ -99,6 +99,7 @@ The dashboard's Events panel expands an event into these rows.
     - `database/sql-column.parsedJson`
     - `database/sql-column.parsedText`
     - `infra/endpoints.implement`
+    - `infra/endpoints.rawEndpointHandler`
     - `infra/jobs.defineJob`
     - `infra/retention.defineRetention`
     - `infra/retention.markCascadeBounded`

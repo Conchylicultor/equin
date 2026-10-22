@@ -98,14 +98,14 @@ the panel until it is given something to say.
   - Exports (values): `worktreeCleanupPane`
 - Server:
   - Contributes: `report-kind` "worktree-reap-failed"
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/worktree` ×10
     - `infra/worktree/reclaim` ×4
     - `database/admin` ×3
     - `tasks/tasks-core` ×3
+    - `infra/endpoints` ×2
     - `infra/host/host-read-pool` ×2
     - `infra/paths` ×2
-    - `infra/endpoints.implement`
     - `infra/jobs/supervised-job.defineSupervisedJob`
     - `infra/ndjson-stream.ndjsonResponse`
     - `primitives/log-channels.defineLogSink`

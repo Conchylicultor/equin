@@ -26,6 +26,24 @@ agent-write ledger) made that a "these must agree" invariant with nothing
 enforcing it. This is the one spelling, and `originOf` is the one reading, so a
 consumer cannot classify provenance slightly differently from its neighbour.
 
+## Main is read-only for agent sessions
+
+On main's backend, a write (POST / PUT / PATCH / DELETE) whose request reads as
+`agent` here is refused with a `403` before its handler runs — unless its
+endpoint declares `agentWrite` (`"telemetry"`: logs, latency samples, slow ops,
+boot traces, reports; `"agent-control"`: the agent-write revert). The gate lives
+in the endpoints primitive (`endpointHandler` in `infra/endpoints/core`, decided
+once per route from `isMain()`), and server-core's `HttpRoutes` type admits only
+endpoint-built handlers on a write route, so no raw handler can skip it.
+Worktree deploys are unchanged. Design:
+[`research/2026-10-22-global-main-read-only-for-agent-sessions.md`](../../../../research/2026-10-22-global-main-read-only-for-agent-sessions.md).
+
+`AGENT_WRITE_HEADER` (`x-singularity-agent-write`) is the third header, and
+**advisory only**: `fetchEndpoint` stamps it (value = the declaration) on a
+request to an endpoint declaring `agentWrite`, and its one reader is the agent
+browser's write drain, which skips such requests. The server gate reads the
+endpoint definition, never this header.
+
 ## Consumers
 
 - **`apps/pages/agent-origin`** stamps a marker on every page an agent created,
@@ -46,6 +64,10 @@ consumer cannot classify provenance slightly differently from its neighbour.
 
 - **Raw `curl` is unmarked.** Nothing can mark it; the harness is the dominant
   path and this is stated rather than papered over.
+- **The main write gate trusts the headers it reads.** An unmarked client (raw
+  `curl`, or page JS that strips or overrides the headers) is a user to it and
+  may write to main. Accepted: the gate keeps an automated session from writing
+  to main by accident, it is not a security boundary.
 - **A script's own Node-side `fetch` is not covered by the browser context.**
   That is a real hole with a silent failure mode, so it has its own remedy and
   its own rule: `agentFetch` in the e2e harness, enforced by
@@ -64,10 +86,13 @@ own server half.)
 ## Plugin reference
 
 - Description: Who caused a request: the two provenance headers an automated browser session stamps on every request it issues, the WriteOrigin type a durable write records, and the single reading of those headers. A leaf — string literals and one Request read, no node:*, no db — so the e2e harness that SETS the headers and the server plugins that ACT on them share one spelling.
+- Cross-plugin:
+  - Imported by: `infra/endpoints`
 - Core:
   - Exports (types): `WriteOrigin`
   - Exports (values):
     - `AGENT_ORIGIN`
+    - `AGENT_WRITE_HEADER`
     - `agentOriginHeaders`
     - `ORIGIN_HEADER`
     - `ORIGIN_SOURCE_HEADER`

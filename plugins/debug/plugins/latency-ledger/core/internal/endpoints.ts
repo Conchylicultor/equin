@@ -39,6 +39,9 @@ export type Interaction = z.infer<typeof InteractionSchema>;
 
 export const submitClientLatency = defineEndpoint({
   route: "POST /api/latency-ledger/client",
+  // Latency histograms and interactions only: an agent session's samples are
+  // observability like a user's (main is read-only for agents otherwise).
+  agentWrite: "telemetry",
   body: z.object({
     scheme: z.literal(HISTOGRAM_SCHEME),
     minutes: z.array(ClientMinuteSchema).max(60),

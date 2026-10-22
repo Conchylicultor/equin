@@ -27,6 +27,7 @@ Add a case there before changing any of this.
     - `Core.Root` → `CrashCollector`
     - `Reports.KindView` → `CrashSummary`
   - Uses:
+    - `infra/endpoints.EndpointAgentWriteRefusedError`
     - `infra/health.wedgeReportSink`
     - `primitives/error-boundary.boundaryReportSink`
     - `reports.report`

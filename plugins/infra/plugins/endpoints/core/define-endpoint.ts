@@ -3,6 +3,7 @@ import { type Codec, isCodec, json } from "./codec";
 import type { ExtractParams } from "./route-params";
 import { extractMethod, extractPath } from "./route-params";
 import type { MachineFeature } from "./needs-machine";
+import type { AgentWrite } from "./agent-write";
 
 /** What every endpoint contract carries, portable or desktop-only. */
 interface EndpointContract<
@@ -40,6 +41,15 @@ interface EndpointContract<
    * backstop). Omit = the global default applies.
    */
   readonly slowThresholdMs?: number;
+  /**
+   * Why an agent session may send this WRITE to main (see {@link AgentWrite}).
+   * Absent = a normal write: main's backend refuses it with a 403 when the
+   * request carries the agent-origin headers. Write endpoints only — `implement`
+   * throws for a GET. `fetchEndpoint` stamps it on the request
+   * (`AGENT_WRITE_HEADER`, advisory) so the agent browser's write drain does not
+   * wait for it; the server reads only this field.
+   */
+  readonly agentWrite?: AgentWrite;
   /** Phantom field to carry the params type. Never set at runtime. */
   readonly __params?: TParams;
 }
@@ -97,6 +107,10 @@ interface EndpointOptions<Route extends string, B, R, TQuery> {
   concurrency?: number;
   dedupe?: boolean;
   slowThresholdMs?: number;
+  /** A read cannot write, so a GET declaring it is a tsc error. */
+  agentWrite?: Route extends `${"GET" | "HEAD" | "OPTIONS"} ${string}`
+    ? never
+    : AgentWrite;
 }
 
 /**
@@ -164,6 +178,7 @@ export function defineEndpoint<
     concurrency: opts.concurrency,
     dedupe: opts.dedupe,
     slowThresholdMs: opts.slowThresholdMs,
+    agentWrite: opts.agentWrite,
     ...(opts.needsMachine !== undefined
       ? { needsMachine: opts.needsMachine }
       : {}),

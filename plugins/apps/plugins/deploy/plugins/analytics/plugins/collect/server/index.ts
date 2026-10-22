@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import { rawEndpointHandler } from "@plugins/infra/plugins/endpoints/server";
 import { ExcludeFromChangeFeed } from "@plugins/database/plugins/change-feed/server";
 import { analyticsQueryEndpoint, collectEndpoint } from "../core";
 import { analyticsRollupJob } from "./internal/rollup";
@@ -15,7 +16,7 @@ export default {
   description:
     "Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the host-only report query, the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.",
   httpRoutes: {
-    [collectEndpoint.route]: handleCollect,
+    [collectEndpoint.route]: rawEndpointHandler(collectEndpoint, handleCollect),
     [analyticsQueryEndpoint.route]: handleAnalyticsQuery,
   },
   contributions: [

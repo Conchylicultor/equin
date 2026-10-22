@@ -60,6 +60,7 @@ curl -sX POST http://<ns>.localhost:9000/api/events-test/queue-saturate \
     - `database.db`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
+    - `infra/endpoints.rawEndpointHandler`
     - `infra/events.defineTriggerEvent`
     - `infra/events.deleteTrigger`
     - `infra/events.deleteTriggersFor`

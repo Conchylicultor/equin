@@ -59,10 +59,19 @@ Files: `services/agent-browser/` (`data-dirs`) — `host.sock`, `host.pid`,
   The session records each deploy it reached (`origins` in the status), and
   closing reverts THAT source's writes on each (`shared/revert.ts`) — never
   another conversation's or an e2e run's.
+- **Main is read-only for a session.** Main's backend refuses its writes with a
+  `403` ("main is read-only for agent sessions — reproduce on your own build")
+  before they run, except endpoints declaring `agentWrite` (telemetry, the
+  revert); reads, navigation and screenshots work. To exercise a write, drive
+  your own build (`./singularity build`). See
+  [`request-origin`](../../../request-origin/CLAUDE.md).
 - **Closing drains first** (`bin/write-drain.ts`). A context close aborts its
   requests client-side only: a write already sent still lands, and if it lands
   after the revert it sticks. So the session tracks its non-GET requests to the
-  deploys from the moment it opens; closing routes every new request to an
+  deploys from the moment it opens — except those stamped
+  `x-singularity-agent-write` (`fetchEndpoint` stamps a request to an endpoint
+  declaring `agentWrite`: telemetry writes nothing the revert undoes, and
+  waiting on it was the `drain-writes` false alarm); closing routes every new request to an
   abort (a debounced write-back firing mid-close included), waits for the
   tracked ones to get their response (≤ 10 s; past that a `drain-writes` host
   error names them and the revert runs anyway), then closes and reverts.

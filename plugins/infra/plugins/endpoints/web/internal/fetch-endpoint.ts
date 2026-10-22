@@ -14,9 +14,11 @@ import type {
 import {
   extractMethod,
   interpolatePath,
+  isAgentWriteRefusal,
   isUnsupportedEndpointRefusal,
   unavailableMessage,
 } from "../../core";
+import { AGENT_WRITE_HEADER } from "@plugins/infra/plugins/request-origin/core";
 import { endpointErrorSink } from "./error-reporter";
 
 export class EndpointError extends Error {
@@ -36,6 +38,17 @@ export class EndpointError extends Error {
  * mutation-error toast skips it.
  */
 export class EndpointUnsupportedError extends EndpointError {}
+
+/**
+ * Main refused the write because the request came from an agent session
+ * (`agentWrite` in `endpoints/core` — main is read-only for agents). Not a bug
+ * of the endpoint, nor of the caller: the message tells the agent to reproduce
+ * on its own build. Nothing files it — `fetchEndpoint` skips
+ * `endpointErrorSink`, the crash collector skips it as an unhandled rejection,
+ * and an optimistic write's rejection is toasted but not reported — so an agent
+ * clicking around main cannot raise a report storm.
+ */
+export class EndpointAgentWriteRefusedError extends EndpointError {}
 
 export function getEndpointErrorMessage(error: unknown): string {
   if (error instanceof EndpointError) {
@@ -180,6 +193,11 @@ async function request<Route extends string, TParams, TBody, TResponse, TQuery>(
   }
 
   const headers: Record<string, string> = {};
+  // Advisory only (the server reads the endpoint's declaration): tells the
+  // agent browser's write drain this write need not be waited for.
+  if (endpoint.agentWrite !== undefined) {
+    headers[AGENT_WRITE_HEADER] = endpoint.agentWrite;
+  }
   // Content-type comes only from the codec — no application/json fallback, so
   // multipart stays header-less (the browser sets the boundary).
   let body: BodyInit | undefined;
@@ -221,6 +239,9 @@ async function request<Route extends string, TParams, TBody, TResponse, TQuery>(
     }
     if (isUnsupportedEndpointRefusal(res.status, errorBody)) {
       throw new EndpointUnsupportedError(res.status, errorBody);
+    }
+    if (isAgentWriteRefusal(res.status, errorBody)) {
+      throw new EndpointAgentWriteRefusedError(res.status, errorBody);
     }
     if (opts?.report !== false) {
       endpointErrorSink.emit({

@@ -71,6 +71,7 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
     - `database.db`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
+    - `infra/endpoints.rawEndpointHandler`
     - `infra/jobs.defineJob`
     - `network/live.serveValue`
     - `primitives/log-channels.Log`

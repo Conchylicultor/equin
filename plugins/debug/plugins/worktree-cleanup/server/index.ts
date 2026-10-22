@@ -1,4 +1,5 @@
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
+import { rawEndpointHandler } from "@plugins/infra/plugins/endpoints/server";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { handleList } from "./internal/handle-list";
 import { handleDelete } from "./internal/handle-delete";
@@ -16,8 +17,11 @@ export default {
     "Audit and remove stale git worktrees and their Postgres DB forks.",
   httpRoutes: {
     [listWorktrees.route]: handleList,
-    [bulkDeleteWorktrees.route]: handleBulkDelete,
-    [deleteWorktree.route]: handleDelete,
+    [bulkDeleteWorktrees.route]: rawEndpointHandler(
+      bulkDeleteWorktrees,
+      handleBulkDelete,
+    ),
+    [deleteWorktree.route]: rawEndpointHandler(deleteWorktree, handleDelete),
   },
   register: [worktreeReapJob],
   contributions: [worktreeReapFailedKind],

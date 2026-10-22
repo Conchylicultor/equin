@@ -7,6 +7,9 @@ import { BootTraceSchema } from "../core";
 // cache/prefetch — a write happens only on an explicit button click.
 export const saveBootTrace = defineEndpoint({
   route: "POST /api/boot-traces",
+  // One boot-trace snapshot row (a debug permalink) — observability, so an
+  // agent session may save one on main (otherwise read-only for agents).
+  agentWrite: "telemetry",
   body: z.object({ snapshot: BootTraceSchema }),
   response: z.object({ id: z.string() }),
 });

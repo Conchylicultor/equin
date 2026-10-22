@@ -28,6 +28,9 @@ export type ReportResult = z.infer<typeof ReportResultSchema>;
 
 export const submitReport = defineEndpoint({
   route: "POST /api/reports",
+  // Error reports (and the bell notification they raise) — an agent session's
+  // failures must still be recorded on main, which is otherwise read-only for it.
+  agentWrite: "telemetry",
   body: ReportBodySchema,
   response: ReportResultSchema,
 });

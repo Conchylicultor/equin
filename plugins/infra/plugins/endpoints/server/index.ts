@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
-export { implement, HttpError } from "../core/implement";
+export { implement, rawEndpointHandler, HttpError } from "../core/implement";
 
 export default {
   portable: true,

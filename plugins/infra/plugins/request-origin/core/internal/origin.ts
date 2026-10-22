@@ -27,6 +27,16 @@ export const ORIGIN_SOURCE_HEADER = "x-singularity-origin-source";
 export const AGENT_ORIGIN = "agent";
 
 /**
+ * Advisory, stamped by `fetchEndpoint` on a request to an endpoint declaring
+ * `agentWrite` (its value is the declaration, e.g. `telemetry`): this write is
+ * one an agent session may send to main. Its only reader is the agent
+ * browser's write drain, which need not wait for such a request before
+ * reverting. NEVER an authority: main's write gate reads the endpoint
+ * definition, never this header — a page can set any header it likes.
+ */
+export const AGENT_WRITE_HEADER = "x-singularity-agent-write";
+
+/**
  * Who caused a durable write.
  *
  * A discriminated union rather than a boolean: `agent` has to carry WHICH

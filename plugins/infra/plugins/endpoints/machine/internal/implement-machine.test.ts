@@ -30,7 +30,10 @@ describe("implementMachine", () => {
   });
 
   test("a raw machine handler answers its own Response", async () => {
-    const raw = machineHandler(() => new Response("down", { status: 500 }));
+    const raw = machineHandler(
+      launch,
+      () => new Response("down", { status: 500 }),
+    );
     const res = await raw(req(), {});
     expect(res.status).toBe(500);
     const machine: NonNullable<MachinePluginDefinition["httpRoutes"]> = {

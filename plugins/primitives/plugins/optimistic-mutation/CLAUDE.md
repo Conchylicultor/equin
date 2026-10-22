@@ -579,6 +579,7 @@ that drops it from the overlay — is emitted on `clientLatencySink`
 - Description: Optimistic-mutation primitive over live-state: useOptimisticResource replays pending ops on server truth (overlay/replay) under the never-revert policy — causal (ack-watermark) and content-based confirmation, denial only under causal proof, keep-rendered transient failures with reconnect auto-retry, and permanent (4xx) rejections dropped and reported.
 - Web:
   - Uses:
+    - `infra/endpoints.EndpointAgentWriteRefusedError`
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.getEndpointErrorMessage`
     - `primitives/latest-ref.useLatestRef`

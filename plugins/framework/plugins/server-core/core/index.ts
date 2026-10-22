@@ -115,7 +115,10 @@ export type {
   ResourceParams,
 } from "./resources";
 export type {
+  EndpointHttpHandler,
   HttpHandler,
+  HttpRoutes,
+  MachineEndpointHttpHandler,
   MachineHttpHandler,
   MachinePluginDefinition,
   Registration,

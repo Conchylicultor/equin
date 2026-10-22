@@ -18,6 +18,11 @@ export function OptimisticRejectionCollector() {
           : "Couldn't save edit",
         description: d.message,
       });
+      // Main refused an agent session's write by design (main is read-only for
+      // agents): the toast tells the agent why, and there is nothing to
+      // investigate — a report per refused click would be a storm of non-bugs.
+      if (d.agentWriteRefused) return;
+      const { agentWriteRefused: _refused, ...payload } = d;
       const what = d.label ? `${d.resourceKey}/${d.label}` : d.resourceKey;
       const op = d.opSummary ? ` (${d.opSummary})` : "";
       void report({
@@ -26,7 +31,7 @@ export function OptimisticRejectionCollector() {
         message: `Write rejected with HTTP ${d.status}: ${what}${op} — ${d.message}`,
         url: window.location.href,
         userAgent: navigator.userAgent,
-        data: d as unknown as Record<string, unknown>,
+        data: payload as unknown as Record<string, unknown>,
       });
     });
 

@@ -39,6 +39,40 @@ export type PortableHttpHandler = HttpHandler & {
   readonly [machineHandlerBrand]?: never;
 };
 
+declare const endpointHandlerBrand: unique symbol;
+
+/**
+ * An HTTP handler built by the endpoints primitive (`implement` /
+ * `implementMachine`, or its raw `endpointRawHandler`): one that reads its
+ * endpoint's declaration before the handler runs — the agent-write gate that
+ * refuses an agent session's write on main among it
+ * (`research/2026-10-22-global-main-read-only-for-agent-sessions.md`). Minted
+ * only by `infra/endpoints`; the brand is type-only.
+ */
+export type EndpointHttpHandler = HttpHandler & {
+  readonly [endpointHandlerBrand]: true;
+};
+
+/** What `implementMachine` (and the machine barrel's raw `machineHandler`) mints. */
+export type MachineEndpointHttpHandler = MachineHttpHandler &
+  EndpointHttpHandler;
+
+/** Methods that cannot write: their routes take any handler. */
+type SafeHttpMethod = "GET" | "HEAD" | "OPTIONS";
+/** Methods that may write: their routes take only an {@link EndpointHttpHandler}. */
+type WriteHttpMethod = "POST" | "PUT" | "PATCH" | "DELETE";
+
+/**
+ * A barrel's `httpRoutes`: `"METHOD /path"` → handler. A write route (POST /
+ * PUT / PATCH / DELETE) takes only an {@link EndpointHttpHandler}, so a raw
+ * handler cannot serve a write and skip the gates the endpoint declaration
+ * drives (tsc) — a key of any other shape is no route at all.
+ */
+export type HttpRoutes<H extends HttpHandler> = {
+  [route: `${SafeHttpMethod} ${string}`]: H;
+  [route: `${WriteHttpMethod} ${string}`]: H & EndpointHttpHandler;
+};
+
 // Opaque handle for a resource defined via `defineResource`. The concrete
 // `Resource<T, P>` type lives in ./resources; kept minimal here to avoid a
 // circular import.
@@ -84,7 +118,7 @@ export interface ServerPluginDefinition {
    */
   loadBearing?: boolean;
   collapsed?: boolean;
-  httpRoutes?: Record<string, PortableHttpHandler>;
+  httpRoutes?: HttpRoutes<PortableHttpHandler>;
   wsRoutes?: Record<string, WsHandler>;
   /**
    * Plugins this plugin's `register` array must run after. Most plugins need
@@ -177,7 +211,7 @@ export type MachinePluginDefinition = Omit<
   ServerPluginDefinition,
   "httpRoutes" | "portable"
 > & {
-  httpRoutes?: Record<string, MachineHttpHandler>;
+  httpRoutes?: HttpRoutes<MachineHttpHandler>;
 };
 
 /**

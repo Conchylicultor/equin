@@ -34,6 +34,9 @@ export type EmitLogsResult = z.infer<typeof EmitLogsResultSchema>;
 
 export const emitLogs = defineEndpoint({
   route: "POST /api/logs/emit",
+  // Log lines only: an agent session's browser logs like a user's (main is
+  // read-only for agents otherwise).
+  agentWrite: "telemetry",
   body: EmitLogsBodySchema,
   response: EmitLogsResultSchema,
   // One batch is one ring trim plus one file write, so this route has no honest

@@ -66,7 +66,9 @@ client sees them at connect (Claude Code connects once per conversation).
 - Load-bearing: yes
 - Server:
   - Contributes: `resource.declare` "mcp.catalog"
-  - Uses: `network/live.serveValue`
+  - Uses:
+    - `infra/endpoints.rawEndpointHandler`
+    - `network/live.serveValue`
   - Exports (types):
     - `McpInstructions`
     - `McpScope`

@@ -27,6 +27,7 @@ const body = {
   status: 400,
   message: "destination is outside the page",
   opSummary: "bulkMove",
+  agentWriteRefused: false,
 };
 
 afterEach(() => {
@@ -55,7 +56,19 @@ describe("OptimisticRejectionCollector", () => {
     expect(sent.message).toBe(
       "Write rejected with HTTP 400: page.blocks/Page (bulkMove) — destination is outside the page",
     );
-    expect(sent.data).toEqual(body);
+    const { agentWriteRefused: _refused, ...payload } = body;
+    expect(sent.data).toEqual(payload);
+  });
+
+  it("an agent-write refusal on main is toasted but files no report", () => {
+    render(<OptimisticRejectionCollector />);
+    optimisticRejectionSink.emit({
+      ...body,
+      status: 403,
+      agentWriteRefused: true,
+    });
+    expect(toastMock).toHaveBeenCalledTimes(1);
+    expect(reportMock).not.toHaveBeenCalled();
   });
 
   it("titles an unlabelled surface generically", () => {

@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { boundaryReportSink } from "@plugins/primitives/plugins/error-boundary/web";
 import { wedgeReportSink } from "@plugins/infra/plugins/health/web";
 import { report } from "@plugins/reports/web";
+import { EndpointAgentWriteRefusedError } from "@plugins/infra/plugins/endpoints/web";
 
 // A Core.Root side-effect component (the old reports ReportCollector, now owned
 // by the crash kind). It owns the three browser crash signals — window errors,
@@ -23,6 +24,11 @@ export function CrashCollector() {
     };
 
     const onRejection = (e: PromiseRejectionEvent) => {
+      // Main refusing an agent session's write is by design (main is read-only
+      // for agents), not a crash: a fire-and-forget write it refuses (a
+      // notification the "Request failed" toast posts, a rank write) must not
+      // file one report per click.
+      if (e.reason instanceof EndpointAgentWriteRefusedError) return;
       const err = e.reason instanceof Error ? e.reason : null;
       void report({
         kind: "crash",

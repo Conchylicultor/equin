@@ -95,6 +95,43 @@ const m = useEndpointMutation(launchTask);                  // { kind: "unavaila
 - **`useMachineAvailability(declaration)`** takes any `{ needsMachine }` declaration — an endpoint or a live read (`network/live`) — for a control that renders disabled with the message (Welcome's send button, the launch form).
 - **Residual gap:** an `await fetchEndpoint(machineDef, …)` whose value is never read ignores the arm silently. Prefer the hook form, or read the result.
 
+## Main is read-only for agent sessions — `agentWrite`
+
+On main's backend, `implement` / `implementMachine` refuse a write (any method
+but GET / HEAD / OPTIONS) carrying the agent-origin headers (`originOf` from
+`request-origin/core`) with `403 { reason: "agent-write-refused", route,
+message }` — before the body is decoded. Decided once per route
+(`agentWriteGate`, `core/agent-write.ts`, from `isMain()`), so other deploys pay
+nothing. Design: `research/2026-10-22-global-main-read-only-for-agent-sessions.md`.
+
+```typescript
+export const emitLogs = defineEndpoint({
+  route: "POST /api/logs/emit", body: …, response: …,
+  agentWrite: "telemetry",          // or "agent-control" — a closed union
+});
+```
+
+- **Absent = protected**, so a new endpoint is gated without anyone opting in.
+  Declare `"telemetry"` only for a write of observability data, `"agent-control"`
+  only for one acting on the agent session's own writes (the ledger revert). A GET
+  declaring it is a tsc error.
+- **No write route escapes it (tsc).** server-core's `HttpRoutes` — the type of
+  every server / machine barrel's `httpRoutes` — takes only an
+  `EndpointHttpHandler` on a POST / PUT / PATCH / DELETE key, a brand minted only
+  here. A raw write handler (a stream, a binary body, custom headers) goes
+  through `rawEndpointHandler(endpoint, handler)` (or `machineHandler(endpoint,
+  handler)`), which runs the same gate and nothing else.
+- **The client.** `fetchEndpoint` stamps `AGENT_WRITE_HEADER` on a request to a
+  declaring endpoint (advisory — read only by the agent browser's write drain;
+  the server reads the declaration) and turns the refusal into
+  `EndpointAgentWriteRefusedError`, which files nothing: not to
+  `endpointErrorSink`, not as an unhandled rejection (the crash collector skips
+  it), not as an optimistic-rejection report (toasted only). The toast / error
+  message is the server's sentence, pointing at `./singularity build`.
+- **Not covered:** `central/` routes (one process for every worktree, never
+  main's), and clients that do not send the agent headers (raw `curl`, page JS
+  overriding them) — the gate prevents accidents, it is not a security boundary.
+
 ## Non-JSON payloads (codecs)
 
 A bare Zod schema in `body:`/`response:` means **JSON** — that's the default and covers ~all endpoints. Binary and multipart payloads opt into the *same* `body:`/`response:` slot via a **codec** exported from `@plugins/infra/plugins/endpoints/core`:
@@ -221,6 +258,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `primitives/networking.useTransport`
   - Exports (types): `EndpointErrorInfo`
   - Exports (values):
+    - `EndpointAgentWriteRefusedError`
     - `EndpointError`
     - `endpointErrorSink`
     - `endpointQueryKey`
@@ -233,11 +271,14 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `useMachineAvailability`
 - Core:
   - Uses:
+    - `infra/request-origin.originOf`
+    - `infra/runtime-identity.isMain`
     - `infra/runtime-profiler.chargeWait`
     - `infra/runtime-profiler.recordEntrySpan`
     - `packages/inflight.createInflight`
     - `packages/semaphore.createSemaphore`
   - Exports (types):
+    - `AgentWrite`
     - `Codec`
     - `EndpointDef`
     - `ExtractParams`
@@ -247,6 +288,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `MachineResult`
     - `MachineUnavailable`
   - Exports (values):
+    - `agentWriteRefusedMessage`
     - `blob`
     - `dateString`
     - `defineEndpoint`
@@ -256,28 +298,30 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `HttpError`
     - `implement`
     - `interpolatePath`
+    - `isAgentWriteRefusal`
     - `isCodec`
     - `isUnsupportedEndpointBody`
     - `isUnsupportedEndpointRefusal`
     - `isUnsupportedEndpointResponse`
     - `multipart`
+    - `rawEndpointHandler`
     - `unavailableMessage`
     - `unmatchedApiResponse`
     - `unsupportedEndpointResponse`
 - Cross-plugin:
-  - Imported by: 194 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×50
+  - Imported by: 197 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×51
     - `conversations` ×30
+    - `infra` ×18
     - `debug` ×17
-    - `infra` ×17
     - `page` ×13
     - `tasks` ×13
     - `primitives` ×10
     - `build` ×8
     - `ui` ×6
     - `auth` ×5
+    - `reports` ×4
     - `stats` ×4
-    - `reports` ×3
     - `active-data` ×2
     - `code-explorer` ×2
     - `config_v2` ×2
@@ -311,6 +355,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
   - Exports (values):
     - `HttpError`
     - `implement`
+    - `rawEndpointHandler`
 - Machine:
   - Exports (values):
     - `implementMachine`

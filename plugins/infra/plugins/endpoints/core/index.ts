@@ -9,7 +9,9 @@ export type {
 } from "./needs-machine";
 export type { ExtractParams } from "./route-params";
 export { extractMethod, extractPath, interpolatePath } from "./route-params";
-export { implement, HttpError } from "./implement";
+export { implement, rawEndpointHandler, HttpError } from "./implement";
+export type { AgentWrite } from "./agent-write";
+export { agentWriteRefusedMessage, isAgentWriteRefusal } from "./agent-write";
 export { getRouteSlowThresholdMs } from "./slow-threshold";
 export type { Codec } from "./codec";
 export { blob, multipart, isCodec } from "./codec";

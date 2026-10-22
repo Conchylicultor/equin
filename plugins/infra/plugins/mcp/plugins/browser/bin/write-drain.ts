@@ -1,4 +1,5 @@
 import type { BrowserContext, Request } from "playwright";
+import { AGENT_WRITE_HEADER } from "@plugins/infra/plugins/request-origin/core";
 
 /**
  * The writes a session still has on the wire, so closing it reverts only once
@@ -15,10 +16,30 @@ import type { BrowserContext, Request } from "playwright";
  * when the session opens, because the in-flight write this exists for was
  * sent before anyone asked to close. Context-level events also cover pages an
  * attached script opened through `bind()`.
+ *
+ * A request stamped `AGENT_WRITE_HEADER` is not waited for: `fetchEndpoint`
+ * stamps it from the endpoint's own `agentWrite` declaration (telemetry — log
+ * lines, latency samples, reports — or the revert itself), which writes nothing
+ * the revert undoes. Waiting on those is what raised the `drain-writes … still
+ * unanswered` false alarm. Advisory by design: a page that forged it only
+ * shortens the wait, and main refuses an agent's real writes regardless.
  */
 
 /** Methods that cannot write. Everything else may. */
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+/**
+ * Whether a request may write something the session's revert must wait for:
+ * any non-safe method, unless its endpoint declared `agentWrite`.
+ * `headers` as Playwright gives them (lower-cased names).
+ */
+export function isDrainedWrite(
+  method: string,
+  headers: Record<string, string>,
+): boolean {
+  if (SAFE_METHODS.has(method)) return false;
+  return headers[AGENT_WRITE_HEADER] === undefined;
+}
 
 export type DrainOutcome =
   { kind: "drained" } | { kind: "timeout"; pending: string[] };
@@ -74,7 +95,7 @@ export function trackWrites(
 ): WriteDrain {
   const inFlight = createInFlight<Request>();
   context.on("request", (req) => {
-    if (SAFE_METHODS.has(req.method())) return;
+    if (!isDrainedWrite(req.method(), req.headers())) return;
     if (tracked(new URL(req.url()))) inFlight.add(req);
   });
   context.on("requestfinished", (req) => inFlight.remove(req));

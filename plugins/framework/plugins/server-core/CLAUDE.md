@@ -345,14 +345,17 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `BrowserHostOptions`
     - `ChangeSource`
     - `DependsOnEntry`
+    - `EndpointHttpHandler`
     - `ExternalResource`
     - `HeapMemory`
     - `HostService`
     - `HttpHandler`
+    - `HttpRoutes`
     - `KeyedServerResourceOptions`
     - `LiveStateSnapshotHooks`
     - `LoadedServerPlugin`
     - `LoaderAggregateView`
+    - `MachineEndpointHttpHandler`
     - `MachineHttpHandler`
     - `MachinePluginDefinition`
     - `MemoryCheckpoint`

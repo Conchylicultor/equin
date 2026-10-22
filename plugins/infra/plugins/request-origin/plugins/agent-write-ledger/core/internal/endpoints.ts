@@ -110,6 +110,9 @@ export function inAgentWritesScope(
  */
 export const revertAgentWrites = defineEndpoint({
   route: "POST /api/agent-writes/revert",
+  // Only ever undoes agent writes, so an agent session must reach it on main
+  // too (start-of-run repair, close-time revert, legacy entries).
+  agentWrite: "agent-control",
   body: agentWritesScopeSchema,
   response: agentWritesRevertOutcomeSchema,
 });

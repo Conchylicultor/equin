@@ -1,9 +1,14 @@
 import type {
   HttpHandler,
-  MachineHttpHandler,
+  MachineEndpointHttpHandler,
 } from "@plugins/framework/plugins/server-core/core";
 import type { MachineEndpointDef } from "../../core/define-endpoint";
-import { endpointHandler, type EndpointHandler } from "../../core/implement";
+import type { AgentWrite } from "../../core/agent-write";
+import {
+  endpointHandler,
+  rawEndpointHandler,
+  type EndpointHandler,
+} from "../../core/implement";
 
 /**
  * The server handler for a desktop-only endpoint (`needsMachine`): the same
@@ -21,9 +26,9 @@ export function implementMachine<
 >(
   endpoint: MachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
   handler: EndpointHandler<TParams, TBody, TResponse, TQuery>,
-): MachineHttpHandler {
+): MachineEndpointHttpHandler {
   // The brand is type-only: a machine handler IS a handler.
-  return endpointHandler(endpoint, handler) as MachineHttpHandler;
+  return endpointHandler(endpoint, handler) as MachineEndpointHttpHandler;
 }
 
 /**
@@ -33,8 +38,15 @@ export function implementMachine<
  * `MachineHttpHandler`, the only handler a machine barrel's `httpRoutes` take.
  * A route a client calls through a typed endpoint is `implementMachine`'s, so
  * its callers get the unavailable arm; this one has no client contract to give.
+ *
+ * It still takes the route's declaration (`route`, `method`, `agentWrite`):
+ * a write route runs the agent-write gate first (`rawEndpointHandler`), so a
+ * raw machine write is refused to an agent session on main like any other.
  */
-export function machineHandler(handler: HttpHandler): MachineHttpHandler {
+export function machineHandler(
+  endpoint: { route: string; method: string; agentWrite?: AgentWrite },
+  handler: HttpHandler,
+): MachineEndpointHttpHandler {
   // The brand is type-only: a machine handler IS a handler.
-  return handler as MachineHttpHandler;
+  return rawEndpointHandler(endpoint, handler) as MachineEndpointHttpHandler;
 }

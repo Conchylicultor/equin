@@ -4,16 +4,16 @@ import {
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
+import type {
+  EndpointHttpHandler,
+  HttpHandler,
+} from "@plugins/framework/plugins/server-core/core";
 import type { EndpointDef, MachineEndpointDef } from "./define-endpoint";
+import { agentWriteGate, type AgentWrite } from "./agent-write";
 import { registerRouteSlowThreshold } from "./slow-threshold";
 import { HttpError } from "./http-error";
 
 export { HttpError };
-
-type HttpHandler = (
-  req: Request,
-  params: Record<string, string>,
-) => Response | Promise<Response>;
 
 // Widen string types recursively so handlers can return:
 // - Drizzle `timestamp` columns (Date) where the Zod schema says string
@@ -53,7 +53,7 @@ export function implement<
 >(
   endpoint: EndpointDef<Route, TParams, TBody, TResponse, TQuery>,
   handler: EndpointHandler<TParams, TBody, TResponse, TQuery>,
-): HttpHandler {
+): EndpointHttpHandler {
   return endpointHandler(endpoint, handler);
 }
 
@@ -73,7 +73,7 @@ export function endpointHandler<
     | EndpointDef<Route, TParams, TBody, TResponse, TQuery>
     | MachineEndpointDef<Route, TParams, TBody, TResponse, TQuery>,
   handler: EndpointHandler<TParams, TBody, TResponse, TQuery>,
-): HttpHandler {
+): EndpointHttpHandler {
   // Per-route gates, built once at registration. `concurrency` caps how many
   // handler bodies run at once (e.g. routes that spawn git/tar subprocesses, so
   // a burst can't saturate the box); `dedupe` collapses concurrent identical
@@ -95,7 +95,14 @@ export function endpointHandler<
   if (_endpoint.slowThresholdMs != null) {
     registerRouteSlowThreshold(_endpoint.route, _endpoint.slowThresholdMs);
   }
-  return async (req: Request, params: Record<string, string>) => {
+  // Main is read-only for agent sessions: refused before the body is even
+  // decoded. `null` (decided once) everywhere it cannot refuse.
+  const agentGate = agentWriteGate(_endpoint);
+  return brand(async (req: Request, params: Record<string, string>) => {
+    if (agentGate) {
+      const refused = agentGate(req);
+      if (refused) return refused;
+    }
     try {
       // Decode body via codec if one exists. The codec throws HttpError(400)
       // on a bad payload, handled by the catch below.
@@ -172,7 +179,29 @@ export function endpointHandler<
       }
       throw err;
     }
-  };
+  });
+}
+
+/**
+ * A RAW write handler (`(req, params) => Response`) behind its endpoint's
+ * declaration: for a route whose answer `implement` cannot build (a binary or
+ * streamed body, custom headers or status) but which may still write. It runs
+ * the same agent-write gate first — the reason a write route takes only an
+ * `EndpointHttpHandler` (server-core's `HttpRoutes`) — and nothing else:
+ * decoding is the handler's.
+ */
+export function rawEndpointHandler(
+  endpoint: { route: string; method: string; agentWrite?: AgentWrite },
+  handler: HttpHandler,
+): EndpointHttpHandler {
+  const agentGate = agentWriteGate(endpoint);
+  if (!agentGate) return brand(handler);
+  return brand((req, params) => agentGate(req) ?? handler(req, params));
+}
+
+// The brand is type-only: an endpoint handler IS a handler. Minted here alone.
+function brand(handler: HttpHandler): EndpointHttpHandler {
+  return handler as EndpointHttpHandler;
 }
 
 // Identity of a GET for dedup: method + path + query string. Two requests with

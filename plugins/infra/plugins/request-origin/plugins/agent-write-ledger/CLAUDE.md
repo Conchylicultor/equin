@@ -15,6 +15,12 @@ Every request an e2e run makes carries the agent-origin headers
 this primitive to snapshot those files before an agent request overwrites them.
 The e2e harness then asks for everything back, at both ends of every run.
 
+**On main there is nothing to revert**: main refuses an agent session's writes
+before they run (see [`request-origin`](../../CLAUDE.md), *Main is read-only for
+agent sessions*). The ledger matters on worktree deploys, where agents may
+write, and for entries an older main left behind. `POST /api/agent-writes/revert`
+declares `agentWrite: "agent-control"`, so it stays callable on main for those.
+
 ## Using it (a domain)
 
 ```ts

@@ -131,6 +131,16 @@ writes an `ok` receipt with a new dist and leaves the previous backend running,
 so a run can still be green against a new frontend talking to old server code.
 Nothing here can see that — the receipt records one build id for both halves.
 
+## Main is read-only for a run
+
+A run against main (`--url http://singularity.localhost:9000`) can read and
+screenshot, but every write it causes is refused by main's backend with a `403`
+(agent-origin headers → main's agent-write gate; telemetry endpoints excepted),
+so a script that clicks a write there fails loudly instead of mutating the
+user's data. A script that needs writes targets the agent's own build — the
+default target. See
+[`request-origin`](../../../../../infra/plugins/request-origin/CLAUDE.md).
+
 ## A run puts the user's data back
 
 A DataView writes its per-instance sort / filter / groupBy straight back through

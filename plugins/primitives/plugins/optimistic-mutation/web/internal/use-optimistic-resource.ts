@@ -19,6 +19,7 @@ import type {
 } from "@plugins/network/plugins/live/core";
 import { subscribeWsStatus } from "@plugins/primitives/plugins/networking/web";
 import {
+  EndpointAgentWriteRefusedError,
   EndpointError,
   getEndpointErrorMessage,
 } from "@plugins/infra/plugins/endpoints/web";
@@ -681,6 +682,7 @@ function useOptimisticCore<Data, Vars>(
                 REJECTION_MESSAGE_MAX,
               ),
               opSummary: describe ? describe(vars) : null,
+              agentWriteRefused: err instanceof EndpointAgentWriteRefusedError,
             });
             if (onErrorRef.current)
               onErrorRef.current(err, vars, { opId, rejected: true });

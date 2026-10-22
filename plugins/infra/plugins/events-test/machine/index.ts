@@ -16,9 +16,18 @@ export default {
   description:
     "The events-test harnesses of the desktop's graphile queue: exact job liveness (crash-recovery), the queue-level lock no-steal, and superseded rows.",
   httpRoutes: {
-    [crashRecoveryEventsTest.route]: machineHandler(handleCrashRecovery),
-    [queueLockNoStealEventsTest.route]: machineHandler(handleQueueLockNoSteal),
-    [supersededEventsTest.route]: machineHandler(handleSuperseded),
+    [crashRecoveryEventsTest.route]: machineHandler(
+      crashRecoveryEventsTest,
+      handleCrashRecovery,
+    ),
+    [queueLockNoStealEventsTest.route]: machineHandler(
+      queueLockNoStealEventsTest,
+      handleQueueLockNoSteal,
+    ),
+    [supersededEventsTest.route]: machineHandler(
+      supersededEventsTest,
+      handleSuperseded,
+    ),
   },
   register: [supersededProbe],
 } satisfies MachinePluginDefinition;

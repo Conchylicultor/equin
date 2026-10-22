@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import { rawEndpointHandler } from "@plugins/infra/plugins/endpoints/server";
 import { cronDedupProbe, handleCronDedup } from "./internal/cron-dedup";
 import {
   abortSaturationSleepers,
@@ -50,8 +51,14 @@ export default {
     [deleteEventsTestTargeting.route]: handleDeleteTargeting,
     [listEventsTestTriggers.route]: handleListTriggers,
     [waitEventsTestIdle.route]: handleWaitIdle,
-    [serialQueueEventsTest.route]: handleSerialQueue,
-    [cronDedupEventsTest.route]: handleCronDedup,
+    [serialQueueEventsTest.route]: rawEndpointHandler(
+      serialQueueEventsTest,
+      handleSerialQueue,
+    ),
+    [cronDedupEventsTest.route]: rawEndpointHandler(
+      cronDedupEventsTest,
+      handleCronDedup,
+    ),
     [queueSaturateEventsTest.route]: handleQueueSaturate,
     [detachedSleepEventsTest.route]: handleDetachedSleep,
   },

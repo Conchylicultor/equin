@@ -455,6 +455,7 @@ describe("useOptimisticResource", () => {
         status: 400,
         message: "destination is outside the page",
         opSummary: "add 2",
+        agentWriteRefused: false,
       },
     ]);
     expect(onError).toHaveBeenCalledTimes(1);

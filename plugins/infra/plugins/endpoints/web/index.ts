@@ -5,6 +5,7 @@ export {
   useFetchEndpoint,
   EndpointError,
   EndpointUnsupportedError,
+  EndpointAgentWriteRefusedError,
   getEndpointErrorMessage,
 } from "./internal/fetch-endpoint";
 export { useEndpoint } from "./internal/use-endpoint";

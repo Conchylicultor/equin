@@ -738,6 +738,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/icon-button.IconButton`
           - Server:
             - Uses:
+              - `infra/endpoints.rawEndpointHandler`
               - `infra/safe-fetch.safeFetch`
               - `infra/safe-fetch.SsrfError`
             - Routes:
@@ -1669,6 +1670,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `database/sql-column.parsedJson`
                   - `database/sql-column.parsedText`
                   - `infra/endpoints.implement`
+                  - `infra/endpoints.rawEndpointHandler`
                   - `infra/jobs.defineJob`
                   - `infra/retention.defineRetention`
                   - `infra/retention.markCascadeBounded`
@@ -22171,14 +22173,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `worktreeCleanupPane`
       - Server:
         - Contributes: `report-kind` "worktree-reap-failed"
-        - Uses: 29 symbols — full list in [`plugins/debug/plugins/worktree-cleanup/REFERENCE.md`](../plugins/debug/plugins/worktree-cleanup/REFERENCE.md)
+        - Uses: 30 symbols — full list in [`plugins/debug/plugins/worktree-cleanup/REFERENCE.md`](../plugins/debug/plugins/worktree-cleanup/REFERENCE.md)
           - `infra/worktree` ×10
           - `infra/worktree/reclaim` ×4
           - `database/admin` ×3
           - `tasks/tasks-core` ×3
+          - `infra/endpoints` ×2
           - `infra/host/host-read-pool` ×2
           - `infra/paths` ×2
-          - `infra/endpoints.implement`
           - `infra/jobs/supervised-job.defineSupervisedJob`
           - `infra/ndjson-stream.ndjsonResponse`
           - `primitives/log-channels.defineLogSink`
@@ -24484,14 +24486,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BrowserHostOptions`
           - `ChangeSource`
           - `DependsOnEntry`
+          - `EndpointHttpHandler`
           - `ExternalResource`
           - `HeapMemory`
           - `HostService`
           - `HttpHandler`
+          - `HttpRoutes`
           - `KeyedServerResourceOptions`
           - `LiveStateSnapshotHooks`
           - `LoadedServerPlugin`
           - `LoaderAggregateView`
+          - `MachineEndpointHttpHandler`
           - `MachineHttpHandler`
           - `MachinePluginDefinition`
           - `MemoryCheckpoint`
@@ -26121,6 +26126,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database.db`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
+          - `infra/endpoints.rawEndpointHandler`
           - `infra/jobs.defineJob`
           - `network/live.serveValue`
           - `primitives/log-channels.Log`
@@ -27006,6 +27012,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/networking.useTransport`
         - Exports (types): `EndpointErrorInfo`
         - Exports (values):
+          - `EndpointAgentWriteRefusedError`
           - `EndpointError`
           - `endpointErrorSink`
           - `endpointQueryKey`
@@ -27018,11 +27025,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useMachineAvailability`
       - Core:
         - Uses:
+          - `infra/request-origin.originOf`
+          - `infra/runtime-identity.isMain`
           - `infra/runtime-profiler.chargeWait`
           - `infra/runtime-profiler.recordEntrySpan`
           - `packages/inflight.createInflight`
           - `packages/semaphore.createSemaphore`
         - Exports (types):
+          - `AgentWrite`
           - `Codec`
           - `EndpointDef`
           - `ExtractParams`
@@ -27032,6 +27042,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MachineResult`
           - `MachineUnavailable`
         - Exports (values):
+          - `agentWriteRefusedMessage`
           - `blob`
           - `dateString`
           - `defineEndpoint`
@@ -27041,28 +27052,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HttpError`
           - `implement`
           - `interpolatePath`
+          - `isAgentWriteRefusal`
           - `isCodec`
           - `isUnsupportedEndpointBody`
           - `isUnsupportedEndpointRefusal`
           - `isUnsupportedEndpointResponse`
           - `multipart`
+          - `rawEndpointHandler`
           - `unavailableMessage`
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 194 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×50
+        - Imported by: 197 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×51
           - `conversations` ×30
+          - `infra` ×18
           - `debug` ×17
-          - `infra` ×17
           - `page` ×13
           - `tasks` ×13
           - `primitives` ×10
           - `build` ×8
           - `ui` ×6
           - `auth` ×5
+          - `reports` ×4
           - `stats` ×4
-          - `reports` ×3
           - `active-data` ×2
           - `code-explorer` ×2
           - `config_v2` ×2
@@ -27096,6 +27109,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `HttpError`
           - `implement`
+          - `rawEndpointHandler`
       - Machine:
         - Exports (values):
           - `implementMachine`
@@ -27352,6 +27366,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database.db`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
+          - `infra/endpoints.rawEndpointHandler`
           - `infra/events.defineTriggerEvent`
           - `infra/events.deleteTrigger`
           - `infra/events.deleteTriggersFor`
@@ -28565,7 +28580,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`mcp`** — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool, and serves the mcp.catalog live value: every tool, instructions section and the scope resolver with the plugin that declared each, each tool's input schema as tools/list sends it.
       - Server:
         - Contributes: `resource.declare` "mcp.catalog"
-        - Uses: `network/live.serveValue`
+        - Uses:
+          - `infra/endpoints.rawEndpointHandler`
+          - `network/live.serveValue`
         - Exports (types):
           - `McpInstructions`
           - `McpScope`
@@ -29023,10 +29040,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Core: `@plugins/infra/plugins/query-resource/core/testing`
           - `familyMemberAlias` — A member's join alias: the family id, then the member id with every character outside `[A-Za-z0-9]` spelled `_<hex>_` — injective, so two members can never share an alias (`cc-1` → `custom__cc_2d_1`).
     - **`request-origin`** — Who caused a request: the two provenance headers an automated browser session stamps on every request it issues, the WriteOrigin type a durable write records, and the single reading of those headers. A leaf — string literals and one Request read, no node:*, no db — so the e2e harness that SETS the headers and the server plugins that ACT on them share one spelling.
+      - Cross-plugin:
+        - Imported by: `infra/endpoints`
       - Core:
         - Exports (types): `WriteOrigin`
         - Exports (values):
           - `AGENT_ORIGIN`
+          - `AGENT_WRITE_HEADER`
           - `agentOriginHeaders`
           - `ORIGIN_HEADER`
           - `ORIGIN_SOURCE_HEADER`
@@ -29122,6 +29142,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `servingSocketPath`
       - Cross-plugin:
         - Imported by:
+          - `infra/endpoints`
           - `infra/jobs/supervised-job`
           - `infra/paths`
           - `plugin-meta/barrel-import`
@@ -40546,6 +40567,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`optimistic-mutation`** — Optimistic-mutation primitive over live-state: useOptimisticResource replays pending ops on server truth (overlay/replay) under the never-revert policy — causal (ack-watermark) and content-based confirmation, denial only under causal proof, keep-rendered transient failures with reconnect auto-retry, and permanent (4xx) rejections dropped and reported.
       - Web:
         - Uses:
+          - `infra/endpoints.EndpointAgentWriteRefusedError`
           - `infra/endpoints.EndpointError`
           - `infra/endpoints.getEndpointErrorMessage`
           - `primitives/latest-ref.useLatestRef`
@@ -43791,6 +43813,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Core.Root` → `CrashCollector`
           - `Reports.KindView` → `CrashSummary`
         - Uses:
+          - `infra/endpoints.EndpointAgentWriteRefusedError`
           - `infra/health.wedgeReportSink`
           - `primitives/error-boundary.boundaryReportSink`
           - `reports.report`

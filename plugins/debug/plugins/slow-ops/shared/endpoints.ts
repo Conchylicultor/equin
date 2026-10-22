@@ -60,6 +60,9 @@ export type SlowOpClientBody = z.infer<typeof SlowOpClientBodySchema>;
 
 export const submitClientSlowOp = defineEndpoint({
   route: "POST /api/slow-ops/client",
+  // Slow-op records and their traces only — observability an agent session
+  // produces like a user's (main is read-only for agents otherwise).
+  agentWrite: "telemetry",
   body: SlowOpClientBodySchema,
   response: z.object({ ok: z.boolean() }),
 });

@@ -52,6 +52,12 @@ export interface OptimisticRejectionReport {
   status: number;
   message: string;
   opSummary: string | null;
+  /**
+   * The refusal is main's agent-write gate (`EndpointAgentWriteRefusedError`):
+   * an agent session's write, refused by design before it ran. The edit is
+   * still gone, so it is still told — but nothing is wrong to investigate.
+   */
+  agentWriteRefused: boolean;
 }
 
 export const REJECTION_MESSAGE_MAX = 500;

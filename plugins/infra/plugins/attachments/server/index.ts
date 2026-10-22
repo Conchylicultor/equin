@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import { rawEndpointHandler } from "@plugins/infra/plugins/endpoints/server";
 import { handleUpload } from "./internal/handle-upload";
 import { handleGet } from "./internal/handle-get";
 import { handleDelete } from "./internal/handle-delete";
@@ -35,10 +36,19 @@ export default {
     ...attachmentFileServed.declare,
   ],
   httpRoutes: {
-    [uploadAttachment.route]: handleUpload,
+    [uploadAttachment.route]: rawEndpointHandler(
+      uploadAttachment,
+      handleUpload,
+    ),
     [getAttachmentFile.route]: handleGet,
-    [deleteAttachmentEndpoint.route]: handleDelete,
-    [holdAttachmentsEndpoint.route]: handleHold,
+    [deleteAttachmentEndpoint.route]: rawEndpointHandler(
+      deleteAttachmentEndpoint,
+      handleDelete,
+    ),
+    [holdAttachmentsEndpoint.route]: rawEndpointHandler(
+      holdAttachmentsEndpoint,
+      handleHold,
+    ),
   },
   // orphanSweepJob declares `schedule` — the jobs worker runs it hourly.
   register: [orphanSweepJob],

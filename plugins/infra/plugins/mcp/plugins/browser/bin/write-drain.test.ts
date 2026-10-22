@@ -1,5 +1,28 @@
 import { describe, expect, test } from "bun:test";
-import { createInFlight } from "./write-drain";
+import { AGENT_WRITE_HEADER } from "@plugins/infra/plugins/request-origin/core";
+import { createInFlight, isDrainedWrite } from "./write-drain";
+
+describe("isDrainedWrite", () => {
+  test("a write is waited for", () => {
+    expect(isDrainedWrite("POST", {})).toBe(true);
+    expect(isDrainedWrite("DELETE", { "content-type": "a/b" })).toBe(true);
+  });
+
+  test("a read never is", () => {
+    expect(isDrainedWrite("GET", {})).toBe(false);
+    expect(isDrainedWrite("HEAD", {})).toBe(false);
+    expect(isDrainedWrite("OPTIONS", {})).toBe(false);
+  });
+
+  test("a write stamped agentWrite (telemetry, the revert) is not tracked", () => {
+    expect(isDrainedWrite("POST", { [AGENT_WRITE_HEADER]: "telemetry" })).toBe(
+      false,
+    );
+    expect(
+      isDrainedWrite("POST", { [AGENT_WRITE_HEADER]: "agent-control" }),
+    ).toBe(false);
+  });
+});
 
 describe("createInFlight", () => {
   test("nothing outstanding: empty at once", async () => {
