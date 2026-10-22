@@ -18,13 +18,19 @@ import type {
 } from "../../core";
 import { useResolveOperatorSet } from "../filter-slot";
 import { useDerivedFields } from "./derived-fields";
-import { renameColumns, resolveLiveFields } from "./live-fields";
+import {
+  namedColumnSets,
+  renameColumns,
+  resolveLiveFields,
+} from "./live-fields";
 import { useWidenedViewFilter } from "./live-filter";
 
 /**
  * A paged read narrowed by a view's filter: the `where` to AND into its query
- * (over the collection's columns), the column sets it names, and whether it is
- * the view's WHOLE filter (no rule dropped) — so a count over it is the view's.
+ * (over the collection's columns), the column sets it names, whether it is
+ * the view's WHOLE filter (no rule dropped) — so a count over it is the
+ * view's — and whether a COUNT can read it at all (it names no contributed
+ * column: a count, like a `GROUP BY`, reads the own and exposed columns only).
  * `none`: the view filters by nothing the collection's columns can run.
  */
 export type PagesNarrowing =
@@ -34,6 +40,7 @@ export type PagesNarrowing =
       where: Filter;
       columns: readonly LiveColumnsDeclaration[];
       whole: boolean;
+      countable: boolean;
     };
 
 const NONE: PagesNarrowing = { kind: "none" };
@@ -122,14 +129,16 @@ export function usePagesNarrowing<Row, F, S extends string>(
       return NONE;
     }
     if (where === undefined) return NONE;
-    const named = filterColumns(where);
+    const { sets, contributed } = namedColumnSets(
+      plan.handles,
+      filterColumns(where),
+    );
     return {
       kind: "narrowed",
       where,
-      columns: [...plan.handles.values()].filter((h) =>
-        [...named].some((c) => c.startsWith(`${h.name}.`)),
-      ),
+      columns: sets,
       whole: widened.whole,
+      countable: contributed.length === 0,
     };
   }, [source, plan, widened]);
 }

@@ -902,8 +902,12 @@ const { pages, paging } = useLivePagesPaging(conversationsGone, {}); // data-vie
   collection's columns like a live source's, as a WIDENING — a rule no column
   backs (a list's synthetic field) is dropped, never refused, since the rows
   are still filtered in memory — and ANDed into `query`. `total: true` also
-  reads the narrowed query's count as `paging.total`, `underFilter` when no
-  rule was dropped, so the section count stays exact under that filter. The
+  reads the narrowed query's count as `paging.total`, stamped with the view's
+  `filter` tree when no rule was dropped; the body counts with it only while
+  the view's filter is that very tree (by identity: an edited filter is a new
+  tree, whose count is a new read) and no search is typed, so the section
+  count stays exact under that filter. A narrowing naming a contributed
+  column reads no count (a COUNT reads the own and exposed columns only). The
   search box is not lowered (in memory it matches any searchable field's
   text). The Queue's Done section is the consumer.
 
@@ -1045,11 +1049,13 @@ const { pages, paging } = useLivePagesPaging(conversationsGone, {}); // data-vie
   counts its other rows plus `count` — ungrouped, or grouped by a field in
   `uniform` (one every row of the read shares, so the unloaded rows land in
   the same section: the queue's `section`). A live `source` reads it itself
-  when its collection is declared `count: true` (`network/live`'s `:count`)
-  and only the source's scope applies. The total is dropped — "N+" again —
-  while the view's search or filter could hide rows of the read (a live
-  source does not even read it then), while it is loading, and for a section
-  the read's rows are split across.
+  when its collection is declared `count: true` (`network/live`'s `:count`),
+  over its scope AND the view's filter — except under a search (a count per
+  keystroke) or a filter naming a contributed column (a COUNT, like a
+  `GROUP BY`, reads the own and exposed columns only). The total is dropped —
+  "N+" again — while the view's search or filter could hide rows of the read
+  (a live source does not read it then), while it is loading, and for a
+  section the read's rows are split across.
 
 ## Create affordances (`creators`)
 

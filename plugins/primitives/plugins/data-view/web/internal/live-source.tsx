@@ -34,6 +34,7 @@ import type {
 } from "../../core";
 import {
   liveGroupLowering,
+  namedColumnSets,
   renameColumns,
   type LiveFieldPlan,
   type LiveGroupColumn,
@@ -209,11 +210,16 @@ export function useLiveSource<TRow>(args: {
         declared: Filterable;
         grouped: LoweredGrouping<TRow>;
         /**
-         * The source's scope alone, when it is ALL the query filters by (no
-         * view filter, no search) — the one `where` a total is read over;
-         * `null` when the view narrows it.
+         * What a total is read over — the source's scope and the view's
+         * filter, with the column sets it names — when a COUNT can read it:
+         * `null` under a search (a count per keystroke) or a filter naming a
+         * contributed column (a count, like a `GROUP BY`, reads the
+         * collection's own and exposed columns only).
          */
-        totalWhere: { where: Filter | undefined } | null;
+        totalWhere: {
+          where: Filter | undefined;
+          columns: readonly LiveColumnsDeclaration[];
+        } | null;
       } => {
     if (!source || !plan) return { kind: "none" };
     // The scope's value is not known yet: read nothing, show the loading state.
@@ -328,16 +334,18 @@ export function useLiveSource<TRow>(args: {
       ]);
       // A sectioned view's section reads name the grouped column too.
       if (grouped.kind === "sections") named.add(grouped.column.name);
-      const columns = [...plan.handles.values()].filter((h) =>
-        [...named].some((c) => c.startsWith(`${h.name}.`)),
+      const columns = namedColumnSets(plan.handles, named).sets;
+      // What the query minus search names: what a total would read.
+      const totalSets = namedColumnSets(
+        plan.handles,
+        resetWhere === undefined ? [] : filterColumns(resetWhere),
       );
       if (grouped.kind === "sections" && where !== undefined) {
         // A `GROUP BY` counts over the collection's own and exposed columns
         // only — never a contributed one.
-        const contributed = [...filterColumns(where)].filter((c) =>
-          [...plan.handles.values()].some(
-            (h) => h.owner.kind !== "exposed" && c.startsWith(`${h.name}.`),
-          ),
+        const { contributed } = namedColumnSets(
+          plan.handles,
+          filterColumns(where),
         );
         if (contributed.length > 0) {
           return {
@@ -354,8 +362,8 @@ export function useLiveSource<TRow>(args: {
         declared,
         grouped,
         totalWhere:
-          renamed === undefined && search === undefined
-            ? { where: scope }
+          search === undefined && totalSets.contributed.length === 0
+            ? { where: resetWhere, columns: totalSets.sets }
             : null,
         resetKey: JSON.stringify({
           where: resetWhere ?? null,
@@ -419,7 +427,7 @@ export function useLiveSource<TRow>(args: {
   });
 
   // The total, when cheap: a collection declared `count: true`, read over the
-  // source's scope alone — under a view filter or a search it is not read, and
+  // source's scope and the view's filter — under a search it is not read, and
   // the counts stay lower bounds. A sectioned view reads none: its sections'
   // counts are the groups read's.
   const counted =
@@ -444,6 +452,9 @@ export function useLiveSource<TRow>(args: {
           count: true,
           ...(totalWhere.where !== undefined
             ? { where: totalWhere.where as LiveWhere<unknown> }
+            : {}),
+          ...(totalWhere.columns.length > 0
+            ? { columns: totalWhere.columns }
             : {}),
         },
   );

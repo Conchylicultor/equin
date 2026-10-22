@@ -1260,7 +1260,8 @@ function DataViewBodyInner<TRow>(
                 growable: paging.isPaged ?? ALL_ROWS,
                 total:
                   matchesView === null ||
-                  (paging.total?.underFilter === true &&
+                  (paging.total?.filter !== undefined &&
+                    paging.total.filter === activeState.filter &&
                     activeState.query.trim() === "")
                     ? (paging.total ?? null)
                     : null,

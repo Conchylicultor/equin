@@ -39,8 +39,10 @@ export type LivePagesPaging = Omit<DataViewPaging<unknown>, "isPaged">;
  *   coming. Without it a filter hiding the tail stops the read at its first
  *   page.
  * - `total` — also read how many rows the (narrowed) query matches, as
- *   `paging.total` (`underFilter` when the narrowing is the view's whole
- *   filter); the collection must be declared `count: true`.
+ *   `paging.total` (stamped with the view's `filter` when the narrowing is
+ *   that whole filter); the collection must be declared `count: true`. Not
+ *   read when the narrowing names a contributed column, which a count cannot
+ *   read — the counts stay lower bounds.
  */
 export function useLivePagesPaging<Row, F, S extends string>(
   collection: LiveCollection<Row, F, S> | null,
@@ -71,7 +73,10 @@ export function useLivePagesPaging<Row, F, S extends string>(
     narrowed,
     resetKey === undefined ? { viewport } : { viewport, resetKey },
   );
-  const counting = options?.total === true && narrowed !== null;
+  const counting =
+    options?.total === true &&
+    narrowed !== null &&
+    (narrowing.kind === "none" || narrowing.countable);
   const total = useLive(
     counting
       ? (collection as unknown as LiveCountedCollection<Row, F, S> | null)
@@ -93,7 +98,12 @@ export function useLivePagesPaging<Row, F, S extends string>(
     loading: () => null,
     error: (_error, stale) => stale ?? null,
   });
-  const underFilter = narrowing.kind === "narrowed" && narrowing.whole;
+  // The filter the count is the view's under: the one the read was narrowed
+  // by whole.
+  const countedUnder =
+    narrowing.kind === "narrowed" && narrowing.whole
+      ? options?.narrowBy?.filter
+      : undefined;
   const paging = useMemo((): LivePagesPaging | null => {
     switch (pages.status) {
       case "ready": {
@@ -106,7 +116,7 @@ export function useLivePagesPaging<Row, F, S extends string>(
                   ? null
                   : {
                       count: totalCount,
-                      ...(underFilter ? { underFilter } : {}),
+                      ...(countedUnder != null ? { filter: countedUnder } : {}),
                     },
             }
           : paging;
@@ -116,7 +126,7 @@ export function useLivePagesPaging<Row, F, S extends string>(
       case "error":
         return null;
     }
-  }, [pages, sink, options?.total, totalCount, underFilter]);
+  }, [pages, sink, options?.total, totalCount, countedUnder]);
   return useMemo(() => ({ pages, paging }), [pages, paging]);
 }
 

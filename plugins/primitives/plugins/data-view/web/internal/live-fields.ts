@@ -308,6 +308,31 @@ export function renameColumns(
 }
 
 /**
+ * The column sets a query naming `columns` (wire names) hands the codec, and
+ * which of those columns are CONTRIBUTED — an arm's or a scoped set's, never
+ * the collection's own or an exposed one. A `GROUP BY` and a COUNT read only
+ * the own and exposed columns, so a filter naming a contributed one can be
+ * neither grouped nor counted.
+ */
+export function namedColumnSets(
+  handles: ReadonlyMap<string, LiveColumnsDeclaration>,
+  columns: Iterable<string>,
+): { sets: LiveColumnsDeclaration[]; contributed: string[] } {
+  const named = [...columns];
+  const setOf = (c: string) =>
+    [...handles.values()].find((h) => c.startsWith(`${h.name}.`));
+  return {
+    sets: [...handles.values()].filter((h) =>
+      named.some((c) => c.startsWith(`${h.name}.`)),
+    ),
+    contributed: named.filter((c) => {
+      const set = setOf(c);
+      return set !== undefined && set.owner.kind !== "exposed";
+    }),
+  };
+}
+
+/**
  * The column scope a surface's field extensions bind scoped columns under
  * (`FieldExtensionProps.liveColumnScope`): its live collection's
  * `columnScope`, which must BE the surface's `storageKey` — a scope's members
