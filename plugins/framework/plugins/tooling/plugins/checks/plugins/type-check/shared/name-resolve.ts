@@ -13,17 +13,29 @@
 //     created;
 //   - the repo FILES it read (a `package.json`).
 //
-// and a file's resolution key is the hash of those directories' real
-// listings (names only, `readdir` — an untracked file shadows a resolution as
-// well as a tracked one) and those files' contents. While the key holds, the
-// recorded targets stand without a TypeScript call; when it moves, that file's
-// imports are resolved again. Paths under `node_modules` are pinned by the
-// lockfile, which is in the engine.
+// and a file's resolution key is the hash of those directories' listings
+// (names only) and those files' versions — all read from the check's VIEW of
+// the repo (`./repo-view.ts`): the run's git tree plus its overlay. An
+// untracked-not-ignored file is in the tree and shadows like a tracked one; a
+// gitignored file that is a program root (a composition registry) is in the
+// overlay and shadows too; anything else on disk does not exist for the check.
+// It used to be the real `readdir` listing, so the transient gitignored entries
+// of the repo root (`.install.lock`, `.merge_file_*`, `.check-*`) — which every
+// lookup that walks up to the root's `node_modules` reached — moved ~6,000
+// files' keys after unrelated commands, and made the verdict a function of
+// files the check's key never hashed.
+//
+// While the key holds, the recorded targets stand without a TypeScript call;
+// when it moves, that file's imports are resolved again. Paths under
+// `node_modules` are answered by the real filesystem and recorded nowhere —
+// whether a `node_modules` exists, and what it holds, is pinned by the lockfile,
+// which is in the engine.
 
 import { createHash } from "crypto";
-import { readdirSync, readFileSync } from "fs";
 import { dirname, join, relative } from "path";
 import ts from "typescript";
+import { isRepoPath } from "./keys";
+import { viewSys, type RepoView, type ViewSys } from "./repo-view";
 
 const sha = (s: string): string =>
   createHash("sha256").update(s).digest("hex").slice(0, 32);
@@ -47,24 +59,25 @@ export interface ResolutionRecord {
 }
 
 /**
- * The real filesystem as resolution sees it, memoized for one run: directory
- * listings and file contents by repo-relative path.
+ * The view as resolution keys it, memoized for one run: directory listings and
+ * file versions by repo-relative path.
  */
 export class ProbeFs {
   private readonly listings = new Map<string, string | null>();
-  private readonly contents = new Map<string, string>();
-  constructor(readonly root: string) {}
+  constructor(readonly view: RepoView) {}
+
+  get root(): string {
+    return this.view.root;
+  }
 
   /** A directory's listing hash, or null when it does not exist. */
   listing(dir: string): string | null {
     let v = this.listings.get(dir);
     if (v !== undefined) return v;
-    try {
-      v = sha(readdirSync(join(this.root, dir)).sort().join("\n"));
-    } catch (err) {
-      const code = (err as NodeJS.ErrnoException).code;
-      if (code !== "ENOENT" && code !== "ENOTDIR") throw err;
-      v = null;
+    if (!this.view.isDir(dir)) v = null;
+    else {
+      const e = this.view.entries(dir);
+      v = sha([...e.files, ...e.dirs].sort().join("\n"));
     }
     this.listings.set(dir, v);
     return v;
@@ -80,18 +93,9 @@ export class ProbeFs {
     return d === "." ? "" : d;
   }
 
+  /** A read file's version, or `-` when it is not in the view. */
   content(file: string): string {
-    let v = this.contents.get(file);
-    if (v === undefined) {
-      try {
-        v = sha(readFileSync(join(this.root, file), "utf8"));
-      } catch (err) {
-        if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-        v = "-";
-      }
-      this.contents.set(file, v);
-    }
-    return v;
+    return this.view.version(file) ?? "-";
   }
 
   /** The key of a set of probed directories and read files, as they are now. */
@@ -105,12 +109,9 @@ export class ProbeFs {
   }
 }
 
-const inRepo = (r: string): boolean =>
-  !r.startsWith("..") && !r.split("/").includes("node_modules");
-
 /**
- * Resolves module specifiers like the program does (same options, real
- * filesystem), recording what each resolution probed. Memoized per (directory,
+ * Resolves module specifiers like the program does (same options, the same
+ * view), recording what each resolution probed. Memoized per (directory,
  * specifier, mode) for the run — every file of a directory resolves a
  * specifier the same way, through the same probes.
  */
@@ -119,10 +120,13 @@ export class RecordingResolver {
     string,
     { target: Target; dirs: Set<string>; files: Set<string> }
   >();
+  private readonly sys: ViewSys;
   constructor(
     private readonly fs: ProbeFs,
     private readonly options: ts.CompilerOptions,
-  ) {}
+  ) {
+    this.sys = viewSys(fs.view);
+  }
 
   private resolveOne(
     fromDir: string,
@@ -133,35 +137,41 @@ export class RecordingResolver {
     const hit = this.memo.get(k);
     if (hit !== undefined) return hit;
     const root = this.fs.root;
+    const sys = this.sys;
     const dirs = new Set<string>();
     const files = new Set<string>();
     const probeDir = (abs: string): void => {
       const r = rel(root, abs);
-      if (!inRepo(r)) return;
+      if (!isRepoPath(r)) return;
       dirs.add(this.fs.existing(r === "" ? "" : r));
     };
+    // Every in-repo question answered by the view, and recorded; one about a
+    // path outside the repo (`node_modules`) answered by the disk and recorded
+    // nowhere — not even as its parent's listing, which no longer decides it.
     const host: ts.ModuleResolutionHost = {
       fileExists: (f) => {
         probeDir(dirname(f));
-        return ts.sys.fileExists(f);
+        return sys.fileExists(f);
       },
       directoryExists: (d) => {
-        // Whether `d` exists is its parent's listing (or, missing, its nearest
-        // existing ancestor's).
-        probeDir(dirname(d));
-        probeDir(d);
-        return ts.sys.directoryExists(d);
+        if (isRepoPath(rel(root, d))) {
+          // Whether `d` exists is its parent's listing (or, missing, its
+          // nearest existing ancestor's).
+          probeDir(dirname(d));
+          probeDir(d);
+        }
+        return sys.directoryExists(d);
       },
       readFile: (f) => {
         const r = rel(root, f);
-        if (inRepo(r)) files.add(r);
-        return ts.sys.readFile(f);
+        if (isRepoPath(r)) files.add(r);
+        return sys.readFile(f);
       },
-      realpath: ts.sys.realpath,
+      realpath: sys.realpath,
       getCurrentDirectory: () => root,
       getDirectories: (d) => {
         probeDir(d);
-        return ts.sys.getDirectories(d);
+        return sys.getDirectories(d);
       },
     };
     const r = ts.resolveModuleName(
@@ -177,7 +187,7 @@ export class RecordingResolver {
     if (r === undefined) target = "-";
     else {
       const p = rel(root, r.resolvedFileName);
-      target = inRepo(p) ? p : "<dep>";
+      target = isRepoPath(p) ? p : "<dep>";
     }
     const out = { target, dirs, files };
     this.memo.set(k, out);
@@ -216,7 +226,7 @@ export class RecordingResolver {
   }
 }
 
-/** Whether a recorded resolution still holds on the filesystem as it is now. */
+/** Whether a recorded resolution still holds in the view as it is now. */
 export function resolutionHolds(fs: ProbeFs, rec: ResolutionRecord): boolean {
   return fs.key(rec.dirs, rec.files) === rec.key;
 }

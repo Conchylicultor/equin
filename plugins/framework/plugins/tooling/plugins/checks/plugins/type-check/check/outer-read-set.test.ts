@@ -22,8 +22,7 @@ import {
   createReadSetRepo,
   type ReadSetRepo,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core/testing";
-import { readTreeListing } from "./fingerprint";
-import { buildImportGraphs } from "./import-graph";
+import { lintableFiles } from "./import-graph";
 import { recordOuterReadSet } from "./outer-read-set";
 
 let repo: ReadSetRepo;
@@ -54,7 +53,7 @@ afterAll(() => {
 /** Record type-check's outer read-set the same way run() does. */
 const record = () =>
   repo.record(async (view) =>
-    recordOuterReadSet(view, await readTreeListing(repo.root)),
+    recordOuterReadSet(view, (await repo.snapshot()).paths()),
   );
 
 test("records membership globs + a content fact per lintable & global-trigger file", async () => {
@@ -76,12 +75,13 @@ test("records membership globs + a content fact per lintable & global-trigger fi
 });
 
 test("every file the check lints has a recorded content fact", async () => {
-  // The read-set is recorded from the listing on the runner's thread; the graph
-  // is built from the same listing on the preparation thread. Both filter with
-  // `lintableFiles`, so a linted file can never be missing from the read-set.
+  // The read-set is recorded from the snapshot's paths on the runner's
+  // thread; the preparation thread lints from its own load of the same tree.
+  // Both filter with `lintableFiles`, so a linted file can never be missing
+  // from the read-set.
   const rs = await record();
   const recorded = new Set(rs.files.map((f) => f.path));
-  const { files } = buildImportGraphs(await readTreeListing(repo.root));
+  const files = lintableFiles((await repo.snapshot()).paths());
   expect(files.length).toBeGreaterThan(0);
   expect(files.filter((f) => !recorded.has(f))).toEqual([]);
 });
@@ -168,12 +168,12 @@ test("a .ts under a gitignored directory is not in the lintable set", async () =
   // The 2026-09-09 failure: type-check walked the filesystem, so a stray `.ts`
   // an agent had left under gitignored `.cache/scratch/` counted as lintable,
   // matched no tsconfig program, and failed the coverage gate — over content
-  // the check cache key never covers. Reading the listing out of git removes
-  // the spelling entirely; the only way to regress is to walk again.
+  // the check cache key never covers. Reading the tree out of git removes the
+  // spelling entirely; the only way to regress is to walk again.
   write(".gitignore", "ignored/\n");
   write("ignored/stray.ts", "export const stray = 1;\n");
   try {
-    const { files } = buildImportGraphs(await readTreeListing(repo.root));
+    const files = lintableFiles((await repo.snapshot()).paths());
     expect(files).toContain("a.ts");
     expect(files).not.toContain("ignored/stray.ts");
   } finally {

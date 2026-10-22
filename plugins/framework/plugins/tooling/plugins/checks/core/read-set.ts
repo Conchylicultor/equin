@@ -40,8 +40,10 @@ import { createHash } from "node:crypto";
 import {
   globPaths,
   pathspecToRegex,
+  type GitTreeSnapshot,
 } from "@plugins/framework/plugins/tooling/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import { computeTreeHash } from "./tree-hash";
 
 // Wedge-breaker for a metadata-only git read: far above any real duration,
 // because starvation under a saturated check run is what these suffer, not
@@ -128,11 +130,7 @@ export interface ReadSet {
  * `prefix → members` index makes membership / glob / pathspec projections O(1)
  * amortised rather than an O(repo) rescan per query.
  */
-export interface TreeSnapshot {
-  readonly treeHash: string;
-  readonly root: string;
-  /** Blob sha of `path`, or null if the path is not a blob in the tree. */
-  blobSha(path: string): string | null;
+export interface TreeSnapshot extends GitTreeSnapshot {
   /** True iff `path` is a blob (file) in the tree. */
   exists(path: string): boolean;
   /**
@@ -206,6 +204,35 @@ export async function loadTreeSnapshot(
   } catch {
     return null;
   }
+}
+
+/**
+ * The snapshot of `root`'s working tree, STRICTLY: hashes the tree first when
+ * no `treeHash` is given, and throws where the fail-open pair
+ * (`computeTreeHash`, `loadTreeSnapshot`) returns null.
+ *
+ * For a reader whose answer IS the tree — `ctx.snapshot()`, and type-check,
+ * which versions every file by its blob sha — rather than a cache that can
+ * degrade to running uncached. A null there would mean "nothing to key on",
+ * which no such reader can do anything sound with.
+ */
+export async function readTreeSnapshot(
+  root: string,
+  treeHash?: string,
+): Promise<TreeSnapshot> {
+  const hash = treeHash ?? (await computeTreeHash(root));
+  if (hash === null) {
+    throw new Error(
+      `git could not hash the working tree of ${root} (computeTreeHash failed) — is it a git checkout?`,
+    );
+  }
+  const snapshot = await loadTreeSnapshot(root, hash);
+  if (snapshot === null) {
+    throw new Error(
+      `git could not list tree ${hash} of ${root} (git ls-tree failed, or the tree is empty)`,
+    );
+  }
+  return snapshot;
 }
 
 // The check-logic source surface. `checkSourceHash` folds every file under ANY

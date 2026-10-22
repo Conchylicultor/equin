@@ -15,6 +15,7 @@
     - `CheckExemptions`
     - `CheckResult`
     - `CheckScope`
+    - `GitTreeSnapshot`
     - `RepoFiles`
   - Exports (values):
     - `assertRepoPath`

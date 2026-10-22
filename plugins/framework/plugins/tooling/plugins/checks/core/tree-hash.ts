@@ -42,14 +42,17 @@ export async function computeTreeHash(root: string): Promise<string | null> {
 
     // Seed from the real index to inherit its stat cache (avoids a full content
     // rescan). `--git-path index` resolves correctly in a linked worktree.
+    // With no index yet (a fresh `git init`, nothing ever added) there is no
+    // stat cache to inherit, and `add -A` into the empty scratch index below
+    // hashes the same tree: what is on disk, honoring .gitignore. (Seeding
+    // from `HEAD` instead gave nothing — a tree read carries no stat info — and
+    // failed outright on an unborn branch.)
     const rel = (await git(root, ["rev-parse", "--git-path", "index"])).stdout;
     const realIndex = rel ? join(root, rel) : "";
     if (realIndex && existsSync(realIndex)) {
       copyFileSync(realIndex, tmpIndex);
       // Refresh stat info against the seeded index (cheap); errors are benign.
       await git(root, ["update-index", "-q", "--refresh"], env);
-    } else if ((await git(root, ["read-tree", "HEAD"], env)).code !== 0) {
-      return null;
     }
 
     if ((await git(root, ["add", "-A"], env)).code !== 0) return null;

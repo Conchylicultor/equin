@@ -8,6 +8,9 @@
 //   - the environment — lib, `@types`, `node_modules` declarations, the repo's
 //     `.d.ts` and JSON — parsed once per process and shared through
 //     `SourceFileCache`;
+//   - every repo file and directory as the check's VIEW has it
+//     (`./repo-view.ts`: the run's git tree plus its overlay) — never the
+//     disk's, so the program reads exactly what the keys hash;
 //   - for every module that resolves to a repo source NOT in the set, that
 //     file's contract (its raw emitted `.d.ts`), served as a virtual `x.d.ts`
 //     BESIDE `x.ts`: the contract's own imports then resolve exactly as the
@@ -20,6 +23,7 @@ import { createHash } from "crypto";
 import { relative } from "path";
 import ts from "typescript";
 import { isRepoPath, needsContract } from "./keys";
+import { viewCompilerHost, type RepoView } from "./repo-view";
 
 const rel = (root: string, abs: string): string =>
   relative(root, abs).split("\\").join("/");
@@ -47,7 +51,8 @@ export function createSourceFileCache(): SourceFileCache {
 }
 
 export interface NameHostInput {
-  root: string;
+  /** The repo as the check sees it; its root is the program's. */
+  view: RepoView;
   options: ts.CompilerOptions;
   /** The repo source files the program checks. */
   sources: ReadonlySet<string>;
@@ -74,8 +79,9 @@ export function contractFileName(abs: string): string {
 }
 
 export function createNameHost(input: NameHostInput): NameHost {
-  const { root, options, sources, contractOf, cache } = input;
-  const base = ts.createCompilerHost(options, /*setParentNodes*/ false);
+  const { view, options, sources, contractOf, cache } = input;
+  const root = view.root;
+  const base = viewCompilerHost(view, options);
   const canonical = base.getCanonicalFileName;
   const resolutionCache = ts.createModuleResolutionCache(
     root,
@@ -125,10 +131,10 @@ export function createNameHost(input: NameHostInput): NameHost {
       }
       // The environment. A dependency is pinned by the lockfile (in the
       // engine); a repo declaration file can change between programs, so it
-      // is keyed by its text.
+      // is keyed by its version.
       const text = base.readFile(fileName);
       if (text === undefined) return undefined;
-      const version = isRepoPath(path) ? `\0${sha256(text)}` : "";
+      const version = isRepoPath(path) ? `\0${view.version(path)!}` : "";
       return cache.get(`env\0${fileName}\0${format}${version}`, () =>
         ts.createSourceFile(fileName, text, languageVersionOrOptions),
       );

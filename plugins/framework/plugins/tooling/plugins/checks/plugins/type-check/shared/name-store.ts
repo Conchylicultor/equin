@@ -4,9 +4,9 @@
 // a run writes only the files it checked (and the few whose resolution key it
 // refreshed).
 //
-//   - `type-check-name-records`, key H(path, version): the file's imports (text
-//     only), its resolution record (`./name-resolve.ts`), whether its syntax is
-//     global, and up to `MAX_VARIANTS` recent VARIANTS — its result under one
+//   - `type-check-name-records`, key H(path, version — the git blob sha): the
+//     file's imports (text only), its resolution record (`./name-resolve.ts`),
+//     whether its syntax is global, and up to `MAX_VARIANTS` recent VARIANTS — its result under one
 //     result key (`./name-walk.ts`): diagnostics, signature, raw `.d.ts` hash,
 //     per-name records and the meanings they were recorded against.
 //   - `type-check-contracts`, key: the hash of a raw `.d.ts` — its text, what a
@@ -77,23 +77,43 @@ export const REFRESH_AFTER_MS = 3 * 24 * 60 * 60 * 1000;
 export interface NameStore {
   readEntry(path: string, version: string): FileEntry | undefined;
   writeEntry(path: string, version: string, entry: FileEntry): void;
-  /** A contract's text; throws when the store does not hold it. */
-  readContract(hash: string): string;
+  /**
+   * A contract's text — undefined when the store no longer holds it (aged
+   * out): the caller re-checks the file it belongs to instead.
+   */
+  readContract(hash: string): string | undefined;
+  /** Whether a contract is stored (no read). */
+  hasContract(hash: string): boolean;
   writeContract(hash: string, text: string): void;
-  /** A variant's prediction data, by its result key; throws when absent. */
-  readDetail(r: string): VariantDetailEntry;
+  /** A variant's prediction data, by its result key — undefined when absent. */
+  readDetail(r: string): VariantDetailEntry | undefined;
   writeDetail(r: string, detail: VariantDetailEntry): void;
+  /**
+   * Mark a file's records used — its entry, the contract and the prediction
+   * data of its result `r` — without reading them: what the walk base does
+   * for the files it carries fixed, which nothing reads (`./walk-base.ts`).
+   */
+  touch(path: string, version: string, contract: string, r: string): void;
   readProgramDiagnostics(global: string): string[] | undefined;
   writeProgramDiagnostics(global: string, diagnostics: string[]): void;
 }
 
 /**
- * The FORMAT every key here is under: the hash of this module's own source.
- * An entry written by another version of the schemas below is not one this
- * code can read, and nothing has to remember to bump a number for that.
+ * What a file's VERSION is: its git blob sha, read out of the run's tree
+ * (`./repo-view.ts`). Until 2026-10-21 it was the sha256 of the text, and an
+ * entry keyed on one kind must never be read as the other, so the kind is part
+ * of the format below.
+ */
+const VERSION_KIND = "git-blob";
+
+/**
+ * The FORMAT every key here is under: the version kind and the hash of this
+ * module's own source. An entry written by another version of the schemas
+ * below is not one this code can read, and nothing has to remember to bump a
+ * number for that.
  */
 const FORMAT = sha256(
-  readFileSync(join(import.meta.dir, "name-store.ts"), "utf8"),
+  `${VERSION_KIND}\n${readFileSync(join(import.meta.dir, "name-store.ts"), "utf8")}`,
 ).slice(0, 12);
 
 const entryKey = (path: string, version: string): string =>
@@ -139,25 +159,22 @@ export function openNameStore(): NameStore {
       const hit = memo.get(hash);
       if (hit !== undefined) return hit;
       const raw = contracts.read(hash);
-      if (raw === undefined) {
-        throw new Error(`type-check: the contract store has no .d.ts ${hash}`);
-      }
+      if (raw === undefined) return undefined;
       const text = contractEntry.parse(raw).text;
       memo.set(hash, text);
+      // Marked used: the store's count bound evicts the least recently
+      // USED, and a stable file's `.d.ts` is read for years, written once.
+      contracts.touch(hash);
       return text;
     },
+    hasContract: (hash) => memo.has(hash) || contracts.has(hash),
     writeContract(hash, text) {
-      if (contracts.has(hash)) return;
+      if (contracts.touch(hash)) return;
       contracts.record(hash, { text });
     },
     readDetail(r) {
       const raw = contracts.read(`${FORMAT}\0detail\0${r}`);
-      if (raw === undefined) {
-        throw new Error(
-          `type-check: the store has no prediction data for result ${r}`,
-        );
-      }
-      return detailSchema.parse(raw);
+      return raw === undefined ? undefined : detailSchema.parse(raw);
     },
     writeDetail(r, detail) {
       contracts.record(`${FORMAT}\0detail\0${r}`, detail);
@@ -170,6 +187,11 @@ export function openNameStore(): NameStore {
     },
     writeProgramDiagnostics(global, diagnostics) {
       contracts.record(`${FORMAT}\0program\0${global}`, { diagnostics });
+    },
+    touch(path, version, contract, r) {
+      entries.touch(entryKey(path, version));
+      contracts.touch(contract);
+      contracts.touch(`${FORMAT}\0detail\0${r}`);
     },
   };
 }
@@ -184,17 +206,43 @@ export function coldWriteThrough(store: NameStore): NameStore {
     readEntry: () => undefined,
     writeEntry: (p, v, e) => store.writeEntry(p, v, e),
     readContract: (h) => store.readContract(h),
+    hasContract: (h) => store.hasContract(h),
     writeContract: (h, t) => store.writeContract(h, t),
     readDetail: (r) => store.readDetail(r),
     writeDetail: (r, d) => store.writeDetail(r, d),
     readProgramDiagnostics: () => undefined,
     writeProgramDiagnostics: (g, d) => store.writeProgramDiagnostics(g, d),
+    touch: (p, v, c, r) => store.touch(p, v, c, r),
+  };
+}
+
+/**
+ * `store` with its WRITES kept in memory: reads see the store and what was
+ * written here, the store itself is untouched. A comparison run's (the full
+ * walk beside the incremental one, `./worker.ts`): both must start from the
+ * same store.
+ */
+export function bufferedNameStore(store: NameStore): NameStore {
+  const mem = memoryNameStore();
+  return {
+    readEntry: (p, v) => mem.readEntry(p, v) ?? store.readEntry(p, v),
+    writeEntry: (p, v, e) => mem.writeEntry(p, v, e),
+    readContract: (h) => mem.readContract(h) ?? store.readContract(h),
+    hasContract: (h) => mem.hasContract(h) || store.hasContract(h),
+    writeContract: (h, t) => mem.writeContract(h, t),
+    readDetail: (r) => mem.readDetail(r) ?? store.readDetail(r),
+    writeDetail: (r, d) => mem.writeDetail(r, d),
+    readProgramDiagnostics: (g) =>
+      mem.readProgramDiagnostics(g) ?? store.readProgramDiagnostics(g),
+    writeProgramDiagnostics: (g, d) => mem.writeProgramDiagnostics(g, d),
+    touch: () => {},
   };
 }
 
 /** An in-memory store: tests, and a dual run's fresh oracle. */
 export function memoryNameStore(): NameStore & {
   entries: Map<string, FileEntry>;
+  contracts: Map<string, string>;
 } {
   const entries = new Map<string, FileEntry>();
   const contracts = new Map<string, string>();
@@ -202,25 +250,23 @@ export function memoryNameStore(): NameStore & {
   const programs = new Map<string, string[]>();
   return {
     entries,
+    contracts,
     readEntry: (p, v) => {
       const e = entries.get(entryKey(p, v));
       return e === undefined ? undefined : structuredClone(e);
     },
     writeEntry: (p, v, e) =>
       void entries.set(entryKey(p, v), structuredClone(e)),
-    readContract(hash) {
-      const t = contracts.get(hash);
-      if (t === undefined) throw new Error(`no contract ${hash}`);
-      return t;
-    },
+    readContract: (hash) => contracts.get(hash),
+    hasContract: (hash) => contracts.has(hash),
     writeContract: (hash, text) => void contracts.set(hash, text),
     readDetail(r) {
       const d = details.get(r);
-      if (d === undefined) throw new Error(`no detail ${r}`);
-      return structuredClone(d);
+      return d === undefined ? undefined : structuredClone(d);
     },
     writeDetail: (r, d) => void details.set(r, structuredClone(d)),
     readProgramDiagnostics: (g) => programs.get(g),
     writeProgramDiagnostics: (g, d) => void programs.set(g, d),
+    touch: () => {},
   };
 }

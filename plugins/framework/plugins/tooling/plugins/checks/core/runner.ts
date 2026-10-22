@@ -19,6 +19,7 @@ import { gateSlot, runCheckFlight, type GateSlot } from "./check-flight";
 import { withScanView } from "./scan-context";
 import {
   loadTreeSnapshot,
+  readTreeSnapshot,
   validate,
   type TreeSnapshot,
   type QueryFact,
@@ -480,6 +481,20 @@ export async function runChecks(
       ? await progress.bootstrap("tree-snapshot", loadSnapshot)
       : null;
 
+  // `ctx.snapshot()`: the run's tree, strictly. With caching on it is the very
+  // snapshot loaded above (one memoized load, so the cache key, the replay and
+  // the check read one tree); under `--no-cache`, or when that fail-open load
+  // came back null, it is hashed and listed here on first ask — and a git
+  // failure rejects, failing the check that asked rather than handing it
+  // nothing to key on.
+  let strictSnapshotLoad: Promise<TreeSnapshot> | null = null;
+  const runSnapshot = (): Promise<TreeSnapshot> =>
+    (strictSnapshotLoad ??= (async () => {
+      const loaded = await loadSnapshot();
+      if (loaded !== null) return loaded;
+      return readTreeSnapshot(root ?? (await getWorktreeRoot()));
+    })());
+
   // `ctx.repo()`: the run's file set, loaded by the first check that asks and
   // shared by every check after it (`repo-set.ts` says where it comes from).
   // `--no-cache` resolved no root above; the set resolves its own then.
@@ -557,6 +572,7 @@ export async function runChecks(
       log: (line, stream) => observations.push({ line, stream }),
       cacheEnabled: !noCache,
       repo,
+      snapshot: runSnapshot,
     };
 
     const settled = (result: CheckResult, cached: boolean): CheckOutcome => ({

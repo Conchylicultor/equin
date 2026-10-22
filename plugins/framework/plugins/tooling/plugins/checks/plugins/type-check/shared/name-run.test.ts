@@ -11,9 +11,12 @@
  *      naming an outside type — and stops where nothing uses what moved;
  *   3. inside an import cycle keys are per file (a body edit stops at the
  *      file); an augmentation is global (everything);
- *   4. resolutions: an added file that shadows one, an untracked file beside a
- *      directory index, a probed directory that starts to exist, an import
- *      that starts resolving;
+ *   4. resolutions, keyed on the TREE (the check's view, never the disk): an
+ *      added file that shadows one, a file added beside a directory index, a
+ *      probed directory that starts to exist, an import that starts
+ *      resolving — and a file on disk but not in the tree, which moves
+ *      nothing; a version is the git blob sha, and bytes that no longer
+ *      match it fail the run;
  *   5. a store warmed on another tree; root order does not move a key;
  *   6. typed lint: a file is linted in the program that holds it, and a valid
  *      file whose typed part is stale joins program 2 as source;
@@ -22,11 +25,9 @@
  */
 
 import { afterAll, expect, setDefaultTimeout, test } from "bun:test";
-import { createHash } from "crypto";
 import {
   mkdirSync,
   mkdtempSync,
-  readFileSync,
   realpathSync,
   rmSync,
   writeFileSync,
@@ -46,6 +47,7 @@ import {
   type NameRunOutput,
 } from "./name-run";
 import { memoryNameStore, type NameStore } from "./name-store";
+import { gitBlobSha, repoViewOver, type RepoView } from "./repo-view";
 import { canonicalDeclarations } from "./tsc-engine";
 
 // Each case builds several programs over lib.es2022 — seconds on a loaded host,
@@ -96,7 +98,24 @@ function writeTree(
   }
 }
 
-const sha = (s: string): string => createHash("sha256").update(s).digest("hex");
+/** A fake tree hash: SHA-1 length, so versions are git's SHA-1 blob shas. */
+const TREE = "0".repeat(40);
+
+/**
+ * The tree a fixture is: exactly `files` (its `node_modules/` aside — outside
+ * the repo, the disk answers), each versioned by its git blob sha. What else is
+ * on disk is not in it.
+ */
+const viewOf = (root: string, files: Record<string, string>): RepoView =>
+  repoViewOver(
+    root,
+    TREE,
+    new Map(
+      Object.entries(files)
+        .filter(([f]) => !f.startsWith("node_modules/"))
+        .map(([f, text]) => [f, gitBlobSha(Buffer.from(text), TREE)]),
+    ),
+  );
 
 /** One run on the tree as it is now, beside a full check. */
 async function run(
@@ -115,26 +134,18 @@ async function run(
     .filter((f) => !f.startsWith("node_modules/"))
     .sort();
   if (opts.order === "reverse") list = list.reverse();
+  const view = viewOf(root, files);
   const out = await runNameCheck({
-    root,
+    view,
     options,
     roots: list,
     engine: "fixture",
     store,
     cache: createSourceFileCache(),
-    versionOf: (p) => {
-      try {
-        return sha(readFileSync(join(root, p), "utf8"));
-      } catch (err) {
-        if ((err as NodeJS.ErrnoException).code === "ENOENT") return undefined;
-        throw err;
-      }
-    },
-    textOf: (p) => readFileSync(join(root, p), "utf8"),
     ...(opts.lint ? { lint: opts.lint } : {}),
     onMiss: opts.onMiss ?? "throw",
   });
-  const full = fullCheck(root, options, list);
+  const full = fullCheck(view, options, list);
   expect(compareResults(out.results, full.results)).toEqual([]);
   return out;
 }
@@ -293,7 +304,10 @@ function blindStore(): NameStore {
   const store = memoryNameStore();
   return {
     ...store,
-    readDetail: (r) => ({ ...store.readDetail(r), i: {} }),
+    readDetail: (r) => {
+      const d = store.readDetail(r);
+      return d === undefined ? undefined : { ...d, i: {} };
+    },
   };
 }
 
@@ -314,8 +328,11 @@ test("a missed prediction throws under onMiss: throw", async () => {
     thrown = err;
   }
   expect(thrown).toBeInstanceOf(PredictionMissed);
+  // g's x moved, and h — kept valid on a use of it — no longer has its
+  // variant's key: the final self-check says so too.
   expect((thrown as PredictionMissed).missed).toEqual([
     { file: "g.ts", name: "x" },
+    { file: "h.ts", name: "(result key)" },
   ]);
 });
 
@@ -345,7 +362,10 @@ test("a missed prediction under onMiss: whole answers from one whole program, an
   // `run` compares with a full check: h's error (y: number = x, now a
   // string), which the missed prediction would have left out, is there.
   const out = await run(root, edited, store, { lint, onMiss: "whole" });
-  expect(out.report.missed).toEqual([{ file: "g.ts", name: "x" }]);
+  expect(out.report.missed).toEqual([
+    { file: "g.ts", name: "x" },
+    { file: "h.ts", name: "(result key)" },
+  ]);
   expect(out.checked).toEqual(["f.ts", "g.ts", "h.ts"]);
   expect(out.report.p2).toBeNull();
   expect(out.results.get("h.ts")!.diagnostics.length).toBe(1);
@@ -459,10 +479,10 @@ test("an added file that shadows a resolution re-checks its importers", async ()
   expect(shadowed).toEqual(["lib.ts", "use.ts"]);
 });
 
-test("an untracked file beside a directory index moves the key: listings are the filesystem's, not git's", async () => {
-  // `pkg/index.ts` is what `./pkg` resolves to; a `pkg.ts` written beside it
-  // — untracked: no git listing names it, the tsconfig's filesystem expansion
-  // does — shadows it. `use.ts` is unchanged; its resolution key moves.
+test("a file added beside a directory index moves the key", async () => {
+  // `pkg/index.ts` is what `./pkg` resolves to; a `pkg.ts` added to the tree
+  // beside it — untracked-not-ignored and in the tree, or a gitignored root in
+  // the overlay — shadows it. `use.ts` is unchanged; its resolution key moves.
   const root = freshRoot();
   const store = memoryNameStore();
   const files = {
@@ -477,6 +497,67 @@ test("an untracked file beside a directory index moves the key: listings are the
   expect(out.report.moved).toBe(1);
   expect(out.checked).toEqual(["pkg.ts", "use.ts"]);
   expect(out.results.get("use.ts")!.diagnostics.join("\n")).toContain("TS2322");
+});
+
+test("a file on disk and not in the tree moves no key, and shadows nothing", async () => {
+  // A transient root entry (`.install.lock`), and a `pkg.ts` that would shadow
+  // `pkg/index.ts` were it in the tree: neither is, so no listing a key hashes
+  // moves, and the program does not see the shadow either.
+  const root = freshRoot();
+  const store = memoryNameStore();
+  const files = {
+    "pkg/index.ts": "export const v: number = 1;\n",
+    "use.ts": 'import { v } from "./pkg";\nexport const w: number = v;\n',
+  };
+  writeTree(root, files);
+  await run(root, files, store);
+  writeTree(root, {
+    ...files,
+    ".install.lock": "",
+    "pkg.ts": 'export const v: string = "s";\n',
+  });
+  const out = await run(root, files, store);
+  expect(out.report.moved).toBe(0);
+  expect(out.report.refreshed).toBe(0);
+  expect(out.checked).toEqual([]);
+  expect(out.results.get("use.ts")!.diagnostics).toEqual([]);
+});
+
+test("a version is the file's git blob sha", async () => {
+  const root = freshRoot();
+  const store = memoryNameStore();
+  const files = { "lone.ts": "export const lone = 1;\n" };
+  writeTree(root, files);
+  await run(root, files, store);
+  // `git hash-object` of the text: what the tree names the file by.
+  const blob = gitBlobSha(Buffer.from(files["lone.ts"]), TREE);
+  expect(blob).toBe("265a6ce1381f8313268c20ba641ee0959a070a99");
+  expect(
+    [...store.entries.keys()].some((k) => k.endsWith(`\0lone.ts\0${blob}`)),
+  ).toBe(true);
+});
+
+test("a file whose bytes changed after the tree was taken fails the run", async () => {
+  const root = freshRoot();
+  const files = { "lone.ts": "export const lone = 1;\n" };
+  writeTree(root, { "lone.ts": "export const lone = 2;\n" });
+  let thrown: unknown;
+  try {
+    await runNameCheck({
+      view: viewOf(root, files),
+      options: optionsFor(root),
+      roots: ["lone.ts"],
+      engine: "fixture",
+      store: memoryNameStore(),
+      cache: createSourceFileCache(),
+      onMiss: "throw",
+    });
+  } catch (err) {
+    thrown = err;
+  }
+  expect(String(thrown)).toContain(
+    "changed on disk after the check took its tree",
+  );
 });
 
 test("a probed directory that starts to exist moves the key", async () => {

@@ -1,10 +1,15 @@
 // ─── Does the two-program check ever differ from a full check? ──────────────
 //
 //   ./singularity run plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/scripts/dual-check.ts \
-//     <checkout> [--mode keyed|dual] [--json <out.json>]
+//     <checkout> [--mode keyed|walks|dual] [--walk-base hint|none] [--json <out.json>]
 //
 // `--mode keyed` runs the two-program check alone (what a check run's tsc half
 // costs, with its CPU, peak and program sizes) — no full check beside it.
+// `--mode walks` runs it beside a FULL WALK of every file over the same store
+// and compares every file's result key, `.d.ts`, signature and diagnostics
+// (the incremental walk's oracle, `../shared/walk-base.ts`); `dual` adds the
+// full check. `--walk-base` picks what the walk starts from: the checkout's
+// last walk (`hint`, the default) or nothing.
 //
 // Runs the type-check worker on `<checkout>`'s tree in `dual` mode: the
 // two-program check over the host-wide store (what a check run does), then a
@@ -28,6 +33,7 @@ import { join, resolve } from "path";
 import { fileURLToPath } from "url";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import type { TypeCheckWorkerJob, TypeCheckWorkerResult } from "../core";
+import { readCheckTree } from "../shared/repo-view";
 
 const WORKER = fileURLToPath(new URL("../shared/worker.ts", import.meta.url));
 
@@ -37,23 +43,33 @@ const jsonAt = args.indexOf("--json");
 const jsonOut = jsonAt >= 0 ? args[jsonAt + 1] : undefined;
 const modeAt = args.indexOf("--mode");
 const mode = modeAt >= 0 ? args[modeAt + 1] : "dual";
-if (root === undefined || (mode !== "keyed" && mode !== "dual")) {
+const baseAt = args.indexOf("--walk-base");
+const walkBase = baseAt >= 0 ? args[baseAt + 1] : "hint";
+if (
+  root === undefined ||
+  (mode !== "keyed" && mode !== "walks" && mode !== "dual") ||
+  (walkBase !== "hint" && walkBase !== "none")
+) {
   console.error(
-    "usage: dual-check.ts <checkout> [--mode keyed|dual] [--json <out.json>]",
+    "usage: dual-check.ts <checkout> [--mode keyed|walks|dual] [--walk-base hint|none] [--json <out.json>]",
   );
   process.exit(2);
 }
 
+const tsconfigPath = join(root, "tsconfig.json");
 const job: TypeCheckWorkerJob = {
   root,
   name: "dual",
-  tsconfigPath: join(root, "tsconfig.json"),
+  tsconfigPath,
   tscMode: mode,
   // A miss is what this script is run to find: it fails the run.
   onMiss: "throw",
   lintFiles: [],
   typedParts: { split: [], whole: [] },
-  versions: {},
+  lintBase: null,
+  walkBase: { kind: walkBase },
+  // The checkout's working tree as it is now, and its gitignored roots.
+  tree: (await readCheckTree(root, tsconfigPath)).tree,
 };
 const jobPath = join(os.tmpdir(), `dual-check-${process.pid}.json`);
 writeFileSync(jobPath, JSON.stringify(job));

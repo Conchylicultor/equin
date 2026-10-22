@@ -1,4 +1,5 @@
-// Import-graph construction over the linted .ts/.tsx file set.
+// Import edges between repo files, for the lint rule groups' closures
+// (`./lint-groups`), and the lint universe.
 //
 // The extractor below is adapted (copied & specialized to file granularity)
 // from the private import-extractor in
@@ -7,22 +8,12 @@
 // We must NOT import from that check (it's a private check file), so the logic
 // is duplicated here and resolves specifiers to concrete repo-relative files.
 //
-// This module does NOT enumerate. Its candidate file set arrives pre-enumerated
-// from `listRepoFiles` (checks/core) — the ONE git-backed lister the whole check
-// run shares — so the graph covers exactly the tree the check cache key hashes,
-// and a gitignored file can no longer reach type-check's coverage gate. That is
-// what a filesystem walk with a private deny-list could not promise; see
-// research/2026-09-09-tooling-check-file-enumeration-from-git.md.
-
-import { existsSync, readFileSync, statSync } from "fs";
-import { dirname, join, relative, resolve, sep } from "path";
-import {
-  findImports,
-  maskSource,
-} from "@plugins/plugin-meta/plugins/parse-utils/core";
-import { isLintScopeExcluded } from "@plugins/framework/plugins/tooling/plugins/lint/core";
-import type { TreeListing } from "./fingerprint";
-
+// Nothing here enumerates or probes the disk: membership is the check's view
+// of the repo (the run's git tree plus its overlay, `../shared/repo-view.ts`),
+// handed in as a predicate. It used to build the whole repo's graph — every
+// lintable file read and parsed, up to five `existsSync` per specifier — only
+// to walk ~100 small closures out of it (3 CPU-s per run, measured).
+//
 // What remains of eslint's ignore list once git has done its part. `.gitignore`
 // already withholds node_modules, dist (and dist.staging/live/old.*), .check-*,
 // .claude/worktrees and web-core/dist, so a git-enumerated set never contains
@@ -31,37 +22,30 @@ import type { TreeListing } from "./fingerprint";
 // from `lint/core`'s one shared list, the same one the ESLint config spreads.
 // This used to be a hand-copy of that list, which is how `prototypes/**` had
 // drifted out of the walk while ESLint still ignored it.
+
+import { posix } from "path";
+import {
+  findImports,
+  maskSource,
+} from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { isLintScopeExcluded } from "@plugins/framework/plugins/tooling/plugins/lint/core";
+
 export function isLintable(rel: string): boolean {
   if (!(rel.endsWith(".ts") || rel.endsWith(".tsx"))) return false;
   return !isLintScopeExcluded(rel);
 }
 
 /**
- * The lint universe of a listing: the files the check lints, and the files the
- * outer read-set records a content fact for.
+ * The lint universe of a tree's paths: the files the check lints, and the
+ * files the outer read-set records a content fact for.
  *
  * ONE function for both on purpose. The read-set is recorded on the check
- * runner's thread from the listing alone, while the graph is built on the
- * preparation thread (`./prepare-thread`); both call this over the same listing
- * value, so the recorded set and the linted set cannot disagree.
+ * runner's thread from the run's snapshot, while the preparation thread lints
+ * from its own load of the same tree (by hash); both call this over that
+ * tree's paths, so the recorded set and the linted set cannot disagree.
  */
-export function lintableFiles(listing: TreeListing): string[] {
-  return listing.files.filter(isLintable);
-}
-
-export function safeRead(absPath: string): string | null {
-  try {
-    if (!statSync(absPath).isFile()) return null;
-    return readFileSync(absPath, "utf-8");
-  } catch (err) {
-    if (
-      (err as NodeJS.ErrnoException).code !== "ENOENT" &&
-      (err as NodeJS.ErrnoException).code !== "EACCES" &&
-      (err as NodeJS.ErrnoException).code !== "ENOTDIR"
-    )
-      throw err;
-    return null;
-  }
+export function lintableFiles(paths: readonly string[]): string[] {
+  return paths.filter(isLintable);
 }
 
 /**
@@ -80,7 +64,7 @@ export function safeRead(absPath: string): string | null {
  * imports (`import type …` / `export type … from`) are real compile edges, and
  * bare side-effect imports too.
  */
-function extractImportSpecifiers(rawSrc: string): string[] {
+export function extractImportSpecifiers(rawSrc: string): string[] {
   const results: string[] = [];
 
   // Static `import … from "…"` / `export … from "…"` / bare `import "…"`.
@@ -109,24 +93,25 @@ const WEB_CORE_WEB = "plugins/framework/plugins/web-core/web";
 
 /**
  * Resolve an import specifier from `fromRel` to a concrete repo-relative file
- * path, or null if it doesn't resolve to a tracked source file (bare npm
+ * path, or null if it doesn't resolve to a source file in the view (bare npm
  * package, missing target, etc.).
  *
  * Only the two tsconfig aliases exist:
  *   @plugins/<rest> → plugins/<rest>
  *   @/<rest>        → plugins/framework/plugins/web-core/web/<rest>
  * Relative ./ ../ resolve against the importing file's dir.
- * Each candidate base is tried with .ts, .tsx, /index.ts, /index.tsx.
+ * Each candidate base is tried with .ts, .tsx, /index.ts, /index.tsx, against
+ * `isFile` — the view's membership, never the disk.
  */
 export function resolveSpecifier(
-  root: string,
   fromRel: string,
   spec: string,
+  isFile: (rel: string) => boolean,
 ): string | null {
   let baseRel: string | null = null;
   if (spec.startsWith("./") || spec.startsWith("../")) {
-    const abs = resolve(dirname(join(root, fromRel)), spec);
-    baseRel = relative(root, abs).split(sep).join("/");
+    baseRel = posix.normalize(posix.join(posix.dirname(fromRel), spec));
+    if (baseRel.endsWith("/")) baseRel = baseRel.slice(0, -1);
   } else if (spec.startsWith("@plugins/")) {
     baseRel = "plugins/" + spec.slice("@plugins/".length);
   } else if (spec === "@" || spec.startsWith("@/")) {
@@ -147,54 +132,7 @@ export function resolveSpecifier(
   ];
   for (const cand of candidates) {
     if (!(cand.endsWith(".ts") || cand.endsWith(".tsx"))) continue;
-    if (existsSync(join(root, cand))) return cand;
+    if (isFile(cand)) return cand;
   }
   return null;
-}
-
-export interface ImportGraphs {
-  files: string[]; // all lintable rel paths
-  forward: Map<string, Set<string>>; // importer -> Set<importee>
-  reverse: Map<string, Set<string>>; // importee -> Set<importer>
-}
-
-/**
- * Build the forward AND reverse import adjacency maps over every linted
- * .ts/.tsx file in a single pass. For each resolved importer→importee edge,
- * insert into both maps:
- *   - forward: Map<importer, Set<importee>> — what each file imports.
- *   - reverse: Map<importee, Set<importer>> — who imports each file.
- *
- * `listing` is the run's one git-derived enumeration (`listRepoFiles`); the
- * lintable set is `lintableFiles` over it, never a second walk. Reading each
- * file's bytes to extract its edges is unrelated to enumeration, so this stays
- * synchronous — which is why it runs on the preparation thread, never the
- * check runner's.
- */
-export function buildImportGraphs(listing: TreeListing): ImportGraphs {
-  const { root } = listing;
-  const files = lintableFiles(listing);
-  const forward = new Map<string, Set<string>>();
-  const reverse = new Map<string, Set<string>>();
-  for (const importer of files) {
-    const src = safeRead(join(root, importer));
-    if (!src) continue;
-    for (const spec of extractImportSpecifiers(src)) {
-      const importee = resolveSpecifier(root, importer, spec);
-      if (!importee || importee === importer) continue;
-      let fwd = forward.get(importer);
-      if (!fwd) {
-        fwd = new Set<string>();
-        forward.set(importer, fwd);
-      }
-      fwd.add(importee);
-      let rev = reverse.get(importee);
-      if (!rev) {
-        rev = new Set<string>();
-        reverse.set(importee, rev);
-      }
-      rev.add(importer);
-    }
-  }
-  return { files, forward, reverse };
 }

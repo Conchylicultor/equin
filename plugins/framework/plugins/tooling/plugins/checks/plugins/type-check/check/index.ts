@@ -30,7 +30,6 @@ import {
   currentScanView,
   type TscProgram,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import type {
   TypeCheckStats,
   TypeCheckWorkerJob,
@@ -49,7 +48,6 @@ import {
   readDarwinBackground,
   type DarwinBackground,
 } from "@plugins/packages/plugins/spawn-priority/server";
-import { readTreeListing } from "./fingerprint";
 import { recordOuterReadSet } from "./outer-read-set";
 import { openPrepareThread } from "./prepare-thread";
 import type { ProgramOutcome } from "./prepare";
@@ -66,7 +64,10 @@ interface WorkerResult extends TypeCheckWorkerResult {
 async function runWorker(
   root: string,
   program: TscProgram,
-  lint: Pick<TypeCheckWorkerJob, "lintFiles" | "typedParts" | "versions">,
+  lint: Pick<
+    TypeCheckWorkerJob,
+    "lintFiles" | "typedParts" | "lintBase" | "walkBase" | "tree"
+  >,
   grant: Grant,
 ): Promise<WorkerResult> {
   const run = await spawnTypeCheckWorker({
@@ -82,7 +83,14 @@ async function runWorker(
     onMiss: "whole",
     lintFiles: lint.lintFiles,
     typedParts: lint.typedParts,
-    versions: lint.versions,
+    // The run base every file outside `lintFiles` carries from.
+    lintBase: lint.lintBase,
+    // The walk base bound to it: the files the walk does not visit keep the
+    // keys the lint base holds.
+    walkBase: lint.walkBase,
+    // The tree and overlay the plan keyed lint on: the worker versions every
+    // file the same way.
+    tree: lint.tree,
     grant,
   });
   return {
@@ -204,16 +212,24 @@ const check: Check = {
   // replay against the fresh snapshot, so a change touching NO typecheckable input
   // (e.g. docs-only) is an outer HIT with zero tsc workers. The INNER per-file
   // lint result store (lint-groups.ts / lint-results.ts) is untouched and orthogonal.
+  //
+  // The one input outside the tree is the OVERLAY: the gitignored
+  // `*.composition.*.generated.ts` registries the tsconfig includes. The read-set
+  // cannot record them (it replays against git snapshots, which do not hold
+  // them), so an outer HIT trusts that they are what the tree generates — which
+  // `./singularity build` regenerates before any check runs. The inner stores
+  // key them by content like every file, so no stored result is ever stale for
+  // one; only an overlay-only change with an unchanged tree can replay a PASS.
   inputKeyed: true,
   async run(ctx: CheckContext) {
-    const root = await getWorktreeRoot();
-
-    // ONE reading of the tree's file set, shared by everything that asks what
-    // files exist: the lint universe, the outer read-set, the content hashes,
-    // and the program key. Four separate walks used to cost
-    // seconds and gave the enumeration rules four places to disagree — and, as
-    // walks, they answered with files git never puts in this check's cache key.
-    const listing = await readTreeListing(root);
+    // The run's tree: its hash and every blob's sha, as git hashed the working
+    // tree — the same snapshot the cache key and the replay read, and taken
+    // under `--no-cache` too (a tree hash is a fact, not a cache). Every file
+    // this check keys is versioned by its blob sha in it, so its verdict is a
+    // function of this tree (plus the overlay the preparation reads beside
+    // it: the gitignored registries the tsconfig includes).
+    const snapshot = await ctx.snapshot();
+    const { root } = snapshot;
 
     // OUTER input-keyed read-set (Stage 2). Only runs on a cache MISS: the runner
     // reaches run() only when validate-by-replay missed (or nothing was recorded
@@ -223,25 +239,29 @@ const check: Check = {
     // the runner falls back to that path), in which case nothing is recorded and
     // behaviour is unchanged. See ./outer-read-set for what each fact guards.
     //
-    // Recorded HERE, from the listing, before the preparation thread starts:
-    // the view belongs to this thread's run, and the facts need no file read.
+    // Recorded HERE, from the snapshot's paths, before the preparation thread
+    // starts: the view belongs to this thread's run, and the facts need no
+    // file read.
     const view = currentScanView();
-    if (view) recordOuterReadSet(view, listing);
+    if (view) recordOuterReadSet(view, snapshot.paths());
 
     let result: WorkerResult | undefined;
     let crash: string | undefined;
     let lintLines = "";
 
-    // Everything that reads file bytes or walks the tree — the import graph,
-    // content hashes, tsconfig include-expansion, the coverage gate, the lint
-    // result store, and the records after the run —
-    // runs on the preparation thread, so this thread (shared by every other
-    // check in the pass) keeps servicing timers and sockets throughout.
+    // Everything that reads file bytes or the tree — the overlay, the tsconfig
+    // include-expansion, the coverage gate, the lint rule groups, the lint
+    // result store, and the records after the run — runs on the preparation
+    // thread, so this thread (shared by every other check in the pass) keeps
+    // servicing timers and sockets throughout. It gets the tree by HASH and
+    // loads its own copy: one `git ls-tree`, cheaper than structured-cloning
+    // 12k paths and versions into it.
     const thread = openPrepareThread();
     try {
       const prepareStart = performance.now();
       const plan = await thread.prepare({
-        listing,
+        root,
+        treeHash: snapshot.treeHash,
       });
       const prepareMs = performance.now() - prepareStart;
 
@@ -326,6 +346,8 @@ const check: Check = {
       const outcome: ProgramOutcome | undefined = result && {
         tscClean: !result.tscErrors,
         lint: result.lint,
+        keys: result.lintKeys,
+        walkRoot: result.walkRoot,
       };
       const finalizeStart = performance.now();
       const finalized = await thread.finalize(outcome);
@@ -334,9 +356,11 @@ const check: Check = {
       // can tell which typed parts were stale.
       ctx.log?.(finalized.lintLine, "stderr");
       // What used to be a freeze of the runner's thread, still measured: the
-      // instrument for making the preparation itself cheaper.
+      // instrument for making the preparation itself cheaper — and which run
+      // base it carried from, how much that left to send, and what the record
+      // phase wrote back.
       ctx.log?.(
-        `type-check: prepared off-thread in ${seconds(prepareMs)}s (finalize ${seconds(performance.now() - finalizeStart)}s)`,
+        `type-check: prepared off-thread in ${seconds(prepareMs)}s (${plan.phaseMs.map(([n, ms]) => `${n} ${seconds(ms)}s`).join(", ")}; ${plan.baseLine}; finalize ${seconds(performance.now() - finalizeStart)}s — ${finalized.baseLine})`,
         "stderr",
       );
     } finally {

@@ -4,6 +4,7 @@ export type {
   CheckExemptions,
   CheckResult,
   CheckScope,
+  GitTreeSnapshot,
   RepoFiles,
 } from "./types";
 export { CHECK_SCOPES } from "./types";

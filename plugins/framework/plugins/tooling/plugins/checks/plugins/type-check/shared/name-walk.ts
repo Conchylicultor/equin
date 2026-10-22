@@ -101,12 +101,76 @@ export interface WalkFile {
 }
 
 export interface WalkInput {
+  /** The files WALKED: every source file, or (incremental) the dirty set. */
   files: ReadonlyMap<string, WalkFile>;
   global: string;
   /** The meaning of a repo file that is not a checked source (JSON, a module `.d.ts`): its version. */
   declMeaning(path: string): string;
-  /** A stored variant's prediction data (read only for files going to program 2). */
-  detail(path: string, variant: WalkVariant): VariantDetail;
+  /**
+   * A stored variant's prediction data (read only for files going to program
+   * 2) — undefined when the store no longer holds it: the file then predicts
+   * nothing (every name ⊥).
+   */
+  detail(path: string, variant: WalkVariant): VariantDetail | undefined;
+  /** The source files NOT walked, as a base run ended (incremental walk only). */
+  fixed?: FixedFiles;
+}
+
+/** A source file outside the walk: what its names mean, and its star targets. */
+export interface FixedRec {
+  m: Readonly<Record<string, string>>;
+  star: readonly string[];
+}
+
+/**
+ * The source files an incremental walk does not visit (`./walk-incremental.ts`):
+ * every one is FIXED — its names mean what the base says. The walk asks only
+ * three things of them.
+ */
+export interface FixedFiles {
+  /** A fixed source file's names and star targets; undefined when `path` is no source file. */
+  rec(path: string): FixedRec | undefined;
+  /**
+   * Order the walked files' components (given dependencies first among
+   * themselves) so each also comes after everything it reaches THROUGH fixed
+   * files. Throws `WalkGrow` with the fixed readers in the way when a walked
+   * file must rise above them (a cycle may close through one).
+   */
+  order(
+    comps: string[][],
+    outOf: (path: string) => readonly string[],
+  ): string[][];
+  /**
+   * A probe for one phase-1 walk: whether the fixed file `owner` uses —
+   * transitively, through fixed files — a walked file in `stale`.
+   */
+  staleProbe(): (owner: string, stale: ReadonlySet<string>) => boolean;
+}
+
+/**
+ * The walked files cannot be placed in rank order while `paths` stay fixed:
+ * a walked file now reads something ranked at or above one of its fixed
+ * readers. Those readers are walked too (raised above it), and the phase runs
+ * again — a cycle closing through them merges into one walked component.
+ */
+export class WalkGrow extends Error {
+  constructor(readonly paths: readonly string[]) {
+    super(
+      `type-check: the walk must also visit ${paths.slice(0, 3).join(", ")}`,
+    );
+    this.name = "WalkGrow";
+  }
+}
+
+/**
+ * The incremental walk cannot answer as the full walk would: the run walks
+ * every file instead (`./name-run.ts`), saying why.
+ */
+export class WalkFallback extends Error {
+  constructor(readonly reason: string) {
+    super(`type-check: incremental walk abandoned — ${reason}`);
+    this.name = "WalkFallback";
+  }
 }
 
 /** A name or file meaning: a hash, `null` (⊥: may change this run). */
@@ -117,6 +181,9 @@ type Meaning = string | null;
  * d-edge owners, so a name's targets are hashed before it), meanings as files
  * get their record.
  */
+/** A fixed file's names carry no record the walk reads: only their meanings. */
+const FIXED_NAME: NameRec = { t: "", d: [], i: [] };
+
 class Meanings {
   /** The record each visited file's names come from; null: every name ⊥. */
   readonly recOf = new Map<string, WalkRecord | null>();
@@ -124,14 +191,57 @@ class Meanings {
   readonly bottomNames = new Map<string, Set<string>>();
   private readonly m = new Map<string, Meaning>();
   private readonly wholeMemo = new Map<string, Meaning>();
+  /** The `F#*` keys a memoized whole reached through stars. */
+  private readonly wholeDeps = new Map<string, string[]>();
+  /**
+   * When set, every key consulted is added — the one asked, and every key a
+   * star or a whole reaches: the READS of the file being keyed (the walk
+   * base's reverse read-set, `./walk-base.ts`).
+   */
+  reads: Set<string> | undefined;
+  /** Per file, the keys its result key and its names' meanings read (when tracking). */
+  readonly tracked: Map<string, Set<string>> | undefined;
 
-  constructor(private readonly input: WalkInput) {}
+  constructor(
+    private readonly input: WalkInput,
+    track = false,
+  ) {
+    this.tracked = track ? new Map() : undefined;
+  }
+
+  readsOf(p: string): Set<string> | undefined {
+    if (this.tracked === undefined) return undefined;
+    let r = this.tracked.get(p);
+    if (r === undefined) this.tracked.set(p, (r = new Set()));
+    return r;
+  }
+
+  /**
+   * What `p` is to the walk: a walked file, a FIXED source file (seeded with
+   * the base's meanings the first time it is asked about), or a declaration
+   * input (JSON, a module `.d.ts`) whose meaning is its version.
+   */
+  private kind(p: string): "walked" | "fixed" | "decl" {
+    if (this.input.files.has(p)) return "walked";
+    if (this.recOf.has(p)) return "fixed";
+    const fx = this.input.fixed?.rec(p);
+    if (fx === undefined) return "decl";
+    this.recOf.set(p, {
+      names: Object.fromEntries(Object.keys(fx.m).map((n) => [n, FIXED_NAME])),
+      star: fx.star,
+      depM: {},
+    });
+    for (const [n, v] of Object.entries(fx.m)) this.m.set(nameKey(p, n), v);
+    return "fixed";
+  }
 
   /** A target's meaning: undefined when its owner was not visited yet. */
   of(key: string, guard: Set<string> = new Set()): Meaning | undefined {
+    this.reads?.add(key);
     const [p, n] = splitKey(key);
-    if (!this.input.files.has(p))
+    if (this.kind(p) === "decl") {
       return h(`decl\0${p}\0${this.input.declMeaning(p)}`);
+    }
     if (!this.recOf.has(p)) return undefined;
     const rec = this.recOf.get(p)!;
     if (rec === null) return null;
@@ -157,12 +267,16 @@ class Meanings {
 
   private whole(p: string, guard: Set<string>): Meaning {
     const memo = this.wholeMemo.get(p);
-    if (memo !== undefined) return memo;
+    if (memo !== undefined) {
+      for (const k of this.wholeDeps.get(p) ?? []) this.reads?.add(k);
+      return memo;
+    }
     const key = nameKey(p, WHOLE);
     if (guard.has(key)) return h(`star-cycle\0${key}`);
     guard.add(key);
     const rec = this.recOf.get(p)!;
     if (rec === null) return null;
+    const deps: string[] = [];
     const parts: string[] = [];
     for (const n of Object.keys(rec.names).sort()) {
       const v = this.m.get(nameKey(p, n));
@@ -173,12 +287,16 @@ class Meanings {
       parts.push(`${n}\0${v}`);
     }
     for (const s of rec.star) {
-      if (!this.input.files.has(s)) {
+      if (this.kind(s) === "decl") {
         parts.push(`*${s}`);
         continue;
       }
       if (!this.recOf.has(s)) return null;
+      const sk = nameKey(s, WHOLE);
+      this.reads?.add(sk);
+      deps.push(sk);
       const v = this.whole(s, guard);
+      deps.push(...(this.wholeDeps.get(s) ?? []));
       if (v === null) {
         this.wholeMemo.set(p, null);
         return null;
@@ -187,6 +305,7 @@ class Meanings {
     }
     const out = h(`whole\0${parts.join("\n")}`);
     this.wholeMemo.set(p, out);
+    this.wholeDeps.set(p, deps);
     return out;
   }
 
@@ -202,6 +321,7 @@ class Meanings {
     for (const p of members) {
       this.recOf.set(p, recs.get(p)!);
       this.wholeMemo.delete(p);
+      this.wholeDeps.delete(p);
     }
     const nodes: string[] = [];
     const own = new Set<string>();
@@ -238,9 +358,13 @@ class Meanings {
         const ext: string[] = [];
         const inComp = new Set(keys);
         for (const k of keys) {
+          const rs = this.readsOf(splitKey(k)[0]);
           for (const d of recOfKey(k).d) {
+            rs?.add(d);
             if (inComp.has(d)) continue;
+            this.reads = rs;
             const v = own.has(d) ? this.m.get(d) : this.of(d);
+            this.reads = undefined;
             if (v === undefined || v === null) {
               bottom = true;
               break;
@@ -263,11 +387,15 @@ class Meanings {
   }
 }
 
-/** Components of the use graph, dependencies first. */
+/**
+ * Components of the use graph, dependencies first — over the walked files;
+ * an incremental walk orders them through the fixed files too (`order`).
+ */
 function components(
-  files: ReadonlyMap<string, WalkFile>,
+  input: WalkInput,
   extraEdges: (p: string) => readonly string[],
 ): string[][] {
+  const { files } = input;
   const paths = [...files.keys()].sort();
   const idx = new Map(paths.map((p, i) => [p, i]));
   const out: string[][] = [];
@@ -285,7 +413,17 @@ function components(
     },
     (comp) => out.push(comp.map((i) => paths[i]!).sort()),
   );
-  return out;
+  const fixed = input.fixed;
+  if (fixed === undefined) return out;
+  return fixed.order(out, (p) => {
+    const f = files.get(p)!;
+    const owners = new Set<string>();
+    for (const k of [...(f.uses ?? []), ...extraEdges(p)]) {
+      const o = splitKey(k)[0];
+      if (o !== p) owners.add(o);
+    }
+    return [...owners];
+  });
 }
 
 /** The d-edge targets of a record's names (for ordering). */
@@ -306,11 +444,16 @@ function fileKey(
 ): string | null {
   const f = files.get(p)!;
   const lines: string[] = [];
-  for (const k of f.uses ?? []) {
-    if (splitKey(k)[0] === p) continue; // its own names are its text
-    const v = meanings.of(k);
-    if (v === undefined || v === null) return null;
-    lines.push(`${k}\0${v}`);
+  meanings.reads = meanings.readsOf(p);
+  try {
+    for (const k of f.uses ?? []) {
+      if (splitKey(k)[0] === p) continue; // its own names are its text
+      const v = meanings.of(k);
+      if (v === undefined || v === null) return null;
+      lines.push(`${k}\0${v}`);
+    }
+  } finally {
+    meanings.reads = undefined;
   }
   return h(`file\0${global}\0${p}\0${f.version}\0${lines.sort().join("\n")}`);
 }
@@ -327,6 +470,8 @@ export interface Phase0 {
   pending: Set<string>;
   /** Files with a valid stored variant, and which. */
   valid: Map<string, WalkVariant>;
+  /** A key's meaning as phase 0 left it (undefined: an owner not visited). */
+  meaning(key: string): string | null | undefined;
 }
 
 /**
@@ -342,7 +487,7 @@ export function phase0(input: WalkInput): Phase0 {
   const first = new Set<string>();
   const pending = new Set<string>();
   const valid = new Map<string, WalkVariant>();
-  const comps = components(files, (p) => dTargets(files.get(p)!.variants[0]));
+  const comps = components(input, (p) => dTargets(files.get(p)!.variants[0]));
   for (const members of comps) {
     const rec = new Map<string, WalkVariant | null>();
     for (const p of members) {
@@ -380,7 +525,7 @@ export function phase0(input: WalkInput): Phase0 {
       if (v) valid.set(p, v);
     }
   }
-  return { first, pending, valid };
+  return { first, pending, valid, meaning: (k) => meanings.of(k) };
 }
 
 // ─── Phase 1 ────────────────────────────────────────────────────────────────
@@ -402,6 +547,8 @@ export interface Phase1 {
    * possibly move).
    */
   why: Map<string, "moved" | "bottom">;
+  /** A key's meaning as phase 1 left it: ⊥ (null) where it may move in program 2. */
+  meaning(key: string): string | null | undefined;
 }
 
 /**
@@ -431,6 +578,7 @@ export function phase1(
   const stable = new Map<string, { prev: WalkRecord; names: Set<string> }>();
   const tainted = new Set<string>();
   const why = new Map<string, "moved" | "bottom">();
+  const fixedStale = input.fixed?.staleProbe();
   // A file is STALE-READ when program 1 was served a `.d.ts` of it that is not
   // its final one (it is re-checked, or keyed to another variant), or when it
   // uses such a file: whatever loaded it through that path may have seen stale
@@ -450,6 +598,12 @@ export function phase1(
     if (f.fresh !== undefined) rec = f.fresh;
     else if (v !== undefined) {
       const d = input.detail(p, v);
+      if (d === undefined) {
+        // Its prediction data is gone from the store: it predicts nothing,
+        // and every name of it is ⊥.
+        prevMemo.set(p, null);
+        return null;
+      }
       rec = {
         names: Object.fromEntries(
           Object.entries(v.names).map(([n, r]) => [
@@ -464,7 +618,7 @@ export function phase1(
     prevMemo.set(p, rec);
     return rec;
   };
-  const comps = components(files, (p) =>
+  const comps = components(input, (p) =>
     dTargets(files.get(p)!.fresh ?? files.get(p)!.variants[0]),
   );
   for (const members of comps) {
@@ -483,7 +637,12 @@ export function phase1(
     const readsStale = (p: string): boolean =>
       (files.get(p)!.uses ?? []).some((k) => {
         const o = splitKey(k)[0];
-        return o !== p && staleRead.has(o);
+        if (o === p) return false;
+        if (staleRead.has(o)) return true;
+        // Through a fixed file: one that uses, at any depth, a stale one.
+        return (
+          fixedStale !== undefined && !files.has(o) && fixedStale(o, staleRead)
+        );
       });
     let bottom = new Set<string>();
     for (let pass = 0; ; pass++) {
@@ -593,7 +752,15 @@ export function phase1(
       }
     }
   }
-  return { second, valid, confirmed, stable, tainted, why };
+  return {
+    second,
+    valid,
+    confirmed,
+    stable,
+    tainted,
+    why,
+    meaning: (k) => meanings.of(k),
+  };
 }
 
 /**
@@ -688,17 +855,29 @@ function predictBottom(
 // ─── Phase 2: the final keys ────────────────────────────────────────────────
 
 export interface FinalKeys {
-  /** Each checked file's result key. */
+  /** Every walked file's result key. */
   keys: Map<string, string>;
   /** Each checked file's `depM`: the meaning of every target outside it that it reaches. */
   depM: Map<string, Record<string, string>>;
+  /**
+   * Every walked file's READS: each key outside the file its result key or
+   * its names' meanings consulted (star and whole recursion included), sorted.
+   */
+  reads: Map<string, string[]>;
+  /**
+   * Valid files whose key, with every record final, is no longer the key of
+   * the variant they were kept on — a name they use moved after the walk
+   * judged them (must be none).
+   */
+  mismatched: string[];
   /** Any name key's final meaning (undefined: no such repo file was visited). */
   meaning(key: string): string | null | undefined;
 }
 
 /**
  * With every record known — `valid` variants, `fresh` records for the files
- * checked — the result key and `depM` of each checked file, to record.
+ * checked — the result key and reads of every walked file (the walk base's
+ * state), and the `depM` of each checked file, to record.
  */
 export function finalKeys(
   input: WalkInput,
@@ -706,9 +885,10 @@ export function finalKeys(
   checked: ReadonlySet<string>,
 ): FinalKeys {
   const { files, global } = input;
-  const meanings = new Meanings(input);
+  const meanings = new Meanings(input, true);
   const keys = new Map<string, string>();
   const depM = new Map<string, Record<string, string>>();
+  const mismatched: string[] = [];
   const recOf = (p: string): WalkRecord => {
     const r = checked.has(p) ? files.get(p)!.fresh : valid.get(p);
     if (r === undefined) {
@@ -718,11 +898,10 @@ export function finalKeys(
     }
     return r;
   };
-  const comps = components(files, (p) => dTargets(recOf(p)));
+  const comps = components(input, (p) => dTargets(recOf(p)));
   for (const members of comps) {
     meanings.assign(members, new Map(members.map((p) => [p, recOf(p)])));
     for (const p of members) {
-      if (!checked.has(p)) continue;
       const r = fileKey(p, files, global, meanings);
       if (r === null) {
         throw new Error(
@@ -730,6 +909,10 @@ export function finalKeys(
         );
       }
       keys.set(p, r);
+      if (!checked.has(p)) {
+        if (valid.get(p)!.r !== r) mismatched.push(p);
+        continue;
+      }
       const rec = recOf(p);
       const out: Record<string, string> = {};
       const targets = new Set<string>(files.get(p)!.uses ?? []);
@@ -749,5 +932,16 @@ export function finalKeys(
       depM.set(p, out);
     }
   }
-  return { keys, depM, meaning: (k) => meanings.of(k) };
+  const reads = new Map<string, string[]>();
+  for (const p of files.keys()) {
+    const rs = meanings.tracked!.get(p) ?? new Set<string>();
+    reads.set(p, [...rs].filter((k) => splitKey(k)[0] !== p).sort());
+  }
+  return {
+    keys,
+    depM,
+    reads,
+    mismatched,
+    meaning: (k) => meanings.of(k),
+  };
 }

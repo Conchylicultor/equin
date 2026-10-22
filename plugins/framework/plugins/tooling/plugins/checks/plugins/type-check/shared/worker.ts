@@ -19,8 +19,8 @@
  * never hit the argv limit). stdout is one JSON result object. A nonzero exit
  * means the worker itself crashed (the orchestrator records no PASSes for it).
  */
-import { readFileSync, unlinkSync, writeSync } from "fs";
-import { dirname, join, relative } from "path";
+import { readFileSync, realpathSync, unlinkSync, writeSync } from "fs";
+import { join, relative } from "path";
 import ts from "typescript";
 import { Linter } from "eslint";
 import { exitWithParent } from "@plugins/packages/plugins/flock/core";
@@ -35,7 +35,6 @@ import {
 import {
   LINT_GROUP_ALL,
   LINT_GROUP_BASE,
-  type LintFileJob,
   type LintFileResult,
   type ProgramSize,
   type RawLintMessage,
@@ -44,14 +43,34 @@ import {
   type TypeCheckWorkerJob as Job,
   type TypeCheckWorkerResult as Result,
 } from "../core";
+import type { NameResult, NameRunOutput } from "./name-run";
 import { signatureEmitOptions } from "./emit-options";
 import { compareResults, fullCheck } from "./full-check";
-import { sha256, typedResultKey } from "./keys";
+import { createLintDecisions } from "./lint-decisions";
+import { openLintResultStore, type LintResultStore } from "./lint-results";
 import type { ProgramStats } from "./name-check";
 import { createSourceFileCache } from "./name-host";
 import { runNameCheck, type LintHook, type NameRunReport } from "./name-run";
-import { coldWriteThrough, openNameStore, type NameStore } from "./name-store";
-import { formatDiagnostic, tscEngineFp } from "./tsc-engine";
+import {
+  bufferedNameStore,
+  coldWriteThrough,
+  openNameStore,
+  type NameStore,
+} from "./name-store";
+import { openRepoView, parseTsconfigOver, type RepoView } from "./repo-view";
+import { openRunBaseStore, runBaseLookup } from "./run-base";
+import {
+  openWalkBase,
+  openWalkBaseStore,
+  writeWalkBase,
+  type OpenedWalkBase,
+  type WalkBaseStore,
+} from "./walk-base";
+import {
+  canonicalDeclarations,
+  formatDiagnostic,
+  tscEngineFp,
+} from "./tsc-engine";
 
 function rel(root: string, abs: string): string {
   return relative(root, abs).split("\\").join("/");
@@ -75,8 +94,13 @@ function reportLines(r: NameRunReport): string[] {
       ? `type-check: ${label}: none`
       : `type-check: ${label}: ${s.sources} sources (${s.checked} checked) + ${s.contracts} .d.ts + ${s.repoDecls} repo decl + ${s.env} env; build ${Math.round(s.programMs)}ms, check ${Math.round(s.checkMs)}ms, records ${Math.round(s.recordMs)}ms`;
   const ms = (x: number): number => Math.round(x);
+  const w = r.walk;
+  const moved =
+    w.paths === null
+      ? ""
+      : ` (+${w.paths.added} -${w.paths.removed} ~${w.paths.modified} paths, ${w.paths.dirs} listings)`;
   return [
-    `type-check: walk: ${r.files} files, ${r.first} without a valid result, ${r.pending} pending, ${r.second} re-checked (${r.keyMoved} key moved, ${r.usesBottom} use a name that may move, ${r.tainted} after a stale .d.ts), ${r.lintOnly} only linted; resolutions ${r.moved} moved, ${r.refreshed} re-keyed; versions ${ms(r.ms.versions)}ms, reads ${ms(r.ms.reads)}ms (${r.reads}), listings ${ms(r.ms.listings)}ms, walk ${ms(r.ms.walk)}ms, write ${ms(r.ms.write)}ms`,
+    `type-check: walk: ${w.mode}; D₀ ${w.d0}${moved}, D ${w.d} of ${r.files} files after ${w.rounds} rounds; entries read ${w.entries}, base shards read ${w.shards} (plan ${w.shardsBy[0]}, phase 0 ${w.shardsBy[1]}, phase 1 ${w.shardsBy[2]}, end ${w.shardsBy[3]}); ${r.first} without a valid result, ${r.pending} pending, ${r.second} re-checked (${r.keyMoved} key moved, ${r.usesBottom} use a name that may move, ${r.tainted} after a stale .d.ts), ${r.lintOnly} only linted; resolutions ${r.moved} moved, ${r.refreshed} re-keyed; versions ${ms(r.ms.versions)}ms, plan ${ms(r.ms.plan)}ms, reads ${ms(r.ms.reads)}ms, listings ${ms(r.ms.listings)}ms, walk ${ms(r.ms.walk)}ms (${w.split}), write ${ms(r.ms.write)}ms`,
     prog("program 1", r.p1),
     prog("program 2", r.p2),
   ];
@@ -85,19 +109,45 @@ function reportLines(r: NameRunReport): string[] {
 /**
  * The lint half: each job's stale syntactic groups with no program, and its
  * typed parts — whose keys only the type check knows — in the program the
- * type check hands over (`hook`).
+ * type check hands over (`hook`); and, against the run base, every carried
+ * file whose key moved (`./lint-decisions.ts`).
  */
-async function lintRunner(job: Job) {
-  const byRel = new Map<string, LintFileJob>(
-    job.lintFiles.map((f) => [rel(job.root, f.file), f]),
-  );
+async function lintRunner(job: Job, view: RepoView) {
+  // The base the plan carried files from: each file's key and unit, read
+  // shard by shard for the files the type check keys (the preparation checked
+  // every shard is stored) — only those can have moved.
+  const base =
+    job.lintBase === null
+      ? undefined
+      : runBaseLookup(openRunBaseStore(), job.lintBase);
+  const baseLine = (): string | null =>
+    base === undefined
+      ? null
+      : `type-check: lint base ${job.lintBase!.slice(0, 12)}: every file carried unless its key moved, ${job.lintFiles.length} sent; ${base.shardsRead} shards read`;
+  let lintStore: LintResultStore | undefined;
+  const decisions = createLintDecisions({
+    lintFiles: job.lintFiles,
+    typedParts: job.typedParts,
+    base,
+    knownTyped: (path, version) =>
+      (lintStore ??= openLintResultStore()).read(path, version)?.typed ?? [],
+    version: (path) => view.version(path),
+    rel: (abs) => rel(job.root, abs),
+    abs: (path) => join(job.root, path),
+  });
   const typedOut = new Map<string, TypedPartOutcome[]>();
-  if (job.lintFiles.length === 0) {
+  if (decisions.idle) {
     return {
       hook: undefined,
-      finish: (_keys: ReadonlyMap<string, string>): Promise<LintFileResult[]> =>
-        Promise.resolve([]),
+      finish: (
+        _keys: ReadonlyMap<string, string>,
+      ): Promise<{
+        results: LintFileResult[];
+        lintKeys: Record<string, string>;
+      }> => Promise.resolve({ results: [], lintKeys: {} }),
       counts: { typed: 0, syntactic: 0 },
+      baseLine,
+      jobs: decisions.jobs,
     };
   }
   // A rule id's namespace is its contribution's `name`; anything else (the
@@ -183,30 +233,18 @@ async function lintRunner(job: Job) {
         column: m.column,
         message: m.message,
       }));
-  const read = (file: string): string => {
-    const code = ts.sys.readFile(file);
-    if (code === undefined) {
-      throw new Error(`type-check worker: cannot read ${file}`);
-    }
-    return code;
-  };
-  const partsOf = (f: LintFileJob) =>
-    f.unit === "whole" ? job.typedParts.whole : job.typedParts.split;
-  const stale = (f: LintFileJob, r: string) =>
-    partsOf(f)
-      .map(({ group, fp }) => ({ group, key: typedResultKey(fp, r) }))
-      .filter((p) => !f.typed.known.includes(p.key));
+  // Through the view: the text checked against the version its results are
+  // stored under, so a file edited mid-run fails the run instead of recording
+  // a result under another text's key.
+  const read = (file: string): string => view.readText(rel(job.root, file));
   const counts = { typed: 0, syntactic: 0 };
 
   const hook: LintHook = {
-    wants(path, r) {
-      const f = byRel.get(path);
-      return f !== undefined && stale(f, r).length > 0;
-    },
+    wants: (path, r) => decisions.wants(path, r),
     async run(program, files) {
       for (const { path, r } of files) {
-        const f = byRel.get(path)!;
-        const toRun = stale(f, r);
+        const f = decisions.jobOf(path, r)!;
+        const toRun = decisions.stale(path, r);
         const code = read(f.file);
         const out: TypedPartOutcome[] = [];
         if (f.unit === "whole") {
@@ -273,61 +311,129 @@ async function lintRunner(job: Job) {
   return {
     hook,
     counts,
+    baseLine,
+    jobs: decisions.jobs,
     /**
-     * The result of every job where something happened, once the type check
-     * has given every file its key. A file whose syntactic parts were all
-     * fresh and whose typed parts all reused the NEWEST of its stored keys
-     * gets no answer: the check reads those back itself.
+     * Every answer, once the type check has given every file its key (see
+     * `./lint-decisions.ts`), and the keys the check records.
      */
-    async finish(keys: ReadonlyMap<string, string>): Promise<LintFileResult[]> {
-      const results: LintFileResult[] = [];
-      for (const [path, f] of byRel) {
-        const r = keys.get(path);
-        if (r === undefined) {
-          throw new Error(
-            `type-check worker: ${path} was sent to be linted and the type check gave it no result key`,
-          );
-        }
-        const ran = typedOut.get(path) ?? [];
-        const ranKeys = new Set(ran.map((p) => p.key));
-        const typed: TypedPartOutcome[] = [...ran];
-        const parts = partsOf(f);
-        const newest = new Set(f.typed.known.slice(0, parts.length));
-        let moved = ran.length > 0;
-        for (const { group, fp } of parts) {
-          const key = typedResultKey(fp, r);
-          if (ranKeys.has(key)) continue;
-          if (!f.typed.known.includes(key)) {
-            throw new Error(
-              `type-check worker: ${path}'s typed part ${group} is stale and no program linted it`,
-            );
-          }
-          if (!newest.has(key)) moved = true;
-          typed.push({ group, kind: "cached", key });
-        }
-        if (!moved && (f.unit === "whole" || f.syntactic.length === 0)) {
-          continue;
-        }
+    finish: (keys: ReadonlyMap<string, string>) =>
+      decisions.answer(keys, typedOut, async (f) => {
         const syntactic: Record<string, RawLintMessage[]> = {};
-        if (f.unit === "split" && f.syntactic.length > 0) {
-          for (const g of f.syntactic) syntactic[g] = [];
-          // A message outside the selection can only be a null-id one (a
-          // parse failure) on a run without the base group, whose stored
-          // result already holds it.
-          for (const m of verify(
-            f.file,
-            read(f.file),
-            await configFor(undefined, "syntactic", f.syntactic),
-          )) {
-            syntactic[groupOf(m.ruleId)]?.push(m);
-          }
-          counts.syntactic++;
+        for (const g of f.syntactic) syntactic[g] = [];
+        // A message outside the selection can only be a null-id one (a
+        // parse failure) on a run without the base group, whose stored
+        // result already holds it.
+        for (const m of verify(
+          f.file,
+          read(f.file),
+          await configFor(undefined, "syntactic", f.syntactic),
+        )) {
+          syntactic[groupOf(m.ruleId)]?.push(m);
         }
-        results.push({ file: f.file, unit: f.unit, syntactic, typed });
-      }
-      return results;
-    },
+        counts.syntactic++;
+        return syntactic;
+      }),
   };
+}
+
+/** The walk base the job names, opened — or why there is none. */
+function openJobWalkBase(
+  store: WalkBaseStore,
+  job: Job,
+  checkout: string,
+): OpenedWalkBase {
+  const ref = job.walkBase;
+  if (ref.kind === "none") return { kind: "none", reason: "none asked for" };
+  if (ref.kind === "root") {
+    return openWalkBase(
+      store,
+      ref.root,
+      `the lint base's ${ref.root.slice(0, 12)}`,
+    );
+  }
+  if (job.lintBase !== null) {
+    // The files the walk does not visit must keep the lint base's keys: only
+    // the walk base bound to it can promise that.
+    return {
+      kind: "none",
+      reason: "a lint base with no walk base bound to it",
+    };
+  }
+  const tree = store.hint(checkout);
+  if (tree === undefined) {
+    return { kind: "none", reason: "no walk recorded in this checkout" };
+  }
+  const root = store.pointer(tree);
+  if (root === undefined) {
+    return { kind: "none", reason: `last walk ${tree.slice(0, 12)}: no root` };
+  }
+  return openWalkBase(store, root, `last walk ${tree.slice(0, 12)}`);
+}
+
+/**
+ * The incremental walk's every file against the full walk's. Two `.d.ts`
+ * hashes that differ are compared by their CANONICAL text: tsc prints union
+ * members in type-creation order, which follows what its program loaded
+ * first, so the same declarations can emit in two orders (a raw-only
+ * difference, counted in `rawOnly`, the same one `canonicalDeclarations`
+ * exists to hash away).
+ */
+function compareWalks(
+  inc: NameRunOutput,
+  incStore: NameStore,
+  full: NameRunOutput,
+  fullStore: NameStore,
+  rawOnly: string[],
+): TscDivergence[] {
+  const a = inc.walk.all();
+  const b = full.walk.all();
+  const out: TscDivergence[] = [];
+  const canonical = (st: NameStore, h: string): string | undefined => {
+    const t = st.readContract(h);
+    return t === undefined ? undefined : canonicalDeclarations(t);
+  };
+  for (const [file, f] of b) {
+    const k = a.get(file);
+    if (k === undefined) {
+      out.push({ file, kind: "walk-missing", keyed: "absent", full: "walked" });
+      continue;
+    }
+    if (k.r !== f.r) {
+      out.push({ file, kind: "walk-key", keyed: k.r, full: f.r });
+    }
+    if (k.contract !== f.contract) {
+      const x = canonical(incStore, k.contract);
+      if (x !== undefined && x === canonical(fullStore, f.contract)) {
+        rawOnly.push(file);
+      } else
+        out.push({
+          file,
+          kind: "walk-contract",
+          keyed: k.contract,
+          full: f.contract,
+        });
+    }
+    if (k.signature !== f.signature) {
+      out.push({
+        file,
+        kind: "walk-signature",
+        keyed: k.signature,
+        full: f.signature,
+      });
+    }
+    const kd = [...k.diagnostics].sort().join("\n");
+    const fd = [...f.diagnostics].sort().join("\n");
+    if (kd !== fd) {
+      out.push({ file, kind: "walk-diagnostics", keyed: kd, full: fd });
+    }
+  }
+  for (const file of a.keys()) {
+    if (!b.has(file)) {
+      out.push({ file, kind: "walk-missing", keyed: "walked", full: "absent" });
+    }
+  }
+  return out;
 }
 
 async function run(job: Job): Promise<Result> {
@@ -341,27 +447,30 @@ async function run(job: Job): Promise<Result> {
     typedLinted: 0,
     syntacticLinted: 0,
   };
-  // 1. Parse the tsconfig (glob resolution only — no type-check yet).
-  const cfg = ts.readConfigFile(job.tsconfigPath, ts.sys.readFile);
-  if (cfg.error) {
+  // 1. The input — the job's git tree plus its overlay — and the tsconfig's
+  //    include expanded over it (no filesystem walk, no type-check yet).
+  const t0 = performance.now();
+  const view = await openRepoView(job.root, job.tree);
+  const t1 = performance.now();
+  const config = parseTsconfigOver(view, job.tsconfigPath);
+  const inputLine = `type-check: input: tree ${job.tree.treeHash.slice(0, 12)} (${view.files().length} files, overlay ${Object.keys(job.tree.overlay).length}); view ${Math.round(t1 - t0)}ms, tsconfig roots ${Math.round(performance.now() - t1)}ms`;
+  if (config.kind === "unreadable") {
     return {
       name: job.name,
-      tscErrors: formatDiagnostic(job.root, cfg.error),
+      tscErrors: formatDiagnostic(job.root, config.error),
       lint: [],
-      tscLines: [],
+      // Nothing was keyed, so there is no lint state to record.
+      lintKeys: null,
+      tscLines: [inputLine],
       divergences: [],
+      walkRoot: null,
+      checked: [],
       missed: [],
       phaseCpuSeconds: { check: cpuSeconds() - cpuStart, full: 0, lint: 0 },
       stats: empty,
     };
   }
-  const parsed = ts.parseJsonConfigFileContent(
-    cfg.config,
-    ts.sys,
-    dirname(job.tsconfigPath),
-    undefined,
-    job.tsconfigPath,
-  );
+  const { parsed, roots } = config;
   // The options emit declarations, so every checked file has a real `.d.ts`,
   // and order types stably, so that `.d.ts` is a function of the code
   // (`./emit-options.ts`).
@@ -369,43 +478,16 @@ async function run(job: Job): Promise<Result> {
   const configDiagnostics = ts
     .getConfigFileParsingDiagnostics(parsed)
     .map((d) => formatDiagnostic(job.root, d));
-  const roots = parsed.fileNames.map((f) => rel(job.root, f));
   if (!options.skipLibCheck) {
     throw new Error(
       "type-check: declaration inputs are never checked, which is only sound under skipLibCheck",
     );
   }
 
-  // 2. The two programs, with typed lint inside them.
+  // 2. The two programs, with typed lint inside them — walking from the
+  //    walk base (`./walk-base.ts`) when there is one.
   const engine = tscEngineFp(job.root, options);
-  const texts = new Map<string, string | undefined>();
-  const textOf = (p: string): string | undefined => {
-    if (texts.has(p)) return texts.get(p);
-    let t: string | undefined;
-    try {
-      t = readFileSync(join(job.root, p), "utf8");
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-    }
-    texts.set(p, t);
-    return t;
-  };
-  const versions = new Map<string, string | undefined>();
-  const versionOf = (p: string): string | undefined => {
-    if (versions.has(p)) return versions.get(p);
-    // The check's preparation hashed every lintable file already (the same
-    // sha256 of the text).
-    const known = job.versions[p];
-    if (known !== undefined) {
-      versions.set(p, known);
-      return known;
-    }
-    const t = textOf(p);
-    const v = t === undefined ? undefined : sha256(t);
-    versions.set(p, v);
-    return v;
-  };
-  const lint = await lintRunner(job);
+  const lint = await lintRunner(job, view);
   const timedHook: LintHook | undefined = lint.hook && {
     wants: lint.hook.wants,
     async run(program, files) {
@@ -414,25 +496,57 @@ async function run(job: Job): Promise<Result> {
       lintCpu += cpuSeconds() - c0;
     },
     discard: () => lint.hook!.discard(),
+    jobs: lint.jobs,
   };
   const store: NameStore = openNameStore();
+  const walkStore = openWalkBaseStore();
+  const checkout = realpathSync(job.root);
+  const opened = openJobWalkBase(walkStore, job, checkout);
+  // `walks` / `dual`: a FULL walk first, over the same store with its writes
+  // kept apart, so the incremental one below starts from the same store.
+  let fullWalk: NameRunOutput | undefined;
+  const fullStore = bufferedNameStore(store);
+  if (job.tscMode !== "keyed") {
+    fullWalk = await runNameCheck({
+      view,
+      options,
+      roots,
+      engine,
+      store: fullStore,
+      cache: createSourceFileCache(),
+      onMiss: "throw",
+      base: {
+        kind: "none",
+        reason: "the full walk beside the incremental one",
+      },
+    });
+  }
   const out = await runNameCheck({
-    root: job.root,
+    view,
     options,
     roots,
     engine,
     store,
     cache: createSourceFileCache(),
-    versionOf,
-    textOf: (p) => {
-      const t = textOf(p);
-      if (t === undefined) throw new Error(`type-check: cannot read ${p}`);
-      return t;
-    },
     ...(timedHook ? { lint: timedHook } : {}),
     onMiss: job.onMiss,
+    base: opened,
   });
-  const tscLines = reportLines(out.report);
+  const tscLines = [inputLine, ...reportLines(out.report)];
+  const lintBaseLine = lint.baseLine();
+  if (lintBaseLine !== null) tscLines.splice(1, 0, lintBaseLine);
+  const divergences: TscDivergence[] = [];
+  if (fullWalk !== undefined) {
+    const rawOnly: string[] = [];
+    divergences.push(...compareWalks(out, store, fullWalk, fullStore, rawOnly));
+    const inc = new Set(out.checked);
+    const full = new Set(fullWalk.checked);
+    const onlyInc = out.checked.filter((p) => !full.has(p));
+    const onlyFull = fullWalk.checked.filter((p) => !inc.has(p));
+    tscLines.push(
+      `type-check: walks: ${divergences.length} differences from the full walk (${rawOnly.length} .d.ts differing only in raw emit order${rawOnly.length > 0 ? `: ${rawOnly.slice(0, 5).join(", ")}` : ""}); checked ${out.checked.length} (incremental) vs ${fullWalk.checked.length} (full)${onlyInc.length + onlyFull.length > 0 ? `; only incremental: ${onlyInc.slice(0, 10).join(", ")}; only full: ${onlyFull.slice(0, 10).join(", ")}` : ""}`,
+    );
+  }
   if (out.report.missed.length > 0) {
     tscLines.push(
       `type-check: PREDICTION MISSED — ${out.report.missed.length} name(s) predicted stable moved (${out.report.missed
@@ -446,6 +560,8 @@ async function run(job: Job): Promise<Result> {
   const fileErrors = (
     results: ReadonlyMap<string, { diagnostics: string[] }>,
   ) => [...results.keys()].sort().flatMap((p) => results.get(p)!.diagnostics);
+  let written: NameRunOutput | undefined =
+    divergences.length > 0 ? undefined : out;
   let tscErrors = [
     ...configDiagnostics,
     ...out.programDiagnostics,
@@ -456,12 +572,18 @@ async function run(job: Job): Promise<Result> {
   // 3. Dual: a full check of a FRESH whole program — the cold ground truth —
   //    compared file by file. Its verdict stands; on any divergence a cold
   //    run overwrites the store (`./full-check.ts`).
-  const divergences: TscDivergence[] = [];
   if (job.tscMode === "dual") {
-    const full = fullCheck(job.root, options, roots);
-    divergences.push(...compareResults(out.results, full.results));
+    const full = fullCheck(view, options, roots);
+    const keyed = new Map<string, NameResult>(
+      [...out.walk.all()].map(([p, f]) => [
+        p,
+        { diagnostics: f.diagnostics, signature: f.signature },
+      ]),
+    );
+    const against = compareResults(keyed, full.results);
+    divergences.push(...against);
     tscLines.push(
-      `type-check: dual: ${divergences.length} of ${full.results.size} files diverge from the full check`,
+      `type-check: dual: ${against.length} of ${full.results.size} files diverge from the full check`,
     );
     tscErrors = [
       ...configDiagnostics,
@@ -471,26 +593,55 @@ async function run(job: Job): Promise<Result> {
     if (divergences.length > 0) {
       // Every entry rewritten from one program over every file: a store that
       // reads nothing and writes through.
-      await runNameCheck({
-        root: job.root,
+      written = await runNameCheck({
+        view,
         options,
         roots,
         engine,
         store: coldWriteThrough(store),
         onMiss: "throw",
         cache: createSourceFileCache(),
-        versionOf,
-        textOf: (p) => textOf(p)!,
+        base: { kind: "none", reason: "a cold rewrite after a divergence" },
       });
       tscLines.push(
         "type-check: dual: the store was rewritten from a cold run",
       );
     }
   }
+  // The walk base this run ended in: what the next run walks from. None
+  // when the incremental walk diverged from the full one and nothing cold
+  // was run — the next run walks from an older base, or every file.
+  let walkRoot: string | null = null;
+  if (written === undefined) {
+    tscLines.push(
+      "type-check: walk base NOT written (the incremental walk diverged)",
+    );
+  } else {
+    const w0 = performance.now();
+    const o = written.walk;
+    const wrote = writeWalkBase({
+      store: walkStore,
+      treeHash: job.tree.treeHash,
+      checkout,
+      global: o.global,
+      globals: o.globals,
+      listings: o.listings,
+      view,
+      base: o.base,
+      files: o.files,
+      removed: o.removed,
+      meaning: o.meaning,
+      touch: (p, f) => store.touch(p, f.v, f.c, f.r),
+    });
+    walkRoot = wrote.hash;
+    tscLines.push(
+      `type-check: walk base ${wrote.hash.slice(0, 12)} ${wrote.wrote ? "written" : "kept"}: shards ${wrote.rebuilt} rebuilt (${wrote.fresh} new), ${wrote.carried} carried (${wrote.touched} touched); ${Math.round(performance.now() - w0)}ms`,
+    );
+  }
   const cpuFull = cpuSeconds();
 
   // 4. The syntactic parts, and every job's result.
-  const lintResults = await lint.finish(out.keys);
+  const { results: lintResults, lintKeys } = await lint.finish(out.keys);
   const cpuEnd = cpuSeconds();
   lintCpu += cpuEnd - cpuFull;
 
@@ -499,8 +650,11 @@ async function run(job: Job): Promise<Result> {
     name: job.name,
     tscErrors,
     lint: lintResults,
+    lintKeys,
     tscLines,
     divergences,
+    walkRoot,
+    checked: out.checked,
     missed: out.report.missed,
     phaseCpuSeconds: {
       check: cpuCheck - cpuStart - (lintCpu - (cpuEnd - cpuFull)),

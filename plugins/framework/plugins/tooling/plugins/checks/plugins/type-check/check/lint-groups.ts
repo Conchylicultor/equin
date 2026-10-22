@@ -2,7 +2,7 @@
 // re-lints only what it can affect.
 //
 // A file's lint messages are a function of (a) the file's own text — the key
-// of its store entry (`./lint-results`); (b) for the type-aware rules only, the
+// of its store entry (`../shared/lint-results`); (b) for the type-aware rules only, the
 // declarations it can see — its result key (`../shared/name-walk.ts`);
 // and (c) the rules that ran on it, keyed here. (c) used to be ONE global hash
 // over every `lint/`, `exempt/`, tsconfig, lockfile and `.d.ts` file, so a
@@ -43,6 +43,15 @@
 // disable directive is "unused" depends on every rule, so its result is keyed
 // on every group at once (and its result key) and it is re-linted whole.
 //
+// Every file in a group is hashed by its VERSION — its git blob sha in the
+// run's tree (`../shared/repo-view.ts`) — so hashing a group reads nothing. Its
+// MEMBERS are found by walking the import closures of the config builder and
+// of each contribution's entry alone, parsing only the files on them and
+// resolving specifiers against the tree (never the disk). They used to be read
+// off an import graph of the whole repo — every lintable file read and parsed,
+// up to five `existsSync` per specifier — built every run for these few
+// closures (3 CPU-s per run, measured on 2026-10-21).
+//
 // See research/2026-10-15-global-lint-cache-per-contribution.md and
 // research/2026-10-17-global-lint-keyed-on-what-it-reads.md.
 
@@ -55,9 +64,14 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import { LINT_GROUP_ALL, LINT_GROUP_BASE } from "../core";
 import { lockfileLintDigest } from "../shared/lockfile";
+import type { TypeAwareGroups } from "../shared/lint-results";
+import type { RepoView } from "../shared/repo-view";
 import { engineSources } from "../shared/tsc-engine";
-import { safeRead, type ImportGraphs } from "./import-graph";
-import type { TreeListing } from "./fingerprint";
+import {
+  extractImportSpecifiers,
+  isLintable,
+  resolveSpecifier,
+} from "./import-graph";
 
 function sha256(s: string): string {
   return createHash("sha256").update(s).digest("hex");
@@ -90,10 +104,31 @@ function isEngineConfigFile(rel: string): boolean {
   return false;
 }
 
-/** Repo-relative paths of files beside this one. */
-function ownSources(root: string, files: readonly string[]): string[] {
+/** This file, repo-relative: how the checkout whose code RUNS is found. */
+const OWN_PATH =
+  "plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/check/lint-groups.ts";
+
+/**
+ * The root of the checkout this code runs from. The rules a group fingerprints
+ * are CODE — the config builder, the contributions, this check's worker —
+ * loaded from here, so their versions are read from this checkout's tree. For
+ * a check run that is the checked tree itself; a test checks a fixture with
+ * the repo's own rules.
+ */
+export function codeCheckoutRoot(): string {
+  const self = import.meta.path.split("\\").join("/");
+  if (!self.endsWith(`/${OWN_PATH}`)) {
+    throw new Error(
+      `type-check: lint-groups.ts runs from ${self}, not from <checkout>/${OWN_PATH} — update OWN_PATH`,
+    );
+  }
+  return self.slice(0, -OWN_PATH.length - 1);
+}
+
+/** Repo-relative paths (in the code checkout) of files beside this one. */
+function ownSources(files: readonly string[]): string[] {
   return files.map((f) =>
-    relative(root, join(import.meta.dir, f))
+    relative(codeCheckoutRoot(), join(import.meta.dir, f))
       .split("\\")
       .join("/"),
   );
@@ -116,9 +151,6 @@ const WORKER_SOURCES = ["../shared/worker.ts"];
  */
 const TYPED_ENGINE_SOURCES = engineSources().map((f) => `../shared/${f}`);
 
-/** A repo-relative file's content hash, memoized for the run. */
-export type ContentHasher = (rel: string) => string;
-
 export interface LintGroups {
   /**
    * Every group's fingerprint, by group id: `LINT_GROUP_BASE` and each
@@ -127,6 +159,8 @@ export interface LintGroups {
   fps: Map<string, string>;
   /** How many files the engine's fingerprint covers (for the transcript). */
   engineFiles: number;
+  /** How many files the closure walks parsed (for the transcript). */
+  parsedFiles: number;
   /** The typed engine's fingerprint: folded into every part that reads types. */
   typedEngineFp: string;
   /**
@@ -135,12 +169,6 @@ export interface LintGroups {
    * rule re-lints it whole.
    */
   allFp: string;
-}
-
-/** The groups holding at least one enabled type-aware rule (`typeAwareLintGroups`). */
-export interface TypeAwareGroups {
-  base: boolean;
-  contributions: ReadonlySet<string>;
 }
 
 /**
@@ -176,77 +204,151 @@ export function typedGroupFps(
 }
 
 /**
- * Forward import closure of `start`, not descending into `stop` (files the
- * engine already covers) nor into a generated registry. Cycle-safe.
- *
- * Registries are skipped because what they enumerate is keyed elsewhere: the
- * lint contributions are groups of their own, the exemption manifests are
- * applied at read time, and the exemptable-rule-id union is a type. Followed,
- * `lint.generated.ts` alone would put every contribution into the engine — and
- * adding any rule anywhere would re-lint the whole repo again.
+ * The import closures of a tree, walked on demand: each file on a walk is
+ * parsed once (its specifiers resolved against the view), every other file
+ * never. Only a LINTABLE file's imports are followed — a generated registry or
+ * a `prototypes/` file is a member of a closure that reaches it, not a way
+ * through it — matching the graph this replaced, which held edges out of
+ * lintable files alone.
  */
-function closureOf(
-  graphs: ImportGraphs,
-  start: string,
-  stop: ReadonlySet<string>,
-): Set<string> {
-  const visited = new Set<string>();
-  const stack = [start];
-  while (stack.length) {
-    const cur = stack.pop()!;
-    if (visited.has(cur)) continue;
-    visited.add(cur);
-    for (const dep of graphs.forward.get(cur) ?? []) {
-      if (visited.has(dep) || stop.has(dep)) continue;
-      if (dep.endsWith(".generated.ts")) continue;
-      stack.push(dep);
+export function lintClosures(view: RepoView) {
+  const deps = new Map<string, readonly string[]>();
+  const depsOf = (rel: string): readonly string[] => {
+    let d = deps.get(rel);
+    if (d === undefined) {
+      const out = new Set<string>();
+      if (isLintable(rel)) {
+        for (const spec of extractImportSpecifiers(view.readText(rel))) {
+          const to = resolveSpecifier(rel, spec, view.isFile);
+          if (to !== null && to !== rel) out.add(to);
+        }
+      }
+      d = [...out];
+      deps.set(rel, d);
     }
-  }
-  return visited;
+    return d;
+  };
+  return {
+    /** How many files the walks have parsed so far. */
+    parsed: (): number => deps.size,
+    /**
+     * Forward import closure of `start`, not descending into `stop` (files the
+     * engine already covers) nor into a generated registry. Cycle-safe.
+     *
+     * Registries are skipped because what they enumerate is keyed elsewhere:
+     * the lint contributions are groups of their own, the exemption manifests
+     * are applied at read time, and the exemptable-rule-id union is a type.
+     * Followed, `lint.generated.ts` alone would put every contribution into
+     * the engine — and adding any rule anywhere would re-lint the whole repo
+     * again.
+     */
+    of(start: string, stop: ReadonlySet<string>): Set<string> {
+      if (!view.isFile(start)) {
+        throw new Error(
+          `type-check: lint group root ${start} is not in the checked tree ${view.treeHash}`,
+        );
+      }
+      const visited = new Set<string>();
+      const stack = [start];
+      while (stack.length) {
+        const cur = stack.pop()!;
+        if (visited.has(cur)) continue;
+        visited.add(cur);
+        for (const dep of depsOf(cur)) {
+          if (visited.has(dep) || stop.has(dep)) continue;
+          if (dep.endsWith(".generated.ts")) continue;
+          stack.push(dep);
+        }
+      }
+      return visited;
+    },
+  };
 }
 
-const body = (files: Iterable<string>, ch: ContentHasher): string =>
-  [...files]
+/** A set of files as hashed: each path with its version, sorted. */
+function body(files: Iterable<string>, view: RepoView): string {
+  return [...files]
     .sort()
-    .map((f) => `${f}\0${ch(f)}`)
+    .map((f) => {
+      const v = view.version(f);
+      if (v === undefined) {
+        throw new Error(
+          `type-check: lint engine file ${f} is not in the checked tree ${view.treeHash}`,
+        );
+      }
+      return `${f}\0${v}`;
+    })
     .join("\n");
+}
 
-/** Compute the engine and every group's fingerprint for this tree. */
+/**
+ * Compute the engine and every group's fingerprint for this tree. `view` is the
+ * checked tree — its config files (tsconfigs, `package.json`, ambient `.d.ts`,
+ * patches, the lockfile, the lint data files) are what the rules run against;
+ * `code` is the tree of the checkout the rules run FROM (`codeCheckoutRoot`) —
+ * the same tree on a check run, the repo's own beside a test's fixture.
+ */
 export function computeLintGroups(
-  listing: TreeListing,
-  graphs: ImportGraphs,
-  ch: ContentHasher,
+  view: RepoView,
+  code: RepoView = view,
 ): LintGroups {
-  const { root } = listing;
+  const closures = lintClosures(code);
 
-  // The engine: the config builder's import closure and the worker, plus the
-  // config files the graph cannot see, plus the lockfile's resolutions and
-  // what rules read from the lint data files.
-  const engine = closureOf(graphs, LINT_CONFIG_SOURCE, new Set());
-  for (const f of ownSources(root, WORKER_SOURCES)) engine.add(f);
-  for (const rel of listing.files) if (isEngineConfigFile(rel)) engine.add(rel);
-  const lock = listing.files.includes("bun.lock")
-    ? lockfileLintDigest(safeRead(join(root, "bun.lock")) ?? "")
+  // The engine: the config builder's import closure and the worker (code),
+  // plus the config files no import names, plus the lockfile's resolutions
+  // and what rules read from the lint data files (the checked tree).
+  const engineCode = closures.of(LINT_CONFIG_SOURCE, new Set());
+  for (const f of ownSources(WORKER_SOURCES)) engineCode.add(f);
+  const engineConfig = view.files().filter(isEngineConfigFile);
+  const engine = new Set([...engineCode, ...engineConfig]);
+  const lock = view.isFile("bun.lock")
+    ? lockfileLintDigest(view.readText("bun.lock"))
     : "";
   const engineFp = sha256(
-    `lock:${lock}\ndata:${lintDataKey(root)}\n${body(engine, ch)}`,
+    `lock:${lock}\ndata:${lintDataKey(view.root)}\n${body(engineCode, code)}\n${body(engineConfig, view)}`,
   );
 
   const fps = new Map<string, string>();
   fps.set(LINT_GROUP_BASE, groupHash(`${LINT_GROUP_BASE}\n${engineFp}`));
   for (const pluginPath of lintContributionPaths()) {
     const entry = `plugins/${pluginPath}/lint/index.ts`;
-    const closure = closureOf(graphs, entry, engine);
+    const closure = closures.of(entry, engine);
     fps.set(
       pluginPath,
-      groupHash(`${pluginPath}\n${engineFp}\n${body(closure, ch)}`),
+      groupHash(`${pluginPath}\n${engineFp}\n${body(closure, code)}`),
     );
   }
   const typedEngineFp = groupHash(
-    `(typed engine)\n${body(ownSources(root, TYPED_ENGINE_SOURCES), ch)}`,
+    `(typed engine)\n${body(ownSources(TYPED_ENGINE_SOURCES), code)}`,
   );
   const allFp = groupHash(
     `${LINT_GROUP_ALL}\n${typedEngineFp}\n${[...fps].map(([g, fp]) => `${g}\0${fp}`).join("\n")}`,
   );
-  return { fps, engineFiles: engine.size, typedEngineFp, allFp };
+  return {
+    fps,
+    engineFiles: engine.size,
+    parsedFiles: closures.parsed(),
+    typedEngineFp,
+    allFp,
+  };
+}
+
+/**
+ * The key of `typeAwareLintGroups`' answer: what it is a function of. Which
+ * groups hold a type-aware rule is decided by each contribution's rules and
+ * the builder's own (each group's closure, and the engine every group folds
+ * in: the builder, its classifier, the lockfile pinning typescript-eslint),
+ * and by which contributions exist — every group's fingerprint, by name. The
+ * typed engine rides along so the key and every typed part move together.
+ * Loading the contributions to learn it costs ~1.2 CPU-s, so a run whose
+ * groups all stood reads the answer back instead.
+ */
+export function typeAwareKey(groups: LintGroups): string {
+  return sha256(
+    [
+      "type-aware",
+      groups.typedEngineFp,
+      ...[...groups.fps].map(([g, fp]) => `${g}\0${fp}`).sort(),
+    ].join("\n"),
+  );
 }

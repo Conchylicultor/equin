@@ -1,5 +1,7 @@
-// The per-file lint RESULT store: for each (file, content hash), the raw
+// The per-file lint RESULT store: for each (file, version), the raw
 // error-level messages each part of its lint produced, under that part's key.
+// A file's version is its git blob sha (`./repo-view.ts`), read out of
+// the run's tree — so looking an entry up reads no file.
 //
 // Keyed on the file's OWN text, not on its import closure, because that is all
 // most rules read (research/2026-10-17-global-lint-keyed-on-what-it-reads.md):
@@ -16,8 +18,12 @@
 // though no rule reads another file's text and tsc already knew the API had not
 // moved.
 //
-// Messages are stored unfiltered; `./lint-verdict` applies the current
+// Messages are stored unfiltered; `../check/lint-verdict` applies the current
 // exemptions when it reads them, so editing a manifest re-lints nothing.
+//
+// Whether the text carries an eslint directive (`hasLintDirective`) is a
+// function of the text, so it is stored in the entry too: a run reads the text
+// of a file with no entry only — and such a file is linted anyway.
 //
 // Host-global and content-addressed: a fresh worktree reuses what a sibling
 // recorded for an identical file. Each entry keeps the last few keys per part
@@ -29,8 +35,14 @@
 
 import { z } from "zod";
 import type { RawLintMessage } from "../core";
-import { lintResultsV2Dir } from "../data-dirs";
-import { openPassSet, type PassSetBounds } from "../shared/pass-set";
+import { lintResultsV3Dir } from "../data-dirs";
+import { openPassSet, type PassSetBounds } from "./pass-set";
+
+/** The groups holding at least one enabled type-aware rule (`typeAwareLintGroups`). */
+export interface TypeAwareGroups {
+  base: boolean;
+  contributions: ReadonlySet<string>;
+}
 
 // One entry per (file, content) variant — at most as many as the closure-keyed
 // store it replaces, which had one per (file, closure) and so at least one per
@@ -42,7 +54,8 @@ const BOUNDS: PassSetBounds = {
   pruneIntervalMs: 60 * 60 * 1000,
 };
 
-const messageSchema = z.object({
+/** One raw lint message as stored (here, and in the run base `./run-base.ts`). */
+export const messageSchema = z.object({
   ruleId: z.string().nullable(),
   fatal: z.boolean(),
   line: z.number(),
@@ -51,6 +64,11 @@ const messageSchema = z.object({
 });
 
 const entrySchema = z.object({
+  /**
+   * Whether the text can carry an eslint directive (`hasLintDirective`): such
+   * a file is linted and stored as one unit (`LINT_GROUP_ALL`).
+   */
+  directive: z.boolean(),
   /** Syntactic group fingerprints this text has a result for, newest first. */
   syntactic: z.array(z.string()),
   /**
@@ -71,6 +89,8 @@ export type LintEntry = z.infer<typeof entrySchema>;
  * each part to keep.
  */
 export interface LintEntryUpdate {
+  /** The text's directive flag: what the plan ran it as. */
+  directive: boolean;
   syntactic: ReadonlyMap<string, readonly RawLintMessage[]>;
   typed: ReadonlyMap<string, readonly RawLintMessage[]>;
   reusedSyntactic: ReadonlySet<string>;
@@ -80,14 +100,21 @@ export interface LintEntryUpdate {
 }
 
 export interface LintResultStore {
-  /** The entry for this (file, content), or undefined when none was recorded. */
-  read(relPath: string, contentHash: string): LintEntry | undefined;
+  /** The entry for this (file, version), or undefined when none was recorded. */
+  read(relPath: string, version: string): LintEntry | undefined;
   /**
-   * Add fresh results and move reused keys up, keeping the most recently used
-   * keys per part. Atomic (write-then-rename); no write when the merge changes
-   * nothing.
+   * Write an entry as merged by the caller (`mergeLintEntry` over the entry it
+   * read). Atomic (write-then-rename); a race with another writer loses one
+   * side's additions, which is only a later miss.
    */
-  add(relPath: string, contentHash: string, update: LintEntryUpdate): void;
+  put(relPath: string, version: string, entry: LintEntry): void;
+  /**
+   * Which rule groups hold a type-aware rule, recorded under `key` — a hash of
+   * what that is a function of (every group's fingerprint, `./lint-groups`) —
+   * or undefined when it was never recorded.
+   */
+  readTypeAware(key: string): TypeAwareGroups | undefined;
+  writeTypeAware(key: string, groups: TypeAwareGroups): void;
 }
 
 /**
@@ -136,7 +163,13 @@ export function mergeLintEntry(
   };
   for (const k of syntactic) keep(k, update.syntactic.get(k));
   for (const k of typed) keep(k, update.typed.get(k));
-  return { syntactic, typed, messages };
+  if (prior !== undefined && prior.directive !== update.directive) {
+    // One text, one flag: two answers mean the key does not name one text.
+    throw new Error(
+      `type-check: a lint entry says directive=${prior.directive}, its update ${update.directive} — the store's key does not name one text`,
+    );
+  }
+  return { directive: update.directive, syntactic, typed, messages };
 }
 
 /** Whether two entries hold the same keys in the same order (and so the same messages). */
@@ -144,36 +177,49 @@ export function sameEntry(a: LintEntry, b: LintEntry): boolean {
   const same = (x: readonly string[], y: readonly string[]): boolean =>
     x.length === y.length && x.every((k, i) => k === y[i]);
   return (
+    a.directive === b.directive &&
     same(a.syntactic, b.syntactic) &&
     same(a.typed, b.typed) &&
     JSON.stringify(a.messages) === JSON.stringify(b.messages)
   );
 }
 
+const typeAwareSchema = z.object({
+  base: z.boolean(),
+  contributions: z.array(z.string()),
+});
+
 /** Open (and lazily create) the global lint result store. */
 export function openLintResultStore(): LintResultStore {
-  const set = openPassSet(lintResultsV2Dir, BOUNDS);
-  const key = (relPath: string, contentHash: string): string =>
-    `${relPath}:${contentHash}`;
-  const read = (
-    relPath: string,
-    contentHash: string,
-  ): LintEntry | undefined => {
-    const raw = set.read(key(relPath, contentHash));
+  const set = openPassSet(lintResultsV3Dir, BOUNDS);
+  // A path never starts with NUL, so the two kinds of key cannot meet.
+  const key = (relPath: string, version: string): string =>
+    `${relPath}:${version}`;
+  const typeAwareKey = (k: string): string => `\0type-aware\0${k}`;
+  const read = (relPath: string, version: string): LintEntry | undefined => {
+    const raw = set.read(key(relPath, version));
     // Every entry is written by `add` below and renamed into place whole, so a
     // shape this schema rejects is a bug in this file — surfaced, not skipped.
     return raw === undefined ? undefined : entrySchema.parse(raw);
   };
   return {
     read,
-    add(relPath, contentHash, update) {
-      const prior = read(relPath, contentHash);
-      const merged = mergeLintEntry(prior, update);
-      if (prior !== undefined && sameEntry(prior, merged)) return;
-      set.record(key(relPath, contentHash), {
-        relPath,
-        contentHash,
-        ...merged,
+    put(relPath, version, entry) {
+      set.record(key(relPath, version), { relPath, version, ...entry });
+    },
+    readTypeAware(k) {
+      const raw = set.read(typeAwareKey(k));
+      if (raw === undefined) return undefined;
+      const parsed = typeAwareSchema.parse(raw);
+      return {
+        base: parsed.base,
+        contributions: new Set(parsed.contributions),
+      };
+    },
+    writeTypeAware(k, groups) {
+      set.record(typeAwareKey(k), {
+        base: groups.base,
+        contributions: [...groups.contributions].sort(),
       });
     },
   };

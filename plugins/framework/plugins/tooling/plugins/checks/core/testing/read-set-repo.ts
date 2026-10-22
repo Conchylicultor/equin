@@ -32,6 +32,8 @@ export interface ReadSetRepo {
   ): Promise<ReadSet>;
   /** Validate `readSet` against a fresh snapshot of the current tree. */
   revalidate(readSet: ReadSet): Promise<ValidateResult>;
+  /** A fresh snapshot of the current tree — what `ctx.snapshot()` hands a check. */
+  snapshot(): Promise<TreeSnapshot>;
   /** Delete the repo. */
   dispose(): void;
 }
@@ -79,6 +81,7 @@ export async function createReadSetRepo(
     async revalidate(readSet) {
       return validate(readSet, await snapshot());
     },
+    snapshot,
     dispose: () => rmSync(root, { recursive: true, force: true }),
   };
 }

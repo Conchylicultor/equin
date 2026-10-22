@@ -3,13 +3,13 @@
  * thread stays free. The move is only safe if it changes WHERE the work runs and
  * nothing else, so the cases below are:
  *   1. the plan the thread returns is the plan `openPreparation` computes
- *      in-process over the same listing — for a runnable tree and for one that
+ *      in-process over the same tree — for a runnable tree and for one that
  *      fails the coverage gate;
  *   2. a throw inside `./prepare` rejects `prepare()` with the thread's own
  *      stack, rather than leaving the runner waiting on a thread that died;
  *   3. a finalize with no run plan behind it is refused loudly.
  *
- * The fixture is a real git repository, because the listing is read out of git.
+ * The fixture is a real git repository, because the tree is read out of git.
  */
 
 import { test, expect, beforeAll, afterAll } from "bun:test";
@@ -21,7 +21,7 @@ import {
   lintContributionPaths,
 } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import { LINT_GROUP_BASE } from "../core";
-import { readTreeListing } from "./fingerprint";
+import { computeTreeHash } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { openPreparation, type Plan, type PrepareInput } from "./prepare";
 import { openPrepareThread } from "./prepare-thread";
 
@@ -99,7 +99,9 @@ afterAll(() => {
 });
 
 async function input(): Promise<PrepareInput> {
-  return { listing: await readTreeListing(root) };
+  const treeHash = await computeTreeHash(root);
+  if (treeHash === null) throw new Error(`no tree hash for ${root}`);
+  return { root, treeHash };
 }
 
 /**
@@ -124,7 +126,10 @@ test(
     try {
       const fromThread = await thread.prepare(await input());
       const inProcess = (await openPreparation(await input())).plan;
-      expect(fromThread).toEqual(inProcess);
+      expect({ ...fromThread, phaseMs: [] }).toEqual({
+        ...inProcess,
+        phaseMs: [],
+      });
       // Not a vacuous equality: the fixture is a runnable cold tree, whose
       // every file needs every syntactic rule group (the result store is
       // empty) and whose typed parts only the worker can decide.
@@ -143,10 +148,15 @@ test(
           split: expect.any(Array) as { group: string; fp: string }[],
           whole: expect.any(Array) as { group: string; fp: string }[],
         },
-        versions: {
-          "src/a.ts": expect.any(String) as string,
-          "src/b.ts": expect.any(String) as string,
-        },
+        // No run was recorded yet, so no base: every file is sent.
+        lintBase: null,
+        // Nor a walk base bound to one: the worker's own last walk, if any.
+        walkBase: { kind: "hint" },
+        // The tree the thread was handed, and no overlay: nothing the
+        // tsconfig includes is gitignored.
+        tree: { treeHash: (await input()).treeHash, overlay: {} },
+        phaseMs: expect.any(Array) as [string, number][],
+        baseLine: expect.stringContaining("base none") as string,
       };
       expect(fromThread).toEqual(expected);
     } finally {
@@ -183,12 +193,10 @@ test(
   async () => {
     const thread = openPrepareThread();
     try {
-      // A listing naming a file that is not there: hashing it fails loudly
-      // — inside `./prepare`, on the thread.
+      // A tree that is not there: loading it fails loudly — inside
+      // `./prepare`, on the thread.
       const err = await rejection(
-        thread.prepare({
-          listing: { root: notARepo, files: ["src/missing.ts"] },
-        }),
+        thread.prepare({ root: notARepo, treeHash: "0".repeat(40) }),
       );
       expect(err.message).toContain(notARepo);
       // A frame from inside `./prepare` — only the thread's own stack has one.

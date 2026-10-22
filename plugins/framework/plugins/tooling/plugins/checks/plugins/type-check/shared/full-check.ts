@@ -1,6 +1,8 @@
 // The ORACLE of the two-program type check: one fresh whole program over every
-// root, with TypeScript's own host, every file checked in tsc's own order — no
-// store, no served `.d.ts`, no walk. `dual` mode (the daily backstop on main,
+// root, with TypeScript's own host over the same input — the check's view of
+// the repo (`./repo-view.ts`: the run's git tree plus its overlay), so the two
+// sides read one tree — every file checked in tsc's own order: no store, no
+// served `.d.ts`, no walk. `dual` mode (the daily backstop on main,
 // `scripts/dual-check.ts`) runs it beside the check and compares file by file.
 
 import { join } from "path";
@@ -10,6 +12,7 @@ import type { TscDivergence } from "../core";
 import { checkFile } from "./name-check";
 import type { NameResult } from "./name-run";
 import { isRepoPath, needsContract } from "./keys";
+import { viewCompilerHost, type RepoView } from "./repo-view";
 import { formatDiagnostic } from "./tsc-engine";
 
 export interface FullCheck {
@@ -18,13 +21,15 @@ export interface FullCheck {
 }
 
 export function fullCheck(
-  root: string,
+  view: RepoView,
   options: ts.CompilerOptions,
   roots: readonly string[],
 ): FullCheck {
+  const root = view.root;
   const program = ts.createProgram({
     rootNames: roots.map((p) => join(root, p)),
     options,
+    host: viewCompilerHost(view, options),
   });
   // Every file's diagnostics first, in program order — exactly what `tsc`
   // does cold — so the per-file reads below read tsc's own answers back.

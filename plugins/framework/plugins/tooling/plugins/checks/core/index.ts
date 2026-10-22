@@ -16,7 +16,12 @@ export type {
   OutstandingCheck,
   ProgressRecord,
 } from "./progress-log";
-export { fingerprint, computeCheckSourceHash } from "./read-set";
+export {
+  fingerprint,
+  computeCheckSourceHash,
+  loadTreeSnapshot,
+  readTreeSnapshot,
+} from "./read-set";
 export type {
   TreeSnapshot,
   FileSystemView,

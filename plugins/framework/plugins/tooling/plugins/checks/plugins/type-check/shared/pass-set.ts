@@ -21,6 +21,7 @@ import {
   renameSync,
   rmSync,
   statSync,
+  utimesSync,
   writeFileSync,
 } from "fs";
 import type { DataDir } from "@plugins/infra/plugins/paths/core";
@@ -61,6 +62,11 @@ export interface PassSet {
    * entry: for a human reading the directory, or for `read`.
    */
   record(key: string, detail: Record<string, unknown>): void;
+  /**
+   * Mark an entry used now (its mtime, which the age bound reads) without
+   * rewriting it. False when there is no such entry.
+   */
+  touch(key: string): boolean;
 }
 
 /** Open (and lazily create) a content-keyed PASS set under `dir`. */
@@ -88,6 +94,16 @@ export function openPassSet(dir: DataDir, bounds: PassSetBounds): PassSet {
       const tmp = dir.file(`.${sha256(file).slice(0, 12)}.tmp`);
       writeFileSync(tmp, JSON.stringify({ ...detail, recordedAt: Date.now() }));
       renameSync(tmp, file); // atomic on the same filesystem
+    },
+    touch(key) {
+      const now = new Date();
+      try {
+        utimesSync(entryFile(key), now, now);
+        return true;
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+        return false;
+      }
     },
   };
 }

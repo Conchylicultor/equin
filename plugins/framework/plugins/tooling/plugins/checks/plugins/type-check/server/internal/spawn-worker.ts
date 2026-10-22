@@ -19,9 +19,11 @@ import type { Grant } from "@plugins/infra/plugins/host/plugins/host-admission/c
 import type { ForegroundSlot } from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import {
   TYPE_CHECK_WORKER_UNITS,
+  type TypeCheckTree,
   type TypeCheckWorkerJob,
   type TypeCheckWorkerResult,
 } from "../../core";
+import { readCheckTree } from "../../shared/repo-view";
 import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { reportMisses, type MissReportSink } from "./miss-reports";
@@ -112,13 +114,26 @@ export async function spawnTypeCheckWorker(opts: {
   lintFiles: TypeCheckWorkerJob["lintFiles"];
   /** The typed parts the lint jobs decide (none: a run that lints nothing). */
   typedParts?: TypeCheckWorkerJob["typedParts"];
-  /** File versions the caller already hashed (none: the worker hashes all). */
-  versions?: TypeCheckWorkerJob["versions"];
+  /** The run base the lint jobs were planned against (none: every file is a job). */
+  lintBase?: TypeCheckWorkerJob["lintBase"];
+  /**
+   * The walk base the type check's walk starts from — by default this
+   * checkout's last walk (`hint`), which only a run with no lint base may use.
+   */
+  walkBase?: TypeCheckWorkerJob["walkBase"];
+  /**
+   * The input to check — the git tree and its overlay — when the caller has
+   * already read it: the check's preparation does, and keys lint on the same
+   * versions. Omitted, it is read here, from the working tree as it is now.
+   */
+  tree?: TypeCheckTree;
   grant: Grant;
 }): Promise<TypeCheckWorkerRun> {
   const { root, name, tsconfigPath, tscMode, onMiss, lintFiles, grant } = opts;
   const typedParts = opts.typedParts ?? { split: [], whole: [] };
-  const versions = opts.versions ?? {};
+  const lintBase = opts.lintBase ?? null;
+  const walkBase = opts.walkBase ?? { kind: "hint" };
+  const tree = opts.tree ?? (await readCheckTree(root, tsconfigPath)).tree;
   const queuedAt = performance.now();
   const run = await typeCheckWorkerPool.run(
     (slot) => {
@@ -136,7 +151,9 @@ export async function spawnTypeCheckWorker(opts: {
               onMiss,
               lintFiles,
               typedParts,
-              versions,
+              lintBase,
+              walkBase,
+              tree,
             },
             slot,
           })),

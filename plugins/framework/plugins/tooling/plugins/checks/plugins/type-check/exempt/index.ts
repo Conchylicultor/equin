@@ -16,6 +16,7 @@ export default [
       "shared/name-store.ts",
       "shared/name-walk.ts",
       "shared/pass-set.ts",
+      "shared/repo-view.ts",
       "shared/tsc-engine.ts",
       "shared/worker.ts",
     ],

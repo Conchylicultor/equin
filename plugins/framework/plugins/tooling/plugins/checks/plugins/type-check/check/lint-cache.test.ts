@@ -19,8 +19,8 @@ import type { ResolvedExemption } from "@plugins/framework/plugins/tooling/plugi
 import type { RawLintMessage } from "../core";
 import { hasLintDirective } from "./fingerprint";
 import { lockfileLintDigest } from "../shared/lockfile";
-import { typedGroupFps, type LintGroups } from "./lint-groups";
-import { mergeLintEntry, sameEntry } from "./lint-results";
+import { typeAwareKey, typedGroupFps, type LintGroups } from "./lint-groups";
+import { mergeLintEntry, sameEntry } from "../shared/lint-results";
 import { lintViolationLines } from "./lint-verdict";
 
 // The shape bun writes, trimmed: a workspaces section, then packages, where a
@@ -82,6 +82,7 @@ const update = (
   keepTyped = 2,
   reused: { syntactic?: string[]; typed?: string[] } = {},
 ) => ({
+  directive: false,
   syntactic: new Map(syntactic),
   typed: new Map(typed),
   reusedSyntactic: new Set(reused.syntactic),
@@ -99,6 +100,7 @@ test("a merged entry puts fresh results first and keeps `keep` of them", () => {
     ]),
   );
   expect(prior).toEqual({
+    directive: false,
     syntactic: ["g1-v1", "g2-v1"],
     typed: [],
     messages: { "g1-v1": [msg("g1/r")] },
@@ -118,6 +120,7 @@ test("a merged entry puts fresh results first and keeps `keep` of them", () => {
   });
   const trimmed = mergeLintEntry(next, update([["g3-v1", []]], [], 2));
   expect(trimmed).toEqual({
+    directive: false,
     syntactic: ["g3-v1", "g1-v2"],
     typed: [],
     messages: {},
@@ -134,6 +137,7 @@ test("typed keys are kept on their own budget, apart from the syntactic ones", (
   // Three typed versions under a budget of two: the oldest goes, with its
   // messages; the syntactic key is untouched by any of it.
   expect(e3).toEqual({
+    directive: false,
     syntactic: ["s1"],
     typed: ["t3", "t2"],
     messages: { t3: [msg("x/typed", 2)] },
@@ -192,6 +196,7 @@ test("a reused key moves up, so it outlives keys nobody uses", () => {
   const e4 = mergeLintEntry(e3, update([], [["t3", []]]));
   // Without the move, t1 would have been the oldest and gone.
   expect(e4).toEqual({
+    directive: false,
     syntactic: [],
     typed: ["t3", "t1"],
     messages: { t1: [msg("x/typed")] },
@@ -226,6 +231,7 @@ const lintGroups = (
 ): LintGroups => ({
   fps: new Map(Object.entries(fps)),
   engineFiles: 1,
+  parsedFiles: 1,
   typedEngineFp,
   allFp: "all",
 });
@@ -276,4 +282,42 @@ test("a type-aware contribution with no rule group is refused", () => {
       contributions: new Set(["missing/plugin"]),
     }),
   ).toThrow("has no rule group");
+});
+
+test("a text's directive flag is one with its entry: a merge that disagrees throws", () => {
+  const e = mergeLintEntry(undefined, {
+    ...update([["s1", []]]),
+    directive: true,
+  });
+  expect(e.directive).toBe(true);
+  expect(() => mergeLintEntry(e, update([["s2", []]]))).toThrow(
+    "does not name one text",
+  );
+});
+
+test("the type-aware memo key moves with any group or the typed engine, and only with them", () => {
+  const groups = {
+    "(base)": "b1",
+    "typed/one": "o1",
+    "syntactic/plugin": "s1",
+  };
+  const key = typeAwareKey(lintGroups(groups));
+  // Same fingerprints, however the map was built: a hit.
+  expect(
+    typeAwareKey(
+      lintGroups({
+        "syntactic/plugin": "s1",
+        "typed/one": "o1",
+        "(base)": "b1",
+      }),
+    ),
+  ).toBe(key);
+  // A contribution's rules moved, one appeared, the typed engine moved: a miss.
+  expect(
+    typeAwareKey(lintGroups({ ...groups, "syntactic/plugin": "s2" })),
+  ).not.toBe(key);
+  expect(typeAwareKey(lintGroups({ ...groups, "new/plugin": "n1" }))).not.toBe(
+    key,
+  );
+  expect(typeAwareKey(lintGroups(groups, "te2"))).not.toBe(key);
 });

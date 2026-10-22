@@ -12,6 +12,7 @@ export type {
   LintFileJob,
   LintFileResult,
   RawLintMessage,
+  TypeCheckTree,
   TypeCheckWorkerJob,
   TypeCheckWorkerResult,
   TscDivergence,

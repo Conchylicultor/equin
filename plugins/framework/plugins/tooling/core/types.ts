@@ -68,6 +68,20 @@ export interface CheckContext {
    */
   repo(): Promise<RepoFiles>;
   /**
+   * The run's tree as git hashed it: its tree hash and every blob's sha (see
+   * `GitTreeSnapshot`). Lazy + memoized per run, and the SAME snapshot the
+   * cache key and the input-keyed replay read when caching is on.
+   *
+   * Computed under `--no-cache` too: a tree hash is a fact about the checkout,
+   * not a cache, so a check that keys its own work on file identity (type-check
+   * versions every file by its blob sha) has one on every run. Rejects when
+   * git cannot hash the tree — a check that asked has nothing to key on.
+   *
+   * NOT recorded in an input-keyed check's read-set: it is the raw tree. Record
+   * what the verdict reads through the scan view (or `repo()`).
+   */
+  snapshot(): Promise<GitTreeSnapshot>;
+  /**
    * The exemptions for one of THIS check's `exemptable` ids — what the
    * exempted plugins declared in their own `exempt/index.ts`. Asking for an id
    * the check did not declare throws.
@@ -94,6 +108,25 @@ export interface CheckExemptions {
   skips(path: string): boolean;
   /** The exemption covering `path`, recording the hit; undefined if none. Ignores `outOfScope`. */
   match(path: string): ResolvedExemption | undefined;
+}
+
+/**
+ * One tree, as git hashed it: the working tree's content (tracked + untracked-
+ * not-ignored, honoring .gitignore — `computeTreeHash`), with every blob's sha.
+ * A read-only, in-memory projection: nothing here touches the disk.
+ *
+ * The checks runner's `TreeSnapshot` (checks/core) is one, with the read-set
+ * projections on top.
+ */
+export interface GitTreeSnapshot {
+  /** Absolute worktree root. */
+  readonly root: string;
+  /** The git tree object hash (`git write-tree` of the working tree). */
+  readonly treeHash: string;
+  /** Every blob path, repo-relative, in `Array.prototype.sort()` order. Frozen. */
+  paths(): readonly string[];
+  /** Blob sha of `path`, or null if the path is not a blob in the tree. */
+  blobSha(path: string): string | null;
 }
 
 /**

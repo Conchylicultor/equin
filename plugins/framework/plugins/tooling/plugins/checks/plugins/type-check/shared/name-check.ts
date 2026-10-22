@@ -23,6 +23,7 @@ import { canonicalDeclarations, formatDiagnostic } from "./tsc-engine";
 import { createNameHost, type SourceFileCache } from "./name-host";
 import { contractNames, nameKey, WHOLE, type NameRec } from "./name-records";
 import type { RecordingResolver, ResolutionRecord } from "./name-resolve";
+import type { RepoView } from "./repo-view";
 import { isRepoPath, needsContract } from "./keys";
 
 const sha256 = (s: string): string =>
@@ -547,7 +548,8 @@ export interface ProgramRun {
 }
 
 export function runProgram(input: {
-  root: string;
+  /** The repo as the check sees it (`./repo-view.ts`); its root is the program's. */
+  view: RepoView;
   options: ts.CompilerOptions;
   /** The repo source files the program holds as source. */
   sources: ReadonlySet<string>;
@@ -561,9 +563,10 @@ export function runProgram(input: {
   cache: SourceFileCache;
   resolver: RecordingResolver;
 }): ProgramRun {
-  const { root, options, sources, check, resolver } = input;
+  const { view, options, sources, check, resolver } = input;
+  const root = view.root;
   const host = createNameHost({
-    root,
+    view,
     options,
     sources,
     contractOf: input.contractOf,

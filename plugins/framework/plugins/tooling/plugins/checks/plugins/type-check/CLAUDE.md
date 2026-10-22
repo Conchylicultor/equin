@@ -72,18 +72,20 @@ Design and decision: `research/2026-09-18-global-type-check-one-program.md`.
 ## Shape
 
 - `check/index.ts` — the **check runner's thread**, shared by every check in
-  the pass. Only: the async git reads (`getWorktreeRoot`, `readTreeListing`),
-  the outer read-set (recorded from the listing alone), the one grant spend, the
-  log lines, the verdict.
+  the pass. Only: the run's tree (`ctx.snapshot()`), the outer read-set
+  (recorded from the snapshot's paths alone), the one grant spend, the log
+  lines, the verdict.
 - `check/prepare.ts` — the **preparation thread** (one Bun `Worker` per run;
-  entry `prepare-worker.ts`, runner-side host `prepare-thread.ts`). Builds the
-  import graph + content hashes, parses the tsconfig's include-expansion, runs
-  the coverage gate (replaces projectService's "every file resolves to a
-  project"), and reads the lint result store: every lintable file goes to the
-  worker with its stale syntactic groups and its typed parts to decide (only
-  the worker knows each file's result key). After the worker, `finalize`
-  records the fresh lint results and assembles the lint verdict under the
-  current exemptions.
+  entry `prepare-worker.ts`, runner-side host `prepare-thread.ts`). Handed the
+  tree HASH, it reads the check's input (`shared/repo-view.ts`
+  `readCheckTree`: the snapshot, the overlay, the tsconfig's include-expansion
+  over both), runs the coverage gate (replaces projectService's "every file
+  resolves to a project"), fingerprints the lint rule groups, picks a **run
+  base** (below) and sends the worker only the files whose lint state does not
+  carry from it, each with its stale syntactic groups and its typed parts to
+  decide (only the worker knows each file's result key). After the worker,
+  `finalize` records the fresh lint results, writes the next base, and
+  assembles the lint verdict under the current exemptions.
 - `shared/worker.ts` — the worker **process**. The **two-program check**
   (`shared/name-run.ts`, below): tsc diagnostics for the files with no valid
   stored result, and every file's result key → ESLint `Linter.verify`: each
@@ -100,38 +102,68 @@ Postgres's 60 s `authentication_timeout` and failed with `ECONNREFUSED`
 (`research/2026-09-10-tooling-type-check-prepare-off-thread.md`).
 
 A thread, not a helper process, because the session must survive the worker:
-the record phase reuses the prepare phase's lint entries and content hashes,
-which a process would have to serialize.
+the record phase reuses the prepare phase's lint entries, versions and
+directive flags, which a process would have to serialize.
 
 New files go FLAT in `shared/`: the engine (`tscEngineFp`, and lint's typed
 engine) is every top-level non-test `.ts` there (`engineSources()`), listed
 from the directory — a subdirectory would silently fall out of every key.
 
-## The file universe comes from git, and is enumerated once
+## The input is the git tree plus an overlay, read through one view
 
-`run()` takes ONE `readTreeListing(root)` — a `TreeListing` whose files come
-from `listRepoFiles` (`checks/core`) — and hands that value to every consumer:
-`buildImportGraphs` (preparation thread) and `recordOuterReadSet` (runner
-thread) both filter it with `lintableFiles`, so the recorded set is the linted
-set; `findGlobalTriggerFiles` with `isGlobalTrigger`. The listing crosses to
-the thread as a value, so it never re-lists. Nothing below the listing
-enumerates: `import-graph.ts` and `fingerprint.ts` only read the bytes of files
-handed to them, which is why they stay synchronous. (The worker's type check
-takes its roots from the tsconfig's own expansion and keys resolutions on the
-real filesystem — below — because that is what tsc reads.)
+The check is `inputKeyed`: its verdict must be a function of the tree its cache
+key hashes (`computeTreeHash` = scratch index + `git add -A`). So the input is
+**the run's git tree** — the hash `ctx.snapshot()` hands every check, computed
+under `--no-cache` too (a tree hash is a fact, not a cache) — **plus an
+overlay**, and everything reads it through one view (`shared/repo-view.ts`
+`RepoView`):
 
-This matters because the check is `inputKeyed`: its verdict must be a function
-of the tree its cache key hashes, and that key is git-derived
-(`computeTreeHash` = scratch index + `git add -A`). Both of the walks this
-replaced saw _more_ than the key — every gitignored file — so on 2026-09-09 a
-stray `.ts` an agent had left under `.cache/scratch/` counted as lintable,
-matched no tsconfig program, and failed a push over content no commit contains.
-The second walk had a matching bug of its own: it skipped a literal `dist`
+- **A file's version is its git blob sha** in the tree (`git ls-tree`,
+  O(changes) through git's index stat cache). The lint result store and the
+  name store are keyed on it, so looking an entry up reads no file. Bytes are
+  still read off the disk to parse, but CHECKED: `readText` throws when a file's
+  bytes no longer hash to its version (it changed after the tree was taken) —
+  a result recorded under another text's key would poison a host-wide store.
+- **The overlay** is the gitignored files the tsconfig makes ROOTS of: the
+  `*.composition.*.generated.ts` registries sit inside `include`, have no blob,
+  and tsc compiles them. `readCheckTree` lists the ignored entries once
+  (`git ls-files -o -i --directory`, wholly-ignored directories as one entry,
+  not descended), expands the tsconfig's `include` over tree ∪ ignored with
+  TypeScript's own matcher (`ts.matchFiles`, internal — used so the expansion
+  is EXACTLY tsc's, and asserted present), and versions the roots without a
+  blob by their bytes. An ignored directory the tsconfig does not exclude (a
+  stale plugin directory holding only `node_modules`) is listed off the disk
+  where the expansion walks into it, as tsc would. The overlay is a dozen
+  files; it crosses to the worker as data in the job (`TypeCheckTree`), and
+  the worker loads the tree itself from the hash.
+- **Every in-repo question is answered by the view**: the tsconfig's roots
+  (prepare's coverage gate and the worker's parse), module resolution (the
+  program host, `RecordingResolver`), resolution keys (`ProbeFs`). What is on
+  disk and not in the view — transient root files (`.install.lock`,
+  `.merge_file_*`, `.check-*`), build output, a stray file — does not exist
+  for the check. `node_modules` (anywhere) and paths above the root stay on
+  the real filesystem, pinned by the lockfile in the engine.
+- **The outer read-set** is recorded from the snapshot's paths (lintable
+  files, global triggers). It cannot record the overlay — it replays against
+  git snapshots, which do not hold it — so an outer HIT trusts that the
+  registries are what the tree generates (`./singularity build` regenerates
+  them before any check). The inner stores key overlay files by content, so
+  no stored result is ever stale for one; only an overlay-only change on an
+  unchanged tree can replay a PASS.
+
+Nothing walks the filesystem. That matters twice. Every walk this replaced saw
+_more_ than the key: on 2026-09-09 a stray `.ts` an agent had left under
+`.cache/scratch/` counted as lintable, matched no tsconfig program, and failed
+a push over content no commit contains; another skipped a literal `dist`
 segment but not `dist.staging.*` / `dist.live.*` / `dist.old.*`, so a build
-artifact under one moved the global fingerprint and invalidated the whole
-closure cache.
+artifact moved the global fingerprint. And resolution keys hashed the real
+`readdir` of every probed directory — the repo root among them, reached by
+every lookup that walks up to `node_modules` — so the root's transient entries
+moved ~6,000 files' keys after unrelated commands (~8 worker CPU-s, and a
+verdict that depended on files no key hashed). See
+`research/2026-10-21-global-type-check-prepare-follows-the-change.md`.
 
-The two predicates now spell only what `.gitignore` does not: `*.generated.ts`
+The lint predicates spell only what `.gitignore` does not: `*.generated.ts`
 and `prototypes/**`, the remainder of eslint's ignore list
 (`lint/core/build-lint-config.ts`) once git has done its part. Do not restate
 `node_modules` / `dist` / `.check-*` / `.claude/worktrees` there — a
@@ -140,10 +172,10 @@ exactly what drifted. See
 `research/2026-09-09-tooling-check-file-enumeration-from-git.md`.
 
 (The root tsconfig's own `exclude` is the one place that list legitimately
-reappears: tsc expands `include` by walking the FILESYSTEM, not by listing git,
-so it needs `**/node_modules` and the `dist*` release trees named. Dot-prefixed
-directories are never matched by a tsconfig wildcard, so `.cache` and
-`.claude/worktrees` need no entry there either.)
+reappears: it is TypeScript's expansion rule, applied here over tree ∪ ignored
+— so it needs `**/node_modules` and the `dist*` release trees named, or the
+expansion would descend into them. Dot-prefixed directories are never matched
+by a tsconfig wildcard, so `.cache` and `.claude/worktrees` need no entry.)
 
 ## The coverage gate is set subtraction
 
@@ -239,12 +271,16 @@ tree reads main's entries; a run writes only what it checked. Entries in use
 are rewritten after 3 days so the 14-day age bound means "unused".
 
 **Resolutions** (`shared/name-resolve.ts`) are keyed on what they PROBED: the
-real `readdir` listing (names only) of every repo directory a lookup consulted —
-a directory that does not exist counts its nearest existing ancestor, so
-creating it moves the key — and the content of every repo file read (a
+view's listing (names only) of every repo directory a lookup consulted — a
+directory that does not exist counts its nearest existing ancestor, so
+creating it moves the key — and the version of every repo file read (a
 `package.json`). While the key holds the targets stand with no TypeScript call;
 when it moves, that file's specifiers are resolved again, and a moved target
-puts the file in program 1. An untracked file shadows like a tracked one.
+puts the file in program 1. An untracked-not-ignored file is in the tree and
+shadows like a tracked one; a gitignored ROOT is in the overlay and shadows
+too; any other file on disk shadows nothing (the program host reads the same
+view, so tsc does not see it either). A `node_modules` lookup records nothing,
+not even its parent's listing: whether one exists is the lockfile's.
 
 **Generated registries need nothing special.** The unit design needed
 `isolatedDeclarations`-clean `*.generated.ts` (contract-first) to break the
@@ -254,7 +290,7 @@ cold run is one program.
 
 - **Soundness** is validated, not assumed. `dual` mode (`TscMode`) runs the
   check, then a full check of a FRESH whole program with TypeScript's own host
-  (`shared/full-check.ts`), and compares every file's diagnostics and
+  over the same view (`shared/full-check.ts`), and compares every file's diagnostics and
   signature; on any divergence a cold run rewrites the store.
   `scripts/dual-check.ts` runs it by hand (`--mode keyed` for the check alone);
   the `backstop` sub-plugin runs it daily on main and files a
@@ -280,8 +316,8 @@ A rule reads the file's own text and, if it is **type-aware** (declares
 `meta.docs.requiresTypeChecking`, `isTypeAwareRule` in `lint/core`; a dozen
 rules), the checker's types for it — a function of the *declarations* the file
 can see, never of another file's source. So a file's result is stored per
-**(file, content hash)** (`check/lint-results.ts`, `type-check-lint-results-v2`)
-in parts, each under its own key:
+**(file, version)** — the git blob sha — (`shared/lint-results.ts`,
+`type-check-lint-results-v3`) in parts, each under its own key:
 
 | Part | Key | Re-linted when |
 | --- | --- | --- |
@@ -297,18 +333,26 @@ typed parts `research/2026-10-18-global-typed-lint-key-stops-at-contracts.md`,
 and the result key that replaced the type fingerprint
 `research/2026-10-21-global-type-check-two-programs.md`.
 
-**The rules half** (`check/lint-groups.ts`) — one fingerprint per GROUP, each
-folding in the **engine**: the config builder's import closure
-(`LINT_CONFIG_SOURCE`, generated registries not followed), `shared/worker.ts`,
+**The rules half** (`check/lint-groups.ts`) — one fingerprint per GROUP, its
+files hashed by their versions, each folding in the **engine**: the config
+builder's import closure (`LINT_CONFIG_SOURCE`, generated registries not
+followed), `shared/worker.ts`,
 the root tsconfigs and `package.json`,
 ambient `.d.ts`, `patches/**`, the lockfile **minus its workspace entries**
 (`lockfileLintDigest`), and the declared `@utility` set (`lintDataKey`). The
 **base** group is the builder's own rules (typescript-eslint, react-hooks,
 eslint core); each **contribution** (`lintContributionPaths()`) is the import
 closure of `plugins/<p>/lint/index.ts`, stopping at engine files (a rule's
-`*.test.ts` is not in it; a helper it imports from outside `lint/` is). Each
-group that holds a type-aware rule (`typeAwareLintGroups`, loaded in prepare
-through the same classifier) has a **typed group fp** (`typedGroupFps`): its
+`*.test.ts` is not in it; a helper it imports from outside `lint/` is). The
+closures are walked from their roots alone (`lintClosures`: ~370 files parsed,
+specifiers resolved against the view — 65 ms), not read off a whole-repo
+import graph (3 CPU-s, every run). The rules are CODE, versioned in the tree
+of the checkout they run FROM (`codeCheckoutRoot`): on a check run the checked
+tree itself, beside a test's fixture the repo's own. Each group that holds a
+type-aware rule (`typeAwareLintGroups`, learned by loading every contribution
+through the same classifier, ~1.2 CPU-s — so stored in the lint result store
+under `typeAwareKey`, every group's fp and the typed engine, and loaded only
+when one moved) has a **typed group fp** (`typedGroupFps`): its
 group fp plus the **typed engine** — the type check's `engineSources()`, which
 only parts that read types depend on. So a syntactic-only rule edit stales no
 typed part, one type-aware rule edit stales its group's typed part only, and
@@ -323,14 +367,18 @@ replaced the step 1b/1c type fingerprint, a Merkle hash over the FILE-level
 contract graph: R is name-level, so an API change moves the files using the
 names that moved, not every importer of the file.
 
-**Only the worker knows R.** So prepare sends EVERY lintable file, its stale
-syntactic groups and its typed parts with the few keys stored for each
-(`known`); the worker computes `typedResultKey(fp, R)` per part and runs the
-ones not among them — in the program that holds the file as source (program 1
-or 2; a file whose typed part is stale while its tsc result is valid — a
-type-aware rule edit, an evicted result — joins program 2 as a source to be
-linted). The worker always runs: an unchanged tree costs its walk; the outer
-read-set replay skips the whole check before prepare runs at all.
+**Only the worker knows R.** So prepare sends each file whose state does not
+carry from the run base (below), its stale syntactic groups and its typed parts
+with the few keys known for each (`known`); the worker computes
+`typedResultKey(fp, R)` per part and runs the ones not among them — in the
+program that holds the file as source (program 1 or 2; a file whose typed part
+is stale while its tsc result is valid — a type-aware rule edit, an evicted
+result — joins program 2 as a source to be linted). A CARRIED file's typed
+parts stand while its R is the base's; when R moved, the worker decides them
+like a job's, with `known` its stored typed keys (it reads the per-file store
+itself, `shared/lint-decisions.ts`). The worker always runs: an unchanged tree
+costs its walk; the outer read-set replay skips the whole check before prepare
+runs at all.
 
 Running a syntactic group without a program (`typeSource: { none: true }`) is
 the enforcement: a type-aware rule that forgot to declare itself throws in
@@ -345,7 +393,9 @@ unused file-level exemption is reported for every file.
 
 **A file with an eslint directive is one unit** (~4 % of files): whether a
 disable directive is unused depends on every rule, so it is re-linted whole
-whenever any rule or its result key changes.
+whenever any rule or its result key changes. Whether a text has one is a
+function of the text, so it is stored in the entry: prepare reads the text of
+a file with no entry only — which is linted anyway.
 
 What a change costs: a body-only edit — the file itself; an exported-type
 change — the file plus the typed parts of the files using the names that moved
@@ -360,6 +410,126 @@ Each entry keeps a few keys per part, most recently USED first: a key a run
 reused moves up beside the fresh ones, so two
 worktrees on two versions of a hub keep each other's results. `finalize`
 writes an entry only when that order changes.
+
+## The run base: a run reads only what changed
+
+`shared/run-base.ts`. Without it every run re-verified every file's stored lint
+state — 12.6k per-file entries read and zod-parsed in prepare (~2.7 CPU-s), a
+`LintFileJob` per file shipped to the worker (~10 MB), the verdict assembled
+over every file — on a tree where one file moved. A **run base** is the
+complete per-file lint state a completed run ended in, content-addressed and
+host-wide (a function of the tree and the global inputs, never of a worktree):
+
+- **Root** (`type-check-run-base-roots`, one per checked tree, found by a
+  `tree → root hash` pointer): the inputs its state is valid under — every
+  syntactic group's fp, every typed part's, the directive (`LINT_GROUP_ALL`)
+  fp, the overlay — and per **shard** (a leaf plugin's lintable files,
+  `shardOf`) its content hash, its **listing hash** (paths and versions), a
+  holds-messages flag and the day it was last marked used. ~150 KB.
+- **Shard** (`type-check-run-base-shards`, keyed by content hash): per file its
+  version, directive flag, result key R and non-empty raw messages per part.
+  Nearby trees share every shard they agree on.
+
+**Choosing.** Candidates, first stored wins: this very tree (a re-run, a
+sibling's), the worktree's last completed run (a per-worktree hint), `HEAD`'s
+tree, the merge-base with `main`'s. A base naming a shard the store no longer
+holds is refused and the run takes the full path, saying why. Correctness never
+rests on the choice: a shard carries only when its listing hash — computed from
+the current tree's versions, no read — equals the root's, a file only when its
+version does, and the rules are compared. (The plan's `git diff-tree` between
+base and tree is not needed: the snapshot's versions are already in hand, and
+hashing the listings is ~10 ms with no assumption that the base's tree object
+survives gc.)
+
+**Planning.** Same rules as the base: only files in a shard whose listing
+moved, and whose version moved there (or are new), are sent; every other file
+carries, and the job names the base (`lintBase`) so the worker can compare
+each carried file's R with the base's. Other rules (a group, typed part or the
+directive fp moved): every file is sent, with the base's state of the same text
+counted as known under the base's keys (`baseEntry`) beside the per-file
+store's — so only the moved group runs (directive files whole), and no base is
+named. No base: every file, as before; that run writes one.
+
+**Recording.** `finalize` builds each sent file's state from what ran and what
+was known, patches each carried file whose R moved (its syntactic results
+stand), rewrites only the shards that hold such a file or whose listing moved,
+and writes the root, the pointer and the hint. A carried shard last marked used
+`TOUCH_AFTER_DAYS` (3) ago is touched, so a shard (14 days) outlives every root
+(7 days) naming it. **Nothing is written** when the worker crashed or keyed
+nothing (an unreadable tsconfig): `ProgramOutcome.keys` is null or absent. After
+a prediction miss the worker's whole-program rerun keyed everything, so its state
+is recorded. The verdict reads only the shards the root marks as holding
+messages, plus the files a file-level lint exemption names (so an unused one is
+still reported) — `lint-verdict.ts` unchanged, over fewer files.
+
+The per-file store (`type-check-lint-results-v3`) stays the reuse layer for
+TEXTS: a sent file's results come from it, and a carried file whose R moved
+reuses typed keys from it — what keeps an API edit and its revert from
+re-linting every user twice. The root also names the WALK BASE the same run
+ended in (`walk`, below): the next run's walk starts from it, so every file the
+walk does not visit keeps the key this base holds.
+
+## The walk base: the walk visits only what changed
+
+`shared/walk-base.ts`, `shared/walk-incremental.ts` (Stage C of
+`research/2026-10-21-global-type-check-prepare-follows-the-change.md`). Without
+it every run read every file's name-record entry (12.6k) and walked every file
+(~1–3 CPU-s) on a tree where one file moved. A **walk base** is the state the
+walk ended in, content-addressed per tree (`type-check-walk-roots`, `-shards`,
+sharded per leaf plugin like the run base), written by the WORKER at the end of
+a run that returned (a crash writes none):
+
+- **Root**: the global hash its state holds under, the global files, and per
+  shard its content hash, its LISTING hash (every view file of the shard, source
+  or not, with its version), a holds-a-diagnostic flag and the day last used.
+- **Shard**: `f` per source file — version, R, contract hash, signature,
+  diagnostics, per name [meaning, text hash, name-use edges], star targets,
+  uses, every other key its key or its names read (star / whole recursion
+  included: `Meanings` records them), resolution probes, rank, component; `p`
+  the listing; and the reverse indexes held by the TARGET: `ir` key → [meaning,
+  readers], `id` probed directory → files, `if` read file → files.
+
+**Which base**: the lint root's `walk` (bound: `walkBase: root`), else — only
+with no lint base — this checkout's last walk (`hint`), else none. A base whose
+global hash differs, or that names a missing shard, is not walked from (full
+walk, the reason in the walk line).
+
+**The walk** (`name-run.ts`): D₀ = sources whose version moved or that are
+new; readers of a removed file or of a changed non-source (JSON); files whose
+resolution probed a directory whose listing moved or read a file that moved —
+from the listing diff of the shards whose listing hash moved, never a tree
+walk — each with its whole component. Every other source is FIXED: its names
+mean the base's meanings, its key and result are the base's, nothing of it is
+read from the name store. After phase 0, a key a walked file owns whose
+meaning is definitely not the base's pulls its readers (and their components)
+into D; after phase 1, a ⊥ one too — so program 2 is sized with every reader
+of a name that may move. Walked components go in RANK order (each above what
+it reads, also through fixed files; a component keeps its base rank while it
+still fits, else sits between what it reads and the lowest fixed reader above
+it or its walked readers). A new edge up past a fixed reader walks the whole
+region in the way — every fixed file reading it, at any depth, ranked at or
+below its new target (Pearce–Kelly) — in one round (`WalkGrow`); a cycle
+through them merges into one walked component. Only floating point running
+out between ranks, or such an edge first seen in program 2's records, walks
+every file instead (`WalkFallback`). A walked file with no entry left stands in with the
+base's variant; a fixed file whose stored `.d.ts` aged out is re-checked
+(`ContractMissing`); a variant with no prediction data predicts nothing (every
+name ⊥). Self-checks after program 2, each a MISS (`onMiss`): a kept-valid
+file whose final key is not its variant's, and the FRONTIER — a fixed file
+reading a key whose final meaning moved.
+
+**The full walk stays**: no base, a global change, a rank violation, a missed
+prediction's cold rerun. `walks` mode runs both side by side (the full one
+over the same store, writes kept apart) and compares every file's R,
+`.d.ts`, signature, diagnostics (`walk-*` divergences; two `.d.ts` hashes
+are compared by canonical text, since tsc prints union members in
+type-creation order — which follows what its program loaded first — so the
+same declarations emit in two orders); `dual` adds the full
+check. `scripts/walk-replay.ts` replays main commits as two chains (incremental
+/ full walk, each its own `SINGULARITY_DIR`) and compares the walk bases, the
+tsc and the lint verdicts. Carried shards older than `TOUCH_AFTER_DAYS` are
+touched with their files' entries, contracts and prediction data, which no
+fixed file reads.
 
 ## Host-wide worker admission — `server/spawnTypeCheckWorker`
 
@@ -412,21 +582,20 @@ facts and are used either way. To force a full re-check, run
 
 ## One reading of the tree, passed around
 
-`readTreeListing(root)` takes one git-backed reading of the repo per run, and everything that asks
-what files exist takes that value: the lint universe, the outer read-set's trigger facts, and the
-lint rule groups' engine. It used to be four independent
-filesystem walks — seconds of traversal, measured, and four copies of the rules for what to skip
-(`node_modules`, `dist`, `.check-*`, `.claude/worktrees`), which is also how they came to disagree
-with the cache key. Now there are no rules to copy: `.gitignore` is the rule.
+Each side takes the tree once and passes the value around: the runner's thread
+gets `ctx.snapshot()` (the runner's own snapshot — the one the cache key and
+replay read — or, under `--no-cache`, one hashed for the asking), the
+preparation thread loads it again by hash and reads the overlay beside it
+(`readCheckTree`), and the worker loads it by hash and takes the overlay from
+the job. Nothing below enumerates. It used to be four independent filesystem
+walks — seconds of traversal, measured, and four copies of the rules for what
+to skip (`node_modules`, `dist`, `.check-*`, `.claude/worktrees`), which is
+also how they came to disagree with the cache key. Now there are no rules to
+copy: `.gitignore` is the rule.
 
-It is a value rather than a cache behind the function on purpose. A listing is a snapshot of a tree
-that keeps changing, so its staleness window belongs at the call site; as a module-level memo the
-window was silently "the rest of the process".
-
-The per-composition registries (`web.composition.<name>.generated.ts`) are gitignored yet sit
-inside the tsconfig `include`, so tsc compiles them. The worker takes its roots from the tsconfig's
-own (filesystem) expansion and keys resolutions on real directory listings, so they are covered there
-like any file.
+It is a value rather than a cache behind the function on purpose. A snapshot is
+of a tree that keeps changing, so its staleness window belongs at the call
+site; as a module-level memo the window was silently "the rest of the process".
 
 `no-adhoc-repo-walk` (lint) bans the hand-written directory deny-list shape, so the next copy cannot
 appear.
@@ -461,21 +630,38 @@ lines per run, and they are the instrument every claim about this check is made 
   sources (40 checked) + 3310 .d.ts; 43 checked of 12369; linted typed 41,
   syntactic 3` — what each program held: the instrument for "did that edit cost
   the file, the users of its names, or the repo".
-- `type-check: walk: 12369 files, 3 without a valid result, 120 pending, 40
-  re-checked (2 key moved, 38 use a name that may move, 0 after a stale
-  .d.ts), 1 only linted; resolutions 0 moved, 2 re-keyed; versions …ms, reads …ms (12369), listings …ms, walk …ms, write
-  …ms` and `type-check: program 1: …` / `program 2: …` (sources, served `.d.ts`,
+- `type-check: walk: incremental (the lint base's 3fa2…); D₀ 1 (+0 -0 ~1
+  paths, 0 listings), D 1 of 12369 files after 2 rounds; entries read 1, base
+  shards read 4; 1 without a valid result, 0 pending, 0 re-checked (…), 0 only
+  linted; resolutions 0 moved, 0 re-keyed; versions …ms, plan …ms, reads …ms,
+  listings …ms, walk …ms, write …ms` — or `full (<why>)` with D every file —
+  and `type-check: program 1: …` / `program 2: …` (sources, served `.d.ts`,
   repo decls, env; build, check and record wall ms) — the walk's own cost and
-  each program's.
+  each program's. `type-check: walk base 9a1c… written: shards 3 rebuilt (3
+  new), 1430 carried (0 touched)` — what the run left for the next.
 - `type-check worker repo: lane background, priority foreground (slot holder)` —
   when the worker is about to run: the grant's lane (which slot window it
   queued in) and its tier — always the foreground as the slot's holder, or
   `unknown (<reason>)` on a host with no darwinbg tier.
-- `type-check: prepared off-thread in 71.3s (finalize 2.1s)` — once per run:
-  the preparation thread's cost before and after the worker (the work that
-  used to freeze the runner; most of it is `parseProgramRoots`' include
-  expansion). A coverage-gate failure says `(finalize skipped: coverage gate
-  failed)`.
+- `type-check: input: tree 4ac279bad93e (19331 files, overlay 12); view
+  120ms, tsconfig roots 90ms` — the worker's load of its input: the tree by
+  hash plus the overlay, and the tsconfig expanded over it.
+- `type-check: prepared off-thread in 0.9s (tree + tsconfig roots (cpu 0.6s)
+  0.5s, lint groups, 368 files parsed (cpu 0.1s) 0.1s, type-aware groups
+  stored (cpu 0.0s) 0.0s, base, 1 shards read (cpu 0.0s) 0.0s, store reads, 1
+  entries, 0 texts read (cpu 0.0s) 0.0s; base last run 4ac279bad93e: 1
+  changed, 0 removed; shards read 1/1480; 1/12602 files sent; finalize 0.2s —
+  base 0.0s: shards 1 rebuilt (1 new), 1479 carried (0 touched), 3 read for the
+  verdict; root 9c01… written)` — once per run: the preparation thread's cost
+  before and after the worker (the work that used to freeze the runner), phase
+  by phase with each phase's process CPU; which base it carried from (or `base
+  none (<why>)`, or `rules moved (N groups, M typed parts)`), how many files
+  changed and were sent; and what finalize wrote back. `texts read` counts the
+  sent files with no lint entry, the only ones prepare reads. A coverage-gate
+  failure says `(finalize skipped: coverage gate failed)`.
+- `type-check: lint base 9c01…: every file carried unless its key moved, 1
+  sent; 2 shards read` — the lint base the worker compares the walked files'
+  keys with.
 
 **Use `cpu`, not wall clock.** The identical program build measured 105s at host
 load 12.8 and 266s at load 14.0; wall clock on this box measures the neighbours.
@@ -533,6 +719,7 @@ measures the queue, so any per-check cost claim needs `./singularity check --job
     - `TscPredictionMiss`
     - `TypeCheckDivergencePayload`
     - `TypeCheckStats`
+    - `TypeCheckTree`
     - `TypeCheckWorkerJob`
     - `TypeCheckWorkerResult`
     - `TypedDecision`
@@ -550,7 +737,7 @@ measures the queue, so any per-check cost claim needs `./singularity check --job
   - Uses tokens: `ui/tokens/shadow --shadow`
   - Imported by: `framework/tooling/checks/type-check/backstop`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/full-check.ts`, `shared/keys.ts`, `shared/lockfile.ts`, `shared/name-check.ts`, `shared/name-host.ts`, `shared/name-records.ts`, `shared/name-resolve.ts`, `shared/name-run.ts`, `shared/name-store.ts`, `shared/name-walk.ts`, `shared/pass-set.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (debt)
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/full-check.ts`, `shared/keys.ts`, `shared/lockfile.ts`, `shared/name-check.ts`, `shared/name-host.ts`, `shared/name-records.ts`, `shared/name-resolve.ts`, `shared/name-run.ts`, `shared/name-store.ts`, `shared/name-walk.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (debt)
 - Sub-plugins:
   - **`backstop`** — The two-program type check's backstop: a daily main-only job runs the type-check worker in dual mode (the two-program check beside a full check of a fresh whole program, compared file by file) and…
 

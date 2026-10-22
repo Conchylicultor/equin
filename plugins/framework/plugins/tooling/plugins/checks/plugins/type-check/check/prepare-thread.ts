@@ -8,8 +8,9 @@
 // `./prepare` for why the session must survive between them.
 //
 // A Worker thread rather than a helper process, because the session carries
-// `ProgramKeyContext.contentHash` across the fan-out, and a thread holds it in
-// memory for free where a process would have to serialize it. Checks only
+// every planned file's lint state (version, directive flag, stored entry)
+// across the fan-out, and a thread holds it in memory for free where a process
+// would have to serialize it. Checks only
 // ever run from source, so the worker is spawned by path the same way the
 // tsc worker is (the sentinel's compiled-release vendoring does not
 // apply here).

@@ -1,16 +1,19 @@
 /**
- * The record phase (research/2026-10-21-global-type-check-two-programs.md):
- *   1. every lintable file goes to the worker with its typed parts to decide
- *      (only the worker knows each file's result key), and `finalize` stores
- *      what came back under the keys the worker computed;
- *   2. the next run sends every file again, its syntactic groups fresh and its
- *      typed keys known; the worker answers `cached`, and a stored violation
- *      is still part of the verdict;
- *   3. after an edit, a file whose result key did not move is reused by the
- *      worker (`cached`), not re-linted.
+ * The record phase (research/2026-10-21-global-type-check-two-programs.md,
+ * and the run base: …-prepare-follows-the-change.md):
+ *   1. with nothing recorded, every lintable file goes to the worker with its
+ *      typed parts to decide (only the worker knows each file's result key),
+ *      and `finalize` stores what came back under the keys the worker
+ *      computed — and records the run base;
+ *   2. the next run of the same tree carries every file from that base and
+ *      sends none; a stored violation is still part of the verdict;
+ *   3. after an edit, only the edited file is sent; the other carries;
+ *   4. an unchanged tree is planned without reading a file or a store entry,
+ *      and without loading the lint contributions (the type-aware groups are
+ *      stored).
  *
  * The worker is not spawned: its outcome is written here, shaped exactly as
- * the protocol says. A real git fixture, because the listing is read from git.
+ * the protocol says. A real git fixture, because the tree is read from git.
  */
 
 import { afterAll, beforeAll, expect, test } from "bun:test";
@@ -25,7 +28,7 @@ import type {
   TypedPartOutcome,
 } from "../core";
 import { typedResultKey } from "../shared/keys";
-import { readTreeListing } from "./fingerprint";
+import { computeTreeHash } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { openPreparation, type Preparation } from "./prepare";
 
 type Plan = Extract<Preparation, { finalize: unknown }>["plan"];
@@ -90,7 +93,9 @@ afterAll(() => {
 });
 
 async function prepare(): Promise<Extract<Preparation, { finalize: unknown }>> {
-  const p = await openPreparation({ listing: await readTreeListing(root) });
+  const treeHash = await computeTreeHash(root);
+  if (treeHash === null) throw new Error(`no tree hash for ${root}`);
+  const p = await openPreparation({ root, treeHash });
   if (!("finalize" in p)) throw new Error("expected a runnable plan");
   return p;
 }
@@ -139,25 +144,43 @@ test(
         typed: ranAll(first.plan, rel),
       };
     });
-    const done = await first.finalize({ tscClean: true, lint });
+    const done = await first.finalize({
+      tscClean: true,
+      lint,
+      keys: RESULT_KEYS,
+      walkRoot: null,
+    });
     expect(done.lintViolations).toBe("src/b.ts:1:1  x/syntactic  stored");
     expect(done.lintLine).toContain(
       "type-check: lint 2/2 files (2 whole, 0 partial; syntactic 2, typed 2;",
     );
 
-    // 2. The same tree: every file sent again, every syntactic group fresh,
-    //    every typed key known and newest — the worker reuses them all and
-    //    answers nothing.
+    // 2. The same tree: every file carries from the base the first run
+    //    recorded, so none is sent; the worker, whose keys did not move,
+    //    answers nothing and keys nothing.
     const second = await prepare();
-    for (const job of second.plan.lintFiles) {
-      expect(job.syntactic).toEqual([]);
-      expect([...job.typed.known].sort()).toEqual(
-        typedKeys(second.plan, relOf(job))
-          .map((p) => p.key)
-          .sort(),
-      );
-    }
-    const again = await second.finalize({ tscClean: true, lint: [] });
+    expect(second.plan.lintFiles).toEqual([]);
+    expect(second.plan.lintBase).not.toBeNull();
+    expect(second.plan.baseLine).toContain("base this tree");
+    // Nothing was read to plan it: every entry was found by version, and each
+    // carries its directive flag. Nor were the contributions loaded: which
+    // groups hold a type-aware rule was stored under the groups' fingerprints.
+    const phases = (plan: Plan): string =>
+      plan.phaseMs.map(([n]) => n).join("; ");
+    expect(phases(first.plan)).toContain("type-aware groups loaded");
+    expect(phases(first.plan)).toContain(
+      "store reads, 2 entries, 2 texts read",
+    );
+    expect(phases(second.plan)).toContain("type-aware groups stored");
+    expect(phases(second.plan)).toContain(
+      "store reads, 0 entries, 0 texts read",
+    );
+    const again = await second.finalize({
+      tscClean: true,
+      lint: [],
+      keys: {},
+      walkRoot: null,
+    });
     // 3. The stored violation is part of the verdict though nothing re-ran.
     expect(again.lintViolations).toBe("src/b.ts:1:1  x/syntactic  stored");
     expect(again.lintLine).toContain("type-check: lint 0/2 files");
@@ -168,19 +191,19 @@ test(
 test(
   "after an edit, a file whose result key did not move is reused, not re-linted",
   async () => {
-    // Fix the violation. b's text changed, so b's entry is new; a's did not,
-    // so its syntactic groups are fresh and its typed keys known.
+    // Fix the violation. b's text changed, so b is sent with nothing known;
+    // a's did not, so it carries from the base and is not sent at all.
     write("src/b.ts", 'import { a } from "./a";\nexport const b = a + 2;\n');
     const run = await prepare();
-    const [jobA, jobB] = run.plan.lintFiles;
-    if (jobA?.unit !== "split" || jobB?.unit !== "split") {
-      throw new Error("expected a and b split");
-    }
-    expect(jobA.syntactic).toEqual([]);
+    expect(run.plan.lintFiles.map(relOf)).toEqual(["src/b.ts"]);
+    const [jobB] = run.plan.lintFiles;
+    if (jobB?.unit !== "split") throw new Error("expected b split");
     expect(jobB.typed.known).toEqual([]);
-    // a reused its newest keys: no answer. b ran.
+    // a's key did not move: no answer, no key. b ran.
     const done = await run.finalize({
       tscClean: true,
+      keys: { "src/b.ts": RESULT_KEYS["src/b.ts"]! },
+      walkRoot: null,
       lint: [
         {
           file: jobB.file,

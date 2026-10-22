@@ -15,7 +15,7 @@
 
 import type { FileSystemView } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { lintableFiles } from "./import-graph";
-import { findGlobalTriggerFiles, type TreeListing } from "./fingerprint";
+import { findGlobalTriggerFiles } from "./fingerprint";
 
 /**
  * Record type-check's outer read-set into `view` (a no-op caller-side when the
@@ -32,14 +32,13 @@ import { findGlobalTriggerFiles, type TreeListing } from "./fingerprint";
  *      NOT see a new file and would stale-PASS the gate; the membership fact is
  *      what closes that hole. A new `tsconfig*.json` is caught the same way.
  *      This fact and the lintable set beside it now answer "which `.ts` files
- *      exist" from the SAME git-honoring set — the glob filters the tree
- *      snapshot, `lintableFiles` filters the listing, which `readTreeListing`
- *      reads out of git. Before, the listing came from a filesystem walk, so
- *      the recorded fact and the scanned set disagreed on exactly the
- *      gitignored files.
- *  (b) CONTENT of every lintable file (`lintableFiles(listing)` — the SAME
- *      function `buildImportGraphs` filters with, over the same listing, so
- *      the recorded set is the linted set by construction) as `(path, blobSha)`
+ *      exist" from the SAME tree — the glob filters the snapshot, and
+ *      `lintableFiles` filters that snapshot's paths. Before, the listing came
+ *      from a filesystem walk, so the recorded fact and the scanned set
+ *      disagreed on exactly the gitignored files.
+ *  (b) CONTENT of every lintable file (`lintableFiles(paths)` — the SAME
+ *      function the preparation filters with, over the same tree, so the
+ *      recorded set is the linted set by construction) as `(path, blobSha)`
  *      facts, so ANY `.ts`/`.tsx` edit is a MISS (the type graph changed) while
  *      a non-source change stays a HIT.
  *  (c) CONTENT of the global-trigger set (`findGlobalTriggerFiles` — the SAME
@@ -53,12 +52,12 @@ import { findGlobalTriggerFiles, type TreeListing } from "./fingerprint";
  * bytes, `glob` is a regex filter over the loaded path set) — a pure in-memory
  * projection, so recording spawns nothing and never touches tsc. This must stay
  * cheap: it runs on the MISS path, on the check runner's own thread, before the
- * preparation thread starts — which is why it takes the listing and not the
- * import graph, whose construction reads every file.
+ * preparation thread starts — which is why it takes the snapshot's paths and
+ * reads nothing.
  */
 export function recordOuterReadSet(
   view: FileSystemView,
-  listing: TreeListing,
+  paths: readonly string[],
 ): void {
   // (a) Membership of the namespaces whose ADDITIONS can flip the verdict.
   //     `*.ts` (superset regex) spans all depths and also covers `*.d.ts`,
@@ -69,7 +68,7 @@ export function recordOuterReadSet(
   view.glob("*.tsx");
   view.glob("*tsconfig*.json");
   // (b) Contents of the exact lintable set the check considers.
-  for (const rel of lintableFiles(listing)) view.recordFile(rel);
+  for (const rel of lintableFiles(paths)) view.recordFile(rel);
   // (c) Contents of the global-trigger set.
-  for (const rel of findGlobalTriggerFiles(listing)) view.recordFile(rel);
+  for (const rel of findGlobalTriggerFiles(paths)) view.recordFile(rel);
 }

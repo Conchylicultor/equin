@@ -10,8 +10,22 @@ export const TYPE_CHECK_DIVERGENCE_KIND = "type-check-divergence";
 
 export const TypeCheckDivergencePayloadSchema = z.discriminatedUnion("kind", [
   z.object({
-    /** What differed: its diagnostics, its signature, or whether it was checked at all. */
-    kind: z.enum(["diagnostics", "signature", "missing"]),
+    /**
+     * What differed: its diagnostics, its signature, or whether it was checked
+     * at all — against the full check; or (`walk-*`) the incremental walk's
+     * result key, `.d.ts`, signature, diagnostics or presence against the full
+     * walk's.
+     */
+    kind: z.enum([
+      "diagnostics",
+      "signature",
+      "missing",
+      "walk-key",
+      "walk-contract",
+      "walk-signature",
+      "walk-diagnostics",
+      "walk-missing",
+    ]),
     /** The repo-relative file whose two-program result differed. */
     file: z.string(),
     /** The two-program check's side (`keyed`, its historical name), and the full check's. */
