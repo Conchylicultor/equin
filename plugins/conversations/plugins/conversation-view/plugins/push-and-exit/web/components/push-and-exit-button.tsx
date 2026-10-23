@@ -22,6 +22,7 @@ import type { MachineResult } from "@plugins/infra/plugins/endpoints/core";
 import {
   conversationPromptDraft,
   useSendConversationTurn,
+  useTurnAwaitingStart,
   useTurnSendAvailability,
   useTurnSendInFlight,
 } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
@@ -176,6 +177,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   const machine = useTurnSendAvailability();
   const fetchEndpoint = useFetchEndpoint();
   const toast = useToast();
+  const awaitingStart = useTurnAwaitingStart(convId);
 
   // Restore / Send / Stop work in every workspace; the edited-files read feeds
   // only a git workspace's exit decision, so it runs only where there is git.
@@ -244,9 +246,10 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
         conversation,
         live,
         draftEmpty: isDraftEmpty(draft),
+        awaitingStart,
         exit,
       }),
-    [draft, exit, conversation, live],
+    [draft, awaitingStart, exit, conversation, live],
   );
 
   if (!conversation || !live) return null;
@@ -265,7 +268,9 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
     !machine.available ||
     (mode === "restore"
       ? !hasSession
-      : live.status === "starting" ||
+      : // Only Stop acts on a starting agent: it takes back the turns that
+        // wait for it (deriveExitMode).
+        (live.status === "starting" && mode !== "stop") ||
         provisional ||
         (sendsATurn && sendInFlight));
 

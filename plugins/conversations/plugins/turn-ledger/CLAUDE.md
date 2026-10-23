@@ -40,6 +40,7 @@ held ─▶ typing ─▶ typed ─▶ accepted     confirmed prompt == typed te
           ├─▶ failed       never reached the agent — Retry
           └─▶ unverified   the runtime cannot tell whether it went in — Retry
 failed / unverified ─withdraw─▶ withdrawn ─exact confirmation─▶ accepted
+held ─Stop while starting─▶ returned
 ```
 
 - **A confirmation always wins** — over `typing` (it can land inside the
@@ -58,6 +59,11 @@ failed / unverified ─withdraw─▶ withdrawn ─exact confirmation─▶ acce
   every turn still on its way. Stop's `returned` ignores confirmations: one of
   that text belongs to whatever turn carries it next. `CONFIRM_ROLE` (a Record
   over every state) says what a confirmation may do in each.
+- `returned` from `held`: Stop while the conversation is `starting`
+  (`returnHeldTurns`, conversations `stopTurn`) takes every held turn back into
+  the draft at once — none reached the agent. Conditional on `held` like the
+  `deliver` claim, so a turn the launch is claiming at that moment is either
+  taken back whole or delivered whole (then stopped as a running turn).
 - `hold` (typing → held): a hibernated conversation the send resumed is
   `starting` again; the turn waits for its input box like any held turn.
   `release` (typing → held): the launch that was to carry it threw.
@@ -175,11 +181,13 @@ withdrawn).
     - `applyTurnEvent`
     - `getTurn`
     - `hasHeldTurns`
+    - `hasTurnInFlight`
     - `holdIfStarting`
     - `latestSubmitAt`
     - `listHeldTurns`
     - `onTurnSubmitted`
     - `resolvePromptSubmit`
+    - `returnHeldTurns`
     - `returnTurnByText`
     - `returnTurnsSince`
     - `userTurnSent`

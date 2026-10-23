@@ -287,3 +287,39 @@ function useRunsAhead(conversation: { id: string; updatedAt: Date }): boolean {
   });
   return runsAheadOfServer(conversation, rows, sent);
 }
+
+/**
+ * The ledger states of a turn still waiting for a starting agent: held for it,
+ * or riding its launch and not confirmed yet. What Stop takes back while the
+ * conversation is `starting`.
+ */
+const AWAITS_START: Record<TurnState, boolean> = {
+  held: true,
+  typing: true,
+  typed: true,
+  accepted: false,
+  merged: false,
+  returned: false,
+  failed: false,
+  unverified: false,
+  withdrawn: false,
+};
+
+/**
+ * Whether a turn of this conversation is waiting for its agent to start — the
+ * launch prompt, or a message sent since — so Stop has something to take back
+ * while the conversation is `starting`. The same ledger window the transcript's
+ * cards read ({@link usePendingTurns}), so the two never disagree.
+ */
+export function useTurnAwaitingStart(
+  conversationId: string,
+): ResourceResult<boolean> {
+  const ledger = useLive(conversationTurns, { where: { conversationId } });
+  return useMemo(
+    () =>
+      mapResource(ledger, (rows) =>
+        rows.some((row) => AWAITS_START[row.state]),
+      ),
+    [ledger],
+  );
+}

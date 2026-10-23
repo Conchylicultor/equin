@@ -8,14 +8,21 @@ import {
   acceptTurn,
   applyTurnEvent,
   getTurn,
+  hasTurnInFlight,
   holdIfStarting,
   listHeldTurns,
+  returnHeldTurns,
   returnTurnByText,
   type TurnRow,
 } from "@plugins/conversations/plugins/turn-ledger/server";
 import { QUESTION_WAITING_FOR } from "../../core/turn-gate";
 import { ensureResumed, ResumeBlockedError } from "./lifecycle";
-import { conversationRuntime, withTerminal, type TypedTurn } from "./runtime";
+import {
+  conversationRuntime,
+  getConversationRow,
+  withTerminal,
+  type TypedTurn,
+} from "./runtime";
 
 // Every turn the app sends to an agent goes through here, and every one gets
 // a row in the turn ledger (conversations/turn-ledger) first. The ledger says
@@ -208,16 +215,36 @@ export async function launchWithHeldTurn(
  * back out of the session (`ConversationRuntime.stop`). The web's draft
  * becomes the turn's only copy, and its ledger row is `returned`. Returns the
  * text taken back.
+ *
+ * While the conversation is starting there is no turn running yet, only turns
+ * waiting for the agent (`held` — the launch prompt, and whatever was sent
+ * since): Stop takes those back at once, without waiting for the workspace or
+ * the agent. The spawn goes on and the agent comes up idle, so the user edits
+ * the prompt and sends it again. A launch message already riding the agent's
+ * start (`typing` / `typed`) is stopped as a running turn, once the launch has
+ * the terminal back.
  */
 export async function stopTurn(conversationId: string): Promise<string | null> {
-  return withTerminal(conversationId, async () => {
-    const { runtime } = await conversationRuntime(conversationId);
-    const { returnedText } = await runtime.stop(conversationId);
-    if (returnedText !== null) {
-      await returnTurnByText(conversationId, returnedText);
-    }
-    return returnedText;
-  });
+  const takenBack = await returnHeldTurns(conversationId);
+  const row = await getConversationRow(conversationId);
+  if (!row) throw new Error(`Conversation ${conversationId} not found`);
+  const nothingRunning =
+    row.status === "starting" && !(await hasTurnInFlight(conversationId));
+  const stopped = nothingRunning
+    ? null
+    : await withTerminal(conversationId, async () => {
+        const { runtime } = await conversationRuntime(conversationId);
+        const { returnedText } = await runtime.stop(conversationId);
+        if (returnedText !== null) {
+          await returnTurnByText(conversationId, returnedText);
+        }
+        return returnedText;
+      });
+  // Oldest first: the running turn was sent before any turn held behind it.
+  const texts = [stopped, ...takenBack.map((turn) => turn.text)].filter(
+    (text): text is string => text !== null && text.trim().length > 0,
+  );
+  return texts.length > 0 ? texts.join("\n\n") : null;
 }
 
 function messageOf(err: unknown): string {

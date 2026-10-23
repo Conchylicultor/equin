@@ -69,10 +69,17 @@ const settled = (data: Partial<SettledData> = {}): ExitDecision => ({
   },
 });
 
+const awaiting = (data: boolean): ExitModeInput["awaitingStart"] => ({
+  status: "ready",
+  data,
+  refetch,
+});
+
 const input = (exitDecision: ExitDecision): ExitModeInput => ({
   conversation,
   live,
   draftEmpty: true,
+  awaitingStart: awaiting(false),
   exit: { workspace: "git", decision: exitDecision },
 });
 
@@ -271,6 +278,38 @@ describe("deriveExitMode", () => {
     expect(
       deriveExitMode({ ...input(pendingErr), conversation: null }).mode,
     ).toBe("exit");
+  });
+
+  test("starting: Stop takes back a turn waiting for the agent", () => {
+    const starting = { status: "starting", workingOn: null } as const;
+    expect(
+      deriveExitMode({
+        ...input(settled()),
+        live: starting,
+        awaitingStart: awaiting(true),
+      }),
+    ).toEqual({ mode: "stop", provisional: false });
+    // The ledger not in yet: Stop, not clickable.
+    expect(
+      deriveExitMode({
+        ...input(settled()),
+        live: starting,
+        awaitingStart: { status: "loading", refetch },
+      }),
+    ).toEqual({ mode: "stop", provisional: true });
+    // Nothing waiting (a blank conversation): no Stop.
+    expect(
+      deriveExitMode({ ...input(settled()), live: starting }).mode,
+    ).not.toBe("stop");
+    // A draft while starting is sent (held for the agent), as before.
+    expect(
+      deriveExitMode({
+        ...input(settled()),
+        live: starting,
+        awaitingStart: awaiting(true),
+        draftEmpty: false,
+      }).mode,
+    ).toBe("send");
   });
 
   test("no git: the delivery decides Drop & Close vs Close — no edited files read", () => {

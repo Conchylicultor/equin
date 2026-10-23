@@ -19,9 +19,9 @@
     - `report-kind` "held-turn-undelivered"
     - `resource.declare` "conversations.context-usage"
     - `resource.declare` "conversations.partial-message"
-  - Uses: 78 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 80 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×24
-    - `conversations/turn-ledger` ×11
+    - `conversations/turn-ledger` ×13
     - `conversations/transcript-watcher` ×7
     - `conversations/workspace` ×4
     - `conversations/conversation-preprompt` ×3

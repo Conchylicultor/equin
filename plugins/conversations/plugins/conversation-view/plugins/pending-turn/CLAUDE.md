@@ -93,6 +93,15 @@ but its failure card like any other. A ledger row's Retry is
 (→ `withdrawn`) plus the draft write. Every state's card is one exhaustive
 Record, `CARD_OF` (`internal/pending.ts`).
 
+## `useTurnAwaitingStart`
+
+Whether a turn waits for a starting agent (`held`, or `typing` / `typed` as
+the launch message) — over the same ledger window as the cards. Push & Close's
+button reads it to offer **Stop while the conversation is `starting`**: the
+server takes the waiting turns back (`returned`), the echo goes, and their
+text comes back into the draft; the workspace and the agent keep coming up,
+idle, so the user edits the prompt and sends it again.
+
 ## `useOptimisticConversationStatus`
 
 `working` only while the server cannot know about a turn yet: this tab's
@@ -147,6 +156,7 @@ render (`reports/turn-unconfirmed`).
     - `useOptimisticConversationStatus`
     - `usePendingTurns`
     - `useSendConversationTurn`
+    - `useTurnAwaitingStart`
     - `useTurnRunning`
     - `useTurnSendAvailability`
     - `useTurnSendInFlight`

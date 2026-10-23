@@ -96,6 +96,11 @@ export type ExitModeInput = {
     workingOn: ConversationWorkingOn | null;
   } | null;
   draftEmpty: boolean;
+  /**
+   * Whether a turn waits for the starting agent (`useTurnAwaitingStart`) —
+   * what Stop takes back while the conversation is `starting`.
+   */
+  awaitingStart: ResourceResult<boolean>;
   exit: ExitReads;
 };
 
@@ -121,6 +126,7 @@ export function deriveExitMode({
   conversation,
   live,
   draftEmpty,
+  awaitingStart,
   exit,
 }: ExitModeInput): ModeResult {
   if (!conversation || !live) return { mode: "exit", provisional: false };
@@ -133,6 +139,17 @@ export function deriveExitMode({
   if (!draftEmpty)
     return { mode: turnRunning ? "queue" : "send", provisional: false };
   if (turnRunning) return { mode: "stop", provisional: false };
+  // Starting: no turn runs yet, but the launch prompt (and anything sent since)
+  // waits for the agent — Stop takes it back into the draft while the
+  // workspace and the agent keep coming up. Until the ledger answers, Stop is
+  // shown but not clickable; with nothing waiting, the exit decision applies
+  // (disabled until the agent is up).
+  if (live.status === "starting") {
+    if (awaitingStart.status === "loading")
+      return { mode: "stop", provisional: true };
+    if (awaitingStart.status === "ready" && awaitingStart.data)
+      return { mode: "stop", provisional: false };
+  }
   switch (exit.workspace) {
     case "unknown":
       return { mode: "exit", provisional: true };

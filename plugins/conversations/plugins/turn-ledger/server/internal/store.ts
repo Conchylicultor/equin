@@ -334,6 +334,48 @@ export async function returnTurnsSince(
 }
 
 /**
+ * Mark `returned` every held turn — Stop while the conversation is starting:
+ * none of them reached the agent, so the web draft takes them back and the
+ * agent comes up with nothing to answer. Each write is conditional on `held`,
+ * like the `deliver` claim of the launch and the flush, so a turn being
+ * claimed at this moment is either taken back whole or delivered whole.
+ * Returns the turns taken back, oldest first.
+ */
+export async function returnHeldTurns(
+  conversationId: string,
+  conn: NodePgDatabase = db,
+): Promise<TurnRow[]> {
+  const returned: TurnRow[] = [];
+  for (const held of await listHeldTurns(conversationId, conn)) {
+    const row = await applyTurnEvent(held.id, { kind: "returned" }, conn);
+    if (row.state === "returned") returned.push(row);
+  }
+  return returned;
+}
+
+/**
+ * Whether a turn is on its way into the agent: claimed for delivery
+ * (`typing`), or typed and not confirmed yet (`typed`). While the conversation
+ * is starting, such a turn is the launch message riding the agent's start.
+ */
+export async function hasTurnInFlight(
+  conversationId: string,
+  conn: Pick<NodePgDatabase, "select"> = db,
+): Promise<boolean> {
+  const [row] = await conn
+    .select({ id: _conversationTurns.id })
+    .from(_conversationTurns)
+    .where(
+      and(
+        eq(_conversationTurns.conversationId, conversationId),
+        inArray(_conversationTurns.state, ["typing", "typed"]),
+      ),
+    )
+    .limit(1);
+  return row !== undefined;
+}
+
+/**
  * Mark `returned` the newest delivered turn whose text the CLI handed back —
  * the text Stop rewound, or a draft found in the input box before typing. The
  * text compared is what the CLI submitted (a merged row's whole prompt).

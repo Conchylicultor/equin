@@ -50,7 +50,7 @@ const MATRIX: Record<TurnState, Record<EventName, TurnState | null>> = {
     "confirmed-equal": null,
     "confirmed-merged": null,
     "confirmed-other": null,
-    returned: null,
+    returned: "returned",
     withdraw: null,
   },
   typing: {

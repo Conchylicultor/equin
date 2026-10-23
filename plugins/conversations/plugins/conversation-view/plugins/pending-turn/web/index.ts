@@ -7,6 +7,7 @@ export {
   usePendingTurns,
   useOptimisticConversationStatus,
   useTurnRunning,
+  useTurnAwaitingStart,
 } from "./internal/pending";
 export type {
   PendingCard,

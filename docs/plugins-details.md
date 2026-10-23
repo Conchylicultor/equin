@@ -12640,9 +12640,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "held-turn-undelivered"
       - `resource.declare` "conversations.context-usage"
       - `resource.declare` "conversations.partial-message"
-    - Uses: 78 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+    - Uses: 80 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `tasks/tasks-core` ×24
-      - `conversations/turn-ledger` ×11
+      - `conversations/turn-ledger` ×13
       - `conversations/transcript-watcher` ×7
       - `conversations/workspace` ×4
       - `conversations/conversation-preprompt` ×3
@@ -16619,6 +16619,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useOptimisticConversationStatus`
               - `usePendingTurns`
               - `useSendConversationTurn`
+              - `useTurnAwaitingStart`
               - `useTurnRunning`
               - `useTurnSendAvailability`
               - `useTurnSendInFlight`
@@ -16724,8 +16725,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `PromptEditorSlots.FloatingAction` → `PushAndExitButton`
               - `ConfigV2.WebRegister` "config"
-            - Uses: 24 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md)
-              - `conversations/conversation-view/pending-turn` ×4
+            - Uses: 25 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md)
+              - `conversations/conversation-view/pending-turn` ×5
               - `conversations/conversation-view` ×3
               - `infra/endpoints` ×3
               - `config_v2` ×2
@@ -18206,11 +18207,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `applyTurnEvent`
           - `getTurn`
           - `hasHeldTurns`
+          - `hasTurnInFlight`
           - `holdIfStarting`
           - `latestSubmitAt`
           - `listHeldTurns`
           - `onTurnSubmitted`
           - `resolvePromptSubmit`
+          - `returnHeldTurns`
           - `returnTurnByText`
           - `returnTurnsSince`
           - `userTurnSent`

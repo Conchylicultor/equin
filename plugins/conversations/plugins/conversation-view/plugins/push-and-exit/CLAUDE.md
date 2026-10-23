@@ -9,8 +9,8 @@
   - Contributes:
     - `PromptEditorSlots.FloatingAction` → `PushAndExitButton`
     - `ConfigV2.WebRegister` "config"
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations/conversation-view/pending-turn` ×4
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations/conversation-view/pending-turn` ×5
     - `conversations/conversation-view` ×3
     - `infra/endpoints` ×3
     - `config_v2` ×2

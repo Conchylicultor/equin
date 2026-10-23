@@ -13,6 +13,8 @@ export {
   latestSubmitAt,
   listHeldTurns,
   resolvePromptSubmit,
+  returnHeldTurns,
+  hasTurnInFlight,
   returnTurnByText,
   returnTurnsSince,
 } from "./internal/store";

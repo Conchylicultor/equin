@@ -29,7 +29,9 @@ import type { TurnState } from "../../core/schemas";
  * - `failed` — the text never reached the box.
  * - `confirmed` — the agent reported taking `prompt` (its `turn_started` event),
  *   `at` the moment it did.
- * - `returned` — the CLI gave the text back (Stop, or found in the box).
+ * - `returned` — the text came back to the user: the CLI gave it back (Stop,
+ *   or found in the box), or Stop took a `held` turn back before the agent it
+ *   was waiting for was up.
  * - `withdraw` — the user took a `failed` / `unverified` turn back into the
  *   draft instead of retrying it: the draft is now its only copy.
  */
@@ -216,7 +218,10 @@ export function transitionTurn(
       };
     }
     case "returned":
-      return state === "typed" || state === "accepted" || state === "merged"
+      return state === "held" ||
+        state === "typed" ||
+        state === "accepted" ||
+        state === "merged"
         ? { state: "returned", patch: {} }
         : null;
     case "withdraw":
