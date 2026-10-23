@@ -41,10 +41,10 @@ const FIELDS: FieldDef<Row>[] = [
 
 const ROW: Row = { id: "1", name: "alpha", status: "todo", when: "5m" };
 
-function renderList(options?: unknown) {
+function renderList(options?: unknown, row: Row = ROW) {
   const props: DataViewRenderProps<Row> = {
     revealSelection: true,
-    rows: [ROW],
+    rows: [row],
     fields: FIELDS,
     rowKey: (r) => r.id,
     state: { sort: [], query: "", filter: null },
@@ -103,5 +103,18 @@ describe("data-view list row shape", () => {
     // No leading separator: the subtitle starts its own line, so it starts its
     // own run.
     expect(subtitle.textContent).toBe("todo");
+  });
+
+  it("leaves an empty subtitle value out of the run, in both shapes", () => {
+    for (const options of [undefined, { lines: 2 }]) {
+      const { container, queryByText } = renderList(options, {
+        ...ROW,
+        status: "",
+      });
+      // No italic placeholder and no dangling separator after the title.
+      expect(queryByText("Empty")).toBeNull();
+      expect(container.textContent).toBe("alpha5m");
+      cleanup();
+    }
   });
 });

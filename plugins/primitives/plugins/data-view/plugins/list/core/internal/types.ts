@@ -8,7 +8,9 @@ import type { ClassName } from "@plugins/primitives/plugins/css/plugins/ui-kit/c
  */
 export interface ListViewOptions<TRow> {
   /** Leading slot per row (icon / avatar / status-dot), rendered after the
-   *  schema's leading field (`FieldDef.leading`), if any. */
+   *  schema's leading field (`FieldDef.leading`), if any. Setting it (or
+   *  declaring a leading field) takes the leading slot from the cover
+   *  thumbnail: the surface's rows draw this instead of their cover. */
   leading?: (row: TRow) => ReactNode;
   /**
    * Full row-body override (escape hatch). Owns its own content; still wrapped

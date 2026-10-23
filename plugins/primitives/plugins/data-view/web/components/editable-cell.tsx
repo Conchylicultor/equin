@@ -27,6 +27,33 @@ function isEmptyScalar(value: FieldValue): boolean {
   return value == null || value === "";
 }
 
+/** A multi-value field is empty when it holds no value. */
+function isEmptyValues(values: readonly string[] | undefined): boolean {
+  return !(values && values.length > 0);
+}
+
+/**
+ * Whether `field` has nothing to show for `row` — THE empty test, shared by the
+ * table's edit affordance (an empty editable cell offers its pencil over an
+ * "Empty" placeholder) and the card / list meta (an empty field is simply
+ * omitted, never drawn as "Empty").
+ *
+ * - multi-value (`values`) — no value;
+ * - scalar (`value`) — null / undefined / `""` (`0` and `false` are values);
+ * - display-only (`data`) — its projection is null / undefined;
+ * - a field with none of them (a `cell`-only field) is never empty: only its
+ *   cell knows what it draws.
+ */
+export function isFieldValueEmpty<TRow>(
+  field: FieldDef<TRow>,
+  row: TRow,
+): boolean {
+  if (field.values) return isEmptyValues(field.values(row));
+  if (field.value) return isEmptyScalar(field.value(row));
+  if (field.data) return field.data(row) == null;
+  return false;
+}
+
 /**
  * Shared read affordance: the value, plus a hover-revealed pencil that is the
  * ONE way into edit mode.
@@ -141,7 +168,7 @@ export function EditableCell(props: {
   const display = props.display ?? "block";
   const isMulti = props.field.values != null;
   const empty = isMulti
-    ? !(props.values && props.values.length > 0)
+    ? isEmptyValues(props.values)
     : isEmptyScalar(props.value);
   const read = (
     <ReadAffordance

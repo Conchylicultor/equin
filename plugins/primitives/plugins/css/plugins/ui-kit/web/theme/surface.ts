@@ -73,10 +73,11 @@ export const SURFACE_LEVELS: Record<SurfaceLevel, string> = {
   // `--float-backdrop` (default a 20px, 1.5× saturated blur), so what it
   // floats over shows through its edges, softened; closed by a real 1px
   // border in the popover's outline colour (inside the box, so a 42px card
-  // is 42px), with the popover's corners and its own shadow tier
-  // (`--shadow-float`, default the popover's). It hovers to `--accent`, the
+  // is 42px), with its own corners (`rounded-float`, `--radius-float`, default
+  // the popover's) and its own shadow tier (`--shadow-float`, default the
+  // popover's). It hovers to `--accent`, the
   // tone a menu row highlights with; the mask is the card, the opaque tone
   // its fill is mixed from.
   float:
-    "rounded-popover border border-popover-border bg-float-fill backdrop-float text-popover-foreground shadow-float [--chrome-mask:var(--card)] [--hover-fill:var(--accent)] [--field-fill:var(--field)] [--field-outline:var(--input)]",
+    "rounded-float border border-popover-border bg-float-fill backdrop-float text-popover-foreground shadow-float [--chrome-mask:var(--card)] [--hover-fill:var(--accent)] [--field-fill:var(--field)] [--field-outline:var(--input)]",
 };

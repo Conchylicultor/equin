@@ -13,4 +13,8 @@ export type { UgSearchResult } from "./search-result";
 export { extractUgTabId } from "./tab-url";
 
 export { UgFetchError } from "./errors";
+
+// The UG side-table shape: the persisted tab, exposing its key to every list of
+// songs (registered by this plugin's server and web barrels).
+export { ultimateGuitarShape } from "./shape";
 export type { UgFetchErrorKind } from "./errors";

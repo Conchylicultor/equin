@@ -52,6 +52,7 @@ export function CompactControls({
   search,
   revealOnHover = true,
   form = "ghost",
+  frame,
 }: {
   /** The applicable controls, in order — the same list the wide bar renders. */
   controls: DataViewControl[];
@@ -69,6 +70,13 @@ export function CompactControls({
   revealOnHover?: boolean;
   /** The trigger's shape — the arrangement's `forms.controls`. */
   form?: ToolbarPartForms["controls"];
+  /**
+   * The box the trigger sits in, when it sits alone in one (the compact
+   * fold's tools pill with no actions or creators beside it). The reveal then
+   * moves from the trigger onto that box — `revealClass` is `undefined` while
+   * it must show — so an empty-looking box is never left standing at rest.
+   */
+  frame?: (node: ReactNode, revealClass: string | undefined) => ReactNode;
 }): ReactNode {
   const [open, setOpen] = useState(false);
   if (controls.length === 0 && !search) return null;
@@ -104,9 +112,10 @@ export function CompactControls({
   // hover-revealed too, since a badge reporting a config-authored filter or sort
   // is precisely the at-rest state this hides.
   const revealClass = alwaysVisible ? undefined : hoverRevealTarget;
+  const triggerReveal = frame === undefined ? revealClass : undefined;
   const shape = form === "round" ? "pill" : "default";
 
-  return (
+  const popover = (
     <ControlPanelPopover
       open={open}
       onOpenChange={setOpen}
@@ -132,7 +141,7 @@ export function CompactControls({
             aspect="text"
             aria-label="View options"
             shape={shape}
-            className={revealClass}
+            className={triggerReveal}
           >
             <Icon icon={tuneIcon} />
             <span className="tabular-nums">{activeCount}</span>
@@ -143,7 +152,7 @@ export function CompactControls({
             label="View options"
             variant="ghost"
             shape={shape}
-            className={cn(revealClass, form === "round" && ROUND_AT_REST)}
+            className={cn(triggerReveal, form === "round" && ROUND_AT_REST)}
           />
         )
       }
@@ -151,6 +160,7 @@ export function CompactControls({
       <CompactRootPanel controls={controls} search={search} />
     </ControlPanelPopover>
   );
+  return frame === undefined ? popover : frame(popover, revealClass);
 }
 
 /**

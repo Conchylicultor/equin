@@ -42,6 +42,7 @@ Three pure pieces every loop consumer shares, so nobody re-derives the maths:
 - Cross-plugin:
   - Imported by:
     - `apps/chord/vocabulary`
+    - `apps/sonata/covers`
     - `apps/sonata/lyric-line`
     - `apps/sonata/pitch-layout`
     - `apps/sonata/theory`

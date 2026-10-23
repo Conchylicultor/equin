@@ -471,6 +471,13 @@ goes in `<PaneChrome overlay={…}>`, which renders it as a sibling of the singl
 your own `relative` host instead: that host spans the header too, so a
 corner-pinned overlay lands on the header's own right-hand actions.
 
+### `ground` — a picture the body scrolls over
+
+A decorative backdrop that must not scroll (the prototype viewer's grid, which
+the Prototypes gallery shares) goes in `<PaneChrome ground={…}>`: it fills the
+body's box (not the header's) as `Overlay`'s `behind` layer, the scroll on top
+of it by DOM order. The ground owns its look and its `aria-hidden`.
+
 ### `floatingHeader` — a page that runs up behind its header
 
 `<PaneChrome floatingHeader>` moves the header bar from above the scroll to
@@ -1001,7 +1008,7 @@ See "Open questions" in the design doc.
     - `welcomePane.Actions` "title" → `PaneTitleItem`
     - `workflow-node.actions` "title" → `PaneTitleItem`
     - `worktreeCleanupPane.Actions` "title" → `PaneTitleItem`
-  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×4
     - `primitives/slot-render` ×4
     - `primitives/live-state` ×3
@@ -1012,6 +1019,7 @@ See "Open questions" in the design doc.
     - `primitives/css/center.Center`
     - `primitives/css/column.Column`
     - `primitives/css/line.Line`
+    - `primitives/css/overlay.Overlay`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/spacing.Stack`

@@ -284,7 +284,10 @@ only for this dynamic scaling geometry.
 
 The pane's header is a floating card over the canvas's top-left corner
 (`PaneChrome header="card"`), so the canvas runs edge to edge under its chrome
-on a fixed ground: a 28px hairline grid under a vignette (`CANVAS_GROUND`).
+on a fixed ground: a 28px hairline grid under a vignette (`CANVAS_GROUND`,
+`components/canvas-ground.tsx`). The barrel exports it as `<CanvasGround>`, a
+decorative fill the gallery passes as its pane's `ground`, so the gallery
+sits on the same grid as the frames it opens.
 `placeFrames` (pure, `internal/layout.ts`) puts every frame's SCREEN at an
 absolute box: the room left by the chrome (`BOARD_PAD` — top 66 for the header
 card, bottom 76 for the size dock, left 16, right 24 for the add rail's
@@ -520,6 +523,7 @@ navigation, so it starts from nothing remembered.
   - Exports (values):
     - `AddFrameRail`
     - `CanvasFrameView`
+    - `CanvasGround`
     - `canvasWith`
     - `documentOptions`
     - `frameA`

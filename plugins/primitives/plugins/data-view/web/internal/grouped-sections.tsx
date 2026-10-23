@@ -23,16 +23,15 @@ export interface GroupedSectionsProps {
   collapsedSections?: ReadonlySet<string>;
   setSectionCollapsed?: (key: string, collapsed: boolean) => void;
   /**
-   * An affordance scoped to ONE section, rendered in that section's header
-   * beside the count — the tree's fold-this-group toggle today, and the seam
+   * An affordance scoped to ONE section, rendered in that section's header's
+   * trailing cluster (before the fold chevron) — the tree's fold-this-group toggle today, and the seam
    * anything else section-scoped goes through tomorrow. Return `null` for a
    * section that has nothing to offer; the wrapper is then not rendered either,
    * so a header without an action keeps the exact node it has always had.
    *
-   * The count and the action want opposite treatments, which is why they are two
-   * clusters rather than one: the count is information and reads at rest (it
-   * rides the header's own `actionsAlwaysVisible` cluster), while an action is
-   * something you reach for, so it appears on hover. `RowActions` already
+   * The count and the action want opposite treatments, which is why they sit
+   * apart: the count is information and reads at rest (in the label's run),
+   * while an action is something you reach for, so it appears on hover. `RowActions` already
    * separates `pin` (positioning) from `alwaysVisible` (reveal), so an inline
    * cluster that still reveals costs nothing new in `Row`, `SectionHeaderRow` or
    * `row-actions` — it rides the row's own `group/row-actions`, published
@@ -51,8 +50,9 @@ export interface GroupedSectionsProps {
   headerActions?: (section: DataViewSection<unknown>) => ReactNode;
   /**
    * The header treatment — the surface's `DataViewProps.groupHeaders`, threaded
-   * through the view's render props. Absent ⇒ `"standard"`, which renders the
-   * exact node this chrome has always rendered.
+   * through the view's render props. Absent ⇒ `"standard"`: the label, its
+   * faint count beside it, a hairline filling the row and the fold chevron at
+   * the far end (always shown, faint, brightening on hover).
    *
    * `"quiet"` reads the header as one run — a semibold label, then its count
    * right beside it ("Queue 6", faint and semibold) — with the fold chevron

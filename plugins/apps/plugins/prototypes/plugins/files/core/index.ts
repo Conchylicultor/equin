@@ -18,6 +18,7 @@ export {
   PrototypeVersionSchema,
   PrototypeHistorySchema,
   prototypeHistory,
+  prototypeVersionCounts,
   restorePrototypeVersion,
 } from "./history";
 export type {

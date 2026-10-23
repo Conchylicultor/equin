@@ -76,7 +76,19 @@ export {
   useResolveColumnDerive,
 } from "./column-config-slot";
 export { useFieldIdentities } from "./internal/use-field-identities";
-export { EditableCell } from "./components/editable-cell";
+export { EditableCell, isFieldValueEmpty } from "./components/editable-cell";
+export {
+  CoverFrame,
+  coverHoverGroup,
+  coverDetailClass,
+} from "./components/cover-frame";
+export type { CoverFrameProps } from "./components/cover-frame";
+export { CardMeta } from "./components/card-meta";
+export type { CardMetaProps } from "./components/card-meta";
+export { resolveCover, pickCoverField } from "./internal/cover";
+export type { ResolvedCover } from "./internal/cover";
+export { partitionCardFields } from "./internal/card-fields";
+export type { CardFields } from "./internal/card-fields";
 export { FieldCell } from "./components/field-cell";
 export { EditableTreeLabel } from "./components/editable-tree-label";
 export type { FieldCellProps } from "./components/field-cell";
@@ -108,6 +120,7 @@ export {
 export { useGroupingClock } from "./internal/use-grouping-clock";
 export { GroupedSections } from "./internal/grouped-sections";
 export { DataViewGroupHeader } from "./internal/group-header";
+export { PillsToolbar } from "./components/toolbar/pills-toolbar";
 export { SectionBody } from "./components/section-body";
 export { useGridPhase } from "./internal/grid-phase";
 export type { GridLine, GridPhase } from "./internal/grid-phase";
@@ -149,11 +162,13 @@ export type {
 } from "./internal/row-dnd";
 export { DropBackground, DropInsertLine } from "./components/drop-background";
 export { defineItemActions } from "./internal/define-item-actions";
-export type {
-  ItemActions,
-  ItemActionContribution,
-} from "./internal/define-item-actions";
+export type { ItemActions } from "./internal/define-item-actions";
 export { useItemActionZones } from "./internal/use-item-action-zones";
+export type {
+  ItemActionRender,
+  ItemActionArms,
+  ItemActionZones,
+} from "./internal/use-item-action-zones";
 export type { FieldExtensionContribution } from "./internal/field-extensions";
 export type {
   FieldValue,
@@ -198,8 +213,12 @@ export type {
   FilterGroup,
   FilterNode,
   ItemActionProps,
+  ItemActionTarget,
+  ItemActionPlacement,
+  ItemActionFilter,
+  ItemActionEntry,
   ItemActionsDescriptor,
-  ItemActionZone,
+  CoverContent,
   FieldExtensionProps,
 } from "../core";
 

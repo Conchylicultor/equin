@@ -11,7 +11,7 @@ import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web"
 import { themeFields, themeSearchText } from "../internal/theme-fields";
 import type { ThemeRow } from "../internal/theme-rows";
 import { useThemeGallery } from "../internal/use-theme-gallery";
-import { ThemeCard } from "./theme-card";
+import { ThemePreview } from "./theme-preview";
 import { ThemeSwatch } from "./theme-swatch";
 
 const NO_ROWS: ThemeRow[] = [];
@@ -43,9 +43,10 @@ function MissingThemeNotice({
  * passes its own surface id, so its named views are its own (cards in the
  * customizer pane, compact rows in the quick-switch popover).
  *
- * Which body a row gets follows the view TYPE its config authors — a
- * `gallery` view draws `ThemeCard`s, a `list` view `ThemeSwatch` rows — so a
- * host that adds a list view to its config gets the compact row with no code.
+ * Which shape a row gets follows the view TYPE its config authors — a
+ * `gallery` view draws the standard card over a `ThemePreview` cover, a `list`
+ * view `ThemeSwatch` rows — so a host that adds a list view to its config gets
+ * the compact row with no code.
  */
 export function ThemeGalleryView({
   storageKey,
@@ -92,9 +93,8 @@ export function ThemeGalleryView({
         readiness={readiness}
         selectedRowId={state.pending ? undefined : state.selectedKey}
         searchAccessor={themeSearchText}
-        // Selecting lives here rather than in the card or row, which are only
-        // bodies — the DataCard / Row the view builds owns the click and the
-        // Enter/Space handling.
+        // Selecting lives here rather than in the card or row — the DataCard /
+        // Row the view builds owns the click and the Enter/Space handling.
         onRowActivate={(row) => void activate(row)}
         itemActions={itemActions}
         emptyState={
@@ -102,14 +102,13 @@ export function ThemeGalleryView({
             No themes match.
           </Text>
         }
+        // The card's picture: the theme's colours. Its text lines are the
+        // schema's (the name, then the source line).
+        cover={(row) => ({
+          kind: "node",
+          node: <ThemePreview row={row} isPending={adoptingKey === row.key} />,
+        })}
         viewOptions={{
-          gallery: {
-            size: "sm",
-            minCardWidth: 168,
-            renderBody: (row: ThemeRow) => (
-              <ThemeCard row={row} isPending={adoptingKey === row.key} />
-            ),
-          },
           list: {
             // Each swatch is ALREADY one line (dots + name), so a row is its
             // natural shape.

@@ -55,3 +55,48 @@
   margin: 0;
   color: var(--muted-foreground);
 }
+
+/* The cover (`ChordGridCover`): up to six chord boxes in a 3 × 2 grid filling
+ * the cover frame. The boxes' colours are chord-box's paints; only the
+ * geometry and the label placement live here — the name large at the
+ * bottom-left (an auto top margin pushes it down past the box's centred
+ * column), the numeral small at the top-right. Sizes follow the box's width
+ * (a chord box is an inline-size container); the grid's own spacing follows
+ * the cover's (a size container). */
+.chord-grid-cover {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  /* Percentages, not container units: this box IS the size container, so a
+     cq unit in its own padding/gap would resolve against an ancestor (the
+     viewport) and swallow the columns. Inline % is of the width on both axes. */
+  gap: 3% 3%;
+  padding: 4.5% 5%;
+  width: 100%;
+  height: 100%;
+  container-type: size;
+  background: var(--background);
+}
+.chord-grid-cover-tile {
+  --chord-edge: 0px;
+  border-radius: 3.5cqw;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.chord-grid-cover-name {
+  align-self: flex-start;
+  margin-top: auto;
+  padding: 0 0 9cqi 9cqi;
+  font-size: clamp(9px, 26cqi, 24px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.chord-box .chord-num.chord-grid-cover-numeral {
+  position: absolute;
+  top: 7cqi;
+  right: 9cqi;
+  font-size: clamp(7px, 14cqi, 13px);
+  opacity: 0.7;
+}

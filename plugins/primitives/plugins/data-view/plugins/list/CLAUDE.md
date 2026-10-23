@@ -13,12 +13,45 @@ hover-revealed trailing actions, and leading icon slot all come for free:
 - **leading slot** — the schema's leading field (`FieldDef.leading`), then
   `options.leading?.(row)` → `Row`'s `icon` slot (icon / avatar / status-dot).
   The leading field is out of the title pick, the subtitle and the trailing
-  cell. See the data-view CLAUDE.md ("Leading field").
+  cell. See the data-view CLAUDE.md ("Leading field"). Neither present → the
+  row's **cover thumbnail** (below).
 - **selection** — `selected = rowKey(row) === selectedRowId` → `Row` maps it to
   `bg-accent` (the same highlight a tree row uses). Baked in from the start.
 - **click** — `onRowActivate`.
-- **item actions** — `<itemActions.Row row hasChildren />` in `Row`'s
-  hover-revealed `actions` slot (matches gallery / table).
+- **item actions** — `useItemActionZones(itemActions, { hasPersistentSlot:
+  false, hasPrimarySlot: <has thumbnail> })`: every cluster action (persistent
+  zone included) in `Row`'s hover-revealed `actions` slot — list actions are
+  **hover-only**, a reserved trailing region would take width from the title in
+  the narrowest surfaces. The primary action sits over the thumbnail (below);
+  without one it joins the hover cluster.
+
+### Cover thumbnail
+
+When the surface is covered (`resolveCover(visibleFields, props.cover)`: the
+`DataViewProps.cover` accessor → `FieldDef.cover` → the first `media` field)
+and **no explicit leading visual** claims the slot, each row's leading slot is
+`<CoverFrame size="thumb">` of its cover — a coverless row a blank frame, so
+every row keeps one height (`--cover-thumb-h` + the row padding; the row grows
+past a plain text row). The cover field is then the picture, never also a body
+term. The precedence is per surface, decided once (`resolveListLeading`):
+
+1. a `FieldDef.leading` field, or a `viewOptions.list.leading` option — the
+   explicit visual always wins (Places keeps its glyph), and the cover field
+   stays an ordinary body term;
+2. else the cover thumbnail;
+3. the tree chrome (`rowChrome: "tree"`) never draws one — its icon box is a
+   tree row's glyph.
+
+**The primary action** (zone `"primary"`, e.g. Play) is centred over the
+thumbnail, revealed by the row's hover and painted at rest while active
+(`primary.atRest` / `primary.revealed`). It cannot live inside the thumbnail:
+the icon slot is inside an activating row's own `<button>`. So
+`PrimaryOverThumbnail` draws it as the row's SIBLING, on a click-through ghost
+of the row's line (`Layer as={Line}` with the row's `p-row`, one
+`size-cover-thumb` cell first) — the cell lands on the thumbnail by
+construction, not by measured offsets. The wrapper is the `row-actions` hover
+group; `RowActions` keeps a press on the action from activating or dragging
+the row. A row without a primary action gets no wrapper (markup unchanged).
 
 ### Tree row chrome (`rowChrome: "tree"`)
 
@@ -47,6 +80,11 @@ The row body maps the `FieldDef` schema (shared `pickPrimaryField` heuristic):
 - **remaining non-primary fields** → the muted subtitle (`Text
   variant="caption"`, truncating), joined with `·` — but see "Chips are not
   middot-ed" below: a term that renders as a chip is parted by spacing instead.
+  A term whose value is empty (`isFieldValueEmpty`) is **left out of the run**,
+  separator and all — never drawn as the italic "Empty" placeholder (a term in
+  a sentence, not a cell standing alone). The cost: an empty editable subtitle
+  field offers no pencil in the list; edit it where it is a cell (table,
+  detail).
 - **row tone** — `DataViewRenderProps.rowTone` tones the **title** in both row
   shapes, through the shared `rowToneClass`. The subtitle and the trailing cell
   are already muted, so the title carries the whole difference between an active
@@ -162,7 +200,8 @@ conditional hook.
 `options` (= `viewOptions.list`) is a `ListViewOptions<TRow>`:
 
 - `leading?(row)` — leading slot per row (icon / avatar / status-dot),
-  rendered after the schema's leading field, if any.
+  rendered after the schema's leading field, if any. Setting it takes the slot
+  from the cover thumbnail.
 - `renderRow?(row)` — full row-body override (escape hatch); still wrapped in
   the selectable `Row`.
 - `lines?` — rows per item, `1 | 2` (default `1`, one line — see above).
@@ -184,16 +223,19 @@ conditional hook.
 - Description: List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
 - Web:
   - Contributes: `DataViewSlots.View` "List" → `ListView`
-  - Uses: 52 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×32
+  - Uses: 61 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×37
     - `primitives/rank-reorder` ×3
     - `primitives/css/spacing` ×2
+    - `primitives/row-actions` ×2
     - `primitives/collapsible.FoldMotion`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/clip.clipClasses`
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
+    - `primitives/css/layer.Layer`
+    - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/text.Text`
@@ -208,6 +250,10 @@ conditional hook.
   - Uses tokens:
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --cover-thumb-h`
+    - `ui/tokens/density --cover-thumb-w`
+    - `ui/tokens/density --pad-row-x`
+    - `ui/tokens/density --pad-row-y`
     - `ui/tokens/density --section-body-pad-top`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xl`

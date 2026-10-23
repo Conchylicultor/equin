@@ -96,9 +96,9 @@ backfill on every flip. The flip is routed instead (above).
 
 ## The gallery cover is an accessor, not a field
 
-The poster comes from `viewOptions.gallery.cover` in `web/panes.tsx`, not from
-`coverField` — which resolves only `FieldDef` ids, and `imageUrl` is deliberately
-not a field (above). Don't mint one for the gallery: that adds a dead sort/filter
+The poster comes from the `DataViewProps.cover` accessor in `web/panes.tsx`, not
+from a cover field (`FieldDef.cover`) — `imageUrl` is deliberately not a field
+(above). Don't mint one for the gallery: that adds a dead sort/filter
 axis to every view to serve one view's chrome.
 
 The src passes `externalUrl()` (absolute `http(s)` only — rows come from

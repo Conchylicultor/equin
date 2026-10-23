@@ -47,6 +47,8 @@ documented with the mockup variable it is.
     - `ui/tokens/color-palette --primary`
     - `ui/tokens/shadow --shadow`
     - `ui/tokens/shadow --shadow-2xl`
+    - `ui/tokens/shadow --shadow-cover`
+    - `ui/tokens/shadow --shadow-cover-hover`
     - `ui/tokens/shadow --shadow-float`
     - `ui/tokens/shadow --shadow-popover`
     - `ui/tokens/shadow --shadow-xl`

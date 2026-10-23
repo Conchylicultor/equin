@@ -291,11 +291,11 @@ away closes it — a click in the thread is not away (`useClickAway`'s
     - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
     - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
     - `JsonlViewerTool.Renderer` "mcp__equin__places_show_picks" → `PicksToolView`
-  - Uses: 121 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 122 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/places/places-core` ×9
     - `conversations/agent-thread` ×8
     - `map` ×8
-    - `primitives/data-view` ×7
+    - `primitives/data-view` ×8
     - `primitives/collapsible` ×6
     - `network/live` ×5
     - `primitives/live-state` ×5

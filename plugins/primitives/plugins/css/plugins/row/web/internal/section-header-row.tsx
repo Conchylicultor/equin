@@ -1,4 +1,8 @@
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  Separator,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
 import type React from "react";
 import {
@@ -68,9 +72,10 @@ const VARIANT_CLASS: Record<SectionHeaderVariant, string> = {
  *   of flat, rule-divided sections, where a column of chevrons is noise.
  * - **`end`** — `none`'s tone (a collapsed header is muted, an open one reads
  *   at full strength), plus a quiet, always-visible chevron at the row's FAR
- *   end, after the header actions: the inspector's look, where the titles
- *   start on the row's own padding and the open/closed state still has a mark
- *   in one column down the panel's edge.
+ *   end, after the header actions, brightening while the row is hovered or
+ *   focused: the inspector's look, where the titles start on the row's own
+ *   padding and the open/closed state still has a mark in one column down the
+ *   panel's edge — and a DataView's group header (with `rule`).
  *
  * The reveal is the `hover-reveal` primitive's per-instance state
  * (`useHoverReveal`), not a Tailwind group: `Row` already publishes
@@ -113,6 +118,13 @@ export interface SectionHeaderRowProps extends Passthrough {
   collapsible?: boolean;
   /** Chevron placement — see {@link SectionHeaderDisclosure}. Default `"lead"`. */
   disclosure?: SectionHeaderDisclosure;
+  /**
+   * Draw a hairline in the row's slack: after the label run, filling the row
+   * up to its trailing cluster (actions, an `end` chevron). The header then
+   * reads as a rule the section hangs from — "Queue 6 ──────── ⌄". Decorative
+   * (out of the a11y tree); the row's click target is unchanged. Default off.
+   */
+  rule?: boolean;
   className?: string;
   children: React.ReactNode;
 }
@@ -136,10 +148,24 @@ export function SectionHeaderRow({
   actions,
   collapsible = true,
   disclosure = "lead",
+  rule = false,
   className,
-  children,
+  children: label,
   ...rest
 }: SectionHeaderRowProps) {
+  // The rule is the last thing in the label run, so it takes exactly the
+  // slack between the label and whatever trails it. `span`s: the run sits
+  // inside the row's `<button>`, which admits phrasing content only.
+  const children = rule ? (
+    <>
+      {label}
+      <Fill as="span" aria-hidden>
+        <Separator render={<span />} className="block" />
+      </Fill>
+    </>
+  ) : (
+    label
+  );
   const ctx = useCollapsibleContext();
   // Resting the pointer on (or focusing) the header warms its content, so the
   // click that opens it does not first pay for mounting it
@@ -269,7 +295,10 @@ export function SectionHeaderRow({
               )}
               <CollapsibleChevron
                 open={open}
-                className="text-faint-foreground"
+                // Faint at rest, brightening while the header is pointed at
+                // or focused — a named group, so a hover elsewhere up the
+                // tree (an enclosing `group`) never lights it.
+                className="text-faint-foreground transition-colors group-hover/section-header:text-foreground group-focus-within/section-header:text-foreground"
               />
             </>
           ) : actions === undefined ? undefined : open ? (
@@ -280,6 +309,7 @@ export function SectionHeaderRow({
         }
         className={cn(
           VARIANT_CLASS[variant],
+          disclosure === "end" && "group/section-header",
           !open && "text-muted-foreground",
           className,
         )}

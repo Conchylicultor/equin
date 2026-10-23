@@ -7,6 +7,7 @@ import { shadowGroup } from "@plugins/ui/plugins/tokens/plugins/shadow/core";
 import { typeScaleGroup } from "@plugins/ui/plugins/tokens/plugins/type-scale/core";
 import { densityGroup } from "@plugins/ui/plugins/tokens/plugins/density/core";
 import { iconsGroup } from "@plugins/ui/plugins/tokens/plugins/icons/core";
+import { materialGroup } from "@plugins/ui/plugins/tokens/plugins/material/core";
 
 // The immersive player's night (proto-1792113547-2qr6g7): a blue-black stage,
 // warm off-white text whose quieter tiers are the same ink at lower alpha, and
@@ -130,14 +131,38 @@ const shape = shapeGroup.fragment(
     radiusControlXs: "999px",
     radiusPopover: "18px",
     radiusPanelRow: "9px",
+    // A song's cover (the library card's picture) — a 16px tile.
+    radiusCover: "1rem",
+    // Floating chrome (the library's toolbar cards) — pills.
+    radiusFloat: "999px",
   }),
 );
 
-/** A floating panel lifts well off the stage. */
+/**
+ * A floating panel lifts well off the stage; floating chrome carries the glass
+ * pill's inner top highlight; a cover sits low and rises on hover
+ * (proto-1792667077-4bakda).
+ */
 const shadow = shadowGroup.fragment(
   both({
     "shadow-popover":
       "0 24px 60px rgb(0 0 0 / 0.55), 0 2px 8px rgb(0 0 0 / 0.3)",
+    "shadow-float":
+      "0 16px 44px rgb(0 0 0 / 0.42), inset 0 1px 0 rgb(255 255 255 / 0.12)",
+    "shadow-cover": "0 10px 30px -14px rgb(0 0 0 / 0.7)",
+    "shadow-cover-hover": "0 20px 40px -16px rgb(0 0 0 / 0.85)",
+  }),
+);
+
+/**
+ * Floating chrome is the mockup's glass: a dark, half-transparent fill under a
+ * strong, saturated blur. (The mockup's faint white top gradient is not
+ * spelled: `floatFill` is a colour token, painted as `background-color`.)
+ */
+const material = materialGroup.fragment(
+  both({
+    floatFill: "rgb(22 22 32 / 0.5)",
+    floatBackdrop: "blur(16px) saturate(1.9)",
   }),
 );
 
@@ -149,6 +174,10 @@ const density = densityGroup.fragment(
   both({
     controlHeightLg: "2.125rem",
     controlIconLg: "1.0625rem",
+    // The library gallery: 220px cards, 18px between columns, 24px between rows.
+    galleryCardMin: "13.75rem",
+    galleryGapX: "1.125rem",
+    galleryGapY: "1.5rem",
   }),
 );
 
@@ -174,6 +203,7 @@ export const sonataTheme = defineTheme({
     typeScale,
     shape,
     shadow,
+    material,
     density,
     icons,
   ],

@@ -8,8 +8,8 @@ own **placement only** — never a reveal. Placement is a closed set:
 | Host shape | Call |
 |---|---|
 | Row / tree row (overlays trailing edge) | `<RowActions>` (pins `right`) |
-| Gallery card (hover cluster) | `<RowActions pin="top-right">` |
-| Gallery card footer (actions that live at rest) | `<RowActions pin={null} alwaysVisible>` |
+| Card cover (gallery card: actions over the picture) | one `Pin to="top-right"` holding `<RowActions pin={null} chrome="float">` (the hover arm) then `<RowActions pin={null} alwaysVisible chrome="float">` (the at-rest arm) — the resting icons keep the right edge, hover adds the others to their left; each arm its own float chip, collapsed when nothing renders in it |
+| Card cover primary (the row's one main verb, bottom-right) | one `Pin to="bottom-right"` holding `<RowActions pin={null} alwaysVisible>` (active) and `<RowActions pin={null}>` (on hover) — no chrome: the action draws its own round button for `placement: "primary"` |
 | Table (reserved `auto` grid track) | `<RowActions pin={null}>`, persistent twin `pin={null} alwaysVisible` before it |
 | Beside prose (a headerless transcript turn) | `<RowActions pin={null} float>` — the text wraps around it; the float is one text line tall (`h-lh`), so it centres on the first line and only that line wraps |
 
@@ -17,6 +17,13 @@ own **placement only** — never a reveal. Placement is a closed set:
 Which cluster a given action belongs to is the *action's* call, declared once as
 `data-view`'s `ItemActionContribution.zone`; a view then paints at most one
 cluster per zone. Don't reach for a per-action `alwaysVisible` here.
+
+`chrome="float"` puts the cluster on its own small float-surface chip
+(`SURFACE_LEVELS.float`) — for a cluster over a picture, where there is no row
+tint for a scrim to dissolve into. A pinned float chip paints no scrim, and the
+chip hides while it holds no control (`not-has-[button,a[href],input]`, not
+`:empty`: the slot's layout-neutral wrappers stay when an action renders
+nothing).
 
 `pin`/`float` are a discriminated pair: a pinned cluster is out of flow, so
 only an unpinned one can take part in a text flow. A cluster beside prose
@@ -81,8 +88,9 @@ row is *reached*, then mounts its buttons and keeps them:
 Two cases mount at once, exactly as before: a row with **no focus stop of its
 own** (a plain container row — Tab could only ever land on the actions
 themselves), and a cluster with **no `rowActionsAnchor` above it** (nothing would
-arm it). An **in-flow** cluster (`pin={null}`, a table's reserved track) and an
-**`alwaysVisible`** one never wait: the first sizes its track by its content,
+arm it). A hover-revealed **float chip** (`chrome="float"`) waits too, pinned or not:
+it sits over a picture, never in a track. An **in-flow** cluster (`pin={null}`,
+a table's reserved track) and an **`alwaysVisible`** one never wait: the first sizes its track by its content,
 the second is on screen at rest.
 
 A test reaching for a hover action does what a user does first —
@@ -131,12 +139,16 @@ construction; *visibility* rests on this signal, and only the runtime asserts it
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
+    - `primitives/css/ui-kit.SURFACE_LEVELS`
     - `primitives/overlay/popup-open.PopupOpenScope`
   - Exports (types): `RowActionsProps`
   - Exports (values):
     - `RowActions`
     - `rowActionsAnchor`
 - Cross-plugin:
+  - Uses tokens:
+    - `ui/tokens/density --space-2xs`
+    - `ui/tokens/shadow --shadow`
   - Imported by:
     - `conversations/conversation-view/jsonl-viewer`
     - `conversations/conversation-view/jsonl-viewer/row-actions`
@@ -148,6 +160,7 @@ construction; *visibility* rests on this signal, and only the runtime asserts it
     - `primitives/data-table`
     - `primitives/data-view`
     - `primitives/data-view/gallery`
+    - `primitives/data-view/list`
     - `primitives/tree`
     - `shell/health-report`
 

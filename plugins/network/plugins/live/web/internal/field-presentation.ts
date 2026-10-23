@@ -5,6 +5,7 @@ import {
   type Contribution,
 } from "@plugins/framework/plugins/web-sdk/core";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type {
   FieldOptionMeta,
   FieldsRecord,
@@ -82,6 +83,13 @@ export interface FieldPresentationSpec<V, Row> {
    * text dimension a person groups by — a release's composition).
    */
   groupable?: true;
+  /** The icon a card's token line draws before the value; absent ⇒ its type's identity icon. */
+  icon?: IconRef;
+  /**
+   * `true`: a row-state mark (a problem, a missing file) rather than a
+   * property — a card draws it on the title line, not as a token.
+   */
+  indicator?: true;
   /**
    * The field's options, read live (a model catalog, a tag vocabulary, a
    * contribution registry) — in place of its declared ones. Filtering stays on

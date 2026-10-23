@@ -165,3 +165,55 @@ describe("SectionHeaderRow — lead keeps the card behaviour", () => {
     expect(button.querySelector("svg")).not.toBeNull();
   });
 });
+
+describe("SectionHeaderRow — end disclosure with a rule", () => {
+  it("puts a faint, always-visible chevron at the far end that brightens on hover", () => {
+    render(
+      <SectionHeaderRow open onClick={() => {}} disclosure="end">
+        Queue
+      </SectionHeaderRow>,
+    );
+    const button = screen.getByRole("button", { name: "Queue" });
+    // Outside the control (the trailing cluster), never hidden at rest.
+    expect(button.querySelector("svg")).toBeNull();
+    const box = button.parentElement!;
+    const chevron = box.querySelector("svg")!;
+    const cls = chevron.getAttribute("class")!;
+    expect(cls).toContain("text-faint-foreground");
+    expect(cls).not.toContain("opacity-0");
+    // Its own named group, so only this header's hover lights it.
+    expect(box.className).toContain("group/section-header");
+    expect(cls).toContain("group-hover/section-header:text-foreground");
+  });
+
+  it("rule: draws a decorative hairline after the label run, inside the control", () => {
+    const onClick = vi.fn();
+    render(
+      <SectionHeaderRow open onClick={onClick} disclosure="end" rule>
+        <span>Queue</span>
+        <span>6</span>
+      </SectionHeaderRow>,
+    );
+    const button = screen.getByRole("button", { name: "Queue6" });
+    const rule = button.querySelector('[data-slot="separator"]')!;
+    expect(rule).not.toBeNull();
+    // Right after the label run, so it takes the slack; out of the a11y tree;
+    // phrasing content only inside the button.
+    const cell = rule.parentElement!;
+    expect(screen.getByText("6").nextElementSibling).toBe(cell);
+    expect(cell.getAttribute("aria-hidden")).toBe("true");
+    expect(cell.tagName.toLowerCase()).toBe("span");
+    expect(rule.tagName.toLowerCase()).toBe("span");
+    fireEvent.click(button);
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("draws no rule by default", () => {
+    render(
+      <SectionHeaderRow open onClick={() => {}} disclosure="end">
+        Queue
+      </SectionHeaderRow>,
+    );
+    expect(document.querySelector('[data-slot="separator"]')).toBeNull();
+  });
+});

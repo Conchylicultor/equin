@@ -21,6 +21,7 @@ import {
   handlePrototypeVersionFile,
   handleRestoreVersion,
   prototypeHistoryServed,
+  prototypeVersionCountsServed,
 } from "./internal/history";
 import { handleSetPicks, prototypePicksServed } from "./internal/picks";
 import { handleSetStatus, prototypeStatusesServed } from "./internal/status";
@@ -65,6 +66,7 @@ export default {
     IdKinds.Kind({ kind: protoIdKind }),
     ...prototypesListServed.declare,
     ...prototypeHistoryServed.declare,
+    ...prototypeVersionCountsServed.declare,
     ...prototypePicksServed.declare,
     ...prototypeStatusesServed.declare,
   ],

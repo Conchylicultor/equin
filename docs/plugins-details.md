@@ -5497,11 +5497,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
               - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
               - `JsonlViewerTool.Renderer` "mcp__equin__places_show_picks" → `PicksToolView`
-            - Uses: 121 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+            - Uses: 122 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `apps/places/places-core` ×9
               - `conversations/agent-thread` ×8
               - `map` ×8
-              - `primitives/data-view` ×7
+              - `primitives/data-view` ×8
               - `primitives/collapsible` ×6
               - `network/live` ×5
               - `primitives/live-state` ×5
@@ -5732,6 +5732,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `AddFrameRail`
               - `CanvasFrameView`
+              - `CanvasGround`
               - `canvasWith`
               - `documentOptions`
               - `frameA`
@@ -5875,6 +5876,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resource.declare` "prototypes.list"
               - `resource.declare` "prototypes.picks"
               - `resource.declare` "prototypes.statuses"
+              - `resource.declare` "prototypes.versionCounts"
             - Uses:
               - `ids.IdKinds`
               - `infra/endpoints.HttpError`
@@ -5894,6 +5896,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `prototypes.list` (push, notified)
               - `prototypes.picks` (push, notified)
               - `prototypes.statuses` (push, notified)
+              - `prototypes.versionCounts` (push, notified)
             - Routes:
               - `GET /api/prototypes`
               - `POST /api/prototypes`
@@ -5979,6 +5982,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `prototypeStatuses`
               - `PrototypeStatusSchema`
               - `prototypeUrl`
+              - `prototypeVersionCounts`
               - `PrototypeVersionSchema`
               - `prototypeVersionUrl`
               - `PrototypeViewportSchema`
@@ -6005,7 +6009,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/artifacts/prototype`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/paths.ts`, `server/internal/picks.ts`, `server/internal/signature.ts`, `server/internal/status.ts`, `server/internal/tree-path.ts`, `shared/folder-signature.ts`, `shared/history/lock.ts`, `shared/history/store.ts`, `shared/list-metas.ts`, `shared/mint.ts`, `shared/read-folder.ts`, `shared/record-store.ts`, `shared/template.ts` (debt)
-        - **`gallery`** — Prototypes gallery list pane — one card per prototype over its rendered preview, grouped (Pinned / In progress / Done) and filterable by a pin and a Done checkbox on every card (and in the detail pane's header) — plus New prototype, which mints the folder before launching the agent that designs it.
+        - **`gallery`** — Prototypes gallery list pane — one card per prototype over its rendered preview, on the prototype viewer's grid, with a Recently edited list; grouped (Pinned / In progress / Done) and filterable by a pin and a Done circle on every card and row (hover actions that stay shown while set; also in the detail pane's header) — plus New prototype, which mints the folder before launching the agent that designs it.
           - Web:
             - Slots:
               - `prototypesGalleryPane.Actions`
@@ -6013,24 +6017,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Slot contributors:
               - `prototypesGalleryPane.Actions` ← `primitives.pane`
               - `PrototypeCardActions` ← `apps.prototypes.gallery`
+              - `PrototypeCardActions` ← `apps.prototypes.present`
             - Contributes:
               - `Pane.Register` "prototypes-gallery"
               - `prototypeDetailPane.Actions` "pin" → `PinHeaderAction`
               - `prototypeDetailPane.Actions` "done" → `DoneHeaderAction`
               - `PrototypeCardActions` "pin" → `PinCardAction`
               - `PrototypeCardActions` "done" → `DoneCardAction`
-            - Uses: 30 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/gallery/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/gallery/REFERENCE.md)
+            - Uses: 28 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/gallery/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/gallery/REFERENCE.md)
+              - `apps/prototypes/canvas` ×4
               - `infra/endpoints` ×4
-              - `primitives/data-view` ×4
-              - `apps/prototypes/canvas` ×3
+              - `primitives/data-view` ×3
               - `primitives/live-state` ×3
               - `primitives/pane` ×3
               - `apps/prototypes/thumbnails` ×2
               - `primitives/css/ui-kit` ×2
               - `network/live.useLive`
               - `primitives/css/badge.Badge`
-              - `primitives/css/overlay.Overlay`
-              - `primitives/css/pin.Pin`
               - `primitives/icon-button.IconButton`
               - `primitives/launch.LaunchAgentPopover`
               - `primitives/relative-time.RelativeTime`
@@ -6047,7 +6050,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --accent`
               - `ui/tokens/color-palette --primary-text`
-            - Imported by: `apps/home/app-cards`
+            - Imported by:
+              - `apps/home/app-cards`
+              - `apps/prototypes/present`
         - **`icons`** — Contributes the prototypes icon family (prototypesIcons) to Icons.Family, so a scope whose iconFamily is prototypes — the Prototypes theme's — draws its glyphs.
           - Web:
             - Contributes: `Icons.Family` "Prototypes"
@@ -6056,7 +6061,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `ui/icons.defineIconFamily`
             - Exports (types): `PrototypesGlyph`
             - Exports (values): `prototypesIcons`
-        - **`present`** — Two frame actions on every prototype canvas frame: Open in a new tab (the frame's chromeless present page at the Responsive size, filling the tab at its own width; a source frame opens its own href) and Full screen (F, which presents the selected frame; the browser's Fullscreen API). While presenting, hovering shows the frame's tag (the canvas frame header's own box: options chip | version stepper) and 'i of n', Exit and the size & zoom chip, on the right edge + (add a frame) and Compare with each resolved frame source (the real app, swiped) — both adding the frame and leaving to the prototype's canvas in the app — and the left and right arrow keys flip through the canvas's frames. The new tab is present/<id>/<sha|live>/<declared|size word>/<picks?>, a one-frame page carrying the frame's version and own picks, with an Exit icon back to the prototype's canvas; its + / Compare open the app's canvas on the frame plus the new one.
+        - **`present`** — Open in a new tab on every gallery card (its live present page) and two frame actions on every prototype canvas frame: Open in a new tab (the frame's chromeless present page at the Responsive size, filling the tab at its own width; a source frame opens its own href) and Full screen (F, which presents the selected frame; the browser's Fullscreen API). While presenting, hovering shows the frame's tag (the canvas frame header's own box: options chip | version stepper) and 'i of n', Exit and the size & zoom chip, on the right edge + (add a frame) and Compare with each resolved frame source (the real app, swiped) — both adding the frame and leaving to the prototype's canvas in the app — and the left and right arrow keys flip through the canvas's frames. The new tab is present/<id>/<sha|live>/<declared|size word>/<picks?>, a one-frame page carrying the frame's version and own picks, with an Exit icon back to the prototype's canvas; its + / Compare open the app's canvas on the frame plus the new one.
           - Web:
             - Slots: `prototypes-present.actions`
             - Slot contributors: `prototypes-present.actions` ← `primitives.pane`
@@ -6065,13 +6070,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeDetailWrap` → `PresentationHost`
               - `PrototypeFrameActions` "open-new-tab" → `OpenNewTabAction`
               - `PrototypeFrameActions` "full-screen" → `FullScreenAction`
-            - Uses: 53 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md)
+              - `PrototypeCardActions` "open-new-tab" → `OpenCardNewTabAction`
+            - Uses: 54 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md)
               - `apps/prototypes/canvas` ×25
               - `primitives/css/ui-kit` ×3
               - `primitives/hover-reveal` ×2
               - `primitives/latest-ref` ×2
               - `primitives/pane` ×2
               - `apps-core/tabs.useSurfaceFocused`
+              - `apps/prototypes/gallery.PrototypeCardActions`
               - `network/live.useLive`
               - `primitives/css/pin.Pin`
               - `primitives/css/scroll.Scroll`
@@ -6122,6 +6129,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --primary`
               - `ui/tokens/shadow --shadow`
               - `ui/tokens/shadow --shadow-2xl`
+              - `ui/tokens/shadow --shadow-cover`
+              - `ui/tokens/shadow --shadow-cover-hover`
               - `ui/tokens/shadow --shadow-float`
               - `ui/tokens/shadow --shadow-popover`
               - `ui/tokens/shadow --shadow-xl`
@@ -6420,6 +6429,35 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/shortcuts.getFocusedSurfaceId`
               - `primitives/shortcuts.targetClaimsKey`
               - `primitives/shortcuts.useSurfaceShortcuts`
+        - **`covers`** — Serves Sonata song covers: a content-addressed SVG cache (rendered on request, deduped while in flight), immutable while the URL's version is current.
+          - Core:
+            - Uses:
+              - `apps/sonata/look.SONATA_DEFAULT_LOOK`
+              - `apps/sonata/look.SONATA_LOOK_STYLES`
+              - `apps/sonata/pitch-layout.pitchGeometry`
+              - `apps/sonata/score.bars`
+              - `apps/sonata/score.leadInBeats`
+              - `apps/sonata/score.makeKeySpeller`
+              - `apps/sonata/score.Note`
+              - `apps/sonata/score.PitchSpelling`
+              - `apps/sonata/score.Score`
+              - `apps/sonata/score.songKey`
+            - Exports (types): `CoverWindow`
+            - Exports (values):
+              - `busiestWindow`
+              - `COVER_RENDER_VERSION`
+              - `renderRollCover`
+              - `renderStaffCover`
+          - Cross-plugin:
+            - Uses tokens: `ui/tokens/shape --spacing`
+            - Imported by:
+              - `apps/sonata/sources/midi`
+              - `apps/sonata/sources/musicxml`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/cover-cache.ts` (debt)
+          - Server:
+            - Exports (types): `ScoreCoverRequest`
+            - Exports (values): `serveScoreCover`
         - **`document`** — Sonata song document: a song's identity (a library song or a file), its sources' raw input and its per-song settings as one per-surface state, composed into a score through the source → merge → transpose → voicing → key → spelling → analyzer → chord-mode → swing pipeline. Defines the SonataDocument.{Source,Analyzer,SongSetting} registries; a file document settles every setting to its default and mounts no observer.
           - Web:
             - Slots:
@@ -6480,6 +6518,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Slots:
               - `Library.Source`
+              - `Library.Cover`
               - `Library.SongActions`
               - `sonataLibraryPane.Actions`
               - `sonataPlayerPane.Actions`
@@ -6489,6 +6528,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Library.Source` ← `apps.sonata.sources.musicxml`
               - `Library.Source` ← `apps.sonata.sources.ultimate-guitar`
               - `Library.Source` ← `apps.sonata.transcription`
+              - `Library.Cover` ← `apps.sonata.sources.chord-grid`
+              - `Library.Cover` ← `apps.sonata.sources.midi`
+              - `Library.Cover` ← `apps.sonata.sources.musicxml`
+              - `Library.Cover` ← `apps.sonata.sources.ultimate-guitar`
+              - `Library.Cover` ← `apps.sonata.transcription`
               - `Library.SongActions` ← `apps.sonata.library`
               - `sonataLibraryPane.Actions` ← `primitives.pane`
               - `sonataPlayerPane.Actions` ← `apps.sonata.audio.engine`
@@ -6508,17 +6552,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Library.SongActions` "delete" → `DeleteSongAction`
               - `Pane.Register` "sonata-library"
               - `Pane.Register` "sonata-player"
-            - Uses: 82 symbols — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
+            - Uses: 87 symbols — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
               - `primitives/pane` ×13
+              - `primitives/data-view` ×7
               - `apps/sonata/shell` ×6
               - `network/live` ×6
               - `primitives/css/ui-kit` ×6
-              - `primitives/data-view` ×6
               - `apps/sonata/player` ×5
               - `apps/sonata/document` ×4
               - `primitives/persistent-draft` ×3
               - `apps/sonata/view-options` ×2
               - `infra/endpoints` ×2
+              - `primitives/css/layer` ×2
               - `primitives/css/spacing` ×2
               - `primitives/latest-ref` ×2
               - `primitives/live-state` ×2
@@ -6526,6 +6571,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/session.useSession`
               - `fullscreen.FullscreenButton`
               - `ids.IdKinds`
+              - `primitives/css/badge.Badge`
               - `primitives/css/card.Card`
               - `primitives/css/center.Center`
               - `primitives/css/clip.Clip`
@@ -6535,6 +6581,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/fill.Fill`
               - `primitives/css/grid.Grid`
               - `primitives/css/line.Line`
+              - `primitives/css/pin.Pin`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/text.Text`
               - `primitives/css/yield.yieldClass`
@@ -6546,6 +6593,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/relative-time.formatRelativeTime`
               - `ui/icons.Icon`
             - Exports (types):
+              - `SongCoverAnswer`
               - `SourceContext`
               - `SourceCreateOption`
               - `SourceHydration`
@@ -6619,12 +6667,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `songsEntityRef`
               - `updateSong`
           - Cross-plugin:
-            - Uses tokens: 24 vars — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
+            - Uses tokens: 35 vars — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
+              - `ui/tokens/categorical` ×10
               - `ui/tokens/density` ×10
               - `ui/tokens/type-scale` ×6
               - `ui/tokens/color-palette` ×5
+              - `ui/tokens/shadow` ×2
               - `ui/tokens/shape` ×2
-              - `ui/tokens/shadow --shadow`
             - Imported by:
               - `active-data/song`
               - `apps/sonata/audio/engine`
@@ -6688,6 +6737,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --primary`
+            - Imported by: `apps/sonata/covers`
         - **`lyric-line`** — One songsheet line as text: <LyricLineText> — the chord row (each chord pinned over its lyric column) stacked over the words, monospace so a column is one character — or, as `layout: words`, the line's words flowing in the surface's own font, each chord over the word it starts on — with no chrome of its own and an optional chordStyle so the caller paints the chords. Shared by the Songsheet and the Chord grid's lyrics.
           - Web:
             - Uses:
@@ -6999,7 +7049,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pitchKeyboardHeight`
               - `pitchLayoutConfig`
           - Cross-plugin:
-            - Imported by: `apps/sonata/rich/readout-keyboard`
+            - Imported by:
+              - `apps/sonata/covers`
+              - `apps/sonata/rich/readout-keyboard`
         - **`playback-history`** — Per-song play count + last-played: records a play on playback start (Sonata.Effect), and presents the Plays / Last-played fields its extension exposes on every list of songs — on the library card, in the DataView's sort and filter pills, and as table columns. Owns the sonata_songs_ext_playback side-table: per-song play count + last-played. Records a play on playback start and exposes both to every list of songs (LiveColumns.Expose).
           - Web:
             - Contributes:
@@ -7933,6 +7985,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/chord/vocabulary`
+              - `apps/sonata/covers`
               - `apps/sonata/lyric-line`
               - `apps/sonata/pitch-layout`
               - `apps/sonata/theory`
@@ -8136,6 +8189,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --popover`
               - `ui/tokens/shadow --shadow`
+              - `ui/tokens/shadow --shadow-cover`
+              - `ui/tokens/shadow --shadow-cover-hover`
+              - `ui/tokens/shadow --shadow-float`
               - `ui/tokens/shadow --shadow-popover`
             - Imported by: 30 plugins — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
               - `apps` ×30
@@ -8170,21 +8226,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --radius`
         - **`sources`** — Input source sub-plugins for Sonata (MIDI, chord-grid, …).
           - Plugins:
-            - **`chord-grid`** — Chord-grid input source for Sonata. A small mini-language (e.g. `Amaj9 Am9 (E E6)`) authors chord annotations: each cell is a bar, a `( )` group shares a bar, and `.` holds the previous chord. A cell may name a chord by letter (`Am7`) or by degree (`vi7`), the latter resolved against the key a `key:` directive declares. compile() emits chord + key annotations only; the shell's reactive re-voicing step generates the notes under the global voicing config. Persists per-song grid text and contributes the library 'New Chord Grid' affordance, hydration, and an in-player editor section. Owns the sonata_songs_ext_chord_grid side-table: per-song chord text. Creates chord-grid–backed songs and persists grid edits (syncing the parent song's derived duration only; the title is library-owned).
+            - **`chord-grid`** — Chord-grid input source for Sonata. A small mini-language (e.g. `Amaj9 Am9 (E E6)`) authors chord annotations: each cell is a bar, a `( )` group shares a bar, and `.` holds the previous chord. A cell may name a chord by letter (`Am7`) or by degree (`vi7`), the latter resolved against the key a `key:` directive declares. compile() emits chord + key annotations only; the shell's reactive re-voicing step generates the notes under the global voicing config. Persists per-song grid text and contributes the library 'New Chord Grid' affordance, hydration, the cell of the Chords field its extension exposes on every list of songs, the song cover (its first chords as degree-coloured chord boxes), and an in-player editor section. Owns the sonata_songs_ext_chord_grid side-table: per-song chord text. Creates chord-grid–backed songs, persists grid edits (syncing the parent song's derived duration only; the title is library-owned), and exposes the chord text to every list of songs (LiveColumns.Expose) for its Chords field and cover.
               - Web:
                 - Contributes:
                   - `SonataDocument.Source` "Chord Grid"
                   - `Library.Source` "chord-grid"
                   - `Sonata.Section` "Chord Grid" → `ChordGridEditorSection`
                   - `Sonata.Effect` "chord-grid-persist" → `ChordGridPersistObserver`
-                - Uses: 22 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/REFERENCE.md)
+                  - `FieldPresentation.Register` "exposure:sonata_songs_ext_chord_grid"
+                  - `Library.Cover` "chord-grid"
+                - Uses: 25 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/REFERENCE.md)
                   - `apps/sonata/library` ×3
                   - `primitives/persistent-draft` ×3
                   - `apps/sonata/document` ×2
                   - `apps/sonata/shell` ×2
+                  - `music/chord-box` ×2
                   - `primitives/collapsible` ×2
                   - `primitives/css/ui-kit` ×2
                   - `infra/endpoints.useEndpointMutation`
+                  - `network/live.FieldPresentation`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/cluster.Cluster`
                   - `primitives/css/fill.Fill`
@@ -8193,12 +8253,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/syntax-highlight/overlay-textarea.OverlayTextarea`
                   - `ui/icons.Icon`
               - Server:
+                - Contributes: `live.columns.expose` "sonata_songs ← sonata_songs_ext_chord_grid"
                 - Uses:
                   - `apps/sonata/library._songs`
                   - `apps/sonata/library.createSongRow`
                   - `apps/sonata/library.updateSongMeta`
                   - `infra/endpoints.implement`
                   - `infra/entity-extensions.defineExtension`
+                  - `network/live.LiveColumns`
                 - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/server/internal/tables.ts`
                 - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_chord_grid`)
                 - Exports (values): `songChordGrid`
@@ -8206,6 +8268,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `POST /api/sonata/songs/chord-grid`
                   - `GET /api/sonata/songs/:id/chord-grid`
                   - `PUT /api/sonata/songs/:id/chord-grid`
+              - Core:
+                - Uses:
+                  - `apps/sonata/library.songsEntityRef`
+                  - `fields/text/config.textField`
+                  - `infra/entity-extensions.defineExtensionShape`
+                - Exports (values): `songChordGridShape`
               - Cross-plugin:
                 - Uses tokens:
                   - `ui/tokens/color-palette --background`
@@ -8225,11 +8293,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/type-scale --font-size-caption`
                   - `ui/tokens/type-scale --font-weight-normal`
                   - `ui/tokens/type-scale --line-height-caption`
-            - **`midi`** — MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi. Persists per-song MIDI (attachment + track count) and contributes the library Import affordance, hydration, and the cell of the Tracks field its extension exposes on every list of songs. Owns the sonata_songs_ext_midi side-table: per-song MIDI attachment + track count. Creates MIDI-backed songs, exposes its track count and file-missing flag to every list of songs (LiveColumns.Expose), and seeds the bundled public-domain MIDI starters at boot.
+            - **`midi`** — MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi. Persists per-song MIDI (attachment + track count) and contributes the library Import affordance, hydration, the song's falling-notes cover, and the cell of the Tracks field its extension exposes on every list of songs. Owns the sonata_songs_ext_midi side-table: per-song MIDI attachment + track count. Creates MIDI-backed songs, exposes its track count and file-missing flag to every list of songs (LiveColumns.Expose), serves each song's falling-notes cover (GET …/midi/cover/<version>.svg, drawn by covers), and seeds the bundled public-domain MIDI starters at boot.
               - Web:
                 - Contributes:
                   - `SonataDocument.Source` "MIDI File"
                   - `Library.Source` "midi"
+                  - `Library.Cover` "midi"
                   - `FieldPresentation.Register` "exposure:sonata_songs_ext_midi"
                 - Uses:
                   - `apps/sonata/document.SonataDocument`
@@ -8254,14 +8323,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Server:
                 - Contributes: `live.columns.expose` "sonata_songs ← sonata_songs_ext_midi"
                 - Uses:
+                  - `apps/sonata/covers.serveScoreCover`
                   - `apps/sonata/library._songs`
                   - `apps/sonata/library.createSongRow`
                   - `apps/sonata/library.songAttachments`
                   - `apps/sonata/library.updateSongMeta`
                   - `database.db`
+                  - `infra/attachments.AttachmentBlobs`
                   - `infra/attachments.createAttachment`
                   - `infra/attachments.getAttachment`
                   - `infra/endpoints.implement`
+                  - `infra/endpoints.rawEndpointHandler`
                   - `infra/entity-extensions.defineExtension`
                   - `network/live.LiveColumns`
                 - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/midi/server/internal/tables.ts`
@@ -8276,6 +8348,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Routes:
                   - `POST /api/sonata/songs/midi`
                   - `GET /api/sonata/songs/:id/midi`
+                  - `GET /api/sonata/songs/:id/midi/cover/:file`
               - Core:
                 - Uses:
                   - `apps/sonata/library.songsEntityRef`
@@ -8370,11 +8443,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `defineFileWatcher('sonata-midi-folders.folders')`
                   - Exemptions:
                     - Exempts itself from: `boundaries/no-platform-api` — `server/internal/import-job.ts`, `server/internal/reconcile.ts` (debt)
-            - **`musicxml`** — MusicXML file input source for Sonata: compile() parses a score-partwise document into a Score (parts and staves as tracks, ties merged, repeats unrolled, chord symbols, tempo, swing). Persists per-song MusicXML as an attachment and contributes the library Import affordance and hydration. Owns the sonata_songs_ext_musicxml side-table: per-song MusicXML attachment + content hash. Creates MusicXML-backed songs from an uploaded document (content-hash dedup) and fills an existing MusicXML song with a document (importMusicXmlForSong, for the transcription flow).
+            - **`musicxml`** — MusicXML file input source for Sonata: compile() parses a score-partwise document into a Score (parts and staves as tracks, ties merged, repeats unrolled, chord symbols, tempo, swing). Persists per-song MusicXML as an attachment and contributes the library Import affordance, hydration and the song's staff cover. Owns the sonata_songs_ext_musicxml side-table: per-song MusicXML attachment + content hash. Creates MusicXML-backed songs from an uploaded document (content-hash dedup) and fills an existing MusicXML song with a document (importMusicXmlForSong, for the transcription flow). Serves each song's staff cover (GET …/musicxml/cover/<version>.svg, drawn by covers).
               - Web:
                 - Contributes:
                   - `SonataDocument.Source` "MusicXML"
                   - `Library.Source` "musicxml"
+                  - `Library.Cover` "musicxml"
                 - Uses:
                   - `apps/sonata/document.SonataDocument`
                   - `apps/sonata/library.Library`
@@ -8387,14 +8461,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/icons.Icon`
               - Server:
                 - Uses:
+                  - `apps/sonata/covers.serveScoreCover`
                   - `apps/sonata/library._songs`
                   - `apps/sonata/library.createSongRow`
                   - `apps/sonata/library.songAttachments`
                   - `apps/sonata/library.updateSongMeta`
                   - `database.db`
+                  - `infra/attachments.AttachmentBlobs`
                   - `infra/attachments.createAttachment`
                   - `infra/attachments.getAttachment`
                   - `infra/endpoints.implement`
+                  - `infra/endpoints.rawEndpointHandler`
                   - `infra/entity-extensions.defineExtension`
                 - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/musicxml/server/internal/tables.ts`
                 - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_musicxml`)
@@ -8406,6 +8483,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Routes:
                   - `POST /api/sonata/songs/musicxml`
                   - `GET /api/sonata/songs/:id/musicxml`
+                  - `GET /api/sonata/songs/:id/musicxml/cover/:file`
               - Cross-plugin:
                 - Uses tokens:
                   - `ui/tokens/color-palette --destructive`
@@ -8414,36 +8492,45 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by: `apps/sonata/transcription`
               - Exemptions:
                 - Exempts itself from: `boundaries/no-platform-api` — `server/internal/import.ts` (debt)
-            - **`ultimate-guitar`** — Player-side Ultimate Guitar source for Sonata: paste a UG tab URL, fetch its raw tab, and compile() the chord/lyric markup into a playable Score (lyric-proportional, bar-quantized timing synthesis → chord annotations, sections, lyrics, synthesized 4/4 tempo). Chord notes are generated by the shell's reactive re-voicing step from the chord annotations. Persists the loaded tab to a per-song side-table, hydrates it on open, and contributes the library 'Import from Ultimate Guitar' URL-paste affordance plus an in-player editor section. Ultimate Guitar source server: fetches raw tabs from UG's private mobile API (fails loudly), and owns the sonata_songs_ext_ultimate_guitar side-table — creating UG-backed songs from a fetched tab and persisting edits (syncing the parent song's title/duration), announcing sonata.ug.tabSaved when a song's sheet content changes.
+            - **`ultimate-guitar`** — Player-side Ultimate Guitar source for Sonata: paste a UG tab URL, fetch its raw tab, and compile() the chord/lyric markup into a playable Score (lyric-proportional, bar-quantized timing synthesis → chord annotations, sections, lyrics, synthesized 4/4 tempo). Chord notes are generated by the shell's reactive re-voicing step from the chord annotations. Persists the loaded tab to a per-song side-table, hydrates it on open, and contributes the library 'Import from Ultimate Guitar' URL-paste affordance plus an in-player editor section, and presents the tab's Key field (exposed on every list of songs). Ultimate Guitar source server: fetches raw tabs from UG's private mobile API (fails loudly), and owns the sonata_songs_ext_ultimate_guitar side-table — creating UG-backed songs from a fetched tab and persisting edits (syncing the parent song's title/duration), exposing the tab's key to every list of songs (LiveColumns.Expose), announcing sonata.ug.tabSaved when a song's sheet content changes.
               - Web:
                 - Contributes:
                   - `SonataDocument.Source` "Ultimate Guitar"
                   - `Library.Source` "ultimate-guitar"
                   - `Sonata.Section` "Ultimate Guitar" → `UltimateGuitarEditorSection`
                   - `Sonata.Effect` "ultimate-guitar-persist" → `UltimateGuitarPersistObserver`
-                - Uses: 29 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md)
-                  - `primitives/css/ui-kit` ×5
+                  - `FieldPresentation.Register` "exposure:sonata_songs_ext_ultimate_guitar"
+                  - `Library.Cover` "ultimate-guitar"
+                - Uses: 37 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/REFERENCE.md)
+                  - `primitives/css/ui-kit` ×6
                   - `apps/sonata/document` ×2
                   - `apps/sonata/library` ×2
                   - `apps/sonata/shell` ×2
                   - `infra/endpoints` ×2
+                  - `primitives/css/layer` ×2
                   - `apps/sonata/primitives/source-line.SourceLine`
+                  - `network/live.FieldPresentation`
                   - `primitives/css/badge.Badge`
+                  - `primitives/css/center.Center`
                   - `primitives/css/fill.Fill`
                   - `primitives/css/grow.growClass`
                   - `primitives/css/inline.Inline`
+                  - `primitives/css/pin.Pin`
                   - `primitives/css/placeholder.Placeholder`
                   - `primitives/css/row.Row`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/spinner.Spinner`
+                  - `primitives/css/surface.Surface`
                   - `primitives/css/text.Text`
                   - `primitives/css/toggle-chip.SegmentedControl`
+                  - `primitives/data-view.coverDetailClass`
                   - `primitives/dom/scroll-reveal.revealElement`
                   - `primitives/loading.Loading`
                   - `primitives/overlay/imperative-dialog.openDialog`
                   - `primitives/search.SearchInput`
                   - `ui/icons.Icon`
               - Server:
+                - Contributes: `live.columns.expose` "sonata_songs ← sonata_songs_ext_ultimate_guitar"
                 - Uses:
                   - `apps/sonata/library._songs`
                   - `apps/sonata/library.createSongRow`
@@ -8454,6 +8541,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/events.defineTriggerEvent`
                   - `infra/safe-fetch.safeFetch`
                   - `infra/safe-fetch.SsrfError`
+                  - `network/live.LiveColumns`
                 - DB schema:
                   - `plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/server/internal/tables-tab-saved.ts`
                   - `plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/server/internal/tables.ts`
@@ -8470,16 +8558,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `POST /api/sonata/songs/ultimate-guitar`
                   - `GET /api/sonata/songs/:id/ultimate-guitar`
                   - `PUT /api/sonata/songs/:id/ultimate-guitar`
-              - Cross-plugin:
-                - Uses tokens:
-                  - `ui/tokens/shape --spacing`
-                  - `ui/tokens/type-scale --font-weight-semibold`
-                - Imported by: `apps/sonata/sources/ultimate-guitar/alignment`
-              - Exemptions:
-                - Exempts itself from:
-                  - `ids:pk-declared` — `server/internal/tables-tab-saved.ts` (debt)
-                  - `boundaries/no-platform-api` — `server/internal/ug-client.ts` (debt)
               - Core:
+                - Uses:
+                  - `apps/sonata/library.songsEntityRef`
+                  - `fields.nullable`
+                  - `fields/int/config.intField`
+                  - `fields/text/config.textField`
+                  - `infra/entity-extensions.defineExtensionShape`
                 - Exports (types):
                   - `UgFetchErrorKind`
                   - `UgSearchResult`
@@ -8487,20 +8572,33 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `extractUgTabId`
                   - `UgFetchError`
                   - `UgSearchResultSchema`
+                  - `ultimateGuitarShape`
+              - Cross-plugin:
+                - Uses tokens:
+                  - `ui/tokens/color-palette --muted`
+                  - `ui/tokens/color-palette --muted-foreground`
+                  - `ui/tokens/shape --spacing`
+                  - `ui/tokens/type-scale --font-weight-semibold`
+                - Imported by: `apps/sonata/sources/ultimate-guitar/alignment`
+              - Exemptions:
+                - Exempts itself from:
+                  - `ids:pk-declared` — `server/internal/tables-tab-saved.ts` (debt)
+                  - `boundaries/no-platform-api` — `server/internal/ug-client.ts` (debt)
               - Plugins:
-                - **`alignment`** — UG sheet alignment in the player: a 'Recording' editor section showing the song's YouTube video (the recording plugin's RecordingVideo viewport with its volume, and its on/off RecordingSwitch in the header; the video itself is declared by a headless effect to the session's recording player, so it keeps playing — synced to the transport when the song plays on its alignment, a weak match included, else on its own — while the section is collapsed), an alignment status box (icon, status line, one control — Cancel, Re-align, Retry, Try another or Find a video — and while working a three-stage bar: find a video, analyse the audio, align the sheet), the video's line (title, match chip, channel, Replace) and an inline picker (a YouTube link, the candidate videos with thumbnail and outcome — click one to switch — and Search again); a headless report of a video the player refuses (SonataRecording.Refused → video-refused), and a headless effect writing the applied alignment record into the Ultimate Guitar raw so the Score plays on the recording's beats. UG sheet alignment server: owns the sonata_songs_ext_ug_alignment side-table (video, who picked it, the resolver's candidates, status, record) served as a lookup-only live collection, the sonata.ug-alignment.align supervised job (choose a video with findSongVideos and walk the best candidates when none was set; beat features → alignChords → record, its live phase written on the row; a user's Cancel stops it as cancelled), the set-video / find-a-video / video-refused / re-align (also resuming a cancelled or failed walk) / cancel / get endpoints, and a trigger that starts choosing a video for a new UG song and re-aligns one whose sheet changes.
+                - **`alignment`** — UG sheet alignment in the player: a 'Recording' editor section showing the song's YouTube video (the recording plugin's RecordingVideo viewport with its volume, and its on/off RecordingSwitch in the header; the video itself is declared by a headless effect to the session's recording player, so it keeps playing — synced to the transport when the song plays on its alignment, a weak match included, else on its own — while the section is collapsed), an alignment status box (icon, status line, one control — Cancel, Re-align, Retry, Try another or Find a video — and while working a three-stage bar: find a video, analyse the audio, align the sheet), the video's line (title, match chip, channel, Replace) and an inline picker (a YouTube link, the candidate videos with thumbnail and outcome — click one to switch — and Search again); a headless report of a video the player refuses (SonataRecording.Refused → video-refused), and a headless effect writing the applied alignment record into the Ultimate Guitar raw so the Score plays on the recording's beats. In the library: the Video field's presentation (hidden by default). UG sheet alignment server: owns the sonata_songs_ext_ug_alignment side-table (video, who picked it, the resolver's candidates, status, record) served as a lookup-only live collection and its video id exposed to every list of songs (LiveColumns.Expose), the sonata.ug-alignment.align supervised job (choose a video with findSongVideos and walk the best candidates when none was set; beat features → alignChords → record, its live phase written on the row; a user's Cancel stops it as cancelled), the set-video / find-a-video / video-refused / re-align (also resuming a cancelled or failed walk) / cancel / get endpoints, and a trigger that starts choosing a video for a new UG song and re-aligns one whose sheet changes.
                   - Web:
                     - Contributes:
                       - `Sonata.Section` "Recording" → `RecordingSection`
                       - `Sonata.Effect` "ug-alignment-sync" → `UgAlignmentSync`
                       - `Sonata.Effect` "ug-recording-video" → `UgRecordingVideo`
                       - `SonataRecording.Refused` "ug-video-refused" → `ReportVideoRefused`
-                    - Uses: 35 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/REFERENCE.md)
+                      - `FieldPresentation.Register` "exposure:sonata_songs_ext_ug_alignment"
+                    - Uses: 36 symbols — full list in [`plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/REFERENCE.md)
                       - `apps/sonata/recording` ×5
                       - `infra/endpoints` ×3
+                      - `network/live` ×3
                       - `primitives/css/spacing` ×3
                       - `primitives/css/ui-kit` ×3
-                      - `network/live` ×2
                       - `primitives/css/badge` ×2
                       - `primitives/css/fill` ×2
                       - `primitives/hover-reveal` ×2
@@ -8520,6 +8618,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - Server:
                     - Contributes:
                       - `resource.declare` "sonata-ug-alignment:rows"
+                      - `live.columns.expose` "sonata_songs ← sonata_songs_ext_ug_alignment"
                       - `trigger` "sonata.ug-alignment.on-tab-saved"
                     - Uses:
                       - `apps/sonata/library._songs`
@@ -8536,6 +8635,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `infra/jobs/supervised-job.defineSupervisedJob`
                       - `integrations/youtube/audio-fetch.isYouTubeAudioError`
                       - `integrations/youtube/song-videos.findSongVideos`
+                      - `network/live.LiveColumns`
                       - `network/live.serveCollection`
                       - `primitives/log-channels.defineLogSink`
                     - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/server/internal/tables.ts`
@@ -8553,6 +8653,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `POST /api/sonata/songs/:id/ultimate-guitar/alignment/cancel`
                   - Core:
                     - Uses:
+                      - `apps/sonata/library.songsEntityRef`
                       - `apps/sonata/sources/ultimate-guitar/tab.InferredSection`
                       - `apps/sonata/sources/ultimate-guitar/tab.inferSections`
                       - `apps/sonata/sources/ultimate-guitar/tab.ParsedLine`
@@ -8793,10 +8894,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/piano-roll`
               - `apps/sonata/rich/chord-mode`
               - `apps/sonata/rich/rhythm-controls`
-        - **`transcription`** — Sonata transcription in the library: a 'Transcribe…' entry in the + menu (a video/post link, or page images and PDFs) that creates the song and starts the transcribing agent; a transcribed song shows its agent run as an embedded agent thread — the steps, the agent's summary and a reply box — in the player until the score is in (Retry when it failed), then in the player's Transcription section, where a reply asks for a correction and the resubmitted score replaces the song's; and a Transcribing / Failed badge on its card. Owns the sonata_songs_ext_transcription side-table: a transcribed song's run state (status, input, task, latest conversation, error). POST transcribe creates the song (MusicXML source), a Sonata task and a transcribing agent in a `sonata.transcription` scratch workspace (CLAUDE.md = the instructions, ./bin/st = the toolkit); its sonata_submit_transcription MCP tool imports the agent's MusicXML into the song. Exposes its status, latest conversation and error to every list of songs (LiveColumns.Expose); a conversation closed before submitting marks the song failed (retry relaunches).
+        - **`transcription`** — Sonata transcription in the library: a 'Transcribe…' entry in the + menu (a video/post link, or page images and PDFs) that creates the song and starts the transcribing agent; a transcribed song shows its agent run as an embedded agent thread — the steps, the agent's summary and a reply box — in the player until the score is in (Retry when it failed), then in the player's Transcription section, where a reply asks for a correction and the resubmitted score replaces the song's; and a Transcribing / Failed badge and cover on its card. Owns the sonata_songs_ext_transcription side-table: a transcribed song's run state (status, input, task, latest conversation, error). POST transcribe creates the song (MusicXML source), a Sonata task and a transcribing agent in a `sonata.transcription` scratch workspace (CLAUDE.md = the instructions, ./bin/st = the toolkit); its sonata_submit_transcription MCP tool imports the agent's MusicXML into the song. Exposes its status, latest conversation and error to every list of songs (LiveColumns.Expose); a conversation closed before submitting marks the song failed (retry relaunches).
           - Web:
             - Contributes:
               - `Library.Source` "transcription"
+              - `Library.Cover` "transcription"
               - `FieldPresentation.Register` "exposure:sonata_songs_ext_transcription"
               - `Sonata.Section` "Transcription" → `TranscriptionSection`
             - Uses:
@@ -22192,9 +22294,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Fields.Identity` ×27
     - Exports (values): `Fields`
   - Cross-plugin:
-    - Imported by: 101 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+    - Imported by: 102 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
       - `fields` ×50
-      - `apps` ×11
+      - `apps` ×12
       - `conversations` ×8
       - `debug` ×5
       - `infra` ×5
@@ -23047,9 +23149,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `intField`
               - `intSample`
           - Cross-plugin:
-            - Imported by: 37 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
+            - Imported by: 38 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
               - `debug` ×12
-              - `apps` ×8
+              - `apps` ×9
               - `infra` ×4
               - `conversations` ×3
               - `backup` ×2
@@ -23779,8 +23881,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 66 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
-              - `apps` ×16
+            - Imported by: 68 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+              - `apps` ×18
               - `conversations` ×15
               - `tasks` ×8
               - `debug` ×5
@@ -24707,6 +24809,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/places/place-details` (1 debt)
               - `apps/prototypes/files` (13 debt)
               - `apps/prototypes/thumbnails` (3 debt)
+              - `apps/sonata/covers` (1 debt)
               - `apps/sonata/sources/midi` (1 debt)
               - `apps/sonata/sources/midi/folders` (2 debt)
               - `apps/sonata/sources/musicxml` (1 debt)
@@ -30534,6 +30637,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/sonata/lyrics-hud`
           - `apps/sonata/rich/chord-overlay`
           - `apps/sonata/rich/readout-keyboard`
+          - `apps/sonata/sources/chord-grid`
           - `apps/sonata/theory`
       - Core:
         - Exports (types):
@@ -30551,8 +30655,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `FieldPresentation.Register`
           - `ClientFields.Resolve`
-        - Slot contributors: 36 contributors — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `FieldPresentation.Register` ×33
+        - Slot contributors: 39 contributors — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `FieldPresentation.Register` ×36
           - `ClientFields.Resolve` ×3
         - Uses:
           - `primitives/live-state.PagedResourceResult`
@@ -30819,8 +30923,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
-        - Imported by: 273 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `apps` ×73
+        - Imported by: 275 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `apps` ×75
           - `conversations` ×50
           - `debug` ×27
           - `tasks` ×27
@@ -36031,8 +36135,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density` ×6
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 165 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
-              - `apps` ×37
+            - Imported by: 166 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+              - `apps` ×38
               - `debug` ×35
               - `conversations` ×24
               - `reports` ×12
@@ -36092,10 +36196,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --primary`
               - `ui/tokens/density --pad-card`
               - `ui/tokens/shadow --shadow`
-            - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/css/plugins/card/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/card/REFERENCE.md)
+            - Imported by: 25 plugins — full list in [`plugins/primitives/plugins/css/plugins/card/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/card/REFERENCE.md)
               - `apps` ×12
-              - `primitives` ×4
               - `page` ×3
+              - `primitives` ×3
               - `conversations` ×2
               - `active-data/task`
               - `debug/trace/contention`
@@ -36110,8 +36214,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 117 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
-              - `apps` ×34
+            - Imported by: 118 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+              - `apps` ×35
               - `primitives` ×25
               - `page` ×17
               - `conversations` ×7
@@ -36141,9 +36245,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `clipClasses`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Imported by: 66 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
+            - Imported by: 65 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
               - `apps` ×21
-              - `primitives` ×11
+              - `primitives` ×10
               - `conversations` ×8
               - `debug` ×8
               - `page` ×5
@@ -36418,7 +36522,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/queue`
               - `debug/timeline`
               - `primitives/css/fill`
-              - `primitives/data-view/view-core`
               - `primitives/markdown`
           - Web:
             - Exports (values): `growClass`
@@ -36479,9 +36582,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Layer`
               - `layerClasses`
           - Cross-plugin:
-            - Imported by: 21 plugins — full list in [`plugins/primitives/plugins/css/plugins/layer/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/layer/REFERENCE.md)
-              - `apps` ×13
-              - `primitives` ×5
+            - Imported by: 25 plugins — full list in [`plugins/primitives/plugins/css/plugins/layer/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/layer/REFERENCE.md)
+              - `apps` ×15
+              - `primitives` ×7
               - `integrations/youtube`
               - `map`
               - `page/code-block`
@@ -36605,7 +36708,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/browser/webview`
               - `apps/chord/trainer`
-              - `apps/prototypes/gallery`
               - `apps/prototypes/thumbnails`
               - `apps/sonata/rich/readout-keyboard`
               - `conversations/conversation-view/jsonl-viewer/collapsible-card`
@@ -36615,7 +36717,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/embed`
               - `page/read-only-view`
               - `primitives/data-view`
-              - `primitives/data-view/floating-toolbar`
+              - `primitives/pane`
               - `ui/ambient-field`
         - **`pin`** — Point-anchored absolute positioning primitive: <Pin to offset> places a child at a corner/edge-center/center of a relative parent. Sibling of Overlay.
           - Web:
@@ -36632,9 +36734,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pinClasses`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 54 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
+            - Imported by: 55 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
               - `primitives` ×18
-              - `apps` ×16
+              - `apps` ×17
               - `page` ×9
               - `conversations` ×4
               - `tasks` ×2
@@ -36727,10 +36829,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Imported by: 124 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+            - Imported by: 123 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
               - `apps` ×29
               - `conversations` ×23
-              - `primitives` ×17
+              - `primitives` ×16
               - `debug` ×12
               - `page` ×7
               - `tasks` ×6
@@ -36752,8 +36854,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/collapsible.CollapsibleChevron`
               - `primitives/collapsible.CollapsibleWarmHandlers`
               - `primitives/collapsible.useCollapsibleContext`
+              - `primitives/css/fill.Fill`
               - `primitives/css/line.Line`
               - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.Separator`
               - `primitives/css/ui-kit.useMenuSurface`
               - `primitives/hover-reveal.hoverRevealClass`
               - `primitives/hover-reveal.useHoverReveal`
@@ -36809,10 +36913,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useScrollsSideways`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 95 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
+            - Imported by: 94 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
               - `conversations` ×26
               - `apps` ×21
-              - `primitives` ×15
+              - `primitives` ×14
               - `debug` ×13
               - `page` ×4
               - `build` ×3
@@ -37017,7 +37121,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `stickyClasses`
               - `stickyOffsetPx`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/color-palette --background`
+            - Uses tokens:
+              - `ui/tokens/color-palette --background`
+              - `ui/tokens/density --sticky-fade-tail`
             - Imported by:
               - `apps/chord/curriculum`
               - `code-explorer/commit-detail`
@@ -37066,8 +37172,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shadow --shadow`
             - Imported by: 32 plugins — full list in [`plugins/primitives/plugins/css/plugins/surface/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/surface/REFERENCE.md)
-              - `apps` ×13
-              - `primitives` ×7
+              - `apps` ×14
+              - `primitives` ×6
               - `page` ×4
               - `infra` ×2
               - `map` ×2
@@ -37406,15 +37512,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSingleLine`
               - `WithTooltip`
           - Cross-plugin:
-            - Uses tokens: 255 vars — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
-              - `ui/tokens/density` ×71
+            - Uses tokens: 264 vars — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+              - `ui/tokens/density` ×76
               - `ui/tokens/color-palette` ×60
               - `ui/tokens/type-scale` ×42
+              - `ui/tokens/shape` ×15
               - `ui/tokens/overlay` ×13
-              - `ui/tokens/shape` ×13
+              - `ui/tokens/shadow` ×12
               - `ui/tokens/sidebar-metrics` ×12
               - `ui/tokens/categorical` ×11
-              - `ui/tokens/shadow` ×10
               - `ui/tokens/sidebar-palette` ×9
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
@@ -37524,9 +37630,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/pending-turn`
         - **`yield`** — Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
           - Cross-plugin:
-            - Imported by: 35 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
+            - Imported by: 34 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
               - `apps` ×10
-              - `primitives` ×9
+              - `primitives` ×8
               - `conversations` ×6
               - `debug` ×4
               - `ui` ×3
@@ -37665,9 +37771,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
-        - Uses: 111 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 112 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `network/live` ×18
-          - `primitives/css/ui-kit` ×14
+          - `primitives/css/ui-kit` ×15
           - `primitives/data-view/view-core` ×8
           - `primitives/live-state` ×6
           - `primitives/css/control-panel` ×4
@@ -37712,6 +37818,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/row-actions.RowActions`
           - `ui/icons.Icon`
         - Exports (types):
+          - `CardFields`
+          - `CardMetaProps`
           - `CellContributionMeta`
           - `CellEditorProps`
           - `CollectionItemActionContribution`
@@ -37719,6 +37827,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CollectionRowActivationContribution`
           - `ColumnConfigDerive`
           - `ColumnConfigProps`
+          - `CoverContent`
+          - `CoverFrameProps`
           - `CreateOption`
           - `DataViewAggregateConfig`
           - `DataViewContribution`
@@ -37778,17 +37888,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HierarchyConfig`
           - `HierarchyTree`
           - `HierarchyTreeOptions`
-          - `ItemActionContribution`
+          - `ItemActionArms`
+          - `ItemActionEntry`
+          - `ItemActionFilter`
+          - `ItemActionPlacement`
           - `ItemActionProps`
+          - `ItemActionRender`
           - `ItemActions`
           - `ItemActionsDescriptor`
-          - `ItemActionZone`
+          - `ItemActionTarget`
+          - `ItemActionZones`
           - `LeadingSlotProps`
           - `LivePagesPaging`
           - `LoweredFilter`
           - `ManualOrderConfig`
           - `PartitionOptions`
           - `ProjectedRow`
+          - `ResolvedCover`
           - `RowDnd`
           - `RowDndHierarchy`
           - `RowDndProps`
@@ -37813,7 +37929,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ViewState`
         - Exports (values):
           - `applyFilter`
+          - `CardMeta`
           - `ChipSelectFilterInput`
+          - `coverDetailClass`
+          - `CoverFrame`
+          - `coverHoverGroup`
           - `DATA_VIEW_HEADER_OFFSET_VAR`
           - `DataView`
           - `DataViewGroupHeader`
@@ -37836,17 +37956,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `IDENTITY_CODEC`
           - `IDENTITY_GROUPING`
           - `IDENTITY_GROUPING_SET`
+          - `isFieldValueEmpty`
           - `isFilterGroup`
           - `isGroupableField`
           - `leadingSlot`
           - `liveDataSource`
           - `makeSortComparator`
           - `MissingDataCellError`
+          - `partitionCardFields`
           - `partitionIntoSections`
+          - `pickCoverField`
           - `pickLeadingField`
           - `pickPrimaryField`
+          - `PillsToolbar`
           - `readFallback`
           - `resolveBodyFields`
+          - `resolveCover`
           - `rowToneClass`
           - `SectionBody`
           - `UNGROUPED_FOLD_KEY`
@@ -37899,6 +38024,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CellEditorProps`
           - `ColumnConfigDerive`
           - `ColumnConfigProps`
+          - `CoverContent`
           - `CreateOption`
           - `DataViewActiveChrome`
           - `DataViewAggregateConfig`
@@ -37963,8 +38089,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HostedToolbar`
           - `HostedToolbarForms`
           - `HostedToolbarParts`
+          - `ItemActionEntry`
+          - `ItemActionFilter`
+          - `ItemActionPlacement`
           - `ItemActionProps`
           - `ItemActionsDescriptor`
+          - `ItemActionTarget`
           - `ItemActionZone`
           - `LiveDataSource`
           - `LiveDataSourceOf`
@@ -38017,17 +38147,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `splitFieldSections`
           - `UNGROUPED_FOLD_KEY`
       - Cross-plugin:
-        - Uses tokens: 28 vars — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ui/tokens/color-palette` ×10
-          - `ui/tokens/density` ×10
-          - `ui/tokens/type-scale` ×5
-          - `ui/tokens/shape` ×2
-          - `ui/tokens/shadow --shadow`
-        - Imported by: 101 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses tokens: 42 vars — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ui/tokens/density` ×15
+          - `ui/tokens/color-palette` ×11
+          - `ui/tokens/type-scale` ×10
+          - `ui/tokens/shadow` ×3
+          - `ui/tokens/shape` ×3
+        - Imported by: 103 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `fields` ×30
-          - `apps` ×23
+          - `apps` ×24
           - `debug` ×13
-          - `primitives` ×9
+          - `primitives` ×10
           - `conversations` ×8
           - `tasks` ×4
           - `infra` ×3
@@ -38180,70 +38310,51 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`floating-toolbar`** — Floating toolbar arrangement for the data-view primitive: the band floats over the view (a full-bleed map under it) — the view tabs as a floating card top-left, past the surface's aside, and search, controls, actions and create as a floating card top-right.
           - Web:
             - Uses:
-              - `primitives/css/fill.Fill`
-              - `primitives/css/line.Line`
-              - `primitives/css/overlay.Overlay`
-              - `primitives/css/rigid.rigidClass`
-              - `primitives/css/scroll.Scroll`
-              - `primitives/css/surface.Surface`
               - `primitives/css/ui-kit.cn`
-              - `primitives/css/yield.yieldClass`
+              - `primitives/data-view.PillsToolbar`
               - `primitives/pane.useReservesFloatingBar`
               - `primitives/shortcuts.useSurfaceShortcuts`
             - Exports (values): `floatingToolbar`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/density --chrome-pane-pad-end`
-              - `ui/tokens/density --space-2xs`
               - `ui/tokens/density --space-md`
-              - `ui/tokens/density --space-sm`
-              - `ui/tokens/density --space-xs`
             - Imported by: `apps/places/places-map`
-        - **`gallery`** — Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
+        - **`gallery`** — Gallery view child for the data-view primitive: a responsive grid of cover cards — the cover is the card, its fields three fixed lines under it, its actions on the cover.
           - Web:
             - Contributes: `DataViewSlots.View` "Gallery" → `GalleryView`
             - Uses: 38 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/gallery/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/gallery/REFERENCE.md)
-              - `primitives/data-view` ×22
+              - `primitives/data-view` ×24
               - `primitives/css/ui-kit` ×2
               - `primitives/row-actions` ×2
               - `primitives/css/badge.Badge`
-              - `primitives/css/card.Card`
               - `primitives/css/center.Center`
-              - `primitives/css/clip.Clip`
               - `primitives/css/grid.Grid`
+              - `primitives/css/layer.Layer`
               - `primitives/css/pin.Pin`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/dom/element-size.useResizeObserver`
               - `primitives/link-gesture.activationProps`
               - `primitives/virtual-rows.VirtualRows`
-              - `ui/icons.Icon`
             - Exports (types):
-              - `CoverContent`
+              - `DataCardActions`
               - `DataCardProps`
-              - `GalleryViewOptions`
             - Exports (values): `DataCard`
           - Cross-plugin:
             - Uses tokens:
-              - `ui/tokens/color-palette --border`
-              - `ui/tokens/color-palette --foreground`
-              - `ui/tokens/color-palette --muted`
+              - `ui/tokens/color-palette --background`
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --primary`
-              - `ui/tokens/color-palette --primary-text`
               - `ui/tokens/color-palette --ring`
               - `ui/tokens/density --chrome-pad-x`
-              - `ui/tokens/density --pad-card`
-              - `ui/tokens/density --space-lg`
+              - `ui/tokens/density --gallery-card-min`
+              - `ui/tokens/density --gallery-card-min-compact`
+              - `ui/tokens/density --gallery-gap-x`
+              - `ui/tokens/density --gallery-gap-y`
               - `ui/tokens/density --space-sm`
               - `ui/tokens/density --space-xl`
-              - `ui/tokens/shape --radius`
-              - `ui/tokens/shape --spacing`
-              - `ui/tokens/type-scale --font-weight-semibold`
-          - Core:
-            - Exports (types):
-              - `CoverContent`
-              - `GalleryViewOptions`
+              - `ui/tokens/shape --radius-cover`
         - **`icons`** — Icons view child for the data-view primitive: a centred launcher grid of fixed-size tiles (the row's leading avatar filling a squircle) with the name underneath, drag-to-reorder in manual order.
           - Web:
             - Contributes: `DataViewSlots.View` "Icons" → `IconsView`
@@ -38277,16 +38388,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
           - Web:
             - Contributes: `DataViewSlots.View` "List" → `ListView`
-            - Uses: 52 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md)
-              - `primitives/data-view` ×32
+            - Uses: 61 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/list/REFERENCE.md)
+              - `primitives/data-view` ×37
               - `primitives/rank-reorder` ×3
               - `primitives/css/spacing` ×2
+              - `primitives/row-actions` ×2
               - `primitives/collapsible.FoldMotion`
               - `primitives/css/badge.Badge`
               - `primitives/css/center.Center`
               - `primitives/css/clip.clipClasses`
               - `primitives/css/fill.Fill`
               - `primitives/css/inline.Inline`
+              - `primitives/css/layer.Layer`
+              - `primitives/css/line.Line`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/row.Row`
               - `primitives/css/text.Text`
@@ -38301,6 +38415,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --foreground`
               - `ui/tokens/color-palette --muted-foreground`
+              - `ui/tokens/density --cover-thumb-h`
+              - `ui/tokens/density --cover-thumb-w`
+              - `ui/tokens/density --pad-row-x`
+              - `ui/tokens/density --pad-row-y`
               - `ui/tokens/density --section-body-pad-top`
               - `ui/tokens/density --space-sm`
               - `ui/tokens/density --space-xl`
@@ -38357,7 +38475,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`view-core`** — Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. Type-agnostic named-view-instance engine (server): the per-id `views` config descriptor + a generic registration helper. Consumers register their own ids under their own plugin.
           - Web:
             - Contributes: `IdKinds.Kind` "view"
-            - Uses: 37 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md)
+            - Uses: 36 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md)
               - `primitives/css/ui-kit` ×13
               - `config_v2` ×3
               - `primitives/css/control-panel` ×2
@@ -38367,7 +38485,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2/fields.FieldRenderer`
               - `ids.IdKinds`
               - `primitives/css/fill.Fill`
-              - `primitives/css/grow.growClass`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/row.Row`
               - `primitives/css/spacing.Stack`
@@ -38418,6 +38535,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --faint-foreground`
+              - `ui/tokens/color-palette --foreground`
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/shape --spacing`
               - `ui/tokens/sidebar-metrics --sidebar-icon-gap`
@@ -41272,7 +41390,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `welcomePane.Actions` "title" → `PaneTitleItem`
           - `workflow-node.actions` "title" → `PaneTitleItem`
           - `worktreeCleanupPane.Actions` "title" → `PaneTitleItem`
-        - Uses: 37 symbols — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Uses: 38 symbols — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `primitives/css/ui-kit` ×4
           - `primitives/slot-render` ×4
           - `primitives/live-state` ×3
@@ -41283,6 +41401,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/center.Center`
           - `primitives/css/column.Column`
           - `primitives/css/line.Line`
+          - `primitives/css/overlay.Overlay`
           - `primitives/css/pin.Pin`
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/spacing.Stack`
@@ -41745,12 +41864,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/spacing.Stack`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.ControlSizeProvider`
+          - `primitives/css/ui-kit.SURFACE_LEVELS`
           - `primitives/overlay/popup-open.PopupOpenScope`
         - Exports (types): `RowActionsProps`
         - Exports (values):
           - `RowActions`
           - `rowActionsAnchor`
       - Cross-plugin:
+        - Uses tokens:
+          - `ui/tokens/density --space-2xs`
+          - `ui/tokens/shadow --shadow`
         - Imported by:
           - `conversations/conversation-view/jsonl-viewer`
           - `conversations/conversation-view/jsonl-viewer/row-actions`
@@ -41762,6 +41885,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/data-table`
           - `primitives/data-view`
           - `primitives/data-view/gallery`
+          - `primitives/data-view/list`
           - `primitives/tree`
           - `shell/health-report`
     - **`scope`** — Which mounted instance does this belong to, and how do I reach mine? — my instance's state (scoped-store), my instance's DOM node (dom-scope), the ids that name an instance (surface-id / tab-id / app-instance), and the deliberate opposite: one implementation for the whole page (install-sink).
@@ -47592,10 +47716,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 311 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 310 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×71
           - `conversations` ×59
-          - `primitives` ×42
+          - `primitives` ×41
           - `page` ×40
           - `fields` ×34
           - `debug` ×14
@@ -48314,12 +48438,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tokenVarName`
           - `transformValues`
       - Cross-plugin:
-        - Uses tokens: 48 vars — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+        - Uses tokens: 53 vars — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ui/tokens/color-palette` ×22
-          - `ui/tokens/density` ×18
+          - `ui/tokens/density` ×19
+          - `ui/tokens/shadow` ×5
           - `ui/tokens/type-scale` ×4
-          - `ui/tokens/shadow` ×3
-          - `ui/tokens/shape --radius`
+          - `ui/tokens/shape` ×3
         - Imported by: 45 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ui` ×28
           - `apps` ×14
@@ -48533,6 +48657,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --border`
+              - `ui/tokens/density --space-md`
               - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
@@ -48565,10 +48690,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `CategoricalTokenValues`
             - Exports (values): `categoricalGroup`
           - Cross-plugin:
-            - Tokens used by: 33 plugins — full list in [`plugins/ui/plugins/tokens/plugins/categorical/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/categorical/REFERENCE.md)
+            - Tokens used by: 34 plugins — full list in [`plugins/ui/plugins/tokens/plugins/categorical/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/categorical/REFERENCE.md)
               - `debug` ×11
+              - `apps` ×6
               - `conversations` ×6
-              - `apps` ×5
               - `plugin-meta` ×5
               - `primitives` ×2
               - `build/build-profiling`
@@ -48667,8 +48792,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 501 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
-              - `apps` ×110
+            - Tokens used by: 502 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+              - `apps` ×111
               - `conversations` ×89
               - `primitives` ×77
               - `debug` ×35
@@ -48726,8 +48851,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 321 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
-              - `primitives` ×67
+            - Tokens used by: 323 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+              - `primitives` ×69
               - `apps` ×66
               - `conversations` ×49
               - `debug` ×28
@@ -49041,9 +49166,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-3xs`
               - `ui/tokens/type-scale --line-height-caption`
-            - Tokens used by: 68 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+            - Tokens used by: 69 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
               - `apps` ×29
-              - `primitives` ×16
+              - `primitives` ×17
               - `framework` ×5
               - `ui` ×5
               - `apps-core` ×2
@@ -49078,9 +49203,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 420 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 421 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×93
-              - `apps` ×83
+              - `apps` ×84
               - `primitives` ×70
               - `page` ×35
               - `ui` ×32
@@ -49207,9 +49332,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 229 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+            - Tokens used by: 228 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
               - `apps` ×58
-              - `primitives` ×39
+              - `primitives` ×38
               - `conversations` ×37
               - `debug` ×16
               - `plugin-meta` ×15

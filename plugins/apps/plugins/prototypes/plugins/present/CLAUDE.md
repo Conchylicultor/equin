@@ -2,7 +2,8 @@
 
 **Present** shows one canvas frame with none of the app around it. It
 contributes two frame actions (`PrototypeFrameActions`), so every frame of the
-prototype canvas gets both, and the canvas knows nothing about them:
+prototype canvas gets both, and the canvas knows nothing about them — plus the
+first one again on every gallery card:
 
 - **Open in a new tab** (`OpenNewTabAction`) — opens the frame's present page
   (below) chromeless (`embedUrl(…, "chromeless")`, so no tab bar, rail or
@@ -12,6 +13,10 @@ prototype canvas gets both, and the canvas knows nothing about them:
   (the real app) opens its own `href`, which already is that, and the button is
   disabled when it has none. The href comes from `BrowserTabOpener`
   (`components/frame-link.tsx`), opened as a `NewTabButton`.
+- **Open in a new tab on a gallery card** (`OpenCardNewTabAction`, a
+  revealed `PrototypeCardActions` contribution — gallery cards and list rows) —
+  the same page for the prototype's live folder, at the Responsive size, with
+  the shared picks (frame A's).
 - **Full screen** (`F`, `FullScreenAction`) — a `<ViewportOverlay layer="max">`
   over the whole page, handed to the browser's Fullscreen API. Escape exits
   fullscreen (the browser handles it), and the resulting `fullscreenchange`
@@ -132,7 +137,7 @@ The routes live in `internal/routes.ts`, apart from the panes.
 
 ## Plugin reference
 
-- Description: Two frame actions on every prototype canvas frame: Open in a new tab (the frame's chromeless present page at the Responsive size, filling the tab at its own width; a source frame opens its own href) and Full screen (F, which presents the selected frame; the browser's Fullscreen API). While presenting, hovering shows the frame's tag (the canvas frame header's own box: options chip | version stepper) and 'i of n', Exit and the size & zoom chip, on the right edge + (add a frame) and Compare with each resolved frame source (the real app, swiped) — both adding the frame and leaving to the prototype's canvas in the app — and the left and right arrow keys flip through the canvas's frames. The new tab is present/<id>/<sha|live>/<declared|size word>/<picks?>, a one-frame page carrying the frame's version and own picks, with an Exit icon back to the prototype's canvas; its + / Compare open the app's canvas on the frame plus the new one.
+- Description: Open in a new tab on every gallery card (its live present page) and two frame actions on every prototype canvas frame: Open in a new tab (the frame's chromeless present page at the Responsive size, filling the tab at its own width; a source frame opens its own href) and Full screen (F, which presents the selected frame; the browser's Fullscreen API). While presenting, hovering shows the frame's tag (the canvas frame header's own box: options chip | version stepper) and 'i of n', Exit and the size & zoom chip, on the right edge + (add a frame) and Compare with each resolved frame source (the real app, swiped) — both adding the frame and leaving to the prototype's canvas in the app — and the left and right arrow keys flip through the canvas's frames. The new tab is present/<id>/<sha|live>/<declared|size word>/<picks?>, a one-frame page carrying the frame's version and own picks, with an Exit icon back to the prototype's canvas; its + / Compare open the app's canvas on the frame plus the new one.
 - Web:
   - Slots: `prototypes-present.actions`
   - Slot contributors: `prototypes-present.actions` ← `primitives.pane`
@@ -141,13 +146,15 @@ The routes live in `internal/routes.ts`, apart from the panes.
     - `PrototypeDetailWrap` → `PresentationHost`
     - `PrototypeFrameActions` "open-new-tab" → `OpenNewTabAction`
     - `PrototypeFrameActions` "full-screen" → `FullScreenAction`
-  - Uses: 53 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `PrototypeCardActions` "open-new-tab" → `OpenCardNewTabAction`
+  - Uses: 54 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/prototypes/canvas` ×25
     - `primitives/css/ui-kit` ×3
     - `primitives/hover-reveal` ×2
     - `primitives/latest-ref` ×2
     - `primitives/pane` ×2
     - `apps-core/tabs.useSurfaceFocused`
+    - `apps/prototypes/gallery.PrototypeCardActions`
     - `network/live.useLive`
     - `primitives/css/pin.Pin`
     - `primitives/css/scroll.Scroll`

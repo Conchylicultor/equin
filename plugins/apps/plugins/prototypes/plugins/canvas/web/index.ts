@@ -23,6 +23,7 @@ import {
 } from "./internal/sub-themes";
 
 export { prototypeDetailPane } from "./panes";
+export { CanvasGround } from "./components/canvas-ground";
 export {
   FrameSource,
   PrototypeDetailWrap,

@@ -42,13 +42,30 @@ describe("GroupedSections — header style", () => {
     expect(standard).toBe(absent);
   });
 
-  it("standard: chevron leads, the count sits outside the control", () => {
+  it("standard: label, count beside it, a rule, the chevron at the end", () => {
     renderSections("standard");
-    const header = screen.getByRole("button", { name: "Queue" });
-    expect(header.firstElementChild?.tagName.toLowerCase()).toBe("svg");
-    // The count rides the trailing cluster, a sibling of the control.
-    expect(header.textContent).toBe("Queue");
-    expect(header.parentElement!.textContent).toContain("6");
+    // The count is part of the label's run, in the code role.
+    const header = screen.getByRole("button", { name: "Queue6" });
+    expect(header.getAttribute("aria-expanded")).toBe("true");
+    expect(header.querySelector(".text-code")!.textContent).toBe("6");
+    // The hairline fills the slack after the run, out of the a11y tree.
+    const rule = header.querySelector('[data-slot="separator"]')!;
+    expect(rule.closest('[aria-hidden="true"]')).not.toBeNull();
+    // No chevron leads; it sits at the far end, outside the control, faint.
+    expect(header.querySelector("svg")).toBeNull();
+    const chevron = header.parentElement!.querySelector("svg")!;
+    expect(chevron.getAttribute("class")).toContain("text-faint-foreground");
+    expect(chevron.getAttribute("class")).not.toContain("opacity-0");
+  });
+
+  it("standard: keeps a section's header actions before the chevron", () => {
+    renderSections("standard", (s) =>
+      s.key === "queue" ? <button type="button">Fold</button> : null,
+    );
+    const action = screen.getByRole("button", { name: "Fold" });
+    const header = screen.getByRole("button", { name: "Queue6" });
+    expect(header.contains(action)).toBe(false);
+    expect(header.parentElement!.contains(action)).toBe(true);
   });
 
   it("quiet: count right after the label, chevron trailing the run", () => {
@@ -85,7 +102,7 @@ describe("GroupedSections — header style", () => {
     renderSections("standard");
     // The count rides the row's actions, so the control is the split path's
     // inner button and the rail is on the row BOX around it.
-    const header = screen.getByRole("button", { name: "Queue" });
+    const header = screen.getByRole("button", { name: "Queue6" });
     expect(header.parentElement!.className).toContain("rail-follow");
   });
 });

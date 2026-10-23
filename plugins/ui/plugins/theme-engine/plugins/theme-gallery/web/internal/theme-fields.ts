@@ -19,7 +19,8 @@ function optionsOf(values: Iterable<string>): FieldOption[] {
 
 /**
  * The Theme DataView's schema. Every field is a filter, sort and group-by
- * dimension; which ones a card or a row DRAWS is the body's choice, so the
+ * dimension, and a gallery card draws the visible ones (the name as its title,
+ * the source as its subtitle, tags and users as its token line); the
  * dimensions only there to narrow (`catalog`, `saved`) default to hidden.
  */
 export function themeFields(rows: readonly ThemeRow[]): FieldDef<ThemeRow>[] {
@@ -32,11 +33,13 @@ export function themeFields(rows: readonly ThemeRow[]): FieldDef<ThemeRow>[] {
       value: (r) => r.label,
     },
     {
+      // A text field, so a gallery card writes it as its subtitle line.
       id: "source",
       label: "Source",
-      type: "enum",
+      type: "text",
       value: (r) => r.source,
-      options: optionsOf(rows.map((r) => r.source)),
+      // Still one section per source, as when it was an enum.
+      groupable: true,
     },
     {
       id: "tags",

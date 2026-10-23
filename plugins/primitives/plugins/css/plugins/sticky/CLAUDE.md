@@ -37,6 +37,22 @@ become a mismatched band in a tinted surface (the sidebar/inset-framing bug).
 tinted surface only has to set `--chrome-mask` alongside its background to get
 matching pinned bars for free.
 
+## Fading — `mask="fade"`
+
+`mask="fade"` is the opaque mask plus a tail: the band keeps `bg-chrome-mask`
+and the `sticky-fade` utility (app.css) hangs an out-of-flow `::after` gradient
+from `--chrome-mask` to transparent past the band's pinned-away edge, over the
+density `--sticky-fade-tail` (default 1.75rem). Content scrolls UNDER the band
+and dissolves into it instead of vanishing at a hard line. The tail is
+absolutely placed off the (positioned) band, so the band's measured height —
+what `stickyOffsetPx` stacks the next band at — never includes it, and it takes
+no pointer events. Sticky writes `data-sticky-edge` so the tail hangs the right
+way for every edge; an inactive band draws no tail (it would hang off whatever
+positioned ancestor is above). Pure map: `stickyMaskClasses`. Caveat: like any
+absolute box, a tail hanging past the END of a scroller's content adds to its
+scrollable overflow — a band normally has content beyond it, so this only shows
+on a near-empty list.
+
 ## Offsets from a measured height — `stickyOffsetPx`, never `Math.round`
 
 A box pinned under another (a group header under a toolbar, the next header in
@@ -64,6 +80,8 @@ toggle, silently resetting any child component state (e.g. an inner
 - **`edge`** — `"top"` (default) | `"bottom"` | `"left"` | `"right"`.
 - **`offset`** — `SpaceStep` inset from the edge. Default `none`.
 - **`layer`** — z-layer stacking level. Default `raised`.
+- **`mask`** — `false` (default) | `true` (opaque `bg-chrome-mask`) | `"glass"`
+  (frosted) | `"fade"` (opaque + a gradient tail, above).
 - **`as`** — host element. Default `div`. **`className`** composes last; caller
   **`style`** overrides the edge offset.
 
@@ -85,7 +103,9 @@ toggle, silently resetting any child component state (e.g. an inner
     - `stickyClasses`
     - `stickyOffsetPx`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/color-palette --background`
+  - Uses tokens:
+    - `ui/tokens/color-palette --background`
+    - `ui/tokens/density --sticky-fade-tail`
   - Imported by:
     - `apps/chord/curriculum`
     - `code-explorer/commit-detail`

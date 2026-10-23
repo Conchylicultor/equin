@@ -1918,8 +1918,8 @@ never add one.
   - Slots:
     - `FieldPresentation.Register`
     - `ClientFields.Resolve`
-  - Slot contributors: 36 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `FieldPresentation.Register` ×33
+  - Slot contributors: 39 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `FieldPresentation.Register` ×36
     - `ClientFields.Resolve` ×3
   - Uses:
     - `primitives/live-state.PagedResourceResult`
@@ -2186,8 +2186,8 @@ never add one.
     - `serveCollectionOn`
     - `serveValueOn`
 - Cross-plugin:
-  - Imported by: 273 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×73
+  - Imported by: 275 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×75
     - `conversations` ×50
     - `debug` ×27
     - `tasks` ×27

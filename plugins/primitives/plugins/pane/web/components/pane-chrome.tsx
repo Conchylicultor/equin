@@ -6,6 +6,7 @@ import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { SlotItemLayout } from "@plugins/primitives/plugins/slot-render/web";
@@ -109,6 +110,18 @@ type PaneChromeProps = HeaderPresentation & {
    * same tree it always was.
    */
   overlay?: ReactNode;
+  /**
+   * The pane's non-scrolling GROUND — a decorative picture painted BEHIND the
+   * body that the body scrolls over (the prototype viewer's grid, which the
+   * gallery shares so a card sits on the same ground as the frame it opens).
+   * Fills the body's box (not the header's), never scrolls, and is painted
+   * under the body by DOM order (`Overlay`'s `behind`), so the body's own
+   * content and backgrounds stay on top. The ground owns its look and its
+   * `aria-hidden`; this only places it.
+   *
+   * The wrapper exists only when this (or `overlay`) is passed.
+   */
+  ground?: ReactNode;
   children: ReactNode;
 };
 
@@ -129,6 +142,7 @@ export function PaneChrome({
   pane,
   titleOnly,
   overlay,
+  ground,
   header: presentation = "bar",
   floatingHeader = false,
   headerTheme,
@@ -215,11 +229,22 @@ export function PaneChrome({
     </Bar>
   );
   const content = <ContentScope>{children}</ContentScope>;
+  // The body over its ground: the ground is Overlay's `behind` (painted first,
+  // filling the box), the body its filling children — so the scroll sits on top
+  // by DOM order and never scrolls the ground with it.
+  const grounded = (body: ReactNode): ReactNode =>
+    ground == null ? (
+      body
+    ) : (
+      <Overlay fill behind={ground} className="isolate h-full">
+        {body}
+      </Overlay>
+    );
   if (presentation === "card") {
     return (
       // positioning host for the card and the overlay: the scroll's PARENT, so neither scrolls away with the body
       <div className="relative isolate h-full">
-        <PaneScroll>{content}</PaneScroll>
+        {grounded(<PaneScroll>{content}</PaneScroll>)}
         {overlay}
         <Pin
           to="top-left"
@@ -301,11 +326,11 @@ export function PaneChrome({
       scrollBody={false}
       body={
         overlay == null ? (
-          scroll
+          grounded(scroll)
         ) : (
           // positioning host for the pane's overlay layer: it must be the scroller's PARENT (an absolute child of a scroller scrolls away) and sit below the header
           <div className="relative isolate h-full">
-            {scroll}
+            {grounded(scroll)}
             {overlay}
           </div>
         )

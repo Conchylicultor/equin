@@ -3,6 +3,7 @@ import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import {
   defineItemActions,
+  type CoverContent,
   type CreateOption,
 } from "@plugins/primitives/plugins/data-view/web";
 import type { Song } from "../core";
@@ -24,12 +25,15 @@ import type { Song } from "../core";
  *    the fetcher bound to the surface's transport (`ctx.fetchEndpoint`).
  *    Adding a new source = a new contribution here, with zero library or
  *    core-schema changes.
+ *  - `Cover` — each source's answer to "what is this song's cover?"
+ *    ({@link SongCoverAnswer}), folded by the library into the one cover every
+ *    view draws (the gallery card's picture, the list row's thumbnail).
  *  - `SongActions` — the ONE per-row action set for the library, rendered by
- *    BOTH views: the gallery card and the table row. An action declares where it
- *    belongs with `zone` — `"persistent"` (painted at rest: the card's footer,
- *    the table's reserved trailing track) or the default `"revealed"` (the
- *    hover cluster). There is no per-view action list, so an action added here
- *    can never reach one view and miss the other.
+ *    EVERY view: the gallery card, the list row and the table row. An action
+ *    declares where it belongs with `zone` — `"primary"` (the row's main verb:
+ *    the round button over the cover), `"persistent"` (painted at rest) or the
+ *    default `"revealed"` (the hover cluster). There is no per-view action
+ *    list, so an action added here can never reach one view and miss another.
  *
  * Extra library fields are not a seam here: a plugin EXPOSES them from its
  * extension of the songs entity (`defineExtensionShape({ exposes })`, e.g.
@@ -62,6 +66,24 @@ export interface SourceContext {
   fetchEndpoint: FetchEndpoint;
 }
 
+/**
+ * One source's answer to "what is this song's cover?" (`Library.Cover`):
+ *
+ * - `art` — the picture (`content`, a data-view `CoverContent`: an image URL,
+ *   or a node the source draws itself — a chord grid in the theme's colours).
+ * - `pending` — the source HAS a cover for the song but it is not ready yet
+ *   (a transcription still running); `label` says what is under way.
+ * - `failed` — the source should have a cover and could not make it;
+ *   `message` says why.
+ *
+ * A source with nothing to say about the song (not its source, no artwork)
+ * returns `undefined` — never a stand-in `art`.
+ */
+export type SongCoverAnswer =
+  | { kind: "art"; content: CoverContent }
+  | { kind: "pending"; label: string }
+  | { kind: "failed"; message: string };
+
 /** A source's create affordance: a data-view `CreateOption` whose `onSelect` takes the {@link SourceContext}. */
 export type SourceCreateOption = Omit<CreateOption, "onSelect"> & {
   onSelect: (ctx: SourceContext) => void | Promise<unknown>;
@@ -81,10 +103,24 @@ export const Library = {
     createOption?: SourceCreateOption;
   }>({ docLabel: (c) => c.sourceId }),
   /**
+   * The cover seam: each contribution answers for the songs it knows
+   * (`cover(song)`, a hook-free read of the row — it is called per card per
+   * render). The library folds every answer through `resolveSongCover`
+   * (failed > pending > art; two arts for one song throw) and paints it on top
+   * of the quiet source-tinted base `SongCover` always draws, so a song no
+   * contribution answers for still has a cover. The library never names a
+   * source (collection–consumer rule).
+   */
+  Cover: defineSlot<{
+    id: string;
+    cover: (song: Song) => SongCoverAnswer | undefined;
+  }>({ docLabel: (c) => c.id }),
+  /**
    * Per-row actions for the library (Play/Pause, Delete). Minted here,
    * contributed in `web/index.ts`, and passed to the one `DataView` as
-   * `itemActions`, so the gallery card and the table row show the same set —
-   * Play painted at rest (`zone: "persistent"`), Delete on hover.
+   * `itemActions`, so the gallery card, the list row and the table row show
+   * the same set — Play is the row's primary verb (`zone: "primary"`: the round
+   * button over the cover, at rest while its song plays), Delete on hover.
    */
   SongActions: defineItemActions<Song>(),
 };

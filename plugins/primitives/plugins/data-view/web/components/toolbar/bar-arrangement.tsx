@@ -1,47 +1,28 @@
 import type { ReactNode } from "react";
+import { spaceLength } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
 import type { ToolbarArrangement, ToolbarParts } from "../../../core";
+import { PillsToolbar } from "./pills-toolbar";
 
 /**
- * The default wide toolbar: one inline row of [title | switcher strip | search |
- * control triggers | actions | creators]. The layout every DataView has always
- * had, moved out of `DataViewToolbar` so it is one arrangement among others
- * rather than the toolbar's only shape.
+ * The default wide toolbar: one in-flow row of [title] [views pill] ···
+ * [tools pill: search · controls · actions | create] — {@link PillsToolbar}
+ * on the in-flow band (on the rail, a small gap above and below).
  */
-function BarToolbar({
-  title,
-  switcher,
-  search,
-  controls,
-  actions,
-  creators,
-}: ToolbarParts): ReactNode {
-  return (
-    <div
-      // toolbar row of variable-content controls; no named-slot primitive maps. The Sticky's `mask` paints `bg-chrome-mask` so rows don't show through the pinned bar (and it matches whatever surface the DataView is embedded in)
-      //
-      // ONE line — no `flex-wrap` (the compact fold is the host's answer to a
-      // row that does not fit).
-      // eslint-disable-next-line layout/no-adhoc-layout
-      className="flex items-center gap-sm py-sm rail-follow"
-    >
-      {title}
-      {/* The switcher grows (flex-1) to absorb the leading slack, so it pushes
-          search + trailing controls to the right — no `ml-auto` margin needed
-          (and an auto margin would steal the free space from the switcher's
-          flex-grow, collapsing its hover-reveal spacer). */}
-      {switcher.strip}
-      {search}
-      {controls}
-      {/* eslint-disable-next-line row-actions/no-raw-actions-slot -- surface-level toolbar actions, one per DataView, not a per-row cluster */}
-      {actions}
-      {creators}
-    </div>
-  );
+function BarToolbar(parts: ToolbarParts): ReactNode {
+  return <PillsToolbar {...parts} />;
 }
 
 /** The default arrangement — see {@link BarToolbar}. */
 export const barArrangement: ToolbarArrangement = {
   id: "bar",
-  forms: { search: "field", controls: "ghost", creators: "labelled" },
+  // `filled`: the search is a quiet well inside the tools pill, which already
+  // draws the edge.
+  forms: { search: "filled", controls: "ghost", creators: "labelled" },
   component: BarToolbar,
+  // The fade's runway. The host hangs a `--sticky-fade-tail` gradient under
+  // the band; at rest the first row must start where it has faded out, or
+  // the top of an unscrolled list reads washed out. It stops one `sm` short
+  // of the tail: the tail's last stretch is near-transparent, and the pills
+  // already sit `py-sm` inside the band.
+  spaceBelow: `calc(var(--sticky-fade-tail) - ${spaceLength("sm")})`,
 };

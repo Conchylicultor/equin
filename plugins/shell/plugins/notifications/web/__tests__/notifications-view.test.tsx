@@ -213,6 +213,7 @@ describe("item actions", () => {
       <DismissNotificationAction
         row={note({ id: notificationIdKind.key("notif-7") })}
         hasChildren={false}
+        placement="cluster"
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
@@ -226,7 +227,11 @@ describe("item actions", () => {
 
   it("Open renders only for a row with an in-app link", () => {
     const { container } = render(
-      <OpenNotificationAction row={note()} hasChildren={false} />,
+      <OpenNotificationAction
+        row={note()}
+        hasChildren={false}
+        placement="cluster"
+      />,
     );
     expect(container.innerHTML).toBe("");
     cleanup();
@@ -234,6 +239,7 @@ describe("item actions", () => {
       <OpenNotificationAction
         row={note({ linkTo: IN_APP_LINK })}
         hasChildren={false}
+        placement="cluster"
       />,
     );
     expect(screen.getByRole("button", { name: "Open" })).toBeTruthy();

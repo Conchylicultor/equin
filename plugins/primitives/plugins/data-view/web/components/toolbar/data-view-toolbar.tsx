@@ -1,24 +1,21 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { type KeyboardEvent, type ReactNode, useCallback, useRef } from "react";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
-import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
-import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
-import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { spaceLength } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { hoverRevealGroup } from "@plugins/primitives/plugins/hover-reveal/web";
-import type {
-  CreateOption,
-  DataViewDensity,
-  DataViewSearchSuggestions,
-  ToolbarArrangement,
-  ToolbarParts,
+import {
+  DATA_VIEW_HEADER_OFFSET_VAR,
+  type CreateOption,
+  type DataViewDensity,
+  type DataViewSearchSuggestions,
+  type ToolbarArrangement,
+  type ToolbarParts,
 } from "../../../core";
 import { useToolbarControls } from "./use-toolbar-controls";
 import { CompactControls } from "./compact-controls";
@@ -26,6 +23,7 @@ import { ControlTrigger } from "./control-trigger";
 import { CreatorsControl } from "../creators-control";
 import { barArrangement } from "./bar-arrangement";
 import { SearchWithSuggestions } from "./search-suggestions";
+import { PillsRow, ToolbarPill } from "./pills-toolbar";
 
 /**
  * Below this container width the toolbar folds: search AND every control
@@ -41,6 +39,13 @@ import { SearchWithSuggestions } from "./search-suggestions";
  * surface that never asked still cannot render the wide row in 200px.
  */
 const COMPACT_BREAKPOINT = 360;
+
+/**
+ * Below this container width the wide row keeps its shape but its search
+ * field narrows: the views pill is the cell that yields, and without this a
+ * fixed-width search squeezes it down to a sliver of the active view's name.
+ */
+const NARROW_SEARCH_BREAKPOINT = 720;
 
 export interface DataViewToolbarProps {
   /**
@@ -151,13 +156,17 @@ export function DataViewToolbar({
   // compact fold then wears a card of its own (below) rather than floating as
   // a transparent row over the view.
   const floating = overlay === true;
-  const creatorsControl = (
-    <CreatorsControl
-      creators={creators}
-      compact={compact}
-      form={forms.creators}
-    />
-  );
+  const fade = !compact && !floating;
+  // `null` when the surface declares none, so an arrangement can tell (and
+  // drop the divider it would draw before it).
+  const creatorsControl =
+    creators === undefined || creators.length === 0 ? null : (
+      <CreatorsControl
+        creators={creators}
+        compact={compact}
+        form={forms.creators}
+      />
+    );
   const field = (
     <SearchInput
       ref={searchRef}
@@ -179,8 +188,14 @@ export function DataViewToolbar({
       // popover (the wrapper's own block box) — hence no width class there.
       // Bare: fills whatever cell the arrangement gives it.
       wrapperClassName={
-        !compact && forms.search === "field"
-          ? cn(searchSuggestions === undefined ? "w-48" : "w-80")
+        !compact && forms.search !== "bare"
+          ? cn(
+              searchSuggestions !== undefined
+                ? "w-80"
+                : width > 0 && width < NARROW_SEARCH_BREAKPOINT
+                  ? "w-32"
+                  : "w-48",
+            )
           : undefined
       }
     />
@@ -211,42 +226,65 @@ export function DataViewToolbar({
     </Text>
   ) : null;
 
+  // The compact fold keeps the two-pill look: the views pill (only when there
+  // is more than one view to switch between) and a tools pill holding the
+  // actions, the creators and the one options trigger — search and every
+  // control folded behind it (a non-empty query counts toward its badge, so
+  // a folded-away search is still visible from the closed bar). ONE line,
+  // never wrapping: the views pill is the cell that scrolls sideways.
+  const hasActions =
+    actions !== undefined && actions !== null && actions !== false;
+  const toolsAtRest = hasActions || creatorsControl !== null;
   const compactRow = (
-    <div
-      // toolbar row of variable-content controls; no named-slot primitive maps. The Sticky's `mask` paints `bg-chrome-mask` so rows don't show through the pinned bar (and it matches whatever surface the DataView is embedded in)
-      //
-      // ONE line in BOTH layouts — no `flex-wrap`. Compact keeps every control
-      // but the switcher behind the single options trigger, and the switcher
-      // (whose chips deliberately never shrink — see EditableViewSwitcher) sits
-      // in the shrinkable scroll lane below, so the trailing controls can never
-      // be pushed past the container's edge and clipped.
-      // eslint-disable-next-line layout/no-adhoc-layout
-      className="flex items-center gap-sm py-sm rail-follow"
-    >
-      {/* The one shrinkable cell of the bar. The switcher's chips hug their
-            content and never shrink, so when more views exist than fit, this
-            lane scrolls horizontally rather than pushing the trailing controls
-            out of reach. Scrollbar hidden — it is an overflow escape hatch, not
-            a permanent affordance. */}
-      <Scroll axis="x" fill hideScrollbar>
-        <Stack direction="row" align="center" gap="sm">
-          {titleNode}
-          {switcherCount > 1 ? switcher.strip : null}
-        </Stack>
-      </Scroll>
-      {/* eslint-disable-next-line row-actions/no-raw-actions-slot -- surface-level toolbar actions, one per DataView, not a per-row cluster */}
-      {actions}
-      {creatorsControl}
-      {/* Search folds in here with every control — a non-empty query
-            counts toward the trigger's badge so a folded-away search is still
-            visible from the closed bar. */}
-      <CompactControls
-        search={searchInput}
-        controls={controls}
-        activeCount={activeCount}
-        searching={query.length > 0}
-      />
-    </div>
+    <PillsRow
+      overlay={floating}
+      {...(floating
+        ? {
+            className: "p-sm",
+            style: {
+              paddingLeft: `calc(${asideInset} + ${spaceLength("sm")})`,
+            },
+          }
+        : {})}
+      lead={titleNode}
+      views={switcherCount > 1 ? switcher.strip : null}
+      tools={
+        toolsAtRest ? (
+          <>
+            {/* eslint-disable-next-line row-actions/no-raw-actions-slot -- surface-level toolbar actions, one per DataView, not a per-row cluster */}
+            {actions}
+            {creatorsControl}
+            <CompactControls
+              search={searchInput}
+              controls={controls}
+              activeCount={activeCount}
+              searching={query.length > 0}
+            />
+          </>
+        ) : null
+      }
+      // A tools pill holding nothing but the hover-revealed trigger would be
+      // an empty pill at rest — so there the PILL is what reveals.
+      trailing={
+        toolsAtRest ? null : (
+          <CompactControls
+            search={searchInput}
+            controls={controls}
+            activeCount={activeCount}
+            searching={query.length > 0}
+            frame={(node, revealClass) => (
+              <ToolbarPill
+                overlay={floating}
+                label="Tools"
+                className={revealClass}
+              >
+                {node}
+              </ToolbarPill>
+            )}
+          />
+        )
+      }
+    />
   );
 
   const bandContent = !compact ? (
@@ -272,8 +310,6 @@ export function DataViewToolbar({
       creators={creatorsControl}
       asideInset={asideInset}
     />
-  ) : floating ? (
-    <FloatingFold asideInset={asideInset}>{compactRow}</FloatingFold>
   ) : (
     compactRow
   );
@@ -289,9 +325,7 @@ export function DataViewToolbar({
     // any row — while reading the list, or on the way somewhere else entirely —
     // flickered a control in the far top corner, unconnected to anything the
     // user was doing. It rides the `<Sticky>` rather than the bar `<div>` inside
-    // it (same box, one element out) purely so the bar's own `className` stays
-    // the single literal its `no-adhoc-layout` suppression is written against —
-    // a positional directive rebinds if a `cn()` call reflows underneath it.
+    // it (same box, one element out), so the pill row inside owns its own box.
     // Pure CSS (`group-hover`), so hovering costs zero re-renders; the state
     // hook would re-render every windowed row on each pointer enter/leave.
     <>
@@ -322,36 +356,32 @@ export function DataViewToolbar({
           {bandContent}
         </Sticky>
       )}
-      {/* The arrangement's space below the band: a sibling of the `<Sticky>`, not
-        padding inside it, so it scrolls away with the content instead of
-        growing the pinned band (and the measured header offset). */}
+      {/* The wide band's fade: content scrolls UNDER the band and dissolves
+        into it. Its own zero-height `<Sticky mask="fade">` pinned at the
+        band's bottom (the measured header offset), NOT the band's own
+        `mask="fade"`: the band is `nav`, so its tail would paint over the
+        group headers pinned right under it, washing their labels out. This
+        tail is `raised` and comes BEFORE the views in the DOM, so a pinned
+        group header (also `raised`, later) covers it, while rows (no layer)
+        pass under it. The compact fold keeps the plain opaque band: its
+        tight rhythm has no runway for a tail (below). */}
+      {fade ? (
+        <Sticky
+          edge="top"
+          mask="fade"
+          layer="raised"
+          aria-hidden
+          style={{ top: `var(${DATA_VIEW_HEADER_OFFSET_VAR}, 0px)` }}
+        />
+      ) : null}
+      {/* The arrangement's space below the band (for the default bar, the
+        fade's runway: at rest the first row starts where the tail has
+        faded out). A sibling of the `<Sticky>`, not padding inside it, so it
+        scrolls away with the content instead of growing the pinned band (and
+        the measured header offset). */}
       {!compact && !floating && spaceBelow ? (
         <div aria-hidden style={{ height: spaceBelow }} />
       ) : null}
     </>
-  );
-}
-
-/**
- * The compact fold under an overlay arrangement: the one bar, as a raised
- * floating card spanning the band past the aside — the fold's own layout, only
- * given a surface to sit on, since the floating band behind it is transparent.
- */
-function FloatingFold(props: {
-  asideInset: string;
-  children: ReactNode;
-}): ReactNode {
-  const { asideInset, children } = props;
-  return (
-    <div
-      className="p-sm"
-      style={{ paddingLeft: `calc(${asideInset} + ${spaceLength("sm")})` }}
-    >
-      <Overlay.Interactive>
-        <Surface level="overlay" className="px-xs">
-          {children}
-        </Surface>
-      </Overlay.Interactive>
-    </div>
   );
 }

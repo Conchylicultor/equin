@@ -160,7 +160,11 @@ contributions each surface passes in, and per-entry plugin id
   `fakeViewGetter` from `web/testing`),
   `buildViewDescriptors`,
   `buildViewConfigContributions(entries: { id, descriptor, pluginId }[])`,
-  `EditableViewSwitcher`, `CollapsedViewSwitcher` (the same inputs folded
+  `EditableViewSwitcher` (the chips, drag-reorderable, then an
+  ALWAYS-visible `+` add-view button — adding a view is a first-class gesture,
+  never hover-revealed chrome; the strip hugs its chips and never grows, so its
+  host decides the slack: the DataView toolbar's views pill scrolls it
+  sideways), `CollapsedViewSwitcher` (the same inputs folded
   into one chip — active view icon + name + chevron — whose menu lists the other
   views, an "Add view" submenu and "View settings…", which opens
   `ViewSettingsPopover` anchored to the chip via `ControlPanelPopover`'s
@@ -180,7 +184,7 @@ contributions each surface passes in, and per-entry plugin id
 - Description: Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. Type-agnostic named-view-instance engine (server): the per-id `views` config descriptor + a generic registration helper. Consumers register their own ids under their own plugin.
 - Web:
   - Contributes: `IdKinds.Kind` "view"
-  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×13
     - `config_v2` ×3
     - `primitives/css/control-panel` ×2
@@ -190,7 +194,6 @@ contributions each surface passes in, and per-entry plugin id
     - `config_v2/fields.FieldRenderer`
     - `ids.IdKinds`
     - `primitives/css/fill.Fill`
-    - `primitives/css/grow.growClass`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
@@ -241,6 +244,7 @@ contributions each surface passes in, and per-entry plugin id
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --faint-foreground`
+    - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/sidebar-metrics --sidebar-icon-gap`

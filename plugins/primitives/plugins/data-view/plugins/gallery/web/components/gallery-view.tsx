@@ -4,19 +4,16 @@ import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
-import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
-import { RowActions } from "@plugins/primitives/plugins/row-actions/web";
 import {
-  FieldCell,
+  CardMeta,
   GroupedSections,
   SectionBody,
   leadingSlot,
-  pickLeadingField,
-  pickPrimaryField,
+  partitionCardFields,
   resolveBodyFields,
+  resolveCover,
   rowToneClass,
   useDataViewSections,
   useItemActionZones,
@@ -24,104 +21,62 @@ import {
   useResolveCellEditor,
   useResolveOperatorSet,
   useGridPhase,
+  type CardFields,
   type CreateOption,
   type DataViewAggregateConfig,
   type DataViewRenderProps,
   type DataViewSection,
-  type FieldDef,
   type GridLine,
   type ItemActionsDescriptor,
 } from "@plugins/primitives/plugins/data-view/web";
-import type { DataViewPagePlaceholders } from "@plugins/primitives/plugins/data-view/core";
-import type { CoverContent, GalleryViewOptions } from "../../core";
+import type {
+  CoverContent,
+  DataViewPagePlaceholders,
+} from "@plugins/primitives/plugins/data-view/core";
 import { DataCard } from "./data-card";
 import { useGridColumns } from "./use-grid-columns";
-import { symbol } from "@plugins/ui/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
-
-const addIcon = symbol("add");
 
 /** Above this card count the gallery windows its grid (lane-aware: each windowed
  *  row holds one measured row of `columns` cards). Smaller galleries keep the
  *  plain auto-fill `.map`. */
 const VIRTUALIZE_THRESHOLD = 60;
 
-/** One grid cell: a data row (carrying its precomputed key) or the trailing
- *  dashed "+" create card. */
-type GalleryCell =
-  | { kind: "row"; row: unknown; key: string; aggregateCount?: number }
-  | { kind: "create" };
+/** A windowed line's first guess, before `VirtualRows` measures a real one: a
+ *  card at the default minimum width (13.75rem ≈ 220px → a 16/10 cover of
+ *  ≈138px) over its three fixed text lines (≈60px), plus the row gap. Every
+ *  card is that one shape, so the probe's measurement replaces it exactly. */
+const LINE_ESTIMATE_PX = 230;
 
-/**
- * Pick the cover field: explicit `coverField` id wins, else the field marked
- * `cover: true`, else the first `media` field. Undefined → no media region.
- */
-function pickCoverField<TRow>(
-  fields: FieldDef<TRow>[],
-  coverField: string | undefined,
-): FieldDef<TRow> | undefined {
-  if (coverField) {
-    return fields.find((f) => f.id === coverField);
-  }
-  return (
-    fields.find((f) => f.cover === true) ??
-    fields.find((f) => f.type === "media")
-  );
-}
+/** The grid's cell minimum, per surface density — one card size everywhere,
+ *  a narrower rung for a compact surface. */
+const CARD_MIN = {
+  comfortable: "var(--gallery-card-min)",
+  compact: "var(--gallery-card-min-compact)",
+} as const;
 
-/** Paint a structured cover descriptor into a uniform `aspect-video` frame. */
-function renderCover(cover: CoverContent): ReactNode {
-  switch (cover.kind) {
-    case "image":
-      return (
-        <img
-          src={cover.src}
-          alt=""
-          className="aspect-video w-full rounded-md object-cover"
-        />
-      );
-    case "icon":
-      return (
-        <Center className="aspect-video w-full rounded-md bg-primary/10 text-primary-text">
-          {cover.icon}
-        </Center>
-      );
-    case "node":
-      return (
-        <Clip className="aspect-video w-full rounded-md border border-border bg-muted/40">
-          {cover.node}
-        </Clip>
-      );
-  }
-}
+/** The gallery's own gaps (density `galleryGapX/Y`), over the Grid's ramp gap. */
+const GRID_GAP = "gap-x-gallery gap-y-gallery";
 
-function renderMedia<TRow>(
-  options: GalleryViewOptions<TRow>,
-  coverFieldDef: FieldDef<TRow> | undefined,
-  row: TRow,
-): ReactNode {
-  // The structured cover producer wins — the sanctioned icon/node/image path.
-  if (options.cover) {
-    const cover = options.cover(row);
-    return cover ? renderCover(cover) : null;
-  }
-  // Else fall back to the field-driven image cover.
-  if (!coverFieldDef) return null;
-  const raw = coverFieldDef.value?.(row);
-  if (typeof raw === "string" && raw.length > 0) {
-    return renderCover({ kind: "image", src: raw });
-  }
-  // Non-URL media (or custom cell) falls back to the field's renderer.
-  return coverFieldDef.cell ? <div>{coverFieldDef.cell(row)}</div> : null;
+/** One grid cell: a data row, carrying its precomputed key. */
+interface GalleryCell {
+  row: unknown;
+  key: string;
+  aggregateCount?: number;
 }
 
 /**
- * Gallery view: a responsive card grid. Renders against `useDataViewSections`:
- * ungrouped → the legacy single grid (byte-for-byte); grouped → one collapsible
- * grid per section. Windowing still applies WITHIN a section's cells.
+ * Gallery view: a responsive grid of cover cards. Renders against
+ * `useDataViewSections`: ungrouped → one grid; grouped → one collapsible grid
+ * per section. Windowing applies WITHIN a section's cells.
  *
- * `rows`/`fields` arrive type-erased as `unknown`; this is the documented re-cast
- * boundary for the view child.
+ * Every card is the one shape `DataCard` draws: the cover
+ * (`resolveCover` — the surface's accessor, else the cover field), then the
+ * card's three text lines (`partitionCardFields`, computed once per view, drawn
+ * by `CardMeta`). A row with no cover of its own shows its leading field (the
+ * avatar) in the frame, else a blank tint — every card stays the same size.
+ *
+ * `rows`/`fields` arrive type-erased as `unknown`; this is the documented
+ * re-cast boundary for the view child.
  */
 export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
   const resolveCell = useResolveCell();
@@ -147,20 +102,15 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
       selectedRowId: props.selectedRowId,
     },
   );
-  // Body fields follow the view's Properties (visible-fields) policy; sort/filter/
-  // search above keep using the full `props.fields`. `null` → identity, so the
-  // cover/title/body picks are byte-for-byte the legacy schema-order behavior.
-  const vis = resolveBodyFields(props.fields, props.state.properties);
-  const options = (props.options ?? {}) as GalleryViewOptions<unknown>;
-  const minCardWidth = options.minCardWidth ?? 200;
   // Documented cast boundary: itemActions arrives type-erased.
   const itemActions = props.itemActions as
     ItemActionsDescriptor<unknown> | undefined;
-  // The card HAS a permanent per-row region (its footer), so persistent-zone
-  // actions stay painted at rest there and the rest live in the hover cluster.
-  // Resolved unconditionally (hooks rules) BEFORE the early empty-state return.
-  const { persistent, revealed } = useItemActionZones(itemActions, {
+  // The card has both slots: an at-rest chip on the cover (the resting
+  // actions) and the cover's primary button. Resolved unconditionally (hooks
+  // rules) BEFORE the early empty-state return.
+  const zones = useItemActionZones(itemActions, {
     hasPersistentSlot: true,
+    hasPrimarySlot: true,
   });
 
   // Documented cast boundary: creators arrives type-erased via render props.
@@ -187,140 +137,57 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
     );
   }
 
-  const coverField = pickCoverField(vis, options.coverField);
-  // The leading field (the card's avatar) renders beside the body in
-  // `DataCard`'s leading block, so it is out of the title pick and the property
-  // rows. The cover pick above is untouched: the cover stays media.
-  const leadingField = pickLeadingField(vis);
-  const titleField = pickPrimaryField(vis.filter((f) => f !== leadingField));
+  // Body fields follow the view's Properties (visible-fields) policy; sort /
+  // filter / search above keep using the full `props.fields`. Hiding the cover
+  // field hides the covers; hiding a text field drops its line.
+  const vis = resolveBodyFields(props.fields, props.state.properties);
+  const covers = resolveCover(vis, props.cover);
+  const cardFields: CardFields<unknown> = partitionCardFields(vis);
+  const cardMin = CARD_MIN[props.density ?? "comfortable"];
 
   // Single source of cell markup — shared by the plain and windowed branches.
-  const renderCell = (cell: GalleryCell): ReactNode => {
-    if (cell.kind === "create") {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => creators![0]!.onSelect()}
-          className="focus-ring aspect-video rounded-lg border border-dashed border-border text-muted-foreground transition-colors hover:border-primary hover:bg-muted/40 hover:text-foreground"
-        >
-          <Stack gap="xs" align="center" justify="center" className="size-full">
-            <Icon icon={addIcon} className="size-5" />
-            <Text variant="label">{creators![0]!.label}</Text>
-          </Stack>
-        </Button>
-      );
-    }
-
-    const { row, key } = cell;
-
-    const media = renderMedia(options, coverField, row);
-    const bodyFields = vis.filter(
-      (f) =>
-        f.id !== titleField?.id &&
-        f.id !== coverField?.id &&
-        f.id !== leadingField?.id,
-    );
-    const actionProps = {
-      row,
-      hasChildren: props.hasChildren?.(key) ?? false,
-    };
-    // Per-row emphasis, composed on top of the card title's own foreground: the
-    // property rows below are already muted, so the title carries the whole
-    // difference between an active card and an inactive one.
-    const toneClass = rowToneClass(props.rowTone?.(row));
-
-    // Aggregate representative → a persistent `×N` corner badge. Pinned top-left
-    // so it never collides with the hover-revealed actions Pin (top-right).
-    const aggregateCount = cell.aggregateCount;
-    // ONE card construction site: a custom body replaces the title + property
-    // rows and nothing else, so every declared affordance is wired either way.
-    const card = (
+  const renderCell = ({ row, key, aggregateCount }: GalleryCell): ReactNode => {
+    const target = { row, hasChildren: props.hasChildren?.(key) ?? false };
+    const tone = props.rowTone?.(row);
+    return (
       <DataCard
         rowKey={key}
-        size={options.size}
         selected={key === props.selectedRowId}
+        dimmed={tone === "muted"}
         onActivate={props.rowActivation?.(row)}
-        media={media}
-        leading={leadingSlot({
-          field: leadingField,
-          row,
-          resolveCell,
-          resolveEditor,
-          own: options.leading?.(row),
-        })}
-        actions={revealed?.(actionProps)}
-        footer={
-          persistent ? (
-            // In flow at the card's foot, so the cluster needs no pin and no
-            // scrim — and `alwaysVisible` is what "persistent" means. The
-            // `justify="end"` row puts it on the trailing edge like every other
-            // action cluster; left-aligned, a lone icon under the body reads as
-            // stray content rather than an affordance.
-            <Stack direction="row" gap="none" justify="end">
-              <RowActions pin={null} alwaysVisible>
-                {persistent(actionProps)}
-              </RowActions>
-            </Stack>
+        cover={coverOf(covers.coverOf(row), cardFields, (field) =>
+          leadingSlot({
+            field,
+            row,
+            resolveCell,
+            resolveEditor,
+            own: undefined,
+          }),
+        )}
+        // Aggregate representative → a `×N` corner mark, top-left, clear of
+        // the action chip at top-right.
+        badge={
+          aggregateCount && aggregateCount > 1 ? (
+            <Badge variant="muted">{`×${aggregateCount}`}</Badge>
           ) : undefined
         }
+        actions={{
+          atRest: zones.cluster.atRest?.(target),
+          revealed: zones.cluster.revealed?.(target),
+          primaryAtRest: zones.primary?.atRest?.(target),
+          primaryRevealed: zones.primary?.revealed?.(target),
+        }}
       >
-        {options.renderBody ? (
-          options.renderBody(row)
-        ) : (
-          <>
-            {titleField ? (
-              <Text
-                as="div"
-                variant="label"
-                className={cn(
-                  "truncate font-semibold text-foreground",
-                  toneClass,
-                )}
-              >
-                <FieldCell
-                  field={titleField}
-                  row={row}
-                  resolveCell={resolveCell}
-                  resolveEditor={resolveEditor}
-                />
-              </Text>
-            ) : null}
-            {bodyFields.length > 0 ? (
-              // eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the body block from the card title
-              <Stack gap="2xs" className="mt-1">
-                {bodyFields.map((field) => (
-                  <Text
-                    as="div"
-                    key={field.id}
-                    variant="caption"
-                    className="truncate text-muted-foreground"
-                  >
-                    <FieldCell
-                      field={field}
-                      row={row}
-                      resolveCell={resolveCell}
-                      resolveEditor={resolveEditor}
-                    />
-                  </Text>
-                ))}
-              </Stack>
-            ) : null}
-          </>
-        )}
+        <CardMeta
+          fields={cardFields}
+          row={row}
+          resolveCell={resolveCell}
+          resolveEditor={resolveEditor}
+          titleClassName={cn(rowToneClass(tone))}
+        />
       </DataCard>
     );
-    if (!aggregateCount || aggregateCount <= 1) return card;
-    return (
-      <div className="relative">
-        {card}
-        <Pin to="top-left" offset="sm">
-          <Badge variant="muted">{`×${aggregateCount}`}</Badge>
-        </Pin>
-      </div>
-    );
   };
-
-  const estimateRowHeight = options.cover || coverField ? 240 : 132;
 
   // Render one section's cells: plain auto-fill grid below the threshold, else
   // the lane-aware windowed grid — inside the section's `SectionBody` band, which
@@ -341,27 +208,23 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
           section={section}
           placeholders={props.placeholders}
           cells={cells}
-          minCardWidth={minCardWidth}
-          estimateRowHeight={estimateRowHeight}
+          cardMin={cardMin}
           renderCell={renderCell}
         />
       )}
     </SectionBody>
   );
 
-  // Ungrouped: the single implicit section renders as the legacy single grid,
-  // with the trailing "+" create card appended.
-  if (sections.length === 1 && sections[0]!.key === null) {
-    const cells: GalleryCell[] = sections[0]!.entries.map((e) => ({
-      kind: "row",
+  const cellsOf = (section: DataViewSection<unknown>): GalleryCell[] =>
+    section.entries.map((e) => ({
       row: e.row,
       key: e.key,
       aggregateCount: e.aggregateCount,
     }));
-    if (options.showCreateCard && creators?.length === 1) {
-      cells.push({ kind: "create" });
-    }
-    return renderSection(sections[0]!, cells);
+
+  // Ungrouped: the single implicit section renders as one grid.
+  if (sections.length === 1 && sections[0]!.key === null) {
+    return renderSection(sections[0]!, cellsOf(sections[0]!));
   }
 
   // Grouped: the shared pinned/stacking group-header chrome (identical to the
@@ -375,23 +238,28 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
       setSectionCollapsed={props.setSectionCollapsed}
       headerStyle={props.groupHeaders}
     >
-      {(section) =>
-        renderSection(
-          section,
-          section.entries.map((e) => ({
-            kind: "row",
-            row: e.row,
-            key: e.key,
-            aggregateCount: e.aggregateCount,
-          })),
-        )
-      }
+      {(section) => renderSection(section, cellsOf(section))}
     </GroupedSections>
   );
 }
 
-const cellKey = (cell: GalleryCell): string =>
-  cell.kind === "create" ? "::create" : cell.key;
+/**
+ * What a card's frame shows: the row's cover, else — when the schema has a
+ * leading field (the avatar) — that field's cell centred on the tint, else
+ * nothing (the blank tinted frame). The leading field is never text.
+ */
+function coverOf(
+  cover: CoverContent | null,
+  cardFields: CardFields<unknown>,
+  leading: (field: CardFields<unknown>["leading"]) => ReactNode | undefined,
+): CoverContent | null {
+  if (cover !== null) return cover;
+  if (!cardFields.leading) return null;
+  return {
+    kind: "node",
+    node: <Center className="size-full">{leading(cardFields.leading)}</Center>,
+  };
+}
 
 /**
  * One section's card grid: the plain auto-fill grid up to the threshold, the
@@ -406,30 +274,33 @@ function GalleryGrid({
   section,
   placeholders,
   cells,
-  minCardWidth,
-  estimateRowHeight,
+  cardMin,
   renderCell,
 }: {
   section: DataViewSection<unknown>;
   placeholders: DataViewPagePlaceholders | undefined;
   cells: GalleryCell[];
-  minCardWidth: number;
-  estimateRowHeight: number;
+  cardMin: string;
   renderCell: (cell: GalleryCell) => ReactNode;
 }): ReactNode {
-  const phase = useGridPhase(section, placeholders, cells.map(cellKey));
-  // Live column count (measured off the probe grid below) — in both branches
-  // when the band pages, so the pad is right in the render a release happens in.
-  const { probeRef, columns } = useGridColumns(minCardWidth);
+  const phase = useGridPhase(
+    section,
+    placeholders,
+    cells.map((c) => c.key),
+  );
+  // Live column count (read off the probe grid's resolved tracks) — in both
+  // branches when the band pages, so the pad is right in the render a release
+  // happens in.
+  const { probeRef, columns } = useGridColumns();
   const windowed = cells.length > VIRTUALIZE_THRESHOLD;
   const probe =
     windowed || phase.paged ? (
       <Grid
         ref={probeRef}
         aria-hidden
-        minCellWidth={`${minCardWidth}px`}
-        gap="lg"
-        className="h-0"
+        minCellWidth={cardMin}
+        gap="none"
+        className={cn("h-0", GRID_GAP)}
       />
     ) : null;
   if (!windowed) {
@@ -437,12 +308,12 @@ function GalleryGrid({
     return (
       <>
         {probe}
-        <Grid minCellWidth={`${minCardWidth}px`} gap="lg">
+        <Grid minCellWidth={cardMin} gap="none" className={GRID_GAP}>
           {Array.from({ length: pad }, (_, i) => (
             <div key={`::pad:${i}`} aria-hidden data-grid-pad="" />
           ))}
           {cells.map((cell) => (
-            <div key={cellKey(cell)} className="contents">
+            <div key={cell.key} className="contents">
               {renderCell(cell)}
             </div>
           ))}
@@ -456,16 +327,22 @@ function GalleryGrid({
       {columns > 0 ? (
         <VirtualRows<GridLine<GalleryCell>>
           items={phase.lines(cells, columns)}
-          estimateSize={estimateRowHeight}
+          estimateSize={LINE_ESTIMATE_PX}
           getKey={(line) => line.key}
         >
           {(line) => (
-            <Grid cols={columns} gap="lg" className="pb-lg">
+            // Each windowed line is its own one-row grid, so the row gap is
+            // the line's bottom padding (`pb-gallery`, the same token).
+            <Grid
+              cols={columns}
+              gap="none"
+              className="gap-x-gallery pb-gallery"
+            >
               {line.cells.map((cell, i) =>
                 cell === null ? (
                   <div key={`::pad:${i}`} aria-hidden data-grid-pad="" />
                 ) : (
-                  <div key={cellKey(cell)} className="contents">
+                  <div key={cell.key} className="contents">
                     {renderCell(cell)}
                   </div>
                 ),

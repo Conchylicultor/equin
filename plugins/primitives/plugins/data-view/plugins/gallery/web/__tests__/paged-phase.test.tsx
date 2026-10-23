@@ -4,7 +4,7 @@
  * band starts with as many empty spacer cells as the released cards' phase
  * (`useGridPhase`), the spacers carry no `data-row-key`, and the windowed
  * lines are keyed by absolute line — so a release keeps the mounted lines'
- * DOM. The grid's column count is stubbed through the probe's measured width.
+ * DOM. The grid's column count is stubbed through the probe's resolved tracks.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -37,7 +37,7 @@ const name: FieldDef<Row> = {
   primary: true,
 };
 
-/** Columns the probe measures: 4 cards of the default 200 px, no gap. */
+/** Columns the probe resolves: 4 tracks. */
 const COLUMNS = 4;
 
 const rowsOf = (from: number, to: number): Row[] =>
@@ -119,8 +119,17 @@ beforeEach(() => {
       disconnect() {}
     },
   );
-  // The probe (and every box) is 800 px wide: 4 columns of 200 px.
+  // The probe resolves 4 tracks (and every box is 800 px wide).
   vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(800);
+  const computed = window.getComputedStyle.bind(window);
+  vi.spyOn(window, "getComputedStyle").mockImplementation((el, pseudo) => {
+    const style = computed(el, pseudo);
+    Object.defineProperty(style, "gridTemplateColumns", {
+      configurable: true,
+      value: Array.from({ length: COLUMNS }, () => "200px").join(" "),
+    });
+    return style;
+  });
   // Every element is laid out 100 px tall and the scroller 10 000 px, so a
   // windowed gallery mounts every line.
   const heightOf = (el: Element) =>

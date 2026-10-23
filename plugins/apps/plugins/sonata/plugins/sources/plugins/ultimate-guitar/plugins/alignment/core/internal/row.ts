@@ -7,6 +7,7 @@ import {
   textField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
+import { songsEntityRef } from "@plugins/apps/plugins/sonata/plugins/library/core";
 import { AlignmentRecordSchema, type AlignmentRecord } from "./record";
 
 /**
@@ -106,6 +107,10 @@ export type AlignmentPhase = z.infer<typeof AlignmentPhaseSchema>;
 // and write. It is declared as a `jsonField` of `AlignmentRecord | null` rather
 // than `nullable(jsonField(...))`, which would demand a stand-in record as the
 // (discarded) inner default.
+//
+// `videoId` is EXPOSED to every list of songs (the library) — null for a song
+// with no alignment row or no video yet — so the UG cover can draw the
+// recording's thumbnail from the listed row alone.
 export const ugAlignmentShape = defineExtensionShape({
   key: "songId",
   fields: {
@@ -130,6 +135,11 @@ export const ugAlignmentShape = defineExtensionShape({
     }),
   },
   wireTimestamps: ["updatedAt"],
+  exposes: {
+    parent: songsEntityRef,
+    name: "ug_alignment",
+    fields: { videoId: { label: "Video" } },
+  },
 });
 export const UgAlignmentRowSchema = ugAlignmentShape.schema;
 export type UgAlignmentRow = z.infer<typeof UgAlignmentRowSchema>;

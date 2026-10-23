@@ -3,7 +3,10 @@ import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { PrototypeHistorySchema } from "../../core/history";
+import {
+  PrototypeHistorySchema,
+  PrototypeVersionCountsSchema,
+} from "../../core/history";
 import {
   HISTORY_DIR_NAME,
   LATEST_STAMP_FILE,
@@ -420,5 +423,50 @@ describe("readVersionPatch", () => {
     const patch = await store.readVersionPatch(ID, result.version.sha);
     expect(patch).toContain("-one");
     expect(patch).toContain("+two");
+  });
+});
+
+describe("readVersionCounts", () => {
+  const stampPath = () =>
+    join(root, HISTORY_DIR_NAME, `${ID}.git`, LATEST_STAMP_FILE);
+
+  test("no history dir yet: no counts", async () => {
+    expect(await store.readVersionCounts()).toEqual({});
+  });
+
+  test("counts every version, v0 included, and follows each new one", async () => {
+    await writeProto({ "index.html": "one" });
+    await store.ensureHistory(ID);
+    expect(await store.readVersionCounts()).toEqual({ [ID]: 1 });
+
+    await writeProto({ "index.html": "two" });
+    await store.checkpoint(ID, { kind: "manual", subject: "x" });
+    const counts = await store.readVersionCounts();
+    expect(counts).toEqual({ [ID]: 2 });
+    // The loader's payload must satisfy the resource schema.
+    expect(PrototypeVersionCountsSchema.parse(counts)).toEqual(counts);
+  });
+
+  test("a repo without a stamp is absent, never 0", async () => {
+    await writeProto({ "index.html": "one" });
+    await store.ensureHistory(ID);
+    await rm(stampPath());
+    expect(await store.readVersionCounts()).toEqual({});
+  });
+
+  test("a malformed stamp throws, naming the file", async () => {
+    await writeProto({ "index.html": "one" });
+    await store.ensureHistory(ID);
+    await writeFile(stampPath(), JSON.stringify({ n: "three" }));
+    const err = await rejection(store.readVersionCounts());
+    expect(err.message).toContain(stampPath());
+  });
+
+  test("ignores what is not a prototype's repo", async () => {
+    await mkdir(join(root, HISTORY_DIR_NAME, "not-an-id.git"), {
+      recursive: true,
+    });
+    await writeFile(join(root, HISTORY_DIR_NAME, `${ID}.lock`), "");
+    expect(await store.readVersionCounts()).toEqual({});
   });
 });

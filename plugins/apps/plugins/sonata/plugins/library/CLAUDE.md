@@ -88,23 +88,52 @@ imperative `openPane` (mirroring `useSongLink`'s exact `mode:"root"` + `input`
 call). `useSongLink` is kept for `SongLibrary`'s `rowActivation`, which runs
 inside a component where the caller-aware context store is correct.
 
-## One surface, no bespoke card
+## One surface, one cover seam (`Library.Cover`)
 
 The library has NO custom card component. The gallery builds the shared
-`DataCard` from the same derived field schema the table uses, plus a `leading`
-music-note block (`viewOptions.gallery.leading`). Everything a card wants is
-declared once on the `<DataView>` and honoured by both views:
+`DataCard` from the same derived field schema the table and the list use; its
+picture — and the list row's thumbnail — is the song's COVER, passed once as
+the DataView's `cover` accessor (a `kind: "node"` `<SongCover>`).
+
+**The cover is an open seam.** `Library.Cover({ id, cover: (song) =>
+SongCoverAnswer | undefined })` — each source answers for the songs it knows:
+
+```ts
+type SongCoverAnswer =
+  | { kind: "art"; content: CoverContent }   // data-view's: image URL, icon, or a node
+  | { kind: "pending"; label: string }       // being made (a transcription running)
+  | { kind: "failed"; message: string };     // should exist, could not be made
+```
+
+`resolveSongCover` (`web/internal/resolve-cover.ts`) folds every answer for a
+song: **failed > pending > art**, whatever the contributions' order; two `art`
+answers for one song THROW (two pictures is a composition bug); no answer is
+`undefined`. `SongCover` (`web/internal/song-cover.tsx`) always paints the
+QUIET base — the song source's glyph (`SonataDocument.Source.icon`) on a
+categorical tint keyed by a stable hash of the source id — so a song nothing
+draws art for still has a cover, never an "empty" claim. On it: the art (an
+`<img decoding="async">`, whose load error drops back to the base with the
+failure badge; or the source's node), a loading marker + label for `pending`,
+a visible "Cover failed" badge (message as tooltip) for `failed`. The library
+never names a source (collection–consumer rule): `cover` is a hook-free read of
+the row, called per card per render.
+
+Everything else a card wants is declared once on the `<DataView>` and honoured
+by every view:
 
 | Affordance | Where it is declared |
 |---|---|
-| Play / Pause, Delete | `Library.SongActions` contributions (Play carries `zone: "persistent"`, so it is painted at rest) |
+| The picture / thumbnail | `Library.Cover` contributions, via `cover={…}` |
+| Play / Pause | `Library.SongActions` "play", `zone: "primary"` + `useActive: useSongPlaying` — the round button over the cover (revealed on hover, at rest while its song plays); the table, with no primary slot, paints it in its cluster |
+| Delete | `Library.SongActions` "delete" (hover-revealed) |
 | Ring on the loaded song | `selectedRowId={currentSongId}` |
-| Opening a song | `onRowActivate` |
-| Anything per-song another plugin knows | a field its entity extension exposes on the songs entity (`defineExtensionShape({ exposes })`) |
+| Opening a song | `rowActivation` (a link) |
+| The card's token icons | `icon` on each field's presentation (`fieldOverrides` for composer / duration / added; playback-history for plays / last played) |
+| Anything per-song another plugin knows | a field its entity extension exposes on the songs entity (`defineExtensionShape({ exposes })`) — a row-state mark declares `indicator: true` (the MIDI folders' `sourceMissing`) |
 
 Which fields the CARD shows is authored config, not code — `properties` on
 the `cards` row of `config/apps/sonata/library/sonata.library.jsonc`. Leave it
-unauthored and every exposed field stacks another caption row.
+unauthored and every exposed field becomes another token.
 
 ## The section dock (`SectionDock`)
 
@@ -207,6 +236,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
 - Web:
   - Slots:
     - `Library.Source`
+    - `Library.Cover`
     - `Library.SongActions`
     - `sonataLibraryPane.Actions`
     - `sonataPlayerPane.Actions`
@@ -216,6 +246,11 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `Library.Source` ← `apps.sonata.sources.musicxml`
     - `Library.Source` ← `apps.sonata.sources.ultimate-guitar`
     - `Library.Source` ← `apps.sonata.transcription`
+    - `Library.Cover` ← `apps.sonata.sources.chord-grid`
+    - `Library.Cover` ← `apps.sonata.sources.midi`
+    - `Library.Cover` ← `apps.sonata.sources.musicxml`
+    - `Library.Cover` ← `apps.sonata.sources.ultimate-guitar`
+    - `Library.Cover` ← `apps.sonata.transcription`
     - `Library.SongActions` ← `apps.sonata.library`
     - `sonataLibraryPane.Actions` ← `primitives.pane`
     - `sonataPlayerPane.Actions` ← `apps.sonata.audio.engine`
@@ -235,17 +270,18 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `Library.SongActions` "delete" → `DeleteSongAction`
     - `Pane.Register` "sonata-library"
     - `Pane.Register` "sonata-player"
-  - Uses: 82 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 87 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×13
+    - `primitives/data-view` ×7
     - `apps/sonata/shell` ×6
     - `network/live` ×6
     - `primitives/css/ui-kit` ×6
-    - `primitives/data-view` ×6
     - `apps/sonata/player` ×5
     - `apps/sonata/document` ×4
     - `primitives/persistent-draft` ×3
     - `apps/sonata/view-options` ×2
     - `infra/endpoints` ×2
+    - `primitives/css/layer` ×2
     - `primitives/css/spacing` ×2
     - `primitives/latest-ref` ×2
     - `primitives/live-state` ×2
@@ -253,6 +289,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `apps/sonata/session.useSession`
     - `fullscreen.FullscreenButton`
     - `ids.IdKinds`
+    - `primitives/css/badge.Badge`
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
@@ -262,6 +299,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `primitives/css/fill.Fill`
     - `primitives/css/grid.Grid`
     - `primitives/css/line.Line`
+    - `primitives/css/pin.Pin`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/text.Text`
     - `primitives/css/yield.yieldClass`
@@ -273,6 +311,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `primitives/relative-time.formatRelativeTime`
     - `ui/icons.Icon`
   - Exports (types):
+    - `SongCoverAnswer`
     - `SourceContext`
     - `SourceCreateOption`
     - `SourceHydration`
@@ -346,12 +385,13 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `songsEntityRef`
     - `updateSong`
 - Cross-plugin:
-  - Uses tokens: 24 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 35 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/categorical` ×10
     - `ui/tokens/density` ×10
     - `ui/tokens/type-scale` ×6
     - `ui/tokens/color-palette` ×5
+    - `ui/tokens/shadow` ×2
     - `ui/tokens/shape` ×2
-    - `ui/tokens/shadow --shadow`
   - Imported by:
     - `active-data/song`
     - `apps/sonata/audio/engine`

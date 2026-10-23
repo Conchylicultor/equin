@@ -1,16 +1,14 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { DataViewSlots } from "@plugins/primitives/plugins/data-view/web";
 import { GalleryView } from "./components/gallery-view";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { DataCard } from "./components/data-card";
-export type { DataCardProps } from "./components/data-card";
-export type { CoverContent, GalleryViewOptions } from "../core";
+export type { DataCardActions, DataCardProps } from "./components/data-card";
 
 export default {
   description:
-    "Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.",
+    "Gallery view child for the data-view primitive: a responsive grid of cover cards — the cover is the card, its fields three fixed lines under it, its actions on the cover.",
   contributions: [
     DataViewSlots.View({
       type: "gallery",
@@ -20,15 +18,6 @@ export default {
       order: 0,
       loadingVariant: "cards",
       loadingCount: 8,
-      // Per-instance options sub-form (ST4 demonstrator): a named gallery
-      // instance can pick which field id supplies the card cover. The gallery
-      // already reads `options.coverField`, so this round-trips end-to-end.
-      configSchema: {
-        coverField: textField({
-          label: "Cover field",
-          description: "Field id whose value supplies the card cover image.",
-        }),
-      },
       component: GalleryView,
     }),
   ],

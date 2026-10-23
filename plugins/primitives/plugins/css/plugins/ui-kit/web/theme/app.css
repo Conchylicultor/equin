@@ -348,6 +348,13 @@
  * `--radius`) — `SURFACE_LEVELS.overlay` wears it, so every popover, menu and
  * dialog rounds together. */
 @utility rounded-popover { border-radius: var(--radius-popover); } /* twmerge: extend rounded */
+/* Floating chrome's corners (`--radius-float`, default the popover's) —
+ * `SURFACE_LEVELS.float` wears it: a toolbar capsule, a dock, an action chip
+ * floated over a cover. */
+@utility rounded-float { border-radius: var(--radius-float); } /* twmerge: extend rounded */
+/* A record's cover — the DataView gallery card and the list's leading
+ * thumbnail (`--radius-cover`, default the raised card's corners). */
+@utility rounded-cover { border-radius: var(--radius-cover); } /* twmerge: extend rounded */
 /* …and its shadow (`--shadow-popover`, default the `md` tier). Spelled out
  * rather than mapped through `@theme`: a theme-derived `shadow-popover` is a word
  * tailwind-merge files under shadow COLOUR, so a caller's `shadow-lg` would not
@@ -372,6 +379,11 @@
  * the same reasons. */
 @utility shadow-float { --tw-shadow: var(--shadow-float); box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow); } /* twmerge: extend shadow */
 @utility backdrop-float { -webkit-backdrop-filter: var(--float-backdrop); backdrop-filter: var(--float-backdrop); } /* twmerge: sg-backdrop */
+/* A record's cover at rest and under the pointer (`--shadow-cover` /
+ * `--shadow-cover-hover`, defaults the `sm` / `xl` tiers) — spelled like
+ * `shadow-popover`, for the same tailwind-merge reason. */
+@utility shadow-cover { --tw-shadow: var(--shadow-cover); box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow); } /* twmerge: extend shadow */
+@utility shadow-cover-hover { --tw-shadow: var(--shadow-cover-hover); box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow); } /* twmerge: extend shadow */
 
 /* How a floating panel ENTERS (`OverlayPanel` wears `data-open:overlay-enter`):
  * from transparent, offset by `--overlay-enter-translate` (a `translate` value)
@@ -687,6 +699,84 @@
 @utility size-status-dot-sm { width: var(--status-dot-sm); height: var(--status-dot-sm); } /* twmerge: extend size */
 @utility size-status-dot-md { width: var(--status-dot-md); height: var(--status-dot-md); } /* twmerge: extend size */
 @utility size-status-dot-lg { width: var(--status-dot-lg); height: var(--status-dot-lg); } /* twmerge: extend size */
+
+/* A record's cover as a list row's leading thumbnail (density `coverThumbW` /
+ * `coverThumbH`, default 52 × 34px — the gallery cover's 16/10 at row height).
+ * Not square, so it writes width and height apart under the one `size` name. */
+@utility size-cover-thumb { width: var(--cover-thumb-w); height: var(--cover-thumb-h); } /* twmerge: extend size */
+
+/* The DataView gallery's gaps between cards (density `galleryGapX` /
+ * `galleryGapY`, defaults the `lg` / `xl` steps). Its card minimum is the
+ * `--gallery-card-min` var itself (`--gallery-card-min-compact` for a narrow
+ * surface), read by the Grid's `minCellWidth`. */
+@utility gap-x-gallery { column-gap: var(--gallery-gap-x); } /* twmerge: extend gap-x */
+@utility gap-y-gallery { row-gap: var(--gallery-gap-y); } /* twmerge: extend gap-y */
+/* The same row gap as a line's own bottom padding, for a WINDOWED gallery whose
+ * lines are separate grids (each one measured row of cards). */
+@utility pb-gallery { padding-bottom: var(--gallery-gap-y); } /* twmerge: extend pb */
+
+/* A one-line row that clips at its inline end with a fade instead of a hard
+ * edge (a card's icon+value token line): the content dissolves over the last
+ * `xl` step. A mask, not an overlay, so it fades to whatever is behind — no
+ * `--chrome-mask` to match. Clipping itself stays with the box (`<Clip>`). */
+@utility clip-fade-end {
+  /* twmerge: standalone -- A mask-image on the box itself; no built-in group sets mask-image, so nothing to replace. */
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - var(--space-xl)), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - var(--space-xl)), transparent);
+  &:dir(rtl) {
+    -webkit-mask-image: linear-gradient(to left, #000 calc(100% - var(--space-xl)), transparent);
+    mask-image: linear-gradient(to left, #000 calc(100% - var(--space-xl)), transparent);
+  }
+}
+
+/* A FADING sticky band (`<Sticky mask="fade">`): the band itself stays opaque
+ * (`bg-chrome-mask`), and an out-of-flow `::after` hangs `--sticky-fade-tail`
+ * (density `stickyFadeTail`) past its pinned-away edge, a gradient from
+ * `--chrome-mask` to transparent — so content scrolls UNDER the band and
+ * dissolves into it rather than vanishing at a hard line. Absolutely placed off
+ * the sticky (hence positioned) band, so the band's measured height — which
+ * `stickyOffsetPx` stacks the next band at — never includes it. The edge comes
+ * from `data-sticky-edge` (Sticky writes it); `top` is the default. The tail
+ * takes no pointer events, so the content under it stays clickable. */
+@utility sticky-fade {
+  /* twmerge: standalone -- An additive ::after gradient tail; pseudo-element paint has no single-value built-in group to conflict with. */
+  &::after {
+    --sticky-fade-stops:
+      var(--chrome-mask) 0,
+      color-mix(in oklab, var(--chrome-mask) 72%, transparent) 30%,
+      color-mix(in oklab, var(--chrome-mask) 38%, transparent) 60%,
+      color-mix(in oklab, var(--chrome-mask) 12%, transparent) 85%,
+      transparent 100%;
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    inset-inline: 0;
+    top: 100%;
+    height: var(--sticky-fade-tail);
+    background: linear-gradient(to bottom, var(--sticky-fade-stops));
+  }
+  &[data-sticky-edge="bottom"]::after {
+    top: auto;
+    bottom: 100%;
+    background: linear-gradient(to top, var(--sticky-fade-stops));
+  }
+  &[data-sticky-edge="left"]::after,
+  &[data-sticky-edge="right"]::after {
+    inset-inline: auto;
+    inset-block: 0;
+    top: 0;
+    height: auto;
+    width: var(--sticky-fade-tail);
+  }
+  &[data-sticky-edge="left"]::after {
+    left: 100%;
+    background: linear-gradient(to right, var(--sticky-fade-stops));
+  }
+  &[data-sticky-edge="right"]::after {
+    right: 100%;
+    background: linear-gradient(to left, var(--sticky-fade-stops));
+  }
+}
 
 /* Sidebar chrome geometry — from the sidebar-metrics token group, whose
  * defaults are the sidebar's old hard-coded h-8 / px-sm / size-4 / gap-sm. The

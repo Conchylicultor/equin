@@ -1,6 +1,6 @@
 {
   "name": "@singularity/plugin-primitives-data-view-gallery",
-  "description": "Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.",
+  "description": "Gallery view child for the data-view primitive: a responsive grid of cover cards — the cover is the card, its fields three fixed lines under it, its actions on the cover.",
   "private": true,
   "version": "0.0.1"
 }

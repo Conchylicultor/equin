@@ -203,7 +203,7 @@ domain data. See
 (`FieldsRecord`) drives the settings popover's options sub-form: the host builds a
 web-side `variantField({ useVariants })` from **that instance's own** addable
 types (`actions.variantsFor(id)` — generic, never names a view child) and renders
-it via `FieldRenderer`. The gallery's `coverField` is the reference
+it via `FieldRenderer`. The map's `locationField` is the reference
 `configSchema`. The type picker inside that sub-form is gated exactly like the `+`
 add menu (view-core's `usableTypes`), so a surface can never switch a view to a
 type it could not have created — see the orphan hazard below for what that used
@@ -369,16 +369,17 @@ renders an inline editor (`EditableTreeLabel`) (the same `onEdit` contract the t
 
 `FieldDef.leading: true` marks the row's **leading visual** (its avatar). list,
 gallery and the nested table render that field's cell in their leading slot —
-`Row.icon`, `DataCard.leading`, the tree head's icon slot — and icons draws it as the whole tile
+`Row.icon`, the gallery card's cover frame (when the row has no cover of its own), the tree head's icon slot — and icons draws it as the whole tile
 (inside `AvatarPresentationProvider value="tile"`); all leave it out of the body: never the
-title / label pick, never a list subtitle or trailing term, a gallery property
-row, or a nested-table secondary cell. The gallery's **cover is untouched**; the cover
-stays media. The **flat table** has no leading slot, so there it is an ordinary
+title / label pick, never a list subtitle or trailing term, a gallery card
+line, or a nested-table secondary cell. The gallery's **cover wins**: a row with a
+cover shows its cover, and only a coverless row shows its leading field in the
+frame. The **flat table** has no leading slot, so there it is an ordinary
 column; the **nested table** (a hierarchical source) has one — the tree head's
 icon slot in its first cell — and renders it there.
 
 - **Composition, not replacement.** The field renders **first**, then the view's
-  own per-view option (list/gallery `leading`, nested-table `leadingIcon`) — most of
+  own per-view option (list `leading`, nested-table `leadingIcon`) — most of
   those put a status glyph there, not an identity, and a surface can want both
   (avatar, then status dot). One shared `leadingSlot(...)` (web barrel) renders
   the pair for every view with a slot, so the order cannot drift; it returns
@@ -704,10 +705,13 @@ rides `DataViewShellChrome`, and the body threads it into
 `DataViewRenderProps.groupHeaders`, which every `GroupedSections` view passes as
 `headerStyle`.
 
-- **`"standard"`** (default) — chevron first, the count at the far right. An
-  absent value renders the exact node it always did (pinned by
-  `web/__tests__/grouped-sections.test.tsx`), so no surface changes unless it
-  asks.
+- **`"standard"`** (default) — `SectionHeaderRow variant="group"
+  disclosure="end" rule`: the label, its count right beside it (faint, the
+  `code` role's mono figures), a hairline filling the rest of the row, then
+  the fold chevron at the far END — always shown, faint, brightening while the
+  header is hovered or focused. A collapsed header's label is muted (the `end`
+  disclosure's tone). A section's `headerActions` sit before the chevron,
+  hover-revealed. Pinned by `web/__tests__/grouped-sections.test.tsx`.
 - **`"quiet"`** — one run: the semibold label, then its count right beside it
   ("Queue 6", faint semibold), with the fold chevron trailing that run and
   shown only on hover or keyboard focus (`SectionHeaderRow
@@ -731,17 +735,17 @@ options" below.
 
 ### `headerActions` — one affordance, scoped to one section
 
-`headerActions?: (section) => ReactNode` renders beside the count (the nested table's
+`headerActions?: (section) => ReactNode` renders in the header's trailing
+cluster — before the chevron of a standard header (the nested table's
 fold-this-group toggle, `groupFoldAction`, today). Return `null` for a section with nothing to
 offer — the wrapper is then skipped too, so a view passing no `headerActions`
 (list, gallery) draws the node it always did.
 
-Count and action want opposite treatments, so they are **two** clusters: the
-count reads at rest on the header's own `actionsAlwaysVisible` cluster, the
-action sits in a nested `<RowActions pin={null}>` and reveals on hover
-(`RowActionsProps` separates `pin` from `alwaysVisible`; the nested cluster
-rides the `group/row-actions` `Row` publishes unconditionally). `gap="xs"`
-between them is load-bearing — nothing has ever sat beside the count.
+Count and action want opposite treatments, so they sit apart: the count reads
+at rest in the label's run, the action sits in a nested `<RowActions
+pin={null}>` and reveals on hover (`RowActionsProps` separates `pin` from
+`alwaysVisible`; the nested cluster rides the `group/row-actions` `Row`
+publishes unconditionally).
 
 No click guard is needed even though the header is the collapse trigger:
 `RowActions`' button `Stack` already stops `onClick` and `onPointerDown`. And
@@ -1071,7 +1075,7 @@ private `CreatorsControl`, **not** barrel-exported): 0 → nothing; 1 → a labe
 flag — each click `await`s `onSelect` in a `try/finally`, disabling the control
 while pending, so no consumer hand-rolls a per-call-site `useState`. The creators
 are also threaded into `DataViewRenderProps.creators` so views can opt into their
-own create UI (the gallery's trailing "+" card + empty-state CTA).
+own create UI (the gallery's empty-state CTA).
 
 `CreateOption.views?: string[]` names the view instances whose section header
 offers the creator on a `sections` surface (absent ⇒ every section) — data, so
@@ -1082,15 +1086,39 @@ create affordance for the whole surface and ignores it.
 
 The toolbar's **parts** are the host's; their **layout** is an arrangement's.
 `DataViewProps.toolbar?: ToolbarArrangement` (core) is a value the surface
-imports and passes — absent, the host uses its own `barArrangement` (the inline
-row every DataView has always had). The host never names or looks up an
-arrangement, so adding one is a new plugin (e.g. `capsule-toolbar`) and no edit
-here.
+imports and passes — absent, the host uses its own `barArrangement`. The host
+never names or looks up an arrangement, so adding one is a new plugin (e.g.
+`capsule-toolbar`) and no edit here.
+
+### The default: two pills (`PillsToolbar`)
+
+Every DataView's toolbar, by default, is ONE row:
+
+    [title] [views pill: switcher strip, "+" always shown] ··· [tools pill: search · controls · actions | create]
+
+`PillsToolbar` (`web/components/toolbar/pills-toolbar.tsx`, web barrel) draws
+it — `barArrangement` in flow, `floating-toolbar` over a canvas (`overlay`:
+each pill opts back into pointer events; the title rides the views pill).
+`PillsToolbarProps` = `ToolbarParts` + `{ overlay?, className?, style? }` (the
+row's inset; default `py-sm rail-follow`).
+
+- **Both pills are floating surfaces** (`Surface level="float"`:
+  `bg-float-fill`, `backdrop-float`, `rounded-float`), under ONE
+  `ControlSizeProvider size="sm"` — so chips, icon triggers, the search field
+  and the create button share `control-sm`, the two pills are the same height
+  and centred on one line at every width.
+- **The views pill is the one cell that gives**: past its room the strip
+  scrolls sideways inside it (hidden scrollbar); the tools pill is rigid; the
+  row never wraps. A pinned surface (no switcher) draws no views pill.
+- **The search is a quiet well** (`forms.search: "filled"`, fixed `w-48`, `w-80`
+  with suggestions) inside the tools pill, which already draws the edge.
+- **Create follows a divider** — drawn only when the surface declares
+  creators: `ToolbarParts.creators` is `null` when there are none.
 
 ```ts
 interface ToolbarArrangement {
   id: string;
-  forms: { search: "field" | "bare"; controls: "ghost" | "round"; creators: "labelled" | "round" };
+  forms: { search: "field" | "filled" | "bare"; controls: "ghost" | "round"; creators: "labelled" | "round" };
   component: ComponentType<ToolbarParts>;
   spaceBelow?: string; // CSS length between the band and the view; wide layout only
   overlay?: true;      // the band floats over the view — see "Floating chrome"
@@ -1117,11 +1145,29 @@ interface ToolbarParts {
 - **`foldedControls`** is every applicable control behind one always-visible
   trigger (no search): for an arrangement that runs out of room itself.
 - **What the host keeps:** the `<Sticky>` band (`mask`, `layer="nav"`), its
-  measurement and `--dv-header-offset`, `hoverRevealGroup` on the band, control
-  applicability/order, and the **compact fold** — `density="compact"` or a band
-  under `COMPACT_BREAKPOINT` renders the fold whatever arrangement was passed. An
-  arrangement only chooses the wide layout, so none can break a narrow pane. The
-  arrangement owns its own row box and inset (`rail-follow`).
+  fade (below), its measurement and `--dv-header-offset`, `hoverRevealGroup` on
+  the band, control applicability/order, and the **compact fold** —
+  `density="compact"` or a band under `COMPACT_BREAKPOINT` renders the fold
+  whatever arrangement was passed. An arrangement only chooses the wide layout,
+  so none can break a narrow pane. The arrangement owns its own row box and
+  inset (`rail-follow`).
+- **The fade.** Wide and in flow, content scrolls UNDER the band and dissolves
+  into it: the band stays opaque (`mask`) and its next sibling is a
+  zero-height `<Sticky mask="fade" layer="raised">` pinned at
+  `--dv-header-offset` — the tail. Not the band's own `mask="fade"`: the band
+  is `nav`, so its tail would paint over the group headers pinned right under
+  it and wash their labels out; this tail is `raised` and comes before the
+  view, so a pinned group header (also `raised`, later in the DOM) covers it
+  while rows pass under it. `barArrangement`'s `spaceBelow` is the tail's
+  **runway** (`--sticky-fade-tail` less `sm`), so an unscrolled list's first
+  row starts where the tail has faded out. The compact fold and an overlay
+  band draw no tail.
+- **The compact fold keeps the two pills**: the views pill (only with more
+  than one view) and a tools pill holding `actions`, the creators and the one
+  options trigger (`CompactControls`). With neither actions nor creators the
+  pill would be empty at rest, so the PILL is what reveals on hover
+  (`CompactControls frame` moves the reveal class onto the box the trigger
+  sits alone in).
 - **`spaceBelow`** is the room an arrangement wants between itself and the view
   (the capsule floats apart from its content; the bar sits flush). The host
   renders it as a sibling AFTER the `<Sticky>` band, so it scrolls away with the
@@ -1140,9 +1186,8 @@ tools floating over it — `floating-toolbar` is the reference arrangement).
   to="top" stretch decorative` over it — transparent, `pointer-events: none`,
   no mask. The arrangement draws its parts as floating cards and wraps each in
   `Overlay.Interactive`, so the gaps stay click-through to the view.
-  `spaceBelow` is ignored. The compact fold floats too, as the one bar on a
-  floating card (`FloatingFold`), so the inset below means the same thing at
-  every width.
+  `spaceBelow` is ignored. The compact fold floats too — the same two pills,
+  past the aside — so the inset below means the same thing at every width.
 - **`DataViewContribution.fullBleed`.** Under an overlay band a `fullBleed`
   view (a map) starts at the top-left edge, under the cards, in an `h-full`
   box. Any other view is inset by the band's measured height
@@ -1768,7 +1813,7 @@ view composes it on top of whatever colour its own title already carries.
 | View | Where |
 |---|---|
 | list | the title `<Text>`, in both the one-line and the stacked shape |
-| gallery | the card title `<Text>` |
+| gallery | the card title (`CardMeta titleClassName`), and the cover is veiled at rest (`DataCard dimmed`) |
 | nested table | folded into the label class, ahead of `options.labelClassName` so the consumer's own per-row class still wins |
 | flat table | **deliberate no-op** |
 
@@ -1804,9 +1849,9 @@ The **list** child reads it as its default row size — `size = options.size ??
 (density === "compact" ? "sm" : "md")`. The **table** hands it to `DataTable` as
 `density`, whose compact rows pad with `py-row-compact` (the `padRowCompactY`
 density token, by default a third of `--pad-row-y`) instead of `py-row`. The
-gallery ignoring it is a deliberate no-op, not an omission: its shape is governed
-by the card grid's cell width, so there is nothing a compact surface would ask it
-to drop.
+**gallery** narrows its card minimum — `var(--gallery-card-min-compact)` instead
+of `var(--gallery-card-min)` — so a compact surface fits more columns; the card
+keeps its one shape.
 
 ## Table view options
 
@@ -1905,9 +1950,12 @@ appears, including today's width-folded narrow surfaces — the conversations
 sidebar's options button is hover-revealed too. Two visually different compact
 bars whose difference nothing in the UI explains would be the alternative.
 
-**The bar stays in flow.** Compact is a thin strip holding the view tabs (shown
-only when there is more than one instance) with the hidden trigger at its end; it
-reserves its height even when it looks empty and never paints over row content.
+**The bar stays in flow.** Compact is the two-pill row — the views pill (only
+when there is more than one instance) and the tools pill with the hidden
+trigger at its end; it reserves its height even when it looks empty and never
+paints over row content. When the tools pill holds nothing but the trigger, the
+reveal moves onto the pill itself (`CompactControls frame`), so no empty pill
+stands at rest.
 
 ### Single-line list rows are the default
 
@@ -1936,7 +1984,7 @@ the field-driven default.
 ## Per-item actions
 
 Per-row actions (delete, expand-all, …) are a **cross-view** concern: contribute
-an action once, every view renders it in its natural trailing affordance (table-row hover-trailing column, gallery-card top-right hover).
+an action once, every view renders it in its natural trailing affordance (table-row hover-trailing column, a float chip at the gallery card cover's top-right).
 
 The mechanism is the **`defineItemActions<TRow>(id)` factory** (web barrel),
 mirroring the `detail-sections` / `tabbed-view` factory precedent — **not** a
@@ -1953,33 +2001,50 @@ Each consumer calls `defineItemActions<Row>("<stable-id>")` once. The result is
 `<DataView itemActions={MyActions} />`; the host threads it (plus a derived
 `hasChildren` predicate from `hierarchy.getParentId`) into every view, which
 renders it in its own affordance. Each action component receives
-`ItemActionProps<Row>` (`{ row, hasChildren }`).
+`ItemActionProps<Row>` (`{ row, hasChildren, placement }`).
 
 ### The zone axis: does this action live at rest?
 
 A contribution declares `zone?: ItemActionZone` — `"revealed"` (default, the
-hover cluster) or `"persistent"` (painted at rest where the view has a permanent
-per-row region). It is a property of the **action**, declared once, so every view
-gives the same answer — as opposed to per-view config, which lets an author
-promote Play on the card and forget the table row.
+hover cluster), `"persistent"` (painted at rest where the view has an at-rest
+region) or `"primary"` (THE row's main verb — Sonata's Play; at most one per
+set, a second throws) — and optionally `useActive?: Hook<(row) => boolean>`
+(the action is "on" for this row: pinned, done, playing). Both are properties of
+the **action**, declared once, so every view gives the same answer. Each action
+component receives `placement: "cluster" | "primary"` and draws itself for it.
 
-Views never branch on zones themselves: they call the ONE shared rule,
-`useItemActionZones(itemActions, { hasPersistentSlot })` (web barrel), once per
-render and apply the returned `persistent` / `revealed` render functions per row.
-`hasPersistentSlot` is **required**, so a new view type must answer it.
+**The rest rule lives in one place** (`web/internal/item-action-rest.ts`,
+`itemActionRests`): `persistent` rests unless it declares `useActive` (then only
+while active); `revealed` / `primary` rest only while active — except a
+`primary` demoted to the cluster (the view has no primary slot), which always
+rests. Each drawn action
+is an `ItemActionCell` that calls its `useActive` and applies the rule, so the
+at-rest and hover arms can never both draw it.
 
-| View | `hasPersistentSlot` | Persistent placement |
-|---|---|---|
-| gallery | `true` | `DataCard.footer` → `<RowActions pin={null} alwaysVisible>` |
-| table | `true` | the reserved trailing `auto` track, before the revealed cluster |
-| list | `false` | — demoted to the hover cluster |
+Views never branch on zones themselves: they call
+`useItemActionZones(itemActions, { hasPersistentSlot, hasPrimarySlot })` (web
+barrel) once per render — both flags **required**, so a new view type must
+answer them — and get `{ cluster: { atRest, revealed }, primary: { atRest,
+revealed } | null }`, each arm a per-row render function or `null` when no
+contribution can land in it.
 
-`false` demotes, **never drops** — a view with no permanent region is still the
-only place that action can appear. List says `false` on purpose: a reserved
-trailing region would take width from the title in the app's narrowest surfaces
-(the Pages sidebar), and no consumer needs one today. It is a one-flag change
-when a surface earns it, so `primitives/css/row` and `primitives/tree` stay
-untouched.
+- `hasPersistentSlot: false` ⇒ `cluster.atRest` is `null` and `cluster.revealed`
+  draws every cluster action whatever its rest state — demoted, **never dropped**.
+- `hasPrimarySlot: false` ⇒ `primary` is `null` and the primary action joins the
+  cluster and **always rests**, whatever its `useActive` says — the row's main
+  verb has nowhere else to show, so a table keeps Play painted on every row.
+
+| View | `hasPersistentSlot` | `hasPrimarySlot` | At-rest placement |
+|---|---|---|---|
+| gallery | `true` | `true` (the round button at the cover's bottom-right) | the cover's top-right float chip: `DataCard.actions.atRest` → `<RowActions pin={null} alwaysVisible chrome="float">`, right of the revealed chip |
+| table | `true` | `false` | the reserved trailing `auto` track, before the revealed cluster |
+| nested table | `true` (`false` for `outline`) | `false` | the row's trailing cell |
+| list | `false` | `true` while the row shows a cover thumbnail (the action sits over it, on hover) | — demoted to the hover cluster |
+
+List says `false` to a persistent slot on purpose: a reserved trailing region
+would take width from the title in the app's narrowest surfaces (the Pages
+sidebar). A collection's own actions (`CollectionItemAction`) are always
+`revealed`, with no `useActive`.
 
 **`primitives/action-presentation` is a different axis — do not merge them.** It
 answers *what form does this action draw as* (ghost icon button vs labelled menu
@@ -2559,6 +2624,22 @@ so the choice is durable and git-promotable. Surfaces wanting a deliberately nar
 body author `properties` directly in their committed `.jsonc` — see the
 config-nav example under "Filtering".
 
+### The card partition
+
+A card (gallery card, list row meta) draws the visible fields as three fixed
+lines, partitioned by ONE helper, `partitionCardFields(visibleFields)` (web
+barrel): `title` (`pickPrimaryField`), `leading` (`FieldDef.leading`),
+`indicators` (`FieldDef.indicator: true` — row-state marks on the title line),
+`subtitle` (fields of type `text`, joined with "·") and `tokens` (the rest,
+icon + value — `FieldDef.icon`, else the field type's identity icon). The cover
+field (`FieldDef.cover`, else the first `media` field) is the picture, in no
+line. `<CardMeta>` draws them: a line exists whenever the VIEW has fields for it,
+so every card is the same height; an empty value (`isFieldValueEmpty`) is
+omitted, never drawn as "Empty". The cover comes from `resolveCover(fields,
+DataViewProps.cover)` — accessor → `FieldDef.cover` → first `media` field —
+drawn by `<CoverFrame size="card" | "thumb">` (a coverless row on a covered
+surface gets a blank tinted frame).
+
 ## The rail (the inverted topology)
 
 Every horizontal band the DataView owns — toolbar, view bodies, group headers,
@@ -2599,7 +2680,9 @@ removes the whole class of nested/severed-scroll bugs.
   hand off automatically — when a section scrolls out its toolbar un-pins with it,
   no `active` toggling or computed `top` offsets. The `mask` prop paints
   `bg-chrome-mask` so rows never show through the pinned bar, following the surface
-  the DataView is embedded in (page canvas, sidebar, `<Surface>`).
+  the DataView is embedded in (page canvas, sidebar, `<Surface>`) — and so does
+  the fade tail hanging under it (see "Toolbar arrangements"), so an embedded,
+  tinted DataView fades into its own surface.
 - **The pane provides the scroll.** `PaneChrome` routes its body through
   `<PaneScroll>`, so a DataView rendered as `PaneChrome` children scrolls for free;
   a non-pane host must supply its own `<PaneScroll>` (or equivalent `overflow-y`
@@ -2704,9 +2787,9 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
     - `IdKinds.Kind` ×2
-  - Uses: 111 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 112 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×18
-    - `primitives/css/ui-kit` ×14
+    - `primitives/css/ui-kit` ×15
     - `primitives/data-view/view-core` ×8
     - `primitives/live-state` ×6
     - `primitives/css/control-panel` ×4
@@ -2751,6 +2834,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `primitives/row-actions.RowActions`
     - `ui/icons.Icon`
   - Exports (types):
+    - `CardFields`
+    - `CardMetaProps`
     - `CellContributionMeta`
     - `CellEditorProps`
     - `CollectionItemActionContribution`
@@ -2758,6 +2843,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `CollectionRowActivationContribution`
     - `ColumnConfigDerive`
     - `ColumnConfigProps`
+    - `CoverContent`
+    - `CoverFrameProps`
     - `CreateOption`
     - `DataViewAggregateConfig`
     - `DataViewContribution`
@@ -2817,17 +2904,23 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `HierarchyConfig`
     - `HierarchyTree`
     - `HierarchyTreeOptions`
-    - `ItemActionContribution`
+    - `ItemActionArms`
+    - `ItemActionEntry`
+    - `ItemActionFilter`
+    - `ItemActionPlacement`
     - `ItemActionProps`
+    - `ItemActionRender`
     - `ItemActions`
     - `ItemActionsDescriptor`
-    - `ItemActionZone`
+    - `ItemActionTarget`
+    - `ItemActionZones`
     - `LeadingSlotProps`
     - `LivePagesPaging`
     - `LoweredFilter`
     - `ManualOrderConfig`
     - `PartitionOptions`
     - `ProjectedRow`
+    - `ResolvedCover`
     - `RowDnd`
     - `RowDndHierarchy`
     - `RowDndProps`
@@ -2852,7 +2945,11 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `ViewState`
   - Exports (values):
     - `applyFilter`
+    - `CardMeta`
     - `ChipSelectFilterInput`
+    - `coverDetailClass`
+    - `CoverFrame`
+    - `coverHoverGroup`
     - `DATA_VIEW_HEADER_OFFSET_VAR`
     - `DataView`
     - `DataViewGroupHeader`
@@ -2875,17 +2972,22 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `IDENTITY_CODEC`
     - `IDENTITY_GROUPING`
     - `IDENTITY_GROUPING_SET`
+    - `isFieldValueEmpty`
     - `isFilterGroup`
     - `isGroupableField`
     - `leadingSlot`
     - `liveDataSource`
     - `makeSortComparator`
     - `MissingDataCellError`
+    - `partitionCardFields`
     - `partitionIntoSections`
+    - `pickCoverField`
     - `pickLeadingField`
     - `pickPrimaryField`
+    - `PillsToolbar`
     - `readFallback`
     - `resolveBodyFields`
+    - `resolveCover`
     - `rowToneClass`
     - `SectionBody`
     - `UNGROUPED_FOLD_KEY`
@@ -2938,6 +3040,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `CellEditorProps`
     - `ColumnConfigDerive`
     - `ColumnConfigProps`
+    - `CoverContent`
     - `CreateOption`
     - `DataViewActiveChrome`
     - `DataViewAggregateConfig`
@@ -3002,8 +3105,12 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `HostedToolbar`
     - `HostedToolbarForms`
     - `HostedToolbarParts`
+    - `ItemActionEntry`
+    - `ItemActionFilter`
+    - `ItemActionPlacement`
     - `ItemActionProps`
     - `ItemActionsDescriptor`
+    - `ItemActionTarget`
     - `ItemActionZone`
     - `LiveDataSource`
     - `LiveDataSourceOf`
@@ -3056,17 +3163,17 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `splitFieldSections`
     - `UNGROUPED_FOLD_KEY`
 - Cross-plugin:
-  - Uses tokens: 28 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/color-palette` ×10
-    - `ui/tokens/density` ×10
-    - `ui/tokens/type-scale` ×5
-    - `ui/tokens/shape` ×2
-    - `ui/tokens/shadow --shadow`
-  - Imported by: 101 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 42 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/density` ×15
+    - `ui/tokens/color-palette` ×11
+    - `ui/tokens/type-scale` ×10
+    - `ui/tokens/shadow` ×3
+    - `ui/tokens/shape` ×3
+  - Imported by: 103 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×30
-    - `apps` ×23
+    - `apps` ×24
     - `debug` ×13
-    - `primitives` ×9
+    - `primitives` ×10
     - `conversations` ×8
     - `tasks` ×4
     - `infra` ×3
@@ -3106,7 +3213,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
   - **`capsule-toolbar`** — Capsule toolbar arrangement for the data-view primitive: the collapsed view chip, a borderless search field (focused by /), the control triggers as circles and a round filled create button, all in…
   - **`custom-columns`** — User-defined custom columns for any DataView: the config-backed definition controller, the per-row values live hook + upsert mutation, and the toolbar settings (Fields) button. Custom-column…
   - **`floating-toolbar`** — Floating toolbar arrangement for the data-view primitive: the band floats over the view (a full-bleed map under it) — the view tabs as a floating card top-left, past the surface's aside, and search…
-  - **`gallery`** — Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
+  - **`gallery`** — Gallery view child for the data-view primitive: a responsive grid of cover cards — the cover is the card, its fields three fixed lines under it, its actions on the cover.
   - **`icons`** — Icons view child for the data-view primitive: a centred launcher grid of fixed-size tiles (the row's leading avatar filling a squircle) with the name underneath, drag-to-reorder in manual order.
   - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
   - **`map`** — Map view child for the data-view primitive: every row with a location as a pin on a full-bleed map, clustered, with clicking a pin activating its row.

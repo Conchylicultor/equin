@@ -71,8 +71,16 @@ vi.mock(
           {(stub.rows as TrashEntryRow[]).map((entry) => (
             <li key={entry.id} data-testid={`row-${entry.id}`}>
               <span>{label.cell!(entry)}</span>
-              <RestoreTrashEntryAction row={entry} hasChildren={false} />
-              <PurgeTrashEntryAction row={entry} hasChildren={false} />
+              <RestoreTrashEntryAction
+                row={entry}
+                hasChildren={false}
+                placement="cluster"
+              />
+              <PurgeTrashEntryAction
+                row={entry}
+                hasChildren={false}
+                placement="cluster"
+              />
             </li>
           ))}
         </ul>
@@ -218,6 +226,7 @@ describe("the trash row actions", () => {
         <PurgeTrashEntryAction
           row={entry("trash-1", "Groceries")}
           hasChildren={false}
+          placement="cluster"
         />,
       ),
     ).toThrow(/outside the pages Trash dialog/);

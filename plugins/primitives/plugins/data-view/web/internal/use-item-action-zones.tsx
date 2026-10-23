@@ -1,72 +1,162 @@
 import { useMemo, type ReactNode } from "react";
 import type {
-  ItemActionProps,
+  ItemActionEntry,
   ItemActionsDescriptor,
+  ItemActionTarget,
   ItemActionZone,
 } from "../../core";
+import { itemActionCanRest } from "./item-action-rest";
 
-/** No-op zones hook so `useItemActionZones` always calls a hook unconditionally
- *  (rules-of-hooks), whether or not the consumer supplied `itemActions` — the
- *  same shape as `data-table`'s `noRowDecoration`. Frozen module constant so it
- *  never churns the memo below. */
-const NO_ZONES: Record<ItemActionZone, boolean> = {
-  persistent: false,
-  revealed: false,
-};
-const useNoZones = (): Record<ItemActionZone, boolean> => NO_ZONES;
+/** Renders one arm's actions for one row (`null` arm = nothing can land there). */
+export type ItemActionRender<TRow> = (p: ItemActionTarget<TRow>) => ReactNode;
+
+/** One placement's two arms: the actions painted at rest for the row, and the
+ *  ones revealed on hover. Each `null` when no contribution can land in it. */
+export interface ItemActionArms<TRow> {
+  atRest: ItemActionRender<TRow> | null;
+  revealed: ItemActionRender<TRow> | null;
+}
+
+export interface ItemActionZones<TRow> {
+  /** The row's action cluster. */
+  cluster: ItemActionArms<TRow>;
+  /** The view's primary slot — `null` when the view has none (the primary
+   *  action is then in `cluster`, always resting) or nothing is primary. */
+  primary: ItemActionArms<TRow> | null;
+}
+
+/** No-op entries hook so `useItemActionZones` always calls a hook
+ *  unconditionally (rules-of-hooks), whether or not the consumer supplied
+ *  `itemActions`. Frozen module constant so it never churns the memo below. */
+const NO_ENTRIES: readonly ItemActionEntry[] = [];
+const useNoEntries = (): readonly ItemActionEntry[] => NO_ENTRIES;
+
+const CLUSTER_ZONES: readonly ItemActionZone[] = ["persistent", "revealed"];
+const CLUSTER_ZONES_WITH_PRIMARY: readonly ItemActionZone[] = [
+  "persistent",
+  "revealed",
+  "primary",
+];
+const PRIMARY_ZONES: readonly ItemActionZone[] = ["primary"];
+
+const NO_ARMS = { atRest: null, revealed: null } as const;
 
 /**
- * The ONE rule mapping an action's declared {@link ItemActionZone} onto a view.
- * It lives here, not in each view child, so the four views cannot drift — a view
- * only says WHERE each arm goes.
+ * The ONE mapping from an action's declared {@link ItemActionZone} onto a view.
+ * It lives here, not in each view child, so the views cannot drift — a view
+ * only says which slots it HAS and where each returned arm goes.
  *
- * - `itemActions` absent ⇒ both arms `null` (nothing to render).
- * - **`hasPersistentSlot: false`** ⇒ `persistent` is `null` and `revealed`
- *   renders the descriptor's `Row` **unfiltered** (every zone). A persistent
- *   action is demoted to hover, **never dropped** — a view with no permanent
- *   region is still the only place that action can appear.
- * - **`hasPersistentSlot: true`** ⇒ each arm is non-null only when a
- *   contribution actually claims that zone, so a view never paints an empty
- *   `RowActions` box.
+ * - **`hasPrimarySlot: false`** ⇒ `primary` is `null` and a `"primary"` action
+ *   joins the cluster and always rests (a table keeps Play painted).
+ * - **`hasPersistentSlot: false`** ⇒ `cluster.atRest` is `null` and
+ *   `cluster.revealed` draws every cluster action, whatever its rest state —
+ *   demoted to hover, **never dropped** (the list stays hover-only).
+ * - **`hasPersistentSlot: true`** ⇒ each row's actions split by the rest rule
+ *   (`itemActionRests`): `atRest` draws those resting for THIS row, `revealed`
+ *   the rest. Each arm is `null` when no contribution could ever land in it.
+ * - More than one `"primary"` contribution throws: a row has one main verb.
  *
- * `hasPersistentSlot` is **required**: a new view type has to answer it, which
- * is what stops the question from being silently forgotten.
+ * Both flags are **required**: a new view type has to answer them.
  *
- * It is a hook (it reads the live contribution set), so call it ONCE per view
- * render — before any early return — and apply the returned render functions per
- * row. The arms are memoized, so a view may safely put them in a `useCallback`
- * dependency list.
+ * A hook (it reads the live contribution set): call it ONCE per view render —
+ * before any early return — and apply the returned render functions per row.
+ * The arms are memoized, so a view may put them in a dependency list.
  */
 export function useItemActionZones<TRow>(
   itemActions: ItemActionsDescriptor<TRow> | undefined,
-  opts: { hasPersistentSlot: boolean },
-): {
-  persistent: ((p: ItemActionProps<TRow>) => ReactNode) | null;
-  revealed: ((p: ItemActionProps<TRow>) => ReactNode) | null;
-} {
-  const { hasPersistentSlot } = opts;
-  const useZones = itemActions?.useZones ?? useNoZones;
-  const zones = useZones();
-  const hasPersistent = zones.persistent;
-  const hasRevealed = zones.revealed;
+  opts: { hasPersistentSlot: boolean; hasPrimarySlot: boolean },
+): ItemActionZones<TRow> {
+  const { hasPersistentSlot, hasPrimarySlot } = opts;
+  const useEntries = itemActions?.useEntries ?? useNoEntries;
+  const entries = useEntries();
 
-  return useMemo(() => {
-    if (!itemActions) return { persistent: null, revealed: null };
+  const primaries = entries.filter((e) => e.zone === "primary");
+  if (primaries.length > 1) {
+    throw new Error(
+      `data-view: an item-action set may declare at most one \`zone: "primary"\` action, got ${primaries.length}`,
+    );
+  }
+  const demote = !hasPrimarySlot;
+  const clusterEntries = demote
+    ? entries
+    : entries.filter((e) => e.zone !== "primary");
+  // Plain booleans as the memo's inputs, so a fresh entries array of the same
+  // shape never re-mints the arms.
+  const clusterAny = clusterEntries.length > 0;
+  const clusterCanRest = clusterEntries.some((e) =>
+    itemActionCanRest(e, true, demote),
+  );
+  const clusterCanReveal = clusterEntries.some((e) =>
+    itemActionCanRest(e, false, demote),
+  );
+  const primary = hasPrimarySlot ? primaries[0] : undefined;
+  const hasPrimary = primary !== undefined;
+  const primaryCanRest =
+    primary !== undefined && itemActionCanRest(primary, true, false);
+
+  return useMemo((): ItemActionZones<TRow> => {
+    if (!itemActions) return { cluster: NO_ARMS, primary: null };
     const Row = itemActions.Row;
-    if (!hasPersistentSlot) {
-      // No permanent region: ONE unfiltered cluster carries every zone.
-      return {
-        persistent: null,
-        revealed: (p: ItemActionProps<TRow>) => <Row {...p} />,
-      };
-    }
+    const zones = demote ? CLUSTER_ZONES_WITH_PRIMARY : CLUSTER_ZONES;
+    const cluster: ItemActionArms<TRow> = !hasPersistentSlot
+      ? {
+          atRest: null,
+          revealed: clusterAny
+            ? (p) => <Row {...p} placement="cluster" zones={zones} />
+            : null,
+        }
+      : {
+          atRest: clusterCanRest
+            ? (p) => (
+                <Row
+                  {...p}
+                  placement="cluster"
+                  zones={zones}
+                  rest
+                  demotePrimary={demote}
+                />
+              )
+            : null,
+          revealed: clusterCanReveal
+            ? (p) => (
+                <Row
+                  {...p}
+                  placement="cluster"
+                  zones={zones}
+                  rest={false}
+                  demotePrimary={demote}
+                />
+              )
+            : null,
+        };
     return {
-      persistent: hasPersistent
-        ? (p: ItemActionProps<TRow>) => <Row {...p} zone="persistent" />
-        : null,
-      revealed: hasRevealed
-        ? (p: ItemActionProps<TRow>) => <Row {...p} zone="revealed" />
+      cluster,
+      primary: hasPrimary
+        ? {
+            atRest: primaryCanRest
+              ? (p) => (
+                  <Row {...p} placement="primary" zones={PRIMARY_ZONES} rest />
+                )
+              : null,
+            revealed: (p) => (
+              <Row
+                {...p}
+                placement="primary"
+                zones={PRIMARY_ZONES}
+                rest={false}
+              />
+            ),
+          }
         : null,
     };
-  }, [itemActions, hasPersistentSlot, hasPersistent, hasRevealed]);
+  }, [
+    itemActions,
+    hasPersistentSlot,
+    demote,
+    clusterAny,
+    clusterCanRest,
+    clusterCanReveal,
+    hasPrimary,
+    primaryCanRest,
+  ]);
 }

@@ -1,33 +1,73 @@
-import type { ComponentType, ReactNode } from "react";
+import { useMemo, type ComponentType, type ReactNode } from "react";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import {
   defineRenderSlot,
   type RenderSlot,
 } from "@plugins/primitives/plugins/slot-render/web";
 import type {
+  ItemActionEntry,
+  ItemActionFilter,
   ItemActionProps,
   ItemActionsDescriptor,
   ItemActionZone,
 } from "../../core";
+import { itemActionPasses } from "./item-action-rest";
 
 export interface ItemActionContribution<TRow> {
   id: string;
   component: ComponentType<ItemActionProps<TRow>>;
   order?: number;
   /**
-   * Whether this action deserves a permanent slot on the views that have one
-   * (the gallery card's footer, the table's trailing track). Default
-   * `"revealed"` — the hover cluster — so every existing contribution and every
-   * view stays byte-identical until an action opts in. Views without a
-   * permanent slot demote a persistent action to the revealed cluster; see
-   * `useItemActionZones`.
+   * Where this action belongs — see {@link ItemActionZone}. Default
+   * `"revealed"` (the hover cluster). `"persistent"` rests where the view has an
+   * at-rest region; `"primary"` is the row's one main verb (at most one per
+   * set). The mapping onto a view lives in `useItemActionZones`.
    */
   zone?: ItemActionZone;
+  /**
+   * Whether this action is "on" for a row (pinned, done, playing). An active
+   * action rests (stays painted without hover) in every zone; a `persistent`
+   * action that declares it rests ONLY while active. Called once per drawn
+   * action per row, so keep it cheap (a store/selector read).
+   */
+  useActive?: Hook<(row: TRow) => boolean>;
 }
 
 export interface ItemActions<TRow>
   extends
     RenderSlot<ItemActionContribution<TRow>>,
     ItemActionsDescriptor<TRow> {}
+
+/** No `useActive` declared: the action's rest state does not depend on the row. */
+const useNoActive = (_row: unknown): boolean | undefined => undefined;
+
+/**
+ * One contributed action for one row, with the rest filter applied. A
+ * component of its own so `useActive` is an ordinary hook call at a stable
+ * position (one cell = one contribution), never a hook inside a loop.
+ */
+function ItemActionCell<TRow>({
+  item,
+  props,
+  filter,
+}: {
+  item: ItemActionContribution<TRow>;
+  props: ItemActionProps<TRow>;
+  filter: ItemActionFilter;
+}): ReactNode {
+  const useActive: Hook<(row: TRow) => boolean | undefined> =
+    item.useActive ?? useNoActive;
+  const active = useActive(props.row);
+  if (!itemActionPasses(item.zone ?? "revealed", active, filter)) return null;
+  const C = item.component;
+  return (
+    <C
+      row={props.row}
+      hasChildren={props.hasChildren}
+      placement={props.placement}
+    />
+  );
+}
 
 /**
  * Mint a per-consumer item-action slot. The returned value is **callable for
@@ -44,29 +84,41 @@ export function defineItemActions<TRow>(): ItemActions<TRow> {
   const Row = ({
     row,
     hasChildren,
-    zone,
-  }: ItemActionProps<TRow> & { zone?: ItemActionZone }): ReactNode => (
+    placement,
+    zones,
+    rest,
+    demotePrimary,
+  }: ItemActionProps<TRow> & ItemActionFilter): ReactNode => (
     <slot.Render>
       {(item) => {
         // Filtering happens INSIDE the existing render callback (rather than over
         // a pre-filtered contribution list) so the slot keeps owning ordering and
-        // per-item isolation. `zone` omitted on `<Row>` ⇒ no filter at all, which
-        // is what keeps a view that hasn't opted into zones unchanged.
-        if (zone !== undefined && (item.zone ?? "revealed") !== zone)
+        // per-item isolation. The zone filter is static; the rest filter needs
+        // the row's `useActive`, so the cell applies it.
+        if (zones !== undefined && !zones.includes(item.zone ?? "revealed"))
           return null;
-        const C = item.component;
-        return <C row={row} hasChildren={hasChildren} />;
+        return (
+          <ItemActionCell
+            item={item}
+            props={{ row, hasChildren, placement }}
+            filter={{ rest, demotePrimary }}
+          />
+        );
       }}
     </slot.Render>
   );
-  const useZones = (): Record<ItemActionZone, boolean> => {
+  const useEntries = (): readonly ItemActionEntry[] => {
     const items = slot.useContributions();
-    return {
-      persistent: items.some((item) => item.zone === "persistent"),
-      revealed: items.some((item) => (item.zone ?? "revealed") === "revealed"),
-    };
+    return useMemo(
+      () =>
+        items.map((item) => ({
+          zone: item.zone ?? "revealed",
+          hasActive: item.useActive !== undefined,
+        })),
+      [items],
+    );
   };
   // `slot` is a callable function-object (like every defineRenderSlot result);
-  // attach `Row`/`useZones` the same way `.Render`/`.useContributions` are attached.
-  return Object.assign(slot, { Row, useZones }) as ItemActions<TRow>;
+  // attach `Row`/`useEntries` the same way `.Render`/`.useContributions` are attached.
+  return Object.assign(slot, { Row, useEntries }) as ItemActions<TRow>;
 }

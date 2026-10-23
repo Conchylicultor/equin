@@ -34,8 +34,8 @@ export interface ResolvedViewInstance<T extends ViewTypeMeta = ViewTypeMeta> {
  *
  * The row's whole `view` value is layered **over** the entry's code-supplied
  * `viewOptions[type]` to become the instance `options`: config-authored keys
- * (`sort`/`filter`/`coverField`/…) override, while non-serializable code-only
- * options (e.g. `renderBody`, `cover`) — which can never live in a config row —
+ * (`sort`/`filter`/`locationField`/…) override, while non-serializable code-only
+ * options (e.g. `renderRow`, `pinData`) — which can never live in a config row —
  * survive. The view-type component reads its own keys off the merged result.
  */
 export function buildInstanceFromRow<T extends ViewTypeMeta>(

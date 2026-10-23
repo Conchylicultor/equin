@@ -2,35 +2,46 @@
 
 The Prototypes app's gallery: the list of every prototype, and New prototype.
 
-- **Gallery pane** (`/prototypes`, no chrome) — a `DataView` gallery over the
-  live `prototypesList` value. Each card shows the prototype's `<title>` + blurb
-  over its rendered screenshot (`thumbnails`' `<PrototypeThumbnail>`; `name`
-  stays the row key and the URL param — it is the directory name, which is a
-  minted id); activating one pushes the detail pane (the `canvas` plugin). A
-  "New prototype" button opens a `LaunchAgentPopover` that mints first (see below).
+- **Gallery pane** (`/prototypes`) — a `DataView` over the live
+  `prototypesList` value, with a Gallery view (cards grouped by status) and a
+  Recently edited list (`config/apps/prototypes/gallery/prototypes.gallery.jsonc`).
+  The pane lies on the viewer's own ground: `PaneChrome`'s `ground` prop takes
+  `canvas`' `<CanvasGround>` (the 28px grid under its vignette), which stays put
+  while the cards scroll over it. Activating a card pushes the detail pane (the
+  `canvas` plugin). A "New prototype" button opens a `LaunchAgentPopover` that
+  mints first (see below). The shell theme sizes the cards (`galleryCardMin`,
+  `galleryGap*`, `radiusCover`, `shadow-cover` / `-hover` — the gallery mock's
+  `.grid` / `.shot`).
 
-  `CoverSwatch` — the id-tinted gradient — stays here as the stand-in the
-  thumbnail falls back to before its picture exists, or when rendering it
-  failed. This pane owns the stand-in; `thumbnails` owns the picture.
+  **The cover** is the DataView's `cover` accessor: `kind: "node"` holding
+  `thumbnails`' `<PrototypeThumbnail>` (the card's picture and the list row's
+  thumbnail). `CoverSwatch` — the id-tinted gradient — stays here as the
+  stand-in the thumbnail falls back to before its picture exists, or when
+  rendering it failed. This pane owns the stand-in; `thumbnails` owns the
+  picture.
 
-  **Both values are subscribed here, together** (`useCombinedResources` over
-  `useLive(prototypesList)` + `usePrototypeThumbnails()`), and the cards wait
-  for both. A value is filled by its subscription's first answer, asked for
-  when its first subscriber mounts, so subscribing to the thumbnails down
-  inside a card would put that ask strictly after the list had painted — a
-  guaranteed swatch-then-screenshot swap on every load. Side by side they are
-  answered in parallel, and the cover is right the first time it is painted.
-  **Done.** A third resource joins them: `files`' `prototypes.statuses`. The
-  gallery maps it onto the rows (`PrototypeGalleryRow = PrototypeMeta & { done, pinned }`)
-  so everything reads one value: a hidden `status` field (the gallery groups by
-  it by default — see `config/apps/prototypes/gallery/prototypes.gallery.jsonc`
-  — and can be filtered on it; no card body cell, the checkbox already shows
-  it), a muted title on Done cards (`rowTone`), and the Done checkbox, which is
-  a `persistent` contribution to `PrototypeCardActions` (painted at rest in the
-  card footer; its click never opens the card). The canvas's header has the
-  same toggle — `DoneHeaderAction` (`done-toggle.tsx`), a contribution to the
-  canvas's `prototypeDetailPane.Actions` — with a fixed "Done" label so ticking
-  it never changes the header's width.
+  **The fields** (`web/internal/gallery-fields.tsx`, `galleryFields`) are the
+  card's three lines (`partitionCardFields`): the `<title>` (primary), the
+  problems count as an `indicator` after it (absent — so omitted — when there
+  are none; the problems themselves are listed in the detail pane), the blurb
+  as the subtitle, then `modifiedAt` (`schedule` icon, relative time) and
+  `versions` (`history` icon, "v12") as tokens. A prototype with no known
+  version count has `versions: undefined`, so the token is omitted — never
+  "v0". `name` (the minted id, the row key and URL param), `createdAt` and
+  `status` are hidden sort / filter / group dimensions.
+
+  **Four values are subscribed here, together** (`useCombinedResources` over
+  `useLive(prototypesList)`, `usePrototypeThumbnails()`,
+  `useLive(prototypeStatuses)` and `useLive(prototypeVersionCounts)`), and the
+  cards wait for all of them. A value is filled by its subscription's first
+  answer, asked for when its first subscriber mounts, so subscribing to the
+  thumbnails (or counts) down inside a card would put that ask strictly after
+  the list had painted — a guaranteed late paint on every load. Side by side
+  they are answered in parallel, and the card is right the first time it is
+  painted. `joinGalleryRows` maps statuses and counts onto the rows
+  (`PrototypeGalleryRow = PrototypeMeta & { done, pinned, versions }`), so
+  everything reads one value: the hidden `status` field (the gallery groups by
+  it), a muted title on Done cards (`rowTone`), and the card actions.
 
   `status` is an enum of three ("Pinned" / "In progress" / "Done") rather than
   the `pinned` / `done` bools it projects: the field is read as SECTION HEADINGS
@@ -38,15 +49,23 @@ The Prototypes app's gallery: the list of every prototype, and New prototype.
   about what it is No of. A pin outranks Done (a pinned, finished prototype
   sits under Pinned).
 
-  **Pinned.** The second field of the same status record (`{ done, pinned }`;
-  a change sets one field and never clobbers the other). A pin icon beside the
-  Done checkbox on every card (`PinCardAction`, `persistent`), and beside the
-  Done toggle in the canvas header (`PinHeaderAction`); both write through
-  `useSetPrototypeStatus` (`set-status.ts`).
+  **Pin / Done / Open in a new tab — the card actions** (`PrototypeCardActions`,
+  the same set on a gallery card and a list row). Pin (`PinCardAction`) and the
+  Done circle (`DoneCardAction`) are `revealed` (hover) actions with
+  `useActive` (`usePinnedActive` / `useDoneActive`, a plain read of the joined
+  row): a set state stays painted at rest, the rest appear on hover. Both
+  write through `useSetPrototypeStatus` (`set-status.ts`) — one status record
+  `{ done, pinned }`, a change setting one field and never clobbering the
+  other — and their click never opens the card. Open in a new tab is
+  contributed by `present` (the live present page). The canvas header carries
+  the same two toggles — `PinHeaderAction` / `DoneHeaderAction`, contributions
+  to `prototypeDetailPane.Actions` — with fixed labels so toggling never
+  changes the header's width.
 
 The detail pane itself — the canvas of frames, its version steppers, option
 picks, size and zoom — is the sibling `canvas` plugin. The gallery depends on
-it only to put its Done toggle in the canvas's header; the routes of both panes
+it to put its pin / Done toggles in the canvas's header and for the ground it
+sits on (`CanvasGround`); the routes of both panes
 live in `shell/core/routes.ts`.
 
 ## The launch prompt
@@ -92,7 +111,7 @@ honest — the prototype does exist — and it self-corrects.
 
 ## Plugin reference
 
-- Description: Prototypes gallery list pane — one card per prototype over its rendered preview, grouped (Pinned / In progress / Done) and filterable by a pin and a Done checkbox on every card (and in the detail pane's header) — plus New prototype, which mints the folder before launching the agent that designs it.
+- Description: Prototypes gallery list pane — one card per prototype over its rendered preview, on the prototype viewer's grid, with a Recently edited list; grouped (Pinned / In progress / Done) and filterable by a pin and a Done circle on every card and row (hover actions that stay shown while set; also in the detail pane's header) — plus New prototype, which mints the folder before launching the agent that designs it.
 - Web:
   - Slots:
     - `prototypesGalleryPane.Actions`
@@ -100,24 +119,23 @@ honest — the prototype does exist — and it self-corrects.
   - Slot contributors:
     - `prototypesGalleryPane.Actions` ← `primitives.pane`
     - `PrototypeCardActions` ← `apps.prototypes.gallery`
+    - `PrototypeCardActions` ← `apps.prototypes.present`
   - Contributes:
     - `Pane.Register` "prototypes-gallery"
     - `prototypeDetailPane.Actions` "pin" → `PinHeaderAction`
     - `prototypeDetailPane.Actions` "done" → `DoneHeaderAction`
     - `PrototypeCardActions` "pin" → `PinCardAction`
     - `PrototypeCardActions` "done" → `DoneCardAction`
-  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/prototypes/canvas` ×4
     - `infra/endpoints` ×4
-    - `primitives/data-view` ×4
-    - `apps/prototypes/canvas` ×3
+    - `primitives/data-view` ×3
     - `primitives/live-state` ×3
     - `primitives/pane` ×3
     - `apps/prototypes/thumbnails` ×2
     - `primitives/css/ui-kit` ×2
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
-    - `primitives/css/overlay.Overlay`
-    - `primitives/css/pin.Pin`
     - `primitives/icon-button.IconButton`
     - `primitives/launch.LaunchAgentPopover`
     - `primitives/relative-time.RelativeTime`
@@ -134,6 +152,8 @@ honest — the prototype does exist — and it self-corrects.
   - Uses tokens:
     - `ui/tokens/color-palette --accent`
     - `ui/tokens/color-palette --primary-text`
-  - Imported by: `apps/home/app-cards`
+  - Imported by:
+    - `apps/home/app-cards`
+    - `apps/prototypes/present`
 
 <!-- AUTOGENERATED:END -->

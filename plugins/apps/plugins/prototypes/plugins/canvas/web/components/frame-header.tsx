@@ -65,7 +65,7 @@ export function FrameHeader({
                   id={item.id}
                   className={hoverRevealTargetInAnchor}
                 >
-                  <Action row={row} hasChildren={false} />
+                  <Action row={row} hasChildren={false} placement="cluster" />
                 </AdaptiveBar.Item>
               );
             }}

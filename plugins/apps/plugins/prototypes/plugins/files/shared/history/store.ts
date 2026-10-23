@@ -1,6 +1,15 @@
 import { existsSync, statSync } from "node:fs";
-import { mkdir, mkdtemp, rename, rm, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rename,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { join } from "node:path";
+import { z } from "zod";
 import {
   PROTOTYPE_ENTRY_FILE,
   protoIdKind,
@@ -46,6 +55,12 @@ export const HISTORY_DIR_NAME = "_history";
  * how a version recorded by ANOTHER backend reaches this one's subscribers.
  */
 export const LATEST_STAMP_FILE = "latest.json";
+
+/** The stamp's shape: the newest version's position and sha. */
+const LatestStampSchema = z.object({
+  n: z.number().int().nonnegative(),
+  sha: z.string(),
+});
 
 /** What a recorded version carries beyond the wire shape — for `prototype log`. */
 export interface VersionEntry extends PrototypeVersion {
@@ -96,6 +111,14 @@ export interface HistoryStore {
   checkpoint(id: string, input: CheckpointInput): Promise<CheckpointResult>;
   /** Every version, oldest → newest, and whether the folder has moved since. */
   readHistory(id: string): Promise<HistoryRead>;
+  /**
+   * How many versions each prototype has, keyed by id — read from each repo's
+   * `latest.json` stamp (`n + 1`), never from git: one small file read per
+   * prototype, all in parallel, so the gallery's whole-list read stays cheap. A
+   * repo without a stamp (or a prototype without a repo) is absent, never `0`;
+   * a malformed stamp throws.
+   */
+  readVersionCounts(): Promise<Record<string, number>>;
   /** One file of one version, as bytes. */
   readVersionFile(
     id: string,
@@ -313,6 +336,42 @@ export function openHistoryStore(root: string): HistoryStore {
     });
   }
 
+  async function readVersionCounts(): Promise<Record<string, number>> {
+    let names: string[];
+    try {
+      names = await readdir(historyDir);
+    } catch (err) {
+      // No history dir yet: no prototype has a history — a real, empty answer.
+      if (isErrnoCode(err, "ENOENT")) return {};
+      throw err;
+    }
+    const ids = names
+      .filter((n) => n.endsWith(".git"))
+      .map((n) => n.slice(0, -".git".length))
+      .filter(protoIdKind.is);
+    const counts = await Promise.all(
+      ids.map(async (id): Promise<[string, number] | null> => {
+        const path = join(repoOf(id), LATEST_STAMP_FILE);
+        let text: string;
+        try {
+          text = await readFile(path, "utf8");
+        } catch (err) {
+          // A repo recorded before stamps existed: its count is unknown here.
+          if (isErrnoCode(err, "ENOENT")) return null;
+          throw err;
+        }
+        const stamp = LatestStampSchema.safeParse(JSON.parse(text));
+        if (!stamp.success) {
+          throw new Error(
+            `malformed version stamp ${path}: ${stamp.error.message}`,
+          );
+        }
+        return [id, stamp.data.n + 1];
+      }),
+    );
+    return Object.fromEntries(counts.filter((c) => c !== null));
+  }
+
   /** Stamp the newest version into the repo, and answer with it. */
   async function afterCommit(
     id: string,
@@ -328,6 +387,7 @@ export function openHistoryStore(root: string): HistoryStore {
     adoptAll,
     checkpoint,
     readHistory,
+    readVersionCounts,
     readVersionFile,
     readVersionPatch,
     restoreVersion,
@@ -507,6 +567,10 @@ async function stampLatest(repo: string, newest: VersionEntry): Promise<void> {
   const temp = `${path}.tmp`;
   await writeFile(temp, JSON.stringify({ n: newest.n, sha: newest.sha }));
   await rename(temp, path);
+}
+
+function isErrnoCode(err: unknown, code: string): boolean {
+  return err instanceof Error && (err as NodeJS.ErrnoException).code === code;
 }
 
 function isDirectory(path: string): boolean {

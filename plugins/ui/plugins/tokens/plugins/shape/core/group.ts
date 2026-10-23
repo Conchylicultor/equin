@@ -53,6 +53,14 @@ export const shapeGroup = defineTokenGroup("shape", {
     label: "Panel row radius",
   },
   pillPadExtra: { default: "0rem", label: "Pill extra padding" },
+  // A record's cover — the DataView gallery card (the cover IS the card) and
+  // the list's leading thumbnail (`rounded-cover`). Default = the raised
+  // card's corners, so a cover rounds like the card it replaced.
+  radiusCover: { default: "var(--radius-card)", label: "Cover radius" },
+  // Floating chrome's corners (`Surface level="float"`, `rounded-float`: a
+  // toolbar capsule, a dock, an action chip over a cover). Default = the
+  // popover's, so float and overlay round alike unless a theme sets them apart.
+  radiusFloat: { default: "var(--radius-popover)", label: "Float radius" },
 });
 
 export type ShapeTokenValues = {

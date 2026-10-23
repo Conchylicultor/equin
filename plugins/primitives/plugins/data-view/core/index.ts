@@ -136,8 +136,13 @@ export type {
   FilterGroup,
   FilterNode,
   ItemActionProps,
+  ItemActionTarget,
+  ItemActionPlacement,
+  ItemActionFilter,
+  ItemActionEntry,
   ItemActionsDescriptor,
   ItemActionZone,
+  CoverContent,
   FieldExtensionProps,
   FieldExtensionsDescriptor,
 } from "./internal/types";

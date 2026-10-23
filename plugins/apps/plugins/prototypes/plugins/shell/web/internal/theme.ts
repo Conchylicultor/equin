@@ -120,6 +120,9 @@ const material = materialGroup.fragment(
  * `shadow-popover` is `.pop`'s, `shadow-float` `.float`'s (each with its 4% /
  * 5% top highlight), `shadow-xl` an add-rail button's and `shadow-2xl` a
  * frame's drop (its 1px `--line-2` ring is `ring-1 ring-border` beside it).
+ * `shadow-cover` is a gallery card's `.shot` (the `--line-2` hairline and a
+ * long soft drop); under the pointer the hairline turns the accent line and
+ * the drop deepens (`.card:hover .shot`).
  */
 const shadow = shadowGroup.fragment(
   both({
@@ -129,6 +132,8 @@ const shadow = shadowGroup.fragment(
       "0 12px 40px -12px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.05)",
     "shadow-xl": "0 8px 24px -10px rgba(0, 0, 0, 0.7)",
     "shadow-2xl": "0 30px 80px -24px rgba(0, 0, 0, 0.75)",
+    "shadow-cover": `0 0 0 1px ${LINE_2}, 0 24px 60px -28px rgba(0, 0, 0, 0.85)`,
+    "shadow-cover-hover": `0 0 0 1px ${ACCENT_LINE}, 0 30px 70px -26px rgba(0, 0, 0, 0.9)`,
   }),
 );
 
@@ -136,7 +141,8 @@ const shadow = shadowGroup.fragment(
  * The mockup's corners on a 9px `--radius`: `rounded-lg` 9 (a row, a frame
  * header's box, a dock button), `rounded-xl` 12.6 (a frame's 12), popovers
  * and the floating chrome 14, panel rows 9, buttons 7 (the 24px `xs` ones 6),
- * chips 6 (`radiusChipCompact`, in density).
+ * chips 6 (`radiusChipCompact`, in density), a gallery card's cover 12
+ * (the gallery mock's `.shot`).
  */
 const shape = shapeGroup.fragment(
   both({
@@ -147,6 +153,7 @@ const shape = shapeGroup.fragment(
     radiusControlXs: "0.375rem",
     radiusPopover: "0.875rem",
     radiusPanelRow: "0.5625rem",
+    radiusCover: "0.75rem",
   }),
 );
 
@@ -175,6 +182,11 @@ const density = densityGroup.fragment(
     // `.versions` (440px): a frame's version list — choices each carrying
     // their request line, the `described` role.
     popoverWidthDescribed: "27.5rem",
+    // The gallery mock's `.grid`: cards at least 250px wide, 26px apart
+    // across and 30px down.
+    galleryCardMin: "15.625rem",
+    galleryGapX: "1.625rem",
+    galleryGapY: "1.875rem",
   }),
 );
 

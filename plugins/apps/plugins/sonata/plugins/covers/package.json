@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-sonata-covers",
+  "description": "Sonata song covers drawn from the real song: a falling-notes piano-roll cover and a schematic grand-staff cover rendered as SVG from a Score, and the content-addressed, render-on-request cache that serves them.",
+  "private": true,
+  "version": "0.0.1"
+}

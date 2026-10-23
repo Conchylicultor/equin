@@ -6,7 +6,11 @@ import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
 import { protoIdKind } from "../../core";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
-import { adoptPrototypeHistories, prototypeHistoryServed } from "./history";
+import {
+  adoptPrototypeHistories,
+  prototypeHistoryServed,
+  prototypeVersionCountsServed,
+} from "./history";
 import { prototypePicksServed } from "./picks";
 import { prototypeStatusesServed } from "./status";
 import { prototypesListServed } from "./resources";
@@ -95,7 +99,14 @@ async function refreshOnce(): Promise<void> {
   // A folder that appeared without the mint (made by hand, restored from a
   // backup) gets its history here; a minted one already has it. Last, so a
   // failure to adopt cannot hold back the notifications above.
-  await adoptPrototypeHistories();
+  try {
+    await adoptPrototypeHistories();
+  } finally {
+    // A repo is born by renaming a stamped staging dir into place — a dir
+    // rename, which need not surface as a `latest.json` event — so a tree that
+    // moved (a prototype minted, adopted or deleted) re-reads the counts here.
+    prototypeVersionCountsServed.notify();
+  }
 }
 
 /** Re-read one prototype's history, for whoever is subscribed to it. */
@@ -132,6 +143,9 @@ function onTreeEvents(paths: string[]): Promise<void> | undefined {
     else if (kind.kind === "tree") treeMoved = true;
   }
   for (const id of recorded) notifyHistory(id);
+  // Every recorded version moves one prototype's count; the counts are one
+  // value, so a batch re-reads it once.
+  if (recorded.size > 0) prototypeVersionCountsServed.notify();
   for (const name of picked) prototypePicksServed.notify({ name });
   if (statusMoved) prototypeStatusesServed.notify();
   return treeMoved ? refreshes.run() : undefined;

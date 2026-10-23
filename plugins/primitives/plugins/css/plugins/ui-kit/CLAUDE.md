@@ -587,15 +587,15 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `useSingleLine`
     - `WithTooltip`
 - Cross-plugin:
-  - Uses tokens: 255 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/density` ×71
+  - Uses tokens: 264 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/density` ×76
     - `ui/tokens/color-palette` ×60
     - `ui/tokens/type-scale` ×42
+    - `ui/tokens/shape` ×15
     - `ui/tokens/overlay` ×13
-    - `ui/tokens/shape` ×13
+    - `ui/tokens/shadow` ×12
     - `ui/tokens/sidebar-metrics` ×12
     - `ui/tokens/categorical` ×11
-    - `ui/tokens/shadow` ×10
     - `ui/tokens/sidebar-palette` ×9
     - `ui/tokens/chart` ×5
     - `ui/tokens/font-family` ×4

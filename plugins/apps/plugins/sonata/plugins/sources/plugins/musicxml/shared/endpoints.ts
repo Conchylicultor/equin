@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import {
+  blob,
+  defineEndpoint,
+  endpointPath,
+} from "@plugins/infra/plugins/endpoints/core";
 
 /**
  * Create a song from an already-uploaded MusicXML attachment. The server reads
@@ -22,3 +26,24 @@ export const getSongMusicXml = defineEndpoint({
   route: "GET /api/sonata/songs/:id/musicxml",
   response: z.object({ attachmentId: z.string() }).nullable(),
 });
+
+/**
+ * One song's cover: a schematic grand staff of its opening bars, drawn on the
+ * server from the song's own MusicXML (`covers` renders and caches it). Raw —
+ * it answers SVG bytes. The last segment is `<version>.svg`, the version the
+ * row's `sourcesChangedAt` (epoch ms) as the card building the URL knew it: the
+ * response is `immutable` while it is current, `no-store` once stale. One
+ * whole-segment param, because the router matches whole segments only.
+ */
+export const getSongMusicXmlCover = defineEndpoint({
+  route: "GET /api/sonata/songs/:id/musicxml/cover/:file",
+  response: blob(),
+});
+
+/** The URL of a song's MusicXML cover, versioned by its `sourcesChangedAt`. */
+export function musicXmlCoverUrl(id: string, sourcesChangedAt: Date): string {
+  return endpointPath(getSongMusicXmlCover, {
+    id,
+    file: `${sourcesChangedAt.getTime()}.svg`,
+  });
+}

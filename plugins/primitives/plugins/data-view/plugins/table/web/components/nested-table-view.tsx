@@ -187,8 +187,11 @@ export function NestedTableView(
   // An outline is a tree's look: like a tree row, it reserves no permanent
   // region for actions (a sidebar's labels keep the width), so the persistent
   // zone demotes to the hover cluster there.
-  const { persistent, revealed } = useItemActionZones(itemActions, {
+  const {
+    cluster: { atRest: persistent, revealed },
+  } = useItemActionZones(itemActions, {
     hasPersistentSlot: options.presentation !== "outline",
+    hasPrimarySlot: false,
   });
 
   // Columns follow the view's Properties policy. The leading field (the row's

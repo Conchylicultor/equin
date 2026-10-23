@@ -4,6 +4,7 @@ import {
   PROTOTYPE_ENTRY_FILE,
   protoIdKind,
   prototypeHistory,
+  prototypeVersionCounts,
   restorePrototypeVersion,
   type PrototypeVersion,
 } from "../../core";
@@ -55,6 +56,19 @@ export const prototypeHistoryServed = serveValue(prototypeHistory, {
     }
     return read.history;
   },
+});
+
+/**
+ * `prototypes.versionCounts` — every prototype's version count, from the
+ * repos' `latest.json` stamps (`HistoryStore.readVersionCounts`): async file
+ * reads, no git, so the whole-gallery read never spawns a process per
+ * prototype. Push; notified by the watcher whenever a stamp is written — by
+ * any backend, as for the per-prototype history.
+ */
+export const prototypeVersionCountsServed = serveValue(prototypeVersionCounts, {
+  source: "external",
+  changes: "notified",
+  loader: async () => store().readVersionCounts(),
 });
 
 /**

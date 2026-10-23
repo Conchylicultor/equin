@@ -27,7 +27,8 @@ because one id means one view config, and the popover must not offer the
 pane's card views. To the user it is ONE list: both configs author the same
 views (My themes / Community / Curated) with the same filters, and differ only
 in view type — keep them in step. A row's body follows that type: `gallery`
-draws `ThemeCard`, `list` draws `ThemeSwatch`.
+draws the standard card over a `ThemePreview` cover (`DataViewProps.cover`;
+its lines are the schema's: name, source, tags), `list` draws `ThemeSwatch`.
 
 ## Rows (`web/internal/theme-rows.ts`, pure, tested)
 
@@ -78,6 +79,7 @@ draws `ThemeCard`, `list` draws `ThemeSwatch`.
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`
+    - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`

@@ -8,6 +8,7 @@ import {
 import {
   cn,
   ControlSizeProvider,
+  SURFACE_LEVELS,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   Pin,
@@ -104,7 +105,27 @@ interface RowActionsCommonProps {
    * outermost node, which is also the node the reveal rides.
    */
   className?: string;
+  /**
+   * `"float"` — the cluster draws on its own small float-surface chip
+   * (`SURFACE_LEVELS.float`: glass, outline, shadow), for a cluster that sits
+   * over a picture rather than over its row's own text (a gallery card's
+   * cover). The chip replaces the pinned scrim (there is no row tint under a
+   * picture to dissolve into), and it **collapses when no control renders** in
+   * it — an at-rest arm whose actions all rest elsewhere for this row draws
+   * nothing, not an empty glass pill. Omitted ⇒ bare buttons (and, pinned, the
+   * row's `--scrim`).
+   */
+  chrome?: "float";
 }
+
+/** The float chip: the float surface around the buttons, hidden while it
+ *  holds no control. `:has()` asks for a control rather than for `:empty`,
+ *  because a slot wraps each contribution in layout-neutral boxes that stay
+ *  even when the contribution renders nothing. */
+const FLOAT_CHIP = cn(
+  SURFACE_LEVELS.float,
+  "p-2xs not-has-[button,a[href],input]:hidden",
+);
 
 /**
  * `pin` and `float` are a discriminated pair, not two free booleans: a pinned
@@ -157,7 +178,10 @@ export function RowActions(props: RowActionsProps) {
   // whether its buttons exist changes no geometry. An in-flow cluster
   // (`pin={null}` — a table's reserved track) sizes its track by its content,
   // and an `alwaysVisible` one is on screen at rest.
-  const deferrable = !props.alwaysVisible && props.pin !== null;
+  // A float chip (`chrome="float"`) sits over a picture, not in a track, so
+  // it may wait too, pinned or not: nothing lays out around it.
+  const deferrable =
+    !props.alwaysVisible && (props.pin !== null || props.chrome === "float");
   const [sentinelRef, reached] = useRowReached(deferrable);
   if (deferrable && !reached) return <span ref={sentinelRef} hidden />;
   return <RowActionsCluster {...props} />;
@@ -213,6 +237,7 @@ function RowActionsCluster({
   pin = "right",
   alwaysVisible = false,
   float = false,
+  chrome,
   className: placement,
 }: RowActionsProps) {
   const cluster = (className?: string) => (
@@ -228,7 +253,7 @@ function RowActionsCluster({
       // the row — that margin is row, not affordance.
       onClick={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
-      className={className}
+      className={cn(chrome === "float" && FLOAT_CHIP, className)}
     >
       <ControlSizeProvider size="xs">{children}</ControlSizeProvider>
     </Stack>
@@ -257,8 +282,14 @@ function RowActionsCluster({
         // moves independently of the box the user actually sees.
         const outer = cn(reveal, placement);
         if (pin !== null) {
+          // A float chip brings its own backdrop, so the pin paints no scrim.
           return (
-            <Pin to={pin} offset="xs" mask className={outer}>
+            <Pin
+              to={pin}
+              offset="xs"
+              mask={chrome !== "float"}
+              className={outer}
+            >
               {cluster()}
             </Pin>
           );

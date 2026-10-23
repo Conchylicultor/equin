@@ -26,11 +26,12 @@ Swing (`meta.swing`) is read here but applied at playback only — see
 
 ## Plugin reference
 
-- Description: MusicXML file input source for Sonata: compile() parses a score-partwise document into a Score (parts and staves as tracks, ties merged, repeats unrolled, chord symbols, tempo, swing). Persists per-song MusicXML as an attachment and contributes the library Import affordance and hydration. Owns the sonata_songs_ext_musicxml side-table: per-song MusicXML attachment + content hash. Creates MusicXML-backed songs from an uploaded document (content-hash dedup) and fills an existing MusicXML song with a document (importMusicXmlForSong, for the transcription flow).
+- Description: MusicXML file input source for Sonata: compile() parses a score-partwise document into a Score (parts and staves as tracks, ties merged, repeats unrolled, chord symbols, tempo, swing). Persists per-song MusicXML as an attachment and contributes the library Import affordance, hydration and the song's staff cover. Owns the sonata_songs_ext_musicxml side-table: per-song MusicXML attachment + content hash. Creates MusicXML-backed songs from an uploaded document (content-hash dedup) and fills an existing MusicXML song with a document (importMusicXmlForSong, for the transcription flow). Serves each song's staff cover (GET …/musicxml/cover/<version>.svg, drawn by covers).
 - Web:
   - Contributes:
     - `SonataDocument.Source` "MusicXML"
     - `Library.Source` "musicxml"
+    - `Library.Cover` "musicxml"
   - Uses:
     - `apps/sonata/document.SonataDocument`
     - `apps/sonata/library.Library`
@@ -43,14 +44,17 @@ Swing (`meta.swing`) is read here but applied at playback only — see
     - `ui/icons.Icon`
 - Server:
   - Uses:
+    - `apps/sonata/covers.serveScoreCover`
     - `apps/sonata/library._songs`
     - `apps/sonata/library.createSongRow`
     - `apps/sonata/library.songAttachments`
     - `apps/sonata/library.updateSongMeta`
     - `database.db`
+    - `infra/attachments.AttachmentBlobs`
     - `infra/attachments.createAttachment`
     - `infra/attachments.getAttachment`
     - `infra/endpoints.implement`
+    - `infra/endpoints.rawEndpointHandler`
     - `infra/entity-extensions.defineExtension`
   - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/musicxml/server/internal/tables.ts`
   - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_musicxml`)
@@ -62,6 +66,7 @@ Swing (`meta.swing`) is read here but applied at playback only — see
   - Routes:
     - `POST /api/sonata/songs/musicxml`
     - `GET /api/sonata/songs/:id/musicxml`
+    - `GET /api/sonata/songs/:id/musicxml/cover/:file`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`

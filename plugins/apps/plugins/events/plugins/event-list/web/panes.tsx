@@ -74,22 +74,20 @@ function EventListPaneView(): ReactElement {
             No events — add a source from Sources to start collecting them.
           </Placeholder>
         }
+        // The poster as the card's cover (and the list's thumbnail).
+        // `imageUrl` is deliberately NOT a listed field (it is a display
+        // input, not a sort/filter dimension — see core/internal/fields.ts),
+        // so the cover comes from the accessor. No usable poster → `null` → a
+        // blank tinted frame the size of every other card's, never a broken
+        // image.
+        cover={(e) => {
+          const src = externalUrl(e.imageUrl);
+          return src === null ? null : { kind: "image", src };
+        }}
         viewOptions={{
           list: {
             size: "md",
             renderRow: (e: ListedEvent) => <EventRow event={e} />,
-          },
-          gallery: {
-            // The poster as the card's cover. `imageUrl` is deliberately NOT a
-            // listed field (it is a display input, not a sort/filter dimension —
-            // see core/internal/fields.ts), so the cover comes from the
-            // accessor rather than `coverField`, which only resolves field ids.
-            // No usable poster → `null` → no cover region at all, i.e. exactly
-            // the text-only card, never an empty frame or a broken image.
-            cover: (e: ListedEvent) => {
-              const src = externalUrl(e.imageUrl);
-              return src === null ? null : { kind: "image", src };
-            },
           },
         }}
         source={eventsListSource}

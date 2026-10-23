@@ -144,7 +144,7 @@ function presented(
   spec: FieldPresentationSpec<unknown, unknown> | undefined,
 ): Pick<
   FieldDef<unknown>,
-  "width" | "align" | "visible" | "groupable" | "header"
+  "width" | "align" | "visible" | "groupable" | "header" | "icon" | "indicator"
 > {
   return {
     ...(spec?.header !== undefined ? { header: spec.header } : {}),
@@ -152,6 +152,8 @@ function presented(
     ...(spec?.align !== undefined ? { align: spec.align } : {}),
     ...(spec?.visible !== undefined ? { visible: spec.visible } : {}),
     ...(spec?.groupable !== undefined ? { groupable: spec.groupable } : {}),
+    ...(spec?.icon !== undefined ? { icon: spec.icon } : {}),
+    ...(spec?.indicator !== undefined ? { indicator: spec.indicator } : {}),
   };
 }
 

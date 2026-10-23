@@ -54,6 +54,7 @@ function renderToolbar(opts: {
   density?: DataViewDensity;
   searchPlaceholder?: string;
   asideInset?: string;
+  creators?: CreateOption[];
 }) {
   lastParts = null;
   return render(
@@ -62,7 +63,7 @@ function renderToolbar(opts: {
         <DataViewToolbar
           query=""
           onQueryChange={() => {}}
-          creators={CREATORS}
+          creators={"creators" in opts ? opts.creators : CREATORS}
           switcher={{
             strip: <div data-testid="strip" />,
             chip: <div data-testid="chip" />,
@@ -86,12 +87,46 @@ describe("DataViewToolbar arrangements", () => {
 
     expect(screen.getByTestId("strip")).toBeTruthy();
     expect(screen.queryByTestId("chip")).toBeNull();
-    // The field search in its fixed lane, and a labelled creator button.
+    // The search as a quiet well in its fixed lane, and a labelled creator.
     const input = screen.getByPlaceholderText("Search…");
     expect(input.parentElement!.className).toContain("w-48");
-    expect(screen.getByRole("button", { name: "New thing" }).textContent).toBe(
-      "New thing",
-    );
+    const create = screen.getByRole("button", { name: "New thing" });
+    expect(create.textContent).toBe("New thing");
+    // Two floating pills: the views (the strip) and the tools (search, then a
+    // divider before create).
+    const views = screen.getByRole("group", { name: "Views" });
+    const tools = screen.getByRole("group", { name: "Tools" });
+    expect(views.className).toContain("bg-float-fill");
+    expect(tools.className).toContain("bg-float-fill");
+    expect(views.contains(screen.getByTestId("strip"))).toBe(true);
+    expect(tools.contains(input)).toBe(true);
+    expect(tools.contains(create)).toBe(true);
+    expect(tools.querySelector('[data-slot="separator"]')).not.toBeNull();
+  });
+
+  it("drops the divider when the surface declares no creators", () => {
+    renderToolbar({ creators: undefined });
+
+    const tools = screen.getByRole("group", { name: "Tools" });
+    expect(tools.querySelector('[data-slot="separator"]')).toBeNull();
+  });
+
+  it("hangs the fade under an opaque band, then the default bar's runway", () => {
+    const { container } = renderToolbar({});
+
+    const band = container.firstElementChild as HTMLElement;
+    // The band itself is opaque and draws no tail of its own…
+    expect(band.className).toContain("bg-chrome-mask");
+    expect(band.className).not.toContain("sticky-fade");
+    // …the tail is the next sibling, pinned at the band's measured bottom,
+    // below the band's layer (so pinned group headers cover it)…
+    const tail = band.nextElementSibling as HTMLElement;
+    expect(tail.className).toContain("sticky-fade");
+    expect(tail.className).toContain("z-raised");
+    expect(tail.style.top).toBe("var(--dv-header-offset, 0px)");
+    // …and the runway that keeps an unscrolled first row out of it.
+    const runway = tail.nextElementSibling as HTMLElement;
+    expect(runway.style.height).toContain("--sticky-fade-tail");
   });
 
   it("hands an arrangement the parts, built in the forms it asked for", () => {
@@ -124,20 +159,22 @@ describe("DataViewToolbar arrangements", () => {
       '[aria-hidden="true"][style*="height: 50px"]',
     );
     expect(spacer).not.toBeNull();
-    // A sibling of the band that holds the arrangement — so the pinned band
-    // (and its measured header offset) never grows by it.
-    const band = spacer!.previousElementSibling!;
+    // A later sibling of the band that holds the arrangement — so the pinned
+    // band (and its measured header offset) never grows by it.
+    const band = container.firstElementChild!;
     expect(band.contains(screen.getByTestId("arrangement"))).toBe(true);
     expect(band.contains(spacer)).toBe(false);
+    expect(spacer!.parentElement).toBe(band.parentElement);
   });
 
-  it("drops spaceBelow in the compact fold", () => {
+  it("drops spaceBelow and the fade in the compact fold", () => {
     const { container } = renderToolbar({
       arrangement: { ...recordingArrangement, spaceBelow: "50px" },
       density: "compact",
     });
 
     expect(container.querySelector('[style*="height: 50px"]')).toBeNull();
+    expect(container.querySelector(".sticky-fade")).toBeNull();
   });
 
   it("folds to the compact bar under density=compact, whatever the arrangement", () => {
@@ -148,6 +185,29 @@ describe("DataViewToolbar arrangements", () => {
     // The compact bar shows the strip (more than one view) and folds search away.
     expect(screen.getByTestId("strip")).toBeTruthy();
     expect(screen.queryByPlaceholderText("Search…")).toBeNull();
+    // Still two pills: the views, and the tools holding create + options.
+    const views = screen.getByRole("group", { name: "Views" });
+    const tools = screen.getByRole("group", { name: "Tools" });
+    expect(views.contains(screen.getByTestId("strip"))).toBe(true);
+    expect(
+      tools.contains(screen.getByRole("button", { name: "New thing" })),
+    ).toBe(true);
+    const options = screen.getByRole("button", { name: "View options" });
+    expect(tools.contains(options)).toBe(true);
+    // The trigger reveals on hover; the pill (holding create) stays.
+    expect(options.className).toContain("opacity-0");
+    expect(tools.className).not.toContain("opacity-0");
+  });
+
+  it("reveals the compact tools pill itself when it holds only the trigger", () => {
+    renderToolbar({ density: "compact", creators: undefined });
+
+    const tools = screen.getByRole("group", { name: "Tools" });
+    const options = screen.getByRole("button", { name: "View options" });
+    expect(tools.contains(options)).toBe(true);
+    // No empty pill at rest: the reveal moves from the trigger onto the pill.
+    expect(tools.className).toContain("opacity-0");
+    expect(options.className).not.toContain("opacity-0");
   });
 
   it("floats an overlay arrangement's band: absolute, click-through, past the aside", () => {

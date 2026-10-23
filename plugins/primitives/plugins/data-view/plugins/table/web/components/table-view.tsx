@@ -80,8 +80,13 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
   // A table row HAS a permanent per-row region — the reserved trailing track —
   // so persistent-zone actions stay painted at rest there, ahead of the
   // hover-revealed cluster. Resolved before the early empty-state return.
-  const { persistent, revealed } = useItemActionZones(itemActions, {
+  // No primary slot: a primary action rests in the trailing track like a
+  // persistent one.
+  const {
+    cluster: { atRest: persistent, revealed },
+  } = useItemActionZones(itemActions, {
     hasPersistentSlot: true,
+    hasPrimarySlot: false,
   });
   const sections = useDataViewSections(
     props.rows,

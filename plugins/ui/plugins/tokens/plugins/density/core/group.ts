@@ -233,6 +233,26 @@ export const densityGroup = defineTokenGroup("density", {
   // A conversation row's in-flight op glyph (build / push / check …). Default
   // = the old `size-3.5`.
   opStatusIcon: { default: "0.875rem", label: "Op status icon" },
+  // The DataView gallery's grid: a card's minimum width (the Grid's
+  // `minCellWidth="var(--gallery-card-min)"`, one size everywhere; the compact
+  // rung for a narrow surface) and the gaps between cards — columns and rows
+  // apart, since a card's text sits under its cover (`gap-x-gallery` /
+  // `gap-y-gallery`).
+  galleryCardMin: { default: "13.75rem", label: "Gallery card min width" },
+  galleryCardMinCompact: {
+    default: "10.5rem",
+    label: "Compact gallery card min width",
+  },
+  galleryGapX: { default: "var(--space-lg)", label: "Gallery column gap" },
+  galleryGapY: { default: "var(--space-xl)", label: "Gallery row gap" },
+  // A record's cover as a list row's leading thumbnail (`size-cover-thumb`).
+  // Defaults = 52 × 34px, the gallery cover's 16/10 shape at row height.
+  coverThumbW: { default: "3.25rem", label: "Cover thumbnail width" },
+  coverThumbH: { default: "2.125rem", label: "Cover thumbnail height" },
+  // How far a fading sticky band's tail hangs past it (`Sticky mask="fade"`):
+  // the gradient from the band's mask to transparent that content scrolls
+  // under. Out of flow — it never adds to the band's measured height.
+  stickyFadeTail: { default: "1.75rem", label: "Sticky fade tail" },
   // 1-D spacing ramp — the closed set of gap/padding roles consumed by the
   // <Stack gap> / <Inset pad> primitives and the gap-*/p-* @utility classes.
   // Lives here (not a separate group) so layout rhythm scales with the active

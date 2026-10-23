@@ -15,7 +15,7 @@ const SWATCH_KEYS = ["primary", "secondary", "accent", "background"] as const;
  * the selected highlight, click, hover, the `sm` density — is the list's own,
  * and selecting the theme is the surface's `onRowActivate`.
  *
- * The full-size `ThemeCard` (a preview panel) is the gallery's shape; a
+ * The gallery card over a `ThemePreview` cover is the full-size shape; a
  * popover needs a dozen of these above the fold, so the preview collapses to
  * dots instead of the card merely shrinking.
  */

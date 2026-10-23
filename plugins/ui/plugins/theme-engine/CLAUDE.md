@@ -301,12 +301,12 @@ without its own theme document is the `""` entry exactly.
     - `tokenVarName`
     - `transformValues`
 - Cross-plugin:
-  - Uses tokens: 48 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 53 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/color-palette` ×22
-    - `ui/tokens/density` ×18
+    - `ui/tokens/density` ×19
+    - `ui/tokens/shadow` ×5
     - `ui/tokens/type-scale` ×4
-    - `ui/tokens/shadow` ×3
-    - `ui/tokens/shape --radius`
+    - `ui/tokens/shape` ×3
   - Imported by: 45 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui` ×28
     - `apps` ×14

@@ -35,6 +35,37 @@ export function stickyClasses(opts: {
   return { className: `sticky ${zLayerClass(opts.layer)}`, style };
 }
 
+/** How a sticky band hides the content scrolling under it (`StickyProps.mask`). */
+export type StickyMask = boolean | "glass" | "fade";
+
+/**
+ * Pure class + attribute map for a band's mask — the fade's tail reads the edge
+ * from `data-sticky-edge` and hangs off the band's own positioning, so it is
+ * drawn only while the band is `active`.
+ */
+export function stickyMaskClasses(opts: {
+  mask: StickyMask;
+  active: boolean;
+  edge: StickyEdge;
+}): { className: string | undefined; edgeAttr: StickyEdge | undefined } {
+  switch (opts.mask) {
+    case false:
+      return { className: undefined, edgeAttr: undefined };
+    case true:
+      return { className: "bg-chrome-mask", edgeAttr: undefined };
+    case "glass":
+      return {
+        className:
+          "bg-chrome-mask/72 backdrop-blur-[14px] backdrop-saturate-[1.3]",
+        edgeAttr: undefined,
+      };
+    case "fade":
+      return opts.active
+        ? { className: "bg-chrome-mask sticky-fade", edgeAttr: opts.edge }
+        : { className: "bg-chrome-mask", edgeAttr: undefined };
+  }
+}
+
 export interface StickyProps extends React.HTMLAttributes<HTMLElement> {
   /**
    * Whether sticky positioning is applied. When `false` the element renders in
@@ -63,8 +94,16 @@ export interface StickyProps extends React.HTMLAttributes<HTMLElement> {
    * `"glass"` frosts instead: the same `--chrome-mask` at 72%, with the content
    * under the bar blurred, so what scrolls beneath still tints it (a page whose
    * content is a picture, not a document — the website's iceberg).
+   *
+   * `"fade"` keeps the opaque band and hangs a gradient tail past its
+   * pinned-away edge (`sticky-fade`: `--chrome-mask` → transparent over the
+   * density `--sticky-fade-tail`), so content scrolls under the band and
+   * dissolves into it instead of vanishing at a hard line. The tail is out of
+   * flow: the band's measured height (what `stickyOffsetPx` stacks the next band
+   * at) is unchanged. Drawn only while `active` — the tail hangs off the band's
+   * own positioning.
    */
-  mask?: boolean | "glass";
+  mask?: StickyMask;
   /** Host element/component. Defaults to a `div`. */
   as?: React.ElementType;
   /** Forwarded to the rendered element (mirrors Surface/Card/Row). */
@@ -97,17 +136,13 @@ export function Sticky({
   ...rest
 }: StickyProps) {
   const sticky = stickyClasses({ edge, offset, layer });
+  const masked = stickyMaskClasses({ mask, active, edge });
   return (
     <As
       ref={ref}
-      className={cn(
-        active && sticky.className,
-        mask === true && "bg-chrome-mask",
-        mask === "glass" &&
-          "bg-chrome-mask/72 backdrop-blur-[14px] backdrop-saturate-[1.3]",
-        className,
-      )}
+      className={cn(active && sticky.className, masked.className, className)}
       style={{ ...(active ? sticky.style : null), ...style }}
+      data-sticky-edge={masked.edgeAttr}
       {...rest}
     >
       {children}

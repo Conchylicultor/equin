@@ -22,8 +22,17 @@ const keepIcon = symbol("keep");
 // section, above In progress and Done, whether or not it is Done.
 
 /**
- * The card's at-rest pin (a `persistent` item action, beside the Done
- * checkbox). The row already carries `pinned` — the gallery joins the statuses
+ * The card action's rest state: on while the prototype is pinned, so the
+ * action stays painted at rest then and shows only on hover otherwise. A plain
+ * read of the joined row — no subscription of its own.
+ */
+export function usePinnedActive(row: PrototypeGalleryRow): boolean {
+  return row.pinned;
+}
+
+/**
+ * The card's pin (a revealed item action that rests while pinned, beside
+ * the Done circle). The row already carries `pinned` — the gallery joins the statuses
  * onto the list before it renders.
  */
 export function PinCardAction({ row }: ItemActionProps<PrototypeGalleryRow>) {

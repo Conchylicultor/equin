@@ -51,6 +51,14 @@ export const shadowGroup = defineTokenGroup("shadow", {
     default: "var(--shadow-popover)",
     label: "Shadow float",
   },
+  // A record's cover (the DataView gallery card), at rest and under the
+  // pointer (`shadow-cover` / `hover:shadow-cover-hover`). Defaults = the `sm`
+  // and `xl` tiers: a cover sits on the page and lifts when hovered.
+  "shadow-cover": { default: "var(--shadow-sm)", label: "Shadow cover" },
+  "shadow-cover-hover": {
+    default: "var(--shadow-xl)",
+    label: "Shadow cover hover",
+  },
 });
 
 export type ShadowTokenValues = {

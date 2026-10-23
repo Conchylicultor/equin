@@ -14,16 +14,25 @@ import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import {
+  RowActions,
+  rowActionsAnchor,
+} from "@plugins/primitives/plugins/row-actions/web";
 import { TreeRowChrome } from "@plugins/primitives/plugins/tree/web";
 import { FoldMotion } from "@plugins/primitives/plugins/collapsible/web";
 import {
+  CoverFrame,
   DROP_TARGET_RING,
   DropBackground,
   DropInsertLine,
   FieldCell,
   GroupedSections,
   SectionBody,
+  isFieldValueEmpty,
   leadingSlot,
+  resolveCover,
   pickLeadingField,
   pickPrimaryField,
   readFallback,
@@ -37,12 +46,14 @@ import {
   useResolveOperatorSet,
   useRowDropState,
   useRowDnd,
+  type CoverContent,
   type DataViewAggregateConfig,
   type DataViewRowEntry,
   type DataViewRenderProps,
   type DataViewSection,
   type FieldDef,
-  type ItemActionProps,
+  type ItemActionArms,
+  type ItemActionRender,
   type ItemActionsDescriptor,
   type ManualOrderConfig,
   type RowDnd,
@@ -120,6 +131,13 @@ const NO_ITEMS: readonly RankReorderItem[] = [];
  */
 interface ListRowConfig {
   leadingField: FieldDef<unknown> | undefined;
+  /** The row's cover thumbnail, when the leading slot is the cover's (see
+   *  {@link resolveListLeading}); `null` when it is the leading field / the
+   *  view's own `leading`. */
+  thumbnail: ((row: unknown) => CoverContent | null) | null;
+  /** The primary action's arms, drawn over the thumbnail; `null` without a
+   *  thumbnail (the primary then sits in the hover cluster) or a primary. */
+  primary: ItemActionArms<unknown> | null;
   titleField: FieldDef<unknown> | undefined;
   subtitleFields: FieldDef<unknown>[];
   trailingFields: FieldDef<unknown>[];
@@ -137,7 +155,7 @@ interface ListRowConfig {
   detail: ListViewOptions<unknown>["detail"];
   rowActivation: DataViewRenderProps<unknown>["rowActivation"];
   rowTone: DataViewRenderProps<unknown>["rowTone"];
-  revealed: ((p: ItemActionProps<unknown>) => ReactNode) | null;
+  revealed: ItemActionRender<unknown> | null;
   setExpanded: DataViewRenderProps<unknown>["setExpanded"];
   /** Native drop targets (`rowDrop`): `null` when the view takes none. */
   dnd: RowDnd<unknown> | null;
@@ -282,12 +300,35 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   // Documented cast boundary: itemActions arrives type-erased.
   const itemActions = props.itemActions as
     ItemActionsDescriptor<unknown> | undefined;
+  const { properties } = props.state;
+  const { fields, rowActivation, rowTone, cover } = props;
+  const { rowChrome, renderRow, leading, labelClassName } = options;
+  const hasOwnLeading = leading !== undefined;
+  // What the leading slot holds, decided once per schema: the leading field /
+  // the view's own `leading`, else the cover thumbnail. Body fields follow the
+  // view's Properties (visible-fields) policy; the section pipeline above keeps
+  // using the full `props.fields` for sort/filter/search.
+  const layout = useMemo(
+    () =>
+      resolveListLeading(
+        resolveBodyFields(fields, properties),
+        cover,
+        hasOwnLeading,
+        rowChrome,
+      ),
+    [fields, properties, cover, hasOwnLeading, rowChrome],
+  );
   // A list row has no permanent trailing region (a reserved one would take width
-  // from the title in the app's narrowest surfaces), so EVERY action — persistent
-  // zone included — renders in the one hover cluster. Resolved unconditionally
-  // (hooks rules) BEFORE the early empty-state return.
-  const { revealed } = useItemActionZones(itemActions, {
+  // from the title in the app's narrowest surfaces), so EVERY cluster action —
+  // persistent zone included — renders in the one hover cluster. The primary
+  // action has a slot only over a thumbnail; without one it joins that cluster.
+  // Resolved unconditionally (hooks rules) BEFORE the early empty-state return.
+  const {
+    cluster: { revealed },
+    primary,
+  } = useItemActionZones(itemActions, {
     hasPersistentSlot: false,
+    hasPrimarySlot: layout.thumbnail !== null,
   });
   // Row detail (`options.detail`): which rows are open is the view's expand
   // map — the one home for per-row disclosure state.
@@ -317,28 +358,26 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     sequence,
   });
 
-  const { properties } = props.state;
-  const { fields, rowActivation, rowTone } = props;
-  const { rowChrome, renderRow, leading, labelClassName } = options;
   const config = useMemo<ListRowConfig>(() => {
-    // Body fields follow the view's Properties (visible-fields) policy; the
-    // section pipeline above keeps using the full `props.fields` for
-    // sort/filter/search. `null` → identity, so the title/subtitle/trailing
-    // split is unchanged.
-    const vis = resolveBodyFields(fields, properties);
-    // The leading field (the row's avatar) renders in `Row`'s icon slot, so it
-    // is out of the title pick, the subtitle and the trailing cell alike.
-    const leadingField = pickLeadingField(vis);
-    const bodyFields = vis.filter((f) => f !== leadingField);
+    const { leadingField, thumbnail, bodyFields } = layout;
     const titleField = pickPrimaryField(bodyFields);
+    // An indicator (`FieldDef.indicator`) is a row-state mark, not a term of
+    // the subtitle sentence: at rest it often draws nothing (a `false` flag),
+    // which would leave its separator dangling. It joins the trailing cell,
+    // ahead of the `align: "end"` fields — the list's place for marks.
     const subtitleFields = bodyFields.filter(
-      (f) => f.id !== titleField?.id && f.align !== "end",
+      (f) => f.id !== titleField?.id && f.align !== "end" && !f.indicator,
     );
     return {
       leadingField,
+      thumbnail,
+      primary,
       titleField,
       subtitleFields,
-      trailingFields: bodyFields.filter((f) => f.align === "end"),
+      trailingFields: [
+        ...bodyFields.filter((f) => f.indicator && f.id !== titleField?.id),
+        ...bodyFields.filter((f) => f.align === "end" && !f.indicator),
+      ],
       // Which terms of the row's run are chips. Resolved once per schema, so a
       // long list pays one lookup per field.
       titleIsChip: titleField != null && isChipField(titleField),
@@ -359,8 +398,8 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       dnd,
     };
   }, [
-    fields,
-    properties,
+    layout,
+    primary,
     isChipField,
     resolveCell,
     resolveEditor,
@@ -461,8 +500,18 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   // so this only has to be close enough that the scrollbar doesn't jump — but a
   // single-line row is roughly a caption-line shorter than the stacked one it
   // replaced, and keeping the old estimate would size the sizer ~35% long.
+  // A thumbnail row is as tall as its thumbnail (`--cover-thumb-h`, 34 px by
+  // default) plus the row's padding, whatever its text density.
   const estimateSize =
-    lines === 2 ? (rowSize === "sm" ? 36 : 44) : rowSize === "sm" ? 28 : 32;
+    config.thumbnail !== null
+      ? 46
+      : lines === 2
+        ? rowSize === "sm"
+          ? 36
+          : 44
+        : rowSize === "sm"
+          ? 28
+          : 32;
   // One section's body: its rows — windowed past the threshold, else a plain
   // `.map` — inside the section's `SectionBody` band, which pays the rail and
   // ends in the fold line, so the line's caption sits on the rows' own column.
@@ -563,7 +612,54 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
 }
 
 /**
- * The separator drawn BEFORE subtitle term `fi`.
+ * What the leading slot holds, for every row of one schema — one answer per
+ * surface, so every row has the same shape:
+ *
+ * 1. the schema's leading field (`FieldDef.leading`) and/or the view's own
+ *    `leading` option — an explicit leading visual always wins (Places keeps its
+ *    glyph);
+ * 2. else the row's cover (`resolveCover`: the surface's `cover` accessor →
+ *    `FieldDef.cover` → the first `media` field) as a thumbnail, when the
+ *    surface is covered — a coverless row gets the blank frame, so the rows
+ *    stay one height. The cover field it is drawn from leaves the body.
+ *
+ * The tree chrome has no thumbnail: its row matches a tree row of the same
+ * records, whose icon box is a glyph.
+ */
+function resolveListLeading(
+  vis: FieldDef<unknown>[],
+  cover: DataViewRenderProps<unknown>["cover"],
+  hasOwnLeading: boolean,
+  rowChrome: ListViewOptions<unknown>["rowChrome"],
+): {
+  leadingField: FieldDef<unknown> | undefined;
+  thumbnail: ((row: unknown) => CoverContent | null) | null;
+  bodyFields: FieldDef<unknown>[];
+} {
+  // The leading field (the row's avatar) renders in `Row`'s icon slot, so it
+  // is out of the title pick, the subtitle and the trailing cell alike.
+  const leadingField = pickLeadingField(vis);
+  const withoutLeading = vis.filter((f) => f !== leadingField);
+  if (leadingField || hasOwnLeading || rowChrome === "tree") {
+    return { leadingField, thumbnail: null, bodyFields: withoutLeading };
+  }
+  const resolved = resolveCover(vis, cover);
+  if (!resolved.hasCovers) {
+    return { leadingField, thumbnail: null, bodyFields: withoutLeading };
+  }
+  return {
+    leadingField,
+    thumbnail: resolved.coverOf,
+    bodyFields: withoutLeading.filter((f) => f !== resolved.field),
+  };
+}
+
+/** Where a subtitle term sits in its row's run: after the previous drawn term
+ *  (its index in `subtitleFields`), after the title on the same line, or first. */
+type TermPrev = number | "title" | null;
+
+/**
+ * The separator drawn BEFORE a subtitle term.
  *
  * ` · ` is a punctuation mark between two pieces of text; it is not what
  * separates two chips, which already carry their own boundary. So the middot
@@ -576,20 +672,52 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
  * spacing is a literal space in the flow, not a flex `gap` — a flex container
  * here would make each chip its own leaf and take the truncation with it.
  *
- * `precededByTitle` covers the one-line seam: on one line the title is simply
- * the run's first term, so the first subtitle term is separated from it by the
- * same rule. Stacked, the title owns its own line and there is no seam.
+ * `prev` is the term DRAWN before it — an empty value is skipped, so its
+ * neighbour is the previous non-empty term. `"title"` covers the one-line
+ * seam: on one line the title is simply the run's first term. Stacked, the
+ * title owns its own line and there is no seam.
  */
 function subtitleSeparator(
   config: ListRowConfig,
   fi: number,
-  precededByTitle: boolean,
+  prev: TermPrev,
 ): ReactNode {
   const { subtitleIsChip, titleIsChip } = config;
-  const prevIsChip =
-    fi > 0 ? subtitleIsChip[fi - 1]! : precededByTitle ? titleIsChip : null;
-  if (prevIsChip == null) return null; // nothing before it — no separator
+  if (prev === null) return null; // nothing before it — no separator
+  const prevIsChip = prev === "title" ? titleIsChip : subtitleIsChip[prev]!;
   return prevIsChip || subtitleIsChip[fi] ? " " : " · ";
+}
+
+/**
+ * The subtitle terms this row draws, as indices into `subtitleFields`: every
+ * field whose value is not empty. An empty value is left out of the run — never
+ * drawn as the italic "Empty" (that placeholder is for a cell standing on its
+ * own, not a term in a sentence) — and takes its separator with it.
+ */
+function drawnSubtitleTerms(config: ListRowConfig, row: unknown): number[] {
+  const terms: number[] = [];
+  config.subtitleFields.forEach((field, fi) => {
+    if (!isFieldValueEmpty(field, row)) terms.push(fi);
+  });
+  return terms;
+}
+
+/** The run's terms, each with its separator. */
+function subtitleRun(
+  config: ListRowConfig,
+  row: unknown,
+  terms: readonly number[],
+  precededByTitle: boolean,
+): ReactNode {
+  return terms.map((fi, i) => (
+    <SubtitleTerm
+      key={config.subtitleFields[fi]!.id}
+      config={config}
+      row={row}
+      fi={fi}
+      prev={i > 0 ? terms[i - 1]! : precededByTitle ? "title" : null}
+    />
+  ));
 }
 
 /**
@@ -606,12 +734,12 @@ function SubtitleTerm({
   config,
   row,
   fi,
-  precededByTitle,
+  prev,
 }: {
   config: ListRowConfig;
   row: unknown;
   fi: number;
-  precededByTitle: boolean;
+  prev: TermPrev;
 }): ReactNode {
   const field = config.subtitleFields[fi]!;
   const cell = (
@@ -625,7 +753,7 @@ function SubtitleTerm({
   );
   return (
     <span>
-      {subtitleSeparator(config, fi, precededByTitle)}
+      {subtitleSeparator(config, fi, prev)}
       {config.subtitleIsChip[fi] ? (
         <Inline gap="none" className="max-w-full">
           {cell}
@@ -762,12 +890,65 @@ function renderTreeChromeRow(
   );
 }
 
+/**
+ * The row's primary action (zone `"primary"` — Sonata's Play), centred over its
+ * thumbnail: revealed by the row's hover like the cluster, painted at rest
+ * while the action is active.
+ *
+ * It cannot sit INSIDE the thumbnail: the thumbnail is in `Row`'s icon slot,
+ * which on an activating row is inside the row's own `<button>`, and a button
+ * may not nest one. So it is the row's SIBLING, drawn on a click-through ghost
+ * of the row's line — a `Layer` over the row box with the row's own `p-row`
+ * padding, holding one thumbnail-sized cell first — so the cell lands on the
+ * thumbnail by construction (same padding, same first track, same centring),
+ * never by measured offsets. The box both sit in is the `row-actions` hover
+ * group, so the reveal answers the same hover as the row's cluster, and
+ * `RowActions` keeps a press on the action from reaching the row (its click,
+ * its drag).
+ */
+function PrimaryOverThumbnail({
+  primary,
+  row,
+  hasChildren,
+  children,
+}: {
+  primary: ItemActionArms<unknown>;
+  row: unknown;
+  hasChildren: boolean;
+  children: ReactNode;
+}): ReactNode {
+  const target = { row, hasChildren };
+  return (
+    <div className={rowActionsAnchor}>
+      {children}
+      <Layer as={Line} decorative className="p-row">
+        <Center axis="both" className={cn("size-cover-thumb", rigidClass())}>
+          {primary.atRest ? (
+            // The ghost is click-through; an action painted at rest is live.
+            <RowActions
+              pin={null}
+              alwaysVisible
+              className="pointer-events-auto"
+            >
+              {primary.atRest(target)}
+            </RowActions>
+          ) : null}
+          {primary.revealed ? (
+            <RowActions pin={null}>{primary.revealed(target)}</RowActions>
+          ) : null}
+        </Center>
+      </Layer>
+    </div>
+  );
+}
+
 // Single source of row markup — shared verbatim by the plain and virtualized
 // branches so the two render identically.
 function listRowNode(props: ListEntryProps): ReactNode {
   const { config, row, rowKey: key, aggregateCount, open } = props;
-  const { titleField, subtitleFields, detail } = config;
+  const { titleField, detail, thumbnail } = config;
   const trailing = hasTrailing(config, aggregateCount);
+  const terms = drawnSubtitleTerms(config, row);
   // Per-row emphasis: composed ON TOP of the title's own `text-foreground`, so
   // a switched-off / archived / finished row reads inactive. The subtitle and
   // the trailing cell are already muted, so the title is the whole difference.
@@ -797,13 +978,24 @@ function listRowNode(props: ListEntryProps): ReactNode {
       // what lets its body hold a real control. A link row also gets its
       // middle- / ⌘-click (`Row` forwards the gesture handlers).
       {...activationProps(config.rowActivation?.(row))}
-      icon={leadingSlot({
-        field: config.leadingField,
-        row,
-        resolveCell: config.resolveCell,
-        resolveEditor: config.resolveEditor,
-        own: config.leading?.(row),
-      })}
+      icon={
+        thumbnail ? (
+          // A rigid leaf: the frame keeps its size however tight the line is.
+          <CoverFrame
+            size="thumb"
+            content={thumbnail(row)}
+            className={rigidClass()}
+          />
+        ) : (
+          leadingSlot({
+            field: config.leadingField,
+            row,
+            resolveCell: config.resolveCell,
+            resolveEditor: config.resolveEditor,
+            own: config.leading?.(row),
+          })
+        )
+      }
       actions={
         detail ? (
           <>
@@ -852,21 +1044,13 @@ function listRowNode(props: ListEntryProps): ReactNode {
                 />
               </Text>
             ) : null}
-            {subtitleFields.length > 0 ? (
+            {terms.length > 0 ? (
               <Text
                 as="div"
                 variant="caption"
                 className="truncate text-muted-foreground"
               >
-                {subtitleFields.map((field, fi) => (
-                  <SubtitleTerm
-                    key={field.id}
-                    config={config}
-                    row={row}
-                    fi={fi}
-                    precededByTitle={false}
-                  />
-                ))}
+                {subtitleRun(config, row, terms, false)}
               </Text>
             ) : null}
           </Stack>
@@ -900,17 +1084,9 @@ function listRowNode(props: ListEntryProps): ReactNode {
               />
             </Text>
           ) : null}
-          {subtitleFields.length > 0 ? (
+          {terms.length > 0 ? (
             <Text variant="caption" className="text-muted-foreground">
-              {subtitleFields.map((field, fi) => (
-                <SubtitleTerm
-                  key={field.id}
-                  config={config}
-                  row={row}
-                  fi={fi}
-                  precededByTitle={titleField != null}
-                />
-              ))}
+              {subtitleRun(config, row, terms, titleField != null)}
             </Text>
           ) : null}
           {trailing ? (
@@ -926,12 +1102,24 @@ function listRowNode(props: ListEntryProps): ReactNode {
       )}
     </Row>
   );
-  if (!detail) return rowNode;
+  const withPrimary =
+    thumbnail && config.primary ? (
+      <PrimaryOverThumbnail
+        primary={config.primary}
+        row={row}
+        hasChildren={props.hasChildren}
+      >
+        {rowNode}
+      </PrimaryOverThumbnail>
+    ) : (
+      rowNode
+    );
+  if (!detail) return withPrimary;
   // The detail is the row's SIBLING, so it may hold controls of its own
   // whatever the row's activation is. It folds in and out under the row.
   return (
     <Stack gap="none">
-      {rowNode}
+      {withPrimary}
       <FoldMotion open={open}>
         <Inset x="sm" b="sm">
           {detail(row)}

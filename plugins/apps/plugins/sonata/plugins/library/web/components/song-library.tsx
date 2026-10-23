@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import {
@@ -8,7 +8,6 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
-import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useSonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { songLibrary, updateSong } from "../../core";
@@ -21,9 +20,13 @@ import { formatDuration } from "../format-duration";
 import { NowPlayingBar } from "./now-playing-bar";
 import { SonataOnboarding } from "./onboarding";
 import { symbol } from "@plugins/ui/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
+import { resolveSongCover } from "../internal/resolve-cover";
+import { SongCover } from "../internal/song-cover";
 
-const musicNoteIcon = symbol("music-note");
+// The icons a card's token line draws before each of the library's own fields.
+const composerIcon = symbol("person");
+const durationIcon = symbol("timer");
+const addedIcon = symbol("calendar-today");
 
 const LIBRARY_VIEW = defineDataView("sonata.library");
 
@@ -40,10 +43,13 @@ const LIBRARY_VIEW = defineDataView("sonata.library");
  * and the songs near the ones on screen stay live.
  *
  * There is no bespoke card: the gallery builds the standard `DataCard` from this
- * schema, plus a `leading` music-note block. Everything the old `SongCard` drew
- * is now declared once and honoured by BOTH views — Play/Delete as
- * `Library.SongActions` contributions, the currently-loaded ring as
- * `selectedRowId`, and opening a song as `rowActivation` (a link).
+ * schema, its picture the song's cover — every `Library.Cover` answer folded by
+ * `resolveSongCover` and drawn by `SongCover` over the quiet source-tinted
+ * base (the list draws the same cover as its thumbnail). Everything else is
+ * declared once and honoured by EVERY view — Play/Delete as
+ * `Library.SongActions` contributions (Play the primary verb, over the cover),
+ * the currently-loaded ring as `selectedRowId`, and opening a song as
+ * `rowActivation` (a link).
  *
  * The fields are derived from the collection: the songs entity's (presented
  * by `songPresentation`), and every field an extension exposes on a song —
@@ -72,6 +78,17 @@ export function SongLibrary() {
   // write surfaces via the global mutation toast (no local onError).
   const { mutate: saveSong } = useEndpointMutation(updateSong);
   const creators = useSourceCreators();
+  // Every source's cover answer, folded per song (the library names none).
+  const coverSources = Library.Cover.useContributions();
+  const cover = useCallback(
+    (song: Song) => ({
+      kind: "node" as const,
+      node: (
+        <SongCover song={song} answer={resolveSongCover(coverSources, song)} />
+      ),
+    }),
+    [coverSources],
+  );
 
   // The list's fields are derived — the songs entity's, its saved-view ids
   // (`duration`, `added`), and every field an extension exposes on a song
@@ -90,6 +107,7 @@ export function SongLibrary() {
           },
         },
         composer: {
+          icon: composerIcon,
           // The raw nullable value, so the inline editor opens from the true
           // value and clearing it stores `null`. No `cell`: the field is
           // editable, so `EditableCell` owns the empty rendering and paints its
@@ -104,11 +122,13 @@ export function SongLibrary() {
         },
         // m:ss over the inherited number cell; the number range filter stays.
         duration: {
+          icon: durationIcon,
           cell: (s) => formatDuration(s.duration),
           width: "5rem",
           align: "end",
         },
         added: {
+          icon: addedIcon,
           cell: (s) => formatRelativeTime(s.added),
           width: "7rem",
         },
@@ -131,12 +151,14 @@ export function SongLibrary() {
           <DataView<Song>
             source={songLibrarySource}
             overrides={overrides}
-            views={["gallery", "table"]}
+            views={["gallery", "list", "table"]}
             defaultView="gallery"
             storageKey={LIBRARY_VIEW}
-            // The one per-row action set, rendered by both views: Play/Pause
-            // at rest (zone "persistent") and Delete on hover. Highlight the
-            // background-playing row.
+            // The song's cover: the card's picture, the list's thumbnail.
+            cover={cover}
+            // The one per-row action set, rendered by every view: Play/Pause
+            // the primary verb (over the cover; at rest while it plays) and
+            // Delete on hover. Highlight the background-playing row.
             itemActions={Library.SongActions}
             selectedRowId={currentSongId ?? undefined}
             // The "Library" title is owned by the enclosing `PaneChrome` (the
@@ -148,17 +170,6 @@ export function SongLibrary() {
             creators={creators}
             rowActivation={songLink}
             emptyState={<>No songs match.</>}
-            viewOptions={{
-              gallery: {
-                // The card's identity block, beside the body — the one piece of
-                // the old SongCard that was a real gap in the generic card.
-                leading: () => (
-                  <Center className="size-10 rounded-md bg-primary/10 text-primary-text">
-                    <Icon icon={musicNoteIcon} className="size-5" />
-                  </Center>
-                ),
-              },
-            }}
           />
         )
       }

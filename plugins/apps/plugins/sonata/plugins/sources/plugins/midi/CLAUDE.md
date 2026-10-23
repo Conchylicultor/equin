@@ -21,11 +21,12 @@ MIDI for playback is the `getSongMidi` endpoint.
 
 ## Plugin reference
 
-- Description: MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi. Persists per-song MIDI (attachment + track count) and contributes the library Import affordance, hydration, and the cell of the Tracks field its extension exposes on every list of songs. Owns the sonata_songs_ext_midi side-table: per-song MIDI attachment + track count. Creates MIDI-backed songs, exposes its track count and file-missing flag to every list of songs (LiveColumns.Expose), and seeds the bundled public-domain MIDI starters at boot.
+- Description: MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi. Persists per-song MIDI (attachment + track count) and contributes the library Import affordance, hydration, the song's falling-notes cover, and the cell of the Tracks field its extension exposes on every list of songs. Owns the sonata_songs_ext_midi side-table: per-song MIDI attachment + track count. Creates MIDI-backed songs, exposes its track count and file-missing flag to every list of songs (LiveColumns.Expose), serves each song's falling-notes cover (GET …/midi/cover/<version>.svg, drawn by covers), and seeds the bundled public-domain MIDI starters at boot.
 - Web:
   - Contributes:
     - `SonataDocument.Source` "MIDI File"
     - `Library.Source` "midi"
+    - `Library.Cover` "midi"
     - `FieldPresentation.Register` "exposure:sonata_songs_ext_midi"
   - Uses:
     - `apps/sonata/document.SonataDocument`
@@ -50,14 +51,17 @@ MIDI for playback is the `getSongMidi` endpoint.
 - Server:
   - Contributes: `live.columns.expose` "sonata_songs ← sonata_songs_ext_midi"
   - Uses:
+    - `apps/sonata/covers.serveScoreCover`
     - `apps/sonata/library._songs`
     - `apps/sonata/library.createSongRow`
     - `apps/sonata/library.songAttachments`
     - `apps/sonata/library.updateSongMeta`
     - `database.db`
+    - `infra/attachments.AttachmentBlobs`
     - `infra/attachments.createAttachment`
     - `infra/attachments.getAttachment`
     - `infra/endpoints.implement`
+    - `infra/endpoints.rawEndpointHandler`
     - `infra/entity-extensions.defineExtension`
     - `network/live.LiveColumns`
   - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/midi/server/internal/tables.ts`
@@ -72,6 +76,7 @@ MIDI for playback is the `getSongMidi` endpoint.
   - Routes:
     - `POST /api/sonata/songs/midi`
     - `GET /api/sonata/songs/:id/midi`
+    - `GET /api/sonata/songs/:id/midi/cover/:file`
 - Core:
   - Uses:
     - `apps/sonata/library.songsEntityRef`

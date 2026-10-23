@@ -9,15 +9,19 @@
       "view": {
         "type": "gallery",
         "groupBy": "source",
-        // Authored, not defaulted: the schema is 9 fields (6 declared by the
-        // library + Plays / Last played / Tracks / Source from the field
-        // extensions), and the card stacks one caption row per visible field.
-        // These six are the card; the rest stay filter/sort dimensions.
+        // Authored, not defaulted: the schema is every field the songs
+        // entity and its extensions expose, and the card shows only these —
+        // the title, the composer or the grid's chords as the subtitle,
+        // length / plays / last played / tracks as icon tokens (a chord sheet's key
+        // is its cover's badge), and the missing-file mark on the title line.
+        // The rest stay filter/sort dimensions (and table columns).
         "properties": [
           { "id": "title" },
           { "id": "composer" },
+          { "id": "chordText" },
           { "id": "duration" },
           { "id": "playCount" },
+          { "id": "lastPlayedAt" },
           { "id": "trackCount" },
           { "id": "sourceMissing" }
         ]
@@ -28,14 +32,14 @@
       "name": "All",
       "icon": "library-music",
       "icon": "library-music",
-      "view": { "type": "table", "sort": { "fieldId": "title", "direction": "asc" } }
+      "view": { "type": "list", "sort": { "fieldId": "title", "direction": "asc" } }
     },
     {
       "id": "longest",
       "name": "Longest",
       "icon": "timer",
       "icon": "timer",
-      "view": { "type": "table", "sort": { "fieldId": "duration", "direction": "desc" } }
+      "view": { "type": "list", "sort": { "fieldId": "duration", "direction": "desc" } }
     },
     {
       "id": "composed",
@@ -57,6 +61,17 @@
             }
           ]
         }
+      }
+    },
+    {
+      // The id the user's own "Recent" view already carries, so this row and
+      // theirs are one view.
+      "id": "view-127a0cb8-0e15-497f-8145-41d97ee37e90",
+      "name": "Recent",
+      "icon": "history",
+      "view": {
+        "type": "list",
+        "sort": [{ "fieldId": "added", "direction": "desc" }]
       }
     }
   ],

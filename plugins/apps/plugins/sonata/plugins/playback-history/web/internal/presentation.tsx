@@ -1,6 +1,10 @@
 import { FieldPresentation } from "@plugins/network/plugins/live/web";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import { playbackHistoryShape } from "../../shared/shape";
+
+const playsIcon = symbol("play-arrow");
+const lastPlayedIcon = symbol("history");
 
 /**
  * The Plays / Last played fields of every list of songs — the playback
@@ -12,6 +16,7 @@ export const playbackPresentation = FieldPresentation.Register({
   owner: playbackHistoryShape.exposure,
   fields: {
     playCount: {
+      icon: playsIcon,
       // The copy the old per-card `PlayStats` strip owned, recovered as this
       // field's cell — so the number reads as a sentence on the card (and in
       // the table) instead of a bare `0`.
@@ -23,6 +28,7 @@ export const playbackPresentation = FieldPresentation.Register({
       align: "end",
     },
     lastPlayedAt: {
+      icon: lastPlayedIcon,
       cell: (at) => (at ? formatRelativeTime(at) : "—"),
       width: "8rem",
     },

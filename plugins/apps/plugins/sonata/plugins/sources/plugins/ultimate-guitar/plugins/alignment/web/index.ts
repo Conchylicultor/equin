@@ -10,10 +10,11 @@ import { UgRecordingVideo } from "./components/recording-video-claim";
 import { ReportVideoRefused } from "./components/report-video-refused";
 import { useUgLibrarySong } from "./internal/use-ug-raw";
 import { RecordingSection } from "./components/recording-section";
+import { ugVideoPresentation } from "./internal/presentation";
 
 export default {
   description:
-    "UG sheet alignment in the player: a 'Recording' editor section showing the song's YouTube video (the recording plugin's RecordingVideo viewport with its volume, and its on/off RecordingSwitch in the header; the video itself is declared by a headless effect to the session's recording player, so it keeps playing — synced to the transport when the song plays on its alignment, a weak match included, else on its own — while the section is collapsed), an alignment status box (icon, status line, one control — Cancel, Re-align, Retry, Try another or Find a video — and while working a three-stage bar: find a video, analyse the audio, align the sheet), the video's line (title, match chip, channel, Replace) and an inline picker (a YouTube link, the candidate videos with thumbnail and outcome — click one to switch — and Search again); a headless report of a video the player refuses (SonataRecording.Refused → video-refused), and a headless effect writing the applied alignment record into the Ultimate Guitar raw so the Score plays on the recording's beats.",
+    "UG sheet alignment in the player: a 'Recording' editor section showing the song's YouTube video (the recording plugin's RecordingVideo viewport with its volume, and its on/off RecordingSwitch in the header; the video itself is declared by a headless effect to the session's recording player, so it keeps playing — synced to the transport when the song plays on its alignment, a weak match included, else on its own — while the section is collapsed), an alignment status box (icon, status line, one control — Cancel, Re-align, Retry, Try another or Find a video — and while working a three-stage bar: find a video, analyse the audio, align the sheet), the video's line (title, match chip, channel, Replace) and an inline picker (a YouTube link, the candidate videos with thumbnail and outcome — click one to switch — and Search again); a headless report of a video the player refuses (SonataRecording.Refused → video-refused), and a headless effect writing the applied alignment record into the Ultimate Guitar raw so the Score plays on the recording's beats. In the library: the Video field's presentation (hidden by default).",
   contributions: [
     Sonata.Section({
       id: "ug-alignment-recording",
@@ -38,5 +39,8 @@ export default {
       id: "ug-video-refused",
       component: ReportVideoRefused,
     }),
+    // The UG song's cover in the library (its video's thumbnail, else the
+    // chord sheet) — here, not in the UG source: the video is this plugin's.
+    ugVideoPresentation,
   ],
 } satisfies PluginDefinition;

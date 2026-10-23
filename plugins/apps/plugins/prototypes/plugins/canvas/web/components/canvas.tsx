@@ -48,14 +48,7 @@ import { SizeDock } from "./size-chip";
 import { CanvasShortcuts } from "./canvas-shortcuts";
 import { AddFrameRail } from "./add-frame-rail";
 import { LayoutToggle } from "./layout-toggle";
-
-/**
- * The ground the frames sit on: a 28px grid of hairlines in the foreground ink
- * at 3.6%, under a vignette that darkens to the background at the edges — the
- * viewer mock's `.canvas`. It does not scroll: the frames move over it.
- */
-const CANVAS_GROUND =
-  "bg-background bg-[image:radial-gradient(ellipse_90%_85%_at_50%_50%,transparent_55%,var(--background)_100%),linear-gradient(color-mix(in_oklab,var(--foreground)_3.6%,transparent)_1px,transparent_1px),linear-gradient(90deg,color-mix(in_oklab,var(--foreground)_3.6%,transparent)_1px,transparent_1px)] bg-[size:100%_100%,28px_28px,28px_28px] bg-[position:0_0,-1px_-1px,-1px_-1px]";
+import { CANVAS_GROUND } from "./canvas-ground";
 
 /**
  * The canvas: every frame side by side, each centred in its share of the room

@@ -143,6 +143,38 @@ describe("data-view list inline cell editing", () => {
     );
   });
 
+  it("an empty subtitle field is left out of the run, editor and all", () => {
+    const { queryByText, queryByLabelText } = render(
+      <PluginProvider plugins={[plugin]}>
+        <ListView
+          {...(renderProps(
+            [
+              {
+                id: "name",
+                label: "Name",
+                type: "text",
+                value: (r) => r.name,
+                primary: true,
+              },
+              {
+                id: "status",
+                label: "Status",
+                type: "text",
+                value: (r) => r.status,
+                onEdit: vi.fn(),
+              },
+            ],
+            [{ id: "1", name: "alpha" }],
+          ) as DataViewRenderProps<unknown>)}
+        />
+      </PluginProvider>,
+    );
+    // A term in a sentence, not a cell standing on its own: no "Empty"
+    // placeholder holding the place of a missing value.
+    expect(queryByText("Empty")).toBeNull();
+    expect(queryByLabelText("Edit Status")).toBeNull();
+  });
+
   it("does not enter edit mode for a field without onEdit", () => {
     const { getByText, queryByLabelText } = render(
       <PluginProvider plugins={[plugin]}>

@@ -120,21 +120,25 @@ directives establish); the selected voicing strategy from the shared
 
 ## Plugin reference
 
-- Description: Chord-grid input source for Sonata. A small mini-language (e.g. `Amaj9 Am9 (E E6)`) authors chord annotations: each cell is a bar, a `( )` group shares a bar, and `.` holds the previous chord. A cell may name a chord by letter (`Am7`) or by degree (`vi7`), the latter resolved against the key a `key:` directive declares. compile() emits chord + key annotations only; the shell's reactive re-voicing step generates the notes under the global voicing config. Persists per-song grid text and contributes the library 'New Chord Grid' affordance, hydration, and an in-player editor section. Owns the sonata_songs_ext_chord_grid side-table: per-song chord text. Creates chord-grid–backed songs and persists grid edits (syncing the parent song's derived duration only; the title is library-owned).
+- Description: Chord-grid input source for Sonata. A small mini-language (e.g. `Amaj9 Am9 (E E6)`) authors chord annotations: each cell is a bar, a `( )` group shares a bar, and `.` holds the previous chord. A cell may name a chord by letter (`Am7`) or by degree (`vi7`), the latter resolved against the key a `key:` directive declares. compile() emits chord + key annotations only; the shell's reactive re-voicing step generates the notes under the global voicing config. Persists per-song grid text and contributes the library 'New Chord Grid' affordance, hydration, the cell of the Chords field its extension exposes on every list of songs, the song cover (its first chords as degree-coloured chord boxes), and an in-player editor section. Owns the sonata_songs_ext_chord_grid side-table: per-song chord text. Creates chord-grid–backed songs, persists grid edits (syncing the parent song's derived duration only; the title is library-owned), and exposes the chord text to every list of songs (LiveColumns.Expose) for its Chords field and cover.
 - Web:
   - Contributes:
     - `SonataDocument.Source` "Chord Grid"
     - `Library.Source` "chord-grid"
     - `Sonata.Section` "Chord Grid" → `ChordGridEditorSection`
     - `Sonata.Effect` "chord-grid-persist" → `ChordGridPersistObserver`
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `FieldPresentation.Register` "exposure:sonata_songs_ext_chord_grid"
+    - `Library.Cover` "chord-grid"
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/sonata/library` ×3
     - `primitives/persistent-draft` ×3
     - `apps/sonata/document` ×2
     - `apps/sonata/shell` ×2
+    - `music/chord-box` ×2
     - `primitives/collapsible` ×2
     - `primitives/css/ui-kit` ×2
     - `infra/endpoints.useEndpointMutation`
+    - `network/live.FieldPresentation`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/fill.Fill`
@@ -143,12 +147,14 @@ directives establish); the selected voicing strategy from the shared
     - `primitives/syntax-highlight/overlay-textarea.OverlayTextarea`
     - `ui/icons.Icon`
 - Server:
+  - Contributes: `live.columns.expose` "sonata_songs ← sonata_songs_ext_chord_grid"
   - Uses:
     - `apps/sonata/library._songs`
     - `apps/sonata/library.createSongRow`
     - `apps/sonata/library.updateSongMeta`
     - `infra/endpoints.implement`
     - `infra/entity-extensions.defineExtension`
+    - `network/live.LiveColumns`
   - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/server/internal/tables.ts`
   - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_chord_grid`)
   - Exports (values): `songChordGrid`
@@ -156,6 +162,12 @@ directives establish); the selected voicing strategy from the shared
     - `POST /api/sonata/songs/chord-grid`
     - `GET /api/sonata/songs/:id/chord-grid`
     - `PUT /api/sonata/songs/:id/chord-grid`
+- Core:
+  - Uses:
+    - `apps/sonata/library.songsEntityRef`
+    - `fields/text/config.textField`
+    - `infra/entity-extensions.defineExtensionShape`
+  - Exports (values): `songChordGridShape`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --background`

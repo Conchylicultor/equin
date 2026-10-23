@@ -69,15 +69,11 @@
       // start but no instance existed, so it was unreachable; this row is what
       // makes it selectable.
       //
-      // NOTE — the cards currently paint NO cover image. Events carry
-      // `imageUrl`, but it is deliberately not a `FieldDef` (see
-      // `event-list/core/internal/fields.ts`: it is a display input, not a
-      // sort/filter dimension), and the gallery only resolves a cover from a
-      // `FieldDef` id (`coverField`) or a code-supplied `viewOptions.gallery.cover`
-      // producer — event-list passes neither. So this deliberately carries no
-      // `coverField`: pointing it at a non-field id would be an override that
-      // silently resolves to nothing. Wiring the cover is a one-line change in
-      // `event-list/web/panes.tsx`, not something this file can express.
+      // The cards' cover is the event's poster, supplied in code
+      // (`DataViewProps.cover` in `event-list/web/panes.tsx`): `imageUrl` is
+      // deliberately not a `FieldDef` (see `event-list/core/internal/fields.ts`
+      // — a display input, not a sort/filter dimension), so nothing here
+      // selects it.
       "view": {
         "type": "gallery",
         "sort": [{ "fieldId": "startsAt", "direction": "asc" }],

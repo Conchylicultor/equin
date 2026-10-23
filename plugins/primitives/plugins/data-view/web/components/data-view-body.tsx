@@ -379,6 +379,7 @@ function DataViewBodyInner<TRow>(
     collectionActivation,
     searchAccessor,
     rowTone,
+    cover,
     onRowActivate,
     rowActivation,
     onRowOpen,
@@ -1230,6 +1231,7 @@ function DataViewBodyInner<TRow>(
           searchAccessor:
             searchAccessor as DataViewRenderProps<unknown>["searchAccessor"],
           rowTone: rowTone as DataViewRenderProps<unknown>["rowTone"],
+          cover: cover as DataViewRenderProps<unknown>["cover"],
           hierarchy: hierarchy as DataViewRenderProps<unknown>["hierarchy"],
           // `manualOrderActive` already implies `cfg != null` (TS cannot see it
           // through the boolean), hence the assertion.

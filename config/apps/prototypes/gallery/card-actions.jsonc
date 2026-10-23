@@ -1,4 +1,4 @@
-// @hash c4cd0b56ef00
+// @hash 4eda8e4bede4
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -6,11 +6,13 @@
 //   Divider (rule): { "type": "divider", "id": "<unique-id>" } — a hairline rule between the items either side of it, turned to the slot's flow (flat in a column such as a sidebar's footer rows, upright in a row such as a toolbar).
 //   Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
 //   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
-// The card footer's at-rest toggles, left to right: `pin` (to the gallery's
-// Pinned section), then `done` (the Done checkbox).
+// The card's actions, left to right on the cover's top-right chip: `pin` (to
+// the gallery's Pinned section), `done` (the Done checkbox) — both stay
+// visible while set — then `open-new-tab` (the chromeless present page).
 {
   "items": [
     "apps.prototypes.gallery:pin",
-    "apps.prototypes.gallery:done"
+    "apps.prototypes.gallery:done",
+    "apps.prototypes.present:open-new-tab"
   ]
 }

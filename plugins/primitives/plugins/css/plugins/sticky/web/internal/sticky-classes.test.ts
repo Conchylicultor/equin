@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { stickyClasses } from "./sticky";
+import { stickyClasses, stickyMaskClasses } from "./sticky";
 
 describe("stickyClasses", () => {
   test("default top edge, flush, raised layer", () => {
@@ -31,6 +31,50 @@ describe("stickyClasses", () => {
     expect(stickyClasses({ edge: "right", offset: "none", layer: "base" })).toEqual({
       className: "sticky z-base",
       style: { right: "0" },
+    });
+  });
+});
+
+describe("stickyMaskClasses", () => {
+  test("no mask paints nothing", () => {
+    expect(
+      stickyMaskClasses({ mask: false, active: true, edge: "top" }),
+    ).toEqual({
+      className: undefined,
+      edgeAttr: undefined,
+    });
+  });
+
+  test("an opaque mask paints the chrome mask, with no tail", () => {
+    expect(
+      stickyMaskClasses({ mask: true, active: true, edge: "top" }),
+    ).toEqual({
+      className: "bg-chrome-mask",
+      edgeAttr: undefined,
+    });
+  });
+
+  test("a fade keeps the opaque band and hangs a tail off its edge", () => {
+    expect(
+      stickyMaskClasses({ mask: "fade", active: true, edge: "top" }),
+    ).toEqual({
+      className: "bg-chrome-mask sticky-fade",
+      edgeAttr: "top",
+    });
+    expect(
+      stickyMaskClasses({ mask: "fade", active: true, edge: "bottom" }),
+    ).toEqual({
+      className: "bg-chrome-mask sticky-fade",
+      edgeAttr: "bottom",
+    });
+  });
+
+  test("an inactive fade drops the tail — it would hang off an unpositioned box", () => {
+    expect(
+      stickyMaskClasses({ mask: "fade", active: false, edge: "top" }),
+    ).toEqual({
+      className: "bg-chrome-mask",
+      edgeAttr: undefined,
     });
   });
 });

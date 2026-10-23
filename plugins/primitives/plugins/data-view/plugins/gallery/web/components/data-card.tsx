@@ -1,82 +1,105 @@
+import { type ReactNode } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   RowActions,
   rowActionsAnchor,
 } from "@plugins/primitives/plugins/row-actions/web";
-import { type ReactNode } from "react";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import {
   runActivation,
   type Activation,
 } from "@plugins/primitives/plugins/link-gesture/core";
-import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
+import {
+  CoverFrame,
+  coverHoverGroup,
+} from "@plugins/primitives/plugins/data-view/web";
+import type { CoverContent } from "@plugins/primitives/plugins/data-view/core";
+
+/**
+ * A card's item actions, already split by the zone rule (`useItemActionZones`
+ * arms applied to the card's row). Each is drawn where the card puts that arm;
+ * an absent one draws nothing.
+ */
+export interface DataCardActions {
+  /** The cluster's actions resting for this row (pinned, done…): always shown,
+   *  at the cover's top-right edge. */
+  atRest?: ReactNode;
+  /** The cluster's other actions: revealed on hover, to the LEFT of the
+   *  resting ones (which keep the edge). */
+  revealed?: ReactNode;
+  /** The primary action while it is active (playing): shown at rest, at the
+   *  cover's bottom-right. */
+  primaryAtRest?: ReactNode;
+  /** The primary action otherwise: revealed on hover, same place. */
+  primaryRevealed?: ReactNode;
+}
 
 export interface DataCardProps {
-  /** Card click + Enter/Space (role=button, tabIndex=0). */
-  /** A plain action, or a link (middle- / ⌘-click open it in a browser tab). */
-  onActivate?: Activation;
-  /** Top region: cover image / icon block. */
-  media?: ReactNode;
-  /** Leading block rendered BESIDE the body (icon / avatar / status dot), the
-   *  card twin of `Row`'s `icon` slot. Sits below `media`, which is a full-width
-   *  region above the body. */
-  leading?: ReactNode;
-  /** Trailing action cluster, rendered through `RowActions` — revealed on card
-   *  hover/focus, and never activating the card (the primitive stops the press). */
-  actions?: ReactNode;
-  /** Bottom row: badges / affordances (the gallery puts the persistent-zone
-   *  action cluster here). */
-  footer?: ReactNode;
-  /** Body: title + property rows. */
-  children: ReactNode;
-  /** Persistent active/selected highlight (ring around the card). */
-  selected?: boolean;
-  /** Card density. `"md"` (default) is the roomy gallery card; `"sm"` tightens
-   *  the padding and the region gap for dense pickers. */
-  size?: "sm" | "md";
-  className?: string;
   /**
    * The card's row key in a DataView, stamped as `data-row-key` — the marker
    * every DataView row carries, by which it measures the rows on screen.
    */
   rowKey?: string;
+  /** Card click + Enter/Space (role=button, tabIndex=0). A plain action, or a
+   *  link (middle- / ⌘-click open it in a browser tab). */
+  onActivate?: Activation;
+  /** Persistent selected highlight: a ring around the cover. */
+  selected?: boolean;
+  /** The row reads as inactive (`RowTone` `"muted"`): the picture is veiled at
+   *  rest, clear again under the pointer. The title's tone is the meta's. */
+  dimmed?: boolean;
+  /** The picture. `null` = a blank tinted frame, the same size as every other
+   *  card's (a covered surface's coverless row). */
+  cover: CoverContent | null;
+  /** A corner mark over the cover's top-left (the aggregate `×N`). */
+  badge?: ReactNode;
+  actions?: DataCardActions;
+  /** The text under the cover — the gallery's `<CardMeta>`. */
+  children: ReactNode;
 }
 
 /**
- * Composable card chrome mirroring the tree's RowChrome region model: media /
- * leading / body / actions / footer regions, with focus and click→`onActivate`
- * behavior baked in so consumers don't re-implement it. The actions region is
- * the shared `RowActions` primitive, which owns the reveal, the pin + scrim, the
- * popup-hold and the press guards — this card only says WHERE it sits.
+ * The gallery card: the COVER is the card. A `<CoverFrame size="card">` (one
+ * fixed 16/10 shape) carrying the card's overlays, then the text under it —
+ * no padded container around the two.
+ *
+ * - **Top-right**: one pin holding `[revealed][at rest]` — each arm its own
+ *   float chip (`RowActions chrome="float"`). At rest only the resting
+ *   actions show; hover adds the others to their left, so a resting icon never
+ *   moves.
+ * - **Bottom-right**: the primary action (the action draws its own round
+ *   button for `placement: "primary"`) — on hover, or at rest while active.
+ * - **Top-left**: the `badge`.
+ *
+ * Hovering anywhere on the card lifts the cover (`coverHoverGroup`) and reveals
+ * the hover arms (`rowActionsAnchor`); every reveal is `RowActions`', so the
+ * card owns placement only.
  */
-export function DataCard(props: DataCardProps) {
-  const {
-    onActivate,
-    media,
-    leading,
-    actions,
-    footer,
-    children,
-    selected,
-    size = "md",
-    className,
-    rowKey,
-  } = props;
-
-  // eslint-disable-next-line layout/no-adhoc-layout -- card body fills the column and allows its children to truncate horizontally
-  const body = <div className="min-w-0 flex-1">{children}</div>;
-
+export function DataCard({
+  rowKey,
+  onActivate,
+  selected,
+  dimmed,
+  cover,
+  badge,
+  actions,
+  children,
+}: DataCardProps): ReactNode {
   // A card with no `onActivate` is not a button: no role, no tab stop, no key
-  // handler, no `interactive` affordance. Announcing one as a button and giving
-  // it a focus stop is a promise the card cannot keep — and it puts a
-  // `role="button"` box around whatever control the footer holds.
+  // handler. Announcing one as a button and giving it a focus stop is a promise
+  // the card cannot keep.
   const activates = onActivate !== undefined;
+  const cluster = actions?.atRest != null || actions?.revealed != null;
+  const primary =
+    actions?.primaryAtRest != null || actions?.primaryRevealed != null;
 
   return (
-    <Card
+    <Stack
+      gap="sm"
       data-row-key={rowKey}
-      interactive={activates}
       role={activates ? "button" : undefined}
       tabIndex={activates ? 0 : undefined}
       {...activationProps(onActivate)}
@@ -90,36 +113,61 @@ export function DataCard(props: DataCardProps) {
             }
           : undefined
       }
-      // `rowActionsAnchor` carries `relative` too, which is what the pinned
-      // cluster anchors to — the card needs no `relative` of its own.
+      // `rowActionsAnchor` carries `relative` too; the overlays anchor to the
+      // cover frame (itself positioned), not to the card.
       className={cn(
         rowActionsAnchor,
-        "rounded-lg",
-        size === "sm" ? "p-card" : "p-lg",
-        selected && "ring-2 ring-primary",
-        className,
+        coverHoverGroup,
+        "focus-ring rounded-cover",
+        activates && "cursor-pointer",
       )}
     >
-      <Stack gap={size === "sm" ? "sm" : "md"}>
-        {media}
-        {/* The leading block sits BESIDE the body (Row's `icon` slot, card
-            edition); with no leading block the body is the plain column child it
-            has always been. */}
-        {leading ? (
-          <Stack direction="row" gap="sm" align="start">
-            {leading}
-            {body}
-          </Stack>
-        ) : (
-          body
-        )}
-        {footer}
-      </Stack>
-      {/* The cluster overlays the card's own body (a long title wraps under it),
-          so the primitive's pin paints the card's scrim, dissolved along its
-          inner left and bottom edges. Card publishes `--scrim` for its hover
-          tint; `selected` here is a ring, not a tint, so it needs none. */}
-      {actions ? <RowActions pin="top-right">{actions}</RowActions> : null}
-    </Card>
+      <CoverFrame
+        size="card"
+        content={cover}
+        className={cn(selected && "ring-2 ring-primary")}
+      >
+        {dimmed ? (
+          <Layer
+            decorative
+            className="bg-background/50 transition-opacity group-hover/cover:opacity-0"
+          />
+        ) : null}
+        {badge ? (
+          <Pin to="top-left" offset="sm">
+            {badge}
+          </Pin>
+        ) : null}
+        {cluster ? (
+          <Pin to="top-right" offset="sm">
+            <Stack direction="row" gap="2xs" align="center">
+              {actions?.revealed != null ? (
+                <RowActions pin={null} chrome="float">
+                  {actions.revealed}
+                </RowActions>
+              ) : null}
+              {actions?.atRest != null ? (
+                <RowActions pin={null} alwaysVisible chrome="float">
+                  {actions.atRest}
+                </RowActions>
+              ) : null}
+            </Stack>
+          </Pin>
+        ) : null}
+        {primary ? (
+          <Pin to="bottom-right" offset="sm">
+            {actions?.primaryAtRest != null ? (
+              <RowActions pin={null} alwaysVisible>
+                {actions.primaryAtRest}
+              </RowActions>
+            ) : null}
+            {actions?.primaryRevealed != null ? (
+              <RowActions pin={null}>{actions.primaryRevealed}</RowActions>
+            ) : null}
+          </Pin>
+        ) : null}
+      </CoverFrame>
+      {children}
+    </Stack>
   );
 }

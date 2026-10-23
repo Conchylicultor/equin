@@ -30,10 +30,11 @@ describe("song library fields", () => {
     expect(f.added).toMatchObject({ label: "Added", domain: "instant" });
   });
 
-  test("the row carries the id, and reaches the songs entity", () => {
+  test("the row carries the id and the sources stamp, and reaches the songs entity", () => {
     expect([...songLibrary.rowKeys] as string[]).toEqual([
       ...LIST_FIELD_IDS,
       "id",
+      "sourcesChangedAt",
     ]);
     expect(Object.values(songLibrary.exposes ?? {}).map((r) => r.name)).toEqual(
       ["sonata_songs"],

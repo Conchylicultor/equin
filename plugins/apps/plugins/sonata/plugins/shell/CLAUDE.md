@@ -92,6 +92,9 @@ persistence); an effect that must run wherever a song plays is a
   - Uses tokens:
     - `ui/tokens/color-palette --popover`
     - `ui/tokens/shadow --shadow`
+    - `ui/tokens/shadow --shadow-cover`
+    - `ui/tokens/shadow --shadow-cover-hover`
+    - `ui/tokens/shadow --shadow-float`
     - `ui/tokens/shadow --shadow-popover`
   - Imported by: 30 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×30

@@ -22,8 +22,17 @@ const radioButtonUncheckedIcon = symbol("radio-button-unchecked");
 // (`set-status.ts`).
 
 /**
- * The card's at-rest checkbox (a `persistent` item action, so it is painted in
- * every card's footer, not only on hover). The row already carries `done` —
+ * The card action's rest state: on while the prototype is done, so the
+ * action stays painted at rest then and shows only on hover otherwise. A plain
+ * read of the joined row — no subscription of its own.
+ */
+export function useDoneActive(row: PrototypeGalleryRow): boolean {
+  return row.done;
+}
+
+/**
+ * The card's Done circle (a revealed item action that rests while done, so a
+ * finished prototype reads as one at rest). The row already carries `done` —
  * the gallery joins the statuses onto the list before it renders.
  */
 export function DoneCardAction({ row }: ItemActionProps<PrototypeGalleryRow>) {

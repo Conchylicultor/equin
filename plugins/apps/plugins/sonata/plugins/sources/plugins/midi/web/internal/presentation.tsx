@@ -1,5 +1,8 @@
 import { FieldPresentation } from "@plugins/network/plugins/live/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 import { songMidiShape } from "../../core";
+
+const tracksIcon = symbol("layers");
 
 /**
  * The Tracks field of every list of songs — the note-bearing track count of a
@@ -15,6 +18,7 @@ export const midiPresentation = FieldPresentation.Register({
   owner: songMidiShape.exposure,
   fields: {
     trackCount: {
+      icon: tracksIcon,
       cell: (n) => (n === null ? null : `${n} ${n === 1 ? "track" : "tracks"}`),
       width: "5rem",
       align: "end",

@@ -854,6 +854,10 @@
       "name": "@singularity/plugin-apps-sonata-controls",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/sonata/plugins/covers": {
+      "name": "@singularity/plugin-apps-sonata-covers",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/sonata/plugins/document": {
       "name": "@singularity/plugin-apps-sonata-document",
       "version": "0.0.1",
@@ -7393,6 +7397,8 @@
     "@singularity/plugin-apps-sonata-chord-chart": ["@singularity/plugin-apps-sonata-chord-chart@workspace:plugins/apps/plugins/sonata/plugins/chord-chart"],
 
     "@singularity/plugin-apps-sonata-controls": ["@singularity/plugin-apps-sonata-controls@workspace:plugins/apps/plugins/sonata/plugins/controls"],
+
+    "@singularity/plugin-apps-sonata-covers": ["@singularity/plugin-apps-sonata-covers@workspace:plugins/apps/plugins/sonata/plugins/covers"],
 
     "@singularity/plugin-apps-sonata-document": ["@singularity/plugin-apps-sonata-document@workspace:plugins/apps/plugins/sonata/plugins/document"],
 

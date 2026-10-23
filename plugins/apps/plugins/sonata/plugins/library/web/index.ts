@@ -4,7 +4,7 @@ import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { SongLibrary } from "./components/song-library";
 import { DisplayPicker } from "./components/player-toolbar-items";
 import { FullscreenButton } from "@plugins/fullscreen/web";
-import { PlaySongAction } from "./components/play-song-action";
+import { PlaySongAction, useSongPlaying } from "./components/play-song-action";
 import { DeleteSongAction } from "./components/delete-song-action";
 import { Library } from "./slots";
 import { IdKinds } from "@plugins/ids/web";
@@ -14,6 +14,7 @@ import { songPresentation } from "./internal/presentation";
 
 export { Library } from "./slots";
 export type {
+  SongCoverAnswer,
   SourceContext,
   SourceCreateOption,
   SourceHydration,
@@ -42,13 +43,15 @@ export default {
       component: DisplayPicker,
     }),
     sonataPlayerPane.Actions({ id: "fullscreen", component: FullscreenButton }),
-    // Play is the library's one at-rest affordance: it earns a permanent slot
-    // on every view that has one (the card's footer, the table's trailing
-    // track). Delete keeps the default hover-revealed zone.
+    // Play is the row's primary verb: the round button over the cover (card,
+    // list thumbnail), revealed on hover and resting while its song plays; a
+    // view without a primary slot (the table) paints it in the cluster.
+    // Delete keeps the default hover-revealed zone.
     Library.SongActions({
       id: "play",
       component: PlaySongAction,
-      zone: "persistent",
+      zone: "primary",
+      useActive: useSongPlaying,
     }),
     Library.SongActions({ id: "delete", component: DeleteSongAction }),
     Pane.Register({ pane: sonataLibraryPane }),

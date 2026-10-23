@@ -136,6 +136,19 @@ the prototype's bytes did not move. Folder edits reach it through the signature
 gate, which is per folder so it can name the prototypes whose `dirty` may have
 flipped. Nothing notifies after a write in-process; the stamp is the one signal.
 
+**Version counts for the gallery** (`prototypes.versionCounts`, push, no
+params: `Record<id, count>`). The gallery's "v12" token for every prototype at
+once, without subscribing to each whole history. Served by
+`HistoryStore.readVersionCounts`, which reads each repo's `latest.json`
+(`n + 1`) — async file reads in parallel, NO git: a whole-gallery read must
+not spawn a process per prototype, and the stamp is already the newest
+version's position. A repo without a stamp is absent from the map (the token
+is omitted, never "v0"); a malformed stamp throws, naming the file. Notified
+by the watcher on every `version-recorded` batch (once per batch), and after
+every real tree change's adoption pass — a new repo is born by renaming a
+stamped staging dir into place, which need not surface as a `latest.json`
+event.
+
 Adoption: `mintPrototype` calls `ensureHistory` (v0 = the page as minted — the
 title is stamped in the staging copy, before the folder is visible); boot and
 every real tree change run `adoptAll`, so the prototypes that predate history,
@@ -481,6 +494,7 @@ for the `checkpoints` plugin's end-of-turn job.
     - `resource.declare` "prototypes.list"
     - `resource.declare` "prototypes.picks"
     - `resource.declare` "prototypes.statuses"
+    - `resource.declare` "prototypes.versionCounts"
   - Uses:
     - `ids.IdKinds`
     - `infra/endpoints.HttpError`
@@ -500,6 +514,7 @@ for the `checkpoints` plugin's end-of-turn job.
     - `prototypes.list` (push, notified)
     - `prototypes.picks` (push, notified)
     - `prototypes.statuses` (push, notified)
+    - `prototypes.versionCounts` (push, notified)
   - Routes:
     - `GET /api/prototypes`
     - `POST /api/prototypes`
@@ -585,6 +600,7 @@ for the `checkpoints` plugin's end-of-turn job.
     - `prototypeStatuses`
     - `PrototypeStatusSchema`
     - `prototypeUrl`
+    - `prototypeVersionCounts`
     - `PrototypeVersionSchema`
     - `prototypeVersionUrl`
     - `PrototypeViewportSchema`

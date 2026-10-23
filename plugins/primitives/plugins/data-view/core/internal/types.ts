@@ -31,10 +31,29 @@ import type {
   ToolbarArrangement,
 } from "./toolbar-arrangement";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
 import type { LiveDataSource } from "./live-data-source";
 
 export type FieldValue = string | number | boolean | Date | null | undefined;
+
+/**
+ * A row's cover — the picture a card is, and a list row's leading thumbnail.
+ * One of three kinds, each drawn by `CoverFrame` into the same fixed frame so
+ * every card stays the same size:
+ *
+ * - `image` — a URL painted `object-cover`.
+ * - `icon`  — an icon centered on a tinted block (a record without artwork).
+ * - `node`  — an arbitrary preview node (a theme swatch, a chord grid),
+ *   clipped to the frame.
+ *
+ * `null` from a cover accessor = this row has no cover: in a covered surface it
+ * gets a blank tinted frame (the size never changes).
+ */
+export type CoverContent =
+  | { kind: "image"; src: string; alt?: string }
+  | { kind: "icon"; icon: IconRef }
+  | { kind: "node"; node: ReactNode };
 
 /**
  * Round-trips a custom column's native cell/editor value ↔ its canonical text
@@ -340,36 +359,79 @@ export type ViewRowDropConfig<TRow> = Omit<
   };
 };
 
-export interface ItemActionProps<TRow> {
+/** The row an item action acts on — what a view hands an action arm. */
+export interface ItemActionTarget<TRow> {
   row: TRow;
   /** True when this row has at least one child in the data source's hierarchy. */
   hasChildren: boolean;
 }
 
 /**
- * Where an action belongs on a view that HAS a permanent per-row slot:
- *
- * - `"persistent"` — important enough to be painted at rest (a Play button).
- * - `"revealed"` — the default: it lives in the hover-revealed cluster.
- *
- * It is a property of the ACTION, declared once at the contribution site, so
- * every view honours the same answer. A view without a permanent slot demotes a
- * persistent action to its revealed cluster — never drops it. The one rule that
- * maps a zone onto a view lives in `useItemActionZones` (web barrel).
+ * Where an action is being drawn: `"cluster"` — the row's action cluster (the
+ * hover-revealed chip, or its at-rest twin); `"primary"` — the view's one
+ * primary-action slot (the round button over a card's cover or a list
+ * thumbnail). An action draws itself for its placement (a primary Play is a
+ * filled round button; in a cluster it is an icon button).
  */
-export type ItemActionZone = "persistent" | "revealed";
+export type ItemActionPlacement = "cluster" | "primary";
+
+export interface ItemActionProps<TRow> extends ItemActionTarget<TRow> {
+  placement: ItemActionPlacement;
+}
+
+/**
+ * Where an action belongs, declared once at the contribution site so every view
+ * honours the same answer:
+ *
+ * - `"revealed"` — the default: the hover-revealed cluster.
+ * - `"persistent"` — painted at rest where the view has an at-rest region (a
+ *   table's trailing track).
+ * - `"primary"` — THE row's main verb (Sonata's Play): the view's primary slot
+ *   when it has one (revealed on hover), else demoted to `"persistent"`. At most
+ *   one per item-action set.
+ *
+ * Whether an action rests is decided in ONE place (`itemActionRests`, applied by
+ * `useItemActionZones`): `persistent` rests unless it declares `useActive` (then
+ * only while active); `revealed` / `primary` rest only while active (a
+ * `primary` demoted to a view's cluster always rests). A view
+ * without an at-rest region demotes everything to its revealed cluster — never
+ * drops it.
+ */
+export type ItemActionZone = "revealed" | "persistent" | "primary";
+
+/**
+ * Which of an item-action set's contributions a `Row` draws:
+ *
+ * - `zones` — only contributions in these zones (omitted ⇒ every zone).
+ * - `rest` — `true` ⇒ only those resting at rest for this row, `false` ⇒ only
+ *   those NOT resting (the hover arm); omitted ⇒ no rest filter.
+ * - `demotePrimary` — the view has no primary slot, so a `"primary"` action
+ *   always rests.
+ */
+export interface ItemActionFilter {
+  zones?: readonly ItemActionZone[];
+  rest?: boolean;
+  demotePrimary?: boolean;
+}
+
+/** One contribution of an item-action set, as the zone rule sees it. */
+export interface ItemActionEntry {
+  zone: ItemActionZone;
+  /** The contribution declares `useActive` — its rest state depends on the row. */
+  hasActive: boolean;
+}
 
 /**
  * Minimal item-actions surface the views consume. `defineItemActions` (web)
  * returns a value satisfying this PLUS the callable contribution-registrar.
  */
 export interface ItemActionsDescriptor<TRow> {
-  /** Renders ALL contributed actions for one row, each error-boundary-isolated.
-   *  `zone` omitted ⇒ every contribution, whatever its zone. */
-  Row: ComponentType<ItemActionProps<TRow> & { zone?: ItemActionZone }>;
-  /** Which zones actually have a contribution — so a view never paints an empty
-   *  cluster for a zone nothing contributed to. */
-  useZones: Hook<() => Record<ItemActionZone, boolean>>;
+  /** Renders the contributed actions the filter selects for one row, each
+   *  error-boundary-isolated. No filter ⇒ every contribution. */
+  Row: ComponentType<ItemActionProps<TRow> & ItemActionFilter>;
+  /** Every contribution's zone and whether it is row-dependent — so a view
+   *  never paints an empty cluster for an arm nothing can land in. */
+  useEntries: Hook<() => readonly ItemActionEntry[]>;
 }
 
 /**
@@ -641,8 +703,19 @@ interface FieldDefBase<TRow> {
   /** Opaque per-type config for custom columns; understood only by the field
    *  type's own code (e.g. enum options). Passed through untouched by the host. */
   config?: unknown;
-  /** type:"media" — gallery cover source. */
+  /** type:"media" — the surface's cover source (see `resolveCover`: below a
+   *  `DataViewProps.cover` accessor, above the first `media` field). */
   cover?: boolean;
+  /**
+   * The icon a card's token line draws before this field's value. Default: the
+   * field type's identity icon (`fields.identity`). Read by card / list meta.
+   */
+  icon?: IconRef;
+  /**
+   * A row-state mark (a problem count, an unsaved dot) rather than a property:
+   * card meta draws it on the TITLE line, after the title, instead of as a token.
+   */
+  indicator?: boolean;
   /** The field rendered as the tree row label. Fallback heuristic: first text field, else fields[0]. */
   primary?: boolean;
   /**
@@ -1207,6 +1280,9 @@ export interface DataViewRenderProps<TRow> {
   /** Per-item action slot descriptor; views render `<itemActions.Row …/>` in
    *  their own trailing affordance (type-erased; views re-cast at the boundary). */
   itemActions?: ItemActionsDescriptor<TRow>;
+  /** The surface's cover accessor, threaded from `DataViewProps.cover`. Views
+   *  resolve the effective cover with `resolveCover(fields, cover)`. */
+  cover?: (row: TRow) => CoverContent | null;
   /** True when `rowId` has ≥1 child — derived once by the host from
    *  `hierarchy.getParentId` over `rows`. Flat views (table/gallery) call this
    *  for a correct `hasChildren`; the tree uses its own node count. */
@@ -1586,6 +1662,8 @@ export type FieldOverride<TRow> = Partial<
     | "leading"
     | "dropOrder"
     | "section"
+    | "icon"
+    | "indicator"
   >
 > & {
   cell?(row: TRow): ReactNode;
@@ -1944,6 +2022,13 @@ export interface DataViewBaseProps<TRow> {
   /** Per-item action slot descriptor minted by `defineItemActions`; views render
    *  each contributed action in their natural trailing affordance. */
   itemActions?: ItemActionsDescriptor<TRow>;
+  /**
+   * Each row's cover — the picture its gallery card IS, and its list row's
+   * leading thumbnail. Takes precedence over a `FieldDef.cover` field and the
+   * first `media` field (`resolveCover`). `null` = this row has none (a blank
+   * frame in a covered surface). A data accessor, like `rowTone`.
+   */
+  cover?: (row: TRow) => CoverContent | null;
   /**
    * Typed create affordances. The host renders them in the toolbar (1 → a
    * `Button`, N → a "+" dropdown menu, with host-owned in-flight busy state) and

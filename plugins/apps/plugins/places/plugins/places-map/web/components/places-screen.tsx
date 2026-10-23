@@ -3,6 +3,7 @@ import {
   DataView,
   defineDataView,
   fieldOverrides,
+  type CoverContent,
 } from "@plugins/primitives/plugins/data-view/web";
 import { floatingToolbar } from "@plugins/primitives/plugins/data-view/plugins/floating-toolbar/web";
 import type { MapViewOptions } from "@plugins/primitives/plugins/data-view/plugins/map/web";
@@ -388,6 +389,19 @@ function PlacesSurface({
     if (hit !== undefined) openHit(hit, null);
   });
 
+  // A place's picture, as its gallery card's cover (and its list thumbnail).
+  const placeCover = useCallback(
+    (p: Place): CoverContent => ({
+      kind: "node",
+      node: (
+        <PlaceCover
+          visual={placeVisual(p, tags)}
+          googlePlaceId={p.googlePlaceId}
+        />
+      ),
+    }),
+    [tags],
+  );
   const viewOptions = useMemo(
     () => ({
       map: {
@@ -415,17 +429,6 @@ function PlacesSurface({
           setHoveredGoogleId(id === null ? null : googlePlaceIdOfPin(id)),
         onCameraRest: (rest) => setBounds(rest.bounds),
       } satisfies MapViewOptions<Place>,
-      gallery: {
-        cover: (p: Place) => ({
-          kind: "node" as const,
-          node: (
-            <PlaceCover
-              visual={placeVisual(p, tags)}
-              googlePlaceId={p.googlePlaceId}
-            />
-          ),
-        }),
-      },
       list: {
         leading: (p: Place) => <PlaceGlyph visual={placeVisual(p, tags)} />,
       },
@@ -605,6 +608,7 @@ function PlacesSurface({
           />
         }
         viewOptions={viewOptions}
+        cover={placeCover}
         onRowActivate={(p) => {
           // Selecting another place swaps the card; it is not a click away.
           claim();

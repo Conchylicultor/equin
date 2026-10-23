@@ -54,6 +54,9 @@ export function buildShadowTiers(p: ShadowParams): ShadowTokenValues {
     "shadow-popover": "var(--shadow-md)",
     // Nor this: floating chrome wears the popover's shadow.
     "shadow-float": "var(--shadow-popover)",
+    // Nor these: a cover rests on the `sm` tier and lifts to the `xl` one.
+    "shadow-cover": "var(--shadow-sm)",
+    "shadow-cover-hover": "var(--shadow-xl)",
   };
 }
 

@@ -7,9 +7,11 @@ import type { ComponentType, ReactNode } from "react";
  * but never re-instantiate one.
  */
 export interface ToolbarPartForms {
-  /** `field`: a bordered fixed-width search box. `bare`: a borderless field
+  /** `field`: a bordered fixed-width search box. `filled`: the same
+   *  fixed-width box as a quiet well (no border at rest) — the search sitting
+   *  inside a pill that already draws the edge. `bare`: a borderless field
    *  that fills its cell, with a trailing `/` hint; Escape clears it. */
-  search: "field" | "bare";
+  search: "field" | "filled" | "bare";
   /** `ghost`: square ghost icon triggers. `round`: circular icon triggers. */
   controls: "ghost" | "round";
   /** `labelled`: one creator is a labelled button. `round`: a filled circular
@@ -47,7 +49,9 @@ export interface ToolbarParts {
   foldedControls: ReactNode;
   /** Consumer toolbar actions (`DataViewProps.actions`). */
   actions: ReactNode;
-  /** The create affordance (`DataViewProps.creators`), in `forms.creators`. */
+  /** The create affordance (`DataViewProps.creators`), in `forms.creators`;
+   *  `null` when the surface declares none (so an arrangement can drop the
+   *  divider it would draw before it). */
   creators: ReactNode;
   /**
    * How far from the surface's left edge the surface's `aside`

@@ -3,6 +3,7 @@ import { Library } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { hydrate } from "./hydrate";
 import { transcribeCreateOption } from "./components/transcribe-create-option";
 import { transcriptionPresentation } from "./internal/presentation";
+import { transcriptionCover } from "./internal/cover";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import {
@@ -12,13 +13,14 @@ import {
 
 export default {
   description:
-    "Sonata transcription in the library: a 'Transcribe…' entry in the + menu (a video/post link, or page images and PDFs) that creates the song and starts the transcribing agent; a transcribed song shows its agent run as an embedded agent thread — the steps, the agent's summary and a reply box — in the player until the score is in (Retry when it failed), then in the player's Transcription section, where a reply asks for a correction and the resubmitted score replaces the song's; and a Transcribing / Failed badge on its card.",
+    "Sonata transcription in the library: a 'Transcribe…' entry in the + menu (a video/post link, or page images and PDFs) that creates the song and starts the transcribing agent; a transcribed song shows its agent run as an embedded agent thread — the steps, the agent's summary and a reply box — in the player until the score is in (Retry when it failed), then in the player's Transcription section, where a reply asks for a correction and the resubmitted score replaces the song's; and a Transcribing / Failed badge and cover on its card.",
   contributions: [
     Library.Source({
       sourceId: "transcription",
       hydrate,
       createOption: transcribeCreateOption,
     }),
+    Library.Cover({ id: "transcription", cover: transcriptionCover }),
     transcriptionPresentation,
     Sonata.Section({
       id: "transcription",

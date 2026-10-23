@@ -141,6 +141,24 @@ describe("data-view list leading field", () => {
     expect(hidden.container.innerHTML).toBe(html);
   });
 
+  it("takes the leading slot from a cover field: no thumbnail", () => {
+    const art: FieldDef<Row> = {
+      id: "art",
+      label: "Art",
+      type: "plain",
+      value: () => "https://img/a.png",
+      cover: true,
+    };
+    const { container, getAllByTestId } = renderList(
+      [{ ...avatar, leading: true }, name, art],
+      { own: false },
+    );
+    expect(getAllByTestId("spec-cell")).toHaveLength(1);
+    expect(container.querySelector(".size-cover-thumb")).toBeNull();
+    // Not drawn as a thumbnail, the cover field stays an ordinary body term.
+    expect(container.textContent).toBe("★alpha · https://img/a.png");
+  });
+
   it("disappears when hidden through properties", () => {
     const { queryByTestId, getByTestId } = renderList(
       [{ ...avatar, leading: true }, name, note],

@@ -11,7 +11,32 @@
       "name": "Gallery",
       "icon": "grid-view",
       "icon": "grid-view",
-      "view": { "type": "gallery", "groupBy": { "fieldId": "status", "groupingId": "value" } }
+      "view": {
+        "type": "gallery",
+        "groupBy": { "fieldId": "status", "groupingId": "value" },
+        // Authored, not defaulted: each card is the prototype's picture, its
+        // title (with the problems mark after it), the blurb as the subtitle,
+        // and when it was last edited and how many versions it has as tokens.
+        // The rest stay sort and filter dimensions.
+        "properties": [
+          { "id": "title" },
+          { "id": "problems" },
+          { "id": "blurb" },
+          { "id": "modifiedAt" },
+          { "id": "versions" }
+        ]
+      }
+    },
+    {
+      // The same prototypes as one list, the most recently edited first —
+      // "what was I working on", without the status sections.
+      "id": "recently-edited",
+      "name": "Recently edited",
+      "icon": "schedule",
+      "view": {
+        "type": "list",
+        "sort": [{ "fieldId": "modifiedAt", "direction": "desc" }]
+      }
     }
   ]
 }

@@ -13,10 +13,9 @@ import {
 import { GalleryView } from "../components/gallery-view";
 
 /**
- * A field declaring `leading: true` renders in the card's leading block — ahead
- * of the view's own `leading` option — and is out of the title and the property
- * rows. The cover stays media. Local fixture cell for a synthetic type (no
- * `fields/*` import: that is a cycle).
+ * A field declaring `leading: true` is the row's avatar: on a card with no
+ * cover it fills the cover frame; it is never the title nor a text line. Local
+ * fixture cell for a synthetic type (no `fields/*` import: that is a cycle).
  */
 function SpecCell(props: TableCellProps) {
   return <span data-testid="spec-cell">{String(props.data)}</span>;
@@ -57,7 +56,7 @@ const ROW: Row = { id: "1", name: "alpha", glyph: "★", note: "memo" };
 
 function renderGallery(
   fields: FieldDef<Row>[],
-  opts: { properties?: string[]; own?: boolean } = {},
+  opts: { properties?: string[]; cover?: boolean } = {},
 ) {
   const props: DataViewRenderProps<Row> = {
     revealSelection: true,
@@ -80,10 +79,10 @@ function renderGallery(
     groupOrder: "asc",
     rowsComplete: true,
     sectioning: { kind: "bucket" },
-    options:
-      opts.own === false
-        ? undefined
-        : { leading: () => <i data-testid="own-leading" /> },
+    options: undefined,
+    cover: opts.cover
+      ? () => ({ kind: "node", node: <i data-testid="own-cover" /> })
+      : undefined,
   };
   return render(
     <PluginProvider plugins={[plugin]}>
@@ -92,61 +91,63 @@ function renderGallery(
   );
 }
 
-const precedes = (a: Element, b: Element) =>
-  (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
-
 afterEach(cleanup);
 
 describe("data-view gallery leading field", () => {
-  it("renders the leading field's cell before the view's own leading node", () => {
-    const { getAllByTestId, getByTestId, getByText } = renderGallery([
+  it("fills the cover frame of a card with no cover, once", () => {
+    const { getAllByTestId, getByText } = renderGallery([
       { ...avatar, leading: true },
       name,
       note,
     ]);
     const cells = getAllByTestId("spec-cell");
-    // Exactly once: in the leading block, not also as a property row.
+    // Exactly once: in the frame, not also as a text line.
     expect(cells).toHaveLength(1);
-    const own = getByTestId("own-leading");
-    expect(precedes(cells[0]!, own)).toBe(true);
-    expect(precedes(own, getByText("alpha"))).toBe(true);
+    expect(
+      cells[0]!.compareDocumentPosition(getByText("alpha")) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("never becomes the title", () => {
-    const { getByText } = renderGallery(
+    const { getByText } = renderGallery([
+      { ...avatar, leading: true },
+      name,
+      note,
+    ]);
+    // The title line is the next field; memo is a line below it.
+    const title = getByText("alpha");
+    expect(
+      title.compareDocumentPosition(getByText("memo")) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(title.textContent).toBe("alpha");
+  });
+
+  it("a row's own cover wins over the leading field", () => {
+    const { queryByTestId, getByTestId } = renderGallery(
       [{ ...avatar, leading: true }, name, note],
-      { own: false },
+      { cover: true },
     );
-    // The title is the next field (the semibold card title), memo a property row.
-    expect(getByText("alpha").className).toContain("font-semibold");
-    expect(getByText("memo").className).toContain("text-muted-foreground");
+    expect(getByTestId("own-cover")).toBeTruthy();
+    expect(queryByTestId("spec-cell")).toBeNull();
   });
 
-  it("without a leading flag the field stays an ordinary property row", () => {
-    const { getByTestId } = renderGallery([name, avatar, note]);
+  it("without a leading flag the field stays an ordinary line", () => {
+    const { getByTestId, getByText } = renderGallery([name, avatar, note]);
     const cell = getByTestId("spec-cell");
-    expect(precedes(getByTestId("own-leading"), cell)).toBe(true);
-    expect(cell.parentElement!.className).toContain("text-muted-foreground");
-  });
-
-  it("with no leading field and no option, the card has no leading block", () => {
-    const withLeading = renderGallery([name, note], { own: false });
-    const html = withLeading.container.innerHTML;
-    cleanup();
-    // The same schema with a hidden leading field renders byte-identical markup.
-    const hidden = renderGallery([{ ...avatar, leading: true }, name, note], {
-      own: false,
-      properties: ["name", "note"],
-    });
-    expect(hidden.container.innerHTML).toBe(html);
+    expect(
+      getByText("alpha").compareDocumentPosition(cell) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("disappears when hidden through properties", () => {
-    const { queryByTestId, getByTestId } = renderGallery(
+    const { queryByTestId, getByText } = renderGallery(
       [{ ...avatar, leading: true }, name, note],
       { properties: ["name", "note"] },
     );
     expect(queryByTestId("spec-cell")).toBeNull();
-    expect(getByTestId("own-leading")).toBeTruthy();
+    expect(getByText("alpha")).toBeTruthy();
   });
 });

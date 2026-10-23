@@ -148,6 +148,17 @@ chevron:
   the state: a collapsed header is muted (its actions re-toned to the
   foreground, so a header toggle never reads disabled). `SectionCard`'s
   `inspector` variant.
+- **`"end"`** — `none`'s tone, plus a faint, always-visible chevron at the
+  row's FAR end, after the header actions, brightening while the header is
+  hovered or focused (its own named group, `group/section-header`, so an
+  enclosing `group` never lights it). The inspector card's look, and a
+  DataView's standard group header.
+
+**`rule`** draws a decorative hairline in the row's slack: the last thing in
+the label run (a `Fill` holding a `Separator`, both `span`s — the run sits in
+the row's `<button>`), so it fills from the label to the trailing cluster —
+"Queue 6 ──────── ⌄". `aria-hidden`; the click target is unchanged. The
+DataView group header is `variant="group" disclosure="end" rule`.
 
 The trailing reveal is `hover-reveal`'s `useHoverReveal` (per-instance state;
 pointer enter/leave on the row box, keyboard-only focus on the control, each
@@ -176,8 +187,10 @@ genuine transient-chrome list escapes with
     - `primitives/collapsible.CollapsibleChevron`
     - `primitives/collapsible.CollapsibleWarmHandlers`
     - `primitives/collapsible.useCollapsibleContext`
+    - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.Separator`
     - `primitives/css/ui-kit.useMenuSurface`
     - `primitives/hover-reveal.hoverRevealClass`
     - `primitives/hover-reveal.useHoverReveal`

@@ -20,7 +20,7 @@ re-themes all surfaces of a role at once.
 | `base`    | `bg-background`                                           | page / pane canvas, toolbar bands, sticky headers |
 | `raised`  | `rounded-card border border-border bg-card shadow-sm`    | a card lifted one step above base               |
 | `overlay` | `rounded-popover bg-popover-fill backdrop-popover text-popover-foreground shadow-popover ring-1 ring-popover-border` (+ `--hover-fill: var(--popover-hover)`, default `--selected`) | floats above all: popovers, menus, floating panels |
-| `float`   | `rounded-popover border border-popover-border bg-float-fill backdrop-float text-popover-foreground shadow-float` (+ `--hover-fill: var(--accent)`) | floating chrome over content: a toolbar card, a dock, a button floated over a canvas — never a menu |
+| `float`   | `rounded-float border border-popover-border bg-float-fill backdrop-float text-popover-foreground shadow-float` (+ `--hover-fill: var(--accent)`) | floating chrome over content: a toolbar card, a dock, a button floated over a canvas — never a menu |
 
 `overlay`'s material is the [`material`](../../../../../ui/plugins/tokens/plugins/material/CLAUDE.md)
 token group's — `--popover-fill` (default `var(--popover)`) and
@@ -31,8 +31,9 @@ the lint flags it.
 
 `float` is glass for **chrome**, not menus: its material is the material
 group's second pair — `--float-fill` (default the card at 86%) and
-`--float-backdrop` (default `blur(20px) saturate(1.5)`) — with the popover's
-corners and outline colour (a real 1px `border`, inside the box) and its own
+`--float-backdrop` (default `blur(20px) saturate(1.5)`) — with its own corners
+(`rounded-float`, the shape group's `--radius-float`, default the popover's),
+the popover's outline colour (a real 1px `border`, inside the box) and its own
 shadow tier (`--shadow-float`, default the popover's). A menu stays `overlay`
 (solid: nothing behind it may compete with what is in it); a bar or a dock
 floating over a canvas only needs to stay readable. First consumer: the
@@ -143,8 +144,8 @@ never be clobbered.
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
   - Imported by: 32 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×13
-    - `primitives` ×7
+    - `apps` ×14
+    - `primitives` ×6
     - `page` ×4
     - `infra` ×2
     - `map` ×2

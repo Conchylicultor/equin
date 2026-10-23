@@ -20,6 +20,7 @@ export const dataDirsEntries: CollectedEntry[] = [
   { pluginPath: "apps/plugins/prototypes", id: "apps.prototypes", loader: () => import("@plugins/apps/plugins/prototypes/data-dirs"), dependsOn: [] },
   { pluginPath: "apps/plugins/prototypes/plugins/thumbnails", id: "apps.prototypes.thumbnails", loader: () => import("@plugins/apps/plugins/prototypes/plugins/thumbnails/data-dirs"), dependsOn: [] },
   { pluginPath: "apps/plugins/sonata", id: "apps.sonata", loader: () => import("@plugins/apps/plugins/sonata/data-dirs"), dependsOn: [] },
+  { pluginPath: "apps/plugins/sonata/plugins/covers", id: "apps.sonata.covers", loader: () => import("@plugins/apps/plugins/sonata/plugins/covers/data-dirs"), dependsOn: [] },
   { pluginPath: "apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment", id: "apps.sonata.sources.ultimate-guitar.alignment", loader: () => import("@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/data-dirs"), dependsOn: [] },
   { pluginPath: "config_v2", id: "config_v2", loader: () => import("@plugins/config_v2/data-dirs"), dependsOn: [] },
   { pluginPath: "conversations/plugins/conversation-view/plugins/rewind", id: "conversations.conversation-view.rewind", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/rewind/data-dirs"), dependsOn: [] },

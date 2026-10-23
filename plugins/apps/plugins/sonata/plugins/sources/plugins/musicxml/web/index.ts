@@ -7,10 +7,11 @@ import { MUSICXML_SOURCE_ID } from "./constants";
 import { hydrate } from "./hydrate";
 import { MusicXmlLoader } from "./loader";
 import { musicXmlCreateOption } from "./components/musicxml-create-option";
+import { musicXmlCover } from "./internal/cover";
 
 export default {
   description:
-    "MusicXML file input source for Sonata: compile() parses a score-partwise document into a Score (parts and staves as tracks, ties merged, repeats unrolled, chord symbols, tempo, swing). Persists per-song MusicXML as an attachment and contributes the library Import affordance and hydration.",
+    "MusicXML file input source for Sonata: compile() parses a score-partwise document into a Score (parts and staves as tracks, ties merged, repeats unrolled, chord symbols, tempo, swing). Persists per-song MusicXML as an attachment and contributes the library Import affordance, hydration and the song's staff cover.",
   contributions: [
     SonataDocument.Source({
       id: MUSICXML_SOURCE_ID,
@@ -24,5 +25,6 @@ export default {
       hydrate,
       createOption: musicXmlCreateOption,
     }),
+    Library.Cover({ id: MUSICXML_SOURCE_ID, cover: musicXmlCover }),
   ],
 } satisfies PluginDefinition;

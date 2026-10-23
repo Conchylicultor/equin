@@ -42,6 +42,7 @@
     - `apps/sonata/lyrics-hud`
     - `apps/sonata/rich/chord-overlay`
     - `apps/sonata/rich/readout-keyboard`
+    - `apps/sonata/sources/chord-grid`
     - `apps/sonata/theory`
 - Core:
   - Exports (types):

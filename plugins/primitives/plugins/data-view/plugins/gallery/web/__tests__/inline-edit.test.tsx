@@ -115,4 +115,38 @@ describe("data-view gallery inline cell editing", () => {
     expect(queryByLabelText("cell-editor")).toBeNull();
     expect(queryByLabelText("Edit Name")).toBeNull();
   });
+
+  it('omits an empty value — never an italic "Empty"', () => {
+    const { container, getByText } = render(
+      <PluginProvider plugins={[plugin]}>
+        <GalleryView
+          {...(renderProps(
+            [
+              {
+                id: "name",
+                label: "Name",
+                type: "text",
+                primary: true,
+                value: (r) => r.name,
+              },
+              {
+                id: "note",
+                label: "Note",
+                type: "text",
+                value: (r) => (r.id === "2" ? undefined : "memo"),
+                onEdit: vi.fn(),
+              },
+            ],
+            [
+              { id: "1", name: "alpha" },
+              { id: "2", name: "beta" },
+            ],
+          ) as DataViewRenderProps<unknown>)}
+        />
+      </PluginProvider>,
+    );
+    expect(getByText("memo")).toBeTruthy();
+    expect(getByText("beta")).toBeTruthy();
+    expect(container.textContent).not.toContain("Empty");
+  });
 });

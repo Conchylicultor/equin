@@ -38,9 +38,9 @@ import { DataViewSlots } from "../slots";
  *   `columns` per line, a line as tall as its tallest card (`linePx` unless
  *   the test sets one), a new grid element starts a new line, and a
  *   placeholder is a block of its own between lines. Both column reads a
- *   grid view makes are stubbed to answer `columns`: the gallery probe's
- *   `clientWidth` (`columns` × 200 px, its default card width, no gap) and the
- *   icons probe's `grid-template-columns` (`columns` tracks).
+ *   grid view makes are stubbed to answer `columns`: the gallery and icons
+ *   probes' `grid-template-columns` (`columns` tracks, no gap), and every
+ *   box's `clientWidth` (`columns` × 200 px).
  */
 export type PagedLayout = "stack" | { columns: number; linePx: number };
 
@@ -519,11 +519,11 @@ class LaidOutPage {
     }
     if (this.grid !== null) {
       const grid = this.grid;
-      // The gallery's probe: `columns` cards of its default 200 px fit.
+      // Every box is as wide as `columns` cards of 200 px.
       vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(
         () => grid.columns * 200,
       );
-      // The icons probe's resolved tracks; no gap anywhere.
+      // The gallery and icons probes' resolved tracks; no gap anywhere.
       const computed = window.getComputedStyle.bind(window);
       vi.spyOn(window, "getComputedStyle").mockImplementation((el, pseudo) => {
         const style = computed(el, pseudo);

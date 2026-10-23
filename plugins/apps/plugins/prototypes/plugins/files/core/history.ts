@@ -80,6 +80,25 @@ export const prototypeHistory = liveValue("prototypes.history", {
   params: ["name"],
 });
 
+/** Version count per prototype id — at least 1 (every history has its `v0`). */
+export const PrototypeVersionCountsSchema = z.record(
+  z.string(),
+  z.number().int().positive(),
+);
+
+/**
+ * How many versions each prototype has, keyed by prototype id (push) — the
+ * gallery's "v12" token, without subscribing to every prototype's whole
+ * history. Read from each history repo's newest-version stamp, so the read is
+ * one small file per prototype. A prototype missing from the map has no count
+ * known (no history yet, or one recorded before the stamp existed) — the token
+ * is omitted, never drawn as `0`. Bounded by the prototype list it annotates.
+ * Notified by the watcher whenever any history records a version.
+ */
+export const prototypeVersionCounts = liveValue("prototypes.versionCounts", {
+  schema: PrototypeVersionCountsSchema,
+});
+
 /**
  * Make an older version live again: saves unsaved changes first (a `manual`
  * "Before restore" version), writes the old files back, and records a

@@ -1,11 +1,4 @@
 import { type ReactNode, useMemo } from "react";
-import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
-import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
-import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
-import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { spaceLength } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { useReservesFloatingBar } from "@plugins/primitives/plugins/pane/web";
@@ -14,26 +7,20 @@ import type {
   ToolbarArrangement,
   ToolbarParts,
 } from "@plugins/primitives/plugins/data-view/core";
+import { PillsToolbar } from "@plugins/primitives/plugins/data-view/web";
 
-/** The gap between a card and the surface's edges (and the aside). */
+/** The gap between a pill and the surface's edges (and the aside). */
 const GUTTER = "md";
 
 /**
- * Two floating cards over the view: [title + view tabs] top-left, past the
- * surface's aside, and [search | controls | actions | create] top-right. The
- * band between them is the host's click-through layer, so the view (a map)
- * stays reachable around the cards; each card opts back into pointer events.
+ * The DataView's own two-pill toolbar (`PillsToolbar`), floated over the view:
+ * [title + views] top-left, past the surface's aside, and [search · controls
+ * · actions | create] top-right. The band between them is the host's
+ * click-through layer, so the view (a map) stays reachable around the pills;
+ * each pill opts back into pointer events.
  */
-function FloatingToolbar({
-  title,
-  switcher,
-  search,
-  focusSearch,
-  controls,
-  actions,
-  creators,
-  asideInset,
-}: ToolbarParts): ReactNode {
+function FloatingToolbar(parts: ToolbarParts): ReactNode {
+  const { focusSearch, asideInset } = parts;
   // Surface-scoped, so two surfaces in two tabs never fight over `/`. A plain
   // key, so it yields to any focused text field (the `/` is typed there).
   const shortcuts = useMemo(
@@ -52,53 +39,29 @@ function FloatingToolbar({
   // At the surface's top-right corner the band stands in for the pane header
   // the global floating bar would otherwise sit in: it reserves the bar's safe
   // area on the right and is the bar's anchor, so the bar is centred on this
-  // band's line, level with the cards — the pane header's own rule.
+  // band's line, level with the pills — the pane header's own rule.
   const reservesFloatingBar = useReservesFloatingBar();
   const gutter = spaceLength(GUTTER);
   return (
-    <Line
+    <PillsToolbar
+      {...parts}
+      overlay
       className={cn(
-        "gap-sm py-md",
+        "py-md",
         reservesFloatingBar
           ? "pr-floating-bar-pane anchor-floating-bar-band"
           : "pr-md",
       )}
-      // The left card starts one gutter past the aside's floating card.
+      // The left pill starts one gutter past the aside's floating card.
       style={{ paddingLeft: `calc(${asideInset} + ${gutter})` }}
-    >
-      {/* The tabs card hugs its chips and is the one cell that gives: past
-          its room the strip scrolls sideways inside the card rather than
-          pushing the tools card off the surface. */}
-      <Overlay.Interactive className={yieldClass("x")}>
-        <Surface level="overlay" className="p-2xs">
-          <Scroll axis="x" hideScrollbar>
-            <Line className="gap-xs">
-              {title}
-              {switcher.strip}
-            </Line>
-          </Scroll>
-        </Surface>
-      </Overlay.Interactive>
-      <Fill />
-      <Overlay.Interactive className={rigidClass()}>
-        <Surface level="overlay" className="p-2xs">
-          <Line className="gap-2xs">
-            {search}
-            {controls}
-            {/* eslint-disable-next-line row-actions/no-raw-actions-slot -- surface-level toolbar actions, one per DataView, not a per-row cluster */}
-            {actions}
-            {creators}
-          </Line>
-        </Surface>
-      </Overlay.Interactive>
-    </Line>
+    />
   );
 }
 
 /** The floating arrangement — pass as `<DataView toolbar={floatingToolbar}>`. */
 export const floatingToolbar: ToolbarArrangement = {
   id: "floating",
-  forms: { search: "field", controls: "ghost", creators: "labelled" },
+  forms: { search: "filled", controls: "ghost", creators: "labelled" },
   component: FloatingToolbar,
   overlay: true,
 };

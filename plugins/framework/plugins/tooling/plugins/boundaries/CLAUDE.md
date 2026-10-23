@@ -161,6 +161,7 @@ readings use it:
     - `apps/places/place-details` (1 debt)
     - `apps/prototypes/files` (13 debt)
     - `apps/prototypes/thumbnails` (3 debt)
+    - `apps/sonata/covers` (1 debt)
     - `apps/sonata/sources/midi` (1 debt)
     - `apps/sonata/sources/midi/folders` (2 debt)
     - `apps/sonata/sources/musicxml` (1 debt)

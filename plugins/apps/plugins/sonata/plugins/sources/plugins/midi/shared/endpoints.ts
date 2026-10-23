@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import {
+  blob,
+  defineEndpoint,
+  endpointPath,
+} from "@plugins/infra/plugins/endpoints/core";
 
 /**
  * Create a song from an already-uploaded MIDI attachment. The client uploads the
@@ -35,3 +39,24 @@ export const getSongMidi = defineEndpoint({
     .object({ attachmentId: z.string(), trackCount: z.number() })
     .nullable(),
 });
+
+/**
+ * One song's cover: a falling-notes SVG of its busiest bars, drawn on the
+ * server from the song's own MIDI (`covers` renders and caches it). Raw — it
+ * answers SVG bytes. The last segment is `<version>.svg`, the version the row's
+ * `sourcesChangedAt` (epoch ms) as the card building the URL knew it: the
+ * response is `immutable` while it is current, `no-store` once stale. One
+ * whole-segment param, because the router matches whole segments only.
+ */
+export const getSongMidiCover = defineEndpoint({
+  route: "GET /api/sonata/songs/:id/midi/cover/:file",
+  response: blob(),
+});
+
+/** The URL of a song's MIDI cover, versioned by its `sourcesChangedAt`. */
+export function midiCoverUrl(id: string, sourcesChangedAt: Date): string {
+  return endpointPath(getSongMidiCover, {
+    id,
+    file: `${sourcesChangedAt.getTime()}.svg`,
+  });
+}
