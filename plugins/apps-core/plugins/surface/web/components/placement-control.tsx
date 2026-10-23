@@ -4,7 +4,10 @@ import {
   useSurfaceMode,
   setSurfaceMode,
 } from "@plugins/apps-core/plugins/tabs/web";
-import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
+import {
+  SegmentedControl,
+  type SegmentedOption,
+} from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { Surface } from "../slots";
 
@@ -27,11 +30,11 @@ export function ActionBarPlacementControl() {
     () =>
       [...defs]
         .sort((a, b) => a.order - b.order)
-        .map((d) => ({
+        .map((d): SegmentedOption<string> => ({
           id: d.id,
-          label: "",
           icon: <Icon icon={d.icon} />,
-          title: d.label,
+          // Icon-only: the mode's label is the radio's tooltip and name.
+          tooltip: d.label,
         })),
     [defs],
   );

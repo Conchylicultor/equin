@@ -80,6 +80,18 @@ the panel stays closed whatever the pointer, focus or a press does, and the
 hover / latch it saw meanwhile are dropped — so lifting it leaves the panel
 closed under a pointer still on it, until the next enter, focus or press.
 
+## Open is not reachable: `data-revealed`
+
+`data-open` drives the morph and the fade the moment the panel opens, but for a
+beat the content still sits clipped at its collapsed spot, then slides into
+place — a click aimed at an item then lands on whatever is under it (a script's
+click even moves the pointer outside the control, which closes it). So the
+content stays `inert` until it is **revealed**: open AND every CSS transition
+the morph started in the panel's subtree has finished (their `finished`
+promises; nothing animating reveals at once; a close cancels them and never
+reveals). The wrapper carries `data-revealed` then — what an e2e script waits
+for before clicking an item, never `data-open`.
+
 ## Hover is the DOM box, focus is the keyboard
 
 Hover is read from native `pointerenter` / `pointerleave` on the wrapper, plus

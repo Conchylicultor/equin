@@ -134,11 +134,35 @@ export function ToggleChip({
   );
 }
 
-export interface SegmentedOption<T extends string> {
-  id: T;
-  label: React.ReactNode;
-  icon?: React.ReactNode;
-  tooltip?: React.ReactNode;
+/**
+ * One segment. Either LABELLED — its visible label names it (an icon and a
+ * tooltip are extras) — or ICON-ONLY: no label, an icon, and a plain-string
+ * `tooltip` that is both its hover tip and its accessible name (Button's
+ * icon-only rule), so a nameless radio has no spelling.
+ */
+export type SegmentedOption<T extends string> = { id: T } & (
+  | {
+      label: Exclude<React.ReactNode, undefined | null | boolean>;
+      icon?: React.ReactNode;
+      tooltip?: React.ReactNode;
+    }
+  | { label?: never; icon: React.ReactNode; tooltip: string }
+);
+
+/**
+ * The accessible name an option's radio takes beyond its own text: the
+ * icon-only arm's tooltip. A labelled arm whose label is `""` would be a
+ * nameless radio the union cannot see (`""` is a string), so it throws.
+ */
+function iconOnlyName<T extends string>(
+  opt: SegmentedOption<T>,
+): string | undefined {
+  if (opt.label === undefined) return opt.tooltip;
+  if (opt.label === "")
+    throw new Error(
+      `SegmentedControl option "${opt.id}" has an empty label: omit \`label\` and give an icon-only option a string \`tooltip\` (its accessible name).`,
+    );
+  return undefined;
 }
 
 export interface SegmentedControlProps<
@@ -178,9 +202,10 @@ export function SegmentedControl<T extends string>({
           variant={variant}
           icon={opt.icon}
           tooltip={opt.tooltip}
+          aria-label={iconOnlyName(opt)}
           onClick={() => onChange(opt.id)}
         >
-          {opt.label}
+          {opt.label ?? null}
         </ToggleChip>
       ))}
     </div>

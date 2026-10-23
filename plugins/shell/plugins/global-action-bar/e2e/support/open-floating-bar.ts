@@ -9,8 +9,10 @@ import type { Page } from "playwright";
  * bar opens on hover, so move the pointer onto the dot — a real pointer move,
  * not `locator.hover()`: the floating panel's own layer sits over the trigger
  * and would make `hover()` wait forever — and wait for the panel to report
- * itself open (`data-open`). A popover opened from an item then holds the bar
- * open on its own (`FloatingAction` is a popup-open scope).
+ * itself revealed (`data-revealed`: open AND done morphing — `data-open` comes
+ * first, while the items are still clipped at their collapsed spot, and a click
+ * aimed there misses). A popover opened from an item then holds the bar open on
+ * its own (`FloatingAction` is a popup-open scope).
  */
 export async function openFloatingActionBar(page: Page): Promise<void> {
   const dot = page.locator("[data-health]").last();
@@ -19,6 +21,6 @@ export async function openFloatingActionBar(page: Page): Promise<void> {
   if (!box) throw new Error("health dot has no box");
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page
-    .locator("[data-open]", { has: page.locator("[data-health]") })
+    .locator("[data-revealed]", { has: page.locator("[data-health]") })
     .waitFor();
 }

@@ -13,7 +13,14 @@ import {
   type PopoverPadding,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
-import { type ComponentProps, type ReactNode, useRef } from "react";
+import {
+  type ComponentProps,
+  type ReactNode,
+  type RefObject,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { PopupOpenScope } from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
 import { useDisclosureIntent } from "./use-disclosure-intent";
 
@@ -198,6 +205,8 @@ function FloatingActionPanel({
   // a trigger that reshapes itself on open (the outline rail clips its dashes
   // away) cannot shrink it. `open` is a dep, so closing re-derives the footprint
   // at once from whatever the trigger became in the meantime.
+  const revealed = useRevealed(panelRef, open);
+
   useResizeObserver(
     triggerRef,
     () => {
@@ -237,6 +246,7 @@ function FloatingActionPanel({
       ref={wrapperRef}
       className={cn("group/fa outline-none", className)}
       data-open={open || undefined}
+      data-revealed={revealed || undefined}
       aria-label={label}
       {...rootProps}
     >
@@ -250,10 +260,13 @@ function FloatingActionPanel({
           // panel owns its overflow, clipping the morph below.
           scroll={false}
           padding={pad}
-          // Closed content is inert: invisible (FadeIn) panel items must not be
-          // pointer- or Tab-reachable. The stable wrapper underneath still
+          // Content is inert until it is revealed (open AND at rest): closed,
+          // invisible (FadeIn) panel items must not be pointer- or
+          // Tab-reachable; opening, they are still clipped at their collapsed
+          // spot, then slide into place, so a click there would land on
+          // whatever passes under it. The stable wrapper underneath still
           // receives the pointer-enter that opens it.
-          inert={!open}
+          inert={!revealed}
           // `overflow-hidden` here clips the width/height transition, not text.
           // The panel is a flex box along `direction` whose ONE child fills it
           // (`flex-1 min-*-0`): a panel clamped by the morph's max-w / max-h
@@ -329,6 +342,53 @@ function FloatingActionPanel({
       </div>
     </div>
   );
+}
+
+/**
+ * Open AND at rest: `open`, and every transition the open morph started in the
+ * panel's subtree (width / max-width / padding, the content's fade) has
+ * finished. Push-based — the
+ * animations' own `finished` promises, read in a layout effect so the morph
+ * the `open` render started is already running. Nothing animating (reduced
+ * motion, no size change) reveals at once. Closing un-reveals immediately;
+ * a close mid-morph cancels the transitions, whose `finished` rejects with an
+ * AbortError — that run is simply stale.
+ *
+ * Exposed as `data-revealed` on the wrapper: the moment the content takes
+ * clicks, which a script driving the control waits for (`data-open` is set
+ * ~80ms before the morph even starts moving the items).
+ */
+function useRevealed(
+  panelRef: RefObject<HTMLElement | null>,
+  open: boolean,
+): boolean {
+  const [revealed, setRevealed] = useState(false);
+  if (!open && revealed) setRevealed(false);
+  useLayoutEffect(() => {
+    const panel = panelRef.current;
+    if (!open || !panel) return;
+    let stale = false;
+    // The subtree's CSS transitions: the morph runs on the panel AND on its
+    // content (the reveal strip's max-width, FadeIn's opacity). Transitions
+    // only — an item's endless keyframe animation (a pulsing ring, a spinner)
+    // never finishes and must not hold the content inert.
+    const morph = panel
+      .getAnimations({ subtree: true })
+      .filter((a) => a instanceof CSSTransition);
+    void Promise.all(morph.map((a) => a.finished)).then(
+      () => {
+        if (!stale) setRevealed(true);
+      },
+      (err: unknown) => {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        throw err;
+      },
+    );
+    return () => {
+      stale = true;
+    };
+  }, [panelRef, open]);
+  return open && revealed;
 }
 
 export interface FloatingActionFadeInProps extends ComponentProps<"div"> {}

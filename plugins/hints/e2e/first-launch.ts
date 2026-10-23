@@ -112,33 +112,36 @@ async function hoverActionBar(page: Page): Promise<void> {
  * The ? button, reached through the folded bar (solo mode). Wait for the bar
  * to fold first — a tour end holds it unfolded while ? pulses — so the hover
  * lands on the folded dot, not where the health dot sits in the unfolded bar.
- * The bar is open while an ancestor of ? carries `data-open` (FloatingAction;
- * a closed panel is only `inert`, which Playwright still counts as visible).
+ * The bar takes clicks once an ancestor of ? carries `data-revealed`
+ * (FloatingAction: open AND done unfolding — a closed or still-unfolding
+ * panel is only `inert`, which Playwright still counts as visible).
  */
 async function openHelpMenu(page: Page): Promise<void> {
   const help = page.getByRole("button", { name: "Getting started" });
   const openBar = page.locator("[data-open]", { has: help }).first();
+  const revealedBar = page.locator("[data-revealed]", { has: help }).first();
   await page.mouse.move(700, 850);
   await openBar.waitFor({ state: "detached" });
   await hoverActionBar(page);
-  await openBar.waitFor({ state: "attached" });
+  await revealedBar.waitFor({ state: "attached" });
   await help.click();
 }
 
-/**
- * Pick a surface mode in the gear's Layout row (the bar must be reachable).
- * The mode radios carry no accessible name (the placement control hands its
- * label to an option field the segmented control does not read), so they are
- * picked by position: the modes are sorted by `order` — docked first, solo
- * last.
- */
+/** The surface-mode radios' names: each placement's label. */
+const SURFACE_MODE_NAMES = {
+  docked: "Dock in tab strip",
+  solo: "Fullscreen (solo)",
+} as const;
+
+/** Pick a surface mode in the gear's Layout row (the bar must be reachable). */
 async function pickSurfaceMode(
   page: Page,
-  mode: "docked" | "solo",
+  mode: keyof typeof SURFACE_MODE_NAMES,
 ): Promise<void> {
   await page.getByRole("button", { name: "View options", exact: true }).click();
-  const radios = page.getByRole("radiogroup").first().getByRole("radio");
-  await (mode === "docked" ? radios.first() : radios.last()).click();
+  await page
+    .getByRole("radio", { name: SURFACE_MODE_NAMES[mode], exact: true })
+    .click();
   await page.keyboard.press("Escape");
 }
 

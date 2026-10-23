@@ -10620,6 +10620,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/control-panel.ControlPanel`
           - `primitives/css/theme-boundary.Theme`
           - `primitives/css/toggle-chip.SegmentedControl`
+          - `primitives/css/toggle-chip.SegmentedOption`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/viewport-overlay.useViewportEscape`
           - `shell/action-bar.ActionBar`

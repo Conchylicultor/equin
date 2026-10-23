@@ -3,7 +3,8 @@
 // reserves that much room on its right, so the collapsed bar no longer sits on
 // top of the header's actions.
 //
-// Opens the app docked (no var expected), switches to Fullscreen (solo) through
+// Docks the app first (solo is the boot mode: through the floating bar's gear),
+// checks no var is published docked, switches to Fullscreen (solo) through
 // the gear's Layout control, then checks the var is published and that no
 // header control in the top band reaches under the collapsed bar, and that the
 // bar is centred on the anchored header's line — also after that header is
@@ -24,9 +25,12 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { Page } from "playwright";
+import { openFloatingActionBar } from "./support/open-floating-bar";
 
 const out = arg("out") ?? "/tmp/solo-safe-area";
-const url = pageUrl();
+// A surface with a top header (the bar centres on it); `/` lands on Home,
+// which has none.
+const url = pageUrl("/agents");
 
 const readVar = (page: Page) =>
   page.evaluate(() =>
@@ -84,10 +88,17 @@ await withBrowser(async (h) => {
   const t = report("solo safe area");
   const { page } = await h.session({ viewport: { width: 1400, height: 900 } });
   await page.goto(url);
-  const gear = page
-    .getByRole("button", { name: "View options", exact: true })
-    .first();
+  // The bar's gear — not a DataView toolbar's own "View options" button.
+  const gear = page.locator('[data-ui-owner^="ViewOptionsButton@"]');
   await gear.waitFor();
+
+  // Solo is the boot mode: dock through the floating bar's gear first.
+  await openFloatingActionBar(page);
+  await gear.click();
+  await page
+    .getByRole("radio", { name: "Dock in tab strip", exact: true })
+    .click();
+  await page.keyboard.press("Escape");
   await page.waitForTimeout(1500);
 
   t.eq("docked: no safe area published", await readVar(page), "");
@@ -152,7 +163,11 @@ await withBrowser(async (h) => {
   await page.mouse.move(700, 600);
   await page.waitForTimeout(1000);
   const homeHit = await page.evaluate(() => {
-    const band = document.querySelector(".floating-bar-band");
+    // The bar's own band (the one holding the health dot) — not its
+    // pointer-events-none home slot, nor another chrome piece on the band.
+    const band = [...document.querySelectorAll(".floating-bar-band")].find(
+      (el) => el.querySelector("[data-health]"),
+    );
     const r = band?.getBoundingClientRect();
     if (!band || !r) return { mounted: false, hit: false };
     const at = document.elementFromPoint(r.left + r.width / 2, r.top + 4);

@@ -133,6 +133,14 @@ Element.prototype.animate = function (): Animation {
   return anim as unknown as Animation;
 };
 
+// jsdom ships no Web Animations API and runs no CSS transitions, so nothing is
+// ever animating: `getAnimations` reports none (a component waiting for its
+// transitions to finish — FloatingAction's reveal — settles on the next
+// microtask). A test that needs a running animation stubs it on the element.
+Element.prototype.getAnimations = function (): Animation[] {
+  return [];
+};
+
 // jsdom under vitest exposes a non-functional `localStorage` (Node's
 // `--localstorage-file` stub). Install a deterministic in-memory Storage so code
 // under test that persists to localStorage works and starts each file clean.
