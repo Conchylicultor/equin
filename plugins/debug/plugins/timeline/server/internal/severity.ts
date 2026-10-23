@@ -31,6 +31,8 @@ export function slowOpSeverity(
 export const CRASH_LIKE_REPORT_KINDS: ReadonlySet<string> = new Set([
   "crash",
   "render-loop",
+  // A frozen browser tab: user-visible breakage, not mere slowness.
+  "main-thread-stall",
   "optimistic-divergence",
   "optimistic-rejection",
 ]);

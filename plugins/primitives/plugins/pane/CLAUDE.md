@@ -1137,7 +1137,7 @@ See "Open questions" in the design doc.
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-md`
     - `ui/tokens/shape --spacing`
-  - Imported by: 174 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 175 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×64
     - `conversations` ×30
     - `debug` ×26
@@ -1148,6 +1148,7 @@ See "Open questions" in the design doc.
     - `layouts` ×4
     - `primitives` ×3
     - `infra` ×2
+    - `reports` ×2
     - `stats` ×2
     - `auth`
     - `backup`
@@ -1155,7 +1156,6 @@ See "Open questions" in the design doc.
     - `code-explorer/commit-detail`
     - `config_v2/settings`
     - `integrations/google-maps`
-    - `reports`
     - `review`
     - `runs`
     - `screenshot`

@@ -51,8 +51,8 @@ host first.
 - Description: Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
 - Web:
   - Slots: `Reports.KindView`
-  - Slot contributors: 28 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Reports.KindView` ×28
+  - Slot contributors: 29 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Reports.KindView` ×29
   - Contributes:
     - `IdKinds.Kind` "report"
     - `ConfigV2.WebRegister` "reports"
@@ -141,8 +141,8 @@ host first.
     - `SERVER_REPORT_SOURCES`
     - `submitReport`
 - Cross-plugin:
-  - Imported by: 52 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `reports` ×23
+  - Imported by: 53 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `reports` ×24
     - `debug` ×13
     - `conversations` ×3
     - `database` ×3
@@ -166,6 +166,7 @@ host first.
   - **`engine`** [exempt] — Records server/frontend crashes as deduped reports (recordReport: per-fingerprint velocity, per-kind fan-out ceiling, duress shedding, bell notifications), files investigation tasks on demand…
   - **`launch-fix`** — Adds a Fix button to the plugin crash banner that launches an agent on the auto-created crash task with optional freeform context.
   - **`live-state-stale-drop`** — Live-state stale-drop collector: drains the live-state primitive's httpStaleDropReportSink into a deduped report when a resource wedges on a stale HTTP body (3 consecutive drops, never applied — the…
+  - **`main-thread-stall`** — Main-thread stall detector: a Core.Root controller that attaches each tab to one out-of-thread SharedWorker watchdog (1 Hz ping, Web Lock per tab, IndexedDB record of an open stall) and feeds it the…
   - **`mutation-errors`** — Warning toast and persistent notification for unhandled TanStack Query mutation errors.
   - **`noise-rules`** — Built-in noise classification rules for low-signal crashes (e.g. ResizeObserver loop warnings).
   - **`optimistic-divergence`** — Optimistic-divergence collector: drains the optimistic-mutation primitive's report sink (a server-acked op superseded by newer truth, or stalled unconfirmed) into a deduped report, plus the Debug →…

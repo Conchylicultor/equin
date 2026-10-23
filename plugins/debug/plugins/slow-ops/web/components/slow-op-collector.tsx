@@ -6,7 +6,7 @@ import { getBootTrace } from "@plugins/primitives/plugins/perfs/plugins/boot-tra
 import { clientLatencySink } from "@plugins/primitives/plugins/perfs/plugins/latency-signal/core";
 import { currentRoutePath } from "@plugins/primitives/plugins/pane/web";
 import { toClientBootSection } from "@plugins/debug/plugins/trace/plugins/client-boot/core";
-import { slowOpConfig } from "../../core";
+import { clientSlowOpSink, slowOpConfig } from "../../core";
 import { TRANSPORT_LAYER } from "../../shared/endpoints";
 import { latencySlowOp } from "../internal/latency-slow-op";
 import { enqueueSlowOp } from "../internal/slow-op-queue";
@@ -106,6 +106,13 @@ export function SlowOpCollector() {
         const item = latencySlowOp(sample, cfgRef.current, currentRoutePath());
         if (item) enqueueSlowOp(item);
       }),
+    [],
+  );
+
+  // Fully-formed slow-ops from producers outside slow-ops (clientSlowOpSink):
+  // each judged itself against its own bar, so it is forwarded unchanged.
+  useEffect(
+    () => clientSlowOpSink.subscribe((signal) => enqueueSlowOp(signal)),
     [],
   );
 

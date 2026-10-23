@@ -62,6 +62,9 @@ export const CLIENT_REPORT_SOURCES = [
   "live-state-wedge",
   "client-slow-op",
   "client-render-loop",
+  // A browser tab's main thread froze (reports/main-thread-stall): filed by a
+  // live tab of the origin on the frozen one's behalf.
+  "client-main-thread-stall",
   "client-optimistic-divergence",
   // The server permanently rejected an optimistic op or a detached write
   // (reports/optimistic-rejection) — the user's edit was lost.

@@ -78,11 +78,11 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `ui/tokens/density` ×6
     - `ui/tokens/shape` ×2
     - `ui/tokens/font-family --font-mono`
-  - Imported by: 166 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 167 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×38
     - `debug` ×35
     - `conversations` ×24
-    - `reports` ×12
+    - `reports` ×13
     - `primitives` ×10
     - `tasks` ×9
     - `plugin-meta` ×8

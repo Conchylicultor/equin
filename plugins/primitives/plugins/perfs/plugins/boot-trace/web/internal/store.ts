@@ -22,6 +22,8 @@ import { BOOT_PLUGIN_TIMING_PREFIX, BOOT_TIMING_PREFIX } from "../../core";
 
 const spans: BootSpan[] = [];
 const longTasks: LongTask[] = [];
+// Ceiling on recorded boot long tasks (see observeLongTasks).
+const MAX_BOOT_LONG_TASKS = 500;
 let firstCommitMs: number | null = null;
 
 // Subscribers re-read getBootTrace() when late timing (FCP / first-paint) or new
@@ -347,16 +349,38 @@ onNextCommit(() => {
 // the span store can't run. The Long Tasks API records those ≥50ms tasks
 // independently; `buffered: true` replays the ones that fired before this module
 // evaluated. Must NEVER throw and brick boot — longtask may be unsupported.
+//
+// Bounded to the boot window: once both boot-end instants are known (FCP and
+// the first commit — `bootWindowEnd`), the first long task starting after them
+// disconnects the observer, and a hard cap stops it regardless (a page without
+// the commit bridge never learns its first commit). Every consumer clips to the
+// boot window anyway; before this, the array grew for the page's whole life.
+// After-boot main-thread stalls are reports/main-thread-stall's to watch.
 (function observeLongTasks() {
   try {
     const obs = new PerformanceObserver((list) => {
+      const fcp = readPaintTiming().firstContentfulPaintMs;
+      const bootEnd =
+        fcp !== null && firstCommitMs !== null
+          ? Math.max(fcp, firstCommitMs)
+          : null;
+      let done = false;
       for (const e of list.getEntries()) {
+        if (bootEnd !== null && e.startTime > bootEnd) {
+          done = true;
+          continue;
+        }
+        if (longTasks.length >= MAX_BOOT_LONG_TASKS) {
+          done = true;
+          break;
+        }
         longTasks.push({
           startMs: e.startTime,
           durationMs: e.duration,
           name: e.name,
         });
       }
+      if (done) obs.disconnect();
       notify();
     });
     obs.observe({ type: "longtask", buffered: true });

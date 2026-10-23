@@ -24,7 +24,9 @@ them). Pick by who listens and whether a late listener should still hear it:
 
 - Description: Web presence for the report-sink primitive; the runtime-agnostic factories live in ./core so both web and server can import them. defineReportSink() is fire-and-forget and holds reports emitted before a handler registers (bounded), replaying them on register; defineRequestSink() returns the handler's answer and never holds. emit() never throws — it is called on error paths.
 - Cross-plugin:
-  - Imported by: `primitives/perfs/latency-signal`
+  - Imported by:
+    - `debug/slow-ops`
+    - `primitives/perfs/latency-signal`
 - Core:
   - Exports (types):
     - `ObservationSink`

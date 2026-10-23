@@ -1,4 +1,4 @@
-// @hash 8235a526cf10
+// @hash a947efd2a684
 {
   "manifests": [
     {
@@ -496,6 +496,7 @@
         "reports.collab-hydration.**",
         "reports.endpoint-errors.**",
         "reports.live-state-stale-drop.**",
+        "reports.main-thread-stall.**",
         "reports.mutation-errors.**",
         "reports.optimistic-divergence.**",
         "reports.optimistic-rejection.**",

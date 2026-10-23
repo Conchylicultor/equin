@@ -10399,13 +10399,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useHomeApp`
       - `usePathname`
   - Cross-plugin:
-    - Imported by: 49 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
+    - Imported by: 50 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
       - `apps` ×27
       - `apps-core` ×11
       - `ui` ×5
       - `config_v2` ×2
       - `hints`
       - `plugin-meta/exhibits`
+      - `reports/main-thread-stall`
       - `shell/global-action-bar`
       - `tasks/task-draft-form`
   - Exemptions:
@@ -21700,13 +21701,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `slow-ops.ops:rows` (keyed, point)
         - Routes: `POST /api/slow-ops/client`
       - Core:
-        - Uses:
-          - `config_v2.ConfigValues`
-          - `config_v2.defineConfig`
+        - Uses: 21 symbols — full list in [`plugins/debug/plugins/slow-ops/REFERENCE.md`](../plugins/debug/plugins/slow-ops/REFERENCE.md)
+          - `fields` ×3
+          - `infra/runtime-profiler` ×3
+          - `config_v2` ×2
+          - `network/live` ×2
           - `debug/trace/engine.traceListRoute`
-          - `fields.FieldsRecord`
-          - `fields.fieldsToZodObject`
-          - `fields.nullable`
           - `fields/date/config.dateField`
           - `fields/float/config.floatField`
           - `fields/int/config.intField`
@@ -21715,14 +21715,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/uuid/config.uuidField`
           - `infra/entities.entityRef`
           - `infra/host/contention.ContentionSnapshotSchema`
-          - `infra/runtime-profiler.SPAN_MEASURES`
-          - `infra/runtime-profiler.SpanMeasure`
-          - `infra/runtime-profiler.WaitBreakdown`
-          - `network/live.liveCollection`
-          - `network/live.LiveRowsCollection`
           - `primitives/pane.defineRoute`
+          - `primitives/report-sink.defineObservationSink`
         - Exports (types):
           - `CallerRef`
+          - `ClientSlowOpSignal`
           - `MeasureStat`
           - `SlowOp`
           - `SlowOpCaller`
@@ -21736,6 +21733,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `CallerRefSchema`
           - `CLIENT_SIGNAL_THRESHOLD`
+          - `clientSlowOpSink`
           - `loadSeverity`
           - `MAX_CLIENT_SLOW_OP_ITEMS`
           - `OTHER_VARIANT`
@@ -25536,7 +25534,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 169 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 170 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×51
               - `primitives` ×26
               - `page` ×24
@@ -25550,6 +25548,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `shell` ×3
               - `ui` ×3
               - `reorder` ×2
+              - `reports` ×2
               - `build`
               - `database/admin`
               - `hints`
@@ -25558,7 +25557,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live`
               - `plugin-meta/exhibits`
               - `release`
-              - `reports`
               - `runs`
           - Exemptions:
             - Exempts itself from: `agent-origin-safety/no-unmarked-app-fetch` — `e2e/app-fetch.ts`, `e2e/deploy-identity.ts` (sanctioned)
@@ -26042,8 +26040,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `Core.Root`
           - `Core.Boot`
-        - Slot contributors: 42 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `Core.Root` ×41
+        - Slot contributors: 43 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `Core.Root` ×42
           - `Core.Boot` ← `infra.boot-snapshot`
       - Core:
         - Uses:
@@ -36519,11 +36517,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density` ×6
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 166 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 167 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×38
               - `debug` ×35
               - `conversations` ×24
-              - `reports` ×12
+              - `reports` ×13
               - `primitives` ×10
               - `tasks` ×9
               - `plugin-meta` ×8
@@ -36937,10 +36935,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 86 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 87 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `apps` ×16
               - `debug` ×14
-              - `reports` ×13
+              - `reports` ×14
               - `conversations` ×9
               - `primitives` ×9
               - `page` ×6
@@ -39407,15 +39405,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useStorageUsage`
               - `WebStorageSlots`
           - Cross-plugin:
-            - Imported by: 38 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
+            - Imported by: 39 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
               - `primitives` ×14
               - `apps` ×10
               - `conversations` ×5
               - `apps-core` ×2
+              - `reports` ×2
               - `layouts/miller`
               - `map`
               - `page/editor`
-              - `reports/web-storage`
               - `shell/global-action-bar`
               - `tasks/task-draft-form`
               - `ui/theme-engine`
@@ -40104,7 +40102,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SortDirection`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 73 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+        - Imported by: 74 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
           - `primitives` ×34
           - `apps` ×22
           - `page` ×4
@@ -40117,6 +40115,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `integrations/youtube`
           - `layouts/miller`
           - `reorder`
+          - `reports/main-thread-stall`
           - `screenshot`
       - Web:
         - Exports (values):
@@ -40596,7 +40595,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 52 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 53 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `apps` ×11
           - `debug` ×9
           - `database` ×7
@@ -40605,13 +40604,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations` ×2
           - `framework` ×2
           - `primitives` ×2
+          - `reports` ×2
           - `tasks` ×2
           - `backup`
           - `integrations/youtube/audio-fetch`
           - `network/live`
           - `page/annotations/agent-access`
           - `release`
-          - `reports/render-loop`
           - `stats/cost`
           - `upstream`
         - Endpoint callers: `log-files`
@@ -41922,7 +41921,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-md`
           - `ui/tokens/shape --spacing`
-        - Imported by: 174 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Imported by: 175 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `apps` ×64
           - `conversations` ×30
           - `debug` ×26
@@ -41933,6 +41932,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `layouts` ×4
           - `primitives` ×3
           - `infra` ×2
+          - `reports` ×2
           - `stats` ×2
           - `auth`
           - `backup`
@@ -41940,7 +41940,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `code-explorer/commit-detail`
           - `config_v2/settings`
           - `integrations/google-maps`
-          - `reports`
           - `review`
           - `runs`
           - `screenshot`
@@ -42249,7 +42248,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useNow`
     - **`report-sink`** — Web presence for the report-sink primitive; the runtime-agnostic factories live in ./core so both web and server can import them. defineReportSink() is fire-and-forget and holds reports emitted before a handler registers (bounded), replaying them on register; defineRequestSink() returns the handler's answer and never holds. emit() never throws — it is called on error paths.
       - Cross-plugin:
-        - Imported by: `primitives/perfs/latency-signal`
+        - Imported by:
+          - `debug/slow-ops`
+          - `primitives/perfs/latency-signal`
       - Core:
         - Exports (types):
           - `ObservationSink`
@@ -42390,6 +42391,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/live-state`
               - `primitives/scope/app-instance`
               - `reports`
+              - `reports/main-thread-stall`
               - `shell/notifications`
     - **`search`** — Search input primitive: SearchInput component, useTextFilter hook for flat lists, and filterTree/collectAllIds utilities for recursive tree filtering.
       - Web:
@@ -44201,8 +44203,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
   - Web:
     - Slots: `Reports.KindView`
-    - Slot contributors: 28 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `Reports.KindView` ×28
+    - Slot contributors: 29 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `Reports.KindView` ×29
     - Contributes:
       - `IdKinds.Kind` "report"
       - `ConfigV2.WebRegister` "reports"
@@ -44291,8 +44293,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SERVER_REPORT_SOURCES`
       - `submitReport`
   - Cross-plugin:
-    - Imported by: 52 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `reports` ×23
+    - Imported by: 53 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `reports` ×24
       - `debug` ×13
       - `conversations` ×3
       - `database` ×3
@@ -44523,6 +44525,43 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `liveStateStaleDropFingerprint`
           - `LiveStateStaleDropPayloadSchema`
+    - **`main-thread-stall`** — Main-thread stall detector: a Core.Root controller that attaches each tab to one out-of-thread SharedWorker watchdog (1 Hz ping, Web Lock per tab, IndexedDB record of an open stall) and feeds it the tab's app, route pattern, visibility and LoAF long frames; a visible tab silent ≥5 s becomes a main-thread-stall report plus a slow-op span (recovered 1–5 s long frames: slow-op only). In-tab fallback without SharedWorker. Main-thread-stall report kind: validates the stall payload (tab, app, route pattern, duration, how it ended, LoAF attribution, cohort), fingerprints by app + route pattern + top attributed function, and renders the investigation task.
+      - Web:
+        - Contributes:
+          - `Core.Root` → `MainThreadStallController`
+          - `Reports.KindView` → `MainThreadStallKindView`
+        - Uses:
+          - `apps-core.useFocusedAppId`
+          - `primitives/css/badge.Badge`
+          - `primitives/css/inline.Inline`
+          - `primitives/dom/web-storage.defineStore`
+          - `primitives/latest-ref.useLatestRef`
+          - `primitives/log-channels.clientLog`
+          - `primitives/pane.peekRoute`
+          - `primitives/pane.usePathname`
+          - `primitives/scope/tab-id.getTabId`
+          - `reports.report`
+          - `reports.Reports`
+      - Server:
+        - Contributes: `report-kind` "main-thread-stall"
+        - Uses: `reports.ReportKind`
+      - Cross-plugin:
+        - Uses tokens:
+          - `ui/tokens/color-palette --muted-foreground`
+          - `ui/tokens/font-family --font-mono`
+      - Core:
+        - Exports (types):
+          - `MainThreadStallPayload`
+          - `StallFrame`
+          - `StallFrameScript`
+          - `StallTab`
+        - Exports (values):
+          - `mainThreadStallFingerprint`
+          - `MainThreadStallPayloadSchema`
+          - `mainThreadStallSummary`
+          - `StallFrameSchema`
+          - `StallFrameScriptSchema`
+          - `StallTabSchema`
     - **`mutation-errors`** — Warning toast and persistent notification for unhandled TanStack Query mutation errors.
       - Web:
         - Contributes: `Core.Root` → `MutationErrorWatcher`
@@ -49214,7 +49253,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 505 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 506 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×111
               - `conversations` ×89
               - `primitives` ×77
@@ -49223,8 +49262,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta` ×27
               - `ui` ×25
               - `tasks` ×14
+              - `reports` ×13
               - `fields` ×12
-              - `reports` ×12
               - `reorder` ×7
               - `active-data` ×6
               - `build` ×6
@@ -49351,13 +49390,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `fontFamilyGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 149 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
+            - Tokens used by: 150 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
               - `conversations` ×36
               - `apps` ×21
               - `plugin-meta` ×21
               - `debug` ×20
               - `primitives` ×15
-              - `reports` ×6
+              - `reports` ×7
               - `ui` ×5
               - `tasks` ×4
               - `fields` ×3

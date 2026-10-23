@@ -283,13 +283,12 @@ bar).
     - `slow-ops.ops:rows` (keyed, point)
   - Routes: `POST /api/slow-ops/client`
 - Core:
-  - Uses:
-    - `config_v2.ConfigValues`
-    - `config_v2.defineConfig`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `fields` ×3
+    - `infra/runtime-profiler` ×3
+    - `config_v2` ×2
+    - `network/live` ×2
     - `debug/trace/engine.traceListRoute`
-    - `fields.FieldsRecord`
-    - `fields.fieldsToZodObject`
-    - `fields.nullable`
     - `fields/date/config.dateField`
     - `fields/float/config.floatField`
     - `fields/int/config.intField`
@@ -298,14 +297,11 @@ bar).
     - `fields/uuid/config.uuidField`
     - `infra/entities.entityRef`
     - `infra/host/contention.ContentionSnapshotSchema`
-    - `infra/runtime-profiler.SPAN_MEASURES`
-    - `infra/runtime-profiler.SpanMeasure`
-    - `infra/runtime-profiler.WaitBreakdown`
-    - `network/live.liveCollection`
-    - `network/live.LiveRowsCollection`
     - `primitives/pane.defineRoute`
+    - `primitives/report-sink.defineObservationSink`
   - Exports (types):
     - `CallerRef`
+    - `ClientSlowOpSignal`
     - `MeasureStat`
     - `SlowOp`
     - `SlowOpCaller`
@@ -319,6 +315,7 @@ bar).
   - Exports (values):
     - `CallerRefSchema`
     - `CLIENT_SIGNAL_THRESHOLD`
+    - `clientSlowOpSink`
     - `loadSeverity`
     - `MAX_CLIENT_SLOW_OP_ITEMS`
     - `OTHER_VARIANT`

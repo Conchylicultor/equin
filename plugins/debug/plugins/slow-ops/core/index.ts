@@ -29,5 +29,7 @@ export type { SlowOpListRow, SlowOpCallerListRow } from "./resources";
 export { slowOpDetailRoute } from "./routes";
 export { slowOpConfig, CLIENT_SIGNAL_THRESHOLD } from "./config";
 export { MAX_CLIENT_SLOW_OP_ITEMS } from "./limits";
+export { clientSlowOpSink } from "./client-slow-op-sink";
+export type { ClientSlowOpSignal } from "./client-slow-op-sink";
 export { SlowOpReportPayloadSchema } from "./report-payload";
 export type { SlowOpReportPayload } from "./report-payload";

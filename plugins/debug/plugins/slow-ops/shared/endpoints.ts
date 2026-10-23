@@ -34,6 +34,10 @@ export const SlowOpClientItemSchema = z.object({
   // the settle reads as transport time-to-first-data, not resource compute.
   // Kept beside `waits` because it drives the report title.
   transportColdStart: z.boolean().optional(),
+  // When the operation ended (epoch ms), for a signal filed after the fact
+  // (clientSlowOpSink's `endedAt`): the sample lands at this instant instead of
+  // the receipt time. Absent for every live signal.
+  endedAt: z.number().optional(),
   // Additive, backward-compatible client evidence for the `page-load` signal
   // (absent for the others and older clients): the browser's own boot
   // decomposition (perfs/boot-trace), trimmed by toClientBootSection so the

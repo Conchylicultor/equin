@@ -5788,6 +5788,10 @@
       "name": "@singularity/plugin-reports-live-state-stale-drop",
       "version": "0.0.1",
     },
+    "plugins/reports/plugins/main-thread-stall": {
+      "name": "@singularity/plugin-reports-main-thread-stall",
+      "version": "0.0.1",
+    },
     "plugins/reports/plugins/mutation-errors": {
       "name": "@singularity/plugin-reports-mutation-errors",
       "version": "0.0.1",
@@ -9764,6 +9768,8 @@
     "@singularity/plugin-reports-launch-fix": ["@singularity/plugin-reports-launch-fix@workspace:plugins/reports/plugins/launch-fix"],
 
     "@singularity/plugin-reports-live-state-stale-drop": ["@singularity/plugin-reports-live-state-stale-drop@workspace:plugins/reports/plugins/live-state-stale-drop"],
+
+    "@singularity/plugin-reports-main-thread-stall": ["@singularity/plugin-reports-main-thread-stall@workspace:plugins/reports/plugins/main-thread-stall"],
 
     "@singularity/plugin-reports-mutation-errors": ["@singularity/plugin-reports-mutation-errors@workspace:plugins/reports/plugins/mutation-errors"],
 

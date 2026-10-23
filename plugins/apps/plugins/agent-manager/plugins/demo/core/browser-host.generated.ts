@@ -550,6 +550,7 @@ export const browserHost = {
     "reports.endpoint-errors",
     "reports.launch-fix",
     "reports.live-state-stale-drop",
+    "reports.main-thread-stall",
     "reports.mutation-errors",
     "reports.optimistic-divergence",
     "reports.optimistic-rejection",

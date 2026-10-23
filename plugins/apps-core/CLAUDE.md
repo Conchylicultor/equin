@@ -111,13 +111,14 @@ Desktop tile opens a clear desktop.
     - `useHomeApp`
     - `usePathname`
 - Cross-plugin:
-  - Imported by: 49 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 50 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×27
     - `apps-core` ×11
     - `ui` ×5
     - `config_v2` ×2
     - `hints`
     - `plugin-meta/exhibits`
+    - `reports/main-thread-stall`
     - `shell/global-action-bar`
     - `tasks/task-draft-form`
 - Exemptions:

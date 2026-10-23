@@ -517,6 +517,7 @@ export const compositionsConfig = defineConfig({
           "reports.collab-hydration",
           "reports.endpoint-errors",
           "reports.live-state-stale-drop",
+          "reports.main-thread-stall",
           "reports.mutation-errors",
           "reports.optimistic-divergence",
           "reports.optimistic-rejection",
