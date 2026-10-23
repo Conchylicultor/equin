@@ -132,6 +132,7 @@ export const browserHost = {
     "conversations.conversation-view.jsonl-viewer.queued-prompt-card",
     "conversations.conversation-view.jsonl-viewer.request-shape",
     "conversations.conversation-view.jsonl-viewer.row-actions",
+    "conversations.conversation-view.jsonl-viewer.steady-reveal",
     "conversations.conversation-view.jsonl-viewer.subagents",
     "conversations.conversation-view.jsonl-viewer.summary",
     "conversations.conversation-view.jsonl-viewer.system",

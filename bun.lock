@@ -1881,6 +1881,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-row-actions",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/steady-reveal": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-steady-reveal",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-subagents",
       "version": "0.0.1",
@@ -7916,6 +7920,8 @@
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-request-shape": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-request-shape@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/request-shape"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-row-actions": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-row-actions@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-steady-reveal": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-steady-reveal@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/steady-reveal"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-subagents": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-subagents@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents"],
 

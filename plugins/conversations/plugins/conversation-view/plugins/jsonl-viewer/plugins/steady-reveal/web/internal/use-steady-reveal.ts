@@ -6,7 +6,14 @@ import {
   type RefObject,
 } from "react";
 import { stepReveal } from "./reveal-pace";
-import { clearTail, FADE_MS, paintTail, TIER_COUNT } from "./reveal-tail";
+import {
+  clearTail,
+  FADE_MS,
+  paintTail,
+  TIER_COUNT,
+  type RevealTone,
+} from "./reveal-tail";
+import "./stream-tail.css";
 
 /** A reveal moment: `len` characters were shown from time `t` on. */
 interface Mark {
@@ -19,11 +26,13 @@ interface Mark {
  * now: a steady flow over the bursts it arrives in (`stepReveal`), with its
  * newest words fading in on `container` (`paintTail`). Driven by animation
  * frames only while there is text left to reveal or a fade still running.
- * Reduced motion shows the text as it arrives.
+ * Reduced motion shows the text as it arrives. `tone` is the colour the
+ * container's text settles on, which the newest words fade up to.
  */
 export function useSteadyReveal(
   text: string,
   container: RefObject<HTMLElement | null>,
+  tone: RevealTone = "foreground",
 ): number {
   const [reduced] = useState(
     () => matchMedia("(prefers-reduced-motion: reduce)").matches,
@@ -64,7 +73,7 @@ export function useSteadyReveal(
         counts.push(upper - lower);
         upper = lower;
       }
-      paintTail(key, el, counts);
+      paintTail(key, tone, el, counts);
     };
     paintRef.current = (now, len) => {
       committed = len;
@@ -106,7 +115,7 @@ export function useSteadyReveal(
       paintRef.current = null;
       clearTail(key);
     };
-  }, [container, reduced]);
+  }, [container, reduced, tone]);
 
   useEffect(() => {
     textRef.current = text;

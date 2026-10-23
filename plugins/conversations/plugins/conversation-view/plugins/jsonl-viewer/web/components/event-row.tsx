@@ -18,9 +18,10 @@ import { HostedContextProvider, type ContextMember } from "./hosted-context";
  * `standIn`: the event is not in the transcript yet — a sent turn's echo
  * (`EchoRow`) drawn through the renderer its real row will use. It carries no
  * row identity (nothing may anchor or restore a reading position on a row that
- * is about to be replaced) and is inert: its actions would act on a line the
- * transcript does not hold yet. Its action box is still drawn, so the text
- * wraps exactly as it will once the real row takes over.
+ * is about to be replaced) and its actions are inert: they would act on a line
+ * the transcript does not hold yet. Its action box is still drawn, so the text
+ * wraps exactly as it will once the real row takes over. The rest of the row
+ * stays live — a thought being written opens like any card.
  *
  * `beforeWindow`: a real event drawn ahead of the loaded window (the prompt of
  * the turn the window opens inside). It keeps its content identity but has no
@@ -40,9 +41,9 @@ export function EventRow({
       ? { "data-event-index": at.index, "data-event-key": eventKey(event) }
       : "beforeWindow" in at
         ? { "data-event-key": eventKey(event) }
-        : { inert: true };
+        : {};
   return (
-    <EventActionProvider event={event}>
+    <EventActionProvider event={event} inert={"standIn" in at}>
       <RowMarkdownProvider>
         <div className={rowActionsAnchor} {...identity}>
           {hosted ? (

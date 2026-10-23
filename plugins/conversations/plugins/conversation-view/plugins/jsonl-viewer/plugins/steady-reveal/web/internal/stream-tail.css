@@ -11,3 +11,16 @@
 ::highlight(stream-tail-3) {
   color: color-mix(in oklch, var(--foreground) 80%, transparent);
 }
+
+/* The same tiers for secondary text (a thought), fading up to its muted colour. */
+::highlight(stream-tail-muted-1) {
+  color: color-mix(in oklch, var(--muted-foreground) 20%, transparent);
+}
+
+::highlight(stream-tail-muted-2) {
+  color: color-mix(in oklch, var(--muted-foreground) 50%, transparent);
+}
+
+::highlight(stream-tail-muted-3) {
+  color: color-mix(in oklch, var(--muted-foreground) 80%, transparent);
+}

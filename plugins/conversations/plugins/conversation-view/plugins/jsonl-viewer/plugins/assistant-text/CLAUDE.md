@@ -20,13 +20,13 @@
     - `conversations/conversation-view/jsonl-viewer/row-actions.CopyTextAction`
     - `conversations/conversation-view/jsonl-viewer/row-actions.EventRowActions`
     - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
+    - `conversations/conversation-view/jsonl-viewer/steady-reveal.useSteadyReveal`
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
     - `primitives/markdown.Markdown`
     - `primitives/select-scope.ContentScope`
 - Cross-plugin:
   - Uses tokens:
-    - `ui/tokens/color-palette --foreground`
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
 

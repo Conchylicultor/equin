@@ -9,14 +9,23 @@
 /** How long a revealed character takes to reach full colour. */
 export const FADE_MS = 360;
 
-/** Faintest first — the `::highlight(stream-tail-N)` rules in stream-tail.css. */
-const TIER_NAMES = ["stream-tail-1", "stream-tail-2", "stream-tail-3"] as const;
+/**
+ * The colour the text settles on, which its newest characters fade up to:
+ * the body text's (`foreground`) or a secondary text's (`muted`).
+ */
+export type RevealTone = "foreground" | "muted";
+
+/** Faintest first — the `::highlight(stream-tail-…)` rules in stream-tail.css. */
+const TIER_NAMES: Record<RevealTone, readonly string[]> = {
+  foreground: ["stream-tail-1", "stream-tail-2", "stream-tail-3"],
+  muted: ["stream-tail-muted-1", "stream-tail-muted-2", "stream-tail-muted-3"],
+};
 
 /**
- * Every live painter's ranges per tier. `CSS.highlights` is one registry per
- * document, and two panes can each be streaming a message.
+ * Every live painter's tone and ranges per tier. `CSS.highlights` is one
+ * registry per document, and two panes can each be streaming a message.
  */
-const painters = new Map<symbol, Range[][]>();
+const painters = new Map<symbol, { tone: RevealTone; tiers: Range[][] }>();
 
 function highlightRegistry(): HighlightRegistry {
   // Supported by every target (Chromium 105, Safari 17.2, Firefox 140).
@@ -31,11 +40,15 @@ function highlightRegistry(): HighlightRegistry {
 
 function sync(): void {
   const registry = highlightRegistry();
-  TIER_NAMES.forEach((name, tier) => {
-    const ranges = [...painters.values()].flatMap((r) => r[tier] ?? []);
-    if (ranges.length === 0) registry.delete(name);
-    else registry.set(name, new Highlight(...ranges));
-  });
+  for (const [tone, names] of Object.entries(TIER_NAMES)) {
+    names.forEach((name, tier) => {
+      const ranges = [...painters.values()].flatMap((p) =>
+        p.tone === tone ? (p.tiers[tier] ?? []) : [],
+      );
+      if (ranges.length === 0) registry.delete(name);
+      else registry.set(name, new Highlight(...ranges));
+    });
+  }
 }
 
 /** The DOM point `fromEnd` characters before the end of `nodes`' text. */
@@ -61,6 +74,7 @@ function pointFromEnd(
  */
 export function paintTail(
   key: symbol,
+  tone: RevealTone,
   container: HTMLElement,
   counts: readonly number[],
 ): void {
@@ -83,7 +97,7 @@ export function paintTail(
     range.setEnd(to.node, to.offset);
     tiers.push(range.collapsed ? [] : [range]);
   }
-  painters.set(key, tiers);
+  painters.set(key, { tone, tiers });
   sync();
 }
 
@@ -92,4 +106,4 @@ export function clearTail(key: symbol): void {
   sync();
 }
 
-export const TIER_COUNT = TIER_NAMES.length;
+export const TIER_COUNT = TIER_NAMES.foreground.length;

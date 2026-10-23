@@ -13,8 +13,7 @@ import { EventRowActions } from "@plugins/conversations/plugins/conversation-vie
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { useSteadyReveal } from "../internal/use-steady-reveal";
-import "./stream-tail.css";
+import { useSteadyReveal } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/steady-reveal/web";
 
 type AssistantTextEvent = Extract<JsonlEvent, { kind: "assistant-text" }>;
 

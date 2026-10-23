@@ -75,6 +75,11 @@ export interface CollapsibleCardProps {
   error?: boolean;
   /** Open on first render. Default false. */
   defaultOpen?: boolean;
+  /** Controlled open state — for a card whose header reads it (one that
+   *  drops its `summary` while the body shows the same text). Pair with
+   *  `onOpenChange`; omit both for the card's own state. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   className?: string;
   /** Collapsible body. */
   children?: ReactNode;
@@ -109,10 +114,16 @@ export function CollapsibleCard({
   trailing,
   error,
   defaultOpen,
+  open: controlledOpen,
+  onOpenChange,
   className,
   children,
 }: CollapsibleCardProps) {
-  const { open, triggerProps, contentProps } = useCollapsible({ defaultOpen });
+  const { open, triggerProps, contentProps } = useCollapsible({
+    defaultOpen,
+    open: controlledOpen,
+    onOpenChange,
+  });
   const sideContent = aside ?? null;
   return (
     <Card

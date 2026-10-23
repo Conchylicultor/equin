@@ -1,19 +1,31 @@
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { RowActions } from "@plugins/primitives/plugins/row-actions/web";
 import { JsonlRowActions } from "../slots";
 
-const EventActionContext = createContext<JsonlEvent | null>(null);
+const EventActionContext = createContext<{
+  event: JsonlEvent;
+  inert: boolean;
+} | null>(null);
 
+/**
+ * `inert`: the row is a stand-in for a line the transcript does not hold yet,
+ * so its actions would act on nothing — the strip is still drawn (the row lays
+ * out exactly as it will once the real row takes over) but takes no input. The
+ * rest of the row stays live: a stand-in card still opens.
+ */
 export function EventActionProvider({
   event,
+  inert = false,
   children,
 }: {
   event: JsonlEvent;
+  inert?: boolean;
   children: ReactNode;
 }) {
+  const value = useMemo(() => ({ event, inert }), [event, inert]);
   return (
-    <EventActionContext.Provider value={event}>
+    <EventActionContext.Provider value={value}>
       {children}
     </EventActionContext.Provider>
   );
@@ -40,15 +52,25 @@ export function EventRowActions({
   className?: string;
   float?: boolean;
 }) {
-  const event = useContext(EventActionContext);
+  const ctx = useContext(EventActionContext);
   const actions = JsonlRowActions.Item.useContributions();
-  if (!event) return null;
+  if (!ctx) return null;
   if (actions.length === 0) return null;
-  return (
+  const { event, inert } = ctx;
+  const strip = (
     <RowActions pin={null} float={float} className={className}>
       <JsonlRowActions.Item.Render>
         {(item) => <item.component event={event} />}
       </JsonlRowActions.Item.Render>
     </RowActions>
+  );
+  // `contents`: the wrapper draws no box, so the strip floats / sits in its
+  // track exactly as it does on a real row.
+  return inert ? (
+    <div inert className="contents">
+      {strip}
+    </div>
+  ) : (
+    strip
   );
 }

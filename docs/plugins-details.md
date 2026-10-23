@@ -14624,13 +14624,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversation-view/jsonl-viewer/row-actions.CopyTextAction`
                   - `conversations/conversation-view/jsonl-viewer/row-actions.EventRowActions`
                   - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
+                  - `conversations/conversation-view/jsonl-viewer/steady-reveal.useSteadyReveal`
                   - `primitives/css/text.Text`
                   - `primitives/icon-button.IconButton`
                   - `primitives/markdown.Markdown`
                   - `primitives/select-scope.ContentScope`
               - Cross-plugin:
                 - Uses tokens:
-                  - `ui/tokens/color-palette --foreground`
                   - `ui/tokens/density --space-md`
                   - `ui/tokens/density --space-sm`
             - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.
@@ -14638,12 +14638,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes: `JsonlViewer.EventRenderer` "assistant-thinking" → `AssistantThinkingRow`
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
+                  - `conversations/conversation-view/jsonl-viewer.useStreamingRow`
                   - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
+                  - `conversations/conversation-view/jsonl-viewer/steady-reveal.useSteadyReveal`
+                  - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
+                  - `primitives/loading.Loading`
               - Cross-plugin:
                 - Uses tokens:
                   - `ui/tokens/color-palette --muted-foreground`
                   - `ui/tokens/font-family --font-mono`
+                  - `ui/tokens/shape --spacing`
             - **`attachment`** — Renders attachment JSONL events with subtype dispatch to per-attachment renderer plugins.
               - Web:
                 - Slots: `JsonlViewerAttachment.Renderer`
@@ -15515,6 +15520,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversation-view/jsonl-viewer/user-image`
                   - `conversations/conversation-view/jsonl-viewer/user-text`
                   - `conversations/conversation-view/rewind`
+            - **`steady-reveal`** — Steady reveal for text an agent is still writing: useSteadyReveal drains a growing text at an even pace over the bursts it arrives in, its newest words fading in through a soft tail painted with the CSS Custom Highlight API, in the foreground or muted tone. Shared by the streaming reply and the streaming thought.
+              - Cross-plugin:
+                - Uses tokens:
+                  - `ui/tokens/color-palette --foreground`
+                  - `ui/tokens/color-palette --muted-foreground`
+                - Imported by:
+                  - `conversations/conversation-view/jsonl-viewer/assistant-text`
+                  - `conversations/conversation-view/jsonl-viewer/assistant-thinking`
+              - Web:
+                - Exports (types): `RevealTone`
+                - Exports (values): `useSteadyReveal`
             - **`subagents`** — The sub-agent surfaces: how one sub-agent is going (state, elapsed, the one thing it most recently did) for the card that launched it, and the pane body that shows its write-up and its own live transcript, drawn by the conversation's own TranscriptView. The reads behind the two live values the machine half serves: what every sub-agent is doing right now (one bounded tail read per change), and one sub-agent's own transcript, parsed by the same reader as the main conversation; it serves the parent-transcript facts sub-agent state joins on (Agent / Workflow calls, task notifications, idle and resume times), folded over the whole parent transcript.
               - Server:
                 - Contributes:
@@ -37286,9 +37302,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 408 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 409 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×107
-              - `conversations` ×64
+              - `conversations` ×65
               - `primitives` ×54
               - `debug` ×37
               - `ui` ×30
@@ -40372,12 +40388,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 197 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 198 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×64
           - `ui` ×21
+          - `conversations` ×19
           - `debug` ×19
           - `primitives` ×19
-          - `conversations` ×18
           - `tasks` ×13
           - `page` ×10
           - `build` ×4
@@ -49496,8 +49512,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 423 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
-              - `conversations` ×93
+            - Tokens used by: 424 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+              - `conversations` ×94
               - `apps` ×85
               - `primitives` ×70
               - `page` ×35
