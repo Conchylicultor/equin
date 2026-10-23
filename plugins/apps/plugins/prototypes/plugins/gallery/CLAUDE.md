@@ -111,7 +111,7 @@ honest — the prototype does exist — and it self-corrects.
 
 ## Plugin reference
 
-- Description: Prototypes gallery list pane — one card per prototype over its rendered preview, on the prototype viewer's grid, with a Recently edited list; grouped (Pinned / In progress / Done) and filterable by a pin and a Done circle on every card and row (hover actions that stay shown while set; also in the detail pane's header) — plus New prototype, which mints the folder before launching the agent that designs it.
+- Description: Prototypes gallery list pane — one card per prototype over its rendered preview, on the prototype viewer's grid, with a Recently edited list; grouped (Pinned / In progress / Done) and filterable by a pin and a Done circle on every card and row (hover actions that stay shown while set; also in the detail pane's header), a confirmed Delete on every card and in the detail header (the folder moves to the data dir's _trash/) — plus New prototype, which mints the folder before launching the agent that designs it.
 - Web:
   - Slots:
     - `prototypesGalleryPane.Actions`
@@ -124,9 +124,11 @@ honest — the prototype does exist — and it self-corrects.
     - `Pane.Register` "prototypes-gallery"
     - `prototypeDetailPane.Actions` "pin" → `PinHeaderAction`
     - `prototypeDetailPane.Actions` "done" → `DoneHeaderAction`
+    - `prototypeDetailPane.Actions` "delete" → `DeleteHeaderAction`
     - `PrototypeCardActions` "pin" → `PinCardAction`
     - `PrototypeCardActions` "done" → `DoneCardAction`
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `PrototypeCardActions` "delete" → `DeleteCardAction`
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/prototypes/canvas` ×4
     - `infra/endpoints` ×4
     - `primitives/data-view` ×3
@@ -138,6 +140,7 @@ honest — the prototype does exist — and it self-corrects.
     - `primitives/css/badge.Badge`
     - `primitives/icon-button.IconButton`
     - `primitives/launch.LaunchAgentPopover`
+    - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
     - `primitives/relative-time.RelativeTime`
     - `shell/notifications.useToast`
     - `ui/icons.Icon`

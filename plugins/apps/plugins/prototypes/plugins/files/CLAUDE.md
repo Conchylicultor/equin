@@ -364,6 +364,17 @@ Design: `research/2026-08-15-global-prototypes-self-contained.md`.
   goes through `implement()`.
 - `POST /api/prototypes` → `{ id }`, body `{ title? }`. Mints a folder from the
   template. JSON, so it goes through `implement()` too.
+- `DELETE /api/prototypes/:name` → 204 (`deletePrototype`, via `implement()`).
+  A soft delete: `shared/trash.ts` renames the folder to `_trash/<name>/`
+  (atomic, `_`-prefixed so never listed or served). `_history/<name>.git`,
+  `_picks/` and `_status/` are left in place, so moving the folder back by hand
+  restores it whole. Like the mint it notifies nothing — the folder leaving the
+  watched tree re-broadcasts the list. 404 for an unknown prototype; **403 for
+  an automated session**: the tree is host-global (a worktree e2e run would
+  delete the user's prototype) and the agent-write ledger snapshots files, not
+  a moved folder, so the write could not be reverted. The gallery's card and
+  the detail header both offer it, behind a confirm dialog
+  (`gallery/web/components/delete-prototype.tsx`).
 - `GET /api/prototypes/:name` → **302** to `…/:name/index.html`, carrying the
   query across. Only for hand-typed URLs; nothing in the app links here.
 - `GET /api/prototypes/:name/:file` → `prototypes/<name>/<file>` verbatim,
@@ -483,7 +494,7 @@ for the `checkpoints` plugin's end-of-turn job.
 
 ## Plugin reference
 
-- Description: Registers the prototype id kind (`proto-…`) in the browser's id-kind registry. Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), mints new prototypes into it from the running checkout's prototypes/_template/, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html> (data-* for a choice, a --<name> custom property for a color), stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), stores whether the user marked each prototype Done or pinned it as one shared record under _status/ (the prototypes.statuses resource and its PUT, undone the same way), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
+- Description: Registers the prototype id kind (`proto-…`) in the browser's id-kind registry. Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), mints new prototypes into it from the running checkout's prototypes/_template/, deletes one by moving its folder into _trash/ (refused for automated sessions), declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html> (data-* for a choice, a --<name> custom property for a color), stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), stores whether the user marked each prototype Done or pinned it as one shared record under _status/ (the prototypes.statuses resource and its PUT, undone the same way), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
 - Web:
   - Contributes: `IdKinds.Kind` "proto"
   - Uses: `ids.IdKinds`
@@ -518,6 +529,7 @@ for the `checkpoints` plugin's end-of-turn job.
   - Routes:
     - `GET /api/prototypes`
     - `POST /api/prototypes`
+    - `DELETE /api/prototypes/:name`
     - `POST /api/prototypes/:name/versions/:sha/restore`
     - `PUT /api/prototypes/:name/picks`
     - `PUT /api/prototypes/:name/status`
@@ -557,6 +569,7 @@ for the `checkpoints` plugin's end-of-turn job.
     - `colorPickValue`
     - `createPrototype`
     - `DEFAULT_PROTOTYPE_VIEWPORT`
+    - `deletePrototype`
     - `describeOptionValues`
     - `foldOptions`
     - `groupOptions`
@@ -626,6 +639,6 @@ for the `checkpoints` plugin's end-of-turn job.
     - `apps/prototypes/thumbnails`
     - `conversations/conversation-view/artifacts/prototype`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/paths.ts`, `server/internal/picks.ts`, `server/internal/signature.ts`, `server/internal/status.ts`, `server/internal/tree-path.ts`, `shared/folder-signature.ts`, `shared/history/lock.ts`, `shared/history/store.ts`, `shared/list-metas.ts`, `shared/mint.ts`, `shared/read-folder.ts`, `shared/record-store.ts`, `shared/template.ts` (debt)
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/paths.ts`, `server/internal/picks.ts`, `server/internal/signature.ts`, `server/internal/status.ts`, `server/internal/tree-path.ts`, `shared/folder-signature.ts`, `shared/history/lock.ts`, `shared/history/store.ts`, `shared/list-metas.ts`, `shared/mint.ts`, `shared/read-folder.ts`, `shared/record-store.ts`, `shared/template.ts`, `shared/trash.ts` (debt)
 
 <!-- AUTOGENERATED:END -->

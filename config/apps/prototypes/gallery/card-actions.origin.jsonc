@@ -1,4 +1,4 @@
-// @hash 4eda8e4bede4
+// @hash 958dc4f768f5
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -9,6 +9,7 @@
   "items": [
     "apps.prototypes.gallery:pin",
     "apps.prototypes.gallery:done",
+    "apps.prototypes.gallery:delete",
     "apps.prototypes.present:open-new-tab"
   ]
 }

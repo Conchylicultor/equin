@@ -17,6 +17,7 @@ export default [
       "shared/read-folder.ts",
       "shared/record-store.ts",
       "shared/template.ts",
+      "shared/trash.ts",
     ],
     kind: "debt",
     task: "task-1792338443-riwqev",

@@ -159,7 +159,7 @@ readings use it:
     - `apps/file-explorer/git` (2 debt)
     - `apps/pages/content-search` (1 debt)
     - `apps/places/place-details` (1 debt)
-    - `apps/prototypes/files` (13 debt)
+    - `apps/prototypes/files` (14 debt)
     - `apps/prototypes/thumbnails` (3 debt)
     - `apps/sonata/covers` (1 debt)
     - `apps/sonata/sources/midi` (1 debt)

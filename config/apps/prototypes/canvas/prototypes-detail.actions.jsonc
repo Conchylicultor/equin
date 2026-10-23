@@ -1,4 +1,4 @@
-// @hash 36e515df43ab
+// @hash ced0df06c844
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -23,7 +23,9 @@
 // prototype itself — `copy-id` (copy its id for a prompt or a CLI command),
 // `pin` (pin it to the gallery's Pinned section) and `done` (the Done checkbox),
 // the last two the same shared flags as the gallery card's. All keep one size
-// in every state, so a click never moves the header.
+// in every state, so a click never moves the header. `delete` comes last, after
+// a hairline rule: the one destructive action (confirmed, then back to the
+// gallery), kept apart from the toggles so it is not hit for one of them.
 //
 // The canvas's own controls are not here: adding a frame (the rail on the last
 // frame's right edge) and the Side by side / Swipe switch (between two frames)
@@ -33,6 +35,8 @@
     "primitives.pane:title",
     "apps.prototypes.copy-id:copy-id",
     "apps.prototypes.gallery:pin",
-    "apps.prototypes.gallery:done"
+    "apps.prototypes.gallery:done",
+    { "type": "divider", "id": "before-delete" },
+    "apps.prototypes.gallery:delete"
   ]
 }

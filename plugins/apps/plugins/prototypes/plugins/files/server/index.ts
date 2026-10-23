@@ -2,6 +2,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { IdKinds } from "@plugins/ids/server";
 import {
   createPrototype,
+  deletePrototype,
   listPrototypes,
   PROTOTYPE_ASSET_ROUTE,
   PROTOTYPE_FILE_ROUTE,
@@ -13,6 +14,7 @@ import {
 } from "../core";
 import {
   handleCreate,
+  handleDelete,
   handleList,
   handlePrototypeAsset,
   handlePrototypeFile,
@@ -51,10 +53,11 @@ export default {
   // string literal — so this one field cannot interpolate
   // PROTOTYPES_DIR_DISPLAY the way every other message here does.
   description:
-    "Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), mints new prototypes into it from the running checkout's prototypes/_template/, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html> (data-* for a choice, a --<name> custom property for a color), stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), stores whether the user marked each prototype Done or pinned it as one shared record under _status/ (the prototypes.statuses resource and its PUT, undone the same way), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).",
+    "Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), mints new prototypes into it from the running checkout's prototypes/_template/, deletes one by moving its folder into _trash/ (refused for automated sessions), declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html> (data-* for a choice, a --<name> custom property for a color), stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), stores whether the user marked each prototype Done or pinned it as one shared record under _status/ (the prototypes.statuses resource and its PUT, undone the same way), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).",
   httpRoutes: {
     [listPrototypes.route]: handleList,
     [createPrototype.route]: handleCreate,
+    [deletePrototype.route]: handleDelete,
     [PROTOTYPE_FILE_ROUTE]: handlePrototypeFile,
     [PROTOTYPE_ASSET_ROUTE]: handlePrototypeAsset,
     [PROTOTYPE_VERSION_FILE_ROUTE]: handlePrototypeVersionFile,

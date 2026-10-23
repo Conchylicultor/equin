@@ -32,6 +32,10 @@ export const prototypesIcons = defineIconFamily({
     done: {
       body: '<circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.2l2.4 2.4 4.6-4.8"/>',
     },
+    // Delete: a bin with its lid, drawn in the mockup's line style.
+    trash: {
+      body: '<path d="M4.5 7h15M9.5 7V5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v2M6.5 7l.8 11.2a2 2 0 0 0 2 1.8h5.4a2 2 0 0 0 2-1.8L17.5 7M10.5 11v5M13.5 11v5"/>',
+    },
     // Mock `cl` / `cr` / `cd`.
     "chevron-left": { body: '<path d="M15 18l-6-6 6-6"/>' },
     "chevron-right": { body: '<path d="M9 18l6-6-6-6"/>' },
@@ -129,6 +133,7 @@ export const prototypesIcons = defineIconFamily({
     keep: "pin",
     "push-pin": "pin",
     "check-circle": "done",
+    delete: "trash",
     // Frame header and add rail.
     "open-in-new": "external",
     fullscreen: "present",

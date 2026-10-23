@@ -75,6 +75,7 @@ appears (YAGNI).
     - `apps/places/places-map`
     - `apps/places/tag-manager`
     - `apps/prototypes/canvas`
+    - `apps/prototypes/gallery`
     - `build/serve-composition`
     - `conversations/conversation-view/rewind`
     - `ui/theme-engine/theme-gallery`

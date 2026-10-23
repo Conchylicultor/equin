@@ -11,6 +11,7 @@ export {
   prototypeVersionUrl,
   listPrototypes,
   createPrototype,
+  deletePrototype,
 } from "./prototypes";
 export type { PrototypeMeta } from "./prototypes";
 export {

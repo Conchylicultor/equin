@@ -218,3 +218,16 @@ export const createPrototype = defineEndpoint({
   body: z.object({ title: z.string().optional() }),
   response: z.object({ id: z.string() }),
 });
+
+/**
+ * Delete a prototype: move its folder out of the gallery into the data dir's
+ * `_trash/` (`shared/trash.ts`). A soft delete — the folder on disk is the only
+ * copy of the work, so it is set aside rather than erased, and a mistaken
+ * delete is undone by moving `_trash/<id>` back. 404 for an unknown prototype;
+ * 403 for an automated session, whose write could not be put back (the
+ * agent-write ledger snapshots files, not folders) on a tree every worktree
+ * shares.
+ */
+export const deletePrototype = defineEndpoint({
+  route: "DELETE /api/prototypes/:name",
+});

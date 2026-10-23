@@ -1,4 +1,4 @@
-// @hash 36e515df43ab
+// @hash ced0df06c844
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -10,6 +10,7 @@
     "apps.prototypes.copy-id:copy-id",
     "apps.prototypes.gallery:pin",
     "apps.prototypes.gallery:done",
+    "apps.prototypes.gallery:delete",
     "primitives.pane:title"
   ]
 }

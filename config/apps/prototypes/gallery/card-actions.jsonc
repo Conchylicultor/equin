@@ -1,4 +1,4 @@
-// @hash 4eda8e4bede4
+// @hash 958dc4f768f5
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -8,11 +8,13 @@
 //   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
 // The card's actions, left to right on the cover's top-right chip: `pin` (to
 // the gallery's Pinned section), `done` (the Done checkbox) — both stay
-// visible while set — then `open-new-tab` (the chromeless present page).
+// visible while set — then `open-new-tab` (the chromeless present page), and
+// `delete` last (confirmed), at the far end from the toggles.
 {
   "items": [
     "apps.prototypes.gallery:pin",
     "apps.prototypes.gallery:done",
-    "apps.prototypes.present:open-new-tab"
+    "apps.prototypes.present:open-new-tab",
+    "apps.prototypes.gallery:delete"
   ]
 }
