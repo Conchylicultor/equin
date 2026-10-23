@@ -9,6 +9,7 @@
   - Contributes:
     - `PromptEditorSlots.FloatingAction` → `PushAndExitButton`
     - `ConfigV2.WebRegister` "config"
+    - `Hints.Hint` "push-and-exit.drop-and-exit"
     - `Hints.Hint` "push-and-exit.exit"
     - `Hints.Hint` "push-and-exit.go"
     - `Hints.Hint` "push-and-exit.push-and-exit"
@@ -56,6 +57,7 @@
     - `hints.defineHintAnchor`
   - Exports (values):
     - `closeHint`
+    - `dropAndCloseHint`
     - `goHint`
     - `mainActionAnchor`
     - `pushAndCloseHint`

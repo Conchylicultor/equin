@@ -16,6 +16,7 @@ import { isAgentBusy, stopConversation } from "@plugins/conversations/core";
 import { useHintAnchor, useHintMoment } from "@plugins/hints/web";
 import {
   closeHint,
+  dropAndCloseHint,
   goHint,
   mainActionAnchor,
   pushAndCloseHint,
@@ -126,6 +127,7 @@ const ICONS: Record<Mode, IconRef> = {
   exit: logoutIcon,
   "exit-error": errorIcon,
   "exit-unavailable": logoutIcon,
+  "exit-sibling": logoutIcon,
   "drop-and-exit": deleteForeverIcon,
 };
 
@@ -143,6 +145,7 @@ const BUTTON_CLASS: Record<Mode, string> = {
   // always safe.
   "exit-error": PRIMARY,
   "exit-unavailable": PRIMARY,
+  "exit-sibling": PRIMARY,
   "drop-and-exit": PRIMARY,
 };
 
@@ -156,6 +159,7 @@ const LABELS: Record<Mode, string> = {
   exit: "Close",
   "exit-error": "Close (state unknown)",
   "exit-unavailable": "Close",
+  "exit-sibling": "Close",
   "drop-and-exit": "Drop & Close",
 };
 
@@ -268,6 +272,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   useHintMoment(pushAndCloseHint, finished && mode === "push-and-exit");
   useHintMoment(closeHint, finished && mode === "exit");
   useHintMoment(goHint, finished && mode === "go");
+  useHintMoment(dropAndCloseHint, finished && mode === "drop-and-exit");
 
   if (!conversation || !live) return null;
 
@@ -354,6 +359,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
       case "exit":
       case "exit-error":
       case "exit-unavailable":
+      case "exit-sibling":
         return {
           verb: "Close",
           successToast: "Conversation closed",

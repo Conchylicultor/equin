@@ -205,7 +205,7 @@ describe("deriveExitMode", () => {
 
   test("measured 'nothing at stake' with an active sibling: plain Close", () => {
     expect(deriveExitMode(input(settled({ hasSibling: true })))).toEqual({
-      mode: "exit",
+      mode: "exit-sibling",
       provisional: false,
     });
   });
@@ -336,7 +336,7 @@ describe("deriveExitMode", () => {
     expect(
       deriveExitMode({ ...input(loading), exit: noGit(undelivered, true) })
         .mode,
-    ).toBe("exit");
+    ).toBe("exit-sibling");
     // Restore needs no git: a done scratch conversation can still be resumed.
     expect(
       deriveExitMode({

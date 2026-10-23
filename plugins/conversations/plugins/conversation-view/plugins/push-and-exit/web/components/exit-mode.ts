@@ -23,6 +23,7 @@ export type Mode =
   | "exit"
   | "exit-error"
   | "exit-unavailable"
+  | "exit-sibling"
   | "drop-and-exit"
   | "go"
   | "restore"
@@ -218,9 +219,10 @@ function fromStanding(work: WorkPayload, hasSibling: boolean): ModeResult {
       return { mode: "exit", provisional: false };
     // Nothing at stake, measured. An active sibling in the same worktree still
     // means the task is in use, so only a lone dead-end attempt offers the drop.
+    // That Close is its own mode: unlike a landed Close, nothing was shipped.
     case "none":
       return {
-        mode: hasSibling ? "exit" : "drop-and-exit",
+        mode: hasSibling ? "exit-sibling" : "drop-and-exit",
         provisional: false,
       };
   }

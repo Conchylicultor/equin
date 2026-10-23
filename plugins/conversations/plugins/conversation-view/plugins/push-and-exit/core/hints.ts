@@ -11,16 +11,17 @@ export const pushAndCloseHint = defineHint({
   id: "push-and-exit.push-and-exit",
   anchor: mainActionAnchor,
   title: "Push & Close",
-  body: "Happy with it? This ships the change to your equin and closes the conversation once it's live. Not quite right? Reply instead — the agent keeps going.",
+  body: "Looks good? Ship it to your equin and mark the conversation as complete. Want changes instead? Just reply — the agent keeps going.",
   placement: "top",
   order: 2,
 });
 
+/** Close after the change landed — not the side-chat Close (`exit-sibling`), which has no tip. */
 export const closeHint = defineHint({
   id: "push-and-exit.exit",
   anchor: mainActionAnchor,
   title: "Close",
-  body: "Nothing to ship here. A conversation stays in your queue until you close it — so nothing you launch gets lost.",
+  body: "Changes have been pushed to your equin. Close the conversation to mark it complete.",
   placement: "top",
   order: 2,
 });
@@ -29,7 +30,16 @@ export const goHint = defineHint({
   id: "push-and-exit.go",
   anchor: mainActionAnchor,
   title: "Go",
-  body: "The agent wrote a plan first. Read it, then let it build — or reply to change the plan.",
+  body: "The agent proposed a plan. Click Go to let it build — or reply to change the plan first.",
+  placement: "top",
+  order: 2,
+});
+
+export const dropAndCloseHint = defineHint({
+  id: "push-and-exit.drop-and-exit",
+  anchor: mainActionAnchor,
+  title: "Drop & Close",
+  body: "To keep your queue clean, drop a conversation once the agent has given you all the answers you need. Want to build something instead? Just reply to continue the conversation.",
   placement: "top",
   order: 2,
 });

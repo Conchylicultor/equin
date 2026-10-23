@@ -16882,6 +16882,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `PromptEditorSlots.FloatingAction` → `PushAndExitButton`
               - `ConfigV2.WebRegister` "config"
+              - `Hints.Hint` "push-and-exit.drop-and-exit"
               - `Hints.Hint` "push-and-exit.exit"
               - `Hints.Hint` "push-and-exit.go"
               - `Hints.Hint` "push-and-exit.push-and-exit"
@@ -16929,6 +16930,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `hints.defineHintAnchor`
             - Exports (values):
               - `closeHint`
+              - `dropAndCloseHint`
               - `goHint`
               - `mainActionAnchor`
               - `pushAndCloseHint`
