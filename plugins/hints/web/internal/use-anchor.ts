@@ -6,14 +6,20 @@ import { rectOf, sameRect, type HintRect } from "./rect";
 
 /**
  * The element on the page for `key` (null key or none rendered: null).
- * Re-resolved when an anchor registers or leaves, and when the focused app
- * changes — the moment a keep-alive tab's copy stops (or starts) rendering.
+ * Re-resolved when an anchor registers or leaves, enters or leaves the
+ * viewport, and when the focused app changes — the moment a keep-alive tab's
+ * copy stops (or starts) rendering. `onScreen`: only one in the viewport.
  */
-export function useAnchorElement(key: string | null): HTMLElement | null {
+export function useAnchorElement(
+  key: string | null,
+  opts?: { onScreen?: boolean },
+): HTMLElement | null {
   // Read for its re-render only: React calls the snapshot below on every
   // render, so a focus change re-resolves which copy is rendered.
   useFocusedAppId();
-  const resolve = () => (key === null ? null : resolveAnchorElement(key));
+  const onScreen = opts?.onScreen ?? false;
+  const resolve = () =>
+    key === null ? null : resolveAnchorElement(key, { onScreen });
   return useSyncExternalStore(subscribeAnchors, resolve, resolve);
 }
 

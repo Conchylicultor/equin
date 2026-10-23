@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
+import {
+  createInViewWatcher,
+  type InViewWatcher,
+} from "@plugins/primitives/plugins/dom/plugins/in-view/web";
 import { useReportPopupOpen } from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
 import { targetKey, type HintTarget } from "../../core";
 
@@ -58,7 +62,34 @@ function recheckRendered(el: HTMLElement): void {
   notify();
 }
 
+/**
+ * Registered elements currently intersecting the viewport. A contextual tip
+ * shows only on an anchor the user can see — a chip scrolled out of the
+ * transcript would leave the card pointing at nothing — so this is watched
+ * for every anchor, through ONE page-wide in-view watcher, and a flip
+ * notifies like any other anchor change. (A tour step scrolls its target
+ * into view instead; it does not read this.)
+ */
+const onScreen = new WeakSet<HTMLElement>();
+let screenWatcher: InViewWatcher | null = null;
+
+function watchOnScreen(el: HTMLElement): void {
+  screenWatcher ??= createInViewWatcher((entries) => {
+    let changed = false;
+    for (const entry of entries) {
+      const target = entry.target as HTMLElement;
+      if (entry.isIntersecting === onScreen.has(target)) continue;
+      if (entry.isIntersecting) onScreen.add(target);
+      else onScreen.delete(target);
+      changed = true;
+    }
+    if (changed) notify();
+  });
+  screenWatcher.observe(el);
+}
+
 function registerAnchor(key: string, el: HTMLElement): () => void {
+  watchOnScreen(el);
   elements.set(key, [...(elements.get(key) ?? []), el]);
   lastRendered.set(el, isRendered(el));
   notify();
@@ -75,13 +106,21 @@ function isRendered(el: HTMLElement): boolean {
   return el.checkVisibility({ visibilityProperty: true });
 }
 
-/** The newest rendered element registered under `key`, or null when none is on the page. */
-export function resolveAnchorElement(key: string): HTMLElement | null {
+/**
+ * The newest rendered element registered under `key`, or null when none is on
+ * the page. `onScreen`: only one intersecting the viewport (a tip's anchor).
+ */
+export function resolveAnchorElement(
+  key: string,
+  opts?: { onScreen?: boolean },
+): HTMLElement | null {
   const list = elements.get(key);
   if (!list) return null;
   for (let i = list.length - 1; i >= 0; i--) {
     const el = list[i]!;
-    if (isRendered(el)) return el;
+    if (!isRendered(el)) continue;
+    if (opts?.onScreen && !onScreen.has(el)) continue;
+    return el;
   }
   return null;
 }

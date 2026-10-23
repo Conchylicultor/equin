@@ -13,3 +13,4 @@ export {
   layoutToggleLabel,
 } from "./frame-attrs";
 export type { CanvasFrameStatus, CanvasLayout } from "./frame-attrs";
+export { optionsChipAnchor, variantsHint } from "./hints";

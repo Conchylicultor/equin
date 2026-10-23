@@ -44,9 +44,12 @@ derives from the kind; nothing here names a family.
 
 ## Plugin reference
 
-- Description: Id chips, web half: idChip({ presenter, surfaces, component? }) mints a kind's IdKinds.Presenter together with its inline chip — the pattern derived from the kind (never re-typed), a generic title + icon chip unless the family brings its own component. rowReferent folds a live by-id row read into a presenter's referent state. Id chips, server half: idChipServer({ kind, surfaces, resolve }) contributes the kind's IdKinds.Referent, the InlineTokenReferentSource that hands a model the referent's title, and — for a chip that belongs in documents — the Editor.InlineToken that keeps a page block holding it agent-readable.
+- Description: Id chips, web half: idChip({ presenter, surfaces, component? }) mints a kind's IdKinds.Presenter together with its inline chip — the pattern derived from the kind (never re-typed), a generic title + icon chip unless the family brings its own component, optionally carrying a first-meeting hint (declared to the hints engine, anchored on and requested by every resolved chip). rowReferent folds a live by-id row read into a presenter's referent state. Id chips, server half: idChipServer({ kind, surfaces, resolve }) contributes the kind's IdKinds.Referent, the InlineTokenReferentSource that hands a model the referent's title, and — for a chip that belongs in documents — the Editor.InlineToken that keeps a page block holding it agent-readable.
 - Web:
   - Uses:
+    - `hints.Hints`
+    - `hints.useHintAnchor`
+    - `hints.useHintMoment`
     - `ids.IdKinds`
     - `ids.IdPresenter`
     - `primitives/css/link-chip.LinkChip`

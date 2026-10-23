@@ -157,7 +157,11 @@ export function HintHost() {
     stepTipQueue(Date.now(), (hint: Hint) => {
       if (tourRunning || seenRows === null) return false;
       if (seenRows.has(hint.id) || isAnswered(hint.id)) return false;
-      return resolveAnchorElement(targetKey(hint.anchor)) !== null;
+      // On screen: a tip on a scrolled-away anchor would point at nothing.
+      return (
+        resolveAnchorElement(targetKey(hint.anchor), { onScreen: true }) !==
+        null
+      );
     });
   });
   useEffect(() => subscribeAnchors(stepTips), [stepTips]);
@@ -185,7 +189,11 @@ export function HintHost() {
   const step = run && run.phase !== "intro" ? currentStep(run) : null;
   const stepTarget = run && step ? resolveStepAnchor(step, run.data) : null;
   const targetKeyOf = stepTarget ?? shownTip?.anchor ?? null;
-  const el = useAnchorElement(targetKeyOf ? targetKey(targetKeyOf) : null);
+  // A tip draws on an anchor the user can see (its eligibility); a tour step
+  // takes its anchor wherever it is and scrolls it into view.
+  const el = useAnchorElement(targetKeyOf ? targetKey(targetKeyOf) : null, {
+    onScreen: !run,
+  });
   const rect = useTrackedRect(el);
   const cueEl = useAnchorElement(step?.cue ? targetKey(step.cue) : null);
   const cueRect = useTrackedRect(cueEl);

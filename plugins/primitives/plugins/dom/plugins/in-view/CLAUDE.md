@@ -71,6 +71,7 @@ allowlisting a copy.
     - `apps/website/pages/foundations`
     - `conversations/agent-thread`
     - `conversations/conversation-view/jsonl-viewer`
+    - `hints`
     - `primitives/css/working-dots`
     - `primitives/cursor-pagination`
     - `primitives/data-view`

@@ -54,6 +54,8 @@ const listeners = new Set<() => void>();
  * main) from restarting.
  */
 const answered = new Set<string>();
+/** How many mounted components hold each hint's moment (see `useHintMoment`). */
+const momentHolders = new Map<string, number>();
 
 function set(next: EngineState): void {
   if (next === state) return;
@@ -86,12 +88,29 @@ export function useEngineState(): EngineState {
  * is known and unseen, its anchor is on the page and no tour runs — after the
  * settle window, lowest `order` first, one at a time. `when` turning false (or
  * the component unmounting) withdraws it without marking it seen.
+ *
+ * Several components may hold one hint's moment (every chip of a kind): the
+ * request stays while ANY holds it, and is withdrawn when the last lets go.
+ * `hint` may be absent — a generic component handed an optional tip asks nothing.
  */
-export function useHintMoment(hint: Hint, when: boolean): void {
+export function useHintMoment(
+  hint: Hint | null | undefined,
+  when: boolean,
+): void {
   useEffect(() => {
-    if (!when) return;
-    setTips(requestTip(state.tips, hint, Date.now()));
-    return () => setTips(removeTip(state.tips, hint.id, Date.now()));
+    if (!hint || !when) return;
+    const holders = momentHolders.get(hint.id) ?? 0;
+    momentHolders.set(hint.id, holders + 1);
+    if (holders === 0) setTips(requestTip(state.tips, hint, Date.now()));
+    return () => {
+      const left = (momentHolders.get(hint.id) ?? 1) - 1;
+      if (left > 0) {
+        momentHolders.set(hint.id, left);
+        return;
+      }
+      momentHolders.delete(hint.id);
+      setTips(removeTip(state.tips, hint.id, Date.now()));
+    };
   }, [hint, when]);
 }
 

@@ -54,6 +54,8 @@ import {
 } from "../internal/canvas-model";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { useHintAnchor, useHintMoment } from "@plugins/hints/web";
+import { optionsChipAnchor, variantsHint } from "../../core";
 
 const linkIcon = symbol("link");
 const tuneIcon = symbol("tune");
@@ -73,6 +75,8 @@ interface OptionsTarget {
  * name leaves out, and a chevron — opening the Options popover under it.
  * Narrow (a frame under 440px) it drops `+N` and the chevron.
  *
+ * Anchors the one-time "View the variants" tip, asked while the chip shows.
+ *
  * Renders nothing for a document with no options: the frame box then holds
  * the version stepper alone. Its 22px look is the frame box's
  * (`frameChipsTheme`).
@@ -91,6 +95,8 @@ export function OptionsChip({
   narrow: boolean;
 }): ReactElement | null {
   const options = documentOptions(meta, frame.version);
+  const anchorRef = useHintAnchor(optionsChipAnchor);
+  useHintMoment(variantsHint, options.length > 0);
   if (options.length === 0) return null;
   const rest = options.length - named;
   return (
@@ -102,6 +108,7 @@ export function OptionsChip({
           title={`Options · ${name}`}
           trigger={
             <Button
+              ref={anchorRef}
               variant="ghost"
               aria-label="Prototype options"
               className="text-muted-foreground"

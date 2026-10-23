@@ -1,5 +1,7 @@
 import type { ComponentType } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
+import type { Hint } from "@plugins/hints/core";
+import { Hints } from "@plugins/hints/web";
 import { IdKinds, type IdPresenter } from "@plugins/ids/web";
 import {
   InlineChip,
@@ -37,14 +39,20 @@ type ChipComponent = ComponentType<{
  *
  * `component` overrides the generic chip (title + icon, opening via
  * `useTarget`) for a family with richer chrome (a status dot, a count).
+ *
+ * `hint` is a first-meeting tip on the generic chip (its anchor is the
+ * chip's own): declared to the hints engine here, and requested by every
+ * resolved chip of the kind — so it shows the first time one appears.
  */
 export function idChip(spec: {
   presenter: IdPresenter;
   surfaces: readonly IdChipSurface[];
   component?: ChipComponent;
+  hint?: Hint;
 }): Contribution[] {
-  const { presenter, surfaces } = spec;
+  const { presenter, surfaces, hint } = spec;
   return [
+    ...(hint ? [Hints.Hint({ hint })] : []),
     IdKinds.Presenter(presenter),
     InlineChip.Tag(
       inlineChip({
@@ -52,7 +60,7 @@ export function idChip(spec: {
         pattern: idChipPattern(presenter.kind),
         surfaces,
         modelText: "resolved",
-        component: spec.component ?? genericIdChip(presenter),
+        component: spec.component ?? genericIdChip(presenter, hint),
       }),
     ),
   ];

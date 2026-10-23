@@ -256,9 +256,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --radius-code`
           - `ui/tokens/shape --spacing`
-    - **`id-chip`** — Id chips, web half: idChip({ presenter, surfaces, component? }) mints a kind's IdKinds.Presenter together with its inline chip — the pattern derived from the kind (never re-typed), a generic title + icon chip unless the family brings its own component. rowReferent folds a live by-id row read into a presenter's referent state. Id chips, server half: idChipServer({ kind, surfaces, resolve }) contributes the kind's IdKinds.Referent, the InlineTokenReferentSource that hands a model the referent's title, and — for a chip that belongs in documents — the Editor.InlineToken that keeps a page block holding it agent-readable.
+    - **`id-chip`** — Id chips, web half: idChip({ presenter, surfaces, component? }) mints a kind's IdKinds.Presenter together with its inline chip — the pattern derived from the kind (never re-typed), a generic title + icon chip unless the family brings its own component, optionally carrying a first-meeting hint (declared to the hints engine, anchored on and requested by every resolved chip). rowReferent folds a live by-id row read into a presenter's referent state. Id chips, server half: idChipServer({ kind, surfaces, resolve }) contributes the kind's IdKinds.Referent, the InlineTokenReferentSource that hands a model the referent's title, and — for a chip that belongs in documents — the Editor.InlineToken that keeps a page block holding it agent-readable.
       - Web:
         - Uses:
+          - `hints.Hints`
+          - `hints.useHintAnchor`
+          - `hints.useHintMoment`
           - `ids.IdKinds`
           - `ids.IdPresenter`
           - `primitives/css/link-chip.LinkChip`
@@ -353,9 +356,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/icons.Icon`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
-    - **`prototype`** — Renders raw `proto-<id>` strings inline as clickable chips (the generic id chip: the mock's title) that open the mock in the prototype-detail pane, and presents the prototype id kind to the id registry. Models emit the bare id, no tag wrapping needed. The prototype id chip's server half (idChipServer): resolves a `proto-<id>` to its prototype's title for the id registry and for model-read text (so a task description holding the id is titled after the mock), and registers the page-editor inline token so a page block holding the chip stays agent-readable.
+    - **`prototype`** — Renders raw `proto-<id>` strings inline as clickable chips (the generic id chip: the mock's title) that open the mock in the prototype-detail pane, and presents the prototype id kind to the id registry. Models emit the bare id, no tag wrapping needed. The first chip the user meets carries a one-time “Click to open the prototype” tip. The prototype id chip's server half (idChipServer): resolves a `proto-<id>` to its prototype's title for the id registry and for model-read text (so a task description holding the id is titled after the mock), and registers the page-editor inline token so a page block holding the chip stays agent-readable.
       - Web:
         - Contributes:
+          - `Hints.Hint` "prototype.open-chip"
           - `IdKinds.Presenter` "proto"
           - `InlineChip.Tag` "proto" → `GenericIdChip`
         - Uses:
@@ -373,7 +377,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data/id-chip.idChipServer`
           - `apps/prototypes/files.readPrototypeTitle`
       - Core:
-        - Exports (values): `PROTOTYPE_CHIP_SURFACES`
+        - Uses:
+          - `hints.defineHint`
+          - `hints.defineHintAnchor`
+        - Exports (values):
+          - `openPrototypeHint`
+          - `PROTOTYPE_CHIP_SURFACES`
+          - `prototypeChipAnchor`
     - **`report`** — Renders a bare `report-<id>` in a transcript as the generic id chip (the report's kind and message) that opens the report's detail pane, and presents the report id kind to the id registry. The report id chip's server half (idChipServer): resolves a `report-<id>` to its kind and message for the id registry and for model-read text.
       - Web:
         - Contributes:
@@ -5719,6 +5729,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeVersionActions` ← `apps.prototypes.canvas`
             - Contributes:
               - `Pane.Register` "prototypes-detail"
+              - `Hints.Hint` "prototypes.variants"
               - `ThemeEngine.SubTheme` "Prototype frame chips"
               - `ThemeEngine.SubTheme` "Prototype option rows"
               - `ThemeEngine.SubTheme` "Prototype version rows"
@@ -5726,10 +5737,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeFrameActions` "close" → `CloseFrameAction`
               - `PrototypeVersionActions` "compare" → `CompareVersionAction`
               - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-            - Uses: 83 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
+            - Uses: 86 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
               - `primitives/css/ui-kit` ×9
               - `primitives/data-view` ×6
               - `primitives/collapsible` ×5
+              - `hints` ×3
               - `primitives/hover-reveal` ×3
               - `primitives/persistent-draft` ×3
               - `infra/endpoints` ×2
@@ -5830,22 +5842,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useFrameSrc`
               - `usePrototypeDetail`
               - `useWindowSize`
-          - Cross-plugin:
-            - Uses tokens: 37 vars — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
-              - `ui/tokens/color-palette` ×12
-              - `ui/tokens/type-scale` ×12
-              - `ui/tokens/density` ×6
-              - `ui/tokens/shape` ×4
-              - `ui/tokens/shadow` ×2
-              - `ui/tokens/font-family --font-mono`
-            - Imported by:
-              - `active-data/prototype`
-              - `apps/prototypes/compare`
-              - `apps/prototypes/copy-id`
-              - `apps/prototypes/gallery`
-              - `apps/prototypes/present`
-              - `conversations/conversation-view/artifacts/prototype`
           - Core:
+            - Uses:
+              - `hints.defineHint`
+              - `hints.defineHintAnchor`
             - Exports (types):
               - `CanvasFrameStatus`
               - `CanvasLayout`
@@ -5861,7 +5861,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `canvasLayoutSelector`
               - `compareWithLabel`
               - `layoutToggleLabel`
+              - `optionsChipAnchor`
               - `PROTOTYPE_FRAME_KIND`
+              - `variantsHint`
+          - Cross-plugin:
+            - Uses tokens: 37 vars — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
+              - `ui/tokens/color-palette` ×12
+              - `ui/tokens/type-scale` ×12
+              - `ui/tokens/density` ×6
+              - `ui/tokens/shape` ×4
+              - `ui/tokens/shadow` ×2
+              - `ui/tokens/font-family --font-mono`
+            - Imported by:
+              - `active-data/prototype`
+              - `apps/prototypes/compare`
+              - `apps/prototypes/copy-id`
+              - `apps/prototypes/gallery`
+              - `apps/prototypes/present`
+              - `conversations/conversation-view/artifacts/prototype`
         - **`checkpoints`** — Records a version of every prototype an agent turn touched, at the end of that turn: reads the turn's window out of the conversation transcript, finds the prototype ids its tool calls named (Edit/Write paths, Bash commands, an Agent call's prompt), and checkpoints each through the files plugin's version store with the turn's request and summary.
           - Server:
             - Contributes: `trigger` "prototypes.checkpoint-turn"
@@ -26102,6 +26119,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Hints.Hint`
       - `Hints.Tour`
     - Slot contributors:
+      - `Hints.Hint` ← `active-data.prototype`
+      - `Hints.Hint` ← `apps.prototypes.canvas`
       - `Hints.Hint` ← `conversations.conversation-view.open-app`
       - `Hints.Hint` ← `conversations.conversation-view.push-and-exit`
       - `Hints.Tour` ← `apps.home.tour`
@@ -26111,9 +26130,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Shortcuts.Shortcut` "hints.tour-back (ArrowLeft)"
       - `Shortcuts.Shortcut` "hints.tour-end (Escape)"
       - `Shortcuts.Shortcut` "hints.tour-next (ArrowRight)"
-    - Uses: 21 symbols — full list in [`plugins/hints/REFERENCE.md`](../plugins/hints/REFERENCE.md)
+    - Uses: 23 symbols — full list in [`plugins/hints/REFERENCE.md`](../plugins/hints/REFERENCE.md)
       - `primitives/live-state` ×3
       - `primitives/css/ui-kit` ×2
+      - `primitives/dom/in-view` ×2
       - `apps-core/tabs.navigate`
       - `apps-core.useFocusedAppId`
       - `infra/endpoints.useFetchEndpoint`
@@ -26234,8 +26254,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ui/tokens/shadow --shadow`
       - `ui/tokens/shadow --shadow-popover`
     - Imported by:
+      - `active-data/id-chip`
+      - `active-data/prototype`
       - `apps/home/app-cards`
       - `apps/home/tour`
+      - `apps/prototypes/canvas`
       - `conversations/conversation-view/open-app`
       - `conversations/conversation-view/push-and-exit`
       - `conversations/conversations-view/data-view`
@@ -39252,6 +39275,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/pages/foundations`
               - `conversations/agent-thread`
               - `conversations/conversation-view/jsonl-viewer`
+              - `hints`
               - `primitives/css/working-dots`
               - `primitives/cursor-pagination`
               - `primitives/data-view`

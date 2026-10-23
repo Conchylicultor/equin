@@ -53,10 +53,16 @@ function OpenAppButton({ conv }) {
 
 `useHintMoment(hint, when)`: while `when` holds the tip is *requested*. The
 host shows it when the seen state is **known** and has no row for it, it was
-not answered this session, its anchor is on the page and no tour runs. Requests
+not answered this session, its anchor is on the page **and on screen** (one
+page-wide in-view watcher; scrolled away, the tip hides and comes back when the
+anchor does) and no tour runs. Requests
 are collected over a **700 ms settle window**, then the lowest `order` (ties:
 first asked) shows — one at a time; the next gets a fresh window after an
 answer. `when` → false or unmount **withdraws** it without marking it seen.
+Several components may hold one hint's moment (every prototype chip on the
+page): the request stays until the last of them lets go. `hint` may be
+`undefined` — a generic component handed an optional tip asks nothing (id-chip's
+`idChip({ …, hint })` is one: its chips anchor and request the kind's tip).
 "Got it" / × marks `dismissed`; a `pointerdown` on the anchor marks `acted`.
 While the seen state is pending nothing shows (no flash on reload).
 
@@ -243,6 +249,8 @@ Exhibits: `hints/card`, `hints/spotlight`, `hints/welcome`.
     - `Hints.Hint`
     - `Hints.Tour`
   - Slot contributors:
+    - `Hints.Hint` ← `active-data.prototype`
+    - `Hints.Hint` ← `apps.prototypes.canvas`
     - `Hints.Hint` ← `conversations.conversation-view.open-app`
     - `Hints.Hint` ← `conversations.conversation-view.push-and-exit`
     - `Hints.Tour` ← `apps.home.tour`
@@ -252,9 +260,10 @@ Exhibits: `hints/card`, `hints/spotlight`, `hints/welcome`.
     - `Shortcuts.Shortcut` "hints.tour-back (ArrowLeft)"
     - `Shortcuts.Shortcut` "hints.tour-end (Escape)"
     - `Shortcuts.Shortcut` "hints.tour-next (ArrowRight)"
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/live-state` ×3
     - `primitives/css/ui-kit` ×2
+    - `primitives/dom/in-view` ×2
     - `apps-core/tabs.navigate`
     - `apps-core.useFocusedAppId`
     - `infra/endpoints.useFetchEndpoint`
@@ -375,8 +384,11 @@ Exhibits: `hints/card`, `hints/spotlight`, `hints/welcome`.
     - `ui/tokens/shadow --shadow`
     - `ui/tokens/shadow --shadow-popover`
   - Imported by:
+    - `active-data/id-chip`
+    - `active-data/prototype`
     - `apps/home/app-cards`
     - `apps/home/tour`
+    - `apps/prototypes/canvas`
     - `conversations/conversation-view/open-app`
     - `conversations/conversation-view/push-and-exit`
     - `conversations/conversations-view/data-view`
