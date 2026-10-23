@@ -8,8 +8,8 @@ import type { SortableItemState } from "@plugins/primitives/plugins/sortable-lis
  * `SortableItemState` types them as `Record<string, unknown>` (dnd-kit hands
  * back an open bag of listeners + aria attributes), which is not assignable to
  * the panel row's `HTMLAttributes<HTMLElement>`. The cast lives here, once, so
- * the two reorderable panel lists (Properties, the sort rule list) do not each
- * carry their own — and so the day the primitive types them properly there is
+ * every reorderable panel list with a handle (the sort rule list) shares it —
+ * and so the day the primitive types them properly there is
  * exactly one place to delete.
  */
 export function dragHandleProps(

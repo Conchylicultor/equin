@@ -8,7 +8,6 @@ import {
 } from "@plugins/primitives/plugins/sortable-list/web";
 import { usePropertiesController } from "../../internal/use-properties-controller";
 import { FieldSections } from "../../internal/field-sections";
-import { dragHandleProps } from "../../internal/drag-handle-props";
 import { useDataViewControls } from "../controls/controls-context";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -27,9 +26,11 @@ const hiddenIcon = symbol("visibility-off");
  * configure); the contribution's `isApplicable` gates the panel on the same
  * condition so the gear never opens onto an empty section.
  *
- * Each row is one `ControlPanel.Row`: the drag handle rides the row's own gutter
- * track, the row itself is the show / hide toggle, and the trailing cell is the
- * eye that says which (`visibility` / `visibility-off`). A hidden field stays
+ * Each row is one `ControlPanel.Row` with no drag handle: the whole row is the
+ * drag activator (its `SortableItem` wrapper carries the listeners — a press
+ * that moves under 4px stays a click, and dnd-kit swallows the click that ends
+ * a drag), the row itself is the show / hide toggle, and the trailing cell is
+ * the eye that says which (`visibility` / `visibility-off`). A hidden field stays
  * where it is, dimmed (`muted`), so showing it again puts it back in the same
  * place — the list's order is the body's, hidden fields included. The eye is
  * presentational (the row is the click target), so the hidden state is also
@@ -86,13 +87,10 @@ export function PropertiesControl(): ReactNode {
                 <SortableItem
                   key={item.field.id}
                   id={item.field.id}
-                  handle
                   className={({ isDragging }) => cn(isDragging && "opacity-40")}
                 >
-                  {(state) => (
+                  {() => (
                     <ControlPanel.Row
-                      handle
-                      handleProps={dragHandleProps(state)}
                       muted={!item.visible}
                       onSelect={() => controller.toggle(item.field.id)}
                       trailing={
