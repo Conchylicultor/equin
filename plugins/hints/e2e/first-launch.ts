@@ -249,7 +249,13 @@ const passed = await withBrowser(async (h) => {
   await hoverActionBar(page);
   await pickSurfaceMode(page, "docked");
   await resetSeen(page);
-  if (!(await visible("docked: welcome card again", card("Welcome to equin"), 20_000)))
+  if (
+    !(await visible(
+      "docked: welcome card again",
+      card("Welcome to equin"),
+      20_000,
+    ))
+  )
     return false;
   await button("Show me around").click();
   await visible("docked: apps step", card("Your apps"));
@@ -272,7 +278,13 @@ const passed = await withBrowser(async (h) => {
 
   // 2. The tour, auto-started on Home, solo (the floating bar).
   await resetSeen(page);
-  if (!(await visible("welcome card again (solo)", card("Welcome to equin"), 20_000)))
+  if (
+    !(await visible(
+      "welcome card again (solo)",
+      card("Welcome to equin"),
+      20_000,
+    ))
+  )
     return false;
   await snap(page, out, "1-welcome");
   await button("Show me around").click();
