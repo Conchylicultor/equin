@@ -62,6 +62,7 @@ export const ICON_MANIFEST: {
     "campaign",
     "cancel",
     "category",
+    "celebration",
     "chat",
     "chat-bubble",
     "check",

@@ -76,6 +76,7 @@ export const LUCIDE_MAP = {
   campaign: "megaphone",
   cancel: "circle-x",
   category: "shapes",
+  celebration: "party-popper",
   chat: "message-circle",
   "chat-bubble": "message-square",
   check: "check",

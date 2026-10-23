@@ -11,7 +11,7 @@ export default {
   contributions: [
     Apps.App({
       app: keyboardPartyApp,
-      icon: appIcon(symbol("keyboard")),
+      icon: appIcon(symbol("celebration"), { color: "pink" }),
       component: KeyboardPartyLayout,
     }),
   ],

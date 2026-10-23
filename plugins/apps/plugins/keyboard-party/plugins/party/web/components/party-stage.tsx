@@ -119,7 +119,7 @@ export function PartyStage() {
         className="kp-stage"
         tabIndex={0}
         role="application"
-        aria-label="Keyboard Party"
+        aria-label="Tap Tap Party"
         onKeyDown={onKeyDown}
         onPointerDown={onPointerDown}
         onContextMenu={(e) => e.preventDefault()}

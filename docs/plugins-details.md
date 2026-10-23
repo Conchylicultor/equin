@@ -4151,7 +4151,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: `apps/keyboard-party/shell`
         - **`shell`** — App shell for Keyboard Party: registers the /keyboard-party app entry, whose one page is the party stage.
           - Web:
-            - Contributes: `Apps.App` "Keyboard Party" → `KeyboardPartyLayout`
+            - Contributes: `Apps.App` "Tap Tap Party" → `KeyboardPartyLayout`
             - Uses:
               - `apps-core.Apps`
               - `apps/keyboard-party/party.PartyStage`
