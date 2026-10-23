@@ -224,6 +224,7 @@ export const LUCIDE_MAP = {
   "local-hospital": "hospital",
   "local-parking": "square-parking",
   "location-on": "map-pin",
+  lock: "lock",
   logout: "log-out",
   "low-priority": MATERIAL_ONLY,
   lyrics: "mic-vocal",

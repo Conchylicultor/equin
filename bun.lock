@@ -575,6 +575,18 @@
       "name": "@singularity/plugin-apps-home-usage-fields",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/keyboard-party": {
+      "name": "@singularity/plugin-apps-keyboard-party",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/keyboard-party/plugins/party": {
+      "name": "@singularity/plugin-apps-keyboard-party-party",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/keyboard-party/plugins/shell": {
+      "name": "@singularity/plugin-apps-keyboard-party-shell",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/mail": {
       "name": "@singularity/plugin-apps-mail",
       "version": "0.0.1",
@@ -7284,6 +7296,12 @@
     "@singularity/plugin-apps-home-tour": ["@singularity/plugin-apps-home-tour@workspace:plugins/apps/plugins/home/plugins/tour"],
 
     "@singularity/plugin-apps-home-usage-fields": ["@singularity/plugin-apps-home-usage-fields@workspace:plugins/apps/plugins/home/plugins/usage-fields"],
+
+    "@singularity/plugin-apps-keyboard-party": ["@singularity/plugin-apps-keyboard-party@workspace:plugins/apps/plugins/keyboard-party"],
+
+    "@singularity/plugin-apps-keyboard-party-party": ["@singularity/plugin-apps-keyboard-party-party@workspace:plugins/apps/plugins/keyboard-party/plugins/party"],
+
+    "@singularity/plugin-apps-keyboard-party-shell": ["@singularity/plugin-apps-keyboard-party-shell@workspace:plugins/apps/plugins/keyboard-party/plugins/shell"],
 
     "@singularity/plugin-apps-mail": ["@singularity/plugin-apps-mail@workspace:plugins/apps/plugins/mail"],
 

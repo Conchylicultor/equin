@@ -1,4 +1,4 @@
-// @hash c75a4f10319f
+// @hash bc1bb5b8f500
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -17,6 +17,7 @@
     "apps.events.shell:events",
     "apps.file-explorer.shell:file-explorer",
     "apps.home.shell:home",
+    "apps.keyboard-party.shell:keyboard-party",
     "apps.mail.shell:mail",
     "apps.pages.shell:pages",
     "apps.places.shell:places",

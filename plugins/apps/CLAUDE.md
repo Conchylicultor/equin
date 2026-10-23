@@ -16,6 +16,7 @@
   - **`events`** — Events — track events from pluggable sources in one database.
   - **`file-explorer`** — File explorer app.
   - **`home`** — Home — app launcher and entry point. The Apps task category: the category tasks filed from the Home app's cards, such as building a new app, are grouped under.
+  - **`keyboard-party`** — Keyboard Party — a keyboard toy for a small child: every key answers with its own animation and sound.
   - **`mail`** — Mail — a Gmail-class client.
   - **`pages`** — Notion-like pages app.
   - **`places`** — Places — the places you want to go and have been, on a map: saved Google places organised by one nested tag tree, coloured by their tags.

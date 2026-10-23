@@ -1,0 +1,14 @@
+// @hash a4f012c6c2dc
+{
+  // The backdrop the keys play over.
+  // Allowed values: "night", "sunny", "paper"
+  "scene": "night",
+  // Calm plays slower, with fewer particles.
+  // Allowed values: "lively", "calm"
+  "motion": "lively",
+  // What is said aloud after a letter.
+  // Allowed values: "word", "letter", "off"
+  "voice": "word",
+  // Show the last keys pressed as beads along the bottom.
+  "trail": true
+}

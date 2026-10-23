@@ -43,6 +43,7 @@ string. `FieldHeader` comes from the slot owner
     - `apps/desktop/wallpaper`
     - `apps/events/sources/dmda`
     - `apps/events/sources/url-extract`
+    - `apps/keyboard-party/party`
     - `apps/sonata/look`
     - `apps/sonata/pitch-layout`
     - `plugin-meta/composition`

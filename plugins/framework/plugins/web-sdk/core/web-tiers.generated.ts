@@ -21,6 +21,7 @@
 //   - apps/plugins/file-explorer/plugins/browser: dependency closure (imported by an eager plugin)
 //   - apps/plugins/home/plugins/app-cards: dependency closure (imported by an eager plugin)
 //   - apps/plugins/home/plugins/tour: watched boot slot Core.Root
+//   - apps/plugins/keyboard-party/plugins/party: dependency closure (imported by an eager plugin)
 //   - apps/plugins/pages/plugins/auto-icon: dependency closure (imported by an eager plugin)
 //   - apps/plugins/pages/plugins/page-tree: dependency closure (imported by an eager plugin)
 //   - apps/plugins/prototypes/plugins/canvas: dependency closure (imported by an eager plugin)

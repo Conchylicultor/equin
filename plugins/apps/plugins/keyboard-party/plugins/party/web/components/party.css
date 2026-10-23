@@ -1,0 +1,268 @@
+/*
+ * Keyboard Party's stage. Theme-independent on purpose: a toy has its own
+ * fixed scenes (night / sunny / paper), picked by the `scene` config.
+ */
+
+.kp-root {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  font-family: "Baloo 2", "Nunito", ui-rounded, "SF Pro Rounded", system-ui, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.kp-root[data-scene="night"] {
+  --kp-bg: radial-gradient(ellipse at 50% 120%, #2b1b5a 0%, #120d2e 55%, #07061a 100%);
+  --kp-glow: 0 0 40px rgb(255 255 255 / 0.25);
+  --kp-word: #fff;
+  --kp-star: rgb(255 255 255 / 0.7);
+}
+.kp-root[data-scene="sunny"] {
+  --kp-bg: linear-gradient(180deg, #7fd3ff 0%, #b8ecff 60%, #c9f5b4 60.2%, #8fdc7a 100%);
+  --kp-glow: 0 6px 0 rgb(0 0 0 / 0.12);
+  --kp-word: #1b2a4a;
+  --kp-star: transparent;
+}
+.kp-root[data-scene="paper"] {
+  --kp-bg: #fbf6ec;
+  --kp-glow: 0 5px 0 rgb(60 40 10 / 0.1);
+  --kp-word: #3a2f25;
+  --kp-star: transparent;
+}
+
+.kp-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--kp-bg);
+  outline: none;
+  cursor: default;
+  touch-action: none;
+}
+
+/* twinkling backdrop stars (only the night scene paints them) */
+.kp-stars {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1.5px 1.5px at 12% 18%, var(--kp-star), transparent),
+    radial-gradient(1.5px 1.5px at 27% 62%, var(--kp-star), transparent),
+    radial-gradient(1.5px 1.5px at 41% 9%, var(--kp-star), transparent),
+    radial-gradient(1.5px 1.5px at 58% 44%, var(--kp-star), transparent),
+    radial-gradient(1.5px 1.5px at 66% 23%, var(--kp-star), transparent),
+    radial-gradient(1.5px 1.5px at 79% 71%, var(--kp-star), transparent),
+    radial-gradient(1.5px 1.5px at 88% 12%, var(--kp-star), transparent),
+    radial-gradient(1.5px 1.5px at 6% 79%, var(--kp-star), transparent),
+    radial-gradient(1.5px 1.5px at 93% 48%, var(--kp-star), transparent),
+    radial-gradient(1.5px 1.5px at 35% 33%, var(--kp-star), transparent),
+    radial-gradient(1.5px 1.5px at 51% 83%, var(--kp-star), transparent),
+    radial-gradient(1.5px 1.5px at 72% 56%, var(--kp-star), transparent);
+  animation: kp-twinkle 4s ease-in-out infinite;
+}
+.kp-stars::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 18% 41%, var(--kp-star), transparent),
+    radial-gradient(1px 1px at 33% 88%, var(--kp-star), transparent),
+    radial-gradient(1px 1px at 47% 57%, var(--kp-star), transparent),
+    radial-gradient(1px 1px at 62% 6%, var(--kp-star), transparent),
+    radial-gradient(1px 1px at 84% 34%, var(--kp-star), transparent),
+    radial-gradient(1px 1px at 9% 52%, var(--kp-star), transparent),
+    radial-gradient(1px 1px at 76% 91%, var(--kp-star), transparent),
+    radial-gradient(1px 1px at 97% 77%, var(--kp-star), transparent);
+  animation: kp-twinkle 3s ease-in-out 1.5s infinite;
+}
+@keyframes kp-twinkle {
+  50% {
+    opacity: 0.3;
+  }
+}
+
+/* the idle hello: three friendly keys that bob until the first press */
+.kp-hello {
+  position: absolute;
+  left: 50%;
+  top: 45%;
+  display: flex;
+  gap: 14px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  transition:
+    opacity 500ms ease,
+    transform 500ms ease;
+}
+.kp-hello-gone {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.6);
+}
+.kp-hello-key {
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  border-radius: 22px;
+  background: hsl(var(--kp-hue, 0) 90% 62%);
+  color: #fff;
+  font-size: 44px;
+  font-weight: 800;
+  box-shadow:
+    inset 0 -8px 0 rgb(0 0 0 / 0.18),
+    0 10px 24px rgb(0 0 0 / 0.18);
+  animation: kp-bob 1.6s ease-in-out infinite;
+}
+.kp-hello-key:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.kp-hello-key:nth-child(3) {
+  animation-delay: 0.4s;
+}
+@keyframes kp-bob {
+  50% {
+    transform: translateY(-16px) rotate(-4deg);
+  }
+}
+
+.kp-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.kp-layer > * {
+  position: absolute;
+  line-height: 1;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.kp-glyph {
+  font-weight: 900;
+  text-shadow: var(--kp-glow);
+}
+.kp-word {
+  color: var(--kp-word);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.kp-word b {
+  font-weight: 900;
+}
+.kp-rocket {
+  width: 6px;
+  height: 24px;
+  border-radius: 3px;
+}
+.kp-band {
+  border-style: solid;
+  border-radius: 50%;
+  clip-path: inset(0 0 50% 0);
+}
+.kp-bubble {
+  border: 3px solid rgb(255 255 255 / 0.8);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 30% 30%,
+    rgb(255 255 255 / 0.7),
+    rgb(120 200 255 / 0.25) 40%,
+    rgb(120 200 255 / 0.08)
+  );
+}
+
+/* the googly blob that boings up from the bottom */
+.kp-blob {
+  width: 140px;
+  height: 140px;
+  border-radius: 46% 54% 42% 58%;
+}
+.kp-blob > * {
+  position: absolute;
+  border-radius: 50%;
+}
+.kp-blob-eye-l,
+.kp-blob-eye-r {
+  top: 44px;
+  width: 22px;
+  height: 28px;
+  background: #fff;
+}
+.kp-blob-eye-l {
+  left: 34px;
+}
+.kp-blob-eye-r {
+  left: 82px;
+}
+.kp-blob-pupil-l,
+.kp-blob-pupil-r {
+  top: 54px;
+  width: 10px;
+  height: 12px;
+  background: #222;
+}
+.kp-blob-pupil-l {
+  left: 41px;
+}
+.kp-blob-pupil-r {
+  left: 89px;
+}
+.kp-blob .kp-blob-mouth {
+  left: 52px;
+  top: 88px;
+  width: 36px;
+  height: 16px;
+  border-radius: 0 0 20px 20px;
+  background: #222;
+}
+
+/* bead trail of recent keys */
+.kp-trail {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 18px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.kp-bead {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  min-width: 46px;
+  height: 46px;
+  padding: 0 10px;
+  border-radius: 23px;
+  background: hsl(var(--kp-hue, 0) 90% 58%);
+  color: #fff;
+  font-size: 24px;
+  font-weight: 900;
+  box-shadow: inset 0 -5px 0 rgb(0 0 0 / 0.18);
+  animation: kp-bead-in 400ms cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+@keyframes kp-bead-in {
+  from {
+    opacity: 0;
+    transform: translateY(40px) scale(0.3);
+  }
+}
+
+/* the grown-up's corner */
+.kp-controls {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  gap: 4px;
+  opacity: 0.45;
+  transition: opacity 200ms ease;
+}
+.kp-controls:hover,
+.kp-controls:focus-within {
+  opacity: 1;
+}

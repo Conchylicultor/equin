@@ -1,4 +1,4 @@
-// @hash c75a4f10319f
+// @hash bc1bb5b8f500
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -13,6 +13,7 @@
   // the same family as Mail — so it sits with them, directly after Mail.
   // Chord (the chord ear trainer) is a music app: it sits beside Sonata.
   // Places (saved places on a map) is personal content: it sits after Events.
+  // Keyboard Party (a keyboard toy for a child) is play: it sits after Chord.
   // Demo (temporary: the in-app demo before it ships on the website) sits
   // right after Website, the surface it is headed for.
   // Desktop sits right after Home: picking it switches the surface into the
@@ -27,6 +28,7 @@
     "apps.places.shell:places",
     "apps.sonata.shell:sonata",
     "apps.chord.shell:chord",
+    "apps.keyboard-party.shell:keyboard-party",
     "apps.browser.shell:browser",
     { "type": "spacer", "id": "spacer-1" },
     "apps.file-explorer.shell:file-explorer",

@@ -204,6 +204,7 @@ export const ICON_MANIFEST: {
     "local-hospital",
     "local-parking",
     "location-on",
+    "lock",
     "logout",
     "low-priority",
     "mail",

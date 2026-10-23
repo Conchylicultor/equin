@@ -74,8 +74,8 @@ Desktop tile opens a clear desktop.
     - `Apps.TabBar`
     - `Apps.TabBarActions`
     - `Apps.Overlay`
-  - Slot contributors: 23 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Apps.App` ×18
+  - Slot contributors: 24 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Apps.App` ×19
     - `Apps.Overlay` ← `apps-core.app-launcher`
     - `Apps.RailFraming` ← `apps-core.app-rail-framing`
     - `Apps.Surface` ← `apps-core.surface`
@@ -111,8 +111,8 @@ Desktop tile opens a clear desktop.
     - `useHomeApp`
     - `usePathname`
 - Cross-plugin:
-  - Imported by: 48 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×26
+  - Imported by: 49 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×27
     - `apps-core` ×11
     - `ui` ×5
     - `config_v2` ×2

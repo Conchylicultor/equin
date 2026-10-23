@@ -4110,6 +4110,55 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields/int/config.intField`
               - `network/live.clientFields`
             - Exports (values): `appUsageFields`
+    - **`keyboard-party`** — Keyboard Party — a keyboard toy for a small child: every key answers with its own animation and sound.
+      - Plugins:
+        - **`party`** — Keyboard Party's stage: every key plays its own animation and sound (letters bring a picture, a word and speech; digits count; space, Enter, arrows, Backspace and modifiers each have their own effect), with a bead trail of recent keys, a full-screen keyboard lock and the party settings. Server registration of the Keyboard Party config.
+          - Web:
+            - Contributes: `ConfigV2.WebRegister` "config"
+            - Uses:
+              - `config_v2.ConfigV2`
+              - `config_v2.useConfig`
+              - `config_v2.useSetConfig`
+              - `config_v2/fields.FieldRenderer`
+              - `primitives/css/control-panel.ControlPanelPopover`
+              - `primitives/icon-button.IconButton`
+            - Exports (values): `PartyStage`
+          - Server:
+            - Contributes: `ConfigV2.Register` "config"
+            - Uses: `config_v2.ConfigV2`
+          - Core:
+            - Uses:
+              - `config_v2.defineConfig`
+              - `fields/bool/config.boolField`
+              - `fields/enum/config.enumField`
+            - Exports (types):
+              - `Direction`
+              - `Entrance`
+              - `Instrument`
+              - `KeyEffect`
+            - Exports (values):
+              - `beadLabel`
+              - `classifyKey`
+              - `COUNT_PICTURES`
+              - `ENTRANCES`
+              - `hueOf`
+              - `INSTRUMENTS`
+              - `LETTER_WORDS`
+              - `NUMBER_WORDS`
+              - `partyConfig`
+              - `pentatonicHz`
+          - Cross-plugin:
+            - Imported by: `apps/keyboard-party/shell`
+        - **`shell`** — App shell for Keyboard Party: registers the /keyboard-party app entry, whose one page is the party stage.
+          - Web:
+            - Contributes: `Apps.App` "Keyboard Party" → `KeyboardPartyLayout`
+            - Uses:
+              - `apps-core.Apps`
+              - `apps/keyboard-party/party.PartyStage`
+              - `layouts/miller.PaneOverlayHost`
+          - Core:
+            - Uses: `primitives/pane.defineApp`
+            - Exports (values): `keyboardPartyApp`
     - **`mail`** — Mail — a Gmail-class client.
       - Plugins:
         - **`attachments`** — Reading-pane attachment UI: the useMailAttachment() lazy-download hook (deduped, cached) and the AttachmentChip component (filename + size + MIME icon; downloads on click and opens in a new tab). Lazy Gmail attachment blob download: fetches an attachment's bytes on demand (reading-pane chip click or inline cid: image), caches them via infra/attachments, stamps mail_attachments.stored_attachment_id, and serves the same-origin URL.
@@ -10291,8 +10340,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Apps.TabBar`
       - `Apps.TabBarActions`
       - `Apps.Overlay`
-    - Slot contributors: 23 contributors — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
-      - `Apps.App` ×18
+    - Slot contributors: 24 contributors — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
+      - `Apps.App` ×19
       - `Apps.Overlay` ← `apps-core.app-launcher`
       - `Apps.RailFraming` ← `apps-core.app-rail-framing`
       - `Apps.Surface` ← `apps-core.surface`
@@ -10328,8 +10377,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useHomeApp`
       - `usePathname`
   - Cross-plugin:
-    - Imported by: 48 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
-      - `apps` ×26
+    - Imported by: 49 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
+      - `apps` ×27
       - `apps-core` ×11
       - `ui` ×5
       - `config_v2` ×2
@@ -12299,8 +12348,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins: the registry over the user-layer store (the ConfigStore host service) and the committed layer (ConfigGitLayer), its live values and the scope routes.
   - Web:
     - Slots: `ConfigV2.WebRegister`
-    - Slot contributors: 87 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×87
+    - Slot contributors: 88 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×88
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
@@ -12480,8 +12529,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 114 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `apps` ×32
+    - Imported by: 115 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `apps` ×33
       - `backup` ×13
       - `conversations` ×13
       - `debug` ×12
@@ -12596,9 +12645,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useFieldSamples`
           - `useLocalValue`
       - Cross-plugin:
-        - Imported by: 26 plugins — full list in [`plugins/config_v2/plugins/fields/REFERENCE.md`](../plugins/config_v2/plugins/fields/REFERENCE.md)
+        - Imported by: 27 plugins — full list in [`plugins/config_v2/plugins/fields/REFERENCE.md`](../plugins/config_v2/plugins/fields/REFERENCE.md)
           - `fields` ×20
-          - `apps` ×4
+          - `apps` ×5
           - `config_v2/settings`
           - `primitives/data-view/view-core`
       - Core:
@@ -22528,9 +22577,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boolField`
               - `boolSample`
           - Cross-plugin:
-            - Imported by: 29 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
+            - Imported by: 30 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
               - `debug` ×11
-              - `apps` ×6
+              - `apps` ×7
               - `conversations` ×4
               - `tasks` ×2
               - `history/engine`
@@ -23020,6 +23069,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/desktop/wallpaper`
               - `apps/events/sources/dmda`
               - `apps/events/sources/url-extract`
+              - `apps/keyboard-party/party`
               - `apps/sonata/look`
               - `apps/sonata/pitch-layout`
               - `plugin-meta/composition`
@@ -30672,6 +30722,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/deploy/shell`
           - `apps/events/shell`
           - `apps/home/shell`
+          - `apps/keyboard-party/shell`
           - `apps/mail/shell`
           - `apps/pages/shell`
           - `apps/settings/shell`
@@ -36700,8 +36751,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×7
               - `ui/tokens/shape` ×2
               - `ui/tokens/shadow --shadow`
-            - Imported by: 39 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
-              - `apps` ×14
+            - Imported by: 40 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
+              - `apps` ×15
               - `page` ×5
               - `primitives` ×4
               - `tasks` ×3
@@ -39889,8 +39940,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 119 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
-          - `apps` ×39
+        - Imported by: 120 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+          - `apps` ×40
           - `conversations` ×21
           - `primitives` ×21
           - `page` ×7
@@ -41810,8 +41861,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-md`
           - `ui/tokens/shape --spacing`
-        - Imported by: 173 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `apps` ×63
+        - Imported by: 174 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `apps` ×64
           - `conversations` ×30
           - `debug` ×26
           - `active-data` ×10
