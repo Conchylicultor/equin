@@ -24,9 +24,11 @@ chrome" had no spelling at all. This primitive is that spelling.
 ## The two halves
 
 - **`<SurfaceOverlayHost>`** declares *"overlays may fill this box"*. It is a
-  plain `relative size-full` box plus a context carrying its own **ref object**
-  (not the element) — a stable value for the host's whole life, so mounting a
-  host never re-renders its subtree. `apps-core/tab-surface` mounts exactly one
+  plain `relative size-full` box plus a context carrying a stable `attach`
+  handle for the host's whole life, so mounting a host never re-renders its
+  subtree. An overlay mounted in the same commit as its host (a deep link) runs
+  its layout effect before the host's ref exists, so `attach` queues it and the
+  host adopts it in its own layout effect, still before paint. `apps-core/tab-surface` mounts exactly one
   per app tab, which is why an overlay lands in the right box under every
   placement (docked / floating window / solo): each hands the tab a different
   outer box, and the host is inside all of them.
@@ -98,7 +100,9 @@ had been rendered there. The same idiom — and the same reason — as
     - `SurfaceOverlay`
     - `SurfaceOverlayHost`
 - Cross-plugin:
-  - Imported by: `apps-core/tab-surface`
+  - Imported by:
+    - `apps-core/tab-surface`
+    - `plugin-meta/exhibits`
 - Exemptions:
   - Exempts itself from: `layout/no-adhoc-layout` — `web/internal/surface-overlay.tsx` (sanctioned)
 

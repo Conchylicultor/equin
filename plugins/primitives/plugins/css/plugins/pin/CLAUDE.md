@@ -104,7 +104,7 @@ offsets expressible on the semantic ramp.
     - `pinClasses`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Imported by: 55 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 56 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×18
     - `apps` ×17
     - `page` ×9
@@ -112,6 +112,7 @@ offsets expressible on the semantic ramp.
     - `tasks` ×2
     - `apps-core/app-rail`
     - `map`
+    - `plugin-meta/exhibits`
     - `reorder/editor`
     - `screenshot/draw-on-app`
     - `ui/tab-bar`

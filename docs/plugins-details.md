@@ -34706,35 +34706,44 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/facets/routes/render-contributions`
           - `plugin-meta/facets/slots/render-contributions`
           - `plugin-meta/facets/structure/render-contributions`
-    - **`exhibits`** — Exhibit catalog: a plugin shows one of its REAL components standalone from an exhibits/ folder (isolatedExhibit / regionExhibit / appExhibit), collected into one generated registry. useExhibits() / useExhibit(id) answer loading / found / missing / ambiguous; <ExhibitView exhibit width?/> renders any arm inside its own error boundary. Debug → Exhibits lists the catalog as a DataView (searchable, grouped by id prefix, badged by runtime and geometry); a row opens the viewer pane (/debug/exhibits/x/<id>;theme=<app>) rendering that one exhibit at each of its widths inside an explicit, switchable theme boundary.
+    - **`exhibits`** — Exhibit catalog: a plugin shows one of its REAL components standalone from an exhibits/ folder (isolatedExhibit / regionExhibit / appExhibit), collected into one generated registry. useExhibits() / useExhibit(id) answer loading / found / missing / ambiguous; <ExhibitView exhibit width?/> renders any arm inside its own error boundary. Debug → Exhibits lists the catalog as a DataView (searchable, grouped by id prefix, badged by runtime and geometry); a row opens the viewer pane (/debug/exhibit/<id>;theme=<app>) rendering that one exhibit at each of its widths inside an explicit, switchable theme boundary; its Open full-screen action opens the stage (/debug/exhibit-stage/<id>;width=<px>;theme=<app>), the exhibit alone over the whole tab.
       - Web:
         - Slots:
           - `exhibits.actions`
           - `exhibit.actions`
+          - `exhibit-stage.actions`
         - Slot contributors:
           - `exhibits.actions` ← `primitives.pane`
+          - `exhibit.actions` ← `plugin-meta.exhibits`
           - `exhibit.actions` ← `primitives.pane`
+          - `exhibit-stage.actions` ← `primitives.pane`
         - Contributes:
           - `Pane.Register` "exhibit"
+          - `Pane.Register` "exhibit-stage"
           - `Pane.Register` "exhibits"
+          - `exhibit.actions` "full-screen" → `OpenFullScreenAction`
           - `DebugApp.Sidebar` "Exhibits"
-        - Uses: 27 symbols — full list in [`plugins/plugin-meta/plugins/exhibits/REFERENCE.md`](../plugins/plugin-meta/plugins/exhibits/REFERENCE.md)
+        - Uses: 33 symbols — full list in [`plugins/plugin-meta/plugins/exhibits/REFERENCE.md`](../plugins/plugin-meta/plugins/exhibits/REFERENCE.md)
           - `primitives/css/ui-kit` ×5
-          - `primitives/pane` ×4
+          - `primitives/pane` ×5
           - `primitives/data-view` ×3
           - `primitives/css/badge` ×2
           - `primitives/css/spacing` ×2
+          - `primitives/hover-reveal` ×2
           - `apps-core/chrome-theme.chromeThemeScope`
           - `apps-core.Apps`
           - `apps/debug/shell.DebugApp`
           - `primitives/copy-to-clipboard.CopyButton`
           - `primitives/css/card.Card`
+          - `primitives/css/pin.Pin`
           - `primitives/css/scroll.Scroll`
           - `primitives/css/text.Text`
           - `primitives/css/theme-boundary.Theme`
           - `primitives/error-boundary.PluginErrorBoundary`
+          - `primitives/icon-button.IconButton`
           - `primitives/live-state.useQueryResource`
           - `primitives/loading.Loading`
+          - `primitives/overlay/surface-overlay.SurfaceOverlay`
         - Exports (types):
           - `ExhibitResult`
           - `ExhibitsResult`
@@ -34766,6 +34775,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `lookupExhibit`
           - `regionExhibit`
       - Cross-plugin:
+        - Uses tokens: `ui/tokens/color-palette --background`
         - Imported by: `apps/prototypes/compare/exhibit`
     - **`facets`** — Facet-based plugin metadata extraction and docgen pipeline
       - Core:
@@ -37101,7 +37111,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pinClasses`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 55 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
+            - Imported by: 56 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
               - `primitives` ×18
               - `apps` ×17
               - `page` ×9
@@ -37109,6 +37119,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×2
               - `apps-core/app-rail`
               - `map`
+              - `plugin-meta/exhibits`
               - `reorder/editor`
               - `screenshot/draw-on-app`
               - `ui/tab-bar`
@@ -39950,7 +39961,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hoverRevealTargetWithGroupFocus`
           - `useHoverReveal`
       - Cross-plugin:
-        - Imported by: 34 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
+        - Imported by: 35 plugins — full list in [`plugins/primitives/plugins/hover-reveal/REFERENCE.md`](../plugins/primitives/plugins/hover-reveal/REFERENCE.md)
           - `apps` ×10
           - `page` ×8
           - `primitives` ×7
@@ -39958,6 +39969,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations` ×2
           - `integrations/youtube`
           - `layouts/miller`
+          - `plugin-meta/exhibits`
           - `tasks/task-description`
     - **`icon-button`** — Ghost icon button with tooltip. Composes Button + Tooltip into a single component.
       - Web:
@@ -39974,7 +39986,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 120 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 121 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×40
           - `conversations` ×21
           - `primitives` ×21
@@ -39992,6 +40004,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fullscreen`
           - `hints/help-menu`
           - `map/google`
+          - `plugin-meta/exhibits`
     - **`icon-picker`** — Searchable, categorized picker over the Material Symbols set: a windowed grid of runtime-symbol cells browsing and searching Google's vendored Material Symbols metadata; onSelect hands back the picked SavedSymbolName. avatar, the page icon button and the callout panel compose it.
       - Web:
         - Uses:
@@ -41613,7 +41626,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SurfaceOverlay`
               - `SurfaceOverlayHost`
           - Cross-plugin:
-            - Imported by: `apps-core/tab-surface`
+            - Imported by:
+              - `apps-core/tab-surface`
+              - `plugin-meta/exhibits`
           - Exemptions:
             - Exempts itself from: `layout/no-adhoc-layout` — `web/internal/surface-overlay.tsx` (sanctioned)
         - **`tooltip`** — <TooltipDoc> documenting tooltip body (name + what it does), and <Kbd> keyboard shortcut badge.
@@ -41653,7 +41668,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots: `Pane.Register`
         - Slot contributors: 88 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `Pane.Register` ×88
-        - Contributes: 114 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Contributes: 115 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `SlotRender.ItemMiddleware`
           - `WebsiteHeader` "title" → `PaneTitleItem`
           - `accountPane.Actions` "title" → `PaneTitleItem`
@@ -41705,6 +41720,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `eventSourcesPane.Actions` "title" → `PaneTitleItem`
           - `events-root.actions` "title" → `PaneTitleItem`
           - `eventsTestPane.Actions` "title" → `PaneTitleItem`
+          - `exhibit-stage.actions` "title" → `PaneTitleItem`
           - `exhibit.actions` "title" → `PaneTitleItem`
           - `exhibits.actions` "title" → `PaneTitleItem`
           - `explorerPane.Actions` "title" → `PaneTitleItem`
@@ -43881,8 +43897,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Web:
     - Slots: `ReorderSlots.AreaEditor`
     - Slot contributors: `ReorderSlots.AreaEditor` ← `reorder.edit-mode`
-    - Contributes: 239 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×239
+    - Contributes: 240 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×240
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -43917,8 +43933,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReorderSlots`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 238 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×238
+    - Contributes: 239 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×239
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
@@ -49188,13 +49204,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 504 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 505 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×111
               - `conversations` ×89
               - `primitives` ×77
               - `debug` ×35
               - `page` ×32
-              - `plugin-meta` ×26
+              - `plugin-meta` ×27
               - `ui` ×25
               - `tasks` ×14
               - `fields` ×12

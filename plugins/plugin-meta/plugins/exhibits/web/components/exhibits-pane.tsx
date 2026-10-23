@@ -27,15 +27,13 @@ export const exhibitsPane = Pane.define({
 });
 
 // `:id*` because an exhibit id is `<group>/<name>`: the URL spells it as path
-// (`/debug/exhibits/x/task-draft/composer`), so an agent or a link can name one
-// exhibit directly. `;theme` is the theme its frames wear (an app id, or
-// `chrome`); absent = the exhibit's declared `home`, else Debug's (this pane's own).
+// (`/debug/exhibit/task-draft/composer`), so an agent or a link can name one
+// exhibit directly. Parentless: a link opens the viewer alone, without the
+// list beside it (a row in the list pushes it to the list's right). `;theme` is
+// the theme its frames wear (an app id, or `chrome`); absent = the exhibit's
+// declared `home`, else Debug's (this pane's own).
 export const exhibitPane = Pane.define({
-  route: defineRoute({
-    id: "exhibit",
-    segment: "x/:id*;theme",
-    parent: exhibitsRoute,
-  }),
+  route: defineRoute({ id: "exhibit", segment: "exhibit/:id*;theme" }),
   app: debugApp,
   title: { useText: ({ id }) => id },
   component: ExhibitBody,

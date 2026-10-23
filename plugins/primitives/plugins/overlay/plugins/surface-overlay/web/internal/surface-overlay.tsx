@@ -91,16 +91,14 @@ export function SurfaceOverlay({
   // browser paints, so the overlay never flashes as a detached (invisible)
   // subtree for one frame.
   useLayoutEffect(() => {
-    const el = host?.current;
-    if (!el) {
+    if (!host) {
       throw new Error(
         "<SurfaceOverlay> needs a <SurfaceOverlayHost> ancestor — the box it fills. " +
           "Every app tab has one (apps-core/tab-surface); if you are rendering outside a " +
           "tab surface, use <ViewportOverlay> (fills the window) or <Layer> (fills its own parent).",
       );
     }
-    el.appendChild(container);
-    return () => container.remove();
+    return host.attach(container);
   }, [host, container]);
 
   return createPortal(

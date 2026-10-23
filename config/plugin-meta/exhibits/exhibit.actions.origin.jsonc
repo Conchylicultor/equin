@@ -1,4 +1,4 @@
-// @hash 0e3be3905428
+// @hash 9e7b04a1ce68
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,6 +7,7 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
+    "plugin-meta.exhibits:full-screen",
     "primitives.pane:title"
   ]
 }

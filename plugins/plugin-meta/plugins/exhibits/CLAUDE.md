@@ -94,20 +94,26 @@ plugin with `exhibits/` and no `web/` fails the build.
   Miller panes. The list (`exhibits-list.tsx`) is a DataView over the catalog
   (`plugin-meta.exhibits.catalog`: search, group by id prefix, filter by
   runtime / geometry) that renders no exhibit. A row opens the viewer
-  (`exhibit-detail.tsx`) at `/debug/exhibits/x/<group>/<name>;theme=<app>`:
+  (`exhibit-detail.tsx`) at `/debug/exhibit/<group>/<name>;theme=<app>`:
   that one exhibit at each of its widths (an app exhibit without widths at
-  360 / 640 / 960), badged by runtime and `geometry`. It replaced the
+  360 / 640 / 960), badged by runtime and `geometry`. The viewer's route is
+  parentless, so a link opens it without the list. Its Open full-screen action
+  opens the stage (`exhibit-stage.tsx`,
+  `/debug/exhibit-stage/<group>/<name>;width=<px>;theme=<app>`): the exhibit
+  alone in a `SurfaceOverlay` over the whole tab, at `width` (else the tab's),
+  with only a hover-revealed way back — what an agent screenshots. The viewer replaced the
   harness's Layout Lab, and the all-at-once gallery that followed it.
 
 ### Looking at one exhibit (agents)
 
 ```bash
 ./singularity run plugins/plugin-meta/plugins/exhibits/e2e/exhibit-shot.ts \
-  --id task-draft/composer [--theme agent-manager|chrome] [--color-scheme dark]
+  --id task-draft/composer [--width 640] [--theme agent-manager|chrome] [--color-scheme dark]
 ```
 
 It opens the viewer pane by URL and screenshots the frames element
-(`[data-exhibit-frames]`) — no scrolling, no hunting. Ids:
+(`[data-exhibit-frames]`) — no scrolling, no hunting. `--width <px>` shoots the
+stage at that window width instead (`[data-exhibit-stage]`). Ids:
 `rg -n 'id: "' -g '**/exhibits/**' plugins`.
 
 ### Which theme an exhibit wears
@@ -132,35 +138,44 @@ the `Specimens.Specimen` dispatch slot — so there is one id namespace for both
 
 ## Plugin reference
 
-- Description: Exhibit catalog: a plugin shows one of its REAL components standalone from an exhibits/ folder (isolatedExhibit / regionExhibit / appExhibit), collected into one generated registry. useExhibits() / useExhibit(id) answer loading / found / missing / ambiguous; <ExhibitView exhibit width?/> renders any arm inside its own error boundary. Debug → Exhibits lists the catalog as a DataView (searchable, grouped by id prefix, badged by runtime and geometry); a row opens the viewer pane (/debug/exhibits/x/<id>;theme=<app>) rendering that one exhibit at each of its widths inside an explicit, switchable theme boundary.
+- Description: Exhibit catalog: a plugin shows one of its REAL components standalone from an exhibits/ folder (isolatedExhibit / regionExhibit / appExhibit), collected into one generated registry. useExhibits() / useExhibit(id) answer loading / found / missing / ambiguous; <ExhibitView exhibit width?/> renders any arm inside its own error boundary. Debug → Exhibits lists the catalog as a DataView (searchable, grouped by id prefix, badged by runtime and geometry); a row opens the viewer pane (/debug/exhibit/<id>;theme=<app>) rendering that one exhibit at each of its widths inside an explicit, switchable theme boundary; its Open full-screen action opens the stage (/debug/exhibit-stage/<id>;width=<px>;theme=<app>), the exhibit alone over the whole tab.
 - Web:
   - Slots:
     - `exhibits.actions`
     - `exhibit.actions`
+    - `exhibit-stage.actions`
   - Slot contributors:
     - `exhibits.actions` ← `primitives.pane`
+    - `exhibit.actions` ← `plugin-meta.exhibits`
     - `exhibit.actions` ← `primitives.pane`
+    - `exhibit-stage.actions` ← `primitives.pane`
   - Contributes:
     - `Pane.Register` "exhibit"
+    - `Pane.Register` "exhibit-stage"
     - `Pane.Register` "exhibits"
+    - `exhibit.actions` "full-screen" → `OpenFullScreenAction`
     - `DebugApp.Sidebar` "Exhibits"
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×5
-    - `primitives/pane` ×4
+    - `primitives/pane` ×5
     - `primitives/data-view` ×3
     - `primitives/css/badge` ×2
     - `primitives/css/spacing` ×2
+    - `primitives/hover-reveal` ×2
     - `apps-core/chrome-theme.chromeThemeScope`
     - `apps-core.Apps`
     - `apps/debug/shell.DebugApp`
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/card.Card`
+    - `primitives/css/pin.Pin`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/text.Text`
     - `primitives/css/theme-boundary.Theme`
     - `primitives/error-boundary.PluginErrorBoundary`
+    - `primitives/icon-button.IconButton`
     - `primitives/live-state.useQueryResource`
     - `primitives/loading.Loading`
+    - `primitives/overlay/surface-overlay.SurfaceOverlay`
   - Exports (types):
     - `ExhibitResult`
     - `ExhibitsResult`
@@ -192,6 +207,7 @@ the `Specimens.Specimen` dispatch slot — so there is one id namespace for both
     - `lookupExhibit`
     - `regionExhibit`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/color-palette --background`
   - Imported by: `apps/prototypes/compare/exhibit`
 
 <!-- AUTOGENERATED:END -->

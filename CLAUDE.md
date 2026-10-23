@@ -178,7 +178,7 @@ For a checkout cloned from someone else's repo, that repo is **upstream** (read-
   --path /agents/c/<id> --click "Artifacts" --out /tmp/artifacts
 ```
 
-**One component on its own** (an exhibit — `plugins/plugin-meta/plugins/exhibits`): `./singularity run plugins/plugin-meta/plugins/exhibits/e2e/exhibit-shot.ts --id <group/name> [--theme <app-id>|chrome]` screenshots its viewer pane (`/debug/exhibits/x/<group>/<name>`) at every width — never scroll Debug → Exhibits for it.
+**One component on its own** (an exhibit — `plugins/plugin-meta/plugins/exhibits`): `./singularity run plugins/plugin-meta/plugins/exhibits/e2e/exhibit-shot.ts --id <group/name> [--width <px>] [--theme <app-id>|chrome]`. With `browser_*`: `/debug/exhibit-stage/<group>/<name>;width=<px>?embed=1` is the component alone (viewport = width); `/debug/exhibit/<group>/<name>` shows every width.
 
 Flags: `--path <route>`, `--viewport 1280x900`, `--wait <ms>`, `--color-scheme dark|light`, `--composition <id>` (a composition this checkout built), `--url http://<namespace>.localhost:9000` (escape hatch for a deploy you didn't build — skips the is-this-my-build check).
 

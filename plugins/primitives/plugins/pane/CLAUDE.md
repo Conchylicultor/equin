@@ -893,7 +893,7 @@ See "Open questions" in the design doc.
   - Slots: `Pane.Register`
   - Slot contributors: 88 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `Pane.Register` ×88
-  - Contributes: 114 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes: 115 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `SlotRender.ItemMiddleware`
     - `WebsiteHeader` "title" → `PaneTitleItem`
     - `accountPane.Actions` "title" → `PaneTitleItem`
@@ -945,6 +945,7 @@ See "Open questions" in the design doc.
     - `eventSourcesPane.Actions` "title" → `PaneTitleItem`
     - `events-root.actions` "title" → `PaneTitleItem`
     - `eventsTestPane.Actions` "title" → `PaneTitleItem`
+    - `exhibit-stage.actions` "title" → `PaneTitleItem`
     - `exhibit.actions` "title" → `PaneTitleItem`
     - `exhibits.actions` "title" → `PaneTitleItem`
     - `explorerPane.Actions` "title" → `PaneTitleItem`

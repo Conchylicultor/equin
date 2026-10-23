@@ -374,9 +374,15 @@
     },
     {
       "paneId": "exhibit",
-      "segment": "x/:id*;theme",
+      "segment": "exhibit/:id*;theme",
       "appIndex": false,
-      "parent": "exhibits"
+      "parent": null
+    },
+    {
+      "paneId": "exhibit-stage",
+      "segment": "exhibit-stage/:id*;width;theme",
+      "appIndex": false,
+      "parent": null
     },
     {
       "paneId": "exhibits",
