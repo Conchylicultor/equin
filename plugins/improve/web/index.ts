@@ -3,7 +3,7 @@ import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
 import { ImproveButton } from "./components/improve-button";
 import { ImproveSlots } from "./slots";
 
-export { insertIntoImproveDraft } from "./internal/open-store";
+export { insertIntoImproveDraft, openImprove } from "./internal/open-store";
 export { ImproveSlots } from "./slots";
 export type { ImproveSegmentContribution } from "./slots";
 

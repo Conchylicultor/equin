@@ -1,0 +1,20 @@
+// @hash 2ea18107e946
+// @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
+//   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
+//   Hide: { "item": "<key>", "hidden": true }
+//   Spacer (gap): { "type": "spacer", "id": "<unique-id>" } — grows to push every item after it to the far end of the row (title left, chips right); at most one per slot. Use it instead of a second slot.
+//   Divider (rule): { "type": "divider", "id": "<unique-id>" } — a hairline rule between the items either side of it, turned to the slot's flow (flat in a column such as a sidebar's footer rows, upright in a row such as a toolbar).
+//   Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+//   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
+{
+  // Vertical list inside the ? "Getting started" popover, read top to bottom:
+  // the tour first (the one thing a lost newcomer wants), then bringing the
+  // tips back, then the two ways out to a fuller answer — the written guide
+  // and asking an agent.
+  "items": [
+    "hints.help-menu:replay-tour",
+    "hints.help-menu:show-tips",
+    "hints.help-menu:read-guide",
+    "hints.help-menu:ask"
+  ]
+}

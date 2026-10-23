@@ -217,6 +217,7 @@ export const ICON_MANIFEST: {
     "monitor-heart",
     "monitoring",
     "more-horiz",
+    "mouse",
     "movie",
     "museum",
     "music-note",

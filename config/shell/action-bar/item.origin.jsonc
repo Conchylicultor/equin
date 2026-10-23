@@ -1,4 +1,4 @@
-// @hash a13efae4ee70
+// @hash d1f626b25b4c
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -8,6 +8,7 @@
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
     "build:build",
+    "hints.help-menu:help",
     "improve:improve",
     "screenshot:screenshot",
     "screenshot.draw-on-app:draw-on-app",

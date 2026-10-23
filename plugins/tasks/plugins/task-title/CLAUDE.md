@@ -36,7 +36,6 @@ task was filed with a placeholder) and a ≤3-word short title for narrow rows
   - Exports (types): `TaskTitleGeneratorImpl`
   - Exports (values):
     - `scheduleTaskTitleUpdate`
-    - `synthesiseTitleFallback`
     - `tasksShortTitle`
     - `TaskTitleGenerator`
   - Resources: `task-short-titles:rows` (keyed, point)
@@ -53,6 +52,7 @@ task was filed with a placeholder) and a ≤3-word short title for narrow rows
     - `network/live.liveCollection`
   - Exports (types): `TaskShortTitle`
   - Exports (values):
+    - `synthesiseTitleFallback`
     - `taskShortTitles`
     - `taskShortTitleShape`
 - Cross-plugin:

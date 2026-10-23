@@ -601,7 +601,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `ui/tokens/font-family` ×4
     - `ui/tokens/material` ×4
     - `ui/tokens/scrollbar --scrollbar-color`
-  - Imported by: 424 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 425 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×109
     - `apps` ×95
     - `conversations` ×55
@@ -626,6 +626,7 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `layouts` ×2
     - `screenshot` ×2
     - `code-explorer/commit-detail`
+    - `hints`
     - `history/dialog`
     - `improve`
     - `map`

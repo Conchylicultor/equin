@@ -1,4 +1,4 @@
-// @hash a13efae4ee70
+// @hash d1f626b25b4c
 // @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -18,7 +18,8 @@
 // At most one spacer per slot.
 {
   // Horizontal bar, read left → right: notifications, a hairline divider, the
-  // utilities (the theme popover, the gear) and Build, then a second divider
+  // utilities (the theme popover, the gear), Build and the ? help menu (Getting
+  // started: replay the tour, tips, the guide), then a second divider
   // before the Improve pill — the one labelled action that acts ON the app.
   // Picking a UI element is a segment of the Improve pill, not its own button.
   // Light/dark is a switch INSIDE the palette popover; the surface mode,
@@ -32,6 +33,7 @@
     "ui.theme-engine.quick-theme:quick-theme",
     "shell.global-action-bar:view-options",
     "build:build",
+    "hints.help-menu:help",
     { "type": "divider", "id": "divider-2" },
     "improve:improve"
   ]

@@ -535,8 +535,10 @@ export const compositionsConfig = defineConfig({
           "debug.live-state-churn.emit",
           "debug.render-profiler",
         ]),
-        // Opt-in root features no released app selects yet: the Cmd+K palette.
-        subsystem("root-features", ["primitives.command-palette"]),
+        // Opt-in root features no released app selects yet: the Cmd+K palette,
+        // and the hints host (onboarding tips and tours) until the plugins that
+        // declare hints reach it by import.
+        subsystem("root-features", ["primitives.command-palette", "hints"]),
 
         // ── Packs: reusable contributor sets apps opt into via `extends` ────────
         {

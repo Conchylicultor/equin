@@ -1,4 +1,5 @@
-import { useState, type KeyboardEvent, type ReactNode } from "react";
+import { useState, type KeyboardEvent, type ReactNode, type Ref } from "react";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { runActivation } from "@plugins/primitives/plugins/link-gesture/core";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -39,6 +40,7 @@ import {
   type ManualOrderConfig,
 } from "@plugins/primitives/plugins/data-view/web";
 import type { DataViewPagePlaceholders } from "@plugins/primitives/plugins/data-view/core";
+import type { IconsViewOptions } from "../../core";
 import { useIconColumns } from "./use-icon-columns";
 
 /** Above this tile count a section windows its grid, one measured lane per
@@ -169,6 +171,22 @@ function ManualOrderTile({
 }
 
 /**
+ * Runs the host's `useTileRef` for one tile (a hook, so once per rendered
+ * tile, as a component) and hands the ref to the tile it draws.
+ */
+function TileRef({
+  row,
+  useTileRef,
+  children,
+}: {
+  row: unknown;
+  useTileRef: Hook<(row: unknown) => Ref<HTMLElement>>;
+  children: (ref: Ref<HTMLElement>) => ReactNode;
+}): ReactNode {
+  return children(useTileRef(row));
+}
+
+/**
  * Icons view: a launcher grid — fixed-width cells centred in the view, each a
  * coloured tile with the row's name underneath (a phone home screen).
  *
@@ -212,6 +230,8 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
   const vis = resolveBodyFields(props.fields, props.state.properties);
   const geometry = GEOMETRY[props.density ?? "comfortable"];
+  // Documented cast boundary: `options` is `viewOptions.icons`, opaque to the host.
+  const { useTileRef } = (props.options ?? {}) as IconsViewOptions<unknown>;
 
   const totalCount = sections.reduce((sum, s) => sum + s.count.n, 0);
   if (totalCount === 0) {
@@ -248,11 +268,16 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
       />
     ) : null;
 
-  const renderTile = (row: unknown, key: string): ReactNode => {
+  const drawTile = (
+    row: unknown,
+    key: string,
+    ref: Ref<HTMLElement> | undefined,
+  ): ReactNode => {
     const activate = props.rowActivation?.(row);
     const selected = key === props.selectedRowId;
     return (
       <Stack
+        ref={ref}
         gap={geometry.tileGap}
         align="center"
         role={activate ? "button" : undefined}
@@ -328,6 +353,17 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
       </Stack>
     );
   };
+
+  // A host's `useTileRef` runs per tile, so a tile that has one is drawn
+  // through `TileRef` (a component) to call it.
+  const renderTile = (row: unknown, key: string): ReactNode =>
+    useTileRef ? (
+      <TileRef row={row} useTileRef={useTileRef}>
+        {(ref) => drawTile(row, key, ref)}
+      </TileRef>
+    ) : (
+      drawTile(row, key, undefined)
+    );
 
   // One entry's node: in manual-order mode wrapped in its drag affordances,
   // except a null-rank (non-orderable) entry, which renders plain.

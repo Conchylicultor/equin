@@ -179,6 +179,7 @@
     - `hasLiveProcess`
     - `hibernationConfig`
     - `isActiveStatus`
+    - `isAgentBusy`
     - `isTurnRunning`
     - `listConversations`
     - `listConversationTurns`
@@ -198,9 +199,9 @@
     - `SYSTEM_CATEGORY_ID`
     - `withdrawConversationTurn`
 - Cross-plugin:
-  - Imported by: 52 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 53 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×38
-    - `apps` ×4
+    - `apps` ×5
     - `review` ×3
     - `active-data` ×2
     - `tasks` ×2

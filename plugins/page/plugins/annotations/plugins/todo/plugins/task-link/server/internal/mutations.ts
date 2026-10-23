@@ -7,10 +7,8 @@ import { todoBlock } from "@plugins/page/plugins/annotations/plugins/todo/core";
 import { PAGES_CATEGORY_ID } from "@plugins/page/plugins/prompt/plugins/link/server";
 import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import { createTask } from "@plugins/tasks/plugins/tasks-core/server";
-import {
-  scheduleTaskTitleUpdate,
-  synthesiseTitleFallback,
-} from "@plugins/tasks/plugins/task-title/server";
+import { scheduleTaskTitleUpdate } from "@plugins/tasks/plugins/task-title/server";
+import { synthesiseTitleFallback } from "@plugins/tasks/plugins/task-title/core";
 import { todoTask } from "./tables";
 
 /**

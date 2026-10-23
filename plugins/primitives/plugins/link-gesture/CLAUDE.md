@@ -79,7 +79,7 @@ resolver returning one. Fix: spread `openPane.link(…)`, or pass `openPane.to(�
 
 - Description: The browser's link gestures as spreadable handler props: plain click opens here, ⌘/Ctrl- and middle-click open the destination's URL in a new browser tab. A <button> gets none of this for free, so every navigating control reads it from one place.
 - Cross-plugin:
-  - Imported by: 43 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 44 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×13
     - `conversations` ×11
     - `apps-core` ×3
@@ -90,6 +90,7 @@ resolver returning one. Fix: spread `openPane.link(…)`, or pass `openPane.to(�
     - `build`
     - `code-explorer/file-resolve`
     - `config_v2/config-link`
+    - `hints/help-menu`
     - `integrations/google-maps/usage`
     - `plugin-meta/plugin-view`
     - `shell/notifications`

@@ -2186,7 +2186,7 @@ never add one.
     - `serveCollectionOn`
     - `serveValueOn`
 - Cross-plugin:
-  - Imported by: 275 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 276 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×75
     - `conversations` ×50
     - `debug` ×27
@@ -2211,6 +2211,7 @@ never add one.
     - `backup/runs-arm`
     - `database/query-deadline`
     - `fields/secret/config`
+    - `hints`
     - `reports`
     - `runs`
     - `shell/notifications`

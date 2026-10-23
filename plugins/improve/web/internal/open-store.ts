@@ -1,5 +1,6 @@
 import {
   draftInsert,
+  draftSeed,
   type TaskDraftInsert,
 } from "@plugins/tasks/plugins/task-draft-form/web";
 
@@ -41,6 +42,19 @@ function emit(): void {
  */
 export function insertIntoImproveDraft(text: string): void {
   state = { open: true, insert: draftInsert(text) };
+  emit();
+}
+
+/**
+ * Open the Improve popover. `seed` is a suggested first request: it fills the
+ * draft only when nothing is drafted yet, so work in progress is never mixed
+ * with it (the onboarding tour's "Try it").
+ */
+export function openImprove({ seed }: { seed?: string } = {}): void {
+  state = {
+    open: true,
+    insert: seed === undefined ? state.insert : draftSeed(seed),
+  };
   emit();
 }
 

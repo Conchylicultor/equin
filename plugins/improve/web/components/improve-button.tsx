@@ -11,7 +11,14 @@ import {
   setImproveOpen,
   subscribeImproveOpen,
 } from "../internal/open-store";
-import { IMPROVEMENTS_CATEGORY_ID } from "../../core";
+import {
+  IMPROVEMENTS_CATEGORY_ID,
+  improveButtonAnchor,
+  improvePanelAnchor,
+  improveSendAnchor,
+  improveSent,
+} from "../../core";
+import { emitHintSignal, useHintAnchor } from "@plugins/hints/web";
 import { ImproveSlots } from "../slots";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -21,6 +28,9 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 // `sparkles`), the app's canonical "agent" glyph: Improve is the bar's one
 // labelled action, and the lone spark reads as it at the bar's size.
 const sparkIcon = symbol("flare");
+
+/** What the onboarding tour points at inside the open popover. */
+const HINT_ANCHORS = { panel: improvePanelAnchor, send: improveSendAnchor };
 
 /**
  * The Improve pill: the Improve button (opening the draft popover) joined with
@@ -38,6 +48,7 @@ export function ImproveButton() {
     getImproveOpenState,
   );
   const segments = ImproveSlots.Segment.useContributions();
+  const anchorRef = useHintAnchor(improveButtonAnchor);
 
   return (
     <ButtonGroup shape="pill">
@@ -45,7 +56,7 @@ export function ImproveButton() {
         open={open}
         onOpenChange={setImproveOpen}
         trigger={
-          <Button variant="ghost" className="text-foreground">
+          <Button ref={anchorRef} variant="ghost" className="text-foreground">
             <Icon
               icon={sparkIcon}
               className="text-muted-foreground transition-colors group-hover/button:text-foreground group-aria-expanded/button:text-foreground"
@@ -58,6 +69,8 @@ export function ImproveButton() {
         insert={insert}
         heading="Improve this app"
         placeholder="What should be better here?"
+        hintAnchors={HINT_ANCHORS}
+        onSuccess={(taskIds) => emitHintSignal(improveSent, { taskIds })}
       />
       {segments.map((segment) => (
         <Fragment key={segment.id}>

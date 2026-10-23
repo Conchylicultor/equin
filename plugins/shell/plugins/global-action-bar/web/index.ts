@@ -12,6 +12,8 @@ import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
 import { actionBarConfig } from "../shared/config";
 import { ViewOptionsButton } from "./components/view-options-button";
 
+export { useActionBarPinned } from "./internal/use-action-bar-pinned";
+
 export default {
   description:
     "Global action bar rendering the shared ActionBar.Item set on every app, with two mutually-exclusive mount points keyed on the surface mode: a docked right-aligned strip in the tab bar (Apps.TabBarActions) in desktop and tab modes, and a floating top-right overlay (Core.Root) in fullscreen (solo), where the tab bar is hidden.",

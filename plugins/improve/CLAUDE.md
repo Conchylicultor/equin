@@ -10,11 +10,14 @@
   - Slot contributors: `ImproveSlots.Segment` ← `improve.element-picker`
   - Contributes: `ActionBar.Item` → `ImproveButton`
   - Uses:
+    - `hints.emitHintSignal`
+    - `hints.useHintAnchor`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.ButtonGroup`
     - `primitives/slot-render.renderIsolated`
     - `shell/action-bar.ActionBar`
     - `tasks/task-draft-form.draftInsert`
+    - `tasks/task-draft-form.draftSeed`
     - `tasks/task-draft-form.TaskDraftInsert`
     - `tasks/task-draft-form.TaskDraftPopover`
     - `ui/icons.Icon`
@@ -22,6 +25,7 @@
   - Exports (values):
     - `ImproveSlots`
     - `insertIntoImproveDraft`
+    - `openImprove`
 - Server:
   - Contributes:
     - `trigger` "improve.apply-group"
@@ -36,16 +40,25 @@
   - DB schema: `plugins/improve/server/internal/tables.ts`
   - Exports (values): `_improvePendingGroups`
   - Register: `defineJob('improve.apply-group')`
+- Core:
+  - Uses:
+    - `hints.defineHintAnchor`
+    - `hints.defineHintSignal`
+  - Exports (values):
+    - `improveButtonAnchor`
+    - `IMPROVEMENTS_CATEGORY_ID`
+    - `improvePanelAnchor`
+    - `improveSendAnchor`
+    - `improveSent`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted-foreground`
   - Imported by:
     - `apps/agent-manager/demo`
+    - `apps/home/tour`
     - `improve/element-picker`
     - `screenshot/draw-on-app`
-- Core:
-  - Exports (values): `IMPROVEMENTS_CATEGORY_ID`
 - Sub-plugins:
   - **`element-picker`** — The element picker wired into Singularity's Improve flow: a 'Pick UI element' segment of the Improve pill that opens the Improve popover with the picked element as a <ui-context/> chip, and an…
 

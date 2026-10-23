@@ -16,6 +16,8 @@ export const companionManifest: Readonly<
   Record<string, CompanionManifestEntry>
 > = {
   "apps.mail.shell.root": { always: ["apps.mail.sync.auto-resume"] },
+  "hints.hint": { always: [] },
+  "hints.tour": { always: [] },
   "primitives.data-view.cell": {
     keyed: {
       "avatar": ["fields.avatar.table"],

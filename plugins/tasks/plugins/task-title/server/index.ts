@@ -6,7 +6,6 @@ export {
   TaskTitleGenerator,
 } from "./internal/generator";
 export type { TaskTitleGeneratorImpl } from "./internal/generator";
-export { synthesiseTitleFallback } from "./internal/title-fallback";
 export { tasksShortTitle } from "./internal/tables";
 
 export default {

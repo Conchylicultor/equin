@@ -1,4 +1,4 @@
-// @hash dddad945ed0a
+// @hash 8235a526cf10
 {
   "manifests": [
     {
@@ -533,7 +533,8 @@
       "name": "root-features",
       "category": "subsystem",
       "entryPoints": [
-        "primitives.command-palette.**"
+        "primitives.command-palette.**",
+        "hints.**"
       ],
       "selectedContributors": [],
       "extends": [],

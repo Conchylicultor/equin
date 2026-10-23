@@ -19,11 +19,15 @@
 //   - apps/plugins/events/plugins/events-core: dependency closure (imported by an eager plugin)
 //   - apps/plugins/events/plugins/sources: dependency closure (imported by an eager plugin)
 //   - apps/plugins/file-explorer/plugins/browser: dependency closure (imported by an eager plugin)
+//   - apps/plugins/home/plugins/app-cards: dependency closure (imported by an eager plugin)
+//   - apps/plugins/home/plugins/tour: watched boot slot Core.Root
 //   - apps/plugins/pages/plugins/auto-icon: dependency closure (imported by an eager plugin)
 //   - apps/plugins/pages/plugins/page-tree: dependency closure (imported by an eager plugin)
 //   - apps/plugins/prototypes/plugins/canvas: dependency closure (imported by an eager plugin)
 //   - apps/plugins/prototypes/plugins/files: dependency closure (imported by an eager plugin)
+//   - apps/plugins/prototypes/plugins/gallery: dependency closure (imported by an eager plugin)
 //   - apps/plugins/prototypes/plugins/icons: dependency closure (imported by an eager plugin)
+//   - apps/plugins/prototypes/plugins/thumbnails: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/document: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/library: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/player: dependency closure (imported by an eager plugin)
@@ -92,7 +96,6 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/file-explorer/plugins/attachment-preview",
   "apps/plugins/file-explorer/plugins/git",
   "apps/plugins/file-explorer/plugins/places",
-  "apps/plugins/home/plugins/app-cards",
   "apps/plugins/home/plugins/usage-fields",
   "apps/plugins/mail/plugins/attachments",
   "apps/plugins/mail/plugins/mail-core",
@@ -124,9 +127,7 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/prototypes/plugins/compare/plugins/exhibit",
   "apps/plugins/prototypes/plugins/compare/plugins/route",
   "apps/plugins/prototypes/plugins/copy-id",
-  "apps/plugins/prototypes/plugins/gallery",
   "apps/plugins/prototypes/plugins/present",
-  "apps/plugins/prototypes/plugins/thumbnails",
   "apps/plugins/settings/plugins/accounts",
   "apps/plugins/settings/plugins/appearance",
   "apps/plugins/settings/plugins/config",

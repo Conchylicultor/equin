@@ -57,6 +57,7 @@ edges). Same precedent as `overlay-boundary`.
 - Cross-plugin:
   - Imported by:
     - `apps/prototypes/present`
+    - `hints`
     - `primitives/adaptive-bar`
     - `primitives/css/ui-kit`
     - `primitives/data-view/view-core`

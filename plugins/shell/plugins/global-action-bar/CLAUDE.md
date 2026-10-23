@@ -118,13 +118,14 @@ tab bar, which an embed does not paint.
     - `Apps.TabBarActions` "Tab bar actions" → `DockedActionBarHost`
     - `ActionBar.Item` → `ViewOptionsButton`
     - `ConfigV2.WebRegister` "config"
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps-core/tabs` ×3
     - `primitives/css/ui-kit` ×3
     - `config_v2` ×2
     - `primitives/overlay/floating-action` ×2
     - `apps-core/chrome-theme.chromeThemeScope`
     - `apps-core.Apps`
+    - `hints.useHintAnchor`
     - `primitives/css/control-panel.ControlPanelPopover`
     - `primitives/css/spacing.Stack`
     - `primitives/css/theme-boundary.Theme`
@@ -137,9 +138,13 @@ tab bar, which an embed does not paint.
     - `primitives/slot-render.SlotItemLayout`
     - `shell/action-bar.ActionBar`
     - `shell/health-report.HealthReportButton`
+  - Exports (values): `useActionBarPinned`
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
+- Core:
+  - Uses: `hints.defineHintAnchor`
+  - Exports (values): `actionBarAnchor`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --foreground`
@@ -151,6 +156,7 @@ tab bar, which an embed does not paint.
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --spacing`
   - Imported by:
+    - `apps/home/tour`
     - `reorder/edit-mode`
     - `shell/notifications`
 

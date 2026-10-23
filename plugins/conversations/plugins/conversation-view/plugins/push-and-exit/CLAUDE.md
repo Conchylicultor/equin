@@ -9,9 +9,13 @@
   - Contributes:
     - `PromptEditorSlots.FloatingAction` → `PushAndExitButton`
     - `ConfigV2.WebRegister` "config"
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Hints.Hint` "push-and-exit.exit"
+    - `Hints.Hint` "push-and-exit.go"
+    - `Hints.Hint` "push-and-exit.push-and-exit"
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/conversation-view/pending-turn` ×5
     - `conversations/conversation-view` ×3
+    - `hints` ×3
     - `infra/endpoints` ×3
     - `config_v2` ×2
     - `conversations` ×2
@@ -46,6 +50,15 @@
     - `mcpTool('exit_clean')`
     - `mcpTool('flag_raise')`
   - Routes: `POST /api/conversations/:id/push-and-exit`
+- Core:
+  - Uses:
+    - `hints.defineHint`
+    - `hints.defineHintAnchor`
+  - Exports (values):
+    - `closeHint`
+    - `goHint`
+    - `mainActionAnchor`
+    - `pushAndCloseHint`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --destructive-solid`

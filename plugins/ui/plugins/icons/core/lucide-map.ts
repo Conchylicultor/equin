@@ -238,6 +238,7 @@ export const LUCIDE_MAP = {
   "monitor-heart": "heart-pulse",
   monitoring: "activity",
   "more-horiz": "ellipsis",
+  mouse: "mouse",
   movie: "clapperboard",
   museum: "landmark",
   "music-note": "eighth-note",

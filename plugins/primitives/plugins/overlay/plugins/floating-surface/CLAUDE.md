@@ -89,6 +89,7 @@ needs the surface element.
     - `apps/desktop/shelf`
     - `apps/sonata/progress/scrubber`
     - `conversations/conversation-view/selection-actions`
+    - `hints`
     - `page/formatting/link`
     - `primitives/path-bar`
     - `primitives/text-editor/caret-trigger`

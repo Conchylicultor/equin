@@ -2,7 +2,9 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { Conversation } from "@plugins/conversations/plugins/conversation-view/plugins/action-bar/web";
+import { Hints } from "@plugins/hints/web";
 import { OpenAppButton } from "./components/open-app-button";
+import { tryItHint } from "../core";
 import { openAppConfig } from "../shared/config";
 import {
   appPreviewPane,
@@ -21,6 +23,7 @@ export default {
       requires: ["build"],
       component: OpenAppButton,
     }),
+    Hints.Hint({ hint: tryItHint }),
     Pane.Register({ pane: appPreviewPane }),
     appPreviewPane.Actions({ id: "reload", component: ReloadAction }),
     appPreviewPane.Actions({

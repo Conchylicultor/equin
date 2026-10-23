@@ -1,7 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { PromptEditorSlots } from "@plugins/primitives/plugins/prompt-editor/web";
 import { ConfigV2 } from "@plugins/config_v2/web";
+import { Hints } from "@plugins/hints/web";
 import { PushAndExitButton } from "./components/push-and-exit-button";
+import { closeHint, goHint, pushAndCloseHint } from "../core";
 import { pushAndExitConfig } from "../shared/config";
 
 export default {
@@ -17,5 +19,8 @@ export default {
       alwaysActive: true,
     }),
     ConfigV2.WebRegister({ descriptor: pushAndExitConfig }),
+    Hints.Hint({ hint: pushAndCloseHint }),
+    Hints.Hint({ hint: closeHint }),
+    Hints.Hint({ hint: goHint }),
   ],
 } satisfies PluginDefinition;

@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-hints-help-menu",
+  "description": "The ? Getting started menu in the global action bar: replay the tour, show tips again, read the guide, ask equin how to do something — an open HelpMenu.Entry slot — and the Help task category those questions are filed under.",
+  "private": true,
+  "version": "0.0.1"
+}

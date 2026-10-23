@@ -46,13 +46,19 @@ export type LaunchToggle = {
 /**
  * What a launch from the form is about: the prompt, and the task it runs —
  * either one that already exists, or a new one filed under `categoryId` and
- * titled with the form's own `title`. There is no fork or attempt arm: the form
+ * titled with `title` (default: the form's own `title`). There is no fork or attempt arm: the form
  * always files a task, so a launch that must not mint one uses `LaunchControl`.
  */
 export type LaunchAgentRequest = { prompt: string } & (
   | { taskId: string }
   | {
       categoryId: string;
+      /**
+       * The new task's title, when the user's words name it better than the
+       * form's heading does (a question asked through a generic "Ask…" form).
+       * Default: the form's `title`.
+       */
+      title?: string;
       /**
        * The record the new task is ABOUT (a failed run). Its live task, when
        * it has one, is reused instead of filing another (`tasks/task-subject`).
@@ -222,7 +228,11 @@ export function LaunchAgentForm({
       picked,
       "taskId" in req
         ? { id: req.taskId }
-        : { title, categoryId: req.categoryId, subject: req.subject },
+        : {
+            title: req.title ?? title,
+            categoryId: req.categoryId,
+            subject: req.subject,
+          },
     );
     // Unreachable: Launch is disabled while launching is unavailable, and a
     // subtree's transport is fixed.

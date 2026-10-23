@@ -14,6 +14,12 @@
 export interface TaskDraftInsert {
   readonly id: number;
   readonly text: string;
+  /**
+   * `add` (an attachment: a picked element, a screenshot) is added to whatever
+   * is drafted. `seed` (a suggested first request) is a starting point, so it
+   * lands only in an EMPTY draft — never mixed into work in progress.
+   */
+  readonly mode: "add" | "seed";
 }
 
 let seq = 0;
@@ -21,7 +27,16 @@ let seq = 0;
 /** Mint an insertion request for `text`. Every call is a distinct request. */
 export function draftInsert(text: string): TaskDraftInsert {
   seq += 1;
-  return { id: seq, text };
+  return { id: seq, text, mode: "add" };
+}
+
+/**
+ * Mint a seed request: `text` fills the head card only when nothing is
+ * drafted (every card empty); otherwise the draft is kept as it is.
+ */
+export function draftSeed(text: string): TaskDraftInsert {
+  seq += 1;
+  return { id: seq, text, mode: "seed" };
 }
 
 /**

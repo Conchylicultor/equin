@@ -8,7 +8,10 @@ export type {
   TaskDraftPopoverProps,
   TaskDraftRelate,
 } from "./components/task-draft-popover";
-export type { CardDraft } from "./components/task-draft-form";
+export type {
+  CardDraft,
+  TaskDraftHintAnchors,
+} from "./components/task-draft-form";
 
 export {
   setActiveRelateContext,
@@ -19,7 +22,7 @@ export type { ActiveRelateContext } from "./active-relate-context";
 export { TaskDraftFormSlots } from "./slots";
 export type { TaskDraftActionProps } from "./slots";
 
-export { draftInsert } from "./insert-request";
+export { draftInsert, draftSeed } from "./insert-request";
 export type { TaskDraftInsert } from "./insert-request";
 
 export default {

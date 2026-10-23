@@ -67,6 +67,7 @@ the forms above — or, if the control does not open a browser tab, another glyp
     - `conversations/commit-conversation`
     - `conversations/conversation-view/artifacts/prototype`
     - `conversations/conversation-view/open-app`
+    - `hints/help-menu`
     - `integrations/youtube`
     - `page/embed`
     - `primitives/overlay/image-viewer`

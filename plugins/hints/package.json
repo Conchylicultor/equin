@@ -1,0 +1,9 @@
+{
+  "name": "@singularity/plugin-hints",
+  "description": "Hints: the generic onboarding-tip engine — anchors, contextual tips shown once at their moment, tours that can cross apps, the seen state they share, and the host + card UI that draws them.",
+  "private": true,
+  "version": "0.0.1",
+  "dependencies": {
+    "@floating-ui/react-dom": "^2.1.9"
+  }
+}

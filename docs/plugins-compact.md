@@ -19,7 +19,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`desktop`** [exempt] [10 sub-plugins] — Desktop — the floating-window desktop mode as an app: windows over a wallpaper, one bottom shelf (launcher, pinned apps, running windows, tray), virtual desktops, overview and a window switcher.
     - **`events`** [exempt] [22 sub-plugins] — Events — track events from pluggable sources in one database.
     - **`file-explorer`** [exempt] [5 sub-plugins] — File explorer app.
-    - **`home`** [3 sub-plugins] — Home — app launcher and entry point. The Apps task category: the category tasks filed from the Home app's cards, such as building a new app, are grouped under.
+    - **`home`** [4 sub-plugins] — Home — app launcher and entry point. The Apps task category: the category tasks filed from the Home app's cards, such as building a new app, are grouped under.
     - **`mail`** [exempt] [12 sub-plugins] — Mail — a Gmail-class client.
     - **`pages`** [exempt] [16 sub-plugins] — Notion-like pages app.
     - **`places`** [exempt] [7 sub-plugins] — Places — the places you want to go and have been, on a map: saved Google places organised by one nested tag tree, coloured by their tags.
@@ -137,6 +137,10 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`web-sdk`** [test helpers] — Web plugin runtime: slots, contributions, loader
 
 - **`fullscreen`** — Browser fullscreen switch in the action bar's view-options popover, and the same switch as a toolbar button (FullscreenButton) for an app header that carries its own.
+
+- **`hints`** — The hints engine, web half: Hints.Hint / Hints.Tour declarations, useHintAnchor (ref registration, holding a floating toolbar open while its tip shows), useHintMoment (a tip shown once at its…
+  - Plugins:
+    - **`help-menu`** — The ? "Getting started" menu on the global action bar — the hints engine's help anchor, ringed while a tour end pulses it — rendering the open HelpMenu.Entry slot: Replay the tour (the primary…
 
 - **`history`** — Umbrella for the reusable version-history primitive: the domain-agnostic versioning engine substrate (more sub-plugins to follow).
   - Plugins:

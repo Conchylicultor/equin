@@ -80,7 +80,6 @@ and endpoint contract are consumed by this plugin's own `web` and `server` only.
     - `tasks/task-category.setTaskCategory`
     - `tasks/task-category.TaskCategory`
     - `tasks/task-title.scheduleTaskTitleUpdate`
-    - `tasks/task-title.synthesiseTitleFallback`
     - `tasks/tasks-core._tasks`
     - `tasks/tasks-core.createTask`
   - DB schema: `plugins/page/plugins/prompt/plugins/link/server/internal/tables.ts`

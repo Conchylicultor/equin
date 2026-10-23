@@ -19,6 +19,7 @@
     - `conversations/conversation-ui/item.conversationTitle`
     - `conversations/conversation-ui/item.ConvTitleOverride`
     - `conversations/conversation-view/pending-turn.useOptimisticConversationStatus`
+    - `hints.useHintAnchor`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/scroll.Scroll`
@@ -39,6 +40,9 @@
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
+- Core:
+  - Uses: `hints.defineHintAnchor`
+  - Exports (values): `conversationRowAnchor`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/density --chrome-pad-x`

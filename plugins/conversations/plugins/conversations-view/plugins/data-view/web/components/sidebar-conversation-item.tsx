@@ -8,6 +8,8 @@ import { useTaskShortTitle } from "@plugins/tasks/plugins/task-title/web";
 import { useOptimisticConversationStatus } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { conversationListConfig } from "../../shared/config";
 import { resolveListTitle } from "../internal/list-title";
+import { useHintAnchor } from "@plugins/hints/web";
+import { conversationRowAnchor } from "../../core";
 
 /**
  * A row the list names: the item's own fields plus its task (id and current
@@ -46,11 +48,15 @@ export function SidebarConversationItem({
 }): ReactElement {
   const { titleMode } = useConfig(conversationListConfig);
   const conv = { ...row, status: useOptimisticConversationStatus(row) };
+  // The row's hint anchor (an onboarding tour points at the conversation it
+  // started).
+  const anchorRef = useHintAnchor(conversationRowAnchor.at(row.id));
   // Split so only the short mode subscribes to the short-title rows.
   if (titleMode === "short")
-    return <ShortTitleItem conv={conv} muted={muted} />;
+    return <ShortTitleItem conv={conv} muted={muted} anchorRef={anchorRef} />;
   return (
     <ConversationItem
+      ref={anchorRef}
       conv={conv}
       layout="line"
       muted={muted}
@@ -62,13 +68,16 @@ export function SidebarConversationItem({
 function ShortTitleItem({
   conv,
   muted,
+  anchorRef,
 }: {
   conv: SidebarConv;
   muted?: boolean;
+  anchorRef: (el: HTMLElement | null) => void;
 }): ReactElement {
   const short = useTaskShortTitle(conv.taskId);
   return (
     <ConversationItem
+      ref={anchorRef}
       conv={conv}
       layout="line"
       muted={muted}

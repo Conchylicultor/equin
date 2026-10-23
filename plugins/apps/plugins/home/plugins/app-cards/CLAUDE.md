@@ -22,7 +22,7 @@ create-app flow is designed.
 - Description: Launcher grid of one card per installed app (a DataView of the installedApp row kind; plugins add fields to it as client fields of that kind), plus the new-app placeholder.
 - Web:
   - Contributes: `Home.Section` "Apps" → `AppGrid`
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps-core/app-launcher` ×3
     - `primitives/data-view` ×3
     - `apps-core` ×2
@@ -31,11 +31,18 @@ create-app flow is designed.
     - `shell/notifications` ×2
     - `apps-core/tabs.useActivateApp`
     - `apps/home/shell.Home`
+    - `hints.useHintAnchor`
+    - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.Button`
     - `primitives/data-view/capsule-toolbar.capsuleToolbar`
     - `primitives/launch.LaunchAgentForm`
     - `primitives/overlay/imperative-dialog.openDialog`
     - `ui/icons.Icon`
+- Core:
+  - Uses: `hints.defineHintAnchor`
+  - Exports (values):
+    - `appTileAnchor`
+    - `homeGalleryAnchor`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
 

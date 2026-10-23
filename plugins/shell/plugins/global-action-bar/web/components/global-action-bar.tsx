@@ -24,6 +24,8 @@ import { useFloatingBarSafeArea } from "../internal/use-floating-bar-safe-area";
 import { useBarPlace, useViewportSize } from "../internal/use-bar-place";
 import { useBarActivities } from "../internal/use-bar-activities";
 import type { Activity } from "@plugins/primitives/plugins/css/plugins/activity-ring/web";
+import { useHintAnchor } from "@plugins/hints/web";
+import { actionBarAnchor } from "../../core";
 
 /**
  * The density each host draws the bar at. The slots declare `sm` (the docked
@@ -167,6 +169,15 @@ function FloatingBar({
   // The collapsed footprint (FloatingAction pins its hitbox to it, so it holds
   // still while the panel is open). The home slot is drawn at this size.
   const hitboxRef = useRef<HTMLDivElement>(null);
+  // The hint anchor is the hitbox — the collapsed dot's footprint, which the
+  // pointer enters to unfold the bar. Registered here, outside FloatingAction's
+  // popup scope, so a tour step on it does not hold the bar open: the user is
+  // asked to hover it and see it unfold.
+  const anchorRef = useHintAnchor(actionBarAnchor);
+  const setHitbox = (el: HTMLDivElement | null) => {
+    hitboxRef.current = el;
+    anchorRef(el);
+  };
   const [footprint, setFootprint] = useState({ width: 0, height: 0 });
   useResizeObserver(hitboxRef, () => {
     const el = hitboxRef.current;
@@ -312,7 +323,7 @@ function FloatingBar({
         style={box ?? undefined}
       >
         <div
-          ref={hitboxRef}
+          ref={setHitbox}
           // eslint-disable-next-line layout/no-adhoc-layout -- the hitbox, centred on the anchored band at home (`my-auto`); `shrink-0` so the zero-height fallback band cannot squash it
           className={cn(
             "my-auto shrink-0 transition-transform duration-150",
@@ -394,11 +405,13 @@ export function FloatingActionBarHost() {
 export function DockedActionBarHost() {
   const { enabled } = useConfig(actionBarConfig);
   const pinned = useActionBarPinned();
+  const anchorRef = useHintAnchor(actionBarAnchor);
 
   if (!enabled || !pinned) return null;
 
   return (
     <Stack
+      ref={anchorRef}
       direction="row"
       gap="2xs"
       align="center"

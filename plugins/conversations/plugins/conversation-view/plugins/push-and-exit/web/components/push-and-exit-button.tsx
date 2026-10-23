@@ -12,7 +12,14 @@ import {
   useHasActiveSiblingInWorktree,
   useConversationById,
 } from "@plugins/conversations/web";
-import { stopConversation } from "@plugins/conversations/core";
+import { isAgentBusy, stopConversation } from "@plugins/conversations/core";
+import { useHintAnchor, useHintMoment } from "@plugins/hints/web";
+import {
+  closeHint,
+  goHint,
+  mainActionAnchor,
+  pushAndCloseHint,
+} from "../../core";
 import {
   getEndpointErrorMessage,
   EndpointError,
@@ -252,6 +259,16 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
     [draft, awaitingStart, exit, conversation, live],
   );
 
+  // The main button's tip is for the decision the user faces once the agent is
+  // at rest (not mid-turn, nor idle on background work it will wake for): one tip per decision state, each requested only while the
+  // button shows it (settled, never provisional). The other modes request
+  // nothing. One call per hint: a hint's request is keyed by the hint itself.
+  const anchorRef = useHintAnchor(mainActionAnchor);
+  const finished = !!live && !isAgentBusy(live.status) && !provisional;
+  useHintMoment(pushAndCloseHint, finished && mode === "push-and-exit");
+  useHintMoment(closeHint, finished && mode === "exit");
+  useHintMoment(goHint, finished && mode === "go");
+
   if (!conversation || !live) return null;
 
   const hasSession = !!live.claudeSessionId;
@@ -390,6 +407,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
 
   return (
     <Button
+      ref={anchorRef}
       variant="default"
       tooltip={tooltip}
       aria-label={label}

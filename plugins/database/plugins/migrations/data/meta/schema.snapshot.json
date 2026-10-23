@@ -1,6 +1,6 @@
 {
-  "id": "9fe1ee25-1a1d-4559-a3b4-b6d00a9aa2fd",
-  "prevId": "4ee37412-44b1-4161-9867-b0103bd0c18f",
+  "id": "7128f479-156e-4d0e-8e5f-c9da66918485",
+  "prevId": "9fe1ee25-1a1d-4559-a3b4-b6d00a9aa2fd",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -8155,6 +8155,38 @@
           "with": {}
         }
       },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.hint_seen": {
+      "name": "hint_seen",
+      "schema": "",
+      "columns": {
+        "hint_id": {
+          "name": "hint_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "outcome": {
+          "name": "outcome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "seen_at": {
+          "name": "seen_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},

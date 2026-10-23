@@ -7,18 +7,18 @@
 - Description: Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations: the task CRUD, chain, dependency and auto-start routes, portable (arming a task wakes the launcher through the tasks.autoStartArmed trigger event). Launching, the repo info, the add_task MCP tool and the auto-start catch-up are the machine half's.
 - Server:
   - Contributes: `resource.declare` "tasks.repo-info"
-  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×15
     - `infra/endpoints` ×2
     - `primitives/rank` ×2
     - `tasks/auto-start` ×2
-    - `tasks/task-title` ×2
     - `conversations/model-provider/catalog.getModelCatalog`
     - `database.db`
     - `infra/attachments.getAttachment`
     - `tasks/launch-options.resolveLaunchOptions`
     - `tasks/task-category.setTaskCategory`
     - `tasks/task-source-url.setTaskSourceUrl`
+    - `tasks/task-title.scheduleTaskTitleUpdate`
     - `tasks/task-track.listSidequestIds`
   - Exports (values): `armTaskAutoStart`
   - Resources: `tasks.repo-info` (invalidate, snapshot)

@@ -12,7 +12,7 @@ import {
   type TitlesAnswer,
 } from "./title-parse";
 import { tasksShortTitle } from "../../server/internal/tables";
-import { synthesiseTitleFallback } from "../../server/internal/title-fallback";
+import { synthesiseTitleFallback } from "../../core";
 import type { TaskTitleGeneratorImpl } from "../../server/internal/generator";
 
 // One Haiku call makes both titles from the FULL description: the short title

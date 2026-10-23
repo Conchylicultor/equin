@@ -567,6 +567,10 @@
       "name": "@singularity/plugin-apps-home-shell",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/home/plugins/tour": {
+      "name": "@singularity/plugin-apps-home-tour",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/home/plugins/usage-fields": {
       "name": "@singularity/plugin-apps-home-usage-fields",
       "version": "0.0.1",
@@ -3596,6 +3600,17 @@
     },
     "plugins/fullscreen": {
       "name": "@singularity/plugin-fullscreen",
+      "version": "0.0.1",
+    },
+    "plugins/hints": {
+      "name": "@singularity/plugin-hints",
+      "version": "0.0.1",
+      "dependencies": {
+        "@floating-ui/react-dom": "^2.1.9",
+      },
+    },
+    "plugins/hints/plugins/help-menu": {
+      "name": "@singularity/plugin-hints-help-menu",
       "version": "0.0.1",
     },
     "plugins/history": {
@@ -7262,6 +7277,8 @@
 
     "@singularity/plugin-apps-home-shell": ["@singularity/plugin-apps-home-shell@workspace:plugins/apps/plugins/home/plugins/shell"],
 
+    "@singularity/plugin-apps-home-tour": ["@singularity/plugin-apps-home-tour@workspace:plugins/apps/plugins/home/plugins/tour"],
+
     "@singularity/plugin-apps-home-usage-fields": ["@singularity/plugin-apps-home-usage-fields@workspace:plugins/apps/plugins/home/plugins/usage-fields"],
 
     "@singularity/plugin-apps-mail": ["@singularity/plugin-apps-mail@workspace:plugins/apps/plugins/mail"],
@@ -8719,6 +8736,10 @@
     "@singularity/plugin-framework-web-sdk": ["@singularity/plugin-framework-web-sdk@workspace:plugins/framework/plugins/web-sdk"],
 
     "@singularity/plugin-fullscreen": ["@singularity/plugin-fullscreen@workspace:plugins/fullscreen"],
+
+    "@singularity/plugin-hints": ["@singularity/plugin-hints@workspace:plugins/hints"],
+
+    "@singularity/plugin-hints-help-menu": ["@singularity/plugin-hints-help-menu@workspace:plugins/hints/plugins/help-menu"],
 
     "@singularity/plugin-history": ["@singularity/plugin-history@workspace:plugins/history"],
 

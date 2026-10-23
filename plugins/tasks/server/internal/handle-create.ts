@@ -6,10 +6,8 @@ import {
   getTask,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { rankAfterSibling } from "@plugins/primitives/plugins/rank/server";
-import {
-  scheduleTaskTitleUpdate,
-  synthesiseTitleFallback,
-} from "@plugins/tasks/plugins/task-title/server";
+import { scheduleTaskTitleUpdate } from "@plugins/tasks/plugins/task-title/server";
+import { synthesiseTitleFallback } from "@plugins/tasks/plugins/task-title/core";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { createTask as createTaskEndpoint } from "../../core/endpoints";
 import { armTaskAutoStart } from "./arm-auto-start";

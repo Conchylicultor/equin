@@ -32,7 +32,9 @@ the `tasks.launch-option` registry drawn by `LaunchOptionPills` — the same pil
 as the Improve popover — and what the user picks becomes the task's own
 preprompt, model and thinking mode, re-applied on every resume. That is also
 why `getRequest` names either an existing task or the category a new one is
-filed under, titled with the form's `title`: a fork or attempt launch, which
+filed under, titled with the form's `title` unless `getRequest` names one
+(`title`, for a form whose heading is generic — the help menu's "Ask equin
+how to…" titles each task with the question): a fork or attempt launch, which
 must not mint a task, has no spelling here and uses `LaunchControl`.
 
 A host that sets some launch options on the task itself — `getRequest` prepared
@@ -100,27 +102,17 @@ started" notification confirms it), so its props are the form's minus
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --spacing`
-  - Imported by:
+  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×5
+    - `conversations` ×5
+    - `tasks` ×3
+    - `page` ×2
     - `active-data/task`
-    - `apps/agent-manager/welcome`
-    - `apps/home/app-cards`
-    - `apps/prototypes/canvas`
-    - `apps/prototypes/gallery`
-    - `apps/sonata/transcription`
     - `config_v2/settings/conflict-agent`
-    - `conversations/agent-thread`
-    - `conversations/conversation-view/fork-conversation`
-    - `conversations/conversation-view/jsonl-viewer/investigate-event`
-    - `conversations/conversation-view/rewind`
-    - `conversations/conversations-view`
-    - `page/annotations/todo/task-link`
-    - `page/prompt/block`
+    - `hints/help-menu`
     - `primitives/launch/investigate`
     - `reports/launch-fix`
     - `screenshot`
-    - `tasks/attempt-view`
-    - `tasks/task-description`
-    - `tasks/task-list`
 - Sub-plugins:
   - **`investigate`** — The one 'launch an agent to investigate this failure' affordance: <InvestigateAction> — a fixed icon, label and popover, briefed by the caller, filed about the failed record (tasks/task-subject) so…
 

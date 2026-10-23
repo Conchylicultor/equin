@@ -26,6 +26,8 @@ import { useCaptureUrlDefault } from "../use-capture-url-default";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { TASK_DRAFT_FORM_WIDTH } from "../../core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import type { HintTarget } from "@plugins/hints/core";
+import { useHintAnchor } from "@plugins/hints/web";
 
 const addIcon = symbol("add");
 const closeIcon = symbol("close");
@@ -77,6 +79,16 @@ export interface TaskDraftFormProps {
    * funnel) through the same path the in-form action buttons use.
    */
   headInsertRef?: React.MutableRefObject<((snippet: string) => void) | null>;
+  /** See `TaskDraftPopoverProps.hintAnchors`. */
+  hintAnchors?: TaskDraftHintAnchors;
+}
+
+/** Hint anchors a host names for the form's elements. */
+export interface TaskDraftHintAnchors {
+  /** The whole form. */
+  readonly panel?: HintTarget;
+  /** The submit button. */
+  readonly send?: HintTarget;
 }
 
 function useIsAgentWorktree(): boolean {
@@ -121,8 +133,11 @@ export function TaskDraftForm({
   heading,
   placeholder,
   headInsertRef,
+  hintAnchors,
 }: TaskDraftFormProps) {
   const isAgentWorktree = useIsAgentWorktree();
+  const panelAnchorRef = useHintAnchor(hintAnchors?.panel);
+  const sendAnchorRef = useHintAnchor(hintAnchors?.send);
   const [draggingId, setDraggingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -206,6 +221,7 @@ export function TaskDraftForm({
 
   return (
     <Stack
+      ref={panelAnchorRef}
       gap="sm"
       // Fixed px: the form is the popover's one column, shared with its exhibit.
       style={{ width: TASK_DRAFT_FORM_WIDTH }}
@@ -321,7 +337,12 @@ export function TaskDraftForm({
         <Button variant="ghost" onClick={onCancel} loading={submitting}>
           Cancel
         </Button>
-        <Button onClick={onSubmit} loading={submitting} disabled={hasEmpty}>
+        <Button
+          ref={sendAnchorRef}
+          onClick={onSubmit}
+          loading={submitting}
+          disabled={hasEmpty}
+        >
           {isMulti ? `Create ${cards.length} tasks` : "Create task"}
           <Kbd className="border-transparent bg-primary-foreground/15 text-primary-foreground">
             ⌘↵

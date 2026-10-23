@@ -28,10 +28,11 @@
     - `ui/tokens/color-palette --popover`
     - `ui/tokens/color-palette --popover-foreground`
     - `ui/tokens/shape --radius`
-  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 26 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×9
     - `conversations` ×3
     - `primitives` ×3
+    - `hints` ×2
     - `page` ×2
     - `apps-core/app-embed`
     - `build/serve-composition`

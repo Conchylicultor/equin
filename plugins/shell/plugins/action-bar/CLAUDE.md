@@ -24,6 +24,7 @@ inherit whichever the host chose, so every item in a host shares one height.
     - `ActionBar.Glance`
   - Slot contributors:
     - `ActionBar.Item` ← `build`
+    - `ActionBar.Item` ← `hints.help-menu`
     - `ActionBar.Item` ← `improve`
     - `ActionBar.Item` ← `screenshot`
     - `ActionBar.Item` ← `screenshot.draw-on-app`
@@ -42,6 +43,7 @@ inherit whichever the host chose, so every item in a host shares one height.
     - `apps-core/surface`
     - `build`
     - `fullscreen`
+    - `hints/help-menu`
     - `improve`
     - `reorder/edit-mode`
     - `screenshot`

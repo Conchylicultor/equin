@@ -180,7 +180,6 @@ card, not a collection.
     - `page/prompt/link.PAGES_CATEGORY_ID`
     - `tasks/task-category.setTaskCategory`
     - `tasks/task-title.scheduleTaskTitleUpdate`
-    - `tasks/task-title.synthesiseTitleFallback`
     - `tasks/tasks-core._tasks`
     - `tasks/tasks-core.createTask`
     - `tasks/tasks-core.tasksView`

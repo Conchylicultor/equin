@@ -1,9 +1,7 @@
 import { createTask } from "@plugins/tasks/plugins/tasks-core/server";
 import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
-import {
-  scheduleTaskTitleUpdate,
-  synthesiseTitleFallback,
-} from "@plugins/tasks/plugins/task-title/server";
+import { scheduleTaskTitleUpdate } from "@plugins/tasks/plugins/task-title/server";
+import { synthesiseTitleFallback } from "@plugins/tasks/plugins/task-title/core";
 import type { CreatePromptBlockTaskBody } from "../../shared/endpoints";
 import { promptBlock } from "./tables";
 

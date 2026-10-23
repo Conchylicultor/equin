@@ -24,7 +24,12 @@ import {
   type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
-import { TaskDraftForm, makeCard, type CardDraft } from "./task-draft-form";
+import {
+  TaskDraftForm,
+  makeCard,
+  type CardDraft,
+  type TaskDraftHintAnchors,
+} from "./task-draft-form";
 import { describeOutcome, submitChain } from "../internal/submit";
 import {
   TaskChainRelateModeSchema,
@@ -142,6 +147,12 @@ export interface TaskDraftPopoverProps {
   /** The head card's placeholder — what this surface asks the user for. */
   placeholder?: string;
   onSuccess?: (taskIds: string[]) => void;
+  /**
+   * Hint anchors the host names for the form's elements (its onboarding tour
+   * points at them): `panel` is the form, `send` its submit button. The form
+   * knows no tour — it registers what it is handed.
+   */
+  hintAnchors?: TaskDraftHintAnchors;
 }
 
 // Inner component that receives settled tasks — all tasks-dependent derivations
@@ -167,6 +178,7 @@ function TaskDraftFormContent({
   placeholder,
   onSuccess,
   headInsertRef,
+  hintAnchors,
 }: {
   tasks: readonly TaskListItem[];
   draft: TaskDraftState;
@@ -188,6 +200,7 @@ function TaskDraftFormContent({
   placeholder: string | undefined;
   onSuccess: ((taskIds: string[]) => void) | undefined;
   headInsertRef: React.MutableRefObject<((snippet: string) => void) | null>;
+  hintAnchors: TaskDraftHintAnchors | undefined;
 }) {
   const { cards, standalone } = draft;
   const effectiveRelateTaskId =
@@ -332,6 +345,7 @@ function TaskDraftFormContent({
       heading={heading}
       placeholder={placeholder}
       headInsertRef={headInsertRef}
+      hintAnchors={hintAnchors}
     />
   );
 }
@@ -347,6 +361,7 @@ export function TaskDraftPopover({
   heading,
   placeholder,
   onSuccess,
+  hintAnchors,
 }: TaskDraftPopoverProps) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const isControlled = controlledOpen !== undefined;
@@ -425,11 +440,16 @@ export function TaskDraftPopover({
   // and reopening the popover — never re-applies one already taken. The ref
   // outlives the popover's content because this component is always mounted.
   const appliedInsertIdRef = useRef<number | null>(null);
+  //
+  // A seed applies only to an empty draft: it is a suggested start, never an
+  // addition to what the user already wrote.
   useEffect(() => {
     if (!insert || appliedInsertIdRef.current === insert.id) return;
     appliedInsertIdRef.current = insert.id;
+    if (insert.mode === "seed" && cards.some((c) => c.text.trim() !== ""))
+      return;
     applyInsert(insert.text);
-  }, [insert, applyInsert]);
+  }, [insert, applyInsert, cards]);
 
   // Where focus goes when the popover closes. A dismissal (Esc, Cancel, a click
   // outside) hands it back to the trigger — the keyboard user keeps their place.
@@ -503,6 +523,7 @@ export function TaskDraftPopover({
             placeholder={placeholder}
             onSuccess={onSuccess}
             headInsertRef={headInsertRef}
+            hintAnchors={hintAnchors}
           />
         )}
       </ResourceView>

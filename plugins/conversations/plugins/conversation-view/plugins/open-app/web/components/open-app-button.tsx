@@ -4,6 +4,8 @@ import {
 } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
+import { isAgentBusy } from "@plugins/conversations/core";
+import { useHintAnchor, useHintMoment } from "@plugins/hints/web";
 import { useAttemptSourceUrl } from "@plugins/tasks/plugins/task-source-url/web";
 import { linkGestureProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -12,6 +14,7 @@ import { opsHistory } from "@plugins/debug/plugins/profiling/plugins/op-log/plug
 import { useConfig } from "@plugins/config_v2/web";
 import { appPreviewPane, appPreviewUrl } from "../app-preview-pane";
 import { openAppConfig } from "../../shared/config";
+import { openAppAnchor, tryItHint } from "../../core";
 
 const rocketLaunchIcon = symbol("rocket-launch");
 
@@ -19,10 +22,21 @@ export function OpenAppButton() {
   const { convId } = conversationPane.useParams();
   const conversation = useConversationById(convId);
   if (!conversation) return null;
-  return <OpenAppAction attemptId={conversation.attemptId} />;
+  return (
+    <OpenAppAction
+      attemptId={conversation.attemptId}
+      agentBusy={isAgentBusy(conversation.status)}
+    />
+  );
 }
 
-function OpenAppAction({ attemptId }: { attemptId: string }) {
+function OpenAppAction({
+  attemptId,
+  agentBusy,
+}: {
+  attemptId: string;
+  agentBusy: boolean;
+}) {
   const source = useAttemptSourceUrl(attemptId);
   const openPane = useOpenPane();
   const { target } = useConfig(openAppConfig);
@@ -36,6 +50,11 @@ function OpenAppAction({ attemptId }: { attemptId: string }) {
   });
   if (builds.status === "error") throw builds.error;
   const built = builds.status === "ready" && builds.data.length > 0;
+  // There is something to try once a build has succeeded and the agent is at
+  // rest (while it works — a turn, or background work it will wake for — the
+  // build may be about to change under the user).
+  const anchorRef = useHintAnchor(openAppAnchor);
+  useHintMoment(tryItHint, built && !agentBusy);
   // No computer behind this app (the in-browser demo): nothing is built or
   // served, and the build history is not readable — disabled, saying why.
   const label =
@@ -46,6 +65,7 @@ function OpenAppAction({ attemptId }: { attemptId: string }) {
         : "Open app";
   return (
     <PaneIconAction
+      ref={anchorRef}
       label={label}
       icon={rocketLaunchIcon}
       // Pending until we know whether the task was filed from a page: opening
