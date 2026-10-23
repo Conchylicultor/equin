@@ -12,7 +12,7 @@ A subagent's background-task completion notification is filed under the PARENT
 session's queue and never delivered, so an agent that backgrounds a build and
 ends its turn is never woken — and whoever waits on it waits forever (measured:
 nine hours). `background-ops` therefore tells a subagent to hold its turn open on
-`./singularity await <op>` instead, and records which agent started which op
+`./equin await <op>` instead, and records which agent started which op
 (`core/agent-ops.ts`), because neither half of "is this agent walking away from
 its own op?" is available at stop time: the marker on disk doesn't say who asked,
 and the stop payload doesn't say what they started.
@@ -128,6 +128,9 @@ can blind or deafen all of them at once.
 - Description: Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
 - Core:
   - Uses:
+    - `framework/cli.CLI_NAME`
+    - `framework/cli.CLI_NAMES`
+    - `framework/cli.isCliName`
     - `framework/tooling/collected-dir.defineCollectedDir`
     - `framework/tooling/collected-dir.loadCollectedDir`
     - `framework/tooling/guards/refusal-format.joinRefusal`

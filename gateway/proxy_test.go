@@ -308,6 +308,9 @@ func TestParseWorktree(t *testing.T) {
 		// Case-insensitive, trailing root dot tolerated.
 		{"SONATA.att-x.LOCALHOST:9000", "sonata.att-x"},
 		{"sonata.att-x.localhost.:9000", "sonata.att-x"},
+		// A host alias resolves to the namespace it stands for.
+		{"equin.localhost:9000", "singularity"},
+		{"EQUIN.localhost", "singularity"},
 		// No namespace: loopback in every spelling, and non-.localhost hosts.
 		{"localhost:9000", ""},
 		{"localhost", ""},

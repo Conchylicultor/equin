@@ -1,18 +1,5 @@
 #!/bin/sh
-set -e
-cd "$(dirname "$0")"
-
-# ONE step, on purpose: nothing may run before the CLI process. This used to
-# `bun install --silent` first, and a failed install aborted the wrapper (set -e)
-# before `exec`, printing nothing — every subcommand then looked like it had
-# failed on its own. Dependencies are now installed INSIDE the CLI, by the
-# bootstrap in bin/index.ts (ensureDeps), which can attribute its own failures.
-# Do not add a step above this line — except this one guard, which cannot fail
-# silently: with no Bun there is no CLI to report anything, and `exec` would say
-# only "bun: not found". The doctor names everything else that is missing too.
-command -v bun >/dev/null 2>&1 || {
-  echo "singularity: bun not found — nothing can run without it." >&2
-  sh plugins/framework/plugins/cli/plugins/doctor/doctor.sh >&2
-  exit 1
-}
-exec bun plugins/framework/plugins/cli/bin/index.ts "$@"
+# Legacy name of ./equin, kept so older docs, hints and muscle memory still work
+# while the app moves off the `singularity` name. Nothing else belongs here:
+# ./equin is the CLI's only entry, and its wrapper must stay one step.
+exec "$(dirname "$0")/equin" "$@"

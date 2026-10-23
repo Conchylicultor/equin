@@ -22,9 +22,7 @@ describe("decideStop", () => {
   test("an agent whose own op is still running is blocked", () => {
     const v = decideStop([started("build")], [live("build")], false);
     expect(v.kind).toBe("block");
-    expect(v.kind === "block" && v.reason).toContain(
-      "./singularity await build",
-    );
+    expect(v.kind === "block" && v.reason).toContain("./equin await build");
   });
 
   test("someone else's op in another checkout does not pin this agent", () => {

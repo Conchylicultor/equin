@@ -16,7 +16,7 @@ export const gitPushGuard = defineGuard<BashInput>({
     if (!cmd) return null;
 
     // Only a push INTO a Singularity checkout is refused: that repo lands work
-    // through `./singularity push`. A push to a separate repo (a package an
+    // through `./equin push`. A push to a separate repo (a package an
     // agent publishes on its own) has no CLI flow to bypass. Anything this
     // cannot place — an unfollowed --git-dir, a directory that is no repo —
     // is treated as Singularity.
@@ -39,7 +39,7 @@ export const gitPushGuard = defineGuard<BashInput>({
       blocked:
         "`git push` into the Singularity repo is not allowed — agents must use the Singularity CLI.",
       why: "Raw git push bypasses validation checks, worktree-merge flow, and branch protection. A previous agent ran `git push origin main` directly and corrupted shared state.",
-      hint: 'Use `./singularity push -m "commit message"` instead. It runs checks, commits, and pushes via the proper worktree-merge flow. (Pushes into a separate, non-Singularity repo are allowed — run them from that repo\'s directory, or with `git -C <dir> push`.)',
+      hint: 'Use `./equin push -m "commit message"` instead. It runs checks, commits, and pushes via the proper worktree-merge flow. (Pushes into a separate, non-Singularity repo are allowed — run them from that repo\'s directory, or with `git -C <dir> push`.)',
     };
   },
 });

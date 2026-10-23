@@ -4,7 +4,7 @@
  *
  * ONE DECLARATION, TWO HALVES OF ONE RULE. The `bun-script` guard denies
  * `bun <file>` for exactly these extensions and sends the caller to
- * `./singularity run <file>`, which accepts exactly these extensions. Those two
+ * `./equin run <file>`, which accepts exactly these extensions. Those two
  * sets must be the same set: an extension `run` refused but the guard denied
  * would leave that caller with nowhere to go, and a dead-end hint is worse than
  * no guard at all. They were briefly two copies of one regex with a comment on

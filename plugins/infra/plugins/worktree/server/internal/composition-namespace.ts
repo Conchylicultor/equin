@@ -25,7 +25,11 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import type { Namespace } from "@plugins/infra/plugins/namespace/core";
+import {
+  isNamespaceHostAlias,
+  NAMESPACE_HOST_ALIASES,
+  type Namespace,
+} from "@plugins/infra/plugins/namespace/core";
 import { worktreesDir } from "@plugins/infra/plugins/paths/server";
 
 export const COMPOSITION_MARKER_FILE = "composition.json";
@@ -84,6 +88,11 @@ export function namespaceCollision(
   claimant: NamespaceClaimant,
   probe: NamespaceProbe,
 ): string | null {
+  // Both sides: the gateway resolves an alias host before it looks a name up,
+  // so a namespace spelled like one could never be reached.
+  if (isNamespaceHostAlias(ns)) {
+    return `"${ns}" is a host alias of the "${NAMESPACE_HOST_ALIASES[ns]}" namespace — the gateway would never route to it; pick another name.`;
+  }
   if (claimant.kind === "composition") {
     if (probe.gitWorktreeDirExists) {
       return `a git worktree checkout named "${ns}" exists under .claude/worktrees/ — rename the composition.`;

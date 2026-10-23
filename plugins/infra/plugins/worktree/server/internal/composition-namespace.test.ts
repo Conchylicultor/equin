@@ -113,3 +113,17 @@ describe("namespaceCollision — a checkout claiming a namespace", () => {
     ).toBeNull();
   });
 });
+
+describe("namespaceCollision — a host alias", () => {
+  test("neither side may claim an alias's name", () => {
+    const equin = asNamespace("equin");
+    for (const claimant of [
+      { kind: "composition", id: "equin" },
+      { kind: "checkout", name: "equin" },
+    ] as const) {
+      expect(namespaceCollision(equin, claimant, clean)).toContain(
+        "host alias",
+      );
+    }
+  });
+});

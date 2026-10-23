@@ -26,7 +26,7 @@ import { agentOpsFor, clearAgentOps, type StartedOp } from "./agent-ops";
  * 1. It blocks only an agent that has an op of its OWN still running — a
  *    recorded start (`agent-ops`) AND a live marker for it right now.
  * 2. The remedy is one command, and that command always terminates: an
- *    `./singularity await` caps itself at 8 minutes and exits.
+ *    `./equin await` caps itself at 8 minutes and exits.
  * 3. Claude Code overrides the hook after 8 consecutive blocks regardless.
  */
 
@@ -92,7 +92,7 @@ export function decideStop(
       `completion notification will NOT be delivered to you — the harness files a subagent's ` +
       `notification under the parent session's queue, where nothing delivers it. If you stop now, ` +
       `nobody learns the outcome and whoever is waiting on you waits forever.\n\n` +
-      `Run \`./singularity await ${names.join(" ")}\` now. It blocks until the verdict is written and ` +
+      `Run \`./equin await ${names.join(" ")}\` now. It blocks until the verdict is written and ` +
       `prints it, so the result reaches you as that call's own output. Exit 0 = success, 1 = failed, ` +
       `70 = still going (just run it again). Then report what it said.`,
   };

@@ -51,9 +51,11 @@ const reason = (command: string, bg?: boolean) => {
 describe("background-ops guard", () => {
   describe("long ops in the foreground are blocked", () => {
     for (const op of ["build", "push", "check", "test", "release"]) {
-      test(`./singularity ${op}`, () => {
-        expect(blocks(`./singularity ${op}`)).toBe(true);
-      });
+      for (const cli of ["./equin", "./singularity"]) {
+        test(`${cli} ${op}`, () => {
+          expect(blocks(`${cli} ${op}`)).toBe(true);
+        });
+      }
     }
 
     test("the exact shape from conv-1786116592-b70n", () => {
@@ -121,9 +123,7 @@ describe("background-ops guard", () => {
     test("… but it is told to await instead of ending its turn", () => {
       const v = subagentVerdict("./singularity build", true);
       expect(v.kind).toBe("inform");
-      expect(v.kind === "inform" && v.context).toContain(
-        "./singularity await build",
-      );
+      expect(v.kind === "inform" && v.context).toContain("./equin await build");
       expect(v.kind === "inform" && v.context).toContain("NOT reach you");
     });
 
@@ -135,9 +135,7 @@ describe("background-ops guard", () => {
       const v = subagentVerdict("./singularity test");
       expect(v.kind).toBe("deny");
       expect(v.kind === "deny" && v.reason).toContain("run_in_background");
-      expect(v.kind === "deny" && v.reason).toContain(
-        "./singularity await test",
-      );
+      expect(v.kind === "deny" && v.reason).toContain("./equin await test");
     });
 
     test("the main conversation's foreground hint still says to end its turn", () => {

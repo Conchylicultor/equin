@@ -2,6 +2,7 @@ import { recordAgentOpStart } from "../agent-ops";
 import { defineGuard } from "../define-guard";
 import { parseShell, type ShellParseResult } from "../parse-shell";
 import type { BashInput, GuardContext } from "../types";
+import { CLI_NAME } from "@plugins/framework/plugins/cli/core";
 
 /**
  * Subcommands that take a host slot and run for minutes. From
@@ -18,7 +19,7 @@ const SHELL_DETACH = new Set(["nohup", "setsid", "disown"]);
 
 function longOpIn(parsed: ShellParseResult): string | null {
   for (const call of parsed.calls) {
-    if (call.name !== "singularity") continue;
+    if (call.name !== CLI_NAME) continue;
     const sub = call.args.find((a) => !a.startsWith("-"));
     if (!sub || !LONG_OPS.has(sub)) continue;
     if (call.args.some((a) => INSTANT_FLAGS.has(a))) continue;
@@ -48,7 +49,7 @@ function shellDetachIn(parsed: ShellParseResult): boolean {
  *
  * `run_in_background: true` answers with "You will be notified when it
  * completes" and lives up to its `timeout` — 30 min by default, 2 h at most,
- * which `background-timeout` sets on every backgrounded `./singularity` call.
+ * which `background-timeout` sets on every backgrounded `./equin` call.
  * Forcing every long op through it deletes the handle-less state entirely.
  *
  * ## The notification only arrives for the main conversation
@@ -57,7 +58,7 @@ function shellDetachIn(parsed: ShellParseResult): boolean {
  * breaks for a subagent — see {@link awaitInstead}. The op still runs correctly
  * backgrounded, so the guard's advice is unchanged; what changes is what the
  * caller does next. A subagent is told to hold its turn open on
- * `./singularity await <op>`, and the ops it started are recorded so the
+ * `./equin await <op>`, and the ops it started are recorded so the
  * stop-guard can refuse a turn that walks away from one.
  */
 /**
@@ -78,7 +79,7 @@ function awaitInstead(op: string): string {
     `You are a subagent, so the completion notification for this ${op} will NOT reach you — ` +
     `the harness files it under the parent session's queue and nothing delivers it there. ` +
     `Do NOT end your turn expecting to be woken.\n` +
-    `Your next call must be: \`./singularity await ${op}\` (foreground). It blocks until the ` +
+    `Your next call must be: \`./equin await ${op}\` (foreground). It blocks until the ` +
     `${op} writes its verdict and prints it, so the wake-up becomes this call's own result. ` +
     `If it exits 70 the op is simply still going — run it again.`
   );
@@ -125,17 +126,17 @@ export const backgroundOpsGuard = defineGuard<BashInput>({
 
     if (shellDetachIn(parsed)) {
       return {
-        blocked: `\`./singularity ${op}\` is being detached by the shell, which produces no tracked task.`,
+        blocked: `\`./equin ${op}\` is being detached by the shell, which produces no tracked task.`,
         why: "A shell-detached process is invisible to the harness: nothing notifies you when it ends, so the only way to learn the outcome is to watch a file. That is the polling loop this repo is trying to remove.",
         hint: `Drop the \`&\`/\`nohup\` and pass \`run_in_background: true\` on the Bash tool call instead.`,
       };
     }
 
     return {
-      blocked: `\`./singularity ${op}\` must run with \`run_in_background: true\`.`,
+      blocked: `\`./equin ${op}\` must run with \`run_in_background: true\`.`,
       why: `A ${op} takes about 10 minutes at the median and regularly exceeds the 600 s foreground limit. On timeout you get "Command timed out after 10m 0s" — no task id, no notification — while the op keeps running, leaving you with no handle on it.`,
       hint: ctx.agent
-        ? `Re-run the same command with \`run_in_background: true\`, then — WITHOUT ending your turn — call \`./singularity await ${op}\`. ${awaitInstead(op)}`
+        ? `Re-run the same command with \`run_in_background: true\`, then — WITHOUT ending your turn — call \`./equin await ${op}\`. ${awaitInstead(op)}`
         : `Re-run the same command with \`run_in_background: true\`, then END YOUR TURN. The timeout is raised to the 2 h ceiling for you, and you will be re-invoked with the output when it finishes. Do not sit and watch it.`,
     };
   },

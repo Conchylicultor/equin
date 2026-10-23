@@ -24244,7 +24244,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `detached-work-safety/no-raw-set-interval` — `bin/index.ts` (sanctioned)
           - `live/no-legacy-resource-spelling` — `.` (sanctioned)
-    - **`cli`** — The `./singularity` CLI: the command declaration contract, the generated-artifact normalize contract, and every built-in command (build, push, check, test, run, release, deploy, and more).
+    - **`cli`** — The `./equin` CLI (legacy name `./singularity`): the command declaration contract, the generated-artifact normalize contract, and every built-in command (build, push, check, test, run, release, deploy, and more).
       - Core:
         - Uses: `framework/tooling/collected-dir.defineCollectedDir`
         - Exports (types):
@@ -24257,17 +24257,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MergeMarkerKind`
         - Exports (values):
           - `clearMergeMarkers`
+          - `CLI_NAME`
+          - `CLI_NAMES`
           - `cliEntrySourcePath`
           - `defineCliCommand`
           - `findClaudeMdConflicts`
           - `isCliCommand`
           - `isCliEntryPresent`
+          - `isCliName`
           - `MERGE_MARKER_KINDS`
           - `mergeMarkerDir`
           - `readMergeMarkers`
           - `resolveGitDir`
       - Cross-plugin:
-        - Imported by: `framework/tooling/import-closure`
+        - Imported by:
+          - `framework/tooling/guards`
+          - `framework/tooling/import-closure`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/claudemd-conflicts.ts`, `core/internal/git-dir.ts`, `core/internal/merge-markers.ts`, `core/internal/registry-entry.ts` (debt)
       - Plugins:
@@ -25622,6 +25627,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Core:
             - Uses:
+              - `framework/cli.CLI_NAME`
+              - `framework/cli.CLI_NAMES`
+              - `framework/cli.isCliName`
               - `framework/tooling/collected-dir.defineCollectedDir`
               - `framework/tooling/collected-dir.loadCollectedDir`
               - `framework/tooling/guards/refusal-format.joinRefusal`
@@ -29219,8 +29227,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BASE_EXCLUSIONS_ID`
           - `GATEWAY_PORT`
           - `isNamespace`
+          - `isNamespaceHostAlias`
           - `MAIN_COMPOSITION_ID`
           - `MAIN_WORKTREE_NAME`
+          - `NAMESPACE_HOST_ALIASES`
           - `NAMESPACE_HOST_SUFFIX`
           - `NAMESPACE_LABEL_RE`
           - `NAMESPACE_RE`

@@ -58,4 +58,4 @@ plugins/apps/plugins/<name>/
 ```
 
 Each `package.json` needs a `"name"` for `bun install`, but its value is derived from the
-folder path and rewritten by `./singularity build` — any unique placeholder works.
+folder path and rewritten by `./equin build` — any unique placeholder works.

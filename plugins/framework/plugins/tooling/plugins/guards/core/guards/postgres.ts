@@ -33,7 +33,7 @@ export const postgresGuard = defineGuard<BashInput>({
     return {
       blocked: `Direct PostgreSQL CLI command blocked: ${blocked.name}.`,
       why: "Blocked commands: psql, pg_dump, pg_restore, createdb, dropdb, and other pg_* utilities.",
-      hint: "Use the `query_db` MCP tool for database inspection and debugging — it runs read-only queries against the worktree's database safely. Database mutations are managed by the server (migrations via `./singularity build`).",
+      hint: "Use the `query_db` MCP tool for database inspection and debugging — it runs read-only queries against the worktree's database safely. Database mutations are managed by the server (migrations via `./equin build`).",
     };
   },
 });

@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import type { ShellCall } from "./parse-shell";
+import { CLI_NAMES } from "@plugins/framework/plugins/cli/core";
 
 /**
  * Which repository a `git` call acts on, and what it runs there.
@@ -57,7 +58,7 @@ export function readGitInvocation(call: ShellCall): GitInvocation {
 
 /**
  * The Singularity CLI's entry point, relative to a checkout's root. A repo
- * whose root holds it lands work through `./singularity push`; any other repo
+ * whose root holds it lands work through `./equin push`; any other repo
  * (a separate package an agent publishes, a scratch clone) has no such flow.
  */
 const CLI_ENTRY = "plugins/framework/plugins/cli/bin/index.ts";
@@ -77,7 +78,7 @@ export function classifyRepo(dir: string): RepoKind {
   for (;;) {
     if (existsSync(join(cur, ".git"))) {
       const isSingularity =
-        existsSync(join(cur, "singularity")) &&
+        CLI_NAMES.some((name) => existsSync(join(cur, name))) &&
         existsSync(join(cur, CLI_ENTRY));
       return { kind: isSingularity ? "singularity" : "other", root: cur };
     }

@@ -1,9 +1,10 @@
 {
   "name": "@singularity/plugin-framework-cli",
-  "description": "The `./singularity` CLI: the command declaration contract, the generated-artifact normalize contract, and every built-in command (build, push, check, test, run, release, deploy, and more).",
+  "description": "The `./equin` CLI (legacy name `./singularity`): the command declaration contract, the generated-artifact normalize contract, and every built-in command (build, push, check, test, run, release, deploy, and more).",
   "private": true,
   "type": "module",
   "bin": {
+    "equin": "bin/index.ts",
     "singularity": "bin/index.ts"
   },
   "dependencies": {

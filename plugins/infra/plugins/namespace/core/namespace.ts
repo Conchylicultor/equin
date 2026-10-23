@@ -235,6 +235,32 @@ export const MAIN_WORKTREE_NAME: Namespace = namespaceFor(MAIN_COMPOSITION_ID, {
 });
 
 /**
+ * Extra host labels the gateway serves as an existing namespace: `equin` is
+ * `singularity`, so `http://equin.localhost:9000` opens the main app.
+ *
+ * An alias is a HOST spelling only — it is never minted (`namespaceFor` cannot
+ * yield one), never a spec dir, socket or database, and `namespaceFromHost`
+ * resolves it to its target, so nothing past the Host header ever sees it.
+ * `namespaceCollision` (`@plugins/infra/plugins/worktree/server`) refuses a
+ * checkout or composition that would take an alias's name, because the gateway
+ * would never route to it.
+ *
+ * Exists to move the app off the `singularity` name gradually: the old host
+ * keeps working while the new one is the one to use.
+ *
+ * KEEP IN SYNC with `hostAliases` in gateway/proxy.go — enforced by the
+ * `namespace:grammar-in-sync` check.
+ */
+export const NAMESPACE_HOST_ALIASES: Readonly<Record<string, Namespace>> = {
+  equin: MAIN_WORKTREE_NAME,
+};
+
+/** Whether `name` is a host alias rather than a namespace of its own. */
+export function isNamespaceHostAlias(name: string): boolean {
+  return Object.hasOwn(NAMESPACE_HOST_ALIASES, name);
+}
+
+/**
  * Validating cast at a serialization boundary — an env var, a spec-dir basename,
  * a DB row, a URL host.
  *
@@ -301,7 +327,8 @@ export function namespaceUrl(
  * and the reason the four hand-rolled copies of this — which disagreed with each
  * other AND with the gateway, one of them taking `host.split(".")[0]` — collapse
  * to one function. Returns `null` for the loopback hosts and anything not served
- * under `.localhost`, which is how "no namespace here" is spelled.
+ * under `.localhost`, which is how "no namespace here" is spelled. A host alias
+ * (`NAMESPACE_HOST_ALIASES`) reads back as the namespace it stands for.
  */
 export function namespaceFromHost(host: string): Namespace | null {
   let h = host;
@@ -319,5 +346,6 @@ export function namespaceFromHost(host: string): Namespace | null {
   if (h === "localhost" || h === "127.0.0.1" || h === "::1") return null;
   if (!h.endsWith(NAMESPACE_HOST_SUFFIX)) return null;
   const name = h.slice(0, -NAMESPACE_HOST_SUFFIX.length);
+  if (isNamespaceHostAlias(name)) return NAMESPACE_HOST_ALIASES[name]!;
   return isNamespace(name) ? (name as Namespace) : null;
 }

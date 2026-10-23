@@ -15,22 +15,22 @@ Singularity is a self-evolving app for the agentic era. The goal is to have an a
 Agents work in isolated, auto-created git worktrees:
 
 1. Solve the request.
-2. Deploy with `./singularity build` (frontend + server + gateway registration).
+2. Deploy with `./equin build` (frontend + server + gateway registration).
 
-   **Use `run_in_background: true` and end your turn** — build/push/check take ~10 min (median), over the 600 s foreground cap. The background task re-invokes you on exit; nothing to wait for or watch. Every backgrounded `./singularity` call is rewritten to the 2 h timeout ceiling (the 30 min default would kill it). Guards enforce all three.
+   **Use `run_in_background: true` and end your turn** — build/push/check take ~10 min (median), over the 600 s foreground cap. The background task re-invokes you on exit; nothing to wait for or watch. Every backgrounded `./equin` call is rewritten to the 2 h timeout ceiling (the 30 min default would kill it). Guards enforce all three.
 
-   **A SUBAGENT must not end its turn there** — it is never re-invoked (its completion notification lands in the parent's queue). Background the op, then call `./singularity await <op>` in the FOREGROUND: it blocks until the verdict and prints it (exit 0 ok, 1 failed, 70 still running — call again). A stop hook refuses a subagent turn that walks away from its running op.
+   **A SUBAGENT must not end its turn there** — it is never re-invoked (its completion notification lands in the parent's queue). Background the op, then call `./equin await <op>` in the FOREGROUND: it blocks until the verdict and prints it (exit 0 ok, 1 failed, 70 still running — call again). A stop hook refuses a subagent turn that walks away from its running op.
 
 3. The app is served at `http://<worktree>.localhost:9000` (always write `http://` so it's clickable).
 
-4. Once reviewed, `./singularity push -m "…"` merges to main (pulls main, merges, pushes).
+4. Once reviewed, `./equin push -m "…"` merges to main (pulls main, merges, pushes).
 
 RULES:
 
-- NEVER `./singularity push` unless instructed — the user reviews first. (A Dependencies-category upgrade task — or legacy Toolchain-category — counts as instruction; its text says when it may push. See `plugins/infra/plugins/deps/plugins/updates`.)
-- NEVER `git commit` yourself (branch conflicts). Always `./singularity push -m "commit message"`.
-- **Always rebase, never merge** (`git rebase origin/main`). Never `git merge origin/main`; never `git reset` a branch onto `main` (deletes the commits in between). Exception: `./singularity upstream merge` (see Upstream).
-- NEVER run `drizzle-kit generate` or the migration runner manually — `./singularity build` does it.
+- NEVER `./equin push` unless instructed — the user reviews first. (A Dependencies-category upgrade task — or legacy Toolchain-category — counts as instruction; its text says when it may push. See `plugins/infra/plugins/deps/plugins/updates`.)
+- NEVER `git commit` yourself (branch conflicts). Always `./equin push -m "commit message"`.
+- **Always rebase, never merge** (`git rebase origin/main`). Never `git merge origin/main`; never `git reset` a branch onto `main` (deletes the commits in between). Exception: `./equin upstream merge` (see Upstream).
+- NEVER run `drizzle-kit generate` or the migration runner manually — `./equin build` does it.
 - **Review diffs against the merge-base**: `git diff $(git merge-base HEAD main)`, not `git diff main` (which includes later main commits).
 
 ### MCP Tools
@@ -62,7 +62,7 @@ This pattern applies to *genuinely open* sets — ones where future plugins must
 
 ### Plugin boundary rules
 
-Enforced by `./singularity check boundary-rules` (which folder may import which — the `folders` table in `plugins/framework/plugins/tooling/plugins/boundaries/core/boundary-config.ts`) and `./singularity check plugin-boundaries` (import grammar, barrels, cycles; rules R1–R13). Details: [`boundaries/CLAUDE.md`](plugins/framework/plugins/tooling/plugins/boundaries/CLAUDE.md), [`plugin-boundaries/CLAUDE.md`](plugins/framework/plugins/tooling/plugins/checks/plugins/plugin-boundaries/CLAUDE.md).
+Enforced by `./equin check boundary-rules` (which folder may import which — the `folders` table in `plugins/framework/plugins/tooling/plugins/boundaries/core/boundary-config.ts`) and `./equin check plugin-boundaries` (import grammar, barrels, cycles; rules R1–R13). Details: [`boundaries/CLAUDE.md`](plugins/framework/plugins/tooling/plugins/boundaries/CLAUDE.md), [`plugin-boundaries/CLAUDE.md`](plugins/framework/plugins/tooling/plugins/checks/plugins/plugin-boundaries/CLAUDE.md).
 
 - **Known folders only** (vocabulary in `plugins/framework/plugins/plugin-id/core`): barrel folders `web`, `server`, `central`, `core`, `shared`, `e2e`, `provision`, `data-dirs`, `cli`, `deps`; leaf folders `check`, `lint`, `facet`, `bin`, `scripts`, `exhibits`, `vite`, `prewarm`, `python`, `exempt`; plus `plugins/` for children. No loose root `.ts`, no unclaimed file under `plugins/`. A new folder kind = a vocabulary entry + its table row (tsc enforces the row).
 - **One import table, inside and across plugins.** Each folder's row lists the barrel folders it may import (`core` → `core`; `web` → `web`, `core`, `shared`; `e2e` → `e2e`, `core`, `data-dirs`). Relative imports in your own plugin obey it too (`core/` → `../server/x` fails). Leaf folders are never import targets. `core/` is the public channel, `shared/` the plugin-private one.
@@ -71,8 +71,8 @@ Enforced by `./singularity check boundary-rules` (which folder may import which 
 - **Test code** = `*.test.ts(x)`, `__tests__/`, or `<runtime>/testing/` (never under `e2e/`). It follows its folder's row; only test code and `check/` may import it (`e2e/` ships, so it may not). A public barrel publishes no test support: no `*ForTest(s)` names, nothing from a test-support module (R12), no name only tests import (R13). Own tests import by relative path; reusable helpers go in `<runtime>/testing/`.
 - **No cross-plugin re-exports** — import the source barrel directly (`@plugins/tasks/plugins/task-draft-form/web`, not a proxy via `@plugins/tasks/web`). Enforced transitively and by name (through an internal file, or import-then-export); no umbrella→descendant exception.
 - **Barrel purity.** `index.ts` holds only imports, re-exports of own files, type aliases, and one `export default { … } satisfies PluginDefinition`. No `const`/`let`, logic, or side effects.
-- **Registry exclusivity.** Default-export plugin imports live only in the generated registries (`{web,server,central}.generated.ts` under `plugins/framework/plugins/{web-sdk,server-core,central-core}/core/`) and the `bin`/`App.tsx` roots (the `exclude` list in `boundary-config.ts`). Never register by hand: create `<runtime>/index.ts` and `./singularity build` (`plugins-registry-in-sync` catches drift).
-- **Exemptions are declared by the exempted plugin**, in its `plugins/<p>/exempt/index.ts` (`rule`, plugin-relative `paths`, `kind: "sanctioned" | "debt"` + `reason`, `task` for debt). Never hand-roll an allowlist (`ALLOWED_FILES`, `ignores`, `.startsWith("plugins/…")`) in a rule — `exempt/no-path-allowlist` rejects it; exempt a whole kind of file with `outOfScope`. List: `./singularity exempt list [--rule <id>] [--plugin <path>] [--debt]`. Details: [`exempt/CLAUDE.md`](plugins/framework/plugins/tooling/plugins/exempt/CLAUDE.md).
+- **Registry exclusivity.** Default-export plugin imports live only in the generated registries (`{web,server,central}.generated.ts` under `plugins/framework/plugins/{web-sdk,server-core,central-core}/core/`) and the `bin`/`App.tsx` roots (the `exclude` list in `boundary-config.ts`). Never register by hand: create `<runtime>/index.ts` and `./equin build` (`plugins-registry-in-sync` catches drift).
+- **Exemptions are declared by the exempted plugin**, in its `plugins/<p>/exempt/index.ts` (`rule`, plugin-relative `paths`, `kind: "sanctioned" | "debt"` + `reason`, `task` for debt). Never hand-roll an allowlist (`ALLOWED_FILES`, `ignores`, `.startsWith("plugins/…")`) in a rule — `exempt/no-path-allowlist` rejects it; exempt a whole kind of file with `outOfScope`. List: `./equin exempt list [--rule <id>] [--plugin <path>] [--debt]`. Details: [`exempt/CLAUDE.md`](plugins/framework/plugins/tooling/plugins/exempt/CLAUDE.md).
 - **No cycles.** The cross-plugin import graph is a DAG; type-only imports count.
 - **Search before writing a helper or fixture.** The plugin's own `CLAUDE.md` has an autogen reference (exports, uses, importers, contributions, test helpers); `docs/plugins-details.md` has it for every plugin, incl. reverse indexes (who imports me, contributes to my slots, calls my endpoints). A list over 20 values is summarized as per-group counts; the plugin's `REFERENCE.md` lists it in full. Kept in sync by `plugins-doc-in-sync`.
 
@@ -89,7 +89,7 @@ Enforced by `./singularity check boundary-rules` (which folder may import which 
 │       ├── shared/   # Private DRY — shared between web/server within this plugin only, never imported cross-plugin
 │       ├── cli/, e2e/, provision/, data-dirs/, deps/   # other barrel folders (CLI verbs, Playwright scripts, install steps, data-dir declarations, on-demand dependency declarations)
 │       ├── lint/     # ESLint rules contributed by this plugin (optional)
-│       ├── check/    # Custom Check[] enforced by ./singularity check (optional)
+│       ├── check/    # Custom Check[] enforced by ./equin check (optional)
 │       ├── exhibits/ # Real components shown standalone — the `plugin-meta/exhibits` catalog (optional)
 │       ├── bin/, scripts/, facet/, vite/, prewarm/   # other leaf folders — discovered or run by path, never imported
 │       └── plugins/  # child plugins
@@ -110,18 +110,20 @@ The project uses bun workspaces (defined in root `package.json`). Run `bun insta
 
 ## CLI
 
+The CLI is `./equin <verb>`. `./singularity <verb>` is its legacy name and still works (a shim), but write `./equin`.
+
 ### Deploy
 
-Always deploy after changes: `./singularity build`, from the worktree directory (not the main repo root). It regenerates DB migrations from `schema.ts` (applied on server restart), builds frontend and server, restarts the server and registers the worktree with the gateway (`http://<worktree>.localhost:9000`).
+Always deploy after changes: `./equin build`, from the worktree directory (not the main repo root). It regenerates DB migrations from `schema.ts` (applied on server restart), builds frontend and server, restarts the server and registers the worktree with the gateway (`http://<worktree>.localhost:9000`).
 
-> **NEVER run `./singularity start` / `stop`** (install / stop the gateway as the machine's launchd service) unless the user explicitly asks.
+> **NEVER run `./equin start` / `stop`** (install / stop the gateway as the machine's launchd service) unless the user explicitly asks.
 
 ### Check
 
 ```bash
-./singularity check                       # all checks
-./singularity check --list                # list checks
-./singularity check migrations-in-sync    # one check (id as positional arg)
+./equin check                       # all checks
+./equin check --list                # list checks
+./equin check migrations-in-sync    # one check (id as positional arg)
 ```
 
 Checks run first in `push`, and in `build` after migration/doc generation (unless `--skip-checks`). Built-ins live in, and are registered in, `plugins/framework/plugins/tooling/plugins/checks/core/index.ts`. Plugins contribute their own (discovered at runtime, no registry edits):
@@ -129,11 +131,11 @@ Checks run first in `push`, and in `build` after migration/doc generation (unles
 - `plugins/<name>/lint/index.ts` — default-export `{ name: "<plugin-id>", rules: { ... } }` of ESLint v9 rules. Each rule is enabled as `error` **repo-wide** (`**/*.{ts,tsx}`), not just in the contributing subtree; the `eslint` check runs them.
 - `plugins/<name>/check/index.ts` — default-export `Check | Check[]` (same interface as built-ins), id `<plugin-name>:<check-id>`.
 
-Notable built-ins: `migrations-in-sync` (schema changes without a committed migration — fix with `./singularity build`), `type-check` (one repo TS program → tsc diagnostics + type-aware ESLint, plugin lint rules included).
+Notable built-ins: `migrations-in-sync` (schema changes without a committed migration — fix with `./equin build`), `type-check` (one repo TS program → tsc diagnostics + type-aware ESLint, plugin lint rules included).
 
 ### Push
 
-`./singularity push -m "message"`:
+`./equin push -m "message"`:
 
 1. Run checks
 2. Fail if dirty
@@ -143,26 +145,26 @@ Notable built-ins: `migrations-in-sync` (schema changes without a committed migr
 6. Push main
 7. Main auto-builds on the `refs/heads/main` advance — never build/redeploy main yourself, and don't report it as a caveat.
 
-> **CRITICAL — NEVER push or commit on your own initiative.** No raw `git commit` / `git push`. "push", "publish", "ship" all mean `./singularity push`.
+> **CRITICAL — NEVER push or commit on your own initiative.** No raw `git commit` / `git push`. "push", "publish", "ship" all mean `./equin push`.
 
 Steps 3, 4, 6 (the only network git) run only when this checkout can write to its remote (probed once, cached in `.git/config`; `plugins/infra/plugins/git/plugins/remotes`). Without write access the work lands on local `main`, which main's auto-build watches.
 
 ### Upstream
 
-For a checkout cloned from someone else's repo, that repo is **upstream** (read-only). A daily main-only job records a report when it has new commits (no task; the report's Investigate button mints one). An update is an ordinary task: `./singularity upstream merge` in a worktree, resolve, build, review; the user lands it with `push`. See `plugins/upstream`. This checkout owns the canonical repo, so it has no upstream.
+For a checkout cloned from someone else's repo, that repo is **upstream** (read-only). A daily main-only job records a report when it has new commits (no task; the report's Investigate button mints one). An update is an ordinary task: `./equin upstream merge` in a worktree, resolve, build, review; the user lands it with `push`. See `plugins/upstream`. This checkout owns the canonical repo, so it has no upstream.
 
 ### `--from-main` (dangerous)
 
-`./singularity push --from-main -m "…"` commits and pushes straight from main. **Never pass it without explicit user approval in the current conversation, for this push** — not from memory, a prior session, or a CLAUDE.md rule. On main with no worktree branch for the changes: stop and ask.
+`./equin push --from-main -m "…"` commits and pushes straight from main. **Never pass it without explicit user approval in the current conversation, for this push** — not from memory, a prior session, or a CLAUDE.md rule. On main with no worktree branch for the changes: stop and ask.
 
 ## Ports
 
-- The gateway listens on **port 9000** for all browser traffic, routed by subdomain (`<name>.localhost:9000`). The main namespace (agent manager app, served from `main`) is always at `singularity.localhost:9000`.
+- The gateway listens on **port 9000** for all browser traffic, routed by subdomain (`<name>.localhost:9000`). The main namespace (agent manager app, served from `main`) is always at `singularity.localhost:9000`, also reachable as `equin.localhost:9000` (a host alias — `NAMESPACE_HOST_ALIASES` in `plugins/infra/plugins/namespace`).
 - Backends do **not** listen on TCP. The gateway hands each backend a per-worktree Unix domain socket at `~/.singularity/sockets/<name>.sock` and dials it directly. There is no backend port range to allocate.
 
 ## Driving the app (screenshots & E2E)
 
-`./singularity build` first: every script resolves its target from the deploy registry THIS checkout's build wrote, and refuses when there is none. Never hand-write `http://<worktree>.localhost:9000` — in an agent session the name comes out as `singularity` and the run drives main. Chromium is an on-demand dependency (`infra/deps`), installed on the first browser run (~280 MB).
+`./equin build` first: every script resolves its target from the deploy registry THIS checkout's build wrote, and refuses when there is none. Never hand-write `http://<worktree>.localhost:9000` — in an agent session the name comes out as `singularity` and the run drives main. Chromium is an on-demand dependency (`infra/deps`), installed on the first browser run (~280 MB).
 
 **Main is read-only for agent sessions**: on main, a write from the agent browser or an e2e run is refused with a 403 (telemetry excepted) — to exercise a write, drive your own build.
 
@@ -173,25 +175,25 @@ For a checkout cloned from someone else's repo, that repo is **upstream** (read-
 **Snapshot / verify behavior** (click, confirm state) with [`screenshot.ts`](plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts) — prints the resolved deploy and the matched button's state, writes `-before.png` / `-after.png`:
 
 ```bash
-./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --out /tmp/shot
-./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
+./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --out /tmp/shot
+./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
   --path /agents/c/<id> --click "Artifacts" --out /tmp/artifacts
 ```
 
-**One component on its own** (an exhibit — `plugins/plugin-meta/plugins/exhibits`): `./singularity run plugins/plugin-meta/plugins/exhibits/e2e/exhibit-shot.ts --id <group/name> [--width <px>] [--theme <app-id>|chrome]`. With `browser_*`: `/debug/exhibit-stage/<group>/<name>;width=<px>?embed=1` is the component alone (viewport = width); `/debug/exhibit/<group>/<name>` shows every width.
+**One component on its own** (an exhibit — `plugins/plugin-meta/plugins/exhibits`): `./equin run plugins/plugin-meta/plugins/exhibits/e2e/exhibit-shot.ts --id <group/name> [--width <px>] [--theme <app-id>|chrome]`. With `browser_*`: `/debug/exhibit-stage/<group>/<name>;width=<px>?embed=1` is the component alone (viewport = width); `/debug/exhibit/<group>/<name>` shows every width.
 
 Flags: `--path <route>`, `--viewport 1280x900`, `--wait <ms>`, `--color-scheme dark|light`, `--composition <id>` (a composition this checkout built), `--url http://<namespace>.localhost:9000` (escape hatch for a deploy you didn't build — skips the is-this-my-build check).
 
 **Compare a prototype against the real app** it mocks (`<meta name="mocks">`: a route, the whole app, or `exhibit:<id>`) with [`compare-diff.ts`](plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts): captures both frames at one size and 100% zoom, writes a red-on-grey diff and side-by-side sheet, logs the differing-pixel ratio, a per-cell heatmap and a colour report (dominant colours, region means, luminance profiles):
 
 ```bash
-./singularity run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts \
+./equin run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts \
   --name <proto-id> [--width 1280] [--options <name>=<value>,…] [--out /tmp/compare] [--fail-above 5]
 ```
 
 `--width` must be a canvas size preset (omit for the mock's declared viewport); variants are captured at their defaults unless `--options` picks one.
 
-**Repeatable flows**: a standalone script at `plugins/<path>/e2e/<name>.ts` in the plugin it verifies — never `*.test.ts` (the test runner would pick it up). Manual only. Running an `e2e/` script is an op (host CPU grant, "E2E in progress" banner); other `./singularity run` scripts are not. `--headed` to watch.
+**Repeatable flows**: a standalone script at `plugins/<path>/e2e/<name>.ts` in the plugin it verifies — never `*.test.ts` (the test runner would pick it up). Manual only. Running an `e2e/` script is an op (host CPU grant, "E2E in progress" banner); other `./equin run` scripts are not. `--headed` to watch.
 
 - Shared helpers (argv, target, `withBrowser`, `report()`): `@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e` — extend it, don't hand-roll. Domain flows go in the owning plugin's `e2e/index.ts`.
 - `e2e` imports only other plugins' `core` and `e2e` barrels — it drives the deployed app, not the code under test.
@@ -217,7 +219,7 @@ Independent projects that live in `sidequests/`, not directly related to Singula
 - Before writing or editing a prototype, read [`prototypes/CLAUDE.md`](prototypes/CLAUDE.md). Prototypes live outside the repo in `~/.singularity/apps/prototypes/<name>/`, shared by every worktree and live at `http://singularity.localhost:9000` with no build or commit. Design from the blank `_template/`. Do not open other prototypes for inspiration.
 - Always edit files in your worktree, not the main branch.
 - **No unbounded `find`** — it has crashed macOS (65k DIR FDs via the bfs shim). Use `rg --files -g '<glob>'` or `fd '<regex>'`; `find` only with `-maxdepth` / `-prune`.
-- **Run scripts with `./singularity run <file>.ts`, never bare `bun <file>.ts`** — bare `bun` resolves dependencies by walking UP, so a worktree without `node_modules` runs against main's (or a mid-install npm state). `./singularity run` installs this worktree's lock first. The `bun-script` guard blocks the bare form (machine-launched scripts importing no npm package stay bare).
+- **Run scripts with `./equin run <file>.ts`, never bare `bun <file>.ts`** — bare `bun` resolves dependencies by walking UP, so a worktree without `node_modules` runs against main's (or a mid-install npm state). `./equin run` installs this worktree's lock first. The `bun-script` guard blocks the bare form (machine-launched scripts importing no npm package stay bare).
 - **STOP on unexpected failures; never improvise around them.** Surface it and ask — don't route around (e.g. curl after a failed MCP call). A loud failure is debuggable; a workaround on a broken assumption is not.
 - **Subagents: always pass `model: "sonnet"`** to `Agent`. Opus only for load-bearing, complex implementation; research, lookup, synthesis and reporting are Sonnet work.
 - **On breakage, rebase to HEAD first** (`git fetch origin main && git rebase origin/main`) — it may already be fixed.
@@ -250,11 +252,11 @@ Details: [`plugins/active-data/plugins/go/CLAUDE.md`](plugins/active-data/plugin
 
 ### Testing
 
-**`./singularity test` is the ONLY way to run tests** — paths only, no flags, no setup (installs dependencies when stale). Never bare `bun test` / `vitest`. Optional and manual; a run is an op (host CPU grant, "Test in progress" banner).
+**`./equin test` is the ONLY way to run tests** — paths only, no flags, no setup (installs dependencies when stale). Never bare `bun test` / `vitest`. Optional and manual; a run is an op (host CPU grant, "Test in progress" banner).
 
 ```bash
-./singularity test plugins/primitives/plugins/optimistic-mutation   # one plugin
-./singularity test                                                  # everything
+./equin test plugins/primitives/plugins/optimistic-mutation   # one plugin
+./equin test                                                  # everything
 ```
 
 - Two runners, split by location: `*.test.ts(x)` beside its source = pure logic; `web/__tests__/` = jsdom/React (auto-discovered by root `vitest.config.ts`).

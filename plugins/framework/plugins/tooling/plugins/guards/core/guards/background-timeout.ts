@@ -1,12 +1,13 @@
 import { defineGuard } from "../define-guard";
 import { parseShell } from "../parse-shell";
 import type { BashInput } from "../types";
+import { CLI_NAME } from "@plugins/framework/plugins/cli/core";
 
 /** The harness's ceiling for a background task's lifetime (ms). */
 export const MAX_BACKGROUND_TIMEOUT_MS = 7_200_000;
 
 /**
- * A backgrounded `./singularity` command gets the longest life the harness
+ * A backgrounded `./equin` command gets the longest life the harness
  * allows.
  *
  * `run_in_background` is not untimed: the harness stops a background task after
@@ -16,7 +17,7 @@ export const MAX_BACKGROUND_TIMEOUT_MS = 7_200_000;
  * real share of ops that were healthy. The kill leaves a build `running` with a
  * dead pid and no verdict.
  *
- * Every subcommand, not only the long ones: nothing about a `./singularity`
+ * Every subcommand, not only the long ones: nothing about a `./equin`
  * command is made better by being killed at 30 minutes, and a list would have
  * to guess which `run` script is an op. A rewrite, not a denial — the fix is
  * mechanical and changes nothing the agent meant. An explicit timeout the agent
@@ -29,8 +30,7 @@ export const backgroundTimeoutGuard = defineGuard<BashInput>({
     if (input.run_in_background !== true) return null;
     const cmd = input.command;
     if (!cmd) return null;
-    if (!parseShell(cmd).calls.some((c) => c.name === "singularity"))
-      return null;
+    if (!parseShell(cmd).calls.some((c) => c.name === CLI_NAME)) return null;
     if (input.timeout === MAX_BACKGROUND_TIMEOUT_MS) return null;
     return { rewrite: { timeout: MAX_BACKGROUND_TIMEOUT_MS } };
   },

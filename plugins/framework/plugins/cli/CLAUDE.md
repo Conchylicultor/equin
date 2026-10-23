@@ -421,7 +421,7 @@ ui-kit's `theme/app.css` (JS-sets / CSS-styles split, as with `.dark`).
 
 ## Plugin reference
 
-- Description: The `./singularity` CLI: the command declaration contract, the generated-artifact normalize contract, and every built-in command (build, push, check, test, run, release, deploy, and more).
+- Description: The `./equin` CLI (legacy name `./singularity`): the command declaration contract, the generated-artifact normalize contract, and every built-in command (build, push, check, test, run, release, deploy, and more).
 - Core:
   - Uses: `framework/tooling/collected-dir.defineCollectedDir`
   - Exports (types):
@@ -434,17 +434,22 @@ ui-kit's `theme/app.css` (JS-sets / CSS-styles split, as with `.dark`).
     - `MergeMarkerKind`
   - Exports (values):
     - `clearMergeMarkers`
+    - `CLI_NAME`
+    - `CLI_NAMES`
     - `cliEntrySourcePath`
     - `defineCliCommand`
     - `findClaudeMdConflicts`
     - `isCliCommand`
     - `isCliEntryPresent`
+    - `isCliName`
     - `MERGE_MARKER_KINDS`
     - `mergeMarkerDir`
     - `readMergeMarkers`
     - `resolveGitDir`
 - Cross-plugin:
-  - Imported by: `framework/tooling/import-closure`
+  - Imported by:
+    - `framework/tooling/guards`
+    - `framework/tooling/import-closure`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/claudemd-conflicts.ts`, `core/internal/git-dir.ts`, `core/internal/merge-markers.ts`, `core/internal/registry-entry.ts` (debt)
 - Sub-plugins:

@@ -22,6 +22,7 @@ import {
   namespaceHost,
   namespaceUrl,
   MAIN_COMPOSITION_ID,
+  MAIN_WORKTREE_NAME,
   NAMESPACE_RE,
   type CheckoutRef,
 } from "./namespace";
@@ -163,6 +164,10 @@ test("namespaceFromHost round-trips namespaceHost and rejects the loopback hosts
   }
   // A host under .localhost whose name is not a legal namespace is not one.
   expect(namespaceFromHost("a.b.c.localhost:9000")).toBeNull();
+
+  // A host alias reads back as the namespace it stands for, in any spelling.
+  expect(namespaceFromHost("equin.localhost:9000")).toBe(MAIN_WORKTREE_NAME);
+  expect(namespaceFromHost("EQUIN.localhost.")).toBe(MAIN_WORKTREE_NAME);
 });
 
 test("namespaceUrl builds an origin, and refuses a path that would double the slash", () => {

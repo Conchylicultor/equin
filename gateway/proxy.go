@@ -501,7 +501,23 @@ func parseWorktree(host string) string {
 	// validated by `nameRegex` in Resolve/loadFile — the gateway never
 	// decomposes it. The loopback short-circuit above must stay ahead of this,
 	// since `127.0.0.1` and `::1` contain dots and colons of their own.
-	return strings.TrimSuffix(h, ".localhost")
+	name := strings.TrimSuffix(h, ".localhost")
+	if target, ok := hostAliases[name]; ok {
+		return target
+	}
+	return name
+}
+
+// hostAliases maps an extra host label onto the namespace it serves:
+// `equin.localhost` is the main app. An alias is a Host spelling only — never a
+// registry entry, socket or database — so it is resolved here, before anything
+// looks the name up.
+//
+// KEEP IN SYNC with NAMESPACE_HOST_ALIASES in
+// plugins/infra/plugins/namespace/core/namespace.ts — enforced by the
+// `namespace:grammar-in-sync` check, which reads these literals.
+var hostAliases = map[string]string{
+	"equin": "singularity",
 }
 
 func isBackendPath(p string) bool {

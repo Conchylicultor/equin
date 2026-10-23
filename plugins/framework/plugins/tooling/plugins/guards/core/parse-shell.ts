@@ -1,6 +1,12 @@
 import { resolve } from "node:path";
+import { CLI_NAME, isCliName } from "@plugins/framework/plugins/cli/core";
 
 export interface ShellCall {
+  /**
+   * The command's basename — except the repo CLI, which is always `CLI_NAME`
+   * whichever of its names was typed (`./equin`, `./equin`), so a guard
+   * matching it cannot miss the other spelling.
+   */
   name: string;
   args: string[];
   raw: string;
@@ -204,7 +210,8 @@ function collectSegment(
   // way a loop body did — `nohup git push` would otherwise walk past git-push.
   // Emit the wrapper AND what it wraps, peeling one layer at a time.
   for (let toks = tokens; toks.length > 0;) {
-    const name = basename(toks[0]!);
+    const bin = basename(toks[0]!);
+    const name = isCliName(bin) ? CLI_NAME : bin;
     const args = toks.slice(1);
     // The call runs in the cwd in effect BEFORE its own `cd` takes hold; a
     // `cd` only moves the directory for the calls that follow it.
@@ -278,7 +285,7 @@ const SHELL_INTERPRETERS = new Set([
  * The scanner tracks quoting AND substitution context, not quoting alone. The
  * commonest heredoc in this repo is
  *
- *     ./singularity push -m "$(cat <<'EOF'   ← `<<` sits inside the `-m` quote
+ *     ./equin push -m "$(cat <<'EOF'   ← `<<` sits inside the `-m` quote
  *
  * where a quote-only mask declines. It is tempting to leave that to the
  * recursion — `splitOnOperators` keeps the whole `$( … )` in one segment, so the

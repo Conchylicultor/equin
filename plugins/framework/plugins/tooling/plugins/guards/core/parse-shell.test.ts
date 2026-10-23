@@ -77,10 +77,7 @@ describe("parseShell reaches inside block structure", () => {
 
   describe("wrappers surface the command they wrap", () => {
     test("nohup", () => {
-      expect(names("nohup ./singularity build")).toEqual([
-        "nohup",
-        "singularity",
-      ]);
+      expect(names("nohup ./singularity build")).toEqual(["nohup", "equin"]);
     });
 
     test("env with assignments", () => {
@@ -107,7 +104,7 @@ describe("parseShell reaches inside block structure", () => {
   describe("redirections are not commands", () => {
     test("2>&1 does not mint a call named 1", () => {
       expect(names("./singularity build 2>&1 | tail -15")).toEqual([
-        "singularity",
+        "equin",
         "tail",
       ]);
     });
@@ -314,7 +311,7 @@ describe("heredoc bodies are data, not commands", () => {
 
     test("a commit message body is stripped, the push is still seen", () => {
       const cmd = message("fix(x): a thing\n\nRan `" + S + " build` first");
-      expect(names(cmd)).toEqual(["singularity", "cat"]);
+      expect(names(cmd)).toEqual(["equin", "cat"]);
     });
 
     test("… even when the message body holds an unpaired quote", () => {
@@ -323,7 +320,7 @@ describe("heredoc bodies are data, not commands", () => {
       const cmd = message(
         'He said "hi and ran `' + S + " build` then\nnext $(git push) here",
       );
-      expect(names(cmd)).toEqual(["singularity", "cat"]);
+      expect(names(cmd)).toEqual(["equin", "cat"]);
     });
 
     test("an interpreter executes its body whatever the delimiter quoting", () => {
@@ -592,4 +589,14 @@ describe("pipedIn marks the calls reading a pipe", () => {
       true,
     ]);
   });
+});
+
+test("the repo CLI is named canonically under either of its names", () => {
+  for (const cmd of [
+    "./equin build",
+    "./singularity build",
+    "/r/repo/singularity build",
+  ]) {
+    expect(parseShell(cmd).calls.map((c) => c.name)).toEqual(["equin"]);
+  }
 });

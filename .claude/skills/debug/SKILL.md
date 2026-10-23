@@ -97,7 +97,7 @@ thrashes; the on-demand **React fiber-commit profiler** names the INITIATING
 component + hook (esp. `useSyncExternalStore`, where `useResource`/`useQuery`
 land), splits mount vs update, and ranks remounts with the structural cause
 (element-type flip, key-change). OFF by default. Open **Debug → Render
-Profiler**, or headless `./singularity run plugins/debug/plugins/render-profiler/e2e/render-profile.ts --url … --seconds 8`; the
+Profiler**, or headless `./equin run plugins/debug/plugins/render-profiler/e2e/render-profile.ts --url … --seconds 8`; the
 report dumps to `logs/render-profiler.jsonl`; API `window.__reactRenderProfiler`.
 → [`plugins/debug/plugins/render-profiler/CLAUDE.md`](../../../plugins/debug/plugins/render-profiler/CLAUDE.md)
 

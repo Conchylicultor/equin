@@ -3,6 +3,7 @@ import {
   type ShellParseResult,
   type ShellRedirection,
 } from "./parse-shell";
+import { CLI_NAME } from "@plugins/framework/plugins/cli/core";
 
 /**
  * Polling detection, as pure functions over a command string and a window.
@@ -121,7 +122,7 @@ const GIT_READ_ONLY = new Set([
  * never reaches `classify`.
  */
 const MUTATORS = new Set([
-  "singularity",
+  CLI_NAME,
   "bun",
   "npm",
   "npx",

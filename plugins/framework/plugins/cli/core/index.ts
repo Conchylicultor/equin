@@ -39,3 +39,5 @@ export type {
   CliCommandSpec,
   CliOptionSpec,
 } from "./internal/command";
+
+export { CLI_NAME, CLI_NAMES, isCliName } from "./internal/cli-name";

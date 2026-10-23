@@ -42,6 +42,12 @@ describe("background-timeout guard", () => {
     ).toBe(MAX_BACKGROUND_TIMEOUT_MS);
   });
 
+  test("the canonical ./equin spelling is covered too", () => {
+    expect(patched({ command: "./equin build", run_in_background: true })).toBe(
+      MAX_BACKGROUND_TIMEOUT_MS,
+    );
+  });
+
   test("already at the ceiling: untouched", () => {
     expect(
       verdict({

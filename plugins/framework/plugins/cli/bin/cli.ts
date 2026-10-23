@@ -1,6 +1,11 @@
 import { program } from "commander";
 import { loadCollectedDir } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
-import { isCliCommand, isCliEntryPresent, type CliCommand } from "../core";
+import {
+  CLI_NAME,
+  isCliCommand,
+  isCliEntryPresent,
+  type CliCommand,
+} from "../core";
 import { cliEntries } from "../core/cli.generated";
 import { registerCommands } from "./register-commands";
 import { runCli } from "./run-cli";
@@ -27,7 +32,7 @@ import { runCli } from "./run-cli";
  * `./singularity build` no longer pays to load every other command's body.
  */
 
-program.name("singularity").description("Singularity agent CLI");
+program.name(CLI_NAME).description("Equin agent CLI");
 
 // `strict`: a declaration that throws at load must not read as "that command
 // does not exist" — `./singularity build` reporting "unknown command" would

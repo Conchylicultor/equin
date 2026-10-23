@@ -102,8 +102,10 @@ Design: `research/2026-08-18-global-namespace-identity.md`.
     - `BASE_EXCLUSIONS_ID`
     - `GATEWAY_PORT`
     - `isNamespace`
+    - `isNamespaceHostAlias`
     - `MAIN_COMPOSITION_ID`
     - `MAIN_WORKTREE_NAME`
+    - `NAMESPACE_HOST_ALIASES`
     - `NAMESPACE_HOST_SUFFIX`
     - `NAMESPACE_LABEL_RE`
     - `NAMESPACE_RE`

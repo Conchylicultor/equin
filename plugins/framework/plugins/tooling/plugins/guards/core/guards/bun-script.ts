@@ -81,7 +81,7 @@ export const bunScriptGuard = defineGuard<BashInput>({
     return {
       blocked: `\`bun ${script}\` runs the script against whichever checkout's \`node_modules\` it happens to find first.`,
       why: "Module resolution walks UP the directory tree, so a worktree without its own `node_modules` silently uses the MAIN checkout's installed tree — or, if that is mid-install, whatever the registry's `latest` is today. Which dependency versions the script gets depends on timing, not on this branch's `bun.lock`. That is how an e2e script came to launch a Playwright the lockfile never chose, demanding a chromium revision nothing had provisioned.",
-      hint: `Use \`./singularity run ${script} [args…]\` — it installs this worktree's own dependencies from its own lock (and provisions their binaries) first, then runs the script. \`bun run <script-name>\`, \`bun install\`, \`bun test\` and \`bunx\` are untouched: they resolve a bin or a subcommand, not a module.`,
+      hint: `Use \`./equin run ${script} [args…]\` — it installs this worktree's own dependencies from its own lock (and provisions their binaries) first, then runs the script. \`bun run <script-name>\`, \`bun install\`, \`bun test\` and \`bunx\` are untouched: they resolve a bin or a subcommand, not a module.`,
     };
   },
 });

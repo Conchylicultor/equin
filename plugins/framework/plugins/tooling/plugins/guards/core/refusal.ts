@@ -11,7 +11,7 @@ import {
  * A guard's own message says why the call was refused. It seldom says that
  * NOTHING in the call ran, and an agent that misses that goes on as though the
  * rest of it had. Measured: a Bash call that edited a file with an inline
- * `python3` heredoc and then ran `./singularity check` was denied by
+ * `python3` heredoc and then ran `./equin check` was denied by
  * `background-ops` over the check. The edit never happened, and the agent went
  * on to build, deploy and report a fix that was never on disk.
  *

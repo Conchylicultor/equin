@@ -6,7 +6,11 @@ import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 // Own-plugin, so relative — the `@plugins/infra/plugins/namespace/core` alias
 // would name this plugin from inside itself. Same shape as `paths/check`
 // importing `../core/internal/paths`.
-import { NAMESPACE_LABEL_RE, NAMESPACE_MAX_BYTES } from "../core/namespace";
+import {
+  NAMESPACE_HOST_ALIASES,
+  NAMESPACE_LABEL_RE,
+  NAMESPACE_MAX_BYTES,
+} from "../core/namespace";
 
 /**
  * The two shapes that ARE namespace identity, as opposed to the many benign
@@ -112,12 +116,13 @@ const noHandBuiltNamespaceUrlCheck: Check = {
  *
  * What must not drift is the label rule itself — the charset and the length —
  * plus the byte cap, which is the difference between two namespaces having two
- * databases and silently sharing one.
+ * databases and silently sharing one — and the host aliases, since an alias the
+ * browser reads back that the gateway does not route is a page that never loads.
  */
 const grammarInSyncCheck: Check = {
   id: "namespace:grammar-in-sync",
   description:
-    "The gateway's Go copy of the namespace grammar and byte cap must match the namespace plugin's",
+    "The gateway's Go copy of the namespace grammar, byte cap and host aliases must match the namespace plugin's",
   async run() {
     const root = await getWorktreeRoot();
     // The label rule as it appears inside a regex literal, anchors stripped —
@@ -138,6 +143,11 @@ const grammarInSyncCheck: Check = {
         expect: `maxNamespaceBytes = ${NAMESPACE_MAX_BYTES}`,
         what: "the namespace byte cap",
       },
+      ...Object.entries(NAMESPACE_HOST_ALIASES).map(([alias, target]) => ({
+        path: "gateway/proxy.go",
+        expect: `"${alias}": "${target}",`,
+        what: `the host alias ${alias} → ${target} (hostAliases)`,
+      })),
     ];
 
     const offenders: string[] = [];
@@ -158,7 +168,7 @@ const grammarInSyncCheck: Check = {
       hint:
         "plugins/infra/plugins/namespace/core/namespace.ts is the source of truth for both of these. " +
         "The gateway's copy exists only because Go cannot import it — every TypeScript caller imports the owner instead. " +
-        "Update gateway/registry.go to match: a namespace the gateway rejects is a 404 that cannot be debugged from the TypeScript side, " +
+        "Update gateway/registry.go (grammar, cap) or gateway/proxy.go (hostAliases) to match: a namespace the gateway rejects is a 404 that cannot be debugged from the TypeScript side, " +
         "and a byte cap the two sides disagree on is two apps silently sharing one Postgres database.",
     };
   },

@@ -179,6 +179,10 @@ describe("bun-script guard", () => {
       });
     }
 
+    test("under its canonical name, ./equin", () => {
+      expect(blocks("./equin run scripts/verify.mjs")).toBe(false);
+    });
+
     test("invoked by absolute path", () => {
       expect(blocks(`${USERS}me/repo/singularity build`)).toBe(false);
     });
@@ -222,10 +226,10 @@ describe("bun-script guard", () => {
 
   describe("the denial says what to do instead", () => {
     const v = verdict("bun e2e/tabs-verify.ts");
-    test("names ./singularity run with the same path", () => {
+    test("names ./equin run with the same path", () => {
       expect(v.kind).toBe("deny");
       expect(v.kind === "deny" && v.reason).toContain(
-        "./singularity run e2e/tabs-verify.ts",
+        "./equin run e2e/tabs-verify.ts",
       );
     });
 

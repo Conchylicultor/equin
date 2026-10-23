@@ -91,8 +91,7 @@ const reexecBudget = takeReexecBudget();
 // the locked Bun too. See `./locked-bun.ts` in the bootstrap plugin.
 const lockedBun = await reexecUnderLockedBun(import.meta.path);
 if (lockedBun.kind === "reexeced") process.exit(lockedBun.exitCode);
-if (lockedBun.kind === "mismatch")
-  console.error(`singularity: ${lockedBun.reason}`);
+if (lockedBun.kind === "mismatch") console.error(`equin: ${lockedBun.reason}`);
 
 // The one dependency chokepoint: freshness-gated (the common case is ~140 ms and
 // silent — see its docblock for the measured breakdown), serialized against
@@ -119,7 +118,7 @@ if (deps.kind !== "fresh") {
   if (outcome.reexeced) process.exit(outcome.exitCode);
   // Budget spent — say so and fall through rather than loop. The reason is the
   // whole story; see `reexecAfterInstall`.
-  console.error(`singularity: ${outcome.reason}`);
+  console.error(`equin: ${outcome.reason}`);
 }
 
 // Only now is `node_modules` known good AND resolvable from this process, so
