@@ -9,7 +9,7 @@ import { useNow } from "@plugins/primitives/plugins/relative-time/web";
 import { claudeAccounts } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
 import {
   claudeUsage,
-  limitStoppedConversations,
+  errorStoppedConversations,
   sdkAgentProcesses,
   sdkBundledCli,
 } from "../../core";
@@ -23,7 +23,7 @@ export function useClaudeCodeRowInputs() {
     agents: useLive(sdkAgentProcesses),
     usage: useLive(claudeUsage),
     accounts: useLive(claudeAccounts),
-    stopped: useLive(limitStoppedConversations),
+    stopped: useLive(errorStoppedConversations),
   });
 }
 

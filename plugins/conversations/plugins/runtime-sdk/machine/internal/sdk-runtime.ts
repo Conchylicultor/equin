@@ -17,6 +17,7 @@ import {
   AgentLaunchOptionsSchema,
   DismissReplySchema,
   TurnReplySchema,
+  USAGE_LIMIT_ERROR,
   type AgentLaunchOptions,
 } from "../../core";
 import {
@@ -257,12 +258,15 @@ async function awaitStart(id: string, started: StartedAgent): Promise<void> {
  * a turn reaches it, restart it on the session's end when a launch now would
  * pick another account — every turn (typed, Resume, Resume all) carries on
  * where an account with room is. When none has room, the turn goes to the
- * agent as is and the CLI answers with its limit notice again.
+ * agent as is and the CLI answers with its limit notice again. Any other API
+ * error (a server error, a lost connection) is not the account's: the turn
+ * goes to the same agent.
  */
 async function moveOffSpentAccount(id: string): Promise<void> {
   await catchUpNow(id);
   const row = await readAgentRow(id);
-  if (!row?.limitHitAt || !row.sessionId || row.working) return;
+  if (row?.stopError !== USAGE_LIMIT_ERROR || !row.sessionId || row.working)
+    return;
   if (nextLaunchAccount() === row.account) return;
   const relaunch = continueRelaunchOptions(readOptions(id), row.sessionId);
   await stopAgent(id);

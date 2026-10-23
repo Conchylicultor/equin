@@ -7,7 +7,7 @@
       "icon": "hourglass-empty",
       "view": {
         "type": "list",
-        "sort": [{ "fieldId": "limitHitAt", "direction": "desc" }]
+        "sort": [{ "fieldId": "stoppedAt", "direction": "desc" }]
       }
     }
   ],

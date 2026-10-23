@@ -755,7 +755,7 @@ export const hostReads: readonly {
   { key: "runtime-sdk.agent-processes", needsMachine: true },
   { key: "runtime-sdk.bundled-cli", needsMachine: true },
   { key: "runtime-sdk.claude-usage", needsMachine: true },
-  { key: "runtime-sdk.limit-stopped", needsMachine: false },
+  { key: "runtime-sdk.error-stopped", needsMachine: false },
   { key: "saved-themes.list", needsMachine: false },
   { key: "subagent-activity", needsMachine: true },
   { key: "subagent-transcript", needsMachine: true },

@@ -132,7 +132,7 @@ describe("usage limits", () => {
 });
 
 describe("agentsPhrase", () => {
-  test("conversations stopped at a usage limit are attention", () => {
+  test("conversations an API error stopped are attention", () => {
     const signedIn: ClaudeCodeStatus = {
       kind: "ready",
       version: "2.1.303",
@@ -145,14 +145,15 @@ describe("agentsPhrase", () => {
         title: "Fix it",
         status: "waiting",
         account: "acct-a",
-        limitHitAt: new Date(NOW),
+        stoppedAt: new Date(NOW),
+        stopError: "server_error",
       },
     ] as const satisfies ClaudeCodeRowInputs["stopped"];
     expect(
       claudeCodeRowVerdict(OK, loaded(signedIn, none, noUsage, stopped), NOW),
     ).toEqual({
       state: "attention",
-      summary: "1 conversation stopped at a usage limit",
+      summary: "1 conversation stopped by an API error",
     });
   });
 

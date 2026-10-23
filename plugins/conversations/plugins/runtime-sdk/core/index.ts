@@ -65,12 +65,15 @@ export {
 } from "./partial";
 export type { PartialFrame, PartialMessage } from "./partial";
 export {
-  limitStoppedConversations,
+  API_ERROR,
+  errorStoppedConversations,
   RESUME_TURN_TEXT,
-  ResumeLimitedResultSchema,
-  resumeLimitedConversations,
-} from "./limit-stopped";
+  ResumeStoppedResultSchema,
+  resumeStoppedConversations,
+  stopErrorLabel,
+  USAGE_LIMIT_ERROR,
+} from "./error-stopped";
 export type {
-  LimitStoppedConversation,
-  ResumeLimitedResult,
-} from "./limit-stopped";
+  ErrorStoppedConversation,
+  ResumeStoppedResult,
+} from "./error-stopped";

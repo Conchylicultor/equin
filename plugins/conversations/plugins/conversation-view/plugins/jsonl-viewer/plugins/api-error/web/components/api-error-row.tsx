@@ -2,7 +2,12 @@ import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-sourc
 import { EventLine } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import { ResumeOnLimit } from "./resume-on-limit";
+import {
+  API_ERROR,
+  stopErrorLabel,
+  USAGE_LIMIT_ERROR,
+} from "@plugins/conversations/plugins/runtime-sdk/core";
+import { ResumeOnStop } from "./resume-on-stop";
 
 const warningIcon = symbol("warning");
 
@@ -10,8 +15,9 @@ type ApiErrorEvent = Extract<JsonlEvent, { kind: "api-error" }>;
 
 /** The eyebrow for the CLI's kind of failure: a usage limit reads as one. */
 function labelOf(error: string | undefined): string {
-  if (error === "rate_limit") return "Usage limit";
-  return error ? `API error · ${error.replace(/[_-]+/g, " ")}` : "API error";
+  if (error === USAGE_LIMIT_ERROR) return "Usage limit";
+  const kind = stopErrorLabel(error);
+  return kind === API_ERROR ? API_ERROR : `${API_ERROR} · ${kind}`;
 }
 
 export function ApiErrorRow({ event }: { event: JsonlEvent }) {
@@ -24,7 +30,7 @@ export function ApiErrorRow({ event }: { event: JsonlEvent }) {
       label={<span className="text-warning">{labelOf(e.error)}</span>}
     >
       <span className="text-foreground">{e.text}</span>
-      {e.error === "rate_limit" ? <ResumeOnLimit /> : null}
+      <ResumeOnStop />
     </EventLine>
   );
 }

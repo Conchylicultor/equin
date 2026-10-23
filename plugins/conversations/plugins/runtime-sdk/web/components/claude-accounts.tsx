@@ -46,11 +46,11 @@ import {
   usageLevel,
   weekRoom,
   type ClaudeUsageRead,
-  type LimitStoppedConversation,
+  type ErrorStoppedConversation,
 } from "../../core";
 import { formatResets, USAGE_WINDOWS } from "../internal/claude-usage";
 import { UsageBar } from "./claude-usage-glance";
-import { LimitStoppedBanner } from "./limit-stopped";
+import { ErrorStoppedBanner } from "./error-stopped";
 
 // The Claude Code row's accounts: which Claude account new agents launch on.
 // Each account shows its weekly room only — the 5-hour session resets too
@@ -281,7 +281,7 @@ function AddAccountForm({
 /**
  * The accounts section of the Claude Code row: every account with its weekly
  * room, the active one highlighted; a click switches. Plus the limit banner,
- * the conversations a limit stopped (with Resume all), adding an account and
+ * the conversations an API error stopped (with Resume all), adding an account and
  * the auto-switch toggle.
  */
 export function ClaudeAccountsSection({
@@ -294,7 +294,7 @@ export function ClaudeAccountsSection({
   accounts: ClaudeAccounts;
   usage: ClaudeUsageRead;
   claude: ClaudeCodeStatus;
-  stopped: readonly LimitStoppedConversation[];
+  stopped: readonly ErrorStoppedConversation[];
   now: number;
 }) {
   const [adding, setAdding] = useState(false);
@@ -377,7 +377,7 @@ export function ClaudeAccountsSection({
           now={now}
           onSwitch={switchTo}
         />
-        <LimitStoppedBanner
+        <ErrorStoppedBanner
           stopped={stopped}
           launchAccountId={launchView.id}
           launchAccountName={launchView.name}

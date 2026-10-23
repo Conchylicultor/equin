@@ -1,6 +1,6 @@
 {
-  "id": "25f13bab-3212-49ba-b020-e004beac078b",
-  "prevId": "9fe1ee25-1a1d-4559-a3b4-b6d00a9aa2fd",
+  "id": "b27ec59b-3fd4-49ab-858e-965fe29627f1",
+  "prevId": "25f13bab-3212-49ba-b020-e004beac078b",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -6454,9 +6454,15 @@
           "primaryKey": false,
           "notNull": false
         },
-        "limit_hit_at": {
-          "name": "limit_hit_at",
+        "stopped_at": {
+          "name": "stopped_at",
           "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "stop_error": {
+          "name": "stop_error",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },

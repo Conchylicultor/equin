@@ -17872,7 +17872,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CONVERSATION_RUNTIMES`
           - `ConversationRuntimeIdSchema`
           - `DEFAULT_CONVERSATION_RUNTIME`
-    - **`runtime-sdk`** — The health report's Claude Code row: Claude Code itself (critical while missing or signed out, with the install / sign-in commands and Check again), attention when it differs in major.minor from the CLI version the pinned Agent SDK was built for, the agent processes running — here, and in every other worktree (each as its task's chip) — the active Claude account's usage limits as meters (the week collapsed, the session too expanded; attention while its limit is reached), and the Claude account picker (each account's weekly room, add / remove / switch, auto-switch, Continue on another account when the active one is limited). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor), the pure event reducer, and the mapping of a launch onto the agent's options file; the runtime-sdk.limit-stopped collection (active conversations whose agent stopped at its account's usage limit).
+    - **`runtime-sdk`** — The health report's Claude Code row: Claude Code itself (critical while missing or signed out, with the install / sign-in commands and Check again), attention when it differs in major.minor from the CLI version the pinned Agent SDK was built for, the agent processes running — here, and in every other worktree (each as its task's chip) — the active Claude account's usage limits as meters (the week collapsed, the session too expanded; attention while its limit is reached), and the Claude account picker (each account's weekly room, add / remove / switch, auto-switch, Continue on another account when the active one is limited). The sdk runtime's portable half: the conversations_ext_sdk_agent side table (each agent's event cursor and the projection of its events — session id, busy/idle, the open question, the last turn and its rewind anchor), the pure event reducer, and the mapping of a launch onto the agent's options file; the runtime-sdk.error-stopped collection (active conversations whose agent's turn an API error stopped — a usage limit, a server error, a lost connection — with the CLI's kind of failure).
       - Web:
         - Contributes: `HealthReport.Row` "Claude Code" → `ClaudeCodeRowDetail`
         - Uses: 37 symbols — full list in [`plugins/conversations/plugins/runtime-sdk/REFERENCE.md`](../plugins/conversations/plugins/runtime-sdk/REFERENCE.md)
@@ -17904,9 +17904,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "runtime-sdk.agent-processes"
           - `resource.declare` "runtime-sdk.bundled-cli"
           - `resource.declare` "runtime-sdk.claude-usage"
-          - `resource.declare` "runtime-sdk.limit-stopped"
-          - `resource.declare` "runtime-sdk.limit-stopped:groups"
-          - `resource.declare` "runtime-sdk.limit-stopped:rows"
+          - `resource.declare` "runtime-sdk.error-stopped"
+          - `resource.declare` "runtime-sdk.error-stopped:groups"
+          - `resource.declare` "runtime-sdk.error-stopped:rows"
           - `trigger` "runtime-sdk.attempt-ended"
         - Uses:
           - `conversations/agent-launch.LAUNCH_CLI_SETTINGS`
@@ -17922,9 +17922,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtime-sdk.agent-processes` (push, notified)
           - `runtime-sdk.bundled-cli` (push, fixed)
           - `runtime-sdk.claude-usage` (push, notified)
-          - `runtime-sdk.limit-stopped` (keyed, window)
-          - `runtime-sdk.limit-stopped:groups` (push)
-          - `runtime-sdk.limit-stopped:rows` (keyed, point)
+          - `runtime-sdk.error-stopped` (keyed, window)
+          - `runtime-sdk.error-stopped:groups` (push)
+          - `runtime-sdk.error-stopped:rows` (keyed, point)
       - Machine:
         - Uses:
           - `conversations/question-relay.holdQuestion`
@@ -17939,7 +17939,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineJob('runtime-sdk.attempt-ended')`
         - Routes:
           - `POST /api/claude-usage/refresh`
-          - `POST /api/runtime-sdk/resume-limited`
+          - `POST /api/runtime-sdk/resume-stopped`
       - Core:
         - Uses:
           - `fields.nullable`
@@ -17962,12 +17962,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ClaudeUsageRefresh`
           - `ClaudeUsageWindow`
           - `CommandReply`
+          - `ErrorStoppedConversation`
           - `HelloReply`
-          - `LimitStoppedConversation`
           - `OpenRequest`
           - `PartialFrame`
           - `PartialMessage`
-          - `ResumeLimitedResult`
+          - `ResumeStoppedResult`
           - `UsageLevel`
           - `UsageWindowId`
           - `UsageWindowView`
@@ -17981,6 +17981,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AgentLaunchOptionsSchema`
           - `AgentLifecycleSchema`
           - `AgentProcessesSchema`
+          - `API_ERROR`
           - `applyPartialFrame`
           - `claudeUsage`
           - `claudeUsageFileName`
@@ -17991,10 +17992,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ClaudeUsageSchema`
           - `CommandReplySchema`
           - `DismissReplySchema`
+          - `errorStoppedConversations`
           - `HelloReplySchema`
           - `launchAccount`
           - `limitReached`
-          - `limitStoppedConversations`
           - `OpenRequestSchema`
           - `partialFrameOf`
           - `PartialFrameSchema`
@@ -18002,14 +18003,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PROTOCOL_VERSION`
           - `refreshClaudeUsage`
           - `RESUME_TURN_TEXT`
-          - `resumeLimitedConversations`
-          - `ResumeLimitedResultSchema`
+          - `resumeStoppedConversations`
+          - `ResumeStoppedResultSchema`
           - `roomiestAccount`
           - `sameMajorMinor`
           - `sdkAgentProcesses`
           - `sdkBundledCli`
+          - `stopErrorLabel`
           - `SubscribeReplySchema`
           - `TurnReplySchema`
+          - `USAGE_LIMIT_ERROR`
           - `usageLevel`
           - `viewUsageWindow`
           - `weekRoom`

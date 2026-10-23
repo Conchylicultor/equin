@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
-  limitStoppedConversations,
-  resumeLimitedConversations,
+  errorStoppedConversations,
+  resumeStoppedConversations,
 } from "@plugins/conversations/plugins/runtime-sdk/core";
 import { useJsonlConversationId } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
@@ -10,15 +10,15 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 /**
- * Resume, on a usage-limit line — shown while this conversation is still
- * stopped at the limit (a turn since, or a restart, takes it out of the set,
- * and the button goes with it). The resume turn's send restarts the agent on
- * the account a launch picks now.
+ * Resume, on an API-error line — shown while an API error still has this
+ * conversation stopped (a turn since, or a restart, takes it out of the set,
+ * and the button goes with it). The resume turn's send restarts an agent a
+ * usage limit stopped on the account a launch picks now.
  */
-export function ResumeOnLimit() {
+export function ResumeOnStop() {
   const conversationId = useJsonlConversationId();
   const fetchEndpoint = useFetchEndpoint();
-  const stopped = useLiveRow(limitStoppedConversations, conversationId);
+  const stopped = useLiveRow(errorStoppedConversations, conversationId);
   const [error, setError] = useState<string | null>(null);
   if (conversationId === null) return null;
   // Not stopped (or not known yet, or unreadable): this line is history, and
@@ -28,7 +28,7 @@ export function ResumeOnLimit() {
   const resume = async () => {
     setError(null);
     const answer = await fetchEndpoint(
-      resumeLimitedConversations,
+      resumeStoppedConversations,
       {},
       { body: { ids: [conversationId] } },
     );

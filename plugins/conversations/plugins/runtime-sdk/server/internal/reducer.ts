@@ -47,11 +47,14 @@ export interface AgentProjection {
   /** The Claude account the agent process runs on (`started`); null before one says. */
   account: string | null;
   /**
-   * When the agent last stopped at its account's usage limit (the CLI's
-   * synthetic `error: "rate_limit"` assistant message), until a turn runs past
-   * it or a new process starts.
+   * When a failed model request last stopped the agent's turn — the CLI's
+   * synthetic assistant message with an `error`, written once its retries
+   * gave up (a usage limit, a server error, a lost connection) — until a turn
+   * runs past it or a new process starts.
    */
-  limitHitAt: Date | null;
+  stoppedAt: Date | null;
+  /** The CLI's kind of that failure (`rate_limit`, `server_error`, …). */
+  stopError: string | null;
 }
 
 export const EMPTY_PROJECTION: AgentProjection = {
@@ -70,7 +73,8 @@ export const EMPTY_PROJECTION: AgentProjection = {
   lastAssistantUuid: null,
   rewindAnchorUuid: null,
   account: null,
-  limitHitAt: null,
+  stoppedAt: null,
+  stopError: null,
 };
 
 /** What the consumer must do for the lines it applied, in order. */
@@ -192,7 +196,8 @@ export function reduceEvents(
             s.openRequestId = null;
             s.openToolUseId = null;
             s.account = p.account ?? null;
-            s.limitHitAt = null;
+            s.stoppedAt = null;
+            s.stopError = null;
             break;
           case "ready":
             s.cliVersion = p.cliVersion;
@@ -204,7 +209,8 @@ export function reduceEvents(
             s.lastPromptUuid = p.promptUuid;
             s.lastPromptText = p.text;
             s.turnReplied = false;
-            s.limitHitAt = null;
+            s.stoppedAt = null;
+            s.stopError = null;
             effects.push({ kind: "prompt-submitted", text: p.text, at });
             break;
           case "exited":
@@ -293,8 +299,12 @@ export function reduceEvents(
         ) {
           s.lastAssistantUuid = msg.uuid;
           s.turnReplied = true;
-          // The CLI's own notice that the account's usage limit stopped the turn.
-          if (msg.error === "rate_limit") s.limitHitAt = at;
+          // The CLI's own notice that a failed model request stopped the turn
+          // (a sub-agent's is its own: the parent carries on).
+          if (typeof msg.error === "string") {
+            s.stoppedAt = at;
+            s.stopError = msg.error;
+          }
         } else if (
           msg.type === "user" &&
           msg.parent_tool_use_id == null &&

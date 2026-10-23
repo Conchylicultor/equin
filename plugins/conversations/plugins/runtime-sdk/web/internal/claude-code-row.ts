@@ -10,7 +10,7 @@ import {
   sameMajorMinor,
   type AgentProcesses,
   type ClaudeUsageRead,
-  type LimitStoppedConversation,
+  type ErrorStoppedConversation,
 } from "../../core";
 import { formatResets, USAGE_WINDOWS } from "./claude-usage";
 
@@ -25,8 +25,8 @@ export interface ClaudeCodeRowInputs {
   usage: ClaudeUsageRead;
   /** The Claude accounts and the one new agents launch on. */
   accounts: ClaudeAccounts;
-  /** The conversations whose agent stopped at a usage limit (latest first). */
-  stopped: readonly LimitStoppedConversation[];
+  /** The conversations whose agent's turn an API error stopped (latest first). */
+  stopped: readonly ErrorStoppedConversation[];
 }
 
 const plural = (n: number, one: string, many = `${one}s`) =>
@@ -58,7 +58,8 @@ export function agentsPhrase(agents: AgentProcesses): string {
  *   under it.
  * - The active account's usage limit reached → `attention`: its agents wait
  *   until it resets (or run on another account).
- * - Conversations stopped at a usage limit → `attention`: they wait for a
+ * - Conversations an API error stopped (a usage limit, a server error, a
+ *   lost connection) → `attention`: they wait for a
  *   resume (the row's detail offers one).
  * - Otherwise `ok`, with the version and the agents running.
  *
@@ -102,7 +103,7 @@ export function claudeCodeRowVerdict(
   if (stopped.length > 0) {
     return {
       state: "attention",
-      summary: `${plural(stopped.length, "conversation")} stopped at a usage limit`,
+      summary: `${plural(stopped.length, "conversation")} stopped by an API error`,
     };
   }
   return {

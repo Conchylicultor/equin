@@ -74,15 +74,35 @@ describe("reduceEvents", () => {
     const head = [withAccount, turnStarted(2, "go", "p-a"), init(3, "sid-1")];
     const hit = reduceEvents(EMPTY_PROJECTION, [...head, limited, result(5)]);
     expect(hit.state.account).toBe("acct-a");
-    expect(hit.state.limitHitAt).toEqual(new Date(limited.t));
+    expect(hit.state.stoppedAt).toEqual(new Date(limited.t));
+    expect(hit.state.stopError).toBe("rate_limit");
 
     const past = reduceEvents(hit.state, [turnStarted(6, "continue", "p-b")]);
-    expect(past.state.limitHitAt).toBeNull();
+    expect(past.state.stoppedAt).toBeNull();
+    expect(past.state.stopError).toBeNull();
 
     const restarted = reduceEvents(hit.state, [started(6)]);
-    expect(restarted.state.limitHitAt).toBeNull();
+    expect(restarted.state.stoppedAt).toBeNull();
     // An agent started before `started` named its account.
     expect(restarted.state.account).toBeNull();
+  });
+
+  test("any API error stops the turn, a sub-agent's does not", () => {
+    const failed = (seq: number, parent: string | null) =>
+      sdk(seq, {
+        type: "assistant",
+        uuid: `a-${String(seq)}`,
+        parent_tool_use_id: parent,
+        error: "server_error",
+        message: { content: [] },
+      });
+    const head = [started(1), turnStarted(2, "go", "p-a"), init(3, "sid-1")];
+    const sub = reduceEvents(EMPTY_PROJECTION, [...head, failed(4, "toolu_1")]);
+    expect(sub.state.stoppedAt).toBeNull();
+
+    const hit = reduceEvents(EMPTY_PROJECTION, [...head, failed(4, null)]);
+    expect(hit.state.stopError).toBe("server_error");
+    expect(hit.state.stoppedAt).not.toBeNull();
   });
 
   test("projects session, busy/idle and the rewind anchor", () => {

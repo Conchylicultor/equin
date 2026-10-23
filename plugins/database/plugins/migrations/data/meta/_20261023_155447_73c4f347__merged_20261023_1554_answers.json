@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "answers": [
+    {
+      "key": "column:conversations_ext_sdk_agent.stopped_at",
+      "entityType": "column",
+      "entityName": "stopped_at",
+      "action": "rename",
+      "from": "limit_hit_at"
+    },
+    {
+      "key": "column:conversations_ext_sdk_agent.stop_error",
+      "entityType": "column",
+      "entityName": "stop_error",
+      "action": "create"
+    }
+  ]
+}
