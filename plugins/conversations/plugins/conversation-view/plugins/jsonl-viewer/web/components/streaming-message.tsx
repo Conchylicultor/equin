@@ -65,13 +65,13 @@ function StreamingBlocks({ message }: { message: PartialMessage }) {
       {/* The attributes mark the message and each stand-in for the e2e
           scripts (assistant-text/e2e/first-token.ts, e2e/stream-order.ts). */}
       <Stack gap="sm" data-streaming-message={message.messageId}>
-        <StreamingRowProvider>
-          {standIns.map((s) => (
-            <div key={s.key} data-stand-in={s.event.kind}>
+        {standIns.map((s) => (
+          <div key={s.key} data-stand-in={s.event.kind}>
+            <StreamingRowProvider writing={s.writing}>
               <EventRow event={s.event} standIn />
-            </div>
-          ))}
-        </StreamingRowProvider>
+            </StreamingRowProvider>
+          </div>
+        ))}
       </Stack>
     </EasedHeight>
   );

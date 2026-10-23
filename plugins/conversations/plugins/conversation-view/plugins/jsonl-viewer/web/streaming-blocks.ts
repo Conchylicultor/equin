@@ -7,6 +7,13 @@ export interface StandIn {
   /** `<messageId>:<block index>` — stable while the block grows. */
   key: string;
   event: JsonlEvent;
+  /**
+   * The model may still be writing this block: it is the message's newest.
+   * Blocks stream in order, so once a later one has begun — its first token,
+   * or a tool call opening — this one is finished, though the transcript may
+   * not hold it for a while yet.
+   */
+  writing: boolean;
 }
 
 /**
@@ -22,8 +29,9 @@ export interface StandIn {
  * has, so a stand-in never sits below a row that follows it. A stand-in goes
  * in the same render that draws the finished row: no gap, no double.
  *
- * A text block with nothing visible yet is not drawn. `at` stamps every
- * stand-in (the time the page first saw the message).
+ * A text block with nothing visible yet is not drawn (but it has begun, so
+ * the block before it is no longer `writing`). `at` stamps every stand-in (the
+ * time the page first saw the message).
  */
 export function standInsOf(
   message: PartialMessage,
@@ -57,6 +65,7 @@ export function standInsOf(
     }
   });
 
+  const newest = blocks.at(-1);
   const out: StandIn[] = [];
   let laterLanded = false;
   for (let i = blocks.length - 1; i >= 0; i--) {
@@ -67,6 +76,7 @@ export function standInsOf(
     out.push({
       key: `${messageId}:${block.index}`,
       event: eventOf(block, messageId, at),
+      writing: block === newest,
     });
   }
   return out.reverse();

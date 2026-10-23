@@ -1,123 +1,159 @@
 import { describe, expect, test } from "bun:test";
 import {
+  distanceToBottom,
   followAction,
-  isAtBottom,
-  nextMode,
   resolveRestore,
   sentinelObserverOptions,
+  step,
   type PersistedMode,
   type ScrollMode,
+  type StickySignal,
 } from "./sticky-scroll-machine";
 
 const following: ScrollMode = { kind: "following" };
+const driving: ScrollMode = { kind: "driving" };
 const anchored: ScrollMode = { kind: "anchored" };
+const T = 50;
 
-describe("nextMode", () => {
-  test("jump always resumes following", () => {
-    expect(nextMode({ t: "jump" })).toEqual(following);
-    expect(nextMode({ t: "jump" })).toEqual(following);
+const scroll = (
+  p: Partial<Extract<StickySignal, { t: "scroll" }>>,
+): StickySignal => ({
+  t: "scroll",
+  ours: false,
+  armed: false,
+  movedDown: false,
+  distance: 0,
+  ...p,
+});
+
+describe("step — reader scrolls", () => {
+  test("jump and followKey resume following and write the bottom", () => {
+    for (const mode of [following, driving, anchored]) {
+      expect(step(mode, { t: "jump" }, T)).toEqual({
+        mode: following,
+        action: "scroll-to-bottom",
+      });
+      expect(step(mode, { t: "follow-key" }, T).mode).toEqual(following);
+    }
   });
 
-  test("followKey change always resumes following", () => {
-    expect(nextMode({ t: "follow-key" })).toEqual(following);
+  test("an armed scroll up from the bottom drives, and writes nothing", () => {
+    // Even inside the margin: a smooth navigation leaving the bottom starts
+    // within it, and a write would cancel it.
+    expect(step(following, scroll({ armed: true, distance: 10 }), T)).toEqual({
+      mode: driving,
+      action: "none",
+    });
   });
 
-  test("a foreign scroll arriving at the bottom resumes following", () => {
+  test("settling inside the margin sticks; beyond it parks", () => {
+    expect(step(driving, { t: "settle", distance: 30 }, T)).toEqual({
+      mode: following,
+      action: "scroll-to-bottom",
+    });
+    expect(step(driving, { t: "settle", distance: 400 }, T)).toEqual({
+      mode: anchored,
+      action: "none",
+    });
+  });
+
+  test("an armed scroll arriving at the bottom resumes at once", () => {
     expect(
-      nextMode({
-        t: "foreign-scroll",
-        sentinelVisible: true,
-        movedUp: false,
-        atEnd: false,
-      }),
-    ).toEqual(following);
+      step(anchored, scroll({ armed: true, movedDown: true, distance: 20 }), T),
+    ).toEqual({ mode: following, action: "none" });
   });
 
-  test("a foreign scroll away from the bottom parks", () => {
-    expect(
-      nextMode({
-        t: "foreign-scroll",
-        sentinelVisible: false,
-        movedUp: true,
-        atEnd: false,
-      }),
-    ).toEqual(anchored);
+  test("an armed scroll down that stops short drives, then parks", () => {
+    const s = step(
+      anchored,
+      scroll({ armed: true, movedDown: true, distance: 300 }),
+      T,
+    );
+    expect(s.mode).toEqual(driving);
+    expect(step(s.mode, { t: "settle", distance: 300 }, T).mode).toEqual(
+      anchored,
+    );
   });
 
-  test("moving up parks even while still inside the bottom threshold", () => {
-    // The regression this exists for: a smooth scroll leaving the bottom starts
-    // within the threshold, so position alone says "you are at the bottom" and
-    // the follow loop drags the user back, cancelling the navigation.
-    expect(
-      nextMode({
-        t: "foreign-scroll",
-        sentinelVisible: true,
-        movedUp: true,
-        atEnd: false,
-      }),
-    ).toEqual(anchored);
+  test("while driving every scroll is the reader's (momentum after the input)", () => {
+    expect(step(driving, scroll({ distance: 500 }), T).mode).toEqual(driving);
   });
 
-  test("a clamp to the end (content shrank below) keeps following", () => {
-    // Measured on a live transcript: the hook wrote the bottom, a tool card
-    // then shrank as its result landed, and the browser clamped the offset
-    // up — a scroll that moved up and was not ours. It is not the reader
-    // leaving: a reader moving up cannot land at the maximum offset.
-    expect(
-      nextMode({
-        t: "foreign-scroll",
-        sentinelVisible: true,
-        movedUp: true,
-        atEnd: true,
-      }),
-    ).toEqual(following);
-  });
-
-  test("moving down but not yet at the bottom stays parked", () => {
-    expect(
-      nextMode({
-        t: "foreign-scroll",
-        sentinelVisible: false,
-        movedUp: false,
-        atEnd: false,
-      }),
-    ).toEqual(anchored);
+  test("find parks", () => {
+    expect(step(following, { t: "find" }, T).mode).toEqual(anchored);
   });
 });
 
-describe("followAction — the 2026-05-25 guarantee", () => {
-  test("never writes while parked, whatever the sentinel does", () => {
-    // This is the file-pane bug: content reflows taller, the bottom leaves the
-    // viewport. A size-based hook read that as "new content" and scrolled.
-    expect(followAction(anchored, false)).toBe("none");
-    expect(followAction(anchored, true)).toBe("none");
+describe("step — nothing but reader evidence stops following", () => {
+  test("a scroll nobody asked for is put back at the bottom", () => {
+    // The clamp as a card collapses, browser anchoring, KeepAnchorAcross
+    // keeping a row across a window slide, a focus() — all of them.
+    expect(step(following, scroll({ distance: 240 }), T)).toEqual({
+      mode: following,
+      action: "scroll-to-bottom",
+    });
+    expect(step(following, scroll({ distance: 0 }), T)).toEqual({
+      mode: following,
+      action: "none",
+    });
   });
 
-  test("chases the bottom only while following and only when off screen", () => {
+  test("no sequence of non-reader signals ever leaves following", () => {
+    const signals: StickySignal[] = [
+      { t: "sentinel", visible: true },
+      { t: "sentinel", visible: false },
+      { t: "settle", distance: 0 },
+      { t: "settle", distance: 900 },
+      scroll({ ours: true, distance: 0 }),
+      scroll({ ours: true, distance: 700 }),
+      scroll({ distance: 0 }),
+      scroll({ distance: 30 }),
+      scroll({ distance: 700 }),
+      scroll({ movedDown: true, distance: 30 }),
+      scroll({ movedDown: true, distance: 700 }),
+    ];
+    const walk = (mode: ScrollMode, depth: number) => {
+      expect(mode).toEqual(following);
+      if (depth === 0) return;
+      for (const signal of signals) walk(step(mode, signal, T).mode, depth - 1);
+    };
+    walk(following, 5);
+  });
+
+  test("no observation writes while not following (2026-05-25)", () => {
+    // The file-pane bug: content reflows taller, the bottom leaves the
+    // viewport. A size-based hook read that as "new content" and scrolled.
+    for (const mode of [driving, anchored]) {
+      for (const visible of [true, false])
+        expect(step(mode, { t: "sentinel", visible }, T).action).toBe("none");
+      for (const distance of [0, 30, 700])
+        expect(step(mode, scroll({ distance }), T).action).toBe("none");
+    }
+    expect(followAction(anchored, false)).toBe("none");
     expect(followAction(following, false)).toBe("scroll-to-bottom");
     expect(followAction(following, true)).toBe("none");
   });
+
+  test("a parked reader stays parked through scrolls nobody asked for", () => {
+    for (const distance of [0, 30, 700])
+      expect(step(anchored, scroll({ distance }), T).mode).toEqual(anchored);
+  });
 });
 
-describe("isAtBottom", () => {
+describe("distanceToBottom", () => {
   const at = (scrollTop: number) =>
-    isAtBottom({ scrollHeight: 1000, scrollTop, clientHeight: 400 }, 50);
+    distanceToBottom({ scrollHeight: 1000, scrollTop, clientHeight: 400 });
 
-  test("true within the threshold of the end", () => {
-    expect(at(600)).toBe(true); // exactly at the bottom
-    expect(at(560)).toBe(true); // 40px short
-    expect(at(550)).toBe(true); // exactly threshold
+  test("measures how far the end is below the viewport", () => {
+    expect(at(600)).toBe(0);
+    expect(at(560)).toBe(40);
+    expect(at(0)).toBe(600);
   });
 
-  test("false beyond the threshold", () => {
-    expect(at(549)).toBe(false);
-    expect(at(0)).toBe(false);
-  });
-
-  test("content shorter than the viewport is always at the bottom", () => {
+  test("content shorter than the viewport is at the bottom", () => {
     expect(
-      isAtBottom({ scrollHeight: 200, scrollTop: 0, clientHeight: 400 }, 50),
-    ).toBe(true);
+      distanceToBottom({ scrollHeight: 200, scrollTop: 0, clientHeight: 400 }),
+    ).toBe(0);
   });
 });
 

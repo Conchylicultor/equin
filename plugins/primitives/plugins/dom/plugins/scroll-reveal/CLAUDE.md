@@ -26,7 +26,9 @@ Extend this primitive rather than hand-rolling `scrollIntoView` again.
 
 - Description: Reveal-on-activation primitive: useRevealOnActive() scrolls an element into view only when it TRANSITIONS active (or on explicit revealOnMount intent), never because it remounted already-active — so background data churn can't move the user's scroll. revealElement() is the imperative funnel for event handlers.
 - Web:
-  - Uses: `primitives/latest-ref.useLatestRef`
+  - Uses:
+    - `primitives/dom/auto-scroll.announceNavigation`
+    - `primitives/latest-ref.useLatestRef`
   - Exports (types): `RevealOptions`
   - Exports (values):
     - `revealElement`

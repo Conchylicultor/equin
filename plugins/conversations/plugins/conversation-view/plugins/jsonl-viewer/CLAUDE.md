@@ -225,6 +225,7 @@ back.
     - `paneScrollScope`
     - `Timestamp`
     - `TranscriptView`
+    - `useBlockWriting`
     - `useHostedContext`
     - `useJsonlConversationId`
     - `useRowMarkdown`

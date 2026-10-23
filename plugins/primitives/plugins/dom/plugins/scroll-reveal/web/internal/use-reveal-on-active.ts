@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { announceNavigation } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 
 export interface RevealOptions {
   behavior?: ScrollBehavior;
@@ -89,6 +90,9 @@ export function revealElement(
     block: opts?.block ?? "nearest",
     inline: opts?.inline ?? "nearest",
   };
+  // A reveal is a navigation: a transcript following its bottom lets it move
+  // the reader rather than putting the bottom back.
+  announceNavigation(el);
   if (opts?.scope === "nearest") revealInNearest(el, resolved);
   else el.scrollIntoView(resolved);
 }

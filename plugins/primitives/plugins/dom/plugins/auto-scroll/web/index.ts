@@ -35,6 +35,7 @@ export {
   restoreDocumentScroll,
 } from "./carry-document-scroll";
 export type { DocumentScroll } from "./carry-document-scroll";
+export { announceNavigation } from "./announce-navigation";
 export { findScrollParent } from "./internal/find-scroll-parent";
 export type { FindScrollParentOptions } from "./internal/find-scroll-parent";
 

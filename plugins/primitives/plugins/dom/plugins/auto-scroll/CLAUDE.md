@@ -7,7 +7,7 @@ bans `scrollTop =` / `scrollTo()` / `scrollBy()` repo-wide except in this
 plugin's own files, so a new scroll behavior belongs *here*, not in the consumer
 that wants it. Today that is six roles:
 
-- **stick-to-bottom streaming** — `useStickyScroll` + `JumpToBottomButton`
+- **stick-to-bottom streaming** — `useStickyScroll` + `JumpToBottomButton`, and `announceNavigation` (every navigating scroll writer calls it)
 - **container-scoped positioning** — `scrollToBottom`, `scrollChildIntoView`
   (scroll only THIS container; never an ancestor, unlike `scrollIntoView`; it
   honours the child's CSS `scroll-margin` as `scrollIntoView` does, so a
@@ -56,13 +56,48 @@ write instead of keeping a row. Keeping a row there scrolled the follower up by
 whatever a commit released above it — a paged transcript's window sliding as a
 new event lands — which the follower read as the reader leaving, and parked.
 
-## `useStickyScroll` — following is an intent, never an inference
+## `useStickyScroll` — only reader evidence stops following
 
-You follow until a scroll **the hook did not author** lands you elsewhere; you
-follow again when such a scroll lands you back at the bottom. Content settling,
-reflow and new messages only *carry out* that standing intent. Consumers render
-the returned `bottomSentinel` as the scroll container's last child (asserted at
-mount) and signal nothing — there is no content-length effect to remember.
+You follow until **you** scroll away: reader input (wheel, touch, a pointer
+down in the scroller, a scroll key) or a navigation you asked for, and your
+scroll settles away from the bottom. Stopping within `threshold`, or coming
+back to it, follows again. Content settling, reflow and new messages only
+*carry out* that standing intent. **A scroll no reader input explains is put
+back at the bottom.** That covers the browser clamping as content below
+shrinks, its scroll anchoring, `KeepAnchorAcross` keeping a row across a
+window slide, and a `focus()`. Consumers render the returned `bottomSentinel`
+as the scroll container's last child (asserted at mount) and signal nothing.
+
+This replaced "a scroll we did not write is the reader leaving", an inference
+by elimination: every layout effect that moved the offset (a card collapsing,
+the paged window sliding, stand-ins folding) was one more way to park, fixed
+one exception at a time
+([`research/2026-10-23-global-sticky-scroll-input-driven-intent.md`](../../../../../../research/2026-10-23-global-sticky-scroll-input-driven-intent.md)).
+No effect produces reader input, so none can park a follower, and
+`sticky-scroll-machine.test.ts` enumerates every sequence of non-reader signals
+to hold that.
+
+**Modes** (`step` in `internal/sticky-scroll-machine.ts`, the hook is wiring):
+`following` (the hook owns the offset), `driving` (the reader is moving it, so
+nothing is written and anchoring is the browser's), `anchored` (parked).
+Input *arms* the scroller for `SETTLE_MS`. A scroll that lands armed, and that
+the hook did not write, is the reader's: arriving at the bottom follows at
+once, anything else drives. While driving every scroll is the reader's (momentum
+after the input). On settle (no input or scroll for `SETTLE_MS`, the pointer
+up), the distance **at the reader's last scroll** decides. Content that
+streamed in meanwhile is not their displacement. Arming without a scroll (a
+click on a card) changes nothing.
+
+**Every sanctioned scroll funnel announces a navigation.**
+`announceNavigation(target)` arms the owner of `target` and of every ancestor
+scroller. It is called by `scrollChildIntoView`, `scrollToBottom`/`scrollToTop`,
+`useEdgeAutoScroll` and scroll-reveal's `revealElement`, so an outline jump or a
+`StickyUserHeader` expand moves the reader and is never undone. A new
+*navigating* scroll writer must call it. A *compensation* that keeps the reader
+in place (`KeepAnchorAcross`, `KeepScrollAcross`, `keepInPlace`) must not.
+Lint already forces every programmatic scroll through these two plugins, so
+the set is complete. The remaining unannounced moves are browser-native:
+find-in-page has no page-visible input, so ⌘F / Ctrl+F parks explicitly.
 
 **Do not reintroduce a size observer.**
 [`research/2026-05-25-global-sticky-scroll-redesign.md`](../../../../../../research/2026-05-25-global-sticky-scroll-redesign.md)
@@ -76,17 +111,10 @@ downward. Asserted in
 sounds: while following, reflow *does* write. It is "no observation-driven writes
 **while not following**".
 
-**Intent = a scroll whose offset ≠ what we last wrote** (read back after writing,
-so clamping counts). Do **not** swap in gesture listeners: they miss scrollbar
-drags, find-in-page, `useEdgeAutoScroll`, and `revealElement` — which
-`jsonl-pane`'s `StickyUserHeader` fires on expand, so a user at the bottom would
-be yanked back and the expand undone on the same frame. **Every own write must be
-instant, including `jumpToBottom`** — a smooth scroll's intermediate offsets never
-match the recorded one, so the hook reads its own animation as the user leaving
-and cancels the jump mid-flight. The one thing the comparison cannot serve is the
-`scroll` handler itself (IO delivers async, so its cached answer describes the
-pre-scroll position); that reads geometry via `isAtBottom`, which is safe because
-only a position change fires `scroll`.
+**"Ours" = the offset we last wrote** (read back after writing, so clamping
+counts). **Every own write must be instant, including `jumpToBottom`**: a
+smooth scroll's intermediate offsets never match the recorded one, so they
+would count as nobody's and be re-pinned.
 
 **`followKey` means "the user just acted"** — never ambient state. `isWorking`
 also rises when a background agent resumes, which must not move a reading user.
@@ -196,6 +224,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `UseEdgeAutoScrollOptions`
     - `UseStickyScrollOptions`
   - Exports (values):
+    - `announceNavigation`
     - `captureDocumentScroll`
     - `findScrollParent`
     - `FOLLOW_MOTION_ATTR`
@@ -225,6 +254,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `layouts/miller`
     - `page/editor`
     - `primitives/data-view`
+    - `primitives/dom/scroll-reveal`
     - `primitives/log-channels`
     - `primitives/outline/scroll-spy`
     - `primitives/overlay/image-viewer`

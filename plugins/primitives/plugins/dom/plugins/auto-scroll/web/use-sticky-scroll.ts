@@ -17,15 +17,15 @@ import { scrollChildIntoView } from "./scroll-child-into-view";
 import { FOLLOW_MOTION_ATTR } from "./follow-motion";
 import { findViewAnchor } from "./internal/view-anchor";
 import { claimBottomPin, releaseBottomPin } from "./internal/bottom-pin";
+import { listenForNavigation } from "./announce-navigation";
 import {
-  followAction,
-  isAtBottom,
-  isAtEnd,
-  nextMode,
+  distanceToBottom,
   resolveRestore,
   sentinelObserverOptions,
+  step,
   type PersistedMode,
   type ScrollMode,
+  type StickySignal,
 } from "./internal/sticky-scroll-machine";
 
 /** Opt-in restoration of the reading position across reloads and remounts. */
@@ -113,14 +113,46 @@ const positionStore = defineStore<PersistedMode>({
 const PERSIST_DEBOUNCE_MS = 150;
 
 /**
+ * How long after the reader's last input or scroll their scroll counts as
+ * settled. A trailing debounce over input events, not a poll: momentum and
+ * smooth scrolls keep emitting `scroll`, which keeps it open until they end.
+ */
+const SETTLE_MS = 150;
+
+/** Keys that scroll the focused scroller (or the one under the last click). */
+const SCROLL_KEYS = new Set([
+  "ArrowUp",
+  "ArrowDown",
+  "PageUp",
+  "PageDown",
+  "Home",
+  "End",
+  " ",
+]);
+
+function isEditable(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLElement &&
+    (target.isContentEditable ||
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLSelectElement)
+  );
+}
+
+/**
  * Stick-to-bottom streaming, as an *intent* the user sets rather than a state
  * the hook infers.
  *
- * The hook never guesses whether you want to be at the bottom. You are following
- * until a scroll it did not author lands you somewhere else; you are following
- * again when such a scroll lands you back at the bottom. Everything else — async
- * content settling, reflow, images loading, new messages arriving — only ever
- * *carries out* that standing intent.
+ * You are following until YOU scroll away — reader input (wheel, touch, a
+ * pointer down in the scroller, a scroll key) or a navigation you asked for
+ * (`announceNavigation`, called by every sanctioned scroll funnel) — and your
+ * scroll settles away from the bottom. Stopping within the threshold, or
+ * coming back to it, follows again. Everything else — content settling,
+ * reflow, images loading, new messages arriving, the browser clamping or
+ * anchoring, a compensation keeping a row in place — only ever *carries out*
+ * that standing intent: a scroll no reader input explains is put back at the
+ * bottom.
  *
  * That inversion is what fixes the three defects the previous design had:
  * position was written before late layout settled, "am I at the bottom?" was
@@ -153,7 +185,6 @@ export function useStickyScroll(
   // actually changes — so scrolling around while parked re-renders nothing.
   const modeRef = useRef<ScrollMode>({ kind: "following" });
   const [isFollowing, setIsFollowing] = useState(true);
-  const sentinelVisibleRef = useRef(true);
 
   // What we last wrote, read back after the write so clamping is accounted for.
   // Any scroll landing anywhere else is, by definition, not ours.
@@ -241,6 +272,18 @@ export function useStickyScroll(
     [schedulePersist, applyAnchoring],
   );
 
+  /** Feed the machine one signal and carry out what it says. */
+  const dispatch = useCallback(
+    (signal: StickySignal) => {
+      const el = scrollRef.current;
+      if (!el) return;
+      const { mode, action } = step(modeRef.current, signal, threshold);
+      if (mode.kind !== modeRef.current.kind) applyMode(mode);
+      if (action === "scroll-to-bottom") writeToBottom(el);
+    },
+    [applyMode, threshold, writeToBottom],
+  );
+
   // ---- mount: assert placement, then restore -------------------------------
   const restoredRef = useRef(false);
   useLayoutEffect(() => {
@@ -316,24 +359,17 @@ export function useStickyScroll(
   useInView(
     () => (scrollRef.current && sentinelEl ? sentinelEl : null),
     (entry) => {
-      sentinelVisibleRef.current = entry.isIntersecting;
       // The follow loop: while following, anything that moves the content end
       // off screen (a new message, an image loading, shiki resolving, a
-      // reflow) pulls us back down. While parked, this is inert by
-      // construction — see followAction.
-      const el = scrollRef.current;
-      if (
-        el &&
-        followAction(modeRef.current, entry.isIntersecting) ===
-          "scroll-to-bottom"
-      ) {
-        writeToBottom(el);
-      }
+      // reflow) pulls us back down. Otherwise inert by construction — see
+      // followAction.
+      if (scrollRef.current)
+        dispatch({ t: "sentinel", visible: entry.isIntersecting });
     },
     {
       root: scrollRef,
       ...sentinelObserverOptions(threshold),
-      deps: [sentinelEl, threshold, writeToBottom],
+      deps: [sentinelEl, threshold, dispatch],
     },
   );
 
@@ -388,35 +424,95 @@ export function useStickyScroll(
     };
   }, [sentinelEl, writeToBottom]);
 
-  // ---- intent: "a scroll I did not author" ---------------------------------
+  // ---- intent: reader input arms, the reader's scroll settles -------------
+  // Only an ARMED scroll — one that lands within SETTLE_MS of reader input or
+  // an announced navigation — is the reader's; while driving, every scroll is.
+  // Any other scroll is nobody's request and the machine puts a follower back
+  // at the bottom. Settling (no input, no scroll for SETTLE_MS, the pointer
+  // up) ends the window and lets the machine decide where the reader stopped.
   useEffect(() => {
     const el = scrollRef.current;
-    if (!el) return;
+    if (!el || !sentinelEl) return;
+    let armed = false;
+    let pointerDown = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
     let previousTop = el.scrollTop;
+    // How far the bottom was at the reader's last scroll: what settle judges.
+    let readerDistance = distanceToBottom(el);
+
+    const settle = () => {
+      timer = null;
+      armed = false;
+      dispatch({ t: "settle", distance: readerDistance });
+    };
+    const restartSettle = () => {
+      if (timer !== null) clearTimeout(timer);
+      timer = pointerDown ? null : setTimeout(settle, SETTLE_MS);
+    };
+    const arm = () => {
+      armed = true;
+      restartSettle();
+    };
+
     const onScroll = () => {
       const top = el.scrollTop;
-      const movedUp = top < previousTop;
+      const movedDown = top > previousTop;
       previousTop = top;
-      if (top === lastWrittenTopRef.current) return; // ours
-      // Read the geometry rather than the observer's last delivery: IO is async,
-      // so its cached answer still describes the pre-scroll position and would
-      // report "you scrolled to the bottom" for a scroll that just left it.
-      // Writing it back also keeps the follow loop from acting on that stale
-      // value before the observer catches up.
-      const atBottom = isAtBottom(el, threshold);
-      sentinelVisibleRef.current = atBottom;
-      applyMode(
-        nextMode({
-          t: "foreign-scroll",
-          sentinelVisible: atBottom,
-          movedUp,
-          atEnd: isAtEnd(el),
-        }),
-      );
+      const ours = top === lastWrittenTopRef.current;
+      const distance = distanceToBottom(el);
+      const reader = !ours && (armed || modeRef.current.kind === "driving");
+      if (reader) {
+        readerDistance = distance;
+        restartSettle();
+      }
+      dispatch({ t: "scroll", ours, armed, movedDown, distance });
     };
+    const onPointerDown = () => {
+      pointerDown = true;
+      arm();
+    };
+    const onPointerUp = () => {
+      if (!pointerDown) return;
+      pointerDown = false;
+      if (armed) restartSettle();
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "f") {
+        dispatch({ t: "find" });
+        return;
+      }
+      if (!SCROLL_KEYS.has(e.key) || isEditable(e.target)) return;
+      const target = e.target;
+      if (
+        target === document.body ||
+        (target instanceof Node && el.contains(target))
+      )
+        arm();
+    };
+
+    const unlisten = listenForNavigation(el, arm);
     el.addEventListener("scroll", onScroll, { passive: true });
-    return () => el.removeEventListener("scroll", onScroll);
-  }, [applyMode, threshold]);
+    el.addEventListener("wheel", arm, { passive: true });
+    el.addEventListener("touchstart", arm, { passive: true });
+    el.addEventListener("touchmove", arm, { passive: true });
+    el.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerUp);
+    // eslint-disable-next-line shortcuts/no-window-key-listener -- observes, never handles: the browser performs the scroll (a scroll key) or the find (⌘F) and nothing is prevented; a scroll key arms only when its target is this scroller or the body, and find-in-page is page-wide by nature
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      unlisten();
+      el.removeEventListener("scroll", onScroll);
+      el.removeEventListener("wheel", arm);
+      el.removeEventListener("touchstart", arm);
+      el.removeEventListener("touchmove", arm);
+      el.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerUp);
+      window.removeEventListener("keydown", onKeyDown);
+      if (timer !== null) clearTimeout(timer);
+    };
+  }, [sentinelEl, dispatch]);
 
   // ---- explicit re-assertions ---------------------------------------------
   const followKeyFirstRunRef = useRef(true);
@@ -425,25 +521,12 @@ export function useStickyScroll(
       followKeyFirstRunRef.current = false;
       return;
     }
-    const el = scrollRef.current;
-    if (!el) return;
-    applyMode(nextMode({ t: "follow-key" }));
-    writeToBottom(el);
-  }, [followKey, applyMode, writeToBottom]);
+    dispatch({ t: "follow-key" });
+  }, [followKey, dispatch]);
 
-  const jumpToBottom = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    applyMode(nextMode({ t: "jump" }));
-    // Instant, deliberately. A smooth scroll emits a stream of intermediate
-    // offsets, none of which equal what we recorded as our own write — so the
-    // hook's own "a scroll I did not author" test reads its own animation as the
-    // user scrolling away and parks the surface mid-flight, cancelling the jump.
-    // Owning the offset outright is the only version with no in-flight window,
-    // and over a long transcript an instant jump is the better affordance
-    // anyway.
-    writeToBottom(el);
-  }, [applyMode, writeToBottom]);
+  // Instant, deliberately: own writes are told apart from the reader's by the
+  // offset they leave, and a smooth scroll's intermediate offsets match none.
+  const jumpToBottom = useCallback(() => dispatch({ t: "jump" }), [dispatch]);
 
   // ---- flush on unmount ----------------------------------------------------
   useEffect(() => {

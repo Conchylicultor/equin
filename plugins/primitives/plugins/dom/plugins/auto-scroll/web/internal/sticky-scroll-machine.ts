@@ -9,7 +9,15 @@
  */
 
 /**
- * Whether the surface is chasing the bottom, or parked.
+ * Whether the surface is chasing the bottom, being moved by the reader, or
+ * parked.
+ *
+ * - `following` — the hook owns the offset: content growing pulls it down, and
+ *   any scroll no reader input explains is put back at the bottom.
+ * - `driving` — the reader (or a navigation they asked for) is moving the
+ *   surface: nothing is written until their scroll settles, which decides
+ *   between the other two.
+ * - `anchored` — parked where the reader left it.
  *
  * Deliberately does NOT record *which* row it is parked on. Only storage cares
  * about that, and resolving it means a `querySelectorAll` over every anchored
@@ -17,7 +25,8 @@
  * transcript. The row is resolved once, lazily, at persist time
  * ({@link PersistedMode}).
  */
-export type ScrollMode = { kind: "following" } | { kind: "anchored" };
+export type ScrollMode =
+  { kind: "following" } | { kind: "driving" } | { kind: "anchored" };
 
 /**
  * The storage shape: a parked surface is only worth saving with a row to park on.
@@ -32,80 +41,117 @@ export type PersistedMode =
 
 export type StickySignal =
   /**
-   * A scroll this hook did not author. This is the ONLY signal that can stop
-   * following, which is what makes the guarantee in {@link followAction} hold.
+   * The scroller's offset changed.
    *
-   * `movedUp` is not redundant with `sentinelVisible`, and leaving it out is a
-   * real bug: a scroll *away* from the bottom begins inside the threshold, so its
-   * first frames still report "at the bottom". Reading only position, the surface
-   * concludes the user scrolled *to* the bottom, keeps following, and the follow
-   * loop drags them back — cancelling any smooth navigation that starts from the
-   * bottom (a table-of-contents jump, a `revealElement`). Direction is
-   * unambiguous where position is not: moving up is leaving — unless it ended
-   * at the very end (`atEnd`).
-   *
-   * `atEnd` (scrolled to the maximum offset) is what tells a reader leaving
-   * the bottom from the browser CLAMPING the offset because content below
-   * shrank — a tool card collapsing as its result lands, a placeholder giving
-   * way to a shorter row. A clamp moves up and is not ours, so without it the
-   * surface parked whenever the transcript shrank under a following reader,
-   * and new rows then arrived off screen. A scroll that ends at the very end
-   * did not leave it, whatever its direction; a reader moving up cannot land
-   * there.
+   * - `ours` — the hook wrote it (read back after the write, so a clamp of our
+   *   own write counts as ours).
+   * - `armed` — reader input (wheel, touch, a pointer down in the scroller, a
+   *   scroll key) or an announced navigation (`announceNavigation`, called by
+   *   every sanctioned scroll funnel) happened in the settle window. Only an
+   *   armed scroll is the reader's; while `driving`, every scroll is.
+   * - `movedDown`, `distance` — its direction, and how far the bottom is after
+   *   it (px).
    */
   | {
-      t: "foreign-scroll";
-      sentinelVisible: boolean;
-      movedUp: boolean;
-      atEnd: boolean;
+      t: "scroll";
+      ours: boolean;
+      armed: boolean;
+      movedDown: boolean;
+      distance: number;
     }
+  /**
+   * The reader's scroll came to rest (no input or scroll for the settle
+   * window). `distance` is how far the bottom was at the reader's LAST scroll
+   * — content that streamed in since is not their displacement.
+   */
+  | { t: "settle"; distance: number }
+  /** The bottom sentinel entered or left the pin margin. */
+  | { t: "sentinel"; visible: boolean }
   /** The user pressed the jump-to-bottom affordance. */
   | { t: "jump" }
   /** The consumer's `followKey` changed — an explicit "the user just acted". */
-  | { t: "follow-key" };
-
-/**
- * The next mode is a function of the signal alone — the previous mode is not an
- * input, and the absence of that parameter is the point: there is no history to
- * get wrong, no ordering hazard between the observer and the scroll listener,
- * and no state a stale closure can pin. Each signal fully determines where you
- * end up.
- */
-export function nextMode(signal: StickySignal): ScrollMode {
-  switch (signal.t) {
-    case "jump":
-    case "follow-key":
-      return { kind: "following" };
-    case "foreign-scroll":
-      if (signal.atEnd) return { kind: "following" };
-      if (signal.movedUp) return { kind: "anchored" };
-      return signal.sentinelVisible
-        ? { kind: "following" }
-        : { kind: "anchored" };
-  }
-}
+  | { t: "follow-key" }
+  /**
+   * Find-in-page was asked for (⌘F / Ctrl+F). Its scrolls reach the page with
+   * no input the page can see, so asking for it parks.
+   */
+  | { t: "find" };
 
 export type StickyAction = "none" | "scroll-to-bottom";
 
+export interface StickyStep {
+  mode: ScrollMode;
+  action: StickyAction;
+}
+
+const FOLLOWING: ScrollMode = { kind: "following" };
+const DRIVING: ScrollMode = { kind: "driving" };
+const ANCHORED: ScrollMode = { kind: "anchored" };
+
 /**
- * The whole write policy, in one expression.
+ * The whole follow policy, as one reducer.
  *
- * **This is the guarantee that `research/2026-05-25-global-sticky-scroll-redesign.md`
- * demands.** That doc removed a `ResizeObserver` because a size delta is
- * *sign-blind*: opening the file pane narrows the column, text rewraps taller,
- * and "grew" is indistinguishable from "new content arrived" — so the hook
- * scrolled a reading user to the bottom.
+ * **Only reader evidence stops following.** Leaving `following` takes an
+ * armed scroll (reader input or an announced navigation), a find, or nothing.
+ * A scroll nothing explains — the browser clamping as content below shrinks,
+ * its scroll anchoring, `KeepAnchorAcross` keeping a row across a window
+ * slide, a `focus()` — is put back at the bottom. That is what makes "a layout
+ * effect parked the follower" inexpressible: no effect, present or future,
+ * produces reader input. The previous rule ("a scroll we did not write is the
+ * reader leaving") was an inference by elimination, and each new effect that
+ * moved the offset was a new way to park.
  *
- * Bottom-proximity is now a *visibility* fact, which is sign-asymmetric: a
- * taller reflow can only push the content end further down, i.e. only ever make
- * the sentinel *less* visible. A signal that can exclusively un-follow cannot
- * drag anyone to the bottom.
- *
- * Note the converse, so nobody reads a stronger promise into this than it makes:
- * while `following`, a reflow DOES produce a scroll write. That is the entire
- * point of a tail-follower. The guarantee is "no observation-driven writes
- * **while not following**" — not "no observation-driven writes".
+ * **Nothing observed writes while not following** (the
+ * `research/2026-05-25-global-sticky-scroll-redesign.md` guarantee): the
+ * sentinel only ever writes from `following`, and visibility is
+ * sign-asymmetric — a taller reflow can only make the bottom less visible — so
+ * no observation drags a parked reader down.
  */
+export function step(
+  mode: ScrollMode,
+  signal: StickySignal,
+  threshold: number,
+): StickyStep {
+  const pin = Math.max(0, threshold);
+  switch (signal.t) {
+    case "jump":
+    case "follow-key":
+      return { mode: FOLLOWING, action: "scroll-to-bottom" };
+    case "find":
+      return { mode: ANCHORED, action: "none" };
+    case "sentinel":
+      return { mode, action: followAction(mode, signal.visible) };
+    case "settle":
+      if (mode.kind !== "driving") return { mode, action: "none" };
+      return signal.distance <= pin
+        ? { mode: FOLLOWING, action: "scroll-to-bottom" }
+        : { mode: ANCHORED, action: "none" };
+    case "scroll": {
+      if (signal.ours) return { mode, action: "none" };
+      if (signal.armed || mode.kind === "driving") {
+        // The reader's. Arriving at the bottom resumes at once; anything else
+        // is theirs to drive until it settles — no write fights it, and
+        // stopping inside the margin still sticks.
+        return signal.movedDown && signal.distance <= pin
+          ? { mode: FOLLOWING, action: "none" }
+          : { mode: DRIVING, action: "none" };
+      }
+      // Nobody asked for it. A follower is put back; a parked reader is left
+      // to the browser's anchoring.
+      if (mode.kind === "following" && signal.distance > END_SLACK_PX)
+        return { mode, action: "scroll-to-bottom" };
+      return { mode, action: "none" };
+    }
+  }
+}
+
+/**
+ * 1px of slack for "already at the end": `scrollTop` is fractional on a zoomed
+ * or high-DPI display, the maximum is not always reachable to the exact pixel.
+ */
+const END_SLACK_PX = 1;
+
+/** The sentinel's write policy: chase the bottom only while following. */
 export function followAction(
   mode: ScrollMode,
   sentinelVisible: boolean,
@@ -150,41 +196,16 @@ export function sentinelObserverOptions(threshold: number): {
   };
 }
 
-/**
- * Synchronous bottom-proximity, for the one moment the observer cannot serve.
- *
- * `IntersectionObserver` delivers **asynchronously**, so inside a `scroll`
- * handler the last delivered visibility is still describing where the surface
- * was *before* this scroll. Deciding intent from it says "you scrolled to the
- * bottom" for a scroll that just left the bottom — the surface stays following
- * and the observer's next callback drags it straight back down.
- *
- * Reading the geometry here is NOT the sign-blind mistake the old design made:
- * this runs only in response to a `scroll` event, which is a *position* change.
- * Reflow and content growth do not fire `scroll`, so this can never interpret
- * "the content got taller" as "the user moved". The observer still owns
- * everything that happens without a scroll.
- */
-export function isAtBottom(
-  metrics: { scrollHeight: number; scrollTop: number; clientHeight: number },
-  threshold: number,
-): boolean {
-  const distance =
-    metrics.scrollHeight - metrics.scrollTop - metrics.clientHeight;
-  return distance <= Math.max(0, threshold);
-}
-
-/**
- * Scrolled to the maximum offset — where the browser clamps to when content
- * shrinks. 1px of slack: `scrollTop` is fractional on a zoomed or high-DPI
- * display, the maximum is not always reachable to the exact pixel.
- */
-export function isAtEnd(metrics: {
+/** How far the content end is below the viewport's bottom (px; 0 at the end). */
+export function distanceToBottom(metrics: {
   scrollHeight: number;
   scrollTop: number;
   clientHeight: number;
-}): boolean {
-  return isAtBottom(metrics, 1);
+}): number {
+  return Math.max(
+    0,
+    metrics.scrollHeight - metrics.scrollTop - metrics.clientHeight,
+  );
 }
 
 export type RestoreOutcome =

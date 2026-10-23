@@ -1,3 +1,5 @@
+import { announceNavigation } from "./announce-navigation";
+
 export type ScrollAlign = "start" | "center" | "end" | "nearest";
 
 export interface ScrollChildIntoViewOptions {
@@ -93,5 +95,6 @@ export function scrollChildIntoView(
       Math.min(raw, container.scrollWidth - container.clientWidth),
     );
   }
+  announceNavigation(container);
   container.scrollTo(to);
 }

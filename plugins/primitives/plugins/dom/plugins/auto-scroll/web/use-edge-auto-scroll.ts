@@ -4,6 +4,7 @@ import {
   useLatestRef,
 } from "@plugins/primitives/plugins/latest-ref/web";
 import { findScrollParent } from "./internal/find-scroll-parent";
+import { announceNavigation } from "./announce-navigation";
 
 /**
  * What an edge auto-scroll moves: anything with an edge band the pointer can
@@ -128,6 +129,7 @@ function domSurface(el: HTMLElement): EdgeScrollSurface {
       remainder -= stepPx;
       if (stepPx === 0) return false;
       const before = el.scrollTop;
+      announceNavigation(el);
       // `instant`, never the container's CSS `scroll-behavior`: a smooth scroll
       // settles asynchronously, so the moved-check would read `before` on every
       // frame and the loop would pile animations onto each other.

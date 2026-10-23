@@ -14574,6 +14574,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `paneScrollScope`
               - `Timestamp`
               - `TranscriptView`
+              - `useBlockWriting`
               - `useHostedContext`
               - `useJsonlConversationId`
               - `useRowMarkdown`
@@ -14705,7 +14706,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes: `JsonlViewer.EventRenderer` "assistant-thinking" → `AssistantThinkingRow`
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
-                  - `conversations/conversation-view/jsonl-viewer.useStreamingRow`
+                  - `conversations/conversation-view/jsonl-viewer.useBlockWriting`
                   - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
                   - `conversations/conversation-view/jsonl-viewer/steady-reveal.useSteadyReveal`
                   - `primitives/css/spacing.Stack`
@@ -39167,6 +39168,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `UseEdgeAutoScrollOptions`
               - `UseStickyScrollOptions`
             - Exports (values):
+              - `announceNavigation`
               - `captureDocumentScroll`
               - `findScrollParent`
               - `FOLLOW_MOTION_ATTR`
@@ -39196,6 +39198,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `layouts/miller`
               - `page/editor`
               - `primitives/data-view`
+              - `primitives/dom/scroll-reveal`
               - `primitives/log-channels`
               - `primitives/outline/scroll-spy`
               - `primitives/overlay/image-viewer`
@@ -39323,7 +39326,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `Core.Root` → `OverscrollHintController`
         - **`scroll-reveal`** — Reveal-on-activation primitive: useRevealOnActive() scrolls an element into view only when it TRANSITIONS active (or on explicit revealOnMount intent), never because it remounted already-active — so background data churn can't move the user's scroll. revealElement() is the imperative funnel for event handlers.
           - Web:
-            - Uses: `primitives/latest-ref.useLatestRef`
+            - Uses:
+              - `primitives/dom/auto-scroll.announceNavigation`
+              - `primitives/latest-ref.useLatestRef`
             - Exports (types): `RevealOptions`
             - Exports (values):
               - `revealElement`

@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
-import { useStreamingRow } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
+import { useBlockWriting } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
 import { useSteadyReveal } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/steady-reveal/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -14,16 +14,19 @@ const THOUGHT_CLASS =
 
 /**
  * A thought, as a card that always opens. While the model is still thinking
- * (a streaming stand-in) it is open on the thought as it is written —
- * revealed at the reply's steady pace, or a placeholder until the first words
- * arrive — and its finished row lands folded. Folded, the header carries the
- * thought's first sentence, which stays put as the rest streams in; open, the
- * header drops it rather than repeat what the body shows.
+ * (the stand-in of the message's newest block) it is open on the thought as it
+ * is written — revealed at the reply's steady pace, or a placeholder until the
+ * first words arrive — and it folds the moment the next block begins (the
+ * reply's first token, a tool call), not when the transcript catches up; its
+ * finished row lands folded. A reader's own toggle wins over both. Folded, the
+ * header carries the thought's first sentence, which stays put as the rest
+ * streams in; open, the header drops it rather than repeat what the body shows.
  */
 export function AssistantThinkingRow({ event }: { event: JsonlEvent }) {
   const e = event as AssistantThinkingEvent;
-  const streaming = useStreamingRow();
-  const [open, setOpen] = useState(streaming);
+  const writing = useBlockWriting();
+  const [chosen, setChosen] = useState<boolean>();
+  const open = chosen ?? writing;
   const lead = open ? "" : firstSentence(e.thinking);
 
   return (
@@ -31,9 +34,9 @@ export function AssistantThinkingRow({ event }: { event: JsonlEvent }) {
       label="Thinking"
       summary={lead === "" ? undefined : lead}
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={setChosen}
     >
-      {streaming ? (
+      {writing ? (
         <StreamingThought text={e.thinking} />
       ) : e.thinking === "" ? (
         <Text

@@ -1,3 +1,5 @@
+import { announceNavigation } from "./announce-navigation";
+
 export interface ScrollToBottomOptions {
   behavior?: ScrollBehavior;
 }
@@ -10,6 +12,7 @@ export function scrollToBottom(
   opts?: ScrollToBottomOptions,
 ): void {
   if (!el) return;
+  announceNavigation(el);
   el.scrollTo({ top: el.scrollHeight, behavior: opts?.behavior ?? "auto" });
 }
 
@@ -21,5 +24,6 @@ export function scrollToTop(
   opts?: ScrollToBottomOptions,
 ): void {
   if (!el) return;
+  announceNavigation(el);
   el.scrollTo({ top: 0, behavior: opts?.behavior ?? "auto" });
 }
