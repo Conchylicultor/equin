@@ -8,6 +8,6 @@ export const variantsHint = defineHint({
   id: "prototypes.variants",
   anchor: optionsChipAnchor,
   title: "Variants",
-  body: "Click to view the prototype's variants.",
+  body: "Click to switch between the alternative designs of this prototype.",
   placement: "bottom",
 });
