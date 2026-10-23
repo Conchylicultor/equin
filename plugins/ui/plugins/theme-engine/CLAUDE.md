@@ -174,13 +174,13 @@ without its own theme document is the `""` entry exactly.
     - `ThemeEngine.SubTheme`
     - `ThemeEngine.FixedTheme`
     - `ThemeEngine.ThemeSource`
-  - Slot contributors: 43 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 44 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `ThemeEngine.TokenGroup` ×18
     - `ThemeEngine.Theme` ×11
     - `ThemeEngine.VariantGroup` ×6
     - `ThemeEngine.SubTheme` ×5
+    - `ThemeEngine.FixedTheme` ×2
     - `ThemeEngine.ThemeSource` ×2
-    - `ThemeEngine.FixedTheme` ← `apps-core.chrome-theme`
   - Contributes:
     - `Core.Root` → `ThemeInjector`
     - `Core.Root` → `AppScopeThemes`
@@ -307,10 +307,11 @@ without its own theme document is the `""` entry exactly.
     - `ui/tokens/shadow` ×5
     - `ui/tokens/type-scale` ×4
     - `ui/tokens/shape` ×3
-  - Imported by: 45 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 46 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui` ×28
     - `apps` ×14
     - `apps-core/chrome-theme`
+    - `hints`
     - `plugin-meta/token-usage`
     - `reports/theme-resolution`
 - Sub-plugins:

@@ -1,16 +1,15 @@
 import type { ReactNode } from "react";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   Button,
   ControlSizeProvider,
-  cn,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const closeIcon = symbol("close");
+const helpIcon = symbol("help");
 
 export interface HintCardAction {
   readonly label: string;
@@ -20,86 +19,160 @@ export interface HintCardAction {
 export interface HintCardProps {
   readonly title: ReactNode;
   readonly body: ReactNode;
-  /** A tour's progress: one dot per step, `index` filled. */
+  /** A tour's progress: one dot per step, `index` current. Absent on a tip. */
   readonly steps?: { readonly count: number; readonly index: number };
   readonly onClose?: () => void;
+  /** A quiet line left of the buttons ("Hover it to unfold"). */
+  readonly footnote?: ReactNode;
   readonly alt?: HintCardAction;
   readonly onBack?: () => void;
   readonly primary?: HintCardAction;
 }
 
 /**
- * The content of every hint card — a tip, a tour step, the welcome card:
- * title (with ×), body, then a footer of step dots and the buttons. It draws
- * no chrome: the floating surface (or the welcome panel) around it does.
+ * The content of the coach card — a tour step or a tip: (step dots and ×),
+ * title, body, then a foot of footnote, alt, Back and the primary. It draws
+ * no chrome: the stage's card around it does.
  */
 export function HintCard({
   title,
   body,
   steps,
   onClose,
+  footnote,
   alt,
   onBack,
   primary,
 }: HintCardProps) {
-  const hasFooter = steps || alt || onBack || primary;
   return (
     <ControlSizeProvider size="sm">
-      <Stack gap="sm">
-        <Stack direction="row" gap="sm" align="start">
-          <Fill>
-            <Text variant="subheading" tone="strong">
-              {title}
-            </Text>
-          </Fill>
+      {(steps || onClose) && (
+        <div className="hint-card-top">
+          {steps && <StepDots {...steps} />}
           {onClose && (
-            <IconButton icon={closeIcon} label="Close" onClick={onClose} />
+            <button
+              type="button"
+              className="hint-close"
+              aria-label="Skip the tour (Esc)"
+              onClick={onClose}
+            >
+              <Icon icon={closeIcon} />
+            </button>
           )}
-        </Stack>
-        <Text as="div" variant="body" tone="muted">
-          {body}
-        </Text>
-        {hasFooter && (
-          <Stack direction="row" gap="xs" align="center">
-            {steps && <StepDots {...steps} />}
-            <Fill />
-            {alt && (
-              <Button variant="ghost" onClick={alt.onClick}>
-                {alt.label}
-              </Button>
-            )}
-            {onBack && (
-              <Button variant="outline" onClick={onBack}>
-                Back
-              </Button>
-            )}
-            {primary && (
-              <Button onClick={primary.onClick}>{primary.label}</Button>
-            )}
-          </Stack>
+        </div>
+      )}
+      <Text as="h2" variant="subheading" tone="strong">
+        {title}
+      </Text>
+      <Text as="div" variant="body" tone="muted" className="hint-card-body">
+        {body}
+      </Text>
+      <div className="hint-card-foot">
+        {footnote && (
+          <Text as="span" variant="caption" className="hint-footnote">
+            {footnote}
+          </Text>
         )}
-      </Stack>
+        {alt && (
+          <Button variant="ghost" shape="pill" onClick={alt.onClick}>
+            {alt.label}
+          </Button>
+        )}
+        <Fill />
+        {onBack && (
+          <Button variant="ghost" shape="pill" onClick={onBack}>
+            Back
+          </Button>
+        )}
+        {primary && (
+          <Button shape="pill" onClick={primary.onClick}>
+            {primary.label}
+          </Button>
+        )}
+      </div>
     </ControlSizeProvider>
   );
 }
 
 function StepDots({ count, index }: { count: number; index: number }) {
   return (
-    <Stack
-      direction="row"
-      gap="2xs"
-      align="center"
-      aria-label={`Step ${index + 1} of ${count}`}
-    >
+    <div className="hint-steps" aria-label={`Step ${index + 1} of ${count}`}>
       {Array.from({ length: count }, (_, i) => (
-        <span
+        <i
           key={i}
-          className={cn(
-            "block size-1.5 rounded-full",
-            i === index ? "bg-primary" : "bg-muted-foreground/30",
-          )}
+          data-state={i < index ? "done" : i === index ? "current" : "next"}
         />
       ))}
-    </Stack>
+    </div>
+  );
+}
+
+export interface WelcomeCardProps {
+  readonly icon?: IconRef;
+  readonly title: ReactNode;
+  readonly body: ReactNode;
+  readonly note?: ReactNode;
+  readonly start: HintCardAction;
+  readonly skip: HintCardAction;
+}
+
+/** The welcome card's content: the brand mark, title, body, the two choices and a note. */
+export function WelcomeCard({
+  icon,
+  title,
+  body,
+  note,
+  start,
+  skip,
+}: WelcomeCardProps) {
+  return (
+    <ControlSizeProvider size="lg">
+      {icon && (
+        <div className="hint-mark">
+          <Icon icon={icon} active />
+        </div>
+      )}
+      <Text as="h2" variant="title" tone="strong">
+        {title}
+      </Text>
+      <Text as="p" variant="body" tone="muted" className="hint-welcome-body">
+        {body}
+      </Text>
+      <div className="hint-welcome-acts">
+        <Button shape="pill" autoFocus onClick={start.onClick}>
+          {start.label}
+        </Button>
+        <Button variant="ghost" shape="pill" onClick={skip.onClick}>
+          {skip.label}
+        </Button>
+      </div>
+      {note && (
+        <Text
+          as="small"
+          variant="caption"
+          tone="faint"
+          className="hint-welcome-note"
+        >
+          {note}
+        </Text>
+      )}
+    </ControlSizeProvider>
+  );
+}
+
+/** The farewell toast's content: where the tour lives from now on. */
+export function TourFarewell() {
+  return (
+    <>
+      <Icon icon={helpIcon} />
+      <div>
+        <Text as="div" variant="body" tone="strong">
+          The tour is here whenever you want it
+        </Text>
+        <Text as="small" variant="caption" tone="faint">
+          <Icon icon={helpIcon} /> in the toolbar → Replay the tour
+        </Text>
+      </div>
+    </>
   );
 }

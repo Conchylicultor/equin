@@ -15,6 +15,7 @@ const Z_LAYER_CLASS = {
   float: "z-float",
   overlay: "z-overlay",
   popover: "z-popover",
+  guide: "z-guide",
   draw: "z-draw",
   max: "z-max",
 } as const;
@@ -28,7 +29,7 @@ export type InTreeLayer = "base" | "raised" | "nav" | "float" | "overlay";
 
 /** Portaled top layers (50–9999): elements portaled to <body> that must
  *  out-stack all in-tree chrome — modals/lightboxes, draw overlay, banners. */
-export type PortaledLayer = "popover" | "draw" | "max";
+export type PortaledLayer = "popover" | "guide" | "draw" | "max";
 
 // Compile-time guard: the two tiers must EXACTLY partition the ladder, so a new
 // layer added to Z_LAYER_CLASS can't silently belong to neither tier.

@@ -4089,14 +4089,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `hints.setTourData`
               - `hints.useTourRun`
               - `improve.openImprove`
-              - `primitives/css/inline.Inline`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
               - `primitives/pane.openPane`
               - `shell/global-action-bar.useActionBarPinned`
               - `ui/icons.Icon`
-          - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
         - **`usage-fields`** — Declares per-app usage stats as client fields of the installed-app row kind: opens and active time over 7 days and all time, and when the app was last opened — sortable, filterable fields shown as columns of the Home grid's table view.
           - Web:
             - Contributes:
@@ -26044,7 +26039,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Cross-plugin:
     - Imported by: `apps/sonata/library`
 
-- **`hints`** — The hints engine, web half: Hints.Hint / Hints.Tour declarations, useHintAnchor (ref registration, holding a floating toolbar open while its tip shows), useHintMoment (a tip shown once at its moment, lowest order first, one at a time), startTour / autoStart, emitHintSignal, the seen state and catalog reads — and the one HintHost at Core.Root drawing the active tip (halo + card) or the tour's welcome card / spotlit step, every tour end pulsing ? and toasting where the tour lives. Owns the hint_seen table — one row per hint or tour the user has met (outcome, seen_at) — served as the hints.seen live collection (boot-preloaded), with the mark-seen upsert and the reset-by-ids delete.
+- **`hints`** — The hints engine, web half: Hints.Hint / Hints.Tour declarations, useHintAnchor (ref registration, holding a floating toolbar open while its tip shows), useHintMoment (a tip shown once at its moment, lowest order first, one at a time), startTour / autoStart, emitHintSignal, the seen state and catalog reads — and the one HintHost at Core.Root drawing the active tip (halo + card) or the tour's welcome card / spotlit step on one persistent stage — every change of scene a CSS transition of the same elements — in the hints' own fixed theme (the same look in every app), every tour end pulsing ? and toasting where the tour lives. Owns the hint_seen table — one row per hint or tour the user has met (outcome, seen_at) — served as the hints.seen live collection (boot-preloaded), with the mark-seen upsert and the reset-by-ids delete.
   - Web:
     - Slots:
       - `Hints.Hint`
@@ -26055,31 +26050,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Hints.Tour` ← `apps.home.tour`
     - Contributes:
       - `Core.Root` → `HintHost`
+      - `ThemeEngine.FixedTheme` "Onboarding hints"
       - `Shortcuts.Shortcut` "hints.tour-back (ArrowLeft)"
       - `Shortcuts.Shortcut` "hints.tour-end (Escape)"
       - `Shortcuts.Shortcut` "hints.tour-next (ArrowRight)"
-    - Uses: 26 symbols — full list in [`plugins/hints/REFERENCE.md`](../plugins/hints/REFERENCE.md)
-      - `primitives/css/ui-kit` ×4
+    - Uses: 21 symbols — full list in [`plugins/hints/REFERENCE.md`](../plugins/hints/REFERENCE.md)
       - `primitives/live-state` ×3
+      - `primitives/css/ui-kit` ×2
       - `apps-core/tabs.navigate`
       - `apps-core.useFocusedAppId`
       - `infra/endpoints.useFetchEndpoint`
       - `network/live.useLive`
-      - `primitives/css/center.Center`
       - `primitives/css/coords.Placed`
       - `primitives/css/fill.Fill`
-      - `primitives/css/layer.Layer`
-      - `primitives/css/spacing.Stack`
       - `primitives/css/text.Text`
+      - `primitives/css/theme-boundary.Theme`
       - `primitives/css/viewport-overlay.ViewportOverlay`
       - `primitives/dom/element-size.useResizeObserver`
       - `primitives/dom/scroll-reveal.revealElement`
-      - `primitives/icon-button.IconButton`
       - `primitives/latest-ref.useEventCallback`
-      - `primitives/overlay/floating-surface.FloatingSurface`
       - `primitives/overlay/popup-open.useReportPopupOpen`
       - `primitives/shortcuts.defineShortcut`
-      - `shell/toast.showToast`
+      - `ui/icons.Icon`
+      - `ui/theme-engine.ThemeEngine`
     - Exports (types):
       - `AnyTour`
       - `HintCatalogEntry`
@@ -26174,10 +26167,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `targetKey`
   - Cross-plugin:
     - Uses tokens:
+      - `ui/tokens/color-palette --faint-foreground`
+      - `ui/tokens/color-palette --info`
       - `ui/tokens/color-palette --muted-foreground`
-      - `ui/tokens/color-palette --primary`
-      - `ui/tokens/shape --radius-control`
-      - `ui/tokens/shape --spacing`
+      - `ui/tokens/color-palette --popover`
+      - `ui/tokens/color-palette --popover-border`
+      - `ui/tokens/color-palette --popover-foreground`
+      - `ui/tokens/font-family --font-sans`
+      - `ui/tokens/shadow --shadow`
+      - `ui/tokens/shadow --shadow-popover`
     - Imported by:
       - `apps/home/app-cards`
       - `apps/home/tour`
@@ -36498,7 +36496,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 119 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+            - Imported by: 118 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
               - `apps` ×35
               - `primitives` ×25
               - `page` ×17
@@ -36515,7 +36513,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `active-data/go`
               - `config_v2/settings`
               - `framework/web-core`
-              - `hints`
               - `layouts/route-fallback`
               - `reorder/node-types/header`
               - `screenshot`
@@ -36838,8 +36835,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 87 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
-              - `apps` ×17
+            - Imported by: 86 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+              - `apps` ×16
               - `debug` ×14
               - `reports` ×13
               - `conversations` ×9
@@ -36870,10 +36867,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Layer`
               - `layerClasses`
           - Cross-plugin:
-            - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/css/plugins/layer/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/layer/REFERENCE.md)
+            - Imported by: 25 plugins — full list in [`plugins/primitives/plugins/css/plugins/layer/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/layer/REFERENCE.md)
               - `apps` ×15
               - `primitives` ×7
-              - `hints`
               - `integrations/youtube`
               - `map`
               - `page/code-block`
@@ -37306,8 +37302,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 409 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
-              - `apps` ×107
+            - Imported by: 407 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+              - `apps` ×106
               - `conversations` ×65
               - `primitives` ×54
               - `debug` ×37
@@ -37332,7 +37328,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `layouts` ×2
               - `screenshot` ×2
               - `framework/web-core`
-              - `hints`
               - `history/dialog`
               - `map/google`
               - `music/chord-box`
@@ -37529,8 +37524,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×36
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 381 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `apps` ×106
+            - Imported by: 380 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+              - `apps` ×105
               - `conversations` ×73
               - `primitives` ×43
               - `debug` ×36
@@ -37606,6 +37601,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/compare/exhibit`
               - `apps/website/pages/apps`
               - `apps/website/shell`
+              - `hints`
               - `layouts/miller`
               - `plugin-meta/exhibits`
               - `primitives/pane`
@@ -39891,7 +39887,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 120 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 119 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×39
           - `conversations` ×21
           - `primitives` ×21
@@ -39901,13 +39897,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2` ×3
           - `infra` ×3
           - `build` ×2
-          - `hints` ×2
           - `screenshot` ×2
           - `shell` ×2
           - `ui` ×2
           - `apps-core/tab-bar`
           - `fields/enum/column-config`
           - `fullscreen`
+          - `hints/help-menu`
           - `map/google`
     - **`icon-picker`** — Searchable, categorized picker over the Material Symbols set: a windowed grid of runtime-symbol cells browsing and searching Google's vendored Material Symbols metadata; onSelect hands back the picked SavedSymbolName. avatar, the page icon button and the callout panel compose it.
       - Web:
@@ -41215,7 +41211,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/desktop/shelf`
               - `apps/sonata/progress/scrubber`
               - `conversations/conversation-view/selection-actions`
-              - `hints`
               - `page/formatting/link`
               - `primitives/path-bar`
               - `primitives/text-editor/caret-trigger`
@@ -45604,16 +45599,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --popover`
           - `ui/tokens/color-palette --popover-foreground`
           - `ui/tokens/shape --radius`
-        - Imported by: 26 plugins — full list in [`plugins/shell/plugins/toast/REFERENCE.md`](../plugins/shell/plugins/toast/REFERENCE.md)
+        - Imported by: 25 plugins — full list in [`plugins/shell/plugins/toast/REFERENCE.md`](../plugins/shell/plugins/toast/REFERENCE.md)
           - `apps` ×9
           - `conversations` ×3
           - `primitives` ×3
-          - `hints` ×2
           - `page` ×2
           - `apps-core/app-embed`
           - `build/serve-composition`
           - `config_v2/settings`
           - `debug/profiling/ops`
+          - `hints/help-menu`
           - `infra/health`
           - `reports/optimistic-rejection`
           - `shell/notifications`
@@ -48027,7 +48022,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 312 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 313 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×72
           - `conversations` ×59
           - `primitives` ×41
@@ -48044,11 +48039,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build` ×3
           - `backup` ×2
           - `config_v2` ×2
+          - `hints` ×2
           - `shell` ×2
           - `auth`
           - `framework/tooling/codegen`
           - `fullscreen`
-          - `hints/help-menu`
           - `improve`
           - `infra/events-test`
           - `layouts/miller`
@@ -48623,13 +48618,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ThemeEngine.SubTheme`
           - `ThemeEngine.FixedTheme`
           - `ThemeEngine.ThemeSource`
-        - Slot contributors: 43 contributors — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+        - Slot contributors: 44 contributors — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ThemeEngine.TokenGroup` ×18
           - `ThemeEngine.Theme` ×11
           - `ThemeEngine.VariantGroup` ×6
           - `ThemeEngine.SubTheme` ×5
+          - `ThemeEngine.FixedTheme` ×2
           - `ThemeEngine.ThemeSource` ×2
-          - `ThemeEngine.FixedTheme` ← `apps-core.chrome-theme`
         - Contributes:
           - `Core.Root` → `ThemeInjector`
           - `Core.Root` → `AppScopeThemes`
@@ -48756,10 +48751,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shadow` ×5
           - `ui/tokens/type-scale` ×4
           - `ui/tokens/shape` ×3
-        - Imported by: 45 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+        - Imported by: 46 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ui` ×28
           - `apps` ×14
           - `apps-core/chrome-theme`
+          - `hints`
           - `plugin-meta/token-usage`
           - `reports/theme-resolution`
       - Plugins:
@@ -49241,7 +49237,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `fontFamilyGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 148 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
+            - Tokens used by: 149 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
               - `conversations` ×36
               - `apps` ×21
               - `plugin-meta` ×21
@@ -49258,6 +49254,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build` ×2
               - `code-explorer` ×2
               - `config_v2/settings`
+              - `hints`
               - `music/chord-box`
               - `stats/cost`
             - Imported by: `ui/tokens/font-family/google-fonts`
@@ -49479,7 +49476,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-3xs`
               - `ui/tokens/type-scale --line-height-caption`
-            - Tokens used by: 69 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+            - Tokens used by: 70 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
               - `apps` ×29
               - `primitives` ×17
               - `framework` ×5
@@ -49490,6 +49487,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×2
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
               - `database/derived-tables`
+              - `hints`
               - `map`
               - `plugin-meta/plugin-tree`
               - `reorder/edit-mode`
@@ -49516,9 +49514,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 424 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 422 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×94
-              - `apps` ×85
+              - `apps` ×84
               - `primitives` ×70
               - `page` ×35
               - `ui` ×32
@@ -49541,7 +49539,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework` ×2
               - `integrations` ×2
               - `screenshot` ×2
-              - `hints`
               - `history/dialog`
               - `layouts/miller`
               - `map/pin-layer`

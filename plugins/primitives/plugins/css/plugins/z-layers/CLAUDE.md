@@ -18,6 +18,7 @@ vars, exposed as the matching `z-*` `@utility` classes (both defined in
 | `z-float`    | 30    | in-pane floating widgets: selection bar, message TOC   |
 | `z-overlay`  | 40    | full-pane bespoke overlays                             |
 | `z-popover`  | 50    | portaled floating layers: floating-action, lightboxes  |
+| `z-guide`    | 55    | onboarding tour / tips: above the popovers they point into |
 | `z-draw`     | 60    | draw-on-app full-screen capture overlay                |
 | `z-max`      | 9999  | critical banners / dev frame                           |
 

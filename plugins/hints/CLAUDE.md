@@ -190,17 +190,38 @@ session's answered set still keeps the tip from repeating.
 
 ## UI
 
-`HintHost` (`Core.Root`) draws one thing at a time: the active tip (a pulsing
-`Halo` ring, no scrim, plus the card), the tour's welcome card (`CenteredCard`
-over a full scrim that takes the clicks), or the current step (`Spotlight`: a
-click-through dim scrim with a rounded cut-out and a primary ring, plus the
-card; `scrim: "none"` uses the halo). `HintCard` is the content (title + ×,
-body, step dots, alt, Back, primary); `AnchoredCard` floats it with
-`FloatingSurface` against a virtual anchor (the element's live rect + 6 px),
-never taking focus. Rects are tracked with Floating UI's `autoUpdate` — the
-tracker the card's placement runs on — so the cut-out, the halo and the card
-follow the element together, including a layout shift that moves it without
-resizing it (the floating toolbar unfolding, a popover sliding in). Exhibits: `hints/card`, `hints/spotlight`, `hints/welcome`.
+**One stage, animated by construction.** `HintHost` (`Core.Root`) derives a
+`StageScene` from the engine — `{ spot, halos, card, welcome, toast }` — and
+draws it on ONE `HintStage` (`web/components/stage.tsx`). The stage keeps one
+element per piece and only moves it: the spotlight is a single box whose
+`box-shadow` is the scrim, so going welcome → step 1 opens the hole out of the
+center, and step → step glides it (left/top/width/height/radius); the coach
+card glides beside it; a piece that leaves keeps its last content while it
+fades (`useLatest`); a card that appears lands in place rather than gliding
+from where it last was (`useSnapOnEnter`). Every transition lives in
+`hints.css`, so a new tour, step or tip is animated without declaring anything.
+Reduced motion turns the durations to 0.
+
+- `spot`: `off` · `cover` (the welcome: full scrim, takes the clicks) ·
+  `hole` (dim scrim, ringed cut-out) · `ring` (`scrim: "none"`).
+- `halos`: a tip's target, a step's `cue` — a pulsing ring, no scrim.
+- `card`: `step` (dots, ×, footnote, alt, Back, primary) or `tip` (Got it),
+  placed by the pure `placeCard` (`web/internal/placement.ts`: the preferred
+  side, its opposite, then the cross axis; clamped) or centered (anchor `null`).
+- `welcome` (`intro.icon` on a brand tile, title, body, Show me around / I'll
+  explore on my own, `intro.note`) and `toast` (the tour's farewell, 4.8 s).
+- The cut-out's padding is `step.padding` (default 6 px); its corners are the
+  anchor's own radius grown by the padding — no step names a radius.
+
+**Its own theme.** The stage wears the `hints` fixed theme
+(`web/internal/hints-theme.ts`, `ThemeEngine.FixedTheme`): near-black panels,
+white pill primaries, Geist, Material Rounded icons and one teal signal
+(`--info`, the spotlight ring, current step dot and halo) — the same look over
+every app, whatever theme the app wears. Designed in the "Getting started"
+prototype (`proto-1792668692-5ijcs8`). Rects are tracked with Floating UI's
+`autoUpdate`, so the cut-out, the halo and the card follow the element
+together, including a layout shift that moves it without resizing it.
+Exhibits: `hints/card`, `hints/spotlight`, `hints/welcome`.
 
 ## Logic, tested pure
 
@@ -216,7 +237,7 @@ resizing it (the floating toolbar unfolding, a popover sliding in). Exhibits: `h
 
 ## Plugin reference
 
-- Description: The hints engine, web half: Hints.Hint / Hints.Tour declarations, useHintAnchor (ref registration, holding a floating toolbar open while its tip shows), useHintMoment (a tip shown once at its moment, lowest order first, one at a time), startTour / autoStart, emitHintSignal, the seen state and catalog reads — and the one HintHost at Core.Root drawing the active tip (halo + card) or the tour's welcome card / spotlit step, every tour end pulsing ? and toasting where the tour lives. Owns the hint_seen table — one row per hint or tour the user has met (outcome, seen_at) — served as the hints.seen live collection (boot-preloaded), with the mark-seen upsert and the reset-by-ids delete.
+- Description: The hints engine, web half: Hints.Hint / Hints.Tour declarations, useHintAnchor (ref registration, holding a floating toolbar open while its tip shows), useHintMoment (a tip shown once at its moment, lowest order first, one at a time), startTour / autoStart, emitHintSignal, the seen state and catalog reads — and the one HintHost at Core.Root drawing the active tip (halo + card) or the tour's welcome card / spotlit step on one persistent stage — every change of scene a CSS transition of the same elements — in the hints' own fixed theme (the same look in every app), every tour end pulsing ? and toasting where the tour lives. Owns the hint_seen table — one row per hint or tour the user has met (outcome, seen_at) — served as the hints.seen live collection (boot-preloaded), with the mark-seen upsert and the reset-by-ids delete.
 - Web:
   - Slots:
     - `Hints.Hint`
@@ -227,31 +248,29 @@ resizing it (the floating toolbar unfolding, a popover sliding in). Exhibits: `h
     - `Hints.Tour` ← `apps.home.tour`
   - Contributes:
     - `Core.Root` → `HintHost`
+    - `ThemeEngine.FixedTheme` "Onboarding hints"
     - `Shortcuts.Shortcut` "hints.tour-back (ArrowLeft)"
     - `Shortcuts.Shortcut` "hints.tour-end (Escape)"
     - `Shortcuts.Shortcut` "hints.tour-next (ArrowRight)"
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×4
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/live-state` ×3
+    - `primitives/css/ui-kit` ×2
     - `apps-core/tabs.navigate`
     - `apps-core.useFocusedAppId`
     - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`
-    - `primitives/css/center.Center`
     - `primitives/css/coords.Placed`
     - `primitives/css/fill.Fill`
-    - `primitives/css/layer.Layer`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/theme-boundary.Theme`
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/dom/scroll-reveal.revealElement`
-    - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useEventCallback`
-    - `primitives/overlay/floating-surface.FloatingSurface`
     - `primitives/overlay/popup-open.useReportPopupOpen`
     - `primitives/shortcuts.defineShortcut`
-    - `shell/toast.showToast`
+    - `ui/icons.Icon`
+    - `ui/theme-engine.ThemeEngine`
   - Exports (types):
     - `AnyTour`
     - `HintCatalogEntry`
@@ -346,10 +365,15 @@ resizing it (the floating toolbar unfolding, a popover sliding in). Exhibits: `h
     - `targetKey`
 - Cross-plugin:
   - Uses tokens:
+    - `ui/tokens/color-palette --faint-foreground`
+    - `ui/tokens/color-palette --info`
     - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/color-palette --primary`
-    - `ui/tokens/shape --radius-control`
-    - `ui/tokens/shape --spacing`
+    - `ui/tokens/color-palette --popover`
+    - `ui/tokens/color-palette --popover-border`
+    - `ui/tokens/color-palette --popover-foreground`
+    - `ui/tokens/font-family --font-sans`
+    - `ui/tokens/shadow --shadow`
+    - `ui/tokens/shadow --shadow-popover`
   - Imported by:
     - `apps/home/app-cards`
     - `apps/home/tour`

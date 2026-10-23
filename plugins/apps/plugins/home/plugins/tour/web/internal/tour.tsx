@@ -16,9 +16,6 @@ import { conversationRowAnchor } from "@plugins/conversations/plugins/conversati
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { openPane } from "@plugins/primitives/plugins/pane/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -46,6 +43,7 @@ export const FIRST_PROMPT =
 
 const mouseIcon = symbol("mouse");
 const pickIcon = symbol("ads-click");
+const equinIcon = symbol("all-inclusive");
 
 /**
  * Home's tour (the primary one: "Replay the tour" starts it). The welcome
@@ -59,18 +57,10 @@ export const homeTour = defineTour<HomeTourData>({
   primary: true,
   autoStart: true,
   intro: {
+    icon: equinIcon,
     title: "Welcome to equin",
-    body: (
-      <Stack gap="sm">
-        <span>
-          An app that builds itself. You say what you want; agents build it in
-          the background while you keep working.
-        </span>
-        <Text as="span" variant="caption" tone="faint">
-          A few quick stops · about a minute
-        </Text>
-      </Stack>
-    ),
+    body: "An app that builds itself. You say what you want; agents build it in the background while you keep working.",
+    note: "A few quick stops · about a minute",
   },
   initialData: {
     taskId: null,
@@ -82,6 +72,7 @@ export const homeTour = defineTour<HomeTourData>({
     {
       id: "apps",
       anchor: homeGalleryAnchor,
+      padding: 14,
       title: "Your apps",
       body: "Customize any app, or create new ones.",
     },
@@ -93,23 +84,16 @@ export const homeTour = defineTour<HomeTourData>({
       // it is the step's gesture. Docked in the tab bar it is always open:
       // nothing to unfold, so only Next moves on.
       body: (d) =>
+        d.barFloating
+          ? "This toolbar is how you interact with the app: ask for changes, get notified, get help. It's on every app, folded into this dot to stay out of your way."
+          : "This toolbar is how you interact with the app: ask for changes, get notified, get help. It's on every app, up here in the tab bar.",
+      footnote: (d) =>
         d.barFloating ? (
-          <Stack gap="sm">
-            <span>
-              This toolbar is how you interact with the app: ask for changes,
-              get notified, get help. It&apos;s on every app, folded into this
-              dot to stay out of your way.
-            </span>
-            <Inline gap="xs">
-              <Icon icon={mouseIcon} className="size-4" />
-              <Text as="span" variant="caption" tone="faint">
-                Hover it to unfold
-              </Text>
-            </Inline>
-          </Stack>
-        ) : (
-          "This toolbar is how you interact with the app: ask for changes, get notified, get help. It's on every app, up here in the tab bar."
-        ),
+          <>
+            <Icon icon={mouseIcon} />
+            Hover it to unfold
+          </>
+        ) : null,
       advanceOn: (d) => (d.barFloating ? "anchor-hover" : null),
     },
     {
@@ -119,9 +103,8 @@ export const homeTour = defineTour<HomeTourData>({
       body: (
         <>
           Spot a bug, a rough edge, an idea? Click <b>Improve</b> and say it —{" "}
-          <Icon icon={pickIcon} className="inline size-4 align-text-bottom" />{" "}
-          points at the exact element. An agent works on it in the background
-          while you carry on.
+          <Icon icon={pickIcon} /> points at the exact element. An agent works
+          on it in the background while you carry on.
         </>
       ),
       // Clicking Improve itself is "Try it" done by hand: the popover the

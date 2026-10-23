@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   DEFAULT_THEME_ID,
+  resolveFixedTheme,
   resolveTheme,
 } from "@plugins/ui/plugins/theme-engine/core";
 import {
@@ -74,13 +75,14 @@ function ensurePreconnect(): void {
 /**
  * Loads every Google font a painted theme asks for: the union of the font
  * families of the theme each scope selects — the desktop's and every app's
- * with its own theme — so an app's font is loaded whether or not it is the
+ * with its own theme — plus every fixed theme's, so an app's font is loaded whether or not it is the
  * focused one. (Reading only the desktop's choice left per-app fonts unloaded.)
  */
 export function GoogleFontsLoader() {
   const selections = useThemeSelections();
   const themes = useThemes();
   const groups = ThemeEngine.TokenGroup.useContributions();
+  const fixedThemes = ThemeEngine.FixedTheme.useContributions();
 
   // The catalog is a deferred import (it must not land in the boot bundle), so
   // it arrives a tick after mount. Resolving it into state — rather than
@@ -119,6 +121,15 @@ export function GoogleFontsLoader() {
       if (fonts) tokenSets.push(fonts.light, fonts.dark);
     }
 
+    // A fixed theme is painted wherever its region mounts, whatever any scope
+    // selects, so its font is loaded too.
+    for (const fixed of fixedThemes) {
+      const fonts = resolveFixedTheme(fixed, descriptors).theme.groups[
+        fontFamilyGroup.id
+      ];
+      if (fonts) tokenSets.push(fonts.light, fonts.dark);
+    }
+
     // Only a face Google can actually serve gets a stylesheet. Asking for
     // anything else returns `400 text/html`, which Chromium blocks as an opaque
     // response (ERR_BLOCKED_BY_ORB) — and a blocked sheet is what left
@@ -126,7 +137,7 @@ export function GoogleFontsLoader() {
     return collectPreferredFamilies(tokenSets).filter((name) =>
       googleFamilies.has(name),
     );
-  }, [selections, themes, groups, googleFamilies]);
+  }, [selections, themes, groups, fixedThemes, googleFamilies]);
 
   const fontsKey = fontsToLoad.join("\0");
 

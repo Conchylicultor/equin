@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { AppRef } from "@plugins/primitives/plugins/pane/core";
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import type { HintTarget } from "./anchors";
 import type { HintSignal } from "./signals";
 
@@ -107,7 +108,18 @@ export interface TourStep<D> {
   readonly cue?: HintTarget;
   readonly title: HintContent<D>;
   readonly body: HintContent<D>;
+  /**
+   * A quiet line at the card's foot, left of its buttons — how to act on the
+   * target by hand ("Hover it to unfold", with its icon).
+   */
+  readonly footnote?: HintContent<D>;
   readonly placement?: HintPlacement;
+  /**
+   * Room the spotlight leaves around the anchor, in px (default 6). The
+   * cut-out's corners follow the anchor's own, grown by this much, so a wide
+   * region (the app gallery) can breathe without naming a radius.
+   */
+  readonly padding?: number;
   /**
    * The primary button. Default `{ label: "Next" }` ("Done" on the last
    * step); `run` replaces the default move — call `ctl.next()`, `ctl.go()` or
@@ -153,8 +165,12 @@ export interface TourStep<D> {
 
 /** The welcome card a tour can open with. */
 export interface TourIntro<D> {
+  /** The mark above the title, drawn on the welcome card's brand tile. */
+  readonly icon?: IconRef;
   readonly title: HintContent<D>;
   readonly body: HintContent<D>;
+  /** A small line under the buttons ("A few quick stops · about a minute"). */
+  readonly note?: HintContent<D>;
   /** Default "Show me around". */
   readonly start?: string;
   /** Default "I'll explore on my own" — ends the tour as `skipped`. */

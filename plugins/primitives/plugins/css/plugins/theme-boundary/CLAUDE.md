@@ -207,6 +207,7 @@ the code:
     - `apps/prototypes/compare/exhibit`
     - `apps/website/pages/apps`
     - `apps/website/shell`
+    - `hints`
     - `layouts/miller`
     - `plugin-meta/exhibits`
     - `primitives/pane`

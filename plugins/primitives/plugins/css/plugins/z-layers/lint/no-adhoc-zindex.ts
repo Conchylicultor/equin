@@ -41,12 +41,12 @@ export default function buildRule({
       type: "problem",
       docs: {
         description:
-          "Disallow raw z-index utilities (z-0…z-50, z-[…]). Stacking order must come from the semantic z-layer scale (z-raised, z-nav, z-float, z-overlay, z-popover, z-draw, z-max).",
+          "Disallow raw z-index utilities (z-0…z-50, z-[…]). Stacking order must come from the semantic z-layer scale (z-raised, z-nav, z-float, z-overlay, z-popover, z-guide, z-draw, z-max).",
       },
       schema: [],
       messages: {
         adhocZindex:
-          "Use a semantic z-layer utility (z-raised, z-nav, z-float, z-overlay, z-popover, z-draw, z-max) from the z-layers scale instead of a raw z-index. See plugins/primitives/plugins/css/plugins/ui-kit/web/theme/app.css.",
+          "Use a semantic z-layer utility (z-raised, z-nav, z-float, z-overlay, z-popover, z-guide, z-draw, z-max) from the z-layers scale instead of a raw z-index. See plugins/primitives/plugins/css/plugins/ui-kit/web/theme/app.css.",
       },
     },
     defaultOptions: [],

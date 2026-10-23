@@ -3,7 +3,9 @@ import {
   type PluginDefinition,
 } from "@plugins/framework/plugins/web-sdk/core";
 import { defineShortcut } from "@plugins/primitives/plugins/shortcuts/web";
+import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { HintHost } from "./components/hint-host";
+import { hintsTheme } from "./internal/hints-theme";
 import {
   dispatchTour,
   isTourRunning,
@@ -29,10 +31,11 @@ export type { AnyTour } from "./internal/tour-machine";
 
 export default {
   description:
-    "The hints engine, web half: Hints.Hint / Hints.Tour declarations, useHintAnchor (ref registration, holding a floating toolbar open while its tip shows), useHintMoment (a tip shown once at its moment, lowest order first, one at a time), startTour / autoStart, emitHintSignal, the seen state and catalog reads — and the one HintHost at Core.Root drawing the active tip (halo + card) or the tour's welcome card / spotlit step, every tour end pulsing ? and toasting where the tour lives.",
+    "The hints engine, web half: Hints.Hint / Hints.Tour declarations, useHintAnchor (ref registration, holding a floating toolbar open while its tip shows), useHintMoment (a tip shown once at its moment, lowest order first, one at a time), startTour / autoStart, emitHintSignal, the seen state and catalog reads — and the one HintHost at Core.Root drawing the active tip (halo + card) or the tour's welcome card / spotlit step on one persistent stage — every change of scene a CSS transition of the same elements — in the hints' own fixed theme (the same look in every app), every tour end pulsing ? and toasting where the tour lives.",
   slots: Hints,
   contributions: [
     Core.Root({ component: HintHost }),
+    ThemeEngine.FixedTheme(hintsTheme),
     defineShortcut({
       id: "hints.tour-end",
       keys: "Escape",

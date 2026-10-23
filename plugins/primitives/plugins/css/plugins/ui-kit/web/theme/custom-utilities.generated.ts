@@ -120,7 +120,7 @@ export const CUSTOM_UTILITY_REGISTRY = [
   { classes: ["font-tag", "font-tag-strong"], extend: "font-weight" },
   { classes: ["text-code", "text-display-compact", "text-title-compact", "text-heading-compact", "text-subheading-compact", "text-body-compact", "text-label-compact", "text-caption-compact", "text-group-compact", "text-control-compact", "text-tag-compact", "text-code-compact"], extend: "font-size" },
   { classes: ["icon-auto"], group: "sg-icon-auto", excludes: ["size", "h", "w"], under: [] },
-  { classes: ["z-under", "z-base", "z-raised", "z-nav", "z-float", "z-overlay", "z-popover", "z-draw", "z-max"], extend: "z" },
+  { classes: ["z-under", "z-base", "z-raised", "z-nav", "z-float", "z-overlay", "z-popover", "z-guide", "z-draw", "z-max"], extend: "z" },
 ] as const satisfies readonly RegistryEntry[];
 
 // Synthetic group ids (for extendTailwindMerge's generic type parameter).

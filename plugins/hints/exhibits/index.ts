@@ -1,8 +1,8 @@
 import { appExhibit } from "@plugins/plugin-meta/plugins/exhibits/core";
 
 // App exhibits: the card's buttons and icons need the running app (theme,
-// icon sprites). Hints float over every app, so they wear the chrome theme by
-// default — pick an app in the viewer to see one in place.
+// icon sprites). Each frame wears the hints' own fixed theme, as the host
+// does over every app — so the app picked in the viewer does not change it.
 export default [
   appExhibit({
     id: "hints/card",

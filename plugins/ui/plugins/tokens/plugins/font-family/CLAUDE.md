@@ -30,7 +30,7 @@
   - Exports (values): `fontFamilyGroup`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Tokens used by: 148 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Tokens used by: 149 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×36
     - `apps` ×21
     - `plugin-meta` ×21
@@ -47,6 +47,7 @@
     - `build` ×2
     - `code-explorer` ×2
     - `config_v2/settings`
+    - `hints`
     - `music/chord-box`
     - `stats/cost`
   - Imported by: `ui/tokens/font-family/google-fonts`

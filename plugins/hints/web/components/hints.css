@@ -1,0 +1,325 @@
+/*
+ * The hints stage: every piece the engine draws — the spotlight, the halos,
+ * the coach card, the welcome card, the farewell toast — is ONE persistent
+ * element whose geometry and visibility are state. A change of step, tip or
+ * phase only changes that state, so every move is a CSS transition here and
+ * nothing a tour or a tip declares has to ask for an animation.
+ *
+ * Colours are the hints fixed theme's (`hints-theme.ts`), read through the
+ * palette's variables; `--hint-accent` is the theme's one signal colour.
+ * Designed in the "Getting started" prototype (proto-1792668692-5ijcs8).
+ */
+
+.hint-stage {
+  --hint-accent: var(--info);
+  --hint-surface: var(--popover);
+  --hint-line: var(--popover-border);
+  --hint-text: var(--popover-foreground);
+  --hint-muted: var(--muted-foreground);
+  --hint-faint: var(--faint-foreground);
+  --hint-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --hint-glide: 0.45s var(--hint-ease);
+  position: absolute;
+  inset: 0;
+  /* The scrim is a 200vmax shadow: the stage is its frame (the viewport, or an exhibit's box). */
+  overflow: clip;
+  pointer-events: none;
+  color: var(--hint-text);
+  font-family: var(--font-sans);
+}
+
+/* ---------- spotlight: a hole in a dim scrim that glides between targets ---------- */
+.hint-spot {
+  border-radius: 16px;
+  opacity: 0;
+  box-shadow:
+    0 0 0 200vmax oklch(0 0 0 / 0.66),
+    0 0 0 2px oklch(from var(--hint-accent) l c h / 0.9),
+    0 0 24px 2px oklch(from var(--hint-accent) l c h / 0.35);
+  transition:
+    opacity 0.3s,
+    left var(--hint-glide),
+    top var(--hint-glide),
+    width var(--hint-glide),
+    height var(--hint-glide),
+    border-radius var(--hint-glide),
+    box-shadow 0.3s;
+}
+.hint-spot[data-mode="hole"],
+.hint-spot[data-mode="ring"],
+.hint-spot[data-mode="cover"] {
+  opacity: 1;
+}
+/* The welcome moment: no hole yet, a deeper scrim; the first step opens it. */
+.hint-spot[data-mode="cover"] {
+  border-radius: 50%;
+  box-shadow: 0 0 0 200vmax oklch(0 0 0 / 0.72);
+}
+/* A step that must not dim the app: only the ring. */
+.hint-spot[data-mode="ring"] {
+  box-shadow:
+    0 0 0 2px oklch(from var(--hint-accent) l c h / 0.9),
+    0 0 24px 2px oklch(from var(--hint-accent) l c h / 0.35);
+}
+
+/* The welcome's scrim takes the clicks: the intro is a choice to make first. */
+.hint-blocker {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+}
+
+/* ---------- halo: rings a target without dimming ---------- */
+.hint-halo {
+  border-radius: 14px;
+  opacity: 0;
+  transition:
+    opacity 0.3s,
+    left var(--hint-glide),
+    top var(--hint-glide),
+    width var(--hint-glide),
+    height var(--hint-glide),
+    border-radius var(--hint-glide);
+}
+.hint-halo[data-on="true"] {
+  opacity: 1;
+  animation: hint-halo 1.4s ease-out infinite;
+}
+@keyframes hint-halo {
+  0% {
+    box-shadow:
+      0 0 0 2px var(--hint-accent),
+      0 0 0 0 oklch(from var(--hint-accent) l c h / 0.5);
+  }
+  100% {
+    box-shadow:
+      0 0 0 2px var(--hint-accent),
+      0 0 0 14px oklch(from var(--hint-accent) l c h / 0);
+  }
+}
+
+/* ---------- the coach card (a tour step, a tip) ---------- */
+.hint-card {
+  width: min(320px, calc(100% - 24px));
+  padding: 16px 16px 12px;
+  border-radius: 16px;
+  background: var(--hint-surface);
+  border: 1px solid var(--hint-line);
+  box-shadow: 0 24px 60px -16px oklch(0 0 0 / 0.9);
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 0.22s,
+    transform 0.3s var(--hint-ease),
+    left var(--hint-glide),
+    top var(--hint-glide);
+}
+.hint-card[data-variant="tip"] {
+  width: min(300px, calc(100% - 24px));
+  padding: 14px 14px 10px;
+}
+.hint-card[data-on="true"] {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+/* Appearing: it lands where it belongs, it does not glide there from where it last was. */
+.hint-card[data-snap="true"] {
+  transition:
+    opacity 0.22s,
+    transform 0.3s var(--hint-ease);
+}
+/* The role ladder's weights and tracking, nudged to the design's. */
+.hint-card h2 {
+  letter-spacing: -0.01em;
+}
+.hint-welcome h2 {
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+.hint-card b {
+  color: var(--hint-text);
+  font-weight: 500;
+}
+
+.hint-card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.hint-card-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+}
+.hint-card[data-variant="tip"] .hint-card-foot {
+  margin-top: 10px;
+}
+.hint-card-body {
+  margin-top: 6px;
+}
+.hint-footnote {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--hint-faint);
+}
+.hint-footnote svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* The × in the card's corner: a round, faint 26px target. */
+.hint-close {
+  margin-left: auto;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--hint-faint);
+  cursor: pointer;
+}
+.hint-close:hover {
+  background: oklch(1 0 0 / 0.07);
+  color: var(--hint-text);
+}
+
+/* ---------- step dots: the current one is a wide accent pill ---------- */
+.hint-steps {
+  display: flex;
+  gap: 4px;
+}
+.hint-steps > i {
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--hint-line);
+  transition:
+    width 0.3s var(--hint-ease),
+    background-color 0.3s;
+}
+.hint-steps > i[data-state="done"] {
+  background: var(--hint-muted);
+}
+.hint-steps > i[data-state="current"] {
+  width: 18px;
+  background: var(--hint-accent);
+}
+
+/* ---------- welcome: the one modal moment ---------- */
+.hint-welcome {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(420px, calc(100% - 32px));
+  padding: 28px 28px 22px;
+  border-radius: 22px;
+  text-align: center;
+  background: var(--hint-surface);
+  border: 1px solid var(--hint-line);
+  box-shadow: 0 40px 100px -20px oklch(0 0 0 / 0.95);
+  opacity: 0;
+  transform: translate(-50%, calc(-50% + 10px)) scale(0.98);
+  transition:
+    opacity 0.3s,
+    transform 0.4s var(--hint-ease);
+}
+.hint-welcome[data-on="true"] {
+  opacity: 1;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+}
+.hint-mark {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 16px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(
+    180deg,
+    oklch(0.7 0.11 210),
+    oklch(0.5 0.12 230)
+  );
+  color: white;
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.25),
+    0 10px 30px -8px oklch(0.55 0.13 220 / 0.7);
+}
+.hint-mark svg {
+  width: 30px;
+  height: 30px;
+}
+.hint-welcome-body {
+  margin-top: 8px;
+}
+.hint-welcome-acts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 22px;
+}
+.hint-welcome-note {
+  display: block;
+  margin-top: 10px;
+}
+
+/* ---------- toast: the tour's farewell, saying where it lives ---------- */
+.hint-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100% - 32px);
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--hint-surface);
+  border: 1px solid var(--hint-line);
+  box-shadow: 0 20px 50px -12px oklch(0 0 0 / 0.9);
+  opacity: 0;
+  transform: translate(-50%, 16px);
+  transition:
+    opacity 0.25s,
+    transform 0.35s var(--hint-ease);
+}
+.hint-toast[data-on="true"] {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  pointer-events: auto;
+}
+.hint-toast > svg {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  color: var(--hint-accent);
+}
+
+/* Icons in copy sit on the text's baseline, a touch larger than the text. */
+.hint-stage .hint-card-body svg,
+.hint-stage .hint-welcome-body svg,
+.hint-stage .hint-toast small svg {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  vertical-align: -3px;
+  color: var(--hint-text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hint-stage *,
+  .hint-stage {
+    transition-duration: 0s !important;
+    animation-duration: 0s !important;
+  }
+}
+.hint-close svg {
+  width: 17px;
+  height: 17px;
+}

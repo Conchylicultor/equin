@@ -1,9 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { navigate } from "@plugins/apps-core/plugins/tabs/web";
 import { useFocusedAppId } from "@plugins/apps-core/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
+import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
+import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
 import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import {
   hintsHelpAnchor,
@@ -14,6 +15,7 @@ import {
   targetKey,
   type Hint,
   type TourEndOutcome,
+  type TourStep,
 } from "../../core";
 import {
   pulseAnchor,
@@ -46,14 +48,21 @@ import {
   type TourRun,
 } from "../internal/tour-machine";
 import { useAnchorElement, useTrackedRect } from "../internal/use-anchor";
-import { AnchoredCard } from "./anchored-card";
-import { CenteredCard } from "./centered-card";
-import { Halo } from "./halo";
-import { HintCard } from "./hint-card";
-import { Spotlight } from "./spotlight";
+import { hintsThemeScope } from "../internal/hints-theme";
+import { ANCHOR_PADDING, inflate, type HintRect } from "../internal/rect";
+import { HintCard, TourFarewell, WelcomeCard } from "./hint-card";
+import {
+  EMPTY_SCENE,
+  HintStage,
+  type StageBox,
+  type StageScene,
+  type StageToast,
+} from "./stage";
 
 /** How long `?` pulses (and holds the toolbar open) after a tour ends. */
 const EXIT_PULSE_MS = 3000;
+/** How long the farewell toast stays. */
+const FAREWELL_MS = 4800;
 
 /**
  * The one hints host, at `Core.Root` — outside every tab, so a tour crosses
@@ -61,7 +70,9 @@ const EXIT_PULSE_MS = 3000;
  * timer), resolving `startTour` / `autoStart` against the declared tours, the
  * single tour-exit path, routing signals to the running tour, and declaring
  * which anchors are held. It draws the one active tip, or the running tour's
- * intro or step.
+ * intro or step, as a scene on the ONE stage (`HintStage`), in the hints'
+ * own fixed theme — so every app sees the same cards, and every change of
+ * scene is a transition of the same elements.
  */
 export function HintHost() {
   const engine = useEngineState();
@@ -77,16 +88,24 @@ export function HintHost() {
   const markSeen = useMarkHintSeen();
 
   // ── The ONE tour-exit path: finish, ×, Esc, "I'll explore on my own". ──
+  const [farewell, setFarewell] = useState<StageToast | null>(null);
   const exitTour = useEventCallback(
     (tour: AnyTour, outcome: TourEndOutcome) => {
       markSeen(tour.id, outcome);
       pulseAnchor(targetKey(hintsHelpAnchor), EXIT_PULSE_MS);
-      showToast({
-        title: "The tour is here whenever you want it",
-        description: "? in the toolbar → Replay the tour",
-      });
+      setFarewell((prev) => ({
+        id: (prev?.id ?? 0) + 1,
+        content: <TourFarewell />,
+      }));
     },
   );
+  const farewellId = farewell?.id ?? null;
+  useEffect(() => {
+    if (farewellId === null) return;
+    // The toast's lifetime — one timer per showing, not a poll.
+    const timer = setTimeout(() => setFarewell(null), FAREWELL_MS);
+    return () => clearTimeout(timer);
+  }, [farewellId]);
   useEffect(
     () =>
       subscribeTourEffects((effect) => {
@@ -134,22 +153,22 @@ export function HintHost() {
 
   // ── The tip queue: step on every input change, and at the settle deadline ──
   const tourRunning = engine.tour !== null;
-  const step = useEventCallback(() => {
+  const stepTips = useEventCallback(() => {
     stepTipQueue(Date.now(), (hint: Hint) => {
       if (tourRunning || seenRows === null) return false;
       if (seenRows.has(hint.id) || isAnswered(hint.id)) return false;
       return resolveAnchorElement(targetKey(hint.anchor)) !== null;
     });
   });
-  useEffect(() => subscribeAnchors(step), [step]);
-  useEffect(() => step(), [step, engine.tips, seenRows, tourRunning]);
+  useEffect(() => subscribeAnchors(stepTips), [stepTips]);
+  useEffect(() => stepTips(), [stepTips, engine.tips, seenRows, tourRunning]);
   useEffect(() => {
     const at = wakeAt(engine.tips);
     if (at === null) return;
     // The settle window's deadline — one timer per window, not a poll.
-    const timer = setTimeout(step, Math.max(0, at - Date.now()));
+    const timer = setTimeout(stepTips, Math.max(0, at - Date.now()));
     return () => clearTimeout(timer);
-  }, [engine.tips, step]);
+  }, [engine.tips, stepTips]);
 
   const tip = activeTip(engine.tips);
 
@@ -161,18 +180,210 @@ export function HintHost() {
   }, [heldSignature]);
   useEffect(() => () => setHeldAnchors([]), []);
 
-  if (engine.tour) return <TourView run={engine.tour} />;
-  if (tip)
-    return (
-      <TipView
-        hint={tip}
-        onAnswer={(outcome) => {
-          answerTip(tip.id);
-          markSeen(tip.id, outcome);
-        }}
-      />
-    );
-  return null;
+  const run = engine.tour;
+  const shownTip = run ? null : tip;
+  const step = run && run.phase !== "intro" ? currentStep(run) : null;
+  const stepTarget = run && step ? resolveStepAnchor(step, run.data) : null;
+  const targetKeyOf = stepTarget ?? shownTip?.anchor ?? null;
+  const el = useAnchorElement(targetKeyOf ? targetKey(targetKeyOf) : null);
+  const rect = useTrackedRect(el);
+  const cueEl = useAnchorElement(step?.cue ? targetKey(step.cue) : null);
+  const cueRect = useTrackedRect(cueEl);
+
+  const answerShownTip = (outcome: "acted" | "dismissed") => {
+    if (!shownTip) return;
+    answerTip(shownTip.id);
+    markSeen(shownTip.id, outcome);
+  };
+  // Acting on a tip's target counts as "Got it".
+  useElementEvent(shownTip ? el : null, "pointerdown", () =>
+    answerShownTip("acted"),
+  );
+  useStepEffects(run && step ? { run, step } : null, el);
+
+  const scene: StageScene = {
+    ...(run
+      ? tourScene(run, step, el, rect, cueEl, cueRect)
+      : shownTip
+        ? tipScene(shownTip, el, rect, () => answerShownTip("dismissed"))
+        : EMPTY_SCENE),
+    toast: farewell,
+  };
+  return (
+    <Theme name={hintsThemeScope} surface="none" className="contents">
+      <ViewportOverlay layer="guide" className="pointer-events-none">
+        <HintStage scene={scene} />
+      </ViewportOverlay>
+    </Theme>
+  );
+}
+
+/** The box the stage draws around `el`: its rect grown by `pad`, its corners grown to match. */
+function boxAround(el: HTMLElement, rect: HintRect, pad: number): StageBox {
+  const own = Number.parseFloat(getComputedStyle(el).borderTopLeftRadius);
+  return {
+    rect: inflate(rect, pad),
+    radius: Math.max((Number.isFinite(own) ? own : 0) + pad, 10),
+  };
+}
+
+function tipScene(
+  hint: Hint,
+  el: HTMLElement | null,
+  rect: HintRect | null,
+  dismiss: () => void,
+): StageScene {
+  if (!el || !rect) return EMPTY_SCENE;
+  const box = boxAround(el, rect, ANCHOR_PADDING);
+  return {
+    ...EMPTY_SCENE,
+    halos: [box],
+    card: {
+      variant: "tip",
+      target: box,
+      placement: hint.placement ?? "bottom",
+      content: (
+        <HintCard
+          title={hint.title}
+          body={hint.body}
+          primary={{ label: hint.gotIt ?? "Got it", onClick: dismiss }}
+        />
+      ),
+    },
+  };
+}
+
+function tourScene(
+  run: TourRun,
+  step: TourStep<object> | null,
+  el: HTMLElement | null,
+  rect: HintRect | null,
+  cueEl: HTMLElement | null,
+  cueRect: HintRect | null,
+): StageScene {
+  const end = (outcome: TourEndOutcome) => () =>
+    dispatchTour({ type: "end", outcome });
+  if (run.phase === "intro" || step === null) {
+    const intro = run.tour.intro;
+    if (!intro)
+      throw new Error(
+        `tour "${run.tour.id}" is on its intro but declares none`,
+      );
+    return {
+      ...EMPTY_SCENE,
+      spot: { mode: "cover" },
+      welcome: (
+        <WelcomeCard
+          icon={intro.icon}
+          title={resolveContent(intro.title, run.data)}
+          body={resolveContent(intro.body, run.data)}
+          note={intro.note && resolveContent(intro.note, run.data)}
+          start={{
+            label: intro.start ?? "Show me around",
+            onClick: pressPrimary,
+          }}
+          skip={{
+            label: intro.skip ?? "I'll explore on my own",
+            onClick: end("skipped"),
+          }}
+        />
+      ),
+    };
+  }
+
+  const target = resolveStepAnchor(step, run.data);
+  const next = step.next;
+  const content = (
+    <HintCard
+      title={resolveContent(step.title, run.data)}
+      body={resolveContent(step.body, run.data)}
+      footnote={step.footnote && resolveContent(step.footnote, run.data)}
+      steps={{ count: run.tour.steps.length, index: stepIndex(run) }}
+      onClose={end("dismissed")}
+      alt={
+        step.alt && {
+          label: resolveLabel(step.alt.label, run.data),
+          onClick: () => dispatchTour({ type: "alt" }),
+        }
+      }
+      onBack={canGoBack(run) ? () => dispatchTour({ type: "back" }) : undefined}
+      primary={
+        next === "none"
+          ? undefined
+          : {
+              label: next
+                ? resolveLabel(next.label, run.data)
+                : isLastStep(run)
+                  ? "Done"
+                  : "Next",
+              onClick: pressPrimary,
+            }
+      }
+    />
+  );
+  const placement = step.placement ?? "bottom";
+  // No anchor: the card waits centered, no spotlight.
+  if (target === null)
+    return {
+      ...EMPTY_SCENE,
+      card: { variant: "step", target: null, placement, content },
+    };
+  // An anchor not on the page yet: nothing until it comes.
+  if (!el || !rect) return EMPTY_SCENE;
+  const box = boxAround(el, rect, step.padding ?? ANCHOR_PADDING);
+  return {
+    ...EMPTY_SCENE,
+    spot: { mode: step.scrim === "none" ? "ring" : "hole", box },
+    halos: cueEl && cueRect ? [boxAround(cueEl, cueRect, 4)] : [],
+    card: { variant: "step", target: box, placement, content },
+  };
+}
+
+function isFullyInViewport(el: HTMLElement): boolean {
+  const r = el.getBoundingClientRect();
+  return (
+    r.top >= 0 &&
+    r.left >= 0 &&
+    r.bottom <= window.innerHeight &&
+    r.right <= window.innerWidth
+  );
+}
+
+/** A running step's effects on its anchor: reveal, shown/lost, and its gesture. */
+function useStepEffects(
+  current: { run: TourRun; step: TourStep<object> } | null,
+  el: HTMLElement | null,
+) {
+  const stepId = current?.run.stepId ?? null;
+  // A step brings its target into view when it lands on it (a conversation
+  // row below the sidebar's fold): the spotlight and the card follow the
+  // element, so an off-screen target would leave the card pinned to an edge,
+  // pointing at nothing. Keyed on the step and the element — never on data
+  // churn. A target already fully on screen is left where it is; one that is
+  // not is centered, so the card has room beside it on either side.
+  useEffect(() => {
+    if (stepId !== null && el && !isFullyInViewport(el))
+      revealElement(el, { block: "center" });
+  }, [el, stepId]);
+
+  // Shown → lost is what `onAnchorLost` reacts to; never-shown is waiting.
+  const present = el !== null;
+  useEffect(() => {
+    if (stepId === null) return;
+    dispatchTour({ type: present ? "anchor-shown" : "anchor-lost" });
+  }, [present, stepId]);
+
+  // The step's gesture on its anchor is the user doing the primary
+  // themselves (`actOnAnchor`): hovering it, or activating it.
+  const advance = current
+    ? resolveStepAdvance(current.step, current.run.data)
+    : null;
+  useElementEvent(el, advance === "anchor-hover" ? "pointerenter" : null, () =>
+    actOnAnchor("anchor-hover"),
+  );
+  useActivation(el, advance === "anchor-click", () =>
+    actOnAnchor("anchor-click"),
+  );
 }
 
 function heldKeysOf(run: TourRun | null, tip: Hint | null): string[] {
@@ -223,147 +434,4 @@ function useActivation(
     doc.addEventListener("click", onClick);
     return () => doc.removeEventListener("click", onClick);
   }, [el, enabled, stable]);
-}
-
-function TipView({
-  hint,
-  onAnswer,
-}: {
-  hint: Hint;
-  onAnswer: (outcome: "acted" | "dismissed") => void;
-}) {
-  const el = useAnchorElement(targetKey(hint.anchor));
-  const rect = useTrackedRect(el);
-  // Acting on the target counts as "Got it".
-  useElementEvent(el, "pointerdown", () => onAnswer("acted"));
-  if (!el || !rect) return null;
-  const dismiss = () => onAnswer("dismissed");
-  return (
-    <>
-      <Halo rect={rect} />
-      <AnchoredCard element={el} rect={rect} placement={hint.placement}>
-        <HintCard
-          title={hint.title}
-          body={hint.body}
-          onClose={dismiss}
-          primary={{ label: hint.gotIt ?? "Got it", onClick: dismiss }}
-        />
-      </AnchoredCard>
-    </>
-  );
-}
-
-function TourView({ run }: { run: TourRun }) {
-  if (run.phase === "intro") return <TourIntroView run={run} />;
-  return <TourStepView run={run} />;
-}
-
-function TourIntroView({ run }: { run: TourRun }) {
-  const intro = run.tour.intro;
-  if (!intro)
-    throw new Error(`tour "${run.tour.id}" is on its intro but declares none`);
-  return (
-    <CenteredCard scrim>
-      <HintCard
-        title={resolveContent(intro.title, run.data)}
-        body={resolveContent(intro.body, run.data)}
-        onClose={() => dispatchTour({ type: "end", outcome: "dismissed" })}
-        alt={{
-          label: intro.skip ?? "I'll explore on my own",
-          onClick: () => dispatchTour({ type: "end", outcome: "skipped" }),
-        }}
-        primary={{
-          label: intro.start ?? "Show me around",
-          onClick: pressPrimary,
-        }}
-      />
-    </CenteredCard>
-  );
-}
-
-function isFullyInViewport(el: HTMLElement): boolean {
-  const r = el.getBoundingClientRect();
-  return (
-    r.top >= 0 &&
-    r.left >= 0 &&
-    r.bottom <= window.innerHeight &&
-    r.right <= window.innerWidth
-  );
-}
-
-function TourStepView({ run }: { run: TourRun }) {
-  const step = currentStep(run);
-  const target = resolveStepAnchor(step, run.data);
-  const el = useAnchorElement(target ? targetKey(target) : null);
-  const rect = useTrackedRect(el);
-  const cueEl = useAnchorElement(step.cue ? targetKey(step.cue) : null);
-  const cueRect = useTrackedRect(cueEl);
-
-  // A step brings its target into view when it lands on it (a conversation
-  // row below the sidebar's fold): the spotlight and the card follow the
-  // element, so an off-screen target would leave the card pinned to an edge,
-  // pointing at nothing. Keyed on the step and the element — never on data
-  // churn (a row that moves group re-registers as a new element, and is
-  // followed). A target already fully on screen is left where it is; one
-  // that is not is centered, so the card has room beside it on either side.
-  useEffect(() => {
-    if (el && !isFullyInViewport(el)) revealElement(el, { block: "center" });
-  }, [el, run.stepId]);
-
-  // Shown → lost is what `onAnchorLost` reacts to; never-shown is waiting.
-  const present = el !== null;
-  useEffect(() => {
-    dispatchTour({ type: present ? "anchor-shown" : "anchor-lost" });
-  }, [present, run.stepId]);
-
-  // The step's gesture on its anchor is the user doing the primary
-  // themselves (`actOnAnchor`): hovering it, or activating it.
-  const advance = resolveStepAdvance(step, run.data);
-  useElementEvent(el, advance === "anchor-hover" ? "pointerenter" : null, () =>
-    actOnAnchor("anchor-hover"),
-  );
-  useActivation(el, advance === "anchor-click", () =>
-    actOnAnchor("anchor-click"),
-  );
-
-  const next = step.next;
-  const card = (
-    <HintCard
-      title={resolveContent(step.title, run.data)}
-      body={resolveContent(step.body, run.data)}
-      steps={{ count: run.tour.steps.length, index: stepIndex(run) }}
-      onClose={() => dispatchTour({ type: "end", outcome: "dismissed" })}
-      alt={
-        step.alt && {
-          label: resolveLabel(step.alt.label, run.data),
-          onClick: () => dispatchTour({ type: "alt" }),
-        }
-      }
-      onBack={canGoBack(run) ? () => dispatchTour({ type: "back" }) : undefined}
-      primary={
-        next === "none"
-          ? undefined
-          : {
-              label: next
-                ? resolveLabel(next.label, run.data)
-                : isLastStep(run)
-                  ? "Done"
-                  : "Next",
-              onClick: pressPrimary,
-            }
-      }
-    />
-  );
-
-  if (target === null) return <CenteredCard scrim={false}>{card}</CenteredCard>;
-  if (!el || !rect) return null;
-  return (
-    <>
-      {step.scrim === "none" ? <Halo rect={rect} /> : <Spotlight rect={rect} />}
-      {cueRect && <Halo rect={cueRect} />}
-      <AnchoredCard element={el} rect={rect} placement={step.placement}>
-        {card}
-      </AnchoredCard>
-    </>
-  );
 }
