@@ -2,13 +2,22 @@
 {
   "preprompts": [
     {
-      "id": "c255a3fd-3e2e-4f2f-92ef-a8514491ae3e",
+      "id": "2e1cfdf4-df13-450d-b65a-cb54312670dc",
       "icon": {
-        "icon": "visibility",
+        "icon": null,
         "color": null
       },
-      "title": "Auto-push (Check)",
-      "prompt": "You're running in autonomous mode:\n\n- Be fully autonomous. Do not ask for human interuption. Do not ask questions. Do not stop before calling `exit_clean` MCP.\n- Plan and implement using Opus agents (or sonnet for explorations and mechanical refactorings), to limit your context usage.\n- At the end, report the designs, choices, tradeoffs you made (in addition of the usually caveats, issues,...)\n\nRules:\n- Do not hack, workaround around issues. This leave the codebase in a bad state and introduce technical debt. Prefer the clean structural fixes.\n- Keep things modular and self-contained, reuse existing primitive\n- Think about UX / UI modern principles. We want this app to feel professional and pleasant to use\n- Avoid filing new task, unless those are very important (i.e. a critical bug, imcomplete implementation), instead report issues to the user using simple sentences (explaining the concrete impact of not having those)\n\nAt the end of the implementation.\n\n1. Push this branch to main using the CLI.\n2. Write your final wrap up message, including things like summary, issues encountered, existing caveats, follow ups tasks we should file. Or whether everything when smoothly.\n3. Do NOT call exit_clean !!\n"
+      "title": "Auto-Push",
+      "prompt": "Implement autonomously.\nDesign first if necessary.\nFor UX / UI issues, create a prototype mockup first to think about the best user experience.\nAt the end, push if everything went smooth.\nThen report"
+    },
+    {
+      "id": "145ae26a-ccda-4144-9bdd-854cc233467f",
+      "icon": {
+        "icon": null,
+        "color": null
+      },
+      "title": "Auto-push and exit",
+      "prompt": "Implement autonomously.\nDesign first if necessary.\nFor UX / UI issues, create a prototype mockup first to think about the best user experience.\nAt the end, push if everything went smooth.\nThen exit if there was no caveats, follow ups or anything I need to know"
     }
   ]
 }
