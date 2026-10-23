@@ -20,6 +20,12 @@ import "./hints.css";
 
 /** A box the stage draws around: a rect in the frame's coordinates and its corner radius. */
 export interface StageBox {
+  /**
+   * What the box is on (the anchor's key). A piece glides to a box with a new
+   * id (the next step, another tip) and follows one with the same id exactly
+   * (the anchor scrolling, or shifting with the layout).
+   */
+  readonly id: string;
   readonly rect: HintRect;
   readonly radius: number;
 }
@@ -73,6 +79,9 @@ export const EMPTY_SCENE: StageScene = {
 /** How many halos the stage keeps mounted (a tip's anchor, a step's cue). */
 const HALO_SLOTS = 2;
 
+/** How long a piece glides to a new target — `--hint-glide`'s duration in hints.css. */
+const GLIDE_MS = 450;
+
 /**
  * Draws a {@link StageScene} filling its positioned parent (the viewport, via
  * the host's overlay; a framed box in an exhibit). Click-through except the
@@ -82,7 +91,11 @@ export function HintStage({ scene }: { scene: StageScene }) {
   const frameRef = useRef<HTMLDivElement>(null);
   const frame = useMeasuredSize(frameRef);
   return (
-    <div ref={frameRef} className="hint-stage">
+    <div
+      ref={frameRef}
+      className="hint-stage"
+      style={{ "--hint-glide-ms": `${GLIDE_MS}ms` } as React.CSSProperties}
+    >
       <Spot spot={scene.spot} frame={frame} />
       {scene.spot.mode === "cover" && <div className="hint-blocker" />}
       {Array.from({ length: HALO_SLOTS }, (_, i) => (
@@ -104,6 +117,7 @@ function Spot({ spot, frame }: { spot: StageSpot; frame: Size }) {
   const box: StageBox =
     spot.mode === "cover" || last === null
       ? {
+          id: "center",
           rect: {
             x: frame.width / 2,
             y: frame.height / 2,
@@ -113,10 +127,12 @@ function Spot({ spot, frame }: { spot: StageSpot; frame: Size }) {
           radius: 0,
         }
       : last;
+  const follow = useFollow(box.id);
   return (
     <Placed
       decorative
       data-mode={spot.mode}
+      data-follow={follow}
       className="hint-spot"
       x={{ start: box.rect.x, size: box.rect.width }}
       y={{ start: box.rect.y, size: box.rect.height }}
@@ -127,11 +143,13 @@ function Spot({ spot, frame }: { spot: StageSpot; frame: Size }) {
 
 function Halo({ box }: { box: StageBox | null }) {
   const last = useLatest(box);
+  const follow = useFollow(last?.id ?? null);
   if (last === null) return null;
   return (
     <Placed
       decorative
       data-on={box !== null}
+      data-follow={follow}
       className="hint-halo"
       x={{ start: last.rect.x, size: last.rect.width }}
       y={{ start: last.rect.y, size: last.rect.height }}
@@ -146,6 +164,7 @@ function Card({ card, frame }: { card: StageCard | null; frame: Size }) {
   const size = useMeasuredSize(ref);
   const on = card !== null;
   const snap = useSnapOnEnter(on);
+  const follow = useFollow(shown?.target?.id ?? null);
   if (shown === null) return null;
   const at: Point = shown.target
     ? placeCard(shown.target.rect, size, frame, sideOrder(shown.placement))
@@ -157,7 +176,7 @@ function Card({ card, frame }: { card: StageCard | null; frame: Size }) {
       aria-hidden={!on}
       inert={!on}
       data-on={on}
-      data-snap={snap}
+      data-follow={snap || follow}
       data-variant={shown.variant}
       className="hint-card"
       x={{ start: at.x }}
@@ -204,6 +223,29 @@ function useLatest<T>(value: T | null): T | null {
   const [last, setLast] = useState<T | null>(value);
   if (value !== null && value !== last) setLast(value);
   return value ?? last;
+}
+
+/**
+ * True while a piece tracks the same target it already sits on, so its moves
+ * are the target's own (a scroll, a layout shift) and must land the same frame
+ * — a glide would trail the element and only catch up once it stops. False
+ * for one glide after the target changes, so moving to the next step or tip
+ * is animated.
+ */
+function useFollow(id: string | null): boolean {
+  const [shownId, setShownId] = useState(id);
+  const [gliding, setGliding] = useState(false);
+  if (id !== shownId) {
+    setShownId(id);
+    setGliding(true);
+  }
+  useEffect(() => {
+    if (!gliding) return;
+    // The glide's lifetime — one timer per target change, not a poll.
+    const timer = setTimeout(() => setGliding(false), GLIDE_MS);
+    return () => clearTimeout(timer);
+  }, [gliding, shownId]);
+  return !gliding;
 }
 
 /**

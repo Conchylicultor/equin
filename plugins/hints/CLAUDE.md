@@ -204,7 +204,11 @@ element per piece and only moves it: the spotlight is a single box whose
 center, and step → step glides it (left/top/width/height/radius); the coach
 card glides beside it; a piece that leaves keeps its last content while it
 fades (`useLatest`); a card that appears lands in place rather than gliding
-from where it last was (`useSnapOnEnter`). Every transition lives in
+from where it last was (`useSnapOnEnter`). A piece glides only when its
+target changes (`StageBox.id`, the anchor's key, is new — the next step,
+another tip); while it stays on the same target it follows it the same frame
+(`useFollow`), so scrolling the page or a layout shift moves the spotlight,
+halo and card with the element instead of trailing it. Every transition lives in
 `hints.css`, so a new tour, step or tip is animated without declaring anything.
 Reduced motion turns the durations to 0.
 

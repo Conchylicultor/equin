@@ -8,6 +8,7 @@ const noop = () => {};
 /** Where the fake anchor sits in the frame, in px. */
 const ANCHOR = { x: 40, y: 32, width: 96, height: 32 };
 const BOX: StageBox = {
+  id: "anchor",
   rect: { x: 34, y: 26, width: 108, height: 44 },
   radius: 22,
 };

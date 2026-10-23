@@ -226,10 +226,19 @@ export function HintHost() {
   );
 }
 
-/** The box the stage draws around `el`: its rect grown by `pad`, its corners grown to match. */
-function boxAround(el: HTMLElement, rect: HintRect, pad: number): StageBox {
+/**
+ * The box the stage draws around `el` (the anchor `id` resolves to): its rect
+ * grown by `pad`, its corners grown to match.
+ */
+function boxAround(
+  id: string,
+  el: HTMLElement,
+  rect: HintRect,
+  pad: number,
+): StageBox {
   const own = Number.parseFloat(getComputedStyle(el).borderTopLeftRadius);
   return {
+    id,
     rect: inflate(rect, pad),
     radius: Math.max((Number.isFinite(own) ? own : 0) + pad, 10),
   };
@@ -242,7 +251,7 @@ function tipScene(
   dismiss: () => void,
 ): StageScene {
   if (!el || !rect) return EMPTY_SCENE;
-  const box = boxAround(el, rect, ANCHOR_PADDING);
+  const box = boxAround(targetKey(hint.anchor), el, rect, ANCHOR_PADDING);
   return {
     ...EMPTY_SCENE,
     halos: [box],
@@ -338,11 +347,19 @@ function tourScene(
     };
   // An anchor not on the page yet: nothing until it comes.
   if (!el || !rect) return EMPTY_SCENE;
-  const box = boxAround(el, rect, step.padding ?? ANCHOR_PADDING);
+  const box = boxAround(
+    targetKey(target),
+    el,
+    rect,
+    step.padding ?? ANCHOR_PADDING,
+  );
   return {
     ...EMPTY_SCENE,
     spot: { mode: step.scrim === "none" ? "ring" : "hole", box },
-    halos: cueEl && cueRect ? [boxAround(cueEl, cueRect, 4)] : [],
+    halos:
+      step.cue && cueEl && cueRect
+        ? [boxAround(targetKey(step.cue), cueEl, cueRect, 4)]
+        : [],
     card: { variant: "step", target: box, placement, content },
   };
 }

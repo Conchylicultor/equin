@@ -18,7 +18,8 @@
   --hint-muted: var(--muted-foreground);
   --hint-faint: var(--faint-foreground);
   --hint-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --hint-glide: 0.45s var(--hint-ease);
+  /* The stage supplies --hint-glide-ms from GLIDE_MS, which also times the glide. */
+  --hint-glide: var(--hint-glide-ms, 0s) var(--hint-ease);
   position: absolute;
   inset: 0;
   /* The scrim is a 200vmax shadow: the stage is its frame (the viewport, or an exhibit's box). */
@@ -123,11 +124,14 @@
   transform: none;
   pointer-events: auto;
 }
-/* Appearing: it lands where it belongs, it does not glide there from where it last was. */
-.hint-card[data-snap="true"] {
-  transition:
-    opacity 0.22s,
-    transform 0.3s var(--hint-ease);
+/*
+ * Following its target (it scrolls, the layout shifts) or appearing: a piece
+ * lands where it belongs the same frame — it glides only to a new target.
+ */
+.hint-spot[data-follow="true"],
+.hint-halo[data-follow="true"],
+.hint-card[data-follow="true"] {
+  --hint-glide: 0s;
 }
 /* The role ladder's weights and tracking, nudged to the design's. */
 .hint-card h2 {
