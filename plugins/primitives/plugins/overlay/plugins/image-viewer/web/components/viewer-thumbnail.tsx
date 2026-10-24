@@ -1,4 +1,4 @@
-import { useContext, type ReactNode } from "react";
+import { useContext, type CSSProperties, type ReactNode } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { clipClasses } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
@@ -46,6 +46,56 @@ const IMG_CLASS: Record<ThumbnailShape | "chip", string> = {
   tiny: "[image-rendering:pixelated]",
   chip: "max-h-16 max-w-32 object-cover",
 };
+
+/**
+ * The box the `<img>` takes from a size known before it loads — the very box
+ * `IMG_CLASS` gives the loaded image, so nothing around it moves when it
+ * arrives (an unsized `<img>` is 0px tall until then, and a transcript row
+ * holding one would grow under the reader). A chip needs none: its button is
+ * a fixed height whatever the image.
+ */
+function reservedBox(known: Size, shape: ThumbnailShape): CSSProperties {
+  const { width, height } = known;
+  if (shape === "tiny") return { width, height };
+  // `max-h-60` is 15rem: the width the cap leaves, the natural width, or the
+  // row's (`max-w-full`), whichever is least — the height follows the aspect.
+  return {
+    width: `min(${width}px, calc(15rem * ${width} / ${height}))`,
+    aspectRatio: `${width} / ${height}`,
+  };
+}
+
+/** A chip's button: one fixed height (the chip image's cap, `max-h-16`), so a
+ *  strip of chips is as tall before its images load as after. */
+const CHIP_BOX = "h-16 box-content";
+
+/**
+ * The box a thumbnail will take, drawn while its source is not known yet (its
+ * asset is still being fetched, the list naming it still loading): a chip's,
+ * or an inline image's whose size is given. Exact, so nothing moves when the
+ * thumbnail replaces it.
+ */
+export type ThumbnailPlaceholderProps =
+  { size: "chip" } | { size?: "inline"; known: Size };
+
+export function ThumbnailPlaceholder(props: ThumbnailPlaceholderProps) {
+  return (
+    <span className="relative inline-block max-w-full align-top">
+      <span
+        aria-hidden
+        className={cn(
+          "block max-w-full rounded-md border border-border bg-muted",
+          props.size === "chip" && cn(CHIP_BOX, "w-16"),
+        )}
+        style={
+          props.size === "chip"
+            ? undefined
+            : reservedBox(props.known, thumbnailShape(props.known))
+        }
+      />
+    </span>
+  );
+}
 
 /** A checkerboard tile from the theme's two neutral tones, behind tiny images
  *  (usually icons with transparent pixels). */
@@ -124,6 +174,7 @@ function Thumbnail({ image, size = "inline", children }: ViewerThumbnailProps) {
           "focus-ring relative block max-w-full cursor-zoom-in rounded-md border border-border bg-muted transition-colors hover:border-primary/40",
           clipClasses({ axis: "both", fill: false }),
           shape === "tiny" && !chip && cn(CHECKER, "p-lg"),
+          chip && CHIP_BOX,
         )}
       >
         <img
@@ -133,6 +184,7 @@ function Thumbnail({ image, size = "inline", children }: ViewerThumbnailProps) {
           alt={image.alt ?? image.name}
           draggable={false}
           {...imgProps}
+          style={known && !chip ? reservedBox(known, shape) : undefined}
           className={cn(
             "block",
             chip ? IMG_CLASS.chip : IMG_CLASS[shape],

@@ -20230,15 +20230,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/loading.Loading`
           - `primitives/overlay/image-viewer.AssetThumbnail`
           - `primitives/overlay/image-viewer.ImageGallery`
+          - `primitives/overlay/image-viewer.ThumbnailPlaceholder`
       - Server:
         - Contributes:
+          - `resource.declare` "browser-recordings.recorded-calls"
           - `resource.declare` "browser-recordings.runs"
           - `conversations.artifacts.extractor` "browser-recording"
         - Uses:
           - `conversations/conversation-view/artifacts.ConversationArtifactExtractor`
           - `infra/file-watcher.acquireDirWatch`
           - `network/live.serveValue`
-        - Resources: `browser-recordings.runs` (push, notified, whole: the runs one tool call drove — one for a browser_* call or an e2e script, a few when a call reran it, whole: one drive's steps — a scripted e2e flow or a single browser_* call, tens of steps, written once when the run ends)
+        - Resources:
+          - `browser-recordings.recorded-calls` (push, notified, whole: the calls the recordings directory still holds a run for — the writer keeps its newest 200 runs)
+          - `browser-recordings.runs` (push, notified, whole: the runs one tool call drove — one for a browser_* call or an e2e script, a few when a call reran it, whole: one drive's steps — a scripted e2e flow or a single browser_* call, tens of steps, written once when the run ends)
       - Core:
         - Uses:
           - `framework/cli/cli-name.CLI_NAME_PATTERN`
@@ -20251,11 +20255,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RecordingStep`
         - Exports (values):
           - `BROWSER_RECORDING_KIND`
+          - `browserRecordedCalls`
           - `browserRecordingRuns`
           - `extractBrowserRecordings`
           - `isRecordedToolCall`
           - `MANIFEST_FILE`
           - `RECORDED_BROWSER_TOOLS`
+          - `RECORDED_CALLS_FILE`
+          - `RecordedCallsIndexSchema`
           - `RecordingManifestSchema`
           - `RecordingSourceSchema`
       - Cross-plugin:
@@ -20273,6 +20280,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Uses:
               - `debug/browser-recordings.MANIFEST_FILE`
+              - `debug/browser-recordings.RECORDED_CALLS_FILE`
               - `debug/browser-recordings.RecordingManifest`
               - `debug/browser-recordings.RecordingSource`
               - `debug/browser-recordings.RecordingStep`
@@ -32431,6 +32439,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by: `infra/host/host-admission`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/host-semaphore.ts` (debt)
+    - **`image-size`** — An image's pixel size read from its header bytes, in plain JS on every host: readImageSize(bytes) for PNG, GIF, JPEG, WebP and BMP — a known-format answer from the first bytes (JPEG: up to its frame header), so a caller can reserve an image's box before the image loads.
+      - Core:
+        - Exports (types):
+          - `ImageSize`
+          - `ImageSizeRead`
+        - Exports (values):
+          - `IMAGE_SIZE_PREFIX_BYTES`
+          - `readImageSize`
     - **`inflight`** — In-flight request deduplicator: createInflight() collapses concurrent callers sharing a key onto one execution, plus a caller-supplied freshness floor (notBefore) that supersedes rather than joins a flight older than a change the caller already knows about.
       - Cross-plugin:
         - Imported by:
@@ -40213,6 +40229,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
+              - `primitives/dom/element-size.useResizeObserver`
               - `primitives/dom/in-view.useInView`
               - `primitives/dom/web-storage.defineStore`
               - `primitives/latest-ref.useEventCallback`
@@ -40317,8 +40334,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useElementSize`
               - `useResizeObserver`
           - Cross-plugin:
-            - Imported by: 36 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
-              - `primitives` ×19
+            - Imported by: 37 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
+              - `primitives` ×20
               - `apps` ×8
               - `shell` ×2
               - `active-data/go`
@@ -42459,7 +42476,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `HoverIntent`
               - `HoverIntentOptions`
             - Exports (values): `createHoverIntent`
-        - **`image-viewer`** — One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge) and useImageViewerTrigger (for callers that keep their own <img>) open it; an image that does not load shows MissingImage (its name, and whether the file is gone or only unreadable, with Retry) and leaves the gallery — useImageLoad gives a caller with its own <img> the same load state, and useImageProbe answers it off-DOM for a caller that must know before it renders; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-close, wheel/pinch zoom, drag pan, minimap, copy/download/open, a docked thumbnail strip, a grid of every image with a tile-size slider, a control-less full-screen slideshow, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
+        - **`image-viewer`** — One full-screen image viewer for every image in the app: ViewerThumbnail (the capped inline thumbnail that always shows the whole image, with a tiny-icon shape and a size badge; a given width / height reserves its box before it loads, and a chip is one fixed height) and useImageViewerTrigger (for callers that keep their own <img>) open it; ThumbnailPlaceholder holds a thumbnail's box while its source is not known yet; an image that does not load shows MissingImage (its name, and whether the file is gone or only unreadable, with Retry) and leaves the gallery — useImageLoad gives a caller with its own <img> the same load state, and useImageProbe answers it off-DOM for a caller that must know before it renders; ImageGallery makes every thumbnail inside one ← / → set in page order and renders the viewer inside its own React tree; ImageViewer is the controlled viewer itself — fit, click-to-close, wheel/pinch zoom, drag pan, minimap, copy/download/open, a docked thumbnail strip, a grid of every image with a tile-size slider, a control-less full-screen slideshow, keyboard-isolated. A ViewerThumbnail outside any gallery is its own gallery of one; useImageViewerTrigger requires one.
           - Web:
             - Uses: 48 symbols — full list in [`plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/image-viewer/REFERENCE.md)
               - `primitives/css/ui-kit` ×6
@@ -42505,6 +42522,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ImageViewerProps`
               - `ImageViewerTrigger`
               - `MissingImageProps`
+              - `ThumbnailPlaceholderProps`
               - `ViewerImage`
               - `ViewerThumbnailProps`
             - Exports (values):
@@ -42512,6 +42530,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ImageGallery`
               - `ImageViewer`
               - `MissingImage`
+              - `ThumbnailPlaceholder`
               - `UnloadedAssetImage`
               - `useImageLoad`
               - `useImageProbe`

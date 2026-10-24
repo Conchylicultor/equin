@@ -24,9 +24,10 @@ import type {
   UserTextSegment,
   ToolCallResult,
   HookRecord,
+  TranscriptImage,
 } from "../../core";
 import { requestConfigOf, requestShapeOf } from "./api-request";
-import { imageMimeOf } from "./image-key";
+import { base64ImageSize, imageMimeOf } from "./image-key";
 
 type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
 type ApiRequestEvent = Extract<JsonlEvent, { kind: "api-request" }>;
@@ -152,11 +153,14 @@ function extractTaskNotifications(
 
 /**
  * Keys an image a prompt references by absolute path (`@/path/shot.png`) — its
- * `TranscriptImage.key`, the page loading the bytes by URL — or `null` when the
- * host has no such image, which renders the reference as plain text. The
- * host's own: a desktop stats the file, a host without one has none.
+ * `TranscriptImage.key`, the page loading the bytes by URL, and its natural
+ * size when the host read it from the file's header — or `null` when the host
+ * has no such image, which renders the reference as plain text. The host's
+ * own: a desktop stats the file, a host without one has none.
  */
-export type TranscriptImageReader = (path: string) => Promise<string | null>;
+export type TranscriptImageReader = (
+  path: string,
+) => Promise<Omit<TranscriptImage, "mime"> | null>;
 
 async function pushTextWithImages(
   text: string,
@@ -184,11 +188,11 @@ async function pushTextWithImages(
     if (before) segments.push({ kind: "text", value: before });
 
     const path = m[1]!;
-    const key = await readImage(path);
-    if (key !== null) {
+    const keyed = await readImage(path);
+    if (keyed !== null) {
       segments.push({
         kind: "image",
-        image: { key, mime: imageMimeOf(path) },
+        image: { ...keyed, mime: imageMimeOf(path) },
       });
       hasImages = true;
     } else {
@@ -231,7 +235,42 @@ interface RawBlock {
     type?: string;
     media_type?: string;
     data?: string;
+    width?: number;
+    height?: number;
   };
+  /** A held tool result's first image's size (`TranscriptLines` dropped the image). */
+  image_size?: { width?: unknown; height?: unknown };
+}
+
+/** A size field as the held line carries it: a positive integer, else absent. */
+function positiveInt(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isInteger(value) && value > 0
+    ? value
+    : undefined;
+}
+
+/** The natural size of a tool result's first image, as `ToolCallResult.imageSize`. */
+function toolResultImageSize(block: RawBlock): ToolCallResult["imageSize"] {
+  const held = block.image_size;
+  if (
+    held &&
+    typeof held.width === "number" &&
+    typeof held.height === "number"
+  ) {
+    return { width: held.width, height: held.height };
+  }
+  if (!Array.isArray(block.content)) return undefined;
+  const first = (block.content as (RawBlock | null)[]).find(
+    (part) =>
+      part?.type === "image" &&
+      part.source?.type === "base64" &&
+      typeof part.source.data === "string",
+  );
+  if (!first?.source?.data) return undefined;
+  const size = base64ImageSize(first.source.data);
+  return size.width !== undefined && size.height !== undefined
+    ? { width: size.width, height: size.height }
+    : undefined;
 }
 
 function extractText(content: unknown): string {
@@ -537,6 +576,7 @@ export async function buildJsonlEvents(
               isError: block.is_error === true ? true : undefined,
               outcomeUnknown: sessionEnded ? true : undefined,
               toolReferences: extractToolReferences(block.content),
+              imageSize: toolResultImageSize(block),
               questionAnswer,
               answerUuid,
             };
@@ -567,6 +607,8 @@ export async function buildJsonlEvents(
                   typeof block.source.media_type === "string"
                     ? block.source.media_type
                     : "image/jpeg",
+                width: positiveInt(block.source.width),
+                height: positiveInt(block.source.height),
               },
             });
           }

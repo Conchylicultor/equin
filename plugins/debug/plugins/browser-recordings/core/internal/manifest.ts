@@ -45,3 +45,12 @@ export type RecordingManifest = z.infer<typeof RecordingManifestSchema>;
 
 /** The manifest's file name inside a run directory. */
 export const MANIFEST_FILE = "manifest.json";
+
+/**
+ * The index at the recordings root: the tool calls that still have a run, as a
+ * JSON array of tool-use ids — rewritten by the writer after every prune (it
+ * lists every kept run then anyway), so a reader does not walk thousands of
+ * call directories to learn it.
+ */
+export const RecordedCallsIndexSchema = z.array(z.string());
+export const RECORDED_CALLS_FILE = "recorded-calls.json";

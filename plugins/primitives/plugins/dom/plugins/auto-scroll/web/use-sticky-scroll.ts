@@ -12,6 +12,7 @@ import { z } from "zod";
 import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useInView } from "@plugins/primitives/plugins/dom/plugins/in-view/web";
+import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { BottomSentinel } from "./internal/bottom-sentinel";
 import { scrollChildIntoView } from "./scroll-child-into-view";
 import { FOLLOW_MOTION_ATTR } from "./follow-motion";
@@ -371,6 +372,27 @@ export function useStickyScroll(
       ...sentinelObserverOptions(threshold),
       deps: [sentinelEl, threshold, dispatch],
     },
+  );
+
+  // ---- content resized while following: re-pin before paint ---------------
+  // The sentinel observer reports after a frame is painted, so content that
+  // grows between the mount restore and the first paint — rows a later commit
+  // fills in, a card's footer resolving — was drawn short of the bottom and
+  // snapped down a frame later (measured: ~500px on every transcript open).
+  // A ResizeObserver reports BEFORE paint. It only carries out the standing
+  // intent: while following it re-writes the bottom, and it never changes the
+  // mode, so a reader who is not following is never moved by it — the
+  // sign-blindness that retired the old size observer cannot reach them.
+  useResizeObserver(
+    () => {
+      const el = scrollRef.current;
+      return el && sentinelEl ? Array.from(el.children) : null;
+    },
+    () => {
+      const el = scrollRef.current;
+      if (el && modeRef.current.kind === "following") writeToBottom(el);
+    },
+    { debounce: false, deps: [sentinelEl, writeToBottom] },
   );
 
   // ---- content in motion: follow it frame by frame -------------------------

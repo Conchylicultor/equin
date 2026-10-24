@@ -26,7 +26,7 @@ import {
 import { editIcon, GO_TINT, GoRailCap, sendIcon } from "./go-cap";
 import { GoItemText } from "./go-item-text";
 import { GoTable } from "./go-table";
-import { PickedBox } from "./picked-box";
+import { PickedBox, type PickState } from "./picked-box";
 
 const resetIcon = symbol("restart-alt");
 /** How far a checklist item's words sit past its box: `PickedBox`'s size-3 + pr-xs. */
@@ -70,7 +70,6 @@ function GoChecklist({ content, body }: { content: string; body: GoBody }) {
   const [local, setLocal] = useState<boolean[] | null>(null);
 
   if (binding.enabled && local === null) {
-    if (binding.value.status === "loading") return <Loading variant="text" />;
     if (binding.value.status === "error") {
       return (
         <ResourceErrorInline
@@ -86,23 +85,33 @@ function GoChecklist({ content, body }: { content: string; body: GoBody }) {
       ? binding.value.data?.picked
       : undefined;
   const initial = body.items.map((i) => i.checked);
+  // Not known yet while the stored picks load: the card is drawn whole — its
+  // final height, so the transcript does not grow under the reader when they
+  // land — with every box pending and nothing to send, rather than a guess
+  // (the agent's picks) that the stored ones would then reverse.
+  const pending =
+    binding.enabled && local === null && binding.value.status === "loading";
   // A stored pick list of another length belongs to other content: ignore it.
-  const picked =
-    local ?? (stored?.length === body.items.length ? stored : initial);
+  const picked = pending
+    ? null
+    : (local ?? (stored?.length === body.items.length ? stored : initial));
 
   const pick = (next: boolean[]) => {
     setLocal(next);
     if (binding.enabled) void binding.set({ picked: next });
   };
-  const toggle = (i: number) =>
-    pick(picked.map((on, j) => (j === i ? !on : on)));
+  const toggle = (i: number) => {
+    if (picked) pick(picked.map((on, j) => (j === i ? !on : on)));
+  };
+  const stateOf = (i: number): PickState => (picked ? picked[i]! : "pending");
 
-  const count = picked.filter(Boolean).length;
-  const changed = picked.some((on, i) => on !== initial[i]);
+  const count = picked?.filter(Boolean).length ?? 0;
+  const changed = picked?.some((on, i) => on !== initial[i]) ?? false;
+  const all = body.items.map(() => true);
   return (
     <GoCard
-      wire={goWire(content, picked)}
-      draft={goWire(content, count === 0 ? body.items.map(() => true) : picked)}
+      wire={goWire(content, picked ?? [])}
+      draft={goWire(content, picked === null || count === 0 ? all : picked)}
       ready={count > 0}
     >
       {body.lead && <Markdown>{body.lead}</Markdown>}
@@ -112,7 +121,9 @@ function GoChecklist({ content, body }: { content: string; body: GoBody }) {
           items={body.items}
           picked={picked}
           onToggle={toggle}
-          onToggleAll={() => pick(picked.map(() => !picked.every(Boolean)))}
+          onToggleAll={() => {
+            if (picked) pick(picked.map(() => !picked.every(Boolean)));
+          }}
         />
       ) : (
         <Stack gap="none">
@@ -120,7 +131,7 @@ function GoChecklist({ content, body }: { content: string; body: GoBody }) {
             <GoItemRow
               key={i}
               item={item}
-              checked={picked[i]!}
+              checked={stateOf(i)}
               onToggle={() => toggle(i)}
             />
           ))}
@@ -128,11 +139,20 @@ function GoChecklist({ content, body }: { content: string; body: GoBody }) {
       )}
       {body.tail && <Markdown>{body.tail}</Markdown>}
       <Stack direction="row" gap="sm" align="center">
-        <Text variant="caption" tone="muted" className="select-none">
-          {count === 0
-            ? "Check the ones to send"
-            : `${count} of ${picked.length} checked`}
-        </Text>
+        {picked === null ? (
+          // A shimmer one caption line tall (`1lh` inside the caption): the
+          // count line's own height, so the card does not resize when the
+          // picks land.
+          <Text variant="caption" as="div">
+            <Loading variant="block" className="h-[1lh] w-32" />
+          </Text>
+        ) : (
+          <Text variant="caption" tone="muted" className="select-none">
+            {count === 0
+              ? "Check the ones to send"
+              : `${count} of ${picked.length} checked`}
+          </Text>
+        )}
         {changed && (
           <ControlSizeProvider size="xs">
             <Button
@@ -205,9 +225,10 @@ function GoItemRow({
   onToggle,
 }: {
   item: GoItem;
-  checked: boolean;
+  checked: PickState;
   onToggle: () => void;
 }) {
+  const known = checked !== "pending";
   return (
     // A block of inline text, not a <button> or a flex row: a button's words
     // cannot be selected, and a row declared as one copy unit is selected
@@ -217,13 +238,14 @@ function GoItemRow({
     <span
       role="checkbox"
       tabIndex={0}
-      aria-checked={checked}
+      aria-checked={checked === true}
+      aria-busy={!known || undefined}
       onClick={() => {
-        if (String(window.getSelection() ?? "")) return;
+        if (!known || String(window.getSelection() ?? "")) return;
         onToggle();
       }}
       onKeyDown={(e) => {
-        if (e.key !== "Enter" && e.key !== " ") return;
+        if (!known || (e.key !== "Enter" && e.key !== " ")) return;
         e.preventDefault();
         onToggle();
       }}
@@ -233,7 +255,10 @@ function GoItemRow({
         paddingInlineStart: `calc(var(--space-xs) + ${BOX_HANG})`,
         textIndent: `calc(-1 * ${BOX_HANG})`,
       }}
-      className="block cursor-pointer rounded-sm px-xs py-2xs transition-colors hover:bg-primary/10 [&_*]:indent-0"
+      className={cn(
+        "block rounded-sm px-xs py-2xs transition-colors [&_*]:indent-0",
+        known && "cursor-pointer hover:bg-primary/10",
+      )}
     >
       <PickedBox checked={checked} />
       <GoItemText text={item.text} />

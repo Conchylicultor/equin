@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mergeChainLines } from "./transcript-lines";
+import { mergeChainLines, TranscriptLines } from "./transcript-lines";
 
 // A conversation's session chain merged into one line array — the one-off read
 // of whole files through `TranscriptLines`.
@@ -121,5 +121,88 @@ describe("mergeChainLines", () => {
       { path: "a.jsonl", raw: `{"uuid":"u1"}\nnot json\n{"uuid":"u2"}\n` },
     ];
     expect(uuidsOf(mergeChainLines(files))).toEqual(["u1", "u2"]);
+  });
+});
+
+describe("TranscriptLines image sizes", () => {
+  // A 1400×900 PNG's signature and IHDR — all the size reader needs.
+  const png = Uint8Array.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48,
+    0x44, 0x52, 0, 0, 0x05, 0x78, 0, 0, 0x03, 0x84, 8, 6, 0, 0, 0,
+  ]);
+  const base64 = btoa(String.fromCharCode(...png));
+  const image = { type: "base64", media_type: "image/png", data: base64 };
+
+  const eventsOf = async (lines: Record<string, unknown>[]) => {
+    const held = new TranscriptLines(() => Promise.resolve(null));
+    held.append(
+      "a.jsonl",
+      0,
+      new TextEncoder().encode(
+        lines.map((l) => JSON.stringify(l)).join("\n") + "\n",
+      ),
+    );
+    return held.events();
+  };
+
+  test("a pasted image's reference carries its natural size", async () => {
+    const events = await eventsOf([
+      {
+        type: "user",
+        uuid: "u1",
+        parentUuid: null,
+        timestamp: T1,
+        message: { role: "user", content: [{ type: "image", source: image }] },
+      },
+    ]);
+    const row = events.find((e) => e.kind === "user-image");
+    expect(row?.kind === "user-image" && row.image).toMatchObject({
+      mime: "image/png",
+      width: 1400,
+      height: 900,
+    });
+  });
+
+  test("a tool result's dropped image leaves its size on the result", async () => {
+    const events = await eventsOf([
+      {
+        type: "assistant",
+        uuid: "a1",
+        parentUuid: null,
+        timestamp: T1,
+        message: {
+          role: "assistant",
+          content: [
+            {
+              type: "tool_use",
+              id: "toolu_1",
+              name: "Read",
+              input: { file_path: "/tmp/shot.png" },
+            },
+          ],
+        },
+      },
+      {
+        type: "user",
+        uuid: "u1",
+        parentUuid: "a1",
+        timestamp: T2,
+        message: {
+          role: "user",
+          content: [
+            {
+              type: "tool_result",
+              tool_use_id: "toolu_1",
+              content: [{ type: "image", source: image }],
+            },
+          ],
+        },
+      },
+    ]);
+    const call = events.find((e) => e.kind === "tool-call");
+    expect(call?.kind === "tool-call" && call.result?.imageSize).toEqual({
+      width: 1400,
+      height: 900,
+    });
   });
 });

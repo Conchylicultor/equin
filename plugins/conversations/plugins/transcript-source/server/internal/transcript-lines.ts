@@ -1,6 +1,10 @@
 import type { JsonlEvent } from "../../core";
 import { slimApiRequestLine } from "./api-request";
-import { encodeImageKey, visitInlineImages } from "./image-key";
+import {
+  base64ImageSize,
+  encodeImageKey,
+  visitInlineImages,
+} from "./image-key";
 import { buildJsonlEvents, type TranscriptImageReader } from "./parse-jsonl";
 
 const NEWLINE = 0x0a;
@@ -116,6 +120,7 @@ export class TranscriptLines {
       image.replace({
         key: encodeImageKey({ kind: "line", file, offset, length, uuid, n }),
         mime: image.mime,
+        ...base64ImageSize(image.base64),
       });
       n += 1;
     });
@@ -141,8 +146,10 @@ function decodeLine(text: string): Record<string, unknown> | null {
 
 /**
  * Drop what the event builder never reads: a tool result's image blocks
- * (`extractText` keeps text only) and `toolUseResult`, but for the answer an
- * answered AskUserQuestion carries in it (`extractQuestionAnswer`).
+ * (`extractText` keeps text only — the first one's size is kept, as the
+ * block's `image_size`, for `ToolCallResult.imageSize`) and `toolUseResult`,
+ * but for the answer an answered AskUserQuestion carries in it
+ * (`extractQuestionAnswer`).
  */
 function dropUnreadPayloads(line: Record<string, unknown>): void {
   const message = line.message as { content?: unknown } | undefined;
@@ -150,11 +157,24 @@ function dropUnreadPayloads(line: Record<string, unknown>): void {
     for (const block of message.content as ({
       type?: unknown;
       content?: unknown;
+      image_size?: unknown;
     } | null)[]) {
       if (block?.type === "tool_result" && Array.isArray(block.content)) {
-        block.content = (block.content as ({ type?: unknown } | null)[]).filter(
-          (part) => part?.type !== "image",
+        const parts = block.content as ({
+          type?: unknown;
+          source?: { type?: unknown; data?: unknown };
+        } | null)[];
+        const first = parts.find(
+          (part) =>
+            part?.type === "image" &&
+            part.source?.type === "base64" &&
+            typeof part.source.data === "string",
         );
+        if (first) {
+          const size = base64ImageSize(first.source!.data as string);
+          if (size.width !== undefined) block.image_size = size;
+        }
+        block.content = parts.filter((part) => part?.type !== "image");
       }
     }
   }

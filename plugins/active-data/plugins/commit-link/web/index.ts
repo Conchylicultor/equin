@@ -1,6 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ActiveData, codeTag } from "@plugins/active-data/web";
-import { CommitLinkChip } from "./components/commit-link-chip";
+import {
+  CommitLinkChip,
+  PendingCommitChip,
+} from "./components/commit-link-chip";
 import { useCommitClaim } from "./internal/use-commit-claim";
 import { COMMIT_SHA_RE } from "./internal/pattern";
 
@@ -14,6 +17,7 @@ export default {
         pattern: COMMIT_SHA_RE,
         useClaim: useCommitClaim,
         component: CommitLinkChip,
+        pending: PendingCommitChip,
       }),
     ),
   ],

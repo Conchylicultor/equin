@@ -2,7 +2,14 @@ import {
   encodeImageKey,
   TranscriptLines,
 } from "@plugins/conversations/plugins/transcript-source/server";
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
+import type {
+  JsonlEvent,
+  TranscriptImage,
+} from "@plugins/conversations/plugins/transcript-source/core";
+import {
+  IMAGE_SIZE_PREFIX_BYTES,
+  readImageSize,
+} from "@plugins/packages/plugins/image-size/core";
 
 // The session files on disk, through the transcript parser
 // (`transcript-source`): this host's reads of a chain and of the images its
@@ -120,18 +127,31 @@ export async function readJsonlEventsFromChain(
 /**
  * A prompt's referenced image (`@/path.png`) as a key the page loads it by —
  * the file's path and (mtime, size), so the key names these bytes and no later
- * ones; `null` when there is no such file, which renders the reference as text.
+ * ones — with its natural size read from the file's header; `null` when there
+ * is no such file, which renders the reference as text.
  */
-async function keyPromptImage(path: string): Promise<string | null> {
+async function keyPromptImage(
+  path: string,
+): Promise<Omit<TranscriptImage, "mime"> | null> {
   try {
-    const st = await Bun.file(path).stat();
+    const file = Bun.file(path);
+    const st = await file.stat();
     if (!st.isFile()) return null;
-    return encodeImageKey({
-      kind: "path",
-      path,
-      mtimeMs: st.mtimeMs,
-      size: st.size,
-    });
+    let read = readImageSize(
+      await file.slice(0, IMAGE_SIZE_PREFIX_BYTES).bytes(),
+    );
+    if (read.kind === "truncated" && st.size > IMAGE_SIZE_PREFIX_BYTES) {
+      read = readImageSize(await file.bytes());
+    }
+    return {
+      key: encodeImageKey({
+        kind: "path",
+        path,
+        mtimeMs: st.mtimeMs,
+        size: st.size,
+      }),
+      ...(read.kind === "size" ? read.size : {}),
+    };
   } catch (err) {
     if (!(err instanceof Error) || !("code" in err)) throw err;
     // File system error (ENOENT, EACCES, etc.) — treat as missing image; render as text

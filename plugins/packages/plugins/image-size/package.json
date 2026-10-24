@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-packages-image-size",
+  "private": true,
+  "version": "0.0.1",
+  "description": "An image's pixel size read from its header bytes, in plain JS on every host: readImageSize(bytes) for PNG, GIF, JPEG, WebP and BMP — a known-format answer from the first bytes (JPEG: up to its frame header), so a caller can reserve an image's box before the image loads."
+}

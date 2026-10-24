@@ -30,6 +30,8 @@ export function UserImageRow({ event }: { event: JsonlEvent }) {
           name: `pasted-image.${ext}`,
           sourceLabel: "Pasted",
           alt: "User-pasted image",
+          width: e.image.width,
+          height: e.image.height,
         }}
       />
     </div>

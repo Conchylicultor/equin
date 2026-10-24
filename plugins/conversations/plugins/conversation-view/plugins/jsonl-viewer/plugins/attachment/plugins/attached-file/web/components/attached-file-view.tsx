@@ -114,6 +114,10 @@ export function AttachedFileView({ event }: AttachmentRendererProps) {
               : "attached-image",
             sourceLabel: "Attached",
             alt: "Attached image",
+            // Known before the bytes load, so the card is its final height
+            // from its first frame.
+            width: width ?? image.width,
+            height: height ?? image.height,
           }}
         />
       </CollapsibleCard>

@@ -4206,6 +4206,10 @@
       "name": "@singularity/plugin-packages-host-semaphore",
       "version": "0.0.1",
     },
+    "plugins/packages/plugins/image-size": {
+      "name": "@singularity/plugin-packages-image-size",
+      "version": "0.0.1",
+    },
     "plugins/packages/plugins/inflight": {
       "name": "@singularity/plugin-packages-inflight",
       "version": "0.0.1",
@@ -9165,6 +9169,8 @@
     "@singularity/plugin-packages-flock": ["@singularity/plugin-packages-flock@workspace:plugins/packages/plugins/flock"],
 
     "@singularity/plugin-packages-host-semaphore": ["@singularity/plugin-packages-host-semaphore@workspace:plugins/packages/plugins/host-semaphore"],
+
+    "@singularity/plugin-packages-image-size": ["@singularity/plugin-packages-image-size@workspace:plugins/packages/plugins/image-size"],
 
     "@singularity/plugin-packages-inflight": ["@singularity/plugin-packages-inflight@workspace:plugins/packages/plugins/inflight"],
 

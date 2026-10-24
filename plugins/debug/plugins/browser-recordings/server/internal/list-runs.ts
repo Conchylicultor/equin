@@ -5,8 +5,11 @@ import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
 import { serveValue } from "@plugins/network/plugins/live/server";
 import { browserRecordingsDir } from "../../data-dirs";
 import {
+  browserRecordedCalls,
   browserRecordingRuns,
   MANIFEST_FILE,
+  RECORDED_CALLS_FILE,
+  RecordedCallsIndexSchema,
   RecordingManifestSchema,
   type BrowserRecordingRun,
 } from "../../core";
@@ -80,4 +83,46 @@ export const browserRecordingRunsServed = serveValue(browserRecordingRuns, {
       },
     });
   },
+});
+
+/**
+ * The calls that still have a run: the writer's index, rewritten after every
+ * prune — one file read, never a walk of the call directories (thousands, on
+ * the boot path: this value is preloaded). A store the writer has not indexed
+ * yet answers `unindexed`, and the view falls back to asking per call.
+ */
+async function listRecordedCalls(): Promise<
+  { kind: "indexed"; toolUseIds: string[] } | { kind: "unindexed" }
+> {
+  let text: string;
+  try {
+    text = await readFile(
+      join(browserRecordingsDir.path, RECORDED_CALLS_FILE),
+      "utf8",
+    );
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT")
+      return { kind: "unindexed" };
+    throw err;
+  }
+  return {
+    kind: "indexed",
+    toolUseIds: RecordedCallsIndexSchema.parse(JSON.parse(text)),
+  };
+}
+
+/** Pushed when the writer rewrites the index. */
+export const browserRecordedCallsServed = serveValue(browserRecordedCalls, {
+  source: "external",
+  changes: "notified",
+  loader: listRecordedCalls,
+  whileSubscribed: async (_params, notify) =>
+    acquireDirWatch({
+      dir: browserRecordingsDir.ensure(),
+      scope: "subtree",
+      onChange: (events) => {
+        if (events.some((e) => e.path.endsWith(sep + RECORDED_CALLS_FILE)))
+          notify();
+      },
+    }),
 });

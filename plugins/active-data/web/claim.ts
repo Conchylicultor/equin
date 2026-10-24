@@ -54,4 +54,15 @@ export function claimed<T>(value: T): CodeClaim<T> {
 export interface CodeResolver<T> {
   useClaim: Hook<(text: string) => CodeClaim<T>>;
   component: ComponentType<{ content: string; value: T }>;
+  /**
+   * What holds the token's place while the claim is `pending` — the claimed
+   * chip's own box, without what only a claim knows (no activation, no hover
+   * card). Omitted: the plain terminal `<code>`. Worth declaring only for a
+   * candidate whose syntactic matches almost always resolve (a backticked
+   * sha): the chip then lands in the box it already had, instead of widening
+   * the span and re-wrapping the paragraph under the reader. A decline still
+   * falls back to the terminal, so a candidate that often declines keeps the
+   * default.
+   */
+  pending?: ComponentType<{ content: string }>;
 }

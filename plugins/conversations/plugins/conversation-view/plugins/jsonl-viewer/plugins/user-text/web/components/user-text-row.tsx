@@ -28,6 +28,8 @@ function InlineImage({ image }: { image: TranscriptImage }) {
         name: `pasted-image.${ext}`,
         sourceLabel: "Pasted",
         alt: "Attached image",
+        width: image.width,
+        height: image.height,
       }}
     />
   );

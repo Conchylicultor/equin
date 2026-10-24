@@ -1,3 +1,8 @@
+import {
+  IMAGE_SIZE_PREFIX_BYTES,
+  readImageSize,
+  type ImageSize,
+} from "@plugins/packages/plugins/image-size/core";
 import type { TranscriptImage } from "../../core";
 
 // An image the transcript shows is never copied into an event: the event
@@ -114,7 +119,13 @@ interface InlineImage {
 
 interface RawImageBlock {
   type?: unknown;
-  source?: { type?: unknown; media_type?: unknown; data?: unknown };
+  source?: {
+    type?: unknown;
+    media_type?: unknown;
+    data?: unknown;
+    width?: unknown;
+    height?: unknown;
+  };
   content?: unknown;
 }
 
@@ -144,7 +155,13 @@ export function visitInlineImages(
           mime,
           base64: source.data,
           replace: (image) => {
-            block.source = { type: "ref", media_type: mime, data: image.key };
+            block.source = {
+              type: "ref",
+              media_type: mime,
+              data: image.key,
+              width: image.width,
+              height: image.height,
+            };
           },
         });
       }
@@ -182,6 +199,22 @@ export function inlineImageAt(
     if (i++ === n) found = { mime: image.mime, base64: image.base64 };
   });
   return found;
+}
+
+/**
+ * The natural size of a base64 image, read from its header — decoding only the
+ * leading bytes the header sits in, and the whole image only when a JPEG's
+ * frame header lies past them. `{}` when the format is not one the reader
+ * knows, so the result spreads straight into a `TranscriptImage`.
+ */
+export function base64ImageSize(base64: string): Partial<ImageSize> {
+  // 4 base64 chars carry 3 bytes.
+  const prefixChars = Math.ceil(IMAGE_SIZE_PREFIX_BYTES / 3) * 4;
+  let read = readImageSize(base64Bytes(base64.slice(0, prefixChars)));
+  if (read.kind === "truncated" && base64.length > prefixChars) {
+    read = readImageSize(base64Bytes(base64));
+  }
+  return read.kind === "size" ? read.size : {};
 }
 
 export function base64Bytes(base64: string): Uint8Array<ArrayBuffer> {

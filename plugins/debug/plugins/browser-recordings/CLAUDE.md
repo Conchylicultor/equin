@@ -82,15 +82,19 @@ inside one `browser_batch` (one frame per call).
     - `primitives/loading.Loading`
     - `primitives/overlay/image-viewer.AssetThumbnail`
     - `primitives/overlay/image-viewer.ImageGallery`
+    - `primitives/overlay/image-viewer.ThumbnailPlaceholder`
 - Server:
   - Contributes:
+    - `resource.declare` "browser-recordings.recorded-calls"
     - `resource.declare` "browser-recordings.runs"
     - `conversations.artifacts.extractor` "browser-recording"
   - Uses:
     - `conversations/conversation-view/artifacts.ConversationArtifactExtractor`
     - `infra/file-watcher.acquireDirWatch`
     - `network/live.serveValue`
-  - Resources: `browser-recordings.runs` (push, notified, whole: the runs one tool call drove — one for a browser_* call or an e2e script, a few when a call reran it, whole: one drive's steps — a scripted e2e flow or a single browser_* call, tens of steps, written once when the run ends)
+  - Resources:
+    - `browser-recordings.recorded-calls` (push, notified, whole: the calls the recordings directory still holds a run for — the writer keeps its newest 200 runs)
+    - `browser-recordings.runs` (push, notified, whole: the runs one tool call drove — one for a browser_* call or an e2e script, a few when a call reran it, whole: one drive's steps — a scripted e2e flow or a single browser_* call, tens of steps, written once when the run ends)
 - Core:
   - Uses:
     - `framework/cli/cli-name.CLI_NAME_PATTERN`
@@ -103,11 +107,14 @@ inside one `browser_batch` (one frame per call).
     - `RecordingStep`
   - Exports (values):
     - `BROWSER_RECORDING_KIND`
+    - `browserRecordedCalls`
     - `browserRecordingRuns`
     - `extractBrowserRecordings`
     - `isRecordedToolCall`
     - `MANIFEST_FILE`
     - `RECORDED_BROWSER_TOOLS`
+    - `RECORDED_CALLS_FILE`
+    - `RecordedCallsIndexSchema`
     - `RecordingManifestSchema`
     - `RecordingSourceSchema`
 - Cross-plugin:

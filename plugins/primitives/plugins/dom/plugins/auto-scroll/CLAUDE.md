@@ -99,7 +99,7 @@ Lint already forces every programmatic scroll through these two plugins, so
 the set is complete. The remaining unannounced moves are browser-native:
 find-in-page has no page-visible input, so ⌘F / Ctrl+F parks explicitly.
 
-**Do not reintroduce a size observer.**
+**No size observer decides anything.**
 [`research/2026-05-25-global-sticky-scroll-redesign.md`](../../../../../../research/2026-05-25-global-sticky-scroll-redesign.md)
 removed one because a size delta is *sign-blind*: opening the file pane rewraps
 text taller, which is indistinguishable from new content. Watching the sentinel
@@ -110,6 +110,14 @@ downward. Asserted in
 `internal/sticky-scroll-machine.test.ts`. The guarantee is narrower than it
 sounds: while following, reflow *does* write. It is "no observation-driven writes
 **while not following**".
+
+The one size observer that remains (on the scroller's children) is an
+*executor*, not a sensor: it re-writes the bottom only while already following
+and never feeds the machine, so it cannot move a reader who is not following.
+It exists for timing — a ResizeObserver reports before paint, the sentinel's
+IntersectionObserver after — so content that grows between the mount restore
+and the first paint (a transcript's later commits) is drawn at the bottom
+instead of ~500px short of it and snapped down a frame later.
 
 **"Ours" = the offset we last wrote** (read back after writing, so clamping
 counts). **Every own write must be instant, including `jumpToBottom`**: a
@@ -202,6 +210,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
   - Uses:
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
+    - `primitives/dom/element-size.useResizeObserver`
     - `primitives/dom/in-view.useInView`
     - `primitives/dom/web-storage.defineStore`
     - `primitives/latest-ref.useEventCallback`

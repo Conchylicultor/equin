@@ -75,11 +75,19 @@ function CodeCandidateLevel({
 }) {
   const claim = candidate.resolver.useClaim(text);
   switch (claim.status) {
-    case "pending":
+    case "pending": {
       // The terminal, NOT the next level. A level below a still-loading candidate
       // would mount and fire its own I/O for an answer about to be discarded — and
-      // then flicker when this one settles.
-      return <InlineCode>{text}</InlineCode>;
+      // then flicker when this one settles. A candidate that declares its
+      // pending box holds the place its chip will take instead.
+      const Pending = candidate.resolver.pending;
+      if (!Pending) return <InlineCode>{text}</InlineCode>;
+      return (
+        <span className="contents" {...copiesAsText(`\`${text}\``)}>
+          <Pending content={text} />
+        </span>
+      );
+    }
     case "declined":
       return (
         <CodeChainLevel text={text} candidates={candidates} index={index + 1} />

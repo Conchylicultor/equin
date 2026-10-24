@@ -1,9 +1,10 @@
 import { createHash } from "node:crypto";
-import { mkdir, readdir, rm, stat, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdir, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
+import { basename, dirname, join } from "node:path";
 import { TOOL_USE_ID_RE } from "@plugins/framework/plugins/tooling/plugins/guards/core";
 import {
   MANIFEST_FILE,
+  RECORDED_CALLS_FILE,
   type RecordingManifest,
   type RecordingSource,
   type RecordingStep,
@@ -103,6 +104,24 @@ async function pruneRuns(root: string, keep: number): Promise<void> {
     }
   }
   runs.sort((a, b) => b.mtimeMs - a.mtimeMs);
-  for (const run of runs.slice(keep))
+  for (const run of runs.slice(keep)) {
     await rm(run.path, { recursive: true, force: true });
+    // A call whose last run went goes too, so the directory lists only the
+    // calls that still have a recording (`browser-recordings.recorded-calls`).
+    const callDir = dirname(run.path);
+    if ((await readdir(callDir)).length === 0)
+      await rm(callDir, { recursive: true, force: true });
+  }
+  // The calls that still have a run, for the view's preloaded set
+  // (`browser-recordings.recorded-calls`). Written whole and renamed into
+  // place, so a reader never sees half a file.
+  const calls = new Set(
+    runs
+      .slice(0, keep)
+      .map((run) => basename(dirname(run.path)))
+      .filter((call) => TOOL_USE_ID_RE.test(call)),
+  );
+  const index = join(root, RECORDED_CALLS_FILE);
+  await writeFile(`${index}.tmp`, JSON.stringify([...calls].sort()));
+  await rename(`${index}.tmp`, index);
 }

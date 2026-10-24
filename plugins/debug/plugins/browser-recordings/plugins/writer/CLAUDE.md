@@ -8,6 +8,7 @@
 - Core:
   - Uses:
     - `debug/browser-recordings.MANIFEST_FILE`
+    - `debug/browser-recordings.RECORDED_CALLS_FILE`
     - `debug/browser-recordings.RecordingManifest`
     - `debug/browser-recordings.RecordingSource`
     - `debug/browser-recordings.RecordingStep`

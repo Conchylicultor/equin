@@ -13,17 +13,25 @@ export function PickedBox({
   checked = true,
   form = "line",
 }: {
-  checked?: boolean;
+  /** `"pending"`: the picks are not known yet (still loading) — an empty,
+   *  pulsing box in the box's own place, never a guess at the pick. */
+  checked?: PickState;
   form?: "line" | "cell";
 }) {
-  const mark = `[${checked ? "x" : " "}] `;
+  const mark = `[${checked === true ? "x" : " "}] `;
   return (
     <Inline
       gap="none"
       className="select-none pr-xs align-middle"
       {...copiesAsText(form === "line" ? `- ${mark}` : mark)}
     >
-      <CheckboxIndicator checked={checked} />
+      <CheckboxIndicator
+        checked={checked === true}
+        className={checked === "pending" ? "animate-pulse" : undefined}
+      />
     </Inline>
   );
 }
+
+/** One item's pick: on, off, or not known yet. */
+export type PickState = boolean | "pending";

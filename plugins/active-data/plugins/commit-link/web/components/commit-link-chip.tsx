@@ -57,3 +57,22 @@ export function CommitLinkChip({
     </WithHoverCard>
   );
 }
+
+/**
+ * The chip's box while the sha is being looked up: the same chip, inert (no
+ * activation, no hover card — only a resolved commit has those). A backticked
+ * sha in an agent's message almost always names a commit, so the chip then
+ * lands in the box the token already had instead of widening the line and
+ * re-wrapping the paragraph.
+ */
+export function PendingCommitChip({ content }: { content: string }) {
+  return (
+    <LinkChip
+      leading={<Icon icon={commitIcon} className="text-muted-foreground" />}
+      mono
+      aria-busy
+    >
+      {content}
+    </LinkChip>
+  );
+}

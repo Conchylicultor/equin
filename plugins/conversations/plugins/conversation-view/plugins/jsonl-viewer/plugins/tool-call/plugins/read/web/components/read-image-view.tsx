@@ -13,16 +13,25 @@ export function ReadImageView({
   worktree,
   worktreePath,
   filePath,
+  size,
 }: {
   worktree: string;
   /** The worktree's absolute root, so an absolute path inside it reads from git. */
   worktreePath: string;
   filePath: string;
+  /** The picture's natural size, as the result read it — its box is held
+   *  before the bytes load. */
+  size?: { width: number; height: number };
 }) {
   const asset = fileUrl(
     fileRefForPath(worktree, filePath, { root: worktreePath }),
   );
   const name = filePath.slice(filePath.lastIndexOf("/") + 1);
 
-  return <AssetThumbnail asset={asset} image={{ name, sourceLabel: "Read" }} />;
+  return (
+    <AssetThumbnail
+      asset={asset}
+      image={{ name, sourceLabel: "Read", ...size }}
+    />
+  );
 }

@@ -31,13 +31,16 @@ export function GoTable({
 }: {
   head: string[];
   items: GoItem[];
-  picked: boolean[];
+  /** Null while the picks are not known yet: every box pending, nothing toggles. */
+  picked: boolean[] | null;
   onToggle: (i: number) => void;
   /** Pick every row, or clear them all when every row is picked. */
   onToggleAll: () => void;
 }) {
-  const all = picked.every(Boolean);
-  const some = !all && picked.some(Boolean);
+  const all = picked?.every(Boolean) ?? false;
+  const some = !all && (picked?.some(Boolean) ?? false);
+  const known = picked !== null;
+  const stateOf = (i: number) => (picked ? picked[i]! : "pending");
   // A row short of cells is padded; one with extra cells keeps only the header's.
   const columns = head.length - 1;
   return (
@@ -52,13 +55,17 @@ export function GoTable({
                     role="checkbox"
                     tabIndex={0}
                     aria-checked={all ? true : some ? "mixed" : false}
+                    aria-busy={!known || undefined}
                     title={all ? "Clear every row" : "Check every row"}
-                    onClick={onToggleAll}
-                    onKeyDown={onToggleKey(onToggleAll)}
-                    className="cursor-pointer select-none"
+                    onClick={known ? onToggleAll : undefined}
+                    onKeyDown={known ? onToggleKey(onToggleAll) : undefined}
+                    className={cn("select-none", known && "cursor-pointer")}
                   >
                     <span className="pr-xs align-middle">
-                      <CheckboxIndicator checked={all} />
+                      <CheckboxIndicator
+                        checked={all}
+                        className={known ? undefined : "animate-pulse"}
+                      />
                     </span>
                     <GoItemText text={cell} />
                   </span>
@@ -75,22 +82,24 @@ export function GoTable({
           <tr
             key={i}
             onClick={() => {
-              if (String(window.getSelection() ?? "")) return;
+              if (!known || String(window.getSelection() ?? "")) return;
               onToggle(i);
             }}
             className={cn(
-              "cursor-pointer border-t border-foreground/5 align-top transition-colors first:border-t-0 hover:bg-primary/10",
-              !picked[i] && "text-muted-foreground",
+              "border-t border-foreground/5 align-top transition-colors first:border-t-0",
+              known && "cursor-pointer hover:bg-primary/10",
+              stateOf(i) === false && "text-muted-foreground",
             )}
           >
             <td className="px-xs py-2xs">
               <span
                 role="checkbox"
                 tabIndex={0}
-                aria-checked={picked[i]}
-                onKeyDown={onToggleKey(() => onToggle(i))}
+                aria-checked={stateOf(i) === true}
+                aria-busy={!known || undefined}
+                onKeyDown={known ? onToggleKey(() => onToggle(i)) : undefined}
               >
-                <PickedBox checked={picked[i]} form="cell" />
+                <PickedBox checked={stateOf(i)} form="cell" />
                 <GoItemText text={item.text} />
               </span>
             </td>

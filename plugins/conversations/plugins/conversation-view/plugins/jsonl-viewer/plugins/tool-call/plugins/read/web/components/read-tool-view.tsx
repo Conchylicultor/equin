@@ -81,6 +81,7 @@ export function ReadToolView({ event }: ToolRendererProps) {
               worktree={conversation.attemptId}
               worktreePath={conversation.worktreePath}
               filePath={file_path}
+              size={event.result.imageSize}
             />
           ) : (
             <CatNListing content={event.result.content} filePath={file_path} />

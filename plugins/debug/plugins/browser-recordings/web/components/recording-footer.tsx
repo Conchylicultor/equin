@@ -1,9 +1,13 @@
 import type { ToolFooterProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { ThumbnailPlaceholder } from "@plugins/primitives/plugins/overlay/plugins/image-viewer/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
-import { browserRecordingRuns, isRecordedToolCall } from "../../core";
+import {
+  browserRecordedCalls,
+  browserRecordingRuns,
+  isRecordedToolCall,
+} from "../../core";
 import { RunStrip } from "./run-strip";
 
 /**
@@ -12,13 +16,37 @@ import { RunStrip } from "./run-strip";
  */
 export function RecordingFooter({ event }: ToolFooterProps) {
   if (!isRecordedToolCall(event.name, event.input)) return null;
-  return <Recordings toolUseId={event.toolUseId} />;
+  return <RecordedCall toolUseId={event.toolUseId} />;
+}
+
+/**
+ * Whether the call still has a recording is known up front (the preloaded
+ * set): a call whose runs were pruned — most of an older conversation's —
+ * draws nothing from its first frame instead of a placeholder that then
+ * collapses. A call still running joins the set when its manifest lands.
+ */
+function RecordedCall({ toolUseId }: { toolUseId: string }) {
+  const recorded = useLive(browserRecordedCalls);
+  if (
+    recorded.status === "ready" &&
+    recorded.data.kind === "indexed" &&
+    !recorded.data.toolUseIds.includes(toolUseId)
+  )
+    return null;
+  return <Recordings toolUseId={toolUseId} />;
 }
 
 function Recordings({ toolUseId }: { toolUseId: string }) {
   const result = useLive(browserRecordingRuns, { toolUseId });
+  // Held at a filmstrip's height — a browser_* call's one frame, the common
+  // run — so the card is already its final size when the runs land, and a
+  // transcript opening on it does not grow under the reader.
   if (result.status === "loading")
-    return <Loading label="Loading recording…" className="px-md pt-2xs" />;
+    return (
+      <Stack gap="xs" className="px-md pt-2xs" aria-busy>
+        <ThumbnailPlaceholder size="chip" />
+      </Stack>
+    );
   if (result.status === "error")
     return (
       <ResourceErrorInline

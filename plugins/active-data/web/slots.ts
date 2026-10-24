@@ -84,6 +84,8 @@ export function codeTag<T>(spec: {
   pattern: RegExp;
   useClaim: Hook<(text: string) => CodeClaim<T>>;
   component: ComponentType<{ content: string; value: T }>;
+  /** See `CodeResolver.pending`. */
+  pending?: ComponentType<{ content: string }>;
 }): ActiveDataCodeContribution {
   return {
     display: "code",
@@ -92,6 +94,7 @@ export function codeTag<T>(spec: {
     resolver: {
       useClaim: spec.useClaim,
       component: spec.component,
+      pending: spec.pending,
       // See SOUNDNESS above — the pair is sealed here and only ever used together.
     } as unknown as CodeResolver<unknown>,
   };

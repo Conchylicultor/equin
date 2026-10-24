@@ -6,7 +6,11 @@ import {
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import type { ViewerImage } from "../internal/types";
 import { MissingImage, type MissingImageProps } from "./missing-image";
-import { ViewerThumbnail, type ViewerThumbnailProps } from "./viewer-thumbnail";
+import {
+  ThumbnailPlaceholder,
+  ViewerThumbnail,
+  type ViewerThumbnailProps,
+} from "./viewer-thumbnail";
 
 /**
  * What an image whose asset is not loadable yet (`useAssetSrc` answered
@@ -63,6 +67,18 @@ export function AssetThumbnail({
   image: Omit<ViewerImage, "src">;
 }) {
   const src = useAssetSrc(asset);
+  // While the bytes are fetched, hold the box the image will take when it is
+  // known (a chip's always is), so the image arriving moves nothing.
+  if (src.kind === "loading") {
+    if (size === "chip") return <ThumbnailPlaceholder size="chip" />;
+    if (image.width && image.height) {
+      return (
+        <ThumbnailPlaceholder
+          known={{ width: image.width, height: image.height }}
+        />
+      );
+    }
+  }
   if (src.kind !== "ready") {
     return <UnloadedAssetImage src={src} name={image.name} size={size} />;
   }

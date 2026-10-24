@@ -35,7 +35,9 @@ export interface LinkChipProps
    *
    * Omitted ONLY when the chip is an overlay TRIGGER (the popover/tooltip
    * wrapper clones it with the handler that opens the panel, and a second one
-   * here would fight it) or sits inside one (its press must bubble to it).
+   * here would fight it), sits inside one (its press must bubble to it), or
+   * holds a still-resolving chip's place (an active-data code claim's
+   * `pending` box: nothing to open until the claim lands).
    */
   activation?: Activation;
   /**

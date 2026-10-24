@@ -53,10 +53,18 @@ export type TokenUsage = z.infer<typeof TokenUsageSchema>;
  * them from their own URL (`transcriptImageUrl`). `key` is opaque to the page —
  * the server's encoding of where the bytes are — and immutable: a key always
  * names the same bytes, so the URL is cached forever.
+ *
+ * `width` / `height` are the image's natural size when the server could read
+ * it from the bytes' header, so the page reserves the image's box before it
+ * loads instead of growing the row once it has (a transcript that reflows
+ * after its first frame shifts the reader). Absent when the header could not
+ * be read.
  */
 export const TranscriptImageSchema = z.object({
   key: z.string(),
   mime: z.string(),
+  width: z.number().int().positive().optional(),
+  height: z.number().int().positive().optional(),
 });
 export type TranscriptImage = z.infer<typeof TranscriptImageSchema>;
 
@@ -123,6 +131,19 @@ const ToolCallResultSchema = z.object({
     reason:
       "one tool result's tool_reference blocks — the tools one search loaded",
   }).optional(),
+  /**
+   * The natural size of the result's first image (a Read of a picture, a
+   * screenshot tool's capture), read from its bytes' header — the result's
+   * images themselves are never shipped. Lets a renderer reserve the picture's
+   * box before it loads. Absent when the result has no image, or its header
+   * could not be read.
+   */
+  imageSize: z
+    .object({
+      width: z.number().int().positive(),
+      height: z.number().int().positive(),
+    })
+    .optional(),
 });
 export type ToolCallResult = z.infer<typeof ToolCallResultSchema>;
 
