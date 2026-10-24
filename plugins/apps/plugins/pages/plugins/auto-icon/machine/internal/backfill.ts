@@ -7,8 +7,10 @@ import {
   liveBlocks,
   PAGE_BLOCK_TYPE,
 } from "@plugins/page/plugins/editor/server";
-import { _pageBlocksAutoIconExt } from "./tables";
+import { pageBlocksAutoIcon } from "@plugins/apps/plugins/pages/plugins/auto-icon/server";
 import { autoIconJob } from "./auto-icon-job";
+
+const autoIconRows = pageBlocksAutoIcon.table;
 
 // Seeds icons for pages that predate the `blocksChanged` subscriber: every live
 // page with no provenance row. `dedup: "singleton"` collapses repeated enqueues;
@@ -28,15 +30,9 @@ export const backfillAutoIconsJob = defineJob({
     const rows = await db
       .select({ id: liveBlocks.id })
       .from(liveBlocks)
-      .leftJoin(
-        _pageBlocksAutoIconExt,
-        eq(_pageBlocksAutoIconExt.blockId, liveBlocks.id),
-      )
+      .leftJoin(autoIconRows, eq(autoIconRows.blockId, liveBlocks.id))
       .where(
-        and(
-          eq(liveBlocks.type, PAGE_BLOCK_TYPE),
-          isNull(_pageBlocksAutoIconExt.blockId),
-        ),
+        and(eq(liveBlocks.type, PAGE_BLOCK_TYPE), isNull(autoIconRows.blockId)),
       );
     for (const { id } of rows) await autoIconJob.enqueue({ pageId: id });
   },

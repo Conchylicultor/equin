@@ -11,6 +11,7 @@ export {
 } from "./internal/index-api";
 
 export default {
+  portable: true,
   description:
     "Domain-agnostic indexed full-text search substrate: search_documents table (tsvector GIN), generic index API, the live search.results typed-query value, and the GET /api/search endpoint.",
   contributions: [...searchResultsServed.declare],

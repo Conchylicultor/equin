@@ -14,6 +14,7 @@ import {
   useSyncPaneRegistry,
 } from "@plugins/primitives/plugins/pane/web";
 import { defaultStore } from "../testing";
+import { navigateApp } from "../app-nav-sink";
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
@@ -132,7 +133,11 @@ describe("useOpenPane outside every pane surface", () => {
     // A `conv-<id>` chip in the Improve popover crashed on the read half.
     const focused = createPaneStore({ live: false });
     setLiveStore(focused);
-    focused.openPaneImpl(detailPane._internal, { id: "7" }, {});
+    focused.openPaneImpl(
+      detailPane._internal,
+      { id: "7" },
+      { crossApp: navigateApp },
+    );
 
     function ChromeOpener() {
       const opened = detailPane.useOpenedHere();

@@ -9,6 +9,7 @@ export { pageBlocksStarred } from "./internal/tables";
 export { setPageStarred } from "./internal/mutations";
 
 export default {
+  portable: true,
   description:
     "Starred-pages side-table (page_blocks_ext_starred): presence-only marker plus the star toggle endpoint, and its presence exposed as the `starred` field of every list whose rows are blocks (LiveColumns.Expose).",
   contributions: [

@@ -19,8 +19,9 @@ import { setSurfaceMode, useTabs } from "./use-tabs";
  * to its base path, so a middle- / ⌘-click on it opens the app in a new
  * browser tab. Spread it with `activationProps`, or hand it to a DataView's
  * `rowActivation`. Inside an `AppNavBoundary` (an in-process app embed) the
- * switch is the boundary's: its navigator is handed the app's base path, so a
- * switcher drawn in an embed never swaps the host's tab.
+ * switch is the boundary's — for a surface-mode app too: its navigator is
+ * handed the app's base path, so a switcher drawn in an embed never swaps the
+ * host's tab nor switches the host's surface mode.
  */
 export function useActivateApp(): (
   entry: Pick<ActiveApp, "id" | "surfaceMode" | "app">,
@@ -30,6 +31,15 @@ export function useActivateApp(): (
   const boundary = useAppNavBoundary();
   const home = useHomeApp();
   return (entry) => {
+    // Inside an embed every pick is the boundary's — a surface-mode app too:
+    // checked before anything that would drive the host's tabs or surface. The
+    // boundary decides (a surface-mode app owns no URL it can hold, so an embed
+    // hands it to its `onLeave`).
+    if (boundary !== null)
+      return {
+        open: () => boundary(entry.app.basePath),
+        href: () => entry.app.basePath,
+      };
     const tabId = ownTabId ?? focusedTabId;
     // A surface-mode app switches this page's surface to its mode; its URL is
     // its base path as a route prefix (bare `/desktop`: that mode, nothing
@@ -55,13 +65,11 @@ export function useActivateApp(): (
       };
     return {
       open: () =>
-        boundary !== null
-          ? boundary(entry.app.basePath)
-          : tabId === undefined
-            ? // An empty surface (the desktop, every window closed) has no tab
-              // to swap: the pick opens one.
-              openTab(entry.id)
-            : replaceTabApp(tabId, entry.id),
+        tabId === undefined
+          ? // An empty surface (the desktop, every window closed) has no tab
+            // to swap: the pick opens one.
+            openTab(entry.id)
+          : replaceTabApp(tabId, entry.id),
       href: () => entry.app.basePath,
     };
   };

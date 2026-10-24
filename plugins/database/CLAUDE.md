@@ -301,8 +301,8 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `loadKnownRelations`
     - `quotedRelationsIn`
 - Cross-plugin:
-  - Imported by: 123 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×34
+  - Imported by: 121 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×32
     - `page` ×15
     - `infra` ×13
     - `conversations` ×12

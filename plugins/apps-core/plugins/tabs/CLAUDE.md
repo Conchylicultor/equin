@@ -69,6 +69,16 @@ one.
 use. A new *in-app* tab is never a modifier on a click: it is an explicit menu
 entry calling `navigate(url, { newTab: true })`.
 
+**Inside React, read them through the hooks**: `useNavigate()`,
+`useAppLink()`, `useAppLinkProps()`. They answer through the nearest
+`AppNavBoundary` (an in-process `<AppEmbed>`) and fall back to the free
+function outside one, so they behave identically everywhere else; the free
+forms would drive the host's tabs from inside an embed. `useActivateApp`
+checks the boundary first too, before its surface-mode branch. Enforced by
+`tabs/no-free-app-nav-in-react` (`lint/`): a reference to the free `navigate`
+/ `appLink` / `appLinkProps` inside a function named like a component or a
+hook is an error; module-level helpers, stores and commands stay legal.
+
 `navigate` is also installed into the pane primitive's `app-nav-sink` here, so a
 pane that declares a home app can be promoted into it. Pane sits below tabs and
 cannot import it, hence the sink.

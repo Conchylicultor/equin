@@ -1,6 +1,6 @@
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { appLinkProps } from "@plugins/apps-core/plugins/tabs/web";
+import { useAppLinkProps } from "@plugins/apps-core/plugins/tabs/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { taskDetailRoute } from "@plugins/tasks/plugins/tasks-core/core";
 import {
@@ -15,6 +15,7 @@ import { navIcons } from "@plugins/ui/plugins/icons/core";
  * gateway; no "Open task" until a task is known to be linked.
  */
 export function WorktreeActions() {
+  const inAppLinkProps = useAppLinkProps();
   const place = useWorktreePlace();
   const task = useLinkedTask(place);
   return (
@@ -26,7 +27,7 @@ export function WorktreeActions() {
         <IconButton
           icon={navIcons.expand}
           label="Open task"
-          {...appLinkProps(
+          {...inAppLinkProps(
             taskDetailRoute.link(agentManagerApp, { taskId: task.taskId }),
           )}
         />

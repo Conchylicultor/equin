@@ -1,5 +1,5 @@
 import { useLiveRow } from "@plugins/network/plugins/live/web";
-import { appLink } from "@plugins/apps-core/plugins/tabs/web";
+import { useAppLink } from "@plugins/apps-core/plugins/tabs/web";
 import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { rowReferent } from "@plugins/active-data/plugins/id-chip/web";
 import {
@@ -20,12 +20,16 @@ export function useSongReferent(id: string): IdReferentState {
 
 /**
  * The link to the song in Sonata's player. The player is a full-surface pane
- * of another app, so it is reached by URL (`appLink`), not pushed beside the
- * surface holding the id. The link is built from the route in the library's
+ * of another app, so it is reached by URL (`useAppLink`, which an embed's
+ * boundary answers first), not pushed beside the surface holding the id. The
+ * link is built from the route in the library's
  * `core/`: importing its web barrel here would make the library eager (chips
  * load at boot) and split it from the deferred sources a player hydrates from.
  */
 export function useSongTarget(): (id: string) => LinkTarget {
+  const inAppLink = useAppLink();
   return (id) =>
-    appLink(sonataPlayerRoute.link(sonataApp, { songId: songIdKind.key(id) }));
+    inAppLink(
+      sonataPlayerRoute.link(sonataApp, { songId: songIdKind.key(id) }),
+    );
 }

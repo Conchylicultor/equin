@@ -183,7 +183,7 @@ selected tile and the table toggle are device-local, never part of the spec.
     - `network/live` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/toggle-chip` ×2
-    - `apps-core/tabs.appLink`
+    - `apps-core/tabs.useAppLink`
     - `primitives/css/card.Card`
     - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`

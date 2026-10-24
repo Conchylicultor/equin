@@ -2,7 +2,7 @@ import type { Report } from "@plugins/reports/core";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
-import { appLink } from "@plugins/apps-core/plugins/tabs/web";
+import { useAppLink } from "@plugins/apps-core/plugins/tabs/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { traceDetailRoute } from "@plugins/debug/plugins/trace/plugins/engine/core";
 import { OpTimePayloadSchema } from "../../core";
@@ -16,6 +16,7 @@ const boltIcon = symbol("bolt");
 // View-trace chip deep-linking the coherent-instant evidence when the per-op trip
 // captured one. Rollup rows (no `label`) read "rollup: <kind>" and carry no trace.
 export function OpTimeSummary({ report }: { report: Report }) {
+  const inAppLink = useAppLink();
   const parsed = OpTimePayloadSchema.safeParse(report.data);
   if (!parsed.success) return <>{report.message}</>;
   const d = parsed.data;
@@ -35,7 +36,7 @@ export function OpTimeSummary({ report }: { report: Report }) {
       {d.traceId && (
         <LinkChip
           leading={<Icon icon={boltIcon} className="icon-auto" />}
-          activation={appLink(
+          activation={inAppLink(
             traceDetailRoute.link(debugApp, { id: d.traceId! }),
           )}
         >

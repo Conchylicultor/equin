@@ -284,7 +284,7 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `infra/endpoints` ×3
     - `primitives/log-channels` ×2
     - `primitives/pane` ×2
-    - `apps-core/tabs.appLink`
+    - `apps-core/tabs.useAppLink`
     - `apps/debug/shell.DebugApp`
     - `build/deployment.DeploymentChain`
     - `config_v2.ConfigV2`

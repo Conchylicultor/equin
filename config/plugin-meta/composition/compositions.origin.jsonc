@@ -1,4 +1,4 @@
-// @hash e8905fd741bc
+// @hash 627cad693162
 {
   "manifests": [
     {
@@ -29,6 +29,7 @@
         "!conversations.transcript-source.memory.**",
         "!conversations.model-provider.catalog.baseline.**",
         "!tasks.task-title.filed-titles.**",
+        "!infra.host-account.guest.**",
         "!config_v2.browser-store.**",
         "!config_v2.bundled-layer.**"
       ],
@@ -138,7 +139,6 @@
         "!tasks.sidequest-autopilot.**",
         "!tasks.outcome-report.**",
         "!apps.file-explorer.**",
-        "!apps.pages.**",
         "!apps.prototypes.**",
         "!menu-bar.**",
         "!conversations.menu-bar-status.**",
@@ -147,7 +147,8 @@
       ],
       "selectedContributors": [],
       "extends": [
-        "agent-manager"
+        "agent-manager",
+        "pages"
       ],
       "excludes": [],
       "serve": "off",

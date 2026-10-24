@@ -42,7 +42,7 @@ same `SlowEvents.View` slot; it fans out across every worktree DB fork.
   - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×5
     - `primitives/pane` ×3
-    - `apps-core/tabs.appLink`
+    - `apps-core/tabs.useAppLink`
     - `debug/trace/pane.SlowEvents`
     - `network/live.useLiveRow`
     - `primitives/css/badge.Badge`

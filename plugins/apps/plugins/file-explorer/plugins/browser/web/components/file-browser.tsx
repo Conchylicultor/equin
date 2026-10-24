@@ -164,6 +164,9 @@ export function FileBrowser(props: FileBrowserProps): ReactNode {
       />
     );
   }
+  if (home.kind === "unavailable") {
+    return <Placeholder>{home.message}</Placeholder>;
+  }
   return <FileBrowserReady {...props} home={home.home} />;
 }
 

@@ -55,7 +55,7 @@ itself stays a pane concern — this surface only follows the choice made there.
   - Contributes: `ActionBar.Item` → `QuickThemeButton`
   - Uses:
     - `apps-core.useActiveApp`
-    - `apps-core/tabs.appLink`
+    - `apps-core/tabs.useAppLink`
     - `config_v2.useScopeMembership`
     - `primitives/css/control-panel.ControlPanel`
     - `primitives/css/control-panel.ControlPanelPopover`

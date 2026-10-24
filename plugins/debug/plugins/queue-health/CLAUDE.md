@@ -367,7 +367,7 @@ them to include 1, which would put the warning on the same instant as the abort.
     - `Reports.KindView` → `WedgedSummary`
     - `HealthReport.Row` "Job queue" → `QueueDetail`
   - Uses:
-    - `apps-core/tabs.appLinkProps`
+    - `apps-core/tabs.useAppLinkProps`
     - `config_v2.ConfigV2`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`

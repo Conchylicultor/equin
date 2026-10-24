@@ -1,6 +1,6 @@
 import { useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
-import { appLinkProps } from "@plugins/apps-core/plugins/tabs/web";
+import { useAppLinkProps } from "@plugins/apps-core/plugins/tabs/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -26,6 +26,7 @@ const warningIcon = symbol("warning");
  * machine to strand, so it has nothing to pin either.
  */
 export function StrandedConfigNotice() {
+  const inAppLinkProps = useAppLinkProps();
   const audit = useLive(configOrphansReport);
   if (audit.status === "loading" || audit.status === "unavailable") return null;
   if (audit.status === "error") {
@@ -59,7 +60,7 @@ export function StrandedConfigNotice() {
         <Button
           variant="ghost"
           className="bg-warning/20 hover:bg-warning/30"
-          {...appLinkProps(configOrphansRoute.link(debugApp, {}))}
+          {...inAppLinkProps(configOrphansRoute.link(debugApp, {}))}
         >
           Review
         </Button>

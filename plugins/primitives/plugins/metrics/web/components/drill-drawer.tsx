@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { appLink } from "@plugins/apps-core/plugins/tabs/web";
+import { useAppLink } from "@plugins/apps-core/plugins/tabs/web";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
@@ -308,10 +308,11 @@ function DrillRow({
   item: DrillItem;
   metric: CatalogMetric;
 }): ReactNode {
+  const inAppLink = useAppLink();
   return (
     <Row
       {...activationProps(
-        item.link === undefined ? undefined : appLink(item.link.href),
+        item.link === undefined ? undefined : inAppLink(item.link.href),
       )}
     >
       <Fill>

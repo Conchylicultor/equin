@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { appLink } from "@plugins/apps-core/plugins/tabs/web";
+import { useAppLink } from "@plugins/apps-core/plugins/tabs/web";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import {
   DataView,
@@ -66,13 +66,14 @@ export function DismissNotificationAction({
 export function OpenNotificationAction({
   row,
 }: ItemActionProps<Notification>): ReactElement | null {
+  const inAppLink = useAppLink();
   const link = notificationLink(row);
   if (link === undefined) return null;
   return (
     <IconButton
       icon={navIcons.expand}
       label="Open"
-      {...activationProps(appLink(link))}
+      {...activationProps(inAppLink(link))}
     />
   );
 }
@@ -84,6 +85,7 @@ export function OpenNotificationAction({
  * are the popover's own body; the toolbar marks everything read or clears it.
  */
 export function NotificationsView(): ReactElement {
+  const inAppLink = useAppLink();
   return (
     <DataView<Notification>
       storageKey={NOTIFICATIONS_VIEW}
@@ -103,7 +105,7 @@ export function NotificationsView(): ReactElement {
       }}
       rowActivation={(n) => {
         const link = notificationLink(n);
-        return link === undefined ? undefined : appLink(link);
+        return link === undefined ? undefined : inAppLink(link);
       }}
       itemActions={NotificationItemActions}
       actions={<BulkActions />}

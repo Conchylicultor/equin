@@ -3,7 +3,7 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
-import { appLinkProps } from "@plugins/apps-core/plugins/tabs/web";
+import { useAppLinkProps } from "@plugins/apps-core/plugins/tabs/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { taskDetailRoute } from "@plugins/tasks/plugins/tasks-core/core";
 import type { TaskSubject } from "@plugins/tasks/plugins/task-subject/core";
@@ -180,6 +180,7 @@ function ViewTask({
   noun,
   presentation,
 }: InvestigateCommon & { taskId: string }) {
+  const appLinkProps = useAppLinkProps();
   const link = appLinkProps(taskDetailRoute.link(agentManagerApp, { taskId }));
   if (presentation === "row-action") {
     return (

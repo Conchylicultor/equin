@@ -4,7 +4,7 @@ import {
   readBlockAsMarkdown,
 } from "@plugins/page/plugins/markdown-apply/server";
 import { todoBlock } from "@plugins/page/plugins/annotations/plugins/todo/core";
-import { PAGES_CATEGORY_ID } from "@plugins/page/plugins/prompt/plugins/link/server";
+import { PAGES_CATEGORY_ID } from "@plugins/page/plugins/prompt/plugins/link/core";
 import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import { createTask } from "@plugins/tasks/plugins/tasks-core/server";
 import { scheduleTaskTitleUpdate } from "@plugins/tasks/plugins/task-title/server";

@@ -5,7 +5,7 @@ import {
   liveBlocks,
   deleteBlocksSubtree,
 } from "@plugins/page/plugins/editor/server";
-import { _pageBlocksOriginExt } from "./tables";
+import { pageBlocksOrigin } from "@plugins/apps/plugins/pages/plugins/agent-origin/server";
 
 // 24h: comfortably longer than the "open the page and see why the assertion
 // failed" window that made per-script teardown unnecessary, short enough that a
@@ -16,7 +16,7 @@ const AGENT_PAGE_TTL_DAYS = 1;
  * The nightly sweep. The retention primitive's own DELETE is hardcoded to
  * `spec.table`, so the MARKER is the sweep target and the pages themselves are
  * removed by `beforeDelete` — exactly how the trash plugin drives
- * `purgeTrashedPages` (`infra/trash/server/internal/purge.ts`).
+ * `purgeTrashedPages` (`infra/trash/machine/internal/purge.ts`).
  *
  * `deleteBlocksSubtree` is THE delete chokepoint: a page root in the cascade set
  * always takes the TRASH path (soft delete + a `trash_entries` row), so the
@@ -32,7 +32,7 @@ const AGENT_PAGE_TTL_DAYS = 1;
  * per-worktree DB fork — each fork sweeps its own marked pages.
  */
 export const agentPagesSweep = defineRetention({
-  table: _pageBlocksOriginExt,
+  table: pageBlocksOrigin.table,
   column: "createdAt",
   ttlDays: AGENT_PAGE_TTL_DAYS,
   perWorktree: true,

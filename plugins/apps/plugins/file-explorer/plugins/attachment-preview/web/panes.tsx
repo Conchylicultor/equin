@@ -14,6 +14,7 @@ import {
   ResourceErrorInline,
 } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { attachmentFile } from "@plugins/infra/plugins/attachments/core";
 import type { AttachedFileRef } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import {
@@ -70,6 +71,9 @@ function AttachmentPreview(): ReactNode {
         refetch={home.refetch}
       />
     );
+  }
+  if (home.kind === "unavailable") {
+    return <Placeholder>{home.message}</Placeholder>;
   }
   return matchResource(file, {
     loading: () => <Loading />,

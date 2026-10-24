@@ -13,7 +13,7 @@
     - `DebugApp.Sidebar` "Config Orphans"
     - `ConfigNavSlots.Notice` → `StrandedConfigNotice`
   - Uses:
-    - `apps-core/tabs.appLinkProps`
+    - `apps-core/tabs.useAppLinkProps`
     - `apps/debug/shell.DebugApp`
     - `config_v2/settings.ConfigNavSlots`
     - `network/live.useLive`

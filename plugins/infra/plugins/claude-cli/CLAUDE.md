@@ -227,7 +227,6 @@ block keep taking a plain `ClaudeCliCall`.
   - Imported by:
     - `apps/events/sources/source-detail/runs/model-call`
     - `apps/events/sources/url-extract`
-    - `apps/pages/auto-icon`
     - `apps/places/places-core`
     - `debug/claude-cli-calls`
 - Exemptions:

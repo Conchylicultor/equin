@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { navigate } from "@plugins/apps-core/plugins/tabs/web";
+import { useNavigate } from "@plugins/apps-core/plugins/tabs/web";
 import { useFocusedAppId } from "@plugins/apps-core/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
@@ -77,6 +77,7 @@ const FAREWELL_MS = 4800;
  * scene is a transition of the same elements.
  */
 export function HintHost() {
+  const goToApp = useNavigate();
   const engine = useEngineState();
   // Not known (loading, or a failed read) is `null`: nothing shows and nothing
   // auto-starts until the seen state is known.
@@ -136,9 +137,9 @@ export function HintHost() {
         `startTour("${id}"): no Hints.Tour declares it (declared: ${tours.map((t) => t.id).join(", ") || "none"})`,
       );
     }
-    if (focusedApp !== tour.app.id) navigate(tour.app.basePath);
+    if (focusedApp !== tour.app.id) goToApp(tour.app.basePath);
     runTour(tour);
-  }, [engine.requestedTour, tours, focusedApp]);
+  }, [engine.requestedTour, tours, focusedApp, goToApp]);
 
   // ── autoStart: once, when unseen and its app is focused ──
   useEffect(() => {

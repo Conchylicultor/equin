@@ -46,12 +46,15 @@ export function usePinnedPlaces(): PlacesState {
   if (config.status === "loading" || home.kind === "pending") {
     return { kind: "pending" };
   }
-  if (home.kind === "failed") {
+  if (home.kind === "failed" || home.kind === "unavailable") {
     return {
       kind: "failed",
       label: "Pinned favorites",
       icon: starIcon,
-      message: "The home directory is not known",
+      message:
+        home.kind === "unavailable"
+          ? home.message
+          : "The home directory is not known",
     };
   }
   return {

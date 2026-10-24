@@ -1,6 +1,7 @@
 import { BUILD_CATEGORY_ID } from "@plugins/build/core";
 import { CONVERSATIONS_CATEGORY_ID } from "@plugins/conversations/core";
 import { IMPROVEMENTS_CATEGORY_ID } from "@plugins/improve/core";
+import { PAGES_CATEGORY_ID } from "@plugins/page/plugins/prompt/plugins/link/core";
 import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/core";
 import {
   agentIdKind,
@@ -11,8 +12,10 @@ import type { TaskTrack } from "@plugins/tasks/plugins/task-track/core";
 
 // The Agent Manager demo's story: a small notes app ("Lumen") with a handful of
 // agents at work. The open conversation is an agent that tracked down why dark
-// mode resets on reload, fixed it, tested it, and is waiting for review. The
-// queue holds three other agents mid-task; the Done list two finished ones.
+// mode resets on reload, fixed it, tested it, and is waiting for review — launched
+// from a prompt on the Lumen workspace's Bugs page (`./pages`), where it left
+// its findings. The queue holds three other agents mid-task; the Done list two
+// finished ones.
 // Every id carries `demo`, so a request that leaked to the real server is
 // findable in its logs. Written into the demo's browser host by its seed
 // (`bin/seed.ts`), each story's transcript by `./transcripts`.
@@ -28,6 +31,12 @@ export type Status = "starting" | "working" | "waiting" | "gone" | "done";
 export interface Story {
   key: string;
   task: string;
+  /**
+   * What the user asked, word for word: the task's description and the
+   * session's first user turn (and, for a story launched from a page, the
+   * prompt block's text). {@link Story.task} when absent.
+   */
+  prompt?: string;
   title: string;
   status: Status;
   model: typeof OPUS;
@@ -74,6 +83,14 @@ export const DEMO_AGENTS: readonly DemoAgent[] = [
   },
 ];
 
+/**
+ * The dark-mode story's prompt: ONE constant for the prompt block it was
+ * launched from (`./pages`), the task's description and the session's first
+ * user turn, so the three cannot disagree.
+ */
+const DARK_MODE_PROMPT =
+  "Dark mode resets to light every time I reload the app. Can you find out why and fix it?";
+
 /** One agent per task: conversation `conv-demo-<key>`, attempt `att-demo-<key>`, task `task-demo-<key>`. */
 export const STORIES: readonly Story[] = [
   {
@@ -81,8 +98,11 @@ export const STORIES: readonly Story[] = [
     shortTitle: "Dark mode reload",
     phase: "implementation",
     note: "Repro: switch to dark, reload, it comes back light. Check that the fix survives a hard reload too.",
-    category: IMPROVEMENTS_CATEGORY_ID,
+    // Launched from the Bugs page's prompt block (`./pages`), so filed where a
+    // prompt-launched task is.
+    category: PAGES_CATEGORY_ID,
     task: "Dark mode resets after a reload",
+    prompt: DARK_MODE_PROMPT,
     title: "Persist the theme choice across reloads",
     status: "waiting",
     model: OPUS,
@@ -154,6 +174,17 @@ export const STORIES: readonly Story[] = [
     endedAgo: 23 * HOUR,
   },
 ];
+
+/** The story under `key` — loud when no story has it. */
+export function storyByKey(key: string): Story {
+  const story = STORIES.find((s) => s.key === key);
+  if (story === undefined)
+    throw new Error(`no demo story has the key "${key}"`);
+  return story;
+}
+
+/** What the user asked ({@link Story.prompt}, else the task's title). */
+export const promptOf = (s: Story) => s.prompt ?? s.task;
 
 export const conversationId = (s: Story) => `conv-demo-${s.key}`;
 export const attemptId = (s: Story) => `att-demo-${s.key}`;

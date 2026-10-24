@@ -33,7 +33,7 @@ import {
   importMidiBytes,
   type MidiSongMeta,
 } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/midi/web";
-import { navigate } from "@plugins/apps-core/plugins/tabs/web";
+import { useNavigate } from "@plugins/apps-core/plugins/tabs/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
@@ -240,6 +240,7 @@ function Facts({
  * Sonata at the preview's playhead bar (the URL carries it; the label does not).
  */
 function OpenInSonata({ file, bytes }: { file: FileRef; bytes: ArrayBuffer }) {
+  const goToApp = useNavigate();
   const { score, stop } = useSession();
   const cursor = useCursorApi();
   const fetchEndpoint = useFetchEndpoint();
@@ -254,7 +255,7 @@ function OpenInSonata({ file, bytes }: { file: FileRef; bytes: ArrayBuffer }) {
         bytes,
         fileRefName(file),
       );
-      navigate(sonataSongLink(song.id, bar));
+      goToApp(sonataSongLink(song.id, bar));
     } catch (err) {
       showToast({
         title: "Could not open in Sonata",

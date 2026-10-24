@@ -87,7 +87,6 @@ and endpoint contract are consumed by this plugin's own `web` and `server` only.
   - Exports (values):
     - `createTaskFromPromptBlock`
     - `getPromptTaskOrigin`
-    - `PAGES_CATEGORY_ID`
     - `promptBlock`
   - Resources:
     - `prompt-block-tasks` (keyed, window)
@@ -107,9 +106,11 @@ and endpoint contract are consumed by this plugin's own `web` and `server` only.
     - `usePromptTaskLink`
 - Cross-plugin:
   - Imported by:
+    - `apps/agent-manager/demo`
     - `apps/pages/prompt-origin`
-    - `page/annotations/todo/task-link`
     - `page/prompt/block`
+- Core:
+  - Exports (values): `PAGES_CATEGORY_ID`
 - Shared:
   - Exports (types):
     - `CreatePromptBlockTaskBody`

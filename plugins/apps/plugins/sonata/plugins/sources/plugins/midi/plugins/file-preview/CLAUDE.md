@@ -54,7 +54,7 @@ preview, then the same in Sonata after Open in Sonata.
     - `apps/sonata/session` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/ui-kit` ×2
-    - `apps-core/tabs.navigate`
+    - `apps-core/tabs.useNavigate`
     - `apps/sonata/library.sonataSongLink`
     - `infra/endpoints.useFetchEndpoint`
     - `primitives/css/center.Center`

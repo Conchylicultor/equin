@@ -764,6 +764,86 @@ describe("applyPageBlockPatch — a page the patch creates", () => {
   });
 });
 
+describe("applyPageBlockPatch — the workspace root (pageId null)", () => {
+  const rootPatch = (p: Partial<Parameters<typeof applyPageBlockPatch>[1]>) =>
+    applyPageBlockPatch(
+      null,
+      { creates: [], updates: [], deleteIds: [], ...p },
+      t.db,
+    );
+
+  test("mints a root page with its body and sub-page, and reads back the root pages", async () => {
+    await seedPage();
+    await t.db.execute(sql`DELETE FROM event_emissions`);
+    const { blocks } = await rootPatch({
+      creates: [
+        blockOf({
+          id: "R",
+          parentId: null,
+          pageId: null,
+          type: "page",
+          rank: "a5",
+        }),
+        blockOf({
+          id: "R1",
+          parentId: "R",
+          pageId: "R",
+          type: "text",
+          rank: "a0",
+          text: "intro",
+        }),
+        blockOf({
+          id: "RS",
+          parentId: "R",
+          pageId: "R",
+          type: "page",
+          rank: "a1",
+        }),
+      ],
+    });
+    expect(await row("R")).toMatchObject({ pageId: null, parentId: null });
+    expect(await row("R1")).toMatchObject({ pageId: "R", parentId: "R" });
+    expect(await row("RS")).toMatchObject({ pageId: "R", parentId: "R" });
+    // The read-back is the root's own rows: every root page, the seeded one too.
+    expect(blocks.map((b) => b.id)).toEqual(["P", "R"]);
+    // No event for the root itself — only for the pages the patch created.
+    const res = await t.db.execute<{ page_id: string }>(
+      sql`SELECT payload->>'pageId' AS page_id FROM event_emissions
+          WHERE event_name = 'page.blocksChanged'`,
+    );
+    expect(res.rows.map((r) => r.page_id).sort()).toEqual(["R", "RS"]);
+  });
+
+  test("updates and deletes a root page it reads under the root lock", async () => {
+    await seedPage();
+    await rootPatch({
+      updates: [{ id: "P", changes: { rank: Rank.from("a9") } }],
+    });
+    expect(await row("P")).toMatchObject({ rank: "a9" });
+    await rootPatch({ deleteIds: ["P"] });
+    expect((await row("P"))?.deletedAt).not.toBeNull();
+  });
+
+  test("a root patch may not create inside an existing page", async () => {
+    await seedPage();
+    const message = await refusedWith(
+      rootPatch({
+        creates: [
+          blockOf({
+            id: "c3",
+            parentId: "P",
+            pageId: "P",
+            type: "text",
+            rank: "a5",
+          }),
+        ],
+      }),
+      400,
+    );
+    expect(message).toMatch(/created under page P/);
+  });
+});
+
 describe("a data edit never changes a page's author — refused on every rewrite path", () => {
   /** P ▸ [HUMAN (a human's sub-page), AGENT (an agent-authored one)]. */
   async function seedPages(): Promise<void> {

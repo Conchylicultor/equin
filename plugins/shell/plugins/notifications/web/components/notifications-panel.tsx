@@ -4,7 +4,7 @@ import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { matchesFilter } from "@plugins/network/plugins/live/plugins/filter/core";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
-import { appLink } from "@plugins/apps-core/plugins/tabs/web";
+import { useAppLink } from "@plugins/apps-core/plugins/tabs/web";
 import { afterOpen } from "@plugins/primitives/plugins/link-gesture/core";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
@@ -51,6 +51,7 @@ function NotificationRow({
   dismiss: (id: string) => void;
   onClose: () => void;
 }) {
+  const inAppLink = useAppLink();
   const link = notificationLink(n);
   return (
     <Stack
@@ -59,7 +60,7 @@ function NotificationRow({
       gap="sm"
       className={`px-md py-sm border-l-2 ${n.muted ? VARIANT_BORDER_MUTED[n.variant] : VARIANT_BORDER[n.variant]} hover:bg-muted/50 ${link !== undefined ? "cursor-pointer" : ""}`}
       {...activationProps(
-        link !== undefined ? afterOpen(appLink(link), onClose) : undefined,
+        link !== undefined ? afterOpen(inAppLink(link), onClose) : undefined,
       )}
     >
       <NotificationBody n={n} />
@@ -333,6 +334,7 @@ export function NotificationsPanel({
   empty: boolean;
   onClose: () => void;
 }) {
+  const inAppLink = useAppLink();
   const [filter, setFilter] = useState<Filter>({ kind: "all" });
   const dismissAll = useEndpointMutation(dismissAllNotifications);
 
@@ -372,7 +374,7 @@ export function NotificationsPanel({
             className="text-muted-foreground hover:text-foreground"
             {...activationProps(
               afterOpen(
-                appLink(notificationsRoute.link(debugApp, {})),
+                inAppLink(notificationsRoute.link(debugApp, {})),
                 onClose,
               ),
             )}

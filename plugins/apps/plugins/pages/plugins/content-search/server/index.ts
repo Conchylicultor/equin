@@ -3,20 +3,22 @@ import { Trigger } from "@plugins/infra/plugins/events/server";
 import { blocksChanged, BlockLifecycle } from "@plugins/page/plugins/editor/server";
 import { reindexPageSearchJob } from "./internal/reindex-job";
 import { backfillPagesSearchJob } from "./internal/backfill-job";
-import { pagesSearchBackfillWarmup } from "./internal/backfill-warmup";
 import {
   deletePagesSearchHook,
   trashPagesSearchHook,
   restorePagesSearchHook,
 } from "./internal/delete-hook";
 
+export { reindexPageSearch } from "./internal/reindex-page";
+export { backfillPagesSearchJob } from "./internal/backfill-job";
+
 export default {
+  portable: true,
   description:
-    "Pages full-text search consumer: indexes pages into the search engine, reindexing on blocksChanged and seeding existing pages via a one-shot boot backfill.",
-  // The backfill warm-up enqueues the seed scan off the serving-critical boot
-  // path (see backfill-warmup.ts); the jobs back both it and the steady-state
-  // reindex trigger.
-  register: [reindexPageSearchJob, backfillPagesSearchJob, pagesSearchBackfillWarmup],
+    "Pages full-text search consumer: indexes pages into the search engine, reindexing on blocksChanged, with the backfill job that seeds existing pages (enqueued at boot by the machine half's warm-up); reindexPageSearch derives one page's doc directly.",
+  // The jobs back both the machine half's backfill warm-up and the
+  // steady-state reindex trigger.
+  register: [reindexPageSearchJob, backfillPagesSearchJob],
   contributions: [
     // Reindex a page's search doc whenever its blocks change. Declared (not
     // imperatively bound) so the events plugin makes it idempotent across

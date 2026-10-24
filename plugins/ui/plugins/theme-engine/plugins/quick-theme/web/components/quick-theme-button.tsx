@@ -2,7 +2,7 @@ import { useState } from "react";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ControlPanelPopover } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { useActiveApp } from "@plugins/apps-core/web";
-import { appLink } from "@plugins/apps-core/plugins/tabs/web";
+import { useAppLink } from "@plugins/apps-core/plugins/tabs/web";
 import { afterOpen } from "@plugins/primitives/plugins/link-gesture/core";
 import { themeCustomizerRoute } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { QuickThemePanel } from "./quick-theme-panel";
@@ -18,18 +18,21 @@ const paletteIcon = symbol("palette");
  *
  * Both mount points render OUTSIDE every `<PaneSurfaceProvider>`, so this has no
  * pane store — `useOpenPane()` would throw. Global chrome navigates through the
- * cross-app `navigate()` (as an `appLink`). The customizer opens in the ACTIVE app (it styles that
- * app's theme scope), so the link is the active app's base path plus the route's
- * own segment.
+ * cross-app navigation (`useAppLink`). The customizer opens in the ACTIVE app
+ * (it styles that app's theme scope), so the link is the active app's base
+ * path plus the route's own segment.
  */
 export function QuickThemeButton() {
+  const inAppLink = useAppLink();
   const [open, setOpen] = useState(false);
   const activeApp = useActiveApp();
 
   // Closing the popover rides the plain open only: an "elsewhere" gesture
   // leaves this tab, and so this popover, where it is.
   const editor = afterOpen(
-    appLink(`${activeApp?.app.basePath ?? ""}${themeCustomizerRoute.path({})}`),
+    inAppLink(
+      `${activeApp?.app.basePath ?? ""}${themeCustomizerRoute.path({})}`,
+    ),
     () => setOpen(false),
   );
 

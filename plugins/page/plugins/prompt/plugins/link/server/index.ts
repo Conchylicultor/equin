@@ -2,12 +2,11 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { TaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import { promptBlockTasksServed } from "./internal/resource";
 import { handleCreatePromptBlockTask } from "./internal/routes";
-import { PAGES_CATEGORY_ID } from "./internal/mutations";
+import { PAGES_CATEGORY_ID } from "../core";
 import { createPromptBlockTask } from "../shared/endpoints";
 
 export { promptBlock } from "./internal/tables";
 export {
-  PAGES_CATEGORY_ID,
   createTaskFromPromptBlock,
   getPromptTaskOrigin,
 } from "./internal/mutations";

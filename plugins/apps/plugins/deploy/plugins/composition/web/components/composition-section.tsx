@@ -1,6 +1,6 @@
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import type { ReactNode } from "react";
-import { appLink } from "@plugins/apps-core/plugins/tabs/web";
+import { useAppLink } from "@plugins/apps-core/plugins/tabs/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
@@ -90,6 +90,7 @@ function CompositionCard({
 }: {
   item: CompositionManifestItem;
 }): ReactNode {
+  const inAppLink = useAppLink();
   return (
     <Stack gap="md">
       <Stack gap="2xs">
@@ -98,7 +99,7 @@ function CompositionCard({
             mono
             leading={<Icon icon={layersIcon} />}
             tooltip={`Open “${item.name}” in Studio`}
-            activation={appLink(
+            activation={inAppLink(
               compositionDetailRoute.link(studioApp, { id: item.id }),
             )}
           >

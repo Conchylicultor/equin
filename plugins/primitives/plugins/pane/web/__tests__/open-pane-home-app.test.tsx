@@ -67,6 +67,18 @@ const guestPane = Pane.define({
   component: () => null,
 });
 
+// A host pane whose from-scratch parent is the guest's: its Back, at the
+// route's root, opens a route headed by another app's pane.
+const hostUnderGuest = Pane.define({
+  route: defineRoute({
+    id: "home-host-under-guest",
+    segment: "under",
+    parent: guestParentRoute,
+  }),
+  app: hostApp,
+  component: () => null,
+});
+
 const plugins = [
   {
     id: "open-pane-home-app-test-plugin",
@@ -75,6 +87,7 @@ const plugins = [
       Pane.Register({ pane: hostPane }),
       Pane.Register({ pane: guestParent }),
       Pane.Register({ pane: guestPane }),
+      Pane.Register({ pane: hostUnderGuest }),
     ],
   } as unknown as LoadedPlugin,
 ];
@@ -251,5 +264,49 @@ describe("openPane (imperative): the same rule", () => {
     openPaneImperative(guestPane, { step: "6" }, { mode: "root" });
     expect(navigated).toEqual(["/guest/acc/setup/6"]);
     expect(shape()).toEqual(["home-host-list"]);
+  });
+});
+
+describe("useBack: a parent of another app goes through the boundary", () => {
+  function BackButton() {
+    const back = hostUnderGuest.useBack();
+    return (
+      <button type="button" disabled={back === null} onClick={() => back?.()}>
+        back
+      </button>
+    );
+  }
+
+  function mountBack(boundary?: (url: string) => void): HTMLElement {
+    store.restoreRoute([{ paneId: "home-host-under-guest", params: {} }]);
+    const button = (
+      <PaneInstanceContext.Provider value={store.getRoute()[0]!.instanceId}>
+        <BackButton />
+      </PaneInstanceContext.Provider>
+    );
+    const view = render(
+      <TestSurface store={store} plugins={plugins} basePath="/host">
+        {boundary ? (
+          <AppNavBoundary navigator={boundary}>{button}</AppNavBoundary>
+        ) : (
+          button
+        )}
+      </TestSurface>,
+    );
+    return view.getByRole("button");
+  }
+
+  it("inside a boundary, the stranded route is the boundary's, never the installed navigator's", () => {
+    const bounded: string[] = [];
+    fireEvent.click(mountBack((url) => bounded.push(url)));
+    expect(bounded).toEqual(["/guest/acc"]);
+    expect(navigated).toEqual([]);
+    expect(shape()).toEqual(["home-host-under-guest"]);
+  });
+
+  it("outside any boundary, it goes to the installed navigator", () => {
+    fireEvent.click(mountBack());
+    expect(navigated).toEqual(["/guest/acc"]);
+    expect(shape()).toEqual(["home-host-under-guest"]);
   });
 });

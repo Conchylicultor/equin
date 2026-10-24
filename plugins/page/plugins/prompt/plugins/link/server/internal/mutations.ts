@@ -3,11 +3,8 @@ import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
 import { scheduleTaskTitleUpdate } from "@plugins/tasks/plugins/task-title/server";
 import { synthesiseTitleFallback } from "@plugins/tasks/plugins/task-title/core";
 import type { CreatePromptBlockTaskBody } from "../../shared/endpoints";
+import { PAGES_CATEGORY_ID } from "../../core";
 import { promptBlock } from "./tables";
-
-// The category prompt-launched tasks are stamped with; the plugin contributes
-// the matching TaskCategory registration from its barrel.
-export const PAGES_CATEGORY_ID = "pages";
 
 // The page/block a task was launched from, or undefined when the task did not
 // come from a prompt block.

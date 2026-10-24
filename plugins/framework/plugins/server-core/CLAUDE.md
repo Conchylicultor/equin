@@ -189,7 +189,8 @@ composition boots two. Today's services: `database.driver`,
 `database.migration-source`, `jobs.queue`, `log-channels.persistence`,
 `attachments.blobs`, `tasks-core.push-ledger`,
 `conversations.transcript-source`, `model-provider.catalog-source`,
-`task-title.generator`, `config-v2.store`, `config-v2.git-layer` (each declared
+`task-title.generator`, `config-v2.store`, `config-v2.git-layer`,
+`host-account.source` (each declared
 `export const X = defineHostService<…>("<id>")`).
 
 - **Placement is checked** (`check/`, `host-services:provider-placement`):

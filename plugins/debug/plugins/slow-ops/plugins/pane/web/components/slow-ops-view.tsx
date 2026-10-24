@@ -9,19 +9,14 @@ import {
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
-import { appLink } from "@plugins/apps-core/plugins/tabs/web";
-import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
-import { traceDetailRoute } from "@plugins/debug/plugins/trace/plugins/engine/core";
-import { symbol } from "@plugins/ui/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
   slowOpsList,
   type SlowOpListRow,
 } from "@plugins/debug/plugins/slow-ops/core";
 import { slowOpDetailPane } from "../panes";
+import { TraceChip } from "./trace-chip";
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
 const SLOW_OPS_LOCAL = defineDataView("debug.slow-ops.local");
@@ -37,8 +32,6 @@ const opsSource = liveDataSource(slowOpsList, {
 });
 
 const ms = (v: number): string => `${Math.round(v)}`;
-
-const boltIcon = symbol("bolt");
 
 // How the derived fields present here (the collection declares their labels,
 // types and filters; every sortable / filterable field's id IS its column).
@@ -69,16 +62,7 @@ const overrides = fieldOverrides(slowOpsList, {
         >
           {r.operation}
         </Text>
-        {r.lastTraceId && (
-          <LinkChip
-            leading={<Icon icon={boltIcon} className="icon-auto" />}
-            activation={appLink(
-              traceDetailRoute.link(debugApp, { id: r.lastTraceId }),
-            )}
-          >
-            trace
-          </LinkChip>
-        )}
+        {r.lastTraceId && <TraceChip traceId={r.lastTraceId} />}
       </Stack>
     ),
     width: "minmax(0,1fr)",

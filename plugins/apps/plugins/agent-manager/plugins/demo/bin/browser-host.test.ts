@@ -85,12 +85,23 @@ import {
   taskRows,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import {
+  DARK_MODE_PAGE_WORK,
   DEMO_AGENTS,
+  DEMO_PAGE_IDS,
   DEMO_STORIES,
   demoAgentId,
   demoConversationId,
+  demoPromptOf,
+  demoStoryByKey,
   demoTaskId,
 } from "../core";
+import type { ToolCallEvent } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
+import { parsePageApplyReport } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/page-tools/core";
+import { readBlockAsMarkdown } from "@plugins/page/plugins/markdown-apply/server";
+import { loadPageTags } from "@plugins/page/plugins/tags/server";
+import { promptBlock } from "@plugins/page/plugins/prompt/plugins/link/server";
+import { PAGES_CATEGORY_ID } from "@plugins/page/plugins/prompt/plugins/link/core";
+import { searchResults } from "@plugins/search/plugins/engine/core";
 import { hostReads } from "../core/browser-host.generated";
 import { conversationTurns } from "@plugins/conversations/plugins/turn-ledger/core";
 import { DEMO_CONVERSATION_ID } from "../core/internal/scenario";
@@ -286,7 +297,10 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
     );
   });
 
-  test("the open conversation's transcript parses from its JSONL", async () => {
+  /** The open conversation's events, oldest first, as the real parser reads its JSONL. */
+  async function openConversationEvents(): Promise<
+    ({ kind: string; name?: string; text?: string } | ToolCallEvent)[]
+  > {
     // One page as large as the ceiling: the whole (short) transcript, newest first.
     const rows = (await loadResourceByKey(
       jsonlEvents.key,
@@ -295,12 +309,156 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
         { limit: JSONL_EVENTS_MAX, after: null, until: null },
       ),
     )) as { event: { kind: string; name?: string } }[];
-    const events = rows.map((r) => r.event).reverse();
+    return rows.map((r) => r.event).reverse();
+  }
+  const toolCalls = async (suffix: string) =>
+    (await openConversationEvents()).filter(
+      (e): e is ToolCallEvent =>
+        e.kind === "tool-call" && (e.name ?? "").endsWith(suffix),
+    );
+
+  test("the open conversation's transcript parses from its JSONL", async () => {
+    const events = await openConversationEvents();
     expect(events[0]?.kind).toBe("user-text");
     expect(
       events.filter((e) => e.kind === "tool-call").map((e) => e.name),
-    ).toEqual(["Grep", "Read", "Edit", "Write", "Write", "Bash"]);
+    ).toEqual([
+      "mcp__equin__read_page",
+      "mcp__equin__read_page",
+      "Grep",
+      "Read",
+      "mcp__equin__edit_page",
+      "Edit",
+      "Write",
+      "Write",
+      "Bash",
+      "mcp__equin__write_agent_note",
+    ]);
     expect(events.at(-1)?.kind).toBe("assistant-text");
+  });
+
+  /** Every live page row: id → [parent, page, title]. */
+  async function livePages(): Promise<
+    Map<string, [string | null, string | null, string]>
+  > {
+    const rows = await db.execute<{
+      id: string;
+      parent_id: string | null;
+      page_id: string | null;
+      title: string;
+    }>(
+      sql`SELECT id, parent_id, page_id, data->>'title' AS title FROM page_blocks
+          WHERE type = 'page' AND deleted_at IS NULL`,
+    );
+    return new Map(
+      rows.rows.map((r) => [r.id, [r.parent_id, r.page_id, r.title]]),
+    );
+  }
+
+  test("the Lumen workspace: its pages, their hierarchy, and the page the agent minted", async () => {
+    const pages = await livePages();
+    const { lumen, spec, bugs, ideas } = DEMO_PAGE_IDS;
+    expect(pages.get(lumen)).toEqual([null, null, "Lumen"]);
+    expect(pages.get(ideas)).toEqual([null, null, "Ideas"]);
+    expect(pages.get(spec)).toEqual([lumen, lumen, "Theme & storage spec"]);
+    expect(pages.get(bugs)).toEqual([lumen, lumen, "Bugs"]);
+    const seeded = new Set<string>([lumen, spec, bugs, ideas]);
+    const minted = [...pages].filter(([id]) => !seeded.has(id));
+    expect(minted.map(([, v]) => v)).toEqual([
+      [bugs, bugs, DARK_MODE_PAGE_WORK.investigationTitle],
+    ]);
+  });
+
+  test("the backlinks index holds the inline link from Lumen to the spec", async () => {
+    const edges = await db.execute<{ source: string; target: string }>(
+      sql`SELECT source_page_id AS source, target_page_id AS target FROM page_links`,
+    );
+    expect(edges.rows).toContainEqual({
+      source: DEMO_PAGE_IDS.lumen,
+      target: DEMO_PAGE_IDS.spec,
+    });
+  });
+
+  test("the pages carry their tags and Lumen its star", async () => {
+    expect(
+      (await loadPageTags(DEMO_PAGE_IDS.lumen)).map((t) => t.name),
+    ).toEqual(["In progress"]);
+    expect((await loadPageTags(DEMO_PAGE_IDS.bugs)).map((t) => t.name)).toEqual(
+      ["Bug"],
+    );
+    const starred = await db.execute<{ id: string }>(
+      sql`SELECT parent_id AS id FROM page_blocks_ext_starred`,
+    );
+    expect(starred.rows.map((r) => r.id)).toEqual([DEMO_PAGE_IDS.lumen]);
+  });
+
+  test("the dark-mode task was launched from the Bugs page's prompt block", async () => {
+    const story = demoStoryByKey("dark-mode");
+    expect(story.category).toBe(PAGES_CATEGORY_ID);
+    expect(await promptBlock.get(demoTaskId(story))).toMatchObject({
+      pageId: DEMO_PAGE_IDS.bugs,
+      blockId: DEMO_PAGE_IDS.prompt,
+    });
+    const prompt = await db.execute<{ text: string }>(
+      sql`SELECT data->'text'->0->>'text' AS text FROM page_blocks WHERE id = ${DEMO_PAGE_IDS.prompt}`,
+    );
+    expect(prompt.rows[0]?.text).toBe(demoPromptOf(story));
+  });
+
+  test("the transcript records the agent's real page work, and its writes are stamped", async () => {
+    // A read of a page the agent never wrote reads back today as it did then.
+    const [readOrigin, readSpec] = await toolCalls("read_page");
+    expect(readSpec!.result?.content).toBe(
+      await readBlockAsMarkdown(DEMO_PAGE_IDS.spec, { meta: true }),
+    );
+    expect(readOrigin!.result?.content).toContain(
+      demoPromptOf(demoStoryByKey("dark-mode")),
+    );
+
+    const [edit] = await toolCalls("edit_page");
+    const report = parsePageApplyReport(edit!);
+    expect(report).not.toBeNull();
+    expect(report!.page_id).toBe(DEMO_PAGE_IDS.bugs);
+    expect(report!.replaced).toBe(1);
+    const pages = await livePages();
+    const investigation = [...pages].find(
+      ([, v]) => v[2] === DARK_MODE_PAGE_WORK.investigationTitle,
+    )![0];
+    expect(report!.created_page_ids).toEqual([investigation]);
+    expect(report!.note_ids).toHaveLength(2);
+    const [card, page] = report!.note_ids as [string, string];
+    expect(page).toBe(investigation);
+
+    const [note] = await toolCalls("write_agent_note");
+    const noted = parsePageApplyReport(note!);
+    expect(noted!.scope_id).toBe(card);
+    expect(noted!.note_ids).toEqual([card]);
+
+    const authors = await db.execute<{
+      block_id: string;
+      conversation_id: string;
+    }>(
+      sql`SELECT block_id, conversation_id FROM page_blocks_agent_authors ORDER BY block_id`,
+    );
+    expect(
+      authors.rows.map((r) => [r.block_id, r.conversation_id]).sort(),
+    ).toEqual(
+      [
+        [card, DEMO_CONVERSATION_ID],
+        [investigation, DEMO_CONVERSATION_ID],
+      ].sort(),
+    );
+    // The card holds the note's final contents, and the agent page is the agent's.
+    const cardRead = await readBlockAsMarkdown(card!);
+    expect(cardRead).toContain(DARK_MODE_PAGE_WORK.cardDone);
+  });
+
+  test("full-text search finds a seeded page on PGlite", async () => {
+    const hits = (await loadResourceByKey(
+      searchResults.key,
+      searchResults.query.encode({ q: "storage spec", sources: ["pages"] }),
+    )) as { entityId: string }[];
+    expect(hits.map((h) => h.entityId)).toContain(DEMO_PAGE_IDS.spec);
   });
 
   test("every read the coverage guard derived is served by the booted host or declares needsMachine", () => {

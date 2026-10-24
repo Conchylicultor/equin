@@ -38,7 +38,7 @@ Auth state and affordances come only from
     - `Core.Root`
   - Uses:
     - `apps-core.Apps`
-    - `apps-core/tabs.navigate`
+    - `apps-core/tabs.useNavigate`
     - `integrations/gmail.GmailAccessEmptyState`
     - `integrations/gmail.useGmailAccess`
     - `layouts/miller.MillerColumns`

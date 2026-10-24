@@ -91,7 +91,7 @@ DataView (`web/components/notifications-view.tsx`):
     - `primitives/cursor-pagination` ×2
     - `primitives/live-state` ×2
     - `primitives/pane` ×2
-    - `apps-core/tabs.appLink`
+    - `apps-core/tabs.useAppLink`
     - `apps/debug/shell.DebugApp`
     - `ids.IdKinds`
     - `network/live.useLive`

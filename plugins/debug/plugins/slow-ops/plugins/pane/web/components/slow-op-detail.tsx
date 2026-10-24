@@ -12,13 +12,9 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { appLink } from "@plugins/apps-core/plugins/tabs/web";
-import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
-import { traceDetailRoute } from "@plugins/debug/plugins/trace/plugins/engine/core";
 import {
   slowOpById,
   slowOpCallers,
@@ -32,10 +28,7 @@ import {
   SPAN_MEASURES,
   type SpanMeasure,
 } from "@plugins/infra/plugins/runtime-profiler/core";
-import { symbol } from "@plugins/ui/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
-
-const boltIcon = symbol("bolt");
+import { TraceChip } from "./trace-chip";
 
 // Markers scraped by codegen (data-views.generated.ts). Must live in web/**.
 const SLOW_OP_CALLERS = defineDataView("debug.slow-op.callers");
@@ -119,16 +112,7 @@ function SlowOpBody({ op }: { op: SlowOp }): ReactElement {
             <Badge variant="muted" mono>
               {op.operationKind}
             </Badge>
-            {traceId && (
-              <LinkChip
-                leading={<Icon icon={boltIcon} className="icon-auto" />}
-                activation={appLink(
-                  traceDetailRoute.link(debugApp, { id: traceId }),
-                )}
-              >
-                newest trace
-              </LinkChip>
-            )}
+            {traceId && <TraceChip traceId={traceId}>newest trace</TraceChip>}
           </Stack>
           <Text as="div" variant="code" className="break-all">
             {op.operation}
@@ -305,17 +289,7 @@ const sampleFields: FieldDef<SampleRow>[] = [
     label: "Trace",
     type: "text",
     value: (r) => r.traceId ?? "",
-    cell: (r) =>
-      r.traceId ? (
-        <LinkChip
-          leading={<Icon icon={boltIcon} className="icon-auto" />}
-          activation={appLink(
-            traceDetailRoute.link(debugApp, { id: r.traceId }),
-          )}
-        >
-          trace
-        </LinkChip>
-      ) : null,
+    cell: (r) => (r.traceId ? <TraceChip traceId={r.traceId} /> : null),
     width: "5rem",
   },
 ];

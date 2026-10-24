@@ -3,7 +3,7 @@ import {
   useGmailAccess,
   GmailAccessEmptyState,
 } from "@plugins/integrations/plugins/gmail/web";
-import { navigate } from "@plugins/apps-core/plugins/tabs/web";
+import { useNavigate } from "@plugins/apps-core/plugins/tabs/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
@@ -17,6 +17,7 @@ import { mailApp } from "../../core";
  * "connected" card.
  */
 export function MailRoot(): ReactElement {
+  const goToApp = useNavigate();
   const { blocker, loading, ready, error, refetch } = useGmailAccess();
 
   // Fire the mailbox redirect exactly once per mount, on the edge where the
@@ -29,9 +30,9 @@ export function MailRoot(): ReactElement {
   useEffect(() => {
     if (ready && !redirected.current) {
       redirected.current = true;
-      navigate(`${mailApp.basePath}/threads`);
+      goToApp(`${mailApp.basePath}/threads`);
     }
-  }, [ready]);
+  }, [ready, goToApp]);
 
   if (loading) {
     return (

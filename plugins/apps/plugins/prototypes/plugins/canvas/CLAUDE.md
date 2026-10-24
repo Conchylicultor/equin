@@ -464,7 +464,7 @@ navigation, so it starts from nothing remembered.
     - `primitives/optimistic-mutation` ×2
     - `primitives/pane` ×2
     - `primitives/slot-render` ×2
-    - `apps-core/tabs.appLinkProps`
+    - `apps-core/tabs.useAppLinkProps`
     - `apps/prototypes/state.usePrototypeState`
     - `network/live.useLive`
     - `primitives/adaptive-bar.AdaptiveBar`

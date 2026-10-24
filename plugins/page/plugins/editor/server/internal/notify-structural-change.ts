@@ -1,5 +1,6 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { PAGE_BLOCK_TYPE } from "../../core/schemas";
+import type { PageScope } from "./page-forest";
 import { blocksChanged } from "./tables-events";
 
 /**
@@ -7,7 +8,8 @@ import { blocksChanged } from "./tables-events";
  * (the `applyBlockOp` and `patch` handlers both call this). It:
  *
  *   1. emits `blocksChanged` for the edited page so the link/image reindexers
- *      refresh;
+ *      refresh — none for the workspace root (`pageId: null`), which is no
+ *      page's content: its rows are pages, announced by 3 when created;
  *   2. for any `type="page"` block in the deleted set, emits its `blocksChanged`;
  *      and
  *   3. for any `type="page"` block the edit CREATED, emits its `blocksChanged` —
@@ -23,7 +25,7 @@ import { blocksChanged } from "./tables-events";
  */
 export async function notifyStructuralChange(
   args: {
-    pageId: string;
+    pageId: PageScope;
     /**
      * Rows removed from the page's live content by this edit (hard-deleted OR
      * trashed), to fan out one `blocksChanged` per emptied sub-page. Only `id` and
@@ -45,7 +47,8 @@ export async function notifyStructuralChange(
   // name. If that emit is ever wanted here, pass a `blockId` — do not go back to
   // deriving a `type` from the edited blocks, which selected the branch without
   // supplying what it needs and so did nothing at all.
-  await blocksChanged.emit({ pageId: args.pageId }, opts);
+  if (args.pageId !== null)
+    await blocksChanged.emit({ pageId: args.pageId }, opts);
 
   const deletedPages = args.deletedRows.filter(
     (r) => r.type === PAGE_BLOCK_TYPE,

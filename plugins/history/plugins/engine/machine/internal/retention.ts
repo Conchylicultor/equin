@@ -1,5 +1,5 @@
 import { defineRetention } from "@plugins/infra/plugins/retention/server";
-import { _entityVersions } from "./tables";
+import { _entityVersions } from "@plugins/history/plugins/engine/server";
 
 // `entity_versions` is an unbounded-growth firehose: one row accrues per edit of
 // a versioned entity. `recordVersion` coalesces edits inside a ~10-min window
@@ -34,7 +34,7 @@ import { _entityVersions } from "./tables";
 // This `defineRetention` call IS `entity_versions`'s growth bound — there is no
 // separate "firehose" declaration to make. The bound is recorded in the
 // growth-bound registry only when `entityVersionsRetention` is mounted in
-// `register: [...]` (see `../index.ts`), so a defined-but-unmounted policy records
+// `register: [...]` (see `../index.ts`, the machine half), so a defined-but-unmounted policy records
 // nothing rather than lying about coverage.
 export const entityVersionsRetention = defineRetention({
   table: _entityVersions,

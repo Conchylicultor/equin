@@ -177,7 +177,6 @@ card, not a collection.
     - `page/editor.Editor`
     - `page/markdown-apply.loadBlockScope`
     - `page/markdown-apply.readBlockAsMarkdown`
-    - `page/prompt/link.PAGES_CATEGORY_ID`
     - `tasks/task-category.setTaskCategory`
     - `tasks/task-title.scheduleTaskTitleUpdate`
     - `tasks/tasks-core._tasks`

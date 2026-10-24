@@ -30,7 +30,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { subThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
-import { appLinkProps } from "@plugins/apps-core/plugins/tabs/web";
+import { useAppLinkProps } from "@plugins/apps-core/plugins/tabs/web";
 import { conversationRoute } from "@plugins/conversations/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import type {
@@ -347,13 +347,14 @@ function RevealOnMount(): ReactElement {
 export function OpenVersionConversation({
   row,
 }: ItemActionProps<PrototypeVersion>) {
+  const inAppLinkProps = useAppLinkProps();
   const convId = row.conversationId;
   if (convId === null) return null;
   return (
     <IconButton
       icon={navIcons.expand}
       label="Open the conversation that made it"
-      {...appLinkProps(conversationRoute.link(agentManagerApp, { convId }))}
+      {...inAppLinkProps(conversationRoute.link(agentManagerApp, { convId }))}
     />
   );
 }

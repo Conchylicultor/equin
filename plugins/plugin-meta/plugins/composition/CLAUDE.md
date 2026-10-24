@@ -40,10 +40,11 @@ pins both facts).
 `agent-manager-demo` (`profile`, `serve: "off"`, home `agent-manager`) is the
 composition the Agent Manager demo's browser host serves
 (`apps/agent-manager/demo/bin/browser-host.composition.ts`): it `extends:
-["agent-manager"]` and only subtracts what means nothing without the computer
-— push-and-exit, automations (`tasks.automations.**`, every automation and the
-outcome-report card with it), `stats.**` and the file explorer — and, for
-now, Pages and Prototypes (D5). Its web plugins are the scope the demo page renders in
+["agent-manager", "pages"]` — the agent manager with the Pages app beside it,
+so the demo can switch to it — and only subtracts what means nothing without
+the computer — push-and-exit, automations (`tasks.automations.**`, every
+automation and the outcome-report card with it), `stats.**` and the file
+explorer — and, for now, Prototypes (its files live on disk). Its web plugins are the scope the demo page renders in
 (`web-sdk`'s `<PluginScope>`) and its portable server barrels the worker's
 graph, both derived by codegen (`browser-host-gen.ts`). Everything a plugin in
 this scope reads, calls or registers must be served by the worker's graph or

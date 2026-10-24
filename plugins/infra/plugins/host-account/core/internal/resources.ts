@@ -3,9 +3,11 @@ import { liveValue } from "@plugins/network/plugins/live/core";
 import { HostAccountSchema } from "./account";
 
 /**
- * The OS account this backend runs as. Read once per backend process (it does
- * not change under a running process) and pushed like any value. No
- * placeholder: until the first read lands, `useLive` reports it loading.
+ * The account this instance runs as — the OS account on the desktop, a fixed
+ * guest account on a host without the computer (the `HostAccountSource` host
+ * service). Read once per backend process (it does not change under a running
+ * process) and pushed like any value. No placeholder: until the first read
+ * lands, `useLive` reports it loading.
  */
 export const hostAccount = liveValue("host-account", {
   schema: HostAccountSchema,
@@ -16,8 +18,11 @@ export const hostAccount = liveValue("host-account", {
  * `~` stands for in every host path the server reads. A sibling of
  * {@link hostAccount} rather than a field of it: it is known without the
  * full-name read, so a surface that only needs `~` never waits on (or fails
- * with) that spawn.
+ * with) that spawn. Served by the machine half.
  */
 export const hostHome = liveValue("host-account.home", {
   schema: z.string().min(1),
+  // The process environment of the computer: a host without one (the demo)
+  // has no home folder to name, so its readers render the unavailable arm.
+  needsMachine: { feature: "Your home folder" },
 });

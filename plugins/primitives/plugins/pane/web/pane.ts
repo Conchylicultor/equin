@@ -41,6 +41,7 @@ import {
   navigateApp,
   useAppNavBoundary,
   useAppNavigator,
+  type AppNavigator,
 } from "./app-nav-sink";
 import {
   linkProps,
@@ -796,11 +797,22 @@ export interface PaneStore {
    * brings back a conversation's saved layout).
    */
   restoredRouteUrl(slots: Parameters<PaneStore["restoreRoute"]>[0]): string;
-  /** Open a pane (non-positional). Used by `promote` and the open hooks. */
+  /**
+   * Open a pane (non-positional). Used by `promote` and the open hooks.
+   * `crossApp` is where a route headed by another app's pane goes instead
+   * ({@link strandedRouteUrl}) — required, so every caller states it: a hook
+   * passes the navigator its subtree reaches (`useAppNavigator()`, an embed's
+   * boundary first), the imperative `openPane` the installed one.
+   */
   openPaneImpl(
     internal: PaneInternal,
     params: Record<string, string>,
-    opts?: { root?: boolean; options?: PaneOptions; hint?: PaneHintBag },
+    opts: {
+      root?: boolean;
+      options?: PaneOptions;
+      hint?: PaneHintBag;
+      crossApp: AppNavigator;
+    },
   ): void;
   close(internal: PaneInternal, instanceId: number): void;
   unwrap(instanceId: number): void;
@@ -1106,17 +1118,22 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
   function openPaneImpl(
     internal: PaneInternal,
     params: Record<string, string>,
-    implOpts?: { root?: boolean; options?: PaneOptions; hint?: PaneHintBag },
+    implOpts: {
+      root?: boolean;
+      options?: PaneOptions;
+      hint?: PaneHintBag;
+      crossApp: AppNavigator;
+    },
   ): void {
     const next = computeOpen(currentSlots(), undefined, internal, params, {
-      mode: implOpts?.root ? "root" : "push",
-      options: implOpts?.options,
-      hint: implOpts?.hint,
+      mode: implOpts.root ? "root" : "push",
+      options: implOpts.options,
+      hint: implOpts.hint,
     });
     const away = next.changed
       ? strandedRouteUrl(currentBasePath, next.route)
       : null;
-    if (away !== null) navigateApp(away);
+    if (away !== null) implOpts.crossApp(away);
     else apply(next);
   }
 
@@ -2494,6 +2511,10 @@ function makePaneObject(
     const store = usePaneStore();
     const instanceId = useContext(PaneInstanceContext);
     const route = useRouteSlots();
+    // A parent of another app is a stranded route: it goes through the
+    // navigator this subtree reaches — an embed's boundary first — never
+    // straight to the installed one (`navigateApp` throws when there is none).
+    const navigator = useAppNavigator();
     return useMemo(() => {
       if (close) return close;
       if (instanceId === undefined) return null;
@@ -2508,8 +2529,12 @@ function makePaneObject(
       const params = route[0]!.params;
       const required = segmentRequiredParamNames(parent.segment);
       if (required.some((name) => !(name in params))) return null;
-      return () => store.openPaneImpl(parent, params, { root: true });
-    }, [close, store, instanceId, route]);
+      return () =>
+        store.openPaneImpl(parent, params, {
+          root: true,
+          crossApp: navigator ?? navigateApp,
+        });
+    }, [close, store, instanceId, route, navigator]);
   }
 
   /**
@@ -3162,6 +3187,8 @@ export function openPane<
       root: opts.mode === "root",
       options: opts.options as PaneOptions | undefined,
       hint: opts.hint as PaneHintBag | undefined,
+      // Imperative: no subtree, so no boundary — the installed navigator.
+      crossApp: navigateApp,
     });
 }
 

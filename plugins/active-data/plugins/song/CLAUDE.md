@@ -22,7 +22,7 @@ shape and stay plain text.
   - Uses:
     - `active-data/id-chip.idChip`
     - `active-data/id-chip.rowReferent`
-    - `apps-core/tabs.appLink`
+    - `apps-core/tabs.useAppLink`
     - `network/live.useLiveRow`
 - Server:
   - Contributes:

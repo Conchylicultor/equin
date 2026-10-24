@@ -287,11 +287,11 @@ Exhibits: `hints/card`, `hints/spotlight`, `hints/welcome`.
     - `Shortcuts.Shortcut` "hints.tour-back (ArrowLeft)"
     - `Shortcuts.Shortcut` "hints.tour-end (Escape)"
     - `Shortcuts.Shortcut` "hints.tour-next (ArrowRight)"
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/live-state` ×3
+    - `apps-core/tabs` ×2
     - `primitives/css/ui-kit` ×2
     - `primitives/dom/in-view` ×2
-    - `apps-core/tabs.navigate`
     - `apps-core.useFocusedAppId`
     - `infra/endpoints.useFetchEndpoint`
     - `network/live.useLive`

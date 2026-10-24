@@ -24,12 +24,14 @@ import {
  * The user's home directory, absolute — what `~` stands for. Every comparison
  * between a typed path and a listed one goes through it. Read from the
  * backend account's `host-account.home` live value (fixed for the process);
- * pending until it arrives.
+ * pending until it arrives. `unavailable` on a host without the computer (the
+ * demo), which has no home folder — `message` says so.
  */
 export type HomeDir =
   | { kind: "pending" }
   | { kind: "ready"; home: string }
-  | { kind: "failed"; error: ResourceError; refetch: () => Promise<void> };
+  | { kind: "failed"; error: ResourceError; refetch: () => Promise<void> }
+  | { kind: "unavailable"; message: string };
 
 export function useHomeDir(): HomeDir {
   const home = useLive(hostHome);
@@ -40,6 +42,8 @@ export function useHomeDir(): HomeDir {
       return { kind: "failed", error: home.error, refetch: home.refetch };
     case "ready":
       return { kind: "ready", home: home.data };
+    case "unavailable":
+      return { kind: "unavailable", message: home.message };
   }
 }
 

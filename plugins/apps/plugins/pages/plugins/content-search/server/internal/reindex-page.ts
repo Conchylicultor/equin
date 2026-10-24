@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import {
@@ -12,6 +11,7 @@ import {
   deleteSearchDocs,
 } from "@plugins/search/plugins/engine/server";
 import type { SearchDoc } from "@plugins/search/plugins/engine/core";
+import { sha256Hex } from "@plugins/packages/plugins/string-hash/core";
 
 // The search source id this plugin owns. Exported so the backfill reads back the
 // exact same source's indexed docs.
@@ -71,9 +71,7 @@ export async function buildPageSearchDoc(
     .join("\n");
   const icon = data.icon;
 
-  const contentHash = createHash("sha256")
-    .update(JSON.stringify({ title, body, icon }))
-    .digest("hex");
+  const contentHash = sha256Hex(JSON.stringify({ title, body, icon }));
 
   return {
     contentHash,

@@ -33,10 +33,10 @@ import {
   TabsProvider,
   peekSurfaceEmpty,
   useTabs,
-  appLinkProps,
   placementOwnsChrome,
   usePlacementCapabilities,
   useSurfaceMode,
+  useAppLinkProps,
 } from "@plugins/apps-core/plugins/tabs/web";
 import { AppTabsBody } from "@plugins/apps-core/plugins/tab-surface/web";
 import { isChromelessDocument } from "@plugins/primitives/plugins/embed/web";
@@ -282,6 +282,7 @@ function NoSuchRouteSurface({
   homePath: string | undefined;
   homeName: string | undefined;
 }) {
+  const inAppLinkProps = useAppLinkProps();
   return (
     <Center className="size-full">
       <Stack gap="sm" align="center" className="max-w-md">
@@ -296,7 +297,7 @@ function NoSuchRouteSurface({
           {pathname}
         </Badge>
         {homePath ? (
-          <Button variant="outline" {...appLinkProps(homePath)}>
+          <Button variant="outline" {...inAppLinkProps(homePath)}>
             Go to {homeName ?? "the home app"}
           </Button>
         ) : null}

@@ -14,6 +14,7 @@ export interface CollectedEntry {
 
 export const lintEntries: CollectedEntry[] = [
   { pluginPath: "apps-core", id: "apps-core", loader: () => import("@plugins/apps-core/lint"), dependsOn: [] },
+  { pluginPath: "apps-core/plugins/tabs", id: "apps-core.tabs", loader: () => import("@plugins/apps-core/plugins/tabs/lint"), dependsOn: [] },
   { pluginPath: "apps/plugins/events/plugins/events-core", id: "apps.events.events-core", loader: () => import("@plugins/apps/plugins/events/plugins/events-core/lint"), dependsOn: [] },
   { pluginPath: "config_v2/plugins/config-link", id: "config_v2.config-link", loader: () => import("@plugins/config_v2/plugins/config-link/lint"), dependsOn: [] },
   { pluginPath: "conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card", id: "conversations.conversation-view.jsonl-viewer.collapsible-card", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/lint"), dependsOn: [] },

@@ -8,7 +8,7 @@ import {
   setPageIcon,
 } from "@plugins/page/plugins/editor/server";
 import { textOf } from "@plugins/page/plugins/editor/core";
-import { pageBlocksAutoIcon } from "./tables";
+import { pageBlocksAutoIcon } from "@plugins/apps/plugins/pages/plugins/auto-icon/server";
 import {
   buildIconPrompt,
   PAGE_CONTENT_CHARS,

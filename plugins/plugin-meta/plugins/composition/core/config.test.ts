@@ -272,6 +272,7 @@ test("the base-exclusions row keeps the browser-only host-service providers out 
     "conversations.transcript-source.memory",
     "conversations.model-provider.catalog.baseline",
     "tasks.task-title.filed-titles",
+    "infra.host-account.guest",
     "config_v2.browser-store",
     "config_v2.bundled-layer",
   ]) {
@@ -286,14 +287,16 @@ test("main's entry points stay exactly `**` — the exclusion lives on the base 
   expect(byName(MAIN_COMPOSITION_ID).entryPoints).toEqual(["**"]);
 });
 
-test("the demo profile is the agent manager minus machine-only surfaces", () => {
+test("the demo profile is the agent manager and Pages minus machine-only surfaces", () => {
   // `agent-manager-demo` is what the in-page demo's browser host serves: it
-  // takes the full agent manager by `extends` and only SUBTRACTS — every own
-  // entry is a negative and it selects nothing — so a plugin the agent manager
-  // gains reaches the demo with no edit here. Never served, same home.
+  // takes the full agent manager and the Pages app by `extends` and only
+  // SUBTRACTS — every own entry is a negative and it selects nothing — so a
+  // plugin either app gains reaches the demo with no edit here. Never served,
+  // same home.
   const demo = byName("agent-manager-demo");
   expect(demo.category).toBe("profile");
-  expect(demo.extends).toEqual(["agent-manager"]);
+  expect(demo.extends).toEqual(["agent-manager", "pages"]);
+  expect(demo.entryPoints).not.toContain("!apps.pages.**");
   expect(demo.selectedContributors).toEqual([]);
   expect(demo.entryPoints.length).toBeGreaterThan(0);
   for (const e of demo.entryPoints) expect(e.startsWith("!")).toBe(true);

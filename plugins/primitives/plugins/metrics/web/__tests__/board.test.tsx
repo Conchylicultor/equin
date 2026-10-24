@@ -22,7 +22,14 @@ vi.mock("@plugins/primitives/plugins/outline/plugins/rail/web", () => ({
   ),
 }));
 const nav = vi.hoisted(() => ({ navigate: vi.fn() }));
-vi.mock("@plugins/apps-core/plugins/tabs/web", () => nav);
+vi.mock("@plugins/apps-core/plugins/tabs/web", () => ({
+  ...nav,
+  // The rows link through the hook form (an embed's boundary first).
+  useAppLink: () => (url: string) => ({
+    open: () => nav.navigate(url),
+    href: () => url,
+  }),
+}));
 
 const PENDING = vi.hoisted(() => ({
   status: "loading" as const,

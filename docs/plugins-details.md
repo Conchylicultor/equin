@@ -440,7 +440,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `active-data/id-chip.idChip`
           - `active-data/id-chip.rowReferent`
-          - `apps-core/tabs.appLink`
+          - `apps-core/tabs.useAppLink`
           - `network/live.useLiveRow`
       - Server:
         - Contributes:
@@ -529,17 +529,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/agents.agentLaunchIdKind`
               - `conversations/model-provider.ConversationModelSchema`
               - `improve.IMPROVEMENTS_CATEGORY_ID`
+              - `page/editor.blockIdKind`
+              - `page/inline-page-link.pageLinkToken`
+              - `page/prompt/link.PAGES_CATEGORY_ID`
             - Exports (types):
               - `DemoAgent`
+              - `DemoContentBlock`
+              - `DemoNode`
+              - `DemoPage`
+              - `DemoPageSession`
+              - `DemoPageToolCall`
               - `DemoStory`
             - Exports (values):
               - `agentManagerDemo`
+              - `DARK_MODE_PAGE_WORK`
               - `DEMO_AGENTS`
+              - `DEMO_PAGE_IDS`
+              - `DEMO_PAGES`
               - `DEMO_STORIES`
               - `demoAgentId`
               - `demoAgentLaunchId`
               - `demoAttemptId`
               - `demoConversationId`
+              - `demoPromptOf`
+              - `demoStoryByKey`
               - `demoTaskId`
               - `demoTranscriptJsonl`
               - `demoWorktreePath`
@@ -1963,7 +1976,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Contributes: `DeploymentDetail.Section` "Composition" → `CompositionSection`
             - Uses:
-              - `apps-core/tabs.appLink`
+              - `apps-core/tabs.useAppLink`
               - `apps/deploy/deployments.DeploymentDetail`
               - `network/live.useLiveRow`
               - `plugin-meta/composition.useManifestItemByName`
@@ -3805,6 +3818,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/file-explorer/browser.PreviewPane`
               - `apps/file-explorer/browser.useHomeDir`
               - `network/live.useLive`
+              - `primitives/css/placeholder.Placeholder`
               - `primitives/live-state.foldResource`
               - `primitives/live-state.matchResource`
               - `primitives/live-state.ResourceErrorInline`
@@ -4590,7 +4604,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Core.Root`
             - Uses:
               - `apps-core.Apps`
-              - `apps-core/tabs.navigate`
+              - `apps-core/tabs.useNavigate`
               - `integrations/gmail.GmailAccessEmptyState`
               - `integrations/gmail.useGmailAccess`
               - `layouts/miller.MillerColumns`
@@ -4780,7 +4794,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: `apps/mail/search`
     - **`pages`** — Notion-like pages app.
       - Plugins:
-        - **`agent-origin`** — Agent-origin provenance for pages: presents the exposed `origin` field (Private / Scratch) of the Pages sidebar DataView, so pages written by an automated session land in their own Scratch section of the sidebar. Agent-origin provenance for pages (page_blocks_ext_origin): a create-hook contributor stamps every page written by an automated session (x-singularity-origin: agent) with the script that minted it, the marker's presence is exposed as the `origin` field (agent | user) of every list whose rows are blocks — the Pages sidebar's Private / Scratch sections — and a 24h retention sweep trashes the marked pages.
+        - **`agent-origin`** — Agent-origin provenance for pages: presents the exposed `origin` field (Private / Scratch) of the Pages sidebar DataView, so pages written by an automated session land in their own Scratch section of the sidebar. Agent-origin provenance for pages (page_blocks_ext_origin): a create-hook contributor stamps every page written by an automated session (x-singularity-origin: agent) with the script that minted it, the marker's presence is exposed as the `origin` field (agent | user) of every list whose rows are blocks — the Pages sidebar's Private / Scratch sections — and the machine half's 24h retention sweep trashes the marked pages.
           - Web:
             - Contributes: `FieldPresentation.Register` "exposure:page_blocks_ext_origin"
             - Uses: `network/live.FieldPresentation`
@@ -4791,43 +4805,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `live.columns.expose` "page_blocks ← page_blocks_ext_origin"
               - `page.editor.block.afterCreate`
             - Uses:
-              - `database.db`
               - `infra/entity-extensions.defineExtension`
-              - `infra/retention.defineRetention`
               - `network/live.LiveColumns`
               - `page/editor._blocks`
               - `page/editor.BlockLifecycle`
-              - `page/editor.deleteBlocksSubtree`
-              - `page/editor.liveBlocks`
             - DB schema: `plugins/apps/plugins/pages/plugins/agent-origin/server/internal/tables.ts`
             - Entity extension of: `page/editor` (table `page_blocks_ext_origin`)
             - Exports (values): `pageBlocksOrigin`
+          - Machine:
             - Register: `defineJob('retention.page_blocks_ext_origin')`
-        - **`auto-icon`** — Regenerate action for the page icon picker: a footer row that forces a new auto-picked emoji for the page pending while the pick runs in the request. Auto-generated page emoji icons: once a page's edits settle (10 s after the last blocksChanged), Haiku picks an emoji from its title + content, avoiding its siblings' icons, and writes it only if the page still has none. A page_blocks_ext_auto_icon row records that generation ran, so it never runs again unasked; Regenerate forces a new pick; a boot backfill covers existing pages.
+        - **`auto-icon`** — Regenerate action for the page icon picker: a footer row that forces a new auto-picked emoji for the page pending while the pick runs in the request. Auto-icon provenance (page_blocks_ext_auto_icon): a row records that icon generation ran for a page, so it never runs again unasked. Everything model-driven — the pick, its jobs, the boot backfill and Regenerate — is the machine half's.
           - Server:
             - Contributes: `trigger` "pages.auto-icon.schedule"
             - Uses:
-              - `database.db`
-              - `infra/claude-cli.runClaudePrint`
-              - `infra/endpoints.implement`
               - `infra/entity-extensions.defineExtension`
-              - `infra/events.Trigger`
-              - `infra/jobs.defineJob`
-              - `infra/warmup.defineWarmup`
               - `page/editor._blocks`
-              - `page/editor.blocksChanged`
-              - `page/editor.liveBlocks`
-              - `page/editor.PAGE_BLOCK_TYPE`
-              - `page/editor.pageData`
-              - `page/editor.setPageIcon`
             - DB schema: `plugins/apps/plugins/pages/plugins/auto-icon/server/internal/tables.ts`
             - Entity extension of: `page/editor` (table `page_blocks_ext_auto_icon`)
-            - Register:
-              - `defineJob('pages.auto-icon.generate')`
-              - `defineJob('pages.auto-icon.schedule')`
-              - `defineJob('pages.auto-icon.backfill')`
-              - `defineWarmup('pages.auto-icon.backfill')`
-            - Routes: `POST /api/pages/:pageId/auto-icon/regenerate`
+            - Exports (values): `pageBlocksAutoIcon`
           - Web:
             - Uses:
               - `infra/endpoints.useEndpointMutation`
@@ -4835,9 +4830,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/loading.Loading`
               - `ui/icons.Icon`
             - Exports (values): `RegenerateIconAction`
+          - Machine:
+            - Uses: `infra/endpoints.implementMachine`
+            - Register:
+              - `defineJob('pages.auto-icon.generate')`
+              - `defineJob('pages.auto-icon.schedule')`
+              - `defineJob('pages.auto-icon.backfill')`
+              - `defineWarmup('pages.auto-icon.backfill')`
+            - Routes: `POST /api/pages/:pageId/auto-icon/regenerate`
           - Cross-plugin:
             - Imported by: `apps/pages/page-tree`
-        - **`content-search`** — Pages full-text search consumer: contributes the Search button into the Pages sidebar, opening the reusable quick-find dialog scoped to the pages source. Pages full-text search consumer: indexes pages into the search engine, reindexing on blocksChanged and seeding existing pages via a one-shot boot backfill.
+        - **`content-search`** — Pages full-text search consumer: contributes the Search button into the Pages sidebar, opening the reusable quick-find dialog scoped to the pages source. Pages full-text search consumer: indexes pages into the search engine, reindexing on blocksChanged, with the backfill job that seeds existing pages (enqueued at boot by the machine half's warm-up); reindexPageSearch derives one page's doc directly.
           - Web:
             - Contributes: `Pages.Sidebar` "Search" → `PagesSearch`
             - Uses:
@@ -4858,7 +4861,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database.db`
               - `infra/events.Trigger`
               - `infra/jobs.defineJob`
-              - `infra/warmup.defineWarmup`
               - `page/editor.BlockDeleteHook`
               - `page/editor.BlockLifecycle`
               - `page/editor.BlockRestoreHook`
@@ -4871,10 +4873,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `search/engine.deleteSearchDocs`
               - `search/engine.getSourceDocMetadata`
               - `search/engine.upsertSearchDocs`
+            - Exports (values):
+              - `backfillPagesSearchJob`
+              - `reindexPageSearch`
             - Register:
               - `defineJob('pages.search.reindex')`
               - `defineJob('pages.search.backfill')`
-              - `defineWarmup('pages.search.backfill')`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --muted`
@@ -4890,8 +4894,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-medium`
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-label`
-          - Exemptions:
-            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/reindex-page.ts` (debt)
+          - Machine:
+            - Register: `defineWarmup('pages.search.backfill')`
         - **`copy-id`** — Copy block ID button next to the title in the page-detail header: copies the open page's block id (the id agents' page tools take) to the clipboard.
           - Web:
             - Contributes: `pageDetailPane.Actions` "copy-id" → `CopyIdAction`
@@ -5809,7 +5813,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/optimistic-mutation` ×2
               - `primitives/pane` ×2
               - `primitives/slot-render` ×2
-              - `apps-core/tabs.appLinkProps`
+              - `apps-core/tabs.useAppLinkProps`
               - `apps/prototypes/state.usePrototypeState`
               - `network/live.useLive`
               - `primitives/adaptive-bar.AdaptiveBar`
@@ -8667,7 +8671,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `apps/sonata/session` ×2
                       - `primitives/css/spacing` ×2
                       - `primitives/css/ui-kit` ×2
-                      - `apps-core/tabs.navigate`
+                      - `apps-core/tabs.useNavigate`
                       - `apps/sonata/library.sonataSongLink`
                       - `infra/endpoints.useFetchEndpoint`
                       - `primitives/css/center.Center`
@@ -10614,10 +10618,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Web: `@plugins/apps-core/web/testing`
       - `getFocusedAppId`
   - Plugins:
-    - **`app-embed`** — <AppEmbed app route onLeave? />: one app surface rendered in-process — the SurfaceCore a tab mounts — with its own non-live pane store (seeded with route, never touching the page URL), its app theme scope (transform-gpu, so a fixed sidebar stays in the embed) and an AppNavBoundary: same-app URLs move the embed's route, any other app is onLeave (default: a toast). Knows nothing about demos or where data comes from.
+    - **`app-embed`** — <AppEmbed app route onLeave? />: one app surface rendered in-process — the SurfaceCore a tab mounts — with its own non-live pane store (seeded with route, never touching the page URL), its app theme scope (transform-gpu, so a fixed sidebar stays in the embed) and an AppNavBoundary resolving URLs against the tab apps in scope: the shown app's URLs move the embed's route, another scope app's swap the embed to that app (a fresh non-live store, its theme scope), anything else is onLeave (default: a toast). Knows nothing about demos or where data comes from.
       - Web:
         - Uses:
+          - `apps-core.ActiveApp`
           - `apps-core.Apps`
+          - `apps-core.resolveAppForPath`
           - `apps-core/tab-surface.SurfaceCore`
           - `apps-core/tabs.appPathFor`
           - `primitives/css/theme-boundary.Theme`
@@ -10626,7 +10632,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/pane.AppNavBoundary`
           - `primitives/pane.AppNavigator`
           - `primitives/pane.createPaneStore`
-          - `primitives/pane.stripBasePath`
+          - `primitives/pane.PaneStore`
           - `shell/toast.showToast`
         - Exports (types): `AppEmbedLeave`
         - Exports (values): `AppEmbed`
@@ -11876,7 +11882,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `infra/endpoints` ×3
       - `primitives/log-channels` ×2
       - `primitives/pane` ×2
-      - `apps-core/tabs.appLink`
+      - `apps-core/tabs.useAppLink`
       - `apps/debug/shell.DebugApp`
       - `build/deployment.DeploymentChain`
       - `config_v2.ConfigV2`
@@ -12846,7 +12852,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Uses:
           - `apps-core.useActiveApp`
-          - `apps-core/tabs.appLink`
+          - `apps-core/tabs.useNavigate`
           - `config_v2.useConfigRegistrations`
           - `config_v2/settings.configDetailRoute`
           - `primitives/css/fill.Fill`
@@ -19038,8 +19044,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadKnownRelations`
       - `quotedRelationsIn`
   - Cross-plugin:
-    - Imported by: 123 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
-      - `apps` ×34
+    - Imported by: 121 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+      - `apps` ×32
       - `page` ×15
       - `infra` ×13
       - `conversations` ×12
@@ -20263,7 +20269,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DebugApp.Sidebar` "Config Orphans"
           - `ConfigNavSlots.Notice` → `StrandedConfigNotice`
         - Uses:
-          - `apps-core/tabs.appLinkProps`
+          - `apps-core/tabs.useAppLinkProps`
           - `apps/debug/shell.DebugApp`
           - `config_v2/settings.ConfigNavSlots`
           - `network/live.useLive`
@@ -20846,7 +20852,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Reports.KindView` → `OpRateSummary`
           - `Reports.KindView` → `OpTimeSummary`
         - Uses:
-          - `apps-core/tabs.appLink`
+          - `apps-core/tabs.useAppLink`
           - `config_v2.ConfigV2`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
@@ -21492,7 +21498,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Reports.KindView` → `WedgedSummary`
           - `HealthReport.Row` "Job queue" → `QueueDetail`
         - Uses:
-          - `apps-core/tabs.appLinkProps`
+          - `apps-core/tabs.useAppLinkProps`
           - `config_v2.ConfigV2`
           - `network/live.useLive`
           - `primitives/css/badge.Badge`
@@ -22007,7 +22013,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Core.Root` → `SlowOpCollector`
           - `Reports.KindView` → `SlowOpKindView`
         - Uses:
-          - `apps-core/tabs.appLink`
+          - `apps-core/tabs.useAppLink`
           - `config_v2.ConfigV2`
           - `config_v2.useConfig`
           - `infra/endpoints.fetchEndpointOver`
@@ -22194,7 +22200,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: 22 symbols — full list in [`plugins/debug/plugins/slow-ops/plugins/pane/REFERENCE.md`](../plugins/debug/plugins/slow-ops/plugins/pane/REFERENCE.md)
               - `primitives/data-view` ×5
               - `primitives/pane` ×3
-              - `apps-core/tabs.appLink`
+              - `apps-core/tabs.useAppLink`
               - `debug/trace/pane.SlowEvents`
               - `network/live.useLiveRow`
               - `primitives/css/badge.Badge`
@@ -22224,7 +22230,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConfigV2.WebRegister` "stall-monitor"
           - `Reports.KindView` → `StallSummary`
         - Uses:
-          - `apps-core/tabs.appLink`
+          - `apps-core/tabs.useAppLink`
           - `config_v2.ConfigV2`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
@@ -22259,7 +22265,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Contributes: `Reports.KindView` → `SpanStuckSummary`
         - Uses:
-          - `apps-core/tabs.appLink`
+          - `apps-core/tabs.useAppLink`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
           - `primitives/css/link-chip.LinkChip`
@@ -25377,7 +25383,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/events/sources/salsanueva` (2 debt)
               - `apps/events/sources/url-extract` (1 debt)
               - `apps/file-explorer/git` (2 debt)
-              - `apps/pages/content-search` (1 debt)
               - `apps/places/place-details` (1 debt)
               - `apps/prototypes/files` (12 debt)
               - `apps/prototypes/state` (1 debt)
@@ -25470,7 +25475,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/file-watcher/background-arm` (1 debt)
               - `infra/git/checkout-watch` (1 debt)
               - `infra/git/remotes` (2 debt)
-              - `infra/host-account` (1 debt)
               - `infra/host-fs` (16 debt)
               - `infra/host-fs/image` (2 debt)
               - `infra/host-fs/zip` (1 debt)
@@ -26565,11 +26569,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Shortcuts.Shortcut` "hints.tour-back (ArrowLeft)"
       - `Shortcuts.Shortcut` "hints.tour-end (Escape)"
       - `Shortcuts.Shortcut` "hints.tour-next (ArrowRight)"
-    - Uses: 23 symbols — full list in [`plugins/hints/REFERENCE.md`](../plugins/hints/REFERENCE.md)
+    - Uses: 24 symbols — full list in [`plugins/hints/REFERENCE.md`](../plugins/hints/REFERENCE.md)
       - `primitives/live-state` ×3
+      - `apps-core/tabs` ×2
       - `primitives/css/ui-kit` ×2
       - `primitives/dom/in-view` ×2
-      - `apps-core/tabs.navigate`
       - `apps-core.useFocusedAppId`
       - `infra/endpoints.useFetchEndpoint`
       - `network/live.useLive`
@@ -26881,7 +26885,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --spacing`
         - Imported by: `apps/pages/history`
-    - **`engine`** — Registers the version id kind (ver) with the web id registry — the server barrel registers the same kind. Domain-agnostic versioning substrate: the entity_versions table, a defineHistorySource registry, time-bucketed recordVersion + deleteVersions, the live history.versions timeline and history.version value, and the restore (plus an e2e-only list) endpoints.
+    - **`engine`** — Registers the version id kind (ver) with the web id registry — the server barrel registers the same kind. Domain-agnostic versioning substrate: the entity_versions table, a defineHistorySource registry, time-bucketed recordVersion + deleteVersions, the live history.versions timeline and history.version value, and the restore (plus an e2e-only list) endpoints; the 30-day retention sweep is the machine half's.
       - Web:
         - Contributes: `IdKinds.Kind` "ver"
         - Uses: `ids.IdKinds`
@@ -26899,16 +26903,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.implement`
           - `infra/entities.defaultNow`
           - `infra/entities.defineEntity`
-          - `infra/retention.defineRetention`
           - `network/live.serveCollection`
           - `network/live.serveValue`
         - DB schema: `plugins/history/plugins/engine/server/internal/tables.ts`
         - Exports (types): `HistorySource`
         - Exports (values):
+          - `_entityVersions`
           - `defineHistorySource`
           - `deleteVersions`
           - `recordVersion`
-        - Register: `defineJob('retention.entity_versions')`
         - Resources:
           - `history.version` (push)
           - `history.versions` (keyed, window)
@@ -26950,6 +26953,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `VersionWithSnapshotSchema`
       - Cross-plugin:
         - Imported by: `apps/pages/history`
+      - Machine:
+        - Register: `defineJob('retention.entity_versions')`
 
 - **`ids`** — The id-kind registry, web half: IdKinds.Kind registers a declared kind and IdKinds.Presenter how its ids render and open (icon, useReferent, useTarget); useIdKinds() / useIdPresenters() read them at render time. The id-kind registry, server half: IdKinds.Kind registers a declared kind and IdKinds.Referent resolves a kind's id to its title; getIdKinds() reads them at call time. idColumn / idRef are a kind's drizzle primary-key and foreign-key columns (typed Id<P>; idRef cascades on update).
   - Web:
@@ -27570,7 +27575,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/events/sources/source-detail/runs/model-call`
           - `apps/events/sources/url-extract`
-          - `apps/pages/auto-icon`
           - `apps/places/places-core`
           - `debug/claude-cli-calls`
       - Exemptions:
@@ -28458,8 +28462,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TriggerRowSchema`
           - `TriggersPayloadSchema`
       - Cross-plugin:
-        - Imported by: 26 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
-          - `apps` ×7
+        - Imported by: 25 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
+          - `apps` ×6
           - `tasks` ×6
           - `conversations` ×4
           - `infra` ×4
@@ -29051,20 +29055,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/op-status`
               - `debug/health-monitor`
               - `debug/profiling/ops`
-    - **`host-account`** — Host account, read: useHostAccount() — the OS account this backend runs as (login name and full name), loading until its value arrives. Its home directory is the hostHome value (core), read with useLive. Host account: serves the host-account value — the OS account this backend runs as (login name, and its full name read once through spawnCaptured: macOS `id -F`, the passwd GECOS field elsewhere) — and its sibling host-account.home, the account's home directory.
+    - **`host-account`** — Host account, read: useHostAccount() — the account this instance runs as (login name and full name: the OS account on the desktop, a guest account on a host without the computer), loading until its value arrives. Its home directory is the hostHome value (core, needsMachine), read with useLive. Host account: serves the host-account value — the account this instance runs as (login name and full name), read once through the HostAccountSource host service: the OS account on the desktop (machine/), a fixed guest account on a host without the computer. Its sibling host-account.home, the account's home directory, is the machine half's.
       - Server:
         - Contributes:
           - `resource.declare` "host-account"
           - `resource.declare` "host-account.home"
-        - Uses:
-          - `infra/paths.HOME_DIR`
-          - `network/live.serveValue`
+          - `host-service:host-account.source` "host-account.source"
+        - Uses: `network/live.serveValue`
+        - Exports (types): `HostAccountSourceImpl`
+        - Exports (values): `HostAccountSource`
         - Resources:
           - `host-account` (push, fixed)
           - `host-account.home` (push, fixed)
       - Web:
         - Uses: `network/live.useLive`
         - Exports (values): `useHostAccount`
+      - Machine:
+        - Uses: `network/live.serveValue`
       - Core:
         - Uses: `network/live.liveValue`
         - Exports (types): `HostAccount`
@@ -29075,9 +29082,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HostAccountSchema`
           - `hostHome`
       - Cross-plugin:
-        - Imported by: `apps/pages/shell`
-      - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/read-account.ts` (debt)
+        - Imported by:
+          - `apps/pages/shell`
+          - `infra/host-account/guest`
+      - Plugins:
+        - **`guest`** (excluded) — The account of a host without the computer: provides the HostAccountSource host service as a fixed guest account (login `demo`, full name Alex Morgan), so a surface that greets the user — the Pages brand — renders as it does on the desktop (the browser composition, the portable boot test). Never booted by the desktop.
+          - Server:
+            - Contributes: `host-service:host-account.source` "host-account.source"
+            - Uses: `infra/host-account.HostAccountSource`
     - **`host-fs`** — The host-filesystem readers other plugins build on: resolveHostPath, openHostFile (a disk file or an archive member), serveHostPath (the one byte server), readHostPathText / decodeTextBytes (the size + binary gate) and the archive-format registry (defineArchiveFormat). Its routes — stat / complete / raw reads of any path the user account can read, POST open / extract / move — are the machine half's, each needsMachine.
       - Server:
         - Contributes:
@@ -29437,8 +29449,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
       - Cross-plugin:
-        - Imported by: 60 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
-          - `apps` ×19
+        - Imported by: 59 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+          - `apps` ×18
           - `infra` ×13
           - `debug` ×7
           - `conversations` ×6
@@ -30017,9 +30029,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 44 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 43 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `debug` ×8
-          - `infra` ×8
+          - `infra` ×7
           - `build` ×5
           - `backup` ×4
           - `framework` ×4
@@ -30301,13 +30313,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/deploy/analytics/collect`
           - `apps/deploy/deployments`
           - `apps/events/refresh`
-          - `apps/pages/agent-origin`
           - `debug/boot-profile`
           - `debug/latency-ledger`
           - `debug/profiling/op-log/op-store`
           - `debug/slow-ops`
           - `debug/trace/engine`
-          - `history/engine`
           - `infra/jobs/supervised-job`
           - `reports/engine`
       - Test helpers:
@@ -30754,8 +30764,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `warmupRunOf`
       - Cross-plugin:
         - Imported by:
-          - `apps/pages/auto-icon`
-          - `apps/pages/content-search`
           - `apps/places/places-core`
           - `apps/prototypes/state`
           - `apps/sonata/sources/midi/folders`
@@ -32994,7 +33002,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `page/editor.Editor`
                   - `page/markdown-apply.loadBlockScope`
                   - `page/markdown-apply.readBlockAsMarkdown`
-                  - `page/prompt/link.PAGES_CATEGORY_ID`
                   - `tasks/task-category.setTaskCategory`
                   - `tasks/task-title.scheduleTaskTitleUpdate`
                   - `tasks/tasks-core._tasks`
@@ -33909,9 +33916,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape` ×2
           - `ui/tokens/font-family --font-mono`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 77 plugins — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Imported by: 78 plugins — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
           - `page` ×58
-          - `apps` ×8
+          - `apps` ×9
           - `reports` ×4
           - `active-data` ×3
           - `primitives` ×2
@@ -34333,6 +34340,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `scanPageLinkTokens`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
+        - Imported by: `apps/agent-manager/demo`
     - **`links`** — Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource. Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource (the boot backfill is the machine half's).
       - Server:
         - Contributes:
@@ -34953,7 +34961,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `createTaskFromPromptBlock`
               - `getPromptTaskOrigin`
-              - `PAGES_CATEGORY_ID`
               - `promptBlock`
             - Resources:
               - `prompt-block-tasks` (keyed, window)
@@ -34973,9 +34980,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `usePromptTaskLink`
           - Cross-plugin:
             - Imported by:
+              - `apps/agent-manager/demo`
               - `apps/pages/prompt-origin`
-              - `page/annotations/todo/task-link`
               - `page/prompt/block`
+          - Core:
+            - Exports (values): `PAGES_CATEGORY_ID`
           - Shared:
             - Exports (types):
               - `CreatePromptBlockTaskBody`
@@ -38090,8 +38099,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-size-body`
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-body`
-            - Imported by: 89 plugins — full list in [`plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md)
-              - `apps` ×29
+            - Imported by: 90 plugins — full list in [`plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md)
+              - `apps` ×30
               - `debug` ×20
               - `primitives` ×13
               - `page` ×6
@@ -41187,7 +41196,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`investigate`** — The one 'launch an agent to investigate this failure' affordance: <InvestigateAction> — a fixed icon, label and popover, briefed by the caller, filed about the failed record (tasks/task-subject) so a second launch reuses its task and the action turns into View task.
           - Web:
             - Uses:
-              - `apps-core/tabs.appLinkProps`
+              - `apps-core/tabs.useAppLinkProps`
               - `primitives/css/ui-kit.Button`
               - `primitives/data-view.DataViewSlots`
               - `primitives/data-view.ItemActionProps`
@@ -41771,7 +41780,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live` ×2
           - `primitives/css/spacing` ×2
           - `primitives/css/toggle-chip` ×2
-          - `apps-core/tabs.appLink`
+          - `apps-core/tabs.useAppLink`
           - `primitives/css/card.Card`
           - `primitives/css/center.Center`
           - `primitives/css/cluster.Cluster`
@@ -46705,7 +46714,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/cursor-pagination` ×2
           - `primitives/live-state` ×2
           - `primitives/pane` ×2
-          - `apps-core/tabs.appLink`
+          - `apps-core/tabs.useAppLink`
           - `apps/debug/shell.DebugApp`
           - `ids.IdKinds`
           - `network/live.useLive`
@@ -49548,7 +49557,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Contributes: `HealthReport.Row` "worktree"
         - Uses:
-          - `apps-core/tabs.appLinkProps`
+          - `apps-core/tabs.useAppLinkProps`
           - `network/live.useLive`
           - `primitives/copy-to-clipboard.CopyButton`
           - `primitives/icon-button.IconButton`
@@ -50480,7 +50489,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `ActionBar.Item` → `QuickThemeButton`
             - Uses:
               - `apps-core.useActiveApp`
-              - `apps-core/tabs.appLink`
+              - `apps-core/tabs.useAppLink`
               - `config_v2.useScopeMembership`
               - `primitives/css/control-panel.ControlPanel`
               - `primitives/css/control-panel.ControlPanelPopover`

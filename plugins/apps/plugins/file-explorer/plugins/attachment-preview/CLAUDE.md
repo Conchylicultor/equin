@@ -15,6 +15,7 @@
     - `apps/file-explorer/browser.PreviewPane`
     - `apps/file-explorer/browser.useHomeDir`
     - `network/live.useLive`
+    - `primitives/css/placeholder.Placeholder`
     - `primitives/live-state.foldResource`
     - `primitives/live-state.matchResource`
     - `primitives/live-state.ResourceErrorInline`

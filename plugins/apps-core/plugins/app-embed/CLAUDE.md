@@ -9,16 +9,28 @@ demo, around nothing the real instance. Design:
 - **Its own route.** A `createPaneStore({ live: false })`, seeded with `route`
   (app-relative, `/c/<id>`). A non-live store never reads or writes the page URL
   or history, so a row click, a pane open and Expand move the embed only.
-- **Its own theme scope.** `<Theme name={appThemeScope(app)} surface="canvas">`
-  with `transform-gpu`: the app shell's `position: fixed` sidebar resolves
-  against the embed, not the viewport.
+- **Its own theme scope.** `<Theme name={appThemeScope(appId)} surface="canvas">`
+  — the app on screen — with `transform-gpu`: the app shell's `position: fixed`
+  sidebar resolves against the embed, not the viewport.
 - **Its own navigation boundary.** An `AppNavBoundary` (`primitives/pane`).
-  Everything that reads it — `usePromote` (Expand), tabs' `useNavigate` /
-  `useAppLink(Props)` / `useActivateApp` (the app brand, the launcher) — comes
-  here: a URL under the app's base path moves the embed's route
-  (`navigatePending`); any other is `onLeave(url)`, by default a toast, and the
-  embed stays. A component that can render inside an embed reads navigation
-  through those hooks, never the free `navigate` / `appLink`.
+  Everything that reads it — `usePromote` (Expand), `useBack`, `useOpenPane`'s
+  stranded routes, tabs' `useNavigate` / `useAppLink(Props)` / `useActivateApp`
+  (the app brand, the launcher) — comes here, and the URL is resolved with
+  `resolveAppForPath` over `Apps.App` (tab apps only):
+  - the app on screen → its route moves (`navigatePending`);
+  - another tab app in scope → the embed **switches app**: a new session
+    `{ appId, store, seq }` with a fresh non-live store at that app's base path
+    holding the route pending (a background tab's recipe), the surface keyed by
+    `seq` and the theme scope following. The previous app is not kept alive,
+    as with an in-tab app swap; Back across the hop is not offered;
+  - anything else (no app, an app outside the scope, a surface-mode app) →
+    `onLeave(url)`, by default a toast, and the embed stays.
+
+  The policy is the scope: inside a `<DemoScope>`, `<PluginScope>` filters
+  `Apps.App` to the composition, so the embed switches between exactly the
+  apps the demo serves. Nothing names the demo. A component that can render
+  inside an embed reads navigation through those hooks, never the free
+  `navigate` / `appLink` / `appLinkProps` (`tabs/no-free-app-nav-in-react`).
 - **Not a tab.** No title reporter, no `mod+z` bindings (a second same-id
   registration would race the host's in the page-global `ShortcutManager`).
 - **Accepted leaks.** Modifier-click hrefs open on the host origin; page-global
@@ -31,10 +43,12 @@ Tests: `web/__tests__/app-embed.test.tsx`.
 
 ## Plugin reference
 
-- Description: <AppEmbed app route onLeave? />: one app surface rendered in-process — the SurfaceCore a tab mounts — with its own non-live pane store (seeded with route, never touching the page URL), its app theme scope (transform-gpu, so a fixed sidebar stays in the embed) and an AppNavBoundary: same-app URLs move the embed's route, any other app is onLeave (default: a toast). Knows nothing about demos or where data comes from.
+- Description: <AppEmbed app route onLeave? />: one app surface rendered in-process — the SurfaceCore a tab mounts — with its own non-live pane store (seeded with route, never touching the page URL), its app theme scope (transform-gpu, so a fixed sidebar stays in the embed) and an AppNavBoundary resolving URLs against the tab apps in scope: the shown app's URLs move the embed's route, another scope app's swap the embed to that app (a fresh non-live store, its theme scope), anything else is onLeave (default: a toast). Knows nothing about demos or where data comes from.
 - Web:
   - Uses:
+    - `apps-core.ActiveApp`
     - `apps-core.Apps`
+    - `apps-core.resolveAppForPath`
     - `apps-core/tab-surface.SurfaceCore`
     - `apps-core/tabs.appPathFor`
     - `primitives/css/theme-boundary.Theme`
@@ -43,7 +57,7 @@ Tests: `web/__tests__/app-embed.test.tsx`.
     - `primitives/pane.AppNavBoundary`
     - `primitives/pane.AppNavigator`
     - `primitives/pane.createPaneStore`
-    - `primitives/pane.stripBasePath`
+    - `primitives/pane.PaneStore`
     - `shell/toast.showToast`
   - Exports (types): `AppEmbedLeave`
   - Exports (values): `AppEmbed`

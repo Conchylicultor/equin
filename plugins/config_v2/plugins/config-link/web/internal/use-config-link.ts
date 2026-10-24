@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useActiveApp } from "@plugins/apps-core/web";
-import { appLink } from "@plugins/apps-core/plugins/tabs/web";
+import { useNavigate } from "@plugins/apps-core/plugins/tabs/web";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import { configDetailRoute } from "@plugins/config_v2/plugins/settings/web";
@@ -13,7 +13,8 @@ import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 // per-surface wiring (and no extra registry) is needed — pass the same
 // descriptor the surface already reads with useConfig().
 //
-// This uses the cross-app `navigate()` (through `appLink`) rather than
+// This uses the cross-app navigation (`useNavigate`, which an embed's
+// `AppNavBoundary` answers first) rather than
 // `useOpenPane()`: the config gear is baked into reusable picker chrome
 // (ConfigSelectContent / ConfigMenuContent / ConfigGearButton) that can render
 // OUTSIDE every pane surface — e.g. a preprompt picker inside the Improve
@@ -29,6 +30,7 @@ import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 export function useConfigLink(): (descriptor: ConfigDescriptor) => LinkTarget {
   const registrations = useConfigRegistrations();
   const activeApp = useActiveApp();
+  const go = useNavigate();
   return useCallback(
     (descriptor: ConfigDescriptor) => {
       const url = () => {
@@ -54,10 +56,10 @@ export function useConfigLink(): (descriptor: ConfigDescriptor) => LinkTarget {
         );
       };
       return {
-        open: () => appLink(url()).open(),
+        open: () => go(url()),
         href: url,
       };
     },
-    [registrations, activeApp],
+    [registrations, activeApp, go],
   );
 }

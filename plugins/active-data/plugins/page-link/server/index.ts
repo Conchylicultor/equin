@@ -6,6 +6,7 @@ import { BLOCK_CHIP_SURFACES } from "../core";
 import { resolveBlockReferent } from "./internal/referent";
 
 export default {
+  portable: true,
   description:
     "The block id chip's server half (idChipServer): resolves a bare `block-<id>` to what its chip shows — the page's title, or '<page title> › <block type>' for a content block — for the id registry and for model-read text. Transcript-only, so no page-editor token.",
   contributions: [

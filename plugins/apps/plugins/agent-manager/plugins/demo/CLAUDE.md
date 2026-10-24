@@ -34,10 +34,14 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   arrangement, and a `set-field` write round-trips.
 - **The composition is `agent-manager-demo`** (`bin/browser-host.composition.ts`;
   its row in `plugin-meta/composition/core/config.ts`): the real
-  `agent-manager` profile minus what means nothing without the computer
-  (push-and-exit, the automations, stats, the file explorer), and — for now
-  (D5 of `research/2026-10-22-global-demo-scope-sealed.md`) — Pages and
-  Prototypes, which return later for cross-app integration. A plugin in the
+  `agent-manager` profile plus the `pages` app (`extends: ["agent-manager",
+  "pages"]` — the Origin section, page chips, page artifacts and tool
+  renderers, and the Pages app itself) minus what means nothing without the
+  computer (push-and-exit, the automations, the file explorer) and Prototypes,
+  which waits for a virtual file-system host service
+  (`research/2026-10-24-global-demo-pages-and-in-embed-app-switching.md`). It
+  only subtracts, so a plugin either app gains reaches the demo with no edit
+  there. A plugin in the
   demo scope whose server half cannot join the worker fails the coverage guard
   — it is split or excluded here, never exempted.
 - **The worker runs as its composition.** `bin/declare-namespace.ts`, the
@@ -79,17 +83,30 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
     - `conversations/agents.agentLaunchIdKind`
     - `conversations/model-provider.ConversationModelSchema`
     - `improve.IMPROVEMENTS_CATEGORY_ID`
+    - `page/editor.blockIdKind`
+    - `page/inline-page-link.pageLinkToken`
+    - `page/prompt/link.PAGES_CATEGORY_ID`
   - Exports (types):
     - `DemoAgent`
+    - `DemoContentBlock`
+    - `DemoNode`
+    - `DemoPage`
+    - `DemoPageSession`
+    - `DemoPageToolCall`
     - `DemoStory`
   - Exports (values):
     - `agentManagerDemo`
+    - `DARK_MODE_PAGE_WORK`
     - `DEMO_AGENTS`
+    - `DEMO_PAGE_IDS`
+    - `DEMO_PAGES`
     - `DEMO_STORIES`
     - `demoAgentId`
     - `demoAgentLaunchId`
     - `demoAttemptId`
     - `demoConversationId`
+    - `demoPromptOf`
+    - `demoStoryByKey`
     - `demoTaskId`
     - `demoTranscriptJsonl`
     - `demoWorktreePath`

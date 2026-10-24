@@ -90,7 +90,7 @@ rename.
     - `ConfigV2.WebRegister` "stall-monitor"
     - `Reports.KindView` → `StallSummary`
   - Uses:
-    - `apps-core/tabs.appLink`
+    - `apps-core/tabs.useAppLink`
     - `config_v2.ConfigV2`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`

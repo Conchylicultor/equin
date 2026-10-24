@@ -23,6 +23,7 @@ import {
 } from "@plugins/primitives/plugins/pane/web";
 import { defaultStore } from "../testing";
 import { defaultHistoryAdapter } from "../history-sink";
+import { navigateApp } from "../app-nav-sink";
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
@@ -127,7 +128,11 @@ describe("route listeners see the committed URL", () => {
       seen.push(window.location.pathname);
     });
 
-    store.openPaneImpl(childPane._internal, { id: "7" });
+    store.openPaneImpl(
+      childPane._internal,
+      { id: "7" },
+      { crossApp: navigateApp },
+    );
     store.navigatePending("nowhere/yet");
     unsub();
 
@@ -143,7 +148,14 @@ describe("commit intents — mode + url + state per the push/replace matrix", ()
     setLiveStore(store);
     store.setBasePath("");
 
-    store.openPaneImpl(rootPane._internal, {}, { root: true });
+    store.openPaneImpl(
+      rootPane._internal,
+      {},
+      {
+        root: true,
+        crossApp: navigateApp,
+      },
+    );
 
     expect(commit).toHaveBeenCalledTimes(1);
     const change = commit.mock.calls[0]![0] as LocationChange;
@@ -212,7 +224,14 @@ describe("commit intents — mode + url + state per the push/replace matrix", ()
     setLiveStore(store);
     store.setBasePath("");
 
-    store.openPaneImpl(noHistoryPane._internal, {}, { root: true });
+    store.openPaneImpl(
+      noHistoryPane._internal,
+      {},
+      {
+        root: true,
+        crossApp: navigateApp,
+      },
+    );
 
     expect(commit).toHaveBeenCalledTimes(1);
     expect((commit.mock.calls[0]![0] as LocationChange).mode).toBe("replace");

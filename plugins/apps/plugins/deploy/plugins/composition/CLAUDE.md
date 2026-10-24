@@ -39,7 +39,7 @@ the first.
 - Web:
   - Contributes: `DeploymentDetail.Section` "Composition" → `CompositionSection`
   - Uses:
-    - `apps-core/tabs.appLink`
+    - `apps-core/tabs.useAppLink`
     - `apps/deploy/deployments.DeploymentDetail`
     - `network/live.useLiveRow`
     - `plugin-meta/composition.useManifestItemByName`

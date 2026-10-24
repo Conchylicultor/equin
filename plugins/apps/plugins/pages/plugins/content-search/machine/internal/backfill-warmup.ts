@@ -1,5 +1,5 @@
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
-import { backfillPagesSearchJob } from "./backfill-job";
+import { backfillPagesSearchJob } from "@plugins/apps/plugins/pages/plugins/content-search/server";
 
 // Seed pages that predate this plugin (and re-sync any doc that drifted while the
 // backfill was last skipped). A declared warm-up, not an eager `onReady` enqueue:

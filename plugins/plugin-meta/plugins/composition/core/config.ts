@@ -228,8 +228,9 @@ export const compositionsConfig = defineConfig({
         // computer — the PGlite database driver, the in-process job queue, the
         // memory stores for attachment bytes, logs, the push ledger and
         // transcripts, the migration history bundled as text, the baseline
-        // model catalog, the task titles kept as filed, the in-memory config
-        // store and the committed config bundled as text. A desktop backend
+        // model catalog, the task titles kept as filed, the guest host account,
+        // the in-memory config store and the committed config bundled as text.
+        // A desktop backend
         // provides each of those services from a machine half
         // (`database#machine`, `jobs#machine`, `config_v2#machine`, …), and a
         // host booting two providers of one service fails boot
@@ -251,6 +252,7 @@ export const compositionsConfig = defineConfig({
             "!conversations.transcript-source.memory.**",
             "!conversations.model-provider.catalog.baseline.**",
             "!tasks.task-title.filed-titles.**",
+            "!infra.host-account.guest.**",
             "!config_v2.browser-store.**",
             "!config_v2.bundled-layer.**",
           ],
@@ -293,11 +295,15 @@ export const compositionsConfig = defineConfig({
         // ── Profile: the agent manager as its in-page demo serves it ─────────────
         // What `/demo` renders (the Agent Manager on made-up data, inside
         // `<DemoScope>`) and what its browser host's worker serves: the full
-        // agent manager MINUS the surfaces that mean nothing without the
-        // computer behind it. A profile — a variant of the one agent-manager
-        // app, like full vs. lean — not an app of its own: same home, same
-        // shell. Never served (`serve: "off"`): it is a browser host's scope,
-        // not a deployment.
+        // agent manager and the Pages app it reaches into (`extends: [
+        // "agent-manager", "pages"]` — the task detail's Origin, the page
+        // chips, the page artifacts and tool renderers, and the Pages app
+        // itself) MINUS the surfaces that mean nothing without the computer
+        // behind it. Still only a subtraction: a plugin either app gains
+        // reaches the demo with no edit here. A profile — a variant of the one
+        // agent-manager app, like full vs. lean — not an app of its own: same
+        // home, same shell. Never served (`serve: "off"`): it is a browser
+        // host's scope, not a deployment.
         //
         // Every negative here is a whole surface whose subject is the user's
         // real machine, so a demo has nothing true to show in it:
@@ -315,13 +321,10 @@ export const compositionsConfig = defineConfig({
         // - the file explorer (`apps.file-explorer.**`, and the conversation's
         //   Explorer tab that embeds it): browses a checkout on disk.
         //
-        // And, for now, the other apps the agent manager reaches into — Pages
-        // and Prototypes (and, with them, the surfaces that import them: the
-        // page-link chip, Pages nav, the page and prototype artifacts, the
-        // page tool-call renderers) — so the demo's scope is the agent manager
-        // alone while its host is sealed (every read and endpoint answered or
-        // `needsMachine`). Pages and Prototypes return later, for the
-        // cross-app integration (research/2026-10-22-global-demo-scope-sealed.md, D5).
+        // And Prototypes (and, with it, the prototype artifacts and chips): a
+        // prototype is a folder on the computer's disk, so it returns once a
+        // virtual file-system host service exists for file-based apps
+        // (research/2026-10-24-global-demo-pages-and-in-embed-app-switching.md).
         // Events, Places and Stats are not in the bundle at all (Stats left
         // with `conversations.usage`'s cost scan, now in its `machine/`), so a
         // negative for them would trim nothing — a dead negative. Debug cannot leave yet: the
@@ -345,7 +348,6 @@ export const compositionsConfig = defineConfig({
             "!tasks.sidequest-autopilot.**",
             "!tasks.outcome-report.**",
             "!apps.file-explorer.**",
-            "!apps.pages.**",
             "!apps.prototypes.**",
             // The OS menu-bar panel and its sections: a page the native
             // helper opens on the computer, meaningless in a demo.
@@ -355,7 +357,7 @@ export const compositionsConfig = defineConfig({
             "!shell.notifications.native.**",
           ],
           selectedContributors: [] as string[],
-          extends: ["agent-manager"],
+          extends: ["agent-manager", "pages"],
           excludes: [] as string[],
           serve: "off",
           home: "agent-manager",

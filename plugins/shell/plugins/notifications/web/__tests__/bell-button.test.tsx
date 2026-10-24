@@ -22,7 +22,7 @@ const spy = vi.hoisted(() => ({
 
 vi.mock("@plugins/apps-core/plugins/tabs/web", async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  appLink: (url: string) => ({
+  useAppLink: () => (url: string) => ({
     open: () => {
       spy.opened.push(url);
     },

@@ -63,7 +63,7 @@ vi.mock("@plugins/infra/plugins/endpoints/web", async (importOriginal) => ({
 
 vi.mock("@plugins/apps-core/plugins/tabs/web", async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  appLink: (url: string) => ({ open: () => {}, href: () => url }),
+  useAppLink: () => (url: string) => ({ open: () => {}, href: () => url }),
 }));
 
 import {

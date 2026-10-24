@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { appLink } from "@plugins/apps-core/plugins/tabs/web";
+import { useAppLink } from "@plugins/apps-core/plugins/tabs/web";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
@@ -52,6 +52,7 @@ function BreakdownRows({
   entry: CatalogBreakdown;
   data: BreakdownResult;
 }): ReactNode {
+  const inAppLink = useAppLink();
   if (data.rows.length === 0) {
     return <ChartState state="empty" height={CARD_CHART_HEIGHT} />;
   }
@@ -62,7 +63,7 @@ function BreakdownRows({
         <Row
           key={row.key}
           {...activationProps(
-            row.link === undefined ? undefined : appLink(row.link.href),
+            row.link === undefined ? undefined : inAppLink(row.link.href),
           )}
         >
           <Fill>

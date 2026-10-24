@@ -7,6 +7,7 @@ import { pageHistoryScheduleJob } from "./internal/schedule-job";
 import { deletePageHistoryHook } from "./internal/delete-hook";
 
 export default {
+  portable: true,
   description:
     "Pages version-history consumer: registers the page history source (serialize/restore via the editor's page-content API), captures time-bucketed snapshots through a debounced two-job pipeline bound to blocksChanged, and drops a page's history on delete.",
   register: [pageHistorySource, pageSnapshotJob, pageHistoryScheduleJob],

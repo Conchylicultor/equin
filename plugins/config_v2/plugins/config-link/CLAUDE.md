@@ -52,7 +52,7 @@ and the editor.
 - Web:
   - Uses:
     - `apps-core.useActiveApp`
-    - `apps-core/tabs.appLink`
+    - `apps-core/tabs.useNavigate`
     - `config_v2.useConfigRegistrations`
     - `config_v2/settings.configDetailRoute`
     - `primitives/css/fill.Fill`

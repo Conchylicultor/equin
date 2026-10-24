@@ -3878,6 +3878,10 @@
       "name": "@singularity/plugin-infra-host-account",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/host-account/plugins/guest": {
+      "name": "@singularity/plugin-infra-host-account-guest",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/host-fs": {
       "name": "@singularity/plugin-infra-host-fs",
       "version": "0.0.1",
@@ -9005,6 +9009,8 @@
     "@singularity/plugin-infra-host": ["@singularity/plugin-infra-host@workspace:plugins/infra/plugins/host"],
 
     "@singularity/plugin-infra-host-account": ["@singularity/plugin-infra-host-account@workspace:plugins/infra/plugins/host-account"],
+
+    "@singularity/plugin-infra-host-account-guest": ["@singularity/plugin-infra-host-account-guest@workspace:plugins/infra/plugins/host-account/plugins/guest"],
 
     "@singularity/plugin-infra-host-contention": ["@singularity/plugin-infra-host-contention@workspace:plugins/infra/plugins/host/plugins/contention"],
 

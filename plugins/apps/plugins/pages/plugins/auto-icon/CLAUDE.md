@@ -5,11 +5,16 @@ Plan: `research/2026-09-29-page-emoji-page-icons.md` §4.
 
 ## How it runs
 
+All of it is the desktop-only `machine/` half — a Haiku call needs the
+computer's Claude CLI. The portable `server/` barrel holds only the
+`page_blocks_ext_auto_icon` provenance table (`pageBlocksAutoIcon`), so a host
+without the computer (the demo) boots it and runs none of this.
+
 - **Trigger.** `Trigger({ on: blocksChanged, do: autoIconScheduleJob })`. The
   scheduler (`hold: "instant"`) re-enqueues the keyed `autoIconJob({ pageId })`
   with `runAt: now + 10 s`; `dedup: { key: pageId }` (graphile replace) pushes
   the one pending row back on every edit — the debounce, no polling.
-- **`generatePageIcon(pageId, { force })`** (`server/internal/generate-icon.ts`)
+- **`generatePageIcon(pageId, { force })`** (`machine/internal/generate-icon.ts`)
   does the pick; `autoIconJob` (`pages.auto-icon.generate`, `hold: "seconds"`,
   `serial`) runs it unforced, the Regenerate endpoint awaits it forced:
   1. reads the live page row (gone / trashed / not a page → return);
@@ -24,7 +29,7 @@ Plan: `research/2026-09-29-page-emoji-page-icons.md` §4.
      block is a sidebar sibling of one at the page's top level — plus the
      parent page's icon and the page's own child pages' icons;
   5. one Haiku call (`runClaudePrint`, source `page-auto-icon`), prompt in
-     `server/internal/icon-prompt.ts`, answer `EMOJI:` / `ALT:`;
+     `machine/internal/icon-prompt.ts`, answer `EMOJI:` / `ALT:`;
   6. `parseIconAnswer` (pure, tested): EMOJI unless a sibling (or, on a forced
      run, the current icon) has it, else ALT, else EMOJI; each checked with
      `isEmoji` (a dropped VS16 is restored). Unusable → warn, write nothing;
@@ -33,10 +38,13 @@ Plan: `research/2026-09-29-page-emoji-page-icons.md` §4.
      provenance row.
 - **Regenerate.** `POST /api/pages/:pageId/auto-icon/regenerate` awaits
   `generatePageIcon(pageId, { force: true })` IN the request (a few seconds) and
-  throws when nothing was written. The web barrel exports `RegenerateIconAction`,
+  throws when nothing was written. It is `needsMachine` ("Picking a page
+  icon"), served by `implementMachine`. The web barrel exports `RegenerateIconAction`,
   the picker footer row `page-tree`'s `page-header.tsx` passes as
   `footerActions`; it is pending exactly while the request is in flight, so it
-  cannot hang on a failed pick or on an answer equal to the current icon.
+  cannot hang on a failed pick or on an answer equal to the current icon. Under
+  a transport with no computer it renders disabled, the unavailable message as
+  its visible description line.
 - **Backfill.** `pages.auto-icon.backfill` (a `worktree`-scope `defineWarmup`
   enqueuing a `singleton` scan): `autoIconJob` for every live page with no
   provenance row.
@@ -60,31 +68,15 @@ Plan: `research/2026-09-29-page-emoji-page-icons.md` §4.
 
 ## Plugin reference
 
-- Description: Regenerate action for the page icon picker: a footer row that forces a new auto-picked emoji for the page pending while the pick runs in the request. Auto-generated page emoji icons: once a page's edits settle (10 s after the last blocksChanged), Haiku picks an emoji from its title + content, avoiding its siblings' icons, and writes it only if the page still has none. A page_blocks_ext_auto_icon row records that generation ran, so it never runs again unasked; Regenerate forces a new pick; a boot backfill covers existing pages.
+- Description: Regenerate action for the page icon picker: a footer row that forces a new auto-picked emoji for the page pending while the pick runs in the request. Auto-icon provenance (page_blocks_ext_auto_icon): a row records that icon generation ran for a page, so it never runs again unasked. Everything model-driven — the pick, its jobs, the boot backfill and Regenerate — is the machine half's.
 - Server:
   - Contributes: `trigger` "pages.auto-icon.schedule"
   - Uses:
-    - `database.db`
-    - `infra/claude-cli.runClaudePrint`
-    - `infra/endpoints.implement`
     - `infra/entity-extensions.defineExtension`
-    - `infra/events.Trigger`
-    - `infra/jobs.defineJob`
-    - `infra/warmup.defineWarmup`
     - `page/editor._blocks`
-    - `page/editor.blocksChanged`
-    - `page/editor.liveBlocks`
-    - `page/editor.PAGE_BLOCK_TYPE`
-    - `page/editor.pageData`
-    - `page/editor.setPageIcon`
   - DB schema: `plugins/apps/plugins/pages/plugins/auto-icon/server/internal/tables.ts`
   - Entity extension of: `page/editor` (table `page_blocks_ext_auto_icon`)
-  - Register:
-    - `defineJob('pages.auto-icon.generate')`
-    - `defineJob('pages.auto-icon.schedule')`
-    - `defineJob('pages.auto-icon.backfill')`
-    - `defineWarmup('pages.auto-icon.backfill')`
-  - Routes: `POST /api/pages/:pageId/auto-icon/regenerate`
+  - Exports (values): `pageBlocksAutoIcon`
 - Web:
   - Uses:
     - `infra/endpoints.useEndpointMutation`
@@ -92,6 +84,14 @@ Plan: `research/2026-09-29-page-emoji-page-icons.md` §4.
     - `primitives/loading.Loading`
     - `ui/icons.Icon`
   - Exports (values): `RegenerateIconAction`
+- Machine:
+  - Uses: `infra/endpoints.implementMachine`
+  - Register:
+    - `defineJob('pages.auto-icon.generate')`
+    - `defineJob('pages.auto-icon.schedule')`
+    - `defineJob('pages.auto-icon.backfill')`
+    - `defineWarmup('pages.auto-icon.backfill')`
+  - Routes: `POST /api/pages/:pageId/auto-icon/regenerate`
 - Cross-plugin:
   - Imported by: `apps/pages/page-tree`
 

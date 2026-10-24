@@ -7,7 +7,7 @@
 - Description: The one 'launch an agent to investigate this failure' affordance: <InvestigateAction> — a fixed icon, label and popover, briefed by the caller, filed about the failed record (tasks/task-subject) so a second launch reuses its task and the action turns into View task.
 - Web:
   - Uses:
-    - `apps-core/tabs.appLinkProps`
+    - `apps-core/tabs.useAppLinkProps`
     - `primitives/css/ui-kit.Button`
     - `primitives/data-view.DataViewSlots`
     - `primitives/data-view.ItemActionProps`

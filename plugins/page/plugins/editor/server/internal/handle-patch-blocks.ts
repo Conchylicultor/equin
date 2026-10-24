@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNotNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
@@ -7,7 +7,7 @@ import { namesField, type BlockPatch } from "../../core/block-diff";
 import { BlockSchema, PAGE_BLOCK_TYPE, type Block } from "../../core/schemas";
 import { _blocks } from "./tables";
 import { liveBlocks } from "./live-blocks";
-import { withPageForest } from "./page-forest";
+import { withPageForest, type PageScope } from "./page-forest";
 import { writeBlockPatch, type ResolvedBlockPatch } from "./forest-writer";
 import { notifyStructuralChange } from "./notify-structural-change";
 import { restoreEntryById, deleteBlocksSubtree } from "./trash-blocks";
@@ -57,9 +57,14 @@ type BlockExecutor = NodePgDatabase;
  * `_blocks`, so a server-side writer that computes its own `BlockPatch` — today
  * `page/markdown-apply`, which diffs an incoming markdown document against the
  * stored forest — routes through this one path rather than growing a second.
+ *
+ * `pageId` is a {@link PageScope}: `null` patches the WORKSPACE ROOT — the
+ * sibling space of root pages (`page_id IS NULL`) — so a server-side writer
+ * minting a root page with its body (a seed) goes through this same path. The
+ * HTTP route names a page only.
  */
 export async function applyPageBlockPatch(
-  pageId: string,
+  pageId: PageScope,
   patch: BlockPatch,
   executor: BlockExecutor = db,
 ): Promise<{ blocks: Block[]; watermark: string }> {
@@ -127,7 +132,16 @@ export async function applyPageBlockPatch(
       // between an op's read and its write left the op reasserting the pre-convert
       // `type`, which is how a bullet typed immediately after an Enter turned back
       // into a paragraph.
-      const rows = await ctx.forest();
+      // The workspace root holds no content set of its own (`ctx.forest()`
+      // loads pages' content), so its rows — the root pages — are read here,
+      // under the same lock.
+      const rows =
+        pageId === null
+          ? await ctx.tx
+              .select()
+              .from(liveBlocks)
+              .where(isNull(liveBlocks.pageId))
+          : await ctx.forest();
       const stored = new Map(rows.map((r) => [r.id, r]));
 
       const inserts = creates.filter((b) => !stored.has(b.id));
@@ -243,7 +257,11 @@ export async function applyPageBlockPatch(
   const finalRows = await executor
     .select()
     .from(liveBlocks)
-    .where(eq(liveBlocks.pageId, pageId))
+    .where(
+      pageId === null
+        ? isNull(liveBlocks.pageId)
+        : eq(liveBlocks.pageId, pageId),
+    )
     .orderBy(asc(liveBlocks.rank), asc(liveBlocks.createdAt));
   return { blocks: finalRows.map((r) => BlockSchema.parse(r)), watermark };
 }

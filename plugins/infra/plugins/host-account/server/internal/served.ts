@@ -1,6 +1,6 @@
 import { serveValue } from "@plugins/network/plugins/live/server";
 import { hostAccount, type HostAccount } from "../../core";
-import { readHostAccount } from "./read-account";
+import { HostAccountSource } from "./source";
 
 // The account a process runs as does not change while it runs, so the read is
 // made once — on first demand — and shared by every later load. A failed read
@@ -8,15 +8,18 @@ import { readHostAccount } from "./read-account";
 let read: Promise<HostAccount> | null = null;
 
 function loadHostAccount(): Promise<HostAccount> {
-  read ??= readHostAccount().catch((err: unknown) => {
-    read = null;
-    throw err;
-  });
+  read ??= HostAccountSource.get()
+    .read()
+    .catch((err: unknown) => {
+      read = null;
+      throw err;
+    });
   return read;
 }
 
-// External: the truth is the OS account database, which no change feed
-// observes — and which never changes under a running process, so the value is
+// External: the truth is the host's account (the OS account database on the
+// desktop — `HostAccountSource`), which no change feed observes — and which
+// never changes under a running process, so the value is
 // `fixed` (no `notify`). Pushed (the `liveValue` default): one small value, the
 // same for every tab.
 export const hostAccountServed = serveValue(hostAccount, {
