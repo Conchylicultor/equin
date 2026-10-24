@@ -18,6 +18,7 @@ import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { Runtime, type RuntimeInfo, type RuntimeSignal } from "./runtime";
 import { deliverHeldTurnsJob } from "./deliver-held-turns-job";
+import { spawnConversationJob } from "./spawn-job";
 import {
   readQuestionHolds,
   reapQuestionHolds,
@@ -69,6 +70,8 @@ interface LiveEntry extends RuntimeInfo {
 interface LiveSnapshot {
   next: Map<string, LiveEntry>;
   failedRuntimes: Set<string>;
+  /** The "starting" rows whose spawn job was still coming just before the runtimes were asked. */
+  spawnsInFlight: ReadonlySet<string>;
 }
 
 /**
@@ -76,7 +79,15 @@ interface LiveSnapshot {
  * runtime that throws is recorded as failed — its conversations' state is
  * unknown, and the decision leaves them untouched.
  */
-async function collectLive(ids?: readonly string[]): Promise<LiveSnapshot> {
+async function collectLive(
+  rows: readonly Conversation[],
+  ids?: readonly string[],
+): Promise<LiveSnapshot> {
+  // Asked FIRST: a spawn that finishes after this read has a session the
+  // runtimes below report, so a starting row is never seen with neither.
+  const spawnsInFlight = await spawnConversationJob.inFlight(
+    rows.filter((r) => r.status === "starting").map((r) => r.id),
+  );
   const merged = new Map<string, LiveEntry>();
   const failedRuntimes = new Set<string>();
   for (const runtime of Runtime.all()) {
@@ -112,7 +123,7 @@ async function collectLive(ids?: readonly string[]): Promise<LiveSnapshot> {
       merged.set(id, { ...info, runtime: runtime.id });
     }
   }
-  return { next: merged, failedRuntimes };
+  return { next: merged, failedRuntimes, spawnsInFlight };
 }
 
 /**
@@ -218,6 +229,7 @@ async function planFor(
     sessionAccepted: gate === "accepted",
     questionHold: holds.get(row.id) ?? null,
     lastSubmitAt: submits.get(row.id) ?? null,
+    spawnInFlight: live.spawnsInFlight.has(row.id),
   });
   const rowStaysLive = plan.kind === "noop" || plan.kind === "patch";
   if (candidate !== null && gate === "no-transcript" && rowStaysLive) {
@@ -335,11 +347,8 @@ async function reconcileRows(
 /** Today's whole-world reconcile: every live session against every active row. */
 function reconcileAll(): Promise<void> {
   return reconcileGate.run(async () => {
-    const [live, rows] = await Promise.all([
-      collectLive(),
-      listConversationsForInfra(),
-    ]);
-    await reconcileRows(rows, live);
+    const rows = await listConversationsForInfra();
+    await reconcileRows(rows, await collectLive(rows));
   });
 }
 
@@ -352,7 +361,10 @@ function reconcileIds(ids: readonly string[]): Promise<void> {
   return reconcileGate.run(async () => {
     const rows = await listConversationsForInfra({ ids });
     if (rows.length === 0) return;
-    const live = await collectLive(rows.map((r) => r.id));
+    const live = await collectLive(
+      rows,
+      rows.map((r) => r.id),
+    );
     await reconcileRows(rows, live);
   });
 }

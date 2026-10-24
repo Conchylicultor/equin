@@ -30,6 +30,7 @@ import {
   writeProjection,
 } from "../../server/internal/rows";
 import { readAgentEvents, type ReadPosition } from "./event-reader";
+import { runningAgentIds } from "./agent-processes";
 import { agentReady } from "./partial-stream";
 import { agentEventsPath, ownAgentsRoot } from "./paths";
 import {
@@ -315,7 +316,14 @@ export async function startConsumer(
     },
   });
   const unlisten = onQuestionResolved(onResolved);
-  for (const id of await liveSdkConversationIds()) {
+  // The rows expected live (an agent that exited while this backend was down
+  // still has its last lines to read) and every agent actually running, whatever
+  // its row says.
+  const atBoot = new Set([
+    ...(await liveSdkConversationIds()),
+    ...(await runningAgentIds()),
+  ]);
+  for (const id of atBoot) {
     ours.set(id, true);
     await catchUps.run(id);
     await resyncOpenRequests(id);

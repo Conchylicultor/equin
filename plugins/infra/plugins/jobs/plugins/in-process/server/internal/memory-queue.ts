@@ -237,6 +237,15 @@ export function createMemoryQueue(): JobQueueImpl {
       }
       activity();
     },
+    async keysInFlight(keys) {
+      const wanted = new Set(keys);
+      const held = new Set<string>();
+      for (const row of rows.values()) {
+        if (row.jobKey !== null && !row.dead && wanted.has(row.jobKey))
+          held.add(row.jobKey);
+      }
+      return held;
+    },
     // The `jobs` collection's questions, answered over every row held — the
     // queue is this tab's own handful of jobs.
     async window(q) {

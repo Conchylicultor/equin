@@ -26,12 +26,12 @@ import {
   sdkLaunchOptions,
 } from "../../server/internal/launch-options";
 import {
-  liveSdkConversationIds,
   prepareAgentRow,
   readAgentRow,
   readAgentRows,
   recordLaunchSession,
 } from "../../server/internal/rows";
+import { runningAgentIds } from "./agent-processes";
 import {
   adoptAgent,
   catchUpNow,
@@ -151,7 +151,7 @@ async function inspectAgents(
   ids: readonly string[],
 ): Promise<Map<string, RuntimeInfo>> {
   const out = new Map<string, RuntimeInfo>();
-  const mine = await liveSdkConversationIds(ids);
+  const mine = await runningAgentIds(ids);
   if (mine.length === 0) return out;
   const [rows, alive] = await Promise.all([
     readAgentRows(mine),
@@ -280,7 +280,7 @@ export const sdkRuntime: ConversationRuntime = {
   id: "sdk",
 
   async list() {
-    const live = await inspectAgents(await liveSdkConversationIds());
+    const live = await inspectAgents(await runningAgentIds());
     // The reconciler's pass is also what notices an agent killed outright (its
     // pid file left behind, no watch event).
     recountAgentProcesses();

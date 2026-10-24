@@ -469,6 +469,14 @@ export interface JobFactory<
   readonly inputSchema: S;
   readonly eventSchema: E;
   enqueue(input: z.input<S>, opts?: EnqueueOpts): Promise<{ jobId: string }>;
+  /**
+   * Of `keys` (this job's `dedup.key` values), the ones whose run is still
+   * coming: a row holds it that is queued, waiting out a retry, or running
+   * (`JobQueueImpl.keysInFlight`). Absent = no run will happen for that key
+   * unless something enqueues one — the job finished, dead-lettered, or never
+   * existed. Throws for a job without a keyed `dedup`: only a key names a run.
+   */
+  inFlight(keys: readonly string[]): Promise<ReadonlySet<string>>;
 }
 
 // Module-load-time registry. Populated by `defineJob`; the worker reads it at
@@ -578,6 +586,22 @@ export function defineJob<
     });
   }
 
+  async function inFlight(
+    keys: readonly string[],
+  ): Promise<ReadonlySet<string>> {
+    if (spec.dedup === "singleton" || spec.dedup === "none") {
+      throw new Error(
+        `[jobs] ${spec.name}: inFlight needs a keyed \`dedup\` — a ${spec.dedup} job's rows name no key`,
+      );
+    }
+    // The queue key `enqueue` stamps (`${name}:${key}`), mapped back.
+    const prefix = `${spec.name}:`;
+    const held = await JobQueue.get().keysInFlight(
+      keys.map((key) => prefix + key),
+    );
+    return new Set([...held].map((queueKey) => queueKey.slice(prefix.length)));
+  }
+
   const factory: JobFactory<N, S, E> = {
     name: spec.name,
     inputSchema: spec.input,
@@ -586,6 +610,7 @@ export function defineJob<
     _factory: "defineJob",
     _doc: { label: spec.name, detail: spec.description },
     enqueue: enqueue as JobFactory<N, S, E>["enqueue"],
+    inFlight,
     register() {
       if (jobRegistry.has(spec.name)) {
         throw new Error(`[jobs] duplicate job name: ${spec.name}`);

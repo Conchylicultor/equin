@@ -13,6 +13,7 @@ import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { serveValue } from "@plugins/network/plugins/live/machine";
 import { sdkAgentProcesses, type AgentProcesses } from "../../core";
 import { sdkAgentPidsDir } from "../../data-dirs";
+import { sdkConversationIdsOf } from "../../server/internal/rows";
 import { agentPidsRoot } from "./paths";
 
 const PID_SUFFIX = ".pid";
@@ -42,6 +43,23 @@ function liveAgents(namespace: string): { id: string; pid: number }[] {
 /** The conversation ids of `namespace`'s agents whose pid file names a live pid. */
 export function liveAgentIds(namespace: string): string[] {
   return liveAgents(namespace).map((a) => a.id);
+}
+
+/**
+ * This backend's sdk conversations whose agent runs — its pid file names a live
+ * pid — of `ids` when given, else every one. Liveness is the process's own
+ * evidence, read for every row whatever its status: the reconciler derives the
+ * status from this answer, so it must never be filtered by it (a `gone` row
+ * whose agent came up late would otherwise stay `gone` while the agent works).
+ */
+export async function runningAgentIds(
+  ids?: readonly string[],
+): Promise<string[]> {
+  const running = liveAgentIds(runtimeNamespace());
+  const wanted = ids ? new Set(ids) : null;
+  return sdkConversationIdsOf(
+    wanted ? running.filter((id) => wanted.has(id)) : running,
+  );
 }
 
 /** Whether `namespace` is served from the worktree checkout named `checkout`, in any composition. */

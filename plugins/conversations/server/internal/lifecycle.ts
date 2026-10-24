@@ -514,7 +514,8 @@ export async function commitConversation(
     // durable graphile job so the interactive Launch response returns
     // immediately with a `starting` row. On failure the job records a deduped
     // notification and retries; the status reconciler owns the eventual
-    // `starting → gone` transition.
+    // `starting → gone` transition, which it makes only once this job is no
+    // longer in flight.
     await spawnConversationJob.enqueue(
       {
         conversationId: p.conversationId,

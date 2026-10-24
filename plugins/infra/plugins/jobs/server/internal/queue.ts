@@ -63,6 +63,15 @@ export interface JobQueueImpl {
     match: { key: string } | { keyPrefix: string },
   ): Promise<void>;
   /**
+   * The subset of `keys` held by a row that has not given up: queued, waiting
+   * out a retry backoff, or running (a running row counts on its last attempt
+   * too). A row past its attempts and unlocked (dead), or superseded, holds no
+   * key here; a finished row is gone. Presence of a row, never its age — so
+   * "is this keyed work still coming?" is answered by the queue itself, not
+   * guessed from how long ago it was enqueued.
+   */
+  keysInFlight(keys: readonly string[]): Promise<ReadonlySet<string>>;
+  /**
    * The queue's rows as the `jobs` collection asks for them (Debug → Queue):
    * one window — the rows matching `q.where`, in `q.orderBy` on the keyset
    * `(runAt, id)` (`runAt`'s `$key` text is `jobRunAtKeyText`, the id

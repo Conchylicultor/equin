@@ -6,7 +6,9 @@
 `jobs.resume`, `NonRetryableError` and the hold table are portable `server/` +
 `core/` code. WHERE a row goes and WHO dispatches it is the **`JobQueue` host
 service** (`server/internal/queue.ts`): `enqueue(job, payload, { tx?, runAt?,
-jobKey?, maxAttempts? })`, `cancelUnstarted`, the Debug → Queue reads
+jobKey?, maxAttempts? })`, `cancelUnstarted`, `keysInFlight` (which keys a row
+that has not given up still holds — what a keyed job's `inFlight(keys)` asks:
+"is this run still coming?", by the row's presence, never its age), the Debug → Queue reads
 (`window` / `rows` / `groups` / `count` — the `jobs` collection's questions —,
 `retry`, `cancel`, `onActivity`; the `jobs` collection and the `/api/jobs`
 mutation routes stay portable over them) and the lifecycle `install` / `start` /

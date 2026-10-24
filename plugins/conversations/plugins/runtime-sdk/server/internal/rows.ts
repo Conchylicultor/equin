@@ -9,8 +9,10 @@ import { sdkAgents } from "./tables";
 const LIVE_STATUSES = ["starting", "working", "waiting"] as const;
 
 /**
- * This DB's sdk conversations a process may be running for (starting, working
- * or waiting) — of `ids` when given, else all of them.
+ * This DB's sdk conversations whose row expects a process (starting, working
+ * or waiting) — of `ids` when given, else all of them. What the events consumer
+ * catches up at boot; never the runtime's liveness (`sdkConversationIdsOf` +
+ * the agent's pid file is).
  */
 export async function liveSdkConversationIds(
   ids?: readonly string[],
@@ -24,6 +26,28 @@ export async function liveSdkConversationIds(
         eq(_conversations.runtime, "sdk"),
         inArray(_conversations.status, [...LIVE_STATUSES]),
         ...(ids ? [inArray(_conversations.id, [...ids])] : []),
+      ),
+    );
+  return rows.map((r) => r.id);
+}
+
+/**
+ * Of `ids`, this DB's sdk conversations, in any status. Which of them has a
+ * process is the runtime's question (the agent's pid file), never the row's
+ * status: the status is what the reconciler derives FROM that answer, so
+ * reading it here would let a stale `gone` hide a running agent forever.
+ */
+export async function sdkConversationIdsOf(
+  ids: readonly string[],
+): Promise<string[]> {
+  if (ids.length === 0) return [];
+  const rows = await db
+    .select({ id: _conversations.id })
+    .from(_conversations)
+    .where(
+      and(
+        eq(_conversations.runtime, "sdk"),
+        inArray(_conversations.id, [...ids]),
       ),
     );
   return rows.map((r) => r.id);

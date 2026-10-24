@@ -50,6 +50,7 @@ function ctx(overrides: Partial<PlanContext> = {}): PlanContext {
     sessionAccepted: false,
     questionHold: null,
     lastSubmitAt: null,
+    spawnInFlight: false,
     ...overrides,
   };
 }
@@ -375,6 +376,26 @@ describe("planConversationUpdate — no live session", () => {
           ctx(),
         ),
       ).toEqual({ kind: "hibernate", endTurn: false });
+    });
+
+    test("past it, its spawn job still coming (a retry after a restart) → noop, never gone", () => {
+      expect(
+        planConversationUpdate(
+          startedAgo(10 * 60_000),
+          ABSENT,
+          ctx({ spawnInFlight: true }),
+        ),
+      ).toEqual({ kind: "noop" });
+    });
+
+    test("its spawn job still coming, closeRequested → closed", () => {
+      expect(
+        planConversationUpdate(
+          row({ status: "starting", closeRequested: true }),
+          ABSENT,
+          ctx({ spawnInFlight: true }),
+        ),
+      ).toEqual({ kind: "closed" });
     });
 
     test("past it, closeRequested → closed", () => {

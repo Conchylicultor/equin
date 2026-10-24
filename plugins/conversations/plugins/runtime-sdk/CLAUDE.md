@@ -12,7 +12,10 @@ agents without tmux, per-namespace paths, the Claude Code health row:
 - `machine/` — the runtime (`sdkRuntime`): launch detached
   (`agent-process.ts`: one `runtime-sdk.agent` daemon instance per agent,
   followed by its pid file, re-attached after a restart; stop = `shutdown`,
-  SIGKILL when it will not), liveness = the socket answers `hello`, the `events.jsonl` consumer (one file watcher, DB
+  SIGKILL when it will not), liveness = its pid file names a live pid and the
+  socket answers `hello` — asked of every sdk row whatever its status
+  (`runningAgentIds`), since the status is what the reconciler derives from it
+  (a `gone` row whose agent runs is resurrected, never hidden), the `events.jsonl` consumer (one file watcher, DB
   cursor, reads rotated generations, reports a seq gap), questions into
   question-relay, and the partial message (`partial-stream.ts`: one
   `subscribe` connection per watched conversation, reconnected when the

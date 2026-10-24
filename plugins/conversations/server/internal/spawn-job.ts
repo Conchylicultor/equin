@@ -10,6 +10,7 @@ import {
   clearSpawnFailure,
   recordSpawnFailure,
 } from "@plugins/conversations/plugins/spawn-failure/server";
+import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { Runtime } from "./runtime";
 import { launchWithHeldTurn } from "./turns";
 
@@ -69,6 +70,11 @@ export const spawnConversationJob = defineJob({
     },
     ctx: { signal },
   }) => {
+    // Closed (or deleted) before its agent started: the user is done with it,
+    // so no agent may start for it now — a retry that ran anyway would leave a
+    // process working for a conversation nothing shows or reaps.
+    const row = await getConversation(conversationId);
+    if (!row || row.status === "done") return;
     const at = { attemptId, path: worktreePath, spec };
     const workspace = Workspace.get(spec.kind);
     // Which step threw, for the report: the checkout and the session start fail
@@ -139,9 +145,11 @@ export const spawnConversationJob = defineJob({
         },
       });
       // Rethrow so graphile retries (and dead-letters after maxAttempts —
-      // observable in Debug → Queue + queue-health). On exhaustion the row is left
-      // `starting`; the status reconciler is the single writer of `starting → gone` and
-      // resurrects the row if a late retry finally spawns the session.
+      // observable in Debug → Queue + queue-health). While a retry is still
+      // coming the status reconciler leaves the row `starting`
+      // (`spawnConversationJob.inFlight`); once the job gives up it is the
+      // single writer of `starting → gone`, and it resurrects a `gone` row the
+      // moment its agent is found running.
       throw err;
     }
   },

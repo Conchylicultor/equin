@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { connectionString } from "@plugins/database/plugins/admin/server";
-import { queryOne } from "@plugins/database/plugins/sql-rows/core";
+import { executeRows, queryOne } from "@plugins/database/plugins/sql-rows/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import type {
   JobQueueImpl,
@@ -129,6 +129,32 @@ async function cancelUnstarted(
   emitQueueActivity();
 }
 
+/** `keysInFlight`: a keyed row still within its attempts, or locked (graphile
+ *  counts the attempt at fetch, so a row running its last one is at
+ *  `max_attempts`). A superseded row has had its key cleared, so never matches;
+ *  a dead one is unlocked past its attempts. A locked row whose worker died
+ *  stays in flight until the stuck-lock sweeper reclaims it — by its lock, not
+ *  by a clock. */
+async function keysInFlight(
+  keys: readonly string[],
+): Promise<ReadonlySet<string>> {
+  if (keys.length === 0) return new Set();
+  const rows = await executeRows(db, {
+    label: "jobs.keysInFlight",
+    row: z.object({ key: z.string() }),
+    query: sql`
+      SELECT DISTINCT j.key
+        FROM graphile_worker._private_jobs j
+       WHERE j.key IN (${sql.join(
+         keys.map((k) => sql`${k}`),
+         sql`, `,
+       )})
+         AND (j.attempts < j.max_attempts OR j.locked_at IS NOT NULL)
+    `,
+  });
+  return new Set(rows.map((r) => r.key));
+}
+
 /**
  * The desktop's job queue: graphile-worker in this backend's own database —
  * the three-runner hold-class ladder, the advisory job lock, cron schedules,
@@ -137,6 +163,7 @@ async function cancelUnstarted(
 export const graphileQueue: JobQueueImpl = {
   enqueue: insertJobRow,
   cancelUnstarted,
+  keysInFlight,
   ...graphileJobReads(db),
   async retry(jobId) {
     const utils = await getWorkerUtils();

@@ -13,11 +13,17 @@ import type { QuestionHold } from "./question-hold";
 // shell (status-reconciler.ts), which applies the plan this returns.
 
 /**
- * Grace window between insertConversation and the runtime reporting a live
- * session. Within this window, a "starting" row with no live session is normal
- * (worktree git fork, agent warmup). Past it, assume the runtime never came up
- * (crash mid-create, server restart, the agent exited before the first
- * reconcile) and mark gone so the UI moves off "Starting…".
+ * Grace window for a "starting" row with NO spawn job in flight and no live
+ * session — a launch whose `runtime.create` runs inline in a request (a fork
+ * into an existing attempt, a resume), with nothing durable to ask. Past it,
+ * assume that create never came up (the backend died mid-create) and mark gone
+ * so the UI moves off "Starting…".
+ *
+ * Never applied while the row's `conversations.spawn` job is still coming
+ * (`PlanContext.spawnInFlight`): the job owns its launch — a restart re-runs
+ * it, a failure retries it — and a clock cannot tell a spawn still on its way
+ * from one that gave up. Sweeping on the clock while the job was waiting out a
+ * restart is how a launch came up 30 s after its row had been called gone.
  */
 export const STARTING_TIMEOUT_MS = 30_000;
 
@@ -60,6 +66,14 @@ export interface PlanContext {
    * `submitted_at`), or null when it never did.
    */
   lastSubmitAt: Date | null;
+  /**
+   * Whether the conversation's `conversations.spawn` job is still coming —
+   * queued, waiting out a retry, or running (`spawnConversationJob.inFlight`,
+   * read BEFORE the runtime is asked, so a spawn that finished in between is
+   * seen live). While it is, a "starting" row with no session is the job's to
+   * settle, however long it takes.
+   */
+  spawnInFlight: boolean;
 }
 
 export type UpdatePlan =
@@ -196,8 +210,16 @@ function planLive(
 
 function planAbsent(row: PlanRow, ctx: PlanContext): UpdatePlan {
   if (row.status === "gone") return { kind: "noop" };
-  // A "starting" row inside the grace window is normal (worktree checkout, DB
-  // fork, agent warmup) — the runtime simply has no session to report yet.
+  // Closed while starting: closed, whatever is still on its way (the spawn job
+  // will not launch for a `done` row).
+  if (row.status === "starting" && row.closeRequested)
+    return { kind: "closed" };
+  // A "starting" row whose spawn job is still coming has no session YET: the
+  // job settles it — a live session the next reconcile adopts, or its last
+  // failed attempt leaving it to the sweep below.
+  if (row.status === "starting" && ctx.spawnInFlight) return { kind: "noop" };
+  // Without a spawn job: a create running inline (fork, resume) inside the
+  // grace window is normal — the runtime simply has no session to report yet.
   const startingAgeMs =
     row.status === "starting" ? ctx.now - row.createdAt.getTime() : null;
   if (startingAgeMs !== null && startingAgeMs < STARTING_TIMEOUT_MS)
