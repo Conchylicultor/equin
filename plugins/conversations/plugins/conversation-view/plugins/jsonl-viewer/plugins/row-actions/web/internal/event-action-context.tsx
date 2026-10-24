@@ -31,6 +31,9 @@ export function EventActionProvider({
   );
 }
 
+/** The strip's reserved box, in xs controls (see `EventRowActions`). */
+const STRIP_RESERVE = { header: 5, float: 6 } as const;
+
 /**
  * The universal row actions (timestamp, copy, …, and the ⋯ the slot's config
  * folds raw JSON and the text toggles into) for one transcript event. This
@@ -44,6 +47,16 @@ export function EventActionProvider({
  * covers the row's content: the header renderers drop it into their own
  * trailing slot, and the headerless text/image renderers render it FIRST inside
  * their text with `float`, so the prose wraps around it.
+ *
+ * `reserve` declares the strip's box, so it mounts only when its row is
+ * reached (pointer or focus) — a transcript opens hundreds of rows at once, and
+ * the strip (a timestamp and a handful of buttons) is most of what each costs —
+ * while a placeholder holds the same box, so the prose wraps and the header
+ * lays out identically before and after. The reserve is an upper bound on what
+ * the contributions draw in one row — a timestamp (~2 controls wide) and up to
+ * three visible controls, the rest folded into `⋯` (measured: 71–91px in a
+ * header, 99–124px floated, whose box also carries its start gutter, hence
+ * one control more). A row drawing more grows its box once, when revealed.
  */
 export function EventRowActions({
   className,
@@ -58,7 +71,12 @@ export function EventRowActions({
   if (actions.length === 0) return null;
   const { event, inert } = ctx;
   const strip = (
-    <RowActions pin={null} float={float} className={className}>
+    <RowActions
+      pin={null}
+      float={float}
+      reserve={float ? STRIP_RESERVE.float : STRIP_RESERVE.header}
+      className={className}
+    >
       <JsonlRowActions.Item.Render>
         {(item) => <item.component event={event} />}
       </JsonlRowActions.Item.Render>

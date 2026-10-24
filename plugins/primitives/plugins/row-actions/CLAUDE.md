@@ -11,7 +11,7 @@ own **placement only** — never a reveal. Placement is a closed set:
 | Card cover (gallery card: actions over the picture) | one `Pin to="top-right"` holding `<RowActions pin={null} chrome="float">` (the hover arm) then `<RowActions pin={null} alwaysVisible chrome="float">` (the at-rest arm) — the resting icons keep the right edge, hover adds the others to their left; each arm its own float chip, collapsed when nothing renders in it |
 | Card cover primary (the row's one main verb, bottom-right) | one `Pin to="bottom-right"` holding `<RowActions pin={null} alwaysVisible>` (active) and `<RowActions pin={null}>` (on hover) — no chrome: the action draws its own round button for `placement: "primary"` |
 | Table (reserved `auto` grid track) | `<RowActions pin={null}>`, persistent twin `pin={null} alwaysVisible` before it |
-| Beside prose (a headerless transcript turn) | `<RowActions pin={null} float>` — the text wraps around it; the float is one text line tall (`h-lh`), so it centres on the first line and only that line wraps |
+| Beside prose (a headerless transcript turn) | `<RowActions pin={null} float reserve={n}>` — the text wraps around it; the float is one text line tall (`h-lh`), so it centres on the first line and only that line wraps; `reserve` lets it mount on reach behind a same-box placeholder |
 
 `alwaysVisible` is **per-cluster by design** — a cluster either fades or doesn't.
 Which cluster a given action belongs to is the *action's* call, declared once as
@@ -89,9 +89,37 @@ Two cases mount at once, exactly as before: a row with **no focus stop of its
 own** (a plain container row — Tab could only ever land on the actions
 themselves), and a cluster with **no `rowActionsAnchor` above it** (nothing would
 arm it). A hover-revealed **float chip** (`chrome="float"`) waits too, pinned or not:
-it sits over a picture, never in a track. An **in-flow** cluster (`pin={null}`,
-a table's reserved track) and an **`alwaysVisible`** one never wait: the first sizes its track by its content,
-the second is on screen at rest.
+it sits over a picture, never in a track. An **`alwaysVisible`** cluster never
+waits (it is on screen at rest).
+
+### An in-flow cluster waits only when it declares its box (`reserve`)
+
+An **in-flow** cluster (`pin={null}`) is part of its row's layout — a header's
+trailing slot, a table's `auto` track, the `float` prose wraps around — so its
+buttons appearing would move things. Its box is unknowable without rendering its
+children (contributions may render nothing, a `⋯` folds some, a timestamp's text
+varies), so the host **declares** it: `reserve={n}`, in xs controls
+(`--control-height-xs` each). Then:
+
+- until reached, a **placeholder** holds the box — the same `Stack`, the same
+  classes (reveal, placement, `float-right h-lh` + gutter), the same inline
+  style, no children;
+- the mounted cluster gets the same box: `min-inline-size: n × control`, plus
+  `min-block-size: 1 control` unless `float` (one text line tall), buttons
+  `justify-end` within it.
+
+So reveal is pixel-identical whenever the content fits the reserve. The reserve
+is an **upper bound**, chosen by the host: a row drawing more grows its box
+once, when revealed (the only reflow left — degraded, not broken), and a row
+drawing less keeps the reserved gutter at rest. Omit `reserve` and the cluster
+mounts at once, sized by its content, exactly as before (tables, lists today).
+
+The placeholder is a **focus stop** (`tabIndex=0`, `aria-label="Actions"`) in
+the cluster's place in the tab sequence, so even a row with no control of its
+own (plain prose) defers: Tab landing on it mounts the cluster (the row's
+`focusin`) and hands focus to its first button — its last on Shift+Tab — which
+is `:focus-visible`, so the cluster reveals. In an `inert` row (a transcript
+stand-in) it takes no focus, as the buttons would not.
 
 A test reaching for a hover action does what a user does first —
 `fireEvent.pointerOver(<something in the row>)` — before querying it.
@@ -147,6 +175,7 @@ construction; *visibility* rests on this signal, and only the runtime asserts it
     - `rowActionsAnchor`
 - Cross-plugin:
   - Uses tokens:
+    - `ui/tokens/density --control-height-xs`
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/shadow --shadow`
   - Imported by:

@@ -9,6 +9,8 @@ import { OverlayBoundary } from "@plugins/primitives/plugins/overlay/plugins/ove
 import { usePortalContainer } from "@plugins/primitives/plugins/overlay/plugins/portal-host/web";
 import { OverlayPanel } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/overlay-panel";
 import { usePinOnClick } from "./use-pin-on-click";
+import { DeferredTrigger } from "./deferred-trigger";
+import type { RenderDeferredTrigger } from "./deferred-trigger";
 
 /**
  * The closed type-role ladder, spelled here because ui-kit cannot import the
@@ -250,6 +252,12 @@ function tooltipAttr(content: ReactNode) {
  * {@link Tooltipped} `tooltip` prop draw theirs through this; reach for it
  * directly only for an element that is not one of them. Empty `content`
  * renders `children` alone.
+ *
+ * A closed tooltip costs nothing: the base-ui machinery (Root, Trigger,
+ * popup) mounts only on the first pointer entry or focus on the element
+ * (`DeferredTrigger`), then behaves as if it had always been there — the open
+ * delay and the provider group's skip-delay included. The element itself is
+ * never wrapped or remounted.
  */
 export function WithTooltip({
   content,
@@ -258,34 +266,40 @@ export function WithTooltip({
   children,
 }: WithTooltipProps) {
   if (!hasTooltip(content)) return children;
+  const attr = tooltipAttr(content);
   const body = <TooltipContent side={side}>{content}</TooltipContent>;
-  if (pinOnClick)
-    return (
-      <PinnableTooltip body={body} attr={tooltipAttr(content)}>
-        {children}
-      </PinnableTooltip>
-    );
   return (
-    <Tooltip>
-      <TooltipTrigger render={children} data-tooltip={tooltipAttr(content)} />
-      {body}
-    </Tooltip>
+    <DeferredTrigger
+      attrs={{ "data-tooltip": attr }}
+      mount={(render) =>
+        pinOnClick ? (
+          <PinnableTooltip body={body} attr={attr} render={render} />
+        ) : (
+          <Tooltip>
+            <TooltipTrigger render={render} data-tooltip={attr} />
+            {body}
+          </Tooltip>
+        )
+      }
+    >
+      {children}
+    </DeferredTrigger>
   );
 }
 
 function PinnableTooltip({
   body,
   attr,
-  children,
+  render,
 }: {
   body: ReactElement;
   attr: string | undefined;
-  children: ReactElement;
+  render: RenderDeferredTrigger;
 }) {
   const pin = usePinOnClick();
   return (
     <Tooltip {...pin.root}>
-      <TooltipTrigger render={children} data-tooltip={attr} {...pin.trigger} />
+      <TooltipTrigger render={render} data-tooltip={attr} {...pin.trigger} />
       {body}
     </Tooltip>
   );

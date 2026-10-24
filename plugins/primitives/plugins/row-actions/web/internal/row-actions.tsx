@@ -2,6 +2,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type CSSProperties,
   type ReactNode,
   type RefObject,
 } from "react";
@@ -149,6 +150,22 @@ export type RowActionsProps = RowActionsCommonProps &
          *  it. Its box is held whether or not it is revealed, so revealing it
          *  never reflows the text. Place it BEFORE the prose it sits beside. */
         float?: boolean;
+        /**
+         * The in-flow cluster's box, in xs controls (`--control-height-xs`
+         * each): its minimum inline size, and — unless `float`, which is one
+         * text line tall — its minimum block size is one control. Declaring
+         * it is what lets an in-flow hover cluster wait for its row to be
+         * reached like a pinned one: until then a placeholder holds the SAME
+         * box (same element, classes and min size, no children), so mounting
+         * the buttons changes no geometry — no reflow of the prose wrapping
+         * around a float, no shift in a header.
+         *
+         * An upper bound, not a count: the buttons sit at the box's inline
+         * end, and content wider than the reserve grows the box once revealed
+         * (the one reflow this cannot rule out). Omitted ⇒ the box is the
+         * content, so the cluster mounts at once, as before.
+         */
+        reserve?: number;
       }
   );
 
@@ -167,24 +184,108 @@ export type RowActionsProps = RowActionsCommonProps &
  * alias for "the button that goes in here" would drag `icon-button` (and
  * through it `action-presentation`) into every consumer of `Row`.
  *
- * The reveal is **opacity only** — the cluster is pinned, so it occupies no flow
- * width and its geometry is identical hovered or not. That is load-bearing, not
+ * The reveal is **opacity only** — the cluster is pinned (or, in flow, holds a
+ * box that does not depend on whether it is revealed), so its geometry is
+ * identical hovered or not. That is load-bearing, not
  * an optimization: a menu launched from inside the cluster anchors to it, so a
  * reveal that changed layout would slide the open menu sideways the moment the
  * pointer left the row.
  */
 export function RowActions(props: RowActionsProps) {
-  // Only a PINNED, hover-revealed cluster can wait: it is out of flow, so
-  // whether its buttons exist changes no geometry. An in-flow cluster
-  // (`pin={null}` — a table's reserved track) sizes its track by its content,
-  // and an `alwaysVisible` one is on screen at rest.
+  // A PINNED, hover-revealed cluster can wait: it is out of flow, so whether
+  // its buttons exist changes no geometry. So can an in-flow one that declares
+  // its box (`reserve`): a placeholder holds that box until the row is
+  // reached. An in-flow cluster without one sizes its track by its content,
+  // and an `alwaysVisible` one is on screen at rest — both mount at once.
   // A float chip (`chrome="float"`) sits over a picture, not in a track, so
   // it may wait too, pinned or not: nothing lays out around it.
+  const reserve = props.pin === null ? props.reserve : undefined;
   const deferrable =
-    !props.alwaysVisible && (props.pin !== null || props.chrome === "float");
+    !props.alwaysVisible &&
+    (props.pin !== null || props.chrome === "float" || reserve !== undefined);
   const [sentinelRef, reached] = useRowReached(deferrable);
-  if (deferrable && !reached) return <span ref={sentinelRef} hidden />;
-  return <RowActionsCluster {...props} />;
+  // Where keyboard focus that landed on the placeholder goes once the buttons
+  // exist: the first one when Tab came from before it, the last on Shift+Tab.
+  const handoffRef = useRef<"first" | "last" | null>(null);
+  if (deferrable && !reached) {
+    if (reserve === undefined) return <span ref={sentinelRef} hidden />;
+    return (
+      <ReservedPlaceholder
+        sentinelRef={sentinelRef}
+        handoffRef={handoffRef}
+        float={props.float ?? false}
+        reserve={reserve}
+        placement={props.className}
+      />
+    );
+  }
+  return <RowActionsCluster {...props} handoffRef={handoffRef} />;
+}
+
+/** The reserved box's size, shared by the placeholder and the mounted cluster
+ *  so the two cannot disagree. Inline style: the size is a runtime count. */
+function reserveStyle(reserve: number, float: boolean): CSSProperties {
+  return {
+    minInlineSize: `calc(${reserve} * var(--control-height-xs))`,
+    // A float is exactly one text line tall (`h-lh`); any other in-flow box
+    // is at least one control tall, so an empty cluster (every contribution
+    // rendered nothing) holds the height a mounted button gives it.
+    ...(float ? {} : { minBlockSize: "var(--control-height-xs)" }),
+  };
+}
+
+/** The outermost node's classes for an in-flow cluster — placeholder and
+ *  mounted cluster alike. */
+function inFlowClass(float: boolean, outer: string | undefined): string {
+  return float
+    ? cn("float-right h-lh", insetClass({ l: "sm" }), outer)
+    : cn(outer);
+}
+
+/**
+ * Stands in for a reserved in-flow cluster until its row is reached: the same
+ * `Stack` with the same classes and reserved size, holding nothing. It is a
+ * focus stop of its own, in the cluster's place in the tab sequence — so a row
+ * with no other control (plain prose) still defers, and Tab landing here
+ * mounts the cluster (the row's `focusin`) and hands focus on to its first
+ * button (its last, coming back with Shift+Tab). In an `inert` stand-in row it
+ * takes no focus, exactly as the buttons would not.
+ */
+function ReservedPlaceholder({
+  sentinelRef,
+  handoffRef,
+  float,
+  reserve,
+  placement,
+}: {
+  sentinelRef: RefObject<HTMLElement | null>;
+  handoffRef: RefObject<"first" | "last" | null>;
+  float: boolean;
+  reserve: number;
+  placement: string | undefined;
+}) {
+  return (
+    <Stack
+      ref={sentinelRef}
+      direction="row"
+      gap="none"
+      align="center"
+      justify="end"
+      tabIndex={0}
+      aria-label="Actions"
+      onFocus={(e) => {
+        const from = e.relatedTarget;
+        handoffRef.current =
+          from instanceof Node &&
+          e.currentTarget.compareDocumentPosition(from) &
+            Node.DOCUMENT_POSITION_FOLLOWING
+            ? "last"
+            : "first";
+      }}
+      className={inFlowClass(float, cn(revealClasses, placement))}
+      style={reserveStyle(reserve, float)}
+    />
+  );
 }
 
 /**
@@ -208,8 +309,8 @@ export function RowActions(props: RowActionsProps) {
  */
 function useRowReached(
   deferrable: boolean,
-): [RefObject<HTMLSpanElement | null>, boolean] {
-  const sentinelRef = useRef<HTMLSpanElement>(null);
+): [RefObject<HTMLElement | null>, boolean] {
+  const sentinelRef = useRef<HTMLElement>(null);
   const [reached, setReached] = useState(false);
   useLayoutEffect(() => {
     if (!deferrable || reached) return;
@@ -232,19 +333,43 @@ function useRowReached(
   return [sentinelRef, reached];
 }
 
-function RowActionsCluster({
-  children,
-  pin = "right",
-  alwaysVisible = false,
-  float = false,
-  chrome,
-  className: placement,
-}: RowActionsProps) {
-  const cluster = (className?: string) => (
+function RowActionsCluster(
+  props: RowActionsProps & { handoffRef: RefObject<"first" | "last" | null> },
+) {
+  const {
+    children,
+    pin = "right",
+    alwaysVisible = false,
+    chrome,
+    className: placement,
+    handoffRef,
+  } = props;
+  const float = props.pin === null && (props.float ?? false);
+  const reserve = props.pin === null ? props.reserve : undefined;
+  const clusterRef = useRef<HTMLElement>(null);
+  // Focus that landed on the placeholder moves on into the buttons, which
+  // replaced it in the tab sequence. Each candidate is tried in turn: one the
+  // layout hides (an empty overflow `⋯`) does not take focus.
+  useLayoutEffect(() => {
+    const to = handoffRef.current;
+    handoffRef.current = null;
+    const root = clusterRef.current;
+    if (to === null || root === null) return;
+    const stops = [...root.querySelectorAll<HTMLElement>(FOCUS_STOP)];
+    if (to === "last") stops.reverse();
+    for (const stop of stops) {
+      stop.focus();
+      if (document.activeElement === stop) return;
+    }
+  }, [handoffRef]);
+  const cluster = (className?: string, style?: CSSProperties) => (
     <Stack
+      ref={clusterRef}
       direction="row"
       gap="none"
       align="center"
+      justify={reserve === undefined ? undefined : "end"}
+      style={style}
       // Pressing an action must not reach the row: a click would fire the row's
       // own onSelect (navigating away from whatever the action just did), and a
       // pointerdown would arm a whole-row drag source (tree rows are dragged by
@@ -301,9 +426,8 @@ function RowActionsCluster({
         // the buttons sit below the first line's centre, and the second line
         // wraps around the float too — the cluster reads as spanning two rows.
         return cluster(
-          float
-            ? cn("float-right h-lh", insetClass({ l: "sm" }), outer)
-            : outer,
+          inFlowClass(float, outer),
+          reserve === undefined ? undefined : reserveStyle(reserve, float),
         );
       }}
     </PopupOpenScope>

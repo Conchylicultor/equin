@@ -43324,6 +43324,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `rowActionsAnchor`
       - Cross-plugin:
         - Uses tokens:
+          - `ui/tokens/density --control-height-xs`
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/shadow --shadow`
         - Imported by:
