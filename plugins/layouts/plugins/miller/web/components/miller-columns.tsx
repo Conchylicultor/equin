@@ -1,4 +1,5 @@
 import { useCallback, useContext, useLayoutEffect, useRef } from "react";
+import { prefersReducedMotion } from "@plugins/primitives/plugins/collapsible/web";
 import { DeferredRouteFallback } from "@plugins/layouts/plugins/route-fallback/web";
 import { scrollChildIntoView } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
@@ -37,6 +38,12 @@ export function MillerColumns() {
         ref.current.lastElementChild as HTMLElement | null,
         {
           inline: "end",
+          // Glides in step with the newcomer's entrance (ColumnMotion), which
+          // glides back as a column leaves; the first paint lands in place.
+          behavior:
+            lastLength.current === 0 || prefersReducedMotion()
+              ? "auto"
+              : "smooth",
         },
       );
     }

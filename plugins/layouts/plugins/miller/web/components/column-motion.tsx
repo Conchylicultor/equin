@@ -1,6 +1,10 @@
 import { Component, type ReactNode, type RefObject } from "react";
 import { prefersReducedMotion } from "@plugins/primitives/plugins/collapsible/web";
-import { cloneWithScroll } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
+import {
+  cloneWithScroll,
+  restoreScrollOffset,
+  scrollChildIntoView,
+} from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import type { MatchEntry } from "@plugins/primitives/plugins/pane/web";
 
 /** The wrapper attribute a column is found by — its pane slot's `uuid`. */
@@ -10,12 +14,10 @@ const DURATION = 280;
 // An ease-out gentle enough that the duration reads: an expo-style curve
 // finishes 80% of the motion in the first fifth and every speed looks alike.
 const EASE_OUT = "cubic-bezier(.33, 1, .68, 1)";
-// A leaving column accelerates away — it is not something to read any more.
-const EASE_IN = "cubic-bezier(.5, 0, .75, 0)";
 
 /**
  * A column React is about to remove, copied while it is still on screen:
- * - `leave` — closed (nothing took its place): slides 36px right as it fades.
+ * - `leave` — closed (nothing took its place): the entrance in reverse.
  * - `swap` — replaced in place by another entity of the same pane (or a new
  *   root): only fades, over the newcomer rising in underneath.
  */
@@ -26,6 +28,13 @@ interface Ghost {
   left: number;
   width: number;
   kind: "leave" | "swap";
+}
+
+/** What a commit removing columns leaves to draw: their ghosts, and the row's
+ *  scroll offset before the commit (which may clamp it mid-way). */
+interface Leaving {
+  ghosts: Ghost[];
+  scrollLeft: number;
 }
 
 interface ColumnMotionProps {
@@ -43,9 +52,11 @@ interface ColumnMotionProps {
  *   fading in. The row's widths commit at once (no width transition), so only
  *   the newcomer moves and no column re-wraps frame by frame. When a column
  *   left in the same change, the newcomer waits a beat for it.
- * - **leave** — a closed column is lifted out of flow at its last rect (a copy
- *   of its DOM, on top) and slides 36px right while fading out; the remaining
- *   columns take their new widths underneath at once.
+ * - **leave** — the entrance in reverse: a closed column is lifted out of flow
+ *   at its last rect (a copy of its DOM, on top) and its content slides 36px
+ *   right while fading out, over the same duration and curve as an entrance;
+ *   the remaining columns take their new widths underneath at once, and a row
+ *   scrolled to reveal the column glides back as it leaves.
  * - **swap** — the same pane showing another entity in the same position, or
  *   a new root column: the old content fades out on top while the new one
  *   fades in with a 4px rise.
@@ -62,11 +73,11 @@ interface ColumnMotionProps {
 export class ColumnMotion extends Component<
   ColumnMotionProps,
   object,
-  Ghost[] | null
+  Leaving | null
 > {
   override getSnapshotBeforeUpdate(
     prev: Readonly<ColumnMotionProps>,
-  ): Ghost[] | null {
+  ): Leaving | null {
     const row = this.props.rowRef.current;
     const next = this.props.panes;
     if (prev.panes === next || !row) return null;
@@ -98,19 +109,31 @@ export class ColumnMotion extends Component<
         kind: swap ? "swap" : "leave",
       });
     }
-    return ghosts;
+    return { ghosts, scrollLeft: row.scrollLeft };
   }
 
   override componentDidUpdate(
     prev: Readonly<ColumnMotionProps>,
     _state: Readonly<object>,
-    ghosts: Ghost[] | null,
+    leaving: Leaving | null,
   ): void {
     const row = this.props.rowRef.current;
     if (prev.panes === this.props.panes || !row) return;
     const reduced = prefersReducedMotion();
-    for (const ghost of ghosts ?? []) drawGhost(row, ghost, reduced);
-    const leaving = ghosts?.some((g) => g.kind === "leave") ?? false;
+    const ghosts = leaving?.ghosts ?? [];
+    for (const ghost of ghosts) drawGhost(row, ghost, reduced);
+    // The ghosts hold the scroll area open again; undo a clamp the commit's
+    // removals caused before they were drawn.
+    if (leaving) restoreScrollOffset(row, { left: leaving.scrollLeft });
+    const left = ghosts.some((g) => g.kind === "leave");
+    if (left && row.scrollLeft > settledLeft(row) + 1) {
+      // The reverse of revealing a newcomer: the row glides back as the
+      // columns past the remaining ones' end leave.
+      scrollChildIntoView(row, lastColumn(row), {
+        inline: "end",
+        behavior: reduced ? "auto" : "smooth",
+      });
+    }
 
     const seen = new Set(prev.panes.map((e) => e.uuid));
     this.props.panes.forEach((entry, i) => {
@@ -135,7 +158,7 @@ export class ColumnMotion extends Component<
           ],
           {
             duration: DURATION,
-            delay: DURATION * (swap ? 0.15 : leaving ? 0.25 : 0),
+            delay: DURATION * (swap ? 0.15 : left ? 0.25 : 0),
             easing: EASE_OUT,
             fill: "backwards",
           },
@@ -181,25 +204,63 @@ function drawGhost(row: HTMLElement, ghost: Ghost, reduced: boolean): void {
   row.prepend(node);
   ghost.carryScroll();
 
-  const fade =
-    ghost.kind === "swap"
-      ? node.animate([{ opacity: 1 }, { opacity: 0 }], {
-          duration: DURATION * 0.45,
-          easing: "linear",
-          fill: "forwards",
-        })
-      : node.animate([{ opacity: 1 }, { opacity: 0 }], {
-          duration: DURATION * 0.7,
-          easing: EASE_IN,
-          fill: "forwards",
-        });
-  fade.onfinish = fade.oncancel = () => node.remove();
-  if (ghost.kind === "leave" && !reduced && box) {
-    for (const child of box.children) {
-      child.animate(
-        [{ transform: "none" }, { transform: "translateX(36px)" }],
-        { duration: DURATION * 0.7, easing: EASE_IN, fill: "forwards" },
-      );
-    }
+  // A swap fades out on top of the newcomer rising in. A closed column plays
+  // the opening animation back the way it came — the same frames reversed,
+  // the same duration and curve — so it visibly leaves from the first frame.
+  // The whole ghost fades (its box's own background included); the content
+  // slides inside the box's clip, like the entrance.
+  const swap = ghost.kind === "swap";
+  const fade = node.animate([{ opacity: 1 }, { opacity: 0 }], {
+    duration: swap ? DURATION * 0.45 : DURATION,
+    easing: swap ? "linear" : EASE_OUT,
+    fill: "forwards",
+  });
+  fade.onfinish = () => removeWhenSettled(row, node);
+  fade.oncancel = () => node.remove();
+  if (swap || reduced || !box) return;
+  for (const child of box.children) {
+    child.animate([{ transform: "none" }, { transform: "translateX(36px)" }], {
+      duration: DURATION,
+      easing: EASE_OUT,
+      fill: "forwards",
+    });
   }
+}
+
+function lastColumn(row: HTMLElement): HTMLElement | null {
+  const columns = row.querySelectorAll<HTMLElement>(`[${COLUMN_ATTR}]`);
+  return columns[columns.length - 1] ?? null;
+}
+
+/** The row's scroll offset once its ghosts are gone: as far right as the
+ *  remaining columns reach, no further. */
+function settledLeft(row: HTMLElement): number {
+  const last = lastColumn(row);
+  if (!last) return 0;
+  const end =
+    last.getBoundingClientRect().right -
+    row.getBoundingClientRect().left -
+    row.clientLeft +
+    row.scrollLeft;
+  return Math.max(0, end - row.clientWidth);
+}
+
+/**
+ * A ghost keeps the row's scroll area open while it animates; removing it
+ * while the row is still scrolled past where the remaining columns reach would
+ * snap the scroll (the remaining columns jumping right at the end). So a faded
+ * ghost waits, hidden, for the scroll-back to arrive.
+ */
+function removeWhenSettled(row: HTMLElement, node: HTMLElement): void {
+  if (row.scrollLeft <= settledLeft(row) + 1) {
+    node.remove();
+    return;
+  }
+  node.style.visibility = "hidden";
+  const onScroll = () => {
+    if (row.scrollLeft > settledLeft(row) + 1) return;
+    row.removeEventListener("scroll", onScroll);
+    node.remove();
+  };
+  row.addEventListener("scroll", onScroll);
 }
