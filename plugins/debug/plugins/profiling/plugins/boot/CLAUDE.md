@@ -27,13 +27,14 @@
     - `debug/boot-monitor.getGatewayBootReport`
     - `infra/endpoints.implement`
     - `network/live.serveValue`
-  - Resources: `profiling.boot` (invalidate, snapshot)
+  - Resources: `profiling.boot` (invalidate, snapshot, whole: one process boot's spans — one per boot phase, plugin step and warm-up, a few hundred, fixed once the warm-ups drain, whole: one per boot phase boundary — a dozen or so)
   - Routes: `GET /api/debug/profiling/boot`
 - Core:
   - Uses:
     - `debug/trace/boot.BootGatewaySchema`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
   - Exports (types):
     - `MemoryCheckpoint`
     - `ProfilingData`

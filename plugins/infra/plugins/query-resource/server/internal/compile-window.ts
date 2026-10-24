@@ -4,6 +4,8 @@ import {
   defineResource,
 } from "@plugins/framework/plugins/server-core/core";
 import type {
+  ExternalPointMembership,
+  ExternalWindowMembership,
   KeyedMembership,
   KeyedServerResourceOptions,
   Resource,
@@ -70,7 +72,14 @@ import type {
 // The compile is two halves: `planArm` (`./arm-plan`) plans one relation set —
 // its joins, projection, routes, per-tuple reads, order and the SQL each shape
 // renders — and `assembleWindow` / `assemblePoint` turn that one arm into the
-// loaders, the membership and the scope policy. Only this compiler assembles
+// loaders, the membership and the scope policy. Each assembler is itself two
+// halves: the loaders with the tuple's size and family (`windowLoaders`) or id
+// set (`pointLoaders`), and the routed `scopePolicyOf`. The routed compile
+// (`compileWindowQuery`) composes both; the compile OFF the change feed
+// (`compileOffFeedQuery` — network/live's `serveCollection` with `changes`)
+// takes the loaders alone, registered as an external keyed window / point set
+// whose change is its own `notify`: an external loader always runs with no
+// `ctx` (a full re-read diffed by key), which is the windowed FULL read. Only this compiler assembles
 // here: the union (`./compile-union-window`) and the `all` compiler
 // (`./compile-alias`) share the arm's ROUTED half (`routedReads`) and render
 // and assemble their own raw SQL.
@@ -83,6 +92,22 @@ import type {
 export interface CompiledWindowQuery<Row, P extends ResourceParams> {
   serverOpts: KeyedServerResourceOptions<Row[], P> & ScopePolicy<P>;
   keyField: string;
+}
+
+/**
+ * The same compile OFF the change feed (`compileOffFeedQuery`): the loader the
+ * routed compile runs and the external membership — the window's clamped size
+ * and family, or the point set's ids — with no scope policy, ready for the
+ * two-arg keyed `defineExternalResource` (`ExternalKeyedPolicy`). `reads` are
+ * the tables its SQL reads (the base and every join it may join — the route
+ * tables of the routed compile), which the caller declares `unfed`.
+ */
+export interface CompiledOffFeedQuery<Row, P extends ResourceParams> {
+  loader: (params: P) => Promise<Row[]>;
+  membership: ExternalWindowMembership<P> | ExternalPointMembership<P>;
+  reads: readonly string[];
+  keyField: string;
+  validateParams?: (params: ResourceParams) => void;
 }
 
 type AnyWindowContract<Row, P extends WindowParams = WindowParams> =
@@ -154,18 +179,15 @@ function scopePolicyOf<Row, P extends ResourceParams>(
 }
 
 /**
- * The window half over its one arm (the 1-tuple type: no multi-arm caller can
- * be written, so no cross-arm signature check exists): the order signature, the
- * windowed FULL loader, the scoped refill, `windowIdsOf`, the membership and
- * the scope policy. The union window (`./compile-union-window`) and the `all`
- * compiler (`./compile-alias`) share only the arm's routed half
- * (`routedReads`) and render their own SQL.
+ * The window's loaders over its one arm: the order signature, the windowed
+ * FULL loader, the scoped refill, `windowIdsOf`, and the clamped `limitOf` /
+ * `familyOf` they share — everything but the scope policy, so the off-feed
+ * compile reads the same SQL as the routed one.
  */
-export function assembleWindow<Row, P extends ResourceParams>(
-  arms: readonly [WindowArmPlan<Row, P>],
+function windowLoaders<Row, P extends ResourceParams>(
+  arm: WindowArmPlan<Row, P>,
   outer: WindowOuter<P>,
-): CompiledWindowQuery<Row, P> {
-  const [arm] = arms;
+) {
   // Each signature column's projected field, in `signatureColumns` order.
   const fields = arm.order.signatureFields;
   const encoded = encoder<Row>(outer.encodeRow);
@@ -238,13 +260,29 @@ export function assembleWindow<Row, P extends ResourceParams>(
   // `limitOf` — the same clamped limit — and the window's `familyOf` let
   // the runtime derive a fresh tuple from rows other tuples of the same query
   // hold (a paged read's split or merge).
-  const membership: KeyedMembership<P> = {
-    kind: "window",
+  return {
+    loader,
     windowIdsOf,
     orderSignatureOf,
     limitOf: outer.limitOf,
     familyOf: outer.familyOf,
   };
+}
+
+/**
+ * The window half over its one arm (the 1-tuple type: no multi-arm caller can
+ * be written, so no cross-arm signature check exists): the loaders
+ * (`windowLoaders`), the membership and the scope policy. The union window
+ * (`./compile-union-window`) and the `all` compiler (`./compile-alias`) share
+ * only the arm's routed half (`routedReads`) and render their own SQL.
+ */
+export function assembleWindow<Row, P extends ResourceParams>(
+  arms: readonly [WindowArmPlan<Row, P>],
+  outer: WindowOuter<P>,
+): CompiledWindowQuery<Row, P> {
+  const [arm] = arms;
+  const { loader, ...answers } = windowLoaders(arm, outer);
+  const membership: KeyedMembership<P> = { kind: "window", ...answers };
   const scopePolicy: ScopePolicy<P> = scopePolicyOf(arm, membership);
 
   const serverOpts = {
@@ -259,26 +297,33 @@ export function assembleWindow<Row, P extends ResourceParams>(
 }
 
 /**
- * The point half over its arm: the loader as a scoped read over
- * `ctx?.affectedIds ?? idsOf(params)` (an empty id set short-circuits to `[]`
- * — a legitimately empty value, no query), and `membership: { kind: "point",
- * idsOf }` — the router intersects the changed identity ids with the point
- * set.
+ * The point loader over its arm: a scoped read over `ctx?.affectedIds ??
+ * idsOf(params)` (an empty id set short-circuits to `[]` — a legitimately
+ * empty value, no query).
+ */
+function pointLoader<Row, P extends ResourceParams>(
+  arm: PointArmPlan<Row, P>,
+  outer: PointOuter<P>,
+): (params: P, ctx?: { affectedIds: readonly string[] }) => Promise<Row[]> {
+  const encoded = encoder<Row>(outer.encodeRow);
+  return async (params, ctx) => {
+    const ids = ctx?.affectedIds ?? outer.idsOf(params);
+    if (ids.length === 0) return [];
+    return encoded(arm.fold(await arm.pointQuery(params, ids), params));
+  };
+}
+
+/**
+ * The point half over its arm: the loader (`pointLoader`) and `membership: {
+ * kind: "point", idsOf }` — the router intersects the changed identity ids
+ * with the point set.
  */
 export function assemblePoint<Row, P extends ResourceParams>(
   arms: readonly [PointArmPlan<Row, P>],
   outer: PointOuter<P>,
 ): CompiledWindowQuery<Row, P> {
   const [arm] = arms;
-  const encoded = encoder<Row>(outer.encodeRow);
-  const loader = async (
-    params: P,
-    ctx?: { affectedIds: readonly string[] },
-  ): Promise<Row[]> => {
-    const ids = ctx?.affectedIds ?? outer.idsOf(params);
-    if (ids.length === 0) return [];
-    return encoded(arm.fold(await arm.pointQuery(params, ids), params));
-  };
+  const loader = pointLoader(arm, outer);
   const membership: KeyedMembership<P> = {
     kind: "point",
     idsOf: (params) => outer.idsOf(params),
@@ -292,6 +337,11 @@ export function assemblePoint<Row, P extends ResourceParams>(
   return { serverOpts, keyField: arm.keyField };
 }
 
+/** One bounded spec, planned: its one arm and what assembling it needs. */
+type PlannedBounded<Row, P extends ResourceParams> =
+  | { kind: "window"; arm: WindowArmPlan<Row, P>; outer: WindowOuter<P> }
+  | { kind: "point"; arm: PointArmPlan<Row, P>; outer: PointOuter<P> };
+
 /**
  * Turn a bounded spec + its shared contract into the two-arg `defineResource`
  * server half. Exported separately from `windowQueryResource` (which also
@@ -304,6 +354,58 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
   contract: AnyWindowContract<Row, P & WindowParams>,
   spec: BoundedQueryResourceSpec<P>,
 ): CompiledWindowQuery<Row, P> {
+  const planned = planBounded<Row, P>(contract, spec);
+  return planned.kind === "point"
+    ? assemblePoint<Row, P>([planned.arm], planned.outer)
+    : assembleWindow<Row, P>([planned.arm], planned.outer);
+}
+
+/**
+ * The same bounded spec compiled OFF the change feed (see
+ * `CompiledOffFeedQuery`): the same guards and the same plan, so the loader
+ * reads exactly the SQL the routed compile reads — and no scope policy. The
+ * loader is the routed one, run by the external arm with no `ctx`: a window's
+ * windowed FULL read, a point set's read of its ids.
+ */
+export function compileOffFeedQuery<Row, P extends WindowParams | PointParams>(
+  contract: AnyWindowContract<Row, P & WindowParams>,
+  spec: BoundedQueryResourceSpec<P>,
+): CompiledOffFeedQuery<Row, P> {
+  const planned = planBounded<Row, P>(contract, spec);
+  assertKeyField(contract as AnyWindowContract<unknown>, planned.arm.keyField);
+  // Every table the SQL may read: the route tables of the routed compile
+  // (the base's identity route, one per join and per family), each once.
+  const reads = [...new Set(planned.arm.routes.map((r) => r.table))];
+  if (planned.kind === "point") {
+    const idsOf = planned.outer.idsOf;
+    const loader = pointLoader(planned.arm, planned.outer);
+    return {
+      loader: (params) => loader(params),
+      membership: { kind: "point", idsOf: (params) => idsOf(params) },
+      reads,
+      keyField: planned.arm.keyField,
+    };
+  }
+  const { loader, limitOf, familyOf } = windowLoaders(
+    planned.arm,
+    planned.outer,
+  );
+  return {
+    loader: (params) => loader(params),
+    membership: { kind: "window", limitOf, familyOf },
+    reads,
+    keyField: planned.arm.keyField,
+    ...(planned.outer.validateParams !== undefined
+      ? { validateParams: planned.outer.validateParams }
+      : {}),
+  };
+}
+
+/** The spec's own guards, then its one arm's plan (`planArm`). */
+function planBounded<Row, P extends WindowParams | PointParams>(
+  contract: AnyWindowContract<Row, P & WindowParams>,
+  spec: BoundedQueryResourceSpec<P>,
+): PlannedBounded<Row, P> {
   const key = contract.key;
   guard(
     !(spec.window && spec.point),
@@ -369,12 +471,16 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
       identity: { pk: spec.point.by },
       mode: { kind: "point" },
     });
-    return assemblePoint<Row, P>([arm], {
-      // `idsOf` IS the descriptor's pure `point.decode`.
-      idsOf: (params) => codec.decode(params),
-      ...encodeRow,
-      ...debounceMs,
-    });
+    return {
+      kind: "point",
+      arm,
+      outer: {
+        // `idsOf` IS the descriptor's pure `point.decode`.
+        idsOf: (params) => codec.decode(params),
+        ...encodeRow,
+        ...debounceMs,
+      },
+    };
   }
 
   // Window kind.
@@ -461,17 +567,21 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
   const decodeLimit =
     win.window.limitOf ?? ((params: P) => codec.decode(params).limit);
   const validateParams = win.window.validateParams;
-  return assembleWindow<Row, P>([arm], {
-    key,
-    limitOf: (params) => Math.min(decodeLimit(params), maxLimit),
-    familyOf: win.rowKey.familyOf,
-    readField:
-      win.readField ??
-      ((row: Record<string, unknown>, field: string): unknown => row[field]),
-    ...(validateParams !== undefined ? { validateParams } : {}),
-    ...encodeRow,
-    ...debounceMs,
-  });
+  return {
+    kind: "window",
+    arm,
+    outer: {
+      key,
+      limitOf: (params) => Math.min(decodeLimit(params), maxLimit),
+      familyOf: win.rowKey.familyOf,
+      readField:
+        win.readField ??
+        ((row: Record<string, unknown>, field: string): unknown => row[field]),
+      ...(validateParams !== undefined ? { validateParams } : {}),
+      ...encodeRow,
+      ...debounceMs,
+    },
+  };
 }
 
 /** The descriptor/keyField drift assertion every registration makes. */

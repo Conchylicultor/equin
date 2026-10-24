@@ -5,7 +5,13 @@ import type {
   MetricDecl,
 } from "./define-metric";
 import { resolveRange, type Interval, type RangeSpec } from "./intervals";
-import type { BreakdownResult, BreakdownRow, SeriesResult } from "./wire";
+import {
+  METRIC_MAX_BREAKDOWN_ROWS,
+  METRIC_MAX_SERIES,
+  type BreakdownResult,
+  type BreakdownRow,
+  type SeriesResult,
+} from "./wire";
 
 // Pure evaluation: the provider's `evaluate` is injected, so every rule here
 // (what a total is, when a previous period exists, what a null means) is
@@ -71,7 +77,7 @@ export async function evaluateMetric<P>(
   checkRows(decl.id, rows, intervals.length, split);
 
   const rangeAt = compare ? 2 * n : n;
-  const series = rows
+  const ranked = rows
     .map((row) => {
       const values = row.values.slice(0, n);
       return {
@@ -82,6 +88,8 @@ export async function evaluateMetric<P>(
       };
     })
     .sort(byTotalDesc);
+  // The top series by total: a split with more keys is served truncated.
+  const series = ranked.slice(0, METRIC_MAX_SERIES);
 
   let total: number | null;
   if (split === null) {
@@ -100,6 +108,7 @@ export async function evaluateMetric<P>(
     kind: "series",
     buckets: r.buckets,
     series,
+    truncated: ranked.length > series.length,
     total,
   };
   if (compare) {
@@ -127,9 +136,11 @@ export async function evaluateBreakdown<P>(
   if (new Set(rows.map((row) => row.key)).size !== rows.length) {
     throw new Error(`breakdown "${decl.id}" returned a key twice`);
   }
+  const ordered = [...rows].sort(breakdownOrder(decl.order));
   return {
     kind: "breakdown",
-    rows: [...rows].sort(breakdownOrder(decl.order)),
+    rows: ordered.slice(0, METRIC_MAX_BREAKDOWN_ROWS),
+    truncated: ordered.length > METRIC_MAX_BREAKDOWN_ROWS,
   };
 }
 

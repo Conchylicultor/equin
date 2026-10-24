@@ -49,7 +49,7 @@ The chip renders a muted `—` (reason as tooltip) both for an unresolved payloa
     - `ui/icons.Icon`
 - Server:
   - Contributes: `resource.declare` "commits-graph.graph"
-  - Resources: `commits-graph.graph` (push)
+  - Resources: `commits-graph.graph` (push, whole: this attempt's own commits main already contains — one per push of one attempt, capped: COMMITS_GRAPH_MAX_COMMITS, capped: COMMITS_GRAPH_MAX_BEHIND)
 - Machine:
   - Uses: `network/live.serveValue`
 - Cross-plugin:

@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  wholeList,
+  wholeRecord,
+} from "@plugins/packages/plugins/list-bound/core";
 import { idKindField } from "@plugins/ids/core";
 import { eventIdKind, eventRunIdKind, eventSourceIdKind } from "./id-kinds";
 import { nullable, type FieldsRecord } from "@plugins/fields/core";
@@ -73,7 +77,9 @@ export const eventSourceFields = {
   name: textField({ label: "Name", primary: true }),
   /** Per-type user input, validated against the type's `configFields` on write. */
   config: jsonField<Record<string, unknown>>({
-    schema: z.record(z.string(), z.unknown()),
+    schema: wholeRecord(z.unknown(), {
+      reason: "one source's per-type input — its type's configFields",
+    }),
     default: {},
   }),
   refresh: enumTextField(REFRESH_CADENCES, {
@@ -103,7 +109,12 @@ export const eventSourceFields = {
    * the page, so it leaves this alone rather than clearing caveats that still
    * stand.
    */
-  lastFlags: jsonField<string[]>({ schema: z.array(z.string()), default: [] }),
+  lastFlags: jsonField<string[]>({
+    schema: wholeList(z.string(), {
+      reason: "the flags one source run raised — a few",
+    }),
+    default: [],
+  }),
   /**
    * How the LAST RUN ended — ANY run, including the cheap `unchanged` ones, so
    * this is the newest thing the engine knows rather than the newest thing it
@@ -258,7 +269,12 @@ export const eventSourceRunFields = {
    * `extracted` run can populate this: `unchanged` and `failed` runs write `[]`
    * because neither of them read the page.
    */
-  flags: jsonField<string[]>({ schema: z.array(z.string()), default: [] }),
+  flags: jsonField<string[]>({
+    schema: wholeList(z.string(), {
+      reason: "the flags one source run raised — a few",
+    }),
+    default: [],
+  }),
 } satisfies FieldsRecord;
 
 /**

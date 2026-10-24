@@ -30,7 +30,7 @@ child names nothing of its parent.
     - `network/live.serveValue`
   - DB schema: `plugins/primitives/plugins/data-view/plugins/custom-columns/plugins/values/server/internal/tables.ts`
   - Exports (values): `_dataViewCustomValues`
-  - Resources: `data-view-custom-values` (push, unbounded: one DataView surface's custom-column cells, indexed client-side onto every rendered row; the key is the composite (dataViewId, rowKey, columnId), so no single-id :rows read fits)
+  - Resources: `data-view-custom-values` (push, whole: one DataView surface's custom-column cells, indexed client-side onto every rendered row; the key is the composite (dataViewId, rowKey, columnId), so no single-id :rows read fits)
   - Routes:
     - `POST /api/data-view/custom-values`
     - `POST /api/data-view/custom-values/delete-column`
@@ -38,6 +38,7 @@ child names nothing of its parent.
   - Uses:
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
   - Exports (types):
     - `CustomColumnValueRow`
     - `DeleteCustomColumnValuesBody`

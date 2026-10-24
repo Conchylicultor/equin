@@ -49,10 +49,6 @@ export const runEventsServed = serveValue(runEvents, {
     reason:
       "one run's events joined to their sources, and the run's existence check; whole-table until it reads through a collection",
   },
-  unbounded: {
-    reason:
-      "one run's closed event set — a single extraction, tens of events — and the loader caps it at RUN_EVENTS_LIMIT rows",
-  },
   loader: async ({ runId }) => {
     if (!(await runExists(runId))) {
       throw runEvents.refuse("missing", `Unknown event source run: ${runId}`);

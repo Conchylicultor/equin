@@ -1,9 +1,14 @@
-import type { CostDay, CostSessionDay } from "./values";
+import { COST_DAYS_MAX, type CostDay, type CostSessionDay } from "./values";
 
 // What the browser derives from the two per-day series (`costDaily`,
 // `costSessionsDaily`) — the arithmetic the deleted cumulative / totals /
 // avg-per-conversation endpoints did on the server, unchanged, so one served
 // series feeds several charts.
+
+/** The note under a per-day chart whose series dropped its oldest days (`truncated`). */
+export function costDaysNote(d: { truncated: boolean }): string | null {
+  return d.truncated ? `Showing the latest ${COST_DAYS_MAX} days.` : null;
+}
 
 export function roundCents(n: number): number {
   return Math.round(n * 100) / 100;

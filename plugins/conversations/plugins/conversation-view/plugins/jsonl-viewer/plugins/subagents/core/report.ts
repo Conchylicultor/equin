@@ -35,7 +35,8 @@ function handbackMessage(input: unknown): string | undefined {
  *   "Report" is wrong three times over: it is not the report, it is explicitly
  *   not for display, and it buries the work. The report is instead the last
  *   `SubagentHandback` call in the sub-agent's OWN transcript, whose `message`
- *   is the write-up it handed back.
+ *   is the write-up it handed back ({@link lastHandback}, read over the whole
+ *   transcript by the server — the pane holds only a window of it).
  * - **unknown shape** — the `tool_result` could be either, and there is no way
  *   to tell which, so nothing is claimed.
  *
@@ -50,14 +51,14 @@ function handbackMessage(input: unknown): string | undefined {
 export function subagentReport({
   requestShape,
   agentToolEvent,
-  events,
+  handback,
 }: {
   /** From the meta file. `undefined` = the harness did not record it. */
   requestShape: SubagentRequestShape | undefined;
   /** The parent's `Agent` tool-call event. */
   agentToolEvent: ToolCallEvent | undefined;
-  /** The SUB-AGENT's own transcript — empty when it has none. */
-  events: readonly JsonlEvent[];
+  /** The SUB-AGENT's last handback ({@link lastHandback}) — `null` when it handed none back. */
+  handback: string | null;
 }): SubagentReport {
   if (toolResultIsOutcome(requestShape)) {
     const result = agentToolEvent?.result;
@@ -68,15 +69,24 @@ export function subagentReport({
       isError: result.isError === true,
     };
   }
-  if (requestShape === "background") {
-    // The LAST handback: a sub-agent can hand back more than once, and the
-    // final one is what the caller was left holding.
-    for (let i = events.length - 1; i >= 0; i--) {
-      const event = events[i];
-      if (event?.kind !== "tool-call" || event.name !== HANDBACK_TOOL) continue;
-      const text = handbackMessage(event.input);
-      if (text !== undefined) return { kind: "report", text, isError: false };
-    }
+  if (requestShape === "background" && handback !== null) {
+    return { kind: "report", text: handback, isError: false };
   }
   return { kind: "none" };
+}
+
+/**
+ * The write-up a sub-agent last handed back in its own transcript — the LAST
+ * `SubagentHandback` call carrying a message: a sub-agent can hand back more
+ * than once, and the final one is what the caller was left holding. `null`:
+ * it handed none back.
+ */
+export function lastHandback(events: readonly JsonlEvent[]): string | null {
+  for (let i = events.length - 1; i >= 0; i--) {
+    const event = events[i];
+    if (event?.kind !== "tool-call" || event.name !== HANDBACK_TOOL) continue;
+    const text = handbackMessage(event.input);
+    if (text !== undefined) return text;
+  }
+  return null;
 }

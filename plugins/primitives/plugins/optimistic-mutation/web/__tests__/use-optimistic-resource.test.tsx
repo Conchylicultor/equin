@@ -20,6 +20,7 @@ vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({
 import { act, render, renderHook, waitFor } from "@testing-library/react";
 import { useEffect } from "react";
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { queryKeyFor } from "@plugins/primitives/plugins/live-state/web";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
@@ -58,7 +59,9 @@ import type {
   OptimisticRejectionReport,
 } from "../reporter";
 
-const Numbers = z.array(z.number());
+const Numbers = wholeList(z.number(), {
+  reason: "a test's handful of numbers",
+});
 
 const rowsValue = liveValue("test.optimistic-mutation.rows", {
   schema: Numbers,
@@ -977,11 +980,11 @@ describe("useOptimisticResource", () => {
 // ---------------------------------------------------------------------------
 
 const numbersValue = liveValue("test.optimistic-mutation.value", {
-  schema: z.array(z.number()),
+  schema: Numbers,
 });
 const numbersKey = queryKeyFor(numbersValue.key, undefined);
 const namedValue = liveValue("test.optimistic-mutation.named", {
-  schema: z.array(z.number()),
+  schema: Numbers,
   params: ["name"],
 });
 

@@ -5,95 +5,108 @@ import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import {
+  enumTextField,
   parsedTextField,
   textField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
+import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import {
   liveCollection,
-  liveValue,
   type LiveRowsCollection,
 } from "@plugins/network/plugins/live/core";
-import { HoldClassSchema } from "./hold";
+import { HOLD_CLASSES, HoldClassSchema } from "./hold";
 
-export const JobStateSchema = z.enum([
-  "pending",
-  "running",
-  "retrying",
-  "dead",
-]);
+export const JOB_STATES = ["pending", "running", "retrying", "dead"] as const;
+export const JobStateSchema = z.enum(JOB_STATES);
 export type JobState = z.infer<typeof JobStateSchema>;
 
-export const JobRowSchema = z.object({
-  id: z.string(),
-  jobName: z.string(),
+// ─── The live queue (see server/internal/resources.ts) ─────────────────────
+
+// The fields of one queue row. The labelled ones are what Debug → Queue lists
+// and filters (in its order); the rest ride on the row for its detail pane.
+// Every instant is the row's `timestamptz` cut to ms (what a `Date` holds).
+const JOB_FIELDS = {
+  jobName: textField({ label: "Job", primary: true }),
+  state: enumTextField(JOB_STATES, { label: "Status" }),
   /**
    * The row's duration class — which tier of the runner ladder can fetch it.
    * Derived from the graphile task the row sits on, not from the payload.
-   *
-   * OPTIONAL on purpose, and it must stay that way. During a rolling restart a
-   * client can still be holding a live-state payload produced by a backend from
-   * before hold classes existed; making this required would fail that parse and
-   * blank the Debug → Queue pane for the length of the deploy.
    */
-  hold: HoldClassSchema.optional(),
-  input: z.unknown(),
-  state: JobStateSchema,
-  attempts: z.number(),
-  maxAttempts: z.number(),
-  runAt: z.string(),
-  lockedAt: z.string().nullable(),
-  lockedBy: z.string().nullable(),
-  // Exact worker liveness for a `running` row: `true` = a worker still holds the
-  // job's session-scoped advisory lock, `false` = nobody does (the owning backend
-  // died, or dispatch is mid-acquisition). `null` for every non-running row,
-  // where the question is meaningless. Never derive this from how long
-  // `lockedAt` has been set — that inference is the bug this replaced.
-  alive: z.boolean().nullable(),
-  /**
-   * Whether the backend has WRITTEN OFF the slot this run is holding: it passed
-   * its hold class's deadline, ignored the abort, and outlived the zombie
-   * grace. `alive && forfeited` is the wedge — the handler is still running and
-   * nobody is waiting for it any more.
-   *
-   * OPTIONAL for the same reason `hold` is, and it must stay that way: during a
-   * rolling restart a client can still hold a payload produced by a backend
-   * from before forfeit existed, and making this required would fail that parse
-   * and blank the Debug → Queue pane for the length of the deploy.
-   */
-  forfeited: z.boolean().optional(),
-  queueName: z.string().nullable(),
-  priority: z.number(),
-  lastError: z.string().nullable(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-});
-export type JobRow = z.infer<typeof JobRowSchema>;
+  hold: nullable(enumTextField(HOLD_CLASSES, { label: "Hold" })),
+  attempts: intField({ label: "Attempts" }),
+  /** When the row becomes runnable (a retrying row: when its backoff ends). */
+  runAt: dateField({ label: "Run at" }),
+  lastError: nullable(textField({ label: "Last error" })),
+};
 
-export const JobsPayloadSchema = z.object({
-  rows: z.array(JobRowSchema),
-  counts: z.object({
-    pending: z.number(),
-    running: z.number(),
-    retrying: z.number(),
-    dead: z.number(),
-  }),
-});
-export type JobsPayload = z.infer<typeof JobsPayloadSchema>;
+const JOB_CARRIED = {
+  /** graphile's job id (a bigint), as text. */
+  id: textField(),
+  input: nullable(jsonField({ schema: z.unknown(), default: null })),
+  maxAttempts: intField(),
+  lockedAt: nullable(dateField()),
+  lockedBy: nullable(textField()),
+  /**
+   * Exact worker liveness for a `running` row: `true` = a worker still holds
+   * the job's session-scoped advisory lock, `false` = nobody does (the owning
+   * backend died, or dispatch is mid-acquisition). `null` for every
+   * non-running row, where the question is meaningless. Never derive this from
+   * how long `lockedAt` has been set — that inference is the bug this replaced.
+   */
+  alive: nullable(boolField()),
+  /**
+   * Whether the backend has WRITTEN OFF the slot this run is holding: it
+   * passed its hold class's deadline, ignored the abort, and outlived the
+   * zombie grace. `alive && forfeited` is the wedge — the handler is still
+   * running and nobody is waiting for it any more.
+   */
+  forfeited: boolField(),
+  queueName: nullable(textField()),
+  priority: intField(),
+  createdAt: dateField(),
+  updatedAt: dateField(),
+};
+
+/** How many queue rows one window of {@link jobs} holds at most. */
+export const JOBS_MAX_LIMIT = 500;
 
 /**
- * Debug → Queue's Jobs tab: the newest 500 graphile job rows, with their
- * per-state counts. Served external (`server/internal/resources.ts`): graphile's
- * tables sit outside the schema the change feed covers.
+ * Debug → Queue's Queue view: the host's job queue (on the desktop graphile's
+ * `_private_jobs`, in the browser the in-memory queue) as a live window
+ * collection — newest `runAt` first, cut on `(runAt, id)` — plus its
+ * `:rows` / `:groups` / `:count` siblings. Served external
+ * (`server/internal/resources.ts`): graphile's tables sit outside the schema
+ * the change feed covers, so the queue's own activity signal notifies it. A
+ * row leaves when its run finishes; the run is then a row of {@link jobRuns}.
  *
- * `load: "on-demand"`: a 500-row join read by one Debug pane is kept out of the
- * shared flush — a change sends an `invalidate`, and each open tab refetches
- * over HTTP. No placeholder: not loaded yet is `pending`, never an empty queue.
+ * `runAt` is the one sort: the queue's keyset is `(runAt, id)` — an instant cut
+ * to ms, then graphile's id as TEXT (the `$key` order) — and an unlocked
+ * superseded row (retired, a newer copy queued) is never listed.
  */
-export const jobsList = liveValue("jobs-list", {
-  schema: JobsPayloadSchema,
-  load: "on-demand",
+export const jobs = liveCollection("jobs", {
+  fields: JOB_FIELDS,
+  carry: { fields: JOB_CARRIED },
+  id: "id",
+  sortable: ["runAt"],
+  default: { orderBy: [["runAt", "desc"]], limit: 100 },
+  maxLimit: JOBS_MAX_LIMIT,
+  count: true,
 });
+
+/** One queue row: a row of the {@link jobs} collection. */
+export type JobRow =
+  typeof jobs extends LiveRowsCollection<infer R> ? R : never;
+
+/**
+ * A queue row's `runAt` as its `$key` text — `Date#toISOString()`, which a
+ * source cuts to ms like the row's value (a fixed-width UTC instant, so its
+ * code-point order is time order). Every queue implementation orders and cuts
+ * on exactly this text, then the id.
+ */
+export function jobRunAtKeyText(runAt: Date): string {
+  return runAt.toISOString();
+}
 
 // ─── Dead-letter archive (see server/internal/dead-job-gc.ts) ──────────────
 
@@ -172,9 +185,10 @@ export type JobRunOutcome = z.infer<typeof JobRunOutcomeSchema>;
 
 const JOB_RUN_OUTCOME = parsedTextField(JobRunOutcomeSchema, {
   default: "succeeded",
+  label: "Outcome",
 });
 const JOB_RUN_HOLD = nullable(
-  parsedTextField(HoldClassSchema, { default: "instant" }),
+  parsedTextField(HoldClassSchema, { default: "instant", label: "Hold" }),
 );
 
 /**
@@ -198,69 +212,70 @@ export const jobRunsEntityRef = entityRef("job_runs", {
   error: nullable(textField({ label: "Error" })),
   durationMs: intField({ label: "Duration" }),
   attempt: intField({ label: "Attempt" }),
-  jobId: nullable(textField()),
+  jobId: nullable(textField({ label: "Job id" })),
   hold: JOB_RUN_HOLD,
   maxAttempts: nullable(intField({ label: "Max attempts" })),
   queuedAt: nullable(dateField({ label: "Queued" })),
   input: nullable(jsonField({ schema: z.unknown(), default: null })),
 });
 
-// The run fields the collection declares itself: the counters its wire reads as
-// floats where the entity stores integers, and `waitMs`, which is not stored.
-const JOB_RUN_OWN = {
-  seq: floatField(),
-  durationMs: floatField(),
-  /** Which attempt this run was (1-based; graphile's `attempts` after the run started). */
-  attempt: floatField(),
-  maxAttempts: nullable(floatField()),
+// The run fields the collection declares itself: `waitMs`, which is not
+// stored (listed), and the counters its wire reads as floats where the entity
+// stores integers (carried).
+const JOB_RUN_LISTED = {
   /**
    * How long the run waited for a worker slot: `startedAt − queuedAt` in ms,
    * floored at 0 (the two come from different clocks). Not a stored column —
    * the served collection computes it in SQL. NULL when `queuedAt` is.
    */
-  waitMs: nullable(floatField()),
+  waitMs: nullable(floatField({ label: "Waited" })),
+};
+const JOB_RUN_CARRIED = {
+  seq: floatField(),
+  maxAttempts: nullable(floatField()),
 };
 
+/** How many runs one window of {@link jobRuns} holds at most. */
+export const JOB_RUNS_MAX_LIMIT = 1000;
+
 /**
- * Debug → Queue's run history: EVERY recorded run, as the whole ordered set
- * (`all`, newest finished first) plus its `:rows` point sibling. Its one
- * reader, the Jobs list, merges it with the live graphile queue on the client
- * and filters, sorts and groups the merge there — so it needs every run, and a
- * window would silently drop the oldest past its edge. Bounded by the table: a
- * per-job ring of `RECENT_RUNS_RING` (20) runs (server/internal/tables.ts), so
- * 20 × (job names ever run) rows — about 1,800 on main. No poll and no notify:
- * `job_runs` is a public table, so the change feed routes each finished run's
- * write (an insert, or an overwrite of the ring slot it lands in) to the set.
+ * Debug → Queue's History view: the recorded runs (`job_runs`, a per-job ring
+ * of `RECENT_RUNS_RING` (20) runs — server/internal/tables.ts) as a live
+ * window collection, newest finished first, plus its `:rows` / `:groups` /
+ * `:count` siblings. A job's queue row (see {@link jobs}) becomes a row here
+ * when its run finishes. `jobName` / `outcome` / `hold` filter, group and
+ * facet; `finishedAt` / `durationMs` / `waitMs` sort; `jobId` names the queue
+ * row a run came from (what a detail pane follows a finished job by). No poll
+ * and no notify: `job_runs` is a public table, so the change feed routes each
+ * finished run's write (an insert, or an overwrite of the ring slot it lands
+ * in) to the windows it reaches.
  *
- * The key is `job-runs.all`, not the old window's `job-runs`: no bundle ever
- * declared this key with another contract, so a tab on an older one gets
- * `unknown-key` (a `skew` verdict) and never parses these rows.
+ * The key is `job-runs.history`, not the old whole-set `job-runs.all` nor the
+ * older window's `job-runs`: a tab on an older bundle gets `unknown-key` (a
+ * `skew` verdict) and never parses these rows.
  */
-export const jobRuns = liveCollection("job-runs.all", {
+export const jobRuns = liveCollection("job-runs.history", {
   from: jobRunsEntityRef,
+  pick: [
+    "jobName",
+    "outcome",
+    "hold",
+    "attempt",
+    "finishedAt",
+    "durationMs",
+    "error",
+    "jobId",
+  ],
+  fields: JOB_RUN_LISTED,
   carry: {
-    pick: [
-      "id",
-      "jobName",
-      "startedAt",
-      "finishedAt",
-      "outcome",
-      "error",
-      "jobId",
-      "hold",
-      "queuedAt",
-      "input",
-    ],
-    fields: JOB_RUN_OWN,
+    pick: ["id", "startedAt", "queuedAt", "input"],
+    fields: JOB_RUN_CARRIED,
   },
   id: "id",
-  all: {
-    orderBy: [["finishedAt", "desc"]],
-    unbounded: {
-      reason:
-        "a ring of 20 per job name, and the Jobs list merges and filters every run on the client",
-    },
-  },
+  sortable: ["finishedAt", "durationMs", "waitMs"],
+  default: { orderBy: [["finishedAt", "desc"]], limit: 100 },
+  maxLimit: JOB_RUNS_MAX_LIMIT,
+  count: true,
 });
 
 /** One recorded run of a job: a row of `job_runs`, plus the derived `waitMs`. */

@@ -52,6 +52,7 @@ property of the thing being filtered. Say it in the field's `description`.
     - `fields.FieldMarks`
     - `fields.FieldMeta`
     - `fields/tags.tagsFieldType`
+    - `packages/list-bound.wholeList`
   - Exports (types):
     - `TagsFieldDef`
     - `TagsFieldOptions`

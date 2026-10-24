@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeRecord } from "@plugins/packages/plugins/list-bound/core";
 
 // ---------------------------------------------------------------------------
 // The trace wire model (snapshot v2). Plain, closed, cross-runtime data — so it
@@ -48,7 +49,9 @@ export const TraceSnapshotSchema = z.object({
   // classId → the class's schema-validated section. The engine never names a
   // key; a section that fails its class schema is omitted (and reported), never
   // faked, so a present key is always valid.
-  events: z.record(z.unknown()),
+  events: wholeRecord(z.unknown(), {
+    reason: "one section per registered trace event class",
+  }),
 });
 export type TraceSnapshot = z.infer<typeof TraceSnapshotSchema>;
 

@@ -6,6 +6,8 @@ import type { GitEntry, GitStatus } from "./resources";
  * (`""` is the root itself), `/`-separated, with no trailing slash.
  */
 export interface GitStatusIndex {
+  /** The status was cut at its cap: a path it does not list is unknown, not clean. */
+  readonly truncated: boolean;
   /** The path's own status: its entry, or untracked when inside an untracked dir. */
   entry(rel: string): GitEntry | null;
   /** Whether git ignores the path: a listed ignored file, or inside an ignored dir. */
@@ -56,6 +58,7 @@ export function indexGitStatus(status: GitStatus): GitStatusIndex {
   }
 
   return {
+    truncated: status.truncated,
     entry(rel) {
       const own = status.entries[rel];
       if (own !== undefined) return own;

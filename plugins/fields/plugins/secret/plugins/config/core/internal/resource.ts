@@ -1,12 +1,15 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeRecord } from "@plugins/packages/plugins/list-bound/core";
 
 const secretMetaValueSchema = z.object({
   set: z.boolean(),
   updatedAt: z.number().optional(),
 });
 
-const configV2SecretMetaSchema = z.record(secretMetaValueSchema);
+const configV2SecretMetaSchema = wholeRecord(secretMetaValueSchema, {
+  reason: "one descriptor's secret fields — bounded by its schema",
+});
 export type ConfigV2SecretMeta = z.infer<typeof configV2SecretMetaSchema>;
 
 // One descriptor's secret fields (fieldKey → set / updatedAt), keyed by the

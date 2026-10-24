@@ -1,17 +1,24 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import {
+  wholeList,
+  wholeRecord,
+} from "@plugins/packages/plugins/list-bound/core";
+
+/** Why one theme's lists are loaded whole. */
+const THEME_VARS_REASON = "one tweakcn theme's CSS variables — tens of tokens";
 
 export const CatalogThemeSchema = z.object({
   id: z.string(),
   name: z.string(),
-  tags: z.array(z.string()),
+  tags: wholeList(z.string(), { reason: "one theme's tags — a handful" }),
   source: z.enum(["registry", "community"]),
   likeCount: z.number().optional(),
   author: z.string().optional(),
   cssVars: z.object({
-    theme: z.record(z.string(), z.string()),
-    light: z.record(z.string(), z.string()),
-    dark: z.record(z.string(), z.string()),
+    theme: wholeRecord(z.string(), { reason: THEME_VARS_REASON }),
+    light: wholeRecord(z.string(), { reason: THEME_VARS_REASON }),
+    dark: wholeRecord(z.string(), { reason: THEME_VARS_REASON }),
   }),
 });
 
@@ -27,5 +34,10 @@ export const CatalogThemeSchema = z.object({
  * changes only when that script is re-run and the code redeployed.
  */
 export const communityCatalog = liveValue("tweakcn.community-catalog", {
-  schema: z.object({ themes: z.array(CatalogThemeSchema) }),
+  schema: z.object({
+    themes: wholeList(CatalogThemeSchema, {
+      reason:
+        "a snapshot bundled with the code (522 themes today), never grown by user data — and the gallery searches and filters every entry",
+    }),
+  }),
 });

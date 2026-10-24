@@ -85,12 +85,13 @@ hard stop if this count is ever wrong.
     - `mapsBudgetNow`
     - `mapsBudgetReads`
     - `placesMeter`
-  - Resources: `google-maps.usage` (push)
+  - Resources: `google-maps.usage` (push, whole: one entry per Places SKU called this month — the closed PLACES_SKUS set)
 - Core:
   - Uses:
     - `config_v2.defineConfig`
     - `fields/int/config.intField`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeRecord`
     - `packages/wall-clock.wallClockToInstant`
     - `packages/wall-clock.zoneWallClock`
   - Exports (types):

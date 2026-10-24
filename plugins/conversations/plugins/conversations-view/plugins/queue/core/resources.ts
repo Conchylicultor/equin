@@ -54,4 +54,8 @@ export const queueRanks = liveCollection("queue-ranks", {
   sortable: ["rank"],
   default: { orderBy: [["rank", "asc"]], limit: 100 },
   maxLimit: 500,
+  // The sidebar's id set is every LIVE conversation (`conversations-active`,
+  // a whole set): ~30 today, so the window's 500 would do — but past it the
+  // queue would stop reading. 2000 is far over any live set, still bounded.
+  maxIds: 2000,
 });

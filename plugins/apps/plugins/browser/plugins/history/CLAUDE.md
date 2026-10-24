@@ -46,7 +46,7 @@ page's "Recent" list.
   - Exports (values):
     - `browserHistory`
     - `recordVisit`
-  - Resources: `browser-recents` (push, unbounded: the 12 most recent distinct urls — capped by the loader's LIMIT; a DISTINCT ON derivation over browser_history, not rows of one table)
+  - Resources: `browser-recents` (push, capped: BROWSER_RECENTS_LIMIT)
   - Routes: `POST /api/browser/history`
 - Core:
   - Uses:

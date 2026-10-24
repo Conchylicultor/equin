@@ -8,7 +8,7 @@ import {
 } from "node:fs";
 import { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
-import type { DepState } from "../../core";
+import { DEP_LOG_TAIL_LINES, type DepState } from "../../core";
 import { isLockHeld } from "./lock";
 import type { InstallPaths } from "./store";
 
@@ -51,7 +51,7 @@ export function screenLine(line: string): string {
 }
 
 /** The last `lines` lines of a (possibly large) log, reading only its end. */
-export function logTail(path: string, lines = 20): string[] {
+export function logTail(path: string, lines = DEP_LOG_TAIL_LINES): string[] {
   if (!existsSync(path)) return [];
   const fd = openSync(path, "r");
   try {

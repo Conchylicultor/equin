@@ -17,8 +17,5 @@ export const searchResultsServed = serveValue(searchResults, {
       "any indexed document may enter or leave any question's ranked hits; whole-table until it reads through a collection",
   },
   throttleMs: 1000,
-  unbounded: {
-    reason: "the 30 best-ranked hits of one question (LIMIT 30 in the search)",
-  },
   loader: ({ q, sources }) => runSearch(q, sources ?? []),
 });

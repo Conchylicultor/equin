@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { EmojiSchema } from "@plugins/ui/plugins/icons/plugins/emoji/core";
 
 // Where the link sits in the source page: an excerpt of the linking block's
@@ -24,7 +25,9 @@ export const BacklinkRowSchema = z.object({
   id: z.string(),
   title: z.string(),
   icon: EmojiSchema.nullable(),
-  path: z.array(z.string()),
+  path: wholeList(z.string(), {
+    reason: "one page's ancestors — as deep as the page tree nests",
+  }),
   snippet: BacklinkSnippetSchema.nullable(),
 });
 export type BacklinkRow = z.infer<typeof BacklinkRowSchema>;

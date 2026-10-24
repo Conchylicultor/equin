@@ -23,6 +23,7 @@ function entry(
     positionAgeMs: null,
     notifyStats: { hand: 0, feed: 0, producer: 0 },
     freshness: null,
+    shape: null,
     ...over,
   });
 }

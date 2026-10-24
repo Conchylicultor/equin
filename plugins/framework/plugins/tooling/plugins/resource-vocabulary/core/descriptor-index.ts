@@ -10,6 +10,7 @@ import {
   hasField,
   unresolvableCallIdMessage,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { declaredListBounds, moduleConstInitializers } from "./list-bounds";
 import { mintsOf } from "./mints";
 import {
   resourceDescriptorFactories,
@@ -56,6 +57,13 @@ export interface DescriptorInfo {
   needsMachine?: true;
   /** The declaration sets `origin: "central"`: central serves it, not the worktree backend. */
   origin?: "central";
+  /**
+   * The list bounds the declaration's schema writes (`list-bound`'s markers),
+   * as labels — `whole: <reason>`, `capped: <max>` — read at the declaration
+   * and through the module-level consts of its plugin it names. Absent when
+   * it writes none.
+   */
+  lists?: string[];
 }
 
 /** How one local identifier got into a file. */
@@ -104,9 +112,19 @@ export type ImportedDescriptorResolver = (
  */
 export function buildDescriptorIndex(
   files: readonly SourceFile[],
-  opts: { ownerPlugin: boolean },
+  opts: {
+    ownerPlugin: boolean;
+    /**
+     * Also read each declaration's list bounds (`DescriptorInfo.lists`) — the
+     * docs facet's ask. Off by default: it needs the WHOLE plugin's sources (a
+     * marker's schema or shared reason may be a const of a sibling file, and a
+     * reason it cannot resolve throws), which a per-module index lacks.
+     */
+    lists?: true;
+  },
 ): Map<string, DescriptorInfo[]> {
   const index = new Map<string, DescriptorInfo[]>();
+  let consts: Map<string, string> | null = null;
   for (const { path, src, masked: given } of files) {
     let masked: string | null = given ?? null;
     for (const [factory, entry] of Object.entries(
@@ -141,6 +159,11 @@ export function buildDescriptorIndex(
         const argsText = src.slice(span.open + 1, span.close);
         const where = { file: path, line: lineAt(src, span.identifier) };
         const traits = declarationTraits(argsText, where);
+        let lists: string[] = [];
+        if (opts.lists) {
+          consts ??= moduleConstInitializers(files);
+          lists = declaredListBounds(argsText, consts, where);
+        }
         index.set(
           name,
           mintsOf(entry, argsText, where).map((m) => ({
@@ -148,6 +171,7 @@ export function buildDescriptorIndex(
             keyed: m.keyed,
             membership: m.membership,
             ...traits,
+            ...(lists.length > 0 ? { lists } : {}),
           })),
         );
       }

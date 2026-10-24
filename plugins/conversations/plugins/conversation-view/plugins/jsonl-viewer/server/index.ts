@@ -17,6 +17,12 @@ export {
   conversationEventsSignature,
   watchConversationEvents,
 } from "./internal/conversation-events";
+// The rows and meta `jsonl-events` pages a transcript as — for another
+// transcript paged the same way (a sub-agent's, `subagent-transcript`).
+export {
+  transcriptMeta,
+  transcriptRows,
+} from "./internal/jsonl-events-resource";
 
 export default {
   portable: true,

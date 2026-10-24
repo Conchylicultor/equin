@@ -3,6 +3,7 @@ import {
   PlaceCandidateSchema,
   PlaceSuggestionSchema,
 } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
+import { cappedList } from "@plugins/packages/plugins/list-bound/core";
 import { SEARCH_RUNGS } from "./search-rung";
 
 /**
@@ -44,6 +45,16 @@ export const PlaceSearchQuerySchema = z.object({
 });
 export type PlaceSearchQuery = z.infer<typeof PlaceSearchQuerySchema>;
 
+/** At most this many Google hits per search (one call bills the same at any size). */
+export const PLACES_SEARCH_MAX_RESULTS = 20;
+
+/** At most this many autocomplete names per search — Google answers at most 5. */
+export const PLACES_SEARCH_MAX_SUGGESTIONS = 5;
+
+const ResultsSchema = cappedList(PlaceCandidateSchema, {
+  max: PLACES_SEARCH_MAX_RESULTS,
+});
+
 /**
  * Google's answer to a Places search, at the rung asked (`searchRung`: the
  * richest detail this month's free allowance still covers):
@@ -58,15 +69,17 @@ export type PlaceSearchQuery = z.infer<typeof PlaceSearchQuerySchema>;
  * showing less without a word.
  */
 export const PlaceSearchResultSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("rich"), results: z.array(PlaceCandidateSchema) }),
+  z.object({ kind: z.literal("rich"), results: ResultsSchema }),
   z.object({
     kind: z.literal("basic"),
-    results: z.array(PlaceCandidateSchema),
+    results: ResultsSchema,
     resumesAt: z.string().datetime(),
   }),
   z.object({
     kind: z.literal("names"),
-    suggestions: z.array(PlaceSuggestionSchema),
+    suggestions: cappedList(PlaceSuggestionSchema, {
+      max: PLACES_SEARCH_MAX_SUGGESTIONS,
+    }),
     resumesAt: z.string().datetime(),
   }),
   MapsNotConfiguredSchema,

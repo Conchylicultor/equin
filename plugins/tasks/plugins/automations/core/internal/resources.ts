@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import {
@@ -19,7 +20,10 @@ import { LAUNCH_DECISIONS, ORIGIN_ROLES } from "./settings";
  * `runningTaskIds` move then.
  */
 export const automationsCatalog = liveValue("automations.catalog", {
-  schema: z.array(AutomationEntrySchema),
+  schema: wholeList(AutomationEntrySchema, {
+    reason:
+      "every registered automation — declared in code, bounded by the composition",
+  }),
   // Served by the machine half: the automations it lists are config-bound
   // (until the config split), so a reader under an in-browser server gets
   // `unavailable`.
@@ -47,7 +51,12 @@ export const taskOriginShape = defineExtensionShape({
   key: "taskId",
   fields: {
     automationId: textField({ label: "Automation" }),
-    sourceKeys: jsonField({ schema: z.array(z.string()), default: [] }),
+    sourceKeys: jsonField({
+      schema: wholeList(z.string(), {
+        reason: "the sources one filed task covers — one batch's",
+      }),
+      default: [],
+    }),
     filedAt: dateField(),
     role: enumTextField(ORIGIN_ROLES, { default: "filed" }),
     releasedAt: nullable(dateField()),

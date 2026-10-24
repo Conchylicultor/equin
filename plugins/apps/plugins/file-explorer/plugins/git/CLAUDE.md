@@ -21,7 +21,10 @@ missing column). Plan: `research/2026-10-02-apps-file-explorer-git-and-code-expl
   resolves descendants by prefix (`shared/status-index.ts`). `matching` rather
   than `traditional` because it never walks an ignored folder (3–4× faster
   here); a folder whose files are each ignored by a file pattern lists those
-  files rather than itself.
+  files rather than itself. Each list is capped at `GIT_STATUS_MAX_PATHS`
+  (5,000, in the schema): past it the loader keeps the first 5,000 and sets
+  `truncated`, and `useGitView` turns that into `failed` (a path left out would
+  otherwise read clean).
 - **Freshness.** A `createSignedMemo` keyed by root, whose signature is the
   porcelain read, `main`'s sha and an `lstat` of each path changed vs HEAD.
   While subscribed, a `defineFileWatcher` on the checkout and its git dir
@@ -70,7 +73,7 @@ missing column). Plan: `research/2026-10-02-apps-file-explorer-git-and-code-expl
     - `primitives/commit-list.tryRunGit`
   - Resources:
     - `file-explorer.git-checkout` (invalidate, snapshot)
-    - `file-explorer.git-status` (push, notified)
+    - `file-explorer.git-status` (push, notified, capped: GIT_STATUS_MAX_PATHS)
 - Core:
   - Uses:
     - `apps/file-explorer/browser.fileEntry`

@@ -4202,6 +4202,10 @@
       "name": "@singularity/plugin-packages-keyed-mutex",
       "version": "0.0.1",
     },
+    "plugins/packages/plugins/list-bound": {
+      "name": "@singularity/plugin-packages-list-bound",
+      "version": "0.0.1",
+    },
     "plugins/packages/plugins/macrotask-yield": {
       "name": "@singularity/plugin-packages-macrotask-yield",
       "version": "0.0.1",
@@ -9139,6 +9143,8 @@
     "@singularity/plugin-packages-inflight": ["@singularity/plugin-packages-inflight@workspace:plugins/packages/plugins/inflight"],
 
     "@singularity/plugin-packages-keyed-mutex": ["@singularity/plugin-packages-keyed-mutex@workspace:plugins/packages/plugins/keyed-mutex"],
+
+    "@singularity/plugin-packages-list-bound": ["@singularity/plugin-packages-list-bound@workspace:plugins/packages/plugins/list-bound"],
 
     "@singularity/plugin-packages-macrotask-yield": ["@singularity/plugin-packages-macrotask-yield@workspace:plugins/packages/plugins/macrotask-yield"],
 

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 export const ColumnSchema = z.object({
   column_name: z.string(),
@@ -16,7 +17,11 @@ export const ColumnSchema = z.object({
  * exist is refused `missing`.
  */
 export const tableColumns = liveValue("studio.table-columns", {
-  schema: z.object({ columns: z.array(ColumnSchema) }),
+  schema: z.object({
+    columns: wholeList(ColumnSchema, {
+      reason: "one table's columns — Postgres caps a table at 1,600",
+    }),
+  }),
   params: ["tableName"],
   refusals: ["missing"],
 });

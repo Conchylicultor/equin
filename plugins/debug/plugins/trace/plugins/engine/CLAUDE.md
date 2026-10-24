@@ -279,6 +279,7 @@ expandable JSON.
     - `infra/entities.entityRef`
     - `network/live.liveCollection`
     - `network/live.LiveRowsCollection`
+    - `packages/list-bound.wholeRecord`
     - `primitives/pane.defineRoute`
   - Exports (types):
     - `RingEvent`

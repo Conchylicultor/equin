@@ -18,12 +18,14 @@
     - `deleteSource`
     - `getSourceDocMetadata`
     - `upsertSearchDocs`
-  - Resources: `search.results` (push, unbounded: the 30 best-ranked hits of one question (LIMIT 30 in the search))
+  - Resources: `search.results` (push, capped: SEARCH_RESULTS_LIMIT, whole: one source's opaque metadata bag — a few keys (an icon descriptor))
   - Routes: `GET /api/search`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
+    - `packages/list-bound.cappedList`
+    - `packages/list-bound.wholeRecord`
   - Exports (types):
     - `SearchDoc`
     - `SearchQuery`

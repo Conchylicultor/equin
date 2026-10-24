@@ -202,6 +202,16 @@ export interface LiveFieldsSpec<
    * every client). The `related` ones still fold.
    */
   baseExposures?: false;
+  /**
+   * The most ids one `:rows` tuple (`useLive(c, { ids })`, `useLiveRow`,
+   * `useOptimisticResource(c, { ids })`) may name: the point codec's `encode`
+   * throws past it, and its `decode` — the params gate and the membership
+   * `idsOf` — refuses it as `contract-mismatch`, so an id set is a bounded read
+   * like a window. Default: a window's `maxLimit`, an `all` set's `max`, else
+   * `LIVE_DEFAULT_MAX_IDS` (500). Declare it where a reader's id set is known
+   * to be larger (the queue reads the ranks of every live conversation).
+   */
+  maxIds?: number;
   /** The old spelling's — `row` / `filterable` / `exposes` are derived here. */
   row?: never;
   filterable?: never;

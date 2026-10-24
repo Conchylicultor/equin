@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 
 // The Claude accounts agents can run on. One is always there: the account the
@@ -22,7 +23,9 @@ export type ClaudeAccount = z.infer<typeof ClaudeAccountSchema>;
 
 export const ClaudeAccountsSchema = z.object({
   /** The token accounts, in the order they were added. */
-  accounts: z.array(ClaudeAccountSchema),
+  accounts: wholeList(ClaudeAccountSchema, {
+    reason: "the Claude accounts the user added by hand — a handful",
+  }),
   /** The account new agents launch on: {@link SYSTEM_ACCOUNT_ID} or a token account's id. */
   active: z.string().min(1),
   /** Launch on the account with the most weekly room left when the active one has hit a limit. */

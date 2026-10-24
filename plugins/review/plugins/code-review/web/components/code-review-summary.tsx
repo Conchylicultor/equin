@@ -75,14 +75,15 @@ function AttemptCodeReviewSummary({
   // An unresolved worktree has no measurable stats — render nothing (this chip's
   // existing absence idiom); the code-review section pane surfaces the reason.
   if (!filesPayload.resolved) return null;
-  const files = filesPayload.value;
+  // The totals are the whole set's (the edited files' meta); the warning level
+  // reads the files loaded — the whole set, or its first `EDITED_FILES_MAX` by
+  // path, where a huge diff has already earned a look.
+  const { files, summary } = filesPayload.value;
 
   // The read is already scoped to this conversation's attempt, so any row means a past push.
   const hasPastPushes = pushes.length > 0;
 
-  const count = files.length;
-  const additions = files.reduce((sum, f) => sum + f.additions, 0);
-  const deletions = files.reduce((sum, f) => sum + f.deletions, 0);
+  const { count, additions, deletions } = summary;
 
   const maxLevel: FileWarningLevel = files.reduce<FileWarningLevel>(
     (max, f) => {

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 /**
  * How much of a shell's output file's END the server reads per change.
@@ -90,6 +91,9 @@ export const ShellFactSchema = z.object({
  * events still sees a shell launched long ago. Small: one entry per shell.
  */
 export const conversationShellFacts = liveValue("background-shells.facts", {
-  schema: z.array(ShellFactSchema),
+  schema: wholeList(ShellFactSchema, {
+    reason:
+      "one conversation's background shells — one per background Bash launch, dozens at most",
+  }),
   params: ["id"],
 });

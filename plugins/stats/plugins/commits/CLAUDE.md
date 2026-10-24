@@ -47,9 +47,9 @@
   - Uses: `config_v2.ConfigV2`
   - Resources:
     - `stats.commits.counts` (invalidate, notified)
-    - `stats.commits.counts-by-category` (invalidate, notified)
+    - `stats.commits.counts-by-category` (invalidate, notified, whole: one entry per item configured in the category (plus Unknown) — a handful the user names)
     - `stats.commits.lines` (invalidate, notified)
-    - `stats.commits.lines-by-ext` (invalidate, notified)
+    - `stats.commits.lines-by-ext` (invalidate, notified, whole: one key per file extension the history touched (~50) — the repo's file kinds, never its files)
 - Machine:
   - Uses: `network/live.serveValue`
 - Cross-plugin:
@@ -77,6 +77,7 @@
     - `CommitsQuery`
   - Exports (values):
     - `COMMIT_BUCKETS`
+    - `commitPointsNote`
     - `commitsConfig`
     - `commitsCounts`
     - `commitsCountsByCategory`

@@ -9,6 +9,7 @@ import {
 } from "@plugins/conversations/plugins/conversation-category/server";
 import { commitsConfig } from "../../shared/config";
 import {
+  COMMIT_POINTS_MAX,
   commitsCounts,
   commitsCountsByCategory,
   commitsLines,
@@ -58,6 +59,13 @@ async function lineCommits(dedup: boolean): Promise<CommitInfo[]> {
   return dedup ? deduplicateByPushId(commits) : commits;
 }
 
+/** The newest `COMMIT_POINTS_MAX` of a series (ascending), and whether older points were dropped. */
+function newestPoints<P>(points: P[]): { points: P[]; truncated: boolean } {
+  return points.length > COMMIT_POINTS_MAX
+    ? { points: points.slice(-COMMIT_POINTS_MAX), truncated: true }
+    : { points, truncated: false };
+}
+
 async function countCommits(dedup: boolean): Promise<CommitInfo[]> {
   const commits = await getCommits();
   return dedup ? deduplicateByPushId(commits) : commits;
@@ -67,9 +75,8 @@ export const commitsCountsServed = serveValue(commitsCounts, {
   source: "external",
   changes: "notified",
   recomputeOn: [refHeadServed],
-  loader: async ({ series, dedup }) => ({
-    points: countPoints(await countCommits(dedup), series),
-  }),
+  loader: async ({ series, dedup }) =>
+    newestPoints(countPoints(await countCommits(dedup), series)),
 });
 
 export const commitsCountsByCategoryServed = serveValue(
@@ -92,8 +99,10 @@ export const commitsCountsByCategoryServed = serveValue(
       const commits = await countCommits(dedup);
       const itemMap = await buildItemMap(categoryId);
       return {
-        points: countByItemPoints(commits, series, (c) =>
-          itemFor(itemMap, c.conversationId),
+        ...newestPoints(
+          countByItemPoints(commits, series, (c) =>
+            itemFor(itemMap, c.conversationId),
+          ),
         ),
         items: getConfigItemOrder(categoryId),
       };
@@ -107,9 +116,8 @@ export const commitsLinesServed = serveValue(commitsLines, {
   source: "external",
   changes: "notified",
   recomputeOn: [refHeadServed],
-  loader: async ({ series, dedup }) => ({
-    points: linesPoints(await lineCommits(dedup), series),
-  }),
+  loader: async ({ series, dedup }) =>
+    newestPoints(linesPoints(await lineCommits(dedup), series)),
   whileSubscribed: (_q, notify) => onConfigChange(commitsConfig, notify),
 });
 
@@ -117,8 +125,7 @@ export const commitsLinesByExtServed = serveValue(commitsLinesByExt, {
   source: "external",
   changes: "notified",
   recomputeOn: [refHeadServed],
-  loader: async ({ series, dedup }) => ({
-    points: linesByExtPoints(await lineCommits(dedup), series),
-  }),
+  loader: async ({ series, dedup }) =>
+    newestPoints(linesByExtPoints(await lineCommits(dedup), series)),
   whileSubscribed: (_q, notify) => onConfigChange(commitsConfig, notify),
 });

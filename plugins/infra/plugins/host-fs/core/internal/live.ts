@@ -112,7 +112,9 @@ export const HostFsDirPeekSchema = z.discriminatedUnion("kind", [
     kind: z.literal("ok"),
     path: z.string(),
     /** Every child, hidden ones included, by name only — no child is stat'ed. */
-    children: z.array(z.object({ name: z.string(), hidden: z.boolean() })),
+    children: z
+      .array(z.object({ name: z.string(), hidden: z.boolean() }))
+      .max(HOST_FS_PEEK_MAX_NAMES),
   }),
   /** More than {@link HOST_FS_PEEK_MAX_NAMES} children: `total` counts them all. */
   z.object({

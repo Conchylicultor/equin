@@ -80,10 +80,11 @@ existed, draws a generic pin / neutral circle until the next refresh.
     - `getPlaceProvider`
   - Resources:
     - `place.resolve` (invalidate, fixed)
-    - `place.search` (invalidate, fixed)
+    - `place.search` (invalidate, fixed, capped: PLACE_SEARCH_MAX_SUGGESTIONS)
 - Core:
   - Uses:
     - `network/live.liveValue`
+    - `packages/list-bound.cappedList`
     - `packages/resource-protocol.ResourceRefusal`
     - `page/editor.defineBlock`
     - `ui/icons.symbol`
@@ -97,6 +98,7 @@ existed, draws a generic pin / neutral circle until the next refresh.
     - `PlaceSuggestion`
   - Exports (values):
     - `PLACE_LOOKUP_REFUSALS`
+    - `PLACE_SEARCH_MAX_SUGGESTIONS`
     - `PLACE_SNAPSHOT_TTL_MS`
     - `PLACE_TYPE`
     - `placeBlock`

@@ -1,29 +1,33 @@
-import {
-  cn,
-  ControlSizeProvider,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import type { ReactElement } from "react";
+import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { useMemo, type ReactElement } from "react";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { useLive, useLiveRow } from "@plugins/network/plugins/live/web";
+import { useLiveRow } from "@plugins/network/plugins/live/web";
+import {
+  DataView,
+  defineDataView,
+  useLivePagedValuePaging,
+  type FieldDef,
+} from "@plugins/primitives/plugins/data-view/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { LiveLogChannel } from "@plugins/primitives/plugins/log-channels/web";
-import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   RELEASE_LOG_CHANNEL,
   releaseRunLogs,
   releaseRuns,
   type ReleaseLogLine,
+  type ReleaseRunLogsQuery,
+  type ReleaseRunLogsRefusal,
 } from "@plugins/release/core";
-import { textVariantClass } from "@plugins/primitives/plugins/css/plugins/text/web";
 
-// Mono log body: intentional fixed code size + line-height (not on the typography scale).
-const monoLogClass = textVariantClass("code");
+// Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
+const RELEASE_RUN_LOGS = defineDataView("release.run-logs");
+
+const NO_LINES: ReleaseLogLine[] = [];
 
 export function ReleaseLogSection({ runId }: { runId: string }): ReactElement {
   const result = useLiveRow(releaseRuns, runId);
@@ -82,26 +86,63 @@ function LiveLogs(): ReactElement {
   );
 }
 
+/**
+ * A finished run's transcript, newest line first, a page at a time: the
+ * DataView pages it by viewport, so scrolling down reads back through the log
+ * (to its phase headers at line 1) without the whole file ever being loaded.
+ */
 function PersistedLogs({ runId }: { runId: string }): ReactElement {
-  const result = useLive(releaseRunLogs, { id: runId });
-  switch (result.status) {
-    case "loading":
-      return <Loading variant="rows" count={3} />;
-    case "error":
-      return (
-        <ResourceErrorInline
-          variant="block"
-          subject="the release logs"
-          error={result.error}
-          refetch={result.refetch}
-        />
-      );
-    case "ready":
-      return <LogLines lines={result.data.lines} />;
-  }
-}
+  const { pages, paging } = useLivePagedValuePaging<
+    ReleaseLogLine,
+    undefined,
+    ReleaseRunLogsQuery,
+    ReleaseRunLogsQuery,
+    ReleaseRunLogsRefusal
+  >(releaseRunLogs, { id: runId });
+  const readiness = useMemo(
+    () =>
+      pages.status === "ready"
+        ? { status: "ready" as const, data: pages.rows }
+        : pages,
+    [pages],
+  );
+  const rows = pages.status === "ready" ? pages.rows : NO_LINES;
 
-function LogLines({ lines }: { lines: ReleaseLogLine[] }): ReactElement {
+  const fields = useMemo<FieldDef<ReleaseLogLine>[]>(
+    () => [
+      {
+        id: "n",
+        label: "Line",
+        type: "number",
+        value: (l) => Number(l.n),
+        cell: (l) => (
+          <Text variant="code" tone="faint" className="tabular-nums">
+            {Number(l.n)}
+          </Text>
+        ),
+        width: "4rem",
+      },
+      {
+        id: "text",
+        label: "Text",
+        type: "text",
+        primary: true,
+        value: (l) => l.text,
+        cell: (l) => (
+          <Text
+            variant="code"
+            tone={l.stream === "stderr" ? "destructive" : "default"}
+            className="whitespace-pre-wrap break-all"
+          >
+            {l.text}
+          </Text>
+        ),
+        width: "minmax(0,1fr)",
+      },
+    ],
+    [],
+  );
+
   return (
     <Stack gap="xs">
       <Line className="pb-xs">
@@ -111,31 +152,27 @@ function LogLines({ lines }: { lines: ReleaseLogLine[] }): ReactElement {
           </Text>
         </Fill>
         <ControlSizeProvider size="xs">
+          {/* The lines loaded so far — the reader pages the rest in. */}
           <CopyButton
-            text={lines.map((l) => l.text).join("\n")}
-            tooltip="Copy logs"
+            text={[...rows]
+              .reverse()
+              .map((l) => l.text)
+              .join("\n")}
+            tooltip="Copy the loaded lines"
           />
         </ControlSizeProvider>
       </Line>
-      <Scroll
-        axis="y"
-        className={`min-h-48 max-h-96 rounded-md border bg-muted/30 px-md py-sm ${monoLogClass}`}
-      >
-        {lines.length === 0 && (
-          <span className="text-muted-foreground">No release logs</span>
-        )}
-        {lines.map((line, i) => (
-          <div
-            key={i}
-            className={cn(
-              "whitespace-pre-wrap break-all",
-              line.stream === "stderr" ? "text-destructive" : "text-foreground",
-            )}
-          >
-            {line.text}
-          </div>
-        ))}
-      </Scroll>
+      <DataView<ReleaseLogLine>
+        rows={rows}
+        fields={fields}
+        rowKey={(l) => l.n}
+        storageKey={RELEASE_RUN_LOGS}
+        views={["table", "list"]}
+        defaultView="table"
+        readiness={readiness}
+        paging={paging ?? undefined}
+        emptyState="No release logs"
+      />
     </Stack>
   );
 }

@@ -1,8 +1,18 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import {
+  cappedList,
+  wholeRecord,
+} from "@plugins/packages/plugins/list-bound/core";
+
+/** How many rows a sample holds — the loader's `LIMIT`, and the schema's cap. */
+export const SAMPLE_ROWS_LIMIT = 10;
+
+/** Postgres's own cap on a table's columns. */
+export const PG_MAX_COLUMNS = 1600;
 
 /**
- * The first 10 rows of one public table (`SELECT * … LIMIT 10`), with its
+ * The first SAMPLE_ROWS_LIMIT rows of one public table (`SELECT * … LIMIT n`), with its
  * column names from the result descriptor. A snapshot: the table is any public
  * relation the reader names, and many have no change signal (a view, a
  * derived-table rollup, an `ExcludeFromChangeFeed` table such as `traces`), so
@@ -12,8 +22,13 @@ import { liveValue } from "@plugins/network/plugins/live/core";
  */
 export const tableSampleRows = liveValue("studio.table-sample-rows", {
   schema: z.object({
-    columns: z.array(z.string()),
-    rows: z.array(z.record(z.unknown())),
+    columns: cappedList(z.string(), { max: PG_MAX_COLUMNS }),
+    rows: cappedList(
+      wholeRecord(z.unknown(), {
+        reason: "one row's columns — Postgres caps a table at 1,600",
+      }),
+      { max: SAMPLE_ROWS_LIMIT },
+    ),
   }),
   params: ["tableName"],
   load: "snapshot",

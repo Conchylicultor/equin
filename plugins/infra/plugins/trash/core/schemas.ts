@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeRecord } from "@plugins/packages/plugins/list-bound/core";
 import { fieldsToZodObject } from "@plugins/fields/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
@@ -24,7 +25,12 @@ export const TRASH_ENTRY_CARRIED = {
   rootEntityId: textField(),
   // Listed by the pages trash (the one column it sorts by), never filtered.
   deletedAt: dateField({ label: "Deleted", filterable: false }),
-  meta: jsonField({ schema: z.record(z.unknown()), default: {} }),
+  meta: jsonField({
+    schema: wholeRecord(z.unknown(), {
+      reason: "the few named values one trash entry's source records",
+    }),
+    default: {},
+  }),
 };
 export const TrashEntrySchema = fieldsToZodObject({
   ...TRASH_ENTRY_CARRIED,

@@ -93,7 +93,9 @@ export const CHAIN_CAP = 200;
  * a fact the UI states rather than hides.
  */
 export const ChainSchema = z.object({
-  commits: z.array(CommitRowSchema),
+  // At most `CHAIN_CAP` walked commits, plus the base's own row when the walk
+  // reached it.
+  commits: z.array(CommitRowSchema).max(CHAIN_CAP + 1),
   truncated: z.boolean(),
 });
 export type Chain = z.infer<typeof ChainSchema>;
@@ -138,24 +140,24 @@ export const DeploymentStateSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("converged"),
     target: z.string(),
-    deployable: z.array(CarrierSchema),
+    deployable: z.array(CarrierSchema).max(CARRIER_IDS.length),
     chain: ChainSchema,
   }),
   z.object({
     kind: z.literal("behind"),
     target: z.string(),
-    deployable: z.array(CarrierSchema),
+    deployable: z.array(CarrierSchema).max(CARRIER_IDS.length),
     chain: ChainSchema,
   }),
   z.object({
     kind: z.literal("diverged"),
     target: z.string(),
-    deployable: z.array(CarrierSchema),
+    deployable: z.array(CarrierSchema).max(CARRIER_IDS.length),
   }),
   z.object({
     kind: z.literal("unknown"),
     reason: z.string(),
-    deployable: z.array(CarrierSchema),
+    deployable: z.array(CarrierSchema).max(CARRIER_IDS.length),
   }),
 ]);
 export type DeploymentState = z.infer<typeof DeploymentStateSchema>;

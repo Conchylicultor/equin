@@ -1,0 +1,13 @@
+// @hash 6ec84829688d
+{
+  // Studio → Release → a run's Logs: the run's log, read newest line first
+  // (the `release.run-logs` paged value — the viewport pages back through it).
+  // The order is the source's, so the views carry no sort of their own.
+  "views": [
+    { "id": "table", "name": "Table", "icon": "table", "view": { "type": "table" } },
+    { "id": "list", "name": "List", "icon": "list", "view": { "type": "list" } }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

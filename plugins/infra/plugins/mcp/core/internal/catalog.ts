@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import {
+  wholeList,
+  wholeRecord,
+} from "@plugins/packages/plugins/list-bound/core";
 
 /**
  * One registered `Mcp.tool`, as the catalog describes it. Everything here is
@@ -20,9 +24,14 @@ export const McpCatalogToolSchema = z.object({
   gated: z.boolean(),
   /** The scratch profiles it is reserved for; `null` for a default-scope
    * tool. */
-  profiles: z.array(z.string()).nullable(),
+  profiles: wholeList(z.string(), {
+    reason: "the scratch profiles a tool is reserved for — one or two",
+  }).nullable(),
   /** The input schema exactly as `tools/list` sends it (JSON Schema). */
-  inputSchema: z.record(z.string(), z.unknown()),
+  inputSchema: wholeRecord(z.unknown(), {
+    reason:
+      "one JSON Schema object's top-level keywords (type, properties, required, …) — a handful",
+  }),
 });
 export type McpCatalogTool = z.infer<typeof McpCatalogToolSchema>;
 
@@ -37,8 +46,14 @@ export type McpCatalogInstructions = z.infer<
 >;
 
 export const McpCatalogSchema = z.object({
-  tools: z.array(McpCatalogToolSchema),
-  instructions: z.array(McpCatalogInstructionsSchema),
+  tools: wholeList(McpCatalogToolSchema, {
+    reason:
+      "every Mcp.tool the code registers — fixed for the process, a hundred or so",
+  }),
+  instructions: wholeList(McpCatalogInstructionsSchema, {
+    reason:
+      "every Mcp.instructions section the code registers — fixed for the process, a handful",
+  }),
   /** The one `Mcp.scope` resolver, when a plugin registered it. */
   scope: z.object({ declaredIn: z.string().nullable() }).nullable(),
 });

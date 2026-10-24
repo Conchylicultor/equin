@@ -1,7 +1,7 @@
 import { LiveChart } from "@plugins/stats/plugins/commits/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { costDaily, type CostDay } from "../../shared/values";
-import { costTotals, type CostTotals } from "../../shared/derive";
+import { costTotals, type CostTotals, costDaysNote } from "../../shared/derive";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ScopeToggle } from "./scope-toggle";
@@ -28,6 +28,7 @@ export function CostKpis() {
         size="content"
         isEmpty={(d) => d.sessionCount === 0}
         emptyText="No sessions recorded yet."
+        note={costDaysNote}
       >
         {(d) => <KpiGrid days={d.days} sessionCount={d.sessionCount} />}
       </LiveChart>

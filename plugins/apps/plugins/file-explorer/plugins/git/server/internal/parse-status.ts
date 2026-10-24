@@ -1,5 +1,10 @@
 import type { NameStatusRecord } from "@plugins/primitives/plugins/commit-list/server";
-import type { GitChange, GitEntry, GitStatus } from "../../shared/resources";
+import {
+  GIT_STATUS_MAX_PATHS,
+  type GitChange,
+  type GitEntry,
+  type GitStatus,
+} from "../../shared/resources";
 
 /** What `git status --porcelain=v2 -z --branch` says, before main is folded in. */
 export interface PorcelainStatus {
@@ -108,12 +113,14 @@ export function parsePorcelainV2Z(out: string): PorcelainStatus {
 /**
  * The wire status: the porcelain read vs HEAD, with each path's status vs the
  * main merge-base (`diff <mergeBase> --name-status`, which covers tracked
- * paths; an untracked file is untracked vs main too).
+ * paths; an untracked file is untracked vs main too). Each list keeps its first
+ * `maxPaths` (the schema's cap); `truncated` says one was cut.
  */
 export function assembleStatus(
   porcelain: PorcelainStatus,
   mergeBase: string | null,
   vsMain: readonly NameStatusRecord[],
+  maxPaths: number = GIT_STATUS_MAX_PATHS,
 ): GitStatus {
   const entries: Record<string, GitEntry> = {};
   const entry = (path: string): GitEntry =>
@@ -126,12 +133,25 @@ export function assembleStatus(
       vsMain: mergeBase === null ? null : "untracked",
     };
   }
+  const paths = Object.keys(entries);
+  const lists = [
+    porcelain.untrackedDirs,
+    porcelain.ignoredDirs,
+    porcelain.ignoredFiles,
+  ];
+  const truncated =
+    paths.length > maxPaths || lists.some((l) => l.length > maxPaths);
   return {
     head: porcelain.head,
     mergeBase,
-    entries,
-    untrackedDirs: porcelain.untrackedDirs,
-    ignoredDirs: porcelain.ignoredDirs,
-    ignoredFiles: porcelain.ignoredFiles,
+    entries: truncated
+      ? Object.fromEntries(
+          paths.slice(0, maxPaths).map((p) => [p, entries[p]!]),
+        )
+      : entries,
+    untrackedDirs: porcelain.untrackedDirs.slice(0, maxPaths),
+    ignoredDirs: porcelain.ignoredDirs.slice(0, maxPaths),
+    ignoredFiles: porcelain.ignoredFiles.slice(0, maxPaths),
+    truncated,
   };
 }

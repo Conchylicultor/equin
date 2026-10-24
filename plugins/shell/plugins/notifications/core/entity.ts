@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeRecord } from "@plugins/packages/plugins/list-bound/core";
 import { nullable, type FieldsRecord } from "@plugins/fields/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
@@ -47,7 +48,12 @@ export const notificationFields = {
    * normalized away.
    */
   metadata: nullable(
-    jsonField({ schema: z.record(z.string(), z.unknown()), default: {} }),
+    jsonField({
+      schema: wholeRecord(z.unknown(), {
+        reason: "the few named values its writer attached to one notification",
+      }),
+      default: {},
+    }),
   ),
   /**
    * Occurrences collapsed onto this row via the dedup key (1 on first insert,

@@ -27,9 +27,9 @@ type DirQuery = { worktree: string; dir: string; ref?: string };
 
 /**
  * The workspace roots the subscribed questions read, resolved once per
- * subscription. A paged value declares no `reads` (its pages are keyed
- * windows, which no declared read reaches), so its loader may not read
- * Postgres: an attempt id's root — its attempt row — is resolved by
+ * subscription, so the pages' loader reads no Postgres (a declared `reads`
+ * would re-read every page on any write to the attempts table): an attempt
+ * id's root — its attempt row — is resolved by
  * `whileSubscribed`, which the runtime awaits before any page or the meta is
  * read, and held until the last question of that workspace lets go. An
  * attempt's worktree path is set when the attempt is made; a row rewritten

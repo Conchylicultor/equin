@@ -8,12 +8,21 @@ import type {
   UsageRule,
 } from "@plugins/plugin-meta/plugins/closure/core";
 import { KEY_SPACES } from "@plugins/framework/plugins/slot-declaration/core";
+import {
+  wholeList,
+  wholeRecord,
+} from "@plugins/packages/plugins/list-bound/core";
 
 // PluginId is a branded string; over the wire it is just a string. Like the plugin
 // tree's schema in plugin-view, we validate shape (string) not brand.
 const pluginIdSchema = z.custom<PluginId>((v) => typeof v === "string");
-const idList = z.array(pluginIdSchema);
-const adjacency = z.record(z.string(), idList);
+
+// The value is the whole plugin graph of this checkout on purpose: the closure
+// engine runs over all of it client-side, so no list here can be paged.
+const GRAPH_REASON =
+  "the plugin graph of this checkout — one entry per plugin (about 1.5k) and per edge between two, which the closure engine walks whole client-side";
+const idList = wholeList(pluginIdSchema, { reason: GRAPH_REASON });
+const adjacency = wholeRecord(idList, { reason: GRAPH_REASON });
 
 const edgeSchema: ZodParser<Edge> = z.object({
   from: pluginIdSchema,
@@ -35,8 +44,8 @@ const serializedEdgeGraphSchema: ZodParser<SerializedEdgeGraph> = z.object({
   softForward: adjacency,
   softReverse: adjacency,
   subtree: adjacency,
-  edges: z.array(edgeSchema),
-  rules: z.array(usageRuleSchema),
+  edges: wholeList(edgeSchema, { reason: GRAPH_REASON }),
+  rules: wholeList(usageRuleSchema, { reason: GRAPH_REASON }),
 });
 
 export interface CompositionData {

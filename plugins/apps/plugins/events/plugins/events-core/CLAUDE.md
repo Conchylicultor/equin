@@ -236,7 +236,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `updateSource`
     - `upsertEvents`
   - Resources:
-    - `events.run-events` (push, unbounded: one run's closed event set — a single extraction, tens of events — and the loader caps it at RUN_EVENTS_LIMIT rows)
+    - `events.run-events` (push, capped: RUN_EVENTS_LIMIT, whole: the flags one source run raised — a few, whole: one source's per-type input — its type's configFields)
     - `events.source-runs` (keyed, window)
     - `events.source-runs:groups` (push)
     - `events.source-runs:rows` (keyed, point)
@@ -251,27 +251,20 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `POST /api/events/sources/:id/refresh`
     - `POST /api/events/sources/refresh-all`
 - Core:
-  - Uses:
-    - `apps/events/event-date.EventDate`
-    - `apps/events/event-date.EventDateSchema`
-    - `fields.FieldsRecord`
-    - `fields.fieldsToZodObject`
-    - `fields.nullable`
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `fields` ×3
+    - `ids` ×3
+    - `network/live` ×3
+    - `packages/list-bound` ×3
+    - `apps/events/event-date` ×2
+    - `fields/text/config` ×2
     - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
     - `fields/int/config.intField`
     - `fields/json/config.jsonField`
     - `fields/tags/config.tagsField`
-    - `fields/text/config.enumTextField`
-    - `fields/text/config.textField`
-    - `ids.defineIdKind`
-    - `ids.idKindField`
-    - `ids.IdOf`
     - `infra/endpoints.defineEndpoint`
     - `infra/entities.entityRef`
-    - `network/live.liveCollection`
-    - `network/live.LiveRowsCollection`
-    - `network/live.liveValue`
   - Exports (types):
     - `CreateEventSourceBody`
     - `EventCategory`

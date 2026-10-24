@@ -1,5 +1,10 @@
 import { z } from "zod";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
+import {
+  cappedList,
+  wholeList,
+  wholeRecord,
+} from "@plugins/packages/plugins/list-bound/core";
 import { conversationsEntityRef } from "@plugins/tasks/plugins/tasks-core/core";
 
 // The Stats → Cost reads. INTERIM: metrics P2 (research/2026-09-30-global-
@@ -22,11 +27,21 @@ const scopeParams = { scope: z.enum(COST_SCOPES) };
 /** How many sessions the top-sessions table lists (the old endpoint's only caller asked for 50). */
 export const TOP_SESSIONS = 50;
 
+/**
+ * How many UTC days a per-day cost series holds: ten years of history. The
+ * loader keeps the newest days and says `truncated` when it dropped older ones.
+ */
+export const COST_DAYS_MAX = 3660;
+
+/** A day's per-model / per-family breakdown: one key per model (family) in use. */
+const PER_MODEL_REASON =
+  "one key per model (or model family) used — the handful of Claude models, never one per session";
+
 const CostDaySchema = z.object({
   /** UTC day, `YYYY-MM-DD`. */
   date: z.string(),
   /** Dollars per canonical model id, rounded to the cent. */
-  byModel: z.record(z.string(), z.number()),
+  byModel: wholeRecord(z.number(), { reason: PER_MODEL_REASON }),
   /** The day's exact dollars (unrounded, so running sums round once). */
   cost: z.number(),
   input: z.number(),
@@ -43,15 +58,18 @@ export type CostDay = z.infer<typeof CostDaySchema>;
  *
  * BOUND: one entry per UTC day that recorded usage, over the whole permanent
  * history (the archive is never truncated) — at most 366 per year of history,
- * each holding at most one key per model used that day. Not capped by a range
- * param on purpose: the charts draw every day, and this value is interim
- * (metrics P2 reads ranges).
+ * each holding at most one key per model used that day — capped at
+ * `COST_DAYS_MAX` (the newest days; `truncated` when older ones were dropped).
+ * Not capped by a range param on purpose: the charts draw every day, and this
+ * value is interim (metrics P2 reads ranges).
  */
 export const costDaily = liveValue("stats.cost.daily", {
   schema: z.object({
-    days: z.array(CostDaySchema),
+    days: cappedList(CostDaySchema, { max: COST_DAYS_MAX }),
+    /** Whether days older than the newest `COST_DAYS_MAX` were dropped. */
+    truncated: z.boolean(),
     /** Every model in `days`, sorted. */
-    models: z.array(z.string()),
+    models: wholeList(z.string(), { reason: PER_MODEL_REASON }),
     /** Sessions (transcripts) counted, whatever their date. */
     sessionCount: z.number(),
   }),
@@ -72,7 +90,7 @@ const SessionDaySchema = z.object({
   sessionCount: z.number(),
   totalCost: z.number(),
   totalTokens: z.number(),
-  byFamily: z.record(z.string(), FamilyDaySchema),
+  byFamily: wholeRecord(FamilyDaySchema, { reason: PER_MODEL_REASON }),
 });
 export type CostSessionDay = z.infer<typeof SessionDaySchema>;
 
@@ -82,13 +100,17 @@ export type CostSessionDay = z.infer<typeof SessionDaySchema>;
  * averages and 7-day rolling windows are derived in the browser).
  *
  * BOUND: one entry per UTC day with a session ending in it, over the whole
- * history — at most 366 per year, each holding at most one key per family.
+ * history — at most 366 per year, each holding at most one key per family —
+ * capped at `COST_DAYS_MAX` (the newest days; `truncated` when older ones
+ * were dropped).
  */
 export const costSessionsDaily = liveValue("stats.cost.sessions-daily", {
   schema: z.object({
-    days: z.array(SessionDaySchema),
+    days: cappedList(SessionDaySchema, { max: COST_DAYS_MAX }),
+    /** Whether days older than the newest `COST_DAYS_MAX` were dropped. */
+    truncated: z.boolean(),
     /** Every family in `days`, sorted. */
-    families: z.array(z.string()),
+    families: wholeList(z.string(), { reason: PER_MODEL_REASON }),
   }),
   params: scopeParams,
 });
@@ -102,7 +124,10 @@ export const costSessionsDaily = liveValue("stats.cost.sessions-daily", {
  */
 export const costDistribution = liveValue("stats.cost.distribution", {
   schema: z.object({
-    buckets: z.array(z.object({ label: z.string(), count: z.number() })),
+    buckets: wholeList(z.object({ label: z.string(), count: z.number() }), {
+      reason:
+        "a 1-2-5 ladder over the sessions' cost spread (about 16 buckets for $0.01 – $1k), whatever the number of sessions",
+    }),
   }),
   params: scopeParams,
 });
@@ -117,7 +142,7 @@ const TopSessionSchema = z.object({
   cacheCreationTokens: z.number(),
   cacheReadTokens: z.number(),
   lastActivity: z.string(),
-  modelsUsed: z.array(z.string()),
+  modelsUsed: wholeList(z.string(), { reason: PER_MODEL_REASON }),
 });
 export type CostTopSession = z.infer<typeof TopSessionSchema>;
 
@@ -130,7 +155,9 @@ export type CostTopSession = z.infer<typeof TopSessionSchema>;
  * BOUND: at most `TOP_SESSIONS` (50) rows.
  */
 export const costTopSessions = liveValue("stats.cost.top-sessions", {
-  schema: z.object({ rows: z.array(TopSessionSchema) }),
+  schema: z.object({
+    rows: cappedList(TopSessionSchema, { max: TOP_SESSIONS }),
+  }),
   params: scopeParams,
 });
 

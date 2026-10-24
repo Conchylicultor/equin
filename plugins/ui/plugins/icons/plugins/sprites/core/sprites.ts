@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { blob, defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import {
+  wholeList,
+  wholeRecord,
+} from "@plugins/packages/plugins/list-bound/core";
 
 // The sprites are built from the icon sets installed on the computer (and the
 // manifest compiled into the desktop's backend), so every declaration here
@@ -16,7 +20,9 @@ export const IconSpritesSchema = z.object({
    */
   manifestHash: z.string(),
   /** Sprite key → a whole `<svg>…</svg>` of `<symbol>`s. */
-  sprites: z.record(z.string(), z.string()),
+  sprites: wholeRecord(z.string(), {
+    reason: "the resident sprites — the default style's two and the brands",
+  }),
 });
 export type IconSprites = z.infer<typeof IconSpritesSchema>;
 
@@ -52,13 +58,18 @@ export const SavedIconSpritesSchema = z.object({
    */
   symbolsHash: z.string(),
   /** Every saved name some saved-icon source reports, sorted. */
-  names: z.array(z.string()),
+  names: wholeList(z.string(), {
+    reason:
+      "every saved icon name — each picked by hand, and every one must be drawable at first paint",
+  }),
   /**
    * Default style key → a whole `<svg>` of `<symbol id="msr-<key>-<name>">`s,
    * one per name: the saved icons drawable at first paint in the default style
    * (and, under any other style, until that style's symbols load).
    */
-  sprites: z.record(z.string(), z.string()),
+  sprites: wholeRecord(z.string(), {
+    reason: "one sprite per default style key — a handful",
+  }),
 });
 export type SavedIconSprites = z.infer<typeof SavedIconSpritesSchema>;
 

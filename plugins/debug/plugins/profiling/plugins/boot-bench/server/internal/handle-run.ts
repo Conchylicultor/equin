@@ -19,6 +19,7 @@ import {
   type IterResult,
   type SnapshotBytes,
 } from "../../shared/endpoints";
+import { editedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { resolveFixtures } from "./fixtures";
 import { resetEldProbe, readEldProbe } from "./eld-probe";
 import { startHostGateLoad } from "./load-generator";
@@ -90,8 +91,14 @@ export const handleBootBenchRun = implement(bootBenchRun, async ({ body }) => {
   // skipped (reported null in the result) rather than crashing the run.
   const targetSpecs: [key: string, params: ResourceParams | null][] = [
     [
-      "edited-files",
-      fixtures.conversationId ? { id: fixtures.conversationId } : null,
+      editedFiles.key,
+      // A key-range-paged value: its page 0 tuple.
+      fixtures.conversationId
+        ? editedFiles.query.encode(
+            { id: fixtures.conversationId },
+            { after: null, until: null, limit: editedFiles.paged.limit },
+          )
+        : null,
     ],
     [
       "commits-graph.graph",

@@ -303,6 +303,7 @@ The job's transcript goes to the `sonata-ug-alignment` log channel.
     - `fields/text/config.textField`
     - `infra/endpoints.defineEndpoint`
     - `infra/entity-extensions.defineExtensionShape`
+    - `packages/list-bound.wholeList`
   - Exports (types):
     - `AlignmentCandidate`
     - `AlignmentPhase`

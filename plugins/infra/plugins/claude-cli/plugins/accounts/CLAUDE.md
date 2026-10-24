@@ -23,7 +23,7 @@ The Claude accounts agents can run on, and which one new agents launch on.
     - `claudeAccountToken`
     - `deleteClaudeAccountToken`
     - `saveClaudeAccountToken`
-  - Resources: `claude-accounts` (push, notified)
+  - Resources: `claude-accounts` (push, notified, whole: the Claude accounts the user added by hand — a handful)
 - Machine:
   - Uses:
     - `infra/endpoints.implementMachine`
@@ -40,6 +40,7 @@ The Claude accounts agents can run on, and which one new agents launch on.
   - Uses:
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
   - Exports (types):
     - `ClaudeAccount`
     - `ClaudeAccounts`

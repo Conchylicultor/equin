@@ -24,9 +24,6 @@ export const agentNotesAuthorsServed = serveValue(agentNotesAuthors, {
     reason:
       "one card's authors; the table has a composite key, so any stamp may change any subscribed card — whole-table until it reads through a collection",
   },
-  unbounded: {
-    reason: "one card's authors — the conversations that wrote into one block",
-  },
   loader: ({ blockId }) =>
     db
       .select({

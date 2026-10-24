@@ -86,6 +86,14 @@ describe("assembleStatus", () => {
     expect(s.mergeBase).toBe("base");
   });
 
+  test("each list keeps its first maxPaths, and says it was cut", () => {
+    expect(assembleStatus(porcelain, "base", vsMain).truncated).toBe(false);
+    const s = assembleStatus(porcelain, "base", vsMain, 2);
+    expect(s.truncated).toBe(true);
+    expect(Object.keys(s.entries)).toEqual(["src/a.ts", "src/c.ts"]);
+    expect(s.untrackedDirs).toEqual(["newdir"]);
+  });
+
   test("without a merge-base nothing is changed vs main", () => {
     const s = assembleStatus(porcelain, null, []);
     expect(s.entries["src/u.ts"]).toEqual({

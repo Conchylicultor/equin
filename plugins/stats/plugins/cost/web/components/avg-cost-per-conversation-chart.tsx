@@ -25,6 +25,7 @@ import { costSessionsDaily, type CostSessionDay } from "../../shared/values";
 import {
   avgPerConversation,
   type AvgPerConversationPoint as Point,
+  costDaysNote,
 } from "../../shared/derive";
 import { formatUsd, formatUsdCompact, formatTokensCompact } from "../../core";
 import { useScope } from "./use-scope";
@@ -89,6 +90,7 @@ export function AvgCostPerConversationChart() {
       size="content"
       isEmpty={(d) => d.days.length === 0}
       emptyText="No sessions recorded yet."
+      note={costDaysNote}
     >
       {(d) => <AvgCostBody days={d.days} families={d.families} />}
     </LiveChart>

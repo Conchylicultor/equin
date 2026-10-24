@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 // The closed set of knobs a metric source can expose (a toggle, a choice, a
 // list). A spec is data, so the catalog ships it to the browser as-is and the
@@ -120,18 +121,21 @@ function parseOne(
 }
 
 /** A spec as the catalog ships it: named, since the wire has no record keys to carry the name. */
+/** Why a param spec's lists are loaded whole. */
+const PARAM_REASON = "one param spec's values — declared in code";
+
 export const ParamSpecWireSchema = z.discriminatedUnion("kind", [
   z.object({ id: z.string(), kind: z.literal("bool"), default: z.boolean() }),
   z.object({
     id: z.string(),
     kind: z.literal("enum"),
-    values: z.array(z.string()),
+    values: wholeList(z.string(), { reason: PARAM_REASON }),
     default: z.string(),
   }),
   z.object({
     id: z.string(),
     kind: z.literal("stringList"),
-    default: z.array(z.string()),
+    default: wholeList(z.string(), { reason: PARAM_REASON }),
   }),
 ]);
 export type ParamSpecWire = z.infer<typeof ParamSpecWireSchema>;

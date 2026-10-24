@@ -88,7 +88,7 @@ own. Plan: `research/2026-09-30-infra-background-activity-catalog.md`.
     - `BackgroundTriggerSource`
     - `defineBackgroundKind`
   - Resources:
-    - `background.catalog` (push, notified)
+    - `background.catalog` (push, notified, whole: the declared set — one entry per job, warm-up, timer, watcher and daemon the code declares (a few hundred), never one per run, whole: what one entry's provider says about it — a few labelled facts, whole: the events one job is bound to — its declared triggers, a handful)
     - `background.recent-runs` (push, notified)
   - Routes: `POST /api/background/run-now`
 - Central:
@@ -98,12 +98,13 @@ own. Plan: `research/2026-09-30-infra-background-activity-catalog.md`.
     - `BackgroundKindSpec`
   - Exports (values): `defineBackgroundKind`
   - Resources:
-    - `background.central-catalog` (push, notified)
+    - `background.central-catalog` (push, notified, whole: the declared set — one entry per job, warm-up, timer, watcher and daemon the code declares (a few hundred), never one per run, whole: what one entry's provider says about it — a few labelled facts, whole: the events one job is bound to — its declared triggers, a handful)
     - `background.central-recent-runs` (push, notified)
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
   - Exports (types):
     - `BackgroundEntry`
     - `BackgroundEntryDraft`

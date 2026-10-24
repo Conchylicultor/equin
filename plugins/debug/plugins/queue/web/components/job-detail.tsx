@@ -11,7 +11,16 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { useQueueActions } from "../internal/actions";
 import { formatDuration } from "../internal/format";
-import { isOverCeiling, type JobListRow } from "../internal/job-rows";
+import {
+  isOverCeiling,
+  useJobHistory,
+  type JobListRow,
+} from "../internal/job-rows";
+import {
+  matchResource,
+  ResourceErrorInline,
+} from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { DurationText, HoldBadge, ProblemBadge, StatusBadge } from "./cells";
 import {
   CodeBlock,
@@ -30,26 +39,24 @@ const playIcon = symbol("play-arrow");
 const replayIcon = symbol("replay");
 
 /**
- * One Jobs row in full, adapting to what it is: a live queue row (state,
- * attempts, run-at / lock, worker liveness, queue, priority, input, last
- * error, Retry / Cancel) or a finished run (start / finish, duration against
- * its hold class's ceiling, slot wait, attempt, input, error, Run now). Both
- * end on the job's recent-runs strip.
+ * One job row in full, adapting to what it is: a queue row (state, attempts,
+ * run-at / lock, worker liveness, queue, priority, input, last error, Retry /
+ * Cancel) or a finished run (start / finish, duration against its hold
+ * class's ceiling, slot wait, attempt, input, error, Run now). Both end on the
+ * job's recent-runs strip.
  */
 export function JobDetail({
   row,
   followed,
-  jobRows,
   runTarget,
 }: {
   row: JobListRow;
   /** The opened key was a queue row that has since finished: `row` is the run it became. */
   followed: boolean;
-  /** Every Jobs row of the same job name, for the strip. */
-  jobRows: readonly JobListRow[];
   /** The link a bar of the recent-runs strip opens: that row's detail. */
   runTarget: (key: string) => LinkTarget;
 }) {
+  const history = useJobHistory(row.jobName);
   return (
     <Stack gap="lg">
       {row.kind === "live" ? (
@@ -57,7 +64,20 @@ export function JobDetail({
       ) : (
         <RunDetail row={row} followed={followed} />
       )}
-      <RunStrip rows={jobRows} current={row.key} runTarget={runTarget} />
+      {matchResource(history, {
+        loading: () => <Loading />,
+        error: (error) => (
+          <ResourceErrorInline
+            variant="block"
+            subject="the job's recent runs"
+            error={error}
+            refetch={history.refetch}
+          />
+        ),
+        ready: (rows) => (
+          <RunStrip rows={rows} current={row.key} runTarget={runTarget} />
+        ),
+      })}
     </Stack>
   );
 }
@@ -132,9 +152,9 @@ function LiveDetail({ row }: { row: Extract<JobListRow, { kind: "live" }> }) {
             {job.attempts} of {job.maxAttempts}
           </Text>
         </MetaCell>
-        <TimeCell label="Run at" date={new Date(job.runAt)} />
+        <TimeCell label="Run at" date={job.runAt} />
         {job.lockedAt !== null && (
-          <TimeCell label="Locked at" date={new Date(job.lockedAt)} />
+          <TimeCell label="Locked at" date={job.lockedAt} />
         )}
         <MetaCell label="Queue">
           <Text variant="code">{job.queueName ?? "(default)"}</Text>
@@ -147,7 +167,7 @@ function LiveDetail({ row }: { row: Extract<JobListRow, { kind: "live" }> }) {
             <IdValue value={job.lockedBy} />
           </MetaCell>
         )}
-        <TimeCell label="Created" date={new Date(job.createdAt)} />
+        <TimeCell label="Created" date={job.createdAt} />
       </MetaGrid>
       <WorkerLiveness row={row} />
       <JsonBlock label="Input" value={job.input} />
@@ -194,7 +214,7 @@ function WorkerLiveness({
       </Note>
     ),
   );
-  if (job.forfeited === true) {
+  if (job.forfeited) {
     notes.push(
       <Note key="forfeited" tone="destructive">
         <Text>

@@ -6,6 +6,8 @@ import {
   ChartOrTable,
   ChartState,
 } from "@plugins/primitives/plugins/metrics/plugins/chart-kit/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import {
   cumulative as runningSum,
@@ -14,6 +16,7 @@ import {
   type DisplayChart,
   type MetricRef,
   type SeriesResult,
+  METRIC_MAX_SERIES,
 } from "../../core";
 import type { CardViewState } from "../internal/board-state";
 import { boardQuery, type BoardContext } from "../internal/query";
@@ -183,7 +186,7 @@ function SeriesBody({
   const shape = (values: readonly (number | null)[]) =>
     cumulative ? runningSum(values) : values;
   const previous = data.previous;
-  return (
+  const chart = (
     <ChartOrTable
       asTable={asTable}
       label={entry.label}
@@ -206,5 +209,14 @@ function SeriesBody({
       }
       pickHint={onPick === undefined ? undefined : "Click to see what happened"}
     />
+  );
+  if (!data.truncated) return chart;
+  return (
+    <Stack gap="none">
+      {chart}
+      <Text variant="caption" tone="muted">
+        Showing the top {METRIC_MAX_SERIES} by total
+      </Text>
+    </Stack>
   );
 }

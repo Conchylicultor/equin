@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { useEditedFiles } from "./use-edited-files";
+export { useEditedFile, useEditedFiles } from "./use-edited-files";
 export { gitStatusDot, gitStatusBadge } from "./internal/git-status-colors";
 
 export default {

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 // The question as the CLI hands it to the hook (`tool_input.questions`). The
 // defaults are the AskUserQuestion tool's own: a hook sees the input as the
@@ -12,12 +13,16 @@ export const RelayQuestionOptionSchema = z.object({
 export const RelayQuestionSchema = z.object({
   question: z.string(),
   header: z.string().default(""),
-  options: z.array(RelayQuestionOptionSchema),
+  options: wholeList(RelayQuestionOptionSchema, {
+    reason: "one question's options — AskUserQuestion offers a handful",
+  }),
   multiSelect: z.boolean().default(false),
 });
 export type RelayQuestion = z.infer<typeof RelayQuestionSchema>;
 
-export const RelayQuestionsSchema = z.array(RelayQuestionSchema).min(1);
+export const RelayQuestionsSchema = wholeList(RelayQuestionSchema, {
+  reason: "one AskUserQuestion call's questions — a handful",
+}).min(1);
 
 /**
  * A held question's lifecycle: `open` until exactly one of

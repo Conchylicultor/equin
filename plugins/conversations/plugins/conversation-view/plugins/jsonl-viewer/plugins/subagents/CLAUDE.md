@@ -122,28 +122,39 @@ speaking, which says more than any tool name. They are skipped only when OLDER
 than a trailing result, where reporting them would quote something the sub-agent
 said before the step it has since taken.
 
-**`subagentTranscript`** (`subagent-transcript`), keyed `{ id, by, key }` — the
-parent conversation plus a flat `SubagentRef` (`by: "call"` with the parent's
-tool-use id, or `by: "agent"` with the sub-agent's own id) → the parsed events. A
-value's params are plain strings on the wire, so the server re-parses `by` / `key`
-through `SubagentRefSchema` before it reads anything. While the sub-agent is still
-starting there is no file, so the room watches the directories; once the file is
-known its identity is fixed and the room narrows to that one path, so a sibling's
-appends stop waking it.
+**`subagentTranscript`** (`subagent-transcript`), a key-range-paged value asked
+`{ id, by, key }` — the parent conversation plus a flat `SubagentRef` (`by:
+"call"` with the parent's tool-use id, or `by: "agent"` with the sub-agent's own
+id), decoded by its typed query (`SubagentTranscriptQuerySchema`), so `by`
+arrives as `call` | `agent`. It pages exactly as the conversation's own
+`jsonl-events` does: rows `{ id, seq, event }` (jsonl-viewer's `transcriptRows`),
+newest first, 200 per page, every page sliced (`sliceRange`) from the one
+memoized read. `subagentTranscript.meta` carries the link state
+(`linked` / `unlinked` / `unjoinable`, below) and, linked, what only the whole
+transcript knows: the count, the first assistant seq, the last handback (the
+background report, `lastHandback`) and the typed prompts. The pane reads both
+through `useSubagentTranscript` (`web/internal/`), which hands `TranscriptView`
+a window like `useTranscriptWindow`'s (jsonl-viewer's `transcriptWindowOf`):
+scrolling up loads older pages, a change ships only the rows it touched. While
+the sub-agent is still starting there is no file, so the room watches the
+directories; once the file is known its identity is fixed and the room narrows
+to that one path, so a sibling's appends stop waking it.
 
-Both resources pair their `revalidate` and their `loader` through **one**
+`subagent-activity` pairs its `revalidate` and its `loader` through **one**
 `createSignedMemo` binding, exactly as `jsonl-events-cache.ts` does — never two
 ETag probes that can drift, which is how `edited-files` once certified a stale
-value with a fresh ETag.
+value with a fresh ETag. The transcript's pages and meta read the same kind of
+memo (a paged value has no `revalidate`: its pages ship as keyed deltas).
 
 ## Not-known-yet is a state, in three places
 
 - A sub-agent whose **meta file** has not landed has **no row**. Inventing one
   would mean naming it "unknown"; the card renders the absence as "starting".
-- The transcript value is a **discriminated result**
-  (`{ kind: "linked", … }` / `{ kind: "unlinked" }`), so "the file isn't there
-  yet" can never be read as "the sub-agent did nothing". Before the first value
-  lands the read is `pending` — `unlinked` is a settled answer, never used as a
+- The transcript's meta is a **discriminated result**
+  (`{ kind: "linked", … }` / `{ kind: "unlinked" }` / `{ kind: "unjoinable" }`),
+  so "the file isn't there yet" can never be read as "the sub-agent did
+  nothing" (an unlinked sub-agent reads no pages). Before the first value lands
+  the read is `pending` — `unlinked` is a settled answer, never used as a
   placeholder.
 - `lastStep: null` means it has written nothing classifiable yet — a fact, not a
   stand-in for "idle".

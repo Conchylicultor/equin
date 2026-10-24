@@ -1,10 +1,15 @@
 import { z } from "zod";
+import {
+  cappedList,
+  wholeList,
+} from "@plugins/packages/plugins/list-bound/core";
 import { DIMENSIONS, DimensionSchema, type Dimension } from "./dimensions";
 import { parseEventPropValue } from "./event-prop";
 import {
   AnalyticsRangeSchema,
   DaySchema,
   GranularitySchema,
+  MAX_SERIES_BUCKETS,
   RAW_RETENTION_DAYS,
   firstRawDay,
   planPeriods,
@@ -119,7 +124,7 @@ export const PeriodReportSchema = z
     from: DaySchema,
     to: DaySchema,
     summary: MetricsSchema,
-    series: z.array(SeriesPointSchema),
+    series: cappedList(SeriesPointSchema, { max: MAX_SERIES_BUCKETS }),
   })
   .strict();
 export type PeriodReport = z.infer<typeof PeriodReportSchema>;
@@ -143,9 +148,19 @@ export function reportRowGroup(dimension: Dimension, value: string): string {
   return `${event}.${key}`;
 }
 
-const ReportRowsSchema = z.array(ReportRowSchema);
+// Every dimension is capped at its top rows; `event_prop` keeps that many per
+// (event, key), so its list grows only with the props the site's code sends.
+const ReportRowsSchema = cappedList(ReportRowSchema, {
+  max: REPORT_ROWS_PER_DIMENSION,
+});
+const EventPropRowsSchema = wholeList(ReportRowSchema, {
+  reason: `the top ${REPORT_ROWS_PER_DIMENSION} rows per (event, key) the site's code sends — bounded by its tracking calls, not its visitors`,
+});
 const rowsShape = Object.fromEntries(
-  DIMENSIONS.map((dimension) => [dimension, ReportRowsSchema]),
+  DIMENSIONS.map((dimension) => [
+    dimension,
+    dimension === "event_prop" ? EventPropRowsSchema : ReportRowsSchema,
+  ]),
 ) as Record<Dimension, typeof ReportRowsSchema>;
 
 export const AnalyticsReportSchema = z
@@ -153,7 +168,7 @@ export const AnalyticsReportSchema = z
     source: z.enum(REPORT_SOURCES),
     range: AnalyticsRangeSchema,
     granularity: GranularitySchema,
-    filters: z.array(AnalyticsFilterSchema),
+    filters: cappedList(AnalyticsFilterSchema, { max: MAX_FILTERS }),
     /** ISO instant the server computed this at. */
     generatedAt: z.string(),
     current: PeriodReportSchema,

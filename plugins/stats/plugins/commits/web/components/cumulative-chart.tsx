@@ -10,7 +10,7 @@ import {
 } from "recharts";
 import { useShowEmptyDays } from "@plugins/stats/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { commitsCounts } from "../../shared";
+import { commitsCounts, commitPointsNote } from "../../shared";
 import { LiveChart } from "./live-chart";
 import {
   axisProps,
@@ -39,6 +39,7 @@ export function CumulativeCommitsChart({ dedup }: { dedup?: boolean }) {
       subject="the commit counts"
       isEmpty={(d) => d.points.length === 0}
       emptyText="No commits yet."
+      note={commitPointsNote}
     >
       {({ points }) => <CumulativeCommitsBody rawPoints={points} />}
     </LiveChart>

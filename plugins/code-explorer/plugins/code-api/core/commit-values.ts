@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { cappedList } from "@plugins/packages/plugins/list-bound/core";
 import { EditedFileSchema } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { CommitRowSchema } from "@plugins/primitives/plugins/commit-list/core";
 import { CODE_MACHINE } from "./endpoints";
@@ -38,9 +39,21 @@ export const commitInfo = liveValue("code.commit-info", {
   needsMachine: CODE_MACHINE,
 });
 
+/**
+ * The most files one commit's or push's answer lists. A mass move touches
+ * thousands; a diff list past this is no longer read file by file, and
+ * `truncated` says the rest were dropped.
+ */
+export const COMMIT_FILES_MAX = 2000;
+
 export const CommitFilesSchema = z.object({
-  /** The files the commit touched against its first parent, sorted by path. */
-  files: z.array(EditedFileSchema),
+  /**
+   * The files the commit touched against its first parent, sorted by path —
+   * the first {@link COMMIT_FILES_MAX}.
+   */
+  files: cappedList(EditedFileSchema, { max: COMMIT_FILES_MAX }),
+  /** The range touched more files than `files` holds. */
+  truncated: z.boolean(),
   /** The first parent; the commit itself for a root commit (then `files` is empty). */
   baseSha: z.string(),
   headSha: z.string(),

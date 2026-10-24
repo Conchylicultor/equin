@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
+import type { ListShape } from "@plugins/packages/plugins/list-bound/core";
 import {
   registerResourceDescriptor,
   type ResourceDescriptor,
@@ -63,6 +64,7 @@ import {
   type LiveRelated,
   type RequireLabel,
 } from "./live-fields";
+import { declaredShape } from "./live-value";
 import {
   allResourceDescriptor,
   pointQueryResourceDescriptor,
@@ -246,7 +248,17 @@ export interface LiveRowsCollection<Row> {
    * table is `from` it, never a restatement of its fields.
    */
   rowsFrom: LiveFrom | null;
+  /**
+   * Every list a row holds, with its bound — the row schema's own fields
+   * (a `jsonField({ schema })`, a string list) walked by `packages/list-bound`
+   * at declaration and frozen; the collection's own list is bounded by its
+   * form (a window's `maxLimit`, an `all` set's bound, `:rows`' `maxIds`).
+   */
+  shape: ListShape;
 }
+
+/** The `:rows` id-set cap of a lookup-only or whole (`unbounded`) set that declares none. */
+export const LIVE_DEFAULT_MAX_IDS = 500;
 
 /**
  * What a collection's rows reach: `base` (the collection's own entity) or the
@@ -365,7 +377,7 @@ export interface LiveNoWindowCollection<
 > extends LiveRowsCollection<Row> {
   /**
    * `key` — every row, in `all.all.orderBy` order (the id breaks ties), one
-   * tuple per scope when declared `by` (see {@link LiveAllOrder.by});
+   * tuple per scope when declared `by` (see {@link LiveAllOrderBase.by});
    * `undefined` when lookup-only.
    */
   all: [Al] extends [undefined]
@@ -384,7 +396,8 @@ export type LiveLookupCollection<Row> = LiveNoWindowCollection<Row, undefined>;
 /**
  * A collection declared `all` (`liveCollection(key, { all })`): `key` holds
  * EVERY row, in the declared order, as one param-less keyed resource — for a
- * set small enough to hold whole (`all.unbounded.reason` says why) whose
+ * set capped (`all.max`) or small enough to hold whole (`all.unbounded.reason`
+ * says why) whose
  * readers need all of it (a tree, a graph). Mints `key` and `${key}:rows` —
  * no `:groups` (a grouping is a window over the set; this set has none) and
  * no window. Serving it as a lookup-only collection is a tsc error (`all` is
@@ -427,6 +440,8 @@ export interface LiveCollectionSpec<Row, F, S extends string> {
   maxLimit: number;
   /** Default `"none"`. A preload reaches the DEFAULT WINDOW only (see {@link LivePreload}). */
   preload?: LivePreload;
+  /** The `:rows` id-set cap (`LiveFieldsSpec.maxIds`). Default: `maxLimit`. */
+  maxIds?: number;
   /**
    * The scope scoped column sets resolve their members in — the id of the
    * DataView surface this collection is listed on (its `storageKey`), whose
@@ -483,11 +498,8 @@ export interface LiveArmsSpec<
   count?: never;
 }
 
-/**
- * The `all` of a whole-ordered-set declaration: the total order every row is
- * held in, and why the set may be held whole.
- */
-export interface LiveAllOrder<Row> {
+/** The order (and scope) half of {@link LiveAllOrder}. */
+export interface LiveAllOrderBase<Row> {
   /**
    * Scope the set: one tuple per value of these row fields (non-empty, each
    * once, never the id), holding the rows whose fields equal the tuple's
@@ -501,9 +513,26 @@ export interface LiveAllOrder<Row> {
   by?: readonly (keyof NoInfer<Row> & string)[];
   /** Row fields with their direction; non-empty, each field once. The id breaks ties. */
   orderBy: LiveOrderBy<keyof NoInfer<Row> & string>;
-  /** Why the whole set is held: it has no other bound. Non-empty. */
-  unbounded: { reason: string };
 }
+
+/**
+ * An `all` set's bound — exactly one of:
+ *
+ * - `max`: a cap — at most that many rows per tuple. The descriptor's schema
+ *   is `.max(max)` (every parse refuses one more) and the server's loads
+ *   refuse a set that outgrew it, loudly — a cap is a statement about the
+ *   data, never a silent truncation.
+ * - `unbounded: { reason }`: held whole, and why that stays small. Non-empty.
+ */
+export type LiveAllBound =
+  | { max: number; unbounded?: never }
+  | { unbounded: { reason: string }; max?: never };
+
+/**
+ * The `all` of a whole-ordered-set declaration: the total order every row is
+ * held in, an optional scope, and its bound ({@link LiveAllBound}).
+ */
+export type LiveAllOrder<Row> = LiveAllOrderBase<Row> & LiveAllBound;
 
 /**
  * A declaration with no window: a row schema and its id, nothing to list by,
@@ -529,6 +558,11 @@ export interface LiveNoWindowSpec<
   /** The row field that identifies a row — the point sibling's id set (and the whole set's tiebreaker). */
   id: keyof Row & string;
   all?: Al;
+  /**
+   * The `:rows` id-set cap (`LiveFieldsSpec.maxIds`). Default: the set's
+   * `all.max`, else {@link LIVE_DEFAULT_MAX_IDS}.
+   */
+  maxIds?: number;
   /** Only the whole set preloads — never a scoped one (`by`). Default `"none"`. */
   preload?: [Al] extends [undefined]
     ? never
@@ -827,6 +861,10 @@ export function liveCollection<Row, F, S extends string>(
       fields: resolved.fields(sortable),
       from: from !== undefined && !isShape(from) ? from : null,
       rowsFrom: from ?? null,
+      // The row's own lists (a `jsonField({ schema })`, a string list) — the
+      // author's fields, never the `$columns` fold (each exposure's fields
+      // are its extension's).
+      shape: declaredShape(`liveCollection("${key}")`, resolved.row, ""),
       ...machineFields(fieldsSpec),
     };
   }
@@ -900,7 +938,15 @@ function mintCollection<Row, F, S extends string>(
           `lookup-only collection has no window to list, sort, cap or preload.`,
       );
     }
-    return { ...rowsPart(key, spec, null), all: undefined };
+    return {
+      ...rowsPart(
+        key,
+        spec,
+        null,
+        checkMaxIds(key, spec.maxIds, LIVE_DEFAULT_MAX_IDS),
+      ),
+      all: undefined,
+    };
   }
   return fullCollection(key, spec as LiveCollectionSpec<Row, F, S>);
 }
@@ -948,13 +994,9 @@ function allCollection<Row>(
     by?: unknown;
     orderBy?: unknown;
     unbounded?: { reason?: unknown };
+    max?: unknown;
   };
-  const reason = all.unbounded?.reason;
-  if (typeof reason !== "string" || reason.trim().length === 0) {
-    throw new Error(
-      `liveCollection("${key}"): \`all.unbounded.reason\` is empty — the whole set has no other bound, so say why it stays small.`,
-    );
-  }
+  const bound = allBound(fail, all);
   if (!Array.isArray(all.orderBy) || all.orderBy.length === 0) {
     fail("`all.orderBy` is empty — the set is held in one declared order.");
   }
@@ -988,22 +1030,79 @@ function allCollection<Row>(
       orderBy: Object.freeze(
         orderBy.map(([f, d]) => Object.freeze([f, d] as const)),
       ),
-      unbounded: Object.freeze({ reason }),
+      ...bound,
       ...(by === null ? {} : { by }),
     } as AllQueryResourceContract<Row, string>["all"],
     ...(spec.preload === undefined || spec.preload === "none"
       ? {}
       : { preload: spec.preload }),
   });
+  const maxIds = checkMaxIds(
+    key,
+    spec.maxIds,
+    "max" in bound ? bound.max : LIVE_DEFAULT_MAX_IDS,
+  );
   return {
-    ...rowsPart(key, { row, id: spec.id }, exposes),
+    ...rowsPart(key, { row, id: spec.id }, exposes, maxIds),
     rowKeys: Object.keys(spec.row.shape) as (keyof Row & string)[],
     all: descriptor as unknown as AllQueryResourceContract<Row>,
   };
 }
 
 /**
- * An `all` declaration's `by` (see {@link LiveAllOrder.by}), checked: `null`
+ * An `all` declaration's bound (see {@link LiveAllBound}), checked: exactly
+ * one of a positive-integer `max` or a non-empty `unbounded.reason`, frozen.
+ */
+function allBound(
+  fail: (message: string) => never,
+  all: { unbounded?: { reason?: unknown }; max?: unknown },
+): { max: number } | { unbounded: { reason: string } } {
+  if (all.max !== undefined && all.unbounded !== undefined) {
+    fail(
+      "`all` declares both `max` and `unbounded` — a set is capped or held whole, not both.",
+    );
+  }
+  if (all.max !== undefined) {
+    const max = all.max;
+    if (typeof max !== "number" || !Number.isSafeInteger(max) || max < 1) {
+      fail(
+        `\`all.max\` is ${JSON.stringify(max)}, not a positive integer — a cap is how many rows the set may hold.`,
+      );
+    }
+    return Object.freeze({ max: max as number });
+  }
+  const reason = all.unbounded?.reason;
+  if (typeof reason !== "string" || reason.trim().length === 0) {
+    fail(
+      "`all` declares no bound — cap it (`max`), or hold it whole with `unbounded: { reason }` saying why it stays small" +
+        (all.unbounded === undefined ? "." : " (the reason is empty)."),
+    );
+  }
+  return Object.freeze({
+    unbounded: Object.freeze({ reason: reason as string }),
+  });
+}
+
+/**
+ * A declaration's `:rows` id-set cap (`LiveFieldsSpec.maxIds`): the declared
+ * one, checked a positive integer, else `fallback` (the form's default).
+ */
+function checkMaxIds(key: string, declared: unknown, fallback: number): number {
+  if (declared === undefined) return fallback;
+  if (
+    typeof declared !== "number" ||
+    !Number.isSafeInteger(declared) ||
+    declared < 1
+  ) {
+    throw new Error(
+      `liveCollection("${key}"): \`maxIds\` is ${JSON.stringify(declared)}, not a positive integer — it caps how many ids one \`:rows\` tuple names.`,
+    );
+  }
+  return declared;
+}
+
+/**
+ * An `all` declaration's `by` (see {@link LiveAllOrderBase.by}), checked: `null`
  * when it declares none, else its fields, frozen. A scope is named by a
  * reader, so a scoped set has no tuple boot could hydrate — a preload beside
  * it throws (it is `never` in the types).
@@ -1099,10 +1198,16 @@ function rowsPart<Row>(
   key: string,
   spec: { row: LiveRowSchema<Row>; id: keyof Row & string },
   exposes: LiveExposes | null,
+  maxIds: number,
 ): LiveRowsCollection<Row> {
   return {
     key,
-    rows: pointQueryResourceDescriptor(`${key}:rows`, spec.row, spec.id),
+    rows: pointQueryResourceDescriptor(
+      `${key}:rows`,
+      spec.row,
+      spec.id,
+      maxIds,
+    ),
     id: spec.id,
     row: spec.row,
     rowKeys: Object.keys(spec.row.shape) as (keyof Row & string)[],
@@ -1111,8 +1216,16 @@ function rowsPart<Row>(
     fields: Object.freeze({}),
     from: null,
     rowsFrom: null,
+    // Set by `liveCollection` from the declaration's fields.
+    shape: NO_LISTS,
   };
 }
+
+/** A row that holds no list — the placeholder `liveCollection` replaces. */
+const NO_LISTS: ListShape = Object.freeze({
+  bounds: Object.freeze([]),
+  bare: Object.freeze([]),
+});
 
 function fullCollection<Row, F, S extends string>(
   key: string,
@@ -1208,7 +1321,12 @@ function fullCollection<Row, F, S extends string>(
   // Minted after the window, as it always was (descriptor registration order).
   // `rowKeys` stay the author's fields: `$columns` is folded, never bound.
   const base = {
-    ...rowsPart(key, { row, id: spec.id }, exposes),
+    ...rowsPart(
+      key,
+      { row, id: spec.id },
+      exposes,
+      checkMaxIds(key, spec.maxIds, spec.maxLimit),
+    ),
     rowKeys: Object.keys(spec.row.shape) as (keyof Row & string)[],
   };
   const groupCodec: LiveGroupCodec<F> = {

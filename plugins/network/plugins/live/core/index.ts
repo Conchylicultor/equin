@@ -45,6 +45,9 @@ export type {
 } from "./internal/live-fields";
 export type { DomainOfValue, FieldsFilterable } from "./internal/field-domain";
 export type { LiveExposedColumns } from "./internal/exposed-columns";
+// A declaration's SHAPE (every list it holds, capped or whole — the
+// list-bound markers) is walked by `liveValue` / `liveCollection` and a bare
+// list refused at declaration; its FRESHNESS is the serve call's `changes`.
 export { liveValue } from "./internal/live-value";
 export type {
   LiveMachineDecl,

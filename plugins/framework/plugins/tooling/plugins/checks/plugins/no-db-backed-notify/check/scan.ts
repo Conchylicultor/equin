@@ -16,15 +16,24 @@ import type { Definition, ModuleIndex } from "./resolve";
 // exemption covers, are unit-testable on literal strings.
 
 /**
- * The two spellings of a resource with a hand-`notify`: the old
+ * The spellings of a resource with a hand-`notify`: the old
  * `defineExternalResource(…)`, and network/live's
- * `serveValue(value, { source: "external", … })`. Only serveValue's external
- * arm has `notify`, so a `source: "db"` call is not a candidate — and neither
- * is an external one that declares its Postgres reads (`reads`): the change
- * feed reaches it through them, and the runtime's drift guard holds its loader
- * to them.
+ * `serveValue(value, { source: "external", … })` and
+ * `serveCollection(c, { source: "external", … })` — a collection answered by
+ * hand, whose window / rows / groups answers may be hand SQL. Only the
+ * external arms have `notify`, so a `source: "db"` value is not a candidate,
+ * and neither is an external value that declares its Postgres reads (`reads`):
+ * the change feed reaches it through them, and the runtime's drift guard holds
+ * its loader to them. Neither is a table-backed `serveCollection` (no
+ * `source`): routed, its compiled SQL is reached through its routes; served
+ * off the feed (`changes`), every table its compiled SQL reads is declared
+ * unfed, which change-feed's boot check holds to the owner's opt-out.
  */
-export const NOTIFY_MARKERS = ["defineExternalResource", "serveValue"] as const;
+export const NOTIFY_MARKERS = [
+  "defineExternalResource",
+  "serveValue",
+  "serveCollection",
+] as const;
 export type NotifyMarker = (typeof NOTIFY_MARKERS)[number];
 
 // Legitimate, documented exceptions — resources that read a Postgres schema the
@@ -164,7 +173,7 @@ export async function scanDbBackedNotify(
     for (const marker of NOTIFY_MARKERS) {
       for (const span of markerCallSpans(module.masked, marker)) {
         if (
-          marker === "serveValue" &&
+          marker !== "defineExternalResource" &&
           !servesUndeclaredExternal(src, module.masked, span)
         ) {
           continue;
@@ -393,8 +402,8 @@ function executesDml(masked: string, src: string, from: number): boolean {
 }
 
 /**
- * Is this `serveValue(value, { … })` call the external arm, declaring no
- * reads? Its second argument must be an inline options object whose OWN
+ * Is this `serveValue(value, { … })` / `serveCollection(c, { … })` call the
+ * external arm, declaring no reads (a collection has no `reads` to declare)? Its second argument must be an inline options object whose OWN
  * `source:` (depth 0 of that object, so an object literal inside the loader
  * never answers) is the literal `"external"`, and which has no OWN `reads:`
  * key (a declared read — static or a thunk — routes the value from the change

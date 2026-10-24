@@ -143,6 +143,7 @@ unbounded.
     - `infra/entities.entityRef`
     - `network/live.liveCollection`
     - `network/live.LiveRowsCollection`
+    - `packages/list-bound.wholeList`
   - Exports (types):
     - `BootTraceItem`
     - `SavedBootTrace`

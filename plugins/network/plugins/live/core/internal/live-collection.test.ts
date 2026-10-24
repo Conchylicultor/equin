@@ -168,6 +168,32 @@ describe("liveCollection — the `all` overload (C16, C39, T13)", () => {
     });
   });
 
+  test("`all: { max }`: the descriptor records the cap, its schema refuses one more row, and `:rows` defaults to it", () => {
+    const c = liveCollection("test.live-collection.all-max", {
+      fields: F,
+      id: "id",
+      all: { orderBy: [["n", "asc"]], max: 2 },
+    });
+    expect(c.all.all).toEqual({ orderBy: [["n", "asc"]], max: 2 });
+    const rows = [
+      { id: "a", n: 1 },
+      { id: "b", n: 2 },
+    ];
+    expect(c.all.schema.safeParse(rows).success).toBe(true);
+    expect(c.all.schema.safeParse([...rows, { id: "c", n: 3 }]).success).toBe(
+      false,
+    );
+    expect(c.rows.point.maxIds).toBe(2);
+    // A whole set declares no cap: `:rows` takes the default, or its own.
+    const whole = liveCollection("test.live-collection.all-whole-ids", {
+      fields: F,
+      id: "id",
+      all,
+      maxIds: 7,
+    });
+    expect(whole.rows.point.maxIds).toBe(7);
+  });
+
   test('`preload: "none"` is the absence of the flag', () => {
     const c = liveCollection("test.live-collection.all-none", {
       fields: F,
@@ -216,12 +242,21 @@ describe("liveCollection — the `all` overload (C16, C39, T13)", () => {
       [{ ...base, arms: { discriminator: "n" } }, /arms beside `all`/],
       [
         { ...base, all: { ...all, unbounded: { reason: " " } } },
-        /`all.unbounded.reason` is empty/,
+        /`all` declares no bound .* \(the reason is empty\)/,
       ],
       [
         { ...base, all: { orderBy: [["n", "asc"]] } },
-        /`all.unbounded.reason` is empty/,
+        /`all` declares no bound/,
       ],
+      [
+        { ...base, all: { ...all, max: 5 } },
+        /declares both `max` and `unbounded`/,
+      ],
+      [
+        { ...base, all: { orderBy: [["n", "asc"]], max: 0 } },
+        /`all.max` is 0, not a positive integer/,
+      ],
+      [{ ...base, maxIds: 1.5 }, /`maxIds` is 1.5, not a positive integer/],
       [{ ...base, all: { ...all, orderBy: [] } }, /`all.orderBy` is empty/],
       [
         { ...base, all: { ...all, orderBy: [["nope", "asc"]] } },
@@ -268,8 +303,17 @@ describe("liveCollection — the `all` overload (C16, C39, T13)", () => {
       // @ts-expect-error — an order field must be a row field
       liveCollection("t.e", { ...s, all: bad });
       const noBound = { orderBy: [["n", "asc"]] } as const;
-      // @ts-expect-error — `unbounded` is required: the set has no other bound
+      // @ts-expect-error — a bound is required: `max` or `unbounded`
       liveCollection("t.f", { ...s, all: noBound });
+      const both = { ...all, max: 5 } as const;
+      // @ts-expect-error — capped or whole, never both
+      liveCollection("t.f2", { ...s, all: both });
+      liveCollection("t.f3", {
+        fields: F,
+        id: "id",
+        all: { orderBy: [["n", "asc"]], max: 5 },
+        maxIds: 10,
+      });
       const w = { sortable: ["n"], maxLimit: 1 } as const;
       const d = { orderBy: [["n", "asc"]], limit: 1 } as const;
       // @ts-expect-error — a window collection is not also the whole set

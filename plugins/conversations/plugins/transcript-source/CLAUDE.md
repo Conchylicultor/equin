@@ -44,15 +44,10 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
     - `TranscriptImageKeyError`
     - `TranscriptLines`
     - `TranscriptSource`
-- Cross-plugin:
-  - Imported by:
-    - `conversations/conversation-view/jsonl-viewer`
-    - `conversations/conversation-view/jsonl-viewer/background-shells`
-    - `conversations/conversation-view/jsonl-viewer/outline`
-    - `conversations/conversation-view/jsonl-viewer/subagents`
-    - `conversations/transcript-source/memory`
-    - `conversations/transcript-watcher`
 - Core:
+  - Uses:
+    - `packages/list-bound.wholeList`
+    - `packages/list-bound.wholeRecord`
   - Exports (types):
     - `ForeignSessionPayload`
     - `HookOutcome`
@@ -96,6 +91,14 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
     - `userPromptText`
     - `withPicksInResponse`
     - `wrapPreprompt`
+- Cross-plugin:
+  - Imported by:
+    - `conversations/conversation-view/jsonl-viewer`
+    - `conversations/conversation-view/jsonl-viewer/background-shells`
+    - `conversations/conversation-view/jsonl-viewer/outline`
+    - `conversations/conversation-view/jsonl-viewer/subagents`
+    - `conversations/transcript-source/memory`
+    - `conversations/transcript-watcher`
 - Sub-plugins:
   - **`memory`** (excluded) — Transcripts in memory: provides the TranscriptSource host service for a host without Claude Code's session files (the browser composition), from JSONL text written to it. Never booted by the desktop.
 

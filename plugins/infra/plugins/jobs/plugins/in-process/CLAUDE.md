@@ -32,6 +32,7 @@ The desktop never boots it: it is in `base-exclusions`
   - Contributes: `host-service:jobs.queue` "jobs.queue"
   - Uses:
     - `database.afterCommit`
+    - `infra/jobs.answerJobsInMemory`
     - `infra/jobs.JobQueue`
     - `infra/jobs.JobQueueImpl`
     - `infra/jobs.JobRowOpts`

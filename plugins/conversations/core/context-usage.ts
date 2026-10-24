@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 // What fills the agent's context window right now, as the harness itself
 // measures it (the Agent SDK's `getContextUsage()`, the data behind `/context`).
@@ -27,15 +28,24 @@ export const ContextUsageSchema = z.object({
   /** Where the harness compacts on its own; absent when it does not say. */
   autoCompactThreshold: z.number().optional(),
   isAutoCompactEnabled: z.boolean(),
-  categories: z.array(ContextCategorySchema),
-  memoryFiles: z.array(z.object({ path: z.string(), tokens: z.number() })),
-  mcpTools: z.array(
+  categories: wholeList(ContextCategorySchema, {
+    reason:
+      "the harness's own breakdown of one context window: a handful of categories",
+  }),
+  memoryFiles: wholeList(z.object({ path: z.string(), tokens: z.number() }), {
+    reason: "the CLAUDE.md / memory files one agent loaded: a handful",
+  }),
+  mcpTools: wholeList(
     z.object({
       name: z.string(),
       serverName: z.string(),
       tokens: z.number(),
       isLoaded: z.boolean().optional(),
     }),
+    {
+      reason:
+        "the MCP tools one agent process was handed: tens, fixed by its config",
+    },
   ),
   messageBreakdown: z
     .object({

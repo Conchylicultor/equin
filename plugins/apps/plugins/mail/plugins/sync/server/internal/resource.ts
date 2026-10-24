@@ -16,9 +16,5 @@ export const mailSyncStateServed = serveValue(mailSyncState, {
     reason:
       "a singleton per-account row — any sync progress or failure write changes what the UI shows",
   },
-  unbounded: {
-    reason:
-      "one row per connected mail account — the app is single-account today",
-  },
   loader: async () => db.select().from(_mailSyncState),
 });

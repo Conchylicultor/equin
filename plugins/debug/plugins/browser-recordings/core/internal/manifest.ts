@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 export const RecordingStepSchema = z.object({
   /** What the step did, e.g. `locator.click getByRole('button', { name: 'Save' })`. */
@@ -35,7 +36,10 @@ export const RecordingManifestSchema = z.object({
   startedAt: z.string(),
   endedAt: z.string(),
   /** In the order they ended, across every page the drive opened. */
-  steps: z.array(RecordingStepSchema),
+  steps: wholeList(RecordingStepSchema, {
+    reason:
+      "one drive's steps — a scripted e2e flow or a single browser_* call, tens of steps, written once when the run ends",
+  }),
 });
 export type RecordingManifest = z.infer<typeof RecordingManifestSchema>;
 

@@ -1,5 +1,9 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { OpeningHoursSchema } from "./rich-details";
+
+/** Why a place's Google types are loaded whole. */
+const PLACE_TYPES_REASON = "one place's Google types — a handful";
 
 /**
  * One row of a place search's dropdown. The neutral, provider-independent shape
@@ -60,7 +64,7 @@ export const PlaceSnapshotSchema = z.object({
    * taxonomy — a consumer maps it onto its own vocabulary.
    */
   primaryType: z.string().optional(),
-  types: z.array(z.string()).optional(),
+  types: wholeList(z.string(), { reason: PLACE_TYPES_REASON }).optional(),
   /** Canonical Google Maps link for the place — the card's "Open in Maps". */
   mapsUrl: z.string().optional(),
   lat: z.number().optional(),
@@ -85,7 +89,7 @@ export const PlaceCandidateSchema = z.object({
   name: z.string(),
   lat: z.number(),
   lng: z.number(),
-  types: z.array(z.string()),
+  types: wholeList(z.string(), { reason: PLACE_TYPES_REASON }),
   /** Full formatted address; absent when Google gives none. */
   address: z.string().optional(),
   businessStatus: z.enum(BUSINESS_STATUSES).optional(),

@@ -142,7 +142,7 @@ that are real.
     - `infra/endpoints.implement`
     - `network/live.serveValue`
   - DB schema: `plugins/apps/plugins/chord/plugins/progress/server/internal/tables.ts`
-  - Resources: `chord.progress` (push)
+  - Resources: `chord.progress` (push, whole: one entry per requested token — the params bound it)
   - Routes: `POST /api/chord/rounds`
 - Core:
   - Uses:
@@ -153,6 +153,7 @@ that are real.
     - `infra/endpoints.defineEndpoint`
     - `integrations/hooktheory.TheorytabSectionIdSchema`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
   - Exports (types):
     - `Answer`
     - `ChordAnswerSample`

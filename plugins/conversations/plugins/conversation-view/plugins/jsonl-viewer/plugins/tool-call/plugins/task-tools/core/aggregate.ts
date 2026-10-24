@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 
 export interface TaskEntry {
@@ -101,12 +102,16 @@ export function buildAggregate(events: readonly JsonlEvent[]): TaskAggregate {
 }
 
 const TaskAggregateSchema = z.object({
-  tasks: z.array(
+  tasks: wholeList(
     z.object({
       taskId: z.string(),
       description: z.string(),
       status: z.string(),
     }),
+    {
+      reason:
+        "one conversation's own task list (TaskCreate calls): a checklist the pane shows entire",
+    },
   ),
   completedCount: z.number().int(),
   totalCount: z.number().int(),

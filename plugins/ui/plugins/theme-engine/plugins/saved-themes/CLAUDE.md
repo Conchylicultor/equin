@@ -48,7 +48,7 @@
     - `ui/theme-engine.ThemeEngine`
   - DB schema: `plugins/ui/plugins/theme-engine/plugins/saved-themes/server/internal/tables.ts`
   - Exports (values): `saveTheme`
-  - Resources: `saved-themes.list` (push, unbounded: every saved theme: the painter needs all of them resident to paint any selection, and the list grows only by a hand-made save or import (single digits in practice))
+  - Resources: `saved-themes.list` (push, whole: every saved theme: the painter needs all of them resident to paint any selection, and the list grows only by a hand-made save or import (single digits in practice))
   - Routes:
     - `POST /api/saved-themes`
     - `PATCH /api/saved-themes/:id/fragment`

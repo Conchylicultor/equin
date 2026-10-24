@@ -224,8 +224,8 @@ A round nothing was typed into reads exactly like the next one, so after
     - `isListedChord`
     - `loadListedChords`
   - Resources:
-    - `chord.catalog` (push)
-    - `chord.curriculum` (push)
+    - `chord.catalog` (push, whole: one loaded song index's catalog, read entire — its distinct chords (1,808 on the full index), built once per index, whole: a subset of Hookpad's key modes — seven at most)
+    - `chord.curriculum` (push, whole: the chords the learner turned on — a subset of the catalog's chords)
   - Routes:
     - `POST /api/chord/curriculum/chords`
     - `POST /api/chord/curriculum/blanks`
@@ -281,6 +281,7 @@ A round nothing was typed into reads exactly like the next one, so after
     - `integrations/hooktheory.HookpadMode`
     - `integrations/hooktheory.HookpadModeSchema`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
   - Exports (types):
     - `AskedBox`
     - `AskedOptions`

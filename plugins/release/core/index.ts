@@ -24,13 +24,8 @@ export {
   STAGED_INTENT,
   previewEndpoint,
   stopPreviewEndpoint,
-  ReleaseLogsResponseSchema,
 } from "./endpoints";
-export type {
-  ReleaseIntent,
-  ReleaseLogLine,
-  ReleaseLogsResponse,
-} from "./endpoints";
+export type { ReleaseIntent } from "./endpoints";
 export {
   BundleResolutionSchema,
   StalenessSchema,
@@ -48,4 +43,11 @@ export {
   releasePreviews,
   releaseRunLogs,
 } from "./resources";
-export type { ReleaseRun, ReleaseHistoryRow, Preview } from "./resources";
+export type {
+  ReleaseRun,
+  ReleaseHistoryRow,
+  Preview,
+  ReleaseLogLine,
+  ReleaseRunLogsQuery,
+  ReleaseRunLogsRefusal,
+} from "./resources";

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
-import { subagentReport } from "./report";
+import { lastHandback, subagentReport } from "./report";
 
 type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
 
@@ -39,7 +39,7 @@ describe("subagentReport", () => {
       subagentReport({
         requestShape: "foreground",
         agentToolEvent: agentCall("Here is what I found."),
-        events: [],
+        handback: lastHandback([]),
       }),
     ).toEqual({
       kind: "report",
@@ -55,7 +55,7 @@ describe("subagentReport", () => {
       subagentReport({
         requestShape: "foreground",
         agentToolEvent: event,
-        events: [],
+        handback: lastHandback([]),
       }),
     ).toEqual({ kind: "report", text: "it blew up", isError: true });
   });
@@ -66,7 +66,7 @@ describe("subagentReport", () => {
     const result = subagentReport({
       requestShape: "background",
       agentToolEvent: agentCall(RECEIPT),
-      events: [text("thinking"), handback("The write-up.")],
+      handback: lastHandback([text("thinking"), handback("The write-up.")]),
     });
     expect(result).toEqual({
       kind: "report",
@@ -80,11 +80,11 @@ describe("subagentReport", () => {
       subagentReport({
         requestShape: "background",
         agentToolEvent: agentCall(RECEIPT),
-        events: [
+        handback: lastHandback([
           handback("first pass"),
           text("more work"),
           handback("final answer"),
-        ],
+        ]),
       }),
     ).toEqual({ kind: "report", text: "final answer", isError: false });
   });
@@ -96,7 +96,7 @@ describe("subagentReport", () => {
       subagentReport({
         requestShape: "background",
         agentToolEvent: agentCall(RECEIPT),
-        events: [text("worked, said nothing back")],
+        handback: lastHandback([text("worked, said nothing back")]),
       }),
     ).toEqual({ kind: "none" });
   });
@@ -106,7 +106,7 @@ describe("subagentReport", () => {
       subagentReport({
         requestShape: undefined,
         agentToolEvent: agentCall(RECEIPT),
-        events: [handback("a write-up")],
+        handback: lastHandback([handback("a write-up")]),
       }),
     ).toEqual({ kind: "none" });
   });
@@ -116,8 +116,25 @@ describe("subagentReport", () => {
       subagentReport({
         requestShape: "foreground",
         agentToolEvent: agentCall(undefined),
-        events: [],
+        handback: lastHandback([]),
       }),
     ).toEqual({ kind: "none" });
+  });
+});
+
+describe("lastHandback", () => {
+  test("the last handback carrying a message, skipping empty ones", () => {
+    expect(
+      lastHandback([
+        handback("first"),
+        text("x"),
+        handback("last"),
+        handback(""),
+      ]),
+    ).toBe("last");
+  });
+
+  test("null when none was handed back", () => {
+    expect(lastHandback([text("worked")])).toBeNull();
   });
 });

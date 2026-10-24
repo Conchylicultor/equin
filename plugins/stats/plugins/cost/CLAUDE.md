@@ -183,7 +183,9 @@ computed by `server/internal/answers.ts` from ONE memoized bundle
 (`loadBundle`): `daily` (the daily-cost, token-mix, cumulative charts and the
 KPIs — cumulative and the last-7-days sum are derived in the browser,
 `shared/derive.ts`), `sessions-daily` (sessions per day and the average per
-conversation), `distribution` and `top-sessions` (top 50). All are external
+conversation), `distribution` and `top-sessions` (top 50). The two per-day
+series keep the newest `COST_DAYS_MAX` days (ten years) and say `truncated`
+(the charts' note). All are external
 `"notified"`: a subscribed tuple holds `watchCostInputs` — a directory watch of
 `~/.claude/projects` (any `.jsonl` written), `onPriceTableUpdated` and a
 capture. Transcript writes are coalesced at the source into one notify per
@@ -261,11 +263,11 @@ it survives, the snapshot fills in where it does not.
     - `defineFileWatcher('corpus-index.stats.cost.usage')`
     - `defineJob('stats.cost.refresh')`
   - Resources:
-    - `stats.cost.daily` (push, notified)
-    - `stats.cost.distribution` (push, notified)
+    - `stats.cost.daily` (push, notified, whole: one key per model (or model family) used — the handful of Claude models, never one per session, capped: COST_DAYS_MAX)
+    - `stats.cost.distribution` (push, notified, whole: a 1-2-5 ladder over the sessions' cost spread (about 16 buckets for $0.01 – $1k), whatever the number of sessions)
     - `stats.cost.session-conversations:rows` (keyed, point)
-    - `stats.cost.sessions-daily` (push, notified)
-    - `stats.cost.top-sessions` (push, notified)
+    - `stats.cost.sessions-daily` (push, notified, whole: one key per model (or model family) used — the handful of Claude models, never one per session, capped: COST_DAYS_MAX)
+    - `stats.cost.top-sessions` (push, notified, capped: TOP_SESSIONS, whole: one key per model (or model family) used — the handful of Claude models, never one per session)
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --background`

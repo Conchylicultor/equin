@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeRecord } from "@plugins/packages/plugins/list-bound/core";
 
 // The claude.ai subscription's usage limits, as last read: by an agent's turn,
 // or on demand (`refreshClaudeUsage`, below).
@@ -42,7 +43,10 @@ export type ClaudeUsage = z.infer<typeof ClaudeUsageSchema>;
  * An account no agent has reported for yet has no entry.
  */
 export const ClaudeUsageReadSchema = z.object({
-  byAccount: z.record(z.string(), ClaudeUsageSchema),
+  byAccount: wholeRecord(ClaudeUsageSchema, {
+    reason:
+      "one entry per Claude account signed in on this machine — a handful",
+  }),
 });
 export type ClaudeUsageRead = z.infer<typeof ClaudeUsageReadSchema>;
 

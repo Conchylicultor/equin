@@ -1,7 +1,13 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
-const AllowFilesSchema = z.object({ allowFiles: z.array(z.string()) });
+const AllowFilesSchema = z.object({
+  allowFiles: wholeList(z.string(), {
+    reason:
+      "the guard-bypass files present at one worktree root — at most one per bypass token, a handful",
+  }),
+});
 export type AllowFiles = z.infer<typeof AllowFilesSchema>;
 
 // Which guard-bypass files exist at a conversation's worktree root (`id` is the

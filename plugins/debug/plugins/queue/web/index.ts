@@ -19,16 +19,20 @@ import {
   TriggerEnabledAction,
   DeleteTriggerAction,
 } from "./components/triggers-view";
-import { jobListPresentation } from "./internal/job-list-presentation";
+import {
+  jobRunsPresentation,
+  jobsPresentation,
+} from "./internal/job-presentation";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { queuePane } from "./panes";
 
 export default {
   description:
-    "Debug → Queue: the jobs queue as live DataViews with side detail panes — Jobs (the live graphile queue merged with the recorded run history: status, hold class, attempts, when, slot wait, duration against the class ceiling, error; Retry / Cancel / Run now), Dead (the dead-letter archive), Events (the emit() log, matched or not) and Triggers (every event→job subscription, enable / disable / delete).",
+    "Debug → Queue: the jobs queue as live DataViews with side detail panes — Queue (the host's live job queue, a windowed external collection: status, hold class, attempts, run-at, error, per-state counts; Retry / Cancel), History (the recorded runs, a windowed collection: outcome, duration against the class ceiling, slot wait, error; Run now) — a job leaves Queue for History when its run finishes, and an open detail follows it — Dead (the dead-letter archive), Events (the emit() log, matched or not) and Triggers (every event→job subscription, enable / disable / delete).",
   contributions: [
-    jobListPresentation,
+    jobsPresentation,
+    jobRunsPresentation,
     Pane.Register({ pane: queuePane }),
     Pane.Register({ pane: jobDetailPane }),
     Pane.Register({ pane: deadDetailPane }),

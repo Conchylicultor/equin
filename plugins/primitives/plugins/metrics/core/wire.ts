@@ -1,6 +1,10 @@
 import { z } from "zod";
+import {
+  cappedList,
+  wholeList,
+} from "@plugins/packages/plugins/list-bound/core";
 import { BREAKDOWN_ORDERS, MEASURES, POLARITIES, UNITS } from "./define-metric";
-import { BUCKET_UNITS, PRESETS, isTimeZone } from "./intervals";
+import { BUCKET_UNITS, MAX_BUCKETS, PRESETS, isTimeZone } from "./intervals";
 import { ParamSpecWireSchema } from "./params";
 
 // The wire contract between the served metrics values (`./live.ts`) and every
@@ -42,8 +46,20 @@ export const MetricQuerySchema = z.union([
 ]);
 export type MetricQuery = z.infer<typeof MetricQuerySchema>;
 
+/**
+ * The most series a split query answers: the top ones by total (`byTotalDesc`).
+ * A split with more keys is served its first this many, `truncated`.
+ */
+export const METRIC_MAX_SERIES = 50;
+
+/** The most rows a breakdown answers, in its declared order; past it, `truncated`. */
+export const METRIC_MAX_BREAKDOWN_ROWS = 100;
+
+/** One per bucket — `resolveRange` refuses a range of more than MAX_BUCKETS. */
+const bucketList = () => cappedList(BucketSchema, { max: MAX_BUCKETS });
+
 /** A value per bucket; `null` = not covered (drawn as a gap, never as 0). */
-const values = z.array(z.number().nullable());
+const values = cappedList(z.number().nullable(), { max: MAX_BUCKETS });
 
 export const SeriesSchema = z.object({
   key: z.string(),
@@ -67,14 +83,16 @@ export type BreakdownRow = z.infer<typeof BreakdownRowSchema>;
 
 export const SeriesResultSchema = z.object({
   kind: z.literal("series"),
-  buckets: z.array(BucketSchema),
-  series: z.array(SeriesSchema),
+  buckets: bucketList(),
+  series: cappedList(SeriesSchema, { max: METRIC_MAX_SERIES }),
+  /** The split had more than METRIC_MAX_SERIES keys: only the top ones are here. */
+  truncated: z.boolean(),
   /** The tile value of the whole query; for a split query, from an unsplit evaluation. */
   total: z.number().nullable(),
   /** Present iff the query asked to compare (and so is unsplit). */
   previous: z
     .object({
-      buckets: z.array(BucketSchema),
+      buckets: bucketList(),
       values,
       total: z.number().nullable(),
       label: z.string(),
@@ -85,7 +103,9 @@ export type SeriesResult = z.infer<typeof SeriesResultSchema>;
 
 export const BreakdownResultSchema = z.object({
   kind: z.literal("breakdown"),
-  rows: z.array(BreakdownRowSchema),
+  rows: cappedList(BreakdownRowSchema, { max: METRIC_MAX_BREAKDOWN_ROWS }),
+  /** The breakdown had more than METRIC_MAX_BREAKDOWN_ROWS rows: only the first are here. */
+  truncated: z.boolean(),
 });
 export type BreakdownResult = z.infer<typeof BreakdownResultSchema>;
 
@@ -138,6 +158,10 @@ export type DetailsSelector = z.infer<typeof DetailsSelectorSchema>;
 
 const SplitDeclSchema = z.object({ id: z.string(), label: z.string() });
 
+/** Why the catalog's lists are loaded whole. */
+const CATALOG_REASON =
+  "the metrics catalog: every contributed source, metric and breakdown — declared in code, fixed per process";
+
 export const CatalogMetricSchema = z.object({
   id: z.string(),
   source: z.string(),
@@ -146,8 +170,8 @@ export const CatalogMetricSchema = z.object({
   unit: z.enum(UNITS),
   polarity: z.enum(POLARITIES),
   measure: z.enum(MEASURES),
-  splits: z.array(SplitDeclSchema),
-  params: z.array(z.string()),
+  splits: wholeList(SplitDeclSchema, { reason: CATALOG_REASON }),
+  params: wholeList(z.string(), { reason: CATALOG_REASON }),
   drill: z.object({ label: z.string() }).optional(),
 });
 export type CatalogMetric = z.infer<typeof CatalogMetricSchema>;
@@ -158,20 +182,20 @@ export const CatalogBreakdownSchema = z.object({
   label: z.string(),
   unit: z.enum(UNITS),
   order: z.enum(BREAKDOWN_ORDERS),
-  params: z.array(z.string()),
+  params: wholeList(z.string(), { reason: CATALOG_REASON }),
 });
 export type CatalogBreakdown = z.infer<typeof CatalogBreakdownSchema>;
 
 export const CatalogSourceSchema = z.object({
   id: z.string(),
   label: z.string(),
-  params: z.array(ParamSpecWireSchema),
+  params: wholeList(ParamSpecWireSchema, { reason: CATALOG_REASON }),
 });
 export type CatalogSource = z.infer<typeof CatalogSourceSchema>;
 
 export const CatalogSchema = z.object({
-  sources: z.array(CatalogSourceSchema),
-  metrics: z.array(CatalogMetricSchema),
-  breakdowns: z.array(CatalogBreakdownSchema),
+  sources: wholeList(CatalogSourceSchema, { reason: CATALOG_REASON }),
+  metrics: wholeList(CatalogMetricSchema, { reason: CATALOG_REASON }),
+  breakdowns: wholeList(CatalogBreakdownSchema, { reason: CATALOG_REASON }),
 });
 export type Catalog = z.infer<typeof CatalogSchema>;

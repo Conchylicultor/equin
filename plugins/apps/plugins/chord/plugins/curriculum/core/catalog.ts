@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import {
   ChordTokenSchema,
   parseChordToken,
@@ -32,6 +33,17 @@ export const LISTED_SHARE = 0.01;
 /** A section with this many rare chords or fewer lists them instead of folding them. */
 export const MAX_FOLDED_RARE = 2;
 
+/**
+ * Why the catalog's lists are loaded whole: the catalog is read entire by the
+ * Chords section, and its size is the loaded song index's distinct chords
+ * (1,808 on the full index, ~72 KB), never anything the learner does.
+ */
+const CATALOG_REASON =
+  "one loaded song index's catalog, read entire — its distinct chords (1,808 on the full index), built once per index";
+
+/** Why a scope's modes are loaded whole. */
+const MODES_REASON = "a subset of Hookpad's key modes — seven at most";
+
 /** One listed chord, the share of its section's windows holding it (0…1), and what it reads as there ("V/V", "I/3", "Neapolitan"). */
 export const CatalogChordSchema = z.object({
   token: ChordTokenSchema,
@@ -44,7 +56,7 @@ export type CatalogChord = z.infer<typeof CatalogChordSchema>;
 /** A section's chords below `LISTED_SHARE`, as one group: set together, answered by the Rare joker. */
 export const RareGroupSchema = z.object({
   /** By share, most common first. */
-  tokens: z.array(ChordTokenSchema).min(1),
+  tokens: wholeList(ChordTokenSchema, { reason: CATALOG_REASON }).min(1),
   /** The share of the section's windows holding at least one of them. */
   share: z.number().min(0).max(1),
 });
@@ -63,13 +75,13 @@ export const CatalogSectionSchema = z.object({
   name: z.string(),
   kind: SectionKindSchema,
   /** The key modes whose windows its shares are counted in. */
-  scope: z.array(HookpadModeSchema).min(1),
+  scope: wholeList(HookpadModeSchema, { reason: MODES_REASON }).min(1),
   /** Every window of those modes. */
   windows: z.number().int().min(0),
   /** The share of those windows holding at least one of its chords. */
   coverage: z.number().min(0).max(1),
   /** The listed chords, by share, most common first. */
-  chords: z.array(CatalogChordSchema),
+  chords: wholeList(CatalogChordSchema, { reason: CATALOG_REASON }),
   rare: RareGroupSchema.nullable(),
 });
 export type CatalogSection = z.infer<typeof CatalogSectionSchema>;
@@ -78,16 +90,16 @@ export const CatalogTrackSchema = z.object({
   id: z.string().min(1),
   name: z.string(),
   blurb: z.string(),
-  scope: z.array(HookpadModeSchema).min(1),
+  scope: wholeList(HookpadModeSchema, { reason: MODES_REASON }).min(1),
   /** Every window of the track's modes. */
   windows: z.number().int().min(0),
   /** Core first, Other last, the rest by how many windows they cover. Empty sections are left out. */
-  sections: z.array(CatalogSectionSchema),
+  sections: wholeList(CatalogSectionSchema, { reason: CATALOG_REASON }),
 });
 export type CatalogTrack = z.infer<typeof CatalogTrackSchema>;
 
 export const CatalogSchema = z.object({
-  tracks: z.array(CatalogTrackSchema),
+  tracks: wholeList(CatalogTrackSchema, { reason: CATALOG_REASON }),
 });
 export type Catalog = z.infer<typeof CatalogSchema>;
 

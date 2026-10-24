@@ -181,6 +181,7 @@ bun test plugins/infra/plugins/trash
     - `infra/entities.entityRef`
     - `network/live.liveCollection`
     - `network/live.LiveRowsCollection`
+    - `packages/list-bound.wholeRecord`
   - Exports (types):
     - `TrashEntry`
     - `TrashEntryId`

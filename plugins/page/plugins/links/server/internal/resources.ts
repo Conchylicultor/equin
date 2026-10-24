@@ -56,10 +56,6 @@ export const pageBacklinksServed = serveValue(pageBacklinks, {
     reason:
       "the backlinks of one page join every edge and every source page's title, icon and text, and each snippet shows the titles its chips resolve to (tasks, songs, pages, …) — whole-table until it reads through a collection",
   }),
-  unbounded: {
-    reason:
-      "the pages that link to one page — a join over page_links and the live page blocks, not the rows of one table",
-  },
   loader: async ({ pageId }) => {
     const edges = await db
       .select({

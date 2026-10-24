@@ -16,10 +16,6 @@ export const customColumnValuesServed = serveValue(customColumnValues, {
     reason:
       "a write to any custom-value row may change the cells of the surface it belongs to; whole-table until it reads through a collection",
   },
-  unbounded: {
-    reason:
-      "one DataView surface's custom-column cells, indexed client-side onto every rendered row; the key is the composite (dataViewId, rowKey, columnId), so no single-id :rows read fits",
-  },
   loader: async ({ dataViewId }) =>
     db
       .select({

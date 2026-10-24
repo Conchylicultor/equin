@@ -372,6 +372,7 @@ remaining allocations are one flat band array per completed entry span, and what
     - `runInRootContext`
     - `runTracked`
     - `runWithoutProfiling`
+    - `SLOWEST_CAP`
     - `SPAN_KINDS`
     - `SPAN_MEASURES`
     - `waitSplit`

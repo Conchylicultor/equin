@@ -25,12 +25,13 @@ const failed = (message: string): ExitDecision => ({
   refetch,
 });
 
-/** The resolved edited-files arm carrying `value`. */
+/** The resolved edited-files arm: `files` loaded of a set of `count` (default: all of them). */
 const resolvedFiles = (
   files: readonly { path: string }[] = [],
+  count: number = files.length,
 ): SettledData["files"] => ({
   resolved: true,
-  value: files,
+  value: { files, summary: { count }, complete: files.length >= count },
 });
 
 /**
@@ -140,6 +141,19 @@ describe("deriveExitMode", () => {
       mode: "go",
       provisional: false,
     });
+  });
+
+  test("research-only files of a CUT list: Push & Close, never Go", () => {
+    // The files past the cap are unknown, so the set is not provably research.
+    expect(
+      deriveExitMode(
+        input(
+          settled({
+            files: resolvedFiles([{ path: "research/plan.md" }], 3000),
+          }),
+        ),
+      ).mode,
+    ).toBe("push-and-exit");
   });
 
   test("clean worktree, commits ahead of main: Push & Close, never Drop", () => {

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 /**
  * The aligner's version: part of every stored record. Bump it when the
@@ -64,15 +65,20 @@ export const AlignmentRecordSchema = z.object({
   sheetHash: z.string(),
   durationSec: z.number().positive(),
   /** The beat grid used (the features' beats, chroma dropped). */
-  beats: z.array(
+  beats: wholeList(
     z.object({ t: z.number().nonnegative(), downbeat: z.boolean() }),
+    { reason: "one recording's beat grid — a song's beats" },
   ),
   /** Semitones: recording = sheet + transpose. In [0, 12); a capo shows up here. */
   transpose: z.number().int().min(0).max(11),
   /** Performance order, contiguous, covering beat indices `[0, beats.length)`. */
-  segments: z.array(AlignmentSegmentSchema),
+  segments: wholeList(AlignmentSegmentSchema, {
+    reason: "one alignment's performance-order segments — a song's sections",
+  }),
   /** One per bar (downbeat to next downbeat; the beats before the first downbeat form bar 0), 0–1. */
-  barConfidence: z.array(z.number().min(0).max(1)),
+  barConfidence: wholeList(z.number().min(0).max(1), {
+    reason: "one per bar of one recording",
+  }),
   /**
    * Overall fit, 0–1: what candidates are compared with. How much of the
    * achievable chord fit the sheet's sequence explains, times the fraction of

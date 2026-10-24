@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { BootGatewaySchema } from "@plugins/debug/plugins/trace/plugins/boot/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 const SpanSchema = z.object({
   id: z.string(),
@@ -26,9 +27,14 @@ const MemoryCheckpointSchema = z.object({
 export type MemoryCheckpoint = z.infer<typeof MemoryCheckpointSchema>;
 
 export const ProfilingDataSchema = z.object({
-  spans: z.array(SpanSchema),
+  spans: wholeList(SpanSchema, {
+    reason:
+      "one process boot's spans — one per boot phase, plugin step and warm-up, a few hundred, fixed once the warm-ups drain",
+  }),
   totalMs: z.number(),
-  memoryCheckpoints: z.array(MemoryCheckpointSchema),
+  memoryCheckpoints: wholeList(MemoryCheckpointSchema, {
+    reason: "one per boot phase boundary — a dozen or so",
+  }),
   // Epoch ms of process start (performance.timeOrigin) — the wall anchor that
   // places this process on another clock's timeline (the cold-start
   // benchmark's).

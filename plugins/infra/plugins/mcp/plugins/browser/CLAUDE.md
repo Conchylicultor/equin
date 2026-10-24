@@ -227,9 +227,11 @@ nor closed under it. Bounded, because the host cannot see the script end.
     - `defineJob('mcp-browser.conversation-ended')`
     - `defineDaemon('mcp-browser.host')`
     - `defineFileWatcher('mcp-browser.host-status')`
-  - Resources: `agent-browser.status` (push, notified)
+  - Resources: `agent-browser.status` (push, notified, whole: the deploys one session reached — its own build, main, a few others an agent opened)
 - Core:
-  - Uses: `network/live.liveValue`
+  - Uses:
+    - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
   - Exports (types):
     - `AgentBrowserHostError`
     - `AgentBrowserHostStatus`

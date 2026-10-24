@@ -155,7 +155,7 @@ plus a per-song reset.
     - `network/live.serveValue`
   - DB schema: `plugins/apps/plugins/sonata/plugins/track-mixer/server/internal/tables.ts`
   - Exports (values): `_trackView`
-  - Resources: `sonata-track-view` (push, unbounded: one song's per-track view overrides — at most one row per track of that song)
+  - Resources: `sonata-track-view` (push, whole: one song's per-track view overrides — at most one row per track of that song)
   - Routes:
     - `POST /api/sonata/songs/:songId/track-view`
     - `DELETE /api/sonata/songs/:songId/track-view`

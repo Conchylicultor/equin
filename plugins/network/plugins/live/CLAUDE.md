@@ -18,6 +18,28 @@ the filter language: `research/2026-09-25-global-unified-filter-language.md`).
   `research/2026-10-11-global-endpoint-reads-onto-live.md`);
   `optimistic-mutation`'s `useOptimisticResource` is a read+write hook.
 
+## Shape vs freshness
+
+A live read answers two independent questions, declared in two places:
+
+- **Shape — how much of a list the browser holds at once.** Declared on the
+  DECLARATION (`core/`), whatever the source: a collection's form (a window's
+  `maxLimit`, `all: { max }` or `all: { unbounded: { reason } }`, `:rows`'
+  `maxIds`), a value `paged` by key ranges, and every other list a payload or
+  row holds marked in its schema with `packages/list-bound` — capped
+  (`cappedList` / `cappedRecord`, a native `.max(n)`) or whole (`wholeList` /
+  `wholeRecord`, with the reason loading it entire is honest). A bare list is
+  refused at declaration (*Values → Shape*).
+- **Freshness — how the server learns the answer changed.** Declared on the
+  SERVE call, on any arm: the change feed (the SQL arm's default), or
+  `changes: "notified"` / `{ fixed }` / `{ immutable }` / `{ snapshot }` — on
+  an external value, the external collection arm, and the SQL arm served off
+  the feed (*Serve → The SQL arm off the change feed*).
+
+The source never decides the shape: a table outside the feed still pages
+through the compiled SQL, and an in-memory array is no more bounded than a
+table. Design: `research/2026-10-22-global-live-bounds-independent-of-freshness.md`.
+
 ## Usage
 
 ```ts
@@ -82,14 +104,23 @@ useLive(blocks, { where: { pageId }, select: headings });             // a slice
   `key:groups` (grouping) — and all three show in the docs; declared
   `count: true`, a fourth, `key:count` (see *Totals* below). Bounded by
   construction: `default.limit` and `maxLimit` are required, and a grouping returns
-  at most the filter language's `LIST_MAX` (100) groups. The one unbounded
-  spelling is a separate form, `all` (below), which must state its
-  `unbounded: { reason }`. A collection declares its FIELDS (*Fields* below):
+  at most the filter language's `LIST_MAX` (100) groups. The whole-set form,
+  `all` (below), states its bound: a cap (`max`) or `unbounded: { reason }`.
+  An id set is bounded too: `maxIds` (below). A collection declares its FIELDS (*Fields* below):
   its row schema — whose keys are exactly what the server projects — and the
   filter domains of its listed fields are derived from them. There is no
   other spelling: the `row` / `filterable` / `exposes` one is deleted (fields
   declared once, phase 2b), and an untyped caller still spelling it throws. As for a `liveValue`, a window, id set or
   grouping not loaded yet is `pending`, never `[]`.
+- **Id sets are capped — `maxIds`.** Every collection's `:rows` tuple
+  (`useLive(c, { ids })`, `useLiveRow`, `useOptimisticResource(c, { ids })`,
+  a `preloadRows` set) names at most `maxIds` ids: the point codec's `encode`
+  throws past it (after dedupe) and its `decode` — the params gate and the
+  membership `idsOf` — refuses it as `contract-mismatch`, before any load.
+  Default: a window's `maxLimit`, an `all` set's `max`, else
+  `LIVE_DEFAULT_MAX_IDS` (500); declare `maxIds` on any form where a reader's
+  id set is known to be larger (`queueRanks` and `spawnFailureRows` read by
+  every live conversation: 2000). Read back as `c.rows.point.maxIds`.
 - **Lookup-only.** Declared WITHOUT `default` — `liveCollection(key, { from:
   shape, id })`, `{ carry: { fields }, id }` — a collection mints `key:rows` alone: a table whose rows are only ever read by
   id (one row per mounted block: `todo-block-task`, `page-block-doc`). Every
@@ -105,7 +136,8 @@ useLive(blocks, { where: { pageId }, select: headings });             // a slice
   param'd value over a one-row table (`oneRow` routing was rejected — see
   `research/2026-09-26-global-live-values-migration-contract.md` §10).
 - **The whole ordered set — `all`.** Declared with `all: { orderBy,
-  unbounded: { reason } }` and no window field —
+  unbounded: { reason } }` (or `all: { orderBy, max }`, *Capped* below) and
+  no window field —
   `liveCollection(key, { …fields, id, all, preload? })` — a collection holds EVERY
   row, in `orderBy` (row fields; the id breaks ties), for a set small enough to
   hold whole whose readers need all of it (the task tree, a graph). It mints
@@ -130,6 +162,17 @@ useLive(blocks, { where: { pageId }, select: headings });             // a slice
   `serveCollection`'s `all` arm (*Serve* below) and read by `useLive(all[, {
   select }])` (*Read* below); the join kinds it reads are query-resource's
   `AllJoinSpec`.
+  - **Capped — `all: { max }`** (B7 of
+    `research/2026-10-22-global-live-bounds-independent-of-freshness.md`).
+    Exactly one of `max` (a positive integer) or `unbounded: { reason }`
+    (`LiveAllBound`; both, neither, an empty reason or a bad `max` throw, and
+    tsc refuses both / neither). `max` is a statement about the data, never a
+    silent truncation: the descriptor's schema is `.max(max)` (every parse —
+    the server's load, the client's hydration and updates — refuses one more
+    row), the SQL arm's full and `orderIds` shapes read `LIMIT max + 1` and a
+    load past the cap is a loud loader error naming the key, and the external
+    arm checks `all()` against it as a window's answer against `q.limit`. An
+    unbounded set's SQL and definition are unchanged.
   - **Scoped — `all: { by }`.** `all: { by: ["pageId"], orderBy, unbounded }`
     holds every row OF ONE SCOPE per tuple: `key`'s params are exactly the
     `by` fields (`AllQueryResourceContract<Row, B>`, params
@@ -273,7 +316,7 @@ useLive(blocks, { where: { pageId }, select: headings });             // a slice
     the same `full` routes and per-tuple joins — rendered as `SELECT count(*)
     … WHERE <base> AND <defaults> AND <where>`, so it counts exactly the rows
     the window lists.
-  - **All three are ROUTED** (research/2026-09-29-global-scoped-change-routing.md):
+  - **All three are ROUTED** — unless served off the feed (`changes`, below) — (research/2026-09-29-global-scoped-change-routing.md):
     each compiler emits the routes its SQL reads, and the runtime's
     `routeTableChange` serves them — never the loader read-set — so a change
     reaches exactly the tuples whose query reads the changed table. `from` is
@@ -353,6 +396,8 @@ useLive(blocks, { where: { pageId }, select: headings });             // a slice
       groups: (q) => store.groups(q),         // optional — `:groups` is not served without it
       count: (q) => store.count(q.where),     // exactly when declared `count: true` (tsc)
       keyText: { total: (n) => pad(n) },      // a non-text sortable field's `$key` text (tsc: required)
+      whileSubscribed: (notify) => store.watch(() => notify()),  // optional, "notified" only
+      throttleMs: 1000,                       // optional, "notified" only
     });
     ordersServed.notify({ ids: ["o1"] });     // or notify(): every subscribed tuple
     // contributions: [...ordersServed.declare]
@@ -391,6 +436,17 @@ useLive(blocks, { where: { pageId }, select: headings });             // a slice
       tuple ships an empty one). The subscribed tuples are tracked from the
       runtime's 0→1 / N→0 hooks, so nothing is re-read for a tuple nobody
       holds.
+    - **`whileSubscribed(notify)` / `throttleMs`** (`"notified"` only — tsc,
+      and a throw on a silent collection), `serveValue`'s semantics:
+      `whileSubscribed` starts ONE watcher for the whole collection when the
+      first tuple of any minted resource is subscribed and stops it when the
+      last is released (refcounted over every tuple, so a reader splitting its
+      pages never restarts it; an async start is awaited before any tuple
+      loads), handed the collection's own `notify`; `throttleMs` is each
+      minted resource's flush throttle (the runtime's per-entry `debounceMs`).
+      The Debug → Queue `jobs` collection is the reference
+      (`infra/jobs`: `whileSubscribed: (notify) => onActivity(() => notify())`,
+      `throttleMs: 1000`).
     - **An exposing collection** (`exposes`, from `from` / `related`) is
       served: its `$columns` is the fold of the exposures served on THIS
       host, as the SQL arm's is — and an external host serves none, so the
@@ -405,6 +461,61 @@ useLive(blocks, { where: { pageId }, select: headings });             // a slice
       collection (throw only), a stray answer for the form (`window` on a
       lookup, `count` without `count: true`), and an empty `changes`
       reason. Tests: `core/internal/serve-on.test.ts`.
+  - **The SQL arm off the change feed — `changes`**
+    (`server/internal/serve-off-feed.ts`; B6 of
+    `research/2026-10-22-global-live-bounds-independent-of-freshness.md`).
+    The source decides only the freshness, never the shape: a table outside
+    the feed (its owner `ExcludeFromChangeFeed`s it) still pages through the
+    same compiled SQL — the filter language, `$key` cuts, joins, `:groups`,
+    `:count` — read by `useLive` unchanged.
+
+    ```ts
+    serveCollection(archive, {
+      from: _archive,                  // an EntityTable its owner opted out of the feed
+      changes: "notified",             // or { fixed | immutable: { reason } }
+      whileSubscribed: (notify) => onArchiveWrite(() => notify()),  // "notified" only
+      throttleMs: 1000,                // "notified" only
+    });                                // → the external arm's served shape: notify(change?) on "notified"
+    ```
+
+    - **Same specs, external registration.** `compileCollection` derives the
+      specs exactly as for the routed arm; query-resource's
+      `compileOffFeedQuery` takes the window's and `:rows`' loaders WITHOUT
+      the scope policy, registered as the runtime's external keyed window
+      (`limitOf` / `familyOf` — pages seeded as a table's) and point set: an
+      external keyed loader runs with no `ctx`, a full re-read diffed by key,
+      which is the windowed FULL read. `:groups` / `:count` keep their
+      loaders as non-keyed externals (`offFeedReach`). The `notify` /
+      `whileSubscribed` / `throttleMs` plumbing is the external arm's
+      (`externalCollectionRegistrar`, `core/internal/serve-on.ts`), with its
+      semantics (`notify({ ids })` narrows `:rows` only).
+    - **Every table the SQL reads is declared unfed** — the base and every
+      join (the routed compile's route tables): the keyed policies' `unfed`,
+      the non-keyed ones' reach `unfed`. So the runtime's drift guard accepts
+      the loader's reads, and change-feed's boot check
+      (`assertUnfedTablesOptedOut`) refuses a table the feed covers — the
+      owner must opt the `from` table (and any joined one) out; A1′ refuses
+      the converse, an opted-out table served routed. `from` stays an
+      `EntityTable`, no new brand.
+    - **No exposure folds**: an exposing collection's rows carry
+      `$columns: {}` (each exposed field reads its default), as on the
+      external arm. **Refused** (a throw): a collection declared `all`, a
+      `columnScope`, a union (its compile), a hook on a silent collection.
+    - Tests: `server/internal/serve-off-feed.test.ts` (routed ≡ off-feed
+      loader for a filter, a `$key` cut, a join and a point set; every
+      resource served and a subscribed window's `notify` delta and watcher;
+      the unfed tables refused until opted out; the refusals), and
+      resource-runtime's `runtime-table-routing.test.ts` §unfed reads (the
+      drift guard accepts a declared unfed read of an external window).
+- **A row's own lists carry their bound** (B7). `liveCollection` walks its
+  row schema — the author's fields, never the `$columns` fold — with
+  `packages/list-bound` and freezes `c.shape` (`ListShape`: `bounds`,
+  `bare`): a `jsonField({ schema })` holding an array or record, a string
+  list (`stringListField`, `tagsField` — marked whole by their factories).
+  Mark one with `wholeList` / `wholeRecord` (or a cap) in the field's
+  schema. A bare one is refused at declaration, as a value's is
+  (`declaredShape`); the bare-list sweep test covers collections beside
+  values.
 - **Collection rows are marked.** Every row a collection read hands out
   (`useLive(c)` window / pages / `all` / `{ ids }`, `useLiveRow`) is typed
   `CollectionRow<Row>` (`core/internal/collection-row.ts`): an optional,
@@ -1442,6 +1553,27 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));  // MANY tuples → on
     must pass `preloadParams: () => P[] | Promise<P[]>` (tsc, and a throw at
     serve time for an untyped caller; any other value may not pass it) — see
     Preload below.
+- **Shape — every list carries its bound** (B0–B1 of
+  `research/2026-10-22-global-live-bounds-independent-of-freshness.md`). The
+  SHAPE (how much of each list the browser holds) is declared in the schema,
+  whatever the source; the freshness (`changes`) never decides it. Each
+  `ZodArray` / `ZodRecord` / `ZodMap` / `ZodSet` the schema reaches — a paged
+  value's `item` (under `[]`) and `meta` — is capped (`cappedList` /
+  `cappedRecord`, a native `.max(n)`, an enum-keyed record) or whole
+  (`wholeList` / `wholeRecord` with a reason): `packages/list-bound`.
+  `liveValue` walks it at declaration and freezes `shape` (`LiveValueShape`:
+  `paged`, `bounds`, and `bare` — always empty) on the descriptor; the
+  runtime shows it in `_debug` (read-set pane, section E) and the resources
+  facet prints the markers. **A bare list is refused at declaration** — a
+  `BareListError` naming the key and every path (`rows[].segments`), thrown
+  by `declaredShape` (`core/internal/live-value.ts`, shared with a
+  collection's row walk) at module evaluation, so on every host's boot
+  (worktree, central, browser server) and in every test importing the
+  declaring module; a malformed marker throws too. No tsc brand (decision 3
+  of the plan: it would spread into domain types and risk tsc depth limits).
+  `core/internal/list-bounds-report.test.ts` imports every declaring module
+  and asserts every declaration the source names was reached and holds no
+  bare list.
 - **Load (delivery mode).** `load` defaults to `"push"` (the value is
   recomputed and pushed); `"on-demand"` is the runtime's `invalidate` — the
   server never ships the value over the socket, and each tab reads it over
@@ -1554,8 +1686,13 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));  // MANY tuples → on
       arm, so the value is external with its freshness from definition). A
       write to one recomputes every subscribed tuple, merged with its
       notifies. An undeclared read is caught by the runtime's D5 guard
-      (reported and routed FULL from then on; thrown under a test runner). Never on a paged value (tsc,
-      and a throw): its pages are keyed windows.
+      (reported and routed FULL from then on; thrown under a test runner). A
+      paged value takes them too, as a static list (a thunk is a tsc error
+      and a throw): its meta sibling is routed like a plain value, and its
+      pages — keyed windows no route reaches (D31) — read each table whole
+      (query-resource's `compiledKeyedReads` → the runtime's
+      `ExternalWindowPolicy.relations`): a write re-reads every subscribed
+      page (`edited-files`, `subagent-transcript`).
     - `{ immutable: { reason } }` — a tuple's answer can never change
       (sha-keyed, a terminal run's artifact).
     - `{ fixed: { reason } }` — constant for the process lifetime (a
@@ -1568,12 +1705,15 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));  // MANY tuples → on
     The three silent arms return a served value with no `notify` (tsc, and at
     runtime). The served value records `changes`; the runtime carries it as a
     `freshness` label the read-set debug pane lists per key.
-  - **The bound rule is a type:** a `"db"` value whose type is an array or a
-    string-indexed record must pass `unbounded: { reason }` (recorded on the
-    served value and shown in the docs), and nothing else may. An external
-    array is bounded by the process holding it.
+  - **The bound is the declaration's, never the serve call's.** Every list a
+    value's payload holds — a top-level array or string-keyed record, or one
+    nested anywhere — carries its bound in the `liveValue`'s schema (*Shape*
+    above: capped, or whole with its reason), whatever the source: an
+    in-memory array is no more bounded than a table. `serveValue` takes no
+    `unbounded` (tsc, and a throw for an untyped caller); a db value's old
+    serve-side reason now sits in its `wholeList` / `wholeRecord`.
   - Returns `ServedValue` = the runtime `Resource` + `source` + `changes?` +
-    `unbounded?` + `keys` (`[key]`) + `declare` (a 1-tuple — spread it like a
+    `keys` (`[key]`) + `declare` (a 1-tuple — spread it like a
     collection's); a `"notified"` external value adds `notify`. `compileValue` is the same derivation
     without registering, and `core/internal/compile-value.ts`'s `registerValue`
     registers it on any runtime (tests use their own).

@@ -6,6 +6,7 @@ import {
   defineEndpoint,
   type AssetPath,
 } from "@plugins/infra/plugins/endpoints/core";
+import { wholeRecord } from "@plugins/packages/plugins/list-bound/core";
 
 /**
  * Why a render produced no picture. Every arm is a state the card renders, not
@@ -64,7 +65,10 @@ export type ThumbnailState = z.infer<typeof ThumbnailStateSchema>;
  * never an empty map standing in for it.
  */
 export const prototypeThumbnails = liveValue("prototypes.thumbnails", {
-  schema: z.record(z.string(), ThumbnailStateSchema),
+  schema: wholeRecord(ThumbnailStateSchema, {
+    reason:
+      "one state per prototype — bounded by the prototype list the gallery holds whole",
+  }),
 });
 
 /**

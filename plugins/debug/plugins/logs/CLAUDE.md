@@ -97,7 +97,7 @@ without a DB append to, and screens read its `op_log_ops` fold.
     - `primitives/log-channels/log-files.logsDir`
     - `primitives/log-channels/log-files.logsDirFor`
   - Resources:
-    - `debug.logs.catalog` (push, notified)
+    - `debug.logs.catalog` (push, notified, whole: every log of one worktree plus the host-wide ones — the files in a handful of folders, tens of logs, whole: one log's kept generations — its rotation's `keep`, a handful)
     - `debug.logs.lines` (keyed, window, notified)
 - Cross-plugin:
   - Uses tokens:

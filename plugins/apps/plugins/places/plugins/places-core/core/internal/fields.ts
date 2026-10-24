@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { idKindField } from "@plugins/ids/core";
 import {
   nullable,
@@ -36,7 +37,12 @@ import { TAG_ROLES } from "./tag-tree";
 // exception: a `tagsField` is the same `jsonb` string array, and its type is
 // what the places list filters it by (has any / all / none of, nested).
 const stringList = () =>
-  jsonField<string[]>({ schema: z.array(z.string()), default: [] });
+  jsonField<string[]>({
+    schema: wholeList(z.string(), {
+      reason: "one place's own strings (its Google types, its auto-set tags)",
+    }),
+    default: [],
+  });
 
 // A nullable icon column: `null` until Haiku (or the user) picks one. The inner
 // default is never reached — the column is nullable and carries no DB default.

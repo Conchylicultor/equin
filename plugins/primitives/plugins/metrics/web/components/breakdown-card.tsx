@@ -7,7 +7,11 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { formatValue } from "@plugins/primitives/plugins/metrics/plugins/chart-kit/core";
 import { ChartState } from "@plugins/primitives/plugins/metrics/plugins/chart-kit/web";
-import type { BreakdownResult, CatalogBreakdown } from "../../core";
+import {
+  METRIC_MAX_BREAKDOWN_ROWS,
+  type BreakdownResult,
+  type CatalogBreakdown,
+} from "../../core";
 import { breakdownQuery, type BoardContext } from "../internal/query";
 import { useMetric } from "../internal/use-metric";
 import { CardFrame } from "./card-frame";
@@ -69,6 +73,11 @@ function BreakdownRows({
           </Text>
         </Row>
       ))}
+      {data.truncated && (
+        <Text variant="caption" tone="muted">
+          Showing the first {METRIC_MAX_BREAKDOWN_ROWS}
+        </Text>
+      )}
     </Stack>
   );
 }

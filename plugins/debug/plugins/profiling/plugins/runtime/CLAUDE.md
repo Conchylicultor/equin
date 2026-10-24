@@ -31,7 +31,7 @@
     - `network/live.serveValue`
     - `tasks/tasks-core.getConversation`
   - Register: `mcpTool('get_runtime_profile')`
-  - Resources: `runtime-profiler.profile` (invalidate, snapshot)
+  - Resources: `runtime-profiler.profile` (invalidate, snapshot, whole: one per distinct label of the kind since the last reset — route patterns, resource keys, job names, never per-call values (those ride `variant`), capped: SLOWEST_CAP, whole: one per distinct parent label (an entry's class, never one run) this label ran under since the last reset, whole: one key per gate layer the entry waited on — the closed set of charging layers, a dozen or so)
   - Routes:
     - `GET /api/debug/profiling/runtime`
     - `POST /api/debug/profiling/runtime/reset`
@@ -39,10 +39,14 @@
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
+    - `infra/runtime-profiler.SLOWEST_CAP`
     - `infra/runtime-profiler.SPAN_KINDS`
     - `infra/runtime-profiler.SPAN_MEASURES`
     - `infra/runtime-profiler.SpanKind`
     - `infra/runtime-profiler.SpanMeasure`
+    - `packages/list-bound.cappedList`
+    - `packages/list-bound.wholeList`
+    - `packages/list-bound.wholeRecord`
   - Exports (values):
     - `FLIGHT_WINDOW_MS_DEFAULT`
     - `FLIGHT_WINDOW_MS_MAX`

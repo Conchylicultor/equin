@@ -1,5 +1,6 @@
 import { afterCommit } from "@plugins/database/server";
 import {
+  answerJobsInMemory,
   listRegisteredJobs,
   resolveJobCron,
   singletonJobKey,
@@ -202,18 +203,20 @@ export function createMemoryQueue(): JobQueueImpl {
       state,
       attempts: row.attempts,
       maxAttempts: row.maxAttempts,
-      runAt: row.runAt.toISOString(),
-      lockedAt: row.running ? row.updatedAt.toISOString() : null,
+      runAt: row.runAt,
+      lockedAt: row.running ? row.updatedAt : null,
       lockedBy: row.running ? "in-process" : null,
       alive: row.running ? true : null,
       forfeited: false,
       queueName: null,
       priority: 0,
       lastError: row.lastError,
-      createdAt: row.createdAt.toISOString(),
-      updatedAt: row.updatedAt.toISOString(),
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     };
   };
+
+  const answer = () => answerJobsInMemory([...rows.values()].map(toJobRow));
 
   return {
     async enqueue(job, payload, opts) {
@@ -234,14 +237,19 @@ export function createMemoryQueue(): JobQueueImpl {
       }
       activity();
     },
-    async list(limit) {
-      const all = [...rows.values()]
-        .sort((a, b) => b.runAt.getTime() - a.runAt.getTime())
-        .slice(0, limit)
-        .map(toJobRow);
-      const counts = { pending: 0, running: 0, retrying: 0, dead: 0 };
-      for (const r of all) counts[r.state]++;
-      return { rows: all, counts };
+    // The `jobs` collection's questions, answered over every row held — the
+    // queue is this tab's own handful of jobs.
+    async window(q) {
+      return answer().window(q);
+    },
+    async rows(ids) {
+      return answer().rows(ids);
+    },
+    async groups(q) {
+      return answer().groups(q);
+    },
+    async count(q) {
+      return answer().count(q);
     },
     async retry(jobId) {
       const row = rows.get(jobId);

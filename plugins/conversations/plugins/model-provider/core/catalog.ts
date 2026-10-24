@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { HttpError } from "@plugins/infra/plugins/endpoints/core";
 import {
   ConversationModelSchema,
@@ -35,7 +36,10 @@ export const ModelVersionSchema = z.object({
 export type ModelVersion = z.infer<typeof ModelVersionSchema>;
 
 export const ModelCatalogSchema = z.object({
-  versions: z.array(ModelVersionSchema),
+  versions: wholeList(ModelVersionSchema, {
+    reason:
+      "every Claude model version this machine has seen — a few dozen, one per release",
+  }),
   /** Each family's current version: what a family choice ("Sonnet") runs. */
   current: z.object(
     Object.fromEntries(

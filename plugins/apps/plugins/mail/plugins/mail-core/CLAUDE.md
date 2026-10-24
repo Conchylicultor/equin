@@ -35,8 +35,8 @@ every mail plugin imports, so no consumer has to import another to read them:
 
 - `mailLabels` (`liveValue("mail-labels")`, the account's `type="user"` labels
   ordered by name) is also served here, as `mailLabelsServed` — a `source: "db"`
-  `serveValue` with `unbounded: { reason }` (Gmail caps an account's labels in
-  the thousands, so the whole list is the working set). `threads` reads it with
+  `serveValue`, its schema a `wholeList` with the reason (Gmail caps an
+  account's labels in the thousands, so the whole list is the working set). `threads` reads it with
   `useLive` for the id→name map that keeps "Label_12" off the screen in its
   `labels` field options and filter chips.
 - `mailSyncState` (`liveValue("mail-sync-state")`, one row per connected
@@ -169,7 +169,7 @@ imports `@plugins/auth/*` directly — all Gmail auth flows through
     - `resolveMailAccountId`
   - Resources:
     - `mail-account` (push)
-    - `mail-labels` (push, unbounded: the connected account's user labels — Gmail caps an account's labels in the thousands, so the whole list is the working set)
+    - `mail-labels` (push, whole: the connected account's user labels — Gmail caps an account's labels in the thousands, so the whole list is the working set)
 - Core:
   - Uses:
     - `fields.FieldsRecord`
@@ -188,6 +188,8 @@ imports `@plugins/auth/*` directly — all Gmail auth flows through
     - `ids.IdOf`
     - `infra/entities.entityRef`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
+    - `packages/list-bound.wholeRecord`
     - `primitives/live-state.tolerantEnum`
   - Exports (types):
     - `MailAccount`

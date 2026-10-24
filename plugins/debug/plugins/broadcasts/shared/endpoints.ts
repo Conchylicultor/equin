@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { OP_KIND_IDS } from "@plugins/infra/plugins/worktree/core";
 
@@ -8,7 +9,9 @@ export const BroadcastEntrySchema = z.object({
   since: z.string().optional(),
   until: z.string().optional(),
   // Which op commands the broadcast prints on — the op-kind vocabulary itself.
-  commands: z.array(z.enum(OP_KIND_IDS)).optional(),
+  commands: wholeList(z.enum(OP_KIND_IDS), {
+    reason: "a subset of the op kinds — a closed vocabulary of a handful",
+  }).optional(),
 });
 export type BroadcastEntry = z.infer<typeof BroadcastEntrySchema>;
 

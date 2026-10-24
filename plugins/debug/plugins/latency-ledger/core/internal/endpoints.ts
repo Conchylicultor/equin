@@ -1,7 +1,11 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { BUCKET_COUNT, HISTOGRAM_SCHEME } from "./histogram";
-import { CLIENT_METRICS, LATENCY_METRICS } from "./metrics";
+import { CLIENT_METRICS, EXIT_CRITERIA, LATENCY_METRICS } from "./metrics";
+import {
+  cappedList,
+  wholeList,
+} from "@plugins/packages/plugins/list-bound/core";
 
 // --- Browser → server -----------------------------------------------------------
 
@@ -64,6 +68,9 @@ const StatSchema = z.object({
 export type LatencyStat = z.infer<typeof StatSchema>;
 
 export const LATENCY_WINDOWS = ["1h", "24h", "7d"] as const;
+
+/** How many of the window's slowest interactions the summary lists. */
+export const SLOWEST_INTERACTIONS = 8;
 export type LatencyWindow = (typeof LATENCY_WINDOWS)[number];
 
 export const LatencySummarySchema = z.object({
@@ -79,7 +86,7 @@ export const LatencySummarySchema = z.object({
     pressure: z.number(),
     slept: z.number(),
   }),
-  metrics: z.array(
+  metrics: cappedList(
     z.object({
       metric: z.enum(LATENCY_METRICS),
       calm: StatSchema,
@@ -89,6 +96,7 @@ export const LatencySummarySchema = z.object({
       /** Samples left out: hidden tab, or a minute in which the machine slept. */
       excluded: z.number(),
     }),
+    { max: LATENCY_METRICS.length },
   ),
   /** Share of 10 s windows in which the serving thread's worst lag passed the bar. */
   threadStalls: z.object({
@@ -96,7 +104,7 @@ export const LatencySummarySchema = z.object({
     calm: z.object({ windows: z.number(), over: z.number() }),
     pressure: z.object({ windows: z.number(), over: z.number() }),
   }),
-  criteria: z.array(
+  criteria: cappedList(
     z.object({
       id: z.string(),
       label: z.string(),
@@ -105,6 +113,7 @@ export const LatencySummarySchema = z.object({
       samples: z.number(),
       verdict: z.enum(["pass", "fail", "no-data"]),
     }),
+    { max: EXIT_CRITERIA.length },
   ),
   /** Where the serving thread's time went, by the plugin whose code was running. */
   threadOwners: z.object({
@@ -112,8 +121,13 @@ export const LatencySummarySchema = z.object({
     samples: z.number(),
     /** Estimated share of wall time the thread was running code, 0..1, or null. */
     busyShare: z.number().nullable(),
-    owners: z.array(z.object({ owner: z.string(), share: z.number() })),
+    owners: wholeList(z.object({ owner: z.string(), share: z.number() }), {
+      reason:
+        "the plugins whose code ran on the serving thread — each minute keeps only its top owners (the rest as `other`), so a window holds a few dozen",
+    }),
   }),
-  slowestInteractions: z.array(InteractionSchema),
+  slowestInteractions: cappedList(InteractionSchema, {
+    max: SLOWEST_INTERACTIONS,
+  }),
 });
 export type LatencySummary = z.infer<typeof LatencySummarySchema>;

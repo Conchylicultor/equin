@@ -21,10 +21,6 @@ export const rowOrderServed = serveValue(rowOrder, {
     reason:
       "a write to any row-order row may change the manual order of the view instance it belongs to; whole-table until it reads through a collection",
   },
-  unbounded: {
-    reason:
-      "one view instance's manual order — the rows a user dragged plus the seeds ahead of them; the key is the composite (dataViewId, viewId, rowKey), so no single-id :rows read fits",
-  },
   loader: async ({ dataViewId, viewId }) => {
     const rows = await db
       .select({

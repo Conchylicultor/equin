@@ -8,7 +8,7 @@ import {
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
+import { useEditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import {
   foldResource,
   ResourceErrorInline,
@@ -93,19 +93,24 @@ function FilePeekPaneContent() {
       : fileRefForPath(worktree, filePath);
   const effectivePath = file.path;
 
-  const filesResult = useEditedFiles(convId ?? null);
+  // This one file's entry in the edited set (`null`: clean), wherever in the
+  // set it falls. Only a workspace file has one: a host file sits outside the
+  // worktree, so it reads nothing.
+  const fileResult = useEditedFile(
+    file.source === "workspace" ? (convId ?? null) : null,
+    file.path,
+  );
   // `status` is a derived renderer hint, so an unknown file set (loading, a
   // failed read, an unresolved worktree, or a host without the computer to
   // measure it) safely defaults to "clean" — no display surface here; the file
   // content itself is a separate read, which renders its own unavailability.
-  // Only a workspace file has one: a host file sits outside the worktree.
-  const status = foldResource(filesResult, {
+  const status = foldResource(fileResult, {
     loading: () => "clean" as const,
     error: () => "clean" as const,
     unavailable: () => "clean" as const,
-    ready: (files) =>
-      files.resolved && file.source === "workspace"
-        ? (files.value.find((f) => f.path === file.path)?.status ?? "clean")
+    ready: (entry) =>
+      entry.resolved && file.source === "workspace"
+        ? (entry.value?.status ?? "clean")
         : "clean",
   });
   const renderers = useFileRenderers({

@@ -161,9 +161,9 @@ Gotchas the spike hit:
   - DB schema: `plugins/conversations/plugins/runtime-sdk/server/internal/tables.ts`
   - Entity extension of: `tasks/tasks-core` (table `conversations_ext_sdk_agent`)
   - Resources:
-    - `runtime-sdk.agent-processes` (push, notified)
+    - `runtime-sdk.agent-processes` (push, notified, whole: one entry per namespace on this machine with a live agent — at most its worktrees)
     - `runtime-sdk.bundled-cli` (push, fixed)
-    - `runtime-sdk.claude-usage` (push, notified)
+    - `runtime-sdk.claude-usage` (push, notified, whole: one entry per Claude account signed in on this machine — a handful)
     - `runtime-sdk.error-stopped` (keyed, window)
     - `runtime-sdk.error-stopped:groups` (push)
     - `runtime-sdk.error-stopped:rows` (keyed, point)
@@ -191,6 +191,8 @@ Gotchas the spike hit:
     - `network/live.liveCollection`
     - `network/live.LiveRowsCollection`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
+    - `packages/list-bound.wholeRecord`
     - `tasks/tasks-core.conversationsEntityRef`
   - Exports (types):
     - `AgentAnswer`

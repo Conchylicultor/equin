@@ -70,6 +70,55 @@ describe("scanDbBackedNotify — defineExternalResource", () => {
   });
 });
 
+describe("scanDbBackedNotify — serveCollection", () => {
+  test("flags an external collection whose answers read db. by hand", async () => {
+    const src = [
+      'import { serveCollection } from "@plugins/network/plugins/live/server";',
+      "",
+      "export const served = serveCollection(things, {",
+      '  source: "external",',
+      '  changes: "notified",',
+      "  window: (q) => db.select().from(_things).limit(q.limit),",
+      "  rows: (ids) => byIds(ids),",
+      "});",
+    ].join("\n");
+    expect(await scan(src)).toEqual([
+      {
+        path: "plugins/debug/plugins/sentinel/server/internal/status-resource.ts",
+        line: 3,
+        marker: "serveCollection",
+      },
+    ]);
+  });
+
+  test("passes the table-backed arm, routed or served off the feed", async () => {
+    const src = [
+      "export const routed = serveCollection(things, {",
+      "  from: _things,",
+      "  where: eq(db.things.done, false),",
+      "});",
+      "export const offFeed = serveCollection(archive, {",
+      "  from: _archive,",
+      '  changes: "notified",',
+      "  whileSubscribed: (notify) => onWrite(() => db.select()),",
+      "});",
+    ].join("\n");
+    expect(await scan(src)).toEqual([]);
+  });
+
+  test("passes an external collection that reads no db.", async () => {
+    const src = [
+      "export const served = serveCollection(things, {",
+      '  source: "external",',
+      '  changes: { fixed: { reason: "a registry" } },',
+      "  window: (q) => registry.window(q),",
+      "  rows: (ids) => registry.byIds(ids),",
+      "});",
+    ].join("\n");
+    expect(await scan(src)).toEqual([]);
+  });
+});
+
 describe("scanDbBackedNotify — serveValue", () => {
   test("flags an external loader that reads db.", async () => {
     const src = [

@@ -1,7 +1,11 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import {
+  wholeList,
+  wholeRecord,
+} from "@plugins/packages/plugins/list-bound/core";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { PrototypeOptionSchema } from "./prototypes";
+import { PROTOTYPE_OPTIONS_REASON, PrototypeOptionSchema } from "./prototypes";
 
 // The wire half of a prototype's version history. The store itself (one private
 // git repo per prototype, beside the folder) is Node-only and lives in
@@ -51,14 +55,19 @@ export const PrototypeVersionSchema = z.object({
    * not yet grown) is still pickable on the version that has it. Empty when it
    * declares none, or has no `index.html` (an empty folder's baseline).
    */
-  options: z.array(PrototypeOptionSchema),
+  options: wholeList(PrototypeOptionSchema, {
+    reason: PROTOTYPE_OPTIONS_REASON,
+  }),
 });
 export type PrototypeVersion = z.infer<typeof PrototypeVersionSchema>;
 
 /** A prototype's whole history, as the stepper reads it. */
 export const PrototypeHistorySchema = z.object({
   /** Oldest → newest; `versions[i].n === i`. */
-  versions: z.array(PrototypeVersionSchema),
+  versions: wholeList(PrototypeVersionSchema, {
+    reason:
+      "one prototype's recorded versions — one per agent turn that changed it, read whole by the version stepper",
+  }),
   /**
    * The folder differs from the newest version — an edit no turn has recorded
    * yet (a hand edit, a plain terminal Claude). Shown as "Live · unsaved
@@ -81,9 +90,12 @@ export const prototypeHistory = liveValue("prototypes.history", {
 });
 
 /** Version count per prototype id — at least 1 (every history has its `v0`). */
-export const PrototypeVersionCountsSchema = z.record(
-  z.string(),
+export const PrototypeVersionCountsSchema = wholeRecord(
   z.number().int().positive(),
+  {
+    reason:
+      "one count per prototype — bounded by the prototype list it annotates, which the gallery holds whole",
+  },
 );
 
 /**

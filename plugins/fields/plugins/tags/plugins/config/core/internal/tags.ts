@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import {
   declaredDefault,
   type ExactOptions,
@@ -75,7 +76,9 @@ export function tagsField<
   const options = (opts?.options ?? []).map(normalizeOption);
   return Object.freeze({
     type: tagsFieldType,
-    schema: z.array(z.string()),
+    schema: wholeList(z.string(), {
+      reason: "one row's tags — a set a person or an extractor attaches",
+    }),
     defaultValue: [...(opts?.default ?? [])],
     ...declaredDefault(opts),
     meta: {

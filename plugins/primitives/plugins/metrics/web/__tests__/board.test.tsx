@@ -132,6 +132,7 @@ function series(
     kind: "series",
     buckets,
     series: [{ key: "all", label: "All", values, total }],
+    truncated: false,
     total,
     previous: {
       buckets,

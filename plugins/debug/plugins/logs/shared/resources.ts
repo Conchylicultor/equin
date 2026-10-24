@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { liveValue } from "@plugins/network/plugins/live/core";
 
 // The two reads of Debug → Logs, served in `server/internal/` and read with
@@ -44,7 +45,9 @@ export const LogEntrySchema = z.object({
   /** The rotation bound that keeps it finite; `null` when no sink bounds it here. */
   bound: z.object({ maxBytes: z.number(), keep: z.number() }).nullable(),
   /** Its kept files, newest first; none = declared but never written. */
-  files: z.array(LogFileSchema),
+  files: wholeList(LogFileSchema, {
+    reason: "one log's kept generations — its rotation's `keep`, a handful",
+  }),
 });
 export type LogEntry = z.infer<typeof LogEntrySchema>;
 
@@ -53,7 +56,12 @@ export type LogEntry = z.infer<typeof LogEntrySchema>;
  * and age. Bounded by the files in a handful of folders.
  */
 export const logsCatalog = liveValue("debug.logs.catalog", {
-  schema: z.object({ entries: z.array(LogEntrySchema) }),
+  schema: z.object({
+    entries: wholeList(LogEntrySchema, {
+      reason:
+        "every log of one worktree plus the host-wide ones — the files in a handful of folders, tens of logs",
+    }),
+  }),
   params: ["worktree"],
   refusals: ["invalid-worktree"],
 });

@@ -1,5 +1,5 @@
-import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { CustomColumnDefSchema } from "./types";
 
 /**
@@ -11,7 +11,10 @@ import { CustomColumnDefSchema } from "./types";
  * added, dropped or retyped moves the SQL its tuples compiled to.
  */
 export const customColumnDefs = liveValue("data-view-custom-column-defs", {
-  schema: z.array(CustomColumnDefSchema),
+  schema: wholeList(CustomColumnDefSchema, {
+    reason:
+      "the custom columns a person added to one DataView surface — a handful",
+  }),
   params: ["dataViewId"],
 });
 

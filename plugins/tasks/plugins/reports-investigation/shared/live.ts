@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { ReportKindScopeSchema } from "./scope";
 
 /**
@@ -12,7 +13,11 @@ import { ReportKindScopeSchema } from "./scope";
 export const reportInvestigationsScope = liveValue(
   "report-investigations.scope",
   {
-    schema: z.object({ kinds: z.array(ReportKindScopeSchema) }),
+    schema: z.object({
+      kinds: wholeList(ReportKindScopeSchema, {
+        reason: "one row per registered report kind: a code-declared registry",
+      }),
+    }),
     query: z.object({ minCount: z.number().int().min(1) }),
   },
 );

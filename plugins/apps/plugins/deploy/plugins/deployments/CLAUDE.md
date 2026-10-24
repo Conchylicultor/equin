@@ -467,7 +467,7 @@ any consumer; extra columns of the row are client fields of the `deployments` co
     - `deploy.run-history` (keyed, window)
     - `deploy.run-history:groups` (push)
     - `deploy.run-history:rows` (keyed, point)
-    - `deploy.runs` (push, notified)
+    - `deploy.runs` (push, notified, whole: one entry per deployment row — its most recent run)
   - Routes:
     - `GET /api/deploy/deployments`
     - `POST /api/deploy/deployments`
@@ -492,6 +492,7 @@ any consumer; extra columns of the row are client fields of the `deployments` co
     - `network/live.liveCollection`
     - `network/live.LiveRowsCollection`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeRecord`
     - `primitives/pane.defineRoute`
   - Exports (types):
     - `CreateDeploymentBody`

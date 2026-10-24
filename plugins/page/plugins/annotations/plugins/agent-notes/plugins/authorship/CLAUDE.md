@@ -97,7 +97,7 @@ gap in that plugin.
   - Exports (values):
     - `_pageBlocksAgentAuthors`
     - `recordAgentNotesAuthor`
-  - Resources: `agent-notes-authors` (push, unbounded: one card's authors — the conversations that wrote into one block)
+  - Resources: `agent-notes-authors` (push, whole: one card's authors — the conversations that wrote into one block)
 - Web:
   - Uses:
     - `conversations/conversation-ui/row.ConversationRowById`

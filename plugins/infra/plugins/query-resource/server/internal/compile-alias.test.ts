@@ -316,12 +316,15 @@ function contracts(
   orderBy: readonly (readonly [string, "asc" | "desc"])[] = [
     ["createdAt", "desc"],
   ],
+  bound: { max: number } | { unbounded: { reason: string } } = {
+    unbounded: { reason: "a test set" },
+  },
 ) {
   const all = {
     key,
     schema: z.array(z.object({ id: z.string() }).passthrough()),
     keyed: { keyOf: (r: unknown) => (r as Row).id },
-    all: { orderBy, unbounded: { reason: "a test set" } },
+    all: { orderBy, ...bound },
     queryPk: "id",
   } as unknown as AllQueryResourceContract<Row>;
   const rows = {
@@ -439,6 +442,16 @@ function compile(key: string, s = spec()) {
 }
 
 const last = (calls: RecordedQuery[]): RecordedQuery => calls.at(-1)!;
+
+/** Await `p` and return the Error it rejected with; throw if it resolved. */
+async function rejection(p: Promise<unknown>): Promise<Error> {
+  try {
+    await p;
+  } catch (err) {
+    return err as Error;
+  }
+  throw new Error("expected the promise to reject, but it resolved");
+}
 
 describe("the shapes", () => {
   test("Full: the CTE set, the row-wise joins, the grouped joins, the order", async () => {
@@ -563,6 +576,40 @@ describe("the shapes", () => {
     };
     expect(m.membership.kind).toBe("point");
     expect(m.membership.idsOf({ ids: "a,b" })).toEqual(["a", "b"]);
+  });
+
+  test("a capped set (`all: { max }`): the full and orderIds shapes read one row past the cap, and a set that outgrew it fails loudly", async () => {
+    let n = 2;
+    const rec = recordingQueryDb((q) =>
+      /^SELECT \S+ AS __id /.test(q.sql)
+        ? Array.from({ length: n }, (_, i) => ({ __id: `t${i}` }))
+        : Array.from({ length: n }, (_, i) => ({ ...ROW, id: `t${i}` })),
+    );
+    const c = compileAllCollection(contracts("a-max", undefined, { max: 2 }), {
+      ...spec(),
+      db: rec.db,
+    });
+    const policy = c.all as unknown as {
+      scopedMembership: { orderOf(p: object): Promise<string[]> };
+    };
+    expect(await c.all.loader({})).toHaveLength(2);
+    expect(last(rec.calls).sql).toMatch(/ NULLS LAST LIMIT 3$/);
+    expect(await policy.scopedMembership.orderOf({})).toEqual(["t0", "t1"]);
+    expect(last(rec.calls).sql).toMatch(/ NULLS LAST LIMIT 3$/);
+    // The scoped refill names its hosts: no LIMIT.
+    await c.all.loader({}, { affectedIds: ["t0"] });
+    expect(last(rec.calls).sql).not.toContain("LIMIT");
+    n = 3;
+    expect(
+      (await rejection(Promise.resolve(c.all.loader({})))).message,
+    ).toMatch(/allCollection\("a-max"\): the full shape read more than 2 rows/);
+    expect(
+      (await rejection(policy.scopedMembership.orderOf({}))).message,
+    ).toMatch(/the orderIds shape read more than 2 rows/);
+    // An unbounded set's SQL has no LIMIT (its definition is unchanged).
+    const whole = compile("a-max-whole");
+    await whole.all.loader({});
+    expect(last(whole.calls).sql).not.toContain("LIMIT");
   });
 
   test("debounceMs passes through to the whole set only (C18)", () => {

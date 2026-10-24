@@ -225,6 +225,7 @@ back.
     - `paneScrollScope`
     - `Timestamp`
     - `TranscriptView`
+    - `transcriptWindowOf`
     - `useBlockWriting`
     - `useHostedContext`
     - `useJsonlConversationId`
@@ -253,6 +254,8 @@ back.
     - `conversationEvents`
     - `conversationEventsSignature`
     - `serveTranscriptValue`
+    - `transcriptMeta`
+    - `transcriptRows`
     - `watchConversationEvents`
   - Resources:
     - `jsonl-events` (keyed, window, notified)
@@ -266,6 +269,7 @@ back.
     - `infra/endpoints.defineEndpoint`
     - `infra/endpoints.interpolatePath`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
   - Exports (types):
     - `JsonlEventsQuery`
     - `TranscriptEventRow`

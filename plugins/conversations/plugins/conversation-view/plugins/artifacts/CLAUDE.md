@@ -197,7 +197,10 @@ here.
   - Uses: `conversations/conversation-view/jsonl-viewer.serveTranscriptValue`
   - Exports (values): `ConversationArtifactExtractor`
 - Core:
-  - Uses: `network/live.liveValue`
+  - Uses:
+    - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
+    - `packages/list-bound.wholeRecord`
   - Exports (types):
     - `ArtifactHit`
     - `ArtifactItem`

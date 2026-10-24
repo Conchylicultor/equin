@@ -2,6 +2,7 @@
 // files this plugin writes (the sentinel worker thread, which has no plugin
 // runtime) can read them without evaluating the server side.
 export {
+  MAX_HEALTH_SAMPLES,
   HealthSampleSchema,
   HostSampleSchema,
   HealthSeriesSchema,

@@ -24,6 +24,7 @@ import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { loadResourceByKey } from "@plugins/framework/plugins/server-core/core";
 import { resourceDescriptorByKey } from "@plugins/primitives/plugins/live-state/core";
@@ -388,7 +389,9 @@ describe("serveCollection — the `all` arm (C4)", () => {
         carry: {
           fields: {
             stamps: jsonField({
-              schema: z.array(z.object({ at: z.coerce.date() })),
+              schema: wholeList(z.object({ at: z.coerce.date() }), {
+                reason: "a test row's few stamps",
+              }),
               default: [],
             }),
           },

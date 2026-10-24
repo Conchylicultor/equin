@@ -38,12 +38,20 @@ function pagingOf(rows: PagedResourceResult<TranscriptEventRow>): Paging {
   }
 }
 
-function windowOf(
+/**
+ * A paged transcript read as the view draws it: the loaded rows oldest first,
+ * the paging handles of `read`, and what the whole transcript knows (where the
+ * agent first answered, its typed prompts). Every transcript paged as
+ * `jsonlEvents` is — the conversation's here, a sub-agent's in its pane — is
+ * drawn through it.
+ */
+export function transcriptWindowOf(
+  read: PagedResourceResult<TranscriptEventRow>,
   rows: readonly TranscriptEventRow[],
-  paging: Paging,
   firstAssistantSeq: number | null,
   prompts: readonly TranscriptEventRow[],
 ): TranscriptWindow {
+  const paging = pagingOf(read);
   // Newest first on the wire; drawn oldest first.
   const oldestFirst = [...rows].reverse();
   const firstSeq = oldestFirst[0]?.seq ?? 0;
@@ -102,9 +110,9 @@ export function useTranscriptWindow(
   return useMemo(
     () =>
       mapResource(all, (data) =>
-        windowOf(
+        transcriptWindowOf(
+          rows,
           data.rows,
-          pagingOf(rows),
           data.meta.firstAssistantSeq,
           data.prompts,
         ),

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import {
   MailAttachmentSchema,
   mailAccountIdKind,
@@ -23,7 +24,9 @@ export const MailMessageBodySchema = z.discriminatedUnion("state", [
     state: z.literal("ready"),
     bodyText: z.string().nullable(),
     bodyHtml: z.string().nullable(),
-    attachments: z.array(MailAttachmentSchema),
+    attachments: wholeList(MailAttachmentSchema, {
+      reason: "one message's attachments — Gmail bounds a message at 25 MB",
+    }),
   }),
 ]);
 export type MailMessageBody = z.infer<typeof MailMessageBodySchema>;

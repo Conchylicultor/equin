@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  wholeList,
+  wholeRecord,
+} from "@plugins/packages/plugins/list-bound/core";
 import { HookRecordSchema } from "./hook-record";
 import { RequestConfigSchema } from "./request-config";
 import { RequestShapeChangeSchema, RequestShapeSchema } from "./request-shape";
@@ -72,16 +76,19 @@ export type UserTextSegment = z.infer<typeof UserTextSegmentSchema>;
  * answers (beside them it starts with the picks — see question-response.ts).
  */
 export const QuestionAnswerSchema = z.object({
-  answers: z.record(z.string(), z.string()),
-  annotations: z
-    .record(
-      z.string(),
-      z.object({
-        notes: z.string().optional(),
-        preview: z.string().optional(),
-      }),
-    )
-    .optional(),
+  answers: wholeRecord(z.string(), {
+    reason: "one AskUserQuestion call's questions — a handful the agent asked",
+  }),
+  annotations: wholeRecord(
+    z.object({
+      notes: z.string().optional(),
+      preview: z.string().optional(),
+    }),
+    {
+      reason:
+        "one AskUserQuestion call's questions — a handful the agent asked",
+    },
+  ).optional(),
   response: z.string().optional(),
 });
 export type QuestionAnswer = z.infer<typeof QuestionAnswerSchema>;
@@ -112,7 +119,10 @@ const ToolCallResultSchema = z.object({
    * They hold no text, so `content` alone would read as an empty result.
    * Absent when the result has none.
    */
-  toolReferences: z.array(z.string()).optional(),
+  toolReferences: wholeList(z.string(), {
+    reason:
+      "one tool result's tool_reference blocks — the tools one search loaded",
+  }).optional(),
 });
 export type ToolCallResult = z.infer<typeof ToolCallResultSchema>;
 
@@ -121,7 +131,9 @@ export const JsonlEventSchema = z.discriminatedUnion("kind", [
     kind: z.literal("user-text"),
     at: z.string(),
     text: z.string(),
-    segments: z.array(UserTextSegmentSchema).optional(),
+    segments: wholeList(UserTextSegmentSchema, {
+      reason: "one typed message's segments",
+    }).optional(),
     /**
      * The transcript line's uuid — present exactly when the row is a message
      * the user typed (`userPromptText`), which is what a rewind can cut at.
@@ -144,10 +156,14 @@ export const JsonlEventSchema = z.discriminatedUnion("kind", [
     input: z.unknown(),
     usage: TokenUsageSchema.optional(),
     result: ToolCallResultSchema.optional(),
-    injectedContext: z.array(z.string()).optional(),
+    injectedContext: wholeList(z.string(), {
+      reason: "one tool call's injected context blocks — a handful per call",
+    }).optional(),
     /** The hooks that ran on this call (PreToolUse, PostToolUse, …), in
      *  transcript order. A PreToolUse `block` means the call never ran. */
-    hooks: z.array(HookRecordSchema).optional(),
+    hooks: wholeList(HookRecordSchema, {
+      reason: "the hooks that ran on one tool call — one per configured hook",
+    }).optional(),
   }),
   z.object({
     kind: z.literal("assistant-thinking"),
@@ -219,12 +235,16 @@ export const JsonlEventSchema = z.discriminatedUnion("kind", [
     postTokens: z.number().optional(),
     /** The summary as markdown, without the harness's "This session is being continued…" preamble. */
     summary: z.string().optional(),
-    files: z.array(
+    files: wholeList(
       z.object({
         path: z.string(),
         /** Present when the file's content was re-attached, absent for a bare reference. */
         lines: z.number().optional(),
       }),
+      {
+        reason:
+          "the files one compaction re-read — a handful the CLI re-attaches",
+      },
     ),
   }),
   z.object({
@@ -240,7 +260,9 @@ export const JsonlEventSchema = z.discriminatedUnion("kind", [
     status: z.string(),
     summary: z.string(),
     outputFile: z.string().optional(),
-    extra: z.record(z.string()).optional(),
+    extra: wholeRecord(z.string(), {
+      reason: "one task notification's extra tags — a handful of fields",
+    }).optional(),
   }),
   z.object({
     kind: z.literal("attachment"),

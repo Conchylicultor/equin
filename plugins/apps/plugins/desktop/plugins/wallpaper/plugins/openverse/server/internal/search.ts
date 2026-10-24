@@ -3,7 +3,10 @@ import {
   safeFetch,
   SsrfError,
 } from "@plugins/infra/plugins/safe-fetch/server";
-import type { WallpaperResult } from "@plugins/apps/plugins/desktop/plugins/wallpaper/core";
+import {
+  WALLPAPER_SEARCH_MAX_RESULTS,
+  type WallpaperResult,
+} from "@plugins/apps/plugins/desktop/plugins/wallpaper/core";
 
 /** Openverse image-search endpoint (no API key needed for basic use). */
 const OPENVERSE_ENDPOINT = "https://api.openverse.org/v1/images/";
@@ -13,11 +16,12 @@ const OPENVERSE_ENDPOINT = "https://api.openverse.org/v1/images/";
  */
 const USER_AGENT = "Singularity/1.0 (+https://equin.ai; desktop wallpaper picker)";
 /**
- * Cap the result grid — one page is plenty for picking a wallpaper. 20 is the
- * most Openverse serves an anonymous request: a larger `page_size` is answered
- * 401 ("page_size may not exceed 20 for anonymous requests").
+ * Cap the result grid at the search's own cap — one page is plenty for picking
+ * a wallpaper. 20 is also the most Openverse serves an anonymous request: a
+ * larger `page_size` is answered 401 ("page_size may not exceed 20 for
+ * anonymous requests").
  */
-const PAGE_SIZE = 20;
+const PAGE_SIZE = WALLPAPER_SEARCH_MAX_RESULTS;
 
 /**
  * One result object from the Openverse `/v1/images/` response. Only the fields

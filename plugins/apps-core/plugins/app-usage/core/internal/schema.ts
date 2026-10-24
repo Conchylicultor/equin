@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 /**
  * One app's usage, summed over its daily rows. "7d" is today plus the six
@@ -22,5 +23,8 @@ export type AppUsageSummaryRow = z.infer<typeof AppUsageSummaryRowSchema>;
  * is bounded by the app registry (tens), not by time.
  */
 export const appUsageSummary = liveValue("app-usage.summary", {
-  schema: z.array(AppUsageSummaryRowSchema),
+  schema: wholeList(AppUsageSummaryRowSchema, {
+    reason:
+      "one row per app id ever used — bounded by the installed app registry (tens of apps), never by time: the GROUP BY folds every day into its app",
+  }),
 });

@@ -389,6 +389,23 @@ export function compileAllCollection<
     sortKeys.push({ fieldId: keyField, col: pk, dir: "asc", nullable: false });
   }
   const orderSql = sql.join(orderByClauses(sortKeys), sql`, `);
+  // A capped set (`all: { max }`) reads one row past its cap, so a set that
+  // outgrew it is a loud loader error, never a silently truncated list. The
+  // literal is a checked positive integer (the declaration's `checkMax`).
+  const max = contract.all.max ?? null;
+  if (max !== null && (!Number.isSafeInteger(max) || max < 1)) {
+    fail(`\`all.max\` is ${String(max)}, not a positive integer.`);
+  }
+  const limitSql = max === null ? null : sql.raw(`LIMIT ${max + 1}`);
+  /** Refuse a load past the declared cap, naming the key and the cap. */
+  const capped = <R>(rows: R[], shape: string): R[] => {
+    if (max !== null && rows.length > max) {
+      fail(
+        `the ${shape} shape read more than ${max} rows — the set is declared \`all: { max: ${max} }\` and outgrew it: raise the cap with a reason, page it as a window, or declare it whole (\`unbounded: { reason }\`).`,
+      );
+    }
+    return rows;
+  };
 
   // ── The scope (`all.by`): base columns the feed carries as text ──────────
   const scope = scopeOf(contract.all.by ?? [], select, plan, fail);
@@ -465,6 +482,7 @@ export function compileAllCollection<
     ];
     if (w !== undefined) parts.push(sql`WHERE ${w}`);
     parts.push(sql`ORDER BY ${orderSql}`);
+    if (limitSql !== null) parts.push(limitSql);
     return sql.join(parts, sql` `);
   };
   const scopedSql = (
@@ -482,6 +500,7 @@ export function compileAllCollection<
     ];
     if (w !== undefined) parts.push(sql`WHERE ${w}`);
     parts.push(sql`ORDER BY ${orderSql}`);
+    if (limitSql !== null) parts.push(limitSql);
     return sql.join(parts, sql` `);
   };
 
@@ -548,7 +567,7 @@ export function compileAllCollection<
       row: decodedRow({ __id: String }),
       label: `${key}:orderIds`,
     });
-    return rows.map((r) => r.__id);
+    return capped(rows, "orderIds").map((r) => r.__id);
   };
   const readField =
     spec.readField ??
@@ -639,7 +658,7 @@ export function compileAllCollection<
     loader: (params: AllParams, ctx?: { affectedIds: readonly string[] }) =>
       ctx
         ? load(scopedSql(ctx.affectedIds, "throws", params), "scoped")
-        : load(fullSql(params), "full"),
+        : load(fullSql(params), "full").then((rows) => capped(rows, "full")),
     ...allPolicy,
     ...(spec.debounceMs != null ? { debounceMs: spec.debounceMs } : {}),
     // The server's gate: the descriptor's (exactly the scope's keys), then

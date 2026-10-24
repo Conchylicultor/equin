@@ -40,7 +40,7 @@ Browse Claude Code auto-memory files for the current project. Lists all `.md` fi
     - `network/live.serveValue`
   - Resources:
     - `memory.file` (push, notified)
-    - `memory.files` (push, notified)
+    - `memory.files` (push, notified, whole: the .md files of one project's memory directory — notes written by hand or by agents, a few dozen)
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/categorical --categorical-5`

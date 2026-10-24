@@ -22,11 +22,10 @@ export interface ResourceDef {
    */
   source?: "db" | "external";
   /**
-   * The recorded reason a Postgres-backed, collection-shaped `serveValue` is not
-   * a `liveCollection` (`unbounded: { reason }`) — the one unbounded spelling,
-   * listed so it stays visible.
+   * The list bounds the DECLARATION's schema writes (`list-bound`'s markers):
+   * `whole: <reason>` / `capped: <max>`, each once. Absent when it writes none.
    */
-  unbounded?: string;
+  lists?: string[];
   /**
    * How an external `serveValue`'s answer changes — its declared `changes`:
    * `"notified"` (something notifies it), or the arm of `{ immutable }` /

@@ -6,17 +6,17 @@ import {
 } from "@plugins/framework/plugins/server-core/core";
 import * as workspaceServer from "@plugins/conversations/plugins/workspace/server";
 
-// review.plugin-changes recomputes on its `edited-files` tuple (the mapped
-// recomputeOn edge), but that cascade reaches only the edited-files tuples
-// someone holds. A write that moves a conversation's worktree must still reach
-// a plugin-changes tuple whose edited-files twin nobody subscribes — which is
-// why it declares its own `reads`. This suite registers the REAL served value
-// on the server-core runtime, subscribes it alone, and routes a
-// `conversations` write through `routeTableChange` (the change feed's entry).
+// review.plugin-changes follows its worktree's edited-files watch, which
+// reaches only an edit — a write that moves a conversation's worktree must
+// still reach a plugin-changes tuple, which is why it declares its own
+// `reads`. This suite registers the REAL served value on the server-core
+// runtime, subscribes it alone, and routes a `conversations` write through
+// `routeTableChange` (the change feed's entry).
 //
 // The worktree lookup is the only DB read: it is stubbed (an unknown
-// conversation, so the loader returns before any git) and counts its calls —
-// one per plugin-changes load, since edited-files is never loaded here.
+// conversation, so the loader returns before any git and the watch watches
+// nothing) and counts its calls — the watch's one at subscribe, then one per
+// plugin-changes load, since edited-files is never loaded here.
 
 const realWorkspaceServer = { ...workspaceServer };
 let lookups = 0;
@@ -77,7 +77,7 @@ describe("review.plugin-changes — its own reads", () => {
   afterAll(() => socket.close());
 
   test(
-    "a conversations write recomputes a subscribed tuple whose edited-files tuple nobody holds",
+    "a conversations write recomputes a subscribed tuple",
     async () => {
       await socket.subscribe(pluginChangesServed.key, {
         conversationId: "conv-test-plugin-changes",

@@ -108,8 +108,4 @@ export const eventTriggersServed = serveValue(eventTriggers, {
       "the value lists every binding of every event's trigger table, so a write to any row of any of them changes the one tuple",
   }),
   loader: loadTriggers,
-  unbounded: {
-    reason:
-      "every binding across every event's own <event>_triggers table — the code's static Trigger() bindings plus one oneShot row per pending ctx.waitFor (a never-fired one lingers) — with the computed `dangling` flag: a union over N tables, which a single-table liveCollection cannot bind",
-  },
 });

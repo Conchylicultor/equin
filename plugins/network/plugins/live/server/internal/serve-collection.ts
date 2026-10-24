@@ -101,6 +101,7 @@ import {
   type AllCollectionSpecs,
   type ServeAllCollectionOptions,
 } from "./serve-all";
+import { serveOffFeed, type OffFeedOptions } from "./serve-off-feed";
 import {
   assertServesItsRows,
   isEntitySource,
@@ -1107,6 +1108,30 @@ export interface ServeCollectionOverloads<H> {
       C
     >,
   ): DeclaredCollection<ServedExternalWindow<Row, C>>;
+  // The SQL arm OFF the change feed (`changes` set — `./serve-off-feed`): the
+  // same binding and compile, served as an external window / point set whose
+  // change is its own `notify`.
+  <
+    Row,
+    F,
+    S extends string,
+    T extends ServedSource,
+    const J extends readonly JoinSpec[] = readonly [],
+    const C extends LiveCollectionChanges = "notified",
+  >(
+    collection: SingleTableCollection<Row, F, S> & H,
+    opts: ServeCollectionOptions<T, Row, J, keyof F & string> &
+      OffFeedOptions<C>,
+  ): DeclaredCollection<ServedExternalWindow<Row, C>>;
+  <
+    Row,
+    T extends ServedSource,
+    const J extends readonly JoinSpec[] = readonly [],
+    const C extends LiveCollectionChanges = "notified",
+  >(
+    collection: LiveLookupCollection<Row> & H,
+    opts: ServeCollectionOptions<T, Row, J, never> & OffFeedOptions<C>,
+  ): DeclaredCollection<ServedExternalLookup<Row, C>>;
   <
     Row,
     F,
@@ -1146,7 +1171,9 @@ export interface ServeCollectionOverloads<H> {
  * `Resource.Declare` contributions — all three for a full collection, `:rows`
  * alone for a lookup-only one, the whole set (`key`) and `:rows` for one
  * declared `all` (its joins may be grouped — children, closure — and its
- * fields bind aggregates; see `./serve-all`):
+ * fields bind aggregates; see `./serve-all`). With `changes`, a window or
+ * lookup-only collection is served OFF the change feed (`./serve-off-feed`) —
+ * the same SQL, its change its own `notify`:
  *
  * ```ts
  * export const eventSourcesServed = serveCollection(eventSources, { from: _eventSources });
@@ -1204,6 +1231,14 @@ export function serveAnyCollection<
   // A table-backed collection reads the rows it is declared `from` — never a
   // restatement of an entity's fields (`./collection-source`).
   assertServesItsRows(collection, (served as { from: CollectionSource }).from);
+  // Off the change feed (`changes`): the same specs, registered external.
+  if ((served as { changes?: unknown }).changes !== undefined) {
+    return serveOffFeedCollection(
+      collection,
+      served as ServeCollectionOptions<T, Row, J, keyof F & string> &
+        OffFeedOptions<LiveCollectionChanges>,
+    );
+  }
   // First (C4): a collection declared `all` has no window either, so the
   // lookup-only branch below would serve it as `:rows` alone and never
   // register its `key`. Bound eagerly — unless it reaches exposures, whose
@@ -1275,6 +1310,66 @@ export function serveAnyCollection<
   return servedWindow(collection, window, rows, groups, count, opts);
 }
 
+/**
+ * A window or lookup-only collection served off the change feed: refused for
+ * what the external arm refuses (an `all` set — its compile is a routed alias —
+ * and a `columnScope`, whose scoped sets fold from routed contributions; a
+ * union never compiles), compiled as the routed arm compiles it — with no
+ * exposure folded, so an exposing collection's rows carry `$columns: {}`, as
+ * an external host's do — and registered by `serveOffFeed`.
+ */
+function serveOffFeedCollection<
+  Row,
+  F,
+  S extends string,
+  T extends CollectionSource,
+  const J extends readonly JoinSpec[],
+>(
+  collection:
+    | SingleTableCollection<Row, F, S>
+    | LiveLookupCollection<Row>
+    | LiveAllCollection<Row, string>
+    | LiveAllCollection<Row>,
+  opts: ServeCollectionOptions<T, Row, J, keyof F & string> &
+    OffFeedOptions<LiveCollectionChanges>,
+): DeclaredCollection<AnyServedExternal> {
+  const fail = (message: string): never => {
+    throw new Error(`serveCollection("${collection.key}"): ${message}`);
+  };
+  if (collection.all !== undefined) {
+    fail(
+      "`changes` serves a window or lookup-only collection off the change feed — a collection declared `all` is a routed alias with no off-feed spelling yet.",
+    );
+  }
+  if (
+    ((collection as { columnScope?: string | null }).columnScope ?? null) !==
+    null
+  ) {
+    fail(
+      "a `columnScope` collection folds scoped column sets routed through the change feed — it cannot be served off it.",
+    );
+  }
+  const windowed = collection as
+    SingleTableCollection<Row, F, S> | LiveLookupCollection<Row>;
+  const specs =
+    windowed.window === undefined
+      ? compileCollection(windowed as LiveLookupCollection<Row>, opts)
+      : compileCollection(windowed as SingleTableCollection<Row, F, S>, opts);
+  const served = serveOffFeed(
+    windowed as LiveCollection<Row, unknown, string>,
+    specs,
+    opts,
+  );
+  return {
+    ...served,
+    declare: served.resources.map((r) =>
+      r.key === served.rows.key
+        ? declareRows(windowed, served.rows, opts.preloadRows)
+        : ResourceContribution.Declare(r),
+    ),
+  };
+}
+
 /** A window collection's served resources, their keys and their declarations. */
 function servedWindow<Row>(
   collection: { key: string; rows: { point: PointCodec } },
@@ -1307,7 +1402,7 @@ type PointCodec = { encode: (ids: readonly string[]) => PointParams };
  */
 function declareRows<Row>(
   collection: { key: string; rows: { point: PointCodec } },
-  rows: Resource<Row[], PointParams>,
+  rows: Pick<Resource<Row[], PointParams>, "key" | "mode" | "load">,
   preloadRows: { idsOf: PreloadRowsSource } | undefined,
 ): ReturnType<typeof ResourceContribution.Declare> {
   if (preloadRows === undefined) return ResourceContribution.Declare(rows);

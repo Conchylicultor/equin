@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  wholeList,
+  wholeRecord,
+} from "@plugins/packages/plugins/list-bound/core";
 import { ContentionSnapshotSchema } from "@plugins/infra/plugins/host/plugins/contention/core";
 import {
   SPAN_MEASURES,
@@ -31,7 +35,9 @@ export type CallerRef = z.infer<typeof CallerRefSchema>;
 // Per-layer wait charged to this operation (gate/lock name → summed ms): the
 // durable wait-vs-work split. Mirrors the profiler's in-memory `waits`; merged
 // per layer on each occurrence. `{}` when the op never waited on a gate.
-export const WaitBreakdownSchema = z.record(z.string(), z.number());
+export const WaitBreakdownSchema = wholeRecord(z.number(), {
+  reason: "one entry per wait layer — the closed gate vocabulary",
+});
 
 // Per-variant breakdown: WHICH instance of the operation was slow (a loader's
 // canonical params), how often and how slow — the per-row answer to "which
@@ -102,7 +108,10 @@ export const slowOpFields = {
   thresholdMs: floatField(),
   waits: jsonField<WaitBreakdown>({ schema: WaitBreakdownSchema, default: {} }),
   variants: jsonField<VariantBreakdown[]>({
-    schema: z.array(VariantBreakdownSchema),
+    schema: wholeList(VariantBreakdownSchema, {
+      reason:
+        "the merge keeps the top VARIANT_CAP variants and folds the rest into one",
+    }),
     default: [],
   }),
   measures: jsonField<SlowOpMeasures>({
@@ -110,7 +119,9 @@ export const slowOpFields = {
     default: {},
   }),
   recentSamples: jsonField<SlowOpSample[]>({
-    schema: z.array(SlowOpSampleSchema),
+    schema: wholeList(SlowOpSampleSchema, {
+      reason: "a ring of the newest 10 samples, capped by the merge",
+    }),
     default: [],
   }),
   firstSeenAt: dateField(),

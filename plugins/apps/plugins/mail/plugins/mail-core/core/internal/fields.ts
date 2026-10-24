@@ -1,5 +1,9 @@
 import { z } from "zod";
 import {
+  wholeList,
+  wholeRecord,
+} from "@plugins/packages/plugins/list-bound/core";
+import {
   fieldsToZodObject,
   nullable,
   type FieldsRecord,
@@ -29,6 +33,10 @@ import {
   MAIL_SYNC_ERROR_CODES,
   MAIL_SYNC_STATUSES,
 } from "./enums";
+
+/** Why a message's (or a thread's) address list is loaded whole. */
+const MAIL_ADDRESSES_REASON =
+  "one message's recipients (one thread's participants), as Gmail returns them";
 
 // Web-safe field records for the mail app's local Gmail-mirror cluster — one
 // `FieldsRecord` per persisted table, the single source of truth for both the
@@ -140,7 +148,7 @@ export const mailThreadFields = {
   subject: nullable(textField({ label: "Subject", primary: true })),
   snippet: nullable(textField({ label: "Snippet" })),
   participants: jsonField<z.infer<typeof MailAddressSchema>[]>({
-    schema: z.array(MailAddressSchema),
+    schema: wholeList(MailAddressSchema, { reason: MAIL_ADDRESSES_REASON }),
     default: [],
   }),
   lastMessageAt: nullable(dateField({ label: "Date" })),
@@ -167,27 +175,29 @@ export const mailMessageFields = {
     default: { email: "" },
   }),
   to: jsonField<z.infer<typeof MailAddressSchema>[]>({
-    schema: z.array(MailAddressSchema),
+    schema: wholeList(MailAddressSchema, { reason: MAIL_ADDRESSES_REASON }),
     default: [],
   }),
   cc: jsonField<z.infer<typeof MailAddressSchema>[]>({
-    schema: z.array(MailAddressSchema),
+    schema: wholeList(MailAddressSchema, { reason: MAIL_ADDRESSES_REASON }),
     default: [],
   }),
   bcc: jsonField<z.infer<typeof MailAddressSchema>[]>({
-    schema: z.array(MailAddressSchema),
+    schema: wholeList(MailAddressSchema, { reason: MAIL_ADDRESSES_REASON }),
     default: [],
   }),
   replyTo: nullable(
     jsonField<z.infer<typeof MailAddressSchema>[]>({
-      schema: z.array(MailAddressSchema),
+      schema: wholeList(MailAddressSchema, { reason: MAIL_ADDRESSES_REASON }),
       default: [],
     }),
   ),
   subject: nullable(textField()),
   snippet: nullable(textField()),
   headers: jsonField<Record<string, string>>({
-    schema: z.record(z.string(), z.string()),
+    schema: wholeRecord(z.string(), {
+      reason: "one message's headers, as Gmail returns them",
+    }),
     default: {},
   }),
   bodyText: nullable(textField()),
@@ -243,15 +253,15 @@ export const mailDraftFields = {
   gmailDraftId: nullable(textField()),
   inReplyToMessageId: nullable(textField()),
   to: jsonField<z.infer<typeof MailAddressSchema>[]>({
-    schema: z.array(MailAddressSchema),
+    schema: wholeList(MailAddressSchema, { reason: MAIL_ADDRESSES_REASON }),
     default: [],
   }),
   cc: jsonField<z.infer<typeof MailAddressSchema>[]>({
-    schema: z.array(MailAddressSchema),
+    schema: wholeList(MailAddressSchema, { reason: MAIL_ADDRESSES_REASON }),
     default: [],
   }),
   bcc: jsonField<z.infer<typeof MailAddressSchema>[]>({
-    schema: z.array(MailAddressSchema),
+    schema: wholeList(MailAddressSchema, { reason: MAIL_ADDRESSES_REASON }),
     default: [],
   }),
   subject: nullable(textField()),

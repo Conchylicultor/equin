@@ -19,7 +19,11 @@ import {
   useCategoryAvatars,
 } from "@plugins/conversations/plugins/conversation-category/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { commitsCountsByCategory, type CommitBucket } from "../../shared";
+import {
+  commitsCountsByCategory,
+  type CommitBucket,
+  commitPointsNote,
+} from "../../shared";
 import { LiveChart } from "./live-chart";
 import {
   axisProps,
@@ -148,6 +152,7 @@ export function CumulativeCommitsCategoryChart({
       subject="the commit counts"
       isEmpty={(d) => d.points.length === 0}
       emptyText="No commits yet."
+      note={commitPointsNote}
     >
       {(data) => (
         <CumulativeCommitsCategoryBody data={data} categoryId={categoryId} />
@@ -253,6 +258,7 @@ export function CommitsRateCategoryChart({
         subject="the commit counts"
         isEmpty={(d) => d.points.length === 0}
         emptyText="No commits yet."
+        note={commitPointsNote}
       >
         {(data) => (
           <CommitsRateCategoryBody

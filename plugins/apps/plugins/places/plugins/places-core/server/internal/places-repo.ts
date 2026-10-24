@@ -13,6 +13,8 @@ import {
   autoTagsFor,
   isCustomPlace,
   placeIdKind,
+  PLACES_SEARCH_MAX_RESULTS,
+  PLACES_SEARCH_MAX_SUGGESTIONS,
   tagIdByRole,
   type CreateCustomPlaceBody,
   type Place,
@@ -51,9 +53,6 @@ async function placeByGoogleId(
   return place;
 }
 
-/** At most this many Google hits per search (one call bills the same at any size). */
-const SEARCH_RESULTS = 20;
-
 /**
  * The Places search bar's Google half, at the rung of the downgrade ladder
  * the reader asked (`searchRung` over this month's live counts). A downgraded
@@ -71,7 +70,10 @@ export async function searchPlaces({
   if (rung === "names") {
     return {
       kind: "names",
-      suggestions: await autocomplete(maps.client, q, session),
+      suggestions: (await autocomplete(maps.client, q, session)).slice(
+        0,
+        PLACES_SEARCH_MAX_SUGGESTIONS,
+      ),
       resumesAt,
     };
   }
@@ -79,7 +81,7 @@ export async function searchPlaces({
   const results = await searchText(maps.client, q, {
     detail: rung === "rich" ? "rich" : "pro",
     ...(box === undefined ? {} : { bias: box }),
-    maxResults: SEARCH_RESULTS,
+    maxResults: PLACES_SEARCH_MAX_RESULTS,
   });
   return rung === "rich"
     ? { kind: "rich", results }

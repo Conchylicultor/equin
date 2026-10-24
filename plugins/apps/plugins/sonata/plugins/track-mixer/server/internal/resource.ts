@@ -19,10 +19,6 @@ export const trackViewsServed = serveValue(trackViews, {
     reason:
       "a write to any track view row may change its song's tuple; whole-table until it reads through a collection",
   },
-  unbounded: {
-    reason:
-      "one song's per-track view overrides — at most one row per track of that song",
-  },
   loader: ({ songId }) =>
     db
       .select(trackView.wireColumns)

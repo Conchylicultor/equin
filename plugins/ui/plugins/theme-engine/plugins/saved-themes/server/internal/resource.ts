@@ -12,9 +12,5 @@ export const savedThemesListServed = serveValue(savedThemesList, {
     tables: [_savedThemes],
     reason: "the list is every saved theme, so a write to any row changes it",
   },
-  unbounded: {
-    reason:
-      "every saved theme: the painter needs all of them resident to paint any selection, and the list grows only by a hand-made save or import (single digits in practice)",
-  },
   loader: listSavedThemes,
 });

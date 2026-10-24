@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 // One authorship record: a conversation that wrote into an agent-notes card,
 // and when it first did. `conversationId` may DANGLE — the record outlives the
@@ -25,6 +26,8 @@ export type AgentNotesAuthor = z.infer<typeof AgentNotesAuthorSchema>;
 // route-scoped with the page, so it hydrates post-mount via its sub-ack — same
 // call `prompt-block-tasks` makes.
 export const agentNotesAuthors = liveValue("agent-notes-authors", {
-  schema: z.array(AgentNotesAuthorSchema),
+  schema: wholeList(AgentNotesAuthorSchema, {
+    reason: "one card's authors — the conversations that wrote into one block",
+  }),
   params: ["blockId"],
 });

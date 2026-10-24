@@ -5,7 +5,7 @@ import { readMailAccount } from "./account";
 import { _mailAccounts } from "./tables";
 
 // The connected account (or `null`), recomputed by the change feed on every
-// write to its declared `reads` table, `mail_accounts`. One row — no `unbounded` reason to state.
+// write to its declared `reads` table, `mail_accounts`. One row — no list to bound.
 export const mailAccountServed = serveValue(mailAccount, {
   source: "db",
   reads: {

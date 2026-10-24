@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { cappedList } from "@plugins/packages/plugins/list-bound/core";
 
 /**
  * Who a process on the machine works for. A closed list, in display order:
@@ -60,7 +61,9 @@ export const MachineUsageSchema = z.discriminatedUnion("kind", [
     cores: z.number().int().min(1),
     totalMemBytes: z.number().int().min(1),
     /** One per bucket, in `MACHINE_USAGE_BUCKETS` order. */
-    groups: z.array(MachineUsageGroupSchema),
+    groups: cappedList(MachineUsageGroupSchema, {
+      max: MACHINE_USAGE_BUCKETS.length,
+    }),
   }),
 ]);
 export type MachineUsage = z.infer<typeof MachineUsageSchema>;

@@ -6,7 +6,7 @@ import {
   executeResult,
 } from "@plugins/database/plugins/sql-rows/core";
 import { serveValue } from "@plugins/network/plugins/live/server";
-import { tableSampleRows } from "../../shared/resources";
+import { SAMPLE_ROWS_LIMIT, tableSampleRows } from "../../shared/resources";
 
 const TableNameRowSchema = z.object({ table_name: z.string() });
 
@@ -29,7 +29,7 @@ async function loadSampleRows({ tableName }: { tableName: string }) {
   // taken as written).
   const quotedTable = `"${tableName.replace(/"/g, '""')}"`;
   const result = await executeResult(db, {
-    query: sql`SELECT * FROM ${sql.raw(quotedTable)} LIMIT 10`,
+    query: sql`SELECT * FROM ${sql.raw(quotedTable)} LIMIT ${SAMPLE_ROWS_LIMIT}`,
     row: SampleRowSchema,
     label: `studio sample rows for ${tableName}`,
   });

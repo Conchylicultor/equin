@@ -28,8 +28,8 @@ export type HoldClass = "instant" | "seconds" | "minutes";
 /** Ordered shortest → longest. */
 export const HOLD_CLASSES = ["instant", "seconds", "minutes"] as const;
 
-/** Wire/parse form of {@link HoldClass} — used by `JobRowSchema` and any other
- * payload that carries a class across the network. */
+/** Wire/parse form of {@link HoldClass} — used by a recorded run's `hold` and any
+ * other payload that carries a class across the network. */
 export const HoldClassSchema = z.enum(HOLD_CLASSES);
 
 /**

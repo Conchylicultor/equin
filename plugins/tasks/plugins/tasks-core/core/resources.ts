@@ -2,7 +2,7 @@ import {
   liveCollection,
   type LiveRowsCollection,
 } from "@plugins/network/plugins/live/core";
-import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import {
   AttemptStatusSchema,
   TASK_STATUS_OPTIONS,
@@ -163,7 +163,9 @@ export const attemptRows = liveCollection("attempts", {
       retained: boolField(),
       finishedAt: nullable(dateField()),
       conversations: jsonField({
-        schema: z.array(ConversationSummarySchema),
+        schema: wholeList(ConversationSummarySchema, {
+          reason: "one attempt's non-system conversations — a handful each",
+        }),
         default: [],
       }),
     },

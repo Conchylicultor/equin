@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
+import { SEARCH_RESULTS_LIMIT } from "../../core/live";
 import type { SearchResult } from "../../core/schemas";
 import { buildPrefixTsQuery } from "./build-tsquery";
 
@@ -60,7 +61,7 @@ export async function runSearch(
     WHERE d.tsv @@ q.query
     ${sourceFilter}
     ORDER BY rank DESC
-    LIMIT 30
+    LIMIT ${SEARCH_RESULTS_LIMIT}
   `,
   });
 

@@ -16,7 +16,12 @@ import {
 import { wholeReach } from "@plugins/framework/plugins/resource-runtime/core/testing";
 import { notificationsWsHandler } from "@plugins/framework/plugins/server-core/core";
 import { liveValue } from "@plugins/network/plugins/live/core";
-import { compileValue, registerValue } from "../../core/internal/compile-value";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
+import {
+  compileValue,
+  registerPagedValue,
+  registerValue,
+} from "../../core/internal/compile-value";
 import { serveValue, valueRuntime } from "./serve-value";
 
 const Count = z.object({ n: z.number() });
@@ -26,7 +31,7 @@ const counts = pgTable("test_serve_value_counts", {
 const countsView = pgView("test_serve_value_counts_v").as((qb) =>
   qb.select().from(counts),
 );
-const Names = z.array(z.string());
+const Names = wholeList(z.string(), { reason: "a test's handful of names" });
 const PagedItem = z.object({ id: z.string(), at: z.string().nullable() });
 type PagedItem = z.output<typeof PagedItem>;
 const pagedValue = (name: string) =>
@@ -46,6 +51,7 @@ interface DebugEntry {
   policy: string;
   externalSource: boolean;
   freshness: { kind: string } | null;
+  shape: unknown;
   routes: Array<{ id: string; table: string }> | null;
   relationReads: Array<{ relation: string; reason: string; bases: string[] }>;
 }
@@ -213,65 +219,41 @@ describe("compileValue", () => {
     expect(h.of("update", v.key)[0]!.value).toEqual({ n: 5 });
   });
 
-  test("a collection-shaped db value records its reason; an empty one throws", () => {
+  test("a serve call names no list bound: `unbounded` is refused (tsc and a throw)", () => {
+    // The bound is the declaration's (`wholeList` on `Names`), whatever the source.
     const v = liveValue(key("names"), { schema: Names });
-    const compiled = compileValue(v, {
-      source: "db",
+    compileValue(v, { source: "db", loader: () => [] });
+    compileValue(v, {
+      source: "external",
+      changes: "notified",
       loader: () => [],
-      unbounded: { reason: "one row per configured host" },
-    });
-    expect(compiled.unbounded).toEqual({
-      reason: "one row per configured host",
     });
     expect(() =>
       compileValue(v, {
         source: "db",
         loader: () => [],
-        unbounded: { reason: "  " },
+        // @ts-expect-error — retired: the reason lives in the schema now
+        unbounded: { reason: "one row per configured host" },
       }),
-    ).toThrow(/unbounded.reason` is empty/);
+    ).toThrow(/`unbounded` is not a serve option/);
+    expect(() =>
+      compileValue(v, {
+        source: "external",
+        changes: "notified",
+        loader: () => [],
+        // @ts-expect-error — nor on an external one
+        unbounded: { reason: "r" },
+      }),
+    ).toThrow(/`unbounded` is not a serve option/);
   });
 
-  test("types: the bound rule and the params type", () => {
-    const names = liveValue(key("t-names"), { schema: Names });
-    const record = liveValue(key("t-record"), {
-      schema: z.record(z.string(), z.number()),
-    });
-    const count = liveValue(key("t-count"), { schema: Count });
+  test("types: the params type", () => {
     const detail = liveValue(key("t-detail"), {
       schema: Count,
       params: ["id"],
     });
     // Never called — the assertions are the `@ts-expect-error`s.
     const typeOnly = () => {
-      // @ts-expect-error — a db array must say why it is not a collection
-      compileValue(names, { source: "db", loader: () => [] });
-      // @ts-expect-error — so must a string-indexed record
-      compileValue(record, { source: "db", loader: () => ({}) });
-      compileValue(names, {
-        source: "db",
-        loader: () => [],
-        unbounded: { reason: "r" },
-      });
-      // An in-memory array is bounded by the process that holds it.
-      compileValue(names, {
-        source: "external",
-        changes: "notified",
-        loader: () => [],
-      });
-      compileValue(count, {
-        source: "db",
-        loader: () => ({ n: 0 }),
-        // @ts-expect-error — `unbounded` only on a collection-shaped db value
-        unbounded: { reason: "r" },
-      });
-      compileValue(names, {
-        source: "external",
-        changes: "notified",
-        loader: () => [],
-        // @ts-expect-error — nor on an external one
-        unbounded: { reason: "r" },
-      });
       compileValue(detail, {
         source: "db",
         // @ts-expect-error — the loader's params are the declared names
@@ -306,7 +288,7 @@ describe("serveValue", () => {
     expect(served.notify).toBeUndefined();
   });
 
-  test("reads: required on the db arm, optional on a notified external, refused on a silent one and a paged one (tsc and a throw)", () => {
+  test("reads: required on the db arm, optional on a notified external (a paged one: a static list), refused on a silent one (tsc and a throw)", () => {
     const v = liveValue(key("served-reads"), { schema: Count });
     const paged = pagedValue("served-reads-paged");
     // Never called — the assertions are the `@ts-expect-error`s.
@@ -336,13 +318,21 @@ describe("serveValue", () => {
         source: "external",
         changes: "notified",
         loader: () => [],
+        reads: { tables: [counts], reason: "r" },
       });
-      // A page is a keyed window, which no declared read reaches (the paged
-      // overload's `reads?: never`; no other overload takes a paged value).
+      // A paged value's pages register at once: no deferred bind for a thunk
+      // (no other overload takes a paged value).
       // @ts-expect-error — reported on the value argument
       serveValue(paged, {
         source: "external",
         changes: "notified",
+        loader: () => [],
+        reads: () => ({ tables: [counts], reason: "r" }),
+      });
+      // @ts-expect-error — reported on the value argument: a fixed paged value claims no push
+      serveValue(paged, {
+        source: "external",
+        changes: { fixed: { reason: "a registry" } },
         loader: () => [],
         reads: { tables: [counts], reason: "r" },
       });
@@ -368,9 +358,17 @@ describe("serveValue", () => {
         source: "external",
         changes: "notified",
         loader: () => [],
+        reads: () => ({ tables: [counts], reason: "r" }),
+      }),
+    ).toThrow(/a paged value's `reads` is a static list/);
+    expect(() =>
+      untyped(pagedValue("served-reads-paged-fixed"), {
+        source: "external",
+        changes: { fixed: { reason: "a registry" } },
+        loader: () => [],
         reads: { tables: [counts], reason: "r" },
       }),
-    ).toThrow(/a paged value declares no `reads`/);
+    ).toThrow(/`reads` is a "notified" value's/);
     expect(() =>
       serveValue(liveValue(key("served-reads-empty"), { schema: Count }), {
         source: "db",
@@ -467,6 +465,82 @@ describe("serveValue", () => {
     );
   });
 
+  test("a paged value with reads: its pages read each table whole, its meta is routed — a write re-reads the subscribed page and recomputes the meta", async () => {
+    const v = liveValue(key("served-paged-reads"), {
+      query: z.object({ list: z.string() }),
+      paged: {
+        item: PagedItem,
+        id: "id",
+        key: { of: (i: PagedItem) => [i.at], order: ["desc"] },
+        limit: 2,
+        maxLimit: 4,
+        meta: Count,
+      },
+    });
+    const h = harness();
+    const runtime = h.runtime;
+    let pageLoads = 0;
+    let metaLoads = 0;
+    const opts = {
+      source: "external" as const,
+      changes: "notified" as const,
+      reads: {
+        tables: [counts, countsView],
+        reason: "each question resolves its list through a lookup",
+      },
+      loader: () => {
+        pageLoads++;
+        return [{ id: `a${pageLoads}`, at: "1" }];
+      },
+      meta: () => ({ n: ++metaLoads }),
+    };
+    const { resource, meta } = registerPagedValue(
+      valueRuntime(v.key, opts, runtime),
+      v,
+      opts,
+    );
+    // The bases are known (server-core's `setRelationBases` runs this).
+    runtime.indexRelationReads();
+    const pages = await debugOf(runtime, v.key);
+    expect(pages.policy).toBe("external");
+    expect(pages.routes).toEqual([]);
+    expect(pages.relationReads.map((r) => r.relation).sort()).toEqual([
+      "test_serve_value_counts",
+      "test_serve_value_counts_v",
+    ]);
+    const metaEntry = await debugOf(runtime, meta!.resource.key);
+    expect(metaEntry.routes?.map((r) => r.table)).toEqual([
+      "test_serve_value_counts",
+    ]);
+    // Change-feed's A1′ holds the pages' bases to a change source, the meta's
+    // route tables to a trigger.
+    expect(
+      runtime
+        .relationResourceReads()
+        .filter((r) => r.key === v.key)
+        .map((r) => r.relation)
+        .sort(),
+    ).toEqual(["test_serve_value_counts", "test_serve_value_counts_v"]);
+    const page = v.query.encode(
+      { list: "x" },
+      { after: null, until: null, limit: 2 },
+    );
+    await h.subscribe(resource.key, page);
+    await h.subscribe(meta!.resource.key, {
+      q: v.query.encodeQuery({ list: "x" }),
+    });
+    const [loadsBefore, metaBefore] = [pageLoads, metaLoads];
+    h.change("test_serve_value_counts");
+    await h.until(
+      () => pageLoads > loadsBefore && metaLoads > metaBefore,
+      "the page re-read and the meta recompute",
+    );
+    await h.until(
+      () => h.of("delta", resource.key).length > 0,
+      "the page's keyed delta",
+    );
+  });
+
   test("an external thunk binds deferred: external with its freshness from definition, its plan at bindDeferredResources", async () => {
     const v = liveValue(key("served-ext-thunk"), { schema: Count });
     // Its own runtime: a process-global bind would bind every other suite's
@@ -495,6 +569,52 @@ describe("serveValue", () => {
       "test_serve_value_counts",
     ]);
     expect(await resource.load({})).toEqual({ n: 3 });
+  });
+
+  test("the declaration's list shape rides _debug — a deferred placeholder's too", async () => {
+    const v = liveValue(key("served-shape"), {
+      schema: z.object({
+        rows: z
+          .array(
+            z.object({
+              parts: wholeList(z.string(), { reason: "a row's few parts" }),
+            }),
+          )
+          .max(50),
+      }),
+    });
+    const shape = {
+      paged: false,
+      bounds: [
+        { path: "rows", max: 50 },
+        { path: "rows[].parts", reason: "a row's few parts" },
+      ],
+      bare: [],
+    };
+    const runtime = createResourceRuntime();
+    const opts = {
+      source: "external" as const,
+      changes: "notified" as const,
+      reads: () => ({ tables: [counts], reason: "a provider's tables" }),
+      loader: () => ({ rows: [] }),
+    };
+    registerValue(valueRuntime(v.key, opts, runtime), v, opts);
+    expect((await debugOf(runtime, v.key)).shape).toEqual(shape);
+    runtime.bindDeferredResources();
+    expect((await debugOf(runtime, v.key)).shape).toEqual(shape);
+
+    const plain = liveValue(key("served-shape-plain"), { schema: Count });
+    const plainOpts = {
+      source: "external" as const,
+      changes: { fixed: { reason: "a constant" } },
+      loader: () => ({ n: 1 }),
+    };
+    registerValue(valueRuntime(plain.key, {}, runtime), plain, plainOpts);
+    expect((await debugOf(runtime, plain.key)).shape).toEqual({
+      paged: false,
+      bounds: [],
+      bare: [],
+    });
   });
 
   test("types: a central value is not served here", () => {

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 /**
  * One UTC day of task history: how many tasks were created that day, and how
@@ -34,5 +35,8 @@ export type TaskHistoryDay = z.infer<typeof TaskHistoryDaySchema>;
  * (it replaces this interim value), not a second per-minute series here.
  */
 export const tasksHistory = liveValue("stats.tasks.history", {
-  schema: z.array(TaskHistoryDaySchema),
+  schema: wholeList(TaskHistoryDaySchema, {
+    reason:
+      "one row per UTC day since the first task (a few hundred for a year of use), aggregated in SQL — never one row per task",
+  }),
 });

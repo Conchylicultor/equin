@@ -1,6 +1,7 @@
 import { isAbsolute } from "node:path";
 import { serveValue } from "@plugins/network/plugins/live/server";
 import {
+  COMMIT_FILES_MAX,
   commitInfo,
   pushFiles,
   type CommitFiles,
@@ -68,9 +69,25 @@ export async function loadPushFiles(
       break;
   }
   const { baseSha, headSha } = range;
+  return {
+    ...(await cappedRangeFiles(root, baseSha, headSha)),
+    baseSha,
+    headSha,
+  };
+}
+
+/** A range's files, the first {@link COMMIT_FILES_MAX} by path, and whether more were dropped. */
+export async function cappedRangeFiles(
+  root: string,
+  baseSha: string,
+  headSha: string,
+): Promise<Pick<CommitFiles, "files" | "truncated">> {
   const files = await getRangeFiles(root, baseSha, headSha);
   if (!files) throw new Error(`git diff ${baseSha} ${headSha} failed`);
-  return { files, baseSha, headSha };
+  return {
+    files: files.slice(0, COMMIT_FILES_MAX),
+    truncated: files.length > COMMIT_FILES_MAX,
+  };
 }
 
 // External: the truth is a diff of two commits in git, which never moves once

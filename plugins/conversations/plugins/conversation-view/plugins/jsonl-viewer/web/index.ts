@@ -21,7 +21,10 @@ export type {
   TranscriptViewProps,
   TranscriptOlder,
 } from "./components/transcript-view";
-export { useTranscriptWindow } from "./use-transcript-window";
+export {
+  transcriptWindowOf,
+  useTranscriptWindow,
+} from "./use-transcript-window";
 export { useWholeTranscript } from "./use-whole-transcript";
 export type { TranscriptWindow } from "./use-transcript-window";
 export { useVisibleEvents } from "./use-visible-events";

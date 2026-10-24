@@ -24,6 +24,7 @@
  * zero), `viewed` markers, a task title toggled and restored.
  */
 import { PROTOCOL } from "@plugins/packages/plugins/resource-protocol/core";
+import { canonicalJson } from "@plugins/packages/plugins/canonical-params/core";
 import { pageBlocks } from "@plugins/page/plugins/editor/core";
 import {
   agentFetch,
@@ -63,7 +64,11 @@ const SUBS: { key: string; params: Record<string, string> }[] = [
   ...PAGES.map((p) => ({ key: PAGE_KEY, params: { pageId: p } })),
   { key: "attempt-work", params: { attemptId: ATTEMPT } },
   { key: "commits-graph.graph", params: { attemptId: ATTEMPT } },
-  { key: "edited-files", params: { id: CONV } },
+  // Key-range paged: page 0 — the question's canonical JSON at the page limit.
+  {
+    key: "edited-files",
+    params: { q: canonicalJson({ id: CONV }), limit: "500" },
+  },
   { key: "allow-files", params: { id: CONV } },
   { key: "jsonl-viewer.outline.turns", params: { id: CONV } },
   { key: "subagent-activity", params: { id: CONV } },

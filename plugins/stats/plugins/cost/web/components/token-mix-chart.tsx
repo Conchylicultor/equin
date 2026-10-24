@@ -21,6 +21,7 @@ import {
 } from "@plugins/stats/plugins/commits/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { costDaily, type CostDay } from "../../shared/values";
+import { costDaysNote } from "../../shared/derive";
 import { useShowEmptyDays } from "@plugins/stats/web";
 import { formatTokens } from "../../core";
 import { useScope } from "./use-scope";
@@ -42,6 +43,7 @@ export function TokenMixChart() {
       size="lg"
       isEmpty={(d) => d.days.length === 0}
       emptyText="No tokens recorded yet."
+      note={costDaysNote}
     >
       {(d) => <TokenMixBody days={d.days} />}
     </LiveChart>

@@ -1,5 +1,5 @@
-import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import {
   MailAccountSchema,
   MailSyncStateSchema,
@@ -12,7 +12,10 @@ import {
 // change-feed, so the UI sees failures/progress live. A value, not a
 // collection: both readers fold every row into one sync view.
 export const mailSyncState = liveValue("mail-sync-state", {
-  schema: z.array(MailSyncStateSchema),
+  schema: wholeList(MailSyncStateSchema, {
+    reason:
+      "one row per connected mail account — the app is single-account today",
+  }),
 });
 
 // The account's user labels, ordered by name. Served here
@@ -25,7 +28,10 @@ export const mailSyncState = liveValue("mail-sync-state", {
 // "Label_12". Hosting it in a consumer would force any future one to import that
 // consumer and risk closing a cycle.
 export const mailLabels = liveValue("mail-labels", {
-  schema: z.array(MailLabelSchema),
+  schema: wholeList(MailLabelSchema, {
+    reason:
+      "the connected account's user labels — Gmail caps an account's labels in the thousands, so the whole list is the working set",
+  }),
 });
 
 /**

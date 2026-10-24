@@ -4,6 +4,7 @@ import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 // queue (the health report's Job queue row) can name it without loading this
 // plugin's web half. Same shape as `reports/core/routes.ts`.
 //
-// `:tab?` is the section on screen (jobs / dead / events / triggers) — a view
-// of the pane, so `/debug/queue` stays valid and opens the default section.
+// `:tab?` is the section on screen (jobs — the live queue — / history / dead /
+// events / triggers) — a view of the pane, so `/debug/queue` stays valid and
+// opens the default section.
 export const queueRoute = defineRoute({ id: "queue", segment: "queue/:tab?" });

@@ -14,10 +14,6 @@ export const activeDataBindingsServed = serveValue(activeDataBindings, {
     reason:
       "a write to any binding row may change the bindings of the conversation it belongs to; whole-table until it reads through a collection",
   },
-  unbounded: {
-    reason:
-      "one conversation's widget bindings — a handful per assistant message; the table's key is the composite (conversationId, messageId, tag, occurrenceIndex), so no single-id :rows read fits",
-  },
   loader: async ({ conversationId }) =>
     db
       .select({

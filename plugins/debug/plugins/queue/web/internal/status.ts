@@ -1,5 +1,4 @@
 import type { BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import type { FieldOption } from "@plugins/primitives/plugins/data-view/web";
 import type { JobListStatus, JobProblem } from "./job-rows";
 
 /** How one Jobs status presents: its label, dot colour, badge tint and text colour. */
@@ -11,9 +10,9 @@ export interface StatusMeta {
 }
 
 /**
- * The single presentation of a Jobs row's status, shared by the list's status
- * column, its filter options and the detail header — so a dot and a badge for
- * the same row cannot disagree.
+ * The single presentation of a job row's status, shared by the Queue and
+ * History status columns, their filter options and the detail header — so a
+ * dot and a badge for the same row cannot disagree.
  */
 export const STATUS_META: Record<JobListStatus, StatusMeta> = {
   pending: {
@@ -60,23 +59,7 @@ export const STATUS_META: Record<JobListStatus, StatusMeta> = {
   },
 };
 
-export const STATUS_OPTIONS: FieldOption[] = (
-  Object.keys(STATUS_META) as JobListStatus[]
-).map((value) => ({
-  value,
-  label: STATUS_META[value].label,
-  variant: STATUS_META[value].badge,
-}));
-
 export const PROBLEM_LABEL: Record<JobProblem, string> = {
   "no-worker": "no worker",
   forfeited: "forfeited",
 };
-
-export const PROBLEM_OPTIONS: FieldOption[] = (
-  Object.keys(PROBLEM_LABEL) as JobProblem[]
-).map((value) => ({
-  value,
-  label: PROBLEM_LABEL[value],
-  variant: "destructive",
-}));

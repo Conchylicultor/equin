@@ -1,5 +1,5 @@
-import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { AttachmentFileSchema, AttachmentSchema } from "./schema";
 
 /**
@@ -8,7 +8,10 @@ import { AttachmentFileSchema, AttachmentSchema } from "./schema";
  * id. An owner type no plugin linked is refused `unknown-owner-type`.
  */
 export const attachmentsByOwner = liveValue("attachments.by-owner", {
-  schema: z.array(AttachmentSchema),
+  schema: wholeList(AttachmentSchema, {
+    reason:
+      "one owner's attachments — the files a person attached to one task or block, a handful, never a growing log",
+  }),
   params: ["ownerType", "id"],
   refusals: ["unknown-owner-type"],
 });

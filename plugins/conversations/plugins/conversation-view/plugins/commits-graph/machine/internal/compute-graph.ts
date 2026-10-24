@@ -1,4 +1,9 @@
-import type { CommitRow, CommitsGraph } from "../../shared/protocol";
+import {
+  COMMITS_GRAPH_MAX_BEHIND as MAX_BEHIND,
+  COMMITS_GRAPH_MAX_COMMITS as MAX_COMMITS,
+  type CommitRow,
+  type CommitsGraph,
+} from "../../shared/protocol";
 import {
   runGit,
   LOG_FORMAT,
@@ -13,8 +18,6 @@ import {
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
 
 const MAIN = "main";
-const MAX_COMMITS = 200;
-const MAX_BEHIND = 50;
 
 // Exact, uncapped one-sided commit count (the commit log is capped at
 // MAX_COMMITS/MAX_BEHIND, so a count derived from the array would underreport on

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 export const PUSH_BUCKETS = ["day", "week", "month"] as const;
 export type PushBucket = (typeof PUSH_BUCKETS)[number];
@@ -20,9 +21,11 @@ const PUSHES_ON_THIS_MACHINE = {
 // data, bounds the list. No exact maximum is quoted: a forked worktree DB holds
 // the rows its fork copied until its own sweep runs (40 day points were seen on
 // one), so the bound is the retention window plus that lag, not "31".
+const PUSH_POINTS_REASON =
+  "one point per bucket holding a completed push within the op store's 30-day retention sweep (plus a forked DB's sweep lag) — the range bounds it, never the number of pushes";
 
 export const PushesWaitTimeSchema = z.object({
-  points: z.array(
+  points: wholeList(
     z.object({
       bucket: z.string(),
       avg: z.number(),
@@ -30,6 +33,7 @@ export const PushesWaitTimeSchema = z.object({
       contested: z.number(),
       total: z.number(),
     }),
+    { reason: PUSH_POINTS_REASON },
   ),
 });
 
@@ -45,12 +49,13 @@ export const pushesWaitTime = liveValue("stats.pushes.wait-time", {
 });
 
 export const PushesThroughputSchema = z.object({
-  points: z.array(
+  points: wholeList(
     z.object({
       bucket: z.string(),
       success: z.number(),
       failed: z.number(),
     }),
+    { reason: PUSH_POINTS_REASON },
   ),
 });
 
@@ -65,7 +70,7 @@ export const pushesThroughput = liveValue("stats.pushes.throughput", {
 });
 
 export const PushesStepBreakdownSchema = z.object({
-  points: z.array(
+  points: wholeList(
     z.object({
       bucket: z.string(),
       fetch: z.number(),
@@ -74,6 +79,7 @@ export const PushesStepBreakdownSchema = z.object({
       push: z.number(),
       other: z.number(),
     }),
+    { reason: PUSH_POINTS_REASON },
   ),
 });
 

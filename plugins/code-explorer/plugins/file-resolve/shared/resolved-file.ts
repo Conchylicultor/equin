@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { cappedList } from "@plugins/packages/plugins/list-bound/core";
 import { CODE_MACHINE } from "@plugins/code-explorer/plugins/code-api/core";
 
 const NotFoundSchema = z.object({ kind: z.literal("not-found") });
@@ -28,7 +29,7 @@ export const ResolvedFileSchema = z.discriminatedUnion("kind", [
      * The best {@link RESOLVE_MAX_MATCHES} candidates, checkout-relative:
      * suffix matches first, each group shortest first.
      */
-    matches: z.array(z.string()),
+    matches: cappedList(z.string(), { max: RESOLVE_MAX_MATCHES }),
     /** How many files matched; more than `matches` holds when capped. */
     total: z.number(),
   }),

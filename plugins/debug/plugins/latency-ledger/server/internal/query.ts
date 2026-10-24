@@ -9,6 +9,7 @@ import {
   LATENCY_METRICS,
   PRESSURE_DECOMPRESSIONS_PER_SEC,
   PRESSURE_FREE_MEM_MB,
+  SLOWEST_INTERACTIONS,
   THREAD_STALL_MS,
   countAtOrAbove,
   emptyCounts,
@@ -218,7 +219,7 @@ export async function loadLatencySummary(
                resource_count, last_resource_key
         FROM latency_ledger_interaction
         WHERE occurred_at >= ${since} AND NOT hidden
-        ORDER BY duration_ms DESC LIMIT 8`,
+        ORDER BY duration_ms DESC LIMIT ${SLOWEST_INTERACTIONS}`,
   });
 
   return {

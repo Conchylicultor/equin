@@ -14,6 +14,7 @@ import {
   liveValue,
   type LiveRowsCollection,
 } from "@plugins/network/plugins/live/core";
+import { wholeRecord } from "@plugins/packages/plugins/list-bound/core";
 import {
   DEPLOY_PHASES,
   DEPLOY_VERBS,
@@ -146,7 +147,9 @@ export type DeployRun = z.infer<typeof DeployRunSchema>;
  * NOT "nothing has run" — the Deploy buttons stay blocked until it settles.
  */
 export const deployRuns = liveValue("deploy.runs", {
-  schema: z.record(z.string(), DeployRunSchema),
+  schema: wholeRecord(DeployRunSchema, {
+    reason: "one entry per deployment row — its most recent run",
+  }),
 });
 
 /**

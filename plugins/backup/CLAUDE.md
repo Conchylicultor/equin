@@ -181,6 +181,7 @@ row with a rising count and a new source starting to fail mints its own.
     - `fields/text/config.enumTextField`
     - `fields/text/config.textField`
     - `infra/entities.entityRef`
+    - `packages/list-bound.wholeList`
     - `primitives/pane.defineRoute`
   - Exports (types):
     - `BackupArchive`
@@ -202,9 +203,8 @@ row with a rising count and a new source starting to fail mints its own.
     - `backupRunFields`
     - `backupRunRoute`
     - `backupRunsEntityRef`
-    - `BackupSourceReportSchema`
+    - `BackupSourceReportsSchema`
     - `backupSourceWentIn`
-    - `BackupTargetResultSchema`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`

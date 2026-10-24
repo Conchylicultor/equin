@@ -1,12 +1,11 @@
 import { sql, type SQL } from "drizzle-orm";
-import { z } from "zod";
 import { expr } from "@plugins/infra/plugins/query-resource/core";
 import {
   nullable,
   parsed,
 } from "@plugins/database/plugins/sql-projection/server";
 import { _backupRuns } from "@plugins/backup/server";
-import { BackupSourceReportSchema } from "@plugins/backup/core";
+import { BackupSourceReportsSchema } from "@plugins/backup/core";
 import { runsServed } from "@plugins/runs/server";
 import { RunOutcomeSchema } from "@plugins/runs/plugins/run-outcome/core";
 import { BACKUP_STATUS_OUTCOME, backupRunArm } from "../../core";
@@ -106,7 +105,7 @@ export const backupRunKind = runsServed.arm(backupRunArm, {
       end)`,
       {
         decoder: nullable(
-          parsed(z.array(BackupSourceReportSchema), "runs.backup.sources"),
+          parsed(BackupSourceReportsSchema, "runs.backup.sources"),
         ),
         sqlType: "jsonb",
       },

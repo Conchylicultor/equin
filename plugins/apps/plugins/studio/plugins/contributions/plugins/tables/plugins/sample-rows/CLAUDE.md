@@ -22,7 +22,7 @@
   - Uses:
     - `database.db`
     - `network/live.serveValue`
-  - Resources: `studio.table-sample-rows` (invalidate, snapshot)
+  - Resources: `studio.table-sample-rows` (invalidate, snapshot, whole: one row's columns — Postgres caps a table at 1,600, capped: PG_MAX_COLUMNS, capped: SAMPLE_ROWS_LIMIT)
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`

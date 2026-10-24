@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeRecord } from "@plugins/packages/plugins/list-bound/core";
 
 // A search result is one navigable hit: the source that owns it, the entity id
 // within that source, a display title, a highlighted snippet (server-produced
@@ -10,7 +11,10 @@ export const SearchResultSchema = z.object({
   title: z.string(),
   snippet: z.string(),
   route: z.string(),
-  metadata: z.record(z.unknown()).nullable(),
+  metadata: wholeRecord(z.unknown(), {
+    reason:
+      "one source's opaque metadata bag — a few keys (an icon descriptor)",
+  }).nullable(),
 });
 export type SearchResult = z.infer<typeof SearchResultSchema>;
 

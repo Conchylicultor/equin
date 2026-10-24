@@ -17,7 +17,10 @@ import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
-import { commitFiles } from "@plugins/code-explorer/plugins/code-api/core";
+import {
+  COMMIT_FILES_MAX,
+  commitFiles,
+} from "@plugins/code-explorer/plugins/code-api/core";
 
 export function CommitDiffView({
   worktree,
@@ -45,10 +48,11 @@ export function CommitDiffView({
     );
   }
 
-  const { files, baseSha, headSha } = result.data;
+  const { files, truncated, baseSha, headSha } = result.data;
   return (
     <CommitFileList
       files={files}
+      truncated={truncated}
       worktree={worktree}
       baseSha={baseSha}
       headSha={headSha}
@@ -58,11 +62,14 @@ export function CommitDiffView({
 
 function CommitFileList({
   files,
+  truncated,
   worktree,
   baseSha,
   headSha,
 }: {
   files: EditedFile[];
+  /** The read dropped files past its cap. */
+  truncated: boolean;
   worktree: string;
   baseSha: string;
   headSha: string;
@@ -118,6 +125,11 @@ function CommitFileList({
           >
             −{totals.deletions}
           </Text>
+          {truncated && (
+            <Text as="span" variant="caption" className="text-muted-foreground">
+              showing the first {COMMIT_FILES_MAX}
+            </Text>
+          )}
         </Stack>
       }
       body={files.map((file) => (

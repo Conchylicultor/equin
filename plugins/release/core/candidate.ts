@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { ReleaseManifestSchema } from "@plugins/release/plugins/bundles/core";
 import type {
   BundleRefusal,
@@ -38,7 +39,10 @@ const BundleRefusalSchema = z.union([
     release: z.string(),
     runDir: z.string(),
     compDir: z.string(),
-    available: z.array(z.string()),
+    available: wholeList(z.string(), {
+      reason:
+        "one composition's release run dirs on disk — the few the artifact prune keeps",
+    }),
     namespace: z.string(),
   }),
   z.object({

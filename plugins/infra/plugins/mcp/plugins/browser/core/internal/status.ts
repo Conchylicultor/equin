@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 /** Most sessions one host holds before it refuses a new one. */
 export const MAX_SESSIONS = 32;
@@ -44,7 +45,10 @@ const SessionShape = z.object({
    * Every deploy the session stamped with its agent-origin headers — where its
    * writes may be, and so what closing it reverts.
    */
-  origins: z.array(z.string()),
+  origins: wholeList(z.string(), {
+    reason:
+      "the deploys one session reached — its own build, main, a few others an agent opened",
+  }),
   openedAt: z.string(),
   /** When the session closes if no call touches it first. */
   idleDeadline: z.string(),

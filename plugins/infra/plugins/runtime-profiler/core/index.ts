@@ -27,6 +27,7 @@ export {
   readGateGauges,
   SPAN_KINDS,
   SPAN_MEASURES,
+  SLOWEST_CAP,
   __contribute,
   __pushBand,
 } from "./recorder";

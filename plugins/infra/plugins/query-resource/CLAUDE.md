@@ -333,8 +333,13 @@ shipping caller (its `all` arm binds the row fields and registers both
 halves); the compile-SQL golden and tasks-core's parity oracle reach it
 through `server/testing` over declarations nothing serves. The whole set's
 descriptor TYPE is `AllQueryResourceContract<Row>` (`core/`, beside the window
-and point contracts): param-less, keyed, no placeholder, `all: { orderBy,
-unbounded }`, `queryPk`. Scoped (`all.by`, below) it is
+and point contracts): param-less, keyed, no placeholder, `all: { orderBy }`
+and its bound (`AllBound`: `{ max }` or `{ unbounded }`), `queryPk`. A capped
+set's full and orderIds shapes end `LIMIT max + 1` (a literal) and a load
+reading more than `max` rows throws, naming the key — the scoped refill and
+`:rows` name their hosts, so they take none; an unbounded set's SQL (and so
+its definition) is unchanged. The point contract carries `point.maxIds`, the
+id-set cap its `decode` enforces (network/live's `maxIds`). Scoped (`all.by`, below) it is
 `AllQueryResourceContract<Row, B>`: params `AllQueryParams<B>` (exactly the
 `by` fields), `all.by` required, `preload` `never`.
 
@@ -713,7 +718,14 @@ order's `signatureColumns`) run before `planArm`. A single-table spec is the
 half (`routedReads`) and renders its own positional SQL; so does the persisted
 `all` collection (*The `all` compiler*) — raw SQL, never an `ArmMode` (P8 v3
 C2). Neither goes through `assembleWindow` / `assemblePoint`, which therefore
-take exactly one arm (`readonly [ArmPlan]`). The grouping compiler splits the
+take exactly one arm (`readonly [ArmPlan]`). Each assembler is the loaders
+(`windowLoaders` — with the clamped `limitOf` and `familyOf` — /
+`pointLoader`) plus the routed `scopePolicyOf`; **`compileOffFeedQuery`**
+runs the same guards and plan and returns the loaders alone, with an
+external membership and `reads` (the route tables, every table the SQL
+reads) — network/live's `serveCollection` with `changes` registers it as an
+external keyed window / point set and declares `reads` unfed
+(`offFeedReach` does the same for a `:groups` / `:count` reach plan). The grouping compiler splits the
 same way: `planGroupArm` and `compileArmGroups`, with `compileGroupsQuery` the
 1-arm case.
 
@@ -931,6 +943,7 @@ importing `db` never touches a worktree — no test env shim needed.
     - `CompiledAllCollection`
     - `CompiledCount`
     - `CompiledGroups`
+    - `CompiledOffFeedQuery`
     - `CompiledUnion`
     - `EntitySource`
     - `PointQueryResourceSpec`
@@ -950,12 +963,15 @@ importing `db` never touches a worktree — no test env shim needed.
   - Exports (values):
     - `compileAllCollection`
     - `compileCountQuery`
+    - `compiledKeyedReads`
     - `compiledValueReach`
     - `compileGroupsQuery`
     - `compileJoins`
+    - `compileOffFeedQuery`
     - `compileUnionCollection`
     - `deferredWindowQueryResource`
     - `joinRefs`
+    - `offFeedReach`
     - `presenceExpr`
     - `windowQueryResource`
 - Cross-plugin:
@@ -975,6 +991,7 @@ importing `db` never touches a worktree — no test env shim needed.
     - `AggregateSet`
     - `AggregateShape`
     - `AggregateValue`
+    - `AllBound`
     - `AllJoinRefs`
     - `AllJoinRefsOf`
     - `AllJoinSpec`

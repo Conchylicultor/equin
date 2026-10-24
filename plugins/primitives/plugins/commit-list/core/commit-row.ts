@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 /**
  * One `Key: value` trailer of a commit message (`Co-Authored-By`, a tool's own
@@ -19,8 +20,12 @@ export const CommitRowSchema = z.object({
   authorName: z.string(),
   authorEmail: z.string(),
   authoredAt: z.string(),
-  parents: z.array(z.string()),
-  trailers: z.array(CommitTrailerSchema),
+  parents: wholeList(z.string(), {
+    reason: "one commit's parents — one, or two for a merge",
+  }),
+  trailers: wholeList(CommitTrailerSchema, {
+    reason: "one commit message's trailers — a handful of lines",
+  }),
 });
 export type CommitRow = z.infer<typeof CommitRowSchema>;
 

@@ -73,15 +73,21 @@ function keyedRows<Row, P extends Record<string, string>>(
     preload?: ResourcePreload;
     /** The params gate — see `ResourceDescriptor.validateParams`. */
     validateParams: (params: Record<string, string>) => void;
+    /** At most this many rows per tuple: the schema's `.max`, so every parse refuses one more. */
+    maxRows?: number;
   },
 ): ResourceDescriptor<Row[], P> & {
   keyed: { keyOf: (row: unknown) => string };
 } {
+  const { maxRows, ...rest } = opts;
   const d = {
     key,
-    schema: z.array(rowSchema),
+    schema:
+      maxRows === undefined
+        ? z.array(rowSchema)
+        : z.array(rowSchema).max(maxRows),
     keyed: { keyOf: pkKeyOf(pkField) },
-    ...opts,
+    ...rest,
   };
   registerResourceDescriptor(d as ResourceDescriptor<unknown>);
   return d;
@@ -156,7 +162,13 @@ export function pointQueryResourceDescriptor<Row>(
   key: string,
   rowSchema: ZodParser<Row>,
   pkField: keyof Row & string,
+  maxIds: number,
 ): PointQueryResourceContract<Row> {
+  if (!Number.isSafeInteger(maxIds) || maxIds < 1) {
+    throw new Error(
+      `pointQueryResourceDescriptor("${key}"): maxIds must be a positive integer, got ${maxIds}`,
+    );
+  }
   const encode = (ids: readonly string[]): PointParams => {
     for (const id of ids) {
       if (!isPointId(id)) {
@@ -166,7 +178,16 @@ export function pointQueryResourceDescriptor<Row>(
         );
       }
     }
-    return { ids: [...new Set(ids)].sort().join(",") };
+    const set = [...new Set(ids)];
+    // An id set past the cap is the reader's bug, thrown where it is built —
+    // the server would refuse the tuple anyway (`decode`).
+    if (set.length > maxIds) {
+      throw new Error(
+        `pointQueryResourceDescriptor("${key}").encode: ${set.length} ids, at most ` +
+          `${maxIds} — read fewer, or declare a larger \`maxIds\` on the collection`,
+      );
+    }
+    return { ids: set.sort().join(",") };
   };
   const decode = (params: Record<string, string>): string[] => {
     const raw = params.ids;
@@ -177,7 +198,15 @@ export function pointQueryResourceDescriptor<Row>(
           `point subscription has no meaning without an id set`,
       );
     }
-    return raw === "" ? [] : raw.split(",");
+    const ids = raw === "" ? [] : raw.split(",");
+    if (ids.length > maxIds) {
+      throw new ResourceContractError(
+        key,
+        `pointQueryResourceDescriptor("${key}").decode: ${ids.length} ids, at most ` +
+          `${maxIds} (the collection's \`maxIds\`) — an id set is a bounded read`,
+      );
+    }
+    return ids;
   };
   // The gate is stricter than `decode` (which, as the membership `idsOf`, reads
   // only `ids`): a point tuple is exactly `{ ids }`, so any other key is a
@@ -197,13 +226,18 @@ export function pointQueryResourceDescriptor<Row>(
   const d = keyedRows<Row, PointParams>(key, rowSchema, pkField, {
     validateParams,
   });
-  return Object.assign(d, { point: { encode, decode }, queryPk: pkField });
+  return Object.assign(d, {
+    point: { encode, decode, maxIds },
+    queryPk: pkField,
+  });
 }
 
 /**
  * Declare the whole ordered set of a collection declared `all` — the
  * `AllQueryResourceContract`: ONE keyed resource holding every row in
  * `orderBy` order. No window codec and no `defaultParams`, no placeholder.
+ * Declared `all: { max }`, its schema is `.max(max)`: every parse of a tuple
+ * (the server's load, the client's hydration and updates) refuses one more.
  *
  * - Without `by`: param-less (boot hydrates the `{}` tuple, exactly the tuple
  *   `useLive(all)` subscribes to), and any param is a subscription this
@@ -264,8 +298,10 @@ export function allResourceDescriptor<Row, B extends string = never>(
       }
     }
   };
+  const max = (opts.all as { max?: number }).max;
   const d = keyedRows<Row, Record<string, string>>(key, rowSchema, pkField, {
     ...(opts.preload === undefined ? {} : { preload: opts.preload }),
+    ...(max === undefined ? {} : { maxRows: max }),
     validateParams,
   });
   return Object.assign(d, {

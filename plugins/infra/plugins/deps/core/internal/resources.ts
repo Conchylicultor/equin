@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { DepRowSchema } from "./dep-state";
 
@@ -11,7 +12,10 @@ import { DepRowSchema } from "./dep-state";
  * re-reads on every change. Reading it never starts an install.
  */
 export const depsStates = liveValue("deps.states", {
-  schema: z.array(DepRowSchema),
+  schema: wholeList(DepRowSchema, {
+    reason:
+      "one row per optional dependency the code declares — a closed handful (browsers, python envs, toolchains)",
+  }),
 });
 
 /**

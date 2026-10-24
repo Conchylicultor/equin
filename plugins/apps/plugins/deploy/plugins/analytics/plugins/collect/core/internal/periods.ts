@@ -70,6 +70,12 @@ export interface ReportPeriod {
   buckets: string[];
 }
 
+/**
+ * The most series buckets one period has: `30d`'s 30 days (`today` has 24
+ * hours, `7d` 7 days, `12m` 12 months). The report schema caps a series at it.
+ */
+export const MAX_SERIES_BUCKETS = 30;
+
 function dayBuckets(from: string, count: number): string[] {
   return Array.from({ length: count }, (_, i) => addDays(from, i));
 }

@@ -57,15 +57,3 @@ export const previewEndpoint = defineEndpoint({
 export const stopPreviewEndpoint = defineEndpoint({
   route: "POST /api/release/runs/:id/preview/stop",
 });
-
-const ReleaseLogLineSchema = z.object({
-  text: z.string(),
-  stream: z.enum(["stdout", "stderr"]),
-});
-
-export const ReleaseLogsResponseSchema = z.object({
-  lines: z.array(ReleaseLogLineSchema),
-});
-
-export type ReleaseLogLine = z.infer<typeof ReleaseLogLineSchema>;
-export type ReleaseLogsResponse = z.infer<typeof ReleaseLogsResponseSchema>;

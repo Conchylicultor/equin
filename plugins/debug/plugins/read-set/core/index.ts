@@ -5,5 +5,6 @@ export type {
   ResourceFreshness,
   ResourcePolicy,
   ResourceRoute,
+  ResourceShape,
   ResourcesDebug,
 } from "./resources-debug";

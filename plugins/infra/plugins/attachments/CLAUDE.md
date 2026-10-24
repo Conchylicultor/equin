@@ -90,7 +90,7 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
     - `getAttachment`
   - Register: `defineJob('attachments.orphan-sweep')`
   - Resources:
-    - `attachments.by-owner` (push, unbounded: one owner's attachments — the files a person attached to one task or block, a handful, never a growing log)
+    - `attachments.by-owner` (push, whole: one owner's attachments — the files a person attached to one task or block, a handful, never a growing log)
     - `attachments.file` (push)
   - Routes:
     - `POST /api/attachments`
@@ -103,6 +103,7 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
     - `infra/endpoints.dateString`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
   - Exports (types):
     - `Attachment`
     - `AttachmentFile`

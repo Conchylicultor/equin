@@ -13,6 +13,7 @@ const status: GitStatus = {
   untrackedDirs: ["newdir/sub"],
   ignoredDirs: ["node_modules", "pkg/node_modules"],
   ignoredFiles: ["src/z.log"],
+  truncated: false,
 };
 
 describe("indexGitStatus", () => {

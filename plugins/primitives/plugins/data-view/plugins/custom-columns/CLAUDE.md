@@ -15,7 +15,7 @@ User-defined custom columns for any DataView. Two stores:
 - **Values** (per-row user data keyed by `(dataViewId, rowKey, columnId)`) live in
   the `data_view_custom_values` DB table, surfaced by the `customColumnValues` live
   value (`liveValue` with `params: ["dataViewId"]`, served
-  `serveValue(…, { source: "db", unbounded })` — recomputed by the change feed on
+  `serveValue(…, { source: "db" })`, its schema a `wholeList` — recomputed by the change feed on
   every write) + a single upsert/delete-on-empty endpoint. A value, not a
   collection: the composite key has no single id to read a row by. The table,
   the live value and the two endpoints are the portable child
@@ -133,12 +133,13 @@ how the caller obtained it.
     - `primitives/data-view.readDataViewConfigDoc`
     - `primitives/data-view.watchDataViewConfigDoc`
     - `primitives/data-view/custom-columns/values._dataViewCustomValues`
-  - Resources: `data-view-custom-column-defs` (push, notified)
+  - Resources: `data-view-custom-column-defs` (push, notified, whole: the custom columns a person added to one DataView surface — a handful)
 - Core:
   - Uses:
     - `ids.defineIdKind`
     - `ids.IdOf`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
   - Exports (types):
     - `CustomColumnDef`
     - `CustomColumnId`

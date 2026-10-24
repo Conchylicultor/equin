@@ -36,8 +36,9 @@ export type RecurrenceFreq = (typeof RECURRENCE_FREQS)[number];
 export const RecurrenceRuleSchema = z.object({
   freq: z.enum(RECURRENCE_FREQS),
   interval: z.number().int().positive().default(1),
-  byWeekday: z.array(z.enum(WEEKDAYS)).optional(),
-  byMonthDay: z.array(z.number().int().min(1).max(31)).optional(),
+  // Capped (a live read walks every list it serves): a weekday set, a month-day set.
+  byWeekday: z.array(z.enum(WEEKDAYS)).max(WEEKDAYS.length).optional(),
+  byMonthDay: z.array(z.number().int().min(1).max(31)).max(31).optional(),
   nthWeekday: z
     .object({
       nth: z.number().int().min(-1).max(5),

@@ -43,9 +43,11 @@ type WorkPayload =
  * - Three states, never two: `loading` (nothing known yet), `error` (one of
  *   the reads failed — the combine's precedence is error > loading > ready), and
  *   `ready`, whose value is one the server currently vouches for.
- * - `files` is the edited-files `Resolvable` payload (spelled structurally to
- *   keep the live-state import out): the loader returns a first-class
- *   "no trustworthy worktree" non-value instead of lying with `[]`.
+ * - `files` is the edited-files `Resolvable` read (`useEditedFiles`, spelled
+ *   structurally to keep the live-state import out): the server returns a
+ *   first-class "no trustworthy worktree" non-value instead of lying with `[]`.
+ *   Resolved, it carries the whole set's `summary` and the files loaded — the
+ *   whole set, or its first page-cap of them (`complete: false`).
  * - `work` is the attempt-standing `Resolvable`, in the same shape and for the
  *   same reason. It replaces what used to be a `pushes` array, and that swap is
  *   the whole point of this file: an empty array of push rows was read as proof
@@ -61,7 +63,14 @@ export type ExitDecision = CombinedResources<{
   work: ResourceResult<WorkPayload>;
   hasSibling: ResourceResult<boolean>;
   files: ResourceResult<
-    | { resolved: true; value: readonly { path: string }[] }
+    | {
+        resolved: true;
+        value: {
+          files: readonly { path: string }[];
+          summary: { count: number };
+          complete: boolean;
+        };
+      }
     | { resolved: false; reason: string }
   >;
 }>;
@@ -164,11 +173,17 @@ export function deriveExitMode({
       // "no trustworthy worktree" non-value rather than lying with `[]`. An
       // unresolved set is as undecidable as an errored resource — surface the
       // same non-destructive "Close (state unknown)" BEFORE
-      // `files.value.length` is even expressible, so the destructive "Drop &
+      // `files.value` is even expressible, so the destructive "Drop &
       // Close" default is unreachable by construction, not by a remembered guard.
       if (!files.resolved) return { mode: "exit-error", provisional: false };
-      if (files.value.length > 0) {
-        if (files.value.every((f) => f.path.startsWith("research/")))
+      const edited = files.value;
+      if (edited.summary.count > 0) {
+        // "Go" only when the WHOLE set is research docs: a list cut at its
+        // cap cannot say what the files past it are, so it pushes.
+        if (
+          edited.complete &&
+          edited.files.every((f) => f.path.startsWith("research/"))
+        )
           return { mode: "go", provisional: false };
         return { mode: "push-and-exit", provisional: false };
       }

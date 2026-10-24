@@ -97,12 +97,15 @@ an empty titled card); a count goes in `summary`, via the shared `SectionCount`.
     - `resource.declare` "plugin-view.facets-tree"
     - `resource.declare` "plugin-view.tree"
   - Resources:
-    - `plugin-view.facets-tree` (invalidate, notified)
-    - `plugin-view.tree` (invalidate, notified)
+    - `plugin-view.facets-tree` (invalidate, notified, whole: this checkout's plugin tree — one node per plugin (about 1.5k), the code's own structure, read whole by the explorer and Studio, whole: one entry per facet extractor — a closed set of a few dozen)
+    - `plugin-view.tree` (invalidate, notified, whole: this checkout's plugin tree — one node per plugin (about 1.5k), the code's own structure, read whole by the explorer and Studio, whole: one entry per facet extractor — a closed set of a few dozen)
 - Machine:
   - Uses: `network/live.serveValue`
 - Core:
-  - Uses: `network/live.liveValue`
+  - Uses:
+    - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
+    - `packages/list-bound.wholeRecord`
   - Exports (types):
     - `PluginNode`
     - `PluginTreePayload`

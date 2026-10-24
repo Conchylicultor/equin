@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeRecord } from "@plugins/packages/plugins/list-bound/core";
 import type { ConfigValues } from "@plugins/config_v2/core";
 import type { PlacesSku } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
 import type { mapsUsageConfig } from "./config";
@@ -13,7 +14,10 @@ import type { mapsUsageConfig } from "./config";
 export const MapsMonthUsageSchema = z.object({
   month: z.string(),
   resetsAt: z.string().datetime(),
-  calls: z.record(z.string(), z.number().int().nonnegative()),
+  calls: wholeRecord(z.number().int().nonnegative(), {
+    reason:
+      "one entry per Places SKU called this month — the closed PLACES_SKUS set",
+  }),
 });
 export type MapsMonthUsage = z.infer<typeof MapsMonthUsageSchema>;
 

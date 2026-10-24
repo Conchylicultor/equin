@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import {
   declaredDefault,
   type FieldDef,
@@ -22,7 +23,10 @@ export function stringListField<
 ): StringListFieldDef & FieldMarks<O> {
   return Object.freeze({
     type: stringListFieldType,
-    schema: z.array(z.string()),
+    schema: wholeList(z.string(), {
+      reason:
+        "one row's own strings, stored in its column and read with the row",
+    }),
     defaultValue: opts?.default ?? [],
     ...declaredDefault(opts),
     meta: pickMeta(opts),

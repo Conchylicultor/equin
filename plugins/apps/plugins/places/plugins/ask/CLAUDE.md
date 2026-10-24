@@ -54,6 +54,7 @@ conversation under the `places.ask` scratch profile, shown as an
     - `infra/entity-extensions.defineExtensionShape`
     - `integrations/google-maps/places-api.PlaceCandidateSchema`
     - `network/live.liveCollection`
+    - `packages/list-bound.wholeRecord`
   - Exports (types):
     - `PickSource`
     - `PlacesAskInput`

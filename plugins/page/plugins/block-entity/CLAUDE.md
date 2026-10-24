@@ -15,6 +15,7 @@
     - `fields/rank/config.rankField`
     - `fields/text/config.textField`
     - `infra/entities.entityRef`
+    - `packages/list-bound.wholeRecord`
   - Exports (types): `BlockData`
   - Exports (values):
     - `asBlockData`

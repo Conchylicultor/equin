@@ -47,7 +47,7 @@ The **secret** type's config capability, spanning all four runtimes:
     - `ui/icons.Icon`
 - Server:
   - Contributes: `resource.declare` "config-v2.secret-meta"
-  - Resources: `config-v2.secret-meta` (push, notified)
+  - Resources: `config-v2.secret-meta` (push, notified, whole: one descriptor's secret fields — bounded by its schema)
 - Machine:
   - Uses: `network/live.serveValue`
 - Central:
@@ -58,6 +58,7 @@ The **secret** type's config capability, spanning all four runtimes:
     - `config_v2/fields.fieldSample`
     - `fields/secret.secretFieldType`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeRecord`
   - Exports (types):
     - `ConfigV2SecretMeta`
     - `SecretFieldDef`

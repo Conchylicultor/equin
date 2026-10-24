@@ -28,6 +28,7 @@ import {
   commitsLines,
   commitsLinesByExt,
   type CommitBucket,
+  commitPointsNote,
 } from "../../shared";
 import { LiveChart } from "./live-chart";
 import {
@@ -112,6 +113,7 @@ export function CumulativeLinesChart({ dedup }: { dedup?: boolean }) {
       subject="the lines changed"
       isEmpty={(d) => d.points.length === 0}
       emptyText="No commits yet."
+      note={commitPointsNote}
     >
       {({ points }) => <CumulativeLinesBody rawPoints={points} />}
     </LiveChart>
@@ -227,6 +229,7 @@ export function LinesRateChart({
       subject="the lines changed"
       isEmpty={(d) => d.points.length === 0}
       emptyText="No commits yet."
+      note={commitPointsNote}
     >
       {({ points }) => <LinesRateBody rawPoints={points} bucket={bucket} />}
     </LiveChart>
@@ -358,6 +361,7 @@ export function CumulativeLinesBreakdownChart({ dedup }: { dedup?: boolean }) {
       subject="the lines changed"
       isEmpty={(d) => d.points.length === 0}
       emptyText="No commits yet."
+      note={commitPointsNote}
     >
       {({ points }) => <CumulativeLinesBreakdownBody points={points} />}
     </LiveChart>
@@ -445,6 +449,7 @@ export function LinesRateBreakdownChart({
       subject="the lines changed"
       isEmpty={(d) => d.points.length === 0}
       emptyText="No commits yet."
+      note={commitPointsNote}
     >
       {({ points }) => (
         <LinesRateBreakdownBody points={points} bucket={bucket} />

@@ -104,7 +104,7 @@ a steady-state reboot writes nothing).
     - `reindexPage`
   - Register: `defineJob('page.links.reindex')`
   - Resources:
-    - `page-backlinks` (push, unbounded: the pages that link to one page — a join over page_links and the live page blocks, not the rows of one table)
+    - `page-backlinks` (push, whole: the pages that link to one page — a join over page_links and the live page blocks, not the rows of one table, whole: one page's ancestors — as deep as the page tree nests)
     - `page-links.sources` (keyed)
     - `page-links.sources:rows` (keyed, point)
 - Web:
@@ -131,6 +131,7 @@ a steady-state reboot writes nothing).
     - `fields/string-list/config.stringListField`
     - `network/live.liveCollection`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
     - `page/block-entity.pagesEntityRef`
     - `ui/icons/emoji.EmojiSchema`
   - Exports (types):

@@ -30,7 +30,7 @@ takes the `total` and says when the list is capped.
 - Description: Fuzzy file path resolution via segment-subsequence matching against git ls-files.
 - Server:
   - Contributes: `resource.declare` "code.resolve-file"
-  - Resources: `code.resolve-file` (invalidate, notified)
+  - Resources: `code.resolve-file` (invalidate, notified, capped: RESOLVE_MAX_MATCHES)
 - Web:
   - Uses:
     - `network/live.useLive`

@@ -166,12 +166,14 @@ state rather than the previous window's numbers.
     - `defineJob('retention.latency_ledger_host_minute')`
     - `defineJob('retention.latency_ledger_thread_minute')`
     - `defineJob('retention.latency_ledger_interaction')`
-  - Resources: `latency-ledger.summary` (invalidate, notified)
+  - Resources: `latency-ledger.summary` (invalidate, notified, whole: the plugins whose code ran on the serving thread — each minute keeps only its top owners (the rest as `other`), so a window holds a few dozen, capped: LATENCY_METRICS.length, capped: EXIT_CRITERIA.length, capped: SLOWEST_INTERACTIONS)
   - Routes: `POST /api/latency-ledger/client`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
+    - `packages/list-bound.cappedList`
+    - `packages/list-bound.wholeList`
   - Exports (types):
     - `ClientLatencyMetric`
     - `ClientMinute`
@@ -206,6 +208,7 @@ state rather than the previous window's numbers.
     - `percentileFromCounts`
     - `PRESSURE_DECOMPRESSIONS_PER_SEC`
     - `PRESSURE_FREE_MEM_MB`
+    - `SLOWEST_INTERACTIONS`
     - `submitClientLatency`
     - `THREAD_STALL_MS`
 - Exemptions:

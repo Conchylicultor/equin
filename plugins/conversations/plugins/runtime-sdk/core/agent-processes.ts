@@ -1,15 +1,20 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 export const AgentProcessesSchema = z.object({
   /** SDK agent processes this backend's namespace launched that are alive. */
   here: z.number().int().nonnegative(),
   /** Every other namespace on the machine with live agents, by namespace. */
-  elsewhere: z.array(
+  elsewhere: wholeList(
     z.object({
       namespace: z.string(),
       running: z.number().int().positive(),
     }),
+    {
+      reason:
+        "one entry per namespace on this machine with a live agent — at most its worktrees",
+    },
   ),
 });
 export type AgentProcesses = z.infer<typeof AgentProcessesSchema>;

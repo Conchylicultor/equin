@@ -129,7 +129,7 @@ filesystem event; the 30 s tick is what notices it.
 - Machine:
   - Uses: `network/live.serveCollection`
 - Core:
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug/profiling/op-log` ×10
     - `fields/text/config` ×3
     - `fields` ×2
@@ -141,6 +141,7 @@ filesystem event; the 30 s tick is what notices it.
     - `infra/entities.entityRef`
     - `infra/worktree.OP_KIND_IDS`
     - `network/live.liveCollection`
+    - `packages/list-bound.wholeList`
   - Exports (types):
     - `OpRow`
     - `StoreClosedBy`

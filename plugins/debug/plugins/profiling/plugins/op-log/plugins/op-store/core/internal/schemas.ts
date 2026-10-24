@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { fieldsToZodObject, nullable } from "@plugins/fields/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
@@ -153,7 +154,12 @@ export const OP_ROW_CARRIED = {
   /** Non-null ⇔ terminal. THE in-flight predicate (`completedAt` is not one). */
   closedBy: nullable(parsedTextField(StoreClosedBySchema, { default: "self" })),
   /** Closed waits, in order. */
-  waits: jsonField({ schema: z.array(OpWaitSchema), default: [] }),
+  waits: jsonField({
+    schema: wholeList(OpWaitSchema, {
+      reason: "one op's waits, folded from its own op log as it runs",
+    }),
+    default: [],
+  }),
   /** The wait the op is parked in right now; `null` when working or closed. */
   openWait: nullable(
     jsonField({ schema: OpenWaitSchema, default: {} as OpenWait }),
@@ -164,7 +170,12 @@ export const OP_ROW_CARRIED = {
   closedWaitMs: floatField(),
   holdMs: floatField(),
   totalMs: floatField(),
-  steps: jsonField({ schema: z.array(OpStepSchema), default: [] }),
+  steps: jsonField({
+    schema: wholeList(OpStepSchema, {
+      reason: "one op's steps — the fixed phases of a build / push / check",
+    }),
+    default: [],
+  }),
   /** Highest v2 `seq` applied; 0 for a legacy op. */
   lastSeq: intField(),
   /**
@@ -172,7 +183,12 @@ export const OP_ROW_CARRIED = {
    * from a writer without sleep stamps — and for every row stored before the
    * column existed (its DB default).
    */
-  sleeps: jsonField({ schema: z.array(OpSleepSchema), default: [] }),
+  sleeps: jsonField({
+    schema: wholeList(OpSleepSchema, {
+      reason: "the machine sleeps one op's lifetime spanned — a few at most",
+    }),
+    default: [],
+  }),
   /** The last sleep stamp applied — where the next sleep's gap starts. */
   sleepStamp: nullable(
     jsonField({ schema: OpSleepStampSchema, default: {} as OpSleepStamp }),

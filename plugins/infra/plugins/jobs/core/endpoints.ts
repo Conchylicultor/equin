@@ -1,10 +1,5 @@
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { DeadJobsPayloadSchema, JobsPayloadSchema } from "./resources";
-
-export const listJobs = defineEndpoint({
-  route: "GET /api/jobs",
-  response: JobsPayloadSchema,
-});
+import { DeadJobsPayloadSchema } from "./resources";
 
 export const listDeadJobs = defineEndpoint({
   route: "GET /api/jobs/dead",

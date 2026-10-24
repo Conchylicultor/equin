@@ -1,5 +1,10 @@
 import { serveValue } from "@plugins/network/plugins/live/server";
-import { PlaceLookupRefusal, placeResolve, placeSearch } from "../../core";
+import {
+  PLACE_SEARCH_MAX_SUGGESTIONS,
+  PlaceLookupRefusal,
+  placeResolve,
+  placeSearch,
+} from "../../core";
 import {
   getPlaceProvider,
   placeProviderIds,
@@ -33,7 +38,10 @@ export const placeSearchServed = serveValue(placeSearch, {
     },
   },
   loader: async ({ providerId, q, session }) => ({
-    suggestions: await requireProvider(providerId).search(q, session),
+    suggestions: (await requireProvider(providerId).search(q, session)).slice(
+      0,
+      PLACE_SEARCH_MAX_SUGGESTIONS,
+    ),
   }),
 });
 

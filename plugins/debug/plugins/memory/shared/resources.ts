@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 const MEMORY_FILE_TYPES = [
   "index",
@@ -23,7 +24,10 @@ export type MemoryFile = z.infer<typeof MemoryFileSchema>;
  */
 export const memoryFiles = liveValue("memory.files", {
   schema: z.object({
-    files: z.array(MemoryFileSchema),
+    files: wholeList(MemoryFileSchema, {
+      reason:
+        "the .md files of one project's memory directory — notes written by hand or by agents, a few dozen",
+    }),
     dir: z.string(),
   }),
 });

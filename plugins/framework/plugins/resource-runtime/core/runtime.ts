@@ -46,6 +46,8 @@ import {
   type TableLayoutRequirement,
   type TupleRouting,
   type TupleUse,
+  type RelationRead,
+  type UnfedRead,
   type UnresolvedReverse,
 } from "./routing";
 
@@ -275,6 +277,22 @@ export interface ResourceFreshness {
   reason?: string;
 }
 
+/**
+ * A value's declared shape — see `ResourceDefinition.shape`: every list its
+ * payload holds, capped (`max`) or loaded whole (`reason`), and the paths of
+ * the bare ones; `paged` when the payload is key-range pages (the lists are
+ * then its item's, under `[]`). `network/live`'s `LiveValueShape`, matched
+ * structurally (this module imports no declaration layer).
+ */
+export interface ResourceListShape {
+  readonly paged: boolean;
+  readonly bounds: readonly (
+    | { readonly path: string; readonly max: number }
+    | { readonly path: string; readonly reason: string }
+  )[];
+  readonly bare: readonly string[];
+}
+
 export interface ResourceDefinition<
   T,
   P extends ResourceParams = ResourceParams,
@@ -350,6 +368,19 @@ export interface ResourceDefinition<
    * hash encoder.
    */
   membership?: KeyedMembership<P>;
+  /**
+   * An EXTERNAL keyed entry's tables read outside the change feed — see
+   * `ExternalWindowPolicy.unfed`. Refused anywhere else (a throw in
+   * `createResource`): a routed entry routes every table it reads, and a
+   * non-keyed one declares them on its `reach` plan.
+   */
+  unfed?: readonly UnfedRead[];
+  /**
+   * An EXTERNAL keyed entry's relations read whole through the change feed —
+   * see `ExternalWindowPolicy.relations`. Refused anywhere else, as `unfed`
+   * is (a non-keyed entry declares them on its `reach` plan).
+   */
+  relations?: readonly RelationRead[];
   /**
    * Scoped change routing (see `RoutePlan` in `./routing`): every table
    * occurrence this resource's compiled query may read, and how each tuple reads
@@ -468,6 +499,12 @@ export interface ResourceDefinition<
    */
   freshness?: ResourceFreshness;
   /**
+   * The declared shape of the payload's lists (`network/live`'s `liveValue`
+   * walks its schema at declaration). A label only, like `freshness`: the
+   * `_debug` payload shows it per key; the parse is what enforces a cap.
+   */
+  shape?: ResourceListShape;
+  /**
    * The params gate — see `ResourceContract.validateParams`. Required on the
    * two-arg form (the contract carries it); optional only on the flat
    * `defineResource({...})` form, which predates it and declares no param
@@ -557,6 +594,8 @@ export type ScopePolicy<P extends ResourceParams = ResourceParams> =
       recomputeOn?: ReadonlyArray<RoutedRecomputeOn>;
       scopedMembership?: never;
       dependsOn?: never;
+      unfed?: never;
+      relations?: never;
     }
   | {
       routes: RoutePlan<P>;
@@ -566,6 +605,8 @@ export type ScopePolicy<P extends ResourceParams = ResourceParams> =
       recomputeOn?: ReadonlyArray<RoutedRecomputeOn>;
       membership?: never;
       dependsOn?: never;
+      unfed?: never;
+      relations?: never;
     };
 
 /**
@@ -617,6 +658,32 @@ export interface ExternalWindowPolicy<
   P extends ResourceParams = ResourceParams,
 > {
   membership: ExternalWindowMembership<P>;
+  /**
+   * The Postgres tables the loader reads that have NO change source by
+   * declaration — opted out of the feed (`ExcludeFromChangeFeed`): a table
+   * served off the feed (network/live's `serveCollection` with `changes`),
+   * whose writes arrive as the resource's own `notify`. Stored as an
+   * unfed-only routing record (it routes nothing), so the drift guard (A8 /
+   * D5) accepts the loader's captured reads of them, and listed by
+   * `unfedResourceTables()` — change-feed's boot check refuses one the feed
+   * does cover (a write it reports would reach nothing). Omit when the loader
+   * reads no Postgres table.
+   */
+  unfed?: readonly UnfedRead[];
+  /**
+   * The Postgres relations (tables, views, rollups) the loader reads WHOLE
+   * that the change feed DOES reach — a lookup beside the entry's own truth
+   * (a paged value's declared `reads`: network/live). Stored on the same
+   * routing record as `unfed` and indexed under each relation's bases
+   * (`indexRelationReads`, as a reach plan's relation reads): a write to a
+   * base re-reads every subscribed tuple whole (`drainMembershipFull`, the
+   * runtime's FULL path for an external keyed entry), merged with its
+   * notifies. The drift guard accepts the relation's name, and change-feed's
+   * boot check holds every base to a change source
+   * (`relationResourceReads()`, A1′). Still no `routes`: nothing scopes a
+   * write to some tuples.
+   */
+  relations?: readonly RelationRead[];
   routes?: never;
   scopedMembership?: never;
   reach?: never;
@@ -633,6 +700,10 @@ export interface ExternalPointPolicy<
   P extends ResourceParams = ResourceParams,
 > {
   membership: ExternalPointMembership<P>;
+  /** The tables its loader reads outside the change feed — see `ExternalWindowPolicy.unfed`. */
+  unfed?: readonly UnfedRead[];
+  /** The relations its loader reads whole through the feed — see `ExternalWindowPolicy.relations`. */
+  relations?: readonly RelationRead[];
   routes?: never;
   scopedMembership?: never;
   reach?: never;
@@ -688,6 +759,8 @@ type ExternalDefinition<T, P extends ResourceParams> = ResourceDefinition<
   routes?: never;
   reach?: never;
   recomputeOn?: never;
+  unfed?: never;
+  relations?: never;
 };
 
 /**
@@ -728,6 +801,8 @@ export interface ResourceContract<
   bytes?: true;
   /** A patched value — see `ResourceDefinition.patches`. */
   patches?: true;
+  /** The declared list shape, a `_debug` label — see `ResourceDefinition.shape`. */
+  shape?: ResourceListShape;
   /**
    * The params gate, declared once on the shared descriptor: throws
    * `ResourceContractError` when a subscription's wire params do not match
@@ -853,6 +928,8 @@ function contractToDefinition<T, P extends ResourceParams>(
     routes?: ResourceDefinition<T, P>["routes"];
     reach?: ResourceDefinition<T, P>["reach"];
     recomputeOn?: ResourceDefinition<T, P>["recomputeOn"];
+    unfed?: ResourceDefinition<T, P>["unfed"];
+    relations?: ResourceDefinition<T, P>["relations"];
   },
 ): ResourceDefinition<T, P> {
   refuseLegacyScopeKeys(form, contract.key, opts);
@@ -884,6 +961,7 @@ function contractToDefinition<T, P extends ResourceParams>(
     ...(contract.refusals !== undefined ? { refusals: contract.refusals } : {}),
     ...(contract.bytes === true ? { bytes: true as const } : {}),
     ...(contract.patches === true ? { patches: true as const } : {}),
+    ...(contract.shape !== undefined ? { shape: contract.shape } : {}),
     loader: opts.loader,
     dependsOn: opts.dependsOn,
     scopedMembership: opts.scopedMembership,
@@ -893,6 +971,8 @@ function contractToDefinition<T, P extends ResourceParams>(
     ...(opts.recomputeOn !== undefined
       ? { recomputeOn: opts.recomputeOn }
       : {}),
+    ...(opts.unfed !== undefined ? { unfed: opts.unfed } : {}),
+    ...(opts.relations !== undefined ? { relations: opts.relations } : {}),
     debounceMs: opts.debounceMs,
     onFirstSubscribe: opts.onFirstSubscribe,
     onLastUnsubscribe: opts.onLastUnsubscribe,
@@ -1202,6 +1282,8 @@ interface RegistryEntry {
   externalSource?: boolean;
   /** Declared freshness (`ResourceDefinition.freshness`) — surfaced in `_debug`. */
   freshness?: ResourceFreshness;
+  /** Declared list shape (`ResourceDefinition.shape`) — surfaced in `_debug`. */
+  shape?: ResourceListShape;
   /** Payload schema. The loader output is parsed against it in `timedLoad`. */
   schema: ZodParser<unknown>;
   loader: (
@@ -2852,14 +2934,16 @@ export function createResourceRuntime(
   // A routing record that routes nothing — the drift guard's own, for a guarded
   // external that declared no reads (D5). Every table it is indexed under is a
   // drifted relation's base, served FULL by `routeEntryChange`.
-  function driftOnlyRouting(): RoutingRecord {
+  function driftOnlyRouting(
+    unfed: ReadonlySet<string> = new Set(),
+  ): RoutingRecord {
     return {
       plan: NO_ROUTES,
       byTable: new Map(),
       routeIds: new Set(),
       matchOf: new Map(),
       derived: new Set(),
-      unfed: new Set(),
+      unfed,
       relations: new Map(),
       drifted: new Set(),
       relationBases: new Set(),
@@ -2867,6 +2951,56 @@ export function createResourceRuntime(
       seededDrift: new Set(),
       uses: new Map(),
     };
+  }
+
+  // An external keyed entry's declared reads (`ExternalWindowPolicy.unfed` /
+  // `.relations`): a routing record that routes nothing — the drift guard's
+  // own shape — holding them, so a capture of one is covered (`readCovered`),
+  // `unfedResourceTables()` lists the unfed tables for change-feed's opt-out
+  // check, and the relations are indexed under their bases like a reach
+  // plan's (`indexEntryRelations`: a write re-reads every target FULL). The
+  // types allow them only on the external keyed arms; this holds the line for
+  // an untyped caller or a cast, with `mintReachPlan`'s checks on the lists.
+  function externalKeyedRouting(
+    key: string,
+    reads: {
+      unfed: readonly UnfedRead[];
+      relations: readonly RelationRead[];
+    },
+    membershipField: "membership" | "scopedMembership" | null,
+    externalSource: boolean,
+  ): RoutingRecord {
+    if (!externalSource || membershipField !== "membership") {
+      const field = reads.unfed.length > 0 ? "unfed" : "relations";
+      throw new Error(
+        `defineResource: "${field}" on key "${key}" is the external keyed arm's (a window or point set no route reaches) — a routed entry routes every table it reads, and a non-keyed one declares its reads on its "reach" plan`,
+      );
+    }
+    const named = new Set<string>();
+    const once = (name: string, what: string, reason: string) => {
+      if (name.trim() === "" || named.has(name)) {
+        throw new Error(
+          `defineExternalResource: key "${key}" declares ${name.trim() === "" ? `an unnamed ${what}` : `${what} "${name}" twice`} — one entry per table.`,
+        );
+      }
+      if (reason.trim() === "") {
+        throw new Error(
+          `defineExternalResource: key "${key}" reads "${name}" (${what}) with no reason.`,
+        );
+      }
+      named.add(name);
+    };
+    const tables = new Set<string>();
+    for (const u of reads.unfed) {
+      once(u.table, "unfed table", u.reason);
+      tables.add(u.table);
+    }
+    const relations = new Map<string, string>();
+    for (const r of reads.relations) {
+      once(r.relation, "relation", r.reason);
+      relations.set(r.relation, r.reason);
+    }
+    return { ...driftOnlyRouting(tables), relations };
   }
 
   /**
@@ -3906,11 +4040,19 @@ export function createResourceRuntime(
       }
     }
 
-    const routing = routingRecordFor(
-      def as ResourceDefinition<unknown, ResourceParams>,
-      membershipField,
-      externalSource,
-    );
+    const routing =
+      def.unfed !== undefined || def.relations !== undefined
+        ? externalKeyedRouting(
+            def.key,
+            { unfed: def.unfed ?? [], relations: def.relations ?? [] },
+            membershipField,
+            externalSource,
+          )
+        : routingRecordFor(
+            def as ResourceDefinition<unknown, ResourceParams>,
+            membershipField,
+            externalSource,
+          );
     // The external keyed arm (`ExternalKeyedPolicy`) — never routed: its
     // routes were refused above. The types allow only a bounded window or a
     // point set; this holds the line for a cast.
@@ -4133,6 +4275,7 @@ export function createResourceRuntime(
       ...(def.patches === true ? { patches: true as const } : {}),
       externalSource,
       ...(def.freshness !== undefined ? { freshness: def.freshness } : {}),
+      ...(def.shape !== undefined ? { shape: def.shape } : {}),
       schema: def.schema as ZodParser<unknown>,
       loader: def.loader as (
         params: ResourceParams,
@@ -4239,6 +4382,7 @@ export function createResourceRuntime(
           : {}),
         ...(contract.bytes === true ? { bytes: true as const } : {}),
         ...(contract.patches === true ? { patches: true as const } : {}),
+        ...(contract.shape !== undefined ? { shape: contract.shape } : {}),
         // The contract's gate until the bind hands the server's own.
         validateParams: contract.validateParams,
         ...(external?.freshness !== undefined
@@ -7450,6 +7594,7 @@ export function createResourceRuntime(
       subTabs: Record<string, number>;
       externalSource: boolean;
       freshness: ResourceFreshness | null;
+      shape: ResourceListShape | null;
       definition?: string | null;
       lastReplaceAt?: number | null;
       lastFloorAt?: number | null;
@@ -7582,6 +7727,9 @@ export function createResourceRuntime(
         // The declared freshness of an external value (`null`: none declared —
         // a db entry, or a resource not served through `network/live`).
         freshness: entry.freshness ?? null,
+        // The declared shape of a value's lists (`null`: none declared — a
+        // collection's resources, or one not declared through `liveValue`).
+        shape: entry.shape ?? null,
         // L2 bookkeeping, for a persisted key only: its definition (A18), when
         // this process last replaced / floor-wrote its row, and the row's
         // `position_at` as last known (epoch ms; null = never in this process).

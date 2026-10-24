@@ -200,10 +200,16 @@ exactly when the parent survived the run (the case that never needed it) and was
 absent for every genuinely orphaned release (the case it was written for). That
 is why `resolveOrphanExitCode` always fell through to the `-1` sentinel.
 
-The live value `release.run-logs` (params `{ id }`) reads the supervised run's
+The live value `release.run-logs` (query `{ id }`) reads the supervised run's
 transcript file, which the CHILD writes for every run whatever becomes of it. It
-is served external and `notified` by a dir-hub watch on that file while a tuple
-is read: a live run's transcript grows, the prune can reap a finished one, and a
+is a key-range-paged value (the `debug.logs.lines` precedent): lines
+`{ n, text, stream }`, newest first, keyed by their zero-padded line number,
+500 per page — the run-detail pane's log section is a DataView paging it by
+viewport, so a long log is never held whole. The server parses the file once
+per `(size, mtime)` (`transcript.ts`'s `releaseTranscriptLines`, dropped when
+the run's last page is released) and slices every page from that array
+(`sliceRange`). It is served external and `notified` by a dir-hub watch on that
+file while a page is read: a live run's transcript grows, the prune can reap a finished one, and a
 terminal run's never changes — so the watch is silent exactly when the answer is
 immutable, with no read of the run row in the loader. Two consequences:
 a **successful** finished run now has a readable log pane (it used to be empty),
@@ -290,10 +296,11 @@ the two endpoints that selected it).
     `(composition, platform)`, live (see above).
   - `releasePreviews` / `Preview` — the live preview map, read with
     `useLive(releasePreviews)`.
-  - `releaseRunLogs` — `release.run-logs`, params `{ id }`: one run's
-    persisted log (its supervised-run transcript), external `notified` by a
-    watch on the transcript while read; an id that is not one path segment is
-    refused `invalid-id`. It replaced `releaseLogsEndpoint`.
+  - `releaseRunLogs` — `release.run-logs`, query `{ id }`, key-range paged
+    by line number (newest first): one run's persisted log (its supervised-run
+    transcript), external `notified` by a watch on the transcript while read;
+    an id that is not one path segment is refused `invalid-id`. It replaced
+    `releaseLogsEndpoint`.
 
 ## Discovery
 
@@ -430,14 +437,14 @@ remote is built here.
     - `resource.declare` "release.previews"
     - `resource.declare` "release.run-logs"
     - `resource.declare` "release.runs:rows"
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `release/bundles` ×6
     - `infra/jobs/supervised-job` ×3
+    - `network/live` ×3
     - `infra/endpoints` ×2
     - `infra/entities` ×2
     - `infra/launcher` ×2
     - `infra/paths` ×2
-    - `network/live` ×2
     - `database.db`
     - `ids.IdKinds`
     - `infra/file-watcher.acquireDirWatch`
@@ -460,12 +467,12 @@ remote is built here.
     - `defineSupervisedJob('release.run.supervised')`
     - `defineDaemon('release.preview')`
   - Resources:
-    - `release.candidate` (push, notified)
+    - `release.candidate` (push, notified, whole: one composition's release run dirs on disk — the few the artifact prune keeps)
     - `release.history` (keyed, window)
     - `release.history:groups` (push)
     - `release.history:rows` (keyed, point)
-    - `release.previews` (push, notified)
-    - `release.run-logs` (push, notified)
+    - `release.previews` (push, notified, whole: one entry per running preview process — a handful at a time)
+    - `release.run-logs` (keyed, window, notified)
     - `release.runs:rows` (keyed, point)
   - Routes:
     - `POST /api/release`
@@ -487,6 +494,8 @@ remote is built here.
     - `network/live.liveCollection`
     - `network/live.LiveRowsCollection`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
+    - `packages/list-bound.wholeRecord`
     - `release/bundles.ReleaseManifestSchema`
     - `release/bundles.releaseRunIdKind`
   - Exports (types):
@@ -497,8 +506,9 @@ remote is built here.
     - `ReleaseHistoryRow`
     - `ReleaseIntent`
     - `ReleaseLogLine`
-    - `ReleaseLogsResponse`
     - `ReleaseRun`
+    - `ReleaseRunLogsQuery`
+    - `ReleaseRunLogsRefusal`
     - `ReleaseTarget`
   - Exports (values):
     - `bunCompileTarget`
@@ -521,7 +531,6 @@ remote is built here.
     - `ReleaseCandidateSchema`
     - `releaseHistory`
     - `ReleaseIntentSchema`
-    - `ReleaseLogsResponseSchema`
     - `releasePreviews`
     - `releaseRunFields`
     - `releaseRunLogs`

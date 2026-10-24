@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  wholeList,
+  wholeRecord,
+} from "@plugins/packages/plugins/list-bound/core";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import type { TokenGroupFragment } from "./define-token-group";
 
@@ -30,14 +34,18 @@ export const NEUTRAL_COLOR_ADJUSTMENT: ColorAdjustment = {
   lightnessScale: 1,
 };
 
-const TokenValuesSchema = z.record(z.string(), z.string());
+const TokenValuesSchema = wholeRecord(z.string(), {
+  reason: "one token group's variables — its declared schema",
+});
 
 /** The wire / storage form of one `TokenGroupFragment`. */
 export const TokenGroupFragmentSchema = z.object({
   groupId: z.string(),
   light: TokenValuesSchema,
   dark: TokenValuesSchema,
-  meta: z.record(z.string(), z.unknown()).optional(),
+  meta: wholeRecord(z.unknown(), {
+    reason: "one fragment's import metadata — a few keys",
+  }).optional(),
 }) satisfies ZodParser<TokenGroupFragment>;
 
 /** The group a theme names twice, if any — a theme has at most one fragment per group. */
@@ -57,9 +65,9 @@ export function duplicateGroupId(
  * group: which of them wins would depend on array order, which nothing else
  * treats as meaningful.
  */
-export const TokenGroupFragmentsSchema = z
-  .array(TokenGroupFragmentSchema)
-  .superRefine((fragments, ctx) => {
+export const TokenGroupFragmentsSchema = wholeList(TokenGroupFragmentSchema, {
+  reason: "at most one fragment per token group — tens of groups",
+}).superRefine((fragments, ctx) => {
     const dup = duplicateGroupId(fragments);
     if (dup !== undefined) {
       ctx.addIssue({

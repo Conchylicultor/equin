@@ -262,8 +262,8 @@ the total request/byte volume versus the old full-mailbox, full-body crawl.
     - `defineJob('mail.attachment-scan')`
     - `defineJob('mail.hydrate')`
   - Resources:
-    - `mail-sync-state` (push, unbounded: one row per connected mail account — the app is single-account today)
-    - `mail.message-body` (push)
+    - `mail-sync-state` (push, whole: one row per connected mail account — the app is single-account today)
+    - `mail.message-body` (push, whole: one message's attachments — Gmail bounds a message at 25 MB)
     - `mail.search` (keyed, window, fixed)
   - Routes:
     - `POST /api/mail/sync`
@@ -285,6 +285,7 @@ the total request/byte volume versus the old full-mailbox, full-body crawl.
     - `apps/mail/mail-core.MailAttachmentSchema`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
   - Exports (types):
     - `MailMessageBody`
     - `MailSearchHit`

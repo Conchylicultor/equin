@@ -20,6 +20,7 @@ import {
 } from "@plugins/stats/plugins/commits/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { costDaily, type CostDay } from "../../shared/values";
+import { costDaysNote } from "../../shared/derive";
 import { useShowEmptyDays } from "@plugins/stats/web";
 import { formatUsd, formatUsdCompact } from "../../core";
 import { useScope } from "./use-scope";
@@ -57,6 +58,7 @@ export function DailyCostChart() {
       size="lg"
       isEmpty={(d) => d.days.length === 0}
       emptyText="No cost recorded yet."
+      note={costDaysNote}
     >
       {(d) => <DailyCostBody days={d.days} models={d.models} />}
     </LiveChart>

@@ -1,11 +1,15 @@
 import { serveValue } from "@plugins/network/plugins/live/machine";
+import { sliceRange } from "@plugins/network/plugins/live/server";
 import {
   conversationChainTag,
   watchPaths,
 } from "@plugins/conversations/plugins/transcript-watcher/server";
 import { transcriptChainReads } from "@plugins/conversations/plugins/transcript-source/server";
-import type { SubagentRef, SubagentTranscript } from "../../core";
-import { SubagentRefSchema, subagentTranscript } from "../../core";
+import {
+  subagentTranscript,
+  type SubagentTranscript,
+  type SubagentTranscriptQuery,
+} from "../../core";
 import {
   evictSubagentTranscript,
   primeSubagentTranscript,
@@ -16,29 +20,43 @@ import {
   readSubagentTranscript,
   resolveTranscriptTargets,
 } from "./transcript-read";
+import {
+  subagentTranscriptMeta,
+  subagentTranscriptRows,
+} from "./transcript-pages";
 
-/**
- * The ref a subscription names. Every value param reaches the server as a plain
- * string, so `by` is re-parsed here rather than trusted to be `call` | `agent`.
- */
-function refOf({ by, key }: { by: string; key: string }): SubagentRef {
-  return SubagentRefSchema.parse({ by, key });
+/** The memoized read of the sub-agent a question names. */
+function transcriptOf({
+  id,
+  by,
+  key,
+}: SubagentTranscriptQuery): Promise<SubagentTranscript> {
+  return subagentTranscriptMemo.get(transcriptMemoKey(id, { by, key }));
 }
 
+// Paged like the conversation's own transcript (`jsonl-events`): every page and
+// the meta read the sub-agent's events through ONE memo, primed by the room
+// before anything is notified, so a recompute slices memory and a change ships
+// the rows it touched — never the whole transcript.
 export const subagentTranscriptServed = serveValue(subagentTranscript, {
   source: "external",
   changes: "notified",
-  // The loader resolves the transcript chain from Postgres before reading files.
+  // The pages and the meta resolve the transcript chain from Postgres before
+  // reading files: a write there re-reads every subscribed page whole.
   reads: transcriptChainReads,
-  loader: ({ id, ...ref }) =>
-    subagentTranscriptMemo.get(transcriptMemoKey(id, refOf(ref))),
-  revalidate: ({ id, ...ref }) =>
-    subagentTranscriptMemo.signature(transcriptMemoKey(id, refOf(ref))),
+  loader: async (query, range) =>
+    sliceRange(
+      subagentTranscript,
+      subagentTranscriptRows(await transcriptOf(query)),
+      range,
+    ),
+  meta: async (query) => subagentTranscriptMeta(await transcriptOf(query)),
   // Watch the sub-agent's file (or, while it is still starting, its
-  // directories) while its pane is open. A synchronous start: `watchPaths`
-  // hands back its unsubscribe at once.
-  whileSubscribed: ({ id, ...params }, notify) => {
-    const ref = refOf(params);
+  // directories) while any page of its pane is open — once per question,
+  // however its pages split. A synchronous start: `watchPaths` hands back its
+  // unsubscribe at once.
+  whileSubscribed: ({ id, by, key }, notify) => {
+    const ref = { by, key };
     const memoKey = transcriptMemoKey(id, ref);
     const unsub = watchPaths<SubagentTranscript>(
       {

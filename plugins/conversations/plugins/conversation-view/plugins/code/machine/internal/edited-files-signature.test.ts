@@ -13,10 +13,12 @@ import {
   insertConversation,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { editedFilesSignature } from "../../server/internal/edited-files-signature";
-import {
-  editedFilesSignatureFor,
-  loadEditedFilesFor,
-} from "./edited-files-resource";
+import { sliceRange } from "@plugins/network/plugins/live/server";
+import { checkPagedSource } from "@plugins/network/plugins/live/server/testing";
+import { resolved } from "@plugins/primitives/plugins/live-state/core";
+import { editedFiles } from "../../core";
+import type { EditedFile } from "../../core/protocol";
+import { editedFilesMetaOf, loadEditedFilesFor } from "./edited-files-resource";
 
 // Real throwaway git repos (no fixture helper exists for this shape — the nearest
 // precedent is commit-list's run-git.test.ts, which also mkdtemps a repo under
@@ -133,25 +135,21 @@ describe("editedFilesSignature", () => {
   });
 });
 
-describe('unresolvable worktree — one consistent (unresolved, "no-worktree") pair', () => {
+describe("unresolvable worktree — one determinate unresolved state", () => {
   // An unresolvable worktree means the edited-file set is UNKNOWN, not empty. The
-  // loader now SAYS SO in the payload (`unresolved`) instead of throwing (the old
-  // wedge) or lying with `[]`; the revalidate collapses onto the constant
-  // `"no-worktree"` ETag. Both are produced from the SAME `onWorktree` branch, so
-  // they are one consistent signature/value pair — never a fresh ETag over a stale
-  // value. `[]` / `"none"` would render a legitimate "no changes" and arm the
-  // destructive Drop & Close.
+  // loader SAYS SO (`unresolved`, carried by the value's meta) instead of throwing
+  // (the old wedge) or lying with `[]` — which would render a legitimate "no
+  // changes" and arm the destructive Drop & Close.
   const NO_SUCH_CONVERSATION =
     "edited-files-signature-test-no-such-conversation";
 
-  test('no worktree at all: loader → unresolved, revalidate → "no-worktree"', async () => {
+  test("no worktree at all: unresolved, and so is the meta", async () => {
     const files = await loadEditedFilesFor(NO_SUCH_CONVERSATION);
-    const signature = await editedFilesSignatureFor(NO_SUCH_CONVERSATION);
     expect(files.resolved).toBe(false);
-    expect(signature).toBe("no-worktree");
+    expect(editedFilesMetaOf(files).resolved).toBe(false);
   });
 
-  test('worktree reaped mid-compute: same (unresolved, "no-worktree") pair', async () => {
+  test("worktree reaped mid-compute: the same unresolved state", async () => {
     // A conversation whose worktreePath resolves in the DB but whose directory is
     // gone — the reap the `onWorktree` catch handles (git shelled in a vanished
     // cwd throws WorktreeGoneError), distinct from the never-had-a-worktree branch
@@ -178,8 +176,51 @@ describe('unresolvable worktree — one consistent (unresolved, "no-worktree") p
     });
 
     const files = await loadEditedFilesFor(convId);
-    const signature = await editedFilesSignatureFor(convId);
     expect(files.resolved).toBe(false);
-    expect(signature).toBe("no-worktree");
+  });
+});
+
+describe("edited-files pages and meta", () => {
+  const file = (
+    path: string,
+    additions: number,
+    deletions: number,
+  ): EditedFile => ({
+    path,
+    status: "modified",
+    additions,
+    deletions,
+  });
+  const files = [
+    file("src/b.ts", 3, 1),
+    file("README.md", 1, 0),
+    file("src/a.ts", 10, 4),
+    file("research/plan.md", 2, 2),
+  ];
+
+  test("pages by path within the paged value's key contract", async () => {
+    await checkPagedSource({
+      value: editedFiles,
+      query: { id: "conv" },
+      loader: (_q, range) => sliceRange(editedFiles, files, range),
+      items: files,
+      limits: [1, 3],
+    });
+    expect(
+      sliceRange(editedFiles, files, {
+        after: null,
+        until: null,
+        limit: 10,
+      }).map((f) => f.path),
+    ).toEqual(["README.md", "research/plan.md", "src/a.ts", "src/b.ts"]);
+  });
+
+  test("the meta totals the whole set", () => {
+    expect(editedFilesMetaOf(resolved(files))).toEqual(
+      resolved({ count: 4, additions: 16, deletions: 7 }),
+    );
+    expect(editedFilesMetaOf(resolved([]))).toEqual(
+      resolved({ count: 0, additions: 0, deletions: 0 }),
+    );
   });
 });

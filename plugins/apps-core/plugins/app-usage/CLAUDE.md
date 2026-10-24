@@ -59,12 +59,13 @@ every flush.
     - `network/live.serveValue`
   - DB schema: `plugins/apps-core/plugins/app-usage/server/internal/tables.ts`
   - Exports (values): `_appUsageDaily`
-  - Resources: `app-usage.summary` (push, unbounded: one row per app id ever used — bounded by the installed app registry (tens of apps), never by time: the GROUP BY folds every day into its app)
+  - Resources: `app-usage.summary` (push, whole: one row per app id ever used — bounded by the installed app registry (tens of apps), never by time: the GROUP BY folds every day into its app)
   - Routes: `POST /api/app-usage/flush`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
   - Exports (types):
     - `AppUsageEntry`
     - `AppUsageSummaryRow`

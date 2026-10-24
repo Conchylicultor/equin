@@ -1,6 +1,10 @@
 import { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import type { SymbolRef } from "@plugins/ui/plugins/icons/core";
+import {
+  cappedList,
+  wholeList,
+} from "@plugins/packages/plugins/list-bound/core";
 import { TRIGGER_KINDS } from "./settings";
 
 /** One thing an automation watches (a dependency updater, …), which the person
@@ -27,7 +31,9 @@ export type AutomationSource = z.infer<typeof AutomationSourceSchema>;
  *   its event, or its schedule is invalid (`scheduleError` says why).
  */
 export const AutomationTriggerSchema = z.object({
-  kinds: z.array(z.enum(TRIGGER_KINDS)).min(1),
+  kinds: cappedList(z.enum(TRIGGER_KINDS), { max: TRIGGER_KINDS.length }).min(
+    1,
+  ),
   current: z.enum(TRIGGER_KINDS),
   words: z.string(),
   eventLabel: z.string().nullable(),
@@ -62,8 +68,13 @@ const AutomationEntryBaseSchema = z.object({
   description: z.string(),
   enabled: z.boolean(),
   trigger: AutomationTriggerSchema,
-  sources: z.array(AutomationSourceSchema),
-  promptVariables: z.array(PromptVariableSchema),
+  sources: wholeList(AutomationSourceSchema, {
+    reason:
+      "what one automation watches — e.g. one per dependency updater, declared in code",
+  }),
+  promptVariables: wholeList(PromptVariableSchema, {
+    reason: "one automation's prompt variables — a handful, declared in code",
+  }),
 });
 
 /**
@@ -95,7 +106,10 @@ export const AutomationEntrySchema = z.discriminatedUnion("kind", [
   AutomationEntryBaseSchema.extend({
     kind: z.literal("launch"),
     concurrency: z.number().int(),
-    runningTaskIds: z.array(z.string()),
+    runningTaskIds: wholeList(z.string(), {
+      reason:
+        "the tasks one launch-kind automation holds a slot for — at most its concurrency",
+    }),
     maxLaunches: z.number().int(),
     launchedInBatch: z.number().int(),
     approvedCount: z.number().int(),

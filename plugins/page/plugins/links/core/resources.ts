@@ -1,5 +1,5 @@
-import { z } from "zod";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { stringListField } from "@plugins/fields/plugins/string-list/plugins/config/core";
 import { pagesEntityRef } from "@plugins/page/plugins/block-entity/core";
 import { BacklinkRowSchema } from "./schemas";
@@ -11,7 +11,10 @@ import { BacklinkRowSchema } from "./schemas";
 // title and icon out of its `data` JSON), not the rows of one table, and the
 // edge table's key is the composite (source, target) pair.
 export const pageBacklinks = liveValue("page-backlinks", {
-  schema: z.array(BacklinkRowSchema),
+  schema: wholeList(BacklinkRowSchema, {
+    reason:
+      "the pages that link to one page — a join over page_links and the live page blocks, not the rows of one table",
+  }),
   params: ["pageId"],
 });
 

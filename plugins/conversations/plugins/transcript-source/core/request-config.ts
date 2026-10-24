@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 /**
  * The settings one model API call was made with, lifted from Claude Code's
@@ -14,7 +15,9 @@ export const RequestConfigSchema = z.object({
   thinking: z.string().optional(),
   maxTokens: z.number().optional(),
   permissionMode: z.string().optional(),
-  betas: z.array(z.string()),
+  betas: wholeList(z.string(), {
+    reason: "one model call's beta flags — a handful",
+  }),
   /** Hash of the call's system prompt + tool set: changes when either does. */
   shapeHash: z.string().optional(),
 });

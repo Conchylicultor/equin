@@ -11,6 +11,7 @@ import type {
   ServerResourceOptions,
 } from "@plugins/framework/plugins/resource-runtime/core";
 import {
+  compiledKeyedReads,
   compiledValueReach,
   type ValueReads,
 } from "@plugins/infra/plugins/query-resource/server";
@@ -62,7 +63,10 @@ import type {
 //   value whose loader ALSO reads Postgres (a lookup beside its files, a
 //   config-gated query) declares those reads (`reads`, as the db arm does): a
 //   write to one recomputes every subscribed tuple, merged with its notifies,
-//   and the drift guard holds the loader to them as it holds a db value's.
+//   and the drift guard holds the loader to them as it holds a db value's. A
+//   paged value's pages take them too (a static list, never a thunk), as
+//   whole relation reads of their keyed windows: a write re-reads every
+//   subscribed page, and its meta sibling recomputes.
 //
 // The body is the core's `serveValueOn` — the one serving code path every host
 // runs (central and a browser server too) — on server-core's runtime; this
@@ -151,6 +155,19 @@ type ExternalReadsOption<C extends LiveValueChanges> = [C] extends ["notified"]
     }
   : { reads?: never };
 
+/**
+ * A `"notified"` paged value's Postgres reads, beside its own truth (its
+ * pages' loader and its meta's): a static list — the pages are keyed windows
+ * registered at once, so there is no deferred bind for a thunk. A write to
+ * one re-reads every subscribed page whole and recomputes the meta.
+ */
+type PagedReadsOption<C extends LiveValueChanges> = [C] extends ["notified"]
+  ? {
+      /** Every table the pages and the meta read, and why a write to any row may change any page. */
+      reads?: ValueReads;
+    }
+  : { reads?: never };
+
 /** Any other worktree value: its `serveValue` takes no `preloadParams`. */
 type PlainValue<T, P extends Record<string, string>> = LiveValue<T, P> & {
   preloadsParams?: never;
@@ -203,10 +220,8 @@ export interface ServeValueOverloads<H> {
       NoInfer<Q>,
       R,
       C
-    > & {
-      /** A page is a keyed window, which no declared read reaches (D31). */
-      reads?: never;
-    },
+    > &
+      PagedReadsOption<C>,
   ): ServedFor<C, ServedPagedValue<Item, Q>, ServedSilentPagedValue<Item>>;
   <T, Q, QIn, const R extends readonly ExternalServed[] = []>(
     value: LiveQueryValue<T, Q, QIn> &
@@ -443,10 +458,12 @@ function runtimeFor(
  * compiled into the routing plan (`reach`) its registration carries — at once,
  * or at the host's `bindDeferredResources` for a thunk (an external one through
  * the runtime's deferred-external arm, so it is external, with its freshness,
- * from definition). Checked when the value registers, after its other options:
- * a db value without `reads`, and `reads` on an external value that is not
- * `"notified"` or on a paged value's keyed pages, are refused (tsc pairs them;
- * this is the untyped caller's check).
+ * from definition) — or, for a paged value's keyed pages, into whole relation
+ * reads of the window (`compiledKeyedReads`: no route reaches an external
+ * keyed entry, D31). Checked when the value registers, after its other
+ * options: a db value without `reads`, and `reads` on an external value that
+ * is not `"notified"`, are refused (tsc pairs them; this is the untyped
+ * caller's check).
  */
 export function valueRuntime(
   key: string,
@@ -474,21 +491,29 @@ export function valueRuntime(
   };
   const defineExternal = (contract: never, options: never) => {
     if (reads === undefined) return defineExternalResource(contract, options);
-    if ((contract as { keyed?: unknown }).keyed !== undefined) {
-      // Unreachable from typed code (`reads?: never` on the paged overload).
-      throw new Error(
-        `${label}: \`reads\` is a plain value's — a paged value's pages are keyed windows, which no declared read reaches.`,
-      );
-    }
     const { mode, freshness } = options as ServerResourceOptions<
       unknown,
       ResourceParams
     >;
     if (freshness?.kind !== "notified") {
-      // Unreachable from typed code (`ExternalReadsOption`).
+      // Unreachable from typed code (`ExternalReadsOption` / `PagedReadsOption`).
       throw new Error(
         `${label}: \`reads\` is a "notified" value's — an immutable, fixed or snapshot value claims no push, so a write could tell it nothing.`,
       );
+    }
+    if ((contract as { keyed?: unknown }).keyed !== undefined) {
+      // A paged value's pages: a keyed external window, which no route
+      // reaches (D31) — its reads are whole relation reads of it.
+      if (typeof reads === "function") {
+        // Unreachable from typed code (`PagedReadsOption` takes no thunk).
+        throw new Error(
+          `${label}: a paged value's \`reads\` is a static list — its pages register at once, with no deferred bind for a thunk.`,
+        );
+      }
+      return defineExternalResource(contract, {
+        ...(options as object),
+        ...compiledKeyedReads(reads, label),
+      } as never);
     }
     if (typeof reads !== "function") {
       return defineExternalResource(contract, routed(options, reads));
@@ -524,12 +549,6 @@ function servePaged(
     // Unreachable from typed code (a paged value is never preloaded).
     throw new Error(
       `serveValue("${value.key}"): a paged value is never preloaded — no \`preloadParams\`.`,
-    );
-  }
-  if (opts.reads !== undefined) {
-    // Unreachable from typed code (`reads?: never` on the paged overload).
-    throw new Error(
-      `serveValue("${value.key}"): a paged value declares no \`reads\` — its pages are keyed windows, which no declared read reaches.`,
     );
   }
   const { meta, ...served } = serveValueOn(

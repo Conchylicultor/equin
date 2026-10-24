@@ -1,4 +1,11 @@
 import { z } from "zod";
+import {
+  wholeList,
+  wholeRecord,
+} from "@plugins/packages/plugins/list-bound/core";
+
+const FACETS_REASON =
+  "one plugin's facet data — one entry per facet extractor, a few dozen";
 
 export interface DiffList {
   added: string[];
@@ -22,18 +29,23 @@ export const PluginChangeDiffSchema = z.object({
   fileCount: z.number(),
   additions: z.number(),
   deletions: z.number(),
-  files: z.array(PluginChangedFileSchema),
+  files: wholeList(PluginChangedFileSchema, {
+    reason: "one plugin's changed files — at most the files of that one plugin",
+  }),
   /** Raw facet data (`node.facets`) for this plugin in the worktree. The server
    *  is facet-blind: it ships the data and the client computes per-facet diffs by
    *  iterating the `PluginChanges.DiffRenderer` slot (see `usePluginFacetDiffs`). */
-  currentFacets: z.record(z.unknown()),
+  currentFacets: wholeRecord(z.unknown(), { reason: FACETS_REASON }),
   /** Raw facet data for the same plugin on main (`{}` when newly added). */
-  mainFacets: z.record(z.unknown()),
+  mainFacets: wholeRecord(z.unknown(), { reason: FACETS_REASON }),
 });
 export type PluginChangeDiff = z.infer<typeof PluginChangeDiffSchema>;
 
 export const PluginChangesSchema = z.object({
-  plugins: z.array(PluginChangeDiffSchema),
+  plugins: wholeList(PluginChangeDiffSchema, {
+    reason:
+      "the plugins one worktree or one push added or modified — at most the repo's plugin count",
+  }),
 });
 export type PluginChangesResponse = z.infer<typeof PluginChangesSchema>;
 

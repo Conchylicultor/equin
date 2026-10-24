@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 // The partial message: what the model has written so far of the message it
 // is streaming — its thinking, text and tool calls — before the CLI writes
@@ -36,7 +37,9 @@ export type PartialBlock = z.infer<typeof PartialBlockSchema>;
 export const PartialMessageSchema = z.object({
   /** The API message id (`msg_…`) — the transcript event's `messageId`. */
   messageId: z.string(),
-  blocks: z.array(PartialBlockSchema),
+  blocks: wholeList(PartialBlockSchema, {
+    reason: "one model turn's content blocks, held only while it streams",
+  }),
 });
 export type PartialMessage = z.infer<typeof PartialMessageSchema>;
 

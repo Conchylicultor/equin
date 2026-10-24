@@ -11,6 +11,7 @@ import {
   textField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { liveCollection } from "./live-collection";
 import { liveArm } from "./live-columns";
 import { LIVE_COLUMNS_KEY } from "./live-columns";
@@ -329,7 +330,10 @@ describe("liveArm — a union arm declared by fields", () => {
       fields: { size: nullable(intField({ label: "Archive size" })) },
       carry: {
         results: nullable(
-          jsonField({ schema: z.array(z.string()), default: [] }),
+          jsonField({
+            schema: wholeList(z.string(), { reason: "one run's targets" }),
+            default: [],
+          }),
         ),
       },
       sortable: ["size"],

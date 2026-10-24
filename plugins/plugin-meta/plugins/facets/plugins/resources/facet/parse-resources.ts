@@ -168,16 +168,17 @@ function literalMode(
 }
 
 /**
- * A `serveValue(value, { source, loader, unbounded? })` call: a value is pushed
+ * A `serveValue(value, { source, loader, changes? })` call: a value is pushed
  * (`push`) unless its DECLARATION opts into `load: "on-demand"` (the runtime's
  * `invalidate` — see {@link DescriptorInfo.onDemand}); a paged value's pages
  * are a keyed window (the vocabulary's `liveValue` mints), served `keyed`
- * whatever the options say, and its `:meta` sibling a push value. `source` and the
- * `unbounded.reason` are recorded as written. Every field is read at the
- * options object's own depth, so an inline loader's object literal (which may
- * well have a `source` or a `reason` of its own) is never mistaken for one.
- * THROWS on a non-literal `source:` / `reason:` — each decides what the docs
- * say the resource is.
+ * whatever the options say, and its `:meta` sibling a push value. `source` and
+ * `changes` are recorded as written; a list's bound is the declaration's
+ * (`lists`, read off its markers — never the serve call). Every field is read
+ * at the options object's own depth, so an inline loader's object literal
+ * (which may well have a `source` of its own) is never mistaken for one.
+ * THROWS on a non-literal `source:` — it decides what the docs say the
+ * resource is.
  */
 function servedValueDef(
   info: DescriptorInfo,
@@ -191,6 +192,7 @@ function servedValueDef(
         ...(info.membership ? { membership: info.membership } : {}),
       }
     : { key: info.key, mode: info.onDemand ? "invalidate" : "push" };
+  if (info.lists !== undefined) def.lists = info.lists;
   const masked = maskSource(argsText);
   // The first argument is an identifier, so the first `{` opens the options.
   const optsBody = objectBodyAt(argsText, masked, masked.indexOf("{"));
@@ -212,16 +214,6 @@ function servedValueDef(
   const bodyMasked = maskSource(optsBody);
   const changes = declaredChanges(optsBody, bodyMasked, where);
   if (changes !== undefined) def.changes = changes;
-  const unbounded = /\bunbounded\s*:\s*\{/g;
-  let m: RegExpExecArray | null;
-  while ((m = unbounded.exec(bodyMasked))) {
-    // Only the options object's own `unbounded:` (depth 0 of its body).
-    if (depthAt(bodyMasked, m.index) !== 0) continue;
-    const inner = objectBodyAt(optsBody, bodyMasked, m.index + m[0].length - 1);
-    const reason = inner === null ? undefined : literal(inner, "reason");
-    if (reason !== undefined) def.unbounded = reason;
-    break;
-  }
   return def;
 }
 
@@ -361,6 +353,7 @@ export function parseResources(pluginDir: string): ResourceFacetData {
 
   const index = buildDescriptorIndex(all, {
     ownerPlugin: isResourceVocabularyOwner(pluginDir),
+    lists: true,
   });
 
   // Cross-plugin descriptors are rare (a handful repo-wide), so the other
@@ -385,6 +378,7 @@ export function parseResources(pluginDir: string): ResourceFacetData {
     return (
       buildDescriptorIndex(files, {
         ownerPlugin: isResourceVocabularyOwner(dir),
+        lists: true,
       }).get(exportedName) ?? null
     );
   };

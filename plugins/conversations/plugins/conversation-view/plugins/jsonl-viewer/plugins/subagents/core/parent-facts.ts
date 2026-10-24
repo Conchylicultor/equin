@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import {
+  wholeList,
+  wholeRecord,
+} from "@plugins/packages/plugins/list-bound/core";
+import {
   JsonlEventSchema,
   taskStopTimes,
   type JsonlEvent,
@@ -21,17 +25,33 @@ import { workflowCallsIn } from "./workflow-join";
  */
 export const ParentFactsSchema = z.object({
   /** Every `task-notification` event. */
-  taskNotifications: z.array(JsonlEventSchema),
+  taskNotifications: wholeList(JsonlEventSchema, {
+    reason:
+      "one conversation's background-task completions — one per launched task, dozens at most",
+  }),
   /** Every `Agent` tool-call (`agentCallsIn`) — with its result, the sub-agent's handback. */
-  agentCalls: z.array(JsonlEventSchema),
+  agentCalls: wholeList(JsonlEventSchema, {
+    reason:
+      "one conversation's Agent calls — one per sub-agent card, each card joins its own",
+  }),
   /** Every `Workflow` tool-call (`workflowCallsIn`). */
-  workflowCalls: z.array(JsonlEventSchema),
+  workflowCalls: wholeList(JsonlEventSchema, {
+    reason: "one conversation's Workflow calls — a handful per conversation",
+  }),
   /** `teammateIdleTimes`, by teammate name. */
-  idleTimes: z.record(z.string(), z.string()),
+  idleTimes: wholeRecord(z.string(), {
+    reason: "one entry per teammate of one conversation — a handful",
+  }),
   /** `agentResumeTimes`, by agent id. */
-  resumeTimes: z.record(z.string(), z.string()),
+  resumeTimes: wholeRecord(z.string(), {
+    reason:
+      "one entry per resumed sub-agent of one conversation — at most its sub-agents",
+  }),
   /** `taskStopTimes`, by the stopped background task's id. */
-  stopTimes: z.record(z.string(), z.string()),
+  stopTimes: wholeRecord(z.string(), {
+    reason:
+      "one entry per stopped background task of one conversation — a handful",
+  }),
 });
 export type ParentFacts = z.infer<typeof ParentFactsSchema>;
 

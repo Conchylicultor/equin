@@ -1,6 +1,11 @@
 import { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
+  BareListError,
+  listShapeOf,
+  type ListShape,
+} from "@plugins/packages/plugins/list-bound/core";
+import {
   ResourceContractError,
   ResourceRefusal,
 } from "@plugins/packages/plugins/resource-protocol/core";
@@ -132,7 +137,74 @@ type LiveValueBase<
      * is `"on-demand"` here, branded `snapshot: true` (see {@link LiveSnapshotBrand}).
      */
     load?: "on-demand";
+    /**
+     * Every list the payload holds, with its bound — frozen at declaration
+     * (see {@link LiveValueShape}). A label the runtime's `_debug` payload
+     * shows per key.
+     */
+    shape: LiveValueShape;
   };
+
+/**
+ * A value's SHAPE — how much of each list it holds the browser holds at once,
+ * independent of how the server learns it changed (its freshness, the serve
+ * call's `changes`). `paged`: the value is key-range pages (each ≤
+ * `paged.maxLimit` items) and `bounds` / `bare` are its item's lists, under
+ * `[]`; otherwise the schema's own. Each list is capped (`{ path, max }`)
+ * or whole (`{ path, reason }`) — `packages/list-bound`'s markers; a bare
+ * one is refused at declaration, so `bare` is always empty here.
+ */
+export interface LiveValueShape extends ListShape {
+  readonly paged: boolean;
+}
+
+/**
+ * A declaration's {@link LiveValueShape}: `schema`'s lists — or, for a paged
+ * value, its item's (`at: "[]"`) — walked by `listShapeOf` and frozen. Throws
+ * on a bare list (no cap, no reason), a malformed marker and a node the walk
+ * cannot read, prefixed with the key.
+ */
+function valueShape(
+  key: string,
+  schema: unknown,
+  paged: boolean,
+): LiveValueShape {
+  return Object.freeze({
+    paged,
+    ...declaredShape(`liveValue("${key}")`, schema, paged ? "[]" : ""),
+  });
+}
+
+/**
+ * The lists `schema` holds (each path prefixed by `at`), walked by
+ * `listShapeOf` and frozen — the one walk every live declaration runs (a
+ * value's payload, a collection's row). REFUSES a bare list — a
+ * `BareListError` naming `where` and each path — at declaration, so on every
+ * host's boot and in every test importing the declaring module; throws on a
+ * malformed marker and on a node the walk cannot read, prefixed with `where`.
+ */
+export function declaredShape(
+  where: string,
+  schema: unknown,
+  at: string,
+): ListShape {
+  let shape: ListShape;
+  try {
+    shape = listShapeOf(schema, at === "" ? {} : { at });
+  } catch (err) {
+    throw new Error(
+      `${where}: ${err instanceof Error ? err.message : String(err)}`,
+      { cause: err },
+    );
+  }
+  if (shape.bare.length > 0) {
+    throw new BareListError(shape.bare, where);
+  }
+  return Object.freeze({
+    bounds: Object.freeze(shape.bounds.map((b) => Object.freeze({ ...b }))),
+    bare: Object.freeze([...shape.bare]),
+  });
+}
 
 /**
  * A declared live value — a `ResourceDescriptor` discriminated from a
@@ -1021,6 +1093,7 @@ function plainOrQueryValue<T>(
     key,
     schema: spec.schema,
     live: "value",
+    shape: valueShape(key, spec.schema, false),
     params,
     ...(optionalParams.length > 0 ? { optionalParams } : {}),
     validateParams: paramsGate(key, params, optionalParams, parsers),
@@ -1304,6 +1377,7 @@ function queryValue<T>(
     value = {
       ...common,
       schema: s.schema,
+      shape: valueShape(key, s.schema, false),
       params: ["q"],
       validateParams: (params: Record<string, string>) =>
         void query.decode(params),
@@ -1390,6 +1464,8 @@ function pagedValue(
   return {
     ...common,
     schema: z.array(row),
+    // The pages are the list's bound; the item's own lists are walked under `[]`.
+    shape: valueShape(key, item, true),
     keyed: {
       keyOf: (r: unknown) => (r as Record<string, unknown>)[id] as string,
     },

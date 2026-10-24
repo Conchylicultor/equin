@@ -1,4 +1,5 @@
 import { serveValue } from "@plugins/network/plugins/live/machine";
+import { sliceRange } from "@plugins/network/plugins/live/server";
 import { WorktreeGoneError } from "@plugins/primitives/plugins/commit-list/server";
 import {
   resolved,
@@ -11,12 +12,9 @@ import {
   _attempts,
   _conversations,
 } from "@plugins/tasks/plugins/tasks-core/server";
-import { editedFiles } from "../../core";
-import type { EditedFile } from "../../core/protocol";
-import {
-  editedFilesMemo,
-  evictEditedFiles,
-} from "../../server/internal/edited-files-cache";
+import { editedFile, editedFiles } from "../../core";
+import type { EditedFile, EditedFilesMeta } from "../../core/protocol";
+import { evictEditedFiles } from "../../server/internal/edited-files-cache";
 import { getEditedFiles } from "../../server/internal/get-edited-files";
 import { watchEditedFiles } from "../../server/internal/watch-edited-files";
 
@@ -73,50 +71,77 @@ export function loadEditedFilesFor(
   );
 }
 
-/** The `revalidate` half — the same memo, hence the same authority. */
-export function editedFilesSignatureFor(
-  conversationId: string,
-): Promise<string> {
-  return onWorktree(conversationId, "no-worktree", (wt) =>
-    editedFilesMemo.signature(wt),
-  );
+/** The whole set's totals — `editedFiles.meta` — from the same memoized list. */
+export function editedFilesMetaOf(
+  files: Resolvable<EditedFile[]>,
+): EditedFilesMeta {
+  if (!files.resolved) return files;
+  let additions = 0;
+  let deletions = 0;
+  for (const f of files.value) {
+    additions += f.additions;
+    deletions += f.deletions;
+  }
+  return resolved({ count: files.value.length, additions, deletions });
 }
 
+const READS = {
+  tables: [_conversations, _attempts],
+  reason:
+    "each tuple resolves its conversation's worktree (conversations → attempts) before reading git, and the same lookup runs in whileSubscribed; a write to any conversation or attempt row may move which worktree a tuple reads — whole-table until the path is a param or a db-served value",
+};
+
+// Watch the worktree (and its git dir) while the conversation is on screen. The
+// watch is a refcounted room per worktree (`watchEditedFiles`), so the pages,
+// the meta and a peeked file share one.
+async function watchConversation(
+  id: string,
+  notify: () => void,
+): Promise<() => void> {
+  const wt = await worktreeFor(id);
+  if (!wt) return () => {};
+  return watchEditedFiles(wt, notify);
+}
+
+// Every page and the meta read ONE authority: `editedFilesMemo` is a
+// `createSignedMemo` binding `editedFilesSignature` to `computeEditedFiles` (the
+// loader's `getEditedFiles`) at its single declaration site, primed by the
+// watcher before it notifies — so a recompute is a signature probe and a slice
+// of the memoized list, never a second set of git reads per page.
+//
+// The signature is content-addressed and cheap: (headSha, mergeBase) + a per-dirty
+// -file (porcelain code, lstat mtime+size). It moves on an uncommitted save with no
+// SHA change. See edited-files-signature.ts for the faithfulness argument and
+// research/2026-07-09-global-etag-value-coproduction.md.
+//
+// An unresolvable (or reaped) worktree is one determinate state from the SAME
+// `onWorktree` branch: the meta says `unresolved(…)` and the pages are empty —
+// never a zero count a reader could take for a clean worktree.
+//
+// The pages, the meta and the one-file value all declare the worktree lookup
+// (`READS`): a write there re-reads every subscribed page whole.
 export const editedFilesServed = serveValue(editedFiles, {
   source: "external",
   changes: "notified",
-  reads: {
-    tables: [_conversations, _attempts],
-    reason:
-      "each tuple resolves its conversation's worktree (conversations → attempts) before reading git, and the same lookup runs in revalidate and whileSubscribed; a write to any conversation or attempt row may move which worktree a tuple reads — whole-table until the path is a param or a db-served value",
+  reads: READS,
+  loader: async ({ id }, range) => {
+    const files = await loadEditedFilesFor(id);
+    return files.resolved ? sliceRange(editedFiles, files.value, range) : [];
   },
-  loader: ({ id }) => loadEditedFilesFor(id),
-  // The ETag and the value are produced by ONE authority: `editedFilesMemo` is a
-  // `createSignedMemo` binding `editedFilesSignature` (here) to `computeEditedFiles`
-  // (the loader's `getEditedFiles`) at its single declaration site. `revalidate` and
-  // `loader` are therefore provably the same function of the same inputs — they are
-  // not two probes agreeing by convention, which is precisely how this resource
-  // drifted into serving a stale value under a fresh ETag (permanent, because an
-  // `invalidate`-mode push carries no value that could heal it).
-  //
-  // The signature is content-addressed and cheap: (headSha, mergeBase) + a per-dirty
-  // -file (porcelain code, lstat mtime+size). It moves on an uncommitted save with no
-  // SHA change, and it survives a server restart — preserving the 304 herd-collapse
-  // this ETag exists for. Cost: 1 `rev-parse` + 1 `merge-base` + 1 `git status` + an
-  // `lstat` per dirty file, vs. the loader's `merge-base` + two `git diff` passes +
-  // full content reads of untracked files. See edited-files-signature.ts for the
-  // faithfulness argument and research/2026-07-09-global-etag-value-coproduction.md.
-  //
-  // The no-worktree/reaped collapse preserves that same co-production invariant:
-  // the `revalidate`'s `"no-worktree"` ETag and the loader's `unresolved(…)` value
-  // are produced from the SAME `onWorktree` branch, so they are one consistent
-  // signature/value pair for a real determinate state — never a fresh ETag over a
-  // stale value.
-  revalidate: ({ id }) => editedFilesSignatureFor(id),
-  // Watch the worktree (and its git dir) while the conversation is on screen.
-  whileSubscribed: async ({ id }, notify) => {
-    const wt = await worktreeFor(id);
-    if (!wt) return () => {};
-    return watchEditedFiles(wt, notify);
+  meta: async ({ id }) => editedFilesMetaOf(await loadEditedFilesFor(id)),
+  whileSubscribed: ({ id }, notify) => watchConversation(id, notify),
+});
+
+// One file of the set, by path, from the same memoized list — the file-peek
+// pane's status hint, wherever in the set's pages the file falls.
+export const editedFileServed = serveValue(editedFile, {
+  source: "external",
+  changes: "notified",
+  reads: READS,
+  loader: async ({ id, path }): Promise<Resolvable<EditedFile | null>> => {
+    const files = await loadEditedFilesFor(id);
+    if (!files.resolved) return files;
+    return resolved(files.value.find((f) => f.path === path) ?? null);
   },
+  whileSubscribed: ({ id }, notify) => watchConversation(id, notify),
 });

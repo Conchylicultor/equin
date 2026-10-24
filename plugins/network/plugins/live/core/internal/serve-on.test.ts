@@ -314,6 +314,136 @@ describe("serveCollectionOn — a window collection", () => {
   });
 });
 
+describe("serveCollectionOn — whileSubscribed and throttleMs", () => {
+  test("one watcher for the collection: started by the first tuple of any resource, stopped by the last", async () => {
+    const h = createHarness();
+    const c = windowCollection(key("watch"));
+    const src = source(initial);
+    const events: string[] = [];
+    let fire: (() => void) | undefined;
+    const served = serveCollectionOn(h.runtime, c, {
+      source: "external",
+      changes: "notified",
+      keyText,
+      window: (q) => src.window(q.limit),
+      rows: (ids) => src.byIds(ids),
+      whileSubscribed: (notify) => {
+        events.push("start");
+        fire = () => notify();
+        return () => {
+          events.push("stop");
+          fire = undefined;
+        };
+      },
+    });
+    expect(events).toEqual([]);
+    await h.subscribe(c.key, c.window.defaultParams);
+    const ids = c.rows.point.encode(["a"]);
+    await h.subscribe(c.rows.key, ids);
+    expect(events).toEqual(["start"]);
+
+    // The watcher's notify is the collection's: every held tuple re-reads.
+    src.rows.set("a", { id: "a", title: "A2", rank: 1 });
+    fire!();
+    await settle(h);
+    expect(h.pushesFor(c.key).map((f) => f.kind)).toEqual(["delta"]);
+    expect(h.pushesFor(c.rows.key).map((f) => f.kind)).toEqual(["delta"]);
+
+    await h.unsub(c.key, c.window.defaultParams);
+    expect(events).toEqual(["start"]);
+    await h.unsub(c.rows.key, ids);
+    expect(events).toEqual(["start", "stop"]);
+    // A new span starts a new watcher.
+    await h.subscribe(c.key, c.window.defaultParams);
+    expect(events).toEqual(["start", "stop", "start"]);
+    expect(typeof served.notify).toBe("function");
+  });
+
+  test("an async start is awaited before the first read", async () => {
+    const h = createHarness();
+    const c = windowCollection(key("watch-async"));
+    const src = source(initial);
+    let resolveStart: ((stop: () => void) => void) | undefined;
+    serveCollectionOn(h.runtime, c, {
+      source: "external",
+      changes: "notified",
+      keyText,
+      window: (q) => src.window(q.limit),
+      rows: (ids) => src.byIds(ids),
+      whileSubscribed: () =>
+        new Promise((resolve) => {
+          resolveStart = resolve;
+        }),
+    });
+    await h.subscribe(c.key, c.window.defaultParams);
+    expect(src.loads).toEqual([]);
+    resolveStart!(() => {});
+    await settle(h);
+    expect(src.loads).toEqual(["window:10"]);
+  });
+
+  test("throttleMs: a burst of notifies costs one re-read per window", async () => {
+    const h = createHarness();
+    const c = windowCollection(key("throttle"));
+    const src = source(initial);
+    const served = serveCollectionOn(h.runtime, c, {
+      source: "external",
+      changes: "notified",
+      keyText,
+      window: (q) => src.window(q.limit),
+      rows: (ids) => src.byIds(ids),
+      throttleMs: 20,
+    });
+    await h.subscribe(c.key, c.window.defaultParams);
+    src.loads.length = 0;
+    for (let i = 0; i < 5; i++) {
+      src.rows.set("b", { id: "b", title: `B${i}`, rank: 2 });
+      served.notify();
+    }
+    await settle(h);
+    expect(src.loads).toEqual([]);
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    await settle(h);
+    expect(src.loads).toEqual(["window:10"]);
+    expect(h.pushesFor(c.key)).toHaveLength(1);
+  });
+
+  test("a silent collection takes neither hook — in its type, and at runtime", () => {
+    const h = createHarness();
+    const typesOnly = () =>
+      // @ts-expect-error — no change signal to react to: `throttleMs` is a `"notified"` collection's
+      serveCollectionOn(h.runtime, windowCollection(key("silent-types")), {
+        source: "external",
+        changes: { fixed: { reason: "a demo pack" } },
+        keyText,
+        window: () => [],
+        rows: () => [],
+        throttleMs: 10,
+      });
+    expect(typeof typesOnly).toBe("function");
+    expect(() =>
+      serveCollectionOn(h.runtime, windowCollection(key("silent")), {
+        source: "external",
+        changes: { fixed: { reason: "a demo pack" } },
+        keyText,
+        window: () => [],
+        rows: () => [],
+        whileSubscribed: (() => () => {}) as never,
+      }),
+    ).toThrow(/`whileSubscribed` reacts to a change signal/);
+    expect(() =>
+      serveCollectionOn(h.runtime, windowCollection(key("bad-throttle")), {
+        source: "external",
+        changes: "notified",
+        keyText,
+        window: () => [],
+        rows: () => [],
+        throttleMs: 0,
+      }),
+    ).toThrow(/`throttleMs` 0 is not a positive number/);
+  });
+});
+
 describe("serveCollectionOn — every window's $key", () => {
   test("rows carry a minted $key; a non-text order field needs keyText", async () => {
     const h = createHarness();
@@ -403,6 +533,54 @@ describe("serveCollectionOn — an `all` collection", () => {
     const pushes = h.pushesFor(c.key);
     expect(pushes.map((f) => f.kind)).toEqual(["delta"]);
     expect(pushes[0]!.deletes).toEqual(["a"]);
+  });
+
+  test("a capped set (`all: { max }`) answers up to its cap, and one row past it is a loud loader error", async () => {
+    const c = liveCollection(key("all-max"), {
+      ...F,
+      all: { orderBy: [["rank", "asc"]], max: 3 },
+    });
+    expect(c.rows.point.maxIds).toBe(3);
+    const src = source(initial);
+    const served = serveCollectionOn(createHarness().runtime, c, {
+      source: "external",
+      changes: "notified",
+      all: () => src.all(),
+      rows: (ids) => src.byIds(ids),
+    });
+    expect(await served.all.load({})).toEqual(initial);
+    src.rows.set("d", { id: "d", title: "D", rank: 4 });
+    expect((await rejection(served.all.load({}))).message).toMatch(
+      /all\(\) returned 4 rows for at most 3/,
+    );
+  });
+});
+
+describe("serveCollectionOn — `:rows` id sets are capped (`maxIds`)", () => {
+  test("a tuple past the collection's maxIds is refused before any load", async () => {
+    const c = liveCollection(key("max-ids"), { ...F, maxIds: 2 });
+    const src = source(initial);
+    const served = serveCollectionOn(createHarness().runtime, c, {
+      source: "external",
+      changes: "notified",
+      rows: (ids) => src.byIds(ids),
+    });
+    expect(c.rows.point.maxIds).toBe(2);
+    expect(await served.rows.load(c.rows.point.encode(["a", "b"]))).toEqual(
+      initial.slice(0, 2),
+    );
+    expect(() => c.rows.point.encode(["a", "b", "c"])).toThrow(
+      /3 ids, at most 2/,
+    );
+    expect(
+      (await rejection(served.rows.load({ ids: "a,b,c" }))).message,
+    ).toMatch(/3 ids, at most 2/);
+    expect(src.loads).toEqual(["rows:a,b"]);
+  });
+
+  test("defaults: a window's maxLimit, a lookup's LIVE_DEFAULT_MAX_IDS", () => {
+    expect(windowCollection(key("w-default")).rows.point.maxIds).toBe(50);
+    expect(liveCollection(key("l-default"), F).rows.point.maxIds).toBe(500);
   });
 });
 

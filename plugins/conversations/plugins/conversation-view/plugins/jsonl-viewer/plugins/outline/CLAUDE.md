@@ -66,6 +66,7 @@ current-position tracking root from the first element `resolve` returns. A
     - `conversations/transcript-source.JsonlEvent`
     - `conversations/transcript-source.JsonlEventSchema`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
   - Exports (types): `OutlineTurn`
   - Exports (values):
     - `conversationTurns`

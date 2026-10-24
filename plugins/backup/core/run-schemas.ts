@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import type { BackupSourceReport, BackupTargetResult } from "./source-report";
 
@@ -30,8 +31,14 @@ export const BackupSourceReportSchema: ZodParser<BackupSourceReport> = z
     outcome: z.enum(["included", "skipped", "failed"]).optional(),
     skipped: z.boolean().optional(),
     error: z.string().optional(),
-    items: z.array(SourceItemSchema),
-    leftOut: z.array(SourceItemSchema).optional(),
+    items: wholeList(SourceItemSchema, {
+      reason:
+        "one source's manifest lines — a handful written per source per run",
+    }),
+    leftOut: wholeList(SourceItemSchema, {
+      reason:
+        "one source's left-out lines — the disposable kinds folded into one, plus one per orphan database",
+    }).optional(),
     sizeBytes: z.number(),
   })
   .refine(
@@ -63,6 +70,14 @@ export const BackupSourceReportSchema: ZodParser<BackupSourceReport> = z
   });
 
 /**
+ * A run's source reports: one per registered backup source, so the list is as
+ * long as the configured sources.
+ */
+export const BackupSourceReportsSchema = wholeList(BackupSourceReportSchema, {
+  reason: "one report per configured backup source — bounded by the sources",
+});
+
+/**
  * The manifest as it is really stored — which is WIDER than `BackupManifest`,
  * deliberately: v1 rows carry `version: 1` and a fixed `sources` object, v2 rows
  * carry source reports with a `skipped` boolean, and the TS interface has always
@@ -76,10 +91,7 @@ export const BackupManifestSchema = z.object({
   trigger: z.enum(["manual", "periodic"]),
   // v2: array of source reports. v1 legacy rows stored a fixed object —
   // accept it permissively so one old row can't reject the whole list.
-  sources: z.union([
-    z.array(BackupSourceReportSchema),
-    z.object({}).passthrough(),
-  ]),
+  sources: z.union([BackupSourceReportsSchema, z.object({}).passthrough()]),
   sizeBytes: z.number(),
 });
 
@@ -91,7 +103,17 @@ export const BackupTargetResultSchema: ZodParser<BackupTargetResult> = z.object(
     detail: z.string().optional(),
     needsConsent: z.boolean().optional(),
     consent: z
-      .object({ providerId: z.string(), scopes: z.array(z.string()) })
+      .object({
+        providerId: z.string(),
+        scopes: wholeList(z.string(), {
+          reason: "the OAuth scopes one target asks consent for",
+        }),
+      })
       .optional(),
   },
 );
+
+/** A run's per-target outcomes, the decoder of `backup_runs.target_results`. */
+export const BackupTargetResultsSchema = wholeList(BackupTargetResultSchema, {
+  reason: "one outcome per configured backup target — bounded by the targets",
+});

@@ -29,7 +29,7 @@
     - `database.db`
     - `network/live.serveValue`
     - `tasks/tasks-core.tasksView`
-  - Resources: `stats.tasks.history` (push, unbounded: one row per UTC day since the first task (a few hundred for a year of use), aggregated in SQL — never one row per task)
+  - Resources: `stats.tasks.history` (push, whole: one row per UTC day since the first task (a few hundred for a year of use), aggregated in SQL — never one row per task)
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`

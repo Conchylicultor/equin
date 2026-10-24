@@ -1,5 +1,17 @@
 import { z } from "zod";
-import { SlowOpMarkerSchema } from "@plugins/debug/plugins/slow-ops/core";
+import {
+  MAX_SLOW_OP_MARKERS,
+  SlowOpMarkerSchema,
+} from "@plugins/debug/plugins/slow-ops/core";
+import {
+  cappedList,
+  wholeList,
+} from "@plugins/packages/plugins/list-bound/core";
+
+// Cap on lines read per worktree file (newest kept). At 10s/sample, 1500 lines
+// is ~4h of history — comfortably above the default 2h read window. The cap
+// every sample list below declares.
+export const MAX_HEALTH_SAMPLES = 1500;
 
 // One per-backend health sample. Every field except `worktree` is a number so
 // the wire shape maps cleanly onto recharts series. Event-loop values are
@@ -108,10 +120,10 @@ export type HostSample = z.infer<typeof HostSampleSchema>;
 
 export const HealthSeriesSchema = z.object({
   worktree: z.string(),
-  samples: z.array(HealthSampleSchema),
+  samples: cappedList(HealthSampleSchema, { max: MAX_HEALTH_SAMPLES }),
   // Slow-op spikes for this backend, overlaid on its metric charts as
   // severity-colored vertical ReferenceLines on the shared time axis.
-  slowOpMarkers: z.array(SlowOpMarkerSchema),
+  slowOpMarkers: cappedList(SlowOpMarkerSchema, { max: MAX_SLOW_OP_MARKERS }),
 });
 export type HealthSeries = z.infer<typeof HealthSeriesSchema>;
 
@@ -119,8 +131,11 @@ export type HealthSeries = z.infer<typeof HealthSeriesSchema>;
 // over the last `windowMs`, as read from disk at `readAtMs` (epoch ms — the
 // "now" a backend's sample age is measured against).
 export const HealthDataSchema = z.object({
-  series: z.array(HealthSeriesSchema),
-  hostSamples: z.array(HostSampleSchema),
+  series: wholeList(HealthSeriesSchema, {
+    reason:
+      "one per worktree backend that sampled in the read window — the backends running in the last 2 h, never every worktree on disk",
+  }),
+  hostSamples: cappedList(HostSampleSchema, { max: MAX_HEALTH_SAMPLES }),
   windowMs: z.number(),
   readAtMs: z.number(),
 });

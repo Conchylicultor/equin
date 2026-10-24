@@ -102,6 +102,11 @@ shows, sorts, filters and groups by. The shape carries the resolved
   or the `CASE`; it projects into `$columns[<slice>][<id>]`, filters, sorts
   and groups on the server like any exposed field. An exposure exposes at
   least one field or its presence.
+- **An exposed list carries its bound.** An exposed field reaches every row
+  of every list of its parent, so each array or record its wire schema holds
+  is marked with `packages/list-bound` (capped, or whole with a reason —
+  `tagsField` / `stringListField` mark themselves): a bare one throws a
+  `BareListError` at declaration, as a collection's own row does.
 - `defineExtension` asserts the parent table and name match the exposure.
 
 Wire it in the plugin's two runtimes — `LiveColumns.Expose(ext)` (server) and
@@ -247,6 +252,7 @@ Never hand-edit the generated SQL to interleave the DML: the push-time hand-edit
     - `fields/text/config.textField`
     - `fields/text/config.TextFieldDef`
     - `infra/entities.wireSchema`
+    - `packages/list-bound.listBoundsOf`
   - Exports (types):
     - `AnyExtensionShape`
     - `EntityExposure`

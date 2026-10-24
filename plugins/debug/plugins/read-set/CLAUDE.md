@@ -59,6 +59,10 @@ Sections, in render order:
   `snapshot` / `fixed` / `immutable` with the author's reason, never-told arms
   first. `null` (not listed) for a db entry or a resource not served through
   `network/live`.
+- **E — Declared shape** — every value's lists as `liveValue` walked its
+  schema (the runtime's `shape` label): `paged`, each list's path with its cap
+  (`≤ n`), whole (reason on hover) or `bare`; values holding a bare list
+  first. `null` for a collection's resources.
 
 A caveat notes that read-sets and drift cover only loaders that have run since
 boot (drift also seeded from a persisted row), and that direct `notify()` sites
@@ -100,9 +104,12 @@ are not modeled.
 - Server:
   - Contributes: `resource.declare` "resources.debug"
   - Uses: `network/live.serveValue`
-  - Resources: `resources.debug` (invalidate, snapshot)
+  - Resources: `resources.debug` (invalidate, snapshot, whole: one per resource this backend registered — the declared resource keys, a few hundred, never the rows they serve, whole: the tables one resource reads or is reached through — a handful per resource, whole: one key per params-tuple some open tab subscribes to — what the user's tabs hold, never the data set, whole: the lists one value's schema reaches — a path per array or record it declares)
 - Core:
-  - Uses: `network/live.liveValue`
+  - Uses:
+    - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
+    - `packages/list-bound.wholeRecord`
   - Exports (types):
     - `NotifyStats`
     - `ResourceDebug`
@@ -110,6 +117,7 @@ are not modeled.
     - `ResourcePolicy`
     - `ResourceRoute`
     - `ResourcesDebug`
+    - `ResourceShape`
   - Exports (values):
     - `resourcesDebug`
     - `resourcesDebugSchema`

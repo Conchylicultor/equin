@@ -22,7 +22,7 @@
   - Uses:
     - `database.db`
     - `network/live.serveValue`
-  - Resources: `studio.table-foreign-keys` (push, fixed)
+  - Resources: `studio.table-foreign-keys` (push, fixed, whole: the foreign keys one table declares — a column's worth at most, whole: the foreign keys pointing at one table — one per referencing column in the schema)
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/font-family --font-mono`

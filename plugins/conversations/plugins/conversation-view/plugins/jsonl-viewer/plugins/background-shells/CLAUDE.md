@@ -140,6 +140,7 @@ v1 is view-only: there is no Stop (only the agent can call `TaskStop`, which the
     - `conversations/transcript-source.JsonlEvent`
     - `conversations/transcript-source.taskStopTimes`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
   - Exports (types):
     - `BackgroundShell`
     - `BackgroundShellsInput`

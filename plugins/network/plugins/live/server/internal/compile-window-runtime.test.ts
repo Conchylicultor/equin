@@ -399,7 +399,7 @@ describe("compiled point resource — end-to-end", () => {
   test("a change routes only to intersecting tuples; foreign ids ship nothing", async () => {
     const { db, table } = liveDb();
     const key = `test.cwr.pt-${seq++}`;
-    const descriptor = pointQueryResourceDescriptor(key, rowSchema, "id");
+    const descriptor = pointQueryResourceDescriptor(key, rowSchema, "id", 500);
     const { serverOpts } = compileWindowQuery(descriptor, {
       from: rowsT,
       point: { by: rowsT.id },

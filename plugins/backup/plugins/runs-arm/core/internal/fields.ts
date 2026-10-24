@@ -1,11 +1,10 @@
-import { z } from "zod";
 import { nullable } from "@plugins/fields/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import { liveArm } from "@plugins/network/plugins/live/core";
 import {
   BACKUP_RUN_KIND,
-  BackupSourceReportSchema,
+  BackupSourceReportsSchema,
   backupRunFields,
   backupRunsEntityRef,
 } from "@plugins/backup/core";
@@ -55,7 +54,7 @@ export const backupRunArm = liveArm(runs, BACKUP_RUN_KIND, {
     targetResults: backupRunFields.targetResults,
     /** The manifest's source reports (v2+ array form only). */
     sources: nullable(
-      jsonField({ schema: z.array(BackupSourceReportSchema), default: [] }),
+      jsonField({ schema: BackupSourceReportsSchema, default: [] }),
     ),
   },
   sortable: ["status", "archiveSize", "sourceCount", "targetCount"],

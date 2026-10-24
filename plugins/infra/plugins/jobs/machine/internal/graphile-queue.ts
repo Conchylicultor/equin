@@ -17,7 +17,7 @@ import {
 import type { JobTaskPayload } from "../../server/internal/registry";
 import { graphileSpecFor } from "./graphile-routing";
 import { reconcileDeadJobs } from "./dead-job-gc";
-import { loadJobsList } from "./jobs-list";
+import { graphileJobReads } from "./jobs-list";
 import { emitQueueActivity, onQueueActivity } from "./slot-ledger";
 import {
   startStuckLockSweeper,
@@ -137,13 +137,13 @@ async function cancelUnstarted(
 export const graphileQueue: JobQueueImpl = {
   enqueue: insertJobRow,
   cancelUnstarted,
-  list: loadJobsList,
+  ...graphileJobReads(db),
   async retry(jobId) {
     const utils = await getWorkerUtils();
     await utils.rescheduleJobs([jobId], { attempts: 0, runAt: new Date() });
     // graphile_worker is outside the public-schema change-feed, and a
-    // reschedule sends no `jobs:insert` → announce it (jobs-list and every
-    // other queue reader listen on this one signal).
+    // reschedule sends no `jobs:insert` → announce it (the `jobs` collection
+    // and every other queue reader listen on this one signal).
     emitQueueActivity();
   },
   async cancel(jobId) {

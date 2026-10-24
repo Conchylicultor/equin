@@ -12,7 +12,11 @@ import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useShowEmptyDays } from "@plugins/stats/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { commitsCounts, type CommitBucket } from "../../shared";
+import {
+  commitsCounts,
+  type CommitBucket,
+  commitPointsNote,
+} from "../../shared";
 import { LiveChart } from "./live-chart";
 import {
   axisProps,
@@ -51,6 +55,7 @@ export function CommitsRateChart({ dedup }: { dedup?: boolean }) {
         subject="the commit counts"
         isEmpty={(d) => d.points.length === 0}
         emptyText="No commits yet."
+        note={commitPointsNote}
       >
         {({ points }) => <CommitsRateBody rawPoints={points} bucket={bucket} />}
       </LiveChart>

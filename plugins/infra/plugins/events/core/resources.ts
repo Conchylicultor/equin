@@ -5,6 +5,10 @@ import {
   type LiveRowsCollection,
 } from "@plugins/network/plugins/live/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
+import {
+  wholeList,
+  wholeRecord,
+} from "@plugins/packages/plugins/list-bound/core";
 import { fieldsToZodObject, type FieldsRecord } from "@plugins/fields/core";
 import { uuidField } from "@plugins/fields/plugins/uuid/plugins/config/core";
 import {
@@ -25,12 +29,16 @@ export const eventEmissionFields = {
   id: uuidField(),
   eventName: textField({ label: "Event", primary: true }),
   payload: jsonField<Record<string, unknown>>({
-    schema: z.record(z.unknown()),
+    schema: wholeRecord(z.unknown(), {
+      reason: "one emission's payload — its event's declared fields",
+    }),
     default: {},
   }),
   matchedCount: intField({ label: "Matched" }),
   matchedTriggerIds: jsonField<string[]>({
-    schema: z.array(z.string()),
+    schema: wholeList(z.string(), {
+      reason: "the triggers one emission matched — those bound to its event",
+    }),
     default: [],
   }),
   emittedAt: dateField({ label: "Time" }),
@@ -56,11 +64,15 @@ export const TriggerRowSchema = z.object({
   eventName: z.string(),
   id: z.string(),
   jobName: z.string(),
-  jobWith: z.record(z.unknown()),
+  jobWith: wholeRecord(z.unknown(), {
+    reason: "the payload one binding hands its job — a few named params",
+  }),
   enabled: z.boolean(),
   oneShot: z.boolean(),
   createdAt: z.string(),
-  filters: z.record(z.unknown()),
+  filters: wholeRecord(z.unknown(), {
+    reason: "one filter per typed column the event declares — a handful",
+  }),
   // Computed (not stored): true when `jobName` is not in the live job registry,
   // i.e. the target job was removed and this trigger can never deliver. Transient
   // — the boot sweep deletes dangling rows, so this is surfaced, never persisted.
@@ -69,7 +81,7 @@ export const TriggerRowSchema = z.object({
 export type TriggerRow = z.infer<typeof TriggerRowSchema>;
 
 // The `GET /api/events/triggers` endpoint's body. The live value below carries
-// the bare array, so the db arm's bound rule sees what it is.
+// the array itself, marked whole with its reason.
 export const TriggersPayloadSchema = z.object({
   rows: z.array(TriggerRowSchema),
 });
@@ -134,5 +146,8 @@ export type EmissionListRow =
 // `dangling` flag, which no single-table `liveCollection` can bind. Pushed
 // whole on every write to any of those tables (the loader's read-set).
 export const eventTriggers = liveValue("event-triggers", {
-  schema: z.array(TriggerRowSchema),
+  schema: wholeList(TriggerRowSchema, {
+    reason:
+      "every binding across every event's own <event>_triggers table — the code's static Trigger() bindings plus one oneShot row per pending ctx.waitFor (a never-fired one lingers) — with the computed `dangling` flag: a union over N tables, which a single-table liveCollection cannot bind",
+  }),
 });

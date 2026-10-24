@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 // Role of a single on-disk orphan file, derived from its path suffix and whether
 // it lives under an `@app/<id>` scope segment.
@@ -43,7 +44,10 @@ export const orphanEntrySchema = z.object({
   // Present only when reason === "relocated": the hierarchy a live descriptor of
   // the same name now lives at (where the config likely moved to).
   relocatedToHier: z.string().optional(),
-  files: z.array(orphanFileSchema),
+  files: wholeList(orphanFileSchema, {
+    reason:
+      "one orphaned descriptor group's files — its origin, override and ancestor snapshots, base and per-app: a handful",
+  }),
   totalBytes: z.number(),
   newestMtimeMs: z.number(),
 });
@@ -52,6 +56,9 @@ export type OrphanEntry = z.infer<typeof orphanEntrySchema>;
 // Wrapped in an object for forward-compatible extensibility (future summary
 // counts, scan metadata, …) without breaking the endpoint's response shape.
 export const orphanReportSchema = z.object({
-  orphans: z.array(orphanEntrySchema),
+  orphans: wholeList(orphanEntrySchema, {
+    reason:
+      "the config files whose descriptor is no longer live — left by renamed or removed plugins, a few at most",
+  }),
 });
 export type OrphanReport = z.infer<typeof orphanReportSchema>;

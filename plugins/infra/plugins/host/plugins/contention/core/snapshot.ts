@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 // Per-database active/total Postgres backend counts. `active` is the count of
 // backends in the `active` state (running a query right now); `pgTopDatabases`
@@ -24,6 +25,8 @@ export const ContentionSnapshotSchema = z.object({
   cpuCount: z.number(),
   pgActiveBackends: z.number(),
   pgTotalBackends: z.number(),
-  pgTopDatabases: z.array(ContentionTopDatabaseSchema),
+  pgTopDatabases: wholeList(ContentionTopDatabaseSchema, {
+    reason: "the few highest-active databases the snapshot keeps",
+  }),
 });
 export type ContentionSnapshot = z.infer<typeof ContentionSnapshotSchema>;

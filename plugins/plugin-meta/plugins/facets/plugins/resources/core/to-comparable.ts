@@ -3,10 +3,9 @@ import type { ResourceDef, ResourceFacetData } from "./types";
 /**
  * How a resource's mode reads wherever it is shown — `"push"`, `"keyed"`, or
  * `"keyed, window"` / `"keyed, point"` when the descriptor declares a bounded
- * membership, and `", unbounded: <reason>"` appended for a collection-shaped
- * Postgres value that declared why it is not a collection. An external value
- * adds its declared freshness (`changes`): `"push, fixed"`,
- * `"invalidate, snapshot"`, `"push, notified"`.
+ * membership. An external value adds its declared freshness (`changes`): `"push, fixed"`,
+ * `"invalidate, snapshot"`, `"push, notified"`; a value whose schema marks its
+ * lists adds each bound (`"push, notified, whole: <reason>, capped: 500"`).
  *
  * One function rather than four spellings, because the four surfaces (doc,
  * detail pane, contributions table, PR diff) each render the same fact and a
@@ -17,11 +16,11 @@ import type { ResourceDef, ResourceFacetData } from "./types";
  */
 export function resourceModeLabel(r: ResourceDef): string {
   const membership = r.membership ? `${r.mode}, ${r.membership}` : r.mode;
-  const base =
-    r.changes !== undefined ? `${membership}, ${r.changes}` : membership;
-  return r.unbounded !== undefined
-    ? `${base}, unbounded: ${r.unbounded}`
-    : base;
+  return [
+    membership,
+    ...(r.changes !== undefined ? [r.changes] : []),
+    ...(r.lists ?? []),
+  ].join(", ");
 }
 
 /** Diff projection: one "key (mode)" string per resource, server before central. */

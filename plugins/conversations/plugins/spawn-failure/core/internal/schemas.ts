@@ -35,4 +35,7 @@ export type SpawnFailure = z.infer<typeof SpawnFailureSchema>;
 export const spawnFailureRows = liveCollection("conversation-spawn-failures", {
   from: spawnFailureShape,
   id: "conversationId",
+  // The queue asks for its gone LIVE conversations (`conversations-active`, a
+  // whole set) at once — the same bound as `queueRanks`' id set.
+  maxIds: 2000,
 });

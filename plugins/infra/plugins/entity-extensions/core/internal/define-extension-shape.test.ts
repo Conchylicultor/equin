@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { z } from "zod";
+import { z } from "zod";
 import { nullable } from "@plugins/fields/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
@@ -8,7 +8,9 @@ import {
   enumTextField,
   textField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
+import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { defineExtensionShape } from "./define-extension-shape";
 
 describe("defineExtensionShape", () => {
@@ -373,6 +375,26 @@ describe("defineExtensionShape — exposes", () => {
         },
       }),
     ).toThrow(/which a missing side row cannot read/);
+  });
+
+  test("an exposed list carries its bound: a bare one throws, a whole one passes", () => {
+    const withList = (schema: z.ZodType<string[]>) =>
+      defineExtensionShape({
+        key: "songId",
+        fields: { tags: jsonField({ label: "Tags", schema, default: [] }) },
+        exposes: {
+          parent: entityRef("songs", {}),
+          name: "tags",
+          fields: { tags: {} },
+        },
+      });
+    expect(() => withList(z.array(z.string()))).toThrow(
+      /exposes\("tags"\): a list with no bound — `tags`/,
+    );
+    expect(
+      withList(wholeList(z.string(), { reason: "a song's few tags" })).exposure
+        .fields.tags.id,
+    ).toBe("tags");
   });
 });
 

@@ -156,9 +156,13 @@ measured overhead on a real worktree workload is still an open task.
   - Register:
     - `defineTimer('health.process-sampler')`
     - `defineTimer('health.host-sampler')`
-  - Resources: `health-monitor.series` (push, notified)
+  - Resources: `health-monitor.series` (push, notified, whole: one per worktree backend that sampled in the read window — the backends running in the last 2 h, never every worktree on disk, capped: MAX_HEALTH_SAMPLES, capped: MAX_SLOW_OP_MARKERS)
 - Core:
-  - Uses: `debug/slow-ops.SlowOpMarkerSchema`
+  - Uses:
+    - `debug/slow-ops.MAX_SLOW_OP_MARKERS`
+    - `debug/slow-ops.SlowOpMarkerSchema`
+    - `packages/list-bound.cappedList`
+    - `packages/list-bound.wholeList`
   - Exports (types):
     - `HealthData`
     - `HealthSample`
@@ -169,6 +173,7 @@ measured overhead on a real worktree workload is still an open task.
     - `HealthSampleSchema`
     - `HealthSeriesSchema`
     - `HostSampleSchema`
+    - `MAX_HEALTH_SAMPLES`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`

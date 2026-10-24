@@ -19,7 +19,7 @@
   - Uses:
     - `database.db`
     - `network/live.serveValue`
-  - Resources: `studio.table-indexes` (push, fixed)
+  - Resources: `studio.table-indexes` (push, fixed, whole: one table's indexes — a handful, each declared in its schema)
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`

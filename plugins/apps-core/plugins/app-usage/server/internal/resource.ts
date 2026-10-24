@@ -21,10 +21,6 @@ export const appUsageSummaryServed = serveValue(appUsageSummary, {
       "the summary folds every day's row into one row per app, so a write to any row of the table may change any app's totals",
   },
   throttleMs: 2000,
-  unbounded: {
-    reason:
-      "one row per app id ever used — bounded by the installed app registry (tens of apps), never by time: the GROUP BY folds every day into its app",
-  },
   loader: async () =>
     db
       .select({

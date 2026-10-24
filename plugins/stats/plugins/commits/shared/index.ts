@@ -1,6 +1,7 @@
 export { commitsConfig } from "./config";
 export {
   COMMIT_BUCKETS,
+  commitPointsNote,
   commitsCounts,
   commitsCountsByCategory,
   commitsLines,

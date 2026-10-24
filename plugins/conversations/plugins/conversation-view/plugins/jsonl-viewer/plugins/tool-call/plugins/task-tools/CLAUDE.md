@@ -40,7 +40,9 @@ Renders Claude Code's native task tools (TaskCreate, TaskUpdate, TaskGet, TaskLi
   - Contributes: `resource.declare` "jsonl-viewer.task-tools.aggregate"
   - Uses: `conversations/conversation-view/jsonl-viewer.serveTranscriptValue`
 - Core:
-  - Uses: `network/live.liveValue`
+  - Uses:
+    - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
   - Exports (types):
     - `TaskAggregate`
     - `TaskEntry`

@@ -20,6 +20,7 @@ import {
 } from "@plugins/stats/plugins/commits/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { costSessionsDaily, type CostSessionDay } from "../../shared/values";
+import { costDaysNote } from "../../shared/derive";
 import { useShowEmptyDays } from "@plugins/stats/web";
 import { useScope } from "./use-scope";
 
@@ -49,6 +50,7 @@ export function ModelUsageChart() {
       size="lg"
       isEmpty={(d) => d.days.length === 0}
       emptyText="No sessions recorded yet."
+      note={costDaysNote}
     >
       {(d) => <ModelUsageBody days={d.days} families={d.families} />}
     </LiveChart>

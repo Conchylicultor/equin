@@ -1,9 +1,9 @@
-import { z } from "zod";
 import {
   liveCollection,
   liveValue,
   type LiveRowsCollection,
 } from "@plugins/network/plugins/live/core";
+import { cappedList } from "@plugins/packages/plugins/list-bound/core";
 import { eventSourceRunsEntityRef, eventSourcesEntityRef } from "./entity-refs";
 import { RunEventSchema } from "./schema";
 
@@ -144,7 +144,7 @@ export const RUN_EVENTS_LIMIT = 200;
  * `unchanged` run legitimately looks like) are different answers.
  */
 export const runEvents = liveValue("events.run-events", {
-  schema: z.array(RunEventSchema),
+  schema: cappedList(RunEventSchema, { max: RUN_EVENTS_LIMIT }),
   params: ["runId"],
   refusals: ["missing"],
 });

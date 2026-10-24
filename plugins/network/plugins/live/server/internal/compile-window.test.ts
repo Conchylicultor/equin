@@ -75,7 +75,7 @@ const byOrder = (p: SortParams) => [
     : { col: rows.n, dir: "desc" as const },
 ];
 const ptDescriptor = () =>
-  pointQueryResourceDescriptor(`test.cw.pt-${seq++}`, rowSchema, "id");
+  pointQueryResourceDescriptor(`test.cw.pt-${seq++}`, rowSchema, "id", 500);
 // Every window is read as key-range pages, so every window spec states where
 // its rows' keys go; these tuples carry no cuts.
 const ROW_KEY: WindowQueryResourceSpec["rowKey"] = {

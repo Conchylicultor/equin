@@ -12,7 +12,9 @@ import {
   type InferFieldValue,
 } from "@plugins/fields/core";
 import type { EntityRef } from "@plugins/infra/plugins/entities/core";
+import type { ListShape } from "@plugins/packages/plugins/list-bound/core";
 import { fieldDomain, type FieldsFilterable } from "./field-domain";
+import { declaredShape } from "./live-value";
 import {
   isShape,
   type FromFields,
@@ -408,6 +410,13 @@ export interface LiveArm<
    * raw ledger or an extension shape (a shape reaches no exposure).
    */
   readonly reaches: EntityRef | null;
+  /**
+   * The lists its slice holds (its listed and carried fields — a
+   * `jsonField({ schema })` array, a string list), each capped or whole:
+   * walked at declaration like a collection's own row (`declaredShape`), so
+   * a bare one is refused here.
+   */
+  readonly shape: ListShape;
 }
 
 /**
@@ -522,11 +531,16 @@ export function liveArm<
   const sortable = spec.sortable ?? [];
   type Listed = Pick<FromFields<E>, P & keyof FromFields<E>> & F;
   type Slice = { [K in keyof (Listed & C)]: InferFieldValue<(Listed & C)[K]> };
+  const sliceRow = fieldsToZodObject({ ...listedFields, ...carried });
+  // Every list the slice holds reaches the browser in every row of the union,
+  // so it carries its bound as a collection's own row does.
+  const shape = declaredShape(
+    `liveArm("${collection.key}", "${arm}")`,
+    sliceRow,
+    "",
+  );
   const handle = armColumns(collection, arm, {
-    row: fieldsToZodObject({
-      ...listedFields,
-      ...carried,
-    }) as unknown as LiveRowSchema<Slice>,
+    row: sliceRow as unknown as LiveRowSchema<Slice>,
     filterable: filterable as unknown as FieldsFilterable<Listed> &
       LiveFilterable<Slice>,
     sortable,
@@ -558,6 +572,7 @@ export function liveArm<
     listed,
     picked: Object.freeze([...(spec.pick ?? [])]),
     reaches: from === undefined || isShape(from) ? null : (from as EntityRef),
+    shape,
   }) as unknown as LiveArm<
     WithContributedColumns<Row>,
     Pick<FromFields<E>, P & keyof FromFields<E>> & F,

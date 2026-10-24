@@ -1,11 +1,12 @@
 import { mkdirSync } from "node:fs";
 import { basename, dirname } from "node:path";
-import { serveValue } from "@plugins/network/plugins/live/server";
+import { serveValue, sliceRange } from "@plugins/network/plugins/live/server";
 import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
 import { releaseRunLogs } from "../../core/resources";
 import {
+  forgetReleaseTranscript,
   isReleaseRunId,
-  readReleaseTranscript,
+  releaseTranscriptLines,
   releaseTranscriptPath,
 } from "./transcript";
 
@@ -40,7 +41,10 @@ async function watchTranscript(
 }
 
 /**
- * The persisted log of one release run — its transcript file, read whole.
+ * The persisted log of one release run — its transcript file, a key range of
+ * lines at a time (newest first), sliced from the lines memoized on the file's
+ * `(size, mtime)` (`releaseTranscriptLines`), so the pages of one change read
+ * the file once.
  *
  * `notified`, by the transcript's own watch: a live run's file grows, the
  * artifact prune can reap a finished one, and a terminal run's never changes
@@ -50,24 +54,31 @@ async function watchTranscript(
  * loader reads no Postgres.
  *
  * Throttled: a live run writes its transcript line by line, and each recompute
- * re-reads the whole file.
+ * re-reads the file.
  */
 export const releaseRunLogsServed = serveValue(releaseRunLogs, {
   source: "external",
   changes: "notified",
   throttleMs: 1000,
-  loader: ({ id }) => {
+  loader: async ({ id }, range) => {
     if (!isReleaseRunId(id)) {
       throw releaseRunLogs.refuse(
         "invalid-id",
         `not a release run id: ${JSON.stringify(id)}`,
       );
     }
-    return { lines: readReleaseTranscript(id) };
+    return sliceRange(releaseRunLogs, await releaseTranscriptLines(id), range);
   },
-  // The async start is RETURNED to the runtime, which awaits it before the
-  // first read, reports a failed start, and chains a stop that arrives first
-  // after it. A malformed id watches nothing — the loader refuses it.
-  whileSubscribed: ({ id }, notify) =>
-    isReleaseRunId(id) ? watchTranscript(id, notify) : () => {},
+  // Once per run, however its pages split. The async start is RETURNED to the
+  // runtime, which awaits it before the first read, reports a failed start,
+  // and chains a stop that arrives first after it. A malformed id watches
+  // nothing — the loader refuses it. The stop drops the memoized lines.
+  whileSubscribed: async ({ id }, notify) => {
+    if (!isReleaseRunId(id)) return () => {};
+    const release = await watchTranscript(id, notify);
+    return () => {
+      release();
+      forgetReleaseTranscript(id);
+    };
+  },
 });

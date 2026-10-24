@@ -286,7 +286,8 @@ export function waitSplit(agg: Aggregate): {
 
 const MAX_LABEL_LEN = 500;
 const MAX_VARIANT_LEN = 200;
-const SLOWEST_CAP = 50;
+/** How many of each kind's slowest recent spans the recorder keeps (and `getRuntimeProfile` lists). */
+export const SLOWEST_CAP = 50;
 
 // Rolling-max window: per-aggregate max durations are bucketed into
 // BUCKET_MS-wide bins; `recentMaxMs` is the max over the last WINDOW_BUCKETS

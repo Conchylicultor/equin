@@ -23,6 +23,8 @@ export {
   type PlaceSearchQuery,
   PlaceSearchResultSchema,
   type PlaceSearchResult,
+  PLACES_SEARCH_MAX_RESULTS,
+  PLACES_SEARCH_MAX_SUGGESTIONS,
 } from "./internal/maps";
 export {
   SEARCH_RUNGS,

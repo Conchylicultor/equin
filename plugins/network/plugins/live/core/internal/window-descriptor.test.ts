@@ -85,7 +85,7 @@ describe("windowQueryResourceDescriptor", () => {
 });
 
 describe("pointQueryResourceDescriptor", () => {
-  const pt = pointQueryResourceDescriptor("test.point.codec", el, "id");
+  const pt = pointQueryResourceDescriptor("test.point.codec", el, "id", 3);
 
   test("registers a keyed descriptor with no defaultParams (point resources are never boot-critical)", () => {
     expect(resourceDescriptorByKey("test.point.codec")).toBe(pt);
@@ -112,5 +112,32 @@ describe("pointQueryResourceDescriptor", () => {
 
   test("decode throws on a params tuple with no id set", () => {
     expect(() => pt.point.decode({})).toThrow(/params\.ids is missing/);
+  });
+
+  test("maxIds: encode throws past the cap (after dedupe), decode refuses it as contract-mismatch", () => {
+    expect(pt.point.maxIds).toBe(3);
+    expect(pt.point.encode(["a", "b", "c", "a"])).toEqual({ ids: "a,b,c" });
+    expect(() => pt.point.encode(["a", "b", "c", "d"])).toThrow(
+      /4 ids, at most 3/,
+    );
+    expect(pt.point.decode({ ids: "a,b,c" })).toEqual(["a", "b", "c"]);
+    let refused: unknown;
+    try {
+      pt.point.decode({ ids: "a,b,c,d" });
+    } catch (err) {
+      refused = err;
+    }
+    expect(refused).toBeInstanceOf(ResourceContractError);
+    expect(String(refused)).toMatch(/4 ids, at most 3/);
+    // The params gate is the same decode.
+    expect(() => pt.validateParams!({ ids: "a,b,c,d" })).toThrow(
+      ResourceContractError,
+    );
+  });
+
+  test("maxIds must be a positive integer", () => {
+    expect(() =>
+      pointQueryResourceDescriptor("test.point.codec-bad", el, "id", 0),
+    ).toThrow(/maxIds must be a positive integer/);
   });
 });

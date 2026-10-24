@@ -19,6 +19,7 @@
  * This script only reads `_debug`; it writes `viewed` markers (agent-marked).
  */
 import { PROTOCOL } from "@plugins/packages/plugins/resource-protocol/core";
+import { canonicalJson } from "@plugins/packages/plugins/canonical-params/core";
 import {
   agentFetch,
   arg,
@@ -38,11 +39,19 @@ const SUBS: { key: string; params: Record<string, string> }[] = [
   { key: "jsonl-viewer.outline.turns", params: { id: CONV } },
   { key: "subagent-activity", params: { id: CONV } },
   { key: "background-shell-output", params: { id: CONV, shellId: SHELL } },
+  // Two key-range-paged values: their page 0 — the question's canonical JSON
+  // (`q`) at the declared page limit (subagent-transcript 200, edited-files 500).
   {
     key: "subagent-transcript",
-    params: { id: CONV, by: "agent", key: SUBAGENT_KEY },
+    params: {
+      q: canonicalJson({ id: CONV, by: "agent", key: SUBAGENT_KEY }),
+      limit: "200",
+    },
   },
-  { key: "edited-files", params: { id: CONV } },
+  {
+    key: "edited-files",
+    params: { q: canonicalJson({ id: CONV }), limit: "500" },
+  },
 ];
 const KEYS = SUBS.map((s) => s.key);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -182,9 +191,9 @@ const rows = KEYS.map((k) => {
 });
 console.table(rows);
 
-// Only value-carrying `update` frames are the skip's business: an
-// invalidate-mode value (edited-files) still sends its few-byte invalidate per
-// routed change, by design — its client revalidates against the ETag.
+// Only value-carrying `update` frames are the skip's business: a paged value's
+// page (edited-files, subagent-transcript) ships keyed deltas, never an
+// `update`, and an unchanged page ships none.
 for (const row of rows) {
   const updates = frames.filter(
     (f) => f.phase === "writes" && f.key === row.key && f.kind === "update",

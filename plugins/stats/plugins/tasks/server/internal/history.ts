@@ -48,10 +48,6 @@ export const tasksHistoryServed = serveValue(tasksHistory, {
     reason:
       "the history aggregates every task's created / resolved day over tasks_v's derived status, so a write to any task, attempt or push row may move any day",
   },
-  unbounded: {
-    reason:
-      "one row per UTC day since the first task (a few hundred for a year of use), aggregated in SQL — never one row per task",
-  },
   throttleMs: 1000,
   loader: loadHistory,
 });

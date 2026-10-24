@@ -47,7 +47,8 @@ Debug → Queue's Triggers tab (`useLive(eventTriggers)`). It is a value, not a
 `liveCollection`, because its rows are a union over one `<event>_triggers` table
 per event plus the computed `dangling` flag (target job not in the registry),
 which a single-table collection cannot bind. Served by
-`serveValue(eventTriggers, { source: "db", unbounded: { reason } })`: the
+`serveValue(eventTriggers, { source: "db" })` (its schema a `wholeList` with
+the reason): the
 loader's read-set is every trigger table, so any binding write pushes the whole
 list. The `GET /api/events/triggers` endpoint serves the same rows wrapped as
 `{ rows }` (`TriggersPayloadSchema`).

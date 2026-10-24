@@ -16,10 +16,6 @@ export const attachmentsByOwnerServed = serveValue(attachmentsByOwner, {
     reason:
       "a tuple joins one owner's link table with attachments; a write to any link row or attachment may change it, whole-table until it reads through a collection",
   }),
-  unbounded: {
-    reason:
-      "one owner's attachments — the files a person attached to one task or block, a handful, never a growing log",
-  },
   loader: async ({ ownerType, id }) => {
     const link = getLink(ownerType);
     if (!link) {

@@ -117,7 +117,7 @@ Behavior:
 
 - One live value per conversation — `activeDataBindings`
   (`liveValue("active-data.bindings", { params: ["conversationId"] })` in
-  `core/resource.ts`, served by `serveValue(…, { source: "db", unbounded })` in
+  `core/resource.ts`, a `wholeList`, served by `serveValue(…, { source: "db" })` in
   `server/internal/resource.ts`) — so all widgets in a conversation share one
   subscription, each picking its own row by
   `(messageId, tag, occurrenceIndex)`. A value, not a collection: that

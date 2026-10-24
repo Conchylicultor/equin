@@ -7,7 +7,7 @@
 - Description: The Machine watcher card's "Where it goes" block (MachineUsageBreakdown): the machine's CPU and memory as two bars split into your Chrome, agent ops, the agent browser and other, then one line per bucket — read from the sentinel.machine-usage value, sampled when the card opens.
 - Server:
   - Contributes: `resource.declare` "sentinel.machine-usage"
-  - Resources: `sentinel.machine-usage` (push, notified)
+  - Resources: `sentinel.machine-usage` (push, notified, capped: MACHINE_USAGE_BUCKETS.length)
 - Web:
   - Uses:
     - `network/live.useLive`
@@ -22,7 +22,9 @@
     - `primitives/loading.Loading`
   - Exports (values): `MachineUsageBreakdown`
 - Core:
-  - Uses: `network/live.liveValue`
+  - Uses:
+    - `network/live.liveValue`
+    - `packages/list-bound.cappedList`
   - Exports (types):
     - `MachineUsage`
     - `MachineUsageBucket`

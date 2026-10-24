@@ -35,6 +35,7 @@ on the endpoints primitive and `EditedFileSchema` (a pure schema sink in the
     - `infra/endpoints.blob`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
+    - `packages/list-bound.cappedList`
     - `primitives/commit-list.CommitRowSchema`
   - Exports (types):
     - `CodeDirEntry`
@@ -47,6 +48,7 @@ on the endpoints primitive and `EditedFileSchema` (a pure schema sink in the
     - `codeFile`
     - `codeFileDiff`
     - `codeImageUrl`
+    - `COMMIT_FILES_MAX`
     - `commitFiles`
     - `CommitFilesSchema`
     - `commitInfo`

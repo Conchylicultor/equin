@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Debug → Queue: the jobs queue as live DataViews with side detail panes — Jobs (the live graphile queue merged with the recorded run history: status, hold class, attempts, when, slot wait, duration against the class ceiling, error; Retry / Cancel / Run now), Dead (the dead-letter archive), Events (the emit() log, matched or not) and Triggers (every event→job subscription, enable / disable / delete).
+- Description: Debug → Queue: the jobs queue as live DataViews with side detail panes — Queue (the host's live job queue, a windowed external collection: status, hold class, attempts, run-at, error, per-state counts; Retry / Cancel), History (the recorded runs, a windowed collection: outcome, duration against the class ceiling, slot wait, error; Run now) — a job leaves Queue for History when its run finishes, and an open detail follows it — Dead (the dead-letter archive), Events (the emit() log, matched or not) and Triggers (every event→job subscription, enable / disable / delete).
 - Web:
   - Slots:
     - `queuePane.Actions`
@@ -24,7 +24,8 @@
     - `job-actions` ← `debug.queue`
     - `trigger-actions` ← `debug.queue`
   - Contributes:
-    - `FieldPresentation.Register` "collection:debug.queue.job-row"
+    - `FieldPresentation.Register` "collection:jobs"
+    - `FieldPresentation.Register` "entity:job_runs"
     - `Pane.Register` "queue"
     - `Pane.Register` "queue-dead"
     - `Pane.Register` "queue-emission"
@@ -69,20 +70,8 @@
     - `ui/icons.Icon`
   - Exports (values): `queuePane`
 - Core:
-  - Uses:
-    - `fields.nullable`
-    - `fields/date/config.dateField`
-    - `fields/int/config.intField`
-    - `fields/text/config.enumTextField`
-    - `fields/text/config.textField`
-    - `infra/jobs.HOLD_CLASSES`
-    - `network/live.rowKind`
-    - `primitives/pane.defineRoute`
-  - Exports (values):
-    - `JOB_LIST_STATUSES`
-    - `JOB_PROBLEMS`
-    - `jobListRow`
-    - `queueRoute`
+  - Uses: `primitives/pane.defineRoute`
+  - Exports (values): `queueRoute`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`

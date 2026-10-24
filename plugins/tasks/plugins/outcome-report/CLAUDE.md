@@ -91,6 +91,7 @@ On submit, in order:
     - `fields/text/config.textField`
     - `infra/entity-extensions.defineExtensionShape`
     - `network/live.liveCollection`
+    - `packages/list-bound.wholeList`
   - Exports (types):
     - `OutcomeReport`
     - `ReportStanding`

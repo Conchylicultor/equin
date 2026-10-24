@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 /**
  * What a model API call was sent besides the conversation, lifted from Claude
@@ -12,15 +13,23 @@ import { z } from "zod";
  */
 export const RequestShapeSchema = z.object({
   /** Tool names, in the order the call listed them. */
-  tools: z.array(z.string()),
+  tools: wholeList(z.string(), {
+    reason: "one model call's tool set — the tools the agent was given",
+  }),
   /** The system prompt's text blocks, in order. */
-  system: z.array(z.string()),
+  system: wholeList(z.string(), {
+    reason: "one system prompt's text blocks — a handful",
+  }),
 });
 export type RequestShape = z.infer<typeof RequestShapeSchema>;
 
 export const RequestShapeChangeSchema = z.object({
-  toolsAdded: z.array(z.string()),
-  toolsRemoved: z.array(z.string()),
+  toolsAdded: wholeList(z.string(), {
+    reason: "the tools one shape change added — at most the tool set",
+  }),
+  toolsRemoved: wholeList(z.string(), {
+    reason: "the tools one shape change removed — at most the tool set",
+  }),
   systemChanged: z.boolean(),
 });
 /** What a shape changed relative to the one before it. */

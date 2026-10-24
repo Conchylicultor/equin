@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 /**
  * Can this machine run an agent right now? Every agent — and every one-shot
@@ -21,7 +22,12 @@ export const ClaudeCodeStatusSchema = z.discriminatedUnion("kind", [
     email: z.string().nullable(),
   }),
   z.object({ kind: z.literal("signed-out"), version: z.string() }),
-  z.object({ kind: z.literal("missing"), searched: z.array(z.string()) }),
+  z.object({
+    kind: z.literal("missing"),
+    searched: wholeList(z.string(), {
+      reason: "the few places the CLI is looked for — a fixed handful of paths",
+    }),
+  }),
   z.object({ kind: z.literal("unreadable"), error: z.string() }),
 ]);
 export type ClaudeCodeStatus = z.infer<typeof ClaudeCodeStatusSchema>;

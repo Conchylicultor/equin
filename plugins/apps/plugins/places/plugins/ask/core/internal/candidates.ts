@@ -1,11 +1,13 @@
-import { z } from "zod";
+import { wholeRecord } from "@plugins/packages/plugins/list-bound/core";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 import { PlaceCandidateSchema } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
 
 /** Every Google candidate a run's searches returned, by place id. */
-export const AskCandidatesSchema = z.record(z.string(), PlaceCandidateSchema);
+export const AskCandidatesSchema = wholeRecord(PlaceCandidateSchema, {
+  reason: "the candidates one Ask run's searches returned",
+});
 
 // The `conversations_ext_places_ask` row: the Google candidates an Ask Sonnet
 // run's searches returned, by place id — merged on every search, never

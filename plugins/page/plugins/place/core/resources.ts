@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { cappedList } from "@plugins/packages/plugins/list-bound/core";
 import { ResourceRefusal } from "@plugins/packages/plugins/resource-protocol/core";
 import { PlaceSnapshotSchema, PlaceSuggestionSchema } from "./schemas";
 
@@ -35,6 +36,13 @@ export class PlaceLookupRefusal extends ResourceRefusal {
 }
 
 /**
+ * The most suggestions one search round answers — Google's autocomplete
+ * answers at most 5. The served loader keeps a provider's first this many, so
+ * the schema's cap is never overflowed.
+ */
+export const PLACE_SEARCH_MAX_SUGGESTIONS = 5;
+
+/**
  * Type-ahead lookup, keyed by `(providerId, q, session)`. `providerId` selects
  * the registered provider; the value itself knows no provider and reads no
  * credential.
@@ -53,7 +61,11 @@ export class PlaceLookupRefusal extends ResourceRefusal {
  * a new tuple.
  */
 export const placeSearch = liveValue("place.search", {
-  schema: z.object({ suggestions: z.array(PlaceSuggestionSchema) }),
+  schema: z.object({
+    suggestions: cappedList(PlaceSuggestionSchema, {
+      max: PLACE_SEARCH_MAX_SUGGESTIONS,
+    }),
+  }),
   params: ["providerId", "q", "session"],
   refusals: PLACE_LOOKUP_REFUSALS,
   load: "on-demand",

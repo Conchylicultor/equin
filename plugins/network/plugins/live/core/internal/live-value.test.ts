@@ -5,6 +5,10 @@ import {
   ResourceContractError,
   ResourceRefusal,
 } from "@plugins/packages/plugins/resource-protocol/core";
+import {
+  wholeList,
+  wholeRecord,
+} from "@plugins/packages/plugins/list-bound/core";
 import { liveValue } from "./live-value";
 
 const S = z.object({ n: z.number() });
@@ -390,5 +394,183 @@ describe("liveValue", () => {
       const refuse = v.refuse as (code: string, message: string) => unknown;
       expect(() => refuse("gone", "x")).toThrow(/not a declared refusal/);
     });
+  });
+});
+
+// The markers' own forms are list-bound's to test; here a native cap, a
+// finite-keyed record and `wholeList` stand for the bounded lists.
+describe("liveValue — the declared list shape", () => {
+  const Row = z.object({
+    id: z.string(),
+    segments: wholeList(z.string(), { reason: "one row's handful of tags" }),
+    flags: z.record(z.enum(["a", "b"]), z.boolean()),
+  });
+
+  test("a plain value's shape is its schema's lists, each with its bound", () => {
+    const v = liveValue("test.live-value.shape.plain", {
+      schema: z.object({
+        rows: z.array(Row).max(500),
+        truncated: z.boolean(),
+      }),
+    });
+    expect(v.shape).toEqual({
+      paged: false,
+      bounds: [
+        { path: "rows", max: 500 },
+        { path: "rows[].segments", reason: "one row's handful of tags" },
+        { path: "rows[].flags", max: 2 },
+      ],
+      bare: [],
+    });
+    expect(Object.isFrozen(v.shape)).toBe(true);
+    expect(Object.isFrozen(v.shape.bounds)).toBe(true);
+  });
+
+  test("a bare list is refused at declaration, naming the key and every path", () => {
+    expect(() =>
+      liveValue("test.live-value.shape.bare", {
+        schema: z.object({
+          rows: z.array(z.object({ segments: z.array(z.string()) })).max(5),
+          byKind: z.record(z.string(), z.number()),
+        }),
+      }),
+    ).toThrow(
+      /liveValue\("test\.live-value\.shape\.bare"\).*`rows\[\]\.segments`, `byKind`/,
+    );
+    // Refused before it registers: nothing under the key.
+    expect(
+      resourceDescriptorByKey("test.live-value.shape.bare"),
+    ).toBeUndefined();
+  });
+
+  test("the bound is the declaration's, whatever serves it: a top-level array or string-keyed record is refused, a marked one declares", () => {
+    // What the retired serve-side `unbounded` (db arm only) asked of a
+    // collection-shaped payload is now asked of EVERY value's schema.
+    expect(() =>
+      liveValue("test.live-value.shape.top-array", {
+        schema: z.array(z.string()),
+      }),
+    ).toThrow(/top-array.*`\(root\)`/);
+    expect(() =>
+      liveValue("test.live-value.shape.top-record", {
+        schema: z.record(z.string(), z.number()),
+      }),
+    ).toThrow(/top-record.*`\(root\)`/);
+    expect(() =>
+      liveValue("test.live-value.shape.nullable-array", {
+        schema: z.array(z.string()).nullable(),
+      }),
+    ).toThrow(/nullable-array.*`\(root\)`/);
+    const names = liveValue("test.live-value.shape.top-whole", {
+      schema: wholeList(z.string(), { reason: "one row per configured host" }),
+    });
+    expect(names.shape.bounds).toEqual([
+      { path: "(root)", reason: "one row per configured host" },
+    ]);
+    const byHost = liveValue("test.live-value.shape.top-whole-record", {
+      schema: wholeRecord(z.number(), { reason: "one entry per host" }),
+    });
+    expect(byHost.shape.bounds).toEqual([
+      { path: "(root)", reason: "one entry per host" },
+    ]);
+  });
+
+  test("a value with no list has an empty shape", () => {
+    expect(
+      liveValue("test.live-value.shape.none", { schema: S }).shape,
+    ).toEqual({ paged: false, bounds: [], bare: [] });
+  });
+
+  test("a typed-query value's shape is its answer's, never its question's", () => {
+    const v = liveValue("test.live-value.shape.query", {
+      schema: z.array(z.number()).max(3),
+      query: z.object({ ids: z.array(z.string()) }),
+    });
+    expect(v.shape).toEqual({
+      paged: false,
+      bounds: [{ path: "(root)", max: 3 }],
+      bare: [],
+    });
+    expect(() =>
+      liveValue("test.live-value.shape.query-bare", {
+        schema: z.array(z.number()),
+        query: z.object({ ids: z.array(z.string()) }),
+      }),
+    ).toThrow(/test\.live-value\.shape\.query-bare.*`\(root\)`/);
+  });
+
+  test("a paged value's shape is its item's lists under `[]`, its meta its own", () => {
+    const v = liveValue("test.live-value.shape.paged", {
+      query: z.object({ list: z.string() }),
+      paged: {
+        item: Row,
+        id: "id",
+        key: { of: (i) => [i.id], order: ["asc"] },
+        limit: 5,
+        maxLimit: 10,
+        meta: z.object({
+          hosts: wholeRecord(z.number(), { reason: "one entry per host" }),
+        }),
+      },
+    });
+    expect(v.shape).toEqual({
+      paged: true,
+      bounds: [
+        { path: "[].segments", reason: "one row's handful of tags" },
+        { path: "[].flags", max: 2 },
+      ],
+      bare: [],
+    });
+    expect(v.meta.shape).toEqual({
+      paged: false,
+      bounds: [{ path: "hosts", reason: "one entry per host" }],
+      bare: [],
+    });
+  });
+
+  test("a paged value's bare item list or meta list is refused", () => {
+    const paged = (key: string, item: z.AnyZodObject, meta?: z.ZodTypeAny) =>
+      liveValue(key, {
+        query: z.object({ list: z.string() }),
+        paged: {
+          item,
+          id: "id",
+          key: { of: (i: { id: string }) => [i.id], order: ["asc"] },
+          limit: 5,
+          maxLimit: 10,
+          ...(meta !== undefined ? { meta } : {}),
+        },
+      } as never);
+    expect(() =>
+      paged(
+        "test.live-value.shape.paged-bare-item",
+        z.object({ id: z.string(), xs: z.array(z.string()) }),
+      ),
+    ).toThrow(/paged-bare-item.*`\[\]\.xs`/);
+    expect(() =>
+      paged(
+        "test.live-value.shape.paged-bare-meta",
+        z.object({ id: z.string() }),
+        z.object({ hosts: z.record(z.number()) }),
+      ),
+    ).toThrow(/paged-bare-meta.*`hosts`/);
+  });
+
+  test("a bytes value holds no list", () => {
+    const v = liveValue("test.live-value.shape.bytes", {
+      bytes: true,
+      params: ["path"],
+    });
+    expect(v.shape).toEqual({ paged: false, bounds: [], bare: [] });
+  });
+
+  test("a malformed marker throws at declaration, naming the key and the path", () => {
+    const xs = z.array(z.string());
+    (xs._def as unknown as Record<string, unknown>).listBound = { reason: "" };
+    expect(() =>
+      liveValue("test.live-value.shape.malformed", {
+        schema: z.object({ xs }),
+      }),
+    ).toThrow(/liveValue\("test\.live-value\.shape\.malformed"\).*`xs`/);
   });
 });

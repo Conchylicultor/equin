@@ -23,16 +23,17 @@ list, push and resolve GET routes are deleted. Only the image route stays — an
 | `code.file` (`codeFile`) | `{ worktree, path, ref? }` → `{ content }` | `machine/`, on demand, notified: `watchHostPath` on the file (on disk) or the checkout watch's HEAD and refs (`HEAD` / `main` — not the index, which `ref:path` never reads), throttle 500 ms; a sha holds no watch; ETag = the file's revision (`workspaceFileSignature`) |
 | `code.file-diff` (`codeFileDiff`) | `{ worktree, path, base?, head?, from? }` → `{ diff }` | `machine/`, on demand, notified by the checkout watch (the git dir, plus the file and its old path for a working-tree diff), throttle 500 ms; two shas hold no watch |
 | `code.dir` (`codeDir`) | `{ worktree, dir, ref? }` → pages of `CodeDirEntry` by name (500 / page, ≤ 10 000 without a viewport); meta `{ total }` | `machine/`, paged, notified: `watchHostDir` (on disk) or HEAD and the refs (named ref), throttle 1 s |
-| `code.push-files` (`pushFiles`) | `{ worktree, pushId }` → `{ files, baseSha, headSha }` | `server/`, pushed, notified by its declared reads (`pushRangeReads`: the push's `pushes` rows); the range is `resolvePushRange` — all of the push's rows ordered by git ancestry (tip = `merge-base --independent`, earliest = `merge-base --octopus`), never by commit time or a client window |
+| `code.push-files` (`pushFiles`) | `{ worktree, pushId }` → `{ files, truncated, baseSha, headSha }` (the first `COMMIT_FILES_MAX` = 2000 files by path; `truncated` when the range touched more — `code.commit-files` alike) | `server/`, pushed, notified by its declared reads (`pushRangeReads`: the push's `pushes` rows); the range is `resolvePushRange` — all of the push's rows ordered by git ancestry (tip = `merge-base --independent`, earliest = `merge-base --octopus`), never by commit time or a client window |
 
 - **Workspace resolution.** An attempt id resolves through its attempt row
   (`loadWorkspaceRoot`, machine barrel), so a plain value serving through it
   declares `reads: workspaceRootReads`. Its watch opens through
   `watchWorkspaceRoot`: a workspace whose row is not there yet answers
   `no-workspace`, and the load the row's insert re-runs opens the watch then,
-  so the loader and the watch read the same root. `code.dir` is paged and may
-  declare no `reads`: its `whileSubscribed` — awaited before any page —
-  resolves the root once per subscription and the pages read the held one.
+  so the loader and the watch read the same root. `code.dir` is paged and declares
+  no `reads` (one would re-read every page on any attempt write): its
+  `whileSubscribed` — awaited before any page — resolves the root once per
+  subscription and the pages read the held one.
 - **Refusals** (each value declares the ones it gives): `no-workspace`,
   `not-a-checkout` (a git read of a scratch workspace), `invalid-path`,
   `invalid-ref`, `missing`, and per read `too-large` / `binary` / `denied` /
@@ -82,13 +83,13 @@ list, push and resolve GET routes are deleted. Only the image route stays — an
     - `resolveWorkspaceRoot`
     - `resolveWorktreePath`
   - Resources:
-    - `code.commit-files` (push, immutable)
+    - `code.commit-files` (push, immutable, capped: COMMIT_FILES_MAX)
     - `code.commit-info` (push, immutable)
     - `code.dir` (keyed, window, notified)
     - `code.dir:meta` (push, notified)
     - `code.file` (invalidate, notified)
     - `code.file-diff` (invalidate, notified)
-    - `code.push-files` (push, notified)
+    - `code.push-files` (push, notified, capped: COMMIT_FILES_MAX)
 - Machine:
   - Uses:
     - `infra/endpoints.machineHandler`

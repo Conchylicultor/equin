@@ -1,8 +1,10 @@
 import { join } from "node:path";
 import { serveValue } from "@plugins/network/plugins/live/server";
 import { refHeadServed } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
-import { getEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/server";
-import { editedFilesServed } from "@plugins/conversations/plugins/conversation-view/plugins/code/machine";
+import {
+  getEditedFiles,
+  watchEditedFiles,
+} from "@plugins/conversations/plugins/conversation-view/plugins/code/server";
 import { findWorkspaceOfConversation } from "@plugins/conversations/plugins/workspace/server";
 import {
   _attempts,
@@ -24,7 +26,7 @@ async function computeWorktreePluginChanges(
   if (!found.found || !found.workspace.path) return { plugins: [] };
   const worktreePath = found.workspace.path;
 
-  const [editedFiles, mainPluginsDir] = await Promise.all([
+  const [worktreeFiles, mainPluginsDir] = await Promise.all([
     getEditedFiles(worktreePath),
     getMainPluginsDir(),
   ]);
@@ -38,7 +40,7 @@ async function computeWorktreePluginChanges(
     getWorktreePluginTree(worktreePath, worktreePluginsDir),
     getMainPluginTree(mainPluginsDir),
   ]);
-  const plugins = computePluginChanges(worktreeTree, mainTree, editedFiles);
+  const plugins = computePluginChanges(worktreeTree, mainTree, worktreeFiles);
   return { plugins };
 }
 
@@ -46,8 +48,11 @@ async function computeWorktreePluginChanges(
 // git, which no change feed can see. It recomputes on exactly the two things
 // that move the diff:
 //
-// - **a worktree file edit** — the conversation's own `edited-files` tuple
-//   (`{ id }`) maps to this conversation's tuple.
+// - **a worktree file edit** — the conversation's worktree watch, the same
+//   refcounted room `edited-files` reads through (`watchEditedFiles`), held
+//   while the tuple is subscribed: it notifies when the edited list changes.
+//   Not a `recomputeOn` edge onto `edited-files`: that value is key-range
+//   paged, and a keyed window cascades nothing (D32).
 // - **a git ref advance** (local commit / rebase / sync-to-head, or main
 //   moving) — the bare `refHeadServed` recomputes every subscribed
 //   conversation. git-watcher only tracks `main` + this worktree's own branch,
@@ -70,11 +75,11 @@ export const pluginChangesServed = serveValue(pluginChanges, {
   // re-arm — so a burst costs one heavy buildPluginTree per window, not one per
   // commit.
   throttleMs: 3000,
-  recomputeOn: [
-    {
-      value: editedFilesServed,
-      params: ({ id }) => ({ conversationId: id }),
-    },
-    refHeadServed,
-  ],
+  recomputeOn: [refHeadServed],
+  whileSubscribed: async ({ conversationId }, notify) => {
+    const found = await findWorkspaceOfConversation(conversationId);
+    // No worktree: the loader answers no plugins, and there is nothing to watch.
+    if (!found.found || !found.workspace.path) return () => {};
+    return watchEditedFiles(found.workspace.path, notify);
+  },
 });

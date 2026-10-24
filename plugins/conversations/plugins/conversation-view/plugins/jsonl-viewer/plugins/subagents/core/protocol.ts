@@ -1,10 +1,16 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import {
-  JsonlEventSchema,
   TokenUsageSchema,
   type JsonlEvent,
 } from "@plugins/conversations/plugins/transcript-source/core";
+import {
+  JSONL_EVENTS_MAX,
+  JSONL_EVENTS_PAGE,
+  seqKey,
+  TranscriptEventRowSchema,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 
 /**
  * How the parent asked for this sub-agent — and therefore what its COMPLETION
@@ -194,7 +200,17 @@ export const SubagentActivityRowSchema = z.discriminatedUnion("kind", [
 ]);
 export type SubagentActivityRow = z.infer<typeof SubagentActivityRowSchema>;
 
-export const SubagentActivityPayloadSchema = z.array(SubagentActivityRowSchema);
+/**
+ * Whole, not capped: every sub-agent card of the conversation joins its own row,
+ * so a cap would silently strip state from the cards past it.
+ */
+export const SubagentActivityPayloadSchema = wholeList(
+  SubagentActivityRowSchema,
+  {
+    reason:
+      "one conversation's sub-agents — one per Agent call or teammate, dozens at most",
+  },
+);
 
 /**
  * Everything a parent's `Agent` call offers for finding the sub-agent it
@@ -273,7 +289,8 @@ export function describedSubagent(
 
 /**
  * A sub-agent's own transcript, or the fact that no file is claimed by that
- * tool-use id yet.
+ * tool-use id yet — what the server reads (and memoizes) per sub-agent, before
+ * `subagentTranscript` pages it out.
  *
  * A discriminated result, never an empty array: "the file isn't there yet" and
  * "the sub-agent did nothing" must not share a spelling, or a card that is still
@@ -290,18 +307,38 @@ export function describedSubagent(
  *                  the pane says so instead of spinning forever waiting for
  *                  something that will never arrive.
  */
-export const SubagentTranscriptSchema = z.discriminatedUnion("kind", [
+export type SubagentTranscript =
+  | { kind: "linked"; agentId: string; events: JsonlEvent[] }
+  | { kind: "unlinked" }
+  | { kind: "unjoinable"; reason: string };
+
+/**
+ * What only a sub-agent's WHOLE transcript knows — `subagentTranscript.meta`.
+ * The link state lives here, not on a page: a page is items only, so whether
+ * a file is claimed at all (`unlinked` / `unjoinable` read no pages) is a fact
+ * about the question. Linked, it carries what a window of the transcript
+ * cannot answer: how many events, where the agent first answered, the last
+ * write-up it handed back (`lastHandback`) and its typed prompts (so a window
+ * opening mid-turn can still pin the prompt that turn answers).
+ */
+export const SubagentTranscriptMetaSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("linked"),
     agentId: z.string(),
-    events: z.array(JsonlEventSchema),
+    count: z.number().int(),
+    firstAssistantSeq: z.number().int().nullable(),
+    handback: z.string().nullable(),
+    prompts: wholeList(TranscriptEventRowSchema, {
+      reason:
+        "one sub-agent's typed prompts — its launch prompt and each message sent to it, a handful",
+    }),
   }),
   z.object({ kind: z.literal("unlinked") }),
   z.object({ kind: z.literal("unjoinable"), reason: z.string() }),
 ]);
-export type SubagentTranscript = z.infer<typeof SubagentTranscriptSchema>;
-
-export type SubagentTranscriptEvents = JsonlEvent[];
+export type SubagentTranscriptMeta = z.infer<
+  typeof SubagentTranscriptMetaSchema
+>;
 
 /**
  * Every sub-agent of one conversation, in start order. ONE subscription serves
@@ -340,15 +377,35 @@ export const SubagentRefSchema = z.object({
 });
 export type SubagentRef = z.infer<typeof SubagentRefSchema>;
 
+/** One sub-agent's transcript question: the PARENT conversation plus a {@link SubagentRef}, flat. */
+export const SubagentTranscriptQuerySchema = SubagentRefSchema.extend({
+  id: z.string(),
+});
+export type SubagentTranscriptQuery = z.infer<
+  typeof SubagentTranscriptQuerySchema
+>;
+
 /**
- * One sub-agent's transcript, keyed by the parent conversation plus whichever
- * {@link SubagentRef} the opening surface holds (spread flat: `{ id, by, key }`);
- * the server re-parses the ref and resolves it to a file. Not loaded yet is
- * `pending` — never `unlinked`, which is a settled answer ("no file claims this
- * card yet"), not a stand-in.
+ * One sub-agent's transcript, asked by the parent conversation plus whichever
+ * {@link SubagentRef} the opening surface holds (`{ id, by, key }`, decoded by
+ * the typed query — `by` arrives as `call` | `agent`, never a bare string), as
+ * the conversation's own is read: rows `{ id, seq, event }` (`jsonlEvents`'
+ * shape), newest first, paged by position — the pane opens on the latest
+ * events, scrolling up loads older ones, and a change ships only the rows it
+ * touched. `subagentTranscript.meta` says whether a file is claimed at all
+ * ({@link SubagentTranscriptMetaSchema}); an unlinked or unjoinable sub-agent
+ * reads no pages. Not loaded yet is `pending` — never `unlinked`, which is a
+ * settled answer ("no file claims this card yet"), not a stand-in.
  */
 export const subagentTranscript = liveValue("subagent-transcript", {
-  schema: SubagentTranscriptSchema,
-  params: ["id", "by", "key"],
+  query: SubagentTranscriptQuerySchema,
+  paged: {
+    item: TranscriptEventRowSchema,
+    id: "id",
+    key: { of: (row) => [seqKey(row.seq)], order: ["desc"] },
+    limit: JSONL_EVENTS_PAGE,
+    maxLimit: JSONL_EVENTS_MAX,
+    meta: SubagentTranscriptMetaSchema,
+  },
   needsMachine: { feature: "Watching sub-agents" },
 });

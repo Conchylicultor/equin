@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import {
   JsonlEventSchema,
   type JsonlEvent,
@@ -37,6 +38,9 @@ export function userTurnsOf(
  * prompt text), and pushed only when a turn is added.
  */
 export const conversationTurns = liveValue("jsonl-viewer.outline.turns", {
-  schema: z.array(OutlineTurnSchema),
+  schema: wholeList(OutlineTurnSchema, {
+    reason:
+      "one conversation's user turns — one per typed prompt, a few hundred at most",
+  }),
   params: ["id"],
 });

@@ -1,7 +1,12 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { BackgroundEntrySchema, BackgroundRecentRunsSchema } from "./entry";
+
+/** Why a catalog half is loaded whole. */
+const CATALOG_REASON =
+  "the declared set — one entry per job, warm-up, timer, watcher and daemon the code declares (a few hundred), never one per run";
 
 /**
  * Everything this backend runs on its own, merged from every registered
@@ -10,7 +15,7 @@ import { BackgroundEntrySchema, BackgroundRecentRunsSchema } from "./entry";
  * throttled server-side so per-minute work cannot churn it.
  */
 export const backgroundCatalog = liveValue("background.catalog", {
-  schema: z.array(BackgroundEntrySchema),
+  schema: wholeList(BackgroundEntrySchema, { reason: CATALOG_REASON }),
 });
 
 /**
@@ -31,7 +36,7 @@ export const backgroundRecentRuns = liveValue("background.recent-runs", {
 export const backgroundCentralCatalog = liveValue(
   "background.central-catalog",
   {
-    schema: z.array(BackgroundEntrySchema),
+    schema: wholeList(BackgroundEntrySchema, { reason: CATALOG_REASON }),
     origin: "central",
     // The central runtime is the computer's machine-wide process.
     needsMachine: { feature: "Reading the central runtime's activity" },

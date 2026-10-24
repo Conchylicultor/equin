@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 export const OutgoingFkSchema = z.object({
   constraint_name: z.string(),
@@ -23,8 +24,13 @@ export const IncomingFkSchema = z.object({
  */
 export const tableForeignKeys = liveValue("studio.table-foreign-keys", {
   schema: z.object({
-    outgoing: z.array(OutgoingFkSchema),
-    incoming: z.array(IncomingFkSchema),
+    outgoing: wholeList(OutgoingFkSchema, {
+      reason: "the foreign keys one table declares — a column's worth at most",
+    }),
+    incoming: wholeList(IncomingFkSchema, {
+      reason:
+        "the foreign keys pointing at one table — one per referencing column in the schema",
+    }),
   }),
   params: ["tableName"],
   refusals: ["missing"],

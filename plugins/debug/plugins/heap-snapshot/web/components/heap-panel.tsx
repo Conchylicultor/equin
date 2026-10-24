@@ -19,8 +19,11 @@ import {
   DataTable,
   type ColumnDef,
 } from "@plugins/primitives/plugins/data-table/web";
-import { captureHeapSnapshot } from "../../shared/endpoints";
-import type { HeapStats } from "../../shared/endpoints";
+import {
+  captureHeapSnapshot,
+  HEAP_TYPES_MAX,
+  type HeapStats,
+} from "../../shared/endpoints";
 import { heapStatsValue } from "../../shared/resources";
 
 function formatBytes(bytes: number): string {
@@ -81,7 +84,11 @@ export function HeapPanel(): ReactElement {
                 1,
               )} MB heap (cap ${stats.data.heapCapacityMb.toFixed(
                 1,
-              )} MB) · ${stats.data.objectCount.toLocaleString()} objects · ${stats.data.types.length} types`}
+              )} MB) · ${stats.data.objectCount.toLocaleString()} objects · ${
+                stats.data.truncated
+                  ? `the ${HEAP_TYPES_MAX} most numerous types`
+                  : `${stats.data.types.length} types`
+              }`}
             </Text>
           )}
         </Stack>

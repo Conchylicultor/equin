@@ -34,6 +34,14 @@ export type WindowQueryResourceContract<
 export type PointQueryResourceContract<Row> = PointResourceDescriptor<Row> & {
   /** The row field the client `keyOf` reads — matched against the server keyField. */
   queryPk: string;
+  point: {
+    /**
+     * The most ids one tuple may name: `encode` throws past it, and `decode`
+     * (the params gate and the membership `idsOf`) refuses it as
+     * `contract-mismatch` — an id set is a bounded read like a window.
+     */
+    maxIds: number;
+  };
 };
 
 /**
@@ -46,11 +54,21 @@ export type AllQueryParams<B extends string> = [B] extends [never]
   : { [K in B]: string };
 
 /**
+ * The bound of a whole ordered set (`all`) — exactly one of: a cap (`max`, at
+ * most that many rows per tuple), or the reason it is held whole.
+ */
+export type AllBound =
+  | { readonly max: number; readonly unbounded?: never }
+  | { readonly unbounded: { reason: string }; readonly max?: never };
+
+/**
  * The whole ordered set of a collection declared `all`
  * (`liveCollection(key, { all })`): ONE keyed resource whose value is every
- * row, in `orderBy` order (pk as the tiebreaker). Unbounded by declaration —
- * `unbounded.reason` says why the set is small enough to hold whole — so it
- * has no window codec, no limit and no default tuple. Not loaded yet is
+ * row, in `orderBy` order (pk as the tiebreaker). Its bound is declared:
+ * capped (`max` — at most that many rows; the schema's `.max` refuses one
+ * more on every parse, and the compiler's loads refuse it) or whole
+ * (`unbounded.reason` says why the set is small enough to hold whole). It has
+ * no window codec, no limit param and no default tuple. Not loaded yet is
  * `pending`, never `[]`.
  *
  * - Declared without `by` (`B` = `never`): param-less — boot hydrates the
@@ -76,9 +94,8 @@ export type AllQueryResourceContract<
      * ties, so the order is total whatever the fields.
      */
     orderBy: readonly (readonly [keyof Row & string, "asc" | "desc"])[];
-    /** Why the whole set is held: the `all` arm has no other bound. */
-    unbounded: { reason: string };
-  } & ([B] extends [never]
+  } & AllBound &
+    ([B] extends [never]
     ? { by?: never }
     : {
         /** The row fields a tuple is scoped by — its params' keys, in declaration order. */

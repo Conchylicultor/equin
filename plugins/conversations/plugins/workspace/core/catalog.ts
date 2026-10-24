@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import {
+  cappedList,
+  wholeList,
+} from "@plugins/packages/plugins/list-bound/core";
+import {
   WorkspaceCapabilitySchema,
   WorkspaceKindSchema,
   WorkspaceSpecSchema,
@@ -18,7 +22,9 @@ export const WorkspaceChoiceSchema = z.object({
   kind: WorkspaceKindSchema,
   label: z.string(),
   description: z.string(),
-  capabilities: z.array(WorkspaceCapabilitySchema),
+  capabilities: cappedList(WorkspaceCapabilitySchema, {
+    max: WorkspaceCapabilitySchema.options.length,
+  }),
   profile: z
     .object({
       id: z.string(),
@@ -40,6 +46,9 @@ export type WorkspaceChoice = z.infer<typeof WorkspaceChoiceSchema>;
  * kinds are a closed set and profiles register at boot.
  */
 export const workspaceCatalog = liveValue("workspace.catalog", {
-  schema: z.array(WorkspaceChoiceSchema),
+  schema: wholeList(WorkspaceChoiceSchema, {
+    reason:
+      "the worktree plus one entry per registered scratch profile — a handful, fixed at boot",
+  }),
   preload: "boot-and-keep",
 });

@@ -4,16 +4,13 @@ import { readChannelJsonAsync } from "@plugins/primitives/plugins/log-channels/p
 import { readSlowOpMarkers } from "@plugins/debug/plugins/slow-ops/server";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import {
+  MAX_HEALTH_SAMPLES,
   HealthSampleSchema,
   HostSampleSchema,
   type HealthSample,
   type HealthSeries,
   type HostSample,
 } from "../../core";
-
-// Cap on lines read per worktree file (newest kept). At 10s/sample, 1500 lines
-// is ~4h of history — comfortably above the default 2h read window.
-const MAX_LINES = 1500;
 
 // Read a channel's JSON payloads (envelope-unwrap + safeParse-drop via the
 // log-channels primitive) and keep only samples at/after the read cutoff.
@@ -27,7 +24,7 @@ async function parseSamples<T>(
   const values = await readChannelJsonAsync(
     worktree,
     channel,
-    MAX_LINES,
+    MAX_HEALTH_SAMPLES,
     schema,
   );
   return values.filter((v) => sampledAt(v) >= cutoff);

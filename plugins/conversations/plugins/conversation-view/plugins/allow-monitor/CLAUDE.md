@@ -22,11 +22,13 @@ The value is the `allowFiles` live value (`allow-files`, params `{ id }` — the
     - `ui/icons.Icon`
 - Server:
   - Contributes: `resource.declare` "allow-files"
-  - Resources: `allow-files` (push, notified)
+  - Resources: `allow-files` (push, notified, whole: the guard-bypass files present at one worktree root — at most one per bypass token, a handful)
 - Machine:
   - Uses: `network/live.serveValue`
 - Core:
-  - Uses: `network/live.liveValue`
+  - Uses:
+    - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
   - Exports (types): `AllowFiles`
   - Exports (values): `allowFiles`
 - Cross-plugin:

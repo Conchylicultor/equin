@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import {
+  cappedList,
+  cappedRecord,
+} from "@plugins/packages/plugins/list-bound/core";
 
 /**
  * How a path stands against one base — the closed set `git status` / `git diff
@@ -23,20 +27,33 @@ export const GitEntrySchema = z.object({
 export type GitEntry = z.infer<typeof GitEntrySchema>;
 
 /**
+ * The most paths each of a status's lists holds (its changed entries, and each
+ * collapsed untracked / ignored list). A checkout past it — a mass rename, an
+ * un-ignored build tree — is served its first this many, `truncated`.
+ */
+export const GIT_STATUS_MAX_PATHS = 5000;
+
+const pathList = () => cappedList(z.string(), { max: GIT_STATUS_MAX_PATHS });
+
+/**
  * One checkout's git status, every path relative to its root. Bounded by what
  * changed, never by tree size: an untracked or ignored directory comes back
  * collapsed (`dir`, no trailing slash) and the client resolves what lies below
- * it by prefix.
+ * it by prefix. Each list is capped at {@link GIT_STATUS_MAX_PATHS};
+ * `truncated` says one was cut, so the paths left out read unknown, never
+ * clean.
  */
 export const GitStatusSchema = z.object({
   /** The checked-out commit; `null` on an unborn branch. */
   head: z.string().nullable(),
   /** `merge-base main HEAD`; `null` when there is no `main` or no common ancestor. */
   mergeBase: z.string().nullable(),
-  entries: z.record(z.string(), GitEntrySchema),
-  untrackedDirs: z.array(z.string()),
-  ignoredDirs: z.array(z.string()),
-  ignoredFiles: z.array(z.string()),
+  entries: cappedRecord(GitEntrySchema, { max: GIT_STATUS_MAX_PATHS }),
+  untrackedDirs: pathList(),
+  ignoredDirs: pathList(),
+  ignoredFiles: pathList(),
+  /** Some list held more than {@link GIT_STATUS_MAX_PATHS} paths and was cut. */
+  truncated: z.boolean(),
 });
 export type GitStatus = z.infer<typeof GitStatusSchema>;
 

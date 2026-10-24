@@ -23,4 +23,8 @@ export {
   wallpaperImage,
 } from "./endpoints";
 export type { WallpaperCandidate } from "./endpoints";
-export { wallpaperSearch, WALLPAPER_QUERY_MAX } from "./resources";
+export {
+  wallpaperSearch,
+  WALLPAPER_QUERY_MAX,
+  WALLPAPER_SEARCH_MAX_RESULTS,
+} from "./resources";

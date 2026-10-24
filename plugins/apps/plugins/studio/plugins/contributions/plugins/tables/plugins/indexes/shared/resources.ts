@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 export const IndexSchema = z.object({
   indexname: z.string(),
@@ -12,7 +13,11 @@ export const IndexSchema = z.object({
  * mid-process. A table that does not exist is refused `missing`.
  */
 export const tableIndexes = liveValue("studio.table-indexes", {
-  schema: z.object({ indexes: z.array(IndexSchema) }),
+  schema: z.object({
+    indexes: wholeList(IndexSchema, {
+      reason: "one table's indexes — a handful, each declared in its schema",
+    }),
+  }),
   params: ["tableName"],
   refusals: ["missing"],
 });

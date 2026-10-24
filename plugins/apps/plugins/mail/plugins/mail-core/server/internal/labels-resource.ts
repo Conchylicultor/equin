@@ -17,10 +17,6 @@ export const mailLabelsServed = serveValue(mailLabels, {
     reason:
       "the whole user-label list of the connected account, whose choice reads every account row — whole-table until it reads through a collection",
   },
-  unbounded: {
-    reason:
-      "the connected account's user labels — Gmail caps an account's labels in the thousands, so the whole list is the working set",
-  },
   loader: async () => {
     const accountId = await resolveMailAccountId();
     if (!accountId) return [];

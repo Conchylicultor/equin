@@ -1,7 +1,15 @@
 import { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
+import {
+  wholeList,
+  wholeRecord,
+} from "@plugins/packages/plugins/list-bound/core";
 import type { PluginNode, PluginTreePayload } from "./types";
+
+/** The tree is every plugin of this checkout, read whole by every view over it. */
+const TREE_REASON =
+  "this checkout's plugin tree — one node per plugin (about 1.5k), the code's own structure, read whole by the explorer and Studio";
 
 // Recursive plugin node. `facets` is left loose (z.record of z.unknown) — each
 // facet's shape lives in its own `core/` and consumers read `facets[id]` directly
@@ -21,14 +29,16 @@ const pluginNodeSchema: ZodParser<PluginNode> = z.lazy(() =>
       machine: z.boolean(),
       central: z.boolean(),
     }),
-    children: z.array(pluginNodeSchema),
-    facets: z.record(z.string(), z.unknown()),
+    children: wholeList(pluginNodeSchema, { reason: TREE_REASON }),
+    facets: wholeRecord(z.unknown(), {
+      reason: "one entry per facet extractor — a closed set of a few dozen",
+    }),
   }),
 );
 
 export const pluginTreePayloadSchema: ZodParser<PluginTreePayload> = z.object({
   pluginsRoot: z.string(),
-  plugins: z.array(pluginNodeSchema),
+  plugins: wholeList(pluginNodeSchema, { reason: TREE_REASON }),
   totals: z.object({
     plugins: z.number(),
     loadBearing: z.number(),

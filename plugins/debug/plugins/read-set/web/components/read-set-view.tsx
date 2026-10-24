@@ -23,6 +23,7 @@ import {
   resourcesDebug,
   type ResourceDebug,
   type ResourceFreshness,
+  type ResourceShape,
 } from "../../core";
 import {
   computeCeiling,
@@ -52,6 +53,8 @@ import {
 //       pure-external, unrouted and unbound keys.
 //   D — declared freshness (`resources[].freshness`): every external value's
 //       `changes` — notified, or immutable / fixed / snapshot with its reason.
+//   E — declared shape (`resources[].shape`): every value's lists — capped,
+//       whole (with its reason) or bare — values holding a bare list first.
 
 interface TableEntry {
   table: string;
@@ -145,6 +148,31 @@ function buildFreshnessEntries(resources: ResourceDebug[]): FreshnessEntry[] {
   );
 }
 
+interface ShapeEntry {
+  key: string;
+  shape: ResourceShape;
+}
+
+/**
+ * Every value whose payload holds a list (or is paged): those holding a bare
+ * list first, then by key. A value with no list says nothing about its shape.
+ */
+function buildShapeEntries(resources: ResourceDebug[]): ShapeEntry[] {
+  const entries: ShapeEntry[] = [];
+  for (const r of resources) {
+    if (
+      r.shape !== null &&
+      (r.shape.paged || r.shape.bounds.length > 0 || r.shape.bare.length > 0)
+    )
+      entries.push({ key: r.key, shape: r.shape });
+  }
+  return entries.sort(
+    (a, b) =>
+      Number(b.shape.bare.length > 0) - Number(a.shape.bare.length > 0) ||
+      a.key.localeCompare(b.key),
+  );
+}
+
 export function ReadSetView(): ReactElement {
   // A snapshot: measured when read, never pushed — a resource the pane
   // subscribes to would perturb what it measures. Refresh re-measures.
@@ -191,6 +219,7 @@ function ReadSetBody({
     () => buildFreshnessEntries(resources),
     [resources],
   );
+  const shapeEntries = useMemo(() => buildShapeEntries(resources), [resources]);
 
   return (
     <Scroll className="h-full p-lg">
@@ -207,6 +236,7 @@ function ReadSetBody({
         <CapturedIndexSection entries={captured} />
         <CeilingSection ceiling={ceiling} />
         <FreshnessSection entries={freshnessEntries} />
+        <ShapeSection entries={shapeEntries} />
       </Stack>
     </Scroll>
   );
@@ -650,6 +680,74 @@ function FreshnessSection({
                   {e.freshness.reason}
                 </Text>
               ) : null}
+            </Stack>
+          ))}
+        </Stack>
+      )}
+    </Stack>
+  );
+}
+
+// ── Section E: declared shape (every value's lists and their bounds) ───────
+
+/**
+ * Every value's lists, as `liveValue` walked its schema: `paged` when the
+ * value is key-range pages, then each list's path with its cap (`≤ n`), its
+ * reason (whole) or `bare` — a list with no bound, which the enforcing batch
+ * will refuse.
+ */
+function ShapeSection({ entries }: { entries: ShapeEntry[] }): ReactElement {
+  const bare = entries.filter((e) => e.shape.bare.length > 0).length;
+  return (
+    <Stack as="section" gap="sm">
+      <SectionLabel>
+        Declared shape — values holding lists{" "}
+        <span className="opacity-60">
+          {entries.length}
+          {bare > 0 ? ` · ${bare} with a bare list` : ""}
+        </span>
+      </SectionLabel>
+      {entries.length === 0 ? (
+        <Text variant="caption" tone="muted">
+          No value holds a list.
+        </Text>
+      ) : (
+        <Stack gap="xs">
+          {entries.map((e) => (
+            <Stack key={e.key} gap="2xs">
+              <Cluster gap="2xs">
+                <Text variant="caption" className="font-mono">
+                  {e.key}
+                </Text>
+                {e.shape.paged ? (
+                  <Badge variant="muted" mono>
+                    paged
+                  </Badge>
+                ) : null}
+              </Cluster>
+              <Cluster gap="2xs">
+                {e.shape.bare.map((path) => (
+                  <Badge key={`bare:${path}`} variant="destructive" mono>
+                    {path} bare
+                  </Badge>
+                ))}
+                {e.shape.bounds.map((b) =>
+                  "max" in b ? (
+                    <Badge key={`max:${b.path}`} variant="muted" mono>
+                      {b.path} ≤ {b.max}
+                    </Badge>
+                  ) : (
+                    <Badge
+                      key={`whole:${b.path}`}
+                      variant="muted"
+                      mono
+                      tooltip={b.reason}
+                    >
+                      {b.path} whole
+                    </Badge>
+                  ),
+                )}
+              </Cluster>
             </Stack>
           ))}
         </Stack>

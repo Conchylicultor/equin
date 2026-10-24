@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import {
   ChordTokenSchema,
   LoopExtrasSchema,
@@ -37,7 +38,10 @@ export type SelectedChord = z.infer<typeof SelectedChordSchema>;
 
 export const SelectionSchema = z.object({
   /** Every chord that is not off, in token order. */
-  chords: z.array(SelectedChordSchema),
+  chords: wholeList(SelectedChordSchema, {
+    reason:
+      "the chords the learner turned on — a subset of the catalog's chords",
+  }),
   blanks: BlanksSchema,
   /** How many chords that are off a loop may hold besides ("Other chords per loop"). */
   extras: LoopExtrasSchema,

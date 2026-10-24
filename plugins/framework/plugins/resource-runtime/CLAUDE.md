@@ -160,6 +160,17 @@ It has no `windowIdsOf` (the runtime derives it from the loader — the tuple's
 own read, its ids mapped — for the paths that call one; none does today, a
 scoped pending exists only through routes) and no `orderSignatureOf` (every
 change is FULL). No `routes`, no alias (throws, beside the type).
+Its loader may read Postgres tables the feed skips by declaration: `unfed`
+on the policy (`UnfedRead[]`, network/live's SQL arm served off the feed)
+is stored on a routing record that routes nothing (`externalKeyedRouting`),
+so the drift guard accepts those reads and `unfedResourceTables()` lists them
+for change-feed's opt-out check. Postgres relations it reads whole that the
+feed DOES reach (a paged value's declared `reads` — a lookup beside its own
+truth) are `relations` on the policy (`RelationRead[]`), held on the same
+record and indexed under their relation bases like a reach plan's: a write to
+a base re-reads every subscribed tuple whole, the drift guard accepts them,
+and change-feed's A1′ holds each base to a change source
+(`relationResourceReads()`). Both are refused on any other entry.
 It may follow external upstreams (`dependsOn`), each change a FULL re-read;
 nothing may cascade OUT of it (D32 — a membership drain cascades nothing), a
 throw in both registration orders. It is never L2-persisted (external and
@@ -540,7 +551,9 @@ the deletion of the old read-set router:
   guard's own record, raw-table space; `[]` when not routed), `readSetBases`
   (the raw read-set expanded through the relation bases, unfiltered), `tuples`
   (`tracked.size`), `persisted` and `positionAgeMs` (now − the row's last known
-  `position_at`; `null` if unknown or not persisted). On central (no read-set
+  `position_at`; `null` if unknown or not persisted), and two declared labels
+  the runtime never acts on: `freshness` and `shape` (`ResourceListShape`, a
+  `liveValue`'s lists and their bounds, read off the contract). On central (no read-set
   capture, no L2) `readSet` / `readSetBases` / `routeDrifted` are `[]`,
   `persisted` is false and `positionAgeMs` null. `debug/read-set` renders the ceiling from
   these alone — every `full` route, routed drift, and the routed, pure-external

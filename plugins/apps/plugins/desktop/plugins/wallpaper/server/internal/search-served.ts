@@ -1,5 +1,9 @@
 import { serveValue } from "@plugins/network/plugins/live/server";
-import { WALLPAPER_QUERY_MAX, wallpaperSearch } from "../../core";
+import {
+  WALLPAPER_QUERY_MAX,
+  WALLPAPER_SEARCH_MAX_RESULTS,
+  wallpaperSearch,
+} from "../../core";
 import { getWallpaperProvider } from "./registry";
 
 /**
@@ -29,6 +33,6 @@ export const wallpaperSearchServed = serveValue(wallpaperSearch, {
         `Unknown wallpaper provider: ${providerId}`,
       );
     }
-    return provider.search(q);
+    return (await provider.search(q)).slice(0, WALLPAPER_SEARCH_MAX_RESULTS);
   },
 });

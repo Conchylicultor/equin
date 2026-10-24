@@ -7,13 +7,16 @@
 placeholder: until it loads the review shows its loading state.
 `pluginChangesServed` serves it external (the truth is the plugin trees on
 disk plus git) with `throttleMs: 3000` (a burst of agent commits costs at
-most one tree rebuild per 3 s window) and `recomputeOn`: `editedFilesServed` mapped
-`{ id } → { conversationId }` (an edit recomputes that conversation only), and
-bare `refHeadServed` (a ref advance recomputes every subscribed conversation).
+most one tree rebuild per 3 s window). It follows the conversation's worktree
+watch while subscribed (`whileSubscribed`: `watchEditedFiles`, the same
+refcounted room `edited-files` reads through — an edit recomputes that
+conversation only; not a `recomputeOn` edge, since the paged `edited-files` is
+a keyed window, which cascades nothing, D32), and `recomputeOn` the bare
+`refHeadServed` (a ref advance recomputes every subscribed conversation).
 It also declares `reads: [_conversations, _attempts]` (the worktree lookup,
-`findWorkspaceOfConversation`): the edited-files edge reaches only edited-files
-tuples someone holds, so a write that moves a worktree must reach this value on
-its own (`server/internal/plugin-changes-resource.test.ts`).
+`findWorkspaceOfConversation`): the watch hears only edits, so a write that
+moves a worktree must reach this value on its own
+(`machine/internal/plugin-changes-resource.test.ts`).
 A push's review reads `pushPluginChanges` (`review.push-plugin-changes`,
 `params: ["first", "last"]`): the review source carries the push's earliest and
 latest sha from the live `pushes` rows, and `server/internal/push-plugin-changes.ts`
@@ -83,10 +86,20 @@ trees; no ledger read). Refused `missing` (a sha names no commit) and `no-base`
     - `network/live.serveValue`
     - `primitives/commit-list.runGit`
   - Resources:
-    - `review.plugin-changes` (push, notified)
-    - `review.push-plugin-changes` (push, notified)
-- Machine:
-  - Uses: `conversations/conversation-view/code.editedFilesServed`
+    - `review.plugin-changes` (push, notified, whole: the plugins one worktree or one push added or modified — at most the repo's plugin count, whole: one plugin's changed files — at most the files of that one plugin, whole: one plugin's facet data — one entry per facet extractor, a few dozen)
+    - `review.push-plugin-changes` (push, notified, whole: the plugins one worktree or one push added or modified — at most the repo's plugin count, whole: one plugin's changed files — at most the files of that one plugin, whole: one plugin's facet data — one entry per facet extractor, a few dozen)
+- Core:
+  - Uses:
+    - `packages/list-bound.wholeList`
+    - `packages/list-bound.wholeRecord`
+  - Exports (types):
+    - `DiffList`
+    - `DiffRenderer`
+    - `PluginChangedFile`
+    - `PluginChangeDiff`
+    - `PluginChangesResponse`
+    - `PluginReviewProps`
+  - Exports (values): `PluginChangesSchema`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`
@@ -116,15 +129,6 @@ trees; no ledger read). Refused `missing` (a sha names no commit) and `no-base`
     - `review/plugin-changes/file-changes`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/push-plugin-changes.ts`, `server/internal/main-plugins-dir.ts` (debt)
-- Core:
-  - Exports (types):
-    - `DiffList`
-    - `DiffRenderer`
-    - `PluginChangedFile`
-    - `PluginChangeDiff`
-    - `PluginChangesResponse`
-    - `PluginReviewProps`
-  - Exports (values): `PluginChangesSchema`
 - Sub-plugins:
   - **`api-changes`** (excluded) — API surface diff section for per-plugin review cards.
   - **`file-changes`** (excluded) — File-level diff section for per-plugin review cards.

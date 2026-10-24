@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+/** How many of an install log's last lines an `installing` state carries. */
+export const DEP_LOG_TAIL_LINES = 20;
+
 /**
  * Where one declared dependency stands on this machine, for its CURRENT
  * identity (the one this checkout's declaration derives today):
@@ -19,7 +22,7 @@ export const DepStateSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("installing"),
     since: z.string(),
-    logTail: z.array(z.string()),
+    logTail: z.array(z.string()).max(DEP_LOG_TAIL_LINES),
   }),
   z.object({
     kind: z.literal("ready"),

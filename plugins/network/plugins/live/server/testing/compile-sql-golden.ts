@@ -68,6 +68,7 @@ import {
 } from "@plugins/fields/plugins/text/plugins/config/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
@@ -729,7 +730,7 @@ async function directWindowCases(): Promise<Record<string, Json>> {
 async function directPointCases(): Promise<Record<string, Json>> {
   const out: Record<string, Json> = {};
   const pt = (key: string) =>
-    pointQueryResourceDescriptor(`golden.${key}`, rowSchema, "id");
+    pointQueryResourceDescriptor(`golden.${key}`, rowSchema, "id", 500);
   const run = async (
     name: string,
     spec: (
@@ -1234,8 +1235,14 @@ const ALL_TREE = {
 };
 // Carried after the listed ones, in the row's key order.
 const ALL_TREE_CARRIED = {
-  attempts: jsonField({ schema: z.array(z.unknown()), default: [] }),
-  dependencies: jsonField({ schema: z.array(z.string()), default: [] }),
+  attempts: jsonField({
+    schema: wholeList(z.unknown(), { reason: "a golden fixture" }),
+    default: [],
+  }),
+  dependencies: jsonField({
+    schema: wholeList(z.string(), { reason: "a golden fixture" }),
+    default: [],
+  }),
   blocked: boolField(),
   status: textField(),
 };

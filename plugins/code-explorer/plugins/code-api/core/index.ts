@@ -1,6 +1,7 @@
 export { CODE_MACHINE, getImageContent, type CodeDirEntry } from "./endpoints";
 export { codeImageUrl } from "./image-url";
 export {
+  COMMIT_FILES_MAX,
   commitInfo,
   commitFiles,
   pushFiles,

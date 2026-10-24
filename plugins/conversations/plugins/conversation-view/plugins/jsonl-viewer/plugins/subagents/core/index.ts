@@ -6,6 +6,8 @@ export type {
   DescribedSubagent,
   UndescribedSubagent,
   SubagentTranscript,
+  SubagentTranscriptMeta,
+  SubagentTranscriptQuery,
   SubagentRef,
 } from "./protocol";
 export {
@@ -16,7 +18,6 @@ export {
   UndescribedSubagentSchema,
   SubagentActivityRowSchema,
   SubagentActivityPayloadSchema,
-  SubagentTranscriptSchema,
   SubagentRefSchema,
   describedSubagent,
   agentCallJoin,
@@ -31,7 +32,7 @@ export { SEND_MESSAGE_TOOL_NAME, agentResumeTimes } from "./resume";
 export type { SubagentRunState, SubagentRunStateInput } from "./run-state";
 export { subagentRunState } from "./run-state";
 export type { SubagentReport } from "./report";
-export { subagentReport } from "./report";
+export { lastHandback, subagentReport } from "./report";
 export type { WorkflowRunEntry, WorkflowRunsInput } from "./workflow-join";
 export {
   workflowCallsIn,

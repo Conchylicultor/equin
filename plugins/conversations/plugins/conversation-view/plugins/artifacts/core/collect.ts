@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import {
+  wholeList,
+  wholeRecord,
+} from "@plugins/packages/plugins/list-bound/core";
 import { mergeHits } from "./merge";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import type { ArtifactHit } from "./contract";
@@ -30,7 +34,13 @@ export const ArtifactItemSchema = z.object({
  */
 export const ConversationArtifactSetSchema = z.object({
   /** Items per kind id. A kind that found nothing has no entry. */
-  byKind: z.record(z.string(), z.array(ArtifactItemSchema)),
+  byKind: wholeRecord(
+    wholeList(ArtifactItemSchema, {
+      reason:
+        "one kind's distinct artifacts over one transcript, merged by key — what the panel lists entire",
+    }),
+    { reason: "one entry per registered artifact kind that found something" },
+  ),
   /** Every artifact, across every kind — what the panel lists. */
   total: z.number().int(),
   /**
@@ -39,7 +49,9 @@ export const ConversationArtifactSetSchema = z.object({
    * nothing made has no entry, so the closed button draws exactly the kinds
    * listed here, each with its number.
    */
-  made: z.record(z.string(), z.number().int()),
+  made: wholeRecord(z.number().int(), {
+    reason: "one count per registered produced artifact kind",
+  }),
   /**
    * The sum of `made` — the whole of what the conversation produced.
    *

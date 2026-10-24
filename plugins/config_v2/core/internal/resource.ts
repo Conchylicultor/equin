@@ -1,7 +1,13 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import {
+  wholeList,
+  wholeRecord,
+} from "@plugins/packages/plugins/list-bound/core";
 
-export const configV2ValuesSchema = z.record(z.unknown());
+export const configV2ValuesSchema = wholeRecord(z.unknown(), {
+  reason: "one config document's fields — its descriptor's declared schema",
+});
 export type ConfigV2Values = z.infer<typeof configV2ValuesSchema>;
 
 // One descriptor's resolved document — `{ path }` is its base (global) document,
@@ -26,7 +32,9 @@ export const configValues = liveValue("config-v2.values", {
 // array (`["items", 6]`) so consumers can drill the offending value out of the
 // stored document and render it inline; `message` is the human zod message.
 export const configV2ValidationIssueSchema = z.object({
-  path: z.array(z.union([z.string(), z.number()])),
+  path: wholeList(z.union([z.string(), z.number()]), {
+    reason: "one zod issue path — as deep as the document it points into",
+  }),
   message: z.string(),
 });
 export type ConfigV2ValidationIssue = z.infer<
@@ -42,25 +50,39 @@ export const configV2ConflictEntrySchema = z.object({
   kind: z.enum(["hash", "invalid"]),
   // The origin (upstream) document — this is what the running app resolves to
   // while the conflict is unreconciled, since origin takes precedence on conflict.
-  originValues: z.record(z.unknown()),
+  originValues: wholeRecord(z.unknown(), {
+    reason: "one config document's fields — its descriptor's declared schema",
+  }),
   // The user's override document as written to disk. The settings editor binds
   // to this so the user can see and reconcile what they configured, independent
   // of what the app currently resolves to.
-  overrideValues: z.record(z.unknown()),
+  overrideValues: wholeRecord(z.unknown(), {
+    reason: "one config document's fields — its descriptor's declared schema",
+  }),
   // Structured zod issues, present only when kind === "invalid". Each carries the
   // path (as an array) and message so the UI can pinpoint and render the offending
   // value drilled from `overrideValues`.
-  issues: z.array(configV2ValidationIssueSchema).optional(),
+  issues: wholeList(configV2ValidationIssueSchema, {
+    reason: "one per schema violation of one config document",
+  }).optional(),
   // Present only for kind === "hash" when an ancestor snapshot exists (a
   // three-way merge is possible). Lists the fields both the user and upstream
   // changed differently — the true conflicts needing manual attention. An empty
   // array means the merge is fully automatic; absent means no ancestor was
   // captured (a pre-existing conflict) so only the binary Keep/Accept apply.
-  trueConflictKeys: z.array(z.string()).optional(),
+  trueConflictKeys: wholeList(z.string(), {
+    reason: "a subset of one config document's field keys",
+  }).optional(),
 });
 export type ConfigV2ConflictEntry = z.infer<typeof configV2ConflictEntrySchema>;
 
-export const configV2ConflictsSchema = z.record(configV2ConflictEntrySchema);
+export const configV2ConflictsSchema = wholeRecord(
+  configV2ConflictEntrySchema,
+  {
+    reason:
+      "one entry per registered config descriptor in conflict (~250 at most)",
+  },
+);
 export type ConfigV2Conflicts = z.infer<typeof configV2ConflictsSchema>;
 
 // Per-descriptor conflict, keyed by `{ path, scopeId? }` (as `configValues`).
@@ -74,7 +96,10 @@ export const configConflict = liveValue("config-v2.conflicts", {
   params: ["path", "scopeId?"],
 });
 
-export const configV2TiersSchema = z.record(z.enum(["default", "git", "user"]));
+export const configV2TiersSchema = wholeRecord(
+  z.enum(["default", "git", "user"]),
+  { reason: "one config document's fields — its descriptor's declared schema" },
+);
 export type ConfigV2Tiers = z.infer<typeof configV2TiersSchema>;
 
 // Which layer supplied each field of one descriptor's document for one scope —
@@ -87,7 +112,9 @@ export const configTiers = liveValue("config-v2.tiers", {
 // The list of scopeIds a single descriptor is customized for (has its own
 // config — a propagated git scope or a runtime fork). This is the per-descriptor
 // element type; the live resource carries the whole map (see below).
-export const configV2ScopesSchema = z.array(z.string());
+export const configV2ScopesSchema = wholeList(z.string(), {
+  reason: "the app scopes one descriptor is customized for — a handful of apps",
+});
 export type ConfigV2Scopes = z.infer<typeof configV2ScopesSchema>;
 
 // The whole membership map: EVERY server-registered storePath → the scopeIds it
@@ -100,7 +127,9 @@ export type ConfigV2Scopes = z.infer<typeof configV2ScopesSchema>;
 // subscribes one per token descriptor) collapse to a single sub. Computed
 // server-side from an in-memory map (no per-load filesystem walk). Changes only
 // when a scope is forked, unforked, or first written.
-export const configV2ScopesMapSchema = z.record(configV2ScopesSchema);
+export const configV2ScopesMapSchema = wholeRecord(configV2ScopesSchema, {
+  reason: "one entry per registered config descriptor (~250)",
+});
 export type ConfigV2ScopesMap = z.infer<typeof configV2ScopesMapSchema>;
 
 // `"boot-and-keep"` for the same reason as `configValues`: hydrated before first
@@ -118,7 +147,9 @@ export const configScopes = liveValue("config-v2.scopes", {
 // `base: false` with a non-empty `scopeIds` is the scoped-only case.
 export const configV2ConflictLocationsSchema = z.object({
   base: z.boolean(),
-  scopeIds: z.array(z.string()),
+  scopeIds: wholeList(z.string(), {
+    reason: "the app scopes one descriptor conflicts in — a handful of apps",
+  }),
 });
 export type ConfigV2ConflictLocations = z.infer<
   typeof configV2ConflictLocationsSchema
@@ -129,8 +160,12 @@ export type ConfigV2ConflictLocations = z.infer<
 // Powers the nav-row warning badge, the scope-tab dots and the rail/sidebar
 // attention dots — distinct from configConflict, which carries ONE
 // descriptor's conflict entry (the full origin/override documents) for ONE scope.
-export const configV2ConflictMapSchema = z.record(
+export const configV2ConflictMapSchema = wholeRecord(
   configV2ConflictLocationsSchema,
+  {
+    reason:
+      "one entry per registered config descriptor in conflict (~250 at most)",
+  },
 );
 export type ConfigV2ConflictMap = z.infer<typeof configV2ConflictMapSchema>;
 
@@ -155,7 +190,10 @@ export const configConflictLocations = liveValue(
 // against `descriptor.defaults`. A value the repo commits is not something the
 // user changed. Same basis as the per-field `config-v2.tiers` attribution the
 // detail pane's stripes and Reset buttons read, so badge and pane agree.
-export const configV2ModifiedCountsSchema = z.record(z.number());
+export const configV2ModifiedCountsSchema = wholeRecord(z.number(), {
+  reason:
+    "one entry per registered config descriptor the user changed (~250 at most)",
+});
 export type ConfigV2ModifiedCounts = z.infer<
   typeof configV2ModifiedCountsSchema
 >;

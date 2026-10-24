@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { JsonlEventSchema } from "@plugins/conversations/plugins/transcript-source/core";
 
 /**
@@ -85,6 +86,9 @@ export const transcriptToolCall = liveValue("jsonl-events.tool-call", {
  * images by reference), and pushed only when a prompt is added.
  */
 export const transcriptPrompts = liveValue("jsonl-events.prompts", {
-  schema: z.array(TranscriptEventRowSchema),
+  schema: wholeList(TranscriptEventRowSchema, {
+    reason:
+      "one conversation's typed prompts — one per user turn, a few hundred at most",
+  }),
   params: ["id"],
 });

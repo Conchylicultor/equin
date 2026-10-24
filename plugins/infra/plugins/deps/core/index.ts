@@ -1,6 +1,7 @@
 // Web-safe: the state vocabulary, the live value and the endpoint contracts.
 // Declaring, installing and running a dependency is `server/` (and the CLI).
 export {
+  DEP_LOG_TAIL_LINES,
   DepRowSchema,
   DepStateSchema,
   DepUpdatesSchema,

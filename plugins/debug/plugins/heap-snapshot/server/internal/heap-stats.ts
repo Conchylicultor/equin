@@ -1,7 +1,7 @@
 import { heapStats } from "bun:jsc";
 import { physFootprintBytes } from "@plugins/framework/plugins/server-core/core";
 import { serveValue } from "@plugins/network/plugins/live/server";
-import type { HeapStats } from "../../shared/endpoints";
+import { HEAP_TYPES_MAX, type HeapStats } from "../../shared/endpoints";
 import { heapStatsValue } from "../../shared/resources";
 
 const BYTES_PER_MB = 1024 * 1024;
@@ -20,7 +20,8 @@ function measureHeap(): HeapStats {
     heapCapacityMb: stats.heapCapacity / BYTES_PER_MB,
     objectCount: stats.objectCount,
     physFootprintMb: footprintBytes / BYTES_PER_MB,
-    types,
+    types: types.slice(0, HEAP_TYPES_MAX),
+    truncated: types.length > HEAP_TYPES_MAX,
   };
 }
 

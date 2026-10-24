@@ -2,17 +2,16 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import {
   handleCancelJob,
   handleListDeadJobs,
-  handleListJobs,
   handleRetryJob,
 } from "./internal/handle";
 import {
   deadJobsServed,
   jobRunsServed,
-  jobsListServed,
+  jobsServed,
 } from "./internal/resources";
 import { jobsResumeJob } from "./internal/resume-job";
 import { JobQueue } from "./internal/queue";
-import { listJobs, listDeadJobs, retryJob, cancelJob } from "../core/endpoints";
+import { listDeadJobs, retryJob, cancelJob } from "../core/endpoints";
 
 export {
   defineJob,
@@ -26,6 +25,7 @@ export { listRegisteredJobs, resolveJobCron } from "./internal/registry";
 export { refreshJobSchedules } from "./internal/refresh-schedules";
 export { JobQueue } from "./internal/queue";
 export type { JobQueueImpl, JobRowOpts, QueuedJob } from "./internal/queue";
+export { answerJobsInMemory } from "./internal/jobs-window";
 export type { JobTaskPayload } from "./internal/registry";
 export { UNSAFE_runJobRow } from "./internal/run-row";
 export type { JobRowOutcome } from "./internal/run-row";
@@ -88,14 +88,13 @@ export default {
   loadBearing: true,
   portable: true,
   httpRoutes: {
-    [listJobs.route]: handleListJobs,
     [listDeadJobs.route]: handleListDeadJobs,
     [retryJob.route]: handleRetryJob,
     [cancelJob.route]: handleCancelJob,
   },
   register: [jobsResumeJob],
   contributions: [
-    ...jobsListServed.declare,
+    ...jobsServed.declare,
     ...deadJobsServed.declare,
     ...jobRunsServed.declare,
   ],

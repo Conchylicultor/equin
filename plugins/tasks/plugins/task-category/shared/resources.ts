@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/core";
 import { tasksEntityRef } from "@plugins/tasks/plugins/tasks-core/core";
@@ -67,6 +68,9 @@ export const taskCategories = liveCollection("task-categories", {
 // category-grouped task list would otherwise wait a round trip — and never
 // garbage-collected, since every task-list surface reads it.
 export const taskCategoryRegistry = liveValue("task-category.registry", {
-  schema: z.array(TaskCategoryDefSchema),
+  schema: wholeList(TaskCategoryDefSchema, {
+    reason:
+      "one entry per registered task category — declared in code, a few dozen",
+  }),
   preload: "boot-and-keep",
 });

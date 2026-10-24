@@ -23,6 +23,10 @@ import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
+import {
+  cappedList,
+  wholeRecord,
+} from "@plugins/packages/plugins/list-bound/core";
 
 // One recorded `claude --print` call. The physical `claude_cli_calls` table
 // (server/internal/tables.ts) and the public `ClaudeCliCall` wire schema below
@@ -51,7 +55,10 @@ export const claudeCliCallFields = {
   sourceName: textField({ label: "Source" }),
   sourceContext: nullable(
     jsonField<Record<string, unknown>>({
-      schema: z.record(z.unknown()),
+      schema: wholeRecord(z.unknown(), {
+        reason:
+          "the caller's label for the call — a few named values it chose (a source id, a url)",
+      }),
       default: {},
     }),
   ),
@@ -168,7 +175,11 @@ export type ClaudeCliCallRow =
  * `RefreshSourceResultSchema` in `events-core`).
  */
 export const ClaudeCliCallsResultSchema = z.discriminatedUnion("status", [
-  z.object({ status: z.literal("calls"), calls: z.array(ClaudeCliCallSchema) }),
+  z.object({
+    status: z.literal("calls"),
+    // The log keeps at most `RECENT_CALLS_LIMIT` calls, so one record's are fewer.
+    calls: cappedList(ClaudeCliCallSchema, { max: RECENT_CALLS_LIMIT }),
+  }),
   z.object({ status: z.literal("none") }),
   z.object({ status: z.literal("not-retained") }),
 ]);

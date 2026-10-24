@@ -10,11 +10,12 @@ import {
   parseGitLog,
   tryRunGit,
 } from "@plugins/primitives/plugins/commit-list/server";
-import { objectStoreRoot, SHA_RE } from "../../server/internal/commit-values";
 import {
-  getRangeFiles,
-  resolveParentSha,
-} from "../../server/internal/get-push-files";
+  cappedRangeFiles,
+  objectStoreRoot,
+  SHA_RE,
+} from "../../server/internal/commit-values";
+import { resolveParentSha } from "../../server/internal/get-push-files";
 
 // One commit's metadata and files, read with git from the repository's object
 // store — desktop-only (`needsMachine` on both declarations).
@@ -62,11 +63,14 @@ async function loadCommitFiles(
   const headSha = exists.stdout.trim();
 
   const baseSha = await resolveParentSha(root, headSha);
-  if (!baseSha) return { files: [], baseSha: headSha, headSha };
-
-  const files = await getRangeFiles(root, baseSha, headSha);
-  if (!files) throw new Error(`git diff ${baseSha} ${headSha} failed`);
-  return { files, baseSha, headSha };
+  if (!baseSha) {
+    return { files: [], truncated: false, baseSha: headSha, headSha };
+  }
+  return {
+    ...(await cappedRangeFiles(root, baseSha, headSha)),
+    baseSha,
+    headSha,
+  };
 }
 
 export const commitInfoServed = serveValue(commitInfo, {

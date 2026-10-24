@@ -4,6 +4,7 @@ export {
   placeResolve,
   PlaceLookupRefusal,
   PLACE_LOOKUP_REFUSALS,
+  PLACE_SEARCH_MAX_SUGGESTIONS,
   type PlaceLookupRefusalCode,
 } from "./resources";
 export {

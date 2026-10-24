@@ -1,11 +1,19 @@
 import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 
 /** The queue pane's sections, in switcher order; the first is the default. */
-export const QUEUE_TABS = ["jobs", "dead", "events", "triggers"] as const;
+export const QUEUE_TABS = [
+  "jobs",
+  "history",
+  "dead",
+  "events",
+  "triggers",
+] as const;
 export type QueueTab = (typeof QUEUE_TABS)[number];
 
 export const TAB_META: Record<QueueTab, { label: string; icon: IconRef }> = {
-  jobs: { label: "Jobs", icon: symbol("work") },
+  // `jobs` is the live queue — the id older links name.
+  jobs: { label: "Queue", icon: symbol("work") },
+  history: { label: "History", icon: symbol("history") },
   dead: { label: "Dead", icon: symbol("heart-broken") },
   events: { label: "Events", icon: symbol("bolt") },
   triggers: { label: "Triggers", icon: symbol("call-split") },

@@ -3,14 +3,12 @@ import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { parsed } from "@plugins/database/plugins/sql-projection/server";
 import { expr } from "@plugins/infra/plugins/query-resource/core";
-import {
-  serveCollection,
-  serveValue,
-} from "@plugins/network/plugins/live/server";
+import { serveCollection } from "@plugins/network/plugins/live/server";
 import {
   deadJobs,
+  jobRunAtKeyText,
   jobRuns,
-  jobsList,
+  jobs,
   type DeadJobsPayload,
 } from "../../core/resources";
 import { JobQueue } from "./queue";
@@ -35,15 +33,15 @@ export async function loadDeadJobsList(limit = 2000): Promise<DeadJobsPayload> {
 // and never updated, so `archivedAt` never re-sorts one.
 export const deadJobsServed = serveCollection(deadJobs, { from: _deadJobs });
 
-// The run history over `job_runs` (a per-job ring, see tables.ts): the whole
-// ordered set (newest finished first) and its `:rows` point sibling. Every
+// The run history over `job_runs` (a per-job ring, see tables.ts): its window
+// (newest finished first) and its `:rows` / `:groups` / `:count` siblings. Every
 // stored field binds to its column by name; `waitMs` is the one computed field
 // — `started_at − queued_at` in whole ms, floored at 0 because `started_at` is
 // this process's clock and `queued_at` the database's. No poll and no notify:
 // the change feed covers `job_runs`. A run's write is an insert, or an UPDATE
 // of the ring slot it overwrites — which moves the row's generated `id`, and
 // the feed names both the old and the new one, so the overwritten run leaves
-// the set as the new one enters it.
+// a window as the new one enters it.
 export const jobRunsServed = serveCollection(jobRuns, {
   from: _jobRuns,
   columns: { waitMs: (j) => jobRunWaitMs(j.base) },
@@ -62,24 +60,29 @@ export function jobRunWaitMs(run: { startedAt: unknown; queuedAt: unknown }) {
   );
 }
 
-// `jobs-list` is the host queue's own rows (`JobQueue.list`) — on the desktop
-// graphile's `graphile_worker.*` job tables, which live OUTSIDE the public
-// schema the L4 DB change-feed triggers cover (the feed deliberately excludes
-// the graphile_worker schema) — so the feed can NEVER invalidate this value. It
-// is therefore served external (`source: "external"`, the arm with a
-// `notify`), driven by the queue's activity signal (`JobQueue.onActivity`: on
-// the desktop the slot ledger's — graphile's own `job:start` / `job:complete`
-// events on every runner, its `jobs:insert` notification, and this plugin's own
-// mutations that send none). It listens only while a tab is subscribed:
-// `whileSubscribed` hands the signal this value's `notify`, and the listener's
-// remover is the stop.
+// The `jobs` collection is the host queue's own rows (`JobQueue`) — on the
+// desktop graphile's `graphile_worker.*` job tables, which live OUTSIDE the
+// public schema the L4 DB change-feed triggers cover (the feed deliberately
+// excludes the graphile_worker schema) — so the feed can NEVER reach it. It is
+// therefore served external (`source: "external"`, the arm with a `notify`),
+// driven by the queue's activity signal (`JobQueue.onActivity`: on the desktop
+// the slot ledger's — graphile's own `job:start` / `job:complete` events on
+// every runner, its `jobs:insert` notification, and this plugin's own
+// mutations that send none). It listens only while a tab holds a tuple of it:
+// `whileSubscribed` hands the signal the collection's `notify` (every held
+// window, `:rows`, `:groups` and `:count` tuple re-reads, each diffed by key),
+// and the listener's remover is the stop.
 //
 // `throttleMs`: a burst of activity (a fan-out enqueue, a queue draining) costs
-// one reload per second, not one per event.
-export const jobsListServed = serveValue(jobsList, {
+// one re-read per second per tuple, not one per event.
+export const jobsServed = serveCollection(jobs, {
   source: "external",
   changes: "notified",
-  loader: () => JobQueue.get().list(500),
+  window: (q) => JobQueue.get().window(q),
+  rows: (ids) => JobQueue.get().rows(ids),
+  groups: (q) => JobQueue.get().groups(q),
+  count: (q) => JobQueue.get().count(q),
+  keyText: { runAt: jobRunAtKeyText },
   throttleMs: 1000,
-  whileSubscribed: (_params, notify) => JobQueue.get().onActivity(notify),
+  whileSubscribed: (notify) => JobQueue.get().onActivity(() => notify()),
 });

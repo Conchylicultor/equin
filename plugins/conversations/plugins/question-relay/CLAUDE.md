@@ -102,6 +102,7 @@ against the stored questions and joins a multi-select with `", "`).
     - `infra/endpoints.defineEndpoint`
     - `infra/entities.entityRef`
     - `network/live.liveCollection`
+    - `packages/list-bound.wholeList`
   - Exports (types):
     - `AnswerQuestionBody`
     - `CliAnswer`

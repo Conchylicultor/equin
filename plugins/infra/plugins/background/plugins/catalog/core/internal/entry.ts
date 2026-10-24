@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 /**
  * When a background entry runs. Derived by its provider from the declaration —
@@ -23,7 +24,13 @@ export const BackgroundTriggerSchema = z.discriminatedUnion("kind", [
     nextAt: z.string().nullable(),
     disabled: z.boolean(),
   }),
-  z.object({ kind: z.literal("event"), names: z.array(z.string()) }),
+  z.object({
+    kind: z.literal("event"),
+    names: wholeList(z.string(), {
+      reason:
+        "the events one job is bound to — its declared triggers, a handful",
+    }),
+  }),
   z.object({ kind: z.literal("boot") }),
   z.object({ kind: z.literal("on-demand") }),
   z.object({ kind: z.literal("interval"), everyMs: z.number() }),
@@ -112,7 +119,9 @@ export const BackgroundEntryDraftSchema = z.object({
   canRunNow: z.boolean(),
   /** Plumbing rather than work a person would recognise — hidden by default. */
   internal: z.boolean(),
-  facts: z.array(BackgroundFactSchema),
+  facts: wholeList(BackgroundFactSchema, {
+    reason: "what one entry's provider says about it — a few labelled facts",
+  }),
 });
 export type BackgroundEntryDraft = z.infer<typeof BackgroundEntryDraftSchema>;
 

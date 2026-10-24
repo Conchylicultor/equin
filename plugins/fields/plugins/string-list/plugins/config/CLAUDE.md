@@ -44,6 +44,7 @@ and remove flush immediately. `FieldRendererComponent` comes from the slot owner
     - `fields.FieldMeta`
     - `fields.pickMeta`
     - `fields/string-list.stringListFieldType`
+    - `packages/list-bound.wholeList`
   - Exports (types): `StringListFieldDef`
   - Exports (values):
     - `stringListField`

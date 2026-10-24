@@ -1,0 +1,57 @@
+// @hash 6ec84829688d
+{
+  // Debug → Queue → History: the recorded runs (the `job-runs.history`
+  // collection, a ring of the last 20 per job — every sort / filter / group
+  // runs on the server). A queue row lands here when its run finishes.
+  "views": [
+    {
+      "id": "all",
+      "name": "All",
+      "icon": "list",
+      "view": { "type": "table", "sort": [{ "fieldId": "finishedAt", "direction": "desc" }] }
+    },
+    {
+      "id": "failed",
+      "name": "Failed",
+      "icon": "error",
+      "view": {
+        "type": "table",
+        "sort": [{ "fieldId": "finishedAt", "direction": "desc" }],
+        "filter": {
+          "kind": "group",
+          "id": "f-failed",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "r-failed-outcome",
+              "fieldId": "outcome",
+              "operatorId": "is-any-of",
+              "value": ["failed"]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "slow",
+      "name": "Slow",
+      "icon": "hourglass-bottom",
+      "view": { "type": "table", "sort": [{ "fieldId": "durationMs", "direction": "desc" }] }
+    },
+    {
+      "id": "by-job",
+      "name": "By job",
+      "icon": "workspaces",
+      "view": {
+        "type": "table",
+        "properties": [{ "id": "outcome" }, { "id": "hold" }, { "id": "attempt" }, { "id": "finishedAt" }, { "id": "waitMs" }, { "id": "durationMs" }, { "id": "error" }],
+        "groupBy": { "fieldId": "jobName", "groupingId": "value" },
+        "sort": [{ "fieldId": "finishedAt", "direction": "desc" }]
+      }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

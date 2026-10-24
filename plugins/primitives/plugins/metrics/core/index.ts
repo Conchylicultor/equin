@@ -89,6 +89,8 @@ export {
   RangeSpecSchema,
   SeriesResultSchema,
   SeriesSchema,
+  METRIC_MAX_BREAKDOWN_ROWS,
+  METRIC_MAX_SERIES,
 } from "./wire";
 export type {
   BreakdownResult,

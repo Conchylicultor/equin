@@ -90,11 +90,12 @@ inside one `browser_batch` (one frame per call).
     - `conversations/conversation-view/artifacts.ConversationArtifactExtractor`
     - `infra/file-watcher.acquireDirWatch`
     - `network/live.serveValue`
-  - Resources: `browser-recordings.runs` (push, notified)
+  - Resources: `browser-recordings.runs` (push, notified, whole: the runs one tool call drove — one for a browser_* call or an e2e script, a few when a call reran it, whole: one drive's steps — a scripted e2e flow or a single browser_* call, tens of steps, written once when the run ends)
 - Core:
   - Uses:
     - `framework/cli/cli-name.CLI_NAME_PATTERN`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
   - Exports (types):
     - `BrowserRecordingRun`
     - `RecordingManifest`

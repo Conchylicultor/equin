@@ -182,6 +182,7 @@ describe("runQuery", () => {
         { key: "b", label: "B", value: 2 },
         { key: "a", label: "A", value: 1 },
       ],
+      truncated: false,
     });
   });
 

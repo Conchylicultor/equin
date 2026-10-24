@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { nullable } from "@plugins/fields/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
@@ -67,7 +68,9 @@ export const AlignmentCandidateSchema = z.object({
   /** Its position in the ranking, 0 = the best. */
   rank: z.number().int().nonnegative(),
   /** The sources that found it (`hooktheory`, `youtube-search`). */
-  sources: z.array(z.string()),
+  sources: wholeList(z.string(), {
+    reason: "the song-video sources that found it — the registered few",
+  }),
   outcome: CandidateOutcomeSchema,
   /** The alignment score once tried; null untried, failed or refused. */
   score: z.number().min(0).max(1).nullable(),
@@ -126,7 +129,9 @@ export const ugAlignmentShape = defineExtensionShape({
     pick: parsedTextField(VideoPickSchema, { default: "user" }),
     /** The resolver's candidates, best first; empty until it has searched. */
     candidates: jsonField<AlignmentCandidate[]>({
-      schema: z.array(AlignmentCandidateSchema),
+      schema: wholeList(AlignmentCandidateSchema, {
+        reason: "the resolver's ranked candidates for one song — a search page",
+      }),
       default: [],
     }),
     record: jsonField<AlignmentRecord | null>({

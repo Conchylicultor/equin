@@ -78,7 +78,7 @@ entry carries the move — `server/internal/store.ts` spells neither path.
   - Exports (values):
     - `defineWallpaperProvider`
     - `getWallpaperProvider`
-  - Resources: `wallpaper.search` (invalidate, fixed)
+  - Resources: `wallpaper.search` (invalidate, fixed, capped: WALLPAPER_SEARCH_MAX_RESULTS)
   - Routes:
     - `POST /api/wallpaper/import-url`
     - `POST /api/wallpaper/upload`
@@ -94,6 +94,7 @@ entry carries the move — `server/internal/store.ts` spells neither path.
     - `infra/endpoints.defineEndpoint`
     - `infra/endpoints.multipart`
     - `network/live.liveValue`
+    - `packages/list-bound.cappedList`
   - Exports (types):
     - `BuiltinWallpaper`
     - `SavedWallpaper`
@@ -110,6 +111,7 @@ entry carries the move — `server/internal/store.ts` spells neither path.
     - `SavedWallpaperSchema`
     - `uploadWallpaper`
     - `WALLPAPER_QUERY_MAX`
+    - `WALLPAPER_SEARCH_MAX_RESULTS`
     - `WallpaperAttributionSchema`
     - `wallpaperConfig`
     - `wallpaperImage`

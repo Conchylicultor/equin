@@ -1,4 +1,3 @@
-import { z } from "zod";
 import { nullable, type FieldsRecord } from "@plugins/fields/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
@@ -9,7 +8,7 @@ import {
 } from "@plugins/fields/plugins/text/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import { BACKUP_RUN_STATUSES } from "./run-status";
-import { BackupManifestSchema, BackupTargetResultSchema } from "./run-schemas";
+import { BackupManifestSchema, BackupTargetResultsSchema } from "./run-schemas";
 
 /**
  * A backup run's fields, in column order — the `backup_runs` table is built
@@ -49,7 +48,7 @@ export const backupRunFields = {
     jsonField({ schema: BackupManifestSchema, default: null }),
   ),
   targetResults: nullable(
-    jsonField({ schema: z.array(BackupTargetResultSchema), default: [] }),
+    jsonField({ schema: BackupTargetResultsSchema, default: [] }),
   ),
 } satisfies FieldsRecord;
 

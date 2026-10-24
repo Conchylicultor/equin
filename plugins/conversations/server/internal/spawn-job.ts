@@ -139,7 +139,7 @@ export const spawnConversationJob = defineJob({
         },
       });
       // Rethrow so graphile retries (and dead-letters after maxAttempts —
-      // observable at /api/jobs + queue-health). On exhaustion the row is left
+      // observable in Debug → Queue + queue-health). On exhaustion the row is left
       // `starting`; the status reconciler is the single writer of `starting → gone` and
       // resurrects the row if a late retry finally spawns the session.
       throw err;

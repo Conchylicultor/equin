@@ -1,8 +1,9 @@
 export type {
   EditedFileStatus,
   EditedFile,
-  EditedFilesResponse,
-  EditedFilesPayload,
+  EditedFilesMeta,
+  EditedFilesQuery,
+  EditedFilesSummary,
 } from "./protocol";
 export { EditedFileSchema } from "./protocol";
-export { editedFiles } from "./resources";
+export { EDITED_FILES_MAX, editedFile, editedFiles } from "./resources";

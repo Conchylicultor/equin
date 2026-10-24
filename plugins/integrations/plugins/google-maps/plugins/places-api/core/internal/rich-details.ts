@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { skuFor, type PlacesSku } from "./sku";
 
 /**
@@ -24,13 +25,16 @@ export type OpeningPoint = z.infer<typeof OpeningPointSchema>;
  * ("Monday: 9:00 AM – 6:30 PM").
  */
 export const OpeningHoursSchema = z.object({
-  periods: z.array(
+  periods: wholeList(
     z.object({
       open: OpeningPointSchema,
       close: OpeningPointSchema.optional(),
     }),
+    { reason: "one place's regular week — a few opening periods a day" },
   ),
-  weekdayDescriptions: z.array(z.string()),
+  weekdayDescriptions: wholeList(z.string(), {
+    reason: "one line per weekday — seven",
+  }),
 });
 
 export type OpeningHours = z.infer<typeof OpeningHoursSchema>;
@@ -41,7 +45,12 @@ export const PlacePhotoSchema = z.object({
   widthPx: z.number(),
   heightPx: z.number(),
   /** Who took it — Google's terms require showing it with the photo. */
-  authors: z.array(z.object({ name: z.string(), uri: z.string().optional() })),
+  authors: wholeList(
+    z.object({ name: z.string(), uri: z.string().optional() }),
+    {
+      reason: "one photo's attribution — its one or two authors",
+    },
+  ),
 });
 
 export type PlacePhoto = z.infer<typeof PlacePhotoSchema>;
@@ -53,7 +62,9 @@ export type PlacePhoto = z.infer<typeof PlacePhotoSchema>;
  * not know, and a park has no phone.
  */
 export const PlaceRichDetailsSchema = z.object({
-  photos: z.array(PlacePhotoSchema),
+  photos: wholeList(PlacePhotoSchema, {
+    reason: "Google answers at most 10 photos of a place",
+  }),
   hours: OpeningHoursSchema.optional(),
   /** The place's offset from UTC now, in minutes — its clock for `hours`. */
   utcOffsetMinutes: z.number().optional(),

@@ -1,11 +1,17 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import {
+  SLOWEST_CAP,
   SPAN_KINDS,
   SPAN_MEASURES,
   type SpanKind,
   type SpanMeasure,
 } from "@plugins/infra/plugins/runtime-profiler/core";
+import {
+  cappedList,
+  wholeList,
+  wholeRecord,
+} from "@plugins/packages/plugins/list-bound/core";
 
 // Mirrors the recorder's getRuntimeProfile() return shape
 // (@plugins/infra/plugins/runtime-profiler/core). A response schema is required
@@ -40,7 +46,10 @@ const parentBreakdownSchema = z.object({
 // Per-layer wait charged to an entry (gate/lock name → ms). Each value is an
 // interval union over the entry's own timeline (≤ its wall-clock), propagated
 // to every open ancestor entry. Absent when the entry never waited.
-const waitBreakdownSchema = z.record(z.string(), z.number());
+const waitBreakdownSchema = wholeRecord(z.number(), {
+  reason:
+    "one key per gate layer the entry waited on — the closed set of charging layers, a dozen or so",
+});
 
 // Numbers a span carries beside its duration (fan-out, frame size, …), keyed by
 // the recorder's closed SPAN_MEASURES set.
@@ -72,7 +81,10 @@ const aggregateSchema = z.object({
   // since-boot maxMs whose age is maxAgeMs — so a stale peak reads as stale.
   recentMaxMs: sinceAdded,
   maxAgeMs: sinceAdded,
-  byParent: z.array(parentBreakdownSchema),
+  byParent: wholeList(parentBreakdownSchema, {
+    reason:
+      "one per distinct parent label (an entry's class, never one run) this label ran under since the last reset",
+  }),
   waits: waitBreakdownSchema.optional(),
   measuresMax: spanMeasuresSchema.optional(),
 });
@@ -99,16 +111,21 @@ const slowSpanSchema = z.object({
 // One array per span kind, derived from SPAN_KINDS so a new kind cannot drift
 // out of the response schema — defaulted, since an older backend has no list
 // for a kind added after it (it recorded none, which an empty list says).
-const byKind = <T extends z.ZodTypeAny>(item: T) =>
+const byKind = <T extends z.ZodTypeAny>(list: () => z.ZodArray<T>) =>
   z.object(
     Object.fromEntries(
-      SPAN_KINDS.map((k) => [k, z.array(item).default([])]),
+      SPAN_KINDS.map((k) => [k, list().default([])]),
     ) as Record<SpanKind, z.ZodDefault<z.ZodArray<T>>>,
   );
 
 export const runtimeProfileSchema = z.object({
-  aggregates: byKind(aggregateSchema),
-  slowest: byKind(slowSpanSchema),
+  aggregates: byKind(() =>
+    wholeList(aggregateSchema, {
+      reason:
+        "one per distinct label of the kind since the last reset — route patterns, resource keys, job names, never per-call values (those ride `variant`)",
+    }),
+  ),
+  slowest: byKind(() => cappedList(slowSpanSchema, { max: SLOWEST_CAP })),
   sinceMs: z.number(),
   // Elapsed wall-time of the current profiling window (now − sinceMs), computed
   // server-side. `sinceMs` is a process-relative performance.now() value, not an

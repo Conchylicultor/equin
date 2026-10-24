@@ -123,6 +123,8 @@ The dashboard's Events panel expands an event into these rows.
   - Uses:
     - `apps/deploy/analytics/host-only.HOST_ONLY_PREFIX`
     - `infra/endpoints.defineEndpoint`
+    - `packages/list-bound.cappedList`
+    - `packages/list-bound.wholeList`
   - Exports (types):
     - `AdditiveMetrics`
     - `AnalyticsFilter`

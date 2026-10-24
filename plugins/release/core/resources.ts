@@ -19,7 +19,7 @@ import {
   liveValue,
   type LiveRowsCollection,
 } from "@plugins/network/plugins/live/core";
-import { ReleaseLogsResponseSchema } from "./endpoints";
+import { wholeRecord } from "@plugins/packages/plugins/list-bound/core";
 import { RELEASE_TARGETS } from "./targets";
 
 // WHY a run was cut. `candidate` is packed and built for a named platform — a
@@ -235,7 +235,7 @@ export type Preview = z.infer<typeof PreviewSchema>;
 // In-memory preview state, keyed by runId. Truth lives in the server's preview
 // manager (an in-memory Map), not Postgres, so the server serves it from the
 // external arm (`releasePreviewsServed.notify()` on every start / stop / reap).
-// Bounded by the live preview processes, so no `unbounded` reason. No
+// Whole: bounded by the live preview processes. No
 // placeholder: before the first value lands the read is `pending`, never an
 // empty record claiming "no previews".
 //
@@ -243,26 +243,63 @@ export type Preview = z.infer<typeof PreviewSchema>;
 // a Studio pane, which is why `web/internal/register.ts` pulls this module into
 // the eager web import graph.
 export const releasePreviews = liveValue("release.previews", {
-  schema: z.record(z.string(), PreviewSchema),
+  schema: wholeRecord(PreviewSchema, {
+    reason: "one entry per running preview process — a handful at a time",
+  }),
   preload: "boot",
 });
 
+/** One line of a release run's transcript, as `releaseRunLogs` pages it. */
+export const ReleaseLogLineSchema = z.object({
+  /**
+   * Its 1-based line number as order-key text — zero-padded (`releaseLogLineKey`),
+   * so text order is line order. Its identity too: a transcript only appends.
+   */
+  n: z.string(),
+  text: z.string(),
+  stream: z.enum(["stdout", "stderr"]),
+});
+export type ReleaseLogLine = z.infer<typeof ReleaseLogLineSchema>;
+
+/** A 1-based line number as its order-key text: zero-padded, so text order is number order. */
+export function releaseLogLineKey(line: number): string {
+  return String(line).padStart(9, "0");
+}
+
+export const ReleaseRunLogsQuerySchema = z.object({ id: z.string() });
+export type ReleaseRunLogsQuery = z.infer<typeof ReleaseRunLogsQuerySchema>;
+
+/** Lines per page, and the most one read without a viewport holds. */
+const RUN_LOG_LINES_PAGE = 500;
+const RUN_LOG_LINES_MAX = 2000;
+
+const RUN_LOGS_REFUSALS = ["invalid-id"] as const;
+/** Why a run-logs read was refused: an id that cannot name a transcript. */
+export type ReleaseRunLogsRefusal = (typeof RUN_LOGS_REFUSALS)[number];
+
 /**
- * One release run's persisted log — every line of its supervised-run
- * transcript, by run id. The run-detail pane reads it once the run is no longer
- * live (an in-flight run streams over the `release` log channel instead).
+ * One release run's persisted log — its supervised-run transcript, by run id —
+ * newest line first, paged by line number: the run-detail pane reads a page
+ * at a time as the reader scrolls back (an in-flight run streams over the
+ * `release` log channel instead), never the whole file at once.
  *
  * Served external, `notified` by a watch on the transcript file for as long as
- * a tuple is read: a live run's transcript grows, the artifact prune can reap a
- * finished one, and a terminal run's never changes again — so the watch is
- * silent exactly when the answer is immutable, without the loader reading the
- * run row to tell the two apart.
+ * a page is read: a live run's transcript grows (a new line reaches page 0),
+ * the artifact prune can reap a finished one, and a terminal run's never
+ * changes again — so the watch is silent exactly when the answer is immutable,
+ * without the loader reading the run row to tell the two apart.
  *
  * An id that is not a single path segment (it names the transcript's filename)
  * is refused `invalid-id` — a malformed question, not a server failure.
  */
 export const releaseRunLogs = liveValue("release.run-logs", {
-  schema: ReleaseLogsResponseSchema,
-  params: ["id"],
-  refusals: ["invalid-id"],
+  query: ReleaseRunLogsQuerySchema,
+  paged: {
+    item: ReleaseLogLineSchema,
+    id: "n",
+    key: { of: (line) => [line.n], order: ["desc"] },
+    limit: RUN_LOG_LINES_PAGE,
+    maxLimit: RUN_LOG_LINES_MAX,
+  },
+  refusals: RUN_LOGS_REFUSALS,
 });

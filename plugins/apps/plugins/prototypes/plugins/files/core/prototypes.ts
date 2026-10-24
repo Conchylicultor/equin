@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import {
+  wholeList,
+  wholeTuple,
+} from "@plugins/packages/plugins/list-bound/core";
+import {
   assetPath,
   blob,
   defineEndpoint,
@@ -26,21 +30,31 @@ export const MocksDeclarationSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("declared"), tag: z.string(), ref: z.string() }),
 ]) satisfies ZodParser<MocksDeclaration>;
 
+/** Why an option's values are loaded whole. */
+const OPTION_REASON =
+  'the values one hand-written <meta name="prototype-option"> line declares — a handful';
+
+/** Why a prototype's options are loaded whole. */
+export const PROTOTYPE_OPTIONS_REASON =
+  "the options one prototype's index.html declares — a handful of hand-written lines";
+
 /** The wire shape of one valid option. Mirrors `PrototypeOption` exactly. */
 export const PrototypeOptionSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("choice"),
     name: z.string(),
-    values: z.tuple([z.string(), z.string()]).rest(z.string()).readonly(),
+    values: wholeTuple([z.string(), z.string()], z.string(), {
+      reason: OPTION_REASON,
+    }).readonly(),
     default: z.string(),
     group: z.string().nullable(),
   }),
   z.object({
     kind: z.literal("color"),
     name: z.string(),
-    suggestions: z
-      .array(z.object({ name: z.string(), color: z.string() }))
-      .readonly(),
+    suggestions: wholeList(z.object({ name: z.string(), color: z.string() }), {
+      reason: OPTION_REASON,
+    }).readonly(),
     default: z.string(),
     group: z.string().nullable(),
   }),
@@ -103,8 +117,13 @@ export const PrototypeMetaSchema = z.object({
   blurb: z.string(),
   viewport: PrototypeViewportSchema,
   mocks: MocksDeclarationSchema,
-  options: z.array(PrototypeOptionSchema),
-  problems: z.array(PrototypeProblemSchema),
+  options: wholeList(PrototypeOptionSchema, {
+    reason: PROTOTYPE_OPTIONS_REASON,
+  }),
+  problems: wholeList(PrototypeProblemSchema, {
+    reason:
+      "the ways one prototype folder breaks the contract — a handful of checks",
+  }),
 });
 export type PrototypeMeta = z.infer<typeof PrototypeMetaSchema>;
 
@@ -112,11 +131,14 @@ export type PrototypeMeta = z.infer<typeof PrototypeMetaSchema>;
  * The list of all prototypes. Served from the data dir (`source: "external"`)
  * and re-broadcast (push) whenever a file under `prototypes/` changes, so the
  * gallery reflects new/edited mocks live. No placeholder: until the list is
- * read it is pending, never "no prototypes". An external array needs no
- * stated bound — it is bounded by the folders on disk.
+ * read it is pending, never "no prototypes". Whole: the gallery lists, filters
+ * and groups every prototype.
  */
 export const prototypesList = liveValue("prototypes.list", {
-  schema: z.array(PrototypeMetaSchema),
+  schema: wholeList(PrototypeMetaSchema, {
+    reason:
+      "every prototype folder on disk — each made by hand, and the gallery lists, filters and groups them all",
+  }),
 });
 
 /**

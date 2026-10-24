@@ -2,6 +2,10 @@ import { z } from "zod";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import {
+  wholeList,
+  wholeRecord,
+} from "@plugins/packages/plugins/list-bound/core";
+import {
   AUTH_PROVIDER_KINDS,
   type AuthIdentity,
   type AuthStateValue,
@@ -20,7 +24,9 @@ const AuthAccountStateSchema = z.object({
   kind: z.enum(AUTH_PROVIDER_KINDS),
   credentialsConfigured: z.boolean(),
   identity: AuthIdentitySchema.optional(),
-  scopes: z.array(z.string()).optional(),
+  scopes: wholeList(z.string(), {
+    reason: "the OAuth scopes one account granted — a handful per provider",
+  }).optional(),
   needsReconsent: z.boolean().optional(),
   connectedAt: z.number().optional(),
   lastRefreshError: z
@@ -30,7 +36,9 @@ const AuthAccountStateSchema = z.object({
 
 export const AuthStateValueSchema = z.object({
   mainOffline: z.boolean().optional(),
-  providers: z.record(AuthAccountStateSchema),
+  providers: wholeRecord(AuthAccountStateSchema, {
+    reason: "one entry per registered auth provider — tens at most",
+  }),
 }) satisfies ZodParser<AuthStateValue>;
 
 /**

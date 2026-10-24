@@ -19,7 +19,7 @@
   - Uses:
     - `database.db`
     - `network/live.serveValue`
-  - Resources: `studio.table-columns` (push, fixed)
+  - Resources: `studio.table-columns` (push, fixed, whole: one table's columns — Postgres caps a table at 1,600)
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`

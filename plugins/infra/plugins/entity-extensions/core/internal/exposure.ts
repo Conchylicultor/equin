@@ -8,6 +8,7 @@ import type {
   OptionKey,
 } from "@plugins/fields/core";
 import type { EntityRef } from "@plugins/infra/plugins/entities/core";
+import { listBoundsOf } from "@plugins/packages/plugins/list-bound/core";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 
 // An extension EXPOSES fields: it declares, once, which of its own fields every
@@ -330,14 +331,19 @@ export function resolveExposure(
       "it exposes nothing — an exposure exposes at least one field, or its presence.",
     );
   }
+  const row = z.object(shape);
+  // An exposed field reaches every row of every list of its parent, so each
+  // list it holds carries its bound like a collection's own row does
+  // (`packages/list-bound`): a bare one is refused here, at declaration.
+  listBoundsOf(row, {
+    where: `defineExtensionShape({ key: "${key}" }).exposes("${exposes.name}")`,
+  });
   return Object.freeze({
     kind: "exposure",
     parent: exposes.parent,
     name: exposes.name,
     slice: `${exposes.parent.name}_ext_${exposes.name}`,
     fields: Object.freeze(resolved),
-    row: z.object(shape) as unknown as ExposureRowSchema<
-      Record<string, unknown>
-    >,
+    row: row as unknown as ExposureRowSchema<Record<string, unknown>>,
   });
 }

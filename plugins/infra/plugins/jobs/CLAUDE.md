@@ -6,9 +6,10 @@
 `jobs.resume`, `NonRetryableError` and the hold table are portable `server/` +
 `core/` code. WHERE a row goes and WHO dispatches it is the **`JobQueue` host
 service** (`server/internal/queue.ts`): `enqueue(job, payload, { tx?, runAt?,
-jobKey?, maxAttempts? })`, `cancelUnstarted`, the Debug → Queue reads (`list`,
-`retry`, `cancel`, `onActivity` — the `jobs-list` value and the `/api/jobs`
-routes stay portable over them) and the lifecycle `install` / `start` /
+jobKey?, maxAttempts? })`, `cancelUnstarted`, the Debug → Queue reads
+(`window` / `rows` / `groups` / `count` — the `jobs` collection's questions —,
+`retry`, `cancel`, `onActivity`; the `jobs` collection and the `/api/jobs`
+mutation routes stay portable over them) and the lifecycle `install` / `start` /
 `schedule` / `refreshSchedules` / `stop`, which THIS plugin's own phase hooks
 call, so every dependent observes them exactly where it always has.
 
@@ -70,7 +71,7 @@ the original bug.
 
 Reading it:
 
-- `queryRunningJobs()` and the `jobs-list` value expose `alive` per locked row
+- `queryRunningJobs()` and the `jobs` collection (`jobsServed`) expose `alive` per locked row
   (Debug → Queue shows a **no worker** badge). `false` = owner died, or dispatch is
   inside the sub-second acquisition window — never "has been running a while".
 - The `pg_locks` key encoding lives once, as `jobLockHeldExpr` in
@@ -148,7 +149,8 @@ overrun) the old row has exactly a dead job's columns.
   with the key, dead ones included — the next cron tick would hide a real
   dead-letter. Only a retirement while **locked** is flagged.
 - **Compose `supersededExpr`** (`introspection.ts`, the one spelling of the
-  flag). `deadJobPredicate` excludes it; `jobs-list` hides unlocked ones.
+  flag). `deadJobPredicate` excludes it; the `jobs` collection (`graphileJobReads`)
+  hides unlocked ones.
 - **The stuck-lock sweeper deletes it** once its run is over — never releases
   it. Worker died: reported like a reclaim. Already unlocked: one `jobs` log
   line, no report (`dispatch()` reported any real failure).
@@ -454,15 +456,35 @@ max. A class with no samples reads `count: 0` with `null` percentiles, never
 event, on `jobs:insert` (heard on the legacy runner only, because each runner
 has its own LISTEN client), and on this plugin's own mutations that send no
 notification: retry, cancel, `abortDurableRun`, the resume timeout delete, the
-stuck-lock reclaim and dead-job GC. `jobs-list` reloads on it, throttled to one
-reload per second, instead of polling: `jobsList` (`core/resources.ts`) is a
-`liveValue` declared `load: "on-demand"` (a 500-row join read by one Debug pane,
-kept out of the shared flush — tabs refetch over HTTP on each invalidate), and
-`jobsListServed` serves it external with `throttleMs: 1000` and
-`whileSubscribed: (_p, notify) => onQueueActivity(notify)`, so it listens only
-while a tab is subscribed. **A new raw write to graphile's tables
+stuck-lock reclaim and dead-job GC. The `jobs` collection re-reads on it,
+throttled to one re-read per second per tuple, instead of polling (below), and
+listens only while a tab holds a tuple of it. **A new raw write to graphile's tables
 must call `emitQueueActivity()`**, or every queue reader goes stale until the
 next unrelated event.
+
+**The live queue is an external window collection.** `jobs`
+(`core/resources.ts`, key `jobs`) lists the host queue's rows — Debug → Queue's
+Queue view — as a bounded window (100 rows, up to `JOBS_MAX_LIMIT` (500) per
+page, read as key-range pages) plus `:rows`, `:groups` and `:count`. It is
+declared by its own fields (state, job name, hold class, attempts, run-at, last
+error listed; the lock, liveness, payload input and the rest carried), sorts
+by `runAt` alone, and is served `source: "external"` (`jobsServed`,
+`server/internal/resources.ts`) over the `JobQueue` seam's `window` / `rows` /
+`groups` / `count`, `changes: "notified"`, `throttleMs: 1000` and
+`whileSubscribed: (notify) => onActivity(() => notify())` — one activity
+listener for the whole collection while any tuple of it is held. The keyset
+is `(runAt, id)`: `runAt` cut to ms, whose `$key` text is `jobRunAtKeyText`
+(`Date#toISOString()`), then graphile's id as text. The desktop answers in SQL
+(`machine/internal/jobs-list.ts`, `graphileJobReads(db)`: one relation `r`
+deriving each row's state / job name / hold once, so a filter
+(`filterSql`), a grouping, a count and a cut name the same expressions; an
+unlocked superseded row is never listed), the in-process queue in memory
+(`answerJobsInMemory`, `server/internal/jobs-window.ts` — also the reference
+the SQL is held to: `jobs-list.test.ts` pages the whole queue through the
+served half at its minted `$key`s, both directions, over rows whose `run_at`s
+collide below the ms and whose ids cross a digit boundary, and compares every
+window, grouping and count). A row leaves the queue when its run finishes; the
+run is then a row of `jobRuns` (below).
 
 The database side of the same picture is `queryQueuePulse()`,
 `queryOldestWaiting()` and `queryRecentDeadJobs()` in `introspection.ts`. There,
@@ -496,12 +518,14 @@ table's single-column primary key — `job_recent_runs`, its predecessor, had a
 composite (job_name, slot) key no collection can bind; its rows were copied
 over by the migration that dropped it. The ring's upsert targets the unique
 (job_name, slot) index, so overwriting a slot moves the row's id, and the change
-feed names both ids. `jobRuns` (key `job-runs.all`) is an `all` collection
-over it — the whole ring, newest finished first (`unbounded`: a ring of 20 per
-job name), plus its `:rows` sibling. Its reader, Debug → Queue's Jobs list,
-merges it with the live graphile queue and filters, sorts and groups the merge
-on the client, so it holds every run. `waitMs` (`startedAt − queuedAt`, floored
-at 0, NULL without a `queuedAt`) is an `expr` column computed in SQL. Nothing
+feed names both ids. `jobRuns` (key `job-runs.history`) is a window
+collection over it — Debug → Queue's History view: newest finished first (100
+rows, up to `JOB_RUNS_MAX_LIMIT` per page), with `:rows`, `:groups` and
+`:count`; it filters and groups by job name, outcome, hold and `jobId` (the
+queue row a run came from — what a detail pane follows a finished job by) and
+sorts by `finishedAt` / `durationMs` / `waitMs`. `waitMs` (`startedAt −
+queuedAt`, floored at 0, NULL without a `queuedAt`) is an `expr` column
+computed in SQL. Nothing
 prunes a retired job name's ring yet.
 `readRecentJobRuns(name)` still reads one job's ring for the Background
 activity catalog.

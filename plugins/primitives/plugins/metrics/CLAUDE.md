@@ -105,7 +105,11 @@ reads against one total, so the pair has no spelling.
   per process (never notified — a restart re-subscribes).
 - `metrics.query` — a typed-query value: a `MetricQuery` → `MetricResult`
   (`series` for a metric, `breakdown` for a breakdown). On-demand: each tab
-  refetches after a change.
+  refetches after a change. Every list is capped in the schema: buckets (and
+  each series' values) at `MAX_BUCKETS`, a split's series at
+  `METRIC_MAX_SERIES` (the top by total) and a breakdown's rows at
+  `METRIC_MAX_BREAKDOWN_ROWS`, the engine cutting past them and setting
+  `truncated` (the card then says "Showing the top / first N").
 - `metrics.details` — a key-range-paged value over a `DetailsSelector`
   (metric, interval, split, params): the records behind one bucket (optionally
   one split key), cut at each record's `[at]` (desc, then id), pages of 50 up
@@ -166,10 +170,10 @@ selected tile and the table toggle are device-local, never part of the spec.
     - `sqlFlow`
     - `sqlLevel`
   - Resources:
-    - `metrics.catalog` (push)
+    - `metrics.catalog` (push, whole: the metrics catalog: every contributed source, metric and breakdown — declared in code, fixed per process, whole: one param spec's values — declared in code, capped: MAX_BUCKETS)
     - `metrics.details` (keyed, window)
     - `metrics.details:meta` (push)
-    - `metrics.query` (invalidate)
+    - `metrics.query` (invalidate, capped: METRIC_MAX_SERIES, capped: METRIC_MAX_BREAKDOWN_ROWS, capped: MAX_BUCKETS)
 - Web:
   - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×7
@@ -230,6 +234,8 @@ selected tile and the table toggle are device-local, never part of the spec.
 - Core:
   - Uses:
     - `network/live.liveValue`
+    - `packages/list-bound.cappedList`
+    - `packages/list-bound.wholeList`
     - `packages/wall-clock.wallClockToInstant`
     - `packages/wall-clock.zoneWallClock`
   - Exports (types):
@@ -318,6 +324,8 @@ selected tile and the table toggle are device-local, never part of the spec.
     - `isTimeZone`
     - `MAX_BUCKETS`
     - `MEASURES`
+    - `METRIC_MAX_BREAKDOWN_ROWS`
+    - `METRIC_MAX_SERIES`
     - `metricCatalog`
     - `metricDetails`
     - `metricQuery`

@@ -11,6 +11,7 @@ import {
 import { logCostBuckets, type CostBucket } from "./distribution";
 import { roundCents } from "../../shared/derive";
 import {
+  COST_DAYS_MAX,
   TOP_SESSIONS,
   type CostDay,
   type CostScope,
@@ -40,11 +41,23 @@ function scopedSessions(b: CostBundle, scope: CostScope): PerSession[] {
     : b.sessions.filter((s) => s.isSingularity);
 }
 
+/** The newest `COST_DAYS_MAX` of `days` (ascending by date), and whether older ones were dropped. */
+function newestDays<D>(days: D[]): { days: D[]; truncated: boolean } {
+  return days.length > COST_DAYS_MAX
+    ? { days: days.slice(-COST_DAYS_MAX), truncated: true }
+    : { days, truncated: false };
+}
+
 /** `stats.cost.daily`: cost by model and tokens by kind, per UTC day. */
 export function dailyAnswer(
   b: CostBundle,
   scope: CostScope,
-): { days: CostDay[]; models: string[]; sessionCount: number } {
+): {
+  days: CostDay[];
+  truncated: boolean;
+  models: string[];
+  sessionCount: number;
+} {
   const perDay = new Map<
     string,
     { day: CostDay; byModel: Map<string, number> }
@@ -86,7 +99,7 @@ export function dailyAnswer(
     return day;
   });
   return {
-    days,
+    ...newestDays(days),
     models,
     sessionCount: scopedSessions(b, scope).length,
   };
@@ -100,7 +113,7 @@ export function dailyAnswer(
 export function sessionsDailyAnswer(
   b: CostBundle,
   scope: CostScope,
-): { days: CostSessionDay[]; families: string[] } {
+): { days: CostSessionDay[]; truncated: boolean; families: string[] } {
   const byDate = new Map<string, CostSessionDay>();
   const allFamilies = new Set<string>();
   for (const s of scopedSessions(b, scope)) {
@@ -137,7 +150,7 @@ export function sessionsDailyAnswer(
   const days = [...byDate.values()].sort((a, b) =>
     a.date.localeCompare(b.date),
   );
-  return { days, families: [...allFamilies].sort() };
+  return { ...newestDays(days), families: [...allFamilies].sort() };
 }
 
 /** `stats.cost.distribution`: sessions per log-spaced cost bucket. */

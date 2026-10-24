@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import { BroadcastEntrySchema } from "./endpoints";
 
@@ -10,7 +11,10 @@ import { BroadcastEntrySchema } from "./endpoints";
  */
 export const broadcastEntries = liveValue("broadcasts.entries", {
   schema: z.object({
-    entries: z.array(BroadcastEntrySchema),
+    entries: wholeList(BroadcastEntrySchema, {
+      reason:
+        "one hand-written broadcasts.json — the few messages a maintainer is broadcasting to stale worktrees",
+    }),
     path: z.string(),
   }),
   refusals: ["malformed"],

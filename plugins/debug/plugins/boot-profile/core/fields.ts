@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import {
   fieldsToZodObject,
   type FieldsRecord,
@@ -63,15 +64,21 @@ const AssetTimingSchema = z.object({
 });
 
 export const BootTraceSchema = z.object({
-  spans: z.array(BootSpanSchema),
+  spans: wholeList(BootSpanSchema, {
+    reason: "one page load's boot spans — the fixed boot tasks and resources",
+  }),
   navigation: NavTimingSchema.nullable(),
   paint: z.object({
     firstPaintMs: z.number().nullable(),
     firstContentfulPaintMs: z.number().nullable(),
   }),
   firstCommitMs: z.number().nullable(),
-  longTasks: z.array(LongTaskSchema),
-  assets: z.array(AssetTimingSchema),
+  longTasks: wholeList(LongTaskSchema, {
+    reason: "the long tasks of one boot window, clipped to first paint",
+  }),
+  assets: wholeList(AssetTimingSchema, {
+    reason: "one page load's scripts and stylesheets",
+  }),
   capturedAt: z.number(),
 });
 

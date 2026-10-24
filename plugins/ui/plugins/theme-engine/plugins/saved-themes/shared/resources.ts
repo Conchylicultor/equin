@@ -1,5 +1,5 @@
-import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { SavedThemeSchema } from "../core";
 
 /**
@@ -17,6 +17,9 @@ import { SavedThemeSchema } from "../core";
  * for this list to have re-read it with `useAwaitSavedThemesWrite` (web).
  */
 export const savedThemesList = liveValue("saved-themes.list", {
-  schema: z.array(SavedThemeSchema),
+  schema: wholeList(SavedThemeSchema, {
+    reason:
+      "every saved theme: the painter needs all of them resident to paint any selection, and the list grows only by a hand-made save or import (single digits in practice)",
+  }),
   preload: "boot-and-keep",
 });

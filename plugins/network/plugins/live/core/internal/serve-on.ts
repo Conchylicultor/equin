@@ -14,6 +14,7 @@ import {
   freshnessOf,
   mintRowKeys,
   registerPagedOf,
+  pairLifecycle,
   registerValueOf,
   tupleKey,
   type AnyServeOptions,
@@ -22,6 +23,7 @@ import {
   type LiveValueSource,
   type ServedFor,
   type ServedValueBase,
+  type StopFn,
 } from "./compile-value";
 import { LIVE_COLUMNS_KEY } from "./live-columns";
 import type {
@@ -186,9 +188,6 @@ export function serveValueOn<T, P extends Record<string, string>>(
     load: (params: P) => resource.load(params),
     source: opts.source,
     ...(compiled.changes !== undefined ? { changes: compiled.changes } : {}),
-    ...(compiled.unbounded !== undefined
-      ? { unbounded: compiled.unbounded }
-      : {}),
     keys: [plain.key],
   };
   if ("notify" in resource && compiled.changes === "notified") {
@@ -357,8 +356,38 @@ type CountOption<Cn> = [Cn] extends [null]
       count: (q: LiveDecodedCountQuery) => Answer<number>;
     };
 
+/** What a `"notified"` collection's `whileSubscribed` is handed: the served collection's own `notify`. */
+export type LiveCollectionNotify = (change?: LiveCollectionChange) => void;
+
+/**
+ * The change-signal hooks — a `"notified"` collection's only (tsc, and a
+ * throw), with `serveValue`'s semantics:
+ *
+ * - `whileSubscribed(notify)` starts watching the source when the FIRST tuple
+ *   of any minted resource (window, `:rows`, `:groups`, `:count`, `all`) is
+ *   subscribed, and its returned stop runs when the LAST is released — one
+ *   watcher for the whole collection, refcounted over every tuple, so a read
+ *   that splits its pages never restarts it. `notify` is the served
+ *   collection's own. An async start is awaited on the subscribe path (every
+ *   tuple subscribed meanwhile waits for it too), and a release that arrives
+ *   first stops it once it resolves.
+ * - `throttleMs`: at most one flush per window for each minted resource (the
+ *   runtime's `debounceMs`, per entry) — a burst of activity costs one re-read
+ *   per window, not one per event.
+ */
+export type ChangeHooks<C> = ServedFor<
+  C,
+  {
+    whileSubscribed?: (
+      notify: LiveCollectionNotify,
+    ) => StopFn | Promise<StopFn>;
+    throttleMs?: number;
+  },
+  { whileSubscribed?: never; throttleMs?: never }
+>;
+
 /** What every external collection form takes. */
-interface ExternalCollectionBase<Row, C extends LiveCollectionChanges> {
+type ExternalCollectionBase<Row, C extends LiveCollectionChanges> = {
   /** The truth lives outside Postgres; a change arrives as `notify` (or never — `changes`). */
   source: "external";
   /**
@@ -368,7 +397,7 @@ interface ExternalCollectionBase<Row, C extends LiveCollectionChanges> {
   changes: C;
   /** The rows with these ids (any order; an id it cannot find is absent). */
   rows: (ids: readonly string[]) => Answer<readonly Row[]>;
-}
+} & ChangeHooks<C>;
 
 /** An external window collection's answers (see the section header). */
 export type ServeExternalWindowOptions<
@@ -602,6 +631,8 @@ export interface AnyExternalCollectionOptions {
   ) => Answer<readonly LiveGroup<FilterScalar>[]>;
   count?: (q: LiveDecodedCountQuery) => Answer<number>;
   keyText?: Record<string, ((value: unknown) => string | null) | undefined>;
+  whileSubscribed?: (notify: LiveCollectionNotify) => StopFn | Promise<StopFn>;
+  throttleMs?: number;
 }
 
 /** The `changes` an external collection declares, checked for an untyped caller. */
@@ -650,6 +681,215 @@ interface Registered {
 }
 
 /**
+ * What every registration of one external collection's minted resources
+ * spreads into its `defineExternalResource` options: the subscribe hooks that
+ * track its live tuples (a `"notified"` collection's only), the flush throttle
+ * and the declared freshness.
+ */
+export interface ExternalCollectionCommon {
+  onFirstSubscribe?: (params: ResourceParams) => void | Promise<void>;
+  onLastUnsubscribe?: (params: ResourceParams) => void;
+  debounceMs?: number;
+  freshness: ReturnType<typeof freshnessOf>;
+}
+
+/** The change half of an external collection's options (see `ChangeHooks`), erased. */
+export interface ExternalCollectionChangeOptions {
+  changes?: LiveCollectionChanges;
+  whileSubscribed?: (notify: LiveCollectionNotify) => StopFn | Promise<StopFn>;
+  throttleMs?: number;
+}
+
+/**
+ * How one external collection's minted resources are registered and told of a
+ * change — shared by the external arm (`compileExternalCollection`) and the
+ * SQL arm served off the change feed (the Bun `serveCollection` with
+ * `changes`, `server/internal/serve-off-feed.ts`): every resource is
+ * registered through `register` (handed the options to spread), and `seal`
+ * builds the served collection's common half — its keys, its resources and,
+ * on a `"notified"` collection, `notify`. Checks `changes` and the change
+ * hooks for an untyped caller (`where` prefixes every error).
+ */
+export function externalCollectionRegistrar(
+  where: string,
+  opts: ExternalCollectionChangeOptions,
+): {
+  register: <T, P extends ResourceParams>(
+    define: (common: ExternalCollectionCommon) => ExternalResource<T, P>,
+    idsOf?: (params: ResourceParams) => readonly string[],
+  ) => ServedExternalResource<T, P>;
+  seal: () => ServedExternalBase & {
+    notify?: (change?: LiveCollectionChange) => void;
+  };
+} {
+  const fail = (message: string): never => {
+    throw new Error(`${where}: ${message}`);
+  };
+  const changes = checkCollectionChanges(fail, opts.changes);
+  const notified = changes === "notified";
+  const freshness = freshnessOf(changes);
+  // The change-signal hooks react to `notify`: a silent collection has none
+  // (tsc); refused for a cast.
+  const hookNames = (["whileSubscribed", "throttleMs"] as const).filter(
+    (h) => opts[h] !== undefined,
+  );
+  if (!notified && hookNames.length > 0) {
+    fail(
+      `\`${hookNames.join("`, `")}\` reacts to a change signal, and a ` +
+        `\`changes: ${JSON.stringify(changes)}\` collection has none — declare \`changes: "notified"\`.`,
+    );
+  }
+  if (
+    opts.whileSubscribed !== undefined &&
+    typeof opts.whileSubscribed !== "function"
+  ) {
+    fail("`whileSubscribed` must be a function `(notify) => stop`.");
+  }
+  if (
+    opts.throttleMs !== undefined &&
+    !(Number.isFinite(opts.throttleMs) && opts.throttleMs > 0)
+  ) {
+    fail(
+      `\`throttleMs\` ${JSON.stringify(opts.throttleMs)} is not a positive number of ms.`,
+    );
+  }
+  /** Every minted resource's flush throttle (the runtime's per-entry `debounceMs`). */
+  const throttle =
+    opts.throttleMs !== undefined ? { debounceMs: opts.throttleMs } : {};
+
+  const registered: Registered[] = [];
+
+  // `whileSubscribed`: ONE watcher for the collection, refcounted over every
+  // subscribed tuple of every minted resource — started by the first, stopped
+  // by the last (`pairLifecycle` over the one collection-wide subject `{}`).
+  // `notify` is bound by `seal`, once every resource is registered; a watcher
+  // starts only once a tuple is subscribed, after that.
+  let notifyCollection: LiveCollectionNotify | undefined;
+  const whileSubscribed = opts.whileSubscribed;
+  const watcher =
+    whileSubscribed === undefined
+      ? undefined
+      : pairLifecycle<Record<string, never>>(() =>
+          whileSubscribed((change) => {
+            if (notifyCollection === undefined) {
+              throw new Error(
+                `${where}: notify used before the collection was registered.`,
+              );
+            }
+            notifyCollection(change);
+          }),
+        );
+  let heldTuples = 0;
+  // The watcher's async start still resolving: a tuple subscribed meanwhile
+  // waits for it too — the runtime reads a tuple only once its 0→1 hook
+  // settles, so nothing is loaded before the source is watched.
+  let starting: Promise<void> | undefined;
+  const enter = (): void | Promise<void> => {
+    heldTuples += 1;
+    if (watcher === undefined) return;
+    if (heldTuples > 1) return starting;
+    const started = watcher.onFirstSubscribe({});
+    if (started instanceof Promise) {
+      // Settled either way: a failed start is reported on the first tuple's
+      // subscribe path (the runtime awaits `started` itself).
+      const settled = started.then(
+        () => undefined,
+        () => undefined,
+      );
+      starting = settled;
+      void settled.then(() => {
+        if (starting === settled) starting = undefined;
+      });
+    }
+    return started;
+  };
+  const leave = (): void => {
+    heldTuples -= 1;
+    if (heldTuples === 0) watcher?.onLastUnsubscribe({});
+  };
+
+  const register = <T, P extends ResourceParams>(
+    define: (common: ExternalCollectionCommon) => ExternalResource<T, P>,
+    idsOf?: (params: ResourceParams) => readonly string[],
+  ): ServedExternalResource<T, P> => {
+    // The subscribe hooks tracking the resource's live tuples — only a
+    // `"notified"` collection needs them.
+    const held = new Map<string, ResourceParams>();
+    const resource = define({
+      ...(notified
+        ? {
+            onFirstSubscribe: (params: ResourceParams) => {
+              const k = tupleKey(params);
+              if (held.has(k)) return;
+              held.set(k, params);
+              return enter();
+            },
+            onLastUnsubscribe: (params: ResourceParams) => {
+              if (held.delete(tupleKey(params))) leave();
+            },
+          }
+        : {}),
+      ...throttle,
+      freshness,
+    });
+    registered.push({
+      resource: resource as unknown as ExternalResource<
+        unknown,
+        ResourceParams
+      >,
+      held,
+      ...(idsOf !== undefined ? { idsOf } : {}),
+    });
+    return {
+      key: resource.key,
+      mode: resource.mode,
+      ...(resource.preload !== undefined ? { preload: resource.preload } : {}),
+      load: (params: P) => resource.load(params),
+    };
+  };
+
+  const seal = (): ServedExternalBase & {
+    notify?: (change?: LiveCollectionChange) => void;
+  } => {
+    const resources = registered.map((r) => ({
+      key: r.resource.key,
+      mode: r.resource.mode,
+      ...(r.resource.preload !== undefined
+        ? { preload: r.resource.preload }
+        : {}),
+      load: (params: ResourceParams) => r.resource.load(params),
+    }));
+    const base: ServedExternalBase = {
+      source: "external",
+      changes,
+      keys: registered.map((r) => r.resource.key),
+      resources,
+    };
+    // No change signal ⇒ no `notify`, at runtime too.
+    if (!notified) return base;
+    const notify = (change?: LiveCollectionChange) => {
+      const ids = change === undefined ? null : new Set(change.ids);
+      for (const r of registered) {
+        for (const params of r.held.values()) {
+          if (
+            ids !== null &&
+            r.idsOf !== undefined &&
+            !r.idsOf(params).some((id) => ids.has(id))
+          ) {
+            continue;
+          }
+          r.resource.notify(params);
+        }
+      }
+    };
+    notifyCollection = notify;
+    return { ...base, notify };
+  };
+
+  return { register, seal };
+}
+
+/**
  * The external compilation, erased (see the section header) — what a host's
  * own typed overloads (the Bun `serveCollection`) dispatch to.
  */
@@ -694,9 +934,6 @@ export function compileExternalCollection(
   // An exposing collection's rows carry the fold of the exposures served on
   // this host — none on an external one (`ExternalSourceRow`).
   const folds = (collection.exposes ?? null) !== null;
-  const changes = checkCollectionChanges(fail, opts.changes);
-  const notified = changes === "notified";
-  const freshness = freshnessOf(changes);
   const form =
     collection.all !== undefined
       ? "all"
@@ -718,51 +955,7 @@ export function compileExternalCollection(
     );
   }
   if (typeof opts.rows !== "function") fail("`rows(ids)` is required.");
-
-  const registered: Registered[] = [];
-  /** The subscribe hooks tracking a resource's live tuples — only a `"notified"` collection needs them. */
-  const track = (): {
-    held: Map<string, ResourceParams>;
-    hooks: {
-      onFirstSubscribe?: (params: ResourceParams) => void;
-      onLastUnsubscribe?: (params: ResourceParams) => void;
-    };
-  } => {
-    const held = new Map<string, ResourceParams>();
-    return {
-      held,
-      hooks: notified
-        ? {
-            onFirstSubscribe: (params) => {
-              held.set(tupleKey(params), params);
-            },
-            onLastUnsubscribe: (params) => {
-              held.delete(tupleKey(params));
-            },
-          }
-        : {},
-    };
-  };
-  const keep = <T, P extends ResourceParams>(
-    resource: ExternalResource<T, P>,
-    held: Map<string, ResourceParams>,
-    idsOf?: (params: ResourceParams) => readonly string[],
-  ): ServedExternalResource<T, P> => {
-    registered.push({
-      resource: resource as unknown as ExternalResource<
-        unknown,
-        ResourceParams
-      >,
-      held,
-      ...(idsOf !== undefined ? { idsOf } : {}),
-    });
-    return {
-      key: resource.key,
-      mode: resource.mode,
-      ...(resource.preload !== undefined ? { preload: resource.preload } : {}),
-      load: (params: P) => resource.load(params),
-    };
-  };
+  const reg = externalCollectionRegistrar(where, opts);
 
   /** One answer's rows, checked against the declaration and projected onto the row schema's keys. */
   const checkedRows = (
@@ -824,10 +1017,10 @@ export function compileExternalCollection(
 
   // ── :rows (every form) ──
   const pointDecode = collection.rows.point.decode;
-  const rowsTrack = track();
-  const rows = keep(
-    rt.defineExternalResource(collection.rows, {
-      membership: { kind: "point", idsOf: (params) => pointDecode(params) },
+  const rows = reg.register(
+    (common) =>
+      rt.defineExternalResource(collection.rows, {
+        membership: { kind: "point", idsOf: (params) => pointDecode(params) },
       loader: async (params: PointParams) => {
         const ids = pointDecode(params);
         const asked = new Set(ids);
@@ -841,10 +1034,8 @@ export function compileExternalCollection(
         }
         return out;
       },
-      ...rowsTrack.hooks,
-      freshness,
-    }),
-    rowsTrack.held,
+        ...common,
+      }),
     (params) => pointDecode(params),
   );
 
@@ -853,11 +1044,15 @@ export function compileExternalCollection(
   if (form === "all") {
     const allAnswer = opts.all;
     if (typeof allAnswer !== "function") fail("`all()` is required.");
-    const allTrack = track();
     // The whole set is one keyed tuple `{}`: an external window as wide as
     // the set (no family — nothing derives from it), its change a re-read
     // diffed by key. Its contract is keyed, so it is never a plain value.
-    const all = keep(
+    // A capped set (`all: { max }`) is that wide and no wider: an answer past
+    // the cap is a loud loader error, as a window's past `q.limit`.
+    const max =
+      (collection.all as { all?: { max?: number } } | undefined)?.all?.max ??
+      null;
+    const all = reg.register((common) =>
       rt.defineExternalResource(
         collection.all as KeyedResourceContract<
           unknown[],
@@ -866,14 +1061,12 @@ export function compileExternalCollection(
         {
           membership: {
             kind: "window",
-            limitOf: () => Number.MAX_SAFE_INTEGER,
+            limitOf: () => max ?? Number.MAX_SAFE_INTEGER,
           },
-          loader: async () => checkedRows("all()", await allAnswer!(), null),
-          ...allTrack.hooks,
-          freshness,
+          loader: async () => checkedRows("all()", await allAnswer!(), max),
+          ...common,
         },
       ),
-      allTrack.held,
     );
     served = { all, rows };
   } else if (form === "window") {
@@ -902,8 +1095,7 @@ export function compileExternalCollection(
           `pass \`keyText.${field}\`: its exact text, whose code-point order is its order.`,
       );
     };
-    const windowTrack = track();
-    const window = keep(
+    const window = reg.register((common) =>
       rt.defineExternalResource(descriptor, {
         // No mode: the window is keyed (its descriptor's `keyed`), sized and
         // familied by its own codec, as the paged value's pages are.
@@ -936,18 +1128,15 @@ export function compileExternalCollection(
             (detail) => fail(`window(q): ${detail}`),
           );
         },
-        ...windowTrack.hooks,
-        freshness,
+        ...common,
       }),
-      windowTrack.held,
     );
 
     let groups: AnyServedExternal["groups"] = null;
     const groupsAnswer = opts.groups;
     if (groupsAnswer !== undefined && collection.groups !== undefined) {
       const groupCodec = collection.groups.groups;
-      const groupsTrack = track();
-      groups = keep(
+      groups = reg.register((common) =>
         rt.defineExternalResource(
           collection.groups as ResourceContract<
             LiveGroup<FilterScalar>[],
@@ -959,11 +1148,9 @@ export function compileExternalCollection(
               const q = groupCodec.decode(params);
               return checkedGroups(fail, collection, q, await groupsAnswer(q));
             },
-            ...groupsTrack.hooks,
-            freshness,
+            ...common,
           },
         ),
-        groupsTrack.held,
       );
     }
 
@@ -979,8 +1166,7 @@ export function compileExternalCollection(
     }
     const countAnswer = opts.count;
     if (countDescriptor !== null && countAnswer !== undefined) {
-      const countTrack = track();
-      count = keep(
+      count = reg.register((common) =>
         rt.defineExternalResource(
           countDescriptor as unknown as ResourceContract<
             number,
@@ -995,11 +1181,9 @@ export function compileExternalCollection(
               }
               return n;
             },
-            ...countTrack.hooks,
-            freshness,
+            ...common,
           },
         ),
-        countTrack.held,
       );
     }
     served = { window, rows, groups, count };
@@ -1007,41 +1191,7 @@ export function compileExternalCollection(
     served = { rows };
   }
 
-  const resources = registered.map((r) => ({
-    key: r.resource.key,
-    mode: r.resource.mode,
-    ...(r.resource.preload !== undefined
-      ? { preload: r.resource.preload }
-      : {}),
-    load: (params: ResourceParams) => r.resource.load(params),
-  }));
-  const base: AnyServedExternal = {
-    ...served,
-    source: "external",
-    changes,
-    keys: registered.map((r) => r.resource.key),
-    resources,
-  };
-  // No change signal ⇒ no `notify`, at runtime too.
-  if (!notified) return base;
-  return {
-    ...base,
-    notify(change?: LiveCollectionChange) {
-      const ids = change === undefined ? null : new Set(change.ids);
-      for (const r of registered) {
-        for (const params of r.held.values()) {
-          if (
-            ids !== null &&
-            r.idsOf !== undefined &&
-            !r.idsOf(params).some((id) => ids.has(id))
-          ) {
-            continue;
-          }
-          r.resource.notify(params);
-        }
-      }
-    },
-  };
+  return { ...served, ...reg.seal() };
 }
 
 /**

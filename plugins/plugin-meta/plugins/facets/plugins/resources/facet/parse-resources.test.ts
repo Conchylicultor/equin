@@ -184,6 +184,73 @@ describe("buildDescriptorIndex", () => {
     ]);
   });
 
+  it("reads the list-bound markers a declaration's schema writes — inline and through its plugin's consts", () => {
+    const schemas = file(
+      `import { z } from "zod";
+export const LogLine = z.object({ parts: wholeList(z.string(), { reason: "one line's parts" }) });
+const unrelated = wholeList(z.string(), { reason: "never named" });
+`,
+      "/repo/plugins/example/core/schemas.ts",
+    );
+    const src = `
+export const RunSchema = z.object({
+  lines: cappedList(LogLine, { max: RUN_LOG_MAX }),
+  truncated: z.boolean(),
+});
+export const runLogs = liveValue("release.run-logs", { schema: RunSchema });
+export const hosts = liveValue("hosts", {
+  schema: wholeRecord(z.string(), { reason: "one row per configured host" }),
+});
+export const plain = liveValue("plain", { schema: S });
+`;
+    const index = buildDescriptorIndex([schemas, file(src)], {
+      ownerPlugin: false,
+      lists: true,
+    });
+    expect(index.get("runLogs")).toEqual([
+      {
+        key: "release.run-logs",
+        keyed: false,
+        membership: null,
+        lists: ["capped: RUN_LOG_MAX", "whole: one line's parts"],
+      },
+    ]);
+    expect(index.get("hosts")?.[0]?.lists).toEqual([
+      "whole: one row per configured host",
+    ]);
+    expect(index.get("plain")?.[0]?.lists).toBeUndefined();
+  });
+
+  it("refuses a whole marker whose reason is not a literal (nor a module const of one)", () => {
+    const src = `
+const REASON = pick("a", "b");
+export const v = liveValue("v", { schema: wholeList(S, { reason: REASON }) });
+`;
+    expect(() =>
+      buildDescriptorIndex([file(src)], { ownerPlugin: false, lists: true }),
+    ).toThrow(/`wholeList\(…\)`.*not a static string literal — got `REASON`/);
+  });
+
+  it("reads a whole marker's reason through a module const of one string literal", () => {
+    const src = `
+const SHARED_REASON =
+  "one loaded index's catalog, read entire";
+export const v = liveValue("v", {
+  schema: z.object({
+    a: wholeList(S, { reason: SHARED_REASON }),
+    b: wholeList(T, { reason: SHARED_REASON }),
+  }),
+});
+`;
+    const index = buildDescriptorIndex([file(src)], {
+      ownerPlugin: false,
+      lists: true,
+    });
+    expect(index.get("v")?.[0]?.lists).toEqual([
+      "whole: one loaded index's catalog, read entire",
+    ]);
+  });
+
   it("reads a liveValue's literal load: \"on-demand\" at its spec's own depth, and refuses a dynamic one", () => {
     const src = `
       export const editedFiles = liveValue("edited-files", {
@@ -462,7 +529,7 @@ describe("resolveRegisterCall", () => {
     ).toEqual([{ key: "notifications.unread", mode: "push", source: "db" }]);
   });
 
-  it("serves an on-demand declaration as invalidate, and reads its unbounded reason", () => {
+  it("serves an on-demand declaration as invalidate; a serve call's bound is never read", () => {
     const valueIndex = new Map<string, DescriptorInfo[]>([
       [
         "hosts",
@@ -487,9 +554,44 @@ describe("resolveRegisterCall", () => {
         key: "hosts",
         mode: "invalidate",
         source: "db",
-        unbounded: "one row per configured host — a handful",
       },
     ]);
+  });
+
+  it("carries the declaration's list bounds onto the served def and its label", () => {
+    const valueIndex = new Map<string, DescriptorInfo[]>([
+      [
+        "hosts",
+        [
+          {
+            key: "hosts",
+            keyed: false,
+            membership: null,
+            lists: ["whole: one row per configured host"],
+          },
+        ],
+      ],
+    ]);
+    const defs = resolveRegisterCall(
+      "serveValue",
+      `hosts, { source: "external", changes: "notified", loader: readHosts }`,
+      bound("hosts"),
+      valueIndex,
+      where,
+      NOTHING_IMPORTED,
+    );
+    expect(defs).toEqual([
+      {
+        key: "hosts",
+        mode: "push",
+        source: "external",
+        changes: "notified",
+        lists: ["whole: one row per configured host"],
+      },
+    ]);
+    expect(resourceModeLabel(defs[0]!)).toBe(
+      "push, notified, whole: one row per configured host",
+    );
   });
 
   it("serves a paged value's pages as a keyed window and its :meta sibling as push", () => {
@@ -543,7 +645,7 @@ describe("resolveRegisterCall", () => {
     expect(
       resolveRegisterCall(
         "serveValue",
-        // Nested `source:` / `load:` / `unbounded:` inside recomputeOn's mapper,
+        // Nested `source:` / `load:` inside recomputeOn's mapper,
         // whileSubscribed's body and revalidate never count.
         `editedFiles, {
           source: "external",

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import { nullable } from "@plugins/fields/core";
 import {
@@ -36,7 +37,12 @@ export const outcomeReportShape = defineExtensionShape({
     body: textField(),
     standing: enumTextField(REPORT_STANDINGS),
     question: nullable(textField()),
-    answers: jsonField({ schema: z.array(z.string()), default: [] }),
+    answers: jsonField({
+      schema: wholeList(z.string(), {
+        reason: "one report's answers to its automation's few questions",
+      }),
+      default: [],
+    }),
     submittedAt: dateField(),
   },
 });

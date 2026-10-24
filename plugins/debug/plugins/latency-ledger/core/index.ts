@@ -33,6 +33,7 @@ export {
   ClientMinuteSchema,
   InteractionSchema,
   LATENCY_WINDOWS,
+  SLOWEST_INTERACTIONS,
 } from "./internal/endpoints";
 export type {
   ClientMinute,

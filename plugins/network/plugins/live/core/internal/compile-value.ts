@@ -142,8 +142,6 @@ export type ServedValueBase<T, P extends Record<string, string>> = Resource<
   source: LiveValueSource;
   /** The external arm's declared freshness (see {@link LiveValueChanges}); absent on a db value. */
   changes?: LiveValueChanges;
-  /** The collection-shaped value's recorded reason (db arm only). */
-  unbounded?: { reason: string };
   /** `[key]` — symmetric with `ServedCollection.keys`. */
   keys: string[];
 };
@@ -191,29 +189,6 @@ export type RecomputeEntry<S, P> =
 export type RecomputeOn<R extends readonly ExternalServed[], P> = {
   [I in keyof R]: RecomputeEntry<R[I], P>;
 };
-
-/**
- * True when `T` could grow without bound as a single payload: an array, or a
- * string-indexed record. Distributive, so a union with ANY such arm (`Row[] |
- * null`) counts.
- */
-type CollectionShaped<T> = T extends readonly unknown[]
-  ? true
-  : string extends keyof T
-    ? true
-    : false;
-
-/**
- * The bound rule, as a type: a Postgres-backed value that is collection-shaped
- * must say why it is not a `liveCollection` (`unbounded: { reason }`), and
- * nothing else may say it. An in-memory (`external`) array is bounded by the
- * process that holds it, so it needs no reason.
- */
-type BoundArm<Src extends LiveValueSource, T> = Src extends "db"
-  ? true extends CollectionShaped<T>
-    ? { unbounded: { reason: string } }
-    : { unbounded?: never }
-  : { unbounded?: never };
 
 /**
  * The change-signal options of a db value: driven by the change feed alone, so
@@ -279,7 +254,6 @@ type ChangesArm<
  * `changes` (external arm).
  */
 type ServeOptionsBase<
-  T,
   S,
   Src extends LiveValueSource,
   R extends readonly ExternalServed[],
@@ -290,8 +264,13 @@ type ServeOptionsBase<
   source: Src;
   /** Read the value for one tuple. Parsed against the declaration's schema. */
   loader: L;
-} & BoundArm<Src, T> &
-  ChangesArm<Src, S, R, C>;
+  /**
+   * Never here: a list's bound is its declaration's (`liveValue`'s schema,
+   * `packages/list-bound`'s markers), whatever the source. A throw for an
+   * untyped caller.
+   */
+  unbounded?: never;
+} & ChangesArm<Src, S, R, C>;
 
 export type ServeValueOptions<
   T,
@@ -299,7 +278,7 @@ export type ServeValueOptions<
   Src extends LiveValueSource,
   R extends readonly ExternalServed[] = [],
   C extends LiveValueChanges = "notified",
-> = ServeOptionsBase<T, P, Src, R, (params: P) => Promise<T> | T, C> & {
+> = ServeOptionsBase<P, Src, R, (params: P) => Promise<T> | T, C> & {
   /**
    * Conditional-revalidation signature (an ETag): a cheap over-approximation
    * of "did the value change?" the read path compares before running the
@@ -328,7 +307,6 @@ export type ServePagedValueOptions<
   R extends readonly ExternalServed[] = [],
   C extends PagedChanges = "notified",
 > = ServeOptionsBase<
-  Item[],
   Q,
   "external",
   R,
@@ -365,7 +343,6 @@ export interface CompiledValue<T, P extends Record<string, string>, S = P> {
   external: boolean;
   /** The external arm's declared `changes`; absent on a db value. */
   changes?: LiveValueChanges;
-  unbounded?: { reason: string };
   /**
    * The wire tuples a change to `subject` recomputes: the params themselves
    * for a plain value, the one `{ q }` of a typed-query value, every
@@ -430,7 +407,7 @@ type Started = { ok: true; stop: StopFn } | { ok: false };
  * A re-subscribe during a pending stop gets its own record: the old start's
  * stop still runs, independently.
  */
-function pairLifecycle<P extends Record<string, string>>(
+export function pairLifecycle<P extends Record<string, string>>(
   whileSubscribed: (params: P) => StopFn | Promise<StopFn>,
 ): {
   onFirstSubscribe: (params: P) => void | Promise<void>;
@@ -685,7 +662,7 @@ export function compileValue<
 >(
   value: LivePlainValue<T, P, O> & SnapshotPairing<C> & BytesPairing<Src>,
   // `NoInfer`: `T` / `P` come from the declaration alone — a loader returning
-  // `{}` must not widen `T` past the bound rule.
+  // `{}` must not widen `T` past what the declaration says.
   opts: ServeValueOptions<NoInfer<T>, NoInfer<P>, Src, R, C>,
 ): CompiledValue<T, P> {
   return compileValueOf<T, P, P>(value, opts as AnyServeOptions);
@@ -765,9 +742,8 @@ function compilePagedOf(
   // A label the runtime's `_debug` payload shows per key (read-set pane).
   const freshness =
     changes !== undefined ? { freshness: freshnessOf(changes) } : {};
-  const stray = (["revalidate", "unbounded"] as const).filter(
-    (f) => opts[f] !== undefined,
-  );
+  refuseServedBound(value.key, opts);
+  const stray = (["revalidate"] as const).filter((f) => opts[f] !== undefined);
   if (stray.length > 0) {
     throw new Error(
       `serveValue("${value.key}"): a paged value takes no \`${stray.join("`, `")}\`.`,
@@ -962,13 +938,7 @@ export function compileValueOf<T, P extends Record<string, string>, S>(
   value: LiveValue<T, P, LiveValueOrigin>,
   opts: AnyServeOptions,
 ): CompiledValue<T, P, S> {
-  const unbounded = (opts as { unbounded?: { reason: string } }).unbounded;
-  if (unbounded !== undefined && unbounded.reason.trim() === "") {
-    throw new Error(
-      `serveValue("${value.key}"): \`unbounded.reason\` is empty — say why this ` +
-        `value is not a liveCollection.`,
-    );
-  }
+  refuseServedBound(value.key, opts);
   const external = opts.source === "external";
   const changes = checkChanges(value, opts);
   if ((value as { paged?: unknown }).paged !== undefined) {
@@ -1049,7 +1019,6 @@ export function compileValueOf<T, P extends Record<string, string>, S>(
     },
     external,
     ...(changes !== undefined ? { changes } : {}),
-    ...(unbounded !== undefined ? { unbounded } : {}),
     tuplesOf: (subject) => subjects.tuplesOf(subject),
     bindNotify(fn) {
       notify = fn;
@@ -1176,7 +1145,25 @@ export interface AnyServeOptions {
   recomputeOn?: readonly unknown[];
   revalidate?: unknown;
   whileSubscribed?: unknown;
-  unbounded?: { reason: string };
+  /** Refused (see {@link refuseServedBound}). */
+  unbounded?: unknown;
+}
+
+/**
+ * A serve call names no list bound: the shape is the declaration's — its
+ * schema's `packages/list-bound` markers, walked by `liveValue` — and the
+ * serve call decides only the freshness. The retired serve-side
+ * `unbounded: { reason }` (a tsc error) throws for an untyped caller, so a
+ * reason cannot sit where nothing reads it.
+ */
+function refuseServedBound(key: string, opts: AnyServeOptions): void {
+  if (opts.unbounded !== undefined) {
+    throw new Error(
+      `serveValue("${key}"): \`unbounded\` is not a serve option — a list's ` +
+        `bound is declared in the liveValue's schema (wholeList / wholeRecord ` +
+        `with the reason, or a cap: packages/list-bound).`,
+    );
+  }
 }
 
 /**

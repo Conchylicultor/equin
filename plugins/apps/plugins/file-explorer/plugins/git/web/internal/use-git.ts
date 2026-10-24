@@ -2,12 +2,13 @@ import { useMemo } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
   mapResource,
-  type ResourceError,
+  ResourceError,
   type ResourceResult,
 } from "@plugins/primitives/plugins/live-state/web";
 import {
   fileExplorerGitCheckoutValue,
   fileExplorerGitStatus,
+  GIT_STATUS_MAX_PATHS,
   type GitCheckout,
 } from "../../shared/resources";
 import { indexGitStatus, type GitStatusIndex } from "../../shared/status-index";
@@ -43,6 +44,8 @@ export type GitView =
  * nothing signals), then its live status.
  * The view keeps its identity while neither answer changes (it is memoized on
  * the answers, not on the reads' wrappers), so a lens built from it does too.
+ * A status cut at its cap is `failed`: the paths it left out would otherwise
+ * read clean.
  */
 export function useGitView(dir: string): GitView {
   const checkout = useLive(fileExplorerGitCheckoutValue, { path: dir });
@@ -58,6 +61,17 @@ export function useGitView(dir: string): GitView {
   return useMemo<GitView>(() => {
     if (checkoutError !== null)
       return { kind: "failed", error: checkoutError, refetch: refetchCheckout };
+    if (found !== null && index?.truncated === true) {
+      return {
+        kind: "failed",
+        error: new ResourceError(
+          "loader-failed",
+          `More than ${GIT_STATUS_MAX_PATHS} changed or ignored paths in this checkout — too many to show git status`,
+          null,
+        ),
+        refetch: refetchStatus,
+      };
+    }
     if (found !== null && index !== null)
       return { kind: "ready", checkout: found, index };
     if (statusError !== null)

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { cappedList } from "@plugins/packages/plugins/list-bound/core";
 import { SearchResultSchema } from "./schemas";
 
 /** The longest query `searchResults` answers; a reader clamps to it. */
@@ -16,13 +17,16 @@ export const SearchQuerySchema = z.object({
 });
 export type SearchQuery = z.infer<typeof SearchQuerySchema>;
 
+/** How many hits one question answers — the search's `LIMIT`, and the schema's cap. */
+export const SEARCH_RESULTS_LIMIT = 30;
+
 /**
  * Ranked full-text search across indexed documents, as a typed-query live
- * value: one tuple per question, the 30 best hits. Served `db` over
+ * value: one tuple per question, the SEARCH_RESULTS_LIMIT best hits. Served `db` over
  * `search_documents`, so a reindex (a page edited, renamed or deleted while
  * the quick-find dialog is open) re-ranks the open question in place.
  */
 export const searchResults = liveValue("search.results", {
-  schema: z.array(SearchResultSchema),
+  schema: cappedList(SearchResultSchema, { max: SEARCH_RESULTS_LIMIT }),
   query: SearchQuerySchema,
 });

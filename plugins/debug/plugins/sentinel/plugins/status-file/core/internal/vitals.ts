@@ -43,8 +43,8 @@ export const SentinelVitalsRecordSchema = z.object({
     blkReadDeltaMs: SignalVitalSchema,
     slowBackends: SignalVitalSchema,
   }),
-  /** Signals at or above their limit this tick. */
-  elevated: z.array(SignalKeySchema),
+  /** Signals at or above their limit this tick — each signal at most once. */
+  elevated: z.array(SignalKeySchema).max(SIGNAL_KEYS.length),
   /** The detector is mid-episode after this tick. */
   tripped: z.boolean(),
   /** Machine context that cannot trip duress by itself. */

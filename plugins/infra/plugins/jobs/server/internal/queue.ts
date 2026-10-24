@@ -1,6 +1,13 @@
 import { defineHostService } from "@plugins/framework/plugins/server-core/core";
+import type { LiveGroup } from "@plugins/network/plugins/live/core";
+import type { FilterScalar } from "@plugins/network/plugins/live/plugins/filter/core";
 import type { HoldClass } from "../../core/hold";
-import type { JobsPayload } from "../../core/resources";
+import type { JobRow } from "../../core/resources";
+import type {
+  JobsCountQuery,
+  JobsGroupQuery,
+  JobsWindowQuery,
+} from "./jobs-window";
 import type { EnqueueTx, JobTaskPayload, SerialSpec } from "./registry";
 
 /** What one inserted job row is made of besides its payload. */
@@ -56,10 +63,17 @@ export interface JobQueueImpl {
     match: { key: string } | { keyPrefix: string },
   ): Promise<void>;
   /**
-   * The queue's rows, newest `runAt` first, at most `limit` — what Debug →
-   * Queue lists (`jobs-list`, `GET /api/jobs`).
+   * The queue's rows as the `jobs` collection asks for them (Debug → Queue):
+   * one window — the rows matching `q.where`, in `q.orderBy` on the keyset
+   * `(runAt, id)` (`runAt`'s `$key` text is `jobRunAtKeyText`, the id
+   * compared as text), strictly after `q.after` and up to `q.until`, at most
+   * `q.limit`; rows by id; a grouping; a count. Every answer is checked by the
+   * served collection; `answerJobsInMemory` is the reference answer.
    */
-  list(limit: number): Promise<JobsPayload>;
+  window(q: JobsWindowQuery): Promise<readonly JobRow[]>;
+  rows(ids: readonly string[]): Promise<readonly JobRow[]>;
+  groups(q: JobsGroupQuery): Promise<readonly LiveGroup<FilterScalar>[]>;
+  count(q: JobsCountQuery): Promise<number>;
   /** Run a row again now, with its attempts reset (`POST /api/jobs/:id/retry`). */
   retry(jobId: string): Promise<void>;
   /** Remove a row (`DELETE /api/jobs/:id`). */
@@ -67,7 +81,7 @@ export interface JobQueueImpl {
   /**
    * Be told whenever the queue's rows may have changed — a row inserted,
    * started, finished, retried or removed. Returns the unsubscribe. What
-   * `jobs-list` reloads on, while a tab watches it.
+   * the `jobs` collection re-reads on, while a tab watches it.
    */
   onActivity(listener: () => void): () => void;
   /** `onReadyBlocking`: make the queue usable (the desktop installs its schema

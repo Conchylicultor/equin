@@ -72,9 +72,9 @@ These are interim values: metrics P2/P3 replace them.
     - `resource.declare` "stats.pushes.throughput"
     - `resource.declare` "stats.pushes.wait-time"
   - Resources:
-    - `stats.pushes.step-breakdown` (push)
-    - `stats.pushes.throughput` (push)
-    - `stats.pushes.wait-time` (push)
+    - `stats.pushes.step-breakdown` (push, whole: one point per bucket holding a completed push within the op store's 30-day retention sweep (plus a forked DB's sweep lag) — the range bounds it, never the number of pushes)
+    - `stats.pushes.throughput` (push, whole: one point per bucket holding a completed push within the op store's 30-day retention sweep (plus a forked DB's sweep lag) — the range bounds it, never the number of pushes)
+    - `stats.pushes.wait-time` (push, whole: one point per bucket holding a completed push within the op store's 30-day retention sweep (plus a forked DB's sweep lag) — the range bounds it, never the number of pushes)
 - Machine:
   - Uses: `network/live.serveValue`
 - Cross-plugin:

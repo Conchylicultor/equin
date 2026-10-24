@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeKeyedRecord } from "@plugins/packages/plugins/list-bound/core";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import { isOptionName, isPickValue } from "./options";
@@ -36,9 +37,10 @@ const PickValueSchema = z
     "not an option value (lowercase letters, digits and dashes, or a lowercase #rrggbb color)",
   );
 
-export const StoredPicksSchema = z.record(
+export const StoredPicksSchema = wholeKeyedRecord(
   OptionNameSchema,
   PickValueSchema,
+  { reason: "one pick per option one prototype declares — a handful" },
 ) satisfies ZodParser<StoredPicks>;
 
 /**

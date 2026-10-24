@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { liveCollection } from "@plugins/network/plugins/live/core";
 import {
   defaultBassPattern,
@@ -32,7 +33,9 @@ export const RhythmPatternSchema = z
   .object({
     presetId: z.string().nullable(),
     subdivisions: z.number().int().min(1).max(48),
-    onsets: z.array(z.number().int().nonnegative()),
+    onsets: wholeList(z.number().int().nonnegative(), {
+      reason: "one pattern's onsets, each below its subdivisions (≤ 48)",
+    }),
     rotation: z.number().int(),
   })
   .refine((p) => p.onsets.every((o) => o < p.subdivisions), {

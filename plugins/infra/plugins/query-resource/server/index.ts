@@ -1,9 +1,11 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
 export {
+  compileOffFeedQuery,
   deferredWindowQueryResource,
   windowQueryResource,
 } from "./internal/compile-window";
+export type { CompiledOffFeedQuery } from "./internal/compile-window";
 export { compileGroupsQuery } from "./internal/compile-groups";
 export { compileCountQuery } from "./internal/compile-count";
 export type { CompiledCount } from "./internal/compile-count";
@@ -25,7 +27,11 @@ export type {
   UnionOrderKey,
 } from "./internal/compile-union-window";
 export { compileJoins, joinRefs, presenceExpr } from "./internal/joins";
-export { compiledValueReach } from "./internal/routes";
+export {
+  compiledKeyedReads,
+  compiledValueReach,
+  offFeedReach,
+} from "./internal/routes";
 export type { ValueReads } from "./internal/routes";
 export type { ReadColumn } from "./internal/joins";
 export type { CompiledGroups } from "./internal/compile-groups";

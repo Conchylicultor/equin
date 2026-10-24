@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import {
+  wholeList,
+  wholeRecord,
+} from "@plugins/packages/plugins/list-bound/core";
 
 // The typed view of the resource runtime's debug payload (`handleResourcesDebug`
 // in `@plugins/framework/plugins/resource-runtime/core`, the one authoritative
@@ -26,6 +30,10 @@ import { liveValue } from "@plugins/network/plugins/live/core";
  * does (the bug class L4 eliminates). A feed- or producer-only resource is
  * expected (out-of-process writes or a now-redundant hand-notify).
  */
+/** The tables one entry reads, routes through or drifted onto. */
+const ENTRY_TABLES_REASON =
+  "the tables one resource reads or is reached through — a handful per resource";
+
 export const notifyStatsSchema = z.object({
   hand: z.number(),
   feed: z.number(),
@@ -77,6 +85,27 @@ export const freshnessSchema = z.object({
   reason: z.string().optional(),
 });
 
+/**
+ * A value's declared list shape (`network/live`'s `liveValue` walks its schema
+ * at declaration): each list it holds, capped at `max` or loaded whole for
+ * `reason`, and the paths of the bare ones; `paged` when the value is
+ * key-range pages (the lists are then its item's, under `[]`).
+ */
+const SHAPE_LISTS_REASON =
+  "the lists one value's schema reaches — a path per array or record it declares";
+
+export const shapeSchema = z.object({
+  paged: z.boolean(),
+  bounds: wholeList(
+    z.union([
+      z.object({ path: z.string(), max: z.number() }),
+      z.object({ path: z.string(), reason: z.string() }),
+    ]),
+    { reason: SHAPE_LISTS_REASON },
+  ),
+  bare: wholeList(z.string(), { reason: SHAPE_LISTS_REASON }),
+});
+
 /** Loader call frequency over the profiling window (server-only). */
 export const loaderStatsSchema = z.object({
   count: z.number(),
@@ -92,7 +121,7 @@ export const loaderStatsSchema = z.object({
 export const relationReadSchema = z.object({
   relation: z.string(),
   reason: z.string(),
-  bases: z.array(z.string()),
+  bases: wholeList(z.string(), { reason: ENTRY_TABLES_REASON }),
 });
 
 export const resourceDebugSchema = z.object({
@@ -102,26 +131,31 @@ export const resourceDebugSchema = z.object({
   /** Total subscriptions across all sockets (sum over params-tuples). */
   subscribers: z.number(),
   /** Authoritative per-pk server subscriber count = the diff fan-out factor. */
-  subCounts: z.record(z.string(), z.number()),
+  subCounts: wholeRecord(z.number(), {
+    reason:
+      "one key per params-tuple some open tab subscribes to — what the user's tabs hold, never the data set",
+  }),
   /** Loader call frequency over the profiling window (absent before a loader ran in it). */
   loaderStats: loaderStatsSchema.optional(),
   /** What this entry is — see `policySchema`. */
   policy: policySchema,
   /** Captured table names this resource's loader read since boot. */
-  readSet: z.array(z.string()),
+  readSet: wholeList(z.string(), { reason: ENTRY_TABLES_REASON }),
   /**
    * The routes a change reaches this entry through — a routed resource's, or
    * an external one's declared reads (D1); `null` = no routing record.
    */
-  routes: z.array(routeSchema).nullable(),
+  routes: wholeList(routeSchema, { reason: ENTRY_TABLES_REASON }).nullable(),
   /** The views / rollups its reach plan reads whole, each with its bases. `[]` otherwise. */
-  relationReads: z.array(relationReadSchema),
+  relationReads: wholeList(relationReadSchema, {
+    reason: ENTRY_TABLES_REASON,
+  }),
   /**
    * The drift guard's record — A8 for a routed resource, D5 for a notified
    * external one: captured tables its plan does not cover (raw-table space,
    * as the guard judged them), each now recomputing it FULL. `[]` otherwise.
    */
-  routeDrifted: z.array(z.string()),
+  routeDrifted: wholeList(z.string(), { reason: ENTRY_TABLES_REASON }),
   /** Subscribed params-tuples a change recomputes. */
   tuples: z.number(),
   /** L2-persisted (its value survives a restart and is kept current with nobody subscribed). */
@@ -132,10 +166,15 @@ export const resourceDebugSchema = z.object({
   notifyStats: notifyStatsSchema,
   /** The declared freshness; `null` = none declared (a db entry, or one not served through `network/live`). */
   freshness: freshnessSchema.nullable(),
+  /** The declared list shape; `null` = none declared (a collection's resources, or one not declared through `liveValue`). */
+  shape: shapeSchema.nullable(),
 });
 
 export const resourcesDebugSchema = z.object({
-  resources: z.array(resourceDebugSchema),
+  resources: wholeList(resourceDebugSchema, {
+    reason:
+      "one per resource this backend registered — the declared resource keys, a few hundred, never the rows they serve",
+  }),
 });
 
 /**
@@ -151,6 +190,7 @@ export const resourcesDebug = liveValue("resources.debug", {
 
 export type NotifyStats = z.infer<typeof notifyStatsSchema>;
 export type ResourceFreshness = z.infer<typeof freshnessSchema>;
+export type ResourceShape = z.infer<typeof shapeSchema>;
 export type ResourcePolicy = z.infer<typeof policySchema>;
 export type ResourceDebug = z.infer<typeof resourceDebugSchema>;
 export type ResourceRoute = z.infer<typeof routeSchema>;

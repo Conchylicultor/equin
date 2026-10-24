@@ -11,7 +11,7 @@ import {
 } from "@plugins/primitives/plugins/pane/web";
 import { useLive, useLiveRow } from "@plugins/network/plugins/live/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
-import { deadJobs } from "@plugins/infra/plugins/jobs/core";
+import { deadJobs, jobRuns, jobs } from "@plugins/infra/plugins/jobs/core";
 import {
   eventEmissions,
   eventTriggers,
@@ -27,12 +27,13 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { queueRoute } from "../core";
 import { QUEUE_TABS, TAB_META, parseTab, type QueueTab } from "./internal/tabs";
-import { findJobRow, useJobRows } from "./internal/job-rows";
-import { JobsView } from "./components/jobs-view";
+import { fromLive, fromRun, parseJobKey } from "./internal/job-rows";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
+import { useNow } from "@plugins/primitives/plugins/relative-time/web";
+import { HistoryView, QueueView } from "./components/jobs-view";
 import { DeadView } from "./components/dead-view";
 import { EventsView } from "./components/events-view";
 import { TriggersView } from "./components/triggers-view";
-import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { JobDetail } from "./components/job-detail";
 import {
   DeadJobDetail,
@@ -122,7 +123,16 @@ function TabBody({ tab }: { tab: QueueTab }): ReactElement {
   switch (tab) {
     case "jobs":
       return (
-        <JobsView
+        <QueueView
+          selectedKey={jobKey}
+          linkTo={(jobRowId) =>
+            openPane.to(jobDetailPane, { tab, jobRowId }, { mode: "push" })
+          }
+        />
+      );
+    case "history":
+      return (
+        <HistoryView
           selectedKey={jobKey}
           linkTo={(jobRowId) =>
             openPane.to(jobDetailPane, { tab, jobRowId }, { mode: "push" })
@@ -169,16 +179,31 @@ function TabBody({ tab }: { tab: QueueTab }): ReactElement {
 
 // ─── Jobs detail ───────────────────────────────────────────────────────────
 
+// A detail key names a queue row (`live:<graphile id>`, a `jobs` row) or a
+// recorded run (`run:<run id>`, a `jobRuns` row). A queue row whose job has
+// since finished is followed to the run it became — the newest run carrying
+// its graphile id — so an open pane follows its job out of the queue instead
+// of turning into Not Found.
+
 /**
- * Found while the key names a row of the merged Jobs list — or, for a queue
- * row that has since finished, the run it became (`findJobRow`), so an open
- * pane follows its job out of the queue instead of turning into Not Found.
+ * Found while the key names a queue row or a run — or, for a queue row that
+ * has since left the queue, while a recorded run carries its graphile id (a
+ * `:count` of them; the body reads the run itself).
  */
 function useResolveJobRow({ jobRowId }: { jobRowId: string }): ResolveResult {
-  return resolveFrom(
-    useJobRows(),
-    (data) => findJobRow(data.rows, jobRowId) !== null,
+  const key = parseJobKey(jobRowId);
+  const liveId = key?.kind === "live" ? key.id : null;
+  const queueRow = useLiveRow(jobs, liveId);
+  const run = useLiveRow(jobRuns, key?.kind === "run" ? key.id : null);
+  const followed = useLive(
+    liveId === null ? null : jobRuns,
+    liveId === null ? null : { count: true, where: { jobId: liveId } },
   );
+  if (key === null) return { status: "missing" };
+  if (key.kind === "run") return resolveRow(run);
+  const inQueue = resolveRow(queueRow);
+  if (inQueue.status !== "missing") return inQueue;
+  return resolveFrom(followed, (n) => n > 0);
 }
 
 function useJobRowTitle({
@@ -186,12 +211,16 @@ function useJobRowTitle({
 }: {
   jobRowId: string;
 }): string | undefined {
-  // The pane's fallback title stands while the read is loading or failed.
-  return foldResource(useJobRows(), {
-    loading: () => undefined,
-    error: () => undefined,
-    ready: (d) => findJobRow(d.rows, jobRowId)?.row.jobName,
-  });
+  // The pane's fallback title stands while a read is loading or failed, and
+  // for a queue row followed into History.
+  const key = parseJobKey(jobRowId);
+  const queueRow = rowOrStale(
+    useLiveRow(jobs, key?.kind === "live" ? key.id : null),
+  );
+  const run = rowOrStale(
+    useLiveRow(jobRuns, key?.kind === "run" ? key.id : null),
+  );
+  return (queueRow ?? run)?.jobName;
 }
 
 export const jobDetailPane = Pane.define({
@@ -205,63 +234,122 @@ export const jobDetailPane = Pane.define({
 
 function JobDetailBody(): ReactElement {
   const { jobRowId } = jobDetailPane.useParams();
-  const { tab } = queuePane.useParams();
-  const openPane = useOpenPane();
-  const result = useJobRows();
+  const key = parseJobKey(jobRowId);
   return (
     <PaneChrome pane={jobDetailPane}>
       <Inset pad="md">
-        {result.status === "loading" ? (
-          <Loading />
-        ) : result.status === "error" ? (
-          <ResourceErrorInline
-            variant="block"
-            subject="the job queue"
-            error={result.error}
-            refetch={result.refetch}
-          />
+        {key === null ? (
+          <Text tone="muted">This job is no longer listed.</Text>
+        ) : key.kind === "live" ? (
+          <QueueRowDetail graphileId={key.id} />
         ) : (
-          <JobDetailContent
-            rows={result.data.rows}
-            jobRowId={jobRowId}
-            runTarget={(key) =>
-              openPane.to(
-                jobDetailPane,
-                { tab, jobRowId: key },
-                { mode: "swap" },
-              )
-            }
-          />
+          <RunDetailById runId={key.id} />
         )}
       </Inset>
     </PaneChrome>
   );
 }
 
-function JobDetailContent({
-  rows,
-  jobRowId,
-  runTarget,
-}: {
-  rows: Parameters<typeof findJobRow>[0];
-  jobRowId: string;
-  runTarget: (key: string) => LinkTarget;
-}): ReactElement {
-  const found = findJobRow(rows, jobRowId);
-  // The guard said the row exists; it can still vanish under a mounted pane
-  // (a pending row cancelled, a run overwritten in its ring). Say so in place.
-  if (found === null) {
-    return <Text tone="muted">This job is no longer listed.</Text>;
+/** The link a bar of the recent-runs strip opens: that row's detail, in place. */
+function useRunTarget(): (key: string) => LinkTarget {
+  const { tab } = queuePane.useParams();
+  const openPane = useOpenPane();
+  return (key) =>
+    openPane.to(jobDetailPane, { tab, jobRowId: key }, { mode: "swap" });
+}
+
+/** A queue row's detail — or, once it has left the queue, the run it became. */
+function QueueRowDetail({ graphileId }: { graphileId: string }) {
+  const read = useLiveRow(jobs, graphileId);
+  const runTarget = useRunTarget();
+  // A running row's duration is read against this clock; its cells tick on
+  // their own.
+  const now = useNow(30_000);
+  switch (read.status) {
+    case "loading":
+      return <Loading />;
+    case "error":
+      return read.stale !== undefined ? (
+        <JobDetail
+          row={fromLive(read.stale, now)}
+          followed={false}
+          runTarget={runTarget}
+        />
+      ) : (
+        <ResourceErrorInline
+          variant="block"
+          subject="the job queue"
+          error={read.error}
+          refetch={read.refetch}
+        />
+      );
+    case "ready":
+      return read.found ? (
+        <JobDetail
+          row={fromLive(read.row, now)}
+          followed={false}
+          runTarget={runTarget}
+        />
+      ) : (
+        <FollowedRun graphileId={graphileId} />
+      );
   }
-  const jobRows = rows.filter((r) => r.jobName === found.row.jobName);
-  return (
-    <JobDetail
-      row={found.row}
-      followed={found.followed}
-      jobRows={jobRows}
-      runTarget={runTarget}
-    />
-  );
+}
+
+/** The newest recorded run of a queue row that has left the queue. */
+function FollowedRun({ graphileId }: { graphileId: string }) {
+  const runs = useLive(jobRuns, { where: { jobId: graphileId }, limit: 1 });
+  const runTarget = useRunTarget();
+  return foldResource(runs, {
+    loading: () => <Loading />,
+    error: (error, stale) =>
+      stale?.[0] !== undefined ? (
+        <JobDetail row={fromRun(stale[0])} followed runTarget={runTarget} />
+      ) : (
+        <ResourceErrorInline
+          variant="block"
+          subject="the job's runs"
+          error={error}
+          refetch={runs.refetch}
+        />
+      ),
+    ready: (rows) =>
+      rows[0] !== undefined ? (
+        <JobDetail row={fromRun(rows[0])} followed runTarget={runTarget} />
+      ) : (
+        // The guard said it exists; it can still vanish under a mounted pane
+        // (a pending row cancelled, a run overwritten in its ring).
+        <Text tone="muted">This job is no longer listed.</Text>
+      ),
+  });
+}
+
+/** A recorded run's detail. */
+function RunDetailById({ runId }: { runId: string }) {
+  const read = useLiveRow(jobRuns, runId);
+  const runTarget = useRunTarget();
+  const run = rowOrStale(read);
+  if (run !== undefined) {
+    return (
+      <JobDetail row={fromRun(run)} followed={false} runTarget={runTarget} />
+    );
+  }
+  switch (read.status) {
+    case "loading":
+      return <Loading />;
+    case "error":
+      return (
+        <ResourceErrorInline
+          variant="block"
+          subject="the run"
+          error={read.error}
+          refetch={read.refetch}
+        />
+      );
+    case "ready":
+      // Overwritten in its job's ring under a mounted pane.
+      return <Text tone="muted">This run is no longer listed.</Text>;
+  }
 }
 
 // ─── Dead detail ───────────────────────────────────────────────────────────

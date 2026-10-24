@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { useLive } from "@plugins/network/plugins/live/web";
 import {
   ResourceErrorInline,
   type ResourceResult,
@@ -26,12 +25,14 @@ import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { ConversationFileLinks } from "@plugins/conversations/web";
 import {
   subagentReport,
-  subagentTranscript,
   type SubagentRef,
   type SubagentReport,
   type SubagentRequestShape,
-  type SubagentTranscript,
 } from "../../core";
+import {
+  useSubagentTranscript,
+  type SubagentTranscriptView,
+} from "../internal/use-subagent-transcript";
 import {
   useConversationSubagents,
   type ConversationSubagents,
@@ -257,10 +258,12 @@ function ReportCard({ report }: { report: ReportText }) {
  * The report card, or nothing — and "nothing" is the common, correct answer.
  *
  * The write-up's source differs per request shape (`subagentReport`), and for a
- * BACKGROUND sub-agent it lives in the sub-agent's own transcript, so no
- * decision can be made until that has arrived. Rendering nothing meanwhile is
- * honest rather than lossy: this card is an enrichment above a transcript that
- * is already on screen and already contains the handback.
+ * BACKGROUND sub-agent it lives in the sub-agent's own transcript (its last
+ * handback, which the server reads over the whole transcript — the pane holds
+ * only a window of it), so no decision can be made until that has arrived.
+ * Rendering nothing meanwhile is honest rather than lossy: this card is an
+ * enrichment above a transcript that is already on screen and already
+ * contains the handback.
  */
 function SubagentReportCard({
   requestShape,
@@ -270,7 +273,7 @@ function SubagentReportCard({
 }: {
   requestShape: SubagentRequestShape | undefined;
   agentToolEvent: ToolCallEvent | undefined;
-  transcript: ResourceResult<SubagentTranscript>;
+  transcript: ResourceResult<SubagentTranscriptView>;
   /** Only a finished sub-agent has handed anything back. */
   finished: boolean;
 }) {
@@ -281,8 +284,9 @@ function SubagentReportCard({
     requestShape,
     agentToolEvent,
     // Past the gate, `unlinked` means the sub-agent really wrote no transcript
-    // — so there is no handback in it, which is what an empty list says here.
-    events: transcript.data.kind === "linked" ? transcript.data.events : [],
+    // — so there is no handback in it.
+    handback:
+      transcript.data.kind === "linked" ? transcript.data.handback : null,
   });
   if (report.kind === "none") return null;
   return (
@@ -379,10 +383,7 @@ function SubagentPaneContent({
   subagents: Extract<ConversationSubagents, { kind: "known" }>;
 }) {
   const resolved = resolveRef(subagents, subagent);
-  const transcript = useLive(subagentTranscript, {
-    id: conversationId,
-    ...subagent,
-  });
+  const transcript = useSubagentTranscript(conversationId, subagent);
 
   // Same declaration-level reason as the sub-agent set: no computer here.
   if (transcript.status === "unavailable") {
@@ -445,7 +446,7 @@ function SubagentTranscript({
 }: {
   conversationId: string;
   subagent: SubagentRef;
-  transcript: ResourceResult<SubagentTranscript>;
+  transcript: ResourceResult<SubagentTranscriptView>;
   status: SubagentStatus;
 }) {
   if (transcript.status === "loading") {
@@ -500,9 +501,13 @@ function SubagentTranscript({
       </BodyMessage>
     );
   }
+  const drawn = transcript.data.window;
   return (
     <TranscriptView
-      events={transcript.data.events}
+      events={drawn.events}
+      ids={drawn.ids}
+      firstSeq={drawn.firstSeq}
+      older={drawn.older}
       conversationId={conversationId}
       subject={{ kind: "subagent", agentId: transcript.data.agentId }}
       // The surface tab is appended by the view — name only the subject here.

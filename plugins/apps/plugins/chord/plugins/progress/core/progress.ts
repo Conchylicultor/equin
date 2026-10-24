@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import {
   ChordTokenSchema,
   type ChordToken,
@@ -28,7 +29,9 @@ export type ChordStanding = z.infer<typeof ChordStandingSchema>;
 
 export const ChordProgressSchema = z.object({
   /** One per requested token, in the params' (canonical, sorted) order. */
-  chords: z.array(ChordStandingSchema),
+  chords: wholeList(ChordStandingSchema, {
+    reason: "one entry per requested token — the params bound it",
+  }),
   /**
    * Every chord the catalog does not list — the chords the Rare joker
    * answers — as one pool, over the last `MASTERY_WINDOW` answers given for

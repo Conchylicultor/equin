@@ -18,6 +18,7 @@ import {
   type Route,
   type RoutePlan,
   type TupleUse,
+  type UnfedRead,
 } from "@plugins/framework/plugins/resource-runtime/core";
 import {
   armKeyCodec,
@@ -357,6 +358,60 @@ export function compiledValueReach<P extends ResourceParams>(
     routes.map((r) => [r.id, { role: "membership" as const }]),
   );
   return mintReachPlan<P>({ routes, usesOf: () => uses, unfed, relations });
+}
+
+/**
+ * A value's declared reads for an EXTERNAL KEYED entry (a paged value's
+ * pages: network/live), which no route may reach (D31): the same compile as
+ * {@link compiledValueReach}, each routed table and each view read handed back
+ * as a relation read WHOLE (the runtime's `ExternalWindowPolicy.relations` —
+ * a write to a base re-reads every subscribed page), the `outsideFeed`
+ * tables as its `unfed`.
+ */
+export function compiledKeyedReads(
+  reads: ValueReads,
+  label: string,
+): { relations: RelationRead[]; unfed?: UnfedRead[] } {
+  const plan = compiledValueReach(reads, label);
+  const unfed = plan.unfed ?? [];
+  return {
+    relations: [
+      ...plan.routes.map((r) => ({ relation: r.table, reason: reads.reason })),
+      ...(plan.relations ?? []),
+    ],
+    ...(unfed.length > 0 ? { unfed: [...unfed] } : {}),
+  };
+}
+
+/**
+ * A compiled non-keyed aggregate (a collection's `:groups` / `:count`) served
+ * OFF the change feed (network/live's `serveCollection` with `changes`): the
+ * same SQL, its change its own `notify`. Every table its routed `reach` names
+ * becomes an `unfed` read and no route remains — so the drift guard accepts
+ * the loader's reads, and change-feed's boot check holds each table to its
+ * opt-out (`ExcludeFromChangeFeed`).
+ */
+export function offFeedReach<P extends ResourceParams>(
+  reach: ReachPlan<P>,
+  reason: string,
+): ReachPlan<P> {
+  if ((reach.relations ?? []).length > 0) {
+    throw new Error(
+      `offFeedReach: the plan reads relations (${reach.relations!.map((r) => `"${r.relation}"`).join(", ")}) — a view or rollup is reached through its bases' change feed, never served off it.`,
+    );
+  }
+  const tables = [
+    ...new Set([
+      ...reach.routes.map((r) => r.table),
+      ...(reach.unfed ?? []).map((u) => u.table),
+    ]),
+  ];
+  const none: ReadonlyMap<string, TupleUse> = new Map();
+  return mintReachPlan<P>({
+    routes: [],
+    usesOf: () => none,
+    unfed: tables.map((table) => ({ table, reason })),
+  });
 }
 
 /**

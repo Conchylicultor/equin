@@ -27,7 +27,7 @@ value + one endpoint, injected back through a global slot.
   index `dvro_view_idx` on the pair). `rank` is `rank_text` (C collation), the
   repo's fractional-index column type.
 - `rowOrder` — a live value (`liveValue` with `params: ["dataViewId", "viewId"]`,
-  served `serveValue(…, { source: "db", unbounded })`), emitting
+  a `wholeList`, served `serveValue(…, { source: "db" })`), emitting
   `{ rowKey, rank }[]` rank-ascending. A value, not a collection: the composite
   key has no single id to read a row by. The loader reads the table, so the
   **change feed** recomputes it on every write; no notify. It ships only what
@@ -248,12 +248,13 @@ set). Identical posture to `data_view_custom_values`.
   - Exports (values):
     - `_dataViewRowOrder`
     - `applyRowOrder`
-  - Resources: `data-view-row-order` (push, unbounded: one view instance's manual order — the rows a user dragged plus the seeds ahead of them; the key is the composite (dataViewId, viewId, rowKey), so no single-id :rows read fits)
+  - Resources: `data-view-row-order` (push, whole: one view instance's manual order — the rows a user dragged plus the seeds ahead of them; the key is the composite (dataViewId, viewId, rowKey), so no single-id :rows read fits)
   - Routes: `POST /api/data-view/row-order`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
     - `primitives/rank.Rank`
     - `primitives/rank.RankSchema`
   - Exports (types):

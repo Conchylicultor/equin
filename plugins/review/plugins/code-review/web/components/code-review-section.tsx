@@ -21,11 +21,18 @@ import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { useConfig } from "@plugins/config_v2/web";
 import type { Source } from "@plugins/review/web";
-import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
+import {
+  EDITED_FILES_MAX,
+  type EditedFile,
+  type EditedFilesSummary,
+} from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { pushFiles } from "@plugins/code-explorer/plugins/code-api/core";
+import {
+  COMMIT_FILES_MAX,
+  pushFiles,
+} from "@plugins/code-explorer/plugins/code-api/core";
 import { reviewConfig } from "../../shared/config";
 import { groupBySection, type FileSection } from "../core-files";
 import { ReviewFileRow } from "./review-file-row";
@@ -88,7 +95,9 @@ function WorkingTreeBody({
       // "No edited files." empty copy that would read as a genuinely clean tree.
       payload.resolved ? (
         <FileList
-          files={payload.value}
+          files={payload.value.files}
+          totals={payload.value.summary}
+          truncatedAt={payload.value.complete ? null : EDITED_FILES_MAX}
           worktree={worktree}
           base="main"
           emptyLabel="No edited files."
@@ -126,6 +135,7 @@ function PushBody({ pushId }: { pushId: string }) {
     ready: (data) => (
       <FileList
         files={data.files}
+        truncatedAt={data.truncated ? COMMIT_FILES_MAX : null}
         worktree="main"
         base={data.baseSha}
         head={data.headSha}
@@ -148,12 +158,18 @@ function sumStats(files: EditedFile[]) {
 
 function FileList({
   files,
+  totals: wholeTotals,
+  truncatedAt = null,
   worktree,
   base,
   head,
   emptyLabel,
 }: {
   files: EditedFile[] | null;
+  /** The whole set's totals, when the read knows them; else the files' own. */
+  totals?: EditedFilesSummary;
+  /** The cap the read cut the files at (`COMMIT_FILES_MAX`, `EDITED_FILES_MAX`); null: not cut. */
+  truncatedAt?: number | null;
   worktree: string;
   base: string;
   head?: string;
@@ -191,14 +207,16 @@ function FileList({
 
   const totals = useMemo(
     () =>
-      sorted ? sumStats(sorted) : { count: 0, additions: 0, deletions: 0 },
-    [sorted],
+      wholeTotals ??
+      (sorted ? sumStats(sorted) : { count: 0, additions: 0, deletions: 0 }),
+    [wholeTotals, sorted],
   );
 
   return (
     <>
       <ToolbarRow
         count={totals.count}
+        truncatedAt={truncatedAt}
         additions={totals.additions}
         deletions={totals.deletions}
         canToggle={sorted != null && sorted.length > 0}
@@ -281,6 +299,7 @@ function FileSectionBlock({
 
 function ToolbarRow({
   count,
+  truncatedAt,
   additions,
   deletions,
   canToggle,
@@ -288,6 +307,7 @@ function ToolbarRow({
   onToggleAll,
 }: {
   count: number;
+  truncatedAt: number | null;
   additions: number;
   deletions: number;
   canToggle: boolean;
@@ -306,6 +326,11 @@ function ToolbarRow({
         <span className="tabular-nums">{count} files</span>
         <span className="text-success tabular-nums">+{additions}</span>
         <span className="text-destructive tabular-nums">−{deletions}</span>
+        {truncatedAt !== null && (
+          <span className="text-muted-foreground">
+            showing the first {truncatedAt}
+          </span>
+        )}
       </Text>
       <Stack as={Fill} direction="row" gap="xs" align="center" justify="end">
         <ExpandAllButton
