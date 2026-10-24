@@ -16,19 +16,23 @@ import {
   DOCK_READ_ARGV,
   GNOME_FAVORITES_READ_ARGV,
   ICONSET,
+  dockPinnedAppIds,
   dockPinPlan,
+  gnomePinnedAppIds,
   gnomePinPlan,
   isShimEntryName,
   linuxShimPaths,
   macShimPaths,
-  readDesktopFileAppId,
-  readShimPlistAppId,
+  readDesktopFile,
+  readShimPlist,
   renderDesktopFile,
   renderShimInfoPlist,
   shimDir,
+  shimHash,
   SHIM_EXECUTABLE,
   type ShimApp,
   type ShimPlatform,
+  type ShimRecord,
   type ShimRoots,
 } from "./shim-files";
 
@@ -43,32 +47,48 @@ export interface ShimHost {
   /** Run one command; resolves its stdout, rejects on a non-zero exit. */
   run(argv: readonly string[]): Promise<string>;
   /** The app's icon as a PNG at `size` px (the app-manifest renderer). */
-  iconPng(appId: string, size: 512 | 1024): Uint8Array;
+  iconPng(appId: string, size: number): Uint8Array;
 }
 
-/** The app ids whose shims are on disk now — read from the shim files themselves. */
-export function readInstalledAppIds(host: ShimHost): string[] {
+/** One shim on disk: what it says about itself, and where it is. */
+export interface InstalledShim extends ShimRecord {
+  /** macOS: the bundle; Linux: the desktop entry. */
+  path: string;
+}
+
+/** Every equin shim on disk now — read from the shim files themselves. */
+export function readInstalledShims(host: ShimHost): InstalledShim[] {
   const dir = shimDir(host.platform, host.roots);
   if (!existsSync(dir)) return [];
-  const ids: string[] = [];
+  const shims: InstalledShim[] = [];
   for (const entry of readdirSync(dir)) {
     if (!isShimEntryName(host.platform, entry)) continue;
-    const id =
+    const path = join(dir, entry);
+    const record =
       host.platform === "macos"
-        ? readIfExists(
-            join(dir, entry, "Contents", "Info.plist"),
-            readShimPlistAppId,
-          )
-        : readIfExists(join(dir, entry), readDesktopFileAppId);
-    if (id !== null) ids.push(id);
+        ? readIfExists(join(path, "Contents", "Info.plist"), readShimPlist)
+        : readIfExists(path, readDesktopFile);
+    if (record !== null) shims.push({ ...record, path });
   }
-  return ids.sort();
+  return shims.sort((a, b) => a.path.localeCompare(b.path));
+}
+
+/** The app ids whose shims are on disk now. */
+export function readInstalledAppIds(host: ShimHost): string[] {
+  return [...new Set(readInstalledShims(host).map((s) => s.appId))].sort();
+}
+
+/** Where an app's shim is written: macOS its bundle, Linux its desktop entry. */
+function shimPath(host: ShimHost, app: ShimApp): string {
+  return host.platform === "macos"
+    ? macShimPaths(host.roots, app).bundle
+    : linuxShimPaths(host.roots, app.id).desktopFile;
 }
 
 function readIfExists(
   path: string,
-  read: (text: string) => string | null,
-): string | null {
+  read: (text: string) => ShimRecord | null,
+): ShimRecord | null {
   // A bundle named like a shim but without our plist is not ours — skipped.
   if (!existsSync(path)) return null;
   return read(readFileSync(path, "utf-8"));
@@ -80,8 +100,8 @@ function readIfExists(
  * - macOS: the bundle is assembled beside its final path and swapped in whole
  *   — `Contents/MacOS/equin-desktop` an APFS clone of the helper (`cp -c`: the
  *   process must live in the shim's bundle to get its own Dock icon),
- *   `Info.plist`, `Resources/app.icns` (`sips` scales the 1024 px render,
- *   `iconutil` packs it), then an ad-hoc signature (`codesign -s -`) — so a
+ *   `Info.plist`, `Resources/app.icns` (every iconset size rendered in-process,
+ *   `iconutil` packs them), then an ad-hoc signature (`codesign -s -`) — so a
  *   running app's executable is never overwritten in place.
  * - Linux: the 512 px icon under the hicolor theme, then the desktop entry
  *   (written last, so the launcher never names a missing icon).
@@ -137,20 +157,11 @@ async function writeIcns(
   // The iconset is scratch, outside the bundle.
   const scratch = mkdtempSync(join(tmpdir(), "equin-shim-icon-"));
   try {
-    const source = join(scratch, "source.png");
-    writeFileSync(source, host.iconPng(appId, 1024));
     const iconset = join(scratch, "app.iconset");
     mkdirSync(iconset);
+    // Rendered here, each at its own size: ten `sips` runs took ~2 s.
     for (const [name, px] of ICONSET) {
-      await host.run([
-        "sips",
-        "-z",
-        String(px),
-        String(px),
-        source,
-        "--out",
-        join(iconset, `${name}.png`),
-      ]);
+      writeFileSync(join(iconset, `${name}.png`), host.iconPng(appId, px));
     }
     await host.run(["iconutil", "-c", "icns", iconset, "-o", icns]);
   } finally {
@@ -231,24 +242,75 @@ export function hasStableHelper(stateDir: string): boolean {
   return existsSync(join(stateDir, SHIM_EXECUTABLE));
 }
 
+/** Remove one shim from disk (Linux: its icon too). */
+function removeShim(host: ShimHost, shim: InstalledShim): void {
+  rmSync(shim.path, { recursive: true, force: true });
+  if (host.platform === "linux") {
+    rmSync(linuxShimPaths(host.roots, shim.appId).icon, { force: true });
+  }
+}
+
+/** What one {@link syncShims} run changed, by app id. */
+export interface ShimSync {
+  written: string[];
+  removed: string[];
+}
+
 /**
- * Re-sync every installed shim to the stable helper after its identity
- * changed: each shim whose app still exists is rewritten (macOS: a fresh
- * clone of the new binary, re-signed). A shim for an app that no longer
- * exists is left alone — removing an install is the user's call. Returns the
- * app ids rewritten.
+ * Bring the shims on disk to exactly `apps`, each running `helper`:
+ *
+ * - an app with no shim, or whose shim is stale (its recorded fingerprint is
+ *   not the app's `shimHash`, or `rewriteAll` — the helper binary changed),
+ *   is (re)written;
+ * - a shim under another path than its app's (an app renamed: the macOS
+ *   bundle is named after the app) is removed once the new one is written;
+ * - a shim whose app is not in `apps` (an app that no longer exists) is
+ *   removed.
+ *
+ * Only equin's own shims are touched (`readInstalledShims` reads the shim's
+ * own `EquinAppId`). A current shim is left alone, so a sync with nothing to
+ * do runs no command.
  */
-export async function reconcileShims(
+export async function syncShims(
   host: ShimHost,
   helper: string,
-  resolve: (appId: string) => ShimApp | undefined,
-): Promise<string[]> {
-  const rewritten: string[] = [];
-  for (const id of readInstalledAppIds(host)) {
-    const app = resolve(id);
-    if (app === undefined) continue;
-    await writeShim(host, app, helper);
-    rewritten.push(id);
+  apps: readonly ShimApp[],
+  opts: { rewriteAll: boolean },
+): Promise<ShimSync> {
+  const onDisk = readInstalledShims(host);
+  const wanted = new Map(apps.map((a) => [a.id, a]));
+  const result: ShimSync = { written: [], removed: [] };
+  for (const app of apps) {
+    const path = shimPath(host, app);
+    const current = onDisk.find((s) => s.path === path && s.appId === app.id);
+    if (opts.rewriteAll || current?.hash !== shimHash(app)) {
+      await writeShim(host, app, helper);
+      result.written.push(app.id);
+    }
   }
-  return rewritten;
+  for (const shim of onDisk) {
+    const app = wanted.get(shim.appId);
+    if (app !== undefined && shimPath(host, app) === shim.path) continue;
+    removeShim(host, shim);
+    result.removed.push(shim.appId);
+  }
+  return result;
+}
+
+/**
+ * Which installed shims the Dock (macOS) / GNOME dash (Linux) keeps. Call
+ * only when the host's `capabilities.pin` says so.
+ */
+export async function readPinnedAppIds(host: ShimHost): Promise<string[]> {
+  const shims = readInstalledShims(host);
+  if (host.platform === "macos") {
+    return dockPinnedAppIds(
+      await host.run(DOCK_READ_ARGV),
+      shims.map((s) => ({ appId: s.appId, bundle: s.path })),
+    );
+  }
+  return gnomePinnedAppIds(
+    await host.run(GNOME_FAVORITES_READ_ARGV),
+    shims.map((s) => s.appId),
+  );
 }

@@ -10795,7 +10795,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Routes: `GET /api/apps/:appId/manifest.webmanifest`
       - Machine:
         - Uses: `infra/endpoints.machineHandler`
-        - Exports (values): `appIconPng`
+        - Exports (values):
+          - `appIconPng`
+          - `appIconSvg`
         - Routes: `GET /api/apps/:appId/icon/:file`
       - Core:
         - Uses:
@@ -31797,19 +31799,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Server:
     - Contributes:
       - `resource.declare` "menu-bar.capabilities"
-      - `resource.declare` "menu-bar.install-requests"
       - `resource.declare` "menu-bar.installed"
+      - `resource.declare` "menu-bar.pin-requests"
+      - `resource.declare` "menu-bar.pinned"
     - Resources:
       - `menu-bar.capabilities` (push, fixed)
-      - `menu-bar.install-requests` (push, notified, whole: at most one in-flight or failed install per app — bounded by the apps there are)
       - `menu-bar.installed` (push, notified, whole: one id per app installed as an OS app — bounded by the apps there are)
+      - `menu-bar.pin-requests` (push, notified, whole: at most one in-flight or failed pin per app — bounded by the apps there are)
+      - `menu-bar.pinned` (push, notified, whole: one id per app installed as an OS app — bounded by the apps there are)
   - Machine:
     - Uses:
       - `apps-core/app-manifest.appIconPng`
+      - `apps-core/app-manifest.appIconSvg`
       - `infra/endpoints.implementMachine`
       - `network/live.serveValue`
-    - Register: `defineFileWatcher('menu-bar.shim-dir')`
-    - Routes: `POST /api/menu-bar/install/:appId`
+    - Register:
+      - `defineFileWatcher('menu-bar.shim-dir')`
+      - `defineFileWatcher('menu-bar.pin-store')`
+    - Routes: `POST /api/menu-bar/pin/:appId`
   - Core:
     - Uses:
       - `infra/endpoints.defineEndpoint`
@@ -31821,24 +31828,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `EquinNativeBridge`
       - `InstallCapabilities`
       - `InstalledApps`
-      - `InstallRequest`
-      - `InstallRequests`
       - `NativeCapabilities`
       - `NativeHostInfo`
       - `NativeMaterial`
       - `NativeNotification`
+      - `PinRequest`
+      - `PinRequests`
     - Exports (values):
       - `BRIDGE_METHODS`
-      - `installApp`
       - `InstallCapabilitiesSchema`
       - `InstalledAppsSchema`
-      - `InstallRequestSchema`
-      - `InstallRequestsSchema`
       - `menuBarApp`
       - `menuBarCapabilities`
       - `menuBarInstalled`
-      - `menuBarInstallRequests`
+      - `menuBarPinned`
+      - `menuBarPinRequests`
       - `NativeHostInfoSchema`
+      - `pinApp`
+      - `PinRequestSchema`
+      - `PinRequestsSchema`
   - Deps:
     - Uses:
       - `infra/deps.defineDep`
@@ -31861,13 +31869,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `tasks/menu-bar-task`
     - Endpoint callers: `app-grid`
   - Plugins:
-    - **`app-grid`** — The menu-bar panel's app grid (MenuBar.Section 'apps'): every Apps.App but the current app and the home app (the desktop included: its URL is its base path as a route prefix) — as the icons DataView over the installedApp row kind, laid out as a menu's grid (viewOptions.icons.menu: four cells sharing the panel's width) (the tile and name Home and the launcher draw), each tile wearing its app's badge. Scrolling past four rows; drag reorders it, persisted per view (defineDataView('menu-bar.apps')). A tile opens its app in its own OS window through the helper when it is installed (launchApp), else in the default browser (openUrl), or in this tab when the panel is not inside the helper. On hover a tile offers + (AppGridActions 'install'): installs the app as an OS app through POST /api/menu-bar/install/:appId — hidden once installed (menu-bar.installed) or where the host cannot install (menu-bar.capabilities), a spinner while pending, an error mark when the install failed.
+    - **`app-grid`** — The menu-bar panel's app grid (MenuBar.Section 'apps'): every Apps.App but the current app and the home app (the desktop included: its URL is its base path as a route prefix) — as the icons DataView over the installedApp row kind, laid out as a menu's grid (viewOptions.icons.menu: four cells sharing the panel's width) (the tile and name Home and the launcher draw), each tile wearing its app's badge. Scrolling past four rows; drag reorders it, persisted per view (defineDataView('menu-bar.apps')). A tile opens its app in its own OS window through the helper (launchApp) — every app has its shim, kept by main ahead of any click (menu-bar.installed); in the default browser (openUrl) only for an app whose shim is not written yet; in this tab when the panel is not inside the helper. On hover a tile offers a pin (AppGridActions 'pin'): keeps the app in the Dock / GNOME dash through POST /api/menu-bar/pin/:appId — hidden once pinned (menu-bar.pinned, which follows the Dock itself) or where the host cannot pin (menu-bar.capabilities), a spinner while pending, an error mark when the pin failed.
       - Web:
         - Slots: `item-actions`
         - Slot contributors: `item-actions` ← `menu-bar.app-grid`
         - Contributes:
           - `MenuBar.Section` "Apps" → `MenuBarAppGrid`
-          - `item-actions` "install" → `InstallAppAction`
+          - `item-actions` "pin" → `PinAppAction`
         - Uses: 26 symbols — full list in [`plugins/menu-bar/plugins/app-grid/REFERENCE.md`](../plugins/menu-bar/plugins/app-grid/REFERENCE.md)
           - `primitives/data-view` ×5
           - `apps-core` ×3

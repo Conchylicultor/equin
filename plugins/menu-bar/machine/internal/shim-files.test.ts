@@ -1,16 +1,19 @@
 import { describe, expect, test } from "bun:test";
 import {
   dockFileUrl,
+  dockPinnedAppIds,
   dockPinPlan,
+  gnomePinnedAppIds,
   gnomePinPlan,
   linuxShimPaths,
   macShimPaths,
   parseGsettingsStrv,
-  readDesktopFileAppId,
-  readShimPlistAppId,
+  readDesktopFile,
+  readShimPlist,
   renderDesktopFile,
   renderGsettingsStrv,
   renderShimInfoPlist,
+  shimHash,
   type ShimApp,
 } from "./shim-files";
 import { installCapabilities } from "./capabilities";
@@ -20,6 +23,7 @@ const MAIL: ShimApp = {
   name: "Mail",
   url: "http://equin.localhost:9000/mail",
   namespace: "singularity",
+  iconSvg: "<svg>mail</svg>",
 };
 const ROOTS = {
   macApplications: "/tmp/home/Applications",
@@ -56,12 +60,59 @@ describe("macOS shim", () => {
     expect(plist).toContain(
       "<key>NSAppTransportSecurity</key><dict><key>NSExceptionDomains</key><dict><key>localhost</key><dict><key>NSIncludesSubdomains</key><true/><key>NSExceptionAllowsInsecureHTTPLoads</key><true/></dict></dict></dict>",
     );
-    expect(readShimPlistAppId(plist)).toBe("mail");
+    expect(readShimPlist(plist)).toEqual({
+      appId: "mail",
+      hash: shimHash(MAIL),
+    });
   });
 
   test("escapes a name with XML metacharacters", () => {
     const plist = renderShimInfoPlist({ ...MAIL, name: "Tom & <Jerry>" });
     expect(plist).toContain("<string>Tom &amp; &lt;Jerry&gt;</string>");
+  });
+});
+
+describe("shim fingerprint", () => {
+  test("moves with the name, the URL and the icon", () => {
+    const base = shimHash(MAIL);
+    expect(shimHash({ ...MAIL })).toBe(base);
+    expect(shimHash({ ...MAIL, name: "Post" })).not.toBe(base);
+    expect(shimHash({ ...MAIL, url: "http://x.localhost:9000/mail" })).not.toBe(
+      base,
+    );
+    expect(shimHash({ ...MAIL, iconSvg: "<svg>new</svg>" })).not.toBe(base);
+  });
+
+  test("a shim written before the fingerprint reads back with none", () => {
+    expect(readShimPlist("<key>EquinAppId</key><string>mail</string>")).toEqual(
+      { appId: "mail", hash: null },
+    );
+    expect(readDesktopFile("X-Equin-AppId=mail\n")).toEqual({
+      appId: "mail",
+      hash: null,
+    });
+  });
+});
+
+describe("pinned set", () => {
+  test("the Dock's apps, matched by bundle URL", () => {
+    const bundle = "/tmp/home/Applications/equin Mail.app";
+    const out = `(\n { "tile-data" = { "file-data" = { "_CFURLString" = "${dockFileUrl(bundle)}"; }; }; }\n)`;
+    expect(
+      dockPinnedAppIds(out, [
+        { appId: "mail", bundle },
+        { appId: "pages", bundle: "/tmp/home/Applications/equin Pages.app" },
+      ]),
+    ).toEqual(["mail"]);
+  });
+
+  test("the GNOME dash's apps", () => {
+    expect(
+      gnomePinnedAppIds("['firefox.desktop', 'equin-mail.desktop']", [
+        "mail",
+        "pages",
+      ]),
+    ).toEqual(["mail"]);
   });
 });
 
@@ -85,7 +136,10 @@ describe("Linux shim", () => {
     expect(text).toContain("Icon=equin-mail\n");
     expect(text).toContain("Name=Mail\n");
     expect(text.startsWith("[Desktop Entry]\nType=Application\n")).toBe(true);
-    expect(readDesktopFileAppId(text)).toBe("mail");
+    expect(readDesktopFile(text)).toEqual({
+      appId: "mail",
+      hash: shimHash(MAIL),
+    });
   });
 
   test("quotes an Exec argument with spaces", () => {

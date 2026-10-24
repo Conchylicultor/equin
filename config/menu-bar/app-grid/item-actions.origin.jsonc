@@ -1,4 +1,4 @@
-// @hash 2caab6b0a70b
+// @hash 397f81bff078
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,6 +7,6 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
-    "menu-bar.app-grid:install"
+    "menu-bar.app-grid:pin"
   ]
 }

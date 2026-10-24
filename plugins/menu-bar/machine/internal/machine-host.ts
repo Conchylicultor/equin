@@ -1,5 +1,9 @@
 import { declaredApps } from "@plugins/apps-core/server";
-import { appIconPng } from "@plugins/apps-core/plugins/app-manifest/machine";
+import {
+  appIconPng,
+  appIconSvg,
+} from "@plugins/apps-core/plugins/app-manifest/machine";
+import type { AppRef } from "@plugins/primitives/plugins/pane/core";
 import { installableApp } from "@plugins/apps-core/plugins/app-manifest/core";
 import {
   spawnCaptured,
@@ -54,6 +58,16 @@ export function machineShimHost(): ShimHost | null {
   };
 }
 
+function toShimApp(app: AppRef): ShimApp {
+  return {
+    id: app.id,
+    name: app.name,
+    url: namespaceUrl(MAIN_WORKTREE_NAME, app.basePath),
+    namespace: MAIN_WORKTREE_NAME,
+    iconSvg: appIconSvg(app),
+  };
+}
+
 /**
  * The app a shim opens, by id: an installable app on the MAIN namespace (an
  * installed app is the user's app, whichever checkout installed it). Undefined
@@ -61,13 +75,15 @@ export function machineShimHost(): ShimHost | null {
  */
 export function shimApp(appId: string): ShimApp | undefined {
   const app = installableApp(declaredApps, appId);
-  if (app === undefined) return undefined;
-  return {
-    id: app.id,
-    name: app.name,
-    url: namespaceUrl(MAIN_WORKTREE_NAME, app.basePath),
-    namespace: MAIN_WORKTREE_NAME,
-  };
+  return app === undefined ? undefined : toShimApp(app);
+}
+
+/** Every installable app, as the shims main keeps for all of them. */
+export function shimApps(): ShimApp[] {
+  return declaredApps.flatMap((d) => {
+    const app = installableApp(declaredApps, d.app.id);
+    return app === undefined ? [] : [toShimApp(app)];
+  });
 }
 
 let capabilities: Promise<InstallCapabilities> | null = null;

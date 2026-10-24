@@ -15,26 +15,27 @@ import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import {
-  installApp,
   menuBarCapabilities,
-  menuBarInstalled,
-  menuBarInstallRequests,
+  menuBarPinned,
+  menuBarPinRequests,
+  pinApp,
+  type InstallCapabilities,
 } from "@plugins/menu-bar/core";
 
-const addIcon = symbol("add");
+const keepIcon = symbol("keep");
 const errorIcon = symbol("error");
 
 /** The app grid's per-tile actions (drawn on the tile's corner by the icons view). */
 export const AppGridActions = defineItemActions<AppRow>();
 
 /**
- * An install in flight or failed rests on the tile (its spinner, its error),
- * so it does not vanish when the pointer leaves; the + itself is hover-only.
- * Unknown requests (loading, failed read) rest nothing — the action itself
- * says why it cannot be offered.
+ * A pin in flight or failed rests on the tile (its spinner, its error), so it
+ * does not vanish when the pointer leaves; the pin button itself is
+ * hover-only. Unknown requests (loading, failed read) rest nothing — the
+ * action itself says why it cannot be offered.
  */
-export function useInstallActive(row: AppRow): boolean {
-  const requests = useLive(menuBarInstallRequests);
+export function usePinActive(row: AppRow): boolean {
+  const requests = useLive(menuBarPinRequests);
   return foldResource(requests, {
     loading: () => false,
     error: () => false,
@@ -43,28 +44,35 @@ export function useInstallActive(row: AppRow): boolean {
   });
 }
 
+/** Where this host keeps pinned apps, in the user's words. */
+function pinPlace(platform: InstallCapabilities["platform"]): string {
+  return platform === "linux" ? "the dash" : "the Dock";
+}
+
 /**
- * The tile's **+**: installs the app as an OS app of its own (its own window,
- * Dock / dash icon) through the menu-bar install endpoint. Offered only once
- * the host's capabilities, the installed set and the install requests are all
- * known — where the host can install (`capabilities.install`) and the app is
- * not installed yet. A failed read is an error mark naming it (click:
+ * The tile's pin: keeps the app in the Dock / GNOME dash through the
+ * menu-bar pin endpoint. Every app is already an OS app of its own (main
+ * keeps a shim for each), so a tile opens its window either way; this only
+ * adds it to the Dock. Offered only once the host's capabilities, the pinned
+ * set and the pin requests are all known — where the host can pin
+ * (`capabilities.pin`) and the app is not pinned yet (dragging it out of the
+ * Dock offers it again). A failed read is an error mark naming it (click:
  * re-read). Pending (the request, then the helper's build) is the button's
- * spinner; a failed install keeps an error mark whose tooltip says why, and a
+ * spinner; a failed pin keeps an error mark whose tooltip says why, and a
  * click on it tries again.
  */
-export function InstallAppAction({ row }: ItemActionProps<AppRow>): ReactNode {
+export function PinAppAction({ row }: ItemActionProps<AppRow>): ReactNode {
   const fetchEndpoint = useFetchEndpoint();
   const state = combineResources({
     capabilities: useLive(menuBarCapabilities),
-    installed: useLive(menuBarInstalled),
-    requests: useLive(menuBarInstallRequests),
+    pinned: useLive(menuBarPinned),
+    requests: useLive(menuBarPinRequests),
   });
   switch (state.status) {
     // Not known yet: there is no + to offer — and nothing claims there is none.
     case "loading":
       return null;
-    // A transport without the computer (the demo): installing is not a thing here.
+    // A transport without the computer (the demo): pinning is not a thing here.
     case "unavailable":
       return null;
     case "error":
@@ -72,7 +80,7 @@ export function InstallAppAction({ row }: ItemActionProps<AppRow>): ReactNode {
         <ControlSizeProvider size="xs">
           <IconButton
             icon={errorIcon}
-            label={`Can't tell whether ${row.name} can be installed: ${state.error.message} — click to retry`}
+            label={`Can't tell whether ${row.name} is in the Dock: ${state.error.message} — click to retry`}
             variant="floating"
             shape="pill"
             className="text-destructive"
@@ -86,16 +94,17 @@ export function InstallAppAction({ row }: ItemActionProps<AppRow>): ReactNode {
     case "ready":
       break;
   }
-  const { capabilities, installed, requests } = state.data;
-  if (!capabilities.install) return null;
-  if (installed.appIds.includes(row.id)) return null;
+  const { capabilities, pinned, requests } = state.data;
+  if (!capabilities.pin) return null;
+  if (pinned.appIds.includes(row.id)) return null;
   const request = requests.requests.find((r) => r.appId === row.id);
+  const place = pinPlace(capabilities.platform);
 
-  const install = async () => {
-    const res = await fetchEndpoint(installApp, { appId: row.id });
+  const pin = async () => {
+    const res = await fetchEndpoint(pinApp, { appId: row.id });
     if (res.kind === "unavailable") {
       showToast({
-        title: `Couldn't install ${row.name}`,
+        title: `Couldn't keep ${row.name} in ${place}`,
         description: res.message,
         variant: "error",
       });
@@ -109,11 +118,11 @@ export function InstallAppAction({ row }: ItemActionProps<AppRow>): ReactNode {
         // the panel's surface, lit in the accent under the pointer.
         variant="floating"
         shape="pill"
-        icon={failed ? errorIcon : addIcon}
+        icon={failed ? errorIcon : keepIcon}
         label={
           failed
-            ? `Installing ${row.name} failed: ${failed.message} — click to retry`
-            : `Install ${row.name} as an app`
+            ? `Keeping ${row.name} in ${place} failed: ${failed.message} — click to retry`
+            : `Keep ${row.name} in ${place}`
         }
         className={
           failed
@@ -123,7 +132,7 @@ export function InstallAppAction({ row }: ItemActionProps<AppRow>): ReactNode {
         loading={request?.state === "waiting-for-helper"}
         onClick={(e) => {
           e.stopPropagation();
-          return install();
+          return pin();
         }}
       />
     </ControlSizeProvider>

@@ -27,7 +27,7 @@ import { useNativeHost } from "@plugins/menu-bar/web";
 import { menuBarInstalled } from "@plugins/menu-bar/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
-import { AppGridActions } from "./install-action";
+import { AppGridActions } from "./pin-action";
 
 const MENU_BAR_APPS_VIEW = defineDataView("menu-bar.apps");
 
@@ -75,10 +75,12 @@ function appUrl(basePath: string): string {
  * Every app as the compact icons DataView — the tile and name Home
  * and the launcher draw, four to a row, scrolling past four rows. Dragging a
  * tile reorders the grid (persisted per view, `view-order`). A tile opens its
- * app: its own OS window (`launchApp`) when it is installed and the helper can
- * launch one, else in the browser through the helper when the panel is inside
- * one, else in this tab. Each tile carries the install **+** on hover
- * (`AppGridActions`, hidden once installed or where the host cannot install).
+ * app: its own OS window (`launchApp`) — main keeps a shim for every app ahead
+ * of any click, so that is every app once its first sync has run; in the
+ * browser through the helper for an app with no shim yet; in this tab when
+ * the panel is not inside the helper. Each tile carries a pin on hover
+ * (`AppGridActions`: keep it in the Dock, hidden once pinned or where the
+ * host cannot pin).
  *
  * The desktop (a surface-mode app) is a tile like any other: its URL is its
  * base path as a route prefix (`/desktop` — the desktop with no window open).

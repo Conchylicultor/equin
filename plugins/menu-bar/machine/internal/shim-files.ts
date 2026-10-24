@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { hashHex } from "@plugins/packages/plugins/string-hash/core";
 
 /**
  * The shim contract, as pure data: where an installed app's launcher lives and
@@ -24,6 +25,32 @@ export interface ShimApp {
   url: string;
   /** The namespace the URL is on. */
   namespace: string;
+  /**
+   * The app icon's picture as SVG text (the app-manifest renderer's): not
+   * written into the shim, only hashed into its fingerprint, so a changed
+   * icon is a stale shim.
+   */
+  iconSvg: string;
+}
+
+/**
+ * A shim's fingerprint: a hash of everything it is written from (its app's
+ * id, name, URL, namespace and icon). The shim records it (`EquinShimHash` /
+ * `X-Equin-ShimHash`); one whose recorded fingerprint differs from its app's
+ * is stale and rewritten. The helper binary is not in it — a new helper
+ * rewrites every shim on its own (`syncStableHelper().changed`).
+ */
+export function shimHash(app: ShimApp): string {
+  return hashHex(
+    JSON.stringify([app.id, app.name, app.url, app.namespace, app.iconSvg]),
+  );
+}
+
+/** What a shim on disk says about itself, read back from its own file. */
+export interface ShimRecord {
+  appId: string;
+  /** Its recorded fingerprint; null for a shim written before it had one. */
+  hash: string | null;
 }
 
 /** The two roots shims are written under (both injectable, for tests). */
@@ -133,16 +160,25 @@ export function renderShimInfoPlist(app: ShimApp): string {
   <key>EquinAppId</key>${s(app.id)}
   <key>EquinUrl</key>${s(app.url)}
   <key>EquinNamespace</key>${s(app.namespace)}
+  <key>EquinShimHash</key>${s(shimHash(app))}
   <key>NSAppTransportSecurity</key><dict><key>NSExceptionDomains</key><dict><key>localhost</key><dict><key>NSIncludesSubdomains</key><true/><key>NSExceptionAllowsInsecureHTTPLoads</key><true/></dict></dict></dict>
 </dict>
 </plist>
 `;
 }
 
-/** `EquinAppId` read back from a shim's `Info.plist` (null: not an equin shim). */
-export function readShimPlistAppId(plist: string): string | null {
-  const m = /<key>EquinAppId<\/key>\s*<string>([^<]*)<\/string>/.exec(plist);
+function plistString(plist: string, key: string): string | null {
+  const m = new RegExp(`<key>${key}</key>\\s*<string>([^<]*)</string>`).exec(
+    plist,
+  );
   return m ? m[1]! : null;
+}
+
+/** A shim's `Info.plist` read back (null: not an equin shim). */
+export function readShimPlist(plist: string): ShimRecord | null {
+  const appId = plistString(plist, "EquinAppId");
+  if (appId === null) return null;
+  return { appId, hash: plistString(plist, "EquinShimHash") };
 }
 
 /** A desktop-entry value: newlines escaped, per the freedesktop spec. */
@@ -182,13 +218,16 @@ Categories=Utility;
 X-Equin-AppId=${app.id}
 X-Equin-Url=${desktopValue(app.url)}
 X-Equin-Namespace=${app.namespace}
+X-Equin-ShimHash=${shimHash(app)}
 `;
 }
 
-/** `X-Equin-AppId` read back from a desktop entry (null: not an equin shim). */
-export function readDesktopFileAppId(text: string): string | null {
-  const m = /^X-Equin-AppId=(.+)$/m.exec(text);
-  return m ? m[1]!.trim() : null;
+/** A desktop entry read back (null: not an equin shim). */
+export function readDesktopFile(text: string): ShimRecord | null {
+  const appId = /^X-Equin-AppId=(.+)$/m.exec(text)?.[1]?.trim();
+  if (appId === undefined) return null;
+  const hash = /^X-Equin-ShimHash=(.+)$/m.exec(text)?.[1]?.trim() ?? null;
+  return { appId, hash };
 }
 
 /** A directory entry that may be an equin shim, by its name alone. */
@@ -203,7 +242,7 @@ export function isShimEntryName(
 
 /**
  * The `.iconset` members `iconutil` packs into `app.icns`, each with the pixel
- * size it is scaled to from the 1024 px render.
+ * size the icon is rendered at (each size its own render, no rescaling).
  */
 export const ICONSET: ReadonlyArray<readonly [name: string, px: number]> = [
   ["icon_16x16", 16],
@@ -261,6 +300,30 @@ export function dockPinPlan(
     ],
     ["killall", "Dock"],
   ];
+}
+
+/**
+ * Which of `shims` (app id → its bundle path) the Dock keeps, given what
+ * `DOCK_READ_ARGV` printed — matched by the `file://` URL the Dock names a
+ * bundle by.
+ */
+export function dockPinnedAppIds(
+  persistentApps: string,
+  shims: ReadonlyArray<{ appId: string; bundle: string }>,
+): string[] {
+  return shims
+    .filter((s) => persistentApps.includes(dockFileUrl(s.bundle)))
+    .map((s) => s.appId)
+    .sort();
+}
+
+/** Which of `appIds` the GNOME dash keeps, given what `GNOME_FAVORITES_READ_ARGV` printed. */
+export function gnomePinnedAppIds(
+  favorites: string,
+  appIds: readonly string[],
+): string[] {
+  const current = new Set(parseGsettingsStrv(favorites));
+  return appIds.filter((id) => current.has(desktopFileId(id))).sort();
 }
 
 /** Reads GNOME's dash favorites. */

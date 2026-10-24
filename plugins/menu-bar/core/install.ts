@@ -7,22 +7,22 @@ import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 const INSTALL_MACHINE = { feature: "Installing apps" } as const;
 
 /**
- * `POST /api/menu-bar/install/:appId` — install a tab app as an OS app of its
- * own: a launcher shim (macOS `~/Applications/equin <Name>.app`, Linux a
- * `.desktop` entry) running the native helper's window mode on the app's URL,
- * pinned to the Dock / GNOME dash where the host can.
+ * `POST /api/menu-bar/pin/:appId` — keep an app in the Dock / GNOME dash.
+ * Every app already has its launcher shim (macOS `~/Applications/equin
+ * <Name>.app`, Linux a `.desktop` entry), kept by main ahead of any click;
+ * the endpoint writes it first when it is not there yet.
  *
- * - `installed` — the shim is written (and pinned where `capabilities.pin`).
+ * - `pinned` — the shim is in the Dock / dash.
  * - `waiting-for-helper` — the native helper (`menu-bar-helper`) is not built
- *   yet: its install was requested, and the app is installed when it lands
- *   (`menu-bar.install-requests` carries the pending row, then the failure if
- *   the build fails).
+ *   yet: its install was requested, and the app is pinned when it lands
+ *   (`menu-bar.pin-requests` carries the pending row, then the failure if the
+ *   build fails).
  *
- * An unknown or unlisted app is a 404; a host without the capability a 409.
+ * An unknown or unlisted app is a 404; a host that cannot pin a 409.
  */
-export const installApp = defineEndpoint({
-  route: "POST /api/menu-bar/install/:appId",
-  response: z.object({ status: z.enum(["installed", "waiting-for-helper"]) }),
+export const pinApp = defineEndpoint({
+  route: "POST /api/menu-bar/pin/:appId",
+  response: z.object({ status: z.enum(["pinned", "waiting-for-helper"]) }),
   needsMachine: INSTALL_MACHINE,
 });
 
@@ -38,7 +38,8 @@ export type InstalledApps = z.infer<typeof InstalledAppsSchema>;
 /**
  * Which apps have a launcher shim on this computer, read from the shim
  * directories themselves (so a shim deleted in Finder disappears here too).
- * Recomputed by the install endpoint and by a watch of the shim directories.
+ * Recomputed by main's shim sync, the pin endpoint and a watch of the shim
+ * directories.
  */
 export const menuBarInstalled = liveValue("menu-bar.installed", {
   schema: InstalledAppsSchema,
@@ -46,11 +47,22 @@ export const menuBarInstalled = liveValue("menu-bar.installed", {
 });
 
 /**
- * An install the endpoint accepted but could not finish yet: waiting for the
- * native helper's build, or failed (the helper's build, or writing the shim
- * once it landed). A finished install leaves the list.
+ * Which apps the Dock (macOS) / GNOME dash (Linux) keeps — read from the
+ * Dock's preferences / the dash's favorites, matched against the shims.
+ * Recomputed by the pin endpoint and by a watch of that store, so an app
+ * dragged out of the Dock leaves it. Empty where the host cannot pin.
  */
-export const InstallRequestSchema = z.discriminatedUnion("state", [
+export const menuBarPinned = liveValue("menu-bar.pinned", {
+  schema: InstalledAppsSchema,
+  needsMachine: INSTALL_MACHINE,
+});
+
+/**
+ * A pin the endpoint accepted but could not finish yet: waiting for the
+ * native helper's build, or failed (the helper's build, writing the shim once
+ * it landed, or the pin itself). A finished pin leaves the list.
+ */
+export const PinRequestSchema = z.discriminatedUnion("state", [
   z.object({ appId: z.string(), state: z.literal("waiting-for-helper") }),
   z.object({
     appId: z.string(),
@@ -58,19 +70,19 @@ export const InstallRequestSchema = z.discriminatedUnion("state", [
     message: z.string(),
   }),
 ]);
-export type InstallRequest = z.infer<typeof InstallRequestSchema>;
+export type PinRequest = z.infer<typeof PinRequestSchema>;
 
-export const InstallRequestsSchema = z.object({
-  requests: wholeList(InstallRequestSchema, {
+export const PinRequestsSchema = z.object({
+  requests: wholeList(PinRequestSchema, {
     reason:
-      "at most one in-flight or failed install per app — bounded by the apps there are",
+      "at most one in-flight or failed pin per app — bounded by the apps there are",
   }),
 });
-export type InstallRequests = z.infer<typeof InstallRequestsSchema>;
+export type PinRequests = z.infer<typeof PinRequestsSchema>;
 
-/** The installs in flight or failed, this backend's (in memory). */
-export const menuBarInstallRequests = liveValue("menu-bar.install-requests", {
-  schema: InstallRequestsSchema,
+/** The pins in flight or failed, this backend's (in memory). */
+export const menuBarPinRequests = liveValue("menu-bar.pin-requests", {
+  schema: PinRequestsSchema,
   needsMachine: INSTALL_MACHINE,
 });
 

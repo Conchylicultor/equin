@@ -68,50 +68,69 @@ namespaces and URLs, never an app.
 
 ## Installed apps (`machine/`)
 
-`POST /api/menu-bar/install/:appId` (`installApp`, `needsMachine`) turns a tab
-app into an OS app: a launcher **shim** running the helper's window mode on the
-app's MAIN-namespace URL (`namespaceUrl(MAIN_WORKTREE_NAME, basePath)`). The
-shim contract is fixed — the Rust helper reads it exactly so — and lives as pure
-data in `machine/internal/shim-files.ts`:
+**Every installable app is an OS app, ahead of any click.** Main keeps one
+launcher **shim** per app (`syncAllShimsOnMain`, `machine/internal/shims.ts`),
+running the helper's window mode on the app's MAIN-namespace URL
+(`namespaceUrl(MAIN_WORKTREE_NAME, basePath)`), so a menu-bar tile always opens
+the app's own window at once. (A shim's own bundle id is what gives a window its
+own Dock icon / Cmd-Tab entry, so it cannot be skipped. Creating one on the
+first click would cost ~0.7 s; with `sips` it was ~2.8 s.) The sync runs on main's boot and each
+helper build, only once the helper is built (it never requests the build: no
+helper, no tray). It writes missing or stale shims. A shim is stale when its recorded
+fingerprint (`shimHash`: app id, name, URL, namespace, icon SVG; `EquinShimHash`
+/ `X-Equin-ShimHash`) differs, or when the helper's identity changed. It removes
+shims of renamed apps (the old bundle name) and of removed apps. Only equin's own
+shims are touched (read by their `EquinAppId`). A current shim runs no command.
+APFS clones make the ~15 bundles nearly free on disk.
+
+`POST /api/menu-bar/pin/:appId` (`pinApp`, `needsMachine`) keeps one in the
+Dock / GNOME dash, writing its shim first when it is not there yet (a worktree,
+or a pin racing main's first sync). The shim contract is fixed — the Rust helper
+reads it exactly so — and lives as pure data in
+`machine/internal/shim-files.ts`:
 
 - **macOS** — `~/Applications/equin <Name>.app`: `Contents/MacOS/equin-desktop`
   (an APFS clone, `cp -c`, of the stable helper — the process must live in the
   shim's bundle to get its own Dock icon), `Info.plist` (`CFBundleIdentifier
   dev.equin.app.<id>`, `CFBundleExecutable equin-desktop`, `CFBundleIconFile
-  app`, `EquinAppId`, `EquinUrl`, `EquinNamespace`, the `localhost` ATS exception; no `LSUIElement`),
-  `Resources/app.icns` (`sips` over the app-manifest renderer's 1024 px PNG,
-  `iconutil`), ad-hoc signed. Assembled in `<bundle>.staging` and swapped in
+  app`, `EquinAppId`, `EquinUrl`, `EquinNamespace`, `EquinShimHash`, the `localhost` ATS exception; no `LSUIElement`),
+  `Resources/app.icns` (every iconset size rendered by the app-manifest
+  renderer at that size, packed by `iconutil`; ten `sips` runs took ~2 s),
+  ad-hoc signed. Assembled in `<bundle>.staging` and swapped in
   whole, so a running app's executable is never overwritten in place.
 - **Linux** — `~/.local/share/applications/equin-<id>.desktop` (`Exec=<stable
   helper> window --app <id> --url <url>`, `StartupWMClass=equin-<id>`,
   `Icon=equin-<id>`, `X-Equin-AppId`), PNG at
   `~/.local/share/icons/hicolor/512x512/apps/equin-<id>.png`.
-- **Pin** (when `capabilities.pin`): macOS appends a `persistent-apps` tile with
+- **Pin** (the pin endpoint, when `capabilities.pin`): macOS appends a `persistent-apps` tile with
   `defaults write com.apple.dock`, then `killall Dock`; GNOME appends to
   `gsettings org.gnome.shell favorite-apps`. Already pinned → nothing runs.
 - **Stable helper** — the dep's binary is copied into `state/menu-bar/`
   (`menuBarState`, with the identity it came from) so no shim names a
-  deps-cache identity; when the identity changes every installed shim is
-  rewritten (`reconcileShims`). Runs on install, and on MAIN's boot and each
-  of its helper builds (`onDepInstallSettled`) — main owns the copy; a worktree
-  install uses its own build until main's next reconcile.
-- **Helper not built yet** — `readyNow` says so: the app is recorded
-  `waiting-for-helper`, `requestDep` builds it, and the install finishes when
-  the build settles (pushed); a failed build marks the request `failed`.
+  deps-cache identity; when the identity changes every shim is rewritten
+  (`syncShims`' `rewriteAll`). Main owns the copy; a worktree pin uses its own
+  build until main's next sync.
+- **Helper not built yet** (a pin) — `readyNow` says so: the app is recorded
+  `waiting-for-helper`, `requestDep` builds it, and the pin finishes when the
+  build settles (pushed); a failed build marks the request `failed`.
 
 Live values (`core/install.ts`): `menu-bar.installed` (the shim set read from
-disk — notified by the endpoint and a `defineFileWatcher` on the shim folder,
-`depth: "children"`), `menu-bar.install-requests` (in flight / failed, in
+disk — notified by the sync, the endpoint and a `defineFileWatcher` on the shim
+folder, `depth: "children"`), `menu-bar.pinned` (the Dock's `persistent-apps`
+/ the dash's favorites matched against the shims — notified by the endpoint
+and, while subscribed, a watcher on `~/Library/Preferences` /
+`~/.config/dconf` filtered to the Dock's plist / dconf's `user`, so an unpin in
+the Dock itself is heard), `menu-bar.pin-requests` (in flight / failed, in
 memory) and `menu-bar.capabilities` (`{ platform, install, pin, reason }`:
 macOS both; Linux install, pin when `gsettings get org.gnome.shell
 favorite-apps` answers; elsewhere neither). Every host-touching step goes
 through `ShimHost` (roots, command runner, icon renderer), which the tests fake
 against a `/tmp` home — never the real `~/Applications`, Dock or dconf.
 
-The app grid (`plugins/app-grid`) draws the **+** as a hover item action on
-each tile (data-view's icons view corner), hidden once installed or where
-`capabilities.install` is false; a tile opens an installed app through
-`launchApp` when the helper has that capability.
+The app grid (`plugins/app-grid`) opens a tile's app through `launchApp` (its
+window) whenever it has a shim — every app, once main's first sync ran — and
+draws the **Keep in Dock** pin as a hover item action on each tile (data-view's
+icons view corner), hidden once pinned or where `capabilities.pin` is false.
 
 `login-services/` declares `dev.equin.menu-bar` (`graphical`): the helper
 binary inside `equin.app` (`cargoBinary(ready)`) run as `tray`, its stdio in
@@ -171,19 +190,24 @@ requests the helper build and reloads the tray onto it
 - Server:
   - Contributes:
     - `resource.declare` "menu-bar.capabilities"
-    - `resource.declare` "menu-bar.install-requests"
     - `resource.declare` "menu-bar.installed"
+    - `resource.declare` "menu-bar.pin-requests"
+    - `resource.declare` "menu-bar.pinned"
   - Resources:
     - `menu-bar.capabilities` (push, fixed)
-    - `menu-bar.install-requests` (push, notified, whole: at most one in-flight or failed install per app — bounded by the apps there are)
     - `menu-bar.installed` (push, notified, whole: one id per app installed as an OS app — bounded by the apps there are)
+    - `menu-bar.pin-requests` (push, notified, whole: at most one in-flight or failed pin per app — bounded by the apps there are)
+    - `menu-bar.pinned` (push, notified, whole: one id per app installed as an OS app — bounded by the apps there are)
 - Machine:
   - Uses:
     - `apps-core/app-manifest.appIconPng`
+    - `apps-core/app-manifest.appIconSvg`
     - `infra/endpoints.implementMachine`
     - `network/live.serveValue`
-  - Register: `defineFileWatcher('menu-bar.shim-dir')`
-  - Routes: `POST /api/menu-bar/install/:appId`
+  - Register:
+    - `defineFileWatcher('menu-bar.shim-dir')`
+    - `defineFileWatcher('menu-bar.pin-store')`
+  - Routes: `POST /api/menu-bar/pin/:appId`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
@@ -195,24 +219,25 @@ requests the helper build and reloads the tray onto it
     - `EquinNativeBridge`
     - `InstallCapabilities`
     - `InstalledApps`
-    - `InstallRequest`
-    - `InstallRequests`
     - `NativeCapabilities`
     - `NativeHostInfo`
     - `NativeMaterial`
     - `NativeNotification`
+    - `PinRequest`
+    - `PinRequests`
   - Exports (values):
     - `BRIDGE_METHODS`
-    - `installApp`
     - `InstallCapabilitiesSchema`
     - `InstalledAppsSchema`
-    - `InstallRequestSchema`
-    - `InstallRequestsSchema`
     - `menuBarApp`
     - `menuBarCapabilities`
     - `menuBarInstalled`
-    - `menuBarInstallRequests`
+    - `menuBarPinned`
+    - `menuBarPinRequests`
     - `NativeHostInfoSchema`
+    - `pinApp`
+    - `PinRequestSchema`
+    - `PinRequestsSchema`
 - Deps:
   - Uses:
     - `infra/deps.defineDep`

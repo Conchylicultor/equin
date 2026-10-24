@@ -12,13 +12,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   defaultShimRoots,
+  dockFileUrl,
   type ShimApp,
   type ShimPlatform,
 } from "./shim-files";
 import {
   pinShim,
   readInstalledAppIds,
-  reconcileShims,
+  readPinnedAppIds,
+  syncShims,
   syncStableHelper,
   writeShim,
   type ShimHost,
@@ -43,19 +45,25 @@ function app(id: string, name: string): ShimApp {
     name,
     url: `http://equin.localhost:9000/${id}`,
     namespace: "singularity",
+    iconSvg: `<svg>${id}</svg>`,
   };
 }
 
 function fakeHost(
   platform: ShimPlatform,
   answers: Record<string, string> = {},
-): ShimHost & { calls: string[][] } {
+): ShimHost & { calls: string[][]; icons: number[] } {
   const calls: string[][] = [];
+  const icons: number[] = [];
   return {
     platform,
     roots: defaultShimRoots(join(root, "home")),
     calls,
-    iconPng: (appId, size) => new TextEncoder().encode(`png:${appId}:${size}`),
+    icons,
+    iconPng: (appId, size) => {
+      icons.push(size);
+      return new TextEncoder().encode(`png:${appId}:${size}`);
+    },
     run: async (argv) => {
       calls.push([...argv]);
       const [cmd] = argv;
@@ -99,10 +107,12 @@ describe("macOS shim layout", () => {
       "-",
       `${bundle}.staging`,
     ]);
-    // The iconset is scaled from the 1024 px render, up to the 1024 member.
-    const sizes = host.calls.filter((c) => c[0] === "sips").map((c) => c[2]);
-    expect(sizes).toContain("16");
-    expect(sizes).toContain("1024");
+    // Every iconset member is rendered at its own size, in-process — no
+    // `sips` (ten runs of it took ~2 s); `iconutil` only packs them.
+    expect(host.icons).toContain(16);
+    expect(host.icons).toContain(1024);
+    expect(host.icons).toHaveLength(10);
+    expect(host.calls.map((c) => c[0])).toEqual(["cp", "iconutil", "codesign"]);
     expect(readInstalledAppIds(host)).toEqual(["mail"]);
   });
 
@@ -202,32 +212,123 @@ describe("stable helper and reconcile", () => {
     expect(readFileSync(next.binary, "utf-8")).toBe("v2");
   });
 
-  test("rewrites every installed shim whose app still exists", async () => {
+  const binOf = (name: string) =>
+    readFileSync(
+      join(
+        root,
+        "home",
+        "Applications",
+        `equin ${name}.app`,
+        "Contents",
+        "MacOS",
+        "equin-desktop",
+      ),
+      "utf-8",
+    );
+  const bundleOf = (name: string) =>
+    join(root, "home", "Applications", `equin ${name}.app`);
+  const sync = (
+    host: ShimHost,
+    helper: string,
+    apps: ShimApp[],
+    rewriteAll = false,
+  ) => syncShims(host, helper, apps, { rewriteAll });
+
+  test("writes a shim for every app, then nothing while they are current", async () => {
+    const host = fakeHost("macos");
+    const helper = helperBinary();
+    const apps = [app("mail", "Mail"), app("pages", "Pages")];
+    expect(await sync(host, helper, apps)).toEqual({
+      written: ["mail", "pages"],
+      removed: [],
+    });
+    expect(readInstalledAppIds(host)).toEqual(["mail", "pages"]);
+    host.calls.length = 0;
+    expect(await sync(host, helper, apps)).toEqual({
+      written: [],
+      removed: [],
+    });
+    expect(host.calls).toEqual([]);
+  });
+
+  test("rewrites a stale shim: a changed icon, or a new helper", async () => {
     const host = fakeHost("macos");
     const v1 = helperBinary("v1");
-    await writeShim(host, app("mail", "Mail"), v1);
-    await writeShim(host, app("gone", "Gone"), v1);
+    await sync(host, v1, [app("mail", "Mail"), app("pages", "Pages")]);
+    const changed = { ...app("mail", "Mail"), iconSvg: "<svg>new</svg>" };
+    expect(await sync(host, v1, [changed, app("pages", "Pages")])).toEqual({
+      written: ["mail"],
+      removed: [],
+    });
     const v2 = join(root, "helper-v2");
     writeFileSync(v2, "v2");
-    const rewritten = await reconcileShims(host, v2, (id) =>
-      id === "mail" ? app("mail", "Mail") : undefined,
+    expect(
+      await sync(host, v2, [changed, app("pages", "Pages")], true),
+    ).toEqual({ written: ["mail", "pages"], removed: [] });
+    expect(binOf("Mail")).toBe("v2");
+    expect(binOf("Pages")).toBe("v2");
+  });
+
+  test("a shim from before the fingerprint is rewritten once", async () => {
+    const host = fakeHost("macos");
+    const helper = helperBinary();
+    await writeShim(host, app("mail", "Mail"), helper);
+    const plist = join(bundleOf("Mail"), "Contents", "Info.plist");
+    writeFileSync(
+      plist,
+      readFileSync(plist, "utf-8").replace(
+        /\s*<key>EquinShimHash<\/key><string>[^<]*<\/string>/,
+        "",
+      ),
     );
-    expect(rewritten).toEqual(["mail"]);
-    const bin = (name: string) =>
-      readFileSync(
-        join(
-          root,
-          "home",
-          "Applications",
-          `equin ${name}.app`,
-          "Contents",
-          "MacOS",
-          "equin-desktop",
-        ),
-        "utf-8",
-      );
-    expect(bin("Mail")).toBe("v2");
-    // An app that no longer exists keeps its shim, untouched.
-    expect(bin("Gone")).toBe("v1");
+    expect(await sync(host, helper, [app("mail", "Mail")])).toEqual({
+      written: ["mail"],
+      removed: [],
+    });
+  });
+
+  test("removes a renamed app's old bundle and a gone app's shim", async () => {
+    const host = fakeHost("macos");
+    const helper = helperBinary();
+    await sync(host, helper, [app("mail", "Mail"), app("gone", "Gone")]);
+    // A bundle that is not an equin shim is never touched.
+    mkdirSync(join(root, "home", "Applications", "Safari.app"));
+    const result = await sync(host, helper, [app("mail", "Post")]);
+    expect(result.written).toEqual(["mail"]);
+    expect(result.removed.sort()).toEqual(["gone", "mail"]);
+    expect(existsSync(bundleOf("Post"))).toBe(true);
+    expect(existsSync(bundleOf("Mail"))).toBe(false);
+    expect(existsSync(bundleOf("Gone"))).toBe(false);
+    expect(existsSync(join(root, "home", "Applications", "Safari.app"))).toBe(
+      true,
+    );
+    expect(readInstalledAppIds(host)).toEqual(["mail"]);
+  });
+
+  test("Linux: a gone app's desktop entry and icon are removed", async () => {
+    const host = fakeHost("linux");
+    await sync(host, "/stable/equin-desktop", [app("gone", "Gone")]);
+    await sync(host, "/stable/equin-desktop", []);
+    const share = join(root, "home", ".local", "share");
+    expect(existsSync(join(share, "applications", "equin-gone.desktop"))).toBe(
+      false,
+    );
+    expect(
+      existsSync(
+        join(share, "icons", "hicolor", "512x512", "apps", "equin-gone.png"),
+      ),
+    ).toBe(false);
+  });
+
+  test("reads which shims the Dock keeps", async () => {
+    const host = fakeHost("macos");
+    await sync(host, helperBinary(), [
+      app("mail", "Mail"),
+      app("pages", "Pages"),
+    ]);
+    const pinned = fakeHost("macos", {
+      "defaults read com.apple.dock persistent-apps": `( { "_CFURLString" = "${dockFileUrl(bundleOf("Mail"))}"; } )`,
+    });
+    expect(await readPinnedAppIds(pinned)).toEqual(["mail"]);
   });
 });

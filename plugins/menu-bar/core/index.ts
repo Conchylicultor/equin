@@ -8,17 +8,18 @@ export {
   type NativeNotification,
 } from "./native-bridge";
 export {
-  installApp,
   InstallCapabilitiesSchema,
   InstalledAppsSchema,
-  InstallRequestSchema,
-  InstallRequestsSchema,
   menuBarCapabilities,
   menuBarInstalled,
-  menuBarInstallRequests,
+  menuBarPinned,
+  menuBarPinRequests,
+  pinApp,
+  PinRequestSchema,
+  PinRequestsSchema,
   type InstallCapabilities,
   type InstalledApps,
-  type InstallRequest,
-  type InstallRequests,
+  type PinRequest,
+  type PinRequests,
 } from "./install";
 export { menuBarApp } from "./app";
