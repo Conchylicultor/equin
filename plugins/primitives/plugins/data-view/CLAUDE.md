@@ -2777,11 +2777,11 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSlots.ValueCodec`
     - `DataViewSlots.Grouping`
     - `DataViewSlots.ColumnConfig`
-  - Slot contributors: 50 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 51 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `DataViewSlots.Cell` ×10
+    - `DataViewSlots.CollectionItemAction` ×7
     - `DataViewSlots.Filter` ×7
     - `DataViewSlots.CellEditor` ×6
-    - `DataViewSlots.CollectionItemAction` ×6
     - `DataViewSlots.View` ×5
     - `DataViewSlots.CollectionRowActivation` ×4
     - `DataViewSlots.Grouping` ×3

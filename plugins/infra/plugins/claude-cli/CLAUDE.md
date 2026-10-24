@@ -228,7 +228,6 @@ block keep taking a plain `ClaudeCliCall`.
     - `apps/pages/auto-icon`
     - `apps/places/places-core`
     - `debug/claude-cli-calls`
-    - `tasks/sidequest-autopilot`
 - Exemptions:
   - Exempts itself from:
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)

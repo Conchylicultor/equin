@@ -134,6 +134,7 @@ Single source of truth for the models an agent can run, and for what the user as
     - `tasks/auto-start`
     - `tasks/auto-start/launch-option`
     - `tasks/automations`
+    - `tasks/task-triage`
     - `tasks/tasks-core`
 - Sub-plugins:
   - **`catalog`** — The model catalog every launch reads: getModelCatalog() over the ModelCatalogSource host service (the desktop's discovered catalog.json, or the code baseline on a host without the computer), and the…

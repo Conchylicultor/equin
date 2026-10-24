@@ -9,7 +9,7 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import type { LaunchDecision } from "@plugins/tasks/plugins/automations/core";
 import {
-  setTaskApproval,
+  useSetTaskApproval,
   useTaskApproval,
 } from "@plugins/tasks/plugins/automations/web";
 
@@ -30,6 +30,7 @@ const HINT: Record<LaunchDecision | "none", string> = {
  */
 export function ApproveFooter({ taskId }: { taskId: string }): ReactElement {
   const approval = useTaskApproval(taskId);
+  const setTaskApproval = useSetTaskApproval();
   if (approval.status === "error") {
     return (
       <ResourceErrorInline

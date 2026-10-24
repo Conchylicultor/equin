@@ -2,7 +2,7 @@
  * A triage row parses into the arm of its state, and a row that breaks the
  * state ⇄ fields contract throws instead of reading as a half-read.
  *
- * Run: `./singularity test plugins/tasks/plugins/task-triage`.
+ * Run: `./equin test plugins/tasks/plugins/task-triage`.
  */
 
 import { describe, expect, test } from "bun:test";

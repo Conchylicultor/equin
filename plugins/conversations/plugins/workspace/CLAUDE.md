@@ -120,6 +120,7 @@ Orthogonal to the runtime (tmux | sdk): a runtime sees only the cwd and the
     - `conversations/workspace/scratch`
     - `conversations/workspace/worktree`
     - `debug/scratch-hello`
+    - `tasks/task-triage`
     - `tasks/tasks-core`
 - Test helpers:
   - Server: `@plugins/conversations/plugins/workspace/server/testing`

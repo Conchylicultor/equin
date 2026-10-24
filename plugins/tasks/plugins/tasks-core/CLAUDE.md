@@ -341,6 +341,7 @@ serves them.
     - `PushLandedPayload`
     - `PushLedgerImpl`
     - `Task`
+    - `TaskDescriptionChangedPayload`
     - `TaskListItem`
     - `TaskStatus`
     - `TaskStatusChangedPayload`
@@ -354,6 +355,7 @@ serves them.
     - `_conversations`
     - `_conversationStatusChangedTriggers`
     - `_pushLandedTriggers`
+    - `_taskDescriptionChangedTriggers`
     - `_tasks`
     - `_taskStatusChangedTriggers`
     - `_taskTitleChangedTriggers`
@@ -413,6 +415,7 @@ serves them.
     - `setConversationHibernated`
     - `taskAttachments`
     - `taskDependsOn`
+    - `taskDescriptionChanged`
     - `TaskListItemSchema`
     - `TaskSchema`
     - `taskStatusChanged`
@@ -430,6 +433,7 @@ serves them.
     - `defineTriggerEvent('pushes.landed')`
     - `defineTriggerEvent('tasks.statusChanged')`
     - `defineTriggerEvent('tasks.titleChanged')`
+    - `defineTriggerEvent('tasks.descriptionChanged')`
     - `defineTriggerEvent('conversation.statusChanged')`
     - `defineTriggerEvent('conversation.created')`
   - Resources:
@@ -524,9 +528,9 @@ serves them.
     - `TaskStatusSchema`
     - `TRAILER_LOG_FORMAT`
 - Cross-plugin:
-  - Imported by: 67 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 68 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×26
-    - `tasks` ×17
+    - `tasks` ×18
     - `active-data` ×5
     - `debug` ×4
     - `page` ×3
@@ -559,10 +563,11 @@ serves them.
     - `tasks/task-preprompt` (table `tasks_ext_preprompt`)
     - `page/prompt/link` (table `tasks_ext_prompt_block`)
     - `tasks/task-title` (table `tasks_ext_short_title`)
-    - `tasks/sidequest-autopilot` (table `tasks_ext_sidequest_triage`)
     - `tasks/task-source-url` (table `tasks_ext_source_url`)
     - `tasks/task-subject` (table `tasks_ext_subject`)
     - `tasks/task-track` (table `tasks_ext_track`)
+    - `tasks/task-triage` (table `tasks_ext_triage`)
+    - `tasks/task-triage` (table `tasks_ext_triage_note`)
     - `conversations/workspace/launch-option` (table `tasks_ext_workspace`)
 - Exemptions:
   - Exempts itself from:

@@ -32,6 +32,7 @@
     - `stats/cost`
     - `tasks/automations`
     - `tasks/sidequest-autopilot`
+    - `tasks/task-triage`
 - Sub-plugins:
   - **`background-arm`** — Warm-ups in the Background activity catalog: registers the `warmup` background kind — every declared warm-up under After boot, its scope from the warm-up's (host → main only, worktree → every…
 

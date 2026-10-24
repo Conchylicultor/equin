@@ -2,7 +2,7 @@
  * The triage fields exposed on tasks: their ids (what saved views name), what
  * a task with no row reads (NULL — "Not triaged"), and each value's options.
  *
- * Run: `./singularity test plugins/tasks/plugins/task-triage`.
+ * Run: `./equin test plugins/tasks/plugins/task-triage`.
  */
 
 import { expect, test } from "bun:test";

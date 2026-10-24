@@ -68,20 +68,17 @@ vi.mock("@plugins/infra/plugins/endpoints/web", () => {
         return Promise.resolve();
       },
     }),
-    fetchEndpoint: (
-      endpoint: { route: string },
-      params: unknown,
-      opts: unknown,
-    ) => {
-      state.calls.push({ route: endpoint.route, args: { params, opts } });
-      return Promise.resolve();
-    },
+    useFetchEndpoint:
+      () => (endpoint: { route: string }, params: unknown, opts: unknown) => {
+        state.calls.push({ route: endpoint.route, args: { params, opts } });
+        return Promise.resolve();
+      },
   };
 });
 
 vi.mock("@plugins/tasks/plugins/automations/web", () => ({
   useTaskApproval: () => state.approval,
-  setTaskApproval: (taskId: string, approved: boolean) => {
+  useSetTaskApproval: () => (taskId: string, approved: boolean) => {
     state.approvals.push({ taskId, approved });
     return Promise.resolve();
   },

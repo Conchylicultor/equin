@@ -29,6 +29,7 @@ text input when no contribution matches.
     - `DynamicEnum.Options` ← `fields.dynamic-enum.config`
     - `DynamicEnum.Options` ← `hints.ask`
     - `DynamicEnum.Options` ← `tasks.automations`
+    - `DynamicEnum.Options` ← `tasks.task-triage`
     - `DynamicEnum.Options` ← `ui.breadcrumb-separator`
     - `DynamicEnum.Options` ← `ui.segmented-progress-bar`
     - `DynamicEnum.Options` ← `ui.sidebar-framing`
@@ -70,6 +71,7 @@ text input when no contribution matches.
     - `conversations/model-provider`
     - `hints/ask`
     - `tasks/automations`
+    - `tasks/task-triage`
     - `ui/segmented-progress-bar`
     - `ui/tab-bar`
     - `ui/theme-engine`

@@ -12409,8 +12409,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins: the registry over the user-layer store (the ConfigStore host service) and the committed layer (ConfigGitLayer), its live values and the scope routes.
   - Web:
     - Slots: `ConfigV2.WebRegister`
-    - Slot contributors: 89 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×89
+    - Slot contributors: 90 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×90
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
@@ -12590,7 +12590,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 116 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 117 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×33
       - `backup` ×13
       - `conversations` ×13
@@ -12598,7 +12598,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ui` ×11
       - `auth` ×6
       - `config_v2` ×5
-      - `tasks` ×4
+      - `tasks` ×5
       - `primitives` ×3
       - `infra` ×2
       - `integrations` ×2
@@ -13061,12 +13061,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SYSTEM_CATEGORY_ID`
       - `withdrawConversationTurn`
   - Cross-plugin:
-    - Imported by: 54 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+    - Imported by: 55 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `conversations` ×38
       - `apps` ×5
       - `review` ×3
+      - `tasks` ×3
       - `active-data` ×2
-      - `tasks` ×2
       - `debug/profiling/ops`
       - `hints/ask`
       - `infra/mcp/browser`
@@ -13960,10 +13960,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xl`
           - `ui/tokens/density --space-xs`
           - `ui/tokens/type-scale --measure-reading`
-        - Imported by: 61 plugins — full list in [`plugins/conversations/plugins/conversation-view/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/REFERENCE.md)
+        - Imported by: 62 plugins — full list in [`plugins/conversations/plugins/conversation-view/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/REFERENCE.md)
           - `conversations` ×49
           - `active-data` ×5
-          - `tasks` ×2
+          - `tasks` ×3
           - `apps/home/tour`
           - `debug/profiling/ops`
           - `primitives/launch`
@@ -17791,6 +17791,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/auto-start`
           - `tasks/auto-start/launch-option`
           - `tasks/automations`
+          - `tasks/task-triage`
           - `tasks/tasks-core`
       - Plugins:
         - **`catalog`** — The model catalog every launch reads: getModelCatalog() over the ModelCatalogSource host service (the desktop's discovered catalog.json, or the code baseline on a host without the computer), and the model-provider.catalog live value served from it.
@@ -17815,6 +17816,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/claude-cli`
               - `tasks`
               - `tasks/auto-start/launch-option`
+              - `tasks/task-triage`
           - Machine:
             - Register:
               - `defineJob('models.discover')`
@@ -18650,6 +18652,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/workspace/scratch`
           - `conversations/workspace/worktree`
           - `debug/scratch-hello`
+          - `tasks/task-triage`
           - `tasks/tasks-core`
       - Test helpers:
         - Server: `@plugins/conversations/plugins/workspace/server/testing`
@@ -22507,13 +22510,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Fields.Identity` ×27
     - Exports (values): `Fields`
   - Cross-plugin:
-    - Imported by: 103 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+    - Imported by: 104 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
       - `fields` ×50
       - `apps` ×12
       - `conversations` ×8
       - `debug` ×5
       - `infra` ×5
-      - `tasks` ×4
+      - `tasks` ×5
       - `page` ×3
       - `backup` ×2
       - `build` ×2
@@ -22847,13 +22850,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `DateFieldDef`
             - Exports (values): `dateField`
           - Cross-plugin:
-            - Imported by: 46 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
+            - Imported by: 47 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
               - `apps` ×9
               - `conversations` ×9
               - `debug` ×5
               - `infra` ×5
+              - `tasks` ×5
               - `page` ×4
-              - `tasks` ×4
               - `backup`
               - `build/run-ledger`
               - `hints`
@@ -23011,6 +23014,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DynamicEnum.Options` ← `fields.dynamic-enum.config`
               - `DynamicEnum.Options` ← `hints.ask`
               - `DynamicEnum.Options` ← `tasks.automations`
+              - `DynamicEnum.Options` ← `tasks.task-triage`
               - `DynamicEnum.Options` ← `ui.breadcrumb-separator`
               - `DynamicEnum.Options` ← `ui.segmented-progress-bar`
               - `DynamicEnum.Options` ← `ui.sidebar-framing`
@@ -23052,6 +23056,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/model-provider`
               - `hints/ask`
               - `tasks/automations`
+              - `tasks/task-triage`
               - `ui/segmented-progress-bar`
               - `ui/tab-bar`
               - `ui/theme-engine`
@@ -23432,12 +23437,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Imported by: 27 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
+            - Imported by: 28 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
               - `apps` ×5
               - `debug` ×4
               - `infra` ×4
+              - `tasks` ×4
               - `conversations` ×3
-              - `tasks` ×3
               - `backup` ×2
               - `page` ×2
               - `apps-core/app-launcher`
@@ -24099,10 +24104,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 69 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+            - Imported by: 70 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
               - `apps` ×18
               - `conversations` ×15
-              - `tasks` ×8
+              - `tasks` ×9
               - `debug` ×5
               - `infra` ×5
               - `page` ×3
@@ -27205,7 +27210,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/pages/auto-icon`
           - `apps/places/places-core`
           - `debug/claude-cli-calls`
-          - `tasks/sidequest-autopilot`
       - Exemptions:
         - Exempts itself from:
           - `ids:pk-declared` — `server/internal/tables.ts` (debt)
@@ -27317,6 +27321,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/runtime-sdk`
               - `infra/claude-cli`
               - `primitives/launch`
+              - `tasks/task-triage`
     - **`corpus-index`** — Fingerprint-keyed incremental file index: defineCorpusIndex enumerates files under roots matching a predicate, re-parses only those whose (mtimeMs,size) changed through a bounded heavy-read-gated pipeline, drops vanished entries, and persists atomically (host scope ⇒ main-only). ensureFresh is the lazy on-read correctness fallback; startWatcher is main-only push freshness.
       - Server:
         - Uses:
@@ -27734,13 +27739,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 223 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 224 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×55
           - `conversations` ×32
           - `page` ×20
           - `debug` ×19
           - `infra` ×19
-          - `tasks` ×17
+          - `tasks` ×18
           - `primitives` ×16
           - `build` ×8
           - `reports` ×6
@@ -28004,9 +28009,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TriggerRowSchema`
           - `TriggersPayloadSchema`
       - Cross-plugin:
-        - Imported by: 25 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
+        - Imported by: 26 plugins — full list in [`plugins/infra/plugins/events/REFERENCE.md`](../plugins/infra/plugins/events/REFERENCE.md)
           - `apps` ×7
-          - `tasks` ×5
+          - `tasks` ×6
           - `conversations` ×4
           - `infra` ×4
           - `page` ×4
@@ -28970,14 +28975,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
       - Cross-plugin:
-        - Imported by: 60 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+        - Imported by: 61 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
           - `apps` ×19
           - `infra` ×13
           - `debug` ×8
           - `conversations` ×6
+          - `tasks` ×4
           - `database` ×3
           - `page` ×3
-          - `tasks` ×3
           - `improve`
           - `integrations/youtube/audio-fetch`
           - `shell/notifications`
@@ -29305,6 +29310,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/mcp/browser`
           - `page/annotations/agent-access`
           - `plugin-meta/plugin-health`
+          - `tasks/task-triage`
       - Plugins:
         - **`browser`** — The health report's Agent browser row: whether the machine's agent-browser host runs, its sessions (what each is for — its task's title — its tab count, and how long until it closes if left idle), a recent failure the host hit on its own, and a host that died without closing them — read from the agent-browser.status push value. Agent browser: MCP tools (browser_navigate, browser_read_page, browser_act, browser_batch, browser_screenshot, browser_console, …) forwarded to one detached host process per machine that owns the shared headless Chromium — an isolated session per conversation targeted at that conversation's own worktree build, tabs that stay open across calls and across backend restarts, frozen between calls — plus the agent-browser.status value (host, sessions, tabs, deadlines) pushed from the host's status file.
           - Web:
@@ -30253,6 +30259,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `stats/cost`
           - `tasks/automations`
           - `tasks/sidequest-autopilot`
+          - `tasks/task-triage`
       - Plugins:
         - **`background-arm`** — Warm-ups in the Background activity catalog: registers the `warmup` background kind — every declared warm-up under After boot, its scope from the warm-up's (host → main only, worktree → every worktree), and its one run in this process (duration, error, or skipped off main) — and pushes the catalog as each warm-up starts and settles. Corpus indexes appear through the warm-up they declare.
           - Server:
@@ -30329,7 +30336,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `release/source-checkout`
           - `stats/cost`
           - `tasks/attempt-work`
-          - `tasks/sidequest-autopilot`
+          - `tasks/task-triage`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/composition-namespace.ts`, `server/internal/spare-name.ts`, `server/internal/spare.ts`, `server/internal/spec.ts`, `server/internal/worktree-op.ts`, `server/internal/worktree.ts` (debt)
       - Core:
@@ -31216,8 +31223,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `FieldPresentation.Register`
           - `ClientFields.Resolve`
-        - Slot contributors: 39 contributors — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `FieldPresentation.Register` ×36
+        - Slot contributors: 40 contributors — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `FieldPresentation.Register` ×37
           - `ClientFields.Resolve` ×3
         - Uses:
           - `primitives/live-state.PagedResourceResult`
@@ -31484,11 +31491,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
-        - Imported by: 277 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 278 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×75
           - `conversations` ×50
+          - `tasks` ×28
           - `debug` ×27
-          - `tasks` ×27
           - `infra` ×16
           - `active-data` ×12
           - `page` ×12
@@ -36617,7 +36624,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/git/git-watcher`
           - `review/plugin-changes`
           - `tasks/attempt-work`
-          - `tasks/sidequest-autopilot`
+          - `tasks/task-triage`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/run-git.ts` (debt)
       - Core:
@@ -36705,13 +36712,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density` ×6
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 168 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 169 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×38
               - `debug` ×35
               - `conversations` ×24
               - `reports` ×13
               - `primitives` ×10
-              - `tasks` ×9
+              - `tasks` ×10
               - `plugin-meta` ×8
               - `build` ×5
               - `review` ×4
@@ -36842,7 +36849,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ClusterProps`
             - Exports (values): `Cluster`
           - Cross-plugin:
-            - Imported by: 63 plugins — full list in [`plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md)
+            - Imported by: 64 plugins — full list in [`plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md)
               - `apps` ×24
               - `debug` ×11
               - `conversations` ×7
@@ -36850,10 +36857,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives` ×6
               - `fields` ×2
               - `page` ×2
+              - `tasks` ×2
               - `config_v2/fields`
               - `infra/claude-cli`
               - `stats/commits`
-              - `tasks/task-dependencies`
               - `ui/tokens/shadow`
         - **`color-picker`** — Composable color picker primitive: a fitted (always-in-gamut) OKLCH ColorArea, HueSlider, AlphaSlider, per-channel ColorValueFields (HEX / OKLCH / HSL), SwatchGrid with named suggestions, and ColorPicker / ColorPickerPopover with before/after, Reset, eyedropper and a shared Recent row. The Color math (parse, convert, gamut) is in core.
           - Web:
@@ -37048,14 +37055,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 164 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+            - Imported by: 165 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
               - `apps` ×47
               - `primitives` ×29
               - `conversations` ×25
               - `debug` ×17
               - `page` ×10
               - `ui` ×9
-              - `tasks` ×6
+              - `tasks` ×7
               - `infra` ×4
               - `plugin-meta` ×3
               - `review` ×3
@@ -37073,7 +37080,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `GridProps`
             - Exports (values): `Grid`
           - Cross-plugin:
-            - Imported by: 39 plugins — full list in [`plugins/primitives/plugins/css/plugins/grid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/grid/REFERENCE.md)
+            - Imported by: 40 plugins — full list in [`plugins/primitives/plugins/css/plugins/grid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/grid/REFERENCE.md)
               - `apps` ×18
               - `primitives` ×9
               - `ui` ×3
@@ -37083,6 +37090,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/claude-cli`
               - `page/formatting/color`
               - `screenshot`
+              - `tasks/task-triage`
         - **`grow`** — Growing-cell layout primitive: growClass() is the flex child that takes the row's slack (flex-1) while staying floored at its own content width. The half of <Fill> that grows, without the half that gives.
           - Cross-plugin:
             - Imported by:
@@ -37126,16 +37134,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 87 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 88 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `apps` ×16
               - `debug` ×14
               - `reports` ×14
               - `conversations` ×9
               - `primitives` ×9
               - `page` ×6
+              - `tasks` ×4
               - `build` ×3
               - `plugin-meta` ×3
-              - `tasks` ×3
               - `ui` ×2
               - `active-data/go`
               - `backup/runs-arm`
@@ -37407,13 +37415,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Imported by: 125 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+            - Imported by: 126 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
               - `apps` ×29
               - `conversations` ×23
               - `primitives` ×16
               - `debug` ×12
               - `page` ×7
-              - `tasks` ×6
+              - `tasks` ×7
               - `ui` ×6
               - `plugin-meta` ×4
               - `review` ×4
@@ -37597,7 +37605,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 408 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 409 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×106
               - `conversations` ×65
               - `primitives` ×54
@@ -37605,7 +37613,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui` ×30
               - `page` ×24
               - `plugin-meta` ×15
-              - `tasks` ×11
+              - `tasks` ×12
               - `fields` ×9
               - `apps-core` ×6
               - `stats` ×6
@@ -37823,7 +37831,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×36
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 381 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 382 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×105
               - `conversations` ×73
               - `primitives` ×43
@@ -37831,7 +37839,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page` ×23
               - `plugin-meta` ×14
               - `ui` ×14
-              - `tasks` ×12
+              - `tasks` ×13
               - `fields` ×9
               - `stats` ×6
               - `build` ×5
@@ -37932,7 +37940,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×12
               - `ui/tokens/density` ×7
               - `ui/tokens/type-scale` ×6
-            - Imported by: 47 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
+            - Imported by: 48 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
               - `apps` ×19
               - `primitives` ×7
               - `stats` ×5
@@ -37945,6 +37953,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-ui/chip`
               - `review`
               - `shell/notifications`
+              - `tasks/task-triage`
               - `ui/tokens/icons`
         - **`ui-kit`** — Global UI kit: the cn() class-merge util, the 14 shadcn/ui primitives, the theme/app.css global stylesheet, and the ControlSize affordance-sizing context.
           - Web:
@@ -38113,14 +38122,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family` ×4
               - `ui/tokens/material` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 427 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 428 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×109
               - `apps` ×95
               - `conversations` ×55
               - `page` ×25
               - `debug` ×23
               - `ui` ×21
-              - `tasks` ×15
+              - `tasks` ×16
               - `fields` ×11
               - `plugin-meta` ×10
               - `apps-core` ×7
@@ -38342,11 +38351,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.ValueCodec`
           - `DataViewSlots.Grouping`
           - `DataViewSlots.ColumnConfig`
-        - Slot contributors: 50 contributors — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Slot contributors: 51 contributors — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `DataViewSlots.Cell` ×10
+          - `DataViewSlots.CollectionItemAction` ×7
           - `DataViewSlots.Filter` ×7
           - `DataViewSlots.CellEditor` ×6
-          - `DataViewSlots.CollectionItemAction` ×6
           - `DataViewSlots.View` ×5
           - `DataViewSlots.CollectionRowActivation` ×4
           - `DataViewSlots.Grouping` ×3
@@ -39691,6 +39700,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/automations`
           - `tasks/task-description`
           - `tasks/task-header`
+          - `tasks/task-triage`
     - **`embed`** — The declared embedded-document signal: embedMode() reads the `?embed=` flag once at boot (the pane router drops every query on its first write, so it cannot be re-read) — `?embed=1` opens one route with no app chrome, `?embed=chrome` opens the whole app, chrome included — and embedUrl(path, mode) builds an in-app URL that opens that way. isChromelessDocument() is read by the apps layout (no tab bar, no rail) and the floating action bar (hidden); isEmbeddedDocument() by the two sessionStorage writers (app-instance registry, persisted tabs) so a same-origin frame in either mode never evicts the host tab's own state.
       - Cross-plugin:
         - Imported by:
@@ -40432,6 +40442,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/background/investigate`
               - `debug/reports`
               - `runs`
+              - `tasks/task-triage`
     - **`lazy-component`** — Pairs React.lazy with its own Suspense boundary so a heavy component is code-split off the eager plugin-boot wave, loading on first mount instead.
       - Web:
         - Uses: `primitives/loading.Loading`
@@ -40453,14 +40464,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/text-editor`
     - **`link-gesture`** — The browser's link gestures as spreadable handler props: plain click opens here, ⌘/Ctrl- and middle-click open the destination's URL in a new browser tab. A <button> gets none of this for free, so every navigating control reads it from one place.
       - Cross-plugin:
-        - Imported by: 44 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
+        - Imported by: 45 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
           - `primitives` ×13
           - `conversations` ×11
           - `apps-core` ×3
           - `apps` ×3
           - `page` ×3
+          - `tasks` ×3
           - `debug` ×2
-          - `tasks` ×2
           - `build`
           - `code-explorer/file-resolve`
           - `config_v2/config-link`
@@ -40625,12 +40636,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 266 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 267 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×72
           - `conversations` ×49
           - `debug` ×24
           - `ui` ×24
-          - `tasks` ×22
+          - `tasks` ×23
           - `page` ×14
           - `primitives` ×12
           - `active-data` ×7
@@ -40718,13 +40729,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 199 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 200 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×64
           - `ui` ×21
           - `conversations` ×19
           - `debug` ×19
           - `primitives` ×19
-          - `tasks` ×13
+          - `tasks` ×14
           - `page` ×10
           - `build` ×4
           - `plugin-meta` ×4
@@ -40938,6 +40949,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/file-viewer/markdown`
           - `tasks/outcome-report`
           - `tasks/sidequest-autopilot`
+          - `tasks/task-triage`
     - **`metrics`** — Metrics surfaces: useMetricCatalog / useMetric / useMetricDetails / useMetricDetailsTotal (live reads of the served metrics values — the details one key-range pages, every loaded one live, and its total the per-question meta sibling — so a change the metric's source announces refetches what is on screen, without polling), MetricTile (KPI toggle with value, polarity-coloured delta and sparkline), MetricCard (controls derived from the catalog entry: split, daily | cumulative for flows, table twin, previous-period line on the unsplit total), BreakdownCard, RangeBar, the DrillDrawer listing the records behind a bucket, BoardView (sections of focus tiles, a lead card and a card grid, every ref checked against the catalog) and Board (a view-core tabbed board whose specs live in a config declared with defineBoardConfig). Metrics engine: the MetricsServer.Source contribution (a source's metrics and breakdowns bound to their evaluators), the served metrics.catalog / metrics.query / metrics.details live values evaluating any of them through the one tz-aware bucketing engine — each query and drill-down (its key-range pages and its total) watching its source's `changes` through one refcounted subscription per source — and the sqlFlow / sqlLevel helpers joining a table against the engine's intervals.
       - Server:
         - Contributes:
@@ -42442,12 +42454,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
-        - Imported by: 64 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
+        - Imported by: 65 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
           - `apps` ×23
           - `debug` ×13
           - `conversations` ×8
+          - `tasks` ×5
           - `infra` ×4
-          - `tasks` ×4
           - `build` ×3
           - `active-data/commit-link`
           - `fields/date/table`
@@ -46702,7 +46714,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/model-provider.ModelChoiceSchema`
               - `tasks/launch-options.defineLaunchOption`
             - Exports (values): `autoStartLaunchOption`
-    - **`automations`** — Automations in the agent manager: the Automations sidebar entry and list (a DataView over the catalog — trigger in words, next run, on/off, open task), the detail pane (Run now through Background activity; Behavior — enabled, model, push policy; Trigger — schedule presets or custom cron, or the event and its settle wait; the sections an automation contributes through Automations.Section; its sources; the Prompt template with Customized / Reset to default — PromptTemplateBlock, the same editor for any template field an automation declares; and the History of the tasks it filed or started — each row expandable into the Automations.TaskDetail contributions for its task), the presentation of the exposed `origin` Automation field in every list whose rows reach a task (its options the live catalog), and automationConfigContributions — how a declaring plugin registers its automation's config document (Automations.Config). Automations registry: defineAutomation declares something that files a task and launches its agent on its own (file kind) or launches agents on existing tasks a few at a time (launch kind: candidates, launched ONLY when a person approved them — the tasks_ext_launch_decision side-table, written by the decide-launch endpoint alone — concurrency slots held until a task settles or releaseLaunchedTask, and a maxLaunches batch per turn-on after which it turns itself off), and owns its job (automation.<id>) — its config document (defineAutomationConfig: enabled, push policy, model, excluded sources, trigger — a schedule re-installed live on change, or an event whose bursts settle into one run — and the prompt template), the one-open-task dedupe, the filled prompt, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.launch-decisions.all set, exposes the filing automation to every list whose rows reach a task (the `origin` field), and notifies the bell when an automated task needs its person. The automations.catalog value and the automations.tasks collection (the origin side-table, an automation's history) are the machine half's.
+    - **`automations`** — Automations in the agent manager: the Automations sidebar entry and list (a DataView over the catalog — trigger in words, next run, on/off, open task), the detail pane (Run now through Background activity; Behavior — enabled, model, push policy; Trigger — schedule presets or custom cron, or the event and its settle wait; the sections an automation contributes through Automations.Section; its sources; the Prompt template with Customized / Reset to default — PromptTemplateBlock, the same editor for any template field an automation declares; and the History of the tasks it filed or started — each row expandable into the Automations.TaskDetail contributions for its task), the presentation of the exposed `origin` Automation field (its options the live catalog) and `approval` Approval field (Approved / Excluded / Not approved) in every list whose rows reach a task, useTaskApproval / useSetTaskApproval — one task's launch decision, read and written from the task, and automationConfigContributions — how a declaring plugin registers its automation's config document (Automations.Config). Automations registry: defineAutomation declares something that files a task and launches its agent on its own (file kind) or launches agents on existing tasks a few at a time (launch kind: candidates, launched ONLY when a person approved them — the tasks_ext_launch_decision side-table, one decision per task whatever automation launches it, written by the decide-launch and task-approval endpoints alone — concurrency slots held until a task settles or releaseLaunchedTask, and a maxLaunches batch per turn-on after which it turns itself off), and owns its job (automation.<id>) — its config document (defineAutomationConfig: enabled, push policy, model, excluded sources, trigger — a schedule re-installed live on change, or an event whose bursts settle into one run — and the prompt template), the one-open-task dedupe, the filled prompt, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.launch-decisions.all set, exposes the filing automation and the launch decision to every list whose rows reach a task (the `origin` and `approval` fields), and notifies the bell when an automated task needs its person. The automations.catalog value and the automations.tasks collection (the origin side-table, an automation's history) are the machine half's.
       - Web:
         - Slots:
           - `Automations.Config`
@@ -46725,18 +46737,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Pane.Register` "automation-detail"
           - `Pane.Register` "automations"
           - `Shell.Sidebar` "Automations"
+          - `FieldPresentation.Register` "exposure:tasks_ext_launch_decision"
           - `FieldPresentation.Register` "exposure:tasks_ext_origin"
-        - Uses: 57 symbols — full list in [`plugins/tasks/plugins/automations/REFERENCE.md`](../plugins/tasks/plugins/automations/REFERENCE.md)
+        - Uses: 60 symbols — full list in [`plugins/tasks/plugins/automations/REFERENCE.md`](../plugins/tasks/plugins/automations/REFERENCE.md)
           - `primitives/css/ui-kit` ×7
+          - `network/live` ×6
           - `primitives/live-state` ×6
           - `primitives/pane` ×5
-          - `network/live` ×4
           - `primitives/data-view` ×4
           - `config_v2` ×3
+          - `infra/endpoints` ×3
           - `tasks/task-status` ×3
           - `conversations/model-provider` ×2
           - `infra/background/catalog` ×2
-          - `infra/endpoints` ×2
           - `primitives/css/control-panel` ×2
           - `fields/dynamic-enum/config.DynamicEnum`
           - `primitives/app-shell.opensPane`
@@ -46759,8 +46772,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `automationConfigContributions`
           - `Automations`
           - `PromptTemplateBlock`
+          - `useSetTaskApproval`
+          - `useTaskApproval`
       - Server:
         - Contributes:
+          - `live.columns.expose` "tasks ← tasks_ext_launch_decision"
           - `live.columns.expose` "tasks ← tasks_ext_origin"
           - `resource.declare` "automations.catalog"
           - `resource.declare` "automations.launch-decisions.all"
@@ -46810,7 +46826,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `automations.tasks` (keyed, window)
           - `automations.tasks:groups` (push)
           - `automations.tasks:rows` (keyed, point)
-        - Routes: `POST /api/automations/:automationId/launch-decisions`
+        - Routes:
+          - `POST /api/automations/:automationId/launch-decisions`
+          - `PUT /api/tasks/:taskId/approval`
       - Machine:
         - Uses:
           - `network/live.serveCollection`
@@ -46897,6 +46915,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ScheduleSettingsSchema`
           - `SETTLE_MAX_WAIT_FACTOR`
           - `SLOT_SETTLED_STATUSES`
+          - `taskApprovalEndpoint`
           - `taskOriginShape`
           - `templateVariables`
           - `TRIGGER_KIND_LABELS`
@@ -46923,6 +46942,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/outcome-report`
           - `tasks/reports-investigation`
           - `tasks/sidequest-autopilot`
+          - `tasks/task-triage`
           - `upstream`
     - **`launch-options`** — Registry of task launch options — the controls that configure HOW an agent launches. Owns the tasks.launch-option slot rendered by BOTH the task detail's Prompt card and the task-draft popover, so an option is one plugin folder and appears on both surfaces. Server half of the task launch-option registry: each option contributes how its value is written onto a task — applied from a draft, and whether it is inherited by a spawned subtask — so the chain endpoint and the task-filing MCP tools stay generic.
       - Web:
@@ -47077,7 +47097,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/tasks-core.getTask`
         - Register: `defineAutomation('report-investigations')`
         - Resources: `report-investigations.scope` (push)
-    - **`sidequest-autopilot`** — The Sidequest autopilot in the Automations pane: registers its config (enabled, at once, in total, push policy, model, prompt, triage, stale after, triage prompt) and contributes its sections — Launch list (a DataView of every ready sidequest in launch order, grouped Approved / Proposed by triage / Needs your call / Looks obsolete / Triaging / Excluded; each row expands to triage's context, its one-click question and Re-triage; triage may tick a row, only Approve selected approves), Run until (until you turn it off, or until a date and time after which it turns itself off) and Triage (the switch, stale after, the triage prompt). Declares the Sidequest autopilot automation (launch kind, off by default): while on, it starts agents on the ready sidequests (no attempt, not held, dropped or blocked) a person APPROVED in its launch list — best first by triage's value for size, `concurrency` at a time (default 2), at most `maxLaunches` per turn-on (default 5) — each with the autopilot prompt (triage's context and the person's answer included; never ask, check obsolescence first, stay in scope, push only what the push policy allows, finish with submit_outcome_report). Triage (on by default, main only): each ready sidequest is read once by a read-only Sonnet run (Read / Grep / Glob over the main checkout) — verdict ready / decide / split / obsolete, risk, size, value, areas, a free-form context and at most one one-click question — stored in tasks_ext_sidequest_triage and served as the sidequest-autopilot.triage.all set; queued when a task becomes a sidequest or a sidequest becomes ready, backfilled at boot, re-run only by the person's Re-triage. Triage approves nothing. Turns itself off at its `runUntil`.
+    - **`sidequest-autopilot`** — The Sidequest autopilot in the Automations pane: registers its config (enabled, at once, in total, push policy, model, prompt, triage) and contributes its sections — Launch list (a DataView of every ready sidequest in launch order — triage's priority, then oldest — grouped Approved / Proposed by triage / Needs your call / Looks obsolete / won't / Triage failed / Triaging / Excluded; each row shows its priority and type, and expands to triage's context, its one-click question and Re-triage; triage may tick a row, only Approve selected approves), Run until (until you turn it off, or until a date and time after which it turns itself off) and Triage (whether new sidequests are triaged automatically). Declares the Sidequest autopilot automation (launch kind, off by default): while on, it starts agents on the ready sidequests (no attempt, not held, dropped or blocked) a person APPROVED — best first by triage's priority (must → should → could, then oldest filed), `concurrency` at a time (default 2), at most `maxLaunches` per turn-on (default 5) — each with the autopilot prompt (triage's context, the person's answer and their note included; never ask, check obsolescence first, stay in scope, push only what the push policy allows, finish with submit_outcome_report). Triage is task-triage's: while the `triage` toggle is on (default, main only) it asks task-triage for a read of each ready sidequest that has none — when a task becomes a sidequest or a sidequest becomes ready, backfilled at boot and when the toggle turns on. Triage approves nothing. Turns itself off at its `runUntil`.
       - Web:
         - Contributes:
           - `ConfigV2.WebRegister` "sidequest-autopilot"
@@ -47085,14 +47105,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Automations.Section` "sidequest-autopilot" → `LaunchListSection`
           - `Automations.Section` "sidequest-autopilot" → `RunUntilSection`
           - `Automations.Section` "sidequest-autopilot" → `TriageSection`
-        - Uses: 38 symbols — full list in [`plugins/tasks/plugins/sidequest-autopilot/REFERENCE.md`](../plugins/tasks/plugins/sidequest-autopilot/REFERENCE.md)
-          - `primitives/css/ui-kit` ×7
+        - Uses: 33 symbols — full list in [`plugins/tasks/plugins/sidequest-autopilot/REFERENCE.md`](../plugins/tasks/plugins/sidequest-autopilot/REFERENCE.md)
+          - `primitives/live-state` ×4
           - `infra/endpoints` ×3
           - `primitives/data-view` ×3
-          - `primitives/live-state` ×3
-          - `tasks/automations` ×3
           - `config_v2` ×2
           - `primitives/css/control-panel` ×2
+          - `primitives/css/ui-kit` ×2
+          - `tasks/automations` ×2
           - `network/live.useLive`
           - `primitives/css/badge.Badge`
           - `primitives/css/fill.Fill`
@@ -47111,43 +47131,32 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes:
           - `ConfigV2.Register` "sidequest-autopilot"
-          - `resource.declare` "sidequest-autopilot.triage.all"
-          - `resource.declare` "sidequest-autopilot.triage.all:rows"
           - `trigger` "sidequest-autopilot.task-ready"
           - `trigger` "sidequest-autopilot.triage-on-task"
           - `trigger` "sidequest-autopilot.triage-on-task"
-        - Uses: 23 symbols — full list in [`plugins/tasks/plugins/sidequest-autopilot/REFERENCE.md`](../plugins/tasks/plugins/sidequest-autopilot/REFERENCE.md)
-          - `config_v2` ×3
-          - `tasks/task-track` ×3
-          - `tasks/tasks-core` ×3
-          - `infra/endpoints` ×2
-          - `tasks/automations` ×2
-          - `database.db`
-          - `infra/claude-cli.runClaudeReadOnly`
-          - `infra/entity-extensions.defineExtension`
+        - Uses:
+          - `config_v2.getConfig`
+          - `config_v2.setConfig`
+          - `config_v2.watchConfig`
           - `infra/events.Trigger`
           - `infra/jobs.defineJob`
           - `infra/warmup.defineWarmup`
-          - `infra/worktree.ensureMainWorktreeRoot`
-          - `network/live.serveCollection`
-          - `primitives/commit-list.runGit`
           - `primitives/log-channels.Log`
-        - DB schema: `plugins/tasks/plugins/sidequest-autopilot/server/internal/tables.ts`
-        - Entity extension of: `tasks/tasks-core` (table `tasks_ext_sidequest_triage`)
+          - `tasks/automations.automationConfigRegistration`
+          - `tasks/automations.defineAutomation`
+          - `tasks/task-track.listSidequestTasks`
+          - `tasks/task-track.taskTrackChanged`
+          - `tasks/task-triage.requestTriage`
+          - `tasks/task-triage.triageNotesOf`
+          - `tasks/task-triage.triageReadsOf`
+          - `tasks/tasks-core.taskStatusChanged`
         - Register:
           - `defineAutomation('sidequest-autopilot')`
           - `defineJob('sidequest-autopilot.task-ready')`
           - `defineJob('sidequest-autopilot.run-until')`
-          - `defineJob('sidequest-autopilot.triage')`
           - `defineJob('sidequest-autopilot.triage-on-task')`
           - `defineJob('sidequest-autopilot.triage-backfill')`
           - `defineWarmup('sidequest-autopilot.triage-backfill')`
-        - Resources:
-          - `sidequest-autopilot.triage.all` (keyed)
-          - `sidequest-autopilot.triage.all:rows` (keyed, point)
-        - Routes:
-          - `POST /api/sidequest-autopilot/triage/:taskId/run`
-          - `PUT /api/sidequest-autopilot/triage/:taskId/answer`
     - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "Attachments" → `TaskAttachments`
@@ -47202,9 +47211,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `task-categories:rows` (keyed, point)
           - `task-category.registry` (push, fixed)
       - Cross-plugin:
-        - Imported by: 26 plugins — full list in [`plugins/tasks/plugins/task-category/REFERENCE.md`](../plugins/tasks/plugins/task-category/REFERENCE.md)
+        - Imported by: 27 plugins — full list in [`plugins/tasks/plugins/task-category/REFERENCE.md`](../plugins/tasks/plugins/task-category/REFERENCE.md)
           - `apps` ×6
-          - `tasks` ×4
+          - `tasks` ×5
           - `conversations` ×3
           - `hints` ×2
           - `page` ×2
@@ -47327,6 +47336,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TaskDetailSlots.Section` ← `tasks.task-events`
           - `TaskDetailSlots.Section` ← `tasks.task-graph`
           - `TaskDetailSlots.Section` ← `tasks.task-header`
+          - `TaskDetailSlots.Section` ← `tasks.task-triage`
           - `tasksRootPane.Actions` ← `primitives.pane`
           - `taskDetailPane.Actions` ← `primitives.pane`
         - Contributes:
@@ -47372,6 +47382,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-events`
           - `tasks/task-graph`
           - `tasks/task-header`
+          - `tasks/task-triage`
     - **`task-draft-form`** — Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.
       - Web:
         - Slots: `TaskDraftFormSlots.Action`
@@ -47825,6 +47836,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `primitives/launch/investigate`
           - `tasks`
+          - `tasks/task-triage`
     - **`task-title`** — Reads a task's Haiku-made short title (at most three words) with useTaskShortTitle; a row is current only while its sourceTitle equals the task's title. Task titles, every host's half: the tasks_ext_short_title side-table (a ≤3-word short title per task, current while its sourceTitle equals the task's title) served as the task-short-titles collection, the synthesised fallback title a task is filed with, and scheduleTaskTitleUpdate over the TaskTitleGenerator host service — which upgrades that fallback in the background where a model is available (machine/).
       - Server:
         - Contributes:
@@ -47964,6 +47976,165 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cli:
         - Exports (types): `CheckoutTrack`
         - Exports (values): `checkoutTrack`
+    - **`task-triage`** — The Triage card in the task detail: the state chip and when it ran (or its place in the queue) in the header, with Conversation (the run's, for follow-up questions) and Re-run; the body per state — Run triage when none, a placeholder while queued or running, the read (Verdict · Priority · Type · Risk, the summary, one question with one-click answers), greyed under a Re-run notice when stale, the error with Re-run when failed — then the person's autosaved note and the Approve / ✓ Approved toggle, which needs no triage. Presents the exposed Triage, Priority, Type and Last triaged fields in every task list, and registers the triage config (its model picked from the live model catalog). Owns task triage: the tasks_ext_triage side-table (one read per task — run state queued / running / done / stale / failed, verdict, MoSCoW priority, type, risk, context, one one-click question) and tasks_ext_triage_note (the person's note, fed to every run). A run is a read-only `system` conversation in a `tasks.triage` scratch workspace (Edit / Write / NotebookEdit / Bash denied) under the triaged task's own `Triage: …` run task (System category, subject `task-triage`), reporting through its task_submit_triage MCP tool; a dispatcher job launches queued runs `concurrency` at a time. A read goes stale when the task's text changes or after `staleAfterDays`; a run whose conversation closes without a read, or that has not submitted after 30 min, fails. Exposes Triage, Priority, Type and Last triaged to every list of tasks; requestTriage is the API other plugins queue a read with.
+      - Web:
+        - Contributes:
+          - `TaskDetailSlots.Section` "Triage" → `TriageCard`
+          - `FieldPresentation.Register` "exposure:tasks_ext_triage"
+          - `DataViewSlots.CollectionItemAction` "task-triage.reads:investigate" → `CollectionInvestigate`
+          - `ConfigV2.WebRegister` "config"
+          - `DynamicEnum.Options` "Model"
+        - Uses: 37 symbols — full list in [`plugins/tasks/plugins/task-triage/REFERENCE.md`](../plugins/tasks/plugins/task-triage/REFERENCE.md)
+          - `network/live` ×4
+          - `infra/endpoints` ×3
+          - `primitives/css/ui-kit` ×3
+          - `primitives/live-state` ×3
+          - `tasks/automations` ×2
+          - `tasks/task-detail` ×2
+          - `config_v2.ConfigV2`
+          - `conversations/conversation-view.useConversationOpener`
+          - `conversations/model-provider.useModelChoiceOptions`
+          - `fields/dynamic-enum/config.DynamicEnum`
+          - `primitives/css/badge.Badge`
+          - `primitives/css/cluster.Cluster`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/grid.Grid`
+          - `primitives/css/inline.Inline`
+          - `primitives/css/rigid.rigidClass`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
+          - `primitives/css/toggle-chip.ToggleChip`
+          - `primitives/editable-field.useEditableField`
+          - `primitives/launch/investigate.Investigate`
+          - `primitives/link-gesture.activationProps`
+          - `primitives/loading.Loading`
+          - `primitives/markdown.Markdown`
+          - `primitives/relative-time.RelativeTime`
+          - `ui/icons.Icon`
+      - Server:
+        - Contributes:
+          - `ConfigV2.Register` "config"
+          - `resource.declare` "task-triage.notes:rows"
+          - `resource.declare` "task-triage.reads"
+          - `resource.declare` "task-triage.reads:groups"
+          - `resource.declare` "task-triage.reads:rows"
+          - `live.columns.expose` "tasks ← tasks_ext_triage"
+          - `trigger` "task-triage.conversation-status"
+          - `trigger` "task-triage.edited"
+          - `trigger` "task-triage.edited"
+        - Uses: 32 symbols — full list in [`plugins/tasks/plugins/task-triage/REFERENCE.md`](../plugins/tasks/plugins/task-triage/REFERENCE.md)
+          - `tasks/tasks-core` ×7
+          - `tasks/task-subject` ×4
+          - `conversations/workspace` ×3
+          - `config_v2` ×2
+          - `infra/endpoints` ×2
+          - `network/live` ×2
+          - `conversations/model-provider/catalog.getModelCatalog`
+          - `conversations.createConversation`
+          - `database.db`
+          - `infra/claude-cli/availability.assertClaudeCodeReady`
+          - `infra/entity-extensions.defineExtension`
+          - `infra/events.Trigger`
+          - `infra/jobs.defineJob`
+          - `infra/mcp.Mcp`
+          - `infra/warmup.defineWarmup`
+          - `infra/worktree.ensureMainWorktreeRoot`
+          - `primitives/commit-list.runGit`
+          - `tasks/task-category.setTaskCategory`
+        - DB schema: `plugins/tasks/plugins/task-triage/server/internal/tables.ts`
+        - Entity extension of:
+          - `tasks/tasks-core` (table `tasks_ext_triage`)
+          - `tasks/tasks-core` (table `tasks_ext_triage_note`)
+        - Exports (types): `RequestTriageResult`
+        - Exports (values):
+          - `getTriageNote`
+          - `getTriageRead`
+          - `requestTriage`
+          - `tasksTriage`
+          - `tasksTriageNote`
+          - `triageNotesOf`
+          - `triageReadsOf`
+        - Register:
+          - `defineJob('task-triage.dispatch')`
+          - `defineWarmup('task-triage.dispatch')`
+          - `defineJob('task-triage.edited')`
+          - `defineJob('task-triage.conversation-status')`
+          - `defineJob('task-triage.sweep')`
+          - `mcpTool('task_submit_triage')`
+        - Resources:
+          - `task-triage.notes:rows` (keyed, point)
+          - `task-triage.reads` (keyed, window)
+          - `task-triage.reads:groups` (push)
+          - `task-triage.reads:rows` (keyed, point)
+        - Routes:
+          - `POST /api/tasks/:taskId/triage`
+          - `PUT /api/tasks/:taskId/triage/answer`
+          - `PUT /api/tasks/:taskId/triage/note`
+      - Core:
+        - Uses:
+          - `fields.nullable`
+          - `fields/date/config.dateField`
+          - `fields/json/config.jsonField`
+          - `fields/text/config.enumTextField`
+          - `fields/text/config.textField`
+          - `infra/endpoints.defineEndpoint`
+          - `infra/entity-extensions.defineExtensionShape`
+          - `network/live.liveCollection`
+          - `tasks/tasks-core.tasksEntityRef`
+        - Exports (types):
+          - `RequestTriageOutcome`
+          - `TaskTriageNoteRow`
+          - `TaskTriageRow`
+          - `TriagePriority`
+          - `TriageRankable`
+          - `TriageRead`
+          - `TriageReadResult`
+          - `TriageResult`
+          - `TriageRisk`
+          - `TriageStaleReason`
+          - `TriageState`
+          - `TriageTaskType`
+          - `TriageVerdict`
+        - Exports (values):
+          - `answerTriageEndpoint`
+          - `compareByTriage`
+          - `latestTriageResult`
+          - `MAX_TRIAGE_ANSWERS`
+          - `MAX_TRIAGE_AREAS`
+          - `normalizeTriageResult`
+          - `NOT_TRIAGED_META`
+          - `parseTriageRead`
+          - `RequestTriageOutcomeSchema`
+          - `runTriageEndpoint`
+          - `setTriageNoteEndpoint`
+          - `TaskTriageNoteRowSchema`
+          - `taskTriageNotes`
+          - `taskTriageNoteShape`
+          - `taskTriageReads`
+          - `TaskTriageRowSchema`
+          - `taskTriageShape`
+          - `TRIAGE_IN_FLIGHT_STATES`
+          - `TRIAGE_PRIORITIES`
+          - `TRIAGE_PRIORITY_META`
+          - `TRIAGE_RISK_META`
+          - `TRIAGE_RISKS`
+          - `TRIAGE_STALE_REASON_META`
+          - `TRIAGE_STALE_REASONS`
+          - `TRIAGE_STATE_META`
+          - `TRIAGE_STATES`
+          - `TRIAGE_TASK_TYPE_META`
+          - `TRIAGE_TASK_TYPES`
+          - `TRIAGE_VERDICT_META`
+          - `TRIAGE_VERDICTS`
+          - `TriageResultSchema`
+          - `TriageRowError`
+      - Cross-plugin:
+        - Uses tokens:
+          - `ui/tokens/color-palette --warning`
+          - `ui/tokens/density --space-md`
+          - `ui/tokens/density --space-sm`
+          - `ui/tokens/shape --radius`
+        - Imported by: `tasks/sidequest-autopilot`
     - **`tasks-core`** — tasks-core web presence: eagerly registers the boot-critical tasks / attempts / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced). Schema + repository layer for the tasks/attempts/conversations FK cluster.
       - Web:
         - Contributes:
@@ -48026,6 +48197,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PushLandedPayload`
           - `PushLedgerImpl`
           - `Task`
+          - `TaskDescriptionChangedPayload`
           - `TaskListItem`
           - `TaskStatus`
           - `TaskStatusChangedPayload`
@@ -48039,6 +48211,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `_conversations`
           - `_conversationStatusChangedTriggers`
           - `_pushLandedTriggers`
+          - `_taskDescriptionChangedTriggers`
           - `_tasks`
           - `_taskStatusChangedTriggers`
           - `_taskTitleChangedTriggers`
@@ -48098,6 +48271,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `setConversationHibernated`
           - `taskAttachments`
           - `taskDependsOn`
+          - `taskDescriptionChanged`
           - `TaskListItemSchema`
           - `TaskSchema`
           - `taskStatusChanged`
@@ -48115,6 +48289,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineTriggerEvent('pushes.landed')`
           - `defineTriggerEvent('tasks.statusChanged')`
           - `defineTriggerEvent('tasks.titleChanged')`
+          - `defineTriggerEvent('tasks.descriptionChanged')`
           - `defineTriggerEvent('conversation.statusChanged')`
           - `defineTriggerEvent('conversation.created')`
         - Resources:
@@ -48209,9 +48384,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TaskStatusSchema`
           - `TRAILER_LOG_FORMAT`
       - Cross-plugin:
-        - Imported by: 67 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Imported by: 68 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations` ×26
-          - `tasks` ×17
+          - `tasks` ×18
           - `active-data` ×5
           - `debug` ×4
           - `page` ×3
@@ -48244,10 +48419,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-preprompt` (table `tasks_ext_preprompt`)
           - `page/prompt/link` (table `tasks_ext_prompt_block`)
           - `tasks/task-title` (table `tasks_ext_short_title`)
-          - `tasks/sidequest-autopilot` (table `tasks_ext_sidequest_triage`)
           - `tasks/task-source-url` (table `tasks_ext_source_url`)
           - `tasks/task-subject` (table `tasks_ext_subject`)
           - `tasks/task-track` (table `tasks_ext_track`)
+          - `tasks/task-triage` (table `tasks_ext_triage`)
+          - `tasks/task-triage` (table `tasks_ext_triage_note`)
           - `conversations/workspace/launch-option` (table `tasks_ext_workspace`)
       - Exemptions:
         - Exempts itself from:
@@ -48418,7 +48594,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 315 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 316 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×72
           - `conversations` ×59
           - `primitives` ×41
@@ -48426,7 +48602,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields` ×34
           - `debug` ×14
           - `ui` ×8
-          - `tasks` ×6
+          - `tasks` ×7
           - `active-data` ×5
           - `plugin-meta` ×4
           - `reorder` ×4
@@ -49496,7 +49672,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 508 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 509 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×111
               - `conversations` ×89
               - `primitives` ×77
@@ -49504,7 +49680,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page` ×32
               - `plugin-meta` ×27
               - `ui` ×25
-              - `tasks` ×14
+              - `tasks` ×15
               - `reports` ×13
               - `fields` ×12
               - `active-data` ×7
@@ -49556,7 +49732,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 324 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 325 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `primitives` ×69
               - `apps` ×66
               - `conversations` ×49
@@ -49566,7 +49742,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta` ×13
               - `fields` ×7
               - `reorder` ×7
-              - `tasks` ×6
+              - `tasks` ×7
               - `review` ×5
               - `infra` ×4
               - `apps-core` ×3
@@ -49911,7 +50087,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 424 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 425 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×94
               - `apps` ×84
               - `primitives` ×70
@@ -49919,8 +50095,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui` ×32
               - `debug` ×27
               - `plugin-meta` ×11
+              - `tasks` ×10
               - `fields` ×9
-              - `tasks` ×9
               - `reorder` ×7
               - `review` ×5
               - `active-data` ×4

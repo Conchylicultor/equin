@@ -2,7 +2,7 @@
  * Triage order: priority must → should → could → wont → untriaged, then the
  * oldest filed, then the task id.
  *
- * Run: `./singularity test plugins/tasks/plugins/task-triage`.
+ * Run: `./equin test plugins/tasks/plugins/task-triage`.
  */
 
 import { expect, test } from "bun:test";

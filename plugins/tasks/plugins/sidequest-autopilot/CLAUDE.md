@@ -127,7 +127,7 @@ finish and report.
 
 ## Plugin reference
 
-- Description: The Sidequest autopilot in the Automations pane: registers its config (enabled, at once, in total, push policy, model, prompt, triage, stale after, triage prompt) and contributes its sections — Launch list (a DataView of every ready sidequest in launch order, grouped Approved / Proposed by triage / Needs your call / Looks obsolete / Triaging / Excluded; each row expands to triage's context, its one-click question and Re-triage; triage may tick a row, only Approve selected approves), Run until (until you turn it off, or until a date and time after which it turns itself off) and Triage (the switch, stale after, the triage prompt). Declares the Sidequest autopilot automation (launch kind, off by default): while on, it starts agents on the ready sidequests (no attempt, not held, dropped or blocked) a person APPROVED in its launch list — best first by triage's value for size, `concurrency` at a time (default 2), at most `maxLaunches` per turn-on (default 5) — each with the autopilot prompt (triage's context and the person's answer included; never ask, check obsolescence first, stay in scope, push only what the push policy allows, finish with submit_outcome_report). Triage (on by default, main only): each ready sidequest is read once by a read-only Sonnet run (Read / Grep / Glob over the main checkout) — verdict ready / decide / split / obsolete, risk, size, value, areas, a free-form context and at most one one-click question — stored in tasks_ext_sidequest_triage and served as the sidequest-autopilot.triage.all set; queued when a task becomes a sidequest or a sidequest becomes ready, backfilled at boot, re-run only by the person's Re-triage. Triage approves nothing. Turns itself off at its `runUntil`.
+- Description: The Sidequest autopilot in the Automations pane: registers its config (enabled, at once, in total, push policy, model, prompt, triage) and contributes its sections — Launch list (a DataView of every ready sidequest in launch order — triage's priority, then oldest — grouped Approved / Proposed by triage / Needs your call / Looks obsolete / won't / Triage failed / Triaging / Excluded; each row shows its priority and type, and expands to triage's context, its one-click question and Re-triage; triage may tick a row, only Approve selected approves), Run until (until you turn it off, or until a date and time after which it turns itself off) and Triage (whether new sidequests are triaged automatically). Declares the Sidequest autopilot automation (launch kind, off by default): while on, it starts agents on the ready sidequests (no attempt, not held, dropped or blocked) a person APPROVED — best first by triage's priority (must → should → could, then oldest filed), `concurrency` at a time (default 2), at most `maxLaunches` per turn-on (default 5) — each with the autopilot prompt (triage's context, the person's answer and their note included; never ask, check obsolescence first, stay in scope, push only what the push policy allows, finish with submit_outcome_report). Triage is task-triage's: while the `triage` toggle is on (default, main only) it asks task-triage for a read of each ready sidequest that has none — when a task becomes a sidequest or a sidequest becomes ready, backfilled at boot and when the toggle turns on. Triage approves nothing. Turns itself off at its `runUntil`.
 - Web:
   - Contributes:
     - `ConfigV2.WebRegister` "sidequest-autopilot"
@@ -135,14 +135,14 @@ finish and report.
     - `Automations.Section` "sidequest-autopilot" → `LaunchListSection`
     - `Automations.Section` "sidequest-autopilot" → `RunUntilSection`
     - `Automations.Section` "sidequest-autopilot" → `TriageSection`
-  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×7
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/live-state` ×4
     - `infra/endpoints` ×3
     - `primitives/data-view` ×3
-    - `primitives/live-state` ×3
-    - `tasks/automations` ×3
     - `config_v2` ×2
     - `primitives/css/control-panel` ×2
+    - `primitives/css/ui-kit` ×2
+    - `tasks/automations` ×2
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`
@@ -161,42 +161,31 @@ finish and report.
 - Server:
   - Contributes:
     - `ConfigV2.Register` "sidequest-autopilot"
-    - `resource.declare` "sidequest-autopilot.triage.all"
-    - `resource.declare` "sidequest-autopilot.triage.all:rows"
     - `trigger` "sidequest-autopilot.task-ready"
     - `trigger` "sidequest-autopilot.triage-on-task"
     - `trigger` "sidequest-autopilot.triage-on-task"
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `config_v2` ×3
-    - `tasks/task-track` ×3
-    - `tasks/tasks-core` ×3
-    - `infra/endpoints` ×2
-    - `tasks/automations` ×2
-    - `database.db`
-    - `infra/claude-cli.runClaudeReadOnly`
-    - `infra/entity-extensions.defineExtension`
+  - Uses:
+    - `config_v2.getConfig`
+    - `config_v2.setConfig`
+    - `config_v2.watchConfig`
     - `infra/events.Trigger`
     - `infra/jobs.defineJob`
     - `infra/warmup.defineWarmup`
-    - `infra/worktree.ensureMainWorktreeRoot`
-    - `network/live.serveCollection`
-    - `primitives/commit-list.runGit`
     - `primitives/log-channels.Log`
-  - DB schema: `plugins/tasks/plugins/sidequest-autopilot/server/internal/tables.ts`
-  - Entity extension of: `tasks/tasks-core` (table `tasks_ext_sidequest_triage`)
+    - `tasks/automations.automationConfigRegistration`
+    - `tasks/automations.defineAutomation`
+    - `tasks/task-track.listSidequestTasks`
+    - `tasks/task-track.taskTrackChanged`
+    - `tasks/task-triage.requestTriage`
+    - `tasks/task-triage.triageNotesOf`
+    - `tasks/task-triage.triageReadsOf`
+    - `tasks/tasks-core.taskStatusChanged`
   - Register:
     - `defineAutomation('sidequest-autopilot')`
     - `defineJob('sidequest-autopilot.task-ready')`
     - `defineJob('sidequest-autopilot.run-until')`
-    - `defineJob('sidequest-autopilot.triage')`
     - `defineJob('sidequest-autopilot.triage-on-task')`
     - `defineJob('sidequest-autopilot.triage-backfill')`
     - `defineWarmup('sidequest-autopilot.triage-backfill')`
-  - Resources:
-    - `sidequest-autopilot.triage.all` (keyed)
-    - `sidequest-autopilot.triage.all:rows` (keyed, point)
-  - Routes:
-    - `POST /api/sidequest-autopilot/triage/:taskId/run`
-    - `PUT /api/sidequest-autopilot/triage/:taskId/answer`
 
 <!-- AUTOGENERATED:END -->

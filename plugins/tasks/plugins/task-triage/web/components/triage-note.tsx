@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { mapRow, useLiveRow } from "@plugins/network/plugins/live/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
@@ -41,6 +41,7 @@ function NoteField({
   taskId: string;
   note: string;
 }): ReactElement {
+  const fetchEndpoint = useFetchEndpoint();
   const field = useEditableField({
     value: note,
     label: "Triage note",

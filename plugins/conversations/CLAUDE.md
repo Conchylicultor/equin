@@ -201,12 +201,12 @@
     - `SYSTEM_CATEGORY_ID`
     - `withdrawConversationTurn`
 - Cross-plugin:
-  - Imported by: 54 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 55 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×38
     - `apps` ×5
     - `review` ×3
+    - `tasks` ×3
     - `active-data` ×2
-    - `tasks` ×2
     - `debug/profiling/ops`
     - `hints/ask`
     - `infra/mcp/browser`

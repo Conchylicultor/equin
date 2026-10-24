@@ -1,4 +1,4 @@
-// @hash 8e73fc2bec7a
+// @hash 4b0594fa4363
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }

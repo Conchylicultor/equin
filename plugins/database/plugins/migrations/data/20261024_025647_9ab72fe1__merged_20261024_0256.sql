@@ -1,3 +1,6 @@
+-- singularity:snapshot id=2cb28db2-5a12-4481-8a5e-031257c7d1d5 parents=b27ec59b-3fd4-49ab-858e-965fe29627f1
+-- singularity:supersedes cb555e59
+-- singularity:supersedes cb555e59 <- 9cd37925
 -- singularity:phase expand
 CREATE TABLE IF NOT EXISTS "tasks_ext_triage" (
 	"parent_id" text PRIMARY KEY NOT NULL,

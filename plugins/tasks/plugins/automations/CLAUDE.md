@@ -150,7 +150,7 @@ outside them launches. It is written ONLY by a person's click, through two
 endpoints:
 
 - `taskApprovalEndpoint` (`PUT /api/tasks/:taskId/approval`, `{ approved }`) —
-  from the task itself (the web barrel's `setTaskApproval(taskId, approved)`;
+  from the task itself (the web barrel's `useSetTaskApproval()(taskId, approved)`;
   read back with `useTaskApproval(taskId)`, a point read of the set). `true`
   records `approved`, overwriting an `excluded`; `false` deletes only an
   `approved` row, so it never erases an exclusion. An approval wakes every
@@ -263,7 +263,7 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
 
 ## Plugin reference
 
-- Description: Automations in the agent manager: the Automations sidebar entry and list (a DataView over the catalog — trigger in words, next run, on/off, open task), the detail pane (Run now through Background activity; Behavior — enabled, model, push policy; Trigger — schedule presets or custom cron, or the event and its settle wait; the sections an automation contributes through Automations.Section; its sources; the Prompt template with Customized / Reset to default — PromptTemplateBlock, the same editor for any template field an automation declares; and the History of the tasks it filed or started — each row expandable into the Automations.TaskDetail contributions for its task), the presentation of the exposed `origin` Automation field in every list whose rows reach a task (its options the live catalog), and automationConfigContributions — how a declaring plugin registers its automation's config document (Automations.Config). Automations registry: defineAutomation declares something that files a task and launches its agent on its own (file kind) or launches agents on existing tasks a few at a time (launch kind: candidates, launched ONLY when a person approved them — the tasks_ext_launch_decision side-table, written by the decide-launch endpoint alone — concurrency slots held until a task settles or releaseLaunchedTask, and a maxLaunches batch per turn-on after which it turns itself off), and owns its job (automation.<id>) — its config document (defineAutomationConfig: enabled, push policy, model, excluded sources, trigger — a schedule re-installed live on change, or an event whose bursts settle into one run — and the prompt template), the one-open-task dedupe, the filled prompt, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.launch-decisions.all set, exposes the filing automation to every list whose rows reach a task (the `origin` field), and notifies the bell when an automated task needs its person. The automations.catalog value and the automations.tasks collection (the origin side-table, an automation's history) are the machine half's.
+- Description: Automations in the agent manager: the Automations sidebar entry and list (a DataView over the catalog — trigger in words, next run, on/off, open task), the detail pane (Run now through Background activity; Behavior — enabled, model, push policy; Trigger — schedule presets or custom cron, or the event and its settle wait; the sections an automation contributes through Automations.Section; its sources; the Prompt template with Customized / Reset to default — PromptTemplateBlock, the same editor for any template field an automation declares; and the History of the tasks it filed or started — each row expandable into the Automations.TaskDetail contributions for its task), the presentation of the exposed `origin` Automation field (its options the live catalog) and `approval` Approval field (Approved / Excluded / Not approved) in every list whose rows reach a task, useTaskApproval / useSetTaskApproval — one task's launch decision, read and written from the task, and automationConfigContributions — how a declaring plugin registers its automation's config document (Automations.Config). Automations registry: defineAutomation declares something that files a task and launches its agent on its own (file kind) or launches agents on existing tasks a few at a time (launch kind: candidates, launched ONLY when a person approved them — the tasks_ext_launch_decision side-table, one decision per task whatever automation launches it, written by the decide-launch and task-approval endpoints alone — concurrency slots held until a task settles or releaseLaunchedTask, and a maxLaunches batch per turn-on after which it turns itself off), and owns its job (automation.<id>) — its config document (defineAutomationConfig: enabled, push policy, model, excluded sources, trigger — a schedule re-installed live on change, or an event whose bursts settle into one run — and the prompt template), the one-open-task dedupe, the filled prompt, the filing (task + category + tasks_ext_origin row in one transaction) and the armed launch. Serves the automations.launch-decisions.all set, exposes the filing automation and the launch decision to every list whose rows reach a task (the `origin` and `approval` fields), and notifies the bell when an automated task needs its person. The automations.catalog value and the automations.tasks collection (the origin side-table, an automation's history) are the machine half's.
 - Web:
   - Slots:
     - `Automations.Config`
@@ -286,18 +286,19 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `Pane.Register` "automation-detail"
     - `Pane.Register` "automations"
     - `Shell.Sidebar` "Automations"
+    - `FieldPresentation.Register` "exposure:tasks_ext_launch_decision"
     - `FieldPresentation.Register` "exposure:tasks_ext_origin"
-  - Uses: 57 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 60 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×7
+    - `network/live` ×6
     - `primitives/live-state` ×6
     - `primitives/pane` ×5
-    - `network/live` ×4
     - `primitives/data-view` ×4
     - `config_v2` ×3
+    - `infra/endpoints` ×3
     - `tasks/task-status` ×3
     - `conversations/model-provider` ×2
     - `infra/background/catalog` ×2
-    - `infra/endpoints` ×2
     - `primitives/css/control-panel` ×2
     - `fields/dynamic-enum/config.DynamicEnum`
     - `primitives/app-shell.opensPane`
@@ -320,8 +321,11 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `automationConfigContributions`
     - `Automations`
     - `PromptTemplateBlock`
+    - `useSetTaskApproval`
+    - `useTaskApproval`
 - Server:
   - Contributes:
+    - `live.columns.expose` "tasks ← tasks_ext_launch_decision"
     - `live.columns.expose` "tasks ← tasks_ext_origin"
     - `resource.declare` "automations.catalog"
     - `resource.declare` "automations.launch-decisions.all"
@@ -371,7 +375,9 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `automations.tasks` (keyed, window)
     - `automations.tasks:groups` (push)
     - `automations.tasks:rows` (keyed, point)
-  - Routes: `POST /api/automations/:automationId/launch-decisions`
+  - Routes:
+    - `POST /api/automations/:automationId/launch-decisions`
+    - `PUT /api/tasks/:taskId/approval`
 - Machine:
   - Uses:
     - `network/live.serveCollection`
@@ -458,6 +464,7 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `ScheduleSettingsSchema`
     - `SETTLE_MAX_WAIT_FACTOR`
     - `SLOT_SETTLED_STATUSES`
+    - `taskApprovalEndpoint`
     - `taskOriginShape`
     - `templateVariables`
     - `TRIGGER_KIND_LABELS`
@@ -484,6 +491,7 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `tasks/outcome-report`
     - `tasks/reports-investigation`
     - `tasks/sidequest-autopilot`
+    - `tasks/task-triage`
     - `upstream`
 
 <!-- AUTOGENERATED:END -->

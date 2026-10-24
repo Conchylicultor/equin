@@ -211,7 +211,7 @@ The autopilot keeps only `triage` (bool): "Triage new sidequests automatically".
    - The launch list and candidates read task-triage's collection and comparator. `{{note}}` is added to its prompt.
    - `triage-section.tsx` keeps only the toggle and links to task-triage's config.
 8. **Card UI** (`web/components/triage-card.tsx`) per the prototype, from `primitives/css` layout primitives, `ui-kit` `Button`, and `Loading`.
-9. **Docs.** task-triage's `CLAUDE.md`, and the autopilot's and automations' `CLAUDE.md` updated. `./singularity build` regenerates the migration, registries and docs.
+9. **Docs.** task-triage's `CLAUDE.md`, and the autopilot's and automations' `CLAUDE.md` updated. `./equin build` regenerates the migration, registries and docs.
 
 ## Tests
 
@@ -230,7 +230,7 @@ The autopilot keeps only `triage` (bool): "Triage new sidequests automatically".
 
 ## Verification
 
-1. `./singularity build`, then `./singularity test plugins/tasks/plugins/task-triage plugins/tasks/plugins/sidequest-autopilot plugins/tasks/plugins/automations`.
+1. `./equin build`, then `./equin test plugins/tasks/plugins/task-triage plugins/tasks/plugins/sidequest-autopilot plugins/tasks/plugins/automations`.
 2. In the worktree app, open a **main-track** task with the autopilot off. Then:
    - Press Run triage. The card should show Queued, then Running.
    - Press **Conversation ↗**. The read-only agent's conversation should open.

@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useCallback, useMemo } from "react";
+import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { mapRow, useLiveRow } from "@plugins/network/plugins/live/web";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import {
@@ -25,11 +25,22 @@ export function useTaskApproval(
 
 /**
  * Approve a task for launch (overwriting an exclusion), or take the approval
- * back — which never erases an exclusion.
+ * back — which never erases an exclusion. A hook: the call goes over the
+ * subtree's endpoint transport.
  */
-export async function setTaskApproval(
+export function useSetTaskApproval(): (
   taskId: string,
   approved: boolean,
-): Promise<void> {
-  await fetchEndpoint(taskApprovalEndpoint, { taskId }, { body: { approved } });
+) => Promise<void> {
+  const fetchEndpoint = useFetchEndpoint();
+  return useCallback(
+    async (taskId, approved) => {
+      await fetchEndpoint(
+        taskApprovalEndpoint,
+        { taskId },
+        { body: { approved } },
+      );
+    },
+    [fetchEndpoint],
+  );
 }

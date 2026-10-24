@@ -181,7 +181,7 @@ pid liveness.
     - `release/source-checkout`
     - `stats/cost`
     - `tasks/attempt-work`
-    - `tasks/sidequest-autopilot`
+    - `tasks/task-triage`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/composition-namespace.ts`, `server/internal/spare-name.ts`, `server/internal/spare.ts`, `server/internal/spec.ts`, `server/internal/worktree-op.ts`, `server/internal/worktree.ts` (debt)
 - Core:
