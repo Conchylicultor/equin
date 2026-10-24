@@ -144,26 +144,23 @@ describe("H5 — notify races a fresh sub", () => {
   });
 
   test("H5c: keyed — a fresh sub races a FULL update, then a subsequent delta merges without drift", async () => {
-    // The deep one. Exercises `handleSub`'s unconditional keyed snapshot-seed
-    // (`runtime.ts:1989`) against a concurrent higher-versioned FULL push that
-    // already advanced the server snapshot.
+    // The deep one. Exercises `serveSub`'s keyed snapshot-seed against a
+    // concurrent higher-versioned FULL push that already advanced the server
+    // snapshot.
     //
-    // Its old rationale — "GREEN because the two FULL loads coalesce, so the
-    // sub-ack re-seeds the identical id→hash: idempotent" — is DEAD. The push
-    // drain now refuses the sub's older flight and runs its own load, so two
-    // loads run and the seeds are no longer identical by construction. That is
-    // asserted below rather than described, so this comment cannot quietly go
-    // false a second time.
+    // Two rationales for it are DEAD. "The two FULL loads coalesce, so the
+    // sub-ack re-seeds the identical id→hash" died when the push drain began
+    // refusing the sub's older flight (two loads run, asserted below). Its
+    // successor — "a read flight is never newer than the push's, so a re-seed
+    // can only regress the base to an older one, which ships extra rows, never
+    // missing ones" — was false too: a read that runs after a commit whose
+    // NOTIFY has not drained yet IS newer, and re-seeding it at the same version
+    // swallowed that commit's delta for every earlier holder
+    // (`runtime-reseed-ahead.test.ts`).
     //
-    // The argument that replaces it does not need coalescing. The sub-ack's seed
-    // comes from a READ, and a read flight is never newer than the push's — it
-    // either started earlier (older rows) or is the same flight. So the re-seed
-    // can only regress the diff base to an OLDER one. An older base makes the
-    // next diff report rows that did not actually change; it can never make it
-    // MISS a row that did. Extra rows on the wire, never missing ones — so the
-    // client still converges and no `handleSub` guard is needed. The conclusion
-    // is the same as before; the reason is not, and the reason is the part a
-    // future reader would have leaned on.
+    // What holds now: the sub-ack seeds only a tuple with NO snapshot. Here the
+    // push's FULL update seeded it first, so the stale sub-ack's value is never
+    // a base at all, and the next delta diffs against the push's.
     const supersedes: string[] = [];
     let fullLoads = 0;
     const h = createHarness({
@@ -215,9 +212,8 @@ describe("H5 — notify races a fresh sub", () => {
     const firstUpdate = h.frames.find((f) => f.kind === "update")!;
     expect(firstUpdate.version).toBe(base + 1);
 
-    // A SUBSEQUENT scoped change ships a delta the client must merge onto the base
-    // the sub-ack's re-seed left behind — at worst an older one, never a newer,
-    // so the delta is at worst redundant. No drift either way.
+    // A SUBSEQUENT scoped change ships a delta the client must merge onto the
+    // push's base, which the stale sub-ack left in place. No drift.
     ctl.setValue([
       { id: "a", n: 3 },
       { id: "b", n: 1 },

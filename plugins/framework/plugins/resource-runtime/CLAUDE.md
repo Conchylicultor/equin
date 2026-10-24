@@ -421,8 +421,8 @@ only) is the watermark of the FULL read the snapshot was last rebuilt from: set 
 `drainMembershipFull` (the flight watermark), the sub-ack seed (the `gatedRead`
 watermark) and `seedPersistedSnapshot` (the row's position) — and forgotten when
 that read's watermark is unknown, which skips floor persists until the next
-rebuild. A scoped drain that finds the snapshot re-seeded under it (a sub-ack
-landed while it read) writes `prev` + its refill and restores `prev`'s floor, never
+rebuild. A scoped drain that finds a snapshot seeded under it (a sub-ack
+landed while it read, the tuple holding none before) writes `prev` + its refill and restores `prev`'s floor, never
 the sub-ack's newer one. A scoped drain never captures one: its refill reads only the requested
 ids, so a drain-time capture could pass over a commit at a lower xid that this
 tuple has not been routed yet, and catch-up would skip it forever.
@@ -1160,12 +1160,17 @@ drain refuses a flight older than its notify, so the sub-ack's value may well co
 from a different, older read. For the DIFF that would be harmless — an older base
 ships EXTRA rows, never fewer — but the routed router reads membership off the same
 snapshot (a value-role change to a non-member is dropped), so a regressed base
-would drop a real change for good. So `serveSub` re-seeds only when no snapshot
-exists or the version is still the flight's `baseVersion` — the tuple's version
-when the read STARTED, co-produced by the flight like its etag, so a subscriber
-that joined a read begun before a push cannot re-seed from it: a push that
-advanced the snapshot meanwhile keeps its base (pinned by
-`runtime-table-routing.test.ts` §freshness and `runtime-snapshot-base.test.ts`).
+would drop a real change for good. A sub-ack read can also be NEWER than the
+snapshot: it ran after a commit whose NOTIFY has not drained yet. Seeded at the
+same version, that base absorbs the commit — its drain diffs to nothing and
+ships an ack, while the earlier holders drop the newer sub-ack as not newer than
+their own, so they never receive the row (main, 2026-10-24: a new conversation
+stuck Unranked in one tab while another tab subscribed the same ranks tuple). So
+`serveSub` seeds **only when the tuple has no snapshot**: a held snapshot is the
+base every earlier holder was served, and can then only lag a joiner's read —
+a redundant row on the next delta, never a missing one (pinned by
+`runtime-reseed-ahead.test.ts`, `runtime-table-routing.test.ts` §freshness and
+`runtime-snapshot-base.test.ts`).
 The other writer is a drain: a tuple's snapshot belongs to its **tracking span**
 (`entry.spans`, a fresh number at the global 0→1, gone at N→0), and every keyed
 drain writes the snapshot — and ships its frames — only if the span it started

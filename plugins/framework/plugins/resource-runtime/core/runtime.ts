@@ -1077,7 +1077,6 @@ interface FlightValue {
   etag: string | undefined;
   watermark: string | undefined;
   ackTx: readonly string[] | undefined;
-  baseVersion: number;
 }
 
 /**
@@ -3034,7 +3033,6 @@ export function createResourceRuntime(
     if (ctx) {
       // A scoped load bypasses the inflight entirely, so it can never join
       // anything and `notBefore` has nothing to refuse — ignored, not forgotten.
-      const baseVersion = entry.versions.get(paramsKey(params)) ?? 0;
       const sink = { raw: undefined as unknown };
       return {
         value: await timedLoad(entry, params, ctx, sink),
@@ -3042,7 +3040,6 @@ export function createResourceRuntime(
         etag: undefined,
         watermark: undefined,
         ackTx: seedAckTx,
-        baseVersion,
       };
     }
     // Gate-after-dedup: when `gated` (the read path), the read-admission slot is
@@ -3062,8 +3059,6 @@ export function createResourceRuntime(
     // only if captured before the loader's first read), then the loader. Runs
     // only in the STARTER's frame; joiners coalesce onto the resolved object.
     const load = async (): Promise<FlightValue> => {
-      // Read before any await: the version the value below is at least as new as.
-      const baseVersion = entry.versions.get(paramsKey(params)) ?? 0;
       let watermark: string | undefined;
       if (opts.captureWatermark) {
         try {
@@ -3084,7 +3079,6 @@ export function createResourceRuntime(
         etag: seedEtag,
         watermark,
         ackTx: seedAckTx,
-        baseVersion,
       };
     };
     return inflight.run(
@@ -5689,9 +5683,8 @@ export function createResourceRuntime(
     // is dropped whole — no snapshot, no frame, no ack (whoever asked for one is
     // gone). Nothing cascades from a membership entry (D32).
     if (snapshotOwner(entry, pk) !== owner) return;
-    // A sub-ack may have re-seeded the snapshot (and raised its base floor to
-    // its own read's watermark) while this drain read: its `versions ===
-    // baseVersion` test holds until this drain bumps the version below. The
+    // A sub-ack may have seeded the snapshot (and set its base floor to its own
+    // read's watermark) while this drain read, when there was none before. The
     // snapshot written here is still `prev` + this refill, so its floor is
     // `prev`'s — keeping the sub-ack's would claim a newer base than the value
     // has, and a floor persist into a missing row (or under another writer's
@@ -6821,12 +6814,11 @@ export function createResourceRuntime(
     let raw: unknown;
     let etag: string | undefined;
     let watermark: string | undefined;
-    let baseVersion: number;
     try {
       // Origin = the subscription: establishes an entry context so the loader
       // span (and any gate waits it charges) is attributed to this `sub` request
       // instead of running with `parent: null`. Gated by the read-admission cap.
-      ({ value, raw, etag, watermark, baseVersion } = await gatedRead(
+      ({ value, raw, etag, watermark } = await gatedRead(
         entry,
         params,
         freshEtag,
@@ -6858,24 +6850,28 @@ export function createResourceRuntime(
     // resumes one job later; it must still run first — it sends its update
     // frame synchronously (H5a: a push beats a racing parked sub-ack) and, for
     // keyed mode, performs the first diffKeyed (no snapshot yet → FULL update)
-    // before this sub-ack's idempotent re-seed below (H5c). Before
+    // before this sub-ack's seed below, which then finds a snapshot and keeps it (H5c). Before
     // gate-after-dedup the starter paid these hops implicitly in the
     // read-admission slot release chain; with the gate now inside the
     // single-flight, the yield is the explicit, pinned equivalent.
     await Promise.resolve();
     // Keyed entries: seed the per-pk snapshot from the full sub-ack value so the
     // next notify can diff against it. The sub-ack itself stays full-value.
-    // Never over a snapshot a push advanced since this value's read STARTED
-    // (the flight's `baseVersion`, not the version this subscriber observed —
-    // a joiner observes a push that landed after the flight it joins began):
-    // that push's base is at least as new as its change, while this read may
-    // predate it. Regressing it would be harmless to a diff (an older base
-    // ships extra rows, never fewer), but the router reads membership off it —
-    // a value-role change to a host the regressed base lacks is dropped as a
-    // non-member's, for good.
+    // ONLY when the tuple has none: a held snapshot is the base every earlier
+    // holder was served, and this read may be NEWER than it as well as older —
+    // older when a push advanced the snapshot since the flight began (H5c),
+    // NEWER when it ran after a commit whose NOTIFY has not drained yet. An
+    // older base would lose a change for good (the router reads membership off
+    // it, and a value-role change to a host the base lacks is dropped as a
+    // non-member's); a newer one, at the same version, absorbs the commit — its
+    // drain diffs to nothing, ships an ack, and the earlier holders, who drop
+    // this sub-ack as not newer than what they hold, never receive the row
+    // (runtime-reseed-ahead.test.ts: the queue's Unranked conversation). Kept,
+    // the base can only lag this read, which costs this holder a redundant row
+    // on the next delta, never a missing one.
     if (entry.mode === "keyed") {
       const snapshots = (entry.snapshots ??= new Map());
-      if (!snapshots.has(pk) || (entry.versions.get(pk) ?? 0) === baseVersion) {
+      if (!snapshots.has(pk)) {
         snapshots.set(pk, snapshotOf(entry, value));
         reseedOrderSigs(entry, params, value); // lifecycle mirrors the snapshot seed
         // The new base's floor is the flight's own watermark (C19): the value
