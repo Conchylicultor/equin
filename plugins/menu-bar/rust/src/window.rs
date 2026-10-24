@@ -3,18 +3,18 @@
 //! `equin-<id>`, the shim's `StartupWMClass`), and ONE window on the app's URL
 //! with `?embed=1`. The window gets no IPC — no capability names its label.
 //!
-//! It keeps to the app's scope (its URL's origin and base path, `shim::in_scope`):
-//! a navigation out of it is cancelled and handed to the installed app owning
-//! the URL, else the default browser (`shim::hand_off`). Three catches, since
-//! a navigation handler cannot tell the main frame from an iframe:
-//! - `src/scope.js` (main frame): out-of-scope link clicks and router pushes
-//!   become `window.open`;
+//! It keeps to its namespace (`window_scope`: the app URL's whole origin, not
+//! its base path), so the app's own ways to other apps — the launcher, a link
+//! into another app — stay in this window. A navigation off the origin is
+//! cancelled and handed to the installed app owning the URL, else the default
+//! browser (`shim::hand_off`). Three catches, since a navigation handler cannot
+//! tell the main frame from an iframe:
+//! - `src/scope.js` (main frame): off-origin link clicks become `window.open`;
 //! - the new-window handler: every `window.open` / `target=_blank` is handed
 //!   off, never a second webview window;
-//! - the navigation handler cancels a same-origin load another installed app
-//!   owns; any other main-frame load that lands outside the scope is handed
-//!   off and stepped back from once it has loaded (an iframe may load any
-//!   origin, so only the page-load event — main frame only — can tell).
+//! - any other main-frame load that lands off the origin is handed off and
+//!   stepped back from once it has loaded (an iframe may load any origin, so
+//!   only the page-load event — main frame only — can tell).
 
 use std::path::PathBuf;
 
@@ -35,7 +35,7 @@ pub struct Launch {
     pub app_id: String,
     /// The window title (the shim's name).
     pub name: String,
-    /// The app's URL: its origin and base path are the window's scope.
+    /// The app's URL: where the window opens; its origin is the window's scope.
     pub base: Url,
     /// Where to open — `base` or a URL inside it.
     pub url: Url,
@@ -101,12 +101,22 @@ fn focus(window: &WebviewWindow) {
     let _ = window.set_focus();
 }
 
+/// What the window may show: every page of the app URL's namespace (its
+/// origin), so moving to another app of it keeps this window.
+fn window_scope(base: &Url) -> Url {
+    let mut scope = base.clone();
+    scope.set_path("/");
+    scope.set_query(None);
+    scope.set_fragment(None);
+    scope
+}
+
 /// A later launch's hand-off: come forward, and go to its URL when it is ours.
-fn on_handoff(app: &AppHandle, base: &Url, url: Option<Url>) {
+fn on_handoff(app: &AppHandle, scope: &Url, url: Option<Url>) {
     let Some(window) = app.get_webview_window(LABEL) else { return };
     focus(&window);
     if let Some(url) = url {
-        if shim::in_scope(base, &url) {
+        if shim::in_scope(scope, &url) {
             if let Err(e) = window.navigate(shim::embedded(&url)) {
                 eprintln!("equin-desktop: cannot navigate to {url}: {e}");
             }
@@ -116,35 +126,21 @@ fn on_handoff(app: &AppHandle, base: &Url, url: Option<Url>) {
     }
 }
 
-fn scope_script(base: &Url) -> String {
+fn scope_script(scope: &Url) -> String {
     let scope = serde_json::json!({
-        "origin": base.origin().ascii_serialization(),
-        "base": base.path().trim_end_matches('/'),
+        "origin": scope.origin().ascii_serialization(),
+        "base": scope.path().trim_end_matches('/'),
     });
     SCOPE_JS.replace("__EQUIN_SCOPE__", &scope.to_string())
 }
 
 fn build_window(app: &AppHandle, launch: &Launch) -> tauri::Result<WebviewWindow> {
-    let nav_base = launch.base.clone();
-    let own_id = launch.app_id.clone();
-    let load_base = launch.base.clone();
+    let scope = window_scope(&launch.base);
     let home = shim::embedded(&launch.base);
     let mut builder = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::External(shim::embedded(&launch.url)))
         .title(&launch.name)
         .min_inner_size(480.0, 360.0)
-        .initialization_script(scope_script(&launch.base))
-        .on_navigation(move |url| {
-            if !web(url) || shim::in_scope(&nav_base, url) || url.origin() != nav_base.origin() {
-                return true;
-            }
-            match shim::owner_of(url) {
-                Some(owner) if owner.app_id != own_id => {
-                    hand_off(url.clone());
-                    false
-                }
-                _ => true,
-            }
-        })
+        .initialization_script(scope_script(&scope))
         .on_new_window(|url, _features| {
             if web(&url) {
                 hand_off(url);
@@ -156,11 +152,11 @@ fn build_window(app: &AppHandle, launch: &Launch) -> tauri::Result<WebviewWindow
                 return;
             }
             let url = payload.url();
-            if !web(url) || shim::in_scope(&load_base, url) {
+            if !web(url) || shim::in_scope(&scope, url) {
                 eprintln!("equin-desktop: loaded {url}");
                 return;
             }
-            eprintln!("equin-desktop: {url} is outside the app; handing it off");
+            eprintln!("equin-desktop: {url} is outside the namespace; handing it off");
             hand_off(url.clone());
             let back = format!(
                 "if (history.length > 1) history.back(); else location.replace({});",
@@ -221,11 +217,11 @@ pub fn run(launch: Launch) {
             let handle = app.handle().clone();
             build_window(&handle, &launch)?;
             if let Some(listener) = listener {
-                let base = launch.base.clone();
+                let scope = window_scope(&launch.base);
                 instance::serve(listener, move |url| {
                     let target = handle.clone();
-                    let base = base.clone();
-                    let _ = handle.run_on_main_thread(move || on_handoff(&target, &base, url));
+                    let scope = scope.clone();
+                    let _ = handle.run_on_main_thread(move || on_handoff(&target, &scope, url));
                 });
             }
             Ok(())
@@ -257,9 +253,19 @@ mod tests {
 
     #[test]
     fn scope_script_is_filled() {
-        let js = scope_script(&Url::parse("http://equin.localhost:9000/mail").unwrap());
+        let js = scope_script(&window_scope(&Url::parse("http://equin.localhost:9000/mail").unwrap()));
         assert!(!js.contains("__EQUIN_SCOPE__"));
-        assert!(js.contains(r#""base":"/mail""#));
+        assert!(js.contains(r#""base":"""#));
         assert!(js.contains(r#""origin":"http://equin.localhost:9000""#));
+    }
+
+    #[test]
+    fn the_window_roams_its_namespace() {
+        let scope = window_scope(&Url::parse("http://equin.localhost:9000/mail/inbox?embed=1").unwrap());
+        let u = |s: &str| Url::parse(s).unwrap();
+        assert!(shim::in_scope(&scope, &u("http://equin.localhost:9000/home")));
+        assert!(shim::in_scope(&scope, &u("http://equin.localhost:9000/agents/c/1")));
+        assert!(!shim::in_scope(&scope, &u("http://other.localhost:9000/home")));
+        assert!(!shim::in_scope(&scope, &u("https://example.com/")));
     }
 }

@@ -1,6 +1,6 @@
-// An installed app's window keeps to its app (src/window.rs). Main frame only,
-// no IPC: an in-page navigation out of the app's scope — a link click, or the
-// SPA's own pushState — becomes `window.open(url)`, which the native
+// An installed app's window keeps to its scope (src/window.rs: its namespace's
+// origin, base ""). Main frame only, no IPC: an in-page navigation out of the
+// scope — a link click, or the SPA's own pushState — becomes `window.open(url)`, which the native
 // new-window handler hands to the installed app owning the URL, else the
 // default browser. `__EQUIN_SCOPE__` is replaced with { origin, base }.
 (function () {

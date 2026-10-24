@@ -31,15 +31,17 @@ namespaces and URLs, never an app.
   per app: a per-user Unix socket `equin-app-<id>.sock` ($TMPDIR /
   $XDG_RUNTIME_DIR) — a later launch hands its URL over and exits; the
   running window comes forward and navigates when the URL is in scope.
-  **Scope** = the app URL's origin + base path. Out-of-scope navigation goes to
-  the installed app owning the URL (read from the shims on disk —
-  `rust/src/shim.rs`; the shim set is the installed set), else the default
-  browser: `rust/src/scope.js` (main frame) turns out-of-scope link clicks and
-  router pushes into `window.open`; every new-window request is handed off and
-  denied; the navigation handler cancels a same-origin load another installed
-  app owns; any other main-frame load landing outside the scope is handed off
-  and stepped back from (an iframe may load any origin, so only the main-frame
-  page-load event can tell). macOS bundles need an ATS exception for
+  **Window scope** = the app URL's whole origin (its namespace), not its base
+  path: the app's own ways to other apps (the launcher, a link into another
+  app) stay in the window. (Routing a launch or hand-off *to* an app still
+  uses the app's base path — `shim::in_scope` against the shim URL.)
+  Navigation off the origin goes to the installed app owning the URL (read
+  from the shims on disk — `rust/src/shim.rs`; the shim set is the installed
+  set), else the default browser: `rust/src/scope.js` (main frame) turns
+  off-origin link clicks into `window.open`; every new-window request is
+  handed off and denied; any other main-frame load landing off the origin is
+  handed off and stepped back from (an iframe may load any origin, so only the
+  main-frame page-load event can tell). macOS bundles need an ATS exception for
   `localhost` + subdomains (`NSExceptionAllowsInsecureHTTPLoads`), else
   WKWebView never loads `http://*.localhost` — `equin.app` and every shim carry it.
 - **Bridge** (`rust/src/bridge.js`, the contract `core/` mirrors): an
