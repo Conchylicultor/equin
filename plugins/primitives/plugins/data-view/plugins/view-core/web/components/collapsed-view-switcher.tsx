@@ -23,7 +23,10 @@ import { PopupOpenScope } from "@plugins/primitives/plugins/overlay/plugins/popu
 import type { ViewTypeMeta } from "../../core";
 import type { ResolvedViewInstance } from "../internal/resolve-instances";
 import type { ViewActionsCore } from "../internal/use-view-model";
-import { ViewSettingsPopover } from "./view-settings-popover";
+import {
+  type HostViewSettings,
+  ViewSettingsPopover,
+} from "./view-settings-popover";
 import { AddViewMenuItems } from "./add-view-menu-items";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -63,12 +66,15 @@ export function CollapsedViewSwitcher<T extends ViewTypeMeta>({
   activeId,
   onSelect,
   actions,
+  hostSettings,
   appearance = "chip",
 }: {
   instances: ResolvedViewInstance<T>[];
   activeId: string;
   onSelect: (id: string) => void;
   actions: ViewActionsCore;
+  /** The consumer's own per-instance settings (see `ViewSettingsPopover`). */
+  hostSettings?: HostViewSettings<T>;
   /** The trigger's shape — see above. Default `"chip"`. */
   appearance?: "chip" | "row";
 }): ReactNode {
@@ -197,6 +203,7 @@ export function CollapsedViewSwitcher<T extends ViewTypeMeta>({
               <ViewSettingsPopover
                 instance={settingsInstance}
                 actions={actions}
+                hostSettings={hostSettings}
                 onClose={() => setSettingsForId(null)}
               />
             </ControlPanelPopover>

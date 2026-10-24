@@ -17,7 +17,10 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { ViewTypeMeta } from "../../core";
 import type { ResolvedViewInstance } from "../internal/resolve-instances";
 import type { ViewActionsCore } from "../internal/use-view-model";
-import { ViewSettingsPopover } from "./view-settings-popover";
+import {
+  type HostViewSettings,
+  ViewSettingsPopover,
+} from "./view-settings-popover";
 import { AddViewMenuItems } from "./add-view-menu-items";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
@@ -34,11 +37,14 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
   activeId,
   onSelect,
   actions,
+  hostSettings,
 }: {
   instances: ResolvedViewInstance<T>[];
   activeId: string;
   onSelect: (id: string) => void;
   actions: ViewActionsCore;
+  /** The consumer's own per-instance settings (see `ViewSettingsPopover`). */
+  hostSettings?: HostViewSettings<T>;
 }): ReactNode {
   // WHICH view's settings are open, not merely whether some are: a bare boolean
   // stayed true when the active instance changed under it, so the panel silently
@@ -101,6 +107,7 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
                       <ViewSettingsPopover
                         instance={r}
                         actions={actions}
+                        hostSettings={hostSettings}
                         onClose={() => setSettingsForId(null)}
                       />
                     </ControlPanelPopover>

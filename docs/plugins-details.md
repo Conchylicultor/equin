@@ -38370,13 +38370,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
-        - Uses: 112 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 115 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `network/live` ×18
           - `primitives/css/ui-kit` ×15
-          - `primitives/data-view/view-core` ×8
+          - `primitives/data-view/view-core` ×9
           - `primitives/live-state` ×6
           - `primitives/css/control-panel` ×4
           - `primitives/slot-render` ×4
+          - `primitives/css/toggle-chip` ×3
           - `primitives/tree` ×3
           - `config_v2` ×2
           - `primitives/collapsible` ×2
@@ -38407,7 +38408,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/scroll.Scroll`
           - `primitives/css/surface.Surface`
           - `primitives/css/text.Text`
-          - `primitives/css/toggle-chip.ToggleChip`
           - `primitives/css/yield.yieldClass`
           - `primitives/dom/auto-scroll.KeepAnchorAcross`
           - `primitives/dom/in-view.createInViewWatcher`
@@ -38701,6 +38701,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveSearchableColumn`
           - `LiveSourceScope`
           - `ManualOrderConfig`
+          - `Nesting`
           - `PresetId`
           - `PropertyEntry`
           - `RowDragConfig`
@@ -38740,6 +38741,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isSectionsToolbar`
           - `optionDescendants`
           - `orderFieldsBySection`
+          - `PARENT_FIELD_ID`
           - `presetIdKind`
           - `scopeFilterRows`
           - `SHARED_FIELD_SECTION`
@@ -39097,6 +39099,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.Icon`
             - Exports (types):
               - `AssertStableGetters`
+              - `HostViewSettings`
               - `ResolvedViewInstance`
               - `ViewActionsCore`
               - `ViewGetter`

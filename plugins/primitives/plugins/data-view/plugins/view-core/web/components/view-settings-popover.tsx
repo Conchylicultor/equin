@@ -11,6 +11,15 @@ import type { ViewActionsCore } from "../internal/use-view-model";
 import { symbol, type SavedSymbolName } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
+/**
+ * A consumer's own settings for one instance, drawn in its settings panel
+ * (`null` = nothing for this instance). Written through `actions.updateView`.
+ */
+export type HostViewSettings<T extends ViewTypeMeta> = (
+  instance: ResolvedViewInstance<T>,
+  actions: ViewActionsCore,
+) => ReactNode;
+
 const contentCopyIcon = symbol("content-copy");
 const deleteIcon = symbol("delete");
 // The same field the config row declares, so the panel and the Settings pane
@@ -39,15 +48,21 @@ const viewIconField = iconField({ label: "Icon" });
  * surface was offered the tree. The stored descriptor stays server-safe (no
  * `useVariants`). `updateView(id, v, { merge: true })` shallow-merges over the
  * raw view, preserving any host-injected keys (sort/filter) the sub-form omits.
+ *
+ * `hostSettings` is the consumer's own settings for the instance, drawn under
+ * the view picker — the seam that keeps the engine type-agnostic: view-core
+ * names no host concern, the host decides what (if anything) to draw.
  */
 export function ViewSettingsPopover<T extends ViewTypeMeta>({
   instance,
   actions,
   onClose,
+  hostSettings,
 }: {
   instance: ResolvedViewInstance<T>;
   actions: ViewActionsCore;
   onClose: () => void;
+  hostSettings?: HostViewSettings<T>;
 }): ReactNode {
   const id = instance.instance.id;
 
@@ -100,6 +115,8 @@ export function ViewSettingsPopover<T extends ViewTypeMeta>({
           }
         />
       </ControlPanel.Section>
+
+      {hostSettings?.(instance, actions)}
 
       <ControlPanel.Footer>
         <ControlPanel.Row

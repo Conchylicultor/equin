@@ -21,6 +21,7 @@ import type {
   FilterScope,
   FoldRule,
   GroupByRule,
+  Nesting,
   PropertyEntry,
   SortRule,
   ViewState,
@@ -214,6 +215,18 @@ function readFilterScope(
 }
 
 /**
+ * Read the authored nesting off a row's raw variant value. Only the known
+ * spellings count; anything else (absent, a typo) is the default `nested`,
+ * reported as `undefined` so the state stays terse.
+ */
+function readNesting(view: VariantValue | undefined): Nesting | undefined {
+  const raw = view?.nesting;
+  return raw === "nested" || raw === "flat" || raw === "roots"
+    ? raw
+    : undefined;
+}
+
+/**
  * A view instance's presentation as a SECTION of a `{ kind: "sections" }`
  * surface — host-injected keys of the config row read like `groupBy`, plus the
  * device-local collapse. Meaningless (and unread) under any other chrome.
@@ -239,6 +252,7 @@ function deriveViewState(
     groupBy: readGroupBy(view),
     fold: readFold(view),
     filterScope: readFilterScope(view),
+    nesting: readNesting(view),
     query,
     expanded,
   };

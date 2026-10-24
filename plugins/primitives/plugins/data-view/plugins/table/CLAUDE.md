@@ -64,7 +64,10 @@ height-keeping one. Drawing them needs a leading full-span row on
 
 `TableView` is two components chosen by `props.hierarchy`: `FlatTableView`
 (everything above, unchanged) and `NestedTableView`. The view is offered on every
-source and nests only when the source has a `hierarchy`; it declares `nestsHierarchy: true`, which
+source and nests only when the source has a `hierarchy` and the view's
+`nesting` (Sub-items) is `nested` — the host passes `hierarchy` only then, so a
+table set to Flat / Parents only is the flat table (data-view's CLAUDE.md,
+"Hierarchy"); it declares `nestsHierarchy: true`, which
 tells the host to apply no fold and no flat manual order to it there (see
 data-view's CLAUDE.md, "Hierarchy"). A tree is a table with no columns. Old saved
 `type: "tree"` rows upgrade through the `tree-view-to-table` config migration

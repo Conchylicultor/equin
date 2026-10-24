@@ -115,6 +115,7 @@ import { BandSurface } from "./band-surface";
 import { HostedOptions } from "./toolbar/hosted-options";
 import { hostedCreators } from "./creators-control";
 import { ViewSection } from "./view-section";
+import { subItemsSettings } from "./sub-items-settings";
 import {
   afterOpen,
   beforeOpen,
@@ -122,6 +123,7 @@ import {
   type Activation,
 } from "@plugins/primitives/plugins/link-gesture/core";
 import { CollectRowActivation } from "../internal/collection-row-activation";
+import { rootRows, withParentField } from "../internal/flat-hierarchy";
 import type { CollectionActivation } from "../internal/fold-activations";
 import {
   DataViewControlsProvider,
@@ -374,7 +376,7 @@ function DataViewBodyInner<TRow>(
   },
 ): ReactNode {
   const {
-    rows,
+    rows: heldRows,
     rowKeyOf: rowKey,
     collectionActivation,
     searchAccessor,
@@ -423,25 +425,20 @@ function DataViewBodyInner<TRow>(
     );
   }
 
-  // The schema is already fully merged: `props.fields` here arrives AFTER
-  // `DataViewBody` derived it and folded the global `DataViewSlots.FieldExtension`
-  // slot (custom columns, keyed by `{ storageKey, rowKey }`) into it. So the merged fields reach the
-  // controllers and render-props uniformly with no custom-columns knowledge here.
-  const fields = props.fields;
-
   // Derive the `hasChildren` predicate once from `hierarchy.getParentId` over
-  // `rows` (absent hierarchy → always `false`). Flat views (table/gallery) use
-  // it for a correct per-row `hasChildren`; the tree uses its own node count.
+  // the held rows (absent hierarchy → always `false`). Flat views (table/gallery)
+  // use it for a correct per-row `hasChildren` — still true of a parent drawn
+  // flat — and the nested table uses its own node count.
   const hasChildren = useMemo(() => {
     const parents = new Set<string>();
-    if (hierarchy && rows) {
-      for (const row of rows) {
+    if (hierarchy && heldRows) {
+      for (const row of heldRows) {
         const pid = hierarchy.getParentId(row);
         if (pid != null) parents.add(pid);
       }
     }
     return (rowId: string) => parents.has(rowId);
-  }, [rows, hierarchy]);
+  }, [heldRows, hierarchy]);
 
   // The list's own row actions plus every one its collection declares
   // (`DataViewSlots.CollectionItemAction`) — one set to the views.
@@ -555,15 +552,43 @@ function DataViewBodyInner<TRow>(
     [storedState, searchQuery],
   );
 
+  // The active view nests THIS source's rows: a view type that can nest (the
+  // table), over a hierarchy, with its `nesting` (Sub-items) left at `nested`. Nested, a
+  // view has no flat section of rows to fold and no flat rank to drag. The
+  // ONE decision: a view receives `hierarchy` only while it nests (renderProps
+  // below), so the table's own nested/flat switch cannot disagree with it.
+  const canNest =
+    hierarchy != null && activeInstance.viewType.nestsHierarchy === true;
+  const nesting = canNest ? (activeState.nesting ?? "nested") : "nested";
+  const activeNests = canNest && nesting === "nested";
+  // A nesting view told to draw its hierarchy flat (Sub-items: Flat / Parents
+  // only): `roots` keeps the top-level rows only, and `flat` adds the derived
+  // Parent field to the schema — a parent, not a nesting, carries the
+  // structure. A view type that never nests (list, gallery) is left as is.
+  const rows = useMemo(
+    () =>
+      hierarchy != null && nesting === "roots" && heldRows
+        ? rootRows(heldRows, rowKey, hierarchy)
+        : heldRows,
+    [hierarchy, heldRows, nesting, rowKey],
+  );
+  // The schema is already fully merged: `props.fields` here arrives AFTER
+  // `DataViewBody` derived it and folded the global `DataViewSlots.FieldExtension`
+  // slot (custom columns, keyed by `{ storageKey, rowKey }`) into it. So the merged fields reach the
+  // controllers and render-props uniformly with no custom-columns knowledge here.
+  const fields = useMemo(
+    () =>
+      hierarchy != null && nesting === "flat" && heldRows
+        ? withParentField(props.fields, heldRows, rowKey, hierarchy)
+        : props.fields,
+    [hierarchy, nesting, heldRows, rowKey, props.fields],
+  );
+
   // The fold in effect: suspended while a search is typed (a match must never
   // hide behind "…"). Computed from `activeState` BEFORE the live branch below
   // zeroes `query`, and carried through that branch like `properties`.
   // A view that draws no fold lines gets no fold at all — applying one would
   // hold its live paging for rows it never set aside.
-  // The active view nests THIS source's rows (the table over a hierarchy).
-  // Nested, a view has no flat section of rows to fold and no flat rank to drag.
-  const activeNests =
-    hierarchy != null && activeInstance.viewType.nestsHierarchy === true;
   const activeSupportsFold =
     activeInstance.viewType.supportsFold !== false && !activeNests;
   const fold = activeSupportsFold ? effectiveFold(activeState) : undefined;
@@ -1232,7 +1257,10 @@ function DataViewBodyInner<TRow>(
             searchAccessor as DataViewRenderProps<unknown>["searchAccessor"],
           rowTone: rowTone as DataViewRenderProps<unknown>["rowTone"],
           cover: cover as DataViewRenderProps<unknown>["cover"],
-          hierarchy: hierarchy as DataViewRenderProps<unknown>["hierarchy"],
+          // Only while the view nests: drawn flat, it is a view of rows.
+          hierarchy: (activeNests
+            ? hierarchy
+            : undefined) as DataViewRenderProps<unknown>["hierarchy"],
           // `manualOrderActive` already implies `cfg != null` (TS cannot see it
           // through the boolean), hence the assertion.
           manualOrder: manualOrderActive
@@ -1459,6 +1487,7 @@ function DataViewBodyInner<TRow>(
               onQueryChange={onQueryChange}
               searchPlaceholder={chrome.searchPlaceholder}
               actions={viewModel.actions}
+              hostSettings={hierarchy != null ? subItemsSettings : undefined}
             >
               {body}
             </ViewSection>

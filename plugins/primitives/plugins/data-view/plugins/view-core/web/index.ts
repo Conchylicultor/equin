@@ -14,7 +14,10 @@ export { buildViewConfigContributions } from "./internal/config-registrations";
 export { EditableViewSwitcher } from "./components/editable-view-switcher";
 export { CollapsedViewSwitcher } from "./components/collapsed-view-switcher";
 export { AddViewMenuItems } from "./components/add-view-menu-items";
-export { ViewSettingsPopover } from "./components/view-settings-popover";
+export {
+  type HostViewSettings,
+  ViewSettingsPopover,
+} from "./components/view-settings-popover";
 
 export default {
   description:

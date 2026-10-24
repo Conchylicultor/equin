@@ -36,6 +36,7 @@ export type {
   FilterScope,
   FilterScopeAccessors,
 } from "./internal/filter-scope";
+export { PARENT_FIELD_ID, type Nesting } from "./internal/nesting";
 
 export {
   atLeastCount,

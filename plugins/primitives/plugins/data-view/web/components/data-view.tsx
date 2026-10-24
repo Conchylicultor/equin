@@ -45,6 +45,7 @@ import { useOrphanViewTypeGuard } from "../internal/use-orphan-view-type-guard";
 import { hoverRevealGroup } from "@plugins/primitives/plugins/hover-reveal/web";
 import { CreatorsControl, hostedCreators } from "./creators-control";
 import { DataViewBody, DataViewSectionsBody } from "./data-view-body";
+import { subItemsSettings } from "./sub-items-settings";
 
 /**
  * Host entry point. Every DataView is config-backed (config mode is universal):
@@ -95,6 +96,7 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
       backdrop={props.backdrop}
       reserve={props.reserve}
       pinnedView={props.pinnedView}
+      hierarchical={props.hierarchy != null}
       renderSections={(instances, chrome, readyModel) => (
         <DataViewSectionsBody<TRow>
           {...availableProps(props)}
@@ -168,6 +170,8 @@ export function DataViewShellFrame(props: {
   reserve?: DataViewReserve;
   /** Present → this host shows one named instance and paints no switcher. */
   pinnedView?: string;
+  /** The rows are a hierarchy: the view settings offer Sub-items. */
+  hierarchical?: boolean;
   /**
    * The sentence a needsMachine read's `unavailable` arm carries: present →
    * the surface shows it in place of every instance (the stand-in chrome
@@ -209,6 +213,7 @@ export function DataViewShellFrame(props: {
     backdrop,
     reserve,
     pinnedView,
+    hierarchical,
     unavailable,
     children,
     renderSections,
@@ -399,6 +404,7 @@ export function DataViewShellFrame(props: {
     activeId: activeViewId,
     onSelect: viewModel.setActiveView,
     actions: viewModel.actions,
+    hostSettings: hierarchical ? subItemsSettings : undefined,
   };
   const chrome: DataViewShellChrome = {
     // A pinned host paints NO switcher — the nodes themselves, not just its

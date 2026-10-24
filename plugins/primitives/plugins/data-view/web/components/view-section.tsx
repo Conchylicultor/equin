@@ -20,6 +20,7 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { WithTooltip } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import {
+  type HostViewSettings,
   ViewSettingsPopover,
   type ResolvedViewInstance,
 } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
@@ -87,6 +88,8 @@ export function ViewSection(props: {
   onQueryChange: (next: string) => void;
   searchPlaceholder: string | undefined;
   actions: ViewActions;
+  /** The host's own per-instance settings (the Sub-items section). */
+  hostSettings: HostViewSettings<DataViewContribution> | undefined;
   /** The view's body (or its loading / error state). */
   children: ReactNode;
 }): ReactNode {
@@ -148,6 +151,7 @@ export function ViewSection(props: {
                   searchPlaceholder={searchPlaceholder}
                   instance={instance}
                   actions={actions}
+                  hostSettings={props.hostSettings}
                   description={description}
                 />
                 {creators && creators.length > 0 ? (
@@ -189,6 +193,7 @@ function SectionOptions(props: {
   searchPlaceholder: string | undefined;
   instance: ResolvedViewInstance<DataViewContribution>;
   actions: ViewActions;
+  hostSettings: HostViewSettings<DataViewContribution> | undefined;
   description: string | null;
 }): ReactNode {
   const { open, onOpenChange, controls } = props;
@@ -224,6 +229,7 @@ function SectionRootPanel(props: {
   searchPlaceholder: string | undefined;
   instance: ResolvedViewInstance<DataViewContribution>;
   actions: ViewActions;
+  hostSettings: HostViewSettings<DataViewContribution> | undefined;
   description: string | null;
 }): ReactNode {
   const {
@@ -267,6 +273,7 @@ function SectionRootPanel(props: {
               <ViewSettingsPopover
                 instance={instance}
                 actions={actions}
+                hostSettings={props.hostSettings}
                 onClose={close}
               />
             ),

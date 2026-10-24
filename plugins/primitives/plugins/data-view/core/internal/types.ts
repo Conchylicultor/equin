@@ -25,6 +25,7 @@ import type {
 import type { DataViewId } from "./define-data-view";
 import type { GroupByRule } from "./grouping";
 import type { FilterScope } from "./filter-scope";
+import type { Nesting } from "./nesting";
 import type {
   HostedToolbar,
   SectionsToolbar,
@@ -837,6 +838,13 @@ export interface ViewState {
    * written by a control). Flat views ignore it.
    */
   filterScope?: FilterScope;
+  /**
+   * How a view that can nest draws a hierarchical source — the tree, every row
+   * flat, or only the roots flat. See {@link Nesting}. Persisted in the
+   * per-instance config row beside `filterScope` (host-injected); absent =
+   * `nested`. Written by the view settings' Sub-items control.
+   */
+  nesting?: Nesting;
   /** Local expand state for hierarchical views lacking server-persisted expansion. */
   expanded?: Record<string, boolean>;
 }

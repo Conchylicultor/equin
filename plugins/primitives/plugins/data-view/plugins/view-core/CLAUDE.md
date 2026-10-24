@@ -170,7 +170,10 @@ contributions each surface passes in, and per-entry plugin id
   `ViewSettingsPopover` anchored to the chip via `ControlPanelPopover`'s
   `anchor` arm; no drag reorder), `AddViewMenuItems` (the add-menu rows both
   switchers share: flat for one untitled source, one section per source
-  otherwise), `ViewSettingsPopover` — the last drawn in the
+  otherwise), `ViewSettingsPopover` (plus an optional `hostSettings: HostViewSettings` render
+  prop, threaded through both switchers, drawing the consumer's own per-instance
+  settings under the view picker — data-view's Sub-items; the engine names none
+  of them) — the last drawn in the
   `control-panel` vocabulary (a sibling primitive; view-core still imports NO
   data-view), so the switcher opens it through `ControlPanelPopover`.
   (The device-local active-id hook
@@ -205,6 +208,7 @@ contributions each surface passes in, and per-entry plugin id
     - `ui/icons.Icon`
   - Exports (types):
     - `AssertStableGetters`
+    - `HostViewSettings`
     - `ResolvedViewInstance`
     - `ViewActionsCore`
     - `ViewGetter`

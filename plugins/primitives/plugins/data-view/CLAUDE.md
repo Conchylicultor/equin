@@ -110,10 +110,13 @@ A row is authored terse (`{ name, view }`); view-core's `normalizeRows` derives
 `id` on read and **array position is the canonical order** (no `rank` field) — see
 view-core's CLAUDE.md. The `view` blob is `{ type, sort?, filter?, …opts }`;
 `sort`/`filter`/`groupBy` are host-injected keys read via `viewFor`/`updateView`.
-So are three authored-only keys (no control writes them): `filterScope`
-(`"rows" | "roots"`, what a nested table's filter tests — see the table
-child's CLAUDE.md "Nesting"; a flat table ignores it), and, read only by the
-`sections` chrome, `hideWhenEmpty` and `description` (see "Sections toolbar").
+So are `nesting` (`"nested" | "flat" | "roots"`, how a view that can nest
+draws a hierarchical source — see "Hierarchy"), `filterScope` (`"rows" |
+"roots"`, what a nested table's filter tests — see the table child's CLAUDE.md
+"Nesting"; a flat table ignores it) — both written by the view settings'
+**Sub-items** section — and two authored-only keys (no control writes them),
+read only by the `sections` chrome: `hideWhenEmpty` and `description` (see
+"Sections toolbar").
 `groupBy` is a `GroupByRule` (`{ fieldId, groupingId }` — see "Grouping is a field-type
 contribution"), with the legacy bare `"<fieldId>"` string migrated on read. `sort` is a
 `SortRule[]` (ordered multi-level; each `{ fieldId, direction }`, priority = list
@@ -335,6 +338,24 @@ present. It says so with `nestsHierarchy: true` on its `DataViewContribution`, s
 over a hierarchical source the host treats it as the tree it draws: no fold (`activeSupportsFold`), no flat manual order
 (`activeSupportsManualOrder` — the `RowOrder` contributor is not even mounted),
 and its `filterScope` decides `hideWhenEmpty` (`rootsScoped`).
+
+**Nesting is per view (`ViewState.nesting`, Notion's Sub-items).** A view type
+that can nest nests only while its row's `nesting` is `nested` (the default,
+absent). `flat` draws every row as a top-level row and `roots` only the
+top-level rows (the tree's orphan rule: a parent `null` or not among the rows).
+The host makes the ONE decision (`activeNests` in `data-view-body.tsx`) and hands
+the view `hierarchy` **only while it nests** — so a table drawn flat simply is the
+flat table, with the fold and flat manual order (`view-order`) back, one sort
+across every row, and no reparent drag, add-child, aliases or `filterScope`.
+`flat` adds the derived **Parent** field to the schema (`web/internal/flat-hierarchy.ts`:
+reserved id `PARENT_FIELD_ID`, a text field holding the parent row's primary
+label — the parent's id when it is not loaded — sortable, filterable, groupable;
+a consumer field claiming the id throws). A view type that never nests (list,
+gallery) ignores the key and gets no Parent field. The control is the
+**Sub-items** section of the view settings (`web/components/sub-items-settings.tsx`,
+passed to view-core's switchers and `ViewSettingsPopover` as `hostSettings`),
+offered only over a hierarchy and on a view type that nests; it also carries
+`filterScope` while nested. Pinned by `web/__tests__/nesting.test.tsx`.
 
 **One pipeline for nesting.** `useHierarchyTree` (web barrel,
 `web/internal/hierarchy/`) is what the nested table runs:
@@ -2796,13 +2817,14 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
     - `IdKinds.Kind` ×2
-  - Uses: 112 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 115 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×18
     - `primitives/css/ui-kit` ×15
-    - `primitives/data-view/view-core` ×8
+    - `primitives/data-view/view-core` ×9
     - `primitives/live-state` ×6
     - `primitives/css/control-panel` ×4
     - `primitives/slot-render` ×4
+    - `primitives/css/toggle-chip` ×3
     - `primitives/tree` ×3
     - `config_v2` ×2
     - `primitives/collapsible` ×2
@@ -2833,7 +2855,6 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `primitives/css/scroll.Scroll`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
-    - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/css/yield.yieldClass`
     - `primitives/dom/auto-scroll.KeepAnchorAcross`
     - `primitives/dom/in-view.createInViewWatcher`
@@ -3127,6 +3148,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `LiveSearchableColumn`
     - `LiveSourceScope`
     - `ManualOrderConfig`
+    - `Nesting`
     - `PresetId`
     - `PropertyEntry`
     - `RowDragConfig`
@@ -3166,6 +3188,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `isSectionsToolbar`
     - `optionDescendants`
     - `orderFieldsBySection`
+    - `PARENT_FIELD_ID`
     - `presetIdKind`
     - `scopeFilterRows`
     - `SHARED_FIELD_SECTION`
