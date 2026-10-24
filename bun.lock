@@ -769,6 +769,10 @@
       "name": "@singularity/plugin-apps-prototypes-checkpoints",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/prototypes/plugins/commands": {
+      "name": "@singularity/plugin-apps-prototypes-commands",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/prototypes/plugins/compare": {
       "name": "@singularity/plugin-apps-prototypes-compare",
       "version": "0.0.1",
@@ -808,6 +812,9 @@
     "plugins/apps/plugins/prototypes/plugins/state": {
       "name": "@singularity/plugin-apps-prototypes-state",
       "version": "0.0.1",
+      "dependencies": {
+        "pg": "^8.23.1",
+      },
     },
     "plugins/apps/plugins/prototypes/plugins/thumbnails": {
       "name": "@singularity/plugin-apps-prototypes-thumbnails",
@@ -7488,6 +7495,8 @@
     "@singularity/plugin-apps-prototypes-canvas": ["@singularity/plugin-apps-prototypes-canvas@workspace:plugins/apps/plugins/prototypes/plugins/canvas"],
 
     "@singularity/plugin-apps-prototypes-checkpoints": ["@singularity/plugin-apps-prototypes-checkpoints@workspace:plugins/apps/plugins/prototypes/plugins/checkpoints"],
+
+    "@singularity/plugin-apps-prototypes-commands": ["@singularity/plugin-apps-prototypes-commands@workspace:plugins/apps/plugins/prototypes/plugins/commands"],
 
     "@singularity/plugin-apps-prototypes-compare": ["@singularity/plugin-apps-prototypes-compare@workspace:plugins/apps/plugins/prototypes/plugins/compare"],
 

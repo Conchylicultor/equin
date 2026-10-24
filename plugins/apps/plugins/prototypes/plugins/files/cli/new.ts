@@ -14,7 +14,10 @@ import { prototypeUrlFormatter } from "./prototype-url";
  * Prints the id first, on its own line: it is what the agent writes into a
  * message (where active-data turns it into a chip) and what names the folder.
  */
-const run: CliAction<[string | undefined], object> = async (title) => {
+export const newPrototypeAction: CliAction<
+  [string | undefined],
+  object
+> = async (title) => {
   const { id, dir } = await mintPrototype(title === undefined ? {} : { title });
   const url = await prototypeUrlFormatter();
 
@@ -22,5 +25,3 @@ const run: CliAction<[string | undefined], object> = async (title) => {
   console.log(`  folder: ${dir}`);
   console.log(`  url:    ${url(id)}`);
 };
-
-export default run;

@@ -32,7 +32,9 @@ const SCREENSHOT_SCRIPT =
  * at another variant, an agent loads the document URL with a different
  * `?<option>=<value>`, which renders it without saving anything.
  */
-const run: CliAction<[string], object> = async (id) => {
+export const prototypeOptionsAction: CliAction<[string], object> = async (
+  id,
+) => {
   const metas = await listPrototypeMetas();
   const meta = metas.find((m) => m.name === id);
   if (!meta) throw new Error(`no prototype ${id} in ${prototypesDir.path}`);
@@ -94,5 +96,3 @@ function shownValue(option: PrototypeOption, picks: OptionPicks): string {
   const hex = pickedColor(option, picks);
   return value === hex ? hex : `${hex} (${value})`;
 }
-
-export default run;

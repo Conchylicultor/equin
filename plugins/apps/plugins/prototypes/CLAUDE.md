@@ -33,7 +33,9 @@ other content lives in sub-plugins:
   on edit. Owns the `/api/prototypes` route contract. Also owns each
   prototype's version history (a private git repo at `_history/<id>.git`
   inside the data dir), the routes that serve and restore a past version, and
-  `./equin prototype log|checkpoint|restore`.
+  the bodies of the `./equin prototype` verbs.
+- **`commands`** — declares the `./equin prototype` group. Its own plugin so
+  `list` can read both `files` (the folders) and `state` (which are deleted).
 - **`checkpoints`** — the end-of-turn job: when an agent turn ends, records a
   version of every prototype that turn's tool calls named, labelled with the
   turn's request. Its own plugin so `files` never depends on `conversations`.
@@ -87,6 +89,7 @@ whose app surface still stands).
 - Sub-plugins:
   - **`canvas`** — The prototype detail pane as a canvas of frames: the prototype (frame A reads and writes the shared option picks, every other frame holds its own), each with its own options chip and version stepper…
   - **`checkpoints`** — Records a version of every prototype an agent turn touched, at the end of that turn: reads the turn's window out of the conversation transcript, finds the prototype ids its tool calls named…
+  - **`commands`** — The ./equin prototype command group (new, list, options, log, checkpoint, restore): declared here, above files and state, so list can leave out the prototypes deleted in this checkout's instance.
   - **`compare`** — The prototype canvas's "Real app" frame: the real app thing a prototype declares it mocks (<meta name="mocks" content="<kind>:<ref>">), resolved through the open Counterpart.Kind registry and…
     - Plugins:
       - **`exhibit`** — The exhibit: counterpart kind for the prototype canvas's Real app frame: one real app component, looked up by id (exhibit:<id>) in the exhibit catalog (plugin-meta/exhibits — any plugin's exhibits/…

@@ -27,7 +27,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`mail`** [exempt] [12 sub-plugins] — Mail — a Gmail-class client.
     - **`pages`** [exempt] [16 sub-plugins] — Notion-like pages app.
     - **`places`** [exempt] [7 sub-plugins] — Places — the places you want to go and have been, on a map: saved Google places organised by one nested tag tree, coloured by their tags.
-    - **`prototypes`** [exempt] [13 sub-plugins] — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under.
+    - **`prototypes`** [exempt] [14 sub-plugins] — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under.
     - **`settings`** [4 sub-plugins] — Settings app.
     - **`sonata`** [test helpers] [exempt] [81 sub-plugins] — Sonata — extensible piano and music app.
     - **`studio`** [exempt] [27 sub-plugins] — Plugin inspection and visualization; home for the plugin graph and contribution tables.

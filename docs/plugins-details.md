@@ -5939,6 +5939,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/jobs.defineJob`
               - `infra/jobs.NonRetryableError`
             - Register: `defineJob('prototypes.checkpoint-turn')`
+        - **`commands`** — The ./equin prototype command group (new, list, options, log, checkpoint, restore): declared here, above files and state, so list can leave out the prototypes deleted in this checkout's instance.
+          - Cli:
+            - Uses:
+              - `apps/prototypes/files.printPrototypeList`
+              - `apps/prototypes/state.readDeletedPrototypes`
         - **`compare`** — The prototype canvas's "Real app" frame: the real app thing a prototype declares it mocks (<meta name="mocks" content="<kind>:<ref>">), resolved through the open Counterpart.Kind registry and contributed as a FrameSource, so the canvas shows it beside the prototype at the canvas's size. Each kind of counterpart (an exhibit from the exhibit catalog, the running app at a route) is a child plugin.
           - Web:
             - Slots: `Counterpart.Kind`
@@ -6140,11 +6145,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `active-data/prototype`
               - `apps/prototypes/canvas`
               - `apps/prototypes/checkpoints`
+              - `apps/prototypes/commands`
               - `apps/prototypes/state`
               - `apps/prototypes/thumbnails`
               - `conversations/conversation-view/artifacts/prototype`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/paths.ts`, `server/internal/picks.ts`, `server/internal/signature.ts`, `server/internal/tree-path.ts`, `shared/folder-signature.ts`, `shared/history/lock.ts`, `shared/history/store.ts`, `shared/list-metas.ts`, `shared/mint.ts`, `shared/read-folder.ts`, `shared/record-store.ts`, `shared/template.ts` (debt)
+          - Cli:
+            - Exports (types): `DeletedPrototypeIds`
+            - Exports (values):
+              - `checkpointPrototypeAction`
+              - `newPrototypeAction`
+              - `printPrototypeList`
+              - `prototypeLogAction`
+              - `prototypeOptionsAction`
+              - `restorePrototypeAction`
         - **`gallery`** — Prototypes gallery list pane — one card per prototype over its rendered preview, on the prototype viewer's grid, with a Recently edited list; grouped by its tag as nested sections along the prototypes' tag tree (or by status: Pinned / In progress / Done), with a pin and a Done circle on every card and row (hover actions that stay shown while set; also in the detail pane's header, beside the tag chip opening the shared tag picker), an undoable Delete on every card and in the detail header (deletedAt in the prototype's state — the folder stays), and a Trash view (its own source in the same view bar) listing the deleted ones with Restore — plus New prototype, which mints the folder before launching the agent that designs it.
           - Web:
             - Slots:
@@ -6367,9 +6382,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/prototypes/canvas`
+              - `apps/prototypes/commands`
               - `apps/prototypes/gallery`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/import-status-files.ts`, `server/internal/legacy-trash.ts` (debt)
+          - Cli:
+            - Exports (types): `DeletedPrototypes`
+            - Exports (values): `readDeletedPrototypes`
         - **`thumbnails`** — The rendered-preview cover for a prototype card: the cached PNG, the caller's fallback while it renders, and a visible 'Preview failed' marker carrying the reason. Rendered PNG previews for the prototypes gallery: a content-addressed disk cache, a headless-chromium render job driven by the files watcher, and the push state resource the cards read; the immutable serving route is the machine/ half's.
           - Server:
             - Contributes: `resource.declare` "prototypes.thumbnails"

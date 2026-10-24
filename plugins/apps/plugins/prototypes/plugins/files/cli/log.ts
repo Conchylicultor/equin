@@ -12,7 +12,10 @@ import { openHistoryStore, type VersionEntry } from "../shared/history/store";
  * detail pane's version arrows step through, read straight off disk with no
  * backend running.
  */
-const run: CliAction<[string], { patch?: boolean }> = async (id, opts) => {
+export const prototypeLogAction: CliAction<
+  [string],
+  { patch?: boolean }
+> = async (id, opts) => {
   const store = openHistoryStore(prototypesDir.path);
   const read = await store.readHistory(id);
   if (read.kind === "no-such-prototype") {
@@ -54,5 +57,3 @@ function printEntry(entry: VersionEntry): void {
     for (const line of entry.body.split("\n")) console.log(`    ${line}`);
   }
 }
-
-export default run;

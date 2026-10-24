@@ -11,7 +11,10 @@ import { openHistoryStore } from "../shared/history/store";
  * next turn folds it in. Same store call as the end-of-turn job, straight
  * against the filesystem.
  */
-const run: CliAction<[string], { message?: string }> = async (id, opts) => {
+export const checkpointPrototypeAction: CliAction<
+  [string],
+  { message?: string }
+> = async (id, opts) => {
   const store = openHistoryStore(prototypesDir.path);
   const result = await store.checkpoint(id, {
     kind: "manual",
@@ -30,5 +33,3 @@ const run: CliAction<[string], { message?: string }> = async (id, opts) => {
       return;
   }
 };
-
-export default run;

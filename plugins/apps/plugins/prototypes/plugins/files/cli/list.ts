@@ -1,4 +1,3 @@
-import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { PROTOTYPES_DIR_DISPLAY } from "@plugins/infra/plugins/paths/plugins/display/core";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import {
@@ -12,9 +11,19 @@ import { openPicksStore, type PicksStore } from "../shared/picks";
 import { prototypeUrlFormatter } from "./prototype-url";
 
 /**
- * `./equin prototype list` — every prototype on disk, with the URL that
- * opens it and, when the user has picked a variant other than the defaults,
- * which one.
+ * What `prototype list` knows about deletion — the caller reads it (the
+ * deleted marks are another plugin's per-instance state) and hands it in as
+ * data. Either the deleted ids, or why they could not be read.
+ */
+export type DeletedPrototypeIds =
+  | { readonly kind: "read"; readonly ids: ReadonlySet<string> }
+  | { readonly kind: "unavailable"; readonly reason: string };
+
+/**
+ * The body of `./equin prototype list` — every prototype on disk the user
+ * has not deleted, with the URL that opens it and, when the user has picked a
+ * variant other than the defaults, which one. The verb itself is declared by
+ * `apps/prototypes/commands`, which reads `deleted` and calls this.
  *
  * Reads the tree through the same `listPrototypeMetas()` the server's list
  * endpoint and live resource use — it sits in `shared/` precisely so this
@@ -23,17 +32,27 @@ import { prototypeUrlFormatter } from "./prototype-url";
  * metas" rather than a terminal-shaped second one that could disagree with the
  * gallery.
  *
- * A prototype the user deleted is still listed: deleted is per-instance state
- * in the instance's DB (`apps/prototypes/state`), which this backend-less
- * process does not read — and the folder, the thing listed, is still there.
+ * A deleted prototype is left out, as the gallery leaves it out; a last line
+ * counts them, so they are not silently missing. When deletion could not be
+ * read, every folder is listed and a stderr line says deleted ones are among
+ * them, and why — a useful answer that says what it could not know.
  *
  * An empty tree is a legitimate answer (nobody has authored a mock yet), not a
  * failure, so it prints as a sentence instead of nothing at all — a bare empty
  * output would read as "the command is broken".
  */
-const run: CliAction<[], object> = async () => {
-  const metas = await listPrototypeMetas();
+export async function printPrototypeList(
+  deleted: DeletedPrototypeIds,
+): Promise<void> {
+  const all = await listPrototypeMetas();
+  const metas =
+    deleted.kind === "read" ? all.filter((m) => !deleted.ids.has(m.name)) : all;
+  const hidden = all.length - metas.length;
   if (metas.length === 0) {
+    if (hidden > 0) {
+      console.log(deletedLine(hidden));
+      return;
+    }
     console.log(`No prototypes yet in ${PROTOTYPES_DIR_DISPLAY}.`);
     console.log(`Create one with: ./equin prototype new "My mock"`);
     return;
@@ -54,7 +73,18 @@ const run: CliAction<[], object> = async () => {
       console.log(`${" ".repeat(width)}  ! ${where}${problem.detail}`);
     }
   }
-};
+  if (hidden > 0) console.log(`\n${deletedLine(hidden)}`);
+  if (deleted.kind === "unavailable") {
+    console.error(
+      `\nDeleted prototypes are listed too: could not read which ones are deleted (${deleted.reason}).`,
+    );
+  }
+}
+
+/** `2 deleted prototypes not shown (the gallery's Trash).` */
+function deletedLine(count: number): string {
+  return `${String(count)} deleted prototype${count === 1 ? "" : "s"} not shown (the gallery's Trash).`;
+}
 
 /**
  * `picked: palette=azure, accent=#3b82f6 (azure)` — the variant the user is
@@ -81,5 +111,3 @@ async function pickedLine(
   if (parts.length === 0) return null;
   return `picked: ${parts.join(", ")}`;
 }
-
-export default run;

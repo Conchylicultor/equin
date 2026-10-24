@@ -12,7 +12,10 @@ import {
  * old files are written back, and "Restored vN" is recorded. Nothing is lost,
  * so a restore is itself undone by restoring the "Before restore" version.
  */
-const run: CliAction<[string, string], object> = async (id, version) => {
+export const restorePrototypeAction: CliAction<
+  [string, string],
+  object
+> = async (id, version) => {
   const store = openHistoryStore(prototypesDir.path);
   const sha = await resolveVersion(store, id, version);
   const result = await store.restoreVersion(id, sha);
@@ -56,5 +59,3 @@ async function resolveVersion(
   }
   return version;
 }
-
-export default run;
