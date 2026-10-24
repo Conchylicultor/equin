@@ -8,13 +8,13 @@ import {
   PROTOTYPE_FILE_ROUTE,
   PROTOTYPE_VERSION_FILE_ROUTE,
   protoIdKind,
+  restorePrototype,
   restorePrototypeVersion,
   setPrototypePicks,
   setPrototypeStatus,
 } from "../core";
 import {
   handleCreate,
-  handleDelete,
   handleList,
   handlePrototypeAsset,
   handlePrototypeFile,
@@ -26,7 +26,14 @@ import {
   prototypeVersionCountsServed,
 } from "./internal/history";
 import { handleSetPicks, prototypePicksServed } from "./internal/picks";
-import { handleSetStatus, prototypeStatusesServed } from "./internal/status";
+import {
+  handleDelete,
+  handleRestore,
+  handleSetStatus,
+  prototypeStatusesServed,
+} from "./internal/status";
+import { adoptLegacyTrash } from "../shared/legacy-trash";
+import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import { prototypesListServed } from "./internal/resources";
 import {
   prototypesTreeWatcher,
@@ -53,7 +60,7 @@ export default {
   // string literal — so this one field cannot interpolate
   // PROTOTYPES_DIR_DISPLAY the way every other message here does.
   description:
-    "Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), mints new prototypes into it from the running checkout's prototypes/_template/, deletes one by moving its folder into _trash/ (refused for automated sessions), declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html> (data-* for a choice, a --<name> custom property for a color), stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), stores whether the user marked each prototype Done or pinned it as one shared record under _status/ (the prototypes.statuses resource and its PUT, undone the same way), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).",
+    "Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), mints new prototypes into it from the running checkout's prototypes/_template/, deletes one by recording deletedAt in its status (the folder stays; restorable, and undone for automated sessions), declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html> (data-* for a choice, a --<name> custom property for a color), stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), stores whether the user marked each prototype Done, pinned or deleted it as one shared record under _status/ (the prototypes.statuses resource, its PUT, DELETE and restore, undone the same way), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).",
   httpRoutes: {
     [listPrototypes.route]: handleList,
     [createPrototype.route]: handleCreate,
@@ -64,6 +71,7 @@ export default {
     [restorePrototypeVersion.route]: handleRestoreVersion,
     [setPrototypePicks.route]: handleSetPicks,
     [setPrototypeStatus.route]: handleSetStatus,
+    [restorePrototype.route]: handleRestore,
   },
   contributions: [
     IdKinds.Kind({ kind: protoIdKind }),
@@ -75,6 +83,9 @@ export default {
   ],
   register: [prototypesTreeWatcher],
   onReady: async () => {
+    // Before the watcher, so its first signature already holds the folders
+    // brought back from the old `_trash/` — as deleted, never as live.
+    await adoptLegacyTrash(prototypesDir.path);
     await startPrototypesWatcher();
   },
   onShutdown: async () => {

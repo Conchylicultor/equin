@@ -4,30 +4,39 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 
 // The wire half of a prototype's status: whether the user has marked it Done,
-// and whether they pinned it (the gallery's Pinned section, above the rest).
+// whether they pinned it (the gallery's Pinned section, above the rest), and
+// whether they deleted it. A delete is a field here, not a move of the folder:
+// a deleted prototype stays a prototype — its folder, history and picks stay
+// where they are, every link to it keeps resolving, and it is listed in the
+// gallery's Trash until restored.
 // ONE record per prototype, shared by every surface (main, every worktree
 // deploy, every browser, the CLI), stored beside the picks as
 // `_status/<id>.json` (`shared/status.ts`). Like the picks, it is about the
 // prototype, not part of its design, so it never enters the folder.
 
-/** A prototype's status as STORED. No file is `{ done: false, pinned: false }`. */
+/** A prototype's status as STORED. No file is {@link NO_PROTOTYPE_STATUS}. */
 export interface PrototypeStatus {
   /** The user has marked this prototype Done. */
   readonly done: boolean;
   /** The user has pinned this prototype — grouped above the rest in the gallery. */
   readonly pinned: boolean;
+  /** When the user deleted it (ISO instant) — `null` while it is not deleted. */
+  readonly deletedAt: string | null;
 }
 
 export const PrototypeStatusSchema = z.object({
   done: z.boolean().default(false),
   // Files written before pins existed hold `done` alone: not pinned.
   pinned: z.boolean().default(false),
+  // Files written before deletion was a status hold no `deletedAt`: not deleted.
+  deletedAt: z.string().datetime().nullable().default(null),
 }) satisfies ZodParser<PrototypeStatus>;
 
 /** The status of a prototype that has none recorded. */
 export const NO_PROTOTYPE_STATUS: PrototypeStatus = {
   done: false,
   pinned: false,
+  deletedAt: null,
 };
 
 /**
@@ -41,14 +50,31 @@ export const PrototypeStatusChangeSchema = z
   });
 export type PrototypeStatusChange = z.infer<typeof PrototypeStatusChangeSchema>;
 
-/** `status` with `change` applied — the one fold. */
+/**
+ * What the store folds: a {@link PrototypeStatusChange}, or a delete / restore.
+ * `deletedAt` is never in the PUT body — only the server's delete and restore
+ * endpoints write it, stamping the instant themselves.
+ */
+export type PrototypeStatusEdit = PrototypeStatusChange & {
+  readonly deletedAt?: string | null;
+};
+
+/** `status` with `edit` applied — the one fold. */
 export function applyPrototypeStatusChange(
   status: PrototypeStatus,
-  change: PrototypeStatusChange,
+  edit: PrototypeStatusEdit,
 ): PrototypeStatus {
   return {
-    done: change.done ?? status.done,
-    pinned: change.pinned ?? status.pinned,
+    done: edit.done ?? status.done,
+    pinned: edit.pinned ?? status.pinned,
+    // Deleting a deleted prototype keeps the FIRST instant: the Trash says
+    // when it was deleted, not when someone last pressed Delete.
+    deletedAt:
+      edit.deletedAt === undefined
+        ? status.deletedAt
+        : edit.deletedAt === null
+          ? null
+          : (status.deletedAt ?? edit.deletedAt),
   };
 }
 
@@ -81,4 +107,20 @@ export function statusOf(
 export const setPrototypeStatus = defineEndpoint({
   route: "PUT /api/prototypes/:name/status",
   body: PrototypeStatusChangeSchema,
+});
+
+/**
+ * Delete a prototype: record `deletedAt` in its status. Nothing on disk moves —
+ * the gallery hides it and lists it in its Trash, and every link to it keeps
+ * working. Deleting a deleted prototype keeps the first `deletedAt`. 404 for an
+ * unknown prototype. An automated session's delete is undone at the end of its
+ * run, like any status write.
+ */
+export const deletePrototype = defineEndpoint({
+  route: "DELETE /api/prototypes/:name",
+});
+
+/** Restore a deleted prototype (clear its `deletedAt`). 404 for an unknown prototype. */
+export const restorePrototype = defineEndpoint({
+  route: "POST /api/prototypes/:name/restore",
 });

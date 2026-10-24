@@ -68,6 +68,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "places.tags", pluginId: "apps.places.tag-manager" },
   { id: "plugin-meta.exhibits.catalog", pluginId: "plugin-meta.exhibits" },
   { id: "prototypes.gallery", pluginId: "apps.prototypes.gallery" },
+  { id: "prototypes.trash", pluginId: "apps.prototypes.gallery" },
   { id: "prototypes.versions", pluginId: "apps.prototypes.canvas" },
   { id: "running-agents", pluginId: "conversations.conversation-view.running-agents" },
   { id: "runs", pluginId: "runs" },

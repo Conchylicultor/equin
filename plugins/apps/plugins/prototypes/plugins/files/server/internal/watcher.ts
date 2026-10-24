@@ -77,7 +77,7 @@ export function onPrototypesChanged(listener: () => void): void {
 /**
  * Re-read the tree; if its bytes really moved, re-broadcast the list (new/edited
  * mocks appear in the gallery, and the moved prototypes' `rev` reloads their
- * open live frames), re-read the history of every prototype that moved (an edit flips its
+ * open live frames), re-read the history of every prototype that moved and still exists (an edit flips its
  * `dirty` flag) and wake the listeners. Then give any new prototype its `v0`.
  *
  * Everything goes through this one gate — the watcher's events and the
@@ -93,7 +93,10 @@ async function refreshOnce(): Promise<void> {
   lastSignature = signature;
 
   prototypesListServed.notify();
-  for (const name of changed) notifyHistory(name);
+  // Only a prototype still on disk has a history to re-read: a deleted one
+  // (moved to `_trash/`) would make the loader throw "no such prototype" for
+  // a pane still open on it — which unmounts once the list above reaches it.
+  for (const name of changed) if (signature.has(name)) notifyHistory(name);
   for (const listener of listeners) listener();
 
   // A folder that appeared without the mint (made by hand, restored from a

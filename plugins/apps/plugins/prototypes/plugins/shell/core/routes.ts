@@ -1,7 +1,7 @@
 import { defineRoute } from "@plugins/primitives/plugins/pane/core";
 
 /**
- * The app's two routes, declared here — beside `prototypesApp` — rather than in
+ * The app's routes, declared here — beside `prototypesApp` — rather than in
  * the plugins that mount a pane on them. Two plugins need each one: the gallery
  * pane and the detail pane nest (the detail route's parent is the gallery's),
  * and the gallery opens the detail pane while the detail pane's plugin
@@ -22,5 +22,15 @@ export const prototypesGalleryRoute = defineRoute({
 export const prototypeDetailRoute = defineRoute({
   id: "prototypes-detail",
   segment: "proto/:name",
+  parent: prototypesGalleryRoute,
+});
+
+/**
+ * The gallery's Trash: every deleted prototype, with Restore. A child of the
+ * gallery, so its Back leads there.
+ */
+export const prototypesTrashRoute = defineRoute({
+  id: "prototypes-trash",
+  segment: "trash",
   parent: prototypesGalleryRoute,
 });

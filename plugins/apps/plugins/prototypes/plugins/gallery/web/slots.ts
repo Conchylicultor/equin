@@ -3,7 +3,7 @@ import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/fil
 
 /**
  * One gallery card: the prototype as listed, joined with its status — whether
- * the user has marked it Done and whether they pinned it (`files`'
+ * the user has marked it Done, pinned or deleted it (`files`'
  * `prototypes.statuses`) — and its version count (`prototypes.versionCounts`).
  * Joined once, in the gallery, so the `status` field, the muted tone and every
  * card action read the same value.
@@ -11,6 +11,8 @@ import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/fil
 export type PrototypeGalleryRow = PrototypeMeta & {
   done: boolean;
   pinned: boolean;
+  /** When it was deleted (ISO instant) — `null` for a live prototype. */
+  deletedAt: string | null;
   /** How many versions it has; `undefined` when no count is known (never 0). */
   versions: number | undefined;
 };
@@ -22,3 +24,9 @@ export type PrototypeGalleryRow = PrototypeMeta & {
  * tab).
  */
 export const PrototypeCardActions = defineItemActions<PrototypeGalleryRow>();
+
+/**
+ * Per-card actions in the gallery's Trash, where a card is a deleted
+ * prototype. The gallery ships Restore.
+ */
+export const PrototypeTrashActions = defineItemActions<PrototypeGalleryRow>();

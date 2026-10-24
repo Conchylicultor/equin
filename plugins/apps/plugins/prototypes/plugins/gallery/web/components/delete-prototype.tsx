@@ -2,15 +2,18 @@ import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { confirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/plugins/confirm/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import {
+  useCombinedResources,
   matchResource,
   ResourceErrorInline,
 } from "@plugins/primitives/plugins/live-state/web";
+import { showToast } from "@plugins/shell/plugins/toast/web";
 import {
   deletePrototype,
+  prototypeStatuses,
   prototypesList,
+  statusOf,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
   prototypeDetailPane,
@@ -18,43 +21,43 @@ import {
   usePrototypeDetail,
 } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 import type { PrototypeGalleryRow } from "../slots";
+import { useRestorePrototype } from "./trash";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const deleteIcon = symbol("delete");
+const restoreIcon = symbol("restore-from-trash");
 
-// Deleting a prototype (`files`' `DELETE /api/prototypes/:name`): its folder
-// moves into the data dir's `_trash/`, so the gallery loses it while the work
-// itself is kept. Always confirmed — the folder is the only copy of the design,
-// and it is shared by every worktree and main. The list re-broadcasts when the
-// folder leaves the watched tree, so nothing here removes the card by hand.
+// Deleting a prototype (`files`' `DELETE /api/prototypes/:name`) records
+// `deletedAt` in its status: nothing on disk moves, the gallery stops listing
+// it and its Trash starts to. So a delete is as reversible as a Done tick —
+// no confirm dialog, but a toast whose Undo restores it at once. The statuses
+// re-broadcast on the write, so nothing here removes the card by hand.
 
 /**
- * Open the confirm dialog for prototype `name`; `onDeleted` runs once the
- * folder has actually moved (never on Cancel, never on a failure — the dialog
- * stays open with the reason then).
+ * Delete prototype `name`; once the server has recorded it, a toast says so
+ * with Undo, and `onDeleted` runs (never on a failure — that is the endpoint
+ * layer's error toast).
  */
-function useConfirmDeletePrototype(): (
+function useDeletePrototype(): (
   name: string,
   title: string,
   onDeleted?: () => void,
 ) => void {
   const mutation = useEndpointMutation(deletePrototype);
+  const { restore } = useRestorePrototype();
   return (name, title, onDeleted) => {
-    void confirmDialog({
-      title: `Delete “${title}”?`,
-      description: (
-        <>
-          It leaves the gallery for every worktree and main. The folder is kept
-          in the prototypes data dir&apos;s <code>_trash/</code>, with its
-          version history, so it can be moved back by hand.
-        </>
-      ),
-      confirmLabel: "Delete",
-      onConfirm: async () => {
-        await mutation.mutateAsync({ params: { name } });
-        onDeleted?.();
+    mutation.mutate(
+      { params: { name } },
+      {
+        onSuccess: () => {
+          showToast({
+            description: `Deleted “${title}” — it is in the gallery's Trash.`,
+            action: { label: "Undo", onClick: () => restore(name) },
+          });
+          onDeleted?.();
+        },
       },
-    });
+    );
   };
 }
 
@@ -62,7 +65,7 @@ function useConfirmDeletePrototype(): (
 export function DeleteCardAction({
   row,
 }: ItemActionProps<PrototypeGalleryRow>) {
-  const confirmDelete = useConfirmDeletePrototype();
+  const deleteNow = useDeletePrototype();
   return (
     <ControlSizeProvider size="sm">
       <IconButton
@@ -72,7 +75,7 @@ export function DeleteCardAction({
         onClick={(e) => {
           // The card's own click opens the prototype; deleting it must not.
           e.stopPropagation();
-          confirmDelete(row.name, row.title);
+          deleteNow(row.name, row.title);
         }}
       />
     </ControlSizeProvider>
@@ -80,42 +83,56 @@ export function DeleteCardAction({
 }
 
 /**
- * The detail pane header's Delete, after the pin and the Done toggle. Once the
- * prototype is gone the pane goes back to the gallery, rather than staying on
- * a "Prototype not found" page. Disabled until the list is known, since the
- * dialog names the prototype by its title; a failed read is the error icon,
- * whose click retries.
+ * The detail pane header's Delete, after the pin and the Done toggle. Once
+ * deleted the pane goes back to the gallery it came from (the toast's Undo
+ * still restores it). On a prototype already deleted — opened from the Trash,
+ * or a link — it is Restore instead. Disabled until the list and the statuses
+ * are known, since the toast names the prototype by its title and the button
+ * must know which of the two it is; a failed read is the error icon, whose
+ * click retries.
  */
 export function DeleteHeaderAction() {
   const { name } = usePrototypeDetail();
-  const list = useLive(prototypesList);
+  const result = useCombinedResources({
+    list: useLive(prototypesList),
+    statuses: useLive(prototypeStatuses),
+  });
   const back = prototypeDetailPane.useBack();
-  const confirmDelete = useConfirmDeletePrototype();
+  const deleteNow = useDeletePrototype();
+  const { pending, restore } = useRestorePrototype();
   const disabled = (
     <TitleActionButton icon={deleteIcon} label="Delete" disabled />
   );
-  return matchResource(list, {
+  return matchResource(result, {
     loading: () => disabled,
     error: (error) => (
       <ResourceErrorInline
         variant="icon"
         icon={deleteIcon}
-        subject="the prototype list"
+        subject="the prototype"
         error={error}
-        refetch={list.refetch}
+        refetch={result.refetch}
       />
     ),
-    ready: (rows) => {
-      const meta = rows.find((p) => p.name === name);
+    ready: ({ list, statuses }) => {
+      const meta = list.find((p) => p.name === name);
       // No such prototype: the pane body says so; there is nothing to delete.
       if (meta === undefined) return disabled;
+      if (statusOf(statuses, name).deletedAt !== null) {
+        return (
+          <TitleActionButton
+            icon={restoreIcon}
+            label="Restore prototype"
+            loading={pending}
+            onClick={() => restore(name)}
+          />
+        );
+      }
       return (
         <TitleActionButton
           icon={deleteIcon}
           label="Delete prototype"
-          onClick={() =>
-            confirmDelete(meta.name, meta.title, back ?? undefined)
-          }
+          onClick={() => deleteNow(meta.name, meta.title, back ?? undefined)}
         />
       );
     },

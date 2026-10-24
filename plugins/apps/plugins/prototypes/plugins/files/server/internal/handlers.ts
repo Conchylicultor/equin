@@ -1,22 +1,15 @@
-import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
-import { originOf } from "@plugins/infra/plugins/request-origin/core";
-import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
+import { implement } from "@plugins/infra/plugins/endpoints/server";
 import {
   PROTOTYPES_API_BASE,
   PROTOTYPE_ENTRY_FILE,
   createPrototype,
-  deletePrototype,
   listPrototypes,
 } from "../../core";
 import { HISTORY_DIR_NAME } from "../../shared/history/store";
 import { PICKS_DIR_NAME } from "../../shared/picks";
 import { STATUS_DIR_NAME } from "../../shared/status";
 import { mintPrototype } from "../../shared/mint";
-import {
-  PrototypeNotFoundError,
-  TRASH_DIR_NAME,
-  trashPrototype,
-} from "../../shared/trash";
+import { TRASH_DIR_NAME } from "../../shared/legacy-trash";
 import { listPrototypeMetas } from "./list";
 import { contentTypeForPath, resolvePrototypeFile } from "./paths";
 import { hasPicks, servePickedDocument } from "./picked-document";
@@ -36,33 +29,6 @@ export const handleList = implement(listPrototypes, async () => {
 export const handleCreate = implement(createPrototype, async ({ body }) => {
   const { id } = await mintPrototype({ title: body.title });
   return { id };
-});
-
-/**
- * `DELETE /api/prototypes/:name` → move the prototype to `_trash/`
- * (`shared/trash.ts`). Like the mint, it notifies nothing: the folder leaving
- * the watched tree is what re-broadcasts the list.
- *
- * Refused for an automated session. The tree is host-global — a worktree's e2e
- * run deleting a prototype deletes the user's — and the agent-write ledger
- * that puts an automated write back snapshots files, not a moved folder.
- */
-export const handleDelete = implement(deletePrototype, ({ params, req }) => {
-  const writer = originOf(req);
-  if (writer.kind === "agent") {
-    throw new HttpError(
-      403,
-      `an automated session (${writer.source}) may not delete a prototype: the prototypes tree is shared by every worktree and the delete could not be reverted`,
-    );
-  }
-  try {
-    trashPrototype(prototypesDir.path, params.name);
-  } catch (err) {
-    if (err instanceof PrototypeNotFoundError) {
-      throw new HttpError(404, err.message);
-    }
-    throw err;
-  }
 });
 
 /**

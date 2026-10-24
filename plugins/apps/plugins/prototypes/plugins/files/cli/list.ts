@@ -5,10 +5,12 @@ import {
   pickedColor,
   protoIdKind,
   resolvePicks,
+  statusOf,
   type PrototypeMeta,
 } from "../core";
 import { listPrototypeMetas } from "../shared/list-metas";
 import { openPicksStore, type PicksStore } from "../shared/picks";
+import { openStatusStore } from "../shared/status";
 import { prototypeUrlFormatter } from "./prototype-url";
 
 /**
@@ -23,13 +25,25 @@ import { prototypeUrlFormatter } from "./prototype-url";
  * metas" rather than a terminal-shaped second one that could disagree with the
  * gallery.
  *
+ * A deleted prototype (`deletedAt` in its status) is left out, as the gallery
+ * leaves it out; a last line counts them, so they are not silently missing.
+ *
  * An empty tree is a legitimate answer (nobody has authored a mock yet), not a
  * failure, so it prints as a sentence instead of nothing at all — a bare empty
  * output would read as "the command is broken".
  */
 const run: CliAction<[], object> = async () => {
-  const metas = await listPrototypeMetas();
+  const statuses = await openStatusStore(prototypesDir.path).readAll();
+  const all = await listPrototypeMetas();
+  const metas = all.filter(
+    (m) => statusOf(statuses, m.name).deletedAt === null,
+  );
+  const deleted = all.length - metas.length;
   if (metas.length === 0) {
+    if (deleted > 0) {
+      console.log(deletedLine(deleted));
+      return;
+    }
     console.log(`No prototypes yet in ${PROTOTYPES_DIR_DISPLAY}.`);
     console.log(`Create one with: ./equin prototype new "My mock"`);
     return;
@@ -50,7 +64,13 @@ const run: CliAction<[], object> = async () => {
       console.log(`${" ".repeat(width)}  ! ${where}${problem.detail}`);
     }
   }
+  if (deleted > 0) console.log(`\n${deletedLine(deleted)}`);
 };
+
+/** `2 deleted prototypes not shown (the gallery's Trash).` */
+function deletedLine(count: number): string {
+  return `${String(count)} deleted prototype${count === 1 ? "" : "s"} not shown (the gallery's Trash).`;
+}
 
 /**
  * `picked: palette=azure, accent=#3b82f6 (azure)` — the variant the user is

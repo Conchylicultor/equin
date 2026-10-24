@@ -11,7 +11,6 @@ export {
   prototypeVersionUrl,
   listPrototypes,
   createPrototype,
-  deletePrototype,
 } from "./prototypes";
 export type { PrototypeMeta } from "./prototypes";
 export {
@@ -83,8 +82,14 @@ export {
   prototypeStatuses,
   statusOf,
   setPrototypeStatus,
+  deletePrototype,
+  restorePrototype,
 } from "./status";
-export type { PrototypeStatus, PrototypeStatusChange } from "./status";
+export type {
+  PrototypeStatus,
+  PrototypeStatusChange,
+  PrototypeStatusEdit,
+} from "./status";
 export type {
   PrototypeOption,
   ChoiceOption,

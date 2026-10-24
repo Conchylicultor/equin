@@ -62,6 +62,18 @@ The Prototypes app's gallery: the list of every prototype, and New prototype.
   to `prototypeDetailPane.Actions` — with fixed labels so toggling never
   changes the header's width.
 
+- **Delete and the Trash.** Delete (a card action, and the detail header's —
+  which reads Restore on a deleted prototype) records `deletedAt` in the
+  prototype's status (`files`); the folder stays. No confirm dialog: it is
+  reversible, and its toast's Undo restores at once. The gallery shows rows with
+  `deletedAt === null`; its header's **Trash** button (with the deleted count)
+  pushes the **Trash pane** (`/prototypes/trash`, `prototypesTrashRoute`) — the
+  same `PrototypeCollection` DataView over the deleted rows, with `trashFields`
+  (adds **Deleted**), its views in
+  `config/apps/prototypes/gallery/prototypes.trash.jsonc` (newest deletion
+  first), and `PrototypeTrashActions` (Restore) as its item actions. Opening a
+  Trash card shows its canvas, which carries the deleted notice.
+
 The detail pane itself — the canvas of frames, its version steppers, option
 picks, size and zoom — is the sibling `canvas` plugin. The gallery depends on
 it to put its pin / Done toggles in the canvas's header and for the ground it
@@ -111,23 +123,29 @@ honest — the prototype does exist — and it self-corrects.
 
 ## Plugin reference
 
-- Description: Prototypes gallery list pane — one card per prototype over its rendered preview, on the prototype viewer's grid, with a Recently edited list; grouped (Pinned / In progress / Done) and filterable by a pin and a Done circle on every card and row (hover actions that stay shown while set; also in the detail pane's header), a confirmed Delete on every card and in the detail header (the folder moves to the data dir's _trash/) — plus New prototype, which mints the folder before launching the agent that designs it.
+- Description: Prototypes gallery list pane — one card per prototype over its rendered preview, on the prototype viewer's grid, with a Recently edited list; grouped (Pinned / In progress / Done) and filterable by a pin and a Done circle on every card and row (hover actions that stay shown while set; also in the detail pane's header), an undoable Delete on every card and in the detail header (deletedAt in the prototype's status — the folder stays), and a Trash pane listing the deleted ones with Restore — plus New prototype, which mints the folder before launching the agent that designs it.
 - Web:
   - Slots:
     - `prototypesGalleryPane.Actions`
+    - `prototypes-trash.actions`
     - `PrototypeCardActions`
+    - `trash-actions`
   - Slot contributors:
     - `prototypesGalleryPane.Actions` ← `primitives.pane`
+    - `prototypes-trash.actions` ← `primitives.pane`
     - `PrototypeCardActions` ← `apps.prototypes.gallery`
     - `PrototypeCardActions` ← `apps.prototypes.present`
+    - `trash-actions` ← `apps.prototypes.gallery`
   - Contributes:
     - `Pane.Register` "prototypes-gallery"
+    - `Pane.Register` "prototypes-trash"
     - `prototypeDetailPane.Actions` "pin" → `PinHeaderAction`
     - `prototypeDetailPane.Actions` "done" → `DoneHeaderAction`
     - `prototypeDetailPane.Actions` "delete" → `DeleteHeaderAction`
     - `PrototypeCardActions` "pin" → `PinCardAction`
     - `PrototypeCardActions` "done" → `DoneCardAction`
     - `PrototypeCardActions` "delete" → `DeleteCardAction`
+    - `trash-actions` "restore" → `RestoreCardAction`
   - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/prototypes/canvas` ×4
     - `infra/endpoints` ×4
@@ -140,9 +158,9 @@ honest — the prototype does exist — and it self-corrects.
     - `primitives/css/badge.Badge`
     - `primitives/icon-button.IconButton`
     - `primitives/launch.LaunchAgentPopover`
-    - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
     - `primitives/relative-time.RelativeTime`
     - `shell/notifications.useToast`
+    - `shell/toast.showToast`
     - `ui/icons.Icon`
   - Exports (types): `PrototypeGalleryRow`
   - Exports (values):
@@ -154,6 +172,7 @@ honest — the prototype does exist — and it self-corrects.
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --accent`
+    - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --primary-text`
   - Imported by:
     - `apps/home/app-cards`

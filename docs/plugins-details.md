@@ -5737,14 +5737,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeFrameActions` "close" → `CloseFrameAction`
               - `PrototypeVersionActions` "compare" → `CompareVersionAction`
               - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-            - Uses: 86 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
+            - Uses: 87 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
               - `primitives/css/ui-kit` ×9
               - `primitives/data-view` ×6
               - `primitives/collapsible` ×5
               - `hints` ×3
+              - `infra/endpoints` ×3
               - `primitives/hover-reveal` ×3
               - `primitives/persistent-draft` ×3
-              - `infra/endpoints` ×2
               - `primitives/action-presentation` ×2
               - `primitives/css/spacing` ×2
               - `primitives/dom/auto-scroll` ×2
@@ -5954,7 +5954,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/canvas.TitleActionButton`
               - `apps/prototypes/canvas.usePrototypeDetail`
               - `primitives/copy-to-clipboard.useCopyToClipboard`
-        - **`files`** — Registers the prototype id kind (`proto-…`) in the browser's id-kind registry. Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), mints new prototypes into it from the running checkout's prototypes/_template/, deletes one by moving its folder into _trash/ (refused for automated sessions), declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html> (data-* for a choice, a --<name> custom property for a color), stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), stores whether the user marked each prototype Done or pinned it as one shared record under _status/ (the prototypes.statuses resource and its PUT, undone the same way), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
+        - **`files`** — Registers the prototype id kind (`proto-…`) in the browser's id-kind registry. Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), mints new prototypes into it from the running checkout's prototypes/_template/, deletes one by recording deletedAt in its status (the folder stays; restorable, and undone for automated sessions), declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html> (data-* for a choice, a --<name> custom property for a color), stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), stores whether the user marked each prototype Done, pinned or deleted it as one shared record under _status/ (the prototypes.statuses resource, its PUT, DELETE and restore, undone the same way), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
           - Web:
             - Contributes: `IdKinds.Kind` "proto"
             - Uses: `ids.IdKinds`
@@ -5993,6 +5993,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `POST /api/prototypes/:name/versions/:sha/restore`
               - `PUT /api/prototypes/:name/picks`
               - `PUT /api/prototypes/:name/status`
+              - `POST /api/prototypes/:name/restore`
           - Core:
             - Uses:
               - `ids.defineIdKind`
@@ -6019,6 +6020,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeProblem`
               - `PrototypeStatus`
               - `PrototypeStatusChange`
+              - `PrototypeStatusEdit`
               - `PrototypeVersion`
               - `PrototypeVersionKind`
               - `PrototypeViewport`
@@ -6080,6 +6082,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `readOptionSource`
               - `readPrototypeOptions`
               - `resolvePicks`
+              - `restorePrototype`
               - `restorePrototypeVersion`
               - `setPrototypePicks`
               - `setPrototypeStatus`
@@ -6099,24 +6102,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/thumbnails`
               - `conversations/conversation-view/artifacts/prototype`
           - Exemptions:
-            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/paths.ts`, `server/internal/picks.ts`, `server/internal/signature.ts`, `server/internal/status.ts`, `server/internal/tree-path.ts`, `shared/folder-signature.ts`, `shared/history/lock.ts`, `shared/history/store.ts`, `shared/list-metas.ts`, `shared/mint.ts`, `shared/read-folder.ts`, `shared/record-store.ts`, `shared/template.ts`, `shared/trash.ts` (debt)
-        - **`gallery`** — Prototypes gallery list pane — one card per prototype over its rendered preview, on the prototype viewer's grid, with a Recently edited list; grouped (Pinned / In progress / Done) and filterable by a pin and a Done circle on every card and row (hover actions that stay shown while set; also in the detail pane's header), a confirmed Delete on every card and in the detail header (the folder moves to the data dir's _trash/) — plus New prototype, which mints the folder before launching the agent that designs it.
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/paths.ts`, `server/internal/picks.ts`, `server/internal/signature.ts`, `server/internal/status.ts`, `server/internal/tree-path.ts`, `shared/folder-signature.ts`, `shared/history/lock.ts`, `shared/history/store.ts`, `shared/list-metas.ts`, `shared/mint.ts`, `shared/read-folder.ts`, `shared/record-store.ts`, `shared/template.ts`, `shared/legacy-trash.ts` (debt)
+        - **`gallery`** — Prototypes gallery list pane — one card per prototype over its rendered preview, on the prototype viewer's grid, with a Recently edited list; grouped (Pinned / In progress / Done) and filterable by a pin and a Done circle on every card and row (hover actions that stay shown while set; also in the detail pane's header), an undoable Delete on every card and in the detail header (deletedAt in the prototype's status — the folder stays), and a Trash pane listing the deleted ones with Restore — plus New prototype, which mints the folder before launching the agent that designs it.
           - Web:
             - Slots:
               - `prototypesGalleryPane.Actions`
+              - `prototypes-trash.actions`
               - `PrototypeCardActions`
+              - `trash-actions`
             - Slot contributors:
               - `prototypesGalleryPane.Actions` ← `primitives.pane`
+              - `prototypes-trash.actions` ← `primitives.pane`
               - `PrototypeCardActions` ← `apps.prototypes.gallery`
               - `PrototypeCardActions` ← `apps.prototypes.present`
+              - `trash-actions` ← `apps.prototypes.gallery`
             - Contributes:
               - `Pane.Register` "prototypes-gallery"
+              - `Pane.Register` "prototypes-trash"
               - `prototypeDetailPane.Actions` "pin" → `PinHeaderAction`
               - `prototypeDetailPane.Actions` "done" → `DoneHeaderAction`
               - `prototypeDetailPane.Actions` "delete" → `DeleteHeaderAction`
               - `PrototypeCardActions` "pin" → `PinCardAction`
               - `PrototypeCardActions` "done" → `DoneCardAction`
               - `PrototypeCardActions` "delete" → `DeleteCardAction`
+              - `trash-actions` "restore" → `RestoreCardAction`
             - Uses: 29 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/gallery/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/gallery/REFERENCE.md)
               - `apps/prototypes/canvas` ×4
               - `infra/endpoints` ×4
@@ -6129,9 +6138,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/badge.Badge`
               - `primitives/icon-button.IconButton`
               - `primitives/launch.LaunchAgentPopover`
-              - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
               - `primitives/relative-time.RelativeTime`
               - `shell/notifications.useToast`
+              - `shell/toast.showToast`
               - `ui/icons.Icon`
             - Exports (types): `PrototypeGalleryRow`
             - Exports (values):
@@ -6143,6 +6152,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --accent`
+              - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --primary-text`
             - Imported by:
               - `apps/home/app-cards`
@@ -6216,6 +6226,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `prototypeDetailRoute`
               - `prototypesApp`
               - `prototypesGalleryRoute`
+              - `prototypesTrashRoute`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --border`
@@ -38169,8 +38180,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ← `primitives.data-view`
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-        - Contributes: 80 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.WebRegister` ×72
+        - Contributes: 81 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.WebRegister` ×73
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
@@ -38406,8 +38417,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useRowFilter`
           - `useSortController`
       - Server:
-        - Contributes: 74 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.Register` ×72
+        - Contributes: 75 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.Register` ×73
           - `ids.kind` ×2
         - Uses:
           - `config_v2.getConfig`
@@ -41575,7 +41586,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/places/places-map`
                   - `apps/places/tag-manager`
                   - `apps/prototypes/canvas`
-                  - `apps/prototypes/gallery`
                   - `build/serve-composition`
                   - `conversations/conversation-view/rewind`
                   - `ui/theme-engine/theme-gallery`
@@ -41690,7 +41700,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots: `Pane.Register`
         - Slot contributors: 88 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `Pane.Register` ×88
-        - Contributes: 115 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Contributes: 116 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `SlotRender.ItemMiddleware`
           - `WebsiteHeader` "title" → `PaneTitleItem`
           - `accountPane.Actions` "title" → `PaneTitleItem`
@@ -41774,6 +41784,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `profilingPane.Actions` "title" → `PaneTitleItem`
           - `prototypeDetailPane.Actions` "title" → `PaneTitleItem`
           - `prototypes-present.actions` "title" → `PaneTitleItem`
+          - `prototypes-trash.actions` "title" → `PaneTitleItem`
           - `prototypesGalleryPane.Actions` "title" → `PaneTitleItem`
           - `queue-dead.actions` "title" → `PaneTitleItem`
           - `queue-emission.actions` "title" → `PaneTitleItem`
@@ -43922,8 +43933,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Web:
     - Slots: `ReorderSlots.AreaEditor`
     - Slot contributors: `ReorderSlots.AreaEditor` ← `reorder.edit-mode`
-    - Contributes: 240 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×240
+    - Contributes: 242 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×242
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -43958,8 +43969,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReorderSlots`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 239 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×239
+    - Contributes: 241 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×241
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
@@ -45765,8 +45776,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --popover`
           - `ui/tokens/color-palette --popover-foreground`
           - `ui/tokens/shape --radius`
-        - Imported by: 25 plugins — full list in [`plugins/shell/plugins/toast/REFERENCE.md`](../plugins/shell/plugins/toast/REFERENCE.md)
-          - `apps` ×9
+        - Imported by: 26 plugins — full list in [`plugins/shell/plugins/toast/REFERENCE.md`](../plugins/shell/plugins/toast/REFERENCE.md)
+          - `apps` ×10
           - `conversations` ×3
           - `primitives` ×3
           - `page` ×2

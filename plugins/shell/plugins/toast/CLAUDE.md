@@ -28,8 +28,8 @@
     - `ui/tokens/color-palette --popover`
     - `ui/tokens/color-palette --popover-foreground`
     - `ui/tokens/shape --radius`
-  - Imported by: 25 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×9
+  - Imported by: 26 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×10
     - `conversations` ×3
     - `primitives` ×3
     - `page` ×2

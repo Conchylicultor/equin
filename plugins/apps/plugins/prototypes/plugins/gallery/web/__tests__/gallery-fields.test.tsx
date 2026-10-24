@@ -39,7 +39,7 @@ describe("joinGalleryRows", () => {
   it("joins each prototype's status and version count", () => {
     const [row] = joinGalleryRows(
       [META],
-      { [META.name]: { done: true, pinned: false } },
+      { [META.name]: { done: true, pinned: false, deletedAt: null } },
       { [META.name]: 12 },
     );
     expect(row).toMatchObject({ done: true, pinned: false, versions: 12 });

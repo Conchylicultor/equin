@@ -13,6 +13,7 @@ import type { PrototypeGalleryRow } from "../slots";
 const warningIcon = symbol("warning");
 const scheduleIcon = symbol("schedule");
 const historyIcon = symbol("history");
+const deleteIcon = symbol("delete");
 
 /**
  * The gallery's rows: the listed prototypes joined with their status and
@@ -26,8 +27,8 @@ export function joinGalleryRows(
   versionCounts: Record<string, number>,
 ): PrototypeGalleryRow[] {
   return prototypes.map((p) => {
-    const { done, pinned } = statusOf(statuses, p.name);
-    return { ...p, done, pinned, versions: versionCounts[p.name] };
+    const { done, pinned, deletedAt } = statusOf(statuses, p.name);
+    return { ...p, done, pinned, deletedAt, versions: versionCounts[p.name] };
   });
 }
 
@@ -113,5 +114,24 @@ export const galleryFields: FieldDef<PrototypeGalleryRow>[] = [
     ],
     value: (p) => (p.pinned ? "pinned" : p.done ? "done" : "in-progress"),
     visible: false,
+  },
+];
+
+/**
+ * The Trash's fields: the gallery's, plus when each prototype was deleted —
+ * a token on the card, and what the Trash lists newest first.
+ */
+export const trashFields: FieldDef<PrototypeGalleryRow>[] = [
+  ...galleryFields,
+  {
+    id: "deletedAt",
+    label: "Deleted",
+    type: "date",
+    icon: deleteIcon,
+    value: (p) => (p.deletedAt === null ? undefined : new Date(p.deletedAt)),
+    cell: (p) =>
+      p.deletedAt === null ? null : (
+        <RelativeTime date={new Date(p.deletedAt)} />
+      ),
   },
 ];

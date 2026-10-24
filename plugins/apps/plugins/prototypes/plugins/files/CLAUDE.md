@@ -202,8 +202,9 @@ server resource/PUT, a `tree-path.ts` arm, a watcher notify and its dir in
 
 ## Status (`shared/status.ts`)
 
-Whether the user marked a prototype **Done**, and whether they **pinned** it:
-`_status/<id>.json` (`{ "done": true, "pinned": false }`; no file = neither; a
+Whether the user marked a prototype **Done**, whether they **pinned** it, and
+whether they **deleted** it:
+`_status/<id>.json` (`{ "done": true, "pinned": false, "deletedAt": null }`; no file = none of them; a
 file from before pins holds `done` alone and reads as not pinned), shared by every surface exactly like
 the picks.
 
@@ -216,7 +217,34 @@ the picks.
   404 for an unknown prototype. Notifies at once; other backends hear it through
   the watcher (`status-recorded`). Automated sessions are undone through the
   `prototype-status` agent-write ledger, like picks.
-- `prototype list` prints `[done]` after a Done prototype's title.
+- `prototype list` leaves deleted prototypes out (a last line counts them).
+
+### Deleted
+
+A delete is a third field, `deletedAt` (ISO instant, `null` while live; a file
+from before holds none and reads as live) — **not a move of the folder**. It
+used to rename the folder into `_trash/`, after which the id named nothing:
+an open canvas, a present link and the watcher kept asking for it and the
+history / picks loaders threw `no such prototype`. Now a deleted prototype
+stays a prototype — folder, history, picks untouched, every link resolving —
+so that class of error has no spelling.
+
+- `DELETE /api/prototypes/:name` records `deletedAt: now`;
+  `POST /api/prototypes/:name/restore` clears it. Both write through the status
+  store (`server/internal/status.ts`, `writeStatus`), so an automated session's
+  delete is undone by the `prototype-status` ledger like any status write (the
+  old 403 is gone). The fold keeps the FIRST `deletedAt` when a deleted
+  prototype is deleted again. A client cannot write the field: the PUT body is
+  `PrototypeStatusChange`; the store folds the wider `PrototypeStatusEdit`.
+- The list (`prototypes.list`) still holds deleted prototypes — they are on
+  disk. Hiding is the reader's: the gallery shows the live ones and lists the
+  rest in its Trash pane; the canvas shows a "Deleted · Restore" notice;
+  `prototype list` leaves them out and counts them.
+- **The old trash** (`shared/legacy-trash.ts`, `adoptLegacyTrash`, run in
+  `onReady` before the watcher): each `_trash/<id>/` is recorded deleted (at
+  its ctime) and renamed back. Kept while branches with the old delete still
+  share the tree; a hand-made folder name stays in `_trash/` (no status key).
+  `_trash` is still never served.
 
 ## `./equin prototype`
 
@@ -364,17 +392,9 @@ Design: `research/2026-08-15-global-prototypes-self-contained.md`.
   goes through `implement()`.
 - `POST /api/prototypes` → `{ id }`, body `{ title? }`. Mints a folder from the
   template. JSON, so it goes through `implement()` too.
-- `DELETE /api/prototypes/:name` → 204 (`deletePrototype`, via `implement()`).
-  A soft delete: `shared/trash.ts` renames the folder to `_trash/<name>/`
-  (atomic, `_`-prefixed so never listed or served). `_history/<name>.git`,
-  `_picks/` and `_status/` are left in place, so moving the folder back by hand
-  restores it whole. Like the mint it notifies nothing — the folder leaving the
-  watched tree re-broadcasts the list. 404 for an unknown prototype; **403 for
-  an automated session**: the tree is host-global (a worktree e2e run would
-  delete the user's prototype) and the agent-write ledger snapshots files, not
-  a moved folder, so the write could not be reverted. The gallery's card and
-  the detail header both offer it, behind a confirm dialog
-  (`gallery/web/components/delete-prototype.tsx`).
+- `DELETE /api/prototypes/:name` → 204 and `POST /api/prototypes/:name/restore`
+  → 204 (`deletePrototype` / `restorePrototype`) — status writes; see
+  **Deleted** under Status.
 - `GET /api/prototypes/:name` → **302** to `…/:name/index.html`, carrying the
   query across. Only for hand-typed URLs; nothing in the app links here.
 - `GET /api/prototypes/:name/:file` → `prototypes/<name>/<file>` verbatim,
@@ -494,7 +514,7 @@ for the `checkpoints` plugin's end-of-turn job.
 
 ## Plugin reference
 
-- Description: Registers the prototype id kind (`proto-…`) in the browser's id-kind registry. Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), mints new prototypes into it from the running checkout's prototypes/_template/, deletes one by moving its folder into _trash/ (refused for automated sessions), declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html> (data-* for a choice, a --<name> custom property for a color), stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), stores whether the user marked each prototype Done or pinned it as one shared record under _status/ (the prototypes.statuses resource and its PUT, undone the same way), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
+- Description: Registers the prototype id kind (`proto-…`) in the browser's id-kind registry. Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), mints new prototypes into it from the running checkout's prototypes/_template/, deletes one by recording deletedAt in its status (the folder stays; restorable, and undone for automated sessions), declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html> (data-* for a choice, a --<name> custom property for a color), stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), stores whether the user marked each prototype Done, pinned or deleted it as one shared record under _status/ (the prototypes.statuses resource, its PUT, DELETE and restore, undone the same way), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
 - Web:
   - Contributes: `IdKinds.Kind` "proto"
   - Uses: `ids.IdKinds`
@@ -533,6 +553,7 @@ for the `checkpoints` plugin's end-of-turn job.
     - `POST /api/prototypes/:name/versions/:sha/restore`
     - `PUT /api/prototypes/:name/picks`
     - `PUT /api/prototypes/:name/status`
+    - `POST /api/prototypes/:name/restore`
 - Core:
   - Uses:
     - `ids.defineIdKind`
@@ -559,6 +580,7 @@ for the `checkpoints` plugin's end-of-turn job.
     - `PrototypeProblem`
     - `PrototypeStatus`
     - `PrototypeStatusChange`
+    - `PrototypeStatusEdit`
     - `PrototypeVersion`
     - `PrototypeVersionKind`
     - `PrototypeViewport`
@@ -620,6 +642,7 @@ for the `checkpoints` plugin's end-of-turn job.
     - `readOptionSource`
     - `readPrototypeOptions`
     - `resolvePicks`
+    - `restorePrototype`
     - `restorePrototypeVersion`
     - `setPrototypePicks`
     - `setPrototypeStatus`
@@ -639,6 +662,6 @@ for the `checkpoints` plugin's end-of-turn job.
     - `apps/prototypes/thumbnails`
     - `conversations/conversation-view/artifacts/prototype`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/paths.ts`, `server/internal/picks.ts`, `server/internal/signature.ts`, `server/internal/status.ts`, `server/internal/tree-path.ts`, `shared/folder-signature.ts`, `shared/history/lock.ts`, `shared/history/store.ts`, `shared/list-metas.ts`, `shared/mint.ts`, `shared/read-folder.ts`, `shared/record-store.ts`, `shared/template.ts`, `shared/trash.ts` (debt)
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/paths.ts`, `server/internal/picks.ts`, `server/internal/signature.ts`, `server/internal/status.ts`, `server/internal/tree-path.ts`, `shared/folder-signature.ts`, `shared/history/lock.ts`, `shared/history/store.ts`, `shared/list-metas.ts`, `shared/mint.ts`, `shared/read-folder.ts`, `shared/record-store.ts`, `shared/template.ts`, `shared/legacy-trash.ts` (debt)
 
 <!-- AUTOGENERATED:END -->

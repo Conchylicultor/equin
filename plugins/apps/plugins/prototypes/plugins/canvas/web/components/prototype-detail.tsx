@@ -1,9 +1,11 @@
 import type { ReactElement, ReactNode } from "react";
-import { matchResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  matchResource,
+  ResourceErrorInline,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
@@ -14,9 +16,19 @@ import {
   Stack,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
+  prototypeStatuses,
   prototypesList,
+  restorePrototype,
+  statusOf,
   type PrototypeMeta,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import {
+  Button,
+  cn,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { prototypeDetailPane } from "../panes";
 import { PrototypeDetailProvider, usePrototypeDetail } from "../context";
 import { Canvas } from "./canvas";
@@ -24,6 +36,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const warningIcon = symbol("warning");
+const deleteIcon = symbol("delete");
 
 /**
  * The detail pane: the prototype's canvas of frames, running edge to edge under
@@ -110,7 +123,12 @@ function PrototypeCanvas(): ReactNode {
         // positioning host for the problem card floated over the canvas's corner
         <div className="relative h-full">
           <Canvas meta={meta} />
-          <ProblemBanner meta={meta} />
+          <Pin to="bottom-left" offset="md">
+            <Stack direction="col" gap="sm" align="start">
+              <DeletedBanner name={meta.name} />
+              <ProblemBanner meta={meta} />
+            </Stack>
+          </Pin>
         </div>
       );
     },
@@ -118,16 +136,67 @@ function PrototypeCanvas(): ReactNode {
 }
 
 /**
+ * "Deleted 3 days ago · Restore", over the canvas's bottom-left corner, while
+ * the prototype is deleted. A deleted prototype is still a prototype — its
+ * folder, versions and picks untouched — so its canvas opens as ever (from
+ * the Trash, a link, Back) and says so here. Nothing while the statuses are
+ * unknown: no claim either way. A failed read says so inline, so a broken
+ * status record is never silently read as "not deleted".
+ */
+function DeletedBanner({ name }: { name: string }): ReactNode {
+  const statuses = useLive(prototypeStatuses);
+  const mutation = useEndpointMutation(restorePrototype);
+  return matchResource(statuses, {
+    loading: () => null,
+    error: (error) => (
+      <Surface level="float">
+        <Inset pad="sm">
+          <ResourceErrorInline
+            variant="inline"
+            subject="whether it was deleted"
+            error={error}
+            refetch={statuses.refetch}
+          />
+        </Inset>
+      </Surface>
+    ),
+    ready: (all) => {
+      const { deletedAt } = statusOf(all, name);
+      if (deletedAt === null) return null;
+      return (
+        <Surface level="float">
+          <Inset pad="sm">
+            <Stack direction="row" gap="sm" align="center">
+              <Badge variant="destructive" icon={<Icon icon={deleteIcon} />}>
+                Deleted <RelativeTime date={new Date(deletedAt)} />
+              </Badge>
+              <ControlSizeProvider size="sm">
+                <Button
+                  variant="outline"
+                  onClick={() => mutation.mutate({ params: { name } })}
+                >
+                  Restore
+                </Button>
+              </ControlSizeProvider>
+            </Stack>
+          </Inset>
+        </Surface>
+      );
+    },
+  });
+}
+
+/**
  * What is wrong with this prototype's folder, floated over the canvas's
- * bottom-left corner (the header card holds the top). Prototypes are user
+ * bottom-left corner (the header card holds the top), under the deleted
+ * notice when there is one. Prototypes are user
  * content, not code, so the self-contained contract is enforced when the
  * folder is read and reported here — in front of the person who just wrote it.
  */
 function ProblemBanner({ meta }: { meta: PrototypeMeta }): ReactElement | null {
   if (meta.problems.length === 0) return null;
   return (
-    <Pin to="bottom-left" offset="md">
-      <Surface level="float">
+    <Surface level="float">
         <Inset pad="sm">
           <Stack direction="col" gap="2xs">
             <Badge variant="warning" icon={<Icon icon={warningIcon} />}>
@@ -147,7 +216,6 @@ function ProblemBanner({ meta }: { meta: PrototypeMeta }): ReactElement | null {
             ))}
           </Stack>
         </Inset>
-      </Surface>
-    </Pin>
+    </Surface>
   );
 }
