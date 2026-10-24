@@ -529,10 +529,10 @@ for the `checkpoints` plugin's end-of-turn job.
     - `readPrototypeTitle`
   - Register: `defineFileWatcher('prototypes-files.tree')`
   - Resources:
-    - `prototypes.history` (push, notified)
-    - `prototypes.list` (push, notified)
+    - `prototypes.history` (push, notified, whole: one prototype's recorded versions — one per agent turn that changed it, read whole by the version stepper, whole: the options one prototype's index.html declares — a handful of hand-written lines, whole: the values one hand-written <meta name="prototype-option"> line declares — a handful)
+    - `prototypes.list` (push, notified, whole: every prototype folder on disk — each made by hand, and the gallery lists, filters and groups them all, whole: the options one prototype's index.html declares — a handful of hand-written lines, whole: the ways one prototype folder breaks the contract — a handful of checks, whole: the values one hand-written <meta name="prototype-option"> line declares — a handful)
     - `prototypes.picks` (push, notified)
-    - `prototypes.versionCounts` (push, notified)
+    - `prototypes.versionCounts` (push, notified, whole: one count per prototype — bounded by the prototype list it annotates, which the gallery holds whole)
   - Routes:
     - `GET /api/prototypes`
     - `POST /api/prototypes`
@@ -554,6 +554,10 @@ for the `checkpoints` plugin's end-of-turn job.
     - `infra/html-decode.decodeHtmlText`
     - `infra/html-decode.readHtmlAttr`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeKeyedRecord`
+    - `packages/list-bound.wholeList`
+    - `packages/list-bound.wholeRecord`
+    - `packages/list-bound.wholeTuple`
     - `primitives/css/color-picker.Color`
   - Exports (types):
     - `ChoiceOption`

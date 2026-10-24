@@ -725,6 +725,7 @@ export const hostReads: readonly {
   { key: "data-view-custom-values", needsMachine: false },
   { key: "data-view-row-order", needsMachine: false },
   { key: "edited-files", needsMachine: true },
+  { key: "edited-files.file", needsMachine: true },
   { key: "file-viewer.bytes", needsMachine: true },
   { key: "hints.seen", needsMachine: false },
   { key: "host-fs.image-sizes", needsMachine: true },

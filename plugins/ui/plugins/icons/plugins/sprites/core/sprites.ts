@@ -115,7 +115,10 @@ const IconManifestSchema = z.object({
    * the build scanned, sorted — so each is a `SymbolName` tsc checked at its
    * call site, and one the sprites carry.
    */
-  symbols: z.array(z.string()),
+  symbols: wholeList(z.string(), {
+    reason:
+      "the symbol names the build scanned from the code — fixed for the process, and the Icons pane lists them all",
+  }),
 });
 
 /**

@@ -514,6 +514,7 @@ See `research/2026-09-29-global-scoped-change-routing.md`.
   - Server: `@plugins/database/plugins/change-feed/server/testing`
     - `assertRouteLayoutsInstalled` — A3: throw (block boot) unless every routed table's installed triggers emit what its routes read.
     - `assertRouteTablesCovered` — Throw loudly (blocking boot) if any resource depends on a table with no change source: no trigger the change-feed installed, and no change producer.
+    - `assertUnfedTablesOptedOut` — A reach plan's `unfed` tables are read outside the change feed BY DECLARATION, so each must be one the feed was told to skip (`ExcludeFromChangeFeed`).
     - `buildViewDeps` — Each public view → the relations it directly reads (sorted).
     - `createChangeFeedListener` — An isolated LISTEN consumer on a suite's own database: the real listener over the desktop driver's session (`openListenSession`, the one `DatabaseDriver.listen` opens), pointed at the suite's connection string rather than the worktree's.
     - `createChangeRouter` — The routing above, into ANY runtime's router — `routeChange` is it bound to server-core's process-global runtime.

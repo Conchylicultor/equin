@@ -347,7 +347,7 @@ Run with `./equin test plugins/plugin-meta/plugins/composition`.
     - `plugin-meta/plugin-tree.getFacetsTreeCached`
     - `plugin-meta/plugin-tree.onPluginTreeChanged`
     - `plugin-meta/plugin-tree.pluginTreeGeneration`
-  - Resources: `composition.data` (invalidate, notified)
+  - Resources: `composition.data` (invalidate, notified, whole: the plugin graph of this checkout — one entry per plugin (about 1.5k) and per edge between two, which the closure engine walks whole client-side)
 - Core:
   - Uses:
     - `config_v2.defineConfig`
@@ -360,6 +360,8 @@ Run with `./equin test plugins/plugin-meta/plugins/composition`.
     - `infra/namespace.MAIN_COMPOSITION_ID`
     - `infra/namespace.NAMESPACE_LABEL_RE`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
+    - `packages/list-bound.wholeRecord`
   - Exports (types):
     - `CompositionData`
     - `CompositionHome`

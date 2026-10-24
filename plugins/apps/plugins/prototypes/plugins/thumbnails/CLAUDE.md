@@ -162,7 +162,7 @@ Design: `research/2026-08-16-apps-prototype-gallery-thumbnails.md`.
   - Register:
     - `defineJob('prototypes.render-thumbnail')`
     - `defineJob('prototypes.sweep-thumbnails')`
-  - Resources: `prototypes.thumbnails` (push, notified)
+  - Resources: `prototypes.thumbnails` (push, notified, whole: one state per prototype — bounded by the prototype list the gallery holds whole)
 - Web:
   - Uses:
     - `infra/endpoints.useAssetSrc`
@@ -186,6 +186,7 @@ Design: `research/2026-08-16-apps-prototype-gallery-thumbnails.md`.
     - `infra/endpoints.blob`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeRecord`
   - Exports (types):
     - `ThumbnailFailureKind`
     - `ThumbnailState`

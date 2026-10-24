@@ -118,6 +118,7 @@ host first.
     - `infra/endpoints.defineEndpoint`
     - `infra/entities.entityRef`
     - `network/live.liveCollection`
+    - `packages/list-bound.wholeRecord`
     - `primitives/pane.defineRoute`
   - Exports (types):
     - `Report`

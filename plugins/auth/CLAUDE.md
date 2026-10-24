@@ -215,7 +215,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `listProviders`
     - `registerAuthProvider`
   - Register: `defineTimer('auth.refresh')`
-  - Resources: `auth-state` (push, notified)
+  - Resources: `auth-state` (push, notified, whole: one entry per registered auth provider — tens at most, whole: the OAuth scopes one account granted — a handful per provider)
   - Routes:
     - `GET /api/auth/start/:provider`
     - `GET /api/auth/callback/:provider`
@@ -228,6 +228,8 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
   - Uses:
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
+    - `packages/list-bound.wholeRecord`
   - Exports (types):
     - `ApiKeyConfig`
     - `AuthAccountState`

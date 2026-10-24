@@ -60,7 +60,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `tasks/tasks-core._conversations`
     - DB schema: `plugins/active-data/server/internal/tables.ts`
     - Exports (values): `_activeDataBindings`
-    - Resources: `active-data.bindings` (push, unbounded: one conversation's widget bindings — a handful per assistant message; the table's key is the composite (conversationId, messageId, tag, occurrenceIndex), so no single-id :rows read fits)
+    - Resources: `active-data.bindings` (push, whole: one conversation's widget bindings — a handful per assistant message; the table's key is the composite (conversationId, messageId, tag, occurrenceIndex), so no single-id :rows read fits)
     - Routes:
       - `PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
       - `DELETE /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
@@ -68,6 +68,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Uses:
       - `infra/endpoints.defineEndpoint`
       - `network/live.liveValue`
+      - `packages/list-bound.wholeList`
     - Exports (types):
       - `ActiveDataBinding`
       - `ActiveDataBindingsPayload`
@@ -721,7 +722,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `browserHistory`
               - `recordVisit`
-            - Resources: `browser-recents` (push, unbounded: the 12 most recent distinct urls — capped by the loader's LIMIT; a DISTINCT ON derivation over browser_history, not rows of one table)
+            - Resources: `browser-recents` (push, capped: BROWSER_RECENTS_LIMIT)
             - Routes: `POST /api/browser/history`
           - Core:
             - Uses:
@@ -942,8 +943,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `isListedChord`
               - `loadListedChords`
             - Resources:
-              - `chord.catalog` (push)
-              - `chord.curriculum` (push)
+              - `chord.catalog` (push, whole: one loaded song index's catalog, read entire — its distinct chords (1,808 on the full index), built once per index, whole: a subset of Hookpad's key modes — seven at most)
+              - `chord.curriculum` (push, whole: the chords the learner turned on — a subset of the catalog's chords)
             - Routes:
               - `POST /api/chord/curriculum/chords`
               - `POST /api/chord/curriculum/blanks`
@@ -999,6 +1000,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `integrations/hooktheory.HookpadMode`
               - `integrations/hooktheory.HookpadModeSchema`
               - `network/live.liveValue`
+              - `packages/list-bound.wholeList`
             - Exports (types):
               - `AskedBox`
               - `AskedOptions`
@@ -1147,7 +1149,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints.implement`
               - `network/live.serveValue`
             - DB schema: `plugins/apps/plugins/chord/plugins/progress/server/internal/tables.ts`
-            - Resources: `chord.progress` (push)
+            - Resources: `chord.progress` (push, whole: one entry per requested token — the params bound it)
             - Routes: `POST /api/chord/rounds`
           - Core:
             - Uses:
@@ -1158,6 +1160,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints.defineEndpoint`
               - `integrations/hooktheory.TheorytabSectionIdSchema`
               - `network/live.liveValue`
+              - `packages/list-bound.wholeList`
             - Exports (types):
               - `Answer`
               - `ChordAnswerSample`
@@ -1722,6 +1725,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses:
                   - `apps/deploy/analytics/host-only.HOST_ONLY_PREFIX`
                   - `infra/endpoints.defineEndpoint`
+                  - `packages/list-bound.cappedList`
+                  - `packages/list-bound.wholeList`
                 - Exports (types):
                   - `AdditiveMetrics`
                   - `AnalyticsFilter`
@@ -2101,7 +2106,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `deploy.run-history` (keyed, window)
               - `deploy.run-history:groups` (push)
               - `deploy.run-history:rows` (keyed, point)
-              - `deploy.runs` (push, notified)
+              - `deploy.runs` (push, notified, whole: one entry per deployment row — its most recent run)
             - Routes:
               - `GET /api/deploy/deployments`
               - `POST /api/deploy/deployments`
@@ -2126,6 +2131,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live.liveCollection`
               - `network/live.LiveRowsCollection`
               - `network/live.liveValue`
+              - `packages/list-bound.wholeRecord`
               - `primitives/pane.defineRoute`
             - Exports (types):
               - `CreateDeploymentBody`
@@ -2829,7 +2835,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `defineWallpaperProvider`
               - `getWallpaperProvider`
-            - Resources: `wallpaper.search` (invalidate, fixed)
+            - Resources: `wallpaper.search` (invalidate, fixed, capped: WALLPAPER_SEARCH_MAX_RESULTS)
             - Routes:
               - `POST /api/wallpaper/import-url`
               - `POST /api/wallpaper/upload`
@@ -2845,6 +2851,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints.defineEndpoint`
               - `infra/endpoints.multipart`
               - `network/live.liveValue`
+              - `packages/list-bound.cappedList`
             - Exports (types):
               - `BuiltinWallpaper`
               - `SavedWallpaper`
@@ -2861,6 +2868,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SavedWallpaperSchema`
               - `uploadWallpaper`
               - `WALLPAPER_QUERY_MAX`
+              - `WALLPAPER_SEARCH_MAX_RESULTS`
               - `WallpaperAttributionSchema`
               - `wallpaperConfig`
               - `wallpaperImage`
@@ -3204,7 +3212,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `updateSource`
               - `upsertEvents`
             - Resources:
-              - `events.run-events` (push, unbounded: one run's closed event set — a single extraction, tens of events — and the loader caps it at RUN_EVENTS_LIMIT rows)
+              - `events.run-events` (push, capped: RUN_EVENTS_LIMIT, whole: the flags one source run raised — a few, whole: one source's per-type input — its type's configFields)
               - `events.source-runs` (keyed, window)
               - `events.source-runs:groups` (push)
               - `events.source-runs:rows` (keyed, point)
@@ -3219,27 +3227,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `POST /api/events/sources/:id/refresh`
               - `POST /api/events/sources/refresh-all`
           - Core:
-            - Uses:
-              - `apps/events/event-date.EventDate`
-              - `apps/events/event-date.EventDateSchema`
-              - `fields.FieldsRecord`
-              - `fields.fieldsToZodObject`
-              - `fields.nullable`
+            - Uses: 23 symbols — full list in [`plugins/apps/plugins/events/plugins/events-core/REFERENCE.md`](../plugins/apps/plugins/events/plugins/events-core/REFERENCE.md)
+              - `fields` ×3
+              - `ids` ×3
+              - `network/live` ×3
+              - `packages/list-bound` ×3
+              - `apps/events/event-date` ×2
+              - `fields/text/config` ×2
               - `fields/bool/config.boolField`
               - `fields/date/config.dateField`
               - `fields/int/config.intField`
               - `fields/json/config.jsonField`
               - `fields/tags/config.tagsField`
-              - `fields/text/config.enumTextField`
-              - `fields/text/config.textField`
-              - `ids.defineIdKind`
-              - `ids.idKindField`
-              - `ids.IdOf`
               - `infra/endpoints.defineEndpoint`
               - `infra/entities.entityRef`
-              - `network/live.liveCollection`
-              - `network/live.LiveRowsCollection`
-              - `network/live.liveValue`
             - Exports (types):
               - `CreateEventSourceBody`
               - `EventCategory`
@@ -3972,7 +3973,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/commit-list.tryRunGit`
             - Resources:
               - `file-explorer.git-checkout` (invalidate, snapshot)
-              - `file-explorer.git-status` (push, notified)
+              - `file-explorer.git-status` (push, notified, capped: GIT_STATUS_MAX_PATHS)
           - Core:
             - Uses:
               - `apps/file-explorer/browser.fileEntry`
@@ -4347,7 +4348,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resolveMailAccountId`
             - Resources:
               - `mail-account` (push)
-              - `mail-labels` (push, unbounded: the connected account's user labels — Gmail caps an account's labels in the thousands, so the whole list is the working set)
+              - `mail-labels` (push, whole: the connected account's user labels — Gmail caps an account's labels in the thousands, so the whole list is the working set)
           - Core:
             - Uses:
               - `fields.FieldsRecord`
@@ -4366,6 +4367,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ids.IdOf`
               - `infra/entities.entityRef`
               - `network/live.liveValue`
+              - `packages/list-bound.wholeList`
+              - `packages/list-bound.wholeRecord`
               - `primitives/live-state.tolerantEnum`
             - Exports (types):
               - `MailAccount`
@@ -4633,8 +4636,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `defineJob('mail.attachment-scan')`
               - `defineJob('mail.hydrate')`
             - Resources:
-              - `mail-sync-state` (push, unbounded: one row per connected mail account — the app is single-account today)
-              - `mail.message-body` (push)
+              - `mail-sync-state` (push, whole: one row per connected mail account — the app is single-account today)
+              - `mail.message-body` (push, whole: one message's attachments — Gmail bounds a message at 25 MB)
               - `mail.search` (keyed, window, fixed)
             - Routes:
               - `POST /api/mail/sync`
@@ -4656,6 +4659,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/mail/mail-core.MailAttachmentSchema`
               - `infra/endpoints.defineEndpoint`
               - `network/live.liveValue`
+              - `packages/list-bound.wholeList`
             - Exports (types):
               - `MailMessageBody`
               - `MailSearchHit`
@@ -5390,6 +5394,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/entity-extensions.defineExtensionShape`
               - `integrations/google-maps/places-api.PlaceCandidateSchema`
               - `network/live.liveCollection`
+              - `packages/list-bound.wholeRecord`
             - Exports (types):
               - `PickSource`
               - `PlacesAskInput`
@@ -5527,7 +5532,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Resources:
               - `places.places.all` (keyed)
               - `places.places.all:rows` (keyed, point)
-              - `places.search` (invalidate, fixed)
+              - `places.search` (invalidate, fixed, capped: PLACES_SEARCH_MAX_SUGGESTIONS, capped: PLACES_SEARCH_MAX_RESULTS)
               - `places.tags.all` (keyed)
               - `places.tags.all:rows` (keyed, point)
             - Routes:
@@ -5537,13 +5542,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DELETE /api/places/places/:id`
               - `POST /api/places/places/:id/icon`
           - Core:
-            - Uses: 31 symbols — full list in [`plugins/apps/plugins/places/plugins/places-core/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-core/REFERENCE.md)
+            - Uses: 33 symbols — full list in [`plugins/apps/plugins/places/plugins/places-core/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-core/REFERENCE.md)
               - `tag-tree/engine` ×6
               - `fields` ×4
               - `integrations/google-maps/places-api` ×4
               - `fields/text/config` ×3
               - `ids` ×3
               - `network/live` ×2
+              - `packages/list-bound` ×2
               - `ui/icons/saved-names` ×2
               - `fields/date/config.dateField`
               - `fields/json/config.jsonField`
@@ -5586,6 +5592,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `placeName`
               - `PlacePositionSchema`
               - `places`
+              - `PLACES_SEARCH_MAX_RESULTS`
+              - `PLACES_SEARCH_MAX_SUGGESTIONS`
               - `PlaceSchema`
               - `placeSearch`
               - `PlaceSearchQuerySchema`
@@ -6034,10 +6042,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `readPrototypeTitle`
             - Register: `defineFileWatcher('prototypes-files.tree')`
             - Resources:
-              - `prototypes.history` (push, notified)
-              - `prototypes.list` (push, notified)
+              - `prototypes.history` (push, notified, whole: one prototype's recorded versions — one per agent turn that changed it, read whole by the version stepper, whole: the options one prototype's index.html declares — a handful of hand-written lines, whole: the values one hand-written <meta name="prototype-option"> line declares — a handful)
+              - `prototypes.list` (push, notified, whole: every prototype folder on disk — each made by hand, and the gallery lists, filters and groups them all, whole: the options one prototype's index.html declares — a handful of hand-written lines, whole: the ways one prototype folder breaks the contract — a handful of checks, whole: the values one hand-written <meta name="prototype-option"> line declares — a handful)
               - `prototypes.picks` (push, notified)
-              - `prototypes.versionCounts` (push, notified)
+              - `prototypes.versionCounts` (push, notified, whole: one count per prototype — bounded by the prototype list it annotates, which the gallery holds whole)
             - Routes:
               - `GET /api/prototypes`
               - `POST /api/prototypes`
@@ -6059,6 +6067,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/html-decode.decodeHtmlText`
               - `infra/html-decode.readHtmlAttr`
               - `network/live.liveValue`
+              - `packages/list-bound.wholeKeyedRecord`
+              - `packages/list-bound.wholeList`
+              - `packages/list-bound.wholeRecord`
+              - `packages/list-bound.wholeTuple`
               - `primitives/css/color-picker.Color`
             - Exports (types):
               - `ChoiceOption`
@@ -6402,7 +6414,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Register:
               - `defineJob('prototypes.render-thumbnail')`
               - `defineJob('prototypes.sweep-thumbnails')`
-            - Resources: `prototypes.thumbnails` (push, notified)
+            - Resources: `prototypes.thumbnails` (push, notified, whole: one state per prototype — bounded by the prototype list the gallery holds whole)
           - Web:
             - Uses:
               - `infra/endpoints.useAssetSrc`
@@ -6426,6 +6438,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints.blob`
               - `infra/endpoints.defineEndpoint`
               - `network/live.liveValue`
+              - `packages/list-bound.wholeRecord`
             - Exports (types):
               - `ThumbnailFailureKind`
               - `ThumbnailState`
@@ -8939,6 +8952,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `fields/text/config.textField`
                       - `infra/endpoints.defineEndpoint`
                       - `infra/entity-extensions.defineExtensionShape`
+                      - `packages/list-bound.wholeList`
                     - Exports (types):
                       - `AlignmentCandidate`
                       - `AlignmentPhase`
@@ -9119,7 +9133,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live.serveValue`
             - DB schema: `plugins/apps/plugins/sonata/plugins/track-mixer/server/internal/tables.ts`
             - Exports (values): `_trackView`
-            - Resources: `sonata-track-view` (push, unbounded: one song's per-track view overrides — at most one row per track of that song)
+            - Resources: `sonata-track-view` (push, whole: one song's per-track view overrides — at most one row per track of that song)
             - Routes:
               - `POST /api/sonata/songs/:songId/track-view`
               - `DELETE /api/sonata/songs/:songId/track-view`
@@ -9664,32 +9678,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Contributes: `ReleaseDetail.Section` "Logs" → `ReleaseLogSection`
                     - Uses:
                       - `apps/studio/compositions/release.ReleaseDetail`
-                      - `network/live.useLive`
                       - `network/live.useLiveRow`
                       - `primitives/copy-to-clipboard.CopyButton`
                       - `primitives/css/fill.Fill`
                       - `primitives/css/line.Line`
-                      - `primitives/css/scroll.Scroll`
                       - `primitives/css/spacing.Stack`
                       - `primitives/css/text.Text`
-                      - `primitives/css/text.textVariantClass`
-                      - `primitives/css/ui-kit.cn`
                       - `primitives/css/ui-kit.ControlSizeProvider`
+                      - `primitives/data-view.DataView`
+                      - `primitives/data-view.defineDataView`
+                      - `primitives/data-view.FieldDef`
+                      - `primitives/data-view.useLivePagedValuePaging`
                       - `primitives/live-state.ResourceErrorInline`
-                      - `primitives/loading.Loading`
                       - `primitives/log-channels.LiveLogChannel`
                       - `shell/notifications.useToast`
                   - Cross-plugin:
                     - Uses tokens:
-                      - `ui/tokens/color-palette --destructive`
-                      - `ui/tokens/color-palette --foreground`
-                      - `ui/tokens/color-palette --muted`
                       - `ui/tokens/color-palette --muted-foreground`
-                      - `ui/tokens/density --space-md`
-                      - `ui/tokens/density --space-sm`
                       - `ui/tokens/density --space-xs`
-                      - `ui/tokens/shape --radius`
-                      - `ui/tokens/shape --spacing`
         - **`contributions`** — Central view of all plugin contributions aggregated by type.
           - Web:
             - Slots: `contributions.actions`
@@ -9771,7 +9777,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses:
                       - `database.db`
                       - `network/live.serveValue`
-                    - Resources: `studio.table-columns` (push, fixed)
+                    - Resources: `studio.table-columns` (push, fixed, whole: one table's columns — Postgres caps a table at 1,600)
                   - Cross-plugin:
                     - Uses tokens:
                       - `ui/tokens/color-palette --muted-foreground`
@@ -9798,7 +9804,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses:
                       - `database.db`
                       - `network/live.serveValue`
-                    - Resources: `studio.table-foreign-keys` (push, fixed)
+                    - Resources: `studio.table-foreign-keys` (push, fixed, whole: the foreign keys one table declares — a column's worth at most, whole: the foreign keys pointing at one table — one per referencing column in the schema)
                   - Cross-plugin:
                     - Uses tokens:
                       - `ui/tokens/font-family --font-mono`
@@ -9825,7 +9831,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses:
                       - `database.db`
                       - `network/live.serveValue`
-                    - Resources: `studio.table-indexes` (push, fixed)
+                    - Resources: `studio.table-indexes` (push, fixed, whole: one table's indexes — a handful, each declared in its schema)
                   - Cross-plugin:
                     - Uses tokens:
                       - `ui/tokens/color-palette --muted-foreground`
@@ -9872,7 +9878,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses:
                       - `database.db`
                       - `network/live.serveValue`
-                    - Resources: `studio.table-sample-rows` (invalidate, snapshot)
+                    - Resources: `studio.table-sample-rows` (invalidate, snapshot, whole: one row's columns — Postgres caps a table at 1,600, capped: PG_MAX_COLUMNS, capped: SAMPLE_ROWS_LIMIT)
                   - Cross-plugin:
                     - Uses tokens:
                       - `ui/tokens/color-palette --muted-foreground`
@@ -10835,12 +10841,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.serveValue`
         - DB schema: `plugins/apps-core/plugins/app-usage/server/internal/tables.ts`
         - Exports (values): `_appUsageDaily`
-        - Resources: `app-usage.summary` (push, unbounded: one row per app id ever used — bounded by the installed app registry (tens of apps), never by time: the GROUP BY folds every day into its app)
+        - Resources: `app-usage.summary` (push, whole: one row per app id ever used — bounded by the installed app registry (tens of apps), never by time: the GROUP BY folds every day into its app)
         - Routes: `POST /api/app-usage/flush`
       - Core:
         - Uses:
           - `infra/endpoints.defineEndpoint`
           - `network/live.liveValue`
+          - `packages/list-bound.wholeList`
         - Exports (types):
           - `AppUsageEntry`
           - `AppUsageSummaryRow`
@@ -11201,7 +11208,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `listProviders`
       - `registerAuthProvider`
     - Register: `defineTimer('auth.refresh')`
-    - Resources: `auth-state` (push, notified)
+    - Resources: `auth-state` (push, notified, whole: one entry per registered auth provider — tens at most, whole: the OAuth scopes one account granted — a handful per provider)
     - Routes:
       - `GET /api/auth/start/:provider`
       - `GET /api/auth/callback/:provider`
@@ -11214,6 +11221,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Uses:
       - `infra/endpoints.defineEndpoint`
       - `network/live.liveValue`
+      - `packages/list-bound.wholeList`
+      - `packages/list-bound.wholeRecord`
     - Exports (types):
       - `ApiKeyConfig`
       - `AuthAccountState`
@@ -11539,6 +11548,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `fields/text/config.enumTextField`
       - `fields/text/config.textField`
       - `infra/entities.entityRef`
+      - `packages/list-bound.wholeList`
       - `primitives/pane.defineRoute`
     - Exports (types):
       - `BackupArchive`
@@ -11560,9 +11570,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `backupRunFields`
       - `backupRunRoute`
       - `backupRunsEntityRef`
-      - `BackupSourceReportSchema`
+      - `BackupSourceReportsSchema`
       - `backupSourceWentIn`
-      - `BackupTargetResultSchema`
   - Cross-plugin:
     - Uses tokens:
       - `ui/tokens/color-palette --muted-foreground`
@@ -11627,7 +11636,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `backup.BACKUP_RUN_KIND`
           - `backup.backupRunFields`
           - `backup.backupRunsEntityRef`
-          - `backup.BackupSourceReportSchema`
+          - `backup.BackupSourceReportsSchema`
           - `fields.nullable`
           - `fields/int/config.intField`
           - `fields/json/config.jsonField`
@@ -12458,13 +12467,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `resolveWorkspaceRoot`
       - `resolveWorktreePath`
     - Resources:
-      - `code.commit-files` (push, immutable)
+      - `code.commit-files` (push, immutable, capped: COMMIT_FILES_MAX)
       - `code.commit-info` (push, immutable)
       - `code.dir` (keyed, window, notified)
       - `code.dir:meta` (push, notified)
       - `code.file` (invalidate, notified)
       - `code.file-diff` (invalidate, notified)
-      - `code.push-files` (push, notified)
+      - `code.push-files` (push, notified, capped: COMMIT_FILES_MAX)
   - Machine:
     - Uses:
       - `infra/endpoints.machineHandler`
@@ -12498,6 +12507,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.blob`
           - `infra/endpoints.defineEndpoint`
           - `network/live.liveValue`
+          - `packages/list-bound.cappedList`
           - `primitives/commit-list.CommitRowSchema`
         - Exports (types):
           - `CodeDirEntry`
@@ -12510,6 +12520,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `codeFile`
           - `codeFileDiff`
           - `codeImageUrl`
+          - `COMMIT_FILES_MAX`
           - `commitFiles`
           - `CommitFilesSchema`
           - `commitInfo`
@@ -12570,7 +12581,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`file-resolve`** — Fuzzy file path resolution via segment-subsequence matching against git ls-files.
       - Server:
         - Contributes: `resource.declare` "code.resolve-file"
-        - Resources: `code.resolve-file` (invalidate, notified)
+        - Resources: `code.resolve-file` (invalidate, notified, capped: RESOLVE_MAX_MATCHES)
       - Web:
         - Uses:
           - `network/live.useLive`
@@ -12673,13 +12684,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `setConfigByPath`
       - `watchConfig`
     - Resources:
-      - `config-v2.conflict-locations` (push, notified)
-      - `config-v2.conflicts` (push, notified)
-      - `config-v2.modified-counts` (push, notified)
+      - `config-v2.conflict-locations` (push, notified, whole: one entry per registered config descriptor in conflict (~250 at most), whole: the app scopes one descriptor conflicts in — a handful of apps)
+      - `config-v2.conflicts` (push, notified, whole: one per schema violation of one config document, whole: a subset of one config document's field keys, whole: one config document's fields — its descriptor's declared schema, whole: one zod issue path — as deep as the document it points into)
+      - `config-v2.modified-counts` (push, notified, whole: one entry per registered config descriptor the user changed (~250 at most))
       - `config-v2.raw-file` (push, notified)
-      - `config-v2.scopes` (push, notified)
-      - `config-v2.tiers` (push, notified)
-      - `config-v2.values` (push, notified)
+      - `config-v2.scopes` (push, notified, whole: one entry per registered config descriptor (~250), whole: the app scopes one descriptor is customized for — a handful of apps)
+      - `config-v2.tiers` (push, notified, whole: one config document's fields — its descriptor's declared schema)
+      - `config-v2.values` (push, notified, whole: one config document's fields — its descriptor's declared schema)
   - Machine:
     - Uses: `network/live.serveValue`
     - Exports (values): `CONFIG_DIR`
@@ -12692,6 +12703,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `fields/object/config.isObjectFieldDef`
       - `infra/endpoints.defineEndpoint`
       - `network/live.liveValue`
+      - `packages/list-bound.wholeList`
+      - `packages/list-bound.wholeRecord`
       - `primitives/rank.Rank`
     - Exports (types):
       - `CommittedFiles`
@@ -13149,8 +13162,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `defineTriggerEvent('conversation.turn-completed')`
       - `defineJob('conversations.status-sweep')`
     - Resources:
-      - `conversations.context-usage` (push, notified)
-      - `conversations.partial-message` (push, notified)
+      - `conversations.context-usage` (push, notified, whole: the harness's own breakdown of one context window: a handful of categories, whole: the CLAUDE.md / memory files one agent loaded: a handful, whole: the MCP tools one agent process was handed: tens, fixed by its config)
+      - `conversations.partial-message` (push, notified, whole: one model turn's content blocks, held only while it streams)
     - Routes:
       - `GET /api/conversations`
       - `GET /api/conversations/:id`
@@ -13198,6 +13211,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `fields/int/config.intField`
       - `infra/endpoints.defineEndpoint`
       - `network/live.liveValue`
+      - `packages/list-bound.wholeList`
       - `primitives/pane.defineRoute`
       - `tasks/tasks-core.ConversationSchema`
     - Exports (types):
@@ -14217,11 +14231,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.Icon`
           - Server:
             - Contributes: `resource.declare` "allow-files"
-            - Resources: `allow-files` (push, notified)
+            - Resources: `allow-files` (push, notified, whole: the guard-bypass files present at one worktree root — at most one per bypass token, a handful)
           - Machine:
             - Uses: `network/live.serveValue`
           - Core:
-            - Uses: `network/live.liveValue`
+            - Uses:
+              - `network/live.liveValue`
+              - `packages/list-bound.wholeList`
             - Exports (types): `AllowFiles`
             - Exports (values): `allowFiles`
           - Cross-plugin:
@@ -14275,7 +14291,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `conversations/conversation-view/jsonl-viewer.serveTranscriptValue`
             - Exports (values): `ConversationArtifactExtractor`
           - Core:
-            - Uses: `network/live.liveValue`
+            - Uses:
+              - `network/live.liveValue`
+              - `packages/list-bound.wholeList`
+              - `packages/list-bound.wholeRecord`
             - Exports (types):
               - `ArtifactHit`
               - `ArtifactItem`
@@ -14415,9 +14434,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `PACKAGED_SKILL_REASON`
                   - `SKILL_KIND`
                   - `skillFilePath`
-        - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive: the git reads (getEditedFiles, editedFilesSignature) other servers share. The live value is served by the machine half.
+        - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive: the git reads (getEditedFiles, editedFilesSignature) and the worktree watch (watchEditedFiles) other servers share. The live value is served by the machine half.
           - Server:
-            - Contributes: `resource.declare` "edited-files"
+            - Contributes:
+              - `resource.declare` "edited-files"
+              - `resource.declare` "edited-files.file"
+              - `resource.declare` "edited-files:meta"
             - Uses:
               - `infra/git/checkout-watch.acquireCheckoutWatch`
               - `infra/git/git-read-cache.createSignedMemo`
@@ -14429,16 +14451,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `editedFilesSignature`
               - `getEditedFiles`
-            - Resources: `edited-files` (invalidate, notified)
+              - `watchEditedFiles`
+            - Resources:
+              - `edited-files` (keyed, window, notified)
+              - `edited-files:meta` (push, notified)
+              - `edited-files.file` (push, notified)
           - Web:
-            - Uses: `network/live.useLive`
+            - Uses:
+              - `network/live.useLive`
+              - `primitives/live-state.combineResources`
+              - `primitives/live-state.mapResource`
+              - `primitives/live-state.ResourceResult`
+              - `primitives/live-state.ResourceUnavailable`
             - Exports (values):
               - `gitStatusBadge`
               - `gitStatusDot`
+              - `useEditedFile`
               - `useEditedFiles`
           - Machine:
             - Uses: `network/live.serveValue`
-            - Exports (values): `editedFilesServed`
           - Core:
             - Uses:
               - `network/live.liveValue`
@@ -14446,10 +14477,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/live-state.resolvableSchema`
             - Exports (types):
               - `EditedFile`
-              - `EditedFilesPayload`
-              - `EditedFilesResponse`
+              - `EditedFilesMeta`
+              - `EditedFilesQuery`
+              - `EditedFilesSummary`
               - `EditedFileStatus`
             - Exports (values):
+              - `EDITED_FILES_MAX`
+              - `editedFile`
               - `editedFiles`
               - `EditedFileSchema`
           - Cross-plugin:
@@ -14486,7 +14520,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `code-explorer/file-resolve.FileDisambiguation`
                   - `code-explorer/file-resolve.useResolvedFile`
                   - `conversations/conversation-view.conversationPane`
-                  - `conversations/conversation-view/code.useEditedFiles`
+                  - `conversations/conversation-view/code.useEditedFile`
                   - `primitives/css/placeholder.Placeholder`
                   - `primitives/css/text.Text`
                   - `primitives/file-links.FileLinksWorkspaceProvider`
@@ -14543,7 +14577,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.Icon`
           - Server:
             - Contributes: `resource.declare` "commits-graph.graph"
-            - Resources: `commits-graph.graph` (push)
+            - Resources: `commits-graph.graph` (push, whole: this attempt's own commits main already contains — one per push of one attempt, capped: COMMITS_GRAPH_MAX_COMMITS, capped: COMMITS_GRAPH_MAX_BEHIND)
           - Machine:
             - Uses: `network/live.serveValue`
           - Cross-plugin:
@@ -14828,6 +14862,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `paneScrollScope`
               - `Timestamp`
               - `TranscriptView`
+              - `transcriptWindowOf`
               - `useBlockWriting`
               - `useHostedContext`
               - `useJsonlConversationId`
@@ -14856,6 +14891,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversationEvents`
               - `conversationEventsSignature`
               - `serveTranscriptValue`
+              - `transcriptMeta`
+              - `transcriptRows`
               - `watchConversationEvents`
             - Resources:
               - `jsonl-events` (keyed, window, notified)
@@ -14869,6 +14906,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints.defineEndpoint`
               - `infra/endpoints.interpolatePath`
               - `network/live.liveValue`
+              - `packages/list-bound.wholeList`
             - Exports (types):
               - `JsonlEventsQuery`
               - `TranscriptEventRow`
@@ -15473,6 +15511,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/transcript-source.JsonlEvent`
                   - `conversations/transcript-source.taskStopTimes`
                   - `network/live.liveValue`
+                  - `packages/list-bound.wholeList`
                 - Exports (types):
                   - `BackgroundShell`
                   - `BackgroundShellsInput`
@@ -15718,6 +15757,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/transcript-source.JsonlEvent`
                   - `conversations/transcript-source.JsonlEventSchema`
                   - `network/live.liveValue`
+                  - `packages/list-bound.wholeList`
                 - Exports (types): `OutlineTurn`
                 - Exports (values):
                   - `conversationTurns`
@@ -15856,16 +15896,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes:
                   - `resource.declare` "subagent-activity"
                   - `resource.declare` "subagent-transcript"
+                  - `resource.declare` "subagent-transcript:meta"
                   - `resource.declare` "subagents.parent-facts"
                 - Uses: `conversations/conversation-view/jsonl-viewer.serveTranscriptValue`
                 - Resources:
-                  - `subagent-activity` (push, notified)
-                  - `subagent-transcript` (push, notified)
+                  - `subagent-activity` (push, notified, whole: one conversation's sub-agents — one per Agent call or teammate, dozens at most)
+                  - `subagent-transcript` (keyed, window, notified, whole: one sub-agent's typed prompts — its launch prompt and each message sent to it, a handful)
+                  - `subagent-transcript:meta` (push, notified, whole: one sub-agent's typed prompts — its launch prompt and each message sent to it, a handful)
               - Web:
-                - Uses: 24 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/REFERENCE.md)
-                  - `primitives/live-state` ×3
+                - Uses: 28 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/REFERENCE.md)
+                  - `primitives/live-state` ×5
+                  - `conversations/conversation-view/jsonl-viewer` ×4
                   - `primitives/relative-time` ×3
-                  - `conversations/conversation-view/jsonl-viewer` ×2
                   - `conversations` ×2
                   - `primitives/css/spacing` ×2
                   - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
@@ -15900,6 +15942,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Core:
                 - Uses:
                   - `conversations.hasLiveProcess`
+                  - `conversations/conversation-view/jsonl-viewer.JSONL_EVENTS_MAX`
+                  - `conversations/conversation-view/jsonl-viewer.JSONL_EVENTS_PAGE`
+                  - `conversations/conversation-view/jsonl-viewer.seqKey`
+                  - `conversations/conversation-view/jsonl-viewer.TranscriptEventRowSchema`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/workflow.parseWorkflowResult`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/workflow.WORKFLOW_TOOL_NAME`
                   - `conversations/transcript-source.JsonlEvent`
@@ -15909,6 +15955,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/transcript-source.tokenUsageOf`
                   - `conversations/transcript-source.TokenUsageSchema`
                   - `network/live.liveValue`
+                  - `packages/list-bound.wholeList`
+                  - `packages/list-bound.wholeRecord`
                 - Exports (types):
                   - `DescribedSubagent`
                   - `LastStep`
@@ -15921,6 +15969,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SubagentRunState`
                   - `SubagentRunStateInput`
                   - `SubagentTranscript`
+                  - `SubagentTranscriptMeta`
+                  - `SubagentTranscriptQuery`
                   - `UndescribedSubagent`
                   - `UsageFold`
                   - `WorkflowRunEntry`
@@ -15938,6 +15988,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `emptyUsageFold`
                   - `foldUsageLine`
                   - `formatLastStep`
+                  - `lastHandback`
                   - `lastStepOfLines`
                   - `LastStepSchema`
                   - `newestTurnLineAt`
@@ -15952,7 +16003,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SubagentRequestShapeSchema`
                   - `subagentRunState`
                   - `subagentTranscript`
-                  - `SubagentTranscriptSchema`
                   - `teammateIdleTimes`
                   - `toolResultIsOutcome`
                   - `turnEndedOfLines`
@@ -16497,7 +16547,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Contributes: `resource.declare` "jsonl-viewer.task-tools.aggregate"
                     - Uses: `conversations/conversation-view/jsonl-viewer.serveTranscriptValue`
                   - Core:
-                    - Uses: `network/live.liveValue`
+                    - Uses:
+                      - `network/live.liveValue`
+                      - `packages/list-bound.wholeList`
                     - Exports (types):
                       - `TaskAggregate`
                       - `TaskEntry`
@@ -17922,6 +17974,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `infra/endpoints.HttpError`
           - `network/live.liveValue`
+          - `packages/list-bound.wholeList`
           - `primitives/live-state.tolerantEnum`
         - Exports (types):
           - `ConversationModel`
@@ -18011,7 +18064,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `getModelCatalog`
               - `ModelCatalogSource`
               - `notifyModelCatalogChanged`
-            - Resources: `model-provider.catalog` (push, notified)
+            - Resources: `model-provider.catalog` (push, notified, whole: every Claude model version this machine has seen — a few dozen, one per release)
           - Cross-plugin:
             - Imported by:
               - `apps/sonata/transcription`
@@ -18130,6 +18183,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.defineEndpoint`
           - `infra/entities.entityRef`
           - `network/live.liveCollection`
+          - `packages/list-bound.wholeList`
         - Exports (types):
           - `AnswerQuestionBody`
           - `CliAnswer`
@@ -18259,9 +18313,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - DB schema: `plugins/conversations/plugins/runtime-sdk/server/internal/tables.ts`
         - Entity extension of: `tasks/tasks-core` (table `conversations_ext_sdk_agent`)
         - Resources:
-          - `runtime-sdk.agent-processes` (push, notified)
+          - `runtime-sdk.agent-processes` (push, notified, whole: one entry per namespace on this machine with a live agent — at most its worktrees)
           - `runtime-sdk.bundled-cli` (push, fixed)
-          - `runtime-sdk.claude-usage` (push, notified)
+          - `runtime-sdk.claude-usage` (push, notified, whole: one entry per Claude account signed in on this machine — a handful)
           - `runtime-sdk.error-stopped` (keyed, window)
           - `runtime-sdk.error-stopped:groups` (push)
           - `runtime-sdk.error-stopped:rows` (keyed, point)
@@ -18289,6 +18343,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.liveCollection`
           - `network/live.LiveRowsCollection`
           - `network/live.liveValue`
+          - `packages/list-bound.wholeList`
+          - `packages/list-bound.wholeRecord`
           - `tasks/tasks-core.conversationsEntityRef`
         - Exports (types):
           - `AgentAnswer`
@@ -18576,15 +18632,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TranscriptImageKeyError`
           - `TranscriptLines`
           - `TranscriptSource`
-      - Cross-plugin:
-        - Imported by:
-          - `conversations/conversation-view/jsonl-viewer`
-          - `conversations/conversation-view/jsonl-viewer/background-shells`
-          - `conversations/conversation-view/jsonl-viewer/outline`
-          - `conversations/conversation-view/jsonl-viewer/subagents`
-          - `conversations/transcript-source/memory`
-          - `conversations/transcript-watcher`
       - Core:
+        - Uses:
+          - `packages/list-bound.wholeList`
+          - `packages/list-bound.wholeRecord`
         - Exports (types):
           - `ForeignSessionPayload`
           - `HookOutcome`
@@ -18628,6 +18679,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `userPromptText`
           - `withPicksInResponse`
           - `wrapPreprompt`
+      - Cross-plugin:
+        - Imported by:
+          - `conversations/conversation-view/jsonl-viewer`
+          - `conversations/conversation-view/jsonl-viewer/background-shells`
+          - `conversations/conversation-view/jsonl-viewer/outline`
+          - `conversations/conversation-view/jsonl-viewer/subagents`
+          - `conversations/transcript-source/memory`
+          - `conversations/transcript-watcher`
       - Plugins:
         - **`memory`** (excluded) — Transcripts in memory: provides the TranscriptSource host service for a host without Claude Code's session files (the browser composition), from JSONL text written to it. Never booted by the desktop.
           - Server:
@@ -18827,9 +18886,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Workspace`
           - `workspaceOfAttempt`
           - `workspaceOfConversation`
-        - Resources: `workspace.catalog` (push, fixed)
+        - Resources: `workspace.catalog` (push, fixed, whole: the worktree plus one entry per registered scratch profile — a handful, fixed at boot, capped: WorkspaceCapabilitySchema.options.length)
       - Core:
-        - Uses: `network/live.liveValue`
+        - Uses:
+          - `network/live.liveValue`
+          - `packages/list-bound.cappedList`
+          - `packages/list-bound.wholeList`
         - Exports (types):
           - `WorkspaceCapability`
           - `WorkspaceChoice`
@@ -19158,6 +19220,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Server: `@plugins/database/plugins/change-feed/server/testing`
           - `assertRouteLayoutsInstalled` — A3: throw (block boot) unless every routed table's installed triggers emit what its routes read.
           - `assertRouteTablesCovered` — Throw loudly (blocking boot) if any resource depends on a table with no change source: no trigger the change-feed installed, and no change producer.
+          - `assertUnfedTablesOptedOut` — A reach plan's `unfed` tables are read outside the change feed BY DECLARATION, so each must be one the feed was told to skip (`ExcludeFromChangeFeed`).
           - `buildViewDeps` — Each public view → the relations it directly reads (sorted).
           - `createChangeFeedListener` — An isolated LISTEN consumer on a suite's own database: the real listener over the desktop driver's session (`openListenSession`, the one `DatabaseDriver.listen` opens), pointed at the suite's connection string rather than the worktree's.
           - `createChangeRouter` — The routing above, into ANY runtime's router — `routeChange` is it bound to server-core's process-global runtime.
@@ -19969,6 +20032,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/entities.entityRef`
           - `network/live.liveCollection`
           - `network/live.LiveRowsCollection`
+          - `packages/list-bound.wholeList`
         - Exports (types):
           - `BootTraceItem`
           - `SavedBootTrace`
@@ -20074,7 +20138,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/file-watcher.acquireDirWatch`
           - `infra/worktree.ensureMainWorktreeRoot`
           - `network/live.serveValue`
-        - Resources: `broadcasts.entries` (push, notified)
+        - Resources: `broadcasts.entries` (push, notified, whole: one hand-written broadcasts.json — the few messages a maintainer is broadcasting to stale worktrees, whole: a subset of the op kinds — a closed vocabulary of a handful)
         - Routes: `PUT /api/debug/broadcasts`
       - Cross-plugin:
         - Uses tokens:
@@ -20130,11 +20194,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/artifacts.ConversationArtifactExtractor`
           - `infra/file-watcher.acquireDirWatch`
           - `network/live.serveValue`
-        - Resources: `browser-recordings.runs` (push, notified)
+        - Resources: `browser-recordings.runs` (push, notified, whole: the runs one tool call drove — one for a browser_* call or an e2e script, a few when a call reran it, whole: one drive's steps — a scripted e2e flow or a single browser_* call, tens of steps, written once when the run ends)
       - Core:
         - Uses:
           - `framework/cli/cli-name.CLI_NAME_PATTERN`
           - `network/live.liveValue`
+          - `packages/list-bound.wholeList`
         - Exports (types):
           - `BrowserRecordingRun`
           - `RecordingManifest`
@@ -20326,9 +20391,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register:
           - `defineTimer('health.process-sampler')`
           - `defineTimer('health.host-sampler')`
-        - Resources: `health-monitor.series` (push, notified)
+        - Resources: `health-monitor.series` (push, notified, whole: one per worktree backend that sampled in the read window — the backends running in the last 2 h, never every worktree on disk, capped: MAX_HEALTH_SAMPLES, capped: MAX_SLOW_OP_MARKERS)
       - Core:
-        - Uses: `debug/slow-ops.SlowOpMarkerSchema`
+        - Uses:
+          - `debug/slow-ops.MAX_SLOW_OP_MARKERS`
+          - `debug/slow-ops.SlowOpMarkerSchema`
+          - `packages/list-bound.cappedList`
+          - `packages/list-bound.wholeList`
         - Exports (types):
           - `HealthData`
           - `HealthSample`
@@ -20339,6 +20408,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HealthSampleSchema`
           - `HealthSeriesSchema`
           - `HostSampleSchema`
+          - `MAX_HEALTH_SAMPLES`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
@@ -20387,7 +20457,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.implement`
           - `infra/paths.worktreeDataDir`
           - `network/live.serveValue`
-        - Resources: `heap.stats` (invalidate, snapshot)
+        - Resources: `heap.stats` (invalidate, snapshot, capped: HEAP_TYPES_MAX)
         - Routes: `POST /api/debug/heap-snapshot`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/handle-capture-snapshot.ts`, `server/internal/heap-stats.ts` (debt)
@@ -20472,12 +20542,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineJob('retention.latency_ledger_host_minute')`
           - `defineJob('retention.latency_ledger_thread_minute')`
           - `defineJob('retention.latency_ledger_interaction')`
-        - Resources: `latency-ledger.summary` (invalidate, notified)
+        - Resources: `latency-ledger.summary` (invalidate, notified, whole: the plugins whose code ran on the serving thread — each minute keeps only its top owners (the rest as `other`), so a window holds a few dozen, capped: LATENCY_METRICS.length, capped: EXIT_CRITERIA.length, capped: SLOWEST_INTERACTIONS)
         - Routes: `POST /api/latency-ledger/client`
       - Core:
         - Uses:
           - `infra/endpoints.defineEndpoint`
           - `network/live.liveValue`
+          - `packages/list-bound.cappedList`
+          - `packages/list-bound.wholeList`
         - Exports (types):
           - `ClientLatencyMetric`
           - `ClientMinute`
@@ -20512,6 +20584,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `percentileFromCounts`
           - `PRESSURE_DECOMPRESSIONS_PER_SEC`
           - `PRESSURE_FREE_MEM_MB`
+          - `SLOWEST_INTERACTIONS`
           - `submitClientLatency`
           - `THREAD_STALL_MS`
       - Exemptions:
@@ -20676,7 +20749,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/log-channels/log-files.logsDir`
           - `primitives/log-channels/log-files.logsDirFor`
         - Resources:
-          - `debug.logs.catalog` (push, notified)
+          - `debug.logs.catalog` (push, notified, whole: every log of one worktree plus the host-wide ones — the files in a handful of folders, tens of logs, whole: one log's kept generations — its rotation's `keep`, a handful)
           - `debug.logs.lines` (keyed, window, notified)
       - Cross-plugin:
         - Uses tokens:
@@ -20758,7 +20831,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.serveValue`
         - Resources:
           - `memory.file` (push, notified)
-          - `memory.files` (push, notified)
+          - `memory.files` (push, notified, whole: the .md files of one project's memory directory — notes written by hand or by agents, a few dozen)
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/categorical --categorical-5`
@@ -20971,13 +21044,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/boot-monitor.getGatewayBootReport`
               - `infra/endpoints.implement`
               - `network/live.serveValue`
-            - Resources: `profiling.boot` (invalidate, snapshot)
+            - Resources: `profiling.boot` (invalidate, snapshot, whole: one process boot's spans — one per boot phase, plugin step and warm-up, a few hundred, fixed once the warm-ups drain, whole: one per boot phase boundary — a dozen or so)
             - Routes: `GET /api/debug/profiling/boot`
           - Core:
             - Uses:
               - `debug/trace/boot.BootGatewaySchema`
               - `infra/endpoints.defineEndpoint`
               - `network/live.liveValue`
+              - `packages/list-bound.wholeList`
             - Exports (types):
               - `MemoryCheckpoint`
               - `ProfilingData`
@@ -21151,7 +21225,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Machine:
                 - Uses: `network/live.serveCollection`
               - Core:
-                - Uses: 23 symbols — full list in [`plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/REFERENCE.md`](../plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/REFERENCE.md)
+                - Uses: 24 symbols — full list in [`plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/REFERENCE.md`](../plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/REFERENCE.md)
                   - `debug/profiling/op-log` ×10
                   - `fields/text/config` ×3
                   - `fields` ×2
@@ -21163,6 +21237,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/entities.entityRef`
                   - `infra/worktree.OP_KIND_IDS`
                   - `network/live.liveCollection`
+                  - `packages/list-bound.wholeList`
                 - Exports (types):
                   - `OpRow`
                   - `StoreClosedBy`
@@ -21297,7 +21372,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live.serveValue`
               - `tasks/tasks-core.getConversation`
             - Register: `mcpTool('get_runtime_profile')`
-            - Resources: `runtime-profiler.profile` (invalidate, snapshot)
+            - Resources: `runtime-profiler.profile` (invalidate, snapshot, whole: one per distinct label of the kind since the last reset — route patterns, resource keys, job names, never per-call values (those ride `variant`), capped: SLOWEST_CAP, whole: one per distinct parent label (an entry's class, never one run) this label ran under since the last reset, whole: one key per gate layer the entry waited on — the closed set of charging layers, a dozen or so)
             - Routes:
               - `GET /api/debug/profiling/runtime`
               - `POST /api/debug/profiling/runtime/reset`
@@ -21305,10 +21380,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Uses:
               - `infra/endpoints.defineEndpoint`
+              - `infra/runtime-profiler.SLOWEST_CAP`
               - `infra/runtime-profiler.SPAN_KINDS`
               - `infra/runtime-profiler.SPAN_MEASURES`
               - `infra/runtime-profiler.SpanKind`
               - `infra/runtime-profiler.SpanMeasure`
+              - `packages/list-bound.cappedList`
+              - `packages/list-bound.wholeList`
+              - `packages/list-bound.wholeRecord`
             - Exports (values):
               - `FLIGHT_WINDOW_MS_DEFAULT`
               - `FLIGHT_WINDOW_MS_MAX`
@@ -21331,7 +21410,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `sink-safety/no-adhoc-profiler-seam` — `.` (sanctioned)
               - `boundaries/no-platform-api` — `server/internal/mcp-tools.ts` (debt)
-    - **`queue`** — Debug → Queue: the jobs queue as live DataViews with side detail panes — Jobs (the live graphile queue merged with the recorded run history: status, hold class, attempts, when, slot wait, duration against the class ceiling, error; Retry / Cancel / Run now), Dead (the dead-letter archive), Events (the emit() log, matched or not) and Triggers (every event→job subscription, enable / disable / delete).
+    - **`queue`** — Debug → Queue: the jobs queue as live DataViews with side detail panes — Queue (the host's live job queue, a windowed external collection: status, hold class, attempts, run-at, error, per-state counts; Retry / Cancel), History (the recorded runs, a windowed collection: outcome, duration against the class ceiling, slot wait, error; Run now) — a job leaves Queue for History when its run finishes, and an open detail follows it — Dead (the dead-letter archive), Events (the emit() log, matched or not) and Triggers (every event→job subscription, enable / disable / delete).
       - Web:
         - Slots:
           - `queuePane.Actions`
@@ -21351,7 +21430,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `job-actions` ← `debug.queue`
           - `trigger-actions` ← `debug.queue`
         - Contributes:
-          - `FieldPresentation.Register` "collection:debug.queue.job-row"
+          - `FieldPresentation.Register` "collection:jobs"
+          - `FieldPresentation.Register` "entity:job_runs"
           - `Pane.Register` "queue"
           - `Pane.Register` "queue-dead"
           - `Pane.Register` "queue-emission"
@@ -21396,20 +21476,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/icons.Icon`
         - Exports (values): `queuePane`
       - Core:
-        - Uses:
-          - `fields.nullable`
-          - `fields/date/config.dateField`
-          - `fields/int/config.intField`
-          - `fields/text/config.enumTextField`
-          - `fields/text/config.textField`
-          - `infra/jobs.HOLD_CLASSES`
-          - `network/live.rowKind`
-          - `primitives/pane.defineRoute`
-        - Exports (values):
-          - `JOB_LIST_STATUSES`
-          - `JOB_PROBLEMS`
-          - `jobListRow`
-          - `queueRoute`
+        - Uses: `primitives/pane.defineRoute`
+        - Exports (values): `queueRoute`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --border`
@@ -21604,9 +21672,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes: `resource.declare` "resources.debug"
         - Uses: `network/live.serveValue`
-        - Resources: `resources.debug` (invalidate, snapshot)
+        - Resources: `resources.debug` (invalidate, snapshot, whole: one per resource this backend registered — the declared resource keys, a few hundred, never the rows they serve, whole: the tables one resource reads or is reached through — a handful per resource, whole: one key per params-tuple some open tab subscribes to — what the user's tabs hold, never the data set, whole: the lists one value's schema reaches — a path per array or record it declares)
       - Core:
-        - Uses: `network/live.liveValue`
+        - Uses:
+          - `network/live.liveValue`
+          - `packages/list-bound.wholeList`
+          - `packages/list-bound.wholeRecord`
         - Exports (types):
           - `NotifyStats`
           - `ResourceDebug`
@@ -21614,6 +21685,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ResourcePolicy`
           - `ResourceRoute`
           - `ResourcesDebug`
+          - `ResourceShape`
         - Exports (values):
           - `resourcesDebug`
           - `resourcesDebugSchema`
@@ -21860,7 +21932,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`machine-usage`** — The Machine watcher card's "Where it goes" block (MachineUsageBreakdown): the machine's CPU and memory as two bars split into your Chrome, agent ops, the agent browser and other, then one line per bucket — read from the sentinel.machine-usage value, sampled when the card opens.
           - Server:
             - Contributes: `resource.declare` "sentinel.machine-usage"
-            - Resources: `sentinel.machine-usage` (push, notified)
+            - Resources: `sentinel.machine-usage` (push, notified, capped: MACHINE_USAGE_BUCKETS.length)
           - Web:
             - Uses:
               - `network/live.useLive`
@@ -21875,7 +21947,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/loading.Loading`
             - Exports (values): `MachineUsageBreakdown`
           - Core:
-            - Uses: `network/live.liveValue`
+            - Uses:
+              - `network/live.liveValue`
+              - `packages/list-bound.cappedList`
             - Exports (types):
               - `MachineUsage`
               - `MachineUsageBucket`
@@ -22018,11 +22092,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `slow-ops.ops:rows` (keyed, point)
         - Routes: `POST /api/slow-ops/client`
       - Core:
-        - Uses: 21 symbols — full list in [`plugins/debug/plugins/slow-ops/REFERENCE.md`](../plugins/debug/plugins/slow-ops/REFERENCE.md)
+        - Uses: 23 symbols — full list in [`plugins/debug/plugins/slow-ops/REFERENCE.md`](../plugins/debug/plugins/slow-ops/REFERENCE.md)
           - `fields` ×3
           - `infra/runtime-profiler` ×3
           - `config_v2` ×2
           - `network/live` ×2
+          - `packages/list-bound` ×2
           - `debug/trace/engine.traceListRoute`
           - `fields/date/config.dateField`
           - `fields/float/config.floatField`
@@ -22053,6 +22128,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `clientSlowOpSink`
           - `loadSeverity`
           - `MAX_CLIENT_SLOW_OP_ITEMS`
+          - `MAX_SLOW_OP_MARKERS`
           - `OTHER_VARIANT`
           - `slowOpById`
           - `slowOpCallerFields`
@@ -22482,6 +22558,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/entities.entityRef`
               - `network/live.liveCollection`
               - `network/live.LiveRowsCollection`
+              - `packages/list-bound.wholeRecord`
               - `primitives/pane.defineRoute`
             - Exports (types):
               - `RingEvent`
@@ -22759,13 +22836,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Fields.Identity` ×28
     - Exports (values): `Fields`
   - Cross-plugin:
-    - Imported by: 107 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+    - Imported by: 106 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
       - `fields` ×51
       - `apps` ×13
       - `conversations` ×8
-      - `debug` ×5
       - `infra` ×5
       - `tasks` ×5
+      - `debug` ×4
       - `page` ×3
       - `backup` ×2
       - `build` ×2
@@ -22916,13 +22993,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boolField`
               - `boolSample`
           - Cross-plugin:
-            - Imported by: 31 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
+            - Imported by: 32 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
               - `debug` ×11
               - `apps` ×8
               - `conversations` ×4
+              - `infra` ×2
               - `tasks` ×2
               - `history/engine`
-              - `infra/host/duress`
               - `page/block-entity`
               - `release`
               - `reports`
@@ -23100,12 +23177,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `DateFieldDef`
             - Exports (values): `dateField`
           - Cross-plugin:
-            - Imported by: 49 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
+            - Imported by: 48 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
               - `apps` ×10
               - `conversations` ×9
-              - `debug` ×5
               - `infra` ×5
               - `tasks` ×5
+              - `debug` ×4
               - `page` ×4
               - `backup`
               - `build/run-ledger`
@@ -23625,8 +23702,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `intField`
               - `intSample`
           - Cross-plugin:
-            - Imported by: 37 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
-              - `debug` ×12
+            - Imported by: 36 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
+              - `debug` ×11
               - `apps` ×8
               - `infra` ×4
               - `conversations` ×3
@@ -24089,7 +24166,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.Icon`
           - Server:
             - Contributes: `resource.declare` "config-v2.secret-meta"
-            - Resources: `config-v2.secret-meta` (push, notified)
+            - Resources: `config-v2.secret-meta` (push, notified, whole: one descriptor's secret fields — bounded by its schema)
           - Machine:
             - Uses: `network/live.serveValue`
           - Central:
@@ -24100,6 +24177,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2/fields.fieldSample`
               - `fields/secret.secretFieldType`
               - `network/live.liveValue`
+              - `packages/list-bound.wholeRecord`
             - Exports (types):
               - `ConfigV2SecretMeta`
               - `SecretFieldDef`
@@ -24199,6 +24277,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields.FieldMeta`
               - `fields.pickMeta`
               - `fields/string-list.stringListFieldType`
+              - `packages/list-bound.wholeList`
             - Exports (types): `StringListFieldDef`
             - Exports (values):
               - `stringListField`
@@ -24272,6 +24351,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields.FieldMarks`
               - `fields.FieldMeta`
               - `fields/tags.tagsFieldType`
+              - `packages/list-bound.wholeList`
             - Exports (types):
               - `TagsFieldDef`
               - `TagsFieldOptions`
@@ -24378,12 +24458,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 72 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+            - Imported by: 71 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
               - `apps` ×19
               - `conversations` ×15
               - `tasks` ×9
-              - `debug` ×5
               - `infra` ×5
+              - `debug` ×4
               - `page` ×3
               - `build` ×2
               - `fields` ×2
@@ -25572,6 +25652,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/studio/contributions/tables/indexes` (0 debt)
                   - `apps/studio/contributions/tables/row-count` (0 debt)
                   - `apps/studio/contributions/tables/sample-rows` (0 debt)
+                  - `network/live` (0 debt)
             - **`no-disabled-flag`**
             - **`no-gitlinks`**
             - **`no-hand-built-link-to`**
@@ -26238,6 +26319,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/parse-utils.parseBoolField`
               - `plugin-meta/parse-utils.parseStaticCallId`
               - `plugin-meta/parse-utils.parseStringField`
+              - `plugin-meta/parse-utils.readStringLiteral`
               - `plugin-meta/parse-utils.unresolvableCallIdMessage`
             - Exports (types):
               - `DescriptorFactory`
@@ -27102,7 +27184,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `getAttachment`
         - Register: `defineJob('attachments.orphan-sweep')`
         - Resources:
-          - `attachments.by-owner` (push, unbounded: one owner's attachments — the files a person attached to one task or block, a handful, never a growing log)
+          - `attachments.by-owner` (push, whole: one owner's attachments — the files a person attached to one task or block, a handful, never a growing log)
           - `attachments.file` (push)
         - Routes:
           - `POST /api/attachments`
@@ -27115,6 +27197,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.dateString`
           - `infra/endpoints.defineEndpoint`
           - `network/live.liveValue`
+          - `packages/list-bound.wholeList`
         - Exports (types):
           - `Attachment`
           - `AttachmentFile`
@@ -27269,7 +27352,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `BackgroundTriggerSource`
               - `defineBackgroundKind`
             - Resources:
-              - `background.catalog` (push, notified)
+              - `background.catalog` (push, notified, whole: the declared set — one entry per job, warm-up, timer, watcher and daemon the code declares (a few hundred), never one per run, whole: what one entry's provider says about it — a few labelled facts, whole: the events one job is bound to — its declared triggers, a handful)
               - `background.recent-runs` (push, notified)
             - Routes: `POST /api/background/run-now`
           - Central:
@@ -27279,12 +27362,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `BackgroundKindSpec`
             - Exports (values): `defineBackgroundKind`
             - Resources:
-              - `background.central-catalog` (push, notified)
+              - `background.central-catalog` (push, notified, whole: the declared set — one entry per job, warm-up, timer, watcher and daemon the code declares (a few hundred), never one per run, whole: what one entry's provider says about it — a few labelled facts, whole: the events one job is bound to — its declared triggers, a handful)
               - `background.central-recent-runs` (push, notified)
           - Core:
             - Uses:
               - `infra/endpoints.defineEndpoint`
               - `network/live.liveValue`
+              - `packages/list-bound.wholeList`
             - Exports (types):
               - `BackgroundEntry`
               - `BackgroundEntryDraft`
@@ -27424,7 +27508,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `claude-cli-calls` (keyed, window)
           - `claude-cli-calls:groups` (push)
           - `claude-cli-calls:rows` (keyed, point)
-          - `claude-cli.calls-for` (push)
+          - `claude-cli.calls-for` (push, capped: RECENT_CALLS_LIMIT, whole: the caller's label for the call — a few named values it chose (a source id, a url))
       - Web:
         - Uses:
           - `conversations/model-provider.familyClass`
@@ -27469,6 +27553,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.liveCollection`
           - `network/live.LiveRowsCollection`
           - `network/live.liveValue`
+          - `packages/list-bound.cappedList`
+          - `packages/list-bound.wholeRecord`
         - Exports (types):
           - `ClaudeCliCall`
           - `ClaudeCliCallRow`
@@ -27521,7 +27607,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `claudeAccountToken`
               - `deleteClaudeAccountToken`
               - `saveClaudeAccountToken`
-            - Resources: `claude-accounts` (push, notified)
+            - Resources: `claude-accounts` (push, notified, whole: the Claude accounts the user added by hand — a handful)
           - Machine:
             - Uses:
               - `infra/endpoints.implementMachine`
@@ -27538,6 +27624,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `infra/endpoints.defineEndpoint`
               - `network/live.liveValue`
+              - `packages/list-bound.wholeList`
             - Exports (types):
               - `ClaudeAccount`
               - `ClaudeAccounts`
@@ -27587,7 +27674,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `onClaudeCodeProbed`
               - `onClaudeCodeReady`
               - `requireClaudeBin`
-            - Resources: `claude-code-status` (push, notified)
+            - Resources: `claude-code-status` (push, notified, whole: the few places the CLI is looked for — a fixed handful of paths)
           - Machine:
             - Uses:
               - `infra/endpoints.implementMachine`
@@ -27597,6 +27684,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `infra/endpoints.defineEndpoint`
               - `network/live.liveValue`
+              - `packages/list-bound.wholeList`
             - Exports (types):
               - `ClaudeCodeBlock`
               - `ClaudeCodeStatus`
@@ -27678,7 +27766,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register:
           - `defineSupervisedJob('deps.install')`
           - `defineFileWatcher('deps.cache')`
-        - Resources: `deps.states` (push, notified)
+        - Resources: `deps.states` (push, notified, whole: one row per optional dependency the code declares — a closed handful (browsers, python envs, toolchains))
         - Routes:
           - `POST /api/deps/install`
           - `POST /api/deps/remove`
@@ -27687,11 +27775,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/collected-dir.defineCollectedDir`
           - `infra/endpoints.defineEndpoint`
           - `network/live.liveValue`
+          - `packages/list-bound.wholeList`
         - Exports (types):
           - `DepRow`
           - `DepState`
           - `DepUpdates`
         - Exports (values):
+          - `DEP_LOG_TAIL_LINES`
           - `DepRowSchema`
           - `depsStates`
           - `DepStateSchema`
@@ -28216,6 +28306,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/text/config.textField`
           - `fields/text/config.TextFieldDef`
           - `infra/entities.wireSchema`
+          - `packages/list-bound.listBoundsOf`
         - Exports (types):
           - `AnyExtensionShape`
           - `EntityExposure`
@@ -28298,7 +28389,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `event-emissions` (keyed, window)
           - `event-emissions:groups` (push)
           - `event-emissions:rows` (keyed, point)
-          - `event-triggers` (push, unbounded: every binding across every event's own <event>_triggers table — the code's static Trigger() bindings plus one oneShot row per pending ctx.waitFor (a never-fired one lingers) — with the computed `dangling` flag: a union over N tables, which a single-table liveCollection cannot bind)
+          - `event-triggers` (push, whole: every binding across every event's own <event>_triggers table — the code's static Trigger() bindings plus one oneShot row per pending ctx.waitFor (a never-fired one lingers) — with the computed `dangling` flag: a union over N tables, which a single-table liveCollection cannot bind, whole: the payload one binding hands its job — a few named params, whole: one filter per typed column the event declares — a handful)
         - Routes:
           - `GET /api/events/emissions`
           - `GET /api/events/triggers`
@@ -28319,6 +28410,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.liveCollection`
           - `network/live.LiveRowsCollection`
           - `network/live.liveValue`
+          - `packages/list-bound.wholeList`
+          - `packages/list-bound.wholeRecord`
         - Exports (types):
           - `EmissionListRow`
           - `EmissionMatch`
@@ -28749,19 +28842,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `database.db`
             - Exports (types): `ContentionSnapshot`
             - Exports (values): `getContentionSnapshot`
-          - Cross-plugin:
-            - Imported by:
-              - `debug/slow-ops`
-              - `debug/trace/contention`
-          - Exemptions:
-            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/snapshot.ts` (debt)
           - Core:
+            - Uses: `packages/list-bound.wholeList`
             - Exports (types):
               - `ContentionSnapshot`
               - `ContentionTopDatabase`
             - Exports (values):
               - `ContentionSnapshotSchema`
               - `ContentionTopDatabaseSchema`
+          - Cross-plugin:
+            - Imported by:
+              - `debug/slow-ops`
+              - `debug/trace/contention`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/snapshot.ts` (debt)
         - **`duress`** — Duress web presence: registers the shed-engine config (enabled, persist-first-N, buffer caps, flush delay) for Settings → Config. Host-global duress: registers the shed engine's config (enabled, persist-first-N, buffer caps, flush delay). The latch file (a mtime-leased latch the cluster sentinel sets while the box is in trouble, read via the cheap synchronous isUnderDuress()) is the latch sub-plugin, the shed engine (per-episode first-N persistence, a bounded buffer, flush-on-clear replay) the shed sub-plugin.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "duress"
@@ -29158,9 +29252,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "dead-jobs"
           - `resource.declare` "dead-jobs:groups"
           - `resource.declare` "dead-jobs:rows"
-          - `resource.declare` "job-runs.all"
-          - `resource.declare` "job-runs.all:rows"
-          - `resource.declare` "jobs-list"
+          - `resource.declare` "job-runs.history"
+          - `resource.declare` "job-runs.history:count"
+          - `resource.declare` "job-runs.history:groups"
+          - `resource.declare` "job-runs.history:rows"
+          - `resource.declare` "jobs"
+          - `resource.declare` "jobs:count"
+          - `resource.declare` "jobs:groups"
+          - `resource.declare` "jobs:rows"
           - `host-service:jobs.queue` "jobs.queue"
           - `fork-schema-data-exclusion` "graphile_worker"
         - Uses:
@@ -29176,7 +29275,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/entities.defaultNow`
           - `infra/entities.defineEntity`
           - `network/live.serveCollection`
-          - `network/live.serveValue`
         - DB schema:
           - `plugins/infra/plugins/jobs/server/internal/queue-schema.ts`
           - `plugins/infra/plugins/jobs/server/internal/tables.ts`
@@ -29206,6 +29304,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `_jobRunStats`
           - `abortDurableRun`
           - `ALL_JOB_TASKS`
+          - `answerJobsInMemory`
           - `ceilingMsFor`
           - `deadlineMsFor`
           - `DEFAULT_MAX_ATTEMPTS`
@@ -29244,11 +29343,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `dead-jobs` (keyed, window)
           - `dead-jobs:groups` (push)
           - `dead-jobs:rows` (keyed, point)
-          - `job-runs.all` (keyed)
-          - `job-runs.all:rows` (keyed, point)
-          - `jobs-list` (invalidate, notified)
+          - `job-runs.history` (keyed, window)
+          - `job-runs.history:count` (push)
+          - `job-runs.history:groups` (push)
+          - `job-runs.history:rows` (keyed, point)
+          - `jobs` (keyed, window)
+          - `jobs:count` (push)
+          - `jobs:groups` (push)
+          - `jobs:rows` (keyed, point)
         - Routes:
-          - `GET /api/jobs`
           - `GET /api/jobs/dead`
           - `POST /api/jobs/:id/retry`
           - `DELETE /api/jobs/:id`
@@ -29256,17 +29359,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `fields.fieldsToZodObject`
           - `fields.nullable`
+          - `fields/bool/config.boolField`
           - `fields/date/config.dateField`
           - `fields/float/config.floatField`
           - `fields/int/config.intField`
           - `fields/json/config.jsonField`
+          - `fields/text/config.enumTextField`
           - `fields/text/config.parsedTextField`
           - `fields/text/config.textField`
           - `infra/endpoints.defineEndpoint`
           - `infra/entities.entityRef`
           - `network/live.liveCollection`
           - `network/live.LiveRowsCollection`
-          - `network/live.liveValue`
         - Exports (types):
           - `Crontab`
           - `DeadJobListRow`
@@ -29277,7 +29381,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `JobRow`
           - `JobRunOutcome`
           - `JobRunRow`
-          - `JobsPayload`
           - `JobState`
           - `RunnerSpec`
         - Exports (values):
@@ -29291,15 +29394,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HOLD_SPECS`
           - `HoldClassSchema`
           - `holdForTask`
-          - `JobRowSchema`
+          - `JOB_RUNS_MAX_LIMIT`
+          - `JOB_STATES`
+          - `jobRunAtKeyText`
           - `JobRunOutcomeSchema`
           - `jobRuns`
-          - `jobsList`
-          - `JobsPayloadSchema`
+          - `jobRunsEntityRef`
+          - `jobs`
+          - `JOBS_MAX_LIMIT`
           - `JobStateSchema`
           - `LEGACY_JOB_TASK`
           - `listDeadJobs`
-          - `listJobs`
           - `nextCronFiring`
           - `parseCrontab`
           - `pickupTargetMsFor`
@@ -29310,10 +29415,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
       - Cross-plugin:
-        - Imported by: 61 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+        - Imported by: 60 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
           - `apps` ×19
           - `infra` ×13
-          - `debug` ×8
+          - `debug` ×7
           - `conversations` ×6
           - `tasks` ×4
           - `database` ×3
@@ -29420,6 +29525,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `host-service:jobs.queue` "jobs.queue"
             - Uses:
               - `database.afterCommit`
+              - `infra/jobs.answerJobsInMemory`
               - `infra/jobs.JobQueue`
               - `infra/jobs.JobQueueImpl`
               - `infra/jobs.JobRowOpts`
@@ -29635,12 +29741,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `McpToolContext`
           - `McpToolResult`
         - Exports (values): `Mcp`
-        - Resources: `mcp.catalog` (push, fixed)
+        - Resources: `mcp.catalog` (push, fixed, whole: every Mcp.tool the code registers — fixed for the process, a hundred or so, whole: every Mcp.instructions section the code registers — fixed for the process, a handful, whole: the scratch profiles a tool is reserved for — one or two, whole: one JSON Schema object's top-level keywords (type, properties, required, …) — a handful)
         - Routes: `POST /api/mcp/:conversationId`
       - Core:
         - Uses:
           - `infra/endpoints.defineEndpoint`
           - `network/live.liveValue`
+          - `packages/list-bound.wholeList`
+          - `packages/list-bound.wholeRecord`
         - Exports (types):
           - `McpCatalog`
           - `McpCatalogInstructions`
@@ -29724,9 +29832,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `defineJob('mcp-browser.conversation-ended')`
               - `defineDaemon('mcp-browser.host')`
               - `defineFileWatcher('mcp-browser.host-status')`
-            - Resources: `agent-browser.status` (push, notified)
+            - Resources: `agent-browser.status` (push, notified, whole: the deploys one session reached — its own build, main, a few others an agent opened)
           - Core:
-            - Uses: `network/live.liveValue`
+            - Uses:
+              - `network/live.liveValue`
+              - `packages/list-bound.wholeList`
             - Exports (types):
               - `AgentBrowserHostError`
               - `AgentBrowserHostStatus`
@@ -29991,6 +30101,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CompiledAllCollection`
           - `CompiledCount`
           - `CompiledGroups`
+          - `CompiledOffFeedQuery`
           - `CompiledUnion`
           - `EntitySource`
           - `PointQueryResourceSpec`
@@ -30010,12 +30121,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `compileAllCollection`
           - `compileCountQuery`
+          - `compiledKeyedReads`
           - `compiledValueReach`
           - `compileGroupsQuery`
           - `compileJoins`
+          - `compileOffFeedQuery`
           - `compileUnionCollection`
           - `deferredWindowQueryResource`
           - `joinRefs`
+          - `offFeedReach`
           - `presenceExpr`
           - `windowQueryResource`
       - Cross-plugin:
@@ -30035,6 +30149,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AggregateSet`
           - `AggregateShape`
           - `AggregateValue`
+          - `AllBound`
           - `AllJoinRefs`
           - `AllJoinRefsOf`
           - `AllJoinSpec`
@@ -30248,6 +30363,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runInRootContext`
           - `runTracked`
           - `runWithoutProfiling`
+          - `SLOWEST_CAP`
           - `SPAN_KINDS`
           - `SPAN_MEASURES`
           - `waitSplit`
@@ -30571,6 +30687,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/entities.entityRef`
           - `network/live.liveCollection`
           - `network/live.LiveRowsCollection`
+          - `packages/list-bound.wholeRecord`
         - Exports (types):
           - `TrashEntry`
           - `TrashEntryId`
@@ -30897,26 +31014,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/browser-config-resource.ts`, `server/internal/browser-config-store.ts` (debt)
       - Plugins:
         - **`places-api`** — Stateless typed Google Places API (New) client: places:autocomplete, places:searchText (pro, or rich with rating, price and this week's hours; biased to a circle or a box), place details, the separately priced rich details (photos, hours, rating, phone, website, summary) and place photos, mapped to the neutral PlaceSuggestion / PlaceSnapshot / PlaceCandidate shapes. Every call takes a PlacesClient — the key and the meter it is counted on, its SKU derived from its field mask (skuFor) — and never touches auth or storage.
-          - Cross-plugin:
-            - Imported by:
-              - `apps/places/ask`
-              - `apps/places/place-details`
-              - `apps/places/places-core`
-              - `page/place/google`
-          - Server:
-            - Exports (types):
-              - `SearchTextBias`
-              - `SearchTextDetail`
-              - `SearchTextOptions`
-            - Exports (values):
-              - `autocomplete`
-              - `PLACE_DETAILS_FIELD_MASK`
-              - `placeDetails`
-              - `placeFirstPhotoName`
-              - `placePhoto`
-              - `placeRichDetails`
-              - `searchText`
           - Core:
+            - Uses: `packages/list-bound.wholeList`
             - Exports (types):
               - `BusinessStatus`
               - `MaskedCall`
@@ -30948,6 +31047,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `RICH_DETAILS_TIERS`
               - `richDetailsSku`
               - `skuFor`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/places/ask`
+              - `apps/places/place-details`
+              - `apps/places/places-core`
+              - `page/place/google`
+          - Server:
+            - Exports (types):
+              - `SearchTextBias`
+              - `SearchTextDetail`
+              - `SearchTextOptions`
+            - Exports (values):
+              - `autocomplete`
+              - `PLACE_DETAILS_FIELD_MASK`
+              - `placeDetails`
+              - `placeFirstPhotoName`
+              - `placePhoto`
+              - `placeRichDetails`
+              - `searchText`
         - **`usage`** — Registers the Google Maps usage budgets (per-SKU monthly call budgets inside Google's free allowance) for Settings → Config, and reads them against this month's live counts (useMapsBudget). Contributes the Google Maps 'Usage this month' row of Settings → Accounts: every billed Places SKU's calls against its budget, live, with the month's reset and a link to edit the budgets. Owns google_maps_usage: every Places call counted per billing month (Pacific time, as Google bills) and SKU, by placesMeter — the meter every server-side PlacesClient carries — and served live as this month's counts (google-maps.usage), which a caller holds against the per-SKU budgets (the google-maps-usage config: Google's free allowance minus a margin) to step down to a cheaper call before it is billed; mapsBudgetNow is the same check read on the server (for a caller with no live value, an agent's tool).
           - Web:
             - Contributes:
@@ -30989,12 +31107,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `mapsBudgetNow`
               - `mapsBudgetReads`
               - `placesMeter`
-            - Resources: `google-maps.usage` (push)
+            - Resources: `google-maps.usage` (push, whole: one entry per Places SKU called this month — the closed PLACES_SKUS set)
           - Core:
             - Uses:
               - `config_v2.defineConfig`
               - `fields/int/config.intField`
               - `network/live.liveValue`
+              - `packages/list-bound.wholeRecord`
               - `packages/wall-clock.wallClockToInstant`
               - `packages/wall-clock.zoneWallClock`
             - Exports (types):
@@ -31582,8 +31701,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `resource.declare` "menu-bar.installed"
     - Resources:
       - `menu-bar.capabilities` (push, fixed)
-      - `menu-bar.install-requests` (push, notified)
-      - `menu-bar.installed` (push, notified)
+      - `menu-bar.install-requests` (push, notified, whole: at most one in-flight or failed install per app — bounded by the apps there are)
+      - `menu-bar.installed` (push, notified, whole: one id per app installed as an OS app — bounded by the apps there are)
   - Machine:
     - Uses:
       - `apps-core/app-manifest.appIconPng`
@@ -31595,6 +31714,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Uses:
       - `infra/endpoints.defineEndpoint`
       - `network/live.liveValue`
+      - `packages/list-bound.wholeList`
       - `primitives/pane.defineApp`
       - `ui/icons.symbol`
     - Exports (types):
@@ -31717,7 +31837,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`network`** — Umbrella for how data moves between the server and the browser: the live-resource API (declare a collection, query it, serve it) and, later, the live-state primitives it is built on.
   - Plugins:
-    - **`live`** — Unified live-resource API, read half: useLive (a collection's window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, grown by its limit, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); every collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows; FieldPresentation.Register presents an owner's fields — an entity's own, an extension's exposed ones, a union arm's, a collection's own — with their cells, widths and live options in every list that reaches the owner, read by useFieldPresentations. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven, a collection-shaped payload must declare `unbounded: { reason }` — or from an external source with notify(); pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a key-range-paged one — external only — is loaded one key range at a time, each answer checked against its range and minted its `$key`, notify(q) reaching every subscribed page and the per-question meta sibling, and sliceRange answers a range for a list held in memory) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a collection reaching an entity compiles at boot, folding every LiveColumns.Expose contribution of an extension exposing fields of it — and a `columnScope` collection every LiveColumns.Scoped set — into its rows' `$columns`) — or, `source: "external"`, from a source outside Postgres that answers window / rows / groups / count / all by hand (core's serveCollectionOn: every answer checked against the row schema, every window row's `$key` minted, notify() re-reading the subscribed tuples); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
+    - **`live`** — Unified live-resource API, read half: useLive (a collection's window — where/orderBy/limit with canGrow/growing/loadMore — a grouping of a filterable column's values with counts, grown by its limit, a collection declared `all` whole — every row in its declared order, or a select-scoped slice of it — or an explicit id set), useLiveRow (one row: loading, failed, found, or determinately absent), with mapRow reducing a row read to a ResourceResult of what the row means; useLive also reads a typed-query liveValue (its question encoded to one canonical tuple); every collection's window — and a key-range-paged liveValue — is read as key-range pages — bounded windows tiling the order by server-minted row-key cuts, split when full and merged when small — given a measured viewport (useLive(c, q, { viewport })) with no depth limit, the pages near it live and the rest held stale up to a per-reader budget, past which they are height-keeping placeholders drawn before and after the rows, and without one every page live, capped at maxLimit rows; FieldPresentation.Register presents an owner's fields — an entity's own, an extension's exposed ones, a union arm's, a collection's own — with their cells, widths and live options in every list that reaches the owner, read by useFieldPresentations. Unified live-resource API, server half: serveValue (a liveValue's loader, from Postgres — change-feed driven — or from an external source with notify(); the serve call decides only the freshness, never the shape: every list's bound is the liveValue's own (its schema's list-bound markers), so a serve call takes no `unbounded`; pushed by default, or refetched over HTTP when the liveValue declares `load: "on-demand"`; a typed-query value's hooks and notify take the decoded question, and a key-range-paged one — external only — is loaded one key range at a time, each answer checked against its range and minted its `$key`, notify(q) reaching every subscribed page and the per-question meta sibling, and sliceRange answers a range for a list held in memory) and serveCollection (binds a liveCollection's row fields to a table's columns — the projection is exactly the row schema — ANDs an optional base `where` into every read, and compiles its window + `:rows` point resources through windowQueryResource and its `:groups` GROUP BY push value — only `:rows` for a lookup-only collection, and the whole ordered set (`key`, a routed scopedMembership alias compiled by compileAllCollection) + `:rows` for one declared `all` — encoding a column type's declared wire form in JS per row; a collection reaching an entity compiles at boot, folding every LiveColumns.Expose contribution of an extension exposing fields of it — and a `columnScope` collection every LiveColumns.Scoped set — into its rows' `$columns`; routed through the change feed, or — with `changes` — the same compiled SQL served off it, for a table its owner opted out) — or, `source: "external"`, from a source outside Postgres that answers window / rows / groups / count / all by hand (core's serveCollectionOn: every answer checked against the row schema, every window row's `$key` minted, notify() re-reading the subscribed tuples); every filter compiles through the filter language's filterSql. Unified live-resource API, central half: serveValue for a liveValue declared `origin: "central"` — the external arm only (central has no change feed), registered through the central plugin's `resources: [served]`; its options compile through the same code as the worktree serveValue.
       - Web:
         - Slots:
           - `FieldPresentation.Register`
@@ -31777,8 +31897,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useLive`
           - `useLiveRow`
       - Server:
-        - Uses: 29 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `infra/query-resource` ×26
+        - Uses: 33 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `infra/query-resource` ×30
           - `database/sql-column` ×2
           - `network/live/filter.filterSql`
         - Exports (types):
@@ -31828,10 +31948,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValue`
           - `sliceRange`
       - Core:
-        - Uses: 22 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Uses: 25 symbols — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `fields` ×6
           - `network/live/filter` ×6
           - `primitives/live-state` ×6
+          - `packages/list-bound` ×3
           - `packages/resource-protocol` ×2
           - `infra/query-resource.KIND_RE`
           - `packages/canonical-params.canonicalJson`
@@ -32025,6 +32146,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `live/no-legacy-resource-spelling` — `.` (sanctioned)
           - `live/no-endpoint-read` — `web` (sanctioned)
+          - `no-db-backed-notify` — `server/internal/serve-off-feed.ts` (sanctioned)
           - `no-raw-websocket` — `e2e/narrowing.ts` (sanctioned)
         - Exempted by:
           - `build/build-commits` (1 debt)
@@ -32220,6 +32342,49 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Exports (types): `KeyedMutex`
         - Exports (values): `createKeyedMutex`
+    - **`list-bound`** — A list's bound, declared in its zod schema: cappedList / cappedRecord (a checked max) and wholeList / wholeRecord (loaded whole, with a written reason), tagged in _def so the tag survives zod's clones; listShapeOf walks every array, record, map and set a schema reaches and reports each one's bound and the bare ones, listBoundsOf refuses a bare one.
+      - Cross-plugin:
+        - Imported by: 83 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+          - `apps` ×13
+          - `conversations` ×13
+          - `infra` ×12
+          - `debug` ×11
+          - `primitives` ×5
+          - `tasks` ×4
+          - `fields` ×3
+          - `page` ×3
+          - `integrations` ×2
+          - `plugin-meta` ×2
+          - `ui` ×2
+          - `active-data`
+          - `apps-core/app-usage`
+          - `auth`
+          - `backup`
+          - `code-explorer/code-api`
+          - `config_v2`
+          - `menu-bar`
+          - `network/live`
+          - `release`
+          - `reports`
+          - `review/plugin-changes`
+          - `search/engine`
+          - `shell/notifications`
+      - Core:
+        - Exports (types):
+          - `ListBound`
+          - `ListShape`
+          - `ListWalkOptions`
+        - Exports (values):
+          - `BareListError`
+          - `cappedList`
+          - `cappedRecord`
+          - `LIST_ROOT_PATH`
+          - `listBoundsOf`
+          - `listShapeOf`
+          - `wholeKeyedRecord`
+          - `wholeList`
+          - `wholeRecord`
+          - `wholeTuple`
     - **`macrotask-yield`** — Macrotask yield: yieldMacrotask() resolves on a later event-loop turn (scheduler.yield, else setImmediate, else setTimeout 0), so due timers and I/O callbacks run first — which a microtask yield never allows; createTurnQueue() gives concurrent callers one turn each, in call order.
       - Cross-plugin:
         - Imported by:
@@ -32574,7 +32739,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values):
                   - `_pageBlocksAgentAuthors`
                   - `recordAgentNotesAuthor`
-                - Resources: `agent-notes-authors` (push, unbounded: one card's authors — the conversations that wrote into one block)
+                - Resources: `agent-notes-authors` (push, whole: one card's authors — the conversations that wrote into one block)
               - Web:
                 - Uses:
                   - `conversations/conversation-ui/row.ConversationRowById`
@@ -32929,6 +33094,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/rank/config.rankField`
           - `fields/text/config.textField`
           - `infra/entities.entityRef`
+          - `packages/list-bound.wholeRecord`
         - Exports (types): `BlockData`
         - Exports (values):
           - `asBlockData`
@@ -34156,7 +34322,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reindexPage`
         - Register: `defineJob('page.links.reindex')`
         - Resources:
-          - `page-backlinks` (push, unbounded: the pages that link to one page — a join over page_links and the live page blocks, not the rows of one table)
+          - `page-backlinks` (push, whole: the pages that link to one page — a join over page_links and the live page blocks, not the rows of one table, whole: one page's ancestors — as deep as the page tree nests)
           - `page-links.sources` (keyed)
           - `page-links.sources:rows` (keyed, point)
       - Web:
@@ -34183,6 +34349,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/string-list/config.stringListField`
           - `network/live.liveCollection`
           - `network/live.liveValue`
+          - `packages/list-bound.wholeList`
           - `page/block-entity.pagesEntityRef`
           - `ui/icons/emoji.EmojiSchema`
         - Exports (types):
@@ -34591,10 +34758,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `getPlaceProvider`
         - Resources:
           - `place.resolve` (invalidate, fixed)
-          - `place.search` (invalidate, fixed)
+          - `place.search` (invalidate, fixed, capped: PLACE_SEARCH_MAX_SUGGESTIONS)
       - Core:
         - Uses:
           - `network/live.liveValue`
+          - `packages/list-bound.cappedList`
           - `packages/resource-protocol.ResourceRefusal`
           - `page/editor.defineBlock`
           - `ui/icons.symbol`
@@ -34608,6 +34776,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PlaceSuggestion`
         - Exports (values):
           - `PLACE_LOOKUP_REFUSALS`
+          - `PLACE_SEARCH_MAX_SUGGESTIONS`
           - `PLACE_SNAPSHOT_TTL_MS`
           - `PLACE_TYPE`
           - `placeBlock`
@@ -35309,7 +35478,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/plugin-tree.getFacetsTreeCached`
           - `plugin-meta/plugin-tree.onPluginTreeChanged`
           - `plugin-meta/plugin-tree.pluginTreeGeneration`
-        - Resources: `composition.data` (invalidate, notified)
+        - Resources: `composition.data` (invalidate, notified, whole: the plugin graph of this checkout — one entry per plugin (about 1.5k) and per edge between two, which the closure engine walks whole client-side)
       - Core:
         - Uses:
           - `config_v2.defineConfig`
@@ -35322,6 +35491,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/namespace.MAIN_COMPOSITION_ID`
           - `infra/namespace.NAMESPACE_LABEL_RE`
           - `network/live.liveValue`
+          - `packages/list-bound.wholeList`
+          - `packages/list-bound.wholeRecord`
         - Exports (types):
           - `CompositionData`
           - `CompositionHome`
@@ -36401,12 +36572,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "plugin-view.facets-tree"
           - `resource.declare` "plugin-view.tree"
         - Resources:
-          - `plugin-view.facets-tree` (invalidate, notified)
-          - `plugin-view.tree` (invalidate, notified)
+          - `plugin-view.facets-tree` (invalidate, notified, whole: this checkout's plugin tree — one node per plugin (about 1.5k), the code's own structure, read whole by the explorer and Studio, whole: one entry per facet extractor — a closed set of a few dozen)
+          - `plugin-view.tree` (invalidate, notified, whole: this checkout's plugin tree — one node per plugin (about 1.5k), the code's own structure, read whole by the explorer and Studio, whole: one entry per facet extractor — a closed set of a few dozen)
       - Machine:
         - Uses: `network/live.serveValue`
       - Core:
-        - Uses: `network/live.liveValue`
+        - Uses:
+          - `network/live.liveValue`
+          - `packages/list-bound.wholeList`
+          - `packages/list-bound.wholeRecord`
         - Exports (types):
           - `PluginNode`
           - `PluginTreePayload`
@@ -37113,6 +37287,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runGit`
           - `tryRunGit`
           - `WorktreeGoneError`
+      - Core:
+        - Uses: `packages/list-bound.wholeList`
+        - Exports (types):
+          - `CommitRow`
+          - `CommitTrailer`
+        - Exports (values):
+          - `CommitRowSchema`
+          - `commitTrailer`
+          - `CommitTrailerSchema`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --border`
@@ -37136,14 +37319,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-triage`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/run-git.ts` (debt)
-      - Core:
-        - Exports (types):
-          - `CommitRow`
-          - `CommitTrailer`
-        - Exports (values):
-          - `CommitRowSchema`
-          - `commitTrailer`
-          - `CommitTrailerSchema`
     - **`copy-to-clipboard`** — useCopyToClipboard hook and CopyButton component for the clipboard write + timeout-reset pattern.
       - Web:
         - Uses:
@@ -38019,9 +38194,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useScrollsSideways`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 96 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
+            - Imported by: 95 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
               - `conversations` ×26
-              - `apps` ×21
+              - `apps` ×20
               - `primitives` ×14
               - `debug` ×13
               - `page` ×4
@@ -38895,8 +39070,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ← `primitives.data-view`
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-        - Contributes: 83 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.WebRegister` ×75
+        - Contributes: 85 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.WebRegister` ×77
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
@@ -39134,8 +39309,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useRowFilter`
           - `useSortController`
       - Server:
-        - Contributes: 77 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.Register` ×75
+        - Contributes: 79 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.Register` ×77
           - `ids.kind` ×2
         - Uses:
           - `config_v2.getConfig`
@@ -39289,9 +39464,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×10
           - `ui/tokens/shadow` ×3
           - `ui/tokens/shape` ×3
-        - Imported by: 106 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Imported by: 107 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `fields` ×31
-          - `apps` ×24
+          - `apps` ×25
           - `debug` ×14
           - `primitives` ×10
           - `conversations` ×8
@@ -39393,12 +39568,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/data-view.readDataViewConfigDoc`
               - `primitives/data-view.watchDataViewConfigDoc`
               - `primitives/data-view/custom-columns/values._dataViewCustomValues`
-            - Resources: `data-view-custom-column-defs` (push, notified)
+            - Resources: `data-view-custom-column-defs` (push, notified, whole: the custom columns a person added to one DataView surface — a handful)
           - Core:
             - Uses:
               - `ids.defineIdKind`
               - `ids.IdOf`
               - `network/live.liveValue`
+              - `packages/list-bound.wholeList`
             - Exports (types):
               - `CustomColumnDef`
               - `CustomColumnId`
@@ -39423,7 +39599,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `network/live.serveValue`
                 - DB schema: `plugins/primitives/plugins/data-view/plugins/custom-columns/plugins/values/server/internal/tables.ts`
                 - Exports (values): `_dataViewCustomValues`
-                - Resources: `data-view-custom-values` (push, unbounded: one DataView surface's custom-column cells, indexed client-side onto every rendered row; the key is the composite (dataViewId, rowKey, columnId), so no single-id :rows read fits)
+                - Resources: `data-view-custom-values` (push, whole: one DataView surface's custom-column cells, indexed client-side onto every rendered row; the key is the composite (dataViewId, rowKey, columnId), so no single-id :rows read fits)
                 - Routes:
                   - `POST /api/data-view/custom-values`
                   - `POST /api/data-view/custom-values/delete-column`
@@ -39431,6 +39607,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses:
                   - `infra/endpoints.defineEndpoint`
                   - `network/live.liveValue`
+                  - `packages/list-bound.wholeList`
                 - Exports (types):
                   - `CustomColumnValueRow`
                   - `DeleteCustomColumnValuesBody`
@@ -39721,12 +39898,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `_dataViewRowOrder`
               - `applyRowOrder`
-            - Resources: `data-view-row-order` (push, unbounded: one view instance's manual order — the rows a user dragged plus the seeds ahead of them; the key is the composite (dataViewId, viewId, rowKey), so no single-id :rows read fits)
+            - Resources: `data-view-row-order` (push, whole: one view instance's manual order — the rows a user dragged plus the seeds ahead of them; the key is the composite (dataViewId, viewId, rowKey), so no single-id :rows read fits)
             - Routes: `POST /api/data-view/row-order`
           - Core:
             - Uses:
               - `infra/endpoints.defineEndpoint`
               - `network/live.liveValue`
+              - `packages/list-bound.wholeList`
               - `primitives/rank.Rank`
               - `primitives/rank.RankSchema`
             - Exports (types):
@@ -41274,8 +41452,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 205 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
-          - `apps` ×66
+        - Imported by: 204 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+          - `apps` ×65
           - `ui` ×21
           - `conversations` ×19
           - `debug` ×19
@@ -41526,10 +41704,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `sqlFlow`
           - `sqlLevel`
         - Resources:
-          - `metrics.catalog` (push)
+          - `metrics.catalog` (push, whole: the metrics catalog: every contributed source, metric and breakdown — declared in code, fixed per process, whole: one param spec's values — declared in code, capped: MAX_BUCKETS)
           - `metrics.details` (keyed, window)
           - `metrics.details:meta` (push)
-          - `metrics.query` (invalidate)
+          - `metrics.query` (invalidate, capped: METRIC_MAX_SERIES, capped: METRIC_MAX_BREAKDOWN_ROWS, capped: MAX_BUCKETS)
       - Web:
         - Uses: 41 symbols — full list in [`plugins/primitives/plugins/metrics/REFERENCE.md`](../plugins/primitives/plugins/metrics/REFERENCE.md)
           - `primitives/css/ui-kit` ×7
@@ -41590,6 +41768,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Uses:
           - `network/live.liveValue`
+          - `packages/list-bound.cappedList`
+          - `packages/list-bound.wholeList`
           - `packages/wall-clock.wallClockToInstant`
           - `packages/wall-clock.zoneWallClock`
         - Exports (types):
@@ -41678,6 +41858,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isTimeZone`
           - `MAX_BUCKETS`
           - `MEASURES`
+          - `METRIC_MAX_BREAKDOWN_ROWS`
+          - `METRIC_MAX_SERIES`
           - `metricCatalog`
           - `metricDetails`
           - `metricQuery`
@@ -44512,14 +44694,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `resource.declare` "release.previews"
       - `resource.declare` "release.run-logs"
       - `resource.declare` "release.runs:rows"
-    - Uses: 27 symbols — full list in [`plugins/release/REFERENCE.md`](../plugins/release/REFERENCE.md)
+    - Uses: 28 symbols — full list in [`plugins/release/REFERENCE.md`](../plugins/release/REFERENCE.md)
       - `release/bundles` ×6
       - `infra/jobs/supervised-job` ×3
+      - `network/live` ×3
       - `infra/endpoints` ×2
       - `infra/entities` ×2
       - `infra/launcher` ×2
       - `infra/paths` ×2
-      - `network/live` ×2
       - `database.db`
       - `ids.IdKinds`
       - `infra/file-watcher.acquireDirWatch`
@@ -44542,12 +44724,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `defineSupervisedJob('release.run.supervised')`
       - `defineDaemon('release.preview')`
     - Resources:
-      - `release.candidate` (push, notified)
+      - `release.candidate` (push, notified, whole: one composition's release run dirs on disk — the few the artifact prune keeps)
       - `release.history` (keyed, window)
       - `release.history:groups` (push)
       - `release.history:rows` (keyed, point)
-      - `release.previews` (push, notified)
-      - `release.run-logs` (push, notified)
+      - `release.previews` (push, notified, whole: one entry per running preview process — a handful at a time)
+      - `release.run-logs` (keyed, window, notified)
       - `release.runs:rows` (keyed, point)
     - Routes:
       - `POST /api/release`
@@ -44569,6 +44751,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `network/live.liveCollection`
       - `network/live.LiveRowsCollection`
       - `network/live.liveValue`
+      - `packages/list-bound.wholeList`
+      - `packages/list-bound.wholeRecord`
       - `release/bundles.ReleaseManifestSchema`
       - `release/bundles.releaseRunIdKind`
     - Exports (types):
@@ -44579,8 +44763,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReleaseHistoryRow`
       - `ReleaseIntent`
       - `ReleaseLogLine`
-      - `ReleaseLogsResponse`
       - `ReleaseRun`
+      - `ReleaseRunLogsQuery`
+      - `ReleaseRunLogsRefusal`
       - `ReleaseTarget`
     - Exports (values):
       - `bunCompileTarget`
@@ -44603,7 +44788,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReleaseCandidateSchema`
       - `releaseHistory`
       - `ReleaseIntentSchema`
-      - `ReleaseLogsResponseSchema`
       - `releasePreviews`
       - `releaseRunFields`
       - `releaseRunLogs`
@@ -45076,6 +45260,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `infra/endpoints.defineEndpoint`
       - `infra/entities.entityRef`
       - `network/live.liveCollection`
+      - `packages/list-bound.wholeRecord`
       - `primitives/pane.defineRoute`
     - Exports (types):
       - `Report`
@@ -45813,10 +45998,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.serveValue`
           - `primitives/commit-list.runGit`
         - Resources:
-          - `review.plugin-changes` (push, notified)
-          - `review.push-plugin-changes` (push, notified)
-      - Machine:
-        - Uses: `conversations/conversation-view/code.editedFilesServed`
+          - `review.plugin-changes` (push, notified, whole: the plugins one worktree or one push added or modified — at most the repo's plugin count, whole: one plugin's changed files — at most the files of that one plugin, whole: one plugin's facet data — one entry per facet extractor, a few dozen)
+          - `review.push-plugin-changes` (push, notified, whole: the plugins one worktree or one push added or modified — at most the repo's plugin count, whole: one plugin's changed files — at most the files of that one plugin, whole: one plugin's facet data — one entry per facet extractor, a few dozen)
+      - Core:
+        - Uses:
+          - `packages/list-bound.wholeList`
+          - `packages/list-bound.wholeRecord`
+        - Exports (types):
+          - `DiffList`
+          - `DiffRenderer`
+          - `PluginChangedFile`
+          - `PluginChangeDiff`
+          - `PluginChangesResponse`
+          - `PluginReviewProps`
+        - Exports (values): `PluginChangesSchema`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --border`
@@ -45846,15 +46041,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review/plugin-changes/file-changes`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/push-plugin-changes.ts`, `server/internal/main-plugins-dir.ts` (debt)
-      - Core:
-        - Exports (types):
-          - `DiffList`
-          - `DiffRenderer`
-          - `PluginChangedFile`
-          - `PluginChangeDiff`
-          - `PluginChangesResponse`
-          - `PluginReviewProps`
-        - Exports (values): `PluginChangesSchema`
       - Plugins:
         - **`api-changes`** (excluded) — API surface diff section for per-plugin review cards.
           - Web:
@@ -46147,12 +46333,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `deleteSource`
           - `getSourceDocMetadata`
           - `upsertSearchDocs`
-        - Resources: `search.results` (push, unbounded: the 30 best-ranked hits of one question (LIMIT 30 in the search))
+        - Resources: `search.results` (push, capped: SEARCH_RESULTS_LIMIT, whole: one source's opaque metadata bag — a few keys (an icon descriptor))
         - Routes: `GET /api/search`
       - Core:
         - Uses:
           - `infra/endpoints.defineEndpoint`
           - `network/live.liveValue`
+          - `packages/list-bound.cappedList`
+          - `packages/list-bound.wholeRecord`
         - Exports (types):
           - `SearchDoc`
           - `SearchQuery`
@@ -46525,6 +46713,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ids.idKindField`
           - `ids.IdOf`
           - `infra/entities.entityRef`
+          - `packages/list-bound.wholeRecord`
           - `primitives/pane.defineRoute`
         - Exports (types): `NotificationId`
         - Exports (values):
@@ -46717,9 +46906,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses: `config_v2.ConfigV2`
         - Resources:
           - `stats.commits.counts` (invalidate, notified)
-          - `stats.commits.counts-by-category` (invalidate, notified)
+          - `stats.commits.counts-by-category` (invalidate, notified, whole: one entry per item configured in the category (plus Unknown) — a handful the user names)
           - `stats.commits.lines` (invalidate, notified)
-          - `stats.commits.lines-by-ext` (invalidate, notified)
+          - `stats.commits.lines-by-ext` (invalidate, notified, whole: one key per file extension the history touched (~50) — the repo's file kinds, never its files)
       - Machine:
         - Uses: `network/live.serveValue`
       - Cross-plugin:
@@ -46747,6 +46936,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CommitsQuery`
         - Exports (values):
           - `COMMIT_BUCKETS`
+          - `commitPointsNote`
           - `commitsConfig`
           - `commitsCounts`
           - `commitsCountsByCategory`
@@ -46810,11 +47000,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineFileWatcher('corpus-index.stats.cost.usage')`
           - `defineJob('stats.cost.refresh')`
         - Resources:
-          - `stats.cost.daily` (push, notified)
-          - `stats.cost.distribution` (push, notified)
+          - `stats.cost.daily` (push, notified, whole: one key per model (or model family) used — the handful of Claude models, never one per session, capped: COST_DAYS_MAX)
+          - `stats.cost.distribution` (push, notified, whole: a 1-2-5 ladder over the sessions' cost spread (about 16 buckets for $0.01 – $1k), whatever the number of sessions)
           - `stats.cost.session-conversations:rows` (keyed, point)
-          - `stats.cost.sessions-daily` (push, notified)
-          - `stats.cost.top-sessions` (push, notified)
+          - `stats.cost.sessions-daily` (push, notified, whole: one key per model (or model family) used — the handful of Claude models, never one per session, capped: COST_DAYS_MAX)
+          - `stats.cost.top-sessions` (push, notified, capped: TOP_SESSIONS, whole: one key per model (or model family) used — the handful of Claude models, never one per session)
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --background`
@@ -46889,9 +47079,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "stats.pushes.throughput"
           - `resource.declare` "stats.pushes.wait-time"
         - Resources:
-          - `stats.pushes.step-breakdown` (push)
-          - `stats.pushes.throughput` (push)
-          - `stats.pushes.wait-time` (push)
+          - `stats.pushes.step-breakdown` (push, whole: one point per bucket holding a completed push within the op store's 30-day retention sweep (plus a forked DB's sweep lag) — the range bounds it, never the number of pushes)
+          - `stats.pushes.throughput` (push, whole: one point per bucket holding a completed push within the op store's 30-day retention sweep (plus a forked DB's sweep lag) — the range bounds it, never the number of pushes)
+          - `stats.pushes.wait-time` (push, whole: one point per bucket holding a completed push within the op store's 30-day retention sweep (plus a forked DB's sweep lag) — the range bounds it, never the number of pushes)
       - Machine:
         - Uses: `network/live.serveValue`
       - Cross-plugin:
@@ -46963,7 +47153,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database.db`
           - `network/live.serveValue`
           - `tasks/tasks-core.tasksView`
-        - Resources: `stats.tasks.history` (push, unbounded: one row per UTC day since the first task (a few hundred for a year of use), aggregated in SQL — never one row per task)
+        - Resources: `stats.tasks.history` (push, whole: one row per UTC day since the first task (a few hundred for a year of use), aggregated in SQL — never one row per task)
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --border`
@@ -47607,7 +47797,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `releaseLaunchedTask`
         - Register: `defineJob('automations.task-status')`
         - Resources:
-          - `automations.catalog` (push, notified)
+          - `automations.catalog` (push, notified, whole: every registered automation — declared in code, bounded by the composition, whole: the tasks one launch-kind automation holds a slot for — at most its concurrency, whole: what one automation watches — e.g. one per dependency updater, declared in code, whole: one automation's prompt variables — a handful, declared in code, capped: TRIGGER_KINDS.length)
           - `automations.launch-decisions.all` (keyed)
           - `automations.launch-decisions.all:rows` (keyed, point)
           - `automations.tasks` (keyed, window)
@@ -47621,11 +47811,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.serveCollection`
           - `network/live.serveValue`
       - Core:
-        - Uses: 24 symbols — full list in [`plugins/tasks/plugins/automations/REFERENCE.md`](../plugins/tasks/plugins/automations/REFERENCE.md)
+        - Uses: 26 symbols — full list in [`plugins/tasks/plugins/automations/REFERENCE.md`](../plugins/tasks/plugins/automations/REFERENCE.md)
           - `config_v2` ×3
           - `conversations/model-provider` ×3
           - `fields/text/config` ×2
           - `network/live` ×2
+          - `packages/list-bound` ×2
           - `fields/bool/config.boolField`
           - `fields/date/config.dateField`
           - `fields/dynamic-enum/config.dynamicEnumField`
@@ -47862,6 +48053,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/text/config.textField`
           - `infra/entity-extensions.defineExtensionShape`
           - `network/live.liveCollection`
+          - `packages/list-bound.wholeList`
         - Exports (types):
           - `OutcomeReport`
           - `ReportStanding`
@@ -47914,7 +48106,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/tasks-core.createTask`
           - `tasks/tasks-core.getTask`
         - Register: `defineAutomation('report-investigations')`
-        - Resources: `report-investigations.scope` (push)
+        - Resources: `report-investigations.scope` (push, whole: one row per registered report kind: a code-declared registry)
     - **`sidequest-autopilot`** — The Sidequest autopilot in the Automations pane: registers its config (enabled, at once, in total, push policy, model, prompt, triage) and contributes its sections — Launch list (a DataView of every ready sidequest in launch order — triage's priority, then oldest — grouped Approved / Proposed by triage / Needs your call / Looks obsolete / won't / Triage failed / Triaging / Excluded; each row shows its priority and type, and expands to triage's context, its one-click question and Re-triage; triage may tick a row, only Approve selected approves), Run until (until you turn it off, or until a date and time after which it turns itself off) and Triage (whether new sidequests are triaged automatically). Declares the Sidequest autopilot automation (launch kind, off by default): while on, it starts agents on the ready sidequests (no attempt, not held, dropped or blocked) a person APPROVED — best first by triage's priority (must → should → could, then oldest filed), `concurrency` at a time (default 2), at most `maxLaunches` per turn-on (default 5) — each with the autopilot prompt (triage's context, the person's answer and their note included; never ask, check obsolescence first, stay in scope, push only what the push policy allows, finish with submit_outcome_report). Triage is task-triage's: while the `triage` toggle is on (default, main only) it asks task-triage for a read of each ready sidequest that has none — when a task becomes a sidequest or a sidequest becomes ready, backfilled at boot and when the toggle turns on. Triage approves nothing. Turns itself off at its `runUntil`.
       - Web:
         - Contributes:
@@ -48028,7 +48220,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Resources:
           - `task-categories` (keyed)
           - `task-categories:rows` (keyed, point)
-          - `task-category.registry` (push, fixed)
+          - `task-category.registry` (push, fixed, whole: one entry per registered task category — declared in code, a few dozen)
       - Cross-plugin:
         - Imported by: 27 plugins — full list in [`plugins/tasks/plugins/task-category/REFERENCE.md`](../plugins/tasks/plugins/task-category/REFERENCE.md)
           - `apps` ×6
@@ -48903,6 +49095,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.defineEndpoint`
           - `infra/entity-extensions.defineExtensionShape`
           - `network/live.liveCollection`
+          - `packages/list-bound.wholeList`
           - `tasks/tasks-core.tasksEntityRef`
         - Exports (types):
           - `RequestTriageOutcome`
@@ -49135,7 +49328,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks` (keyed)
           - `tasks:rows` (keyed, point)
       - Core:
-        - Uses: 22 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Uses: 23 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations/workspace` ×3
           - `fields/text/config` ×3
           - `fields` ×3
@@ -49147,6 +49340,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/json/config.jsonField`
           - `fields/string-list/config.stringListField`
           - `infra/entities.entityRef`
+          - `packages/list-bound.wholeList`
           - `primitives/pane.defineRoute`
           - `primitives/rank.RankSchema`
         - Exports (types):
@@ -49654,10 +49848,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resource.declare` "icons.saved-sprites"
               - `resource.declare` "icons.sprites"
             - Resources:
-              - `icons.manifest` (push, fixed)
+              - `icons.manifest` (push, fixed, whole: the symbol names the build scanned from the code — fixed for the process, and the Icons pane lists them all)
               - `icons.saved-icons-changed` (push, notified)
-              - `icons.saved-sprites` (push)
-              - `icons.sprites` (push, fixed)
+              - `icons.saved-sprites` (push, whole: every saved icon name — each picked by hand, and every one must be drawable at first paint, whole: one sprite per default style key — a handful)
+              - `icons.sprites` (push, fixed, whole: the resident sprites — the default style's two and the brands)
           - Machine:
             - Uses:
               - `infra/endpoints.machineHandler`
@@ -49670,6 +49864,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints.blob`
               - `infra/endpoints.defineEndpoint`
               - `network/live.liveValue`
+              - `packages/list-bound.wholeList`
+              - `packages/list-bound.wholeRecord`
             - Exports (types):
               - `IconSprites`
               - `SavedIconSprites`
@@ -50117,6 +50313,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2.defineConfig`
           - `fields/dynamic-enum/config.dynamicEnumField`
           - `fields/enum/config.enumField`
+          - `packages/list-bound.wholeList`
+          - `packages/list-bound.wholeRecord`
           - `primitives/css/ui-kit.appThemeScope`
           - `primitives/css/ui-kit.fixedThemeScope`
           - `primitives/css/ui-kit.subThemeScope`
@@ -50267,7 +50465,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/theme-engine.ThemeEngine`
             - DB schema: `plugins/ui/plugins/theme-engine/plugins/saved-themes/server/internal/tables.ts`
             - Exports (values): `saveTheme`
-            - Resources: `saved-themes.list` (push, unbounded: every saved theme: the painter needs all of them resident to paint any selection, and the list grows only by a hand-made save or import (single digits in practice))
+            - Resources: `saved-themes.list` (push, whole: every saved theme: the painter needs all of them resident to paint any selection, and the list grows only by a hand-made save or import (single digits in practice))
             - Routes:
               - `POST /api/saved-themes`
               - `PATCH /api/saved-themes/:id/fragment`
@@ -50964,9 +51162,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 430 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 429 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×94
-              - `apps` ×84
+              - `apps` ×83
               - `primitives` ×70
               - `page` ×35
               - `ui` ×32
@@ -51251,7 +51449,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints.implement`
               - `network/live.serveValue`
               - `ui/theme-engine/saved-themes.saveTheme`
-            - Resources: `tweakcn.community-catalog` (push, fixed)
+            - Resources: `tweakcn.community-catalog` (push, fixed, whole: a snapshot bundled with the code (522 themes today), never grown by user data — and the gallery searches and filters every entry, whole: one theme's tags — a handful, whole: one tweakcn theme's CSS variables — tens of tokens)
             - Routes: `POST /api/tweakcn/community/apply`
           - Core:
             - Uses:

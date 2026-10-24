@@ -70,10 +70,10 @@ Saved (runtime) symbols — see the parent's "Runtime symbols":
     - `resource.declare` "icons.saved-sprites"
     - `resource.declare` "icons.sprites"
   - Resources:
-    - `icons.manifest` (push, fixed)
+    - `icons.manifest` (push, fixed, whole: the symbol names the build scanned from the code — fixed for the process, and the Icons pane lists them all)
     - `icons.saved-icons-changed` (push, notified)
-    - `icons.saved-sprites` (push)
-    - `icons.sprites` (push, fixed)
+    - `icons.saved-sprites` (push, whole: every saved icon name — each picked by hand, and every one must be drawable at first paint, whole: one sprite per default style key — a handful)
+    - `icons.sprites` (push, fixed, whole: the resident sprites — the default style's two and the brands)
 - Machine:
   - Uses:
     - `infra/endpoints.machineHandler`
@@ -86,6 +86,8 @@ Saved (runtime) symbols — see the parent's "Runtime symbols":
     - `infra/endpoints.blob`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
+    - `packages/list-bound.wholeRecord`
   - Exports (types):
     - `IconSprites`
     - `SavedIconSprites`
