@@ -147,7 +147,7 @@ block keep taking a plain `ClaudeCliCall`.
     - `claude-cli-calls` (keyed, window)
     - `claude-cli-calls:groups` (push)
     - `claude-cli-calls:rows` (keyed, point)
-    - `claude-cli.calls-for` (push)
+    - `claude-cli.calls-for` (push, capped: RECENT_CALLS_LIMIT, whole: the caller's label for the call — a few named values it chose (a source id, a url))
 - Web:
   - Uses:
     - `conversations/model-provider.familyClass`
@@ -192,6 +192,8 @@ block keep taking a plain `ClaudeCliCall`.
     - `network/live.liveCollection`
     - `network/live.LiveRowsCollection`
     - `network/live.liveValue`
+    - `packages/list-bound.cappedList`
+    - `packages/list-bound.wholeRecord`
   - Exports (types):
     - `ClaudeCliCall`
     - `ClaudeCliCallRow`

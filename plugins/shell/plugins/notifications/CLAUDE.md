@@ -174,6 +174,7 @@ DataView (`web/components/notifications-view.tsx`):
     - `ids.idKindField`
     - `ids.IdOf`
     - `infra/entities.entityRef`
+    - `packages/list-bound.wholeRecord`
     - `primitives/pane.defineRoute`
   - Exports (types): `NotificationId`
   - Exports (values):

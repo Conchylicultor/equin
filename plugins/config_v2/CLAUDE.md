@@ -458,13 +458,13 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `setConfigByPath`
     - `watchConfig`
   - Resources:
-    - `config-v2.conflict-locations` (push, notified)
-    - `config-v2.conflicts` (push, notified)
-    - `config-v2.modified-counts` (push, notified)
+    - `config-v2.conflict-locations` (push, notified, whole: one entry per registered config descriptor in conflict (~250 at most), whole: the app scopes one descriptor conflicts in — a handful of apps)
+    - `config-v2.conflicts` (push, notified, whole: one per schema violation of one config document, whole: a subset of one config document's field keys, whole: one config document's fields — its descriptor's declared schema, whole: one zod issue path — as deep as the document it points into)
+    - `config-v2.modified-counts` (push, notified, whole: one entry per registered config descriptor the user changed (~250 at most))
     - `config-v2.raw-file` (push, notified)
-    - `config-v2.scopes` (push, notified)
-    - `config-v2.tiers` (push, notified)
-    - `config-v2.values` (push, notified)
+    - `config-v2.scopes` (push, notified, whole: one entry per registered config descriptor (~250), whole: the app scopes one descriptor is customized for — a handful of apps)
+    - `config-v2.tiers` (push, notified, whole: one config document's fields — its descriptor's declared schema)
+    - `config-v2.values` (push, notified, whole: one config document's fields — its descriptor's declared schema)
 - Machine:
   - Uses: `network/live.serveValue`
   - Exports (values): `CONFIG_DIR`
@@ -477,6 +477,8 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `fields/object/config.isObjectFieldDef`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
+    - `packages/list-bound.wholeRecord`
     - `primitives/rank.Rank`
   - Exports (types):
     - `CommittedFiles`

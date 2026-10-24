@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
 /** What every install read and write needs: the shims live on this computer. */
 const INSTALL_MACHINE = { feature: "Installing apps" } as const;
@@ -27,7 +28,10 @@ export const installApp = defineEndpoint({
 
 /** The apps installed as OS apps — read from the shims on disk. */
 export const InstalledAppsSchema = z.object({
-  appIds: z.array(z.string()),
+  appIds: wholeList(z.string(), {
+    reason:
+      "one id per app installed as an OS app — bounded by the apps there are",
+  }),
 });
 export type InstalledApps = z.infer<typeof InstalledAppsSchema>;
 
@@ -57,7 +61,10 @@ export const InstallRequestSchema = z.discriminatedUnion("state", [
 export type InstallRequest = z.infer<typeof InstallRequestSchema>;
 
 export const InstallRequestsSchema = z.object({
-  requests: z.array(InstallRequestSchema),
+  requests: wholeList(InstallRequestSchema, {
+    reason:
+      "at most one in-flight or failed install per app — bounded by the apps there are",
+  }),
 });
 export type InstallRequests = z.infer<typeof InstallRequestsSchema>;
 

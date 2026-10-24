@@ -89,9 +89,12 @@ Orthogonal to the runtime (tmux | sdk): a runtime sees only the cwd and the
     - `Workspace`
     - `workspaceOfAttempt`
     - `workspaceOfConversation`
-  - Resources: `workspace.catalog` (push, fixed)
+  - Resources: `workspace.catalog` (push, fixed, whole: the worktree plus one entry per registered scratch profile — a handful, fixed at boot, capped: WorkspaceCapabilitySchema.options.length)
 - Core:
-  - Uses: `network/live.liveValue`
+  - Uses:
+    - `network/live.liveValue`
+    - `packages/list-bound.cappedList`
+    - `packages/list-bound.wholeList`
   - Exports (types):
     - `WorkspaceCapability`
     - `WorkspaceChoice`

@@ -290,6 +290,8 @@ exactly.
     - `config_v2.defineConfig`
     - `fields/dynamic-enum/config.dynamicEnumField`
     - `fields/enum/config.enumField`
+    - `packages/list-bound.wholeList`
+    - `packages/list-bound.wholeRecord`
     - `primitives/css/ui-kit.appThemeScope`
     - `primitives/css/ui-kit.fixedThemeScope`
     - `primitives/css/ui-kit.subThemeScope`

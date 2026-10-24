@@ -106,7 +106,7 @@ The fix commands (`CLAUDE_CODE_FIX`) are the same two lines doctor.sh prints;
     - `onClaudeCodeProbed`
     - `onClaudeCodeReady`
     - `requireClaudeBin`
-  - Resources: `claude-code-status` (push, notified)
+  - Resources: `claude-code-status` (push, notified, whole: the few places the CLI is looked for — a fixed handful of paths)
 - Machine:
   - Uses:
     - `infra/endpoints.implementMachine`
@@ -116,6 +116,7 @@ The fix commands (`CLAUDE_CODE_FIX`) are the same two lines doctor.sh prints;
   - Uses:
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
   - Exports (types):
     - `ClaudeCodeBlock`
     - `ClaudeCodeStatus`

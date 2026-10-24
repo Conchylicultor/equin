@@ -122,7 +122,7 @@ insert and the ring's inline prune reach it through the change feed. The
     - `event-emissions` (keyed, window)
     - `event-emissions:groups` (push)
     - `event-emissions:rows` (keyed, point)
-    - `event-triggers` (push, unbounded: every binding across every event's own <event>_triggers table — the code's static Trigger() bindings plus one oneShot row per pending ctx.waitFor (a never-fired one lingers) — with the computed `dangling` flag: a union over N tables, which a single-table liveCollection cannot bind)
+    - `event-triggers` (push, whole: every binding across every event's own <event>_triggers table — the code's static Trigger() bindings plus one oneShot row per pending ctx.waitFor (a never-fired one lingers) — with the computed `dangling` flag: a union over N tables, which a single-table liveCollection cannot bind, whole: the payload one binding hands its job — a few named params, whole: one filter per typed column the event declares — a handful)
   - Routes:
     - `GET /api/events/emissions`
     - `GET /api/events/triggers`
@@ -143,6 +143,8 @@ insert and the ring's inline prune reach it through the change feed. The
     - `network/live.liveCollection`
     - `network/live.LiveRowsCollection`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
+    - `packages/list-bound.wholeRecord`
   - Exports (types):
     - `EmissionListRow`
     - `EmissionMatch`

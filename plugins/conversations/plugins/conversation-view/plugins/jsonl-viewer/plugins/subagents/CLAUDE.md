@@ -444,16 +444,18 @@ downstream can widen the set, because nothing downstream resolves one.
   - Contributes:
     - `resource.declare` "subagent-activity"
     - `resource.declare` "subagent-transcript"
+    - `resource.declare` "subagent-transcript:meta"
     - `resource.declare` "subagents.parent-facts"
   - Uses: `conversations/conversation-view/jsonl-viewer.serveTranscriptValue`
   - Resources:
-    - `subagent-activity` (push, notified)
-    - `subagent-transcript` (push, notified)
+    - `subagent-activity` (push, notified, whole: one conversation's sub-agents — one per Agent call or teammate, dozens at most)
+    - `subagent-transcript` (keyed, window, notified, whole: one sub-agent's typed prompts — its launch prompt and each message sent to it, a handful)
+    - `subagent-transcript:meta` (push, notified, whole: one sub-agent's typed prompts — its launch prompt and each message sent to it, a handful)
 - Web:
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/live-state` ×3
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/live-state` ×5
+    - `conversations/conversation-view/jsonl-viewer` ×4
     - `primitives/relative-time` ×3
-    - `conversations/conversation-view/jsonl-viewer` ×2
     - `conversations` ×2
     - `primitives/css/spacing` ×2
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
@@ -488,6 +490,10 @@ downstream can widen the set, because nothing downstream resolves one.
 - Core:
   - Uses:
     - `conversations.hasLiveProcess`
+    - `conversations/conversation-view/jsonl-viewer.JSONL_EVENTS_MAX`
+    - `conversations/conversation-view/jsonl-viewer.JSONL_EVENTS_PAGE`
+    - `conversations/conversation-view/jsonl-viewer.seqKey`
+    - `conversations/conversation-view/jsonl-viewer.TranscriptEventRowSchema`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow.parseWorkflowResult`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow.WORKFLOW_TOOL_NAME`
     - `conversations/transcript-source.JsonlEvent`
@@ -497,6 +503,8 @@ downstream can widen the set, because nothing downstream resolves one.
     - `conversations/transcript-source.tokenUsageOf`
     - `conversations/transcript-source.TokenUsageSchema`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
+    - `packages/list-bound.wholeRecord`
   - Exports (types):
     - `DescribedSubagent`
     - `LastStep`
@@ -509,6 +517,8 @@ downstream can widen the set, because nothing downstream resolves one.
     - `SubagentRunState`
     - `SubagentRunStateInput`
     - `SubagentTranscript`
+    - `SubagentTranscriptMeta`
+    - `SubagentTranscriptQuery`
     - `UndescribedSubagent`
     - `UsageFold`
     - `WorkflowRunEntry`
@@ -526,6 +536,7 @@ downstream can widen the set, because nothing downstream resolves one.
     - `emptyUsageFold`
     - `foldUsageLine`
     - `formatLastStep`
+    - `lastHandback`
     - `lastStepOfLines`
     - `LastStepSchema`
     - `newestTurnLineAt`
@@ -540,7 +551,6 @@ downstream can widen the set, because nothing downstream resolves one.
     - `SubagentRequestShapeSchema`
     - `subagentRunState`
     - `subagentTranscript`
-    - `SubagentTranscriptSchema`
     - `teammateIdleTimes`
     - `toolResultIsOutcome`
     - `turnEndedOfLines`

@@ -574,9 +574,14 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `resource.declare` "dead-jobs"
     - `resource.declare` "dead-jobs:groups"
     - `resource.declare` "dead-jobs:rows"
-    - `resource.declare` "job-runs.all"
-    - `resource.declare` "job-runs.all:rows"
-    - `resource.declare` "jobs-list"
+    - `resource.declare` "job-runs.history"
+    - `resource.declare` "job-runs.history:count"
+    - `resource.declare` "job-runs.history:groups"
+    - `resource.declare` "job-runs.history:rows"
+    - `resource.declare` "jobs"
+    - `resource.declare` "jobs:count"
+    - `resource.declare` "jobs:groups"
+    - `resource.declare` "jobs:rows"
     - `host-service:jobs.queue` "jobs.queue"
     - `fork-schema-data-exclusion` "graphile_worker"
   - Uses:
@@ -592,7 +597,6 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `infra/entities.defaultNow`
     - `infra/entities.defineEntity`
     - `network/live.serveCollection`
-    - `network/live.serveValue`
   - DB schema:
     - `plugins/infra/plugins/jobs/server/internal/queue-schema.ts`
     - `plugins/infra/plugins/jobs/server/internal/tables.ts`
@@ -622,6 +626,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `_jobRunStats`
     - `abortDurableRun`
     - `ALL_JOB_TASKS`
+    - `answerJobsInMemory`
     - `ceilingMsFor`
     - `deadlineMsFor`
     - `DEFAULT_MAX_ATTEMPTS`
@@ -660,11 +665,15 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `dead-jobs` (keyed, window)
     - `dead-jobs:groups` (push)
     - `dead-jobs:rows` (keyed, point)
-    - `job-runs.all` (keyed)
-    - `job-runs.all:rows` (keyed, point)
-    - `jobs-list` (invalidate, notified)
+    - `job-runs.history` (keyed, window)
+    - `job-runs.history:count` (push)
+    - `job-runs.history:groups` (push)
+    - `job-runs.history:rows` (keyed, point)
+    - `jobs` (keyed, window)
+    - `jobs:count` (push)
+    - `jobs:groups` (push)
+    - `jobs:rows` (keyed, point)
   - Routes:
-    - `GET /api/jobs`
     - `GET /api/jobs/dead`
     - `POST /api/jobs/:id/retry`
     - `DELETE /api/jobs/:id`
@@ -672,17 +681,18 @@ connection and every statement on it gives up after 60 s with no reply, and the
   - Uses:
     - `fields.fieldsToZodObject`
     - `fields.nullable`
+    - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
     - `fields/float/config.floatField`
     - `fields/int/config.intField`
     - `fields/json/config.jsonField`
+    - `fields/text/config.enumTextField`
     - `fields/text/config.parsedTextField`
     - `fields/text/config.textField`
     - `infra/endpoints.defineEndpoint`
     - `infra/entities.entityRef`
     - `network/live.liveCollection`
     - `network/live.LiveRowsCollection`
-    - `network/live.liveValue`
   - Exports (types):
     - `Crontab`
     - `DeadJobListRow`
@@ -693,7 +703,6 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `JobRow`
     - `JobRunOutcome`
     - `JobRunRow`
-    - `JobsPayload`
     - `JobState`
     - `RunnerSpec`
   - Exports (values):
@@ -707,15 +716,17 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `HOLD_SPECS`
     - `HoldClassSchema`
     - `holdForTask`
-    - `JobRowSchema`
+    - `JOB_RUNS_MAX_LIMIT`
+    - `JOB_STATES`
+    - `jobRunAtKeyText`
     - `JobRunOutcomeSchema`
     - `jobRuns`
-    - `jobsList`
-    - `JobsPayloadSchema`
+    - `jobRunsEntityRef`
+    - `jobs`
+    - `JOBS_MAX_LIMIT`
     - `JobStateSchema`
     - `LEGACY_JOB_TASK`
     - `listDeadJobs`
-    - `listJobs`
     - `nextCronFiring`
     - `parseCrontab`
     - `pickupTargetMsFor`
@@ -726,10 +737,10 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `taskFor`
     - `TOTAL_JOB_SLOTS`
 - Cross-plugin:
-  - Imported by: 61 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 60 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×19
     - `infra` ×13
-    - `debug` ×8
+    - `debug` ×7
     - `conversations` ×6
     - `tasks` ×4
     - `database` ×3

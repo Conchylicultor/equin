@@ -186,7 +186,7 @@ Behavior:
     - `tasks/tasks-core._conversations`
   - DB schema: `plugins/active-data/server/internal/tables.ts`
   - Exports (values): `_activeDataBindings`
-  - Resources: `active-data.bindings` (push, unbounded: one conversation's widget bindings — a handful per assistant message; the table's key is the composite (conversationId, messageId, tag, occurrenceIndex), so no single-id :rows read fits)
+  - Resources: `active-data.bindings` (push, whole: one conversation's widget bindings — a handful per assistant message; the table's key is the composite (conversationId, messageId, tag, occurrenceIndex), so no single-id :rows read fits)
   - Routes:
     - `PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
     - `DELETE /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
@@ -194,6 +194,7 @@ Behavior:
   - Uses:
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
   - Exports (types):
     - `ActiveDataBinding`
     - `ActiveDataBindingsPayload`

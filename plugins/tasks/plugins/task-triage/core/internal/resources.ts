@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { liveCollection } from "@plugins/network/plugins/live/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { nullable } from "@plugins/fields/core";
 import {
   enumTextField,
@@ -96,10 +97,20 @@ export const taskTriageShape = defineExtensionShape({
     ),
     context: nullable(textField()),
     question: nullable(textField()),
-    answers: jsonField({ schema: z.array(z.string()), default: [] }),
+    answers: jsonField({
+      schema: wholeList(z.string(), {
+        reason: "one triage's answers to the few questions it asks",
+      }),
+      default: [],
+    }),
     // The person's one-click answer to `question` (one of `answers`).
     answer: nullable(textField()),
-    areas: jsonField({ schema: z.array(z.string()), default: [] }),
+    areas: jsonField({
+      schema: wholeList(z.string(), {
+        reason: "the few areas one task touches",
+      }),
+      default: [],
+    }),
     mainSha: nullable(textField()),
   },
   serverOnly: ["sourceTitle", "sourceDescription"],

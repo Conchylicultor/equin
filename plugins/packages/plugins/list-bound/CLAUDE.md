@@ -62,15 +62,15 @@ tuples, intersections, malformed tags).
 
 - Description: A list's bound, declared in its zod schema: cappedList / cappedRecord (a checked max) and wholeList / wholeRecord (loaded whole, with a written reason), tagged in _def so the tag survives zod's clones; listShapeOf walks every array, record, map and set a schema reaches and reports each one's bound and the bare ones, listBoundsOf refuses a bare one.
 - Cross-plugin:
-  - Imported by: 81 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 83 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×13
     - `conversations` ×13
     - `infra` ×12
     - `debug` ×11
     - `primitives` ×5
+    - `tasks` ×4
     - `fields` ×3
     - `page` ×3
-    - `tasks` ×3
     - `integrations` ×2
     - `plugin-meta` ×2
     - `ui` ×2
@@ -80,6 +80,7 @@ tuples, intersections, malformed tags).
     - `backup`
     - `code-explorer/code-api`
     - `config_v2`
+    - `menu-bar`
     - `network/live`
     - `release`
     - `reports`

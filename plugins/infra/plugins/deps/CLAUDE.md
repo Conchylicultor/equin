@@ -342,7 +342,7 @@ torch.
   - Register:
     - `defineSupervisedJob('deps.install')`
     - `defineFileWatcher('deps.cache')`
-  - Resources: `deps.states` (push, notified)
+  - Resources: `deps.states` (push, notified, whole: one row per optional dependency the code declares — a closed handful (browsers, python envs, toolchains))
   - Routes:
     - `POST /api/deps/install`
     - `POST /api/deps/remove`
@@ -351,11 +351,13 @@ torch.
     - `framework/tooling/collected-dir.defineCollectedDir`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
   - Exports (types):
     - `DepRow`
     - `DepState`
     - `DepUpdates`
   - Exports (values):
+    - `DEP_LOG_TAIL_LINES`
     - `DepRowSchema`
     - `depsStates`
     - `DepStateSchema`

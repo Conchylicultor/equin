@@ -171,8 +171,8 @@ binary inside `equin.app` (`cargoBinary(ready)`) run as `tray`, its stdio in
     - `resource.declare` "menu-bar.installed"
   - Resources:
     - `menu-bar.capabilities` (push, fixed)
-    - `menu-bar.install-requests` (push, notified)
-    - `menu-bar.installed` (push, notified)
+    - `menu-bar.install-requests` (push, notified, whole: at most one in-flight or failed install per app — bounded by the apps there are)
+    - `menu-bar.installed` (push, notified, whole: one id per app installed as an OS app — bounded by the apps there are)
 - Machine:
   - Uses:
     - `apps-core/app-manifest.appIconPng`
@@ -184,6 +184,7 @@ binary inside `equin.app` (`cargoBinary(ready)`) run as `tray`, its stdio in
   - Uses:
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
     - `primitives/pane.defineApp`
     - `ui/icons.symbol`
   - Exports (types):

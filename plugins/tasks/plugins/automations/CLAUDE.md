@@ -369,7 +369,7 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `releaseLaunchedTask`
   - Register: `defineJob('automations.task-status')`
   - Resources:
-    - `automations.catalog` (push, notified)
+    - `automations.catalog` (push, notified, whole: every registered automation — declared in code, bounded by the composition, whole: the tasks one launch-kind automation holds a slot for — at most its concurrency, whole: what one automation watches — e.g. one per dependency updater, declared in code, whole: one automation's prompt variables — a handful, declared in code, capped: TRIGGER_KINDS.length)
     - `automations.launch-decisions.all` (keyed)
     - `automations.launch-decisions.all:rows` (keyed, point)
     - `automations.tasks` (keyed, window)
@@ -383,11 +383,12 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `network/live.serveCollection`
     - `network/live.serveValue`
 - Core:
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `config_v2` ×3
     - `conversations/model-provider` ×3
     - `fields/text/config` ×2
     - `network/live` ×2
+    - `packages/list-bound` ×2
     - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
     - `fields/dynamic-enum/config.dynamicEnumField`

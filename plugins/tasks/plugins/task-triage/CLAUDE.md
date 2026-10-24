@@ -176,6 +176,7 @@ risk, a context for the person, at most one one-click question. Design:
     - `infra/endpoints.defineEndpoint`
     - `infra/entity-extensions.defineExtensionShape`
     - `network/live.liveCollection`
+    - `packages/list-bound.wholeList`
     - `tasks/tasks-core.tasksEntityRef`
   - Exports (types):
     - `RequestTriageOutcome`

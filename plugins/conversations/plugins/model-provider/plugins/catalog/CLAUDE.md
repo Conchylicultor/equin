@@ -28,7 +28,7 @@ The host-global model catalog — which model versions this machine knows, which
     - `getModelCatalog`
     - `ModelCatalogSource`
     - `notifyModelCatalogChanged`
-  - Resources: `model-provider.catalog` (push, notified)
+  - Resources: `model-provider.catalog` (push, notified, whole: every Claude model version this machine has seen — a few dozen, one per release)
 - Cross-plugin:
   - Imported by:
     - `apps/sonata/transcription`

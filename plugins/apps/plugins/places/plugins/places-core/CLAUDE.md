@@ -117,7 +117,7 @@ its own.
   - Resources:
     - `places.places.all` (keyed)
     - `places.places.all:rows` (keyed, point)
-    - `places.search` (invalidate, fixed)
+    - `places.search` (invalidate, fixed, capped: PLACES_SEARCH_MAX_SUGGESTIONS, capped: PLACES_SEARCH_MAX_RESULTS)
     - `places.tags.all` (keyed)
     - `places.tags.all:rows` (keyed, point)
   - Routes:
@@ -127,13 +127,14 @@ its own.
     - `DELETE /api/places/places/:id`
     - `POST /api/places/places/:id/icon`
 - Core:
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tag-tree/engine` ×6
     - `fields` ×4
     - `integrations/google-maps/places-api` ×4
     - `fields/text/config` ×3
     - `ids` ×3
     - `network/live` ×2
+    - `packages/list-bound` ×2
     - `ui/icons/saved-names` ×2
     - `fields/date/config.dateField`
     - `fields/json/config.jsonField`
@@ -176,6 +177,8 @@ its own.
     - `placeName`
     - `PlacePositionSchema`
     - `places`
+    - `PLACES_SEARCH_MAX_RESULTS`
+    - `PLACES_SEARCH_MAX_SUGGESTIONS`
     - `PlaceSchema`
     - `placeSearch`
     - `PlaceSearchQuerySchema`

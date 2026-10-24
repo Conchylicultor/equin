@@ -78,12 +78,14 @@ client sees them at connect (Claude Code connects once per conversation).
     - `McpToolContext`
     - `McpToolResult`
   - Exports (values): `Mcp`
-  - Resources: `mcp.catalog` (push, fixed)
+  - Resources: `mcp.catalog` (push, fixed, whole: every Mcp.tool the code registers — fixed for the process, a hundred or so, whole: every Mcp.instructions section the code registers — fixed for the process, a handful, whole: the scratch profiles a tool is reserved for — one or two, whole: one JSON Schema object's top-level keywords (type, properties, required, …) — a handful)
   - Routes: `POST /api/mcp/:conversationId`
 - Core:
   - Uses:
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
+    - `packages/list-bound.wholeRecord`
   - Exports (types):
     - `McpCatalog`
     - `McpCatalogInstructions`

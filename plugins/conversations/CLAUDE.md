@@ -89,8 +89,8 @@
     - `defineTriggerEvent('conversation.turn-completed')`
     - `defineJob('conversations.status-sweep')`
   - Resources:
-    - `conversations.context-usage` (push, notified)
-    - `conversations.partial-message` (push, notified)
+    - `conversations.context-usage` (push, notified, whole: the harness's own breakdown of one context window: a handful of categories, whole: the CLAUDE.md / memory files one agent loaded: a handful, whole: the MCP tools one agent process was handed: tens, fixed by its config)
+    - `conversations.partial-message` (push, notified, whole: one model turn's content blocks, held only while it streams)
   - Routes:
     - `GET /api/conversations`
     - `GET /api/conversations/:id`
@@ -138,6 +138,7 @@
     - `fields/int/config.intField`
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
+    - `packages/list-bound.wholeList`
     - `primitives/pane.defineRoute`
     - `tasks/tasks-core.ConversationSchema`
   - Exports (types):

@@ -17,7 +17,7 @@
     - `code-explorer/file-resolve.FileDisambiguation`
     - `code-explorer/file-resolve.useResolvedFile`
     - `conversations/conversation-view.conversationPane`
-    - `conversations/conversation-view/code.useEditedFiles`
+    - `conversations/conversation-view/code.useEditedFile`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/text.Text`
     - `primitives/file-links.FileLinksWorkspaceProvider`
