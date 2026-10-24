@@ -126,6 +126,7 @@ export type ExemptableRuleId =
   | "row/no-row-focus-class"
   | "rule-kind-safety/type-aware-rule-declared"
   | "runtime-isolation/no-deep-own-folder-import"
+  | "rust/no-bare-cargo"
   | "scoped-store/no-module-mutable-store"
   | "scroll-safety/no-adhoc-scroll-into-view"
   | "scroll-safety/no-adhoc-scroll-write"
