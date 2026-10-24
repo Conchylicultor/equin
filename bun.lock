@@ -6113,6 +6113,10 @@
         "pg": "^8.23.1",
       },
     },
+    "plugins/tasks/plugins/task-triage": {
+      "name": "@singularity/plugin-tasks-task-triage",
+      "version": "0.0.1",
+    },
     "plugins/tasks/plugins/tasks-core": {
       "name": "@singularity/plugin-tasks-tasks-core",
       "version": "0.0.1",
@@ -9932,6 +9936,8 @@
     "@singularity/plugin-tasks-task-title-filed-titles": ["@singularity/plugin-tasks-task-title-filed-titles@workspace:plugins/tasks/plugins/task-title/plugins/filed-titles"],
 
     "@singularity/plugin-tasks-task-track": ["@singularity/plugin-tasks-task-track@workspace:plugins/tasks/plugins/task-track"],
+
+    "@singularity/plugin-tasks-task-triage": ["@singularity/plugin-tasks-task-triage@workspace:plugins/tasks/plugins/task-triage"],
 
     "@singularity/plugin-tasks-tasks-core": ["@singularity/plugin-tasks-tasks-core@workspace:plugins/tasks/plugins/tasks-core"],
 

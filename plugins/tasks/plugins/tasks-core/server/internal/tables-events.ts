@@ -60,6 +60,26 @@ export const { event: taskTitleChanged, table: _taskTitleChangedTriggers } =
     },
   });
 
+export interface TaskDescriptionChangedPayload {
+  taskId: string;
+  description: string | null;
+  [key: string]: unknown;
+}
+
+// Emitted when `updateTaskOn` writes a description (`patch.description` set,
+// `null` included). Not on creation: a new task's text is announced by
+// `tasks.titleChanged`. Like that event, a subscriber doing slow work re-reads
+// the task before persisting anything derived. Filterable by taskId.
+export const {
+  event: taskDescriptionChanged,
+  table: _taskDescriptionChangedTriggers,
+} = defineTriggerEvent<TaskDescriptionChangedPayload>({
+  name: "tasks.descriptionChanged",
+  filters: {
+    taskId: text("task_id"),
+  },
+});
+
 export interface ConversationStatusChangedPayload {
   conversationId: string;
   taskId: string | null;

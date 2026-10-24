@@ -78,4 +78,8 @@ export type {
   LaunchDecisionRow,
 } from "./internal/resources";
 export { automationsRoute, automationDetailRoute } from "./internal/routes";
-export { decideLaunchEndpoint, MAX_DECIDED_TASKS } from "./internal/endpoints";
+export {
+  decideLaunchEndpoint,
+  MAX_DECIDED_TASKS,
+  taskApprovalEndpoint,
+} from "./internal/endpoints";

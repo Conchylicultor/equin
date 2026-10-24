@@ -7,21 +7,24 @@ import {
 import { rowKind } from "@plugins/network/plugins/live/core";
 import type { LaunchDecision } from "@plugins/tasks/plugins/automations/core";
 import {
-  triageScore,
-  triageStaleness,
-  type SidequestTriage,
-  type TriageStaleness,
-} from "./triage";
+  compareByTriage,
+  latestTriageResult,
+  type TriageRead,
+  type TriageReadResult,
+} from "@plugins/tasks/plugins/task-triage/core";
 
 /**
  * Where a ready sidequest sits in the launch list, in display order:
  *
  * - `approved` — the person approved it: the autopilot may launch it.
  * - `proposed` — triage read it and nothing is left to ask; a checkbox, ticked
- *   for the person when triage rates it ready and low risk (never approved).
+ *   for the person when the read is fresh and rates it a low-risk must / should
+ *   that is ready (never approved).
  * - `needs-call` — triage put a question to the person, unanswered yet.
- * - `obsolete` — triage found it already fixed, or its code gone.
- * - `triaging` — not read yet.
+ * - `obsolete` — triage found it already fixed or its code gone, or rated it
+ *   won't (out of scope this timebox).
+ * - `failed` — its only triage run ended without a read.
+ * - `triaging` — not read yet: queued, running, or never asked for.
  * - `excluded` — the person excluded it: never proposed until restored.
  */
 export const LAUNCH_LANES = [
@@ -29,6 +32,7 @@ export const LAUNCH_LANES = [
   "proposed",
   "needs-call",
   "obsolete",
+  "failed",
   "triaging",
   "excluded",
 ] as const;
@@ -41,7 +45,8 @@ export const LAUNCH_LANE_META: {
   approved: { label: "Approved" },
   proposed: { label: "Proposed by triage" },
   "needs-call": { label: "Needs your call" },
-  obsolete: { label: "Looks obsolete" },
+  obsolete: { label: "Looks obsolete / won't" },
+  failed: { label: "Triage failed" },
   triaging: { label: "Triaging" },
   excluded: { label: "Excluded" },
 };
@@ -71,7 +76,6 @@ export const launchListRowKind = rowKind("sidequest-autopilot.launch-list", {
 export interface LaunchListTask {
   id: string;
   title: string;
-  description: string | null;
   createdAt: Date;
 }
 
@@ -81,73 +85,93 @@ export interface LaunchListRow {
   /** The task's title: the kind's primary field. */
   title: string;
   task: LaunchListTask;
-  triage: SidequestTriage | null;
+  /** The task's triage as task-triage holds it (`null`: never asked for). */
+  triage: TriageRead | null;
+  /**
+   * The read the row is judged by: the latest that landed (`done` / `stale`,
+   * or the one a run in flight or failed would replace) — `null` for none.
+   */
+  result: TriageReadResult | null;
   decision: LaunchDecision | null;
   lane: LaunchLane;
-  /** Launch order, 1-based: triage's value for size, then oldest first. */
+  /** Launch order, 1-based: triage's priority, then oldest first. */
   rank: number;
-  staleness: TriageStaleness | null;
   /** Ticked for the person before they touch it — never an approval. */
   preTicked: boolean;
 }
 
 export function laneOf(
-  triage: SidequestTriage | null,
+  triage: TriageRead | null,
   decision: LaunchDecision | null,
 ): LaunchLane {
   if (decision === "approved") return "approved";
   if (decision === "excluded") return "excluded";
-  if (triage === null) return "triaging";
-  if (triage.verdict === "obsolete") return "obsolete";
-  if (triage.question !== null && triage.answer === null) return "needs-call";
+  const result = latestTriageResult(triage);
+  if (result === null) {
+    return triage?.state === "failed" ? "failed" : "triaging";
+  }
+  if (result.verdict === "obsolete" || result.priority === "wont") {
+    return "obsolete";
+  }
+  if (result.question !== null && result.answer === null) return "needs-call";
   return "proposed";
 }
 
 /**
- * Triage's pre-tick: a fresh read rating it ready and low risk, or a question
- * the person answered. Only ever a suggestion in the list.
+ * Triage's pre-tick: a fresh (`done`) read rating it a ready, low-risk must or
+ * should — or, when it put a question, one the person answered. Only ever a
+ * suggestion in the list.
  */
-export function preTicked(
-  triage: SidequestTriage | null,
-  staleness: TriageStaleness | null,
-): boolean {
-  if (triage === null || staleness?.stale === true) return false;
-  if (triage.question !== null) return triage.answer !== null;
-  return triage.verdict === "ready" && triage.risk === "low";
+export function preTicked(triage: TriageRead | null): boolean {
+  if (triage?.state !== "done") return false;
+  const read = triage.read;
+  if (read.question !== null) return read.answer !== null;
+  return (
+    read.verdict === "ready" &&
+    (read.priority === "must" || read.priority === "should") &&
+    read.risk === "low"
+  );
 }
 
 /**
- * Every ready sidequest as a launch-list row, in launch order (the same order
- * the autopilot's candidates use).
+ * Every ready sidequest as a launch-list row, in launch order (the
+ * autopilot's candidates' order: task-triage's `compareByTriage`).
  */
 export function launchListRows(
   tasks: readonly LaunchListTask[],
-  triage: ReadonlyMap<string, SidequestTriage>,
+  triage: ReadonlyMap<string, TriageRead>,
   decisions: ReadonlyMap<string, LaunchDecision>,
-  now: Date,
-  staleAfterDays: number,
 ): LaunchListRow[] {
-  const ordered = [...tasks].sort(
-    (a, b) =>
-      triageScore(triage.get(b.id)) - triageScore(triage.get(a.id)) ||
-      a.createdAt.getTime() - b.createdAt.getTime() ||
-      a.id.localeCompare(b.id),
-  );
-  return ordered.map((task, index) => {
+  const judged = tasks.map((task) => {
     const read = triage.get(task.id) ?? null;
+    return { task, read, result: latestTriageResult(read) };
+  });
+  judged.sort((a, b) =>
+    compareByTriage(
+      {
+        taskId: a.task.id,
+        createdAt: a.task.createdAt,
+        priority: a.result?.priority ?? null,
+      },
+      {
+        taskId: b.task.id,
+        createdAt: b.task.createdAt,
+        priority: b.result?.priority ?? null,
+      },
+    ),
+  );
+  return judged.map(({ task, read, result }, index) => {
     const decision = decisions.get(task.id) ?? null;
-    const staleness =
-      read === null ? null : triageStaleness(read, task, now, staleAfterDays);
     return {
       id: task.id,
       title: task.title,
       task,
       triage: read,
+      result,
       decision,
       lane: laneOf(read, decision),
       rank: index + 1,
-      staleness,
-      preTicked: preTicked(read, staleness),
+      preTicked: preTicked(read),
     };
   });
 }

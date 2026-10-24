@@ -164,7 +164,7 @@ async function runLaunch(
     signal,
   });
   const [approved, withOrigin, armed] = await Promise.all([
-    approvedTaskIds(spec.id),
+    approvedTaskIds(),
     taskIdsWithOrigin(candidates.map((c) => c.taskId)),
     listArmedTaskIds(),
   ]);

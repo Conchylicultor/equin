@@ -2,11 +2,14 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { defineAutomation } from "@plugins/tasks/plugins/automations/server";
 import { listSidequestTasks } from "@plugins/tasks/plugins/task-track/server";
 import {
+  triageNotesOf,
+  triageReadsOf,
+} from "@plugins/tasks/plugins/task-triage/server";
+import {
   sidequestAutopilotConfig,
   SIDEQUEST_AUTOPILOT_ID,
 } from "../../shared/config";
 import { sidequestCandidates } from "./candidates";
-import { triageReadsOf } from "./triage-reads";
 import { stopIfPastRunUntil } from "./run-until";
 
 // How many ready sidequests one run reads. The registry keeps only the ones a
@@ -18,9 +21,10 @@ const CANDIDATE_WINDOW = 200;
  * Sidequest autopilot: works through the sidequests the person approved in the
  * background, a few agents at a time. Candidates are the sidequests ready to
  * start — no attempt yet, not held, dropped or blocked (derived status `new`)
- * — best first by triage's value for size; the registry launches only the
- * approved ones, at most `maxLaunches` per turn-on. Each agent gets the autopilot prompt (never ask, check obsolescence
- * first, stay in scope, report with `submit_outcome_report`), and its slot
+ * — best first by triage's priority (task-triage's `compareByTriage`); the
+ * registry launches only the approved ones, at most `maxLaunches` per turn-on.
+ * Each agent gets the autopilot prompt (never ask, check obsolescence first,
+ * stay in scope, report with `submit_outcome_report`), and its slot
  * frees when it reports or its task settles. Off by default.
  */
 export const sidequestAutopilotAutomation = defineAutomation({
@@ -29,14 +33,14 @@ export const sidequestAutopilotAutomation = defineAutomation({
   label: "Sidequest autopilot",
   icon: symbol("rocket-launch"),
   description:
-    "Works through the sidequests you approve: Sonnet reads each one first and proposes it, you approve what may run, and it starts agents on the approved ones, best first, a few at a time up to your cap — each leaves you a report.",
+    "Works through the sidequests you approve: triage reads each one first and proposes it, you approve what may run, and it starts agents on the approved ones, best first, a few at a time up to your cap — each leaves you a report.",
   config: sidequestAutopilotConfig,
   triggers: {
     kinds: ["event"],
     eventLabel: "When a task becomes ready to start",
   },
   inProcess:
-    "One indexed read of at most 200 ready sidequests and their triage rows, then at most `concurrency` (≤ 8) origin-row inserts and marker arms — bounded by the window and the slots; a restart leaves the tasks for the next run.",
+    "One indexed read of at most 200 ready sidequests, their triage rows and notes, then at most `concurrency` (≤ 8) origin-row inserts and marker arms — bounded by the window and the slots; a restart leaves the tasks for the next run.",
   promptVariables: [
     { name: "taskId", description: "The sidequest's task id" },
     { name: "title", description: "The sidequest's title" },
@@ -54,6 +58,11 @@ export const sidequestAutopilotAutomation = defineAutomation({
       description:
         "Triage's question and the person's answer (or a note that there was none)",
     },
+    {
+      name: "note",
+      description:
+        "The person's note about the task — the one on its Triage card (or a note that there is none)",
+    },
   ],
   candidates: async () => {
     if (await stopIfPastRunUntil()) return [];
@@ -61,9 +70,11 @@ export const sidequestAutopilotAutomation = defineAutomation({
       statuses: ["new"],
       limit: CANDIDATE_WINDOW,
     });
-    return sidequestCandidates(
-      tasks,
-      await triageReadsOf(tasks.map((t) => t.id)),
-    );
+    const ids = tasks.map((t) => t.id);
+    const [triage, notes] = await Promise.all([
+      triageReadsOf(ids),
+      triageNotesOf(ids),
+    ]);
+    return sidequestCandidates(tasks, triage, notes);
   },
 });

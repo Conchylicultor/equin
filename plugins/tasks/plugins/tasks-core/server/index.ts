@@ -24,6 +24,7 @@ import {
   pushLanded,
   taskStatusChanged,
   taskTitleChanged,
+  taskDescriptionChanged,
   conversationStatusChanged,
   conversationCreated,
 } from "./internal/tables-events";
@@ -196,6 +197,14 @@ export {
 } from "./internal/tables-events";
 export type { TaskTitleChangedPayload } from "./internal/tables-events";
 
+// Emitted when a task's description is edited (`updateTask` with a
+// description in the patch). Filterable by taskId.
+export {
+  taskDescriptionChanged,
+  _taskDescriptionChangedTriggers,
+} from "./internal/tables-events";
+export type { TaskDescriptionChangedPayload } from "./internal/tables-events";
+
 // Emitted at the conversation status-write chokepoint whenever a single
 // conversation's status column changes. Finer-grained than taskStatusChanged;
 // the queue plugin subscribes to revalidate the focus pin.
@@ -266,6 +275,7 @@ export default {
     pushLanded,
     taskStatusChanged,
     taskTitleChanged,
+    taskDescriptionChanged,
     conversationStatusChanged,
     conversationCreated,
   ],

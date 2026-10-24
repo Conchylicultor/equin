@@ -13,7 +13,7 @@ import { TriageSection } from "./components/triage-section";
 
 export default {
   description:
-    "The Sidequest autopilot in the Automations pane: registers its config (enabled, at once, in total, push policy, model, prompt, triage, stale after, triage prompt) and contributes its sections — Launch list (a DataView of every ready sidequest in launch order, grouped Approved / Proposed by triage / Needs your call / Looks obsolete / Triaging / Excluded; each row expands to triage's context, its one-click question and Re-triage; triage may tick a row, only Approve selected approves), Run until (until you turn it off, or until a date and time after which it turns itself off) and Triage (the switch, stale after, the triage prompt).",
+    "The Sidequest autopilot in the Automations pane: registers its config (enabled, at once, in total, push policy, model, prompt, triage) and contributes its sections — Launch list (a DataView of every ready sidequest in launch order — triage's priority, then oldest — grouped Approved / Proposed by triage / Needs your call / Looks obsolete / won't / Triage failed / Triaging / Excluded; each row shows its priority and type, and expands to triage's context, its one-click question and Re-triage; triage may tick a row, only Approve selected approves), Run until (until you turn it off, or until a date and time after which it turns itself off) and Triage (whether new sidequests are triaged automatically).",
   contributions: [
     ...automationConfigContributions(sidequestAutopilotConfig),
     Automations.Section({

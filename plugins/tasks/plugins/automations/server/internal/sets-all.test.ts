@@ -43,7 +43,6 @@ beforeAll(async () => {
   await t.db.insert(tasksLaunchDecision.table).values(
     ids.map((taskId) => ({
       taskId,
-      automationId: "probe",
       decision: "approved" as const,
       decidedAt: at,
     })),

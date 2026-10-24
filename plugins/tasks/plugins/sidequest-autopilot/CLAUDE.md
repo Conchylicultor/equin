@@ -1,19 +1,22 @@
 # sidequest-autopilot
 
-Works through the sidequests the person approves, in the background: Sonnet
-reads each ready sidequest first (triage) and proposes it in the **launch
-list**; the person approves what may run; once switched on, it starts agents on
-the approved ones, best first, a few at a time and at most `maxLaunches` in
-total, and each leaves a report the person reads when back. Design:
-`research/2026-10-10-tasks-sidequest-autopilot.md` (phase 1) and
-`research/2026-10-11-tasks-sidequest-autopilot-v2.md` (triage, approval, cap).
+Works through the sidequests the person approves, in the background: each
+ready sidequest is triaged first (task-triage's read-only agent) and proposed in
+the **launch list**; the person approves what may run; once switched on, it
+starts agents on the approved ones, best first, a few at a time and at most
+`maxLaunches` in total, and each leaves a report the person reads when back.
+Design: `research/2026-10-10-tasks-sidequest-autopilot.md` (phase 1),
+`research/2026-10-11-tasks-sidequest-autopilot-v2.md` (triage, approval, cap)
+and `research/2026-10-22-tasks-task-triage-card.md` (triage moved to
+`tasks/task-triage`; MoSCoW priority).
 
 A `tasks/automations` automation of the **launch** kind (`kind: "launch"`, see
 `plugins/tasks/plugins/automations/CLAUDE.md`), **off by default**.
 
 **Nothing launches unless the person approved that task** — the automations
-registry enforces it (only `decideLaunchEndpoint` writes approvals). Triage's
-rating can at most pre-tick a row in the list.
+registry enforces it (approval is a fact about the task, written by
+`decideLaunchEndpoint` or the task's Triage card). Triage's rating can at most
+pre-tick a row in the list.
 
 ## Config
 
@@ -23,11 +26,11 @@ plus `concurrency` (default 2), `maxLaunches` (default 5), and its own:
 
 - `runUntil` — `""` runs until it is turned off; an ISO datetime turns it off
   then (`shared/run-until.ts`; anything else throws).
-- `triage` (default on) — whether new sidequests are read.
-- `staleAfterDays` (default 7) — when a read is tagged Stale.
-- `triagePrompt` — `SIDEQUEST_TRIAGE_PROMPT`, variables
-  `TRIAGE_PROMPT_VARIABLES` (`taskId`, `title`, `description`, `filedAgo`,
-  `recentCommits`).
+- `triage` (default on) — "Triage new sidequests automatically": whether it
+  asks task-triage for a read of each new sidequest.
+
+How a read runs — model, prompt, concurrency, stale age — is task-triage's
+config (Settings → Config → task-triage), not this one.
 
 The committed default is
 `config/tasks/automations/sidequest-autopilot.origin.jsonc`, written by the
@@ -35,42 +38,42 @@ build.
 
 ## Triage
 
-`server/internal/triage.ts`: one `runClaudeReadOnly` (`infra/claude-cli`) per
-sidequest — Sonnet with ONLY Read / Grep / Glob over the main checkout (read-only
-by what the CLI can do, not by the prompt), its answer a zod/v4 schema the CLI
-is handed as `--json-schema` and parsed with. Stored in
-`tasks_ext_sidequest_triage` (`shared/triage.ts`): `verdict` (`ready` /
-`decide` / `split` / `obsolete`), free-form `context` (markdown, for a human),
-`question` + 2–4 `answers` (or none), the person's `answer`, `risk`,
-`sizeMinutes`, `value` 1–5, `areas`, the `mainSha` read and the task's
-`sourceTitle` / `sourceDescription`. Served as `sidequest-autopilot.triage.all`,
-the whole ordered set (`all`, at most one row per task): the launch list joins
-it (and automations' `launchDecisions` set) to every ready sidequest.
+Triage is `tasks/task-triage`'s (its CLAUDE.md): one read per task in
+`tasks_ext_triage` — run state, verdict, MoSCoW `priority`, `taskType`, risk,
+context, one one-click question — plus the person's note
+(`tasks_ext_triage_note`). This plugin is a consumer:
 
-- **When** (`server/internal/triage-jobs.ts`, main only, while `triage` is on):
-  a task becomes a sidequest (`tasks.trackChanged`, task-track) or a sidequest
-  becomes ready (`tasks.statusChanged` → `new`), with no row yet; a boot
-  backfill (warm-up) and turning `triage` on queue every unread one. The job
-  (`sidequest-autopilot.triage`) is keyed on the task and `serial`: one Sonnet
-  at a time.
-- **Once per task.** Never re-run on its own: a read is **stale** (derived,
-  `triageStaleness`) once older than `staleAfterDays` or the task's title or
-  description changed — shown, not acted on. Re-triage (`retriageEndpoint`) is
-  the person's.
-- **Answer** (`answerTriageEndpoint`) — one of triage's answers, fed to the
-  agent as `{{decision}}`. It approves nothing.
+- **Asks for reads** (`server/internal/triage-requests.ts`, main only, while
+  `triage` is on): when a task becomes a sidequest (`tasks.trackChanged`,
+  task-track) or a sidequest becomes ready (`tasks.statusChanged` → `new`), a
+  boot backfill (warm-up) and turning `triage` on — each calls task-triage's
+  `requestTriage(taskId, { force: false })`, which leaves a task with a read
+  (or a run in flight) alone and queues the rest.
+- **Reads them** — the launch list through `useLive(taskTriageReads, { ids })`
+  (the triage of exactly the ready sidequests shown), the candidates through
+  `triageReadsOf` / `triageNotesOf`; both parse rows into task-triage's
+  `TriageRead` and judge a row by `latestTriageResult` (a run in flight or
+  failed keeps the read it would replace). Both rank with task-triage's one
+  comparator, `compareByTriage` (priority must → should → could → won't,
+  untriaged after, then oldest filed), so they cannot drift.
+- **Stale** is the read's own `state` (written by task-triage), never computed
+  here. Re-triage / Triage now and the one-click answer call task-triage's
+  endpoints (`runTriageEndpoint`, `answerTriageEndpoint`).
 
 ## The launch list
 
 `web/components/launch-list-section.tsx` — a DataView of every ready sidequest
-(`shared/launch-list.ts` `launchListRows`), in launch order (triage's value for
-size, `triageScore`; untriaged after, oldest first), grouped by `lane`:
-Approved (rank, Remove) / Proposed by triage (a box, pre-ticked when the read
-is fresh, `ready` and low risk, or its question was answered) / Needs your call
-(the question, one-click answers) / Looks obsolete (Drop task) / Triaging /
-Excluded (Restore). **Approve selected** writes the ticked rows as approved;
-nothing else does. The header says what turning it on will do (how many of the
-approved it launches, how many at a time).
+(`shared/launch-list.ts` `launchListRows`), in launch order
+(`compareByTriage`), grouped by `lane`: Approved (rank, Remove) / Proposed by
+triage (a box, pre-ticked when the read is fresh — `done` — and either rates it
+`ready`, `must` or `should` and low risk, or its question was answered) / Needs
+your call (the question, one-click answers) / Looks obsolete / won't (verdict
+`obsolete` or priority `wont`; Drop task) / Triage failed (its only run ended
+without a read) / Triaging (queued, running or never asked) / Excluded
+(Restore). Each row shows its priority and type chips (task-triage's
+`*_META`), its verdict, risk and staleness. **Approve selected** writes the
+ticked rows as approved; nothing else here does. The header says what turning
+it on will do (how many of the approved it launches, how many at a time).
 
 ## What it launches
 
@@ -81,11 +84,14 @@ per run (`task-track`'s `listSidequestTasks`), ranked like the launch list
 approved, skips the ones some automation already filed or launched, or someone
 armed, and fills the free slots (and what is left of the batch) from the rest.
 Prompt variables: `taskId`, `title`, `description`, `context` (triage's, or a
-note), `decision` (triage's question and the person's answer, or a note), plus
-`pushPolicy`.
+note), `decision` (triage's question and the person's answer, or a note),
+`note` (the person's note from the task's Triage card, or a note that there is
+none), plus `pushPolicy`.
+
 ## The agent's prompt
 
-`SIDEQUEST_AUTOPILOT_PROMPT` (editable in the pane's Prompt section): never ask
+`SIDEQUEST_AUTOPILOT_PROMPT` (editable in the pane's Prompt section) hands the
+agent triage's `{{context}}`, the person's `{{decision}}` and `{{note}}`, then: never ask
 questions or wait; check the task is not obsolete first (if it is, change
 nothing and ask whether to drop it — agents cannot drop tasks); stay in scope
 and file extras with `add_task` on the sidequest track; stop early when it is

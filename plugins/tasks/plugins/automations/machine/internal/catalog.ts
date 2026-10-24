@@ -14,7 +14,7 @@ import {
   occupiedSlotTaskIdsByAutomation,
   openAutomationTaskIds,
 } from "../../server/internal/origin";
-import { pendingApprovalCounts } from "../../server/internal/decisions";
+import { pendingApprovalCount } from "../../server/internal/decisions";
 import { launchedInOpenBatches } from "../../server/internal/launch-batch";
 import {
   registeredAutomations,
@@ -57,7 +57,7 @@ async function loadCatalog(): Promise<AutomationEntry[]> {
     openAutomationTaskIds(),
     occupiedSlotTaskIdsByAutomation(),
     launchedInOpenBatches(),
-    pendingApprovalCounts(),
+    pendingApprovalCount(),
   ]);
   return registeredAutomations().map(({ spec, jobName }) => {
     const settings = automationSettings(spec);
@@ -80,7 +80,7 @@ async function loadCatalog(): Promise<AutomationEntry[]> {
         runningTaskIds: running.get(spec.id) ?? [],
         maxLaunches: config.maxLaunches,
         launchedInBatch: inBatch.get(spec.id) ?? 0,
-        approvedCount: approved.get(spec.id) ?? 0,
+        approvedCount: approved,
       };
     }
     return {

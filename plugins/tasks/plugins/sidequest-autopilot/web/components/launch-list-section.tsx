@@ -1,5 +1,4 @@
 import { useMemo, useState, type ReactElement } from "react";
-import { useConfigResult } from "@plugins/config_v2/web";
 import {
   EndpointError,
   useEndpointMutation,
@@ -8,6 +7,7 @@ import { useLive } from "@plugins/network/plugins/live/web";
 import {
   combineResources,
   foldResource,
+  mapResource,
 } from "@plugins/primitives/plugins/live-state/web";
 import {
   DataView,
@@ -29,10 +29,8 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import {
-  taskDescriptions,
-  taskRows,
-} from "@plugins/tasks/plugins/tasks-core/core";
+import type { FieldOptionMeta } from "@plugins/fields/core";
+import { taskRows } from "@plugins/tasks/plugins/tasks-core/core";
 import { useStoredTracks } from "@plugins/tasks/plugins/task-track/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { patchTask } from "@plugins/tasks/web";
@@ -47,21 +45,25 @@ import {
   type LaunchDecisionRow,
 } from "@plugins/tasks/plugins/automations/core";
 import {
-  sidequestAutopilotConfig,
-  SIDEQUEST_AUTOPILOT_ID,
-} from "../../shared/config";
-import { answerTriageEndpoint, retriageEndpoint } from "../../shared/endpoints";
+  answerTriageEndpoint,
+  parseTriageRead,
+  runTriageEndpoint,
+  TRIAGE_PRIORITY_META,
+  TRIAGE_RISK_META,
+  TRIAGE_STALE_REASON_META,
+  TRIAGE_STATE_META,
+  TRIAGE_TASK_TYPE_META,
+  TRIAGE_VERDICT_META,
+  taskTriageReads,
+  type TaskTriageRow,
+  type TriageRead,
+} from "@plugins/tasks/plugins/task-triage/core";
+import { SIDEQUEST_AUTOPILOT_ID } from "../../shared/config";
 import {
   launchListRowKind,
   launchListRows,
   type LaunchListRow,
 } from "../../shared/launch-list";
-import {
-  sidequestTriageRows,
-  type SidequestTriage,
-  type TriageRisk,
-  type TriageVerdict,
-} from "../../shared/triage";
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
 const LAUNCH_LIST_VIEW = defineDataView(
@@ -69,22 +71,19 @@ const LAUNCH_LIST_VIEW = defineDataView(
 );
 
 // Stable (module-level), so the `select` re-runs only when the set changes:
-// this automation's decisions, by task.
-function ownDecisions(
+// every task's decision (a decision is the task's, whichever automation — or
+// the task itself — it was made from), by task.
+function decisionsByTask(
   rows: readonly LaunchDecisionRow[],
 ): ReadonlyMap<string, LaunchDecision> {
-  return new Map(
-    rows
-      .filter((r) => r.automationId === SIDEQUEST_AUTOPILOT_ID)
-      .map((r) => [r.taskId, r.decision]),
-  );
+  return new Map(rows.map((r) => [r.taskId, r.decision]));
 }
 
-// Stable (module-level): the triage rows, by task.
+// The triage rows, parsed (a row breaking its state contract throws), by task.
 function triageByTask(
-  rows: readonly SidequestTriage[],
-): ReadonlyMap<string, SidequestTriage> {
-  return new Map(rows.map((r) => [r.taskId, r]));
+  rows: readonly TaskTriageRow[],
+): ReadonlyMap<string, TriageRead> {
+  return new Map(rows.map((r) => [r.taskId, parseTriageRead(r)]));
 }
 
 const NO_ROWS: LaunchListRow[] = [];
@@ -96,21 +95,14 @@ const LAUNCH_LIST_OVERRIDES = fieldOverrides(launchListRowKind, {
   rank: { visible: false },
 });
 
-const VERDICT_BADGE: Record<
-  TriageVerdict,
-  { label: string; variant: "success" | "warning" | "muted" }
-> = {
-  ready: { label: "Ready", variant: "success" },
-  decide: { label: "Needs a decision", variant: "warning" },
-  split: { label: "Too big — split", variant: "warning" },
-  obsolete: { label: "Obsolete", variant: "muted" },
-};
-
-const RISK_VARIANT: Record<TriageRisk, "muted" | "warning" | "destructive"> = {
-  low: "muted",
-  medium: "warning",
-  high: "destructive",
-};
+/** One of task-triage's option chips, as every triage surface draws it. */
+function MetaBadge({ meta }: { meta: FieldOptionMeta }): ReactElement {
+  return (
+    <Badge variant={meta.variant ?? "muted"} tooltip={meta.hint}>
+      {meta.label}
+    </Badge>
+  );
+}
 
 type LaunchEntry = Extract<AutomationEntry, { kind: "launch" }>;
 
@@ -144,13 +136,11 @@ const LAUNCH_LIST_TOOLBAR: HostedToolbar = {
  */
 export function LaunchListSection(): ReactElement {
   const openPane = useOpenPane();
-  const config = useConfigResult(sidequestAutopilotConfig);
   const catalog = useLive(automationsCatalog);
   const tracks = useStoredTracks();
   const tasks = useLive(taskRows);
-  // Both read whole (`all`): the list joins them to every ready sidequest.
-  const triage = useLive(sidequestTriageRows, { select: triageByTask });
-  const decisions = useLive(launchDecisions, { select: ownDecisions });
+  // Read whole (`all`): the list joins it to every ready sidequest.
+  const decisions = useLive(launchDecisions, { select: decisionsByTask });
   const readyIds = useMemo(
     () =>
       foldResource(combineResources({ tracks, tasks }), {
@@ -163,24 +153,19 @@ export function LaunchListSection(): ReactElement {
       }),
     [tracks, tasks],
   );
-  const descriptions = useLive(taskDescriptions, { ids: readyIds });
-  const [now] = useState(() => new Date());
+  // The triage of exactly the sidequests shown — a point read by id.
+  const triageRows = useLive(taskTriageReads, { ids: readyIds });
+  const triage = useMemo(
+    () => mapResource(triageRows, triageByTask),
+    [triageRows],
+  );
   // The person's own ticks, over triage's pre-ticks: `true` / `false` once
   // they clicked a row's box, absent until then.
   const [ticks, setTicks] = useState<ReadonlyMap<string, boolean>>(new Map());
 
   const result = useMemo(
-    () =>
-      combineResources({
-        config,
-        catalog,
-        tracks,
-        tasks,
-        descriptions,
-        triage,
-        decisions,
-      }),
-    [config, catalog, tracks, tasks, descriptions, triage, decisions],
+    () => combineResources({ catalog, tracks, tasks, triage, decisions }),
+    [catalog, tracks, tasks, triage, decisions],
   );
   const rows = useMemo(
     () =>
@@ -190,27 +175,17 @@ export function LaunchListSection(): ReactElement {
         // Never reaches the view: DataView renders the message instead.
         unavailable: () => NO_ROWS,
         ready: (d) => {
-          const description = new Map(
-            d.descriptions.map((r) => [r.id, r.description]),
-          );
           const ready = d.tasks
             .filter((t) => t.status === "new" && d.tracks.has(t.id))
             .map((t) => ({
               id: t.id,
               title: t.title,
-              description: description.get(t.id) ?? null,
               createdAt: new Date(t.createdAt),
             }));
-          return launchListRows(
-            ready,
-            d.triage,
-            d.decisions,
-            now,
-            d.config.staleAfterDays,
-          );
+          return launchListRows(ready, d.triage, d.decisions);
         },
       }),
-    [result, now],
+    [result],
   );
   const entry = foldResource(catalog, {
     loading: () => null,
@@ -369,7 +344,8 @@ function RowBody({ row }: { row: LaunchListRow }): ReactElement {
         body: { taskIds: [row.task.id], decision },
       })
       .then(() => undefined, swallowShown);
-  const t = row.triage;
+  const r = row.result;
+  const triage = row.triage;
   return (
     <>
       <Fill>
@@ -377,41 +353,43 @@ function RowBody({ row }: { row: LaunchListRow }): ReactElement {
           <Line>
             <Text variant="label">{row.task.title}</Text>
           </Line>
-          {t !== null ? (
-            <Line>
-              <Text variant="caption" tone="muted">
-                {[
-                  t.areas.slice(0, 2).join(", "),
-                  `~${formatMinutes(t.sizeMinutes)}`,
-                  `value ${t.value}/5`,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </Text>
-            </Line>
+          {r !== null ? (
+            <Stack direction="row" gap="xs" align="center">
+              <MetaBadge meta={TRIAGE_PRIORITY_META[r.priority]} />
+              <MetaBadge meta={TRIAGE_TASK_TYPE_META[r.taskType]} />
+              {r.areas.length > 0 ? (
+                <Line>
+                  <Text variant="caption" tone="muted">
+                    {r.areas.slice(0, 2).join(", ")}
+                  </Text>
+                </Line>
+              ) : null}
+            </Stack>
           ) : null}
         </Stack>
       </Fill>
       <Stack direction="row" gap="xs" align="center" className={rigidClass()}>
-        {t !== null && row.lane !== "proposed" && row.lane !== "approved" ? (
-          <Badge variant={VERDICT_BADGE[t.verdict].variant}>
-            {VERDICT_BADGE[t.verdict].label}
-          </Badge>
+        {r !== null && row.lane !== "proposed" && row.lane !== "approved" ? (
+          <MetaBadge meta={TRIAGE_VERDICT_META[r.verdict]} />
         ) : null}
         {row.preTicked && row.lane === "proposed" ? (
           <Badge variant="info">Triage pick</Badge>
         ) : null}
-        {row.staleness?.stale === true ? (
-          <Badge variant="warning">
-            {row.staleness.reason === "edited" ? "Stale — edited" : "Stale"}
+        {triage?.state === "stale" ? (
+          <Badge
+            variant="warning"
+            tooltip={TRIAGE_STALE_REASON_META[triage.staleReason].hint}
+          >
+            {triage.staleReason === "edited" ? "Stale — edited" : "Stale"}
           </Badge>
         ) : null}
-        {t?.answer != null ? (
-          <Badge variant="success">{`You: ${t.answer}`}</Badge>
+        {triage?.state === "queued" || triage?.state === "running" ? (
+          <MetaBadge meta={TRIAGE_STATE_META[triage.state]} />
         ) : null}
-        {t !== null ? (
-          <Badge variant={RISK_VARIANT[t.risk]}>{`risk: ${t.risk}`}</Badge>
+        {r?.answer != null ? (
+          <Badge variant="success">{`You: ${r.answer}`}</Badge>
         ) : null}
+        {r !== null ? <MetaBadge meta={TRIAGE_RISK_META[r.risk]} /> : null}
         <RowAction row={row} setDecision={setDecision} />
       </Stack>
     </>
@@ -462,31 +440,45 @@ function RowAction({
           Exclude
         </Button>
       );
+    case "failed":
     case "triaging":
       return null;
   }
 }
 
-/** Triage's context, its question with one-click answers, and Re-triage. */
+/**
+ * Triage's context, its question with one-click answers, and Re-triage —
+ * task-triage's run endpoint, the same request the task's Triage card makes.
+ */
 function RowDetail({ row }: { row: LaunchListRow }): ReactElement {
-  const retriage = useEndpointMutation(retriageEndpoint);
+  const run = useEndpointMutation(runTriageEndpoint);
   const answer = useEndpointMutation(answerTriageEndpoint);
-  const t = row.triage;
+  const triage = row.triage;
+  const r = row.result;
   const rerun = () =>
-    retriage
+    run
       .mutateAsync({ params: { taskId: row.task.id } })
       .then(() => undefined, swallowShown);
-  if (t === null) {
+  const inFlight = triage?.state === "queued" || triage?.state === "running";
+  if (r === null) {
     return (
       <Stack direction="row" gap="sm" align="center">
         <Fill>
           <Text variant="caption" tone="muted">
-            Not read yet — triage reads one sidequest at a time.
+            {triage === null
+              ? "Not triaged yet."
+              : triage.state === "failed"
+                ? `Triage failed: ${triage.error}`
+                : triage.state === "queued"
+                  ? "Queued — triage reads a few tasks at a time."
+                  : "Being read now."}
           </Text>
         </Fill>
-        <Button variant="outline" onClick={rerun}>
-          Triage now
-        </Button>
+        {inFlight ? null : (
+          <Button variant="outline" onClick={rerun}>
+            {triage === null ? "Triage now" : "Re-run"}
+          </Button>
+        )}
       </Stack>
     );
   }
@@ -496,35 +488,39 @@ function RowDetail({ row }: { row: LaunchListRow }): ReactElement {
         <Fill>
           <Text variant="caption" tone="muted">
             {"Context written by triage "}
-            <RelativeTime date={new Date(t.triagedAt)} />
-            {` at ${t.mainSha.slice(0, 10)}`}
-            {row.staleness?.stale === true
-              ? row.staleness.reason === "edited"
-                ? " — the task was edited since"
-                : " — older than the stale-after setting"
-              : ""}
+            <RelativeTime date={r.triagedAt} />
+            {` at ${r.mainSha.slice(0, 10)}`}
+            {triage?.state === "stale"
+              ? ` — ${TRIAGE_STALE_REASON_META[triage.staleReason].hint}`
+              : triage?.state === "failed"
+                ? ` — the latest re-run failed: ${triage.error}`
+                : inFlight
+                  ? " — a new read is on its way"
+                  : ""}
           </Text>
         </Fill>
-        <Button variant="ghost" onClick={rerun}>
-          Re-triage
-        </Button>
+        {inFlight ? null : (
+          <Button variant="ghost" onClick={rerun}>
+            Re-triage
+          </Button>
+        )}
       </Stack>
-      <Markdown>{t.context}</Markdown>
-      {t.question !== null ? (
+      <Markdown>{r.context}</Markdown>
+      {r.question !== null ? (
         <Stack gap="xs">
           <Text as="p" variant="label">
-            {t.question}
+            {r.question}
           </Text>
           <Stack direction="row" gap="xs" wrap>
-            {t.answers.map((label) => (
+            {r.answers.map((label) => (
               <Button
                 key={label}
-                variant={t.answer === label ? "default" : "outline"}
+                variant={r.answer === label ? "default" : "outline"}
                 onClick={() =>
                   answer
                     .mutateAsync({
                       params: { taskId: row.task.id },
-                      body: { answer: t.answer === label ? null : label },
+                      body: { answer: r.answer === label ? null : label },
                     })
                     .then(() => undefined, swallowShown)
                 }
@@ -541,10 +537,4 @@ function RowDetail({ row }: { row: LaunchListRow }): ReactElement {
       ) : null}
     </Stack>
   );
-}
-
-function formatMinutes(minutes: number): string {
-  if (minutes < 60) return `${minutes} min`;
-  const hours = minutes / 60;
-  return `${Number.isInteger(hours) ? hours : hours.toFixed(1)} h`;
 }

@@ -82,8 +82,9 @@ const AutomationEntryBaseSchema = z.object({
  *   released, not settled), newest first; `maxLaunches` how many it launches
  *   once turned on before it turns itself off, `launchedInBatch` how many it
  *   has launched since it was last turned on (0 while off), and
- *   `approvedCount` how many tasks a person approved for it that it has not
- *   launched yet.
+ *   `approvedCount` how many tasks a person approved that are still `new` and
+ *   no automation launched yet (an approval is the task's, so every launch
+ *   automation reads the same count).
  */
 export const AutomationEntrySchema = z.discriminatedUnion("kind", [
   AutomationEntryBaseSchema.extend({

@@ -1,4 +1,4 @@
-// @hash 8e73fc2bec7a
+// @hash 4b0594fa4363
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -15,6 +15,7 @@
     "tasks.task-events:pushes",
     "tasks.task-events:attempts",
     "tasks.task-graph:graph",
-    "tasks.task-header:header"
+    "tasks.task-header:header",
+    "tasks.task-triage:triage"
   ]
 }

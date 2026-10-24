@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "answers": [
+    {
+      "key": "table:tasks_ext_triage",
+      "entityType": "table",
+      "entityName": "tasks_ext_triage",
+      "action": "create"
+    },
+    {
+      "key": "table:tasks_ext_triage_note",
+      "entityType": "table",
+      "entityName": "tasks_ext_triage_note",
+      "action": "create"
+    },
+    {
+      "key": "table:tasks_descriptionChanged_triggers",
+      "entityType": "table",
+      "entityName": "tasks_descriptionChanged_triggers",
+      "action": "create"
+    }
+  ]
+}

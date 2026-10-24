@@ -1,0 +1,35 @@
+import { useMemo } from "react";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { mapRow, useLiveRow } from "@plugins/network/plugins/live/web";
+import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import {
+  launchDecisions,
+  taskApprovalEndpoint,
+  type LaunchDecision,
+} from "../../core";
+
+/**
+ * One task's launch decision: `approved`, `excluded`, or `null` (undecided —
+ * no row, never launched). Not loaded yet stays the loading arm, so an
+ * approved task never flashes as unapproved.
+ */
+export function useTaskApproval(
+  taskId: string,
+): ResourceResult<LaunchDecision | null> {
+  const result = useLiveRow(launchDecisions, taskId);
+  return useMemo(
+    () => mapRow(result, (row) => (row ? row.decision : null)),
+    [result],
+  );
+}
+
+/**
+ * Approve a task for launch (overwriting an exclusion), or take the approval
+ * back — which never erases an exclusion.
+ */
+export async function setTaskApproval(
+  taskId: string,
+  approved: boolean,
+): Promise<void> {
+  await fetchEndpoint(taskApprovalEndpoint, { taskId }, { body: { approved } });
+}

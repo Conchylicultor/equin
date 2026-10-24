@@ -1,45 +1,85 @@
 import { describe, expect, test } from "bun:test";
+import type {
+  TriageRead,
+  TriageReadResult,
+} from "@plugins/tasks/plugins/task-triage/core";
 import { laneOf, launchListRows, preTicked } from "./launch-list";
-import type { SidequestTriage } from "./triage";
 
 const at = new Date("2026-10-01T00:00:00Z");
-const read = (over: Partial<SidequestTriage> = {}): SidequestTriage => ({
-  taskId: "a",
+const result = (over: Partial<TriageReadResult> = {}): TriageReadResult => ({
   verdict: "ready",
+  priority: "should",
+  taskType: "bugfix",
+  risk: "low",
   context: "ctx",
   question: null,
   answers: [],
-  answer: null,
-  risk: "low",
-  sizeMinutes: 30,
-  value: 3,
   areas: [],
-  mainSha: "abc",
-  sourceTitle: "T",
-  sourceDescription: "",
   triagedAt: at,
+  mainSha: "abc",
+  answer: null,
   ...over,
 });
-const fresh = { stale: false } as const;
+const base = (taskId: string) => ({
+  taskId,
+  conversationId: null,
+  runTaskId: null,
+  requestedAt: at,
+});
+const done = (
+  over: Partial<TriageReadResult> = {},
+  taskId = "a",
+): TriageRead => ({ ...base(taskId), state: "done", read: result(over) });
+const stale = (over: Partial<TriageReadResult> = {}): TriageRead => ({
+  ...base("a"),
+  state: "stale",
+  staleReason: "old",
+  read: result(over),
+});
+const queued = (previous: TriageReadResult | null = null): TriageRead => ({
+  ...base("a"),
+  state: "queued",
+  startedAt: null,
+  previous,
+});
+const failed = (previous: TriageReadResult | null = null): TriageRead => ({
+  ...base("a"),
+  state: "failed",
+  error: "boom",
+  previous,
+});
 
 describe("laneOf", () => {
   test("a person's decision wins over anything triage said", () => {
-    expect(laneOf(read({ verdict: "obsolete" }), "approved")).toBe("approved");
+    expect(laneOf(done({ verdict: "obsolete" }), "approved")).toBe("approved");
     expect(laneOf(null, "excluded")).toBe("excluded");
   });
 
-  test("untriaged, obsolete, an open question, otherwise proposed", () => {
+  test("not read yet — never asked, queued or running — is triaging", () => {
     expect(laneOf(null, null)).toBe("triaging");
-    expect(laneOf(read({ verdict: "obsolete" }), null)).toBe("obsolete");
+    expect(laneOf(queued(), null)).toBe("triaging");
+  });
+
+  test("a failed first run is its own lane; a failed re-run keeps its read", () => {
+    expect(laneOf(failed(), null)).toBe("failed");
+    expect(laneOf(failed(result()), null)).toBe("proposed");
+    expect(laneOf(queued(result({ verdict: "obsolete" })), null)).toBe(
+      "obsolete",
+    );
+  });
+
+  test("obsolete or won't, an open question, otherwise proposed", () => {
+    expect(laneOf(done({ verdict: "obsolete" }), null)).toBe("obsolete");
+    expect(laneOf(done({ priority: "wont" }), null)).toBe("obsolete");
     expect(
       laneOf(
-        read({ verdict: "decide", question: "Q?", answers: ["A", "B"] }),
+        done({ verdict: "decide", question: "Q?", answers: ["A", "B"] }),
         null,
       ),
     ).toBe("needs-call");
     expect(
       laneOf(
-        read({
+        done({
           verdict: "decide",
           question: "Q?",
           answers: ["A", "B"],
@@ -48,27 +88,29 @@ describe("laneOf", () => {
         null,
       ),
     ).toBe("proposed");
-    expect(laneOf(read({ verdict: "ready", risk: "high" }), null)).toBe(
-      "proposed",
-    );
+    expect(laneOf(done({ risk: "high" }), null)).toBe("proposed");
   });
 });
 
 describe("preTicked", () => {
-  test("ticks a fresh ready, low-risk read", () => {
-    expect(preTicked(read(), fresh)).toBe(true);
+  test("ticks a fresh ready, low-risk must or should", () => {
+    expect(preTicked(done({ priority: "must" }))).toBe(true);
+    expect(preTicked(done({ priority: "should" }))).toBe(true);
   });
 
-  test("never ticks a risky, stale or untriaged one", () => {
-    expect(preTicked(read({ risk: "medium" }), fresh)).toBe(false);
-    expect(preTicked(read(), { stale: true, reason: "old" })).toBe(false);
-    expect(preTicked(null, null)).toBe(false);
+  test("never ticks a could, a risky, stale, in-flight or untriaged one", () => {
+    expect(preTicked(done({ priority: "could" }))).toBe(false);
+    expect(preTicked(done({ risk: "medium" }))).toBe(false);
+    expect(preTicked(done({ verdict: "split" }))).toBe(false);
+    expect(preTicked(stale())).toBe(false);
+    expect(preTicked(queued(result()))).toBe(false);
+    expect(preTicked(null)).toBe(false);
   });
 
   test("ticks a question only once the person answered it", () => {
     const q = { verdict: "decide" as const, question: "Q?", answers: ["A"] };
-    expect(preTicked(read(q), fresh)).toBe(false);
-    expect(preTicked(read({ ...q, answer: "A" }), fresh)).toBe(true);
+    expect(preTicked(done(q))).toBe(false);
+    expect(preTicked(done({ ...q, answer: "A" }))).toBe(true);
   });
 });
 
@@ -76,37 +118,40 @@ describe("launchListRows", () => {
   const task = (id: string, days: number) => ({
     id,
     title: "T",
-    description: null,
     createdAt: new Date(at.getTime() + days * 86_400_000),
   });
 
-  test("ranks by value for size, untriaged after, oldest first on ties", () => {
+  test("ranks by priority, untriaged after, oldest first on ties", () => {
     const rows = launchListRows(
-      [task("old", 0), task("new", 1), task("best", 2), task("untriaged", -5)],
+      [
+        task("old", 0),
+        task("new", 1),
+        task("must", 2),
+        task("wont", -9),
+        task("untriaged", -5),
+      ],
       new Map([
-        ["old", read({ taskId: "old" })],
-        ["new", read({ taskId: "new" })],
-        ["best", read({ taskId: "best", value: 5 })],
+        ["old", done({}, "old")],
+        ["new", done({}, "new")],
+        ["must", done({ priority: "must" }, "must")],
+        ["wont", done({ priority: "wont" }, "wont")],
       ]),
       new Map(),
-      at,
-      7,
     );
     expect(rows.map((r) => [r.task.id, r.rank])).toEqual([
-      ["best", 1],
+      ["must", 1],
       ["old", 2],
       ["new", 3],
-      ["untriaged", 4],
+      ["wont", 4],
+      ["untriaged", 5],
     ]);
   });
 
   test("an approval is the person's, whatever triage pre-ticked", () => {
     const [row] = launchListRows(
       [task("a", 0)],
-      new Map([["a", read()]]),
+      new Map([["a", done()]]),
       new Map(),
-      at,
-      7,
     );
     expect(row?.preTicked).toBe(true);
     expect(row?.lane).toBe("proposed");

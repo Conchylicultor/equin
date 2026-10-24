@@ -7,15 +7,19 @@ import { Shell } from "@plugins/shell/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { automationModelField } from "../core";
 import { automationDetailPane, automationsPane } from "./panes";
-import { originPresentation } from "./internal/presentation";
+import {
+  approvalPresentation,
+  originPresentation,
+} from "./internal/presentation";
 import { Automations } from "./internal/slots";
 
 export { Automations, automationConfigContributions } from "./internal/slots";
 export { PromptTemplateBlock } from "./components/prompt-section";
+export { setTaskApproval, useTaskApproval } from "./internal/approval";
 
 export default {
   description:
-    "Automations in the agent manager: the Automations sidebar entry and list (a DataView over the catalog — trigger in words, next run, on/off, open task), the detail pane (Run now through Background activity; Behavior — enabled, model, push policy; Trigger — schedule presets or custom cron, or the event and its settle wait; the sections an automation contributes through Automations.Section; its sources; the Prompt template with Customized / Reset to default — PromptTemplateBlock, the same editor for any template field an automation declares; and the History of the tasks it filed or started — each row expandable into the Automations.TaskDetail contributions for its task), the presentation of the exposed `origin` Automation field in every list whose rows reach a task (its options the live catalog), and automationConfigContributions — how a declaring plugin registers its automation's config document (Automations.Config).",
+    "Automations in the agent manager: the Automations sidebar entry and list (a DataView over the catalog — trigger in words, next run, on/off, open task), the detail pane (Run now through Background activity; Behavior — enabled, model, push policy; Trigger — schedule presets or custom cron, or the event and its settle wait; the sections an automation contributes through Automations.Section; its sources; the Prompt template with Customized / Reset to default — PromptTemplateBlock, the same editor for any template field an automation declares; and the History of the tasks it filed or started — each row expandable into the Automations.TaskDetail contributions for its task), the presentation of the exposed `origin` Automation field (its options the live catalog) and `approval` Approval field (Approved / Excluded / Not approved) in every list whose rows reach a task, useTaskApproval / setTaskApproval — one task's launch decision, read and written from the task, and automationConfigContributions — how a declaring plugin registers its automation's config document (Automations.Config).",
   contributions: [
     // Every automation's model is picked from the live model catalog: the
     // field object is shared by every automation config.
@@ -33,6 +37,8 @@ export default {
     }),
     // The exposed `origin` field of every list whose rows reach a task.
     originPresentation,
+    // The exposed `approval` field (a person's launch decision on a task).
+    approvalPresentation,
   ],
   slots: {
     "automation-config": Automations.Config,

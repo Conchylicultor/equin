@@ -18,16 +18,13 @@ export const tasksOrigin = defineExtension(_tasks, "origin", taskOriginShape, {
 export const _tasksOriginExt = tasksOrigin.table;
 
 // What a person decided about launching a task (see the shape): the approved
-// set a launch-kind automation draws from, keyed by automation.
+// set every launch-kind automation draws from. The index serves the reads by
+// decision: the approved set and the pending-approval count.
 export const tasksLaunchDecision = defineExtension(
   _tasks,
   "launch_decision",
   launchDecisionShape,
-  {
-    indexes: (t, b) => [
-      b.index("automation_decision").on(t.automationId, t.decision),
-    ],
-  },
+  { indexes: (t, b) => [b.index("decision").on(t.decision)] },
 );
 // Re-exported so drizzle-kit discovers the underlying pgTable.
 export const _tasksLaunchDecisionExt = tasksLaunchDecision.table;

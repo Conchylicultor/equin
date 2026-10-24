@@ -6,7 +6,11 @@ import {
   type LiveFieldOptionsRead,
 } from "@plugins/network/plugins/live/web";
 import { mapResource } from "@plugins/primitives/plugins/live-state/web";
-import { taskOriginShape, type AutomationEntry } from "../../core";
+import {
+  launchDecisionShape,
+  taskOriginShape,
+  type AutomationEntry,
+} from "../../core";
 import { useAutomations } from "./use-automations";
 
 /** A task no automation filed reads NULL: the option spelled "null". */
@@ -64,4 +68,40 @@ const BY_HAND_ONLY: readonly LiveFieldOption[] = [BY_HAND];
 export const originPresentation = FieldPresentation.Register({
   owner: taskOriginShape.exposure,
   fields: { automationId: { useOptions: useOriginOptions } },
+});
+
+/** A task no one decided on reads NULL: the option spelled "null". */
+const APPROVAL_OPTIONS: readonly LiveFieldOption[] = [
+  {
+    value: "approved",
+    label: "Approved",
+    variant: "success",
+    hint: "A launch automation may start it",
+  },
+  {
+    value: "excluded",
+    label: "Excluded",
+    variant: "muted",
+    hint: "Not proposed for launch again",
+  },
+  {
+    value: NULL_OPTION_KEY,
+    label: "Not approved",
+    hint: "No automation launches it",
+    quiet: true,
+  },
+];
+
+function useApprovalOptions(): LiveFieldOptionsRead {
+  return APPROVAL_OPTIONS;
+}
+
+/**
+ * The exposed `approval` field (a person's launch decision on a task) of every
+ * list whose rows reach a task — the task list. A task with no row is "Not
+ * approved": quiet (no chip on every row), a filter option and a group section.
+ */
+export const approvalPresentation = FieldPresentation.Register({
+  owner: launchDecisionShape.exposure,
+  fields: { decision: { useOptions: useApprovalOptions } },
 });

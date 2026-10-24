@@ -6,22 +6,12 @@
 //   Divider (rule): { "type": "divider", "id": "<unique-id>" } — a hairline rule between the items either side of it, turned to the slot's flow (flat in a column such as a sidebar's footer rows, upright in a row such as a toolbar).
 //   Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
 //   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
-// `task-dependencies` merged its two sections into one: `dependents` is gone and
-// `dependencies` now renders both ends of the edge, in the position the pair held.
-// `task-events` split into two sections (its one card nested two titled blocks,
-// which the host's own title would have made a third). Both halves take the
-// position the old combined `events` entry held, pushes before attempts — the
-// order they were stacked in inside the old card.
-// `preprompt` and `effort` left this slot: they are launch configuration, and
-// now ride the Prompt card's own launch-option slot beside the Launch button
-// (config/tasks/task-description/task-prompt.launch-option.jsonc) instead of
-// trailing the pane as two one-line cards. Every other entry is the
-// hand-authored arrangement and is untouched.
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
     "tasks.task-deps-tree:deps-tree",
     "tasks.task-header:header",
+    "tasks.task-triage:triage",
     "tasks.task-description:description",
     "apps.pages.prompt-origin:prompt-origin",
     "tasks.task-dependencies:dependencies",

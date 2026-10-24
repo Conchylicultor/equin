@@ -81,17 +81,28 @@ export const automationTasks = liveCollection("automations.tasks", {
   needsMachine: { feature: "Automations" },
 });
 
-// What a person decided about launching a task with a launch-kind automation:
-// one row per decided task, in the `tasks_ext_launch_decision` side-table,
-// written ONLY by the person's click (`decideLaunchEndpoint`). `approved` ⇒
-// that automation may launch it; `excluded` ⇒ it is not proposed again until
-// the row is cleared. No row ⇒ undecided, never launched.
+// What a person decided about launching a task: one row per decided task, in
+// the `tasks_ext_launch_decision` side-table, written ONLY by a person's click
+// (`taskApprovalEndpoint` from a task, `decideLaunchEndpoint` from a launch
+// list). A fact about the TASK, not about one automation: `approved` ⇒ any
+// launch-kind automation whose candidates hold it may launch it; `excluded` ⇒
+// it is not proposed again until the row is cleared. No row ⇒ undecided,
+// never launched.
+//
+// It EXPOSES the decision to every list whose rows reach a task (`exposes` —
+// the task list), under the id `approval` (`as`: what saved views name): NULL
+// for a task with no row (the field declares no default) — "Not approved",
+// presented by this plugin's web half. No list is named here.
 export const launchDecisionShape = defineExtensionShape({
   key: "taskId",
   fields: {
-    automationId: textField(),
-    decision: enumTextField(LAUNCH_DECISIONS),
+    decision: enumTextField(LAUNCH_DECISIONS, { label: "Approval" }),
     decidedAt: dateField(),
+  },
+  exposes: {
+    parent: tasksEntityRef,
+    name: "launch_decision",
+    fields: { decision: { as: "approval" } },
   },
 });
 export const LaunchDecisionRowSchema = launchDecisionShape.schema;
@@ -99,9 +110,10 @@ export type LaunchDecisionRow = z.infer<typeof LaunchDecisionRowSchema>;
 
 /**
  * Every launch decision, as the WHOLE ordered set (`all`): a launch list joins
- * the decisions to every task it shows (`useLive(launchDecisions, { select })`
- * keeping its own automation's), so its reader holds them entire — a decided
- * task never reads as undecided past a window's edge.
+ * the decisions to every task it shows (`useLive(launchDecisions, { select })`),
+ * so its reader holds them entire — a decided task never reads as undecided
+ * past a window's edge. One task's decision is `useLiveRow(launchDecisions,
+ * taskId)` (`found: false` ⇒ undecided) — `useTaskApproval` on the web.
  *
  * The key is `automations.launch-decisions.all`, not the old window's
  * `automations.launch-decisions`: no bundle ever declared this key with another

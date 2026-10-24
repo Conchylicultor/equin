@@ -11,7 +11,7 @@ import {
   taskDependsOn,
 } from "../queries/tasks";
 import { withTaskStatusChange } from "../status-scope";
-import { taskTitleChanged } from "../tables-events";
+import { taskDescriptionChanged, taskTitleChanged } from "../tables-events";
 import type { EmitTx } from "@plugins/infra/plugins/events/server";
 import { unionTaskClusters } from "./clusters";
 import { withTaskStatusBatch, type DbExecutor } from "../status-batch";
@@ -183,6 +183,12 @@ async function updateTaskOn(
     if (typeof patch.title === "string") {
       await taskTitleChanged.emit(
         { taskId: id, title: patch.title },
+        exec === db ? undefined : { tx: exec as EmitTx },
+      );
+    }
+    if (patch.description === null || typeof patch.description === "string") {
+      await taskDescriptionChanged.emit(
+        { taskId: id, description: patch.description },
         exec === db ? undefined : { tx: exec as EmitTx },
       );
     }

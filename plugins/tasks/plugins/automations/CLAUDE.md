@@ -129,8 +129,8 @@ around its settings.
    batch left)` (never below 0: lowering either stops nothing). Batch spent ⇒
    it writes `enabled: false` (its config, `systemOrigin`) and stops; none free
    ⇒ stops.
-3. Calls `candidates` (best first), keeps ONLY the tasks a person approved for
-   it, skips any task an automation already filed or launched (a task has ONE
+3. Calls `candidates` (best first), keeps ONLY the tasks a person approved
+   (see Approval), skips any task an automation already filed or launched (a task has ONE
    origin) or someone already armed, and takes the first `free`
    (`selectLaunches`). After launching, a spent batch turns it off the same way.
 4. For each: fills the template with the candidate's `variables` +
@@ -142,16 +142,39 @@ around its settings.
    ready, the model resolves) apply as for any armed task; a task waiting on
    them still holds its slot.
 
-**Approval.** `tasks_ext_launch_decision` (one row per task: `automationId`,
-`decision: approved | excluded`, `decidedAt`) is the approved set, written
-ONLY by `decideLaunchEndpoint` (`POST /api/automations/:automationId/launch-decisions`,
-`decision: null` clears) — the person's click. Nothing on the server approves
-a task, and `candidates` cannot bypass the filter: an automation only ranks.
-`excluded` is for the automation's own review UI (not proposed again); the pump
-ignores it. Served as `launchDecisions` (`automations.launch-decisions.all`), the
-whole ordered set (`all`, at most one row per task): a launch list joins it to
-every task it shows, so it reads it entire and keeps its own automation's rows
-(`useLive(launchDecisions, { select })`).
+**Approval.** `tasks_ext_launch_decision` (one row per task: `decision:
+approved | excluded`, `decidedAt`) is the approved set. An approval is a fact
+about the TASK, not about one automation: every launch-kind run reads the same
+set (`approvedTaskIds()`) and intersects it with its own candidates, so nothing
+outside them launches. It is written ONLY by a person's click, through two
+endpoints:
+
+- `taskApprovalEndpoint` (`PUT /api/tasks/:taskId/approval`, `{ approved }`) —
+  from the task itself (the web barrel's `setTaskApproval(taskId, approved)`;
+  read back with `useTaskApproval(taskId)`, a point read of the set). `true`
+  records `approved`, overwriting an `excluded`; `false` deletes only an
+  `approved` row, so it never erases an exclusion. An approval wakes every
+  launch-kind automation.
+- `decideLaunchEndpoint` (`POST /api/automations/:automationId/launch-decisions`,
+  `decision: null` clears) — from a launch list, in bulk. `:automationId` must
+  be a launch-kind automation, which is woken on an approval; it is not stored.
+
+Nothing on the server approves a task, and `candidates` cannot bypass the
+filter: an automation only ranks. `excluded` is for a launch list's own review
+(not proposed again); the pump ignores it. The catalog's `approvedCount` is
+`pendingApprovalCount()` — approved, no origin row, task still `new` (a done,
+dropped, held or already-started task waits on no automation) — the same for
+every launch automation. Read two ways:
+
+- `launchDecisions` (`automations.launch-decisions.all`), the whole ordered set
+  (`all`, at most one row per task): a launch list joins it to every task it
+  shows (`useLive(launchDecisions, { select })`); one task's is
+  `useLiveRow(launchDecisions, taskId)` (`useTaskApproval`).
+- EXPOSED (`launchDecisionShape.exposes`, served by
+  `LiveColumns.Expose(tasksLaunchDecision)`): `decision` under the field id
+  `approval` (**Approval**) in every list whose rows reach a task. No default:
+  a task with no row reads NULL, presented as the quiet *Not approved* option
+  (`web/internal/presentation.ts`, `approvalPresentation`).
 
 Dedupe ("one open task") is file-kind only. A launched task stays the person's
 task: its category, title and description are untouched; the role says the
