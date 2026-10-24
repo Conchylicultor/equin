@@ -3223,6 +3223,9 @@ export interface OpenPaneFn {
    * ```tsx
    * <DataView rowActivation={(r) => openPane.to(traceDetailPane, { id: r.id }, { mode: "push" })} />
    * ```
+   *
+   * It does NOT navigate: built and dropped (`onClick={() => openPane.to(…)}`)
+   * it does nothing — `link-gesture/no-discarded-link` rejects that.
    */
   to<
     Params = Record<string, string>,

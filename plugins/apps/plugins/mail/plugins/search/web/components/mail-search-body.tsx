@@ -260,8 +260,8 @@ function SearchResults({
       }}
       rowActivation={(t) => {
         const messageId = messageOf.get(t.id);
-        if (messageId === undefined) return;
-        openPane.to(
+        if (messageId === undefined) return undefined;
+        return openPane.to(
           mailMessagePane,
           { messageId },
           { mode: "push", side: "right" },

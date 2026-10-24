@@ -43,8 +43,9 @@
  * mutation has no gesture to read), and any handler doing other work besides.
  *
  * A callback that BUILDS a `LinkTarget` and discards it (`() => openPane.to(…)`)
- * is not this rule's job: `Activation`'s function arm returns `void | undefined`,
- * so tsc rejects it.
+ * is not this rule's job: on an activation prop tsc rejects it (`Activation`'s
+ * function arm returns `void | undefined`), and in any other `() => void`
+ * context `link-gesture/no-discarded-link` does.
  *
  * Closed: a genuine non-link escapes per site with
  * `// eslint-disable-next-line link-gesture/no-click-navigate -- <reason>`.

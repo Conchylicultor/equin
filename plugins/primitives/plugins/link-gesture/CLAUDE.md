@@ -56,6 +56,19 @@ checked, so a function returning a value (a `LinkTarget`, a Promise) is
 rejected; pass the target itself, or `() => void promise()`. Pinned by the
 `@ts-expect-error` cases in `core/internal/activation.test.ts`.
 
+**Everywhere else, a dropped link is a lint error: `link-gesture/no-discarded-link`**
+(closed, type-aware, `lint/`). tsc cannot reject a value returned into a plain
+`() => void` (React's `onClick`, a component's own `openTrash: () => void`,
+`forEach`) and has no must-use return — the Prototypes Trash button shipped as
+`openTrash={() => openPane.to(…)}` and was dead. The rule is keyed on the TYPE
+(any value with callable `open` and `href`), not on names, so it catches every
+producer (`openPane.to`, `appLink`, an opener's target) under any prop name. It
+reports a link-valued expression statement (`openPane.to(…);`, `void appLink(u);`),
+a function literal returning a link where its contextual return is exactly
+`void`, and a function value returning a link passed where a `() => void` is
+expected (`onClick={go}`). Fix: spread `openPane.link(…)`, pass the target as
+an `activation`, or — with no gesture to read — call `openPane(…)` itself.
+
 `LinkChip` makes it a type: `onClick?: never` / `onAuxClick?: never`, so a chip's
 click is its `activation` (a plain function for a chip that does something other
 than navigate — still isolated from its container).
