@@ -79,7 +79,7 @@ behind by a frozen-then-reloaded tab is filed by its next load (`unknown`,
 
 ## Verify
 
-`./singularity run plugins/reports/plugins/main-thread-stall/e2e/freeze.ts --no-record`
+`./equin run plugins/reports/plugins/main-thread-stall/e2e/freeze.ts --no-record`
 after a build (`--no-record`: the harness screencast hangs on a hung page):
 recovered (attributed), gone (second tab killed), unknown (watchdog host
 killed). Headless Chromium cannot reload or close a hung tab — it waits on the

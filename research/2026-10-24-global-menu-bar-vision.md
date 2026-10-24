@@ -119,8 +119,8 @@ process outside the gateway can report the gateway's absence).
 
 ## Verification (for the implementing task)
 
-- `./singularity check boundary-rules plugin-boundaries` accept `rust/`.
-- A fresh worktree builds the helper on demand; `./singularity start` brings up
+- `./equin check boundary-rules plugin-boundaries` accept `rust/`.
+- A fresh worktree builds the helper on demand; `./equin start` brings up
   gateway + icon; `stop --disable` removes both.
 - Panel matches the prototype (compare-diff against `proto-1792791657-kzcrw3`);
   adding a throwaway app plugin makes it appear in the grid with no menu-bar

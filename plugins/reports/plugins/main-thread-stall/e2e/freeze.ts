@@ -14,8 +14,8 @@
  *
  * Reads the reports straight from the deploy's database (refuses main).
  *
- * Manual only. Run after `./singularity build`:
- *   ./singularity run plugins/reports/plugins/main-thread-stall/e2e/freeze.ts --no-record [--headed]
+ * Manual only. Run after `./equin build`:
+ *   ./equin run plugins/reports/plugins/main-thread-stall/e2e/freeze.ts --no-record [--headed]
  *
  * `--no-record` is required: the harness's screencast recorder never returns
  * on a hung / crashed page, so a recorded run hangs at the freeze.

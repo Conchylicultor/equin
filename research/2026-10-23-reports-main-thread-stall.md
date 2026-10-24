@@ -157,7 +157,7 @@ sessionStorage with a lastAlive timestamp, and the next load files it. That lose
      `framesDuring: 0`.
    - Two same-origin tabs, one frozen, must give a single report.
    - A hidden tab frozen must give no report.
-2. `./singularity test` on the pure parts: the stall state machine is a reducer over
+2. `./equin test` on the pure parts: the stall state machine is a reducer over
    `{ping, pong, lockGone, tick}` events, so sleep, cohort and threshold rules are unit
    tested without a browser.
 3. Idle cost check: Performance panel or `get_runtime_profile` with three tabs idle for
