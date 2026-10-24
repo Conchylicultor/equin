@@ -200,21 +200,20 @@ and equality. A new kind is a `shared/<kind>.ts` of that shape, plus its
 server resource/PUT, a `tree-path.ts` arm, a watcher notify and its dir in
 `isInternalDir`.
 
-## `_status/` and `_trash/` — retired
+## `_trash/` — retired
 
 Done / pinned / deleted used to be a third record kind here
-(`_status/<id>.json`). It moved into the instance's DB
+(`_status/<id>.json`, since removed from disk). It moved into the instance's DB
 (`apps/prototypes/state`: `prototype_state`, per-instance — a worktree's marks,
 deletes included, no longer reach main). Deleting a prototype is a field there
 (`deletedAt`), **not a move of the folder**: the folder, its history and picks
 stay, every link resolves, and the readers hide it (the gallery's Trash, the
 canvas's "Deleted · Restore" notice). `_trash/` is where an older delete moved
 folders; `state`'s main-only warm-up moves any folder left there back, recorded
-deleted. Both names stay reserved — `RETIRED_DIR_NAMES` (`shared/retired.ts`):
-never served (the file routes 404 them, `isInternalDir`), and the watcher
-classifies anything under them as `retired` (`tree-path.ts`), nothing to react
-to. The `_status` files stay on disk for `state`'s one-time import; nothing
-here reads or writes them.
+deleted. The name stays reserved — `RETIRED_DIR_NAMES` (`shared/retired.ts`):
+never served (the file routes 404 it, `isInternalDir`), and the watcher
+classifies anything under it as `retired` (`tree-path.ts`), nothing to react
+to.
 
 `prototype list` (below) leaves deleted prototypes out, the way the gallery
 does: the deleted marks are handed to it by `commands`, which reads them from

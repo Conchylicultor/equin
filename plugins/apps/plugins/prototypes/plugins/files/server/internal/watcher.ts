@@ -128,8 +128,8 @@ const refreshes = createCoalescer({
  * history and nothing else: the prototype's bytes did not move, so nothing may
  * reload. Picks written under `_picks/` likewise re-read that one prototype's
  * picks and reload nothing — the frames follow on their own, because their `src`
- * carries the picks. Anything under a retired dir (`_status/`, `_trash/`) is nothing to
- * react to. Everything else goes through the signature gate.
+ * carries the picks. Anything under a retired dir (`_trash/`) is nothing to react
+ * to. Everything else goes through the signature gate.
  */
 function onTreeEvents(paths: string[]): Promise<void> | undefined {
   let treeMoved = false;

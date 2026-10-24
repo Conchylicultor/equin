@@ -160,7 +160,7 @@ readings use it:
     - `apps/pages/content-search` (1 debt)
     - `apps/places/place-details` (1 debt)
     - `apps/prototypes/files` (12 debt)
-    - `apps/prototypes/state` (2 debt)
+    - `apps/prototypes/state` (1 debt)
     - `apps/prototypes/thumbnails` (3 debt)
     - `apps/sonata/covers` (1 debt)
     - `apps/sonata/sources/midi` (1 debt)

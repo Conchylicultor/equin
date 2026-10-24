@@ -17,7 +17,6 @@ import {
   handleRestorePrototype,
   handleSetPrototypeState,
 } from "./internal/handlers";
-import { importStatusFilesWarmup } from "./internal/import-status-files";
 import { adoptLegacyTrashWarmup } from "./internal/legacy-trash";
 import {
   prototypeStatesServed,
@@ -27,8 +26,8 @@ import { _prototypeState, _prototypeTags } from "./internal/tables";
 
 export default {
   description:
-    "Per-instance prototype state in the DB: the prototype_state table (pinned, Done, one tag per prototype, deletedAt) and its PATCH, the delete / restore endpoints (deleted is a field — the folder stays), the prototypes' tag tree (prototype_tags, served through the tag-tree engine; a deleted tag's prototypes move to its parent), both live collections, the one-time import of the retired host-global _status/<id>.json records into an empty table, and (main only) the adoption of the old _trash/<id>/ folders as deleted prototypes.",
-  register: [importStatusFilesWarmup, adoptLegacyTrashWarmup],
+    "Per-instance prototype state in the DB: the prototype_state table (pinned, Done, one tag per prototype, deletedAt) and its PATCH, the delete / restore endpoints (deleted is a field — the folder stays), the prototypes' tag tree (prototype_tags, served through the tag-tree engine; a deleted tag's prototypes move to its parent), both live collections, and (main only) the adoption of the old _trash/<id>/ folders as deleted prototypes.",
+  register: [adoptLegacyTrashWarmup],
   httpRoutes: {
     [setPrototypeState.route]: handleSetPrototypeState,
     [deletePrototype.route]: handleDeletePrototype,

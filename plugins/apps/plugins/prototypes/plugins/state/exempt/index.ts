@@ -3,13 +3,10 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 export default [
   {
     rule: "boundaries/no-platform-api",
-    paths: [
-      "server/internal/import-status-files.ts",
-      "server/internal/legacy-trash.ts",
-    ],
+    paths: ["server/internal/legacy-trash.ts"],
     kind: "debt",
     task: "task-1792338443-riwqev",
     reason:
-      "the one-time _status import reads the retired files, and the old _trash/ adoption moves folders back; both deleted with the import (follow-up task)",
+      "the old _trash/ adoption moves folders back into the tree; deleted once no branch with the old move-to-trash delete runs",
   },
 ] satisfies Exemptions;

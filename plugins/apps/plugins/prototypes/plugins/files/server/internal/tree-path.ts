@@ -20,7 +20,7 @@ import { isRetiredDirName } from "../../shared/retired";
  *   this backend or any other. Re-reads that one record; nothing reloads on
  *   its account (the frames' `src` carries the picks, so they follow).
  * - `picks-internal` — anything else under `_picks/`: nothing to react to.
- * - `retired` — anything under a retired dir (`_status/`, `_trash/`,
+ * - `retired` — anything under a retired dir (`_trash/`,
  *   `shared/retired.ts`): nothing to react to.
  * - `tree` — everything else: a prototype's own files, `_template/`. Goes
  *   through the signature gate like before.

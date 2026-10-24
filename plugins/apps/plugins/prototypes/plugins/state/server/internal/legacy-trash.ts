@@ -5,7 +5,6 @@ import { db } from "@plugins/database/server";
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import { protoIdKind } from "@plugins/apps/plugins/prototypes/plugins/files/core";
-import { importStatusFiles } from "./import-status-files";
 import { _prototypeState } from "./tables";
 
 // The trash as it used to be: a delete renamed the folder into
@@ -19,7 +18,7 @@ import { _prototypeState } from "./tables";
 // instance, so whichever DB adopts a folder is the only one that knows it was
 // deleted — that must be main's (a worktree forked after inherits the row).
 // Kept while branches with the old move-to-trash delete may still run against
-// the shared tree; removed with the `_status` import (the same follow-up task).
+// the shared tree.
 
 /** The old trash dir's name inside the prototypes data dir. */
 const TRASH_DIR = "_trash";
@@ -63,10 +62,5 @@ export const adoptLegacyTrashWarmup = defineWarmup({
   description:
     "Brings each prototype folder an old build moved into _trash/ back into the gallery, recorded as deleted (in its Trash).",
   scope: "host",
-  run: async () => {
-    // The one-time `_status` import first: it runs only on an EMPTY table, and
-    // a row written here would make it skip every retired record.
-    await importStatusFiles();
-    await adoptLegacyTrash(prototypesDir.path);
-  },
+  run: () => adoptLegacyTrash(prototypesDir.path),
 });

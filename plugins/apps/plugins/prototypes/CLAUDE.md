@@ -47,8 +47,8 @@ other content lives in sub-plugins:
 - **`state`** — the per-instance DB state: `prototype_state` (pinned, Done,
   one tag per prototype, `deletedAt`) with its PATCH, delete / restore and
   live rows, the prototypes' tag tree
-  (`prototype_tags`, a `tag-tree` declaration), the one-time import of the
-  retired `_status/` files, and (main only) the adoption of the old `_trash/`.
+  (`prototype_tags`, a `tag-tree` declaration), and (main only) the adoption
+  of the old `_trash/`.
 - **`gallery`** — the gallery list pane (a card per prototype, pin, Done and
   Delete on each, grouped by tag as nested sections), its Trash pane, the
   detail header's tag chip, pin, Done and Delete / Restore, and New prototype. Also owns the launch prompt — the

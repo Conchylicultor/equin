@@ -43,11 +43,11 @@ describe("classifyTreePath", () => {
     }
   });
 
-  test("anything under the retired _status dir is nothing to react to", () => {
+  test("anything under the retired _trash dir is nothing to react to", () => {
     for (const path of [
-      `${ROOT}/_status/${ID}.json`,
-      `${ROOT}/_status/${ID}.lock`,
-      `${ROOT}/_status`,
+      `${ROOT}/_trash/${ID}/index.html`,
+      `${ROOT}/_trash/${ID}`,
+      `${ROOT}/_trash`,
     ]) {
       expect(classifyTreePath(ROOT, path)).toEqual({ kind: "retired" });
     }

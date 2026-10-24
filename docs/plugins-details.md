@@ -6313,7 +6313,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow --shadow-popover`
               - `ui/tokens/shadow --shadow-xl`
               - `ui/tokens/shape --radius`
-        - **`state`** — Per-instance prototype state, web half: registers the prototype tag id kind (`prtag-…`), and the hooks reading and writing a prototype's pinned / Done / tag state (usePrototypeStates, usePrototypeState, useSetPrototypeState). Per-instance prototype state in the DB: the prototype_state table (pinned, Done, one tag per prototype, deletedAt) and its PATCH, the delete / restore endpoints (deleted is a field — the folder stays), the prototypes' tag tree (prototype_tags, served through the tag-tree engine; a deleted tag's prototypes move to its parent), both live collections, the one-time import of the retired host-global _status/<id>.json records into an empty table, and (main only) the adoption of the old _trash/<id>/ folders as deleted prototypes.
+        - **`state`** — Per-instance prototype state, web half: registers the prototype tag id kind (`prtag-…`), and the hooks reading and writing a prototype's pinned / Done / tag state (usePrototypeStates, usePrototypeState, useSetPrototypeState). Per-instance prototype state in the DB: the prototype_state table (pinned, Done, one tag per prototype, deletedAt) and its PATCH, the delete / restore endpoints (deleted is a field — the folder stays), the prototypes' tag tree (prototype_tags, served through the tag-tree engine; a deleted tag's prototypes move to its parent), both live collections, and (main only) the adoption of the old _trash/<id>/ folders as deleted prototypes.
           - Web:
             - Contributes: `IdKinds.Kind` "prtag"
             - Uses:
@@ -6349,9 +6349,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tag-tree/engine.singleTagCarrier`
               - `tag-tree/engine.TagTrees`
             - DB schema: `plugins/apps/plugins/prototypes/plugins/state/server/internal/tables.ts`
-            - Register:
-              - `defineWarmup('prototypes.import-status-files')`
-              - `defineWarmup('prototypes.adopt-legacy-trash')`
+            - Register: `defineWarmup('prototypes.adopt-legacy-trash')`
             - Resources:
               - `prototypes.state.all` (keyed)
               - `prototypes.state.all:rows` (keyed, point)
@@ -6397,7 +6395,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/commands`
               - `apps/prototypes/gallery`
           - Exemptions:
-            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/import-status-files.ts`, `server/internal/legacy-trash.ts` (debt)
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/legacy-trash.ts` (debt)
           - Cli:
             - Exports (types): `DeletedPrototypes`
             - Exports (values): `readDeletedPrototypes`
@@ -25399,7 +25397,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/pages/content-search` (1 debt)
               - `apps/places/place-details` (1 debt)
               - `apps/prototypes/files` (12 debt)
-              - `apps/prototypes/state` (2 debt)
+              - `apps/prototypes/state` (1 debt)
               - `apps/prototypes/thumbnails` (3 debt)
               - `apps/sonata/covers` (1 debt)
               - `apps/sonata/sources/midi` (1 debt)
