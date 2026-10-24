@@ -762,7 +762,7 @@ const REWIND_REFUSAL_MESSAGE: Record<LocateCutRefusal | "not-in-tail", string> =
     "no-transcript": "This conversation has no transcript on disk to rewind.",
     "not-found": "That message is no longer in the transcript.",
     "not-a-live-user-prompt":
-      "A conversation can only be rewound to one of your own messages.",
+      "A conversation can only be rewound to one of your own messages or answers.",
     "nothing-before":
       "This is the first message — there is nothing before it to go back to. Start a new conversation instead.",
     "not-in-tail":

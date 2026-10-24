@@ -40,7 +40,7 @@ export type CutLosses = z.infer<typeof CutLossesSchema>;
  * Why a transcript cannot be cut before a given message.
  * - `not-found` — no transcript line has this uuid.
  * - `not-a-live-user-prompt` — the line exists but is not a message the user
- *   typed on the conversation's live path.
+ *   typed, nor their answer to a question, on the conversation's live path.
  * - `nothing-before` — it is the first message: there is no conversation left
  *   to resume, and `claude --resume` on an empty session fails. Starting over is
  *   a new conversation, not a rewind.

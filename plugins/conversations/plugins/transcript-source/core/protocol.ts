@@ -101,6 +101,12 @@ const ToolCallResultSchema = z.object({
   /** The structured answer of an answered AskUserQuestion; absent otherwise. */
   questionAnswer: QuestionAnswerSchema.optional(),
   /**
+   * The result line's uuid — present exactly when the result is the user's
+   * answer to an AskUserQuestion (`questionAnswerText`), which a rewind can
+   * cut at to answer again. Absent otherwise.
+   */
+  answerUuid: z.string().optional(),
+  /**
    * Names carried by the result's `tool_reference` blocks — the content type a
    * tool-search result uses to hand deferred tool definitions to the model.
    * They hold no text, so `content` alone would read as an empty result.

@@ -79,6 +79,7 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
     - `JsonlEventSchema`
     - `PREPROMPT_TAG`
     - `QuestionAnswerSchema`
+    - `questionAnswerText`
     - `replyOf`
     - `requestConfigChanges`
     - `RequestConfigSchema`

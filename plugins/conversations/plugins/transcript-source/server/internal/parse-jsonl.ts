@@ -8,6 +8,7 @@ import {
   stripRelayBoilerplate,
   unwrapPastedContent,
   userPromptText,
+  questionAnswerText,
   tokenUsageOf,
   QuestionAnswerSchema,
   requestConfigChanges,
@@ -522,6 +523,9 @@ export async function buildJsonlEvents(
         );
         const sessionEnded = obj.toolDenialKind === "interrupted";
         if (sessionEnded && uuid) sessionEndedResultLines.add(uuid);
+        // The same predicate a rewind applies to an answer it cuts at.
+        const answerUuid =
+          uuid && questionAnswerText(obj) !== null ? uuid : undefined;
         for (const block of content as RawBlock[]) {
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
           if (block?.type === "tool_result") {
@@ -534,6 +538,7 @@ export async function buildJsonlEvents(
               outcomeUnknown: sessionEnded ? true : undefined,
               toolReferences: extractToolReferences(block.content),
               questionAnswer,
+              answerUuid,
             };
             const existing = toolCallByUseId.get(toolUseId);
             if (existing) {

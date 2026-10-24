@@ -1,10 +1,13 @@
 import {
   activeLineUuids,
+  questionAnswerText,
   userPromptText,
 } from "@plugins/conversations/plugins/transcript-source/core";
 import type { BackgroundWork, CutLosses, CutRefusal } from "../../core/rewind";
 
-// Cutting a Claude Code transcript just before one of the user's own messages.
+// Cutting a Claude Code transcript just before one of the user's own messages:
+// a turn they typed, or their answer to a question (an AskUserQuestion result —
+// cut before it, the question is unanswered again and can be answered anew).
 //
 // This is the one place that decides what a rewind keeps and what it loses, so
 // the three callers cannot disagree: the Stop button (cut at the last
@@ -120,7 +123,10 @@ function parseLines(rawLines: readonly string[]): ParsedLine[] {
   return parsed;
 }
 
-/** Cut just before the user message whose transcript line has this uuid. */
+/**
+ * Cut just before the user message whose transcript line has this uuid: a
+ * typed prompt (`userPromptText`) or a question's answer (`questionAnswerText`).
+ */
 export function cutTranscriptAt(
   rawLines: readonly string[],
   userMessageUuid: string,
@@ -129,7 +135,8 @@ export function cutTranscriptAt(
   const target = parsed.find((p) => p.uuid === userMessageUuid);
   if (!target) return { ok: false, reason: "not-found" };
   const active = activeLineUuids(parsed.map((p) => p.obj));
-  const messageText = userPromptText(target.obj);
+  const messageText =
+    userPromptText(target.obj) ?? questionAnswerText(target.obj);
   if (messageText === null || !active.has(userMessageUuid)) {
     return { ok: false, reason: "not-a-live-user-prompt" };
   }

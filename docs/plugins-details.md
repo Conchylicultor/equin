@@ -18342,6 +18342,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `JsonlEventSchema`
           - `PREPROMPT_TAG`
           - `QuestionAnswerSchema`
+          - `questionAnswerText`
           - `replyOf`
           - `requestConfigChanges`
           - `RequestConfigSchema`

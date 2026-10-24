@@ -9,8 +9,11 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { useTranscriptEvents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { RowActionButton } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
 import { useGoBackToMessage } from "@plugins/conversations/plugins/conversation-view/plugins/rewind/web";
-import { restoreAnswerDraft } from "./answer-draft";
-import { type AskUserQuestionInput } from "./answer-model";
+import {
+  restoreAnswerDraft,
+  restoreAnswerDraftFromRecord,
+} from "./answer-draft";
+import { type AskUserQuestionInput, type Question } from "./answer-model";
 import { findAnswerTurn } from "./question-state";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -27,9 +30,11 @@ type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
  * either here (the agent forgets everything since) or in a new conversation.
  * Same glyph and menu as the rewind on the user's own messages.
  *
- * The answer is an ordinary user turn this plugin hides from the transcript, so
- * the transcript's own per-message rewind never shows for it; the question's
- * row is the only place that can offer it.
+ * The answer is either the tool's real result (answered through the live
+ * form) or an ordinary user turn this plugin hides from the transcript (sent
+ * after the agent stopped asking). Neither is a row the transcript's own
+ * per-message rewind shows on, so the question's row is the only place that
+ * can offer it.
  */
 export function ChangeAnswersAction({ event }: { event: JsonlEvent }) {
   if (event.kind !== "tool-call" || event.name !== "AskUserQuestion") {
@@ -43,15 +48,42 @@ function ChangeAnswersMenu({ event }: { event: ToolCallEvent }) {
   // The transcript this row is drawn in: a window of a long conversation
   // still holds every event after this call, which is where its answer is.
   const events = useTranscriptEvents();
-  // Only an answer sent from here is a message a rewind can cut at; one given
-  // in the terminal lives inside the tool result.
   const answerTurn = findAnswerTurn(events, event.toolUseId);
-  if (answerTurn == null) return null;
+  if (answerTurn != null) {
+    // Answered as a message: its text is the serialized answer.
+    return (
+      <ChangeAnswersMenuFor
+        convId={convId}
+        event={event}
+        answerUuid={answerTurn.uuid}
+        restore={(targetConvId, questions, answerText) =>
+          restoreAnswerDraft(
+            targetConvId,
+            event.toolUseId,
+            questions,
+            answerText,
+          )
+        }
+      />
+    );
+  }
+  const record = event.result?.questionAnswer;
+  const answerUuid = event.result?.answerUuid;
+  if (record == null || answerUuid == null) return null;
+  // Answered as the tool's result: its structured record is the answer.
   return (
     <ChangeAnswersMenuFor
       convId={convId}
       event={event}
-      answerUuid={answerTurn.uuid}
+      answerUuid={answerUuid}
+      restore={(targetConvId, questions) =>
+        restoreAnswerDraftFromRecord(
+          targetConvId,
+          event.toolUseId,
+          questions,
+          record,
+        )
+      }
     />
   );
 }
@@ -60,10 +92,17 @@ function ChangeAnswersMenuFor({
   convId,
   event,
   answerUuid,
+  restore,
 }: {
   convId: string;
   event: ToolCallEvent;
   answerUuid: string | undefined;
+  /** Put the removed answer back in the reopened form of `targetConvId`. */
+  restore: (
+    targetConvId: string,
+    questions: Question[],
+    answerText: string,
+  ) => void;
 }) {
   const input = event.input as AskUserQuestionInput;
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; input is `as`-cast from unknown
@@ -72,10 +111,9 @@ function ChangeAnswersMenuFor({
   const { available, busy, run } = useGoBackToMessage({
     convId,
     uuid: answerUuid,
-    // The removed text is the serialized answer: put it back in the form, not
-    // in the prompt editor.
+    // The removed answer goes back in the form, not in the prompt editor.
     onBack: (targetConvId, answerText) =>
-      restoreAnswerDraft(targetConvId, event.toolUseId, questions, answerText),
+      restore(targetConvId, questions, answerText),
   });
 
   if (!available) return null;

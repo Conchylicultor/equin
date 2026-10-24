@@ -146,6 +146,68 @@ describe("cutTranscriptAt", () => {
     }
   });
 
+  test("cuts before a question's answer, leaving the question unanswered", () => {
+    const ask = {
+      type: "assistant",
+      uuid: "q1",
+      parentUuid: "u1",
+      timestamp: at(),
+      message: {
+        role: "assistant",
+        content: [
+          {
+            type: "tool_use",
+            id: "toolu_q",
+            name: "AskUserQuestion",
+            input: {},
+          },
+        ],
+      },
+    };
+    const answer = (uuid: string, extra: object = {}) => ({
+      type: "user",
+      uuid,
+      parentUuid: "q1",
+      timestamp: at(),
+      toolUseResult: { questions: [], answers: { "Which?": "A" } },
+      message: {
+        role: "user",
+        content: [
+          {
+            type: "tool_result",
+            tool_use_id: "toolu_q",
+            content: "User has answered your questions: A",
+          },
+        ],
+      },
+      ...extra,
+    });
+    const cut = cutTranscriptAt(
+      lines([
+        user("u1", null, "first"),
+        ask,
+        answer("r1"),
+        assistant("a2", "r1", "thanks"),
+      ]),
+      "r1",
+    );
+    if (!cut.ok) throw new Error(cut.reason);
+    expect(labelsOf(cut.keptLines)).toEqual(["u1", "q1"]);
+    expect(cut.messageText).toBe("User has answered your questions: A");
+
+    // The result the CLI fills in after a session ended mid-question is no answer.
+    expect(
+      cutTranscriptAt(
+        lines([
+          user("u1", null, "first"),
+          ask,
+          answer("r2", { toolDenialKind: "interrupted" }),
+        ]),
+        "r2",
+      ),
+    ).toEqual({ ok: false, reason: "not-a-live-user-prompt" });
+  });
+
   test("an abandoned attempt written after the kept path does not become the conversation", () => {
     // Native /rewind: u2/a2 were abandoned for u2b. Cutting at u2b would leave
     // a2 as the newest leaf in the file — drop the abandoned attempt.

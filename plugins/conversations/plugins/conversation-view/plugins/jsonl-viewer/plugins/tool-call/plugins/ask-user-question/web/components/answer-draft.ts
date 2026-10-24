@@ -6,8 +6,14 @@ import {
   writeDraft,
 } from "@plugins/primitives/plugins/persistent-draft/web";
 import {
+  replyOf,
+  type QuestionAnswer as AnswerRecord,
+} from "@plugins/conversations/plugins/transcript-source/core";
+import {
+  answersFromRecord,
   parseMarkerAnswer,
   parseSelectedLabels,
+  type ParsedAnswer,
   type Question,
 } from "./answer-model";
 
@@ -77,7 +83,13 @@ export function answersFromText(
   questions: Question[],
   answerText: string,
 ): QuestionAnswer[] {
-  const parsed = parseMarkerAnswer(answerText, questions);
+  return formAnswers(questions, parseMarkerAnswer(answerText, questions));
+}
+
+function formAnswers(
+  questions: Question[],
+  parsed: Record<string, ParsedAnswer>,
+): QuestionAnswer[] {
   return questions.map((q) => {
     const { selected, otherText } = parseSelectedLabels(
       parsed[q.question]?.answer ?? undefined,
@@ -101,4 +113,27 @@ export function restoreAnswerDraft(
   writeDraft(answerDraftStore, answersFromText(questions, answerText), {
     scope: answerDraftScope(convId, toolUseId),
   });
+}
+
+/**
+ * Pre-fill a question's answer form in `convId` with an answer given as the
+ * tool's real result — its structured record (the line's `toolUseResult`),
+ * the free-text reply included.
+ */
+export function restoreAnswerDraftFromRecord(
+  convId: string,
+  toolUseId: string,
+  questions: Question[],
+  record: AnswerRecord,
+): void {
+  const scope = answerDraftScope(convId, toolUseId);
+  writeDraft(
+    answerDraftStore,
+    formAnswers(questions, answersFromRecord(record)),
+    {
+      scope,
+    },
+  );
+  const reply = replyOf(record);
+  if (reply !== undefined) writeDraft(responseDraftStore, reply, { scope });
 }

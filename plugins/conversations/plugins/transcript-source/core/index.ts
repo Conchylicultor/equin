@@ -20,7 +20,7 @@ export { withPicksInResponse, replyOf } from "./question-response";
 export { isInterruptContent } from "./interrupt";
 export { taskStopTimes } from "./task-stop";
 export { unwrapPastedContent } from "./pasted-content";
-export { userPromptText } from "./user-prompt";
+export { questionAnswerText, userPromptText } from "./user-prompt";
 export { activeLineUuids } from "./branch-filter";
 export type { TeammateMessage } from "./relay";
 export {

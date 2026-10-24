@@ -42,3 +42,49 @@ export function userPromptText(line: Record<string, unknown>): string | null {
   if (!text.trim() || isInterruptContent(text)) return null;
   return text;
 }
+
+/**
+ * The tool-result text of a transcript line that answers an AskUserQuestion —
+ * the user's answer, delivered as the tool's real result — or null when the
+ * line is anything else. It is the user's own message as much as a typed turn
+ * is, so it is the other line a rewind can cut at ("Change answers").
+ *
+ * The answer is recognised by the line's structured `toolUseResult` (the
+ * question record, `questions` + `answers`), never by the result's prose. The
+ * result the CLI fills in when a session ended mid-question
+ * (`toolDenialKind: "interrupted"`) is no answer.
+ *
+ * One definition on purpose: the parser stamps a call's result with its line
+ * `uuid` (`answerUuid`) exactly when this returns text.
+ */
+export function questionAnswerText(
+  line: Record<string, unknown>,
+): string | null {
+  if (line.type !== "user" || line.isMeta === true) return null;
+  if (line.toolDenialKind === "interrupted") return null;
+  const record = line.toolUseResult;
+  if (typeof record !== "object" || record === null) return null;
+  if (!("questions" in record) || !("answers" in record)) return null;
+  const msg = line.message as { content?: unknown } | undefined;
+  if (!Array.isArray(msg?.content)) return null;
+  const results = (msg.content as unknown[]).filter(
+    (b): b is { type: "tool_result"; content?: unknown } =>
+      typeof b === "object" &&
+      b !== null &&
+      (b as { type?: unknown }).type === "tool_result",
+  );
+  if (results.length !== 1) return null;
+  const content = results[0]!.content;
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+  return (content as unknown[])
+    .map((b) =>
+      typeof b === "object" &&
+      b !== null &&
+      (b as { type?: unknown }).type === "text" &&
+      typeof (b as { text?: unknown }).text === "string"
+        ? (b as { text: string }).text
+        : "",
+    )
+    .join("");
+}
