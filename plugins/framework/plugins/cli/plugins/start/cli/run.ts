@@ -1,4 +1,5 @@
-import { writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { assertPrerequisites } from "@plugins/framework/plugins/cli/plugins/doctor/cli";
 import { installLockedToolchain } from "@plugins/infra/plugins/deps/plugins/mise/core";
@@ -188,7 +189,10 @@ async function startDeclaredLoginServices(
       await service.unload();
       if (runningPid !== null) await awaitProcessGone(runningPid);
     }
-    // The manager appends; truncate so the log holds this start's output.
+    // The manager appends; truncate so the log holds this start's output. Its
+    // folder may not exist yet (a declaration's first start), and neither
+    // launchd nor systemd creates it — the job would fail to spawn.
+    mkdirSync(dirname(job.stdioLog), { recursive: true });
     writeFileSync(job.stdioLog, "");
     const pid = await service.load();
     console.log(
