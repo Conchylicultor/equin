@@ -893,9 +893,9 @@ See "Open questions" in the design doc.
 - Load-bearing: yes
 - Web:
   - Slots: `Pane.Register`
-  - Slot contributors: 90 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Pane.Register` ×90
-  - Contributes: 117 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 89 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Pane.Register` ×89
+  - Contributes: 116 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `SlotRender.ItemMiddleware`
     - `WebsiteHeader` "title" → `PaneTitleItem`
     - `accountPane.Actions` "title" → `PaneTitleItem`
@@ -974,7 +974,6 @@ See "Open questions" in the design doc.
     - `pageDetailPane.Actions` "title" → `PaneTitleItem`
     - `pages-root.actions` "title" → `PaneTitleItem`
     - `pagesTreePane.Actions` "title" → `PaneTitleItem`
-    - `panel.actions` "title" → `PaneTitleItem`
     - `places-map.actions` "title" → `PaneTitleItem`
     - `plugin-conv-side.actions` "title" → `PaneTitleItem`
     - `pluginViewPane.Actions` "title" → `PaneTitleItem`

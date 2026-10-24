@@ -217,7 +217,6 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "infra.deps.item-actions", pluginId: "infra.deps", configName: "item-actions" },
   { slotId: "infra.events-test.events-test.actions", pluginId: "infra.events-test", configName: "events-test.actions" },
   { slotId: "menu-bar.app-grid.item-actions", pluginId: "menu-bar.app-grid", configName: "item-actions" },
-  { slotId: "menu-bar.panel.actions", pluginId: "menu-bar", configName: "panel.actions" },
   { slotId: "menu-bar.section", pluginId: "menu-bar", configName: "section" },
   { slotId: "menu-bar.status", pluginId: "menu-bar", configName: "status" },
   { slotId: "page.editor.block", pluginId: "page.editor", configName: "block" },

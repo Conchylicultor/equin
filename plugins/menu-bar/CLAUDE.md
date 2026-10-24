@@ -125,13 +125,12 @@ requests the helper build and reloads the tray onto it
 
 ## Plugin reference
 
-- Description: The menu-bar panel the native helper opens: the menu-bar app (unlisted, colorMode light — the panel is designed light) mounted at /home/menu-bar, whose index pane is the panel (rendered chromeless under ?embed=1), whose body is the MenuBar.Section slot, drawn in its own theme (a native menu's: the system font, 13px rows, a 2–16px spacing ramp, the menu palette), plus the header (the spiral and a status line joined from MenuBar.Status parts, whose attention lights the menu-bar icon's dot) and the footer ('Running · <host>', opening equin). useNativeHost() reads the helper's bridge (window.equinNative): pending, absent (a plain browser), or present with its platform, capabilities and methods — a capability the host lacks has no method. MenuBar.Mount runs headless work while the panel page is alive; the panel reports its content height to the helper.
+- Description: The menu-bar panel the native helper opens: the menu-bar app (unlisted, colorMode light — the panel is designed light) mounted at /home/menu-bar, whose whole layout is the panel (no pane; chromeless under ?embed=1), whose body is the MenuBar.Section slot, drawn in its own theme (a native menu's: the system font, 13px rows, a 2–16px spacing ramp, the menu palette), plus the header (the spiral and a status line joined from MenuBar.Status parts, whose attention lights the menu-bar icon's dot) and the footer ('Running · <host>', opening equin). useNativeHost() reads the helper's bridge (window.equinNative): pending, absent (a plain browser), or present with its platform, capabilities and methods — a capability the host lacks has no method. MenuBar.Mount runs headless work while the panel page is alive; the panel reports its content height to the helper.
 - Web:
   - Slots:
     - `MenuBar.Section`
     - `MenuBar.Status`
     - `MenuBar.Mount`
-    - `panel.actions`
   - Slot contributors:
     - `MenuBar.Section` ← `menu-bar`
     - `MenuBar.Section` ← `menu-bar.app-grid`
@@ -139,31 +138,29 @@ requests the helper build and reloads the tray onto it
     - `MenuBar.Section` ← `tasks.menu-bar-task`
     - `MenuBar.Status` ← `conversations.menu-bar-status`
     - `MenuBar.Mount` ← `shell.notifications.native`
-    - `panel.actions` ← `primitives.pane`
   - Contributes:
-    - `Apps.App` "Menu bar" → `FullPane`
-    - `Pane.Register` "menu-bar"
+    - `Apps.App` "Menu bar" → `MenuBarPanel`
     - `ThemeEngine.Theme` "Menu bar"
     - `MenuBar.Section` "Header" → `PanelHeader`
     - `MenuBar.Section` "Footer" → `PanelFooter`
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/spacing` ×3
-    - `primitives/pane` ×3
-    - `primitives/slot-render` ×2
+  - Uses:
     - `apps-core.Apps`
-    - `layouts/full-pane.FullPane`
     - `primitives/css/clip.Clip`
     - `primitives/css/fill.Fill`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
+    - `primitives/css/spacing.Inset`
+    - `primitives/css/spacing.insetClass`
+    - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/loading.Loading`
-    - `primitives/overlay/surface-overlay.SurfaceOverlay`
+    - `primitives/slot-render.defineMountSlot`
+    - `primitives/slot-render.defineRenderSlot`
     - `ui/theme-engine.ThemeEngine`
   - Exports (types):
     - `MenuBarStatus`

@@ -31421,7 +31421,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/sonata/shell`
           - `apps/website/shell`
           - `layouts/host`
-          - `menu-bar`
     - **`host`** — Mixing host that dispatches each active pane to Full-pane or Miller per the app's own full-surface pane list. Reads the surface's already-resolved match.
       - Web:
         - Uses:
@@ -31685,13 +31684,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: `map/google`
 
-- **`menu-bar`** — The menu-bar panel the native helper opens: the menu-bar app (unlisted, colorMode light — the panel is designed light) mounted at /home/menu-bar, whose index pane is the panel (rendered chromeless under ?embed=1), whose body is the MenuBar.Section slot, drawn in its own theme (a native menu's: the system font, 13px rows, a 2–16px spacing ramp, the menu palette), plus the header (the spiral and a status line joined from MenuBar.Status parts, whose attention lights the menu-bar icon's dot) and the footer ('Running · <host>', opening equin). useNativeHost() reads the helper's bridge (window.equinNative): pending, absent (a plain browser), or present with its platform, capabilities and methods — a capability the host lacks has no method. MenuBar.Mount runs headless work while the panel page is alive; the panel reports its content height to the helper.
+- **`menu-bar`** — The menu-bar panel the native helper opens: the menu-bar app (unlisted, colorMode light — the panel is designed light) mounted at /home/menu-bar, whose whole layout is the panel (no pane; chromeless under ?embed=1), whose body is the MenuBar.Section slot, drawn in its own theme (a native menu's: the system font, 13px rows, a 2–16px spacing ramp, the menu palette), plus the header (the spiral and a status line joined from MenuBar.Status parts, whose attention lights the menu-bar icon's dot) and the footer ('Running · <host>', opening equin). useNativeHost() reads the helper's bridge (window.equinNative): pending, absent (a plain browser), or present with its platform, capabilities and methods — a capability the host lacks has no method. MenuBar.Mount runs headless work while the panel page is alive; the panel reports its content height to the helper.
   - Web:
     - Slots:
       - `MenuBar.Section`
       - `MenuBar.Status`
       - `MenuBar.Mount`
-      - `panel.actions`
     - Slot contributors:
       - `MenuBar.Section` ← `menu-bar`
       - `MenuBar.Section` ← `menu-bar.app-grid`
@@ -31699,31 +31697,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `MenuBar.Section` ← `tasks.menu-bar-task`
       - `MenuBar.Status` ← `conversations.menu-bar-status`
       - `MenuBar.Mount` ← `shell.notifications.native`
-      - `panel.actions` ← `primitives.pane`
     - Contributes:
-      - `Apps.App` "Menu bar" → `FullPane`
-      - `Pane.Register` "menu-bar"
+      - `Apps.App` "Menu bar" → `MenuBarPanel`
       - `ThemeEngine.Theme` "Menu bar"
       - `MenuBar.Section` "Header" → `PanelHeader`
       - `MenuBar.Section` "Footer" → `PanelFooter`
-    - Uses: 23 symbols — full list in [`plugins/menu-bar/REFERENCE.md`](../plugins/menu-bar/REFERENCE.md)
-      - `primitives/css/spacing` ×3
-      - `primitives/pane` ×3
-      - `primitives/slot-render` ×2
+    - Uses:
       - `apps-core.Apps`
-      - `layouts/full-pane.FullPane`
       - `primitives/css/clip.Clip`
       - `primitives/css/fill.Fill`
       - `primitives/css/rigid.rigidClass`
       - `primitives/css/row.Row`
       - `primitives/css/scroll.Scroll`
+      - `primitives/css/spacing.Inset`
+      - `primitives/css/spacing.insetClass`
+      - `primitives/css/spacing.Stack`
       - `primitives/css/status-dot.StatusDot`
       - `primitives/css/surface.Surface`
       - `primitives/css/text.Text`
       - `primitives/css/ui-kit.cn`
       - `primitives/dom/element-size.useResizeObserver`
       - `primitives/loading.Loading`
-      - `primitives/overlay/surface-overlay.SurfaceOverlay`
+      - `primitives/slot-render.defineMountSlot`
+      - `primitives/slot-render.defineRenderSlot`
       - `ui/theme-engine.ThemeEngine`
     - Exports (types):
       - `MenuBarStatus`
@@ -42659,7 +42655,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps-core/tab-surface`
-              - `menu-bar`
               - `plugin-meta/exhibits`
           - Exemptions:
             - Exempts itself from: `layout/no-adhoc-layout` — `web/internal/surface-overlay.tsx` (sanctioned)
@@ -42698,9 +42693,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
         - Slots: `Pane.Register`
-        - Slot contributors: 90 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `Pane.Register` ×90
-        - Contributes: 117 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Slot contributors: 89 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `Pane.Register` ×89
+        - Contributes: 116 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `SlotRender.ItemMiddleware`
           - `WebsiteHeader` "title" → `PaneTitleItem`
           - `accountPane.Actions` "title" → `PaneTitleItem`
@@ -42779,7 +42774,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `pageDetailPane.Actions` "title" → `PaneTitleItem`
           - `pages-root.actions` "title" → `PaneTitleItem`
           - `pagesTreePane.Actions` "title" → `PaneTitleItem`
-          - `panel.actions` "title" → `PaneTitleItem`
           - `places-map.actions` "title" → `PaneTitleItem`
           - `plugin-conv-side.actions` "title" → `PaneTitleItem`
           - `pluginViewPane.Actions` "title" → `PaneTitleItem`
@@ -44983,8 +44977,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Web:
     - Slots: `ReorderSlots.AreaEditor`
     - Slot contributors: `ReorderSlots.AreaEditor` ← `reorder.edit-mode`
-    - Contributes: 248 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×248
+    - Contributes: 247 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×247
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -45019,8 +45013,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReorderSlots`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 247 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×247
+    - Contributes: 246 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×246
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
