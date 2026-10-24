@@ -1,4 +1,4 @@
-import { Icon } from "@plugins/ui/plugins/icons/web";
+import { Icon, IconMotionRegion } from "@plugins/ui/plugins/icons/web";
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import {
   Button,
@@ -345,8 +345,13 @@ export function AppShellLayout({
     // sidebar's own bands apply the inset and their hover fills and section
     // rules still reach the sidebar's edge. `rail-sm` would pad here too, and
     // every band would then inset twice.
+    //
+    // It is also the sidebar's icon MOTION REGION (`IconMotionRegion`):
+    // hovering a row plays its animated family glyph once. Only the sidebar —
+    // the toolbar, menus and popovers (portalled out of here) stay still.
     <div
       className="rail-owe-sidebar"
+      {...IconMotionRegion}
       style={
         {
           display: "contents",

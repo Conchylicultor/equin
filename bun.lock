@@ -221,6 +221,10 @@
       "name": "@singularity/plugin-apps-agent-manager-demo",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/agent-manager/plugins/icons": {
+      "name": "@singularity/plugin-apps-agent-manager-icons",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/agent-manager/plugins/pages-nav": {
       "name": "@singularity/plugin-apps-agent-manager-pages-nav",
       "version": "0.0.1",
@@ -2440,6 +2444,10 @@
     },
     "plugins/debug/plugins/heap-snapshot": {
       "name": "@singularity/plugin-debug-heap-snapshot",
+      "version": "0.0.1",
+    },
+    "plugins/debug/plugins/icons": {
+      "name": "@singularity/plugin-debug-icons",
       "version": "0.0.1",
     },
     "plugins/debug/plugins/latency-ledger": {
@@ -5838,6 +5846,10 @@
       "name": "@singularity/plugin-reports-engine",
       "version": "0.0.1",
     },
+    "plugins/reports/plugins/icon-family-gap": {
+      "name": "@singularity/plugin-reports-icon-family-gap",
+      "version": "0.0.1",
+    },
     "plugins/reports/plugins/launch-fix": {
       "name": "@singularity/plugin-reports-launch-fix",
       "version": "0.0.1",
@@ -7171,6 +7183,8 @@
 
     "@singularity/plugin-apps-agent-manager-demo": ["@singularity/plugin-apps-agent-manager-demo@workspace:plugins/apps/plugins/agent-manager/plugins/demo"],
 
+    "@singularity/plugin-apps-agent-manager-icons": ["@singularity/plugin-apps-agent-manager-icons@workspace:plugins/apps/plugins/agent-manager/plugins/icons"],
+
     "@singularity/plugin-apps-agent-manager-pages-nav": ["@singularity/plugin-apps-agent-manager-pages-nav@workspace:plugins/apps/plugins/agent-manager/plugins/pages-nav"],
 
     "@singularity/plugin-apps-agent-manager-shell": ["@singularity/plugin-apps-agent-manager-shell@workspace:plugins/apps/plugins/agent-manager/plugins/shell"],
@@ -8282,6 +8296,8 @@
     "@singularity/plugin-debug-health-monitor": ["@singularity/plugin-debug-health-monitor@workspace:plugins/debug/plugins/health-monitor"],
 
     "@singularity/plugin-debug-heap-snapshot": ["@singularity/plugin-debug-heap-snapshot@workspace:plugins/debug/plugins/heap-snapshot"],
+
+    "@singularity/plugin-debug-icons": ["@singularity/plugin-debug-icons@workspace:plugins/debug/plugins/icons"],
 
     "@singularity/plugin-debug-latency-ledger": ["@singularity/plugin-debug-latency-ledger@workspace:plugins/debug/plugins/latency-ledger"],
 
@@ -9874,6 +9890,8 @@
     "@singularity/plugin-reports-endpoint-errors": ["@singularity/plugin-reports-endpoint-errors@workspace:plugins/reports/plugins/endpoint-errors"],
 
     "@singularity/plugin-reports-engine": ["@singularity/plugin-reports-engine@workspace:plugins/reports/plugins/engine"],
+
+    "@singularity/plugin-reports-icon-family-gap": ["@singularity/plugin-reports-icon-family-gap@workspace:plugins/reports/plugins/icon-family-gap"],
 
     "@singularity/plugin-reports-launch-fix": ["@singularity/plugin-reports-launch-fix@workspace:plugins/reports/plugins/launch-fix"],
 

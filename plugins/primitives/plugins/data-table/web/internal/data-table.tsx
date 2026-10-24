@@ -621,11 +621,29 @@ export function DataTable<TRow>({
             // stack needs — and StickyStack renders no element of its own, so
             // the `col-span-full` lines stay direct grid children: the tracks
             // line up, and the fold finds them.
+            //
+            // Each group's rows window on their own, like the ungrouped body,
+            // once the group holds more than `VIRTUALIZE_THRESHOLD` of them:
+            // grouping is the outer structure, windowing the inner one, so
+            // every header (and footer) stays mounted for the stack to measure.
             <StickyStack
               keys={groups.map((group) => group.key)}
               base={groupHeaderTop}
             >
-              {fold.items.map((line) => renderLine(line))}
+              {bodySegments(fold.items).map((segment) =>
+                segment.kind === "line" ? (
+                  renderLine(segment.line)
+                ) : (
+                  <VirtualTableBody
+                    key={segment.key}
+                    lines={segment.lines}
+                    selectedRowId={selectedRowId}
+                    renderLine={renderLine}
+                    keepMounted={keepMountedRowKeys}
+                    drawPastEnd={fold.inFlight}
+                  />
+                ),
+              )}
             </StickyStack>
           ) : rows.length > VIRTUALIZE_THRESHOLD ? (
             <VirtualTableBody
@@ -1248,6 +1266,44 @@ function bodyLines<TRow>(
     if (group.footer != null)
       out.push({ kind: "footer", key: `\u0000footer:${group.key}`, group });
   });
+  return out;
+}
+
+/**
+ * A grouped body as what draws it: each header and footer line on its own,
+ * and each group's run of rows — plain lines while the run holds at most
+ * `VIRTUALIZE_THRESHOLD` of them, one windowed body past that. A run is keyed
+ * by the line before it (its group's header), so its window survives the
+ * rows changing under it.
+ */
+type BodySegment<TRow> =
+  | { kind: "line"; line: BodyLine<TRow> }
+  | { kind: "window"; key: string; lines: BodyLine<TRow>[] };
+
+function bodySegments<TRow>(
+  lines: readonly BodyLine<TRow>[],
+): BodySegment<TRow>[] {
+  const out: BodySegment<TRow>[] = [];
+  let run: BodyLine<TRow>[] = [];
+  let runKey = "\u0000run:start";
+  const flush = () => {
+    if (run.length > VIRTUALIZE_THRESHOLD) {
+      out.push({ kind: "window", key: runKey, lines: run });
+    } else {
+      for (const line of run) out.push({ kind: "line", line });
+    }
+    run = [];
+  };
+  for (const line of lines) {
+    if (line.kind === "row") {
+      run.push(line);
+      continue;
+    }
+    flush();
+    out.push({ kind: "line", line });
+    runKey = `\u0000run:${line.key}`;
+  }
+  flush();
   return out;
 }
 

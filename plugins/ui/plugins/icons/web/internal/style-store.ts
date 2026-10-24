@@ -74,6 +74,39 @@ export function useScopeIconStyle(scope: string | undefined): IconStyle {
   return useSyncExternalStore(subscribe, () => iconStyleOf(scope));
 }
 
+/**
+ * The icon style of each of `scopes`, in order — what an `<Icon>` inside each
+ * draws with (its own published style, else the root's, else the default). For
+ * a surface listing many scopes at once (Debug → Icons: every app's family),
+ * where one `useScopeIconStyle` per scope would be a hook in a loop.
+ */
+export function useScopeIconStyles(
+  scopes: readonly (string | undefined)[],
+): readonly IconStyle[] {
+  // The scopes as one value, so a fresh array of the same scopes is no change.
+  const key = JSON.stringify(scopes.map((s) => s ?? ROOT));
+  // The snapshot itself is the answer, re-read on every publish. (A useMemo
+  // keyed on a version it never reads is a dependency the React Compiler
+  // drops: the styles froze at the first render, before any publish.)
+  return useSyncExternalStore(subscribe, () => scopeStylesSnapshot(key));
+}
+
+const scopeStylesCache = new Map<
+  string,
+  { version: number; styles: readonly IconStyle[] }
+>();
+
+/** The styles of the scope list `key`, the same array until the store changes. */
+function scopeStylesSnapshot(key: string): readonly IconStyle[] {
+  const hit = scopeStylesCache.get(key);
+  if (hit?.version === version) return hit.styles;
+  const styles = (JSON.parse(key) as (string | undefined)[]).map((s) =>
+    iconStyleOf(s === ROOT ? undefined : s),
+  );
+  scopeStylesCache.set(key, { version, styles });
+  return styles;
+}
+
 // eslint-disable-next-line scoped-store/no-module-mutable-store -- a memo of the page-global style map above (see `version`)
 let wantedCache: { version: number; keys: readonly StyleKey[] } | undefined;
 

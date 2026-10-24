@@ -7,6 +7,7 @@ import { sidebarMetricsGroup } from "@plugins/ui/plugins/tokens/plugins/sidebar-
 import { densityGroup } from "@plugins/ui/plugins/tokens/plugins/density/core";
 import { typeScaleGroup } from "@plugins/ui/plugins/tokens/plugins/type-scale/core";
 import { scrollbarGroup } from "@plugins/ui/plugins/tokens/plugins/scrollbar/core";
+import { iconsGroup } from "@plugins/ui/plugins/tokens/plugins/icons/core";
 
 /**
  * Mist, the agent manager's look (prototype proto-1789643584-ldt6): cool,
@@ -387,6 +388,13 @@ const scrollbar = scrollbarGroup.fragment({
 });
 
 /**
+ * The agent manager's own line icons, with their sidebar hover motions: the
+ * `agent` family (`agentIcons`, agent-manager/icons), which falls back to each
+ * symbol's Lucide counterpart for the names it does not draw.
+ */
+const icons = iconsGroup.fragment(both({ iconFamily: "agent" }));
+
+/**
  * The agent manager's own theme. Selected for the app in
  * `config/ui/theme-engine/@app/agent-manager/theme.jsonc`; a group it does not
  * mention paints that group's schema defaults, never the desktop's choice.
@@ -403,5 +411,6 @@ export const mistTheme = defineTheme({
     fontFamily,
     shape,
     scrollbar,
+    icons,
   ],
 });

@@ -1,0 +1,33 @@
+// @hash 6ec84829688d
+// Matrix: every icon name the app draws × every icon family, grouped by the
+// worst cell (a gap, a fallback, or every set drawing it itself). By set: one
+// tile grid per family.
+{
+  "views": [
+    {
+      "id": "matrix",
+      "name": "Matrix",
+      "icon": "grid-on",
+      "source": "matrix",
+      "view": {
+        "type": "table",
+        "groupBy": { "fieldId": "status", "groupingId": "value" },
+        "sort": [{ "fieldId": "name", "direction": "asc" }]
+      }
+    },
+    {
+      "id": "by-set",
+      "name": "By set",
+      "icon": "grid-view",
+      "source": "by-set",
+      "view": {
+        "type": "icons",
+        "groupBy": { "fieldId": "family", "groupingId": "value" },
+        "sort": [{ "fieldId": "name", "direction": "asc" }]
+      }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

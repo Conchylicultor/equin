@@ -14,6 +14,7 @@ import { defineIconFamily } from "@plugins/ui/plugins/icons/core";
 export const sonataIcons = defineIconFamily({
   id: "sonata",
   label: "Sonata",
+  coverage: "fallback",
   fallback: "lucide",
   stroke: 1.7,
   glyphs: {

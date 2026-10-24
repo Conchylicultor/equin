@@ -50,14 +50,21 @@ export type {
 export {
   MATERIAL_FAMILY,
   defineIconFamily,
+  familyGapId,
+  familyGlyphBody,
   familyGlyphId,
   familyGlyphMarkup,
+  familyGlyphOf,
   isIconFamilyId,
 } from "./icon-family";
 export type {
   IconFamily,
+  IconFamilyCoverage,
   IconFamilyId,
   SpriteIconFamily,
   IconGlyph,
+  IconGlyphSource,
   InlineIconFamily,
 } from "./icon-family";
+export { ICON_MOTIONS, isIconMotion } from "./icon-motion";
+export type { IconMotion } from "./icon-motion";

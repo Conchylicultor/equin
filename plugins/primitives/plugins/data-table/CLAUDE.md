@@ -67,13 +67,20 @@ it has no rows.
 
 ## Windowing
 
-Above `DATA_TABLE_VIRTUALIZE_THRESHOLD` (100) rows the ungrouped body windows
+Above `DATA_TABLE_VIRTUALIZE_THRESHOLD` (100) rows the body windows
 through the shared `useVirtualRows`. Unlike `VirtualRows`, the slice renders in
 **normal grid flow** — the outer grid owns the column tracks and every row is a
 `grid-cols-subgrid` span, so absolutely positioning rows would break alignment.
 Off-screen height is instead reserved by `col-span-full` spacers, **one per gap**
 in the rendered index sequence (leading, trailing, and any interior hole). Grouped
-mode (`groups`) is never windowed — it targets bounded, sectioned lists.
+mode (`groups`) windows **per group**: each group's run of rows past the threshold
+is its own windowed body (`bodySegments`), while every header and footer stays
+mounted — grouping is the outer structure, windowing the inner one, so
+`StickyStack` can always measure the headers. Each run's `useVirtualRows`
+measures its own `scrollMargin` (and re-measures as the boxes above it resize),
+so several windows share one scroller. Debug → Icons' matrix (≈350 rows × 5
+icon columns in a few groups) mounted every cell before this — ~1,800 `<Icon>`s
+per render.
 The windowed body's first commit draws the hook's `probe` row (one real row, measured before
 paint) so the window never starts from the `ROW_ESTIMATE` guess: a table that
 crosses the threshold while scrolled would otherwise shift its visible rows

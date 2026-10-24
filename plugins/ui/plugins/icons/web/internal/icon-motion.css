@@ -1,0 +1,448 @@
+/* Icon motions (core/icon-motion.ts ICON_MOTIONS): one keyframe set per kind,
+   played on a moving part of an animated family glyph (`data-motion`) when the
+   control holding it is hovered inside a motion region (`IconMotionRegion`).
+   A CSS animation starts when its selector starts matching, so the motion
+   plays once per hover entry and settles at rest. Timings are the agent-icons
+   prototype's (proto-1789643584-ldt6, agent-icons.js). Animated glyphs are
+   drawn inline by <Icon>: a <use> shadow tree is out of this sheet's reach.
+
+   A part transforms about its own box centre unless the glyph pins an origin
+   (`data-motion-origin`, written as an inline view-box transform-origin); a
+   stagger (`data-motion-delay`) is the inline `--icon-motion-delay`. */
+
+[data-motion] {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* A typed character is invisible at rest: it only shows while it plays. */
+[data-motion="type"] {
+  opacity: 0;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion] {
+  animation-duration: 520ms;
+  animation-timing-function: cubic-bezier(0.3, 0.7, 0.35, 1);
+  animation-delay: var(--icon-motion-delay, 0ms);
+  animation-fill-mode: both;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="nudge-right"] {
+  animation-name: icon-motion-nudge-right;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="nudge-left"] {
+  animation-name: icon-motion-nudge-left;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="nudge-up"] {
+  animation-name: icon-motion-nudge-up;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="nudge-down"] {
+  animation-name: icon-motion-nudge-down;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="turn"] {
+  animation-name: icon-motion-turn;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="pop"] {
+  animation-name: icon-motion-pop;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="draw"] {
+  animation-name: icon-motion-draw;
+  animation-duration: 600ms;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="blink"] {
+  animation-name: icon-motion-blink;
+  animation-duration: 900ms;
+  animation-timing-function: steps(1, end);
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="blink-y"] {
+  animation-name: icon-motion-blink-y;
+  animation-duration: 420ms;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="bob"] {
+  animation-name: icon-motion-bob;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="type"] {
+  animation-name: icon-motion-type;
+  animation-duration: 900ms;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="scan"] {
+  animation-name: icon-motion-scan;
+  animation-duration: 640ms;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="tilt"] {
+  animation-name: icon-motion-tilt;
+  animation-duration: 640ms;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="scribble"] {
+  animation-name: icon-motion-scribble;
+  animation-duration: 600ms;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="shake"] {
+  animation-name: icon-motion-shake;
+  animation-duration: 560ms;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="slide"] {
+  animation-name: icon-motion-slide;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="splay-l"] {
+  animation-name: icon-motion-splay-l;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="splay-r"] {
+  animation-name: icon-motion-splay-r;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="link-a"] {
+  animation-name: icon-motion-link-a;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="link-b"] {
+  animation-name: icon-motion-link-b;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="open-l"] {
+  animation-name: icon-motion-open-l;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="open-r"] {
+  animation-name: icon-motion-open-r;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="squeeze"] {
+  animation-name: icon-motion-squeeze;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="grow"] {
+  animation-name: icon-motion-grow;
+  transform-origin: 50% 100%;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="hop"] {
+  animation-name: icon-motion-hop;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="hop-small"] {
+  animation-name: icon-motion-hop-small;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="drift"] {
+  animation-name: icon-motion-drift;
+  animation-duration: 800ms;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="flip"] {
+  animation-name: icon-motion-flip;
+  animation-duration: 640ms;
+  animation-timing-function: cubic-bezier(0.6, 0, 0.3, 1);
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="rewind"] {
+  animation-name: icon-motion-rewind;
+  animation-duration: 700ms;
+  animation-timing-function: cubic-bezier(0.5, 0, 0.25, 1);
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="spin"] {
+  animation-name: icon-motion-spin;
+  animation-duration: 700ms;
+  animation-timing-function: cubic-bezier(0.5, 0, 0.25, 1);
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="bubble"] {
+  animation-name: icon-motion-bubble;
+  animation-duration: 760ms;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="launch"] {
+  animation-name: icon-motion-launch;
+  animation-duration: 600ms;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="flicker"] {
+  animation-name: icon-motion-flicker;
+  animation-duration: 600ms;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="light"] {
+  animation-name: icon-motion-light;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="twinkle"] {
+  animation-name: icon-motion-twinkle;
+  animation-duration: 640ms;
+}
+
+[data-icon-motion-region]
+  :is(a, button, [role="button"], [role="option"], [role="treeitem"], [role="menuitem"], [role="tab"]):hover
+  [data-motion="spark"] {
+  animation-name: icon-motion-spark;
+  animation-duration: 640ms;
+}
+
+@keyframes icon-motion-nudge-right {
+  40% { transform: translateX(2px); }
+}
+
+@keyframes icon-motion-nudge-left {
+  40% { transform: translateX(-2px); }
+}
+
+@keyframes icon-motion-nudge-up {
+  40% { transform: translateY(-2px); }
+}
+
+@keyframes icon-motion-nudge-down {
+  40% { transform: translateY(2px); }
+}
+
+@keyframes icon-motion-turn {
+  from { transform: rotate(0); }
+  to { transform: rotate(90deg); }
+}
+
+@keyframes icon-motion-pop {
+  40% { transform: scale(1.16); }
+}
+
+@keyframes icon-motion-draw {
+  from { stroke-dasharray: 1; stroke-dashoffset: 1; }
+  to { stroke-dasharray: 1; stroke-dashoffset: 0; }
+}
+
+@keyframes icon-motion-blink {
+  0%, 50% { opacity: 0; }
+  25%, 75% { opacity: 1; }
+}
+
+@keyframes icon-motion-blink-y {
+  45% { transform: scaleY(0.12); }
+}
+
+@keyframes icon-motion-bob {
+  40% { transform: translateY(-2px); }
+}
+
+@keyframes icon-motion-type {
+  0% { opacity: 0; transform: translateY(1px); }
+  30%, 70% { opacity: 1; transform: none; }
+  100% { opacity: 0; }
+}
+
+@keyframes icon-motion-scan {
+  30% { transform: translate(-1.2px, -1.2px); }
+  65% { transform: translate(1px, 0.4px); }
+}
+
+@keyframes icon-motion-tilt {
+  25% { transform: rotate(-10deg); }
+  55% { transform: rotate(7deg); }
+  80% { transform: rotate(-3deg); }
+}
+
+@keyframes icon-motion-scribble {
+  20% { transform: rotate(-7deg); }
+  45% { transform: rotate(5deg); }
+  70% { transform: rotate(-3deg); }
+}
+
+@keyframes icon-motion-shake {
+  20% { transform: translateX(-1.2px) rotate(-4deg); }
+  45% { transform: translateX(1.2px) rotate(4deg); }
+  70% { transform: translateX(-0.6px) rotate(-2deg); }
+}
+
+@keyframes icon-motion-slide {
+  40% { transform: translate(1.5px, 1.5px); }
+}
+
+@keyframes icon-motion-splay-l {
+  40% { transform: rotate(-9deg); }
+}
+
+@keyframes icon-motion-splay-r {
+  40% { transform: rotate(9deg); }
+}
+
+@keyframes icon-motion-link-a {
+  40% { transform: translate(1.2px, -1.2px); }
+}
+
+@keyframes icon-motion-link-b {
+  40% { transform: translate(-1.2px, 1.2px); }
+}
+
+@keyframes icon-motion-open-l {
+  40% { transform: rotate(-5deg); }
+}
+
+@keyframes icon-motion-open-r {
+  40% { transform: rotate(5deg); }
+}
+
+@keyframes icon-motion-squeeze {
+  40% { transform: scaleX(0.6); }
+}
+
+@keyframes icon-motion-grow {
+  from { transform: scaleY(0.35); }
+  to { transform: scaleY(1); }
+}
+
+@keyframes icon-motion-hop {
+  35% { transform: translateY(-2.5px) rotate(-8deg); }
+  70% { transform: translateY(0.4px); }
+}
+
+@keyframes icon-motion-hop-small {
+  35% { transform: translateY(-1.6px); }
+  70% { transform: translateY(0.3px); }
+}
+
+@keyframes icon-motion-drift {
+  40% { transform: translateX(1.8px); }
+  75% { transform: translateX(-0.6px); }
+}
+
+@keyframes icon-motion-flip {
+  from { transform: rotate(0); }
+  to { transform: rotate(180deg); }
+}
+
+@keyframes icon-motion-rewind {
+  from { transform: rotate(0); }
+  to { transform: rotate(-360deg); }
+}
+
+@keyframes icon-motion-spin {
+  from { transform: rotate(0); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes icon-motion-bubble {
+  0% { transform: none; opacity: 1; }
+  60% { transform: translateY(-4px); opacity: 0; }
+  61% { transform: translateY(1px); opacity: 0; }
+  100% { transform: none; opacity: 1; }
+}
+
+@keyframes icon-motion-launch {
+  40% { transform: translate(1.6px, -1.6px); }
+  70% { transform: translate(-0.3px, 0.3px); }
+}
+
+@keyframes icon-motion-flicker {
+  25% { transform: scaleY(1.35); }
+  50% { transform: scaleY(0.85); }
+  75% { transform: scaleY(1.2); }
+}
+
+@keyframes icon-motion-light {
+  0% { opacity: 0.15; }
+  100% { opacity: 1; }
+}
+
+@keyframes icon-motion-twinkle {
+  0% { transform: rotate(0) scale(1); }
+  45% { transform: rotate(40deg) scale(1.12); }
+  100% { transform: rotate(72deg) scale(1); }
+}
+
+@keyframes icon-motion-spark {
+  0% { transform: rotate(0) scale(1); }
+  45% { transform: rotate(50deg) scale(1.1); }
+  100% { transform: rotate(90deg) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-icon-motion-region] [data-motion] {
+    animation: none !important;
+  }
+}

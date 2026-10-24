@@ -1,4 +1,4 @@
-// @hash 78e79f592715
+// @hash 46c0701e7853
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -34,6 +34,7 @@
     { "type": "spacer", "id": "spacer-1" },
     "conversations.recover:conversations-recover",
     "infra.events-test:events-test",
+    "debug.icons:icons",
     "plugin-meta.exhibits:exhibits",
     "backup:backup"
   ]

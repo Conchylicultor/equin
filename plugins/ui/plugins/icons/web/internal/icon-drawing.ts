@@ -2,13 +2,17 @@ import {
   BRANDS_SPRITE,
   DEFAULT_ICON_STYLE,
   SETI_SPRITE,
+  MATERIAL_FAMILY,
   brandId,
+  familyGapId,
   familyGlyphId,
+  familyGlyphOf,
   runtimeSymbolId,
   setiId,
   styleKeyOf,
   symbolId,
   type IconFamily,
+  type IconFamilyId,
   type IconRef,
   type IconStyle,
   type SpriteKey,
@@ -23,7 +27,9 @@ import { iconFamily } from "./family-store";
 export type DrawingSource =
   | { kind: "sprite"; key: SpriteKey }
   | { kind: "runtime" }
-  | { kind: "family"; family: string };
+  | { kind: "family"; family: string; glyph: string }
+  /** A strict family's gap glyph, standing in for `name` it does not map. */
+  | { kind: "gap"; family: string; name: SymbolName };
 
 /** Something a drawing is still waiting for, to ask its loader for. */
 export type DrawingWant =
@@ -63,36 +69,86 @@ function familyChain(id: string): readonly IconFamily[] {
 /**
  * The first family of the chain that draws `name` and holds its drawing, plus
  * the sprites wanted on the way (a sprite family that maps the name but has
- * not loaded yet: the next family draws until it lands).
+ * not loaded yet: the next family draws until it lands). `strictEnd` is the
+ * chain's last family when it is strict: past it, nothing else may draw.
  */
 function familyDrawing(
   familyId: string,
   name: SymbolName,
-): { drawing: Drawing | null; wants: DrawingWant[] } {
+): {
+  drawing: Drawing | null;
+  wants: DrawingWant[];
+  strictEnd: IconFamilyId | undefined;
+} {
   const wants: DrawingWant[] = [];
-  for (const f of familyChain(familyId)) {
+  const chain = familyChain(familyId);
+  for (const f of chain) {
+    const id = familyGlyphOf(f, name);
+    if (id === undefined) continue;
     if (f.kind === "inline") {
-      const glyph = f.symbols[name];
-      if (glyph === undefined) continue;
       return {
         drawing: {
-          id: familyGlyphId(f.id, glyph),
-          source: { kind: "family", family: f.id },
+          id: familyGlyphId(f.id, id),
+          source: { kind: "family", family: f.id, glyph: id },
         },
         wants,
+        strictEnd: undefined,
       };
     }
-    const id = f.idOf(name);
-    if (id === undefined) continue;
     if (hasSprite(f.sprite)) {
       return {
         drawing: { id, source: { kind: "sprite", key: f.sprite } },
         wants,
+        strictEnd: undefined,
       };
     }
     wants.push({ kind: "sprite", key: f.sprite });
   }
-  return { drawing: null, wants };
+  const last = chain.at(-1);
+  return {
+    drawing: null,
+    wants,
+    strictEnd: last?.coverage === "strict" ? last.id : undefined,
+  };
+}
+
+/**
+ * Where the family `familyId` gets its drawing of `name` from — by MAPPING,
+ * not by what has loaded: the same chain `<Icon>` walks (`familyChain` +
+ * `familyGlyphOf`), so a page listing coverage cannot disagree with what an
+ * app draws.
+ *
+ * - `own` — the family draws it itself (`glyph`: its glyph name, its sprite
+ *   symbol id, or — for `material` — the Material name).
+ * - `fallback` — a later family of its chain draws it; `material` when the
+ *   chain ends without one.
+ * - `gap` — the chain ends at a strict family that does not map it: its scopes
+ *   draw the gap glyph.
+ *
+ * A family not (yet) contributed has no chain: `fallback` to `material`.
+ */
+export type IconSource =
+  | { kind: "own"; glyph: string }
+  | { kind: "fallback"; family: IconFamilyId }
+  | { kind: "gap"; family: IconFamilyId };
+
+export function resolveIconSource(
+  name: SymbolName,
+  familyId: IconFamilyId,
+): IconSource {
+  if (familyId === MATERIAL_FAMILY) return { kind: "own", glyph: name };
+  const chain = familyChain(familyId);
+  for (const f of chain) {
+    const glyph = familyGlyphOf(f, name);
+    if (glyph === undefined) continue;
+    return f.id === familyId
+      ? { kind: "own", glyph }
+      : { kind: "fallback", family: f.id };
+  }
+  const last = chain.at(-1);
+  return last?.coverage === "strict"
+    ? { kind: "gap", family: last.id }
+    : { kind: "fallback", family: MATERIAL_FAMILY };
 }
 
 export function resolveIconDrawing(
@@ -157,7 +213,7 @@ export function resolveIconDrawing(
       return {
         drawing: {
           id: familyGlyphId(f.id, icon.name),
-          source: { kind: "family", family: f.id },
+          source: { kind: "family", family: f.id, glyph: icon.name },
         },
         wants: [],
       };
@@ -165,6 +221,25 @@ export function resolveIconDrawing(
     case "symbol": {
       const family = familyDrawing(style.family, icon.name);
       if (family.drawing !== null) return family;
+      if (family.strictEnd !== undefined) {
+        // A strict family's scope never borrows another family's drawing: an
+        // unmapped name is its gap glyph — or, while a sprite family earlier in
+        // the chain that maps it is loading, nothing yet.
+        return {
+          drawing:
+            family.wants.length > 0
+              ? null
+              : {
+                  id: familyGapId(family.strictEnd),
+                  source: {
+                    kind: "gap",
+                    family: family.strictEnd,
+                    name: icon.name,
+                  },
+                },
+          wants: family.wants,
+        };
+      }
       const drawnKey = hasSprite(key) ? key : defaultKey;
       return {
         drawing: {

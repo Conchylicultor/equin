@@ -11,6 +11,8 @@ import {
 import { resolveIconDrawing, type DrawingSource } from "./icon-drawing";
 import { iconFamily, useIconFamilies } from "./family-store";
 import { askFor, useIconStyle } from "./icon";
+import { reportIconFamilyGap } from "./family-gap";
+import { useIconFamilyPreview } from "./icon-scope";
 
 /**
  * One icon as standalone SVG content: the `<symbol>`'s inner markup and its
@@ -69,7 +71,7 @@ function symbolMarkup(
   id: string,
   source: DrawingSource,
 ): IconMarkup | undefined {
-  if (source.kind === "family") {
+  if (source.kind === "family" || source.kind === "gap") {
     const family = iconFamily(source.family);
     return family?.kind === "inline"
       ? indexSymbols(markupOfFamily(family)).get(id)
@@ -96,6 +98,8 @@ function symbolMarkup(
  */
 export function useIconMarkup(): IconMarkupReader {
   const style = useIconStyle();
+  // A preview shows gaps on purpose: only an app drawing one is reported.
+  const previewing = useIconFamilyPreview() !== undefined;
   // Subscriptions only: the reader reads the stores themselves.
   useSprites();
   useRuntimeSymbolChunks();
@@ -104,6 +108,12 @@ export function useIconMarkup(): IconMarkupReader {
     const { drawing, wants } = resolveIconDrawing(icon, style, active);
     for (const w of wants) queueMicrotask(() => askFor(w));
     if (drawing === null) return { kind: "pending" };
+    const { source } = drawing;
+    if (source.kind === "gap" && !previewing) {
+      queueMicrotask(() =>
+        reportIconFamilyGap({ family: source.family, name: source.name }),
+      );
+    }
     const markup = symbolMarkup(drawing.id, drawing.source);
     if (markup === undefined) {
       // The resolver said this sprite holds the symbol: a sprite without it

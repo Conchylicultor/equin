@@ -65,10 +65,12 @@ Saved (runtime) symbols — see the parent's "Runtime symbols":
     - `ui/icons.useWantedStyleKeys`
 - Server:
   - Contributes:
+    - `resource.declare` "icons.manifest"
     - `resource.declare` "icons.saved-icons-changed"
     - `resource.declare` "icons.saved-sprites"
     - `resource.declare` "icons.sprites"
   - Resources:
+    - `icons.manifest` (push, fixed)
     - `icons.saved-icons-changed` (push, notified)
     - `icons.saved-sprites` (push)
     - `icons.sprites` (push, fixed)
@@ -88,6 +90,7 @@ Saved (runtime) symbols — see the parent's "Runtime symbols":
     - `IconSprites`
     - `SavedIconSprites`
   - Exports (values):
+    - `iconManifest`
     - `IconSpritesSchema`
     - `residentSprites`
     - `runtimeSymbolsEndpoint`

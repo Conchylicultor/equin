@@ -1,6 +1,7 @@
 export {
   IconSpritesSchema,
   SavedIconSpritesSchema,
+  iconManifest,
   residentSprites,
   runtimeSymbolsEndpoint,
   savedIconSprites,

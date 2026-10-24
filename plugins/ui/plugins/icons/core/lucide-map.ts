@@ -409,6 +409,7 @@ export const LUCIDE_FAMILY: SpriteIconFamily = {
   kind: "sprite",
   id: "lucide",
   label: "Lucide",
+  coverage: "fallback",
   sprite: LUCIDE_SPRITE,
   idOf: (name) =>
     lucideNameOf(name) === undefined ? undefined : lucideId(name),

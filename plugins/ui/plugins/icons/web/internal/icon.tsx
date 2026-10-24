@@ -1,18 +1,29 @@
 import {
   useEffect,
+  useMemo,
   useSyncExternalStore,
   type ComponentPropsWithRef,
 } from "react";
-import type { IconRef, IconStyle } from "../../core";
-import { useIconScope } from "./icon-scope";
+import {
+  familyGlyphBody,
+  type IconRef,
+  type IconStyle,
+  type InlineIconFamily,
+} from "../../core";
+import { useIconFamilyPreview, useIconScope } from "./icon-scope";
 import { useScopeIconStyle } from "./style-store";
 import { subscribeSprites, wantSprite } from "./sprite-store";
 import {
   subscribeRuntimeSymbols,
   wantRuntimeSymbol,
 } from "./runtime-symbol-store";
-import { resolveIconDrawing, type DrawingWant } from "./icon-drawing";
-import { subscribeFamilies } from "./family-store";
+import {
+  resolveIconDrawing,
+  type DrawingSource,
+  type DrawingWant,
+} from "./icon-drawing";
+import { iconFamily, subscribeFamilies } from "./family-store";
+import { reportIconFamilyGap } from "./family-gap";
 
 export interface IconProps extends Omit<
   ComponentPropsWithRef<"svg">,
@@ -28,9 +39,20 @@ export interface IconProps extends Omit<
   title?: string;
 }
 
-/** The icon style of the theme scope this component renders in. */
+/**
+ * The icon style of the theme scope this component renders in — its family
+ * replaced by an enclosing `IconFamilyPreview`'s, when there is one.
+ */
 export function useIconStyle(): IconStyle {
-  return useScopeIconStyle(useIconScope());
+  const style = useScopeIconStyle(useIconScope());
+  const preview = useIconFamilyPreview();
+  return useMemo(
+    () =>
+      preview === undefined || preview === style.family
+        ? style
+        : { ...style, family: preview },
+    [style, preview],
+  );
 }
 
 /** Subscribe to every icon store: a sprite, a runtime-symbol chunk or the families landing. */
@@ -57,6 +79,35 @@ function wantsKey(wants: readonly DrawingWant[]): string {
     .join(",");
 }
 
+/** Each inline family's animated glyphs' drawn markup, built once per family object. */
+const inlineMarkup = new WeakMap<InlineIconFamily, Map<string, string>>();
+
+/**
+ * The markup `<Icon>` draws INLINE for a drawing, or `null` to `<use>` it: an
+ * animated family glyph (one with moving parts) must sit in the page's DOM for
+ * the motion CSS to reach its parts — a `<use>` shadow tree is out of reach.
+ * The same `familyGlyphBody` the sheet's `<symbol>` holds, so the two draw
+ * alike.
+ */
+function inlineGlyphMarkup(source: DrawingSource | undefined): string | null {
+  if (source?.kind !== "family") return null;
+  const family = iconFamily(source.family);
+  if (family?.kind !== "inline") return null;
+  const glyph = family.glyphs[source.glyph];
+  if (glyph === undefined || !glyph.animated) return null;
+  let byGlyph = inlineMarkup.get(family);
+  if (byGlyph === undefined) {
+    byGlyph = new Map();
+    inlineMarkup.set(family, byGlyph);
+  }
+  let markup = byGlyph.get(source.glyph);
+  if (markup === undefined) {
+    markup = familyGlyphBody(family, glyph);
+    byGlyph.set(source.glyph, markup);
+  }
+  return markup;
+}
+
 /**
  * Draws an `IconRef`: an `<svg>` at 1em (so `className="size-4"` and every
  * `[&_svg]:…` rule size it as before) that `<use>`s the sprite symbol for the
@@ -79,6 +130,13 @@ function wantsKey(wants: readonly DrawingWant[]): string {
  * A custom glyph (`family.icon("…")`) draws from its family in every scope,
  * and is an empty box at its final size until the family is contributed.
  *
+ * In a scope whose family is STRICT (`coverage: "strict"`), a symbol the family
+ * does not map draws the family's gap glyph — never Material or Lucide — and is
+ * reported once per (family, name) (`iconFamilyGapReportSink`).
+ *
+ * An ANIMATED family glyph (moving parts, `data-motion`) is drawn inline rather
+ * than through `<use>`, so a motion region's CSS can play it on hover.
+ *
  * A runtime (saved) symbol draws from the runtime symbol store the same way:
  * its style's symbol once held, the default style's while that one loads, and
  * — only for a name no chunk holds in either — an empty box at its final size
@@ -86,6 +144,8 @@ function wantsKey(wants: readonly DrawingWant[]): string {
  */
 export function Icon({ icon, active = false, title, ...rest }: IconProps) {
   const style = useIconStyle();
+  // A preview shows gaps on purpose: only an app drawing one is reported.
+  const previewing = useIconFamilyPreview() !== undefined;
   // Plain strings out of the store: an icon re-renders only when what it
   // draws, or what it waits for, changes.
   const id = useSyncExternalStore(
@@ -95,6 +155,17 @@ export function Icon({ icon, active = false, title, ...rest }: IconProps) {
   const wanted = useSyncExternalStore(subscribeIconStores, () =>
     wantsKey(resolveIconDrawing(icon, style, active).wants),
   );
+  const inline = useSyncExternalStore(subscribeIconStores, () =>
+    inlineGlyphMarkup(resolveIconDrawing(icon, style, active).drawing?.source),
+  );
+  const gapFamily = useSyncExternalStore(subscribeIconStores, () => {
+    const source = resolveIconDrawing(icon, style, active).drawing?.source;
+    return source?.kind === "gap" ? source.family : null;
+  });
+  useEffect(() => {
+    if (gapFamily === null || icon.kind !== "symbol" || previewing) return;
+    reportIconFamilyGap({ family: gapFamily, name: icon.name });
+  }, [gapFamily, icon, previewing]);
   useEffect(() => {
     if (wanted === "") return;
     for (const w of resolveIconDrawing(icon, style, active).wants) askFor(w);
@@ -116,7 +187,15 @@ export function Icon({ icon, active = false, title, ...rest }: IconProps) {
       {...rest}
     >
       {title !== undefined ? <title>{title}</title> : null}
-      {id !== null ? <use href={`#${id}`} /> : null}
+      {inline !== null ? (
+        <g
+          // A family glyph body: source-code data, checked at definition to
+          // hold shape elements and valid motion attributes only.
+          dangerouslySetInnerHTML={{ __html: inline }}
+        />
+      ) : id !== null ? (
+        <use href={`#${id}`} />
+      ) : null}
     </svg>
   );
 }

@@ -1,0 +1,19 @@
+// @hash 6ec84829688d
+// The icon sets beside the matrix: app sets (an app drawing in its own family)
+// first, then the libraries, each a column the row's click shows or hides.
+{
+  "views": [
+    {
+      "id": "sets",
+      "name": "Sets",
+      "icon": "category",
+      "view": {
+        "type": "list",
+        "groupBy": { "fieldId": "group", "groupingId": "value" }
+      }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

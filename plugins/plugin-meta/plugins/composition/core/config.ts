@@ -522,6 +522,7 @@ export const compositionsConfig = defineConfig({
           "reports.caret-flight",
           "reports.collab-hydration",
           "reports.endpoint-errors",
+          "reports.icon-family-gap",
           "reports.live-state-stale-drop",
           "reports.main-thread-stall",
           "reports.mutation-errors",

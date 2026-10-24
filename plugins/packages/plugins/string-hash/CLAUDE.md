@@ -35,6 +35,7 @@ None of those defends against a forged collision; they tell contents apart.
     - `map`
     - `packages/resource-protocol`
     - `plugin-meta/token-usage`
+    - `reports/icon-family-gap`
 - Core:
   - Exports (values):
     - `hash53`

@@ -97,3 +97,22 @@ export const runtimeSymbolsEndpoint = defineEndpoint({
   response: blob("image/svg+xml"),
   needsMachine: SPRITES,
 });
+
+const IconManifestSchema = z.object({
+  /**
+   * Every Material Symbols name some code draws — the `symbol("…")` literals
+   * the build scanned, sorted — so each is a `SymbolName` tsc checked at its
+   * call site, and one the sprites carry.
+   */
+  symbols: z.array(z.string()),
+});
+
+/**
+ * The build's icon manifest as data, for a surface that lists the icons the app
+ * draws (Debug → Icons). Not preloaded: only that surface reads it. Fixed for
+ * the process — the manifest is compiled into the server.
+ */
+export const iconManifest = liveValue("icons.manifest", {
+  schema: IconManifestSchema,
+  needsMachine: SPRITES,
+});

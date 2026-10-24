@@ -1,4 +1,4 @@
-// @hash 74fb72dd5a15
+// @hash e8905fd741bc
 {
   "manifests": [
     {
@@ -499,6 +499,7 @@
         "reports.caret-flight.**",
         "reports.collab-hydration.**",
         "reports.endpoint-errors.**",
+        "reports.icon-family-gap.**",
         "reports.live-state-stale-drop.**",
         "reports.main-thread-stall.**",
         "reports.mutation-errors.**",

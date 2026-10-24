@@ -237,6 +237,7 @@ describe("<Icon> with an app-drawn family", () => {
   const app = defineIconFamily({
     id: "test-app",
     label: "Test app",
+    coverage: "fallback",
     fallback: "lucide",
     stroke: 1.7,
     glyphs: {
@@ -285,6 +286,7 @@ describe("<Icon> with an app-drawn family", () => {
       defineIconFamily({
         id: "bad",
         label: "Bad",
+        coverage: "fallback",
         stroke: 1,
         glyphs: { x: { body: "<script>alert(1)</script>" } },
         symbols: {},

@@ -2827,7 +2827,7 @@ it):
 | **list** | 100 entries | Composes with manual-order drag via `keepMounted` + `raisedKey`. |
 | **gallery** | 60 cards | Lane-aware: each windowed row is one measured row of `columns` cards. |
 | **icons** | 120 tiles | Lane-aware like gallery; the lane count is the probe grid's resolved track count. |
-| **table** | 100 rows, **ungrouped only** | Grouped mode is never windowed — it targets bounded, sectioned lists — and uses grid-flow spacers rather than absolute positioning, so the subgrid's column tracks stay aligned. Nested, it windows the *visible* (expanded) lines at the same 100-row threshold, keeping the drag source and the selected row mounted, and uses `scrollToIndex` for selection reveal. |
+| **table** | 100 rows (grouped: per section) | Grouped, each section past the threshold windows its own rows while every header stays mounted; grid-flow spacers rather than absolute positioning, so the subgrid's column tracks stay aligned. Nested, it windows the *visible* (expanded) lines at the same 100-row threshold, keeping the drag source and the selected row mounted, and uses `scrollToIndex` for selection reveal. |
 
 Background: `research/2026-06-18-data-view-row-virtualization.md`.
 
@@ -2865,8 +2865,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSlots.Control` ← `primitives.data-view`
     - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
     - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-  - Contributes: 81 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.WebRegister` ×73
+  - Contributes: 83 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×75
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
     - `IdKinds.Kind` ×2
@@ -3104,8 +3104,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `useRowFilter`
     - `useSortController`
 - Server:
-  - Contributes: 75 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.Register` ×73
+  - Contributes: 77 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.Register` ×75
     - `ids.kind` ×2
   - Uses:
     - `config_v2.getConfig`
@@ -3259,10 +3259,10 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `ui/tokens/type-scale` ×10
     - `ui/tokens/shadow` ×3
     - `ui/tokens/shape` ×3
-  - Imported by: 105 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 106 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×31
     - `apps` ×24
-    - `debug` ×13
+    - `debug` ×14
     - `primitives` ×10
     - `conversations` ×8
     - `tasks` ×4

@@ -248,8 +248,9 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
     density: props.density,
   };
 
-  // Ungrouped renders as one flat body (the only body DataTable windows);
-  // grouped interleaves a header row per section and never windows.
+  // Ungrouped renders as one flat body; grouped interleaves a header row per
+  // section. Either windows its rows past DATA_TABLE_VIRTUALIZE_THRESHOLD —
+  // grouped, per section.
   const ungrouped = sections.length === 1 && sections[0]!.key === null;
 
   const renderTable = (activeId: string | null): ReactNode =>
@@ -327,9 +328,11 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
     // re-measures droppables every frame so a freshly mounted row (autoscrolled
     // into view) is a valid drop target. `filter` is undefined here, so the
     // table's row count is exactly the section's entry count.
-    const windowed =
-      ungrouped &&
-      sections[0]!.entries.length > DATA_TABLE_VIRTUALIZE_THRESHOLD;
+    const windowed = sections.some(
+      (section) =>
+        !(props.collapsedSections?.has(section.key!) ?? false) &&
+        section.entries.length > DATA_TABLE_VIRTUALIZE_THRESHOLD,
+    );
     return (
       <RankReorderProvider
         items={manualOrderItems(sections, manualOrder)}

@@ -2,6 +2,8 @@ import { useLayoutEffect } from "react";
 import { familyGlyphMarkup } from "../../core";
 import { Icons } from "../slots";
 import { provideIconFamilies, useIconFamilies } from "./family-store";
+// The motion keyframes and region rules, shipped wherever icons are.
+import "./icon-motion.css";
 
 /**
  * Publishes every `Icons.Family` contribution to the family store and renders

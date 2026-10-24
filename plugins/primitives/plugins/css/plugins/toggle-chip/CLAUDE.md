@@ -34,11 +34,11 @@ anonymous index signature. See
     - `ui/tokens/color-palette` ×12
     - `ui/tokens/density` ×7
     - `ui/tokens/type-scale` ×6
-  - Imported by: 49 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 50 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×19
     - `primitives` ×7
     - `stats` ×5
-    - `debug` ×3
+    - `debug` ×4
     - `fields` ×3
     - `config_v2` ×2
     - `page` ×2

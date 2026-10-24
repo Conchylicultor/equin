@@ -51,8 +51,8 @@ host first.
 - Description: Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
 - Web:
   - Slots: `Reports.KindView`
-  - Slot contributors: 29 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Reports.KindView` ×29
+  - Slot contributors: 30 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Reports.KindView` ×30
   - Contributes:
     - `IdKinds.Kind` "report"
     - `ConfigV2.WebRegister` "reports"
@@ -141,8 +141,8 @@ host first.
     - `SERVER_REPORT_SOURCES`
     - `submitReport`
 - Cross-plugin:
-  - Imported by: 53 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `reports` ×24
+  - Imported by: 54 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `reports` ×25
     - `debug` ×13
     - `conversations` ×3
     - `database` ×3
@@ -164,6 +164,7 @@ host first.
   - **`crash`** — Crash report kind: browser crash collector and the Debug → Reports summary view. Crash report kind: validates crash payloads, fingerprints by error + stack, and renders per-crash tasks.
   - **`endpoint-errors`** — Files crash tasks for bug-shaped handled endpoint errors (validation 400s and 5xx).
   - **`engine`** [exempt] — Records server/frontend crashes as deduped reports (recordReport: per-fingerprint velocity, per-kind fan-out ceiling, duress shedding, bell notifications), files investigation tasks on demand…
+  - **`icon-family-gap`** — Icon-family-gap collector: drains the icons plugin's iconFamilyGapReportSink into a deduped report whenever a scope whose icon family is strict draws a symbol the family does not map (it shows the…
   - **`launch-fix`** — Adds a Fix button to the plugin crash banner that launches an agent on the auto-created crash task with optional freeform context.
   - **`live-state-stale-drop`** — Live-state stale-drop collector: drains the live-state primitive's httpStaleDropReportSink into a deduped report when a resource wedges on a stale HTTP body (3 consecutive drops, never applied — the…
   - **`main-thread-stall`** — Main-thread stall detector: a Core.Root controller that attaches each tab to one out-of-thread SharedWorker watchdog (1 Hz ping, Web Lock per tab, IndexedDB record of an open stall) and feeds it the…

@@ -8,7 +8,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`apps`** — Container for the installed apps (agent-manager, pages, settings, …). The switcher infrastructure lives in apps-core.
   - Plugins:
-    - **`agent-manager`** [4 sub-plugins] — Agent manager app shell and layout.
+    - **`agent-manager`** [5 sub-plugins] — Agent manager app shell and layout.
     - **`browser`** [exempt] [9 sub-plugins] — Minimal iframe-based web browser app.
     - **`chord`** [exempt] [8 sub-plugins] — Chord — a chord ear trainer that plays loops of real songs whose chords you have turned on, asks you to name each chord, and keeps track of how well you know each one.
     - **`debug`** [1 sub-plugin] — Debug app.
@@ -99,7 +99,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`sql-projection`** [exempt] — Mapped raw-SQL projections: `parsed` / `nullable` turn a schema or a column into the decoder drizzle's `.mapWith()` derives a projection's type from, so a `sql` expression selected as a value can no…
     - **`sql-rows`** [exempt] — Parsed raw-SQL row reads: queryRows / executeRows parse every row against a ZodParser and throw a SqlRowError naming the column, the value and its Postgres type OID — closing the pool.query<T>()…
 
-- **`debug`** [exempt] [61 sub-plugins] — Debug tools umbrella plugin.
+- **`debug`** [exempt] [62 sub-plugins] — Debug tools umbrella plugin.
 
 - **`fields`** [test helpers] [100 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
 
@@ -259,7 +259,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`node-types`** [4 sub-plugins] — Reorder node-type registry: owns the reorder.node-type slot and the useReorderNodeTypes() read hook. Slot owner only — contributes no node types itself.
     - **`slot-middleware`** [load-bearing] — Applies every render slot's committed layout: reorder's list and item middleware, contributed to slot-render as companions so they ship wherever slots render. Editing a layout is not here — it is…
 
-- **`reports`** [exempt] [25 sub-plugins] — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The…
+- **`reports`** [exempt] [26 sub-plugins] — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The…
 
 - **`review`** — Toolbar button that opens a side pane exposing agent modifications in a structured, extensible view.
   - Plugins:

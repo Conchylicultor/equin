@@ -85,6 +85,9 @@ export const CLIENT_REPORT_SOURCES = [
   "client-collab-hydration",
   "client-page-undo-conflict",
   "client-theme-resolution",
+  // A symbol drawn in the scope of a strict icon family that does not map it
+  // (reports/icon-family-gap): the scope shows the family's gap glyph.
+  "client-icon-family-gap",
   "boot-snapshot",
   // A Core.Boot task failed or ran past App's boot deadline (web-core's
   // boot-tasks): the page is showing its boot waiting / error screen.

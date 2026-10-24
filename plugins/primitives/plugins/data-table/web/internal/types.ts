@@ -52,7 +52,8 @@ export interface ColumnDef<TRow> {
  * `header` as a full-span row inside the single subgrid (so columns stay aligned
  * across groups), then the group's rows when not `collapsed`. The header node is
  * fully owned by the caller (chevron, label, count, toggle) — the table stays
- * agnostic. Grouped mode is non-virtualized (targets bounded, sectioned lists).
+ * agnostic. A group holding more than `DATA_TABLE_VIRTUALIZE_THRESHOLD` rows
+ * windows them on its own; its header and footer always stay mounted.
  */
 export interface DataTableGroup<TRow> {
   /** Stable key (React key for the header row). */

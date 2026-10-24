@@ -544,6 +544,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `demoWorktreePath`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shadow --shadow`
+        - **`icons`** — Contributes the agent icon family (agentIcons) to Icons.Family, so a scope whose iconFamily is agent — the Mist theme's — draws its glyphs.
+          - Web:
+            - Contributes: `Icons.Family` "Agent"
+            - Uses: `ui/icons.Icons`
+          - Core:
+            - Uses:
+              - `ui/icons.defineIconFamily`
+              - `ui/icons.IconMotion`
+            - Exports (types): `AgentGlyph`
+            - Exports (values): `agentIcons`
         - **`pages-nav`** — Pages entry point in the agent manager: a conversation-toolbar toggle that opens the Pages tree as a column beside the conversation.
           - Web:
             - Contributes: `Conversation.ActionBar` → `PagesTreeButton`
@@ -1616,8 +1626,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Slots:
               - `DebugApp.Sidebar`
               - `DebugApp.Toolbar`
-            - Slot contributors: 25 contributors — full list in [`plugins/apps/plugins/debug/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/debug/plugins/shell/REFERENCE.md)
-              - `DebugApp.Sidebar` ×25
+            - Slot contributors: 26 contributors — full list in [`plugins/apps/plugins/debug/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/debug/plugins/shell/REFERENCE.md)
+              - `DebugApp.Sidebar` ×26
             - Contributes: `Apps.App` "Debug" → `DebugLayout`
             - Uses:
               - `apps-core.Apps`
@@ -1631,8 +1641,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.symbol`
             - Exports (values): `debugApp`
           - Cross-plugin:
-            - Imported by: 25 plugins — full list in [`plugins/apps/plugins/debug/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/debug/plugins/shell/REFERENCE.md)
-              - `debug` ×19
+            - Imported by: 26 plugins — full list in [`plugins/apps/plugins/debug/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/debug/plugins/shell/REFERENCE.md)
+              - `debug` ×20
               - `backup`
               - `build`
               - `conversations/recover`
@@ -10517,13 +10527,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useHomeApp`
       - `usePathname`
   - Cross-plugin:
-    - Imported by: 55 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
+    - Imported by: 56 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
       - `apps` ×27
       - `apps-core` ×12
       - `ui` ×6
       - `config_v2` ×2
       - `hints` ×2
       - `menu-bar` ×2
+      - `debug/icons`
       - `plugin-meta/exhibits`
       - `reports/main-thread-stall`
       - `shell/global-action-bar`
@@ -20317,6 +20328,40 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Routes: `POST /api/debug/heap-snapshot`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/handle-capture-snapshot.ts`, `server/internal/heap-stats.ts` (debt)
+    - **`icons`** — Debug → Icons: every icon name the app draws (the build's icon manifest), plus every inline family's app-only glyphs (family.icon names no Material name maps), as each icon family draws it — Material plus every contributed family — side by side (Matrix) or as one tile grid per family (By set), each cell a real <Icon> under an IconFamilyPreview, badged when it falls back (L / M: the initial of the family drawing it) and dashed when a strict family has a gap. The left list holds every app set (an app whose theme draws in an app-drawn family: own/total over the manifest, +N own glyphs, how far from strict) and every library; a click shows or hides its column. Search, size, Fallbacks only; the body is an icon motion region.
+      - Web:
+        - Slots:
+          - `icons.actions`
+          - `sources`
+        - Slot contributors:
+          - `icons.actions` ← `primitives.pane`
+          - `sources` ← `debug.icons`
+        - Contributes:
+          - `Pane.Register` "debug-icons"
+          - `DebugApp.Sidebar` "Icons"
+          - `sources` "Matrix" → `MatrixSource`
+          - `sources` "By set" → `BySetSource`
+        - Uses: 29 symbols — full list in [`plugins/debug/plugins/icons/REFERENCE.md`](../plugins/debug/plugins/icons/REFERENCE.md)
+          - `primitives/data-view` ×6
+          - `ui/icons` ×6
+          - `primitives/pane` ×3
+          - `primitives/css/toggle-chip` ×2
+          - `apps-core.Apps`
+          - `apps/debug/shell.DebugApp`
+          - `network/live.useLive`
+          - `primitives/css/badge.Badge`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/placeholder.Placeholder`
+          - `primitives/css/rigid.Rigid`
+          - `primitives/css/selection-indicator.CheckboxIndicator`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.cn`
+          - `primitives/live-state.foldResource`
+      - Cross-plugin:
+        - Uses tokens:
+          - `ui/tokens/color-palette --border`
+          - `ui/tokens/shape --spacing`
     - **`latency-ledger`** — The browser half of the latency ledger: times every page load and in-app navigation until every list on screen has its data, and the delay of every update pushed into the tab, and posts them as per-minute histograms at most once a minute. The server half of the latency ledger: counts every delivery to a tab, every 10 s thread-lag sample and every stack sample by owning plugin into per-minute histograms, merges the browser's page-load / navigation / update-delay minutes into the same rows, and answers p50 / p95 for any window split into calm and under-pressure minutes, with the track's exit criteria as pass / fail.
       - Web:
         - Contributes: `Core.Root` → `LatencyCollector`
@@ -26294,8 +26339,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `Core.Root`
           - `Core.Boot`
-        - Slot contributors: 44 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `Core.Root` ×43
+        - Slot contributors: 45 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `Core.Root` ×44
           - `Core.Boot` ← `infra.boot-snapshot`
       - Core:
         - Uses:
@@ -31861,11 +31906,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
-        - Imported by: 282 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 283 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×76
           - `conversations` ×50
+          - `debug` ×28
           - `tasks` ×28
-          - `debug` ×27
           - `infra` ×16
           - `active-data` ×12
           - `page` ×12
@@ -32287,6 +32332,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `map`
           - `packages/resource-protocol`
           - `plugin-meta/token-usage`
+          - `reports/icon-family-gap`
       - Core:
         - Exports (values):
           - `hash53`
@@ -36608,11 +36654,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slot contributors:
           - `AppShell.Framing` ← `ui.sidebar-framing`
           - `AppShell.Brand` ← `apps-core.app-launcher`
-        - Uses: 30 symbols — full list in [`plugins/primitives/plugins/app-shell/REFERENCE.md`](../plugins/primitives/plugins/app-shell/REFERENCE.md)
+        - Uses: 31 symbols — full list in [`plugins/primitives/plugins/app-shell/REFERENCE.md`](../plugins/primitives/plugins/app-shell/REFERENCE.md)
           - `primitives/css/ui-kit` ×13
           - `primitives/pane` ×4
           - `primitives/collapsible` ×3
           - `primitives/slot-render` ×2
+          - `ui/icons` ×2
           - `primitives/bar.Bar`
           - `primitives/css/clip.Clip`
           - `primitives/css/pin.Pin`
@@ -36620,7 +36667,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/spacing.Stack`
           - `primitives/css/yield.yieldClass`
           - `primitives/scope/surface-id.useSurfaceTabId`
-          - `ui/icons.Icon`
         - Exports (types):
           - `AppShellBrandForm`
           - `AppShellSidebarComponent`
@@ -37086,11 +37132,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density` ×6
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 169 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 171 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×38
-              - `debug` ×35
+              - `debug` ×36
               - `conversations` ×24
-              - `reports` ×13
+              - `reports` ×14
               - `primitives` ×10
               - `tasks` ×10
               - `plugin-meta` ×8
@@ -37431,11 +37477,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 169 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+            - Imported by: 170 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
               - `apps` ×47
               - `primitives` ×29
               - `conversations` ×25
-              - `debug` ×17
+              - `debug` ×18
               - `page` ×10
               - `ui` ×9
               - `tasks` ×8
@@ -37513,10 +37559,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 88 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 89 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `apps` ×16
+              - `reports` ×15
               - `debug` ×14
-              - `reports` ×14
               - `conversations` ×9
               - `primitives` ×9
               - `page` ×6
@@ -37727,9 +37773,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-size-body`
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-body`
-            - Imported by: 88 plugins — full list in [`plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md)
+            - Imported by: 89 plugins — full list in [`plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md)
               - `apps` ×29
-              - `debug` ×19
+              - `debug` ×20
               - `primitives` ×13
               - `page` ×6
               - `conversations` ×5
@@ -37796,11 +37842,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Imported by: 128 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+            - Imported by: 129 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
               - `apps` ×29
               - `conversations` ×23
               - `primitives` ×16
-              - `debug` ×12
+              - `debug` ×13
               - `tasks` ×8
               - `page` ×7
               - `ui` ×6
@@ -37920,6 +37966,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `active-data/go`
               - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
+              - `debug/icons`
               - `page/read-only-view`
               - `primitives/css/control-panel`
               - `tasks/sidequest-autopilot`
@@ -37989,11 +38036,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 414 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 415 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×106
               - `conversations` ×65
               - `primitives` ×54
-              - `debug` ×37
+              - `debug` ×38
               - `ui` ×31
               - `page` ×24
               - `plugin-meta` ×15
@@ -38221,11 +38268,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×36
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 387 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 388 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×105
               - `conversations` ×73
               - `primitives` ×43
-              - `debug` ×36
+              - `debug` ×37
               - `page` ×23
               - `ui` ×15
               - `plugin-meta` ×14
@@ -38332,11 +38379,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×12
               - `ui/tokens/density` ×7
               - `ui/tokens/type-scale` ×6
-            - Imported by: 49 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
+            - Imported by: 50 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
               - `apps` ×19
               - `primitives` ×7
               - `stats` ×5
-              - `debug` ×3
+              - `debug` ×4
               - `fields` ×3
               - `config_v2` ×2
               - `page` ×2
@@ -38514,12 +38561,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family` ×4
               - `ui/tokens/material` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 433 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 434 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×109
               - `apps` ×95
               - `conversations` ×55
               - `page` ×25
-              - `debug` ×23
+              - `debug` ×24
               - `ui` ×21
               - `tasks` ×17
               - `fields` ×11
@@ -38759,8 +38806,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ← `primitives.data-view`
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-        - Contributes: 81 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.WebRegister` ×73
+        - Contributes: 83 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.WebRegister` ×75
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
@@ -38998,8 +39045,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useRowFilter`
           - `useSortController`
       - Server:
-        - Contributes: 75 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.Register` ×73
+        - Contributes: 77 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.Register` ×75
           - `ids.kind` ×2
         - Uses:
           - `config_v2.getConfig`
@@ -39153,10 +39200,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×10
           - `ui/tokens/shadow` ×3
           - `ui/tokens/shape` ×3
-        - Imported by: 105 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Imported by: 106 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `fields` ×31
           - `apps` ×24
-          - `debug` ×13
+          - `debug` ×14
           - `primitives` ×10
           - `conversations` ×8
           - `tasks` ×4
@@ -41044,10 +41091,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 268 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
+        - Imported by: 269 plugins — full list in [`plugins/primitives/plugins/live-state/REFERENCE.md`](../plugins/primitives/plugins/live-state/REFERENCE.md)
           - `apps` ×72
           - `conversations` ×49
-          - `debug` ×24
+          - `debug` ×25
           - `ui` ×24
           - `tasks` ×23
           - `page` ×14
@@ -42318,9 +42365,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
         - Slots: `Pane.Register`
-        - Slot contributors: 89 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `Pane.Register` ×89
-        - Contributes: 116 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Slot contributors: 90 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `Pane.Register` ×90
+        - Contributes: 117 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `SlotRender.ItemMiddleware`
           - `WebsiteHeader` "title" → `PaneTitleItem`
           - `accountPane.Actions` "title" → `PaneTitleItem`
@@ -42382,6 +42429,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `graphCanvasPane.Actions` "title" → `PaneTitleItem`
           - `healthMonitorPane.Actions` "title" → `PaneTitleItem`
           - `heapSnapshotPane.Actions` "title" → `PaneTitleItem`
+          - `icons.actions` "title" → `PaneTitleItem`
           - `liveStateEmitPane.Actions` "title" → `PaneTitleItem`
           - `liveStateHealthPane.Actions` "title" → `PaneTitleItem`
           - `logChannelPane.Actions` "title" → `PaneTitleItem`
@@ -42565,10 +42613,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-md`
           - `ui/tokens/shape --spacing`
-        - Imported by: 178 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Imported by: 179 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `apps` ×64
           - `conversations` ×30
-          - `debug` ×26
+          - `debug` ×27
           - `active-data` ×10
           - `tasks` ×9
           - `apps-core` ×6
@@ -44579,8 +44627,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Web:
     - Slots: `ReorderSlots.AreaEditor`
     - Slot contributors: `ReorderSlots.AreaEditor` ← `reorder.edit-mode`
-    - Contributes: 246 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×246
+    - Contributes: 248 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×248
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfig`
@@ -44615,8 +44663,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReorderSlots`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 245 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×245
+    - Contributes: 247 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×247
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
@@ -44873,8 +44921,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
   - Web:
     - Slots: `Reports.KindView`
-    - Slot contributors: 29 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `Reports.KindView` ×29
+    - Slot contributors: 30 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `Reports.KindView` ×30
     - Contributes:
       - `IdKinds.Kind` "report"
       - `ConfigV2.WebRegister` "reports"
@@ -44963,8 +45011,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SERVER_REPORT_SOURCES`
       - `submitReport`
   - Cross-plugin:
-    - Imported by: 53 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `reports` ×24
+    - Imported by: 54 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `reports` ×25
       - `debug` ×13
       - `conversations` ×3
       - `database` ×3
@@ -45155,6 +45203,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `sink-safety/no-adhoc-file-sink` — `server/internal/buffer.ts` (sanctioned)
           - `boundaries/no-platform-api` — `server/internal/buffer.ts` (debt)
+    - **`icon-family-gap`** — Icon-family-gap collector: drains the icons plugin's iconFamilyGapReportSink into a deduped report whenever a scope whose icon family is strict draws a symbol the family does not map (it shows the family's gap glyph), plus the Debug → Reports summary view. Icon-family-gap report kind: validates the payload <Icon> files when a scope whose icon family is strict draws a symbol the family does not map (the scope shows the family's gap glyph), fingerprints by (family, name), and renders a task asking for the missing glyph.
+      - Web:
+        - Contributes:
+          - `Core.Root` → `IconFamilyGapCollector`
+          - `Reports.KindView` → `IconFamilyGapKindView`
+        - Uses:
+          - `primitives/css/badge.Badge`
+          - `primitives/css/inline.Inline`
+          - `reports.report`
+          - `reports.Reports`
+          - `ui/icons.iconFamilyGapReportSink`
+      - Server:
+        - Contributes: `report-kind` "icon-family-gap"
+        - Uses: `reports.ReportKind`
+      - Core:
+        - Uses: `packages/string-hash.sha256Hex`
+        - Exports (types): `IconFamilyGapPayload`
+        - Exports (values):
+          - `iconFamilyGapFingerprint`
+          - `IconFamilyGapPayloadSchema`
     - **`launch-fix`** — Adds a Fix button to the plugin crash banner that launches an agent on the auto-created crash task with optional freeform context.
       - Web:
         - Contributes: `ErrorBoundary.Action` → `LaunchFixButton`
@@ -49219,7 +49287,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/breadcrumb-separator.BreadcrumbSeparator`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --muted-foreground`
-    - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Icon families beyond Material are contributed to Icons.Family (Lucide is this plugin's own; an app draws its own with defineIconFamily), published to <Icon> by IconFamilyHost. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
+    - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Icon families beyond Material are contributed to Icons.Family (Lucide is this plugin's own; an app draws its own with defineIconFamily), published to <Icon> by IconFamilyHost. A family states its coverage: fallback (an unmapped symbol draws the next family of its chain, Material last) or strict (its gap glyph, reported through iconFamilyGapReportSink); resolveIconSource answers which, by the same chain. Animated family glyphs (data-motion parts, a closed ICON_MOTIONS vocabulary) are drawn inline and play once on hover inside an IconMotionRegion. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
       - Web:
         - Slots:
           - `Icons.Root`
@@ -49228,6 +49296,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Icons.Root` ← `ui.icons`
           - `Icons.Root` ← `ui.icons.sprites`
           - `Icons.Root` ← `ui.tokens.icons`
+          - `Icons.Family` ← `apps.agent-manager.icons`
           - `Icons.Family` ← `apps.prototypes.icons`
           - `Icons.Family` ← `apps.sonata.primitives.icons`
           - `Icons.Family` ← `ui.icons`
@@ -49237,37 +49306,44 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Icons.Family` "Lucide"
         - Exports (types):
           - `IconFamilyContribution`
+          - `IconFamilyGap`
           - `IconMarkup`
           - `IconMarkupReader`
           - `IconProps`
+          - `IconSource`
           - `RuntimeSymbolEntry`
         - Exports (values):
           - `hasRuntimeSymbol`
           - `hasSprite`
           - `Icon`
+          - `iconFamilyGapReportSink`
+          - `IconFamilyPreview`
+          - `IconMotionRegion`
           - `Icons`
           - `IconScopeProvider`
           - `IconSpriteSheet`
           - `installRuntimeSymbolLoader`
           - `provideRuntimeSymbols`
           - `provideSprite`
+          - `resolveIconSource`
           - `useIconFamilies`
           - `useIconMarkup`
           - `useIconStyle`
           - `usePublishIconStyle`
+          - `useScopeIconStyles`
           - `useWantedSprites`
           - `useWantedStyleKeys`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 335 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
-          - `apps` ×86
+        - Imported by: 338 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+          - `apps` ×87
           - `conversations` ×59
           - `primitives` ×41
           - `page` ×40
           - `fields` ×35
-          - `debug` ×14
+          - `debug` ×15
           - `tasks` ×8
           - `ui` ×8
           - `active-data` ×5
@@ -49280,6 +49356,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell` ×3
           - `backup` ×2
           - `config_v2` ×2
+          - `reports` ×2
           - `auth`
           - `framework/tooling/codegen`
           - `fullscreen`
@@ -49288,7 +49365,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `layouts/miller`
           - `map`
           - `menu-bar`
-          - `reports/launch-fix`
           - `screenshot`
           - `tag-tree/picker`
       - Exemptions:
@@ -49312,9 +49388,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BrandRef`
           - `CustomRef`
           - `IconFamily`
+          - `IconFamilyCoverage`
           - `IconFamilyId`
           - `IconFill`
           - `IconGlyph`
+          - `IconGlyphSource`
+          - `IconMotion`
           - `IconRef`
           - `IconShape`
           - `IconStyle`
@@ -49339,13 +49418,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DEFAULT_ICON_STYLE`
           - `DEFAULT_STYLE_KEYS`
           - `defineIconFamily`
+          - `familyGapId`
+          - `familyGlyphBody`
           - `familyGlyphId`
           - `familyGlyphMarkup`
+          - `familyGlyphOf`
           - `ICON_FILLS`
+          - `ICON_MOTIONS`
           - `ICON_SHAPES`
           - `ICON_WEIGHTS`
           - `iconifyName`
           - `isIconFamilyId`
+          - `isIconMotion`
           - `isIconRefModule`
           - `isSpriteKey`
           - `isStyleKey`
@@ -49477,10 +49561,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.useWantedStyleKeys`
           - Server:
             - Contributes:
+              - `resource.declare` "icons.manifest"
               - `resource.declare` "icons.saved-icons-changed"
               - `resource.declare` "icons.saved-sprites"
               - `resource.declare` "icons.sprites"
             - Resources:
+              - `icons.manifest` (push, fixed)
               - `icons.saved-icons-changed` (push, notified)
               - `icons.saved-sprites` (push)
               - `icons.sprites` (push, fixed)
@@ -49500,6 +49586,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `IconSprites`
               - `SavedIconSprites`
             - Exports (values):
+              - `iconManifest`
               - `IconSpritesSchema`
               - `residentSprites`
               - `runtimeSymbolsEndpoint`
@@ -50370,11 +50457,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 514 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 515 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×111
               - `conversations` ×89
               - `primitives` ×77
-              - `debug` ×35
+              - `debug` ×36
               - `page` ×32
               - `plugin-meta` ×27
               - `ui` ×25
@@ -50789,13 +50876,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 429 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 430 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×94
               - `apps` ×84
               - `primitives` ×70
               - `page` ×35
               - `ui` ×32
-              - `debug` ×27
+              - `debug` ×28
               - `plugin-meta` ×11
               - `tasks` ×11
               - `fields` ×9

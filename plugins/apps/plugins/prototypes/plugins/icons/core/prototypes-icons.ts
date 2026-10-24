@@ -17,6 +17,7 @@ import { defineIconFamily } from "@plugins/ui/plugins/icons/core";
 export const prototypesIcons = defineIconFamily({
   id: "prototypes",
   label: "Prototypes",
+  coverage: "fallback",
   fallback: "lucide",
   stroke: 1.6,
   glyphs: {

@@ -265,6 +265,12 @@
       "parent": null
     },
     {
+      "paneId": "debug-icons",
+      "segment": "icons",
+      "appIndex": false,
+      "parent": null
+    },
+    {
       "paneId": "debug-live-state-emit",
       "segment": "live-state-emit",
       "appIndex": false,

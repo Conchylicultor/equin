@@ -140,11 +140,40 @@ hidden in the page as `<symbol id="fam-<family>-<glyph>">`.
   time); its paint (`stroke` at the family's `stroke` width, round caps and
   joins, or `fill`) is the sheet's one `<g>` around it, so callers need no CSS.
 - **A symbol in family F** draws from the first family of the chain F →
-  `F.fallback` → … that maps it (an inline family's `symbols`, a sprite
-  family's `idOf`); a sprite family whose sprite has not loaded is wanted and
-  the walk goes on. Material ends every chain, in the scope's Material style. A
-  family not (yet) contributed ends the chain early — its plugin may load in a
-  later tier, so its scopes draw Material meanwhile. A fallback loop throws.
+  `F.fallback` → … that maps it (`familyGlyphOf`: an inline family's
+  `symbols`, a sprite family's `idOf`); a sprite family whose sprite has not
+  loaded is wanted and the walk goes on. Material ends every chain, in the
+  scope's Material style. A family not (yet) contributed ends the chain early —
+  its plugin may load in a later tier, so its scopes draw Material meanwhile. A
+  fallback loop throws.
+- **Coverage is required** (`IconFamilyCoverage`, a discriminated union, so tsc
+  makes every family state it): `coverage: "fallback"` (with an optional
+  `fallback` family — the chain above) or `coverage: "strict"` (no `fallback`
+  can be spelled). In a scope whose chain ends at a STRICT family, a `symbol`
+  it does not map draws the family's **gap glyph** — a dashed rounded square,
+  one `<symbol id="famgap-<family>">` in its sheet — never Lucide or Material,
+  and `<Icon>` (and `useIconMarkup`) report it once per (family, name) per page
+  into `iconFamilyGapReportSink`; `reports/icon-family-gap` drains it into an
+  `icon-family-gap` report. Only `symbol` refs are subject: `brand`, `seti`,
+  `runtime-symbol` (user-picked icons) and `custom` keep their own drawing.
+  Sprite families are always `fallback` (the gap lives in an inline sheet).
+  Staged: a family ships `fallback`, and flips to `strict` once Debug → Icons
+  shows it falls back for nothing.
+- **`resolveIconSource(name, familyId)`** (web) — where a family's drawing of a
+  name comes from, by MAPPING (not by what has loaded): `{ kind: "own", glyph }`,
+  `{ kind: "fallback", family }` (`material` at the chain's end) or
+  `{ kind: "gap", family }`. Built on the same `familyChain` + `familyGlyphOf`
+  `<Icon>` walks, so a coverage page cannot disagree with an app. For a
+  `material` id it is `own`. Families, their `coverage` and an inline family's
+  `symbols` keys come from `useIconFamilies()`.
+- **`IconFamilyPreview`** (web) — `<IconFamilyPreview family="…">` draws the
+  icons below as that family draws them (its chain, every other axis the
+  enclosing scope's): for an INSPECTION surface showing one name in several
+  families side by side (Debug → Icons). A gap drawn under it is never
+  reported. An app picks its family through its theme, never this.
+- **`useScopeIconStyles(scopes)`** (web) — the icon style each scope token draws
+  with (its published style, else the root's, else the default), for a surface
+  listing many scopes at once (every app's family on Debug → Icons).
 - **App-only glyphs**: `family.icon("piano-roll")` mints a `CustomRef`
   (`{ kind: "custom", family, name }`, the name checked by tsc against the
   family's glyphs). It draws from its family in every scope — one style, like a
@@ -154,6 +183,43 @@ hidden in the page as `<symbol id="fam-<family>-<glyph>">`.
   picker lists Material plus every contributed family.
 
 Example: `apps/sonata/primitives/icons` (`sonataIcons`, fallback `lucide`).
+
+## Icon motion (animated glyphs)
+
+A family glyph may MOVE: a part of its body carries `data-motion="<kind>"`,
+optionally `data-motion-delay="<ms>"` (a stagger) and
+`data-motion-origin="<x> <y>"` (its transform origin in the 24-unit grid;
+otherwise the part's own box centre).
+
+- **A closed vocabulary** — `ICON_MOTIONS` (`core/icon-motion.ts`): nudge-up /
+  -down / -left / -right, turn, pop, draw, blink, blink-y, bob, type, scan,
+  tilt, scribble, shake, slide, splay-l / -r, link-a / -b, open-l / -r,
+  squeeze, grow, hop, hop-small, drift, flip, rewind, spin, bubble, launch, flicker,
+  light, twinkle, spark — the agent-icons prototype's
+  (`proto-1789643584-ldt6`), timings included. A new kind is an entry there
+  plus its keyframes and rule in `web/internal/icon-motion.css`.
+- **Checked at definition**: `defineIconFamily` throws on an unknown kind, a
+  malformed delay / origin, any other `data-motion-*` attribute, a delay or
+  origin without a kind, a `style` beside them, and a `draw` on a `<g>`. It
+  writes the DRAWN body: delay → inline `--icon-motion-delay`, origin → inline
+  `transform-box:view-box; transform-origin`, and `pathLength="1"` on a `draw`
+  part. `IconGlyph.animated` is derived (any `data-motion`) — never declared.
+- **Drawn inline**: `<Icon>` draws an animated glyph — a mapped `symbol`'s or
+  an app-only `CustomRef`'s alike — as a `<g>` holding
+  `familyGlyphBody` (the same paint + body the sheet's `<symbol>` holds), not
+  `<use>` — CSS cannot reach into a `<use>` shadow tree. Still glyphs keep
+  `<use>`.
+- **Played only in a motion region**: `icon-motion.css` (imported by
+  `IconFamilyHost`, so it ships wherever icons do) animates a part only under
+  `[data-icon-motion-region] :is(a, button, [role=button|option|treeitem|menuitem|tab]):hover`.
+  A CSS animation starts when its selector starts matching, so it plays once
+  per hover entry and settles at rest; no JS. `prefers-reduced-motion: reduce`
+  turns it off. A region is `{...IconMotionRegion}` (attribute props, web
+  barrel) on an element. Today exactly one caller: the app-shell sidebar
+  (`primitives/app-shell` `AppShellLayout`'s sidebar content). The toolbar,
+  menus, popovers (portalled out of the region's DOM) and transcript are never
+  in a region, so the same glyphs stay still there. A `type` part is invisible
+  at rest, in or out of a region.
 
 ## Lucide family
 
@@ -288,7 +354,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
 
 ## Plugin reference
 
-- Description: Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Icon families beyond Material are contributed to Icons.Family (Lucide is this plugin's own; an app draws its own with defineIconFamily), published to <Icon> by IconFamilyHost. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
+- Description: Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Icon families beyond Material are contributed to Icons.Family (Lucide is this plugin's own; an app draws its own with defineIconFamily), published to <Icon> by IconFamilyHost. A family states its coverage: fallback (an unmapped symbol draws the next family of its chain, Material last) or strict (its gap glyph, reported through iconFamilyGapReportSink); resolveIconSource answers which, by the same chain. Animated family glyphs (data-motion parts, a closed ICON_MOTIONS vocabulary) are drawn inline and play once on hover inside an IconMotionRegion. Reads glyphs out of the installed Iconify JSON: resolveIcon (a name in a set, aliases followed), resolveSymbol (the icon drawing a symbol in a style, after the nearest-style fallback) and symbolBody (one Material Symbols glyph in a style, for a consumer with no sprite sheet — the release CLI's app icon); SETI_SET / readSetiSet expose the vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour).
 - Web:
   - Slots:
     - `Icons.Root`
@@ -297,6 +363,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `Icons.Root` ← `ui.icons`
     - `Icons.Root` ← `ui.icons.sprites`
     - `Icons.Root` ← `ui.tokens.icons`
+    - `Icons.Family` ← `apps.agent-manager.icons`
     - `Icons.Family` ← `apps.prototypes.icons`
     - `Icons.Family` ← `apps.sonata.primitives.icons`
     - `Icons.Family` ← `ui.icons`
@@ -306,37 +373,44 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `Icons.Family` "Lucide"
   - Exports (types):
     - `IconFamilyContribution`
+    - `IconFamilyGap`
     - `IconMarkup`
     - `IconMarkupReader`
     - `IconProps`
+    - `IconSource`
     - `RuntimeSymbolEntry`
   - Exports (values):
     - `hasRuntimeSymbol`
     - `hasSprite`
     - `Icon`
+    - `iconFamilyGapReportSink`
+    - `IconFamilyPreview`
+    - `IconMotionRegion`
     - `Icons`
     - `IconScopeProvider`
     - `IconSpriteSheet`
     - `installRuntimeSymbolLoader`
     - `provideRuntimeSymbols`
     - `provideSprite`
+    - `resolveIconSource`
     - `useIconFamilies`
     - `useIconMarkup`
     - `useIconStyle`
     - `usePublishIconStyle`
+    - `useScopeIconStyles`
     - `useWantedSprites`
     - `useWantedStyleKeys`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/shadow --shadow`
     - `ui/tokens/shape --spacing`
-  - Imported by: 335 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×86
+  - Imported by: 338 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×87
     - `conversations` ×59
     - `primitives` ×41
     - `page` ×40
     - `fields` ×35
-    - `debug` ×14
+    - `debug` ×15
     - `tasks` ×8
     - `ui` ×8
     - `active-data` ×5
@@ -349,6 +423,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `shell` ×3
     - `backup` ×2
     - `config_v2` ×2
+    - `reports` ×2
     - `auth`
     - `framework/tooling/codegen`
     - `fullscreen`
@@ -357,7 +432,6 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `layouts/miller`
     - `map`
     - `menu-bar`
-    - `reports/launch-fix`
     - `screenshot`
     - `tag-tree/picker`
 - Exemptions:
@@ -381,9 +455,12 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `BrandRef`
     - `CustomRef`
     - `IconFamily`
+    - `IconFamilyCoverage`
     - `IconFamilyId`
     - `IconFill`
     - `IconGlyph`
+    - `IconGlyphSource`
+    - `IconMotion`
     - `IconRef`
     - `IconShape`
     - `IconStyle`
@@ -408,13 +485,18 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `DEFAULT_ICON_STYLE`
     - `DEFAULT_STYLE_KEYS`
     - `defineIconFamily`
+    - `familyGapId`
+    - `familyGlyphBody`
     - `familyGlyphId`
     - `familyGlyphMarkup`
+    - `familyGlyphOf`
     - `ICON_FILLS`
+    - `ICON_MOTIONS`
     - `ICON_SHAPES`
     - `ICON_WEIGHTS`
     - `iconifyName`
     - `isIconFamilyId`
+    - `isIconMotion`
     - `isIconRefModule`
     - `isSpriteKey`
     - `isStyleKey`

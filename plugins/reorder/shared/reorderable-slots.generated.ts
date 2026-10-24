@@ -182,6 +182,8 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "debug.config-orphans.config-orphans.actions", pluginId: "debug.config-orphans", configName: "config-orphans.actions" },
   { slotId: "debug.health-monitor.debug-health-monitor.actions", pluginId: "debug.health-monitor", configName: "debug-health-monitor.actions" },
   { slotId: "debug.heap-snapshot.debug-heap-snapshot.actions", pluginId: "debug.heap-snapshot", configName: "debug-heap-snapshot.actions" },
+  { slotId: "debug.icons.icons.actions", pluginId: "debug.icons", configName: "icons.actions" },
+  { slotId: "debug.icons.sources", pluginId: "debug.icons", configName: "sources" },
   { slotId: "debug.live-state-churn.emit.debug-live-state-emit.actions", pluginId: "debug.live-state-churn.emit", configName: "debug-live-state-emit.actions" },
   { slotId: "debug.live-state-health.live-state-health.actions", pluginId: "debug.live-state-health", configName: "live-state-health.actions" },
   { slotId: "debug.logs.logs-channel.actions", pluginId: "debug.logs", configName: "logs-channel.actions" },
