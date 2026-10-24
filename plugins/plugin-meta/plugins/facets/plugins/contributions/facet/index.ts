@@ -35,6 +35,8 @@ import {
   parsePropsBlock,
   parsePaneDeclarations,
   parseRouteDeclarations,
+  parseServerCompanionKinds,
+  parseServerCompanions,
   sourceRef,
 } from "./internal/static-parse";
 
@@ -192,6 +194,7 @@ export default createFacet<ContributionsFacetData>({
               // pluginId filled in by relate(); no component, no SlotDef display name.
               doc: c._doc ?? {},
               id: typeof c.id === "string" ? c.id : undefined,
+              ...(c.companion === true ? { companion: true as const } : {}),
             });
           }
           // else: no recognizable marker → skip (unchanged for malformed entries)
@@ -205,6 +208,11 @@ export default createFacet<ContributionsFacetData>({
       panes,
       routes,
       paneRefs,
+      // Server companions, statically like the web ones above (the closure
+      // engine runs barrel-free): the kinds this plugin's `server/` opens to
+      // companions, and its `server/index.ts`'s `companion: true` calls.
+      serverCompanionKinds: parseServerCompanionKinds(ctx.dir),
+      serverCompanions: parseServerCompanions(ctx.dir),
     };
   },
 

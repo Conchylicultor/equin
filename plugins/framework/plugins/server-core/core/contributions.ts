@@ -46,6 +46,18 @@ export interface AbsentOnHost {
   reason: string;
 }
 
+/**
+ * What a contribution to a kind opened with `companions: true` may add:
+ * `companion: true` makes it ship wherever the kind's declaring plugin ships
+ * (the closure engine's companion edge, owner → contributor). Only such a kind
+ * accepts it — on any other the field is an excess property, so a plugin
+ * cannot make itself a companion of an owner that never asked for one. The
+ * server twin of web-sdk's `CompanionFlag`.
+ */
+export interface ServerCompanionFlag {
+  companion?: true;
+}
+
 // `null` until `collectContributions` runs: "not collected" is its own state,
 // never an empty map.
 let byKind: Map<symbol, ServerContribution[]> | null = null;
@@ -74,7 +86,28 @@ function stripKind<P>({ _kind: _, ...rest }: ServerContribution): P {
  * without the contribution (a task list without a category's label, a list
  * without an exposed column). The reason is required: it is the claim the
  * guard takes on trust.
+ *
+ * `companions: true` opens the kind to COMPANIONS: a contribution passing
+ * `companion: true` ships wherever the declaring plugin ships — a hard owner →
+ * contributor edge in the closure engine (`plugin-meta/closure`), for what the
+ * owner needs at runtime and cannot import (the import would be a cycle):
+ * change-feed's `ChangelogRetention` — the changelog it writes grows forever
+ * unless something prunes it, and the pruner (live-state-snapshot) imports
+ * change-feed. Both flags are read STATICALLY — the kind's `companions: true`
+ * from this call (an inline literal, the token bound to a `const`), the
+ * contribution's `companion: true` from the inline `contributions: [ … ]`
+ * literal of the contributor's `server/index.ts` — so neither may be computed.
+ * Unkeyed only: a server kind dispatches on no key space, so there is no
+ * "required while used" form (the web's keyed companion slots).
  */
+export function defineServerContribution<P>(
+  debugName: string,
+  opts: {
+    docLabel?: (props: P) => string | undefined;
+    absentOnHost?: AbsentOnHost;
+    companions: true;
+  },
+): ServerContributionToken<P, P & ServerCompanionFlag>;
 export function defineServerContribution<P>(
   debugName: string,
   opts?: {
@@ -82,6 +115,16 @@ export function defineServerContribution<P>(
     absentOnHost?: AbsentOnHost;
   },
 ): ServerContributionToken<P>;
+export function defineServerContribution<P, I>(
+  debugName: string,
+  opts: {
+    docLabel?: (props: P) => string | undefined;
+    /** The payload a contributor's input declares. */
+    project: (input: I) => P;
+    absentOnHost?: AbsentOnHost;
+    companions: true;
+  },
+): ServerContributionToken<P, I & ServerCompanionFlag>;
 export function defineServerContribution<P, I>(
   debugName: string,
   opts: {
@@ -97,17 +140,24 @@ export function defineServerContribution<P, I>(
     docLabel?: (props: P) => string | undefined;
     project?: (input: I) => P;
     absentOnHost?: AbsentOnHost;
+    companions?: true;
   },
 ): ServerContributionToken<P, I> {
   const kind = Symbol(debugName);
   const project = opts?.project ?? ((input: I) => input as unknown as P);
 
   const token = ((input: I) => {
-    const props = project(input);
+    const { input: payload, companion } = splitCompanion(
+      debugName,
+      opts?.companions === true,
+      input,
+    );
+    const props = project(payload);
     return {
       _kind: kind,
       _doc: { label: opts?.docLabel?.(props) },
       ...props,
+      ...(companion ? { companion: true } : {}),
     };
   }) as unknown as ServerContributionToken<P, I>;
 
@@ -133,6 +183,32 @@ export function defineServerContribution<P, I>(
       .map((c) => stripKind<P>(c));
 
   return token;
+}
+
+/**
+ * Separate a contribution's `companion` flag from its payload. A kind not
+ * opened to companions refuses the field loudly — the type already rejects it,
+ * so reaching here means a cast hid it, and a companion its owner never asked
+ * for is no companion at all to the closure engine.
+ */
+function splitCompanion<I>(
+  debugName: string,
+  opened: boolean,
+  input: I,
+): { input: I; companion: boolean } {
+  if (typeof input !== "object" || input === null || !("companion" in input))
+    return { input, companion: false };
+  const { companion, ...rest } = input as I & { companion: unknown };
+  if (!opened)
+    throw new Error(
+      `[contributions] "${debugName}" is not opened to companions: a contribution to it cannot pass \`companion\`. ` +
+        "Its declaring plugin opts in with `defineServerContribution(name, { companions: true })`.",
+    );
+  if (companion !== true)
+    throw new Error(
+      `[contributions] "${debugName}": \`companion\` must be the literal \`true\` (or absent), got ${String(companion)}.`,
+    );
+  return { input: rest as I, companion: true };
 }
 
 /** Forget what was collected — back to the pre-boot state. Test support (`core/testing`). */

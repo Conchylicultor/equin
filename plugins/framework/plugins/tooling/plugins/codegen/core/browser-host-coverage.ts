@@ -65,6 +65,7 @@ import {
   maskSource,
   matchBracket,
   type EndpointExport,
+  type ServerContributionKindDecl,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import {
   buildDescriptorIndex,
@@ -76,7 +77,10 @@ import {
   type DescriptorInfo,
   type ImportedDescriptorResolver,
 } from "@plugins/framework/plugins/tooling/plugins/resource-vocabulary/core";
-import { RESOURCE_HTTP_ROUTE } from "@plugins/packages/plugins/resource-protocol/core";
+import {
+  CENTRAL_RESOURCE_HTTP_ROUTE,
+  RESOURCE_HTTP_ROUTE,
+} from "@plugins/packages/plugins/resource-protocol/core";
 
 /** One live read the scoped page references, as the generated `hostReads` lists it. */
 export interface HostRead {
@@ -96,8 +100,8 @@ export interface HostCoverageInputs {
   webPlugins: readonly PluginId[];
   /** The composition's whole bundle, by dot id — "not in the composition" vs "not portable". */
   bundle: ReadonlySet<string>;
-  /** The run's file set. */
-  repo: Pick<RepoFiles, "has" | "under" | "read">;
+  /** The run's file set, as the snapshot's scan reads it (`createSourceScans`, held on the ctx). */
+  sources: SourceScans;
   /**
    * What keeps a non-portable server barrel outside the graph: the
    * non-portable barrels it reaches and its own modules that need the
@@ -111,6 +115,9 @@ export interface HostCoverage {
   /** Every live read the scope references, sorted by key. */
   reads: HostRead[];
 }
+
+/** The file-set reads the scan makes. */
+type ScanRepo = Pick<RepoFiles, "has" | "under" | "read">;
 
 // ── Paths ─────────────────────────────────────────────────────────────────
 
@@ -141,19 +148,12 @@ const isSource = (path: string): boolean =>
   SOURCE_RE.test(path) && !isTestCodePath(path.split("/"));
 
 /** Every non-test source file directly owned by `plugin`'s `folder/` (no child plugin). */
-function folderFiles(
-  repo: HostCoverageInputs["repo"],
-  plugin: string,
-  folder: string,
-): string[] {
+function folderFiles(repo: ScanRepo, plugin: string, folder: string): string[] {
   return repo.under(`plugins/${plugin}/${folder}`).filter(isSource);
 }
 
 /** Every non-test source file of `plugin` itself, in any folder (no child plugin). */
-function pluginFiles(
-  repo: HostCoverageInputs["repo"],
-  plugin: string,
-): string[] {
+function pluginFiles(repo: ScanRepo, plugin: string): string[] {
   return repo
     .under(`plugins/${plugin}`)
     .filter((p) => isSource(p) && locate(p)?.plugin === plugin);
@@ -171,7 +171,7 @@ function normalize(path: string): string {
 
 /** The repo module a specifier names from `importer`, or null (an npm package, an asset). */
 function resolveModule(
-  repo: HostCoverageInputs["repo"],
+  repo: ScanRepo,
   importer: string,
   specifier: string,
 ): string | null {
@@ -198,11 +198,8 @@ function resolveModule(
 
 // ── Source reading ────────────────────────────────────────────────────────
 
-/** One file's source, its masked twin and what it declares — read once per run. */
-interface Module {
-  path: string;
-  src: string;
-  masked: string;
+/** What a module declares and imports, parsed off its masked source. */
+interface ModuleShape {
   /** Exported names re-exported from another module: name → (module, its name there). */
   reexports: Map<string, { from: string; name: string }>;
   /** `export * from …` targets. */
@@ -234,79 +231,247 @@ const DECL_RE =
   /^(?:export\s+)?(?:declare\s+)?(?:async\s+)?(?:const|let|var|function\*?|class|enum)\s+([A-Za-z_$][\w$]*)/gm;
 const LOCAL_EXPORT_LIST_RE = /\bexport\s+(type\s+)?\{([^}]*)\}/g;
 
-function createReader(repo: HostCoverageInputs["repo"]) {
-  const modules = new Map<string, Promise<Module | null>>();
-  const load = async (path: string): Promise<Module | null> => {
-    const src = await repo.read(path);
-    if (src === null) return null;
-    const masked = maskSource(src);
-    const locals = new Set<string>();
-    for (const m of masked.matchAll(DECL_RE)) locals.add(m[1]!);
-    const reexports = new Map<string, { from: string; name: string }>();
-    const stars: string[] = [];
-    const imports = new Map<
-      string,
-      { from: string; name: string; line: number }
-    >();
-    let pageBound = false;
-    for (const ref of findImports(src)) {
-      if (ref.sideEffect) continue;
-      const target = resolveModule(repo, path, ref.specifier);
-      const clause = ref.clause.trim();
-      if (ref.keyword === "export") {
-        if (target === null || ref.typeOnly) continue;
-        if (/^\*\s*$/.test(clause)) {
-          stars.push(target);
-          continue;
-        }
-        for (const item of namedItems(clause)) {
-          if (!item.typeOnly)
-            reexports.set(item.local, { from: target, name: item.imported });
-        }
+const DESCRIPTOR_FACTORIES = Object.keys(resourceDescriptorFactories);
+const REGISTER_MARKERS = Object.keys(resourceRegisterMarkers);
+
+/**
+ * One file of the snapshot: its source, read once, and every reading the scan
+ * makes of it — computed on first ask, each from the ONE `maskSource(src)` the
+ * file is masked into. A file the scan only text-filters is never masked.
+ */
+class Module {
+  #masked: string | undefined;
+  #urlMasked: string | undefined;
+  #shape: ModuleShape | undefined;
+  #descriptors: Map<string, DescriptorInfo[]> | undefined;
+  #endpoints: EndpointExport[] | undefined;
+
+  constructor(
+    private readonly repo: ScanRepo,
+    readonly path: string,
+    readonly src: string,
+  ) {}
+
+  /** `maskSource(src)`: comments, strings and regexes blanked, offsets kept. */
+  get masked(): string {
+    return (this.#masked ??= maskSource(this.src));
+  }
+
+  /** Comments masked, strings KEPT — the raw `/api/` URL scan's reading. */
+  get urlMasked(): string {
+    return (this.#urlMasked ??= maskSource(this.src, { strings: false }));
+  }
+
+  get reexports(): ModuleShape["reexports"] {
+    return this.#parsed().reexports;
+  }
+  get stars(): string[] {
+    return this.#parsed().stars;
+  }
+  get locals(): Set<string> {
+    return this.#parsed().locals;
+  }
+  get imports(): ModuleShape["imports"] {
+    return this.#parsed().imports;
+  }
+  get pageBound(): boolean {
+    return this.#parsed().pageBound;
+  }
+
+  /** The descriptors it declares (the resource vocabulary's index of this one file). */
+  get descriptors(): Map<string, DescriptorInfo[]> {
+    if (this.#descriptors === undefined) {
+      const plugin = locate(this.path)?.plugin ?? "";
+      // `buildDescriptorIndex`'s own fast path, before the mask is asked for.
+      this.#descriptors = DESCRIPTOR_FACTORIES.some((f) => this.src.includes(f))
+        ? buildDescriptorIndex(
+            [{ path: this.path, src: this.src, masked: this.masked }],
+            { ownerPlugin: isResourceVocabularyOwner(`plugins/${plugin}`) },
+          )
+        : new Map();
+    }
+    return this.#descriptors;
+  }
+
+  /** The endpoints it declares (`endpointExports`). */
+  get endpoints(): EndpointExport[] {
+    return (this.#endpoints ??= this.src.includes("defineEndpoint")
+      ? endpointExports(this.path, this.src, this.masked)
+      : []);
+  }
+
+  #parsed(): ModuleShape {
+    return (this.#shape ??= parseShape(this.repo, this));
+  }
+}
+
+function parseShape(repo: ScanRepo, m: Module): ModuleShape {
+  const { path, src, masked } = m;
+  const locals = new Set<string>();
+  for (const x of masked.matchAll(DECL_RE)) locals.add(x[1]!);
+  const reexports = new Map<string, { from: string; name: string }>();
+  const stars: string[] = [];
+  const imports = new Map<
+    string,
+    { from: string; name: string; line: number }
+  >();
+  let pageBound = false;
+  for (const ref of findImports(src, masked)) {
+    if (ref.sideEffect) continue;
+    const target = resolveModule(repo, path, ref.specifier);
+    const clause = ref.clause.trim();
+    if (ref.keyword === "export") {
+      if (target === null || ref.typeOnly) continue;
+      if (/^\*\s*$/.test(clause)) {
+        stars.push(target);
         continue;
       }
       for (const item of namedItems(clause)) {
-        if (ref.typeOnly || item.typeOnly) continue;
-        if (PAGE_BOUND_IMPORTS.has(item.imported)) pageBound = true;
-        if (target === null) continue;
-        imports.set(item.local, {
-          from: target,
-          name: item.imported,
-          line: lineAt(src, ref.index),
-        });
+        if (!item.typeOnly)
+          reexports.set(item.local, { from: target, name: item.imported });
       }
+      continue;
     }
-    // `export { a as b }` with no `from`: a local (or imported) name, exported.
-    for (const m of masked.matchAll(LOCAL_EXPORT_LIST_RE)) {
-      if (m[1] !== undefined) continue;
-      const after = masked.slice(m.index + m[0].length).trimStart();
-      if (after.startsWith("from")) continue;
-      for (const item of namedItems(`{${m[2]!}}`)) {
-        if (item.typeOnly || item.local === item.imported) continue;
-        const imported = imports.get(item.imported);
-        if (imported !== undefined) reexports.set(item.local, imported);
-        else locals.add(item.local);
-      }
+    for (const item of namedItems(clause)) {
+      if (ref.typeOnly || item.typeOnly) continue;
+      if (PAGE_BOUND_IMPORTS.has(item.imported)) pageBound = true;
+      if (target === null) continue;
+      imports.set(item.local, {
+        from: target,
+        name: item.imported,
+        line: lineAt(src, ref.index),
+      });
     }
-    return {
-      path,
-      src,
-      masked,
-      reexports,
-      stars,
-      locals,
-      imports,
-      pageBound,
-    };
-  };
-  return (path: string): Promise<Module | null> => {
-    let m = modules.get(path);
+  }
+  // `export { a as b }` with no `from`: a local (or imported) name, exported.
+  for (const x of masked.matchAll(LOCAL_EXPORT_LIST_RE)) {
+    if (x[1] !== undefined) continue;
+    const after = masked.slice(x.index + x[0].length).trimStart();
+    if (after.startsWith("from")) continue;
+    for (const item of namedItems(`{${x[2]!}}`)) {
+      if (item.typeOnly || item.local === item.imported) continue;
+      const imported = imports.get(item.imported);
+      if (imported !== undefined) reexports.set(item.local, imported);
+      else locals.add(item.local);
+    }
+  }
+  return { reexports, stars, locals, imports, pageBound };
+}
+
+/**
+ * The coverage scan's reading of one snapshot (a `RegistryGenContext`'s file
+ * set): every file read and parsed at most once, and the repo-wide facts every
+ * host's scan shares — the serving wrappers, each backend barrel's routes,
+ * each plugin's descriptor index — derived at most once. Held on the ctx
+ * (`RegistryGenContext.sourceScans`), so it has exactly the snapshot's
+ * lifetime: never a module-level cache that would outlive the files it read.
+ */
+export class SourceScans {
+  readonly #files = new Map<string, Promise<Module | null>>();
+  readonly #routes = new Map<string, Promise<string[]>>();
+  readonly #pluginIndexes = new Map<
+    string,
+    Promise<Map<string, DescriptorInfo[]>>
+  >();
+  #wrappers: Promise<Set<string>> | undefined;
+  #allRoutes: Promise<void> | undefined;
+
+  constructor(readonly repo: ScanRepo) {}
+
+  /** One file, read once (null when the file set has no such file). */
+  read(path: string): Promise<Module | null> {
+    let m = this.#files.get(path);
     if (m === undefined) {
-      m = load(path);
-      modules.set(path, m);
+      m = this.repo
+        .read(path)
+        .then((src) =>
+          src === null ? null : new Module(this.repo, path, src),
+        );
+      this.#files.set(path, m);
     }
     return m;
-  };
+  }
+
+  /** The file declaring `name` as `module` exports it, through re-exports. */
+  async resolveExport(
+    module: string,
+    name: string,
+    seen = new Set<string>(),
+  ): Promise<{ module: Module; name: string } | null> {
+    const key = `${module}#${name}`;
+    if (seen.has(key)) return null;
+    seen.add(key);
+    const m = await this.read(module);
+    if (m === null) return null;
+    const re = m.reexports.get(name);
+    if (re !== undefined) return this.resolveExport(re.from, re.name, seen);
+    if (m.locals.has(name)) return { module: m, name };
+    for (const star of m.stars) {
+      const hit = await this.resolveExport(star, name, seen);
+      if (hit !== null) return hit;
+    }
+    return null;
+  }
+
+  /** Every serving wrapper of the repo's backend code (see `serveWrappers`). */
+  wrappers(): Promise<Set<string>> {
+    return (this.#wrappers ??= serveWrappers(this));
+  }
+
+  /** `barrel`'s `httpRoutes` (see `httpRoutes`) — a rejection is every asker's same failure. */
+  routes(barrel: string): Promise<string[]> {
+    let r = this.#routes.get(barrel);
+    if (r === undefined) {
+      r = httpRoutes(this, barrel);
+      this.#routes.set(barrel, r);
+    }
+    return r;
+  }
+
+  /**
+   * Every backend barrel's routes read, member or not: a route held where the
+   * scan cannot read it is refused wherever it is (`httpRoutes` throws), not
+   * only once it joins a graph.
+   */
+  readAllRoutes(): Promise<void> {
+    return (this.#allRoutes ??= (async () => {
+      const barrels = this.repo.under("plugins").filter((path) => {
+        const where = locate(path);
+        return (
+          where !== null &&
+          path === `plugins/${where.plugin}/${where.folder}/index.ts` &&
+          (BACKEND_FOLDERS as readonly string[]).includes(where.folder)
+        );
+      });
+      // Every read at once (the file set bounds how many are open).
+      await Promise.all(barrels.map((path) => this.routes(path)));
+    })());
+  }
+
+  /** The descriptor index of every non-test file of `plugin` (`a/plugins/b`), merged in file order. */
+  pluginIndex(plugin: string): Promise<Map<string, DescriptorInfo[]>> {
+    let index = this.#pluginIndexes.get(plugin);
+    if (index === undefined) {
+      index = (async () => {
+        const merged = new Map<string, DescriptorInfo[]>();
+        const files = await Promise.all(
+          pluginFiles(this.repo, plugin).map((path) => this.read(path)),
+        );
+        for (const m of files) {
+          if (m === null) continue;
+          for (const [name, infos] of m.descriptors) merged.set(name, infos);
+        }
+        return merged;
+      })();
+      this.#pluginIndexes.set(plugin, index);
+    }
+    return index;
+  }
+}
+
+/** A fresh scan of `repo` — hold one per snapshot (`RegistryGenContext.sourceScans`). */
+export function createSourceScans(repo: ScanRepo): SourceScans {
+  return new SourceScans(repo);
 }
 
 /**
@@ -365,34 +530,15 @@ interface Reader {
 export async function resolveHostCoverage(
   inputs: HostCoverageInputs,
 ): Promise<HostCoverage> {
-  const { repo, label } = inputs;
-  const read = createReader(repo);
+  const { sources, label } = inputs;
+  const { repo } = sources;
+  const read = (path: string) => sources.read(path);
+  const resolveExport = (module: string, name: string) =>
+    sources.resolveExport(module, name);
   const members = new Set(inputs.members);
 
-  // Descriptor and endpoint declarations, per file, memoized.
-  const indexes = new Map<string, Map<string, DescriptorInfo[]>>();
-  const descriptorsOf = (m: Module): Map<string, DescriptorInfo[]> => {
-    let index = indexes.get(m.path);
-    if (index === undefined) {
-      const plugin = locate(m.path)?.plugin ?? "";
-      index = buildDescriptorIndex([{ path: m.path, src: m.src }], {
-        ownerPlugin: isResourceVocabularyOwner(`plugins/${plugin}`),
-      });
-      indexes.set(m.path, index);
-    }
-    return index;
-  };
-  const endpointsOf = new Map<string, EndpointExport[]>();
-  const endpointsIn = (m: Module): EndpointExport[] => {
-    let list = endpointsOf.get(m.path);
-    if (list === undefined) {
-      list = endpointExports(m.path, m.src);
-      endpointsOf.set(m.path, list);
-    }
-    return list;
-  };
   const declarationIn = (m: Module, name: string): Declaration | null => {
-    const infos = descriptorsOf(m).get(name);
+    const infos = m.descriptors.get(name);
     if (infos !== undefined && infos.length > 0) {
       const keys = infos.map((i) => i.key);
       return {
@@ -405,30 +551,9 @@ export async function resolveHostCoverage(
         origin: infos.some((i) => i.origin === "central") ? "central" : null,
       };
     }
-    const endpoint = endpointsIn(m).find((e) => e.name === name);
+    const endpoint = m.endpoints.find((e) => e.name === name);
     if (endpoint !== undefined) {
       return { kind: "endpoint", file: m.path, name, endpoint };
-    }
-    return null;
-  };
-
-  /** The file declaring `name` as `module` exports it, through re-exports. */
-  const resolveExport = async (
-    module: string,
-    name: string,
-    seen = new Set<string>(),
-  ): Promise<{ module: Module; name: string } | null> => {
-    const key = `${module}#${name}`;
-    if (seen.has(key)) return null;
-    seen.add(key);
-    const m = await read(module);
-    if (m === null) return null;
-    const re = m.reexports.get(name);
-    if (re !== undefined) return resolveExport(re.from, re.name, seen);
-    if (m.locals.has(name)) return { module: m, name };
-    for (const star of m.stars) {
-      const hit = await resolveExport(star, name, seen);
-      if (hit !== null) return hit;
     }
     return null;
   };
@@ -461,6 +586,9 @@ export async function resolveHostCoverage(
     }
   }
 
+  // The scoped plugins' own files, read at once; the helpers they lead to are
+  // read as they are found.
+  await Promise.all(readers.map((path) => read(path)));
   const mixed: Reader[] = [];
   for (let i = 0; i < readers.length; i++) {
     const m = await read(readers[i]!);
@@ -501,8 +629,7 @@ export async function resolveHostCoverage(
     if (!m.pageBound && m.src.includes("/api/")) {
       // Sanctioned token-in-string scan (as the routes facet's caller join):
       // the URL lives inside a string, so strings are kept; comments are not.
-      const kept = maskSource(m.src, { strings: false });
-      for (const hit of kept.matchAll(/["'`]\/api\/([A-Za-z0-9_-]+)/g)) {
+      for (const hit of m.urlMasked.matchAll(/["'`]\/api\/([A-Za-z0-9_-]+)/g)) {
         const list = rawApi.get(hit[1]!) ?? [];
         list.push({ file: m.path, line: lineAt(m.src, hit.index) });
         rawApi.set(hit[1]!, list);
@@ -511,29 +638,28 @@ export async function resolveHostCoverage(
   }
 
   // ── What the graph serves ──
-  const wrappers = await serveWrappers(repo, read, resolveExport);
+  const wrappers = await sources.wrappers();
   const servedKeys = new Set<string>();
   // Every host mounts its resource runtime's own HTTP read (server-core's host
   // routes), whatever its graph.
   const servedRoutes = new Set<string>([RESOURCE_HTTP_ROUTE]);
   for (const plugin of members) {
-    const files = folderFiles(repo, plugin, "server");
     for (const key of await registeredKeys(
-      repo,
-      read,
-      resolveExport,
+      sources,
       wrappers,
       plugin,
-      files,
+      folderFiles(repo, plugin, "server"),
     ))
       servedKeys.add(key);
-    for (const route of await httpRoutes(
-      read,
-      resolveExport,
+    for (const route of await sources.routes(
       `plugins/${plugin}/server/index.ts`,
     ))
       servedRoutes.add(route);
   }
+  // Every backend barrel's routes are read, member or not, though only a
+  // member's serve the host — once per snapshot (see `readAllRoutes`); an
+  // explanation naming who serves a prefix is then complete.
+  await sources.readAllRoutes();
 
   // ── The verdict ──
   const problems: string[] = mixed.map(
@@ -545,7 +671,7 @@ export async function resolveHostCoverage(
   const explain = async (
     what: { key: string } | { route: string } | { prefix: string },
   ): Promise<string> => {
-    servers ??= indexServers(repo, read, resolveExport, wrappers);
+    servers ??= indexServers(sources, wrappers);
     const index = await servers;
     const sites =
       "key" in what
@@ -593,19 +719,20 @@ export async function resolveHostCoverage(
     );
   }
 
-  const servedPrefixes = new Set([...servedRoutes].map(routePrefix));
+  // Besides what the graph serves, central's resource read
+  // (`CENTRAL_RESOURCE_HTTP_ROUTE`): the live-state client builds its URL for a
+  // central read, which the read arm above already requires `needsMachine` —
+  // so on a browser host it is never asked.
+  const servedPrefixes = new Set(
+    [...servedRoutes, CENTRAL_RESOURCE_HTTP_ROUTE].map(routePrefix),
+  );
   for (const [prefix, at] of [...rawApi].sort(([a], [b]) =>
     a.localeCompare(b),
   )) {
+    // Every route is read (`httpRoutes` throws on a key it cannot), so a
+    // prefix no member serves is unserved — whether another barrel serves it
+    // or none does.
     if (servedPrefixes.has(prefix)) continue;
-    // A prefix no backend barrel declares a route under is a dynamically
-    // registered one (the asset mirror's): nothing here can judge it. Its
-    // in-scope consumer gates on the transport (`servesUrls`) instead — a
-    // URL handed to a third-party fetcher is a sink no text scan can see.
-    servers ??= indexServers(repo, read, resolveExport, wrappers);
-    const index = await servers;
-    if (![...index.routes.keys()].some((r) => routePrefix(r) === prefix))
-      continue;
     const where = at
       .slice(0, 3)
       .map((r) => `${r.file}:${r.line}`)
@@ -654,12 +781,6 @@ function routePrefix(route: string): string | null {
   return /^\S+\s+\/api\/([A-Za-z0-9_-]+)/.exec(route)?.[1] ?? null;
 }
 
-type ReadModule = (path: string) => Promise<Module | null>;
-type ResolveExport = (
-  module: string,
-  name: string,
-) => Promise<{ module: Module; name: string } | null>;
-
 /**
  * The keys `plugin`'s `files` serve: every register call's descriptor, resolved
  * through the plugin's own declarations and, for an imported descriptor, the
@@ -668,62 +789,39 @@ type ResolveExport = (
  * handing its first parameter to a register call) counts as a register call.
  */
 async function registeredKeys(
-  repo: HostCoverageInputs["repo"],
-  read: ReadModule,
-  resolveExport: ResolveExport,
+  sources: SourceScans,
   wrappers: ReadonlySet<string>,
   plugin: string,
   files: readonly string[],
 ): Promise<string[]> {
-  const sources = async (paths: readonly string[]) =>
-    (await Promise.all(paths.map((p) => read(p)))).flatMap((m) =>
-      m === null ? [] : [{ path: m.path, src: m.src }],
-    );
-  const own = buildDescriptorIndex(await sources(pluginFiles(repo, plugin)), {
-    ownerPlugin: isResourceVocabularyOwner(`plugins/${plugin}`),
-  });
-  const others = new Map<string, Map<string, DescriptorInfo[]>>();
-  const otherIndex = async (specifier: string) => {
-    const dir = specifier.replace(/^@plugins\//, "").replace(/\/[^/]+$/, "");
-    let index = others.get(dir);
-    if (index === undefined) {
-      index = buildDescriptorIndex(await sources(pluginFiles(repo, dir)), {
-        ownerPlugin: isResourceVocabularyOwner(`plugins/${dir}`),
-      });
-      others.set(dir, index);
-    }
-    return index;
-  };
   const keys: string[] = [];
   for (const path of files) {
-    const m = await read(path);
+    const m = await sources.read(path);
     if (m === null) continue;
-    const markers = Object.keys(resourceRegisterMarkers).filter((k) =>
-      m.src.includes(k),
-    );
-    // The serving wrappers this file calls, by their local name.
-    for (const [local, imp] of m.imports) {
-      const hit = await resolveExport(imp.from, imp.name);
-      if (hit !== null && wrappers.has(`${hit.module.path}#${hit.name}`))
-        markers.push(local);
-    }
-    for (const name of m.locals) {
-      if (wrappers.has(`${m.path}#${name}`)) markers.push(name);
-    }
+    const markers = REGISTER_MARKERS.filter((k) => m.src.includes(k));
+    // The serving wrappers this file calls, by their local name — only a
+    // file naming one can, so the rest are never parsed.
+    const names = wrapperNames(wrappers);
+    if (namesAny(m.src, names))
+      markers.push(...(await wrappersCalledIn(sources, m, wrappers, names)));
     if (markers.length === 0) continue;
-    const bindings = parseFileBindings(m.src);
+    const own = await sources.pluginIndex(plugin);
+    const bindings = parseFileBindings(m.src, m.masked);
     // Imported descriptors resolve through the declaring plugin's index,
     // prepared before the (synchronous) scan asks for it.
     const imported = new Map<string, Map<string, DescriptorInfo[]>>();
     for (const b of bindings.values()) {
       if (b.specifier?.startsWith("@plugins/") === true && !b.typeOnly) {
-        imported.set(b.specifier, await otherIndex(b.specifier));
+        const dir = b.specifier
+          .replace(/^@plugins\//, "")
+          .replace(/\/[^/]+$/, "");
+        imported.set(b.specifier, await sources.pluginIndex(dir));
       }
     }
     const resolveImported: ImportedDescriptorResolver = (specifier, name) =>
       imported.get(specifier)?.get(name) ?? null;
     for (const marker of markers) {
-      for (const call of findMarkerCalls(m.src, marker)) {
+      for (const call of findMarkerCalls(m.src, marker, m.masked)) {
         const target = registerCallTarget(
           marker,
           call.argsText,
@@ -748,38 +846,47 @@ async function registeredKeys(
  * the descriptor it is handed. A text scan cannot follow the descriptor
  * through the parameter; it can see the wrapper.
  */
-async function serveWrappers(
-  repo: HostCoverageInputs["repo"],
-  read: ReadModule,
-  resolveExport: ResolveExport,
-): Promise<Set<string>> {
-  const candidates: Module[] = [];
-  for (const path of repo.under("plugins")) {
+async function serveWrappers(sources: SourceScans): Promise<Set<string>> {
+  const paths = sources.repo.under("plugins").filter((path) => {
     const where = locate(path);
-    if (where === null || !isSource(path)) continue;
-    if (!(BACKEND_FOLDERS as readonly string[]).includes(where.folder))
-      continue;
-    const m = await read(path);
-    if (m !== null) candidates.push(m);
-  }
+    return (
+      where !== null &&
+      isSource(path) &&
+      (BACKEND_FOLDERS as readonly string[]).includes(where.folder)
+    );
+  });
+  // Every read at once (the file set bounds how many are open).
+  const candidates = (
+    await Promise.all(paths.map((path) => sources.read(path)))
+  ).filter((m): m is Module => m !== null);
   const wrappers = new Set<string>();
+  // How many serving names each module's functions were last scanned with: a
+  // function that served none of them serves none until the list grows.
+  const scannedWith = new Map<Module, number>();
   for (let grew = true; grew;) {
     grew = false;
+    const names = wrapperNames(wrappers);
     for (const m of candidates) {
       // The names this module may call to serve: the markers, and the
-      // wrappers it imports or declares.
-      const markers = Object.keys(resourceRegisterMarkers).filter((k) =>
-        m.src.includes(k),
-      );
-      for (const [local, imp] of m.imports) {
-        const hit = await resolveExport(imp.from, imp.name);
-        if (hit !== null && wrappers.has(`${hit.module.path}#${hit.name}`))
-          markers.push(local);
+      // wrappers it imports or declares. A file naming neither (its raw text,
+      // the cheap test — most backend files) is never masked or parsed.
+      const markers = REGISTER_MARKERS.filter((k) => m.src.includes(k));
+      if (markers.length === 0 && !namesAny(m.src, names)) continue;
+      markers.push(...(await wrappersCalledIn(sources, m, wrappers, names)));
+      // A wrapper re-exported under another name is named by that one in
+      // its importers' text: record the alias, so their filter sees it.
+      for (const [alias, re] of m.reexports) {
+        const id = `${m.path}#${alias}`;
+        if (wrappers.has(id) || !names.has(re.name)) continue;
+        const hit = await sources.resolveExport(re.from, re.name);
+        if (hit !== null && wrappers.has(`${hit.module.path}#${hit.name}`)) {
+          wrappers.add(id);
+          grew = true;
+        }
       }
-      for (const name of m.locals) {
-        if (wrappers.has(`${m.path}#${name}`)) markers.push(name);
-      }
-      if (markers.length === 0) continue;
+      if (markers.length === 0 || scannedWith.get(m) === markers.length)
+        continue;
+      scannedWith.set(m, markers.length);
       for (const fn of functionsOf(m.masked)) {
         const id = `${m.path}#${fn.name}`;
         if (wrappers.has(id)) continue;
@@ -799,6 +906,44 @@ async function serveWrappers(
     }
   }
   return wrappers;
+}
+
+/**
+ * Every name a serving wrapper goes by: its declared name, or an alias it is
+ * re-exported under (`serveWrappers` records both, as `<module>#<name>`). A
+ * file naming none of them cannot import or call one.
+ */
+function wrapperNames(wrappers: ReadonlySet<string>): Set<string> {
+  return new Set([...wrappers].map((id) => id.slice(id.lastIndexOf("#") + 1)));
+}
+
+function namesAny(src: string, names: ReadonlySet<string>): boolean {
+  for (const name of names) if (src.includes(name)) return true;
+  return false;
+}
+
+/**
+ * The local names under which `m` calls a serving wrapper: an import resolving
+ * to one (only an import of a name some wrapper goes by is resolved), or one
+ * it declares.
+ */
+async function wrappersCalledIn(
+  sources: SourceScans,
+  m: Module,
+  wrappers: ReadonlySet<string>,
+  names: ReadonlySet<string>,
+): Promise<string[]> {
+  const out: string[] = [];
+  for (const [local, imp] of m.imports) {
+    if (!names.has(imp.name)) continue;
+    const hit = await sources.resolveExport(imp.from, imp.name);
+    if (hit !== null && wrappers.has(`${hit.module.path}#${hit.name}`))
+      out.push(local);
+  }
+  for (const name of m.locals) {
+    if (wrappers.has(`${m.path}#${name}`)) out.push(name);
+  }
+  return out;
 }
 
 /** Module-level functions of a masked source: name, first parameter, body span. */
@@ -843,57 +988,145 @@ function functionsOf(
 /**
  * The HTTP routes a backend barrel's `httpRoutes` serves: a literal
  * `"METHOD /path"` key, or a computed `[endpoint.route]` resolved to the
- * endpoint's declaration.
+ * endpoint's declaration (a `defineEndpoint` with a literal `route:`).
+ *
+ * STRICT: every key must be one of those two. Any other key — a constant
+ * (`[ROUTE_KEY]`), a template with a substitution, a spread, a shorthand — is
+ * a route this scan cannot read, so it THROWS naming the barrel and the key
+ * rather than drop it: a dropped route is one the guard would call unserved
+ * (or, worse, a raw URL to it would look judged). So is an `httpRoutes` that
+ * is not an object literal, and a `[x.route]` that names no endpoint.
  */
 async function httpRoutes(
-  read: ReadModule,
-  resolveExport: ResolveExport,
+  sources: SourceScans,
   barrel: string,
 ): Promise<string[]> {
-  const m = await read(barrel);
-  if (m === null) return [];
+  const m = await sources.read(barrel);
+  if (m === null || !m.src.includes("httpRoutes")) return [];
+  const mentions = [...m.masked.matchAll(/\bhttpRoutes\b/g)];
+  if (mentions.length === 0) return [];
   const at = m.masked.search(/\bhttpRoutes\s*:\s*\{/);
-  if (at < 0) return [];
-  const open = m.masked.indexOf("{", at);
-  let depth = 0;
-  let close = -1;
-  for (let i = open; i < m.masked.length; i++) {
-    const c = m.masked[i];
-    if (c === "{" || c === "[" || c === "(") depth++;
-    else if (c === "}" || c === "]" || c === ")") {
-      depth--;
-      if (depth === 0) {
-        close = i;
-        break;
-      }
-    }
-  }
-  if (close < 0) return [];
-  const routes: string[] = [];
-  const block = m.masked.slice(open + 1, close);
-  for (const k of block.matchAll(
-    /\[\s*([A-Za-z_$][\w$]*)\s*\.\s*route\s*\]/g,
-  )) {
-    const local = k[1]!;
-    const imp = m.imports.get(local);
-    const hit =
-      imp !== undefined
-        ? await resolveExport(imp.from, imp.name)
-        : { module: m, name: local };
-    if (hit === null) continue;
-    const e = endpointExports(hit.module.path, hit.module.src).find(
-      (x) => x.name === hit.name,
+  if (at < 0 || mentions.length > 1) {
+    throw new Error(
+      `${barrel}: \`httpRoutes\` is not one object literal (\`httpRoutes: { … }\`) — the browser-host coverage guard reads its keys from source, so spell them in the barrel`,
     );
-    if (e !== undefined) routes.push(e.route);
   }
-  // Literal keys: the masked block blanks string interiors (offsets kept), so
-  // each quoted key is located there and read back from the original.
-  const original = m.src.slice(open + 1, close);
-  for (const k of block.matchAll(/(["'`])([^"'`]*)\1\s*:/g)) {
-    const text = original.slice(k.index + 1, k.index + 1 + k[2]!.length);
-    if (/^[A-Z]+\s+\//.test(text)) routes.push(text);
+  const open = m.masked.indexOf("{", at);
+  const close = matchBracket(m.masked, open, "{", "}");
+  if (close < 0) {
+    throw new Error(`${barrel}: \`httpRoutes\`'s object never closes`);
+  }
+  const unreadable = (key: string, why: string): Error =>
+    new Error(
+      `${barrel}: \`httpRoutes\` key \`${key}\` ${why} — the browser-host coverage guard reads every route from source, so key it by \`[decl.route]\` (a \`defineEndpoint\` with a literal \`route:\`, in the plugin's \`core/\`) or by a \`"METHOD /path"\` literal`,
+    );
+  const routes: string[] = [];
+  for (const entry of topLevelEntries(m.masked, open + 1, close)) {
+    // The key: the entry up to its first top-level `:` (none: a shorthand,
+    // a spread or a method).
+    const colon = topLevelColon(m.masked, entry.start, entry.end);
+    const keyMasked = m.masked.slice(entry.start, colon ?? entry.end).trim();
+    const keyText = m.src.slice(entry.start, colon ?? entry.end).trim();
+    if (colon === null)
+      throw unreadable(keyText, "is not a `key: handler` pair");
+    const computed = /^\[\s*([A-Za-z_$][\w$]*)\s*\.\s*route\s*\]$/.exec(
+      keyMasked,
+    );
+    if (computed !== null) {
+      const local = computed[1]!;
+      const imp = m.imports.get(local);
+      const hit =
+        imp !== undefined
+          ? await sources.resolveExport(imp.from, imp.name)
+          : m.locals.has(local)
+            ? { module: m, name: local }
+            : null;
+      const e =
+        hit === null
+          ? undefined
+          : hit.module.endpoints.find((x) => x.name === hit.name);
+      if (e === undefined) {
+        throw unreadable(
+          keyText,
+          `names no endpoint declaration (\`${local}\` does not resolve to a \`defineEndpoint\` with a literal \`route:\`)`,
+        );
+      }
+      routes.push(e.route);
+      continue;
+    }
+    // A literal key: the masked text blanks string interiors (offsets kept),
+    // so its quotes are found there and its text read back from the original.
+    const literal = /^(["'`])\s*\1$/.test(keyMasked)
+      ? keyText.slice(1, -1)
+      : null;
+    if (literal === null) throw unreadable(keyText, "is not readable");
+    if (keyText.startsWith("`") && literal.includes("${")) {
+      throw unreadable(keyText, "is a template with a substitution");
+    }
+    if (!/^[A-Z]+\s+\//.test(literal)) {
+      throw unreadable(keyText, 'is not a `"METHOD /path"` route');
+    }
+    routes.push(literal);
   }
   return routes;
+}
+
+/**
+ * The offsets of `[from, to)` of a masked source that sit outside every
+ * bracket — `()`, `[]`, `{}` and a type-argument list `<…>` — calling `visit`
+ * on each until it returns true (that offset is returned), else null. A `<`
+ * opens a type-argument list only right after an identifier
+ * (`handler<A, B>(…)` — a comparison is spaced, `a < b`), and a `>` closes one
+ * only while one is open and it is not an arrow's (`=>`).
+ */
+function scanTopLevel(
+  masked: string,
+  from: number,
+  to: number,
+  visit: (i: number, c: string) => boolean,
+): number | null {
+  let depth = 0;
+  let angles = 0;
+  for (let i = from; i < to; i++) {
+    const c = masked[i]!;
+    if (c === "{" || c === "[" || c === "(") depth++;
+    else if (c === "}" || c === "]" || c === ")") depth--;
+    else if (c === "<" && i > from && /[\w$]/.test(masked[i - 1]!)) angles++;
+    else if (c === ">" && angles > 0 && masked[i - 1] !== "=") angles--;
+    else if (depth === 0 && angles === 0 && visit(i, c)) return i;
+  }
+  return null;
+}
+
+/** The comma-separated entries of the object body `[from, to)` of a masked source, top level only. */
+function topLevelEntries(
+  masked: string,
+  from: number,
+  to: number,
+): { start: number; end: number }[] {
+  const out: { start: number; end: number }[] = [];
+  let start = from;
+  const push = (end: number): void => {
+    if (masked.slice(start, end).trim() !== "") out.push({ start, end });
+  };
+  scanTopLevel(masked, from, to, (i, c) => {
+    if (c === ",") {
+      push(i);
+      start = i + 1;
+    }
+    return false;
+  });
+  push(to);
+  return out;
+}
+
+/** The first `:` of `[from, to)` outside every bracket (see `scanTopLevel`), or null. */
+function topLevelColon(
+  masked: string,
+  from: number,
+  to: number,
+): number | null {
+  return scanTopLevel(masked, from, to, (_i, c) => c === ":");
 }
 
 // ── Explaining a gap ──────────────────────────────────────────────────────
@@ -959,11 +1192,10 @@ interface ServerIndex {
 
 /** Every key and route every backend folder of the repo serves — read only to explain a failure. */
 async function indexServers(
-  repo: HostCoverageInputs["repo"],
-  read: ReadModule,
-  resolveExport: ResolveExport,
+  sources: SourceScans,
   wrappers: ReadonlySet<string>,
 ): Promise<ServerIndex> {
+  const { repo } = sources;
   const keys = new Map<string, ServeSite[]>();
   const routes = new Map<string, ServeSite[]>();
   const add = (
@@ -991,16 +1223,14 @@ async function indexServers(
       const barrel = `plugins/${plugin}/${folder}/index.ts`;
       const site = { plugin, folder, file: barrel };
       for (const key of await registeredKeys(
-        repo,
-        read,
-        resolveExport,
+        sources,
         wrappers,
         plugin,
         files,
       )) {
         add(keys, key, site);
       }
-      for (const route of await httpRoutes(read, resolveExport, barrel)) {
+      for (const route of await sources.routes(barrel)) {
         add(routes, route, site);
       }
     }
@@ -1137,37 +1367,6 @@ export async function resolveHostConfigCoverage(
 
 // ── The contributions arm ─────────────────────────────────────────────────
 
-/**
- * One `defineServerContribution("<kind>", { … })` declaration: the contribution
- * kind its tokens stamp (`_kind.description`), and whether it declares
- * `absentOnHost` — a host may run without some of its contributors.
- */
-export interface ServerContributionKindDecl {
-  kind: string;
-  absentOnHost: boolean;
-}
-
-/**
- * The contribution kinds `source` declares: each genuine
- * `defineServerContribution(…)` call (comments and strings masked) whose first
- * argument is a string literal. A call whose name is not a literal (the
- * function's own declaration) declares nothing a contribution can stamp.
- */
-export function parseServerContributionDeclarations(
-  source: string,
-): ServerContributionKindDecl[] {
-  const out: ServerContributionKindDecl[] = [];
-  for (const call of findMarkerCalls(source, "defineServerContribution")) {
-    const kind = /^\s*(["'`])([^"'`$]+)\1\s*(?:,|$)/.exec(call.argsText);
-    if (kind === null) continue;
-    out.push({
-      kind: kind[2]!,
-      absentOnHost: /\babsentOnHost\s*:/.test(maskSource(call.argsText)),
-    });
-  }
-  return out;
-}
-
 /** A scoped web plugin's `server/` barrel outside the graph, as imported. */
 export interface HostContributionBarrel {
   /** The plugin, by path (`a/plugins/b`). */
@@ -1191,7 +1390,9 @@ export interface HostContributionCoverageInputs {
   /** Every declared contribution kind: kind → its declarations, by plugin path. */
   kinds: ReadonlyMap<
     string,
-    readonly (ServerContributionKindDecl & { plugin: string })[]
+    readonly (Pick<ServerContributionKindDecl, "kind" | "absentOnHost"> & {
+      plugin: string;
+    })[]
   >;
   blockers(barrel: string): Promise<string[]>;
 }

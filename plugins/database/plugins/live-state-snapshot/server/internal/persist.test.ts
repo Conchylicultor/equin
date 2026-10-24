@@ -14,7 +14,6 @@ import {
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import {
-  captureWatermark,
   compactTargets,
   persistSnapshot,
   readPersistedReadSets,
@@ -24,10 +23,11 @@ import {
   type L2Expectation,
 } from "./persist";
 
-// Real-DB invariant suite for the L2 persist SQL: xid8 watermark monotonicity,
-// the ON CONFLICT upsert, the text[] `tables_read` round-trip (incl. the empty
-// `ARRAY[]::text[]` path), jsonb value round-trip, and the `params_key='{}'`
-// filtering of the read helpers. Runs the real SQL against a throwaway database on
+// Real-DB invariant suite for the L2 persist SQL: the ON CONFLICT upsert, the
+// text[] `tables_read` round-trip (incl. the empty `ARRAY[]::text[]` path), jsonb
+// value round-trip, and the `params_key='{}'` filtering of the read helpers. The
+// watermark a persist is floored by is the database's (`snapshotWatermark`,
+// tested in database/server). Runs the real SQL against a throwaway database on
 // the running cluster (see the db-test-fixture primitive).
 
 let t: TestDb;
@@ -137,27 +137,6 @@ async function selectRow(
   );
   return res.rows[0];
 }
-
-describe("captureWatermark", () => {
-  test("returns a non-empty numeric string", async () => {
-    const wm = await captureWatermark(t.db);
-    expect(typeof wm).toBe("string");
-    expect(wm.length).toBeGreaterThan(0);
-    // Parseable as a non-negative BigInt (xid8 stored as numeric).
-    expect(BigInt(wm) >= 0n).toBe(true);
-  });
-
-  test("is monotonic non-decreasing across a committed write", async () => {
-    const first = await captureWatermark(t.db);
-    // Force xid advancement with a real committed write between captures.
-    await replace("wm-probe", "{}", { n: 1 }, "1", ["t"]);
-    await t.db.execute(
-      sql`UPDATE ${sql.raw(LIVE_STATE_SNAPSHOT_TABLE)} SET persisted_at = now() WHERE resource_key = ${"wm-probe"}`,
-    );
-    const second = await captureWatermark(t.db);
-    expect(BigInt(second) >= BigInt(first)).toBe(true);
-  });
-});
 
 describe("persistSnapshot — replace", () => {
   test("inserts a row that reads back, stamped (definition_at = persisted_at) with position_at set", async () => {

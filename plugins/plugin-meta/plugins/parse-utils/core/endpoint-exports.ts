@@ -33,9 +33,14 @@ export interface EndpointExport {
  * every reader matches routes by their text, so a route it cannot read would
  * silently drop out of the docs and out of the coverage guard.
  */
-export function endpointExports(path: string, src: string): EndpointExport[] {
+export function endpointExports(
+  path: string,
+  src: string,
+  /** `maskSource(src)`, when the caller already holds it. */
+  masked?: string,
+): EndpointExport[] {
   if (!src.includes("defineEndpoint")) return [];
-  const masked = maskSource(src);
+  masked ??= maskSource(src);
   const out: EndpointExport[] = [];
   for (const span of markerCallSpans(masked, "defineEndpoint")) {
     const decl = /export\s+const\s+([A-Za-z_$][\w$]*)\s*(?::[^=;]+)?=\s*$/.exec(

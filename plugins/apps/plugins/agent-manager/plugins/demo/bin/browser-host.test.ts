@@ -10,7 +10,11 @@
  * And a write through the real mutations recomputes its readers through the
  * worker's own change feed (PGlite triggers → NOTIFY → the listener `onReady`
  * started → the router): a subscriber of the tasks collection and of one
- * task's row gets the change, acked by the write's transaction id.
+ * task's row gets the change, acked by the write's transaction id — and a
+ * fresh read after it carries a commit watermark above that id, so an op whose
+ * exact ack is missed still confirms. L2 (`live-state-snapshot`) runs in the
+ * worker too: the changelog every write appends to is pruned by the desktop's
+ * own policy.
  *
  * Two substitutions, one per provider whose data is bundled text (a vite
  * `import.meta.glob`, which Bun cannot evaluate): the migration history
@@ -71,6 +75,7 @@ import {
 import { systemOrigin } from "@plugins/infra/plugins/request-origin/core";
 import { sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import { pruneChangelog } from "@plugins/database/plugins/live-state-snapshot/server/testing";
 import {
   createTask,
   updateTask,
@@ -192,6 +197,7 @@ interface Frame {
   key?: string;
   params?: ResourceParams;
   ackTx?: string[];
+  watermark?: string;
 }
 
 function isFor(frame: Frame, key: string, params: ResourceParams): boolean {
@@ -228,9 +234,8 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
     }
     const graph = hostEntries.filter((e) => !swapped.has(e.pluginPath));
     expect(graph).toHaveLength(hostEntries.length - swapped.size);
-    // The worker's own boot (`./browser-host.ts`): browser mode (no L2,
-    // frames without a commit watermark), every plugin asserted portable, the
-    // resource key set closed.
+    // The worker's own boot (`./browser-host.ts`): browser mode, every plugin
+    // asserted portable, the resource key set closed.
     host = await bootBrowserHost({
       entries: [...graph, ...Object.values(SWAPS)],
       seed,
@@ -567,6 +572,15 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
 
       const point = taskDescriptions.rows.point.encode([id]);
       await subscribe(taskDescriptions.rows.key, point);
+      // A read started after the commit carries the database's snapshot
+      // watermark, strictly above the write's xid: the backstop that confirms
+      // an op whose exact ack the client missed.
+      const ack = frames.find(
+        (f) =>
+          isFor(f, taskDescriptions.rows.key, point) && f.kind === "sub-ack",
+      );
+      expect(ack?.watermark).toMatch(/^\d+$/);
+      expect(BigInt(ack!.watermark!) > BigInt(created.xid)).toBe(true);
       const updated = await inTx((tx) =>
         updateTask(
           id,
@@ -599,5 +613,36 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
     } finally {
       ws.close(socket, 1000, "test");
     }
+  });
+
+  test("L2 persists in the worker, and its prune bounds the changelog", async () => {
+    // Every persisted key is recomputed after the seed (`onReady`'s catch-up),
+    // so the floors are captured above every seed write.
+    const floor = async () =>
+      (
+        await db.execute<{ floor: string | null; rows: number }>(
+          sql`SELECT min(position)::text AS floor, count(*)::int AS rows FROM live_state_snapshot`,
+        )
+      ).rows[0]!;
+    const deadline = Date.now() + 10_000;
+    let persisted = await floor();
+    while (persisted.rows === 0) {
+      if (Date.now() > deadline) {
+        throw new Error("timed out waiting for L2 to persist a snapshot row");
+      }
+      await new Promise((r) => setTimeout(r, 20));
+      persisted = await floor();
+    }
+    expect(persisted.floor).toMatch(/^\d+$/);
+    const below = async () =>
+      (
+        await db.execute<{ n: number }>(
+          sql`SELECT count(*)::int AS n FROM live_state_changelog WHERE xid < (SELECT min(position) FROM live_state_snapshot)`,
+        )
+      ).rows[0]!.n;
+    // The seed's writes are in the changelog, under every floor.
+    expect(await below()).toBeGreaterThan(0);
+    await pruneChangelog(db);
+    expect(await below()).toBe(0);
   });
 });

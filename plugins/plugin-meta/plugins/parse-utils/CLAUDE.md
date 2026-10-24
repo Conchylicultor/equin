@@ -155,6 +155,7 @@ caller**. Omitting `path` keeps the `ts` loader — correct only for `.ts`-only 
     - `ImportRef`
     - `MarkerCall`
     - `MarkerCallSpan`
+    - `ServerContributionKindDecl`
     - `StaticCallIdResult`
     - `StringFieldResult`
     - `StringLiteralResult`
@@ -172,6 +173,7 @@ caller**. Omitting `path` keeps the `ts` loader — correct only for `.ts`-only 
     - `parseBarrelExports`
     - `parseBoolField`
     - `parseDefineGroup`
+    - `parseServerContributionDeclarations`
     - `parseStaticCallId`
     - `parseStringField`
     - `readIfExists`

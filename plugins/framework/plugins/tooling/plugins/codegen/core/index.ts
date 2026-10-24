@@ -263,7 +263,6 @@ export type {
 // contributions arms read the barrels' contributions, so checks run them
 // (`config-v2:registrations-paired`, `browser-host:contributions-covered`).
 export {
-  parseServerContributionDeclarations,
   resolveHostConfigCoverage,
   resolveHostContributionCoverage,
   serverBarrelBlockers,
@@ -272,7 +271,6 @@ export type {
   HostConfigRegistration,
   HostContributionBarrel,
   HostRead,
-  ServerContributionKindDecl,
 } from "./browser-host-coverage";
 // Host services read statically — the browser-host derivation's reading,
 // shared with `host-services:provider-placement`.

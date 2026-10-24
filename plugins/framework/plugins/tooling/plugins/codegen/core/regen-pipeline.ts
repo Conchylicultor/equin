@@ -128,10 +128,9 @@ export async function regenerateRegistryCodegen({
   await onStep("eagerTier", "eager-tier manifest", () =>
     generateEagerTier({ root, ctx }),
   );
-  let browserHosts: string[] = [];
-  await onStep("browserHosts", "browser host graphs", async () => {
-    browserHosts = await generateBrowserHosts(ctx);
-  });
+  // Not wrapped in one span: the generator opens its own per-phase spans
+  // (inference, coverage guard, write), which a wrapping span would nest.
+  const browserHosts = await generateBrowserHosts(ctx, onStep);
   return { renamedPackages, browserHosts };
 }
 

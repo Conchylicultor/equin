@@ -20,6 +20,7 @@ import { BASE_EXCLUSIONS_ID } from "@plugins/infra/plugins/namespace/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { crossRefsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/cross-refs/core";
 import { classifyEdges } from "./classify-edges";
+import { collectCompanionSlots } from "./companion-slots";
 import {
   resolveComposition,
   removalClosure,
@@ -1040,6 +1041,45 @@ test("the website bundles its runtime companions, none listed by name", () => {
     "reorder.node-types.spacer",
   ])
     expect(comp.bundle.has(asPluginId(id))).toBe(true);
+});
+
+// ── Server companions ────────────────────────────────────────────────────────
+//
+// A server contribution kind opened with `defineServerContribution(name, {
+// companions: true })` draws the same owner → contributor hard edge from each
+// `Kind({ …, companion: true })`. change-feed's changelog is bounded only by
+// live-state-snapshot's prune job, and L2 imports change-feed — so without the
+// edge no composition built from entry patterns carried L2 (the demo worker's
+// changelog, and every served agent-manager's, was never pruned).
+test("a server companion contribution is a hard edge from the kind's owner", () => {
+  const CHANGE_FEED = asPluginId("database.change-feed");
+  const L2 = asPluginId("database.live-state-snapshot");
+  expect(graph.hardForward.get(CHANGE_FEED)).toContain(L2);
+  expect(
+    graph.edges.find(
+      (e) => e.from === CHANGE_FEED && e.to === L2 && e.kind === "hard",
+    )?.via,
+  ).toBe("companion");
+  const kind = collectCompanionSlots(tree).find(
+    (s) => s.runtime === "server" && s.ref === "ChangelogRetention",
+  );
+  expect(kind).toMatchObject({
+    owner: CHANGE_FEED,
+    slotId: "change-feed-changelog-retention",
+    companions: [{ plugin: L2 }],
+  });
+  expect(kind?.keyed).toBeUndefined();
+});
+
+test("a bundle holding change-feed holds L2, none listing it", () => {
+  const comp = resolveComposition(graph, {
+    name: "change-feed-probe",
+    entryPoints: [asPluginId("database.change-feed")],
+    selectedContributors: [],
+  });
+  expect(comp.bundle.has(asPluginId("database.live-state-snapshot"))).toBe(
+    true,
+  );
 });
 
 // ── Keyed companions (required if used) ──────────────────────────────────────

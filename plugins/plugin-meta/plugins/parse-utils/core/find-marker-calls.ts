@@ -130,10 +130,14 @@ function skipTypeArgs(masked: string, start: number): number {
  * with `parseStringField` / `parseBoolField`. The generic call form
  * (`marker<…>(…)`) is matched, via the shared `markerCallSpans` scanner.
  *
- * `marker` is a plain identifier (e.g. `"defineCollectedDir"`).
+ * `marker` is a plain identifier (e.g. `"defineCollectedDir"`). A caller that
+ * already holds `maskSource(src)` passes it as `masked`.
  */
-export function findMarkerCalls(src: string, marker: string): MarkerCall[] {
-  const masked = maskSource(src, { strings: true });
+export function findMarkerCalls(
+  src: string,
+  marker: string,
+  masked: string = maskSource(src, { strings: true }),
+): MarkerCall[] {
   return markerCallSpans(masked, marker).map((s) => ({
     index: s.identifier,
     argsText: src.slice(s.open + 1, s.close),

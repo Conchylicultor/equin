@@ -5,6 +5,8 @@ export type {
   DocMetaContribution,
   PaneDeclaration,
   RouteDeclaration,
+  ServerCompanionContribution,
+  ServerCompanionKind,
   SourceRef,
 } from "./types";
 export { contributionId, contributionsToComparable } from "./to-comparable";

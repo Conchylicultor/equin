@@ -2,11 +2,12 @@ import { describe, test, expect } from "bun:test";
 import { sql } from "drizzle-orm";
 import { db, DatabaseDriver } from "./driver";
 import { currentTxId } from "./current-tx-id";
+import { snapshotWatermark } from "./snapshot-watermark";
 
 // Real-DB invariant suite for the causal ack token: xid8 text is BigInt-parseable,
 // strictly increasing across committed write transactions, and comparable with the
-// snapshot watermark (`pg_snapshot_xmin(pg_current_snapshot())` — the exact SQL
-// live-state-snapshot's captureWatermark runs). The last one pins the Rule A↔B
+// snapshot watermark (`snapshotWatermark`, the capture the resource runtime stamps
+// on frames and L2 floors a persisted value with). The last one pins the Rule A↔B
 // comparability the optimistic-mutation confirmation depends on, on real Postgres.
 //
 // Runs against the plugin's OWN worktree DB (the bun-test preload declares the
@@ -47,22 +48,15 @@ describe("currentTxId", () => {
 
   test("committed write's token compares < a subsequent snapshot xmin (Rule A↔B)", async () => {
     const token = await writeTxCapturingToken();
-    // The snapshot watermark exactly as captureWatermark
-    // (plugins/database/plugins/live-state-snapshot/server/internal/persist.ts)
-    // captures it before a loader read. Our write committed before this capture,
-    // so its xid can no longer be in progress: xmin (lowest in-progress xid,
+    // The snapshot watermark exactly as the runtime captures it before a loader
+    // read. Our write committed before this capture, so its xid can no longer
+    // be in progress: xmin (lowest in-progress xid,
     // else next-to-assign) must lie strictly above it — the strict `>` that lets
     // a snapshot DENY an op per Rule B. Assumes no concurrent transaction older
     // than our commit is still open cluster-wide at capture time (long-lived
     // transactions pin xmin — the plan's accepted "delayed, never unsound"
     // residue; in this suite nothing holds transactions open).
-    const res = await db.execute<{ xmin: string }>(
-      sql.raw(`SELECT pg_snapshot_xmin(pg_current_snapshot())::text AS xmin`),
-    );
-    const xmin = res.rows[0]?.xmin;
-    if (xmin === undefined) {
-      throw new Error("pg_snapshot_xmin returned no row");
-    }
+    const xmin = await snapshotWatermark(db);
     expect(BigInt(token) < BigInt(xmin)).toBe(true);
   });
 });

@@ -1710,8 +1710,9 @@ export interface ResourceRuntimeOptions {
   /**
    * Capture the durable monotonic position (the xmin watermark). Called BEFORE
    * the loader's first read, so any write not visible to the loader's snapshot
-   * has xid >= this watermark. server:
-   * `SELECT pg_snapshot_xmin(pg_current_snapshot())::text` through the pool.
+   * has xid >= this watermark. server: `database/server`'s `snapshotWatermark`
+   * (`SELECT pg_snapshot_xmin(pg_current_snapshot())::text`), installed on every
+   * host with a database through server-core's `setWatermarkSource`.
    * The rule is not "one caller" but ONE CAPTURE PER READ: a floor may only
    * describe the read it accompanies. The main caller is every FULL
    * read/recompute flight (`getResourceValue`), captured by the flight's STARTER,
@@ -1730,11 +1731,11 @@ export interface ResourceRuntimeOptions {
    * ids, so no capture taken there describes the whole value. A persisted
    * alias's floor persists use the snapshot's BASE floor instead — the
    * watermark of the FULL read the snapshot was rebuilt from (C19).
-   * Absent (central) ⇒ frames ship tokenless and nothing is persisted.
-   * Resolving `undefined` says the same for one host booted without the
-   * capability (a browser worker host has no L2): tokenless, not a failure.
+   * Absent (central) ⇒ frames ship tokenless and nothing is persisted. Present,
+   * it always resolves a watermark: a capture that cannot answer throws, and
+   * the runtime reports it and ships that one frame tokenless.
    */
-  captureWatermark?: () => Promise<string | undefined>;
+  captureWatermark?: () => Promise<string>;
   /**
    * Persist a value to `live_state_snapshot` under (key, paramsKey) with its
    * catch-up floor. Called only for a value that is whole (never on a loader's

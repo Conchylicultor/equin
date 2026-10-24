@@ -28,12 +28,17 @@ four-stage pipeline before injecting it, and each stage exists for a reason.
      is available, else leaves a `data-cid` placeholder (the body re-processes
      when `resolveCid` changes, so it fills in as attachments hydrate).
    - remote `http(s)` → **only** rewritten to the same-origin, SSRF-guarded proxy
-     (`remote-images`) **when `showRemoteImages` is true**; otherwise the src is
-     stripped and recorded. **Why:** a remote image is a tracking pixel — loading
+     (`remote-images`, its URL from `assetUrlOver` over the subtree's
+     transport) **when `showRemoteImages` is true** and the proxy is available
+     (it is desktop-only); otherwise the src is stripped and recorded. **Why:** a remote image is a tracking pixel — loading
      it leaks the reader's IP, location, and open-time to the sender. Nothing
      remote loads until the user explicitly opts in per message. After the walk,
      `onRemoteImagesDetected(hadRemoteImage)` tells the pane whether to offer the
-     "Display images" affordance.
+     "Display images" affordance — `<RemoteImagesNotice onDisplay>`, which
+     decides the proxy's availability itself (`useMachineAvailability` on
+     `getMailImage`): the button where the proxy answers, the unavailable
+     message instead where it cannot, so a demo never offers an opt-in whose
+     images would all be stripped.
    - `data:` images are dropped (belt-and-suspenders).
    - Links are forced to `target="_blank"` `rel="noopener noreferrer nofollow"`.
 3. **Quoted-history collapse.** Detects the first reply boundary — a
@@ -60,13 +65,22 @@ Depends on `dompurify` (declared in `package.json`).
 
 ## Plugin reference
 
-- Description: Privacy-safe email HTML renderer: <MailHtml> runs a DOMPurify sanitize → remote-image gating (proxied only after opt-in) → cid: inline-image resolution → quoted-history collapse pipeline, injected inside a style-scoped container.
+- Description: Privacy-safe email HTML renderer: <MailHtml> runs a DOMPurify sanitize → remote-image gating (proxied only after opt-in) → cid: inline-image resolution → quoted-history collapse pipeline, injected inside a style-scoped container; <RemoteImagesNotice> is the Display images opt-in above it, or the proxy's unavailable message on a host without the computer.
 - Web:
   - Uses:
+    - `infra/endpoints.assetUrlOver`
+    - `infra/endpoints.useMachineAvailability`
     - `primitives/collapsible.FoldMotion`
     - `primitives/collapsible.useCollapsible`
+    - `primitives/css/row.Row`
+    - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.Button`
+    - `primitives/networking.useTransport`
+    - `ui/icons.Icon`
   - Exports (types): `MailHtmlProps`
-  - Exports (values): `MailHtml`
+  - Exports (values):
+    - `MailHtml`
+    - `RemoteImagesNotice`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`

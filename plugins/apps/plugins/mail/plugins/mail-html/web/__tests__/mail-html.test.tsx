@@ -1,6 +1,10 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { cleanup, render, fireEvent } from "@testing-library/react";
-import { MailHtml } from "../index";
+import { cleanup, fireEvent } from "@testing-library/react";
+import {
+  renderWithTransport as render,
+  testTransport,
+} from "@plugins/primitives/plugins/networking/web/testing";
+import { MailHtml, RemoteImagesNotice } from "../index";
 
 // DOM-bound coverage of the sanitize → image-gate → cid-resolve → quote-collapse
 // pipeline (DOMPurify needs a DOM, so this can't be a bun:test).
@@ -72,6 +76,37 @@ describe("MailHtml remote-image gating", () => {
     const src = container.querySelector("img")!.getAttribute("src")!;
     expect(src.startsWith("/api/mail/image?url=")).toBe(true);
     expect(src).toContain(encodeURIComponent("https://tracker.example/px.gif"));
+  });
+
+  it("strips remote images when opted in on a host without the computer", () => {
+    const { container } = render(
+      <MailHtml
+        html={`<img src="https://tracker.example/px.gif">`}
+        showRemoteImages={true}
+      />,
+      { transport: testTransport({ machine: false, servesUrls: false }) },
+    );
+    const img = container.querySelector("img")!;
+    expect(img.getAttribute("src")).toBeNull();
+    expect(img.getAttribute("data-blocked-src")).toBe(
+      "https://tracker.example/px.gif",
+    );
+  });
+
+  it('offers "Display images" where the proxy answers, and the unavailable message where it cannot', () => {
+    const onDisplay = vi.fn();
+    const desktop = render(<RemoteImagesNotice onDisplay={onDisplay} />);
+    fireEvent.click(desktop.getByRole("button", { name: "Display images" }));
+    expect(onDisplay).toHaveBeenCalledTimes(1);
+    cleanup();
+
+    const demo = render(<RemoteImagesNotice onDisplay={onDisplay} />, {
+      transport: testTransport({ machine: false, servesUrls: false }),
+    });
+    expect(demo.queryByRole("button")).toBeNull();
+    expect(demo.container.textContent).toContain(
+      "Displaying an email's remote images",
+    );
   });
 
   it("reports no remote images for a purely local message", () => {

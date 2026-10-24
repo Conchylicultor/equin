@@ -1,4 +1,4 @@
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import type { Check } from "@plugins/framework/plugins/tooling/core";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
   buildRegistryGenContext,
@@ -12,21 +12,18 @@ import {
   type ConfigRegistration,
 } from "./config-registrations";
 
-type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
-
 const check: Check = {
   id: "config-v2:registrations-paired",
   description:
     "Every ConfigV2.Register (server/ or machine/) must have a matching ConfigV2.WebRegister (web) at the same storePath, and vice versa — and every one a browser host's scoped page registers is served by a `server/` barrel of the host's worker graph",
-  async run() {
-    const root = await getWorktreeRoot();
-
-    // The shared registry-gen context: its memoized barrel-free tree is the same
-    // node set this check walks, and its `mainBundle` is the app's membership —
-    // both already built by the other checks in the run, so taking them here
-    // costs nothing and cannot disagree with what codegen emitted.
-    const ctx = await buildRegistryGenContext(root);
+  async run(checkCtx) {
+    // The run's registry-gen context — the one every check passing the run's
+    // file set shares: its barrel-free tree is the same node set this check
+    // walks, its `mainBundle` is the app's membership, and its browser-host
+    // graphs are the ones `plugins-registry-in-sync` derived, so taking them
+    // here costs nothing and cannot disagree with what codegen emitted.
+    const repo = await checkCtx.repo();
+    const ctx = await buildRegistryGenContext(repo.root, repo);
     const loaded = await loadConfigRegistrations(ctx);
     if (!loaded.ok) return loaded;
 

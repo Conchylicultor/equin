@@ -1,6 +1,6 @@
 import { assetMirrorCache } from "../../data-dirs";
-import { mirrorFetchToDisk } from "./fetch-to-disk";
-import { mirrorRegistry } from "./registry";
+import { mirrorFetchToDisk } from "../../server/internal/fetch-to-disk";
+import { mirrorRegistry } from "../../server/internal/registry";
 
 const MIME_BY_EXT: Record<string, string> = {
   ".ogg": "audio/ogg",

@@ -3,14 +3,17 @@ import type { MachineFeature } from "./needs-machine";
 import { interpolatePath } from "./route-params";
 
 declare const assetPathBrand: unique symbol;
+declare const assetBaseBrand: unique symbol;
 
 /**
  * The key an {@link AssetPath}'s `/api/…` path is held under — not a `path`
  * field, so no element is one property away from a `src` that bypasses the
- * subtree's transport. Its one reader is `useAssetSrc` (`endpoints/web`); it
+ * subtree's transport. Its readers are `useAssetSrc` and `useAssetUrl`
+ * (`endpoints/web`); it
  * is on the core barrel only because the browser build loads `core/` as its
  * barrel artifact, so `web/` cannot reach the file directly. Never read it
- * elsewhere: an element gets its `src` from `useAssetSrc`.
+ * elsewhere: an element gets its `src` from `useAssetSrc`, a sink that loads
+ * by URL on its own its URL from `useAssetUrl`.
  */
 export const ASSET_PATH = Symbol("asset-path");
 
@@ -68,4 +71,63 @@ export function assetPath<TParams, TQuery>(
     [ASSET_PATH]: path,
     needsMachine: endpoint.needsMachine ?? null,
   } as AssetPath;
+}
+
+/**
+ * The address of a SET of server assets a library fetches on its own, by
+ * appending the rest of the path to it (`<base>/<locale>/data.json`,
+ * `<base>/<sample>.ogg`): an emoji picker's data, a sampler's samples. Opaque
+ * like {@link AssetPath}, for the same reason: its URL comes only from
+ * `useAssetUrl` (`endpoints/web`), which answers `unavailable` where the route
+ * needs a computer the transport lacks — a library's own `fetch` reaches the
+ * page's server, never the subtree's.
+ *
+ * Built only by {@link assetBase}, from the GET endpoint serving its files.
+ */
+export interface AssetBase {
+  readonly [assetBaseBrand]: true;
+  /** The `/api/…` path prefix the files are served under, on their server. */
+  readonly [ASSET_PATH]: string;
+  /** The route's `needsMachine` — set when only the desktop app serves it. */
+  readonly needsMachine: MachineFeature | null;
+}
+
+/**
+ * The {@link AssetBase} of `endpoint`'s files under its leading `params`: the
+ * route's path, interpolated, cut before its first param not given
+ * (`GET /api/asset-mirror/:id/:file` with `{ id: "emojibase" }` →
+ * `/api/asset-mirror/emojibase`). Throws for a param given after one left
+ * open (it would be cut away), and when nothing is left open — a whole path
+ * is an {@link AssetPath}.
+ */
+export function assetBase<TParams>(
+  endpoint: AssetEndpoint<TParams, unknown>,
+  params: Partial<TParams>,
+): AssetBase {
+  const given = (params ?? {}) as Record<string, string>;
+  const open = /\/:([A-Za-z_][\w]*)/g;
+  let cut = -1;
+  for (const m of endpoint.path.matchAll(open)) {
+    if (!(m[1]! in given)) {
+      cut = m.index;
+      break;
+    }
+  }
+  if (cut < 0) {
+    throw new Error(
+      `assetBase(${endpoint.route}): every param is given — a whole path is an AssetPath (assetPath)`,
+    );
+  }
+  const prefix = endpoint.path.slice(0, cut);
+  for (const name of Object.keys(given)) {
+    if (!new RegExp(`:${name}(?!\\w)`).test(prefix)) {
+      throw new Error(
+        `assetBase(${endpoint.route}): param "${name}" comes after a param left open, so the base would drop it`,
+      );
+    }
+  }
+  return {
+    [ASSET_PATH]: interpolatePath(prefix, given),
+    needsMachine: endpoint.needsMachine ?? null,
+  } as AssetBase;
 }

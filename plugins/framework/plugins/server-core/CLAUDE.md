@@ -226,6 +226,32 @@ composition boots two. Today's services: `database.driver`,
   host), `procMemory()` / `heapMemory()` answer `null` (the profiler then records
   no memory, never a made-up zero) and the snapshot hash is the portable `hash64`.
 
+## Contribution kinds and their companions
+
+`defineServerContribution<P>(debugName, opts?)` (`core/contributions.ts`) is a
+server contribution kind; plugins list `Kind(payload)` in `contributions`, and
+readers call `Kind.getContributions()` after `collectContributions`. Two
+static options shape what the build does with a kind:
+
+- `absentOnHost: { reason }` — a host may run without some contributors (the
+  browser-host coverage guard's contributions arm).
+- `companions: true` — opens the kind to **companions**: a contribution passing
+  `companion: true` ships wherever the kind's declaring plugin ships (the
+  closure engine's owner → contributor hard edge, `plugin-meta/closure`). For
+  what the owner needs at runtime and cannot import, because the import would
+  be a cycle: change-feed's `ChangelogRetention`, contributed by
+  live-state-snapshot. Type-enforced like a web companion slot: an unflagged
+  kind's input has no `companion` field (an excess property), and a cast past
+  it throws at the call. Statically read — the kind's `companions: true` from
+  the inline option literal of a `const`-bound `defineServerContribution(…)` in
+  the owner's `server/` (parse-utils' `parseServerContributionDeclarations`),
+  the contribution's flag from the inline `contributions: [ … ]` literal of the
+  contributor's `server/index.ts`, its token imported by name from
+  `@plugins/<owner>/server`. Never in `machine/` (both throw: a browser host
+  boots the owner but no `machine/` half). Unkeyed: a server kind dispatches on
+  no key space. The owner decides what a missing companion means at runtime
+  (change-feed fails its serving-host `onReady`).
+
 ## ServerPluginDefinition
 
 Each server plugin default-exports a `ServerPluginDefinition`. `id` is not authored — the loader derives it from the plugin's hierarchy path:
@@ -470,6 +496,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `setLiveStateSnapshotHooks`
     - `setProfilerHooks`
     - `setRelationBases`
+    - `setWatermarkSource`
     - `triggerResourcePush`
     - `unboundedWindowKeys`
     - `unfedResourceTables`

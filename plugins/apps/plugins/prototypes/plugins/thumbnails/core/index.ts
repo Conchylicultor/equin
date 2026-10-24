@@ -2,8 +2,7 @@ export {
   ThumbnailFailureKindSchema,
   ThumbnailStateSchema,
   prototypeThumbnails,
-  PROTOTYPE_THUMBS_BASE,
-  PROTOTYPE_THUMB_ROUTE,
-  prototypeThumbnailUrl,
+  getPrototypeThumbnail,
+  prototypeThumbnailAsset,
 } from "./thumbnails";
 export type { ThumbnailFailureKind, ThumbnailState } from "./thumbnails";

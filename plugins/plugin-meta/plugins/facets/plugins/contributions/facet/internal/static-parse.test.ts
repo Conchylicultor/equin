@@ -1,9 +1,14 @@
-import { describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import { maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import {
   findCalls,
   paneDeclarationsIn,
   parsePropsBlock,
+  parseServerCompanionKinds,
+  parseServerCompanions,
   routeDeclarationsIn,
 } from "./static-parse";
 
@@ -236,5 +241,86 @@ describe("paneDeclarationsIn", () => {
         "const tpl = `const ghostPane = Pane.define({ route: ghostRoute })`;",
       ),
     ).toEqual([]);
+  });
+});
+
+// ── Server companions ──────────────────────────────────────────────
+
+describe("server companions", () => {
+  const roots: string[] = [];
+  afterAll(() => {
+    for (const r of roots) rmSync(r, { recursive: true, force: true });
+  });
+  /** A throwaway plugin dir holding `files` (plugin-relative path → source). */
+  const pluginDir = (files: Record<string, string>): string => {
+    const root = mkdtempSync(join(tmpdir(), "server-companions-"));
+    roots.push(root);
+    for (const [rel, src] of Object.entries(files)) {
+      mkdirSync(dirname(join(root, rel)), { recursive: true });
+      writeFileSync(join(root, rel), src);
+    }
+    return root;
+  };
+
+  test("findCalls with `bare` also matches a bare token callee, not a nested one", () => {
+    const block = `Trigger({ on: x }), ...served.declare, Kind({ a: f(1), companion: true })`;
+    expect(
+      findCalls(maskSource(block), block, { bare: true }).map((c) => c.callee),
+    ).toEqual(["Trigger", "Kind"]);
+  });
+
+  test("an owner's kinds opened to companions are read from its `server/`", () => {
+    const dir = pluginDir({
+      "server/internal/retention.ts": `export const Retention = defineServerContribution<{ reason: string }>("x-retention", { companions: true });
+export const Other = defineServerContribution<{ id: string }>("x-other");`,
+    });
+    expect(parseServerCompanionKinds(dir)).toEqual([
+      { binding: "Retention", kind: "x-retention" },
+    ]);
+  });
+
+  test("a kind opened to companions in `machine/` throws", () => {
+    const dir = pluginDir({
+      "machine/internal/k.ts": `export const K = defineServerContribution<P>("k", { companions: true });`,
+    });
+    expect(() => parseServerCompanionKinds(dir)).toThrow(
+      /in `machine\/` — a kind opened to companions is declared in the plugin's portable `server\/`/,
+    );
+  });
+
+  test("a companion contribution names its token as imported; ordinary ones are skipped", () => {
+    const dir = pluginDir({
+      "server/index.ts": `import { Retention as R, Trigger } from "@plugins/owner/server";
+export default {
+  contributions: [
+    Trigger({ on: "x" }),
+    R({ companion: true, reason: "prunes it" }),
+  ],
+};`,
+    });
+    expect(parseServerCompanions(dir)).toEqual([
+      { token: { name: "Retention", module: "@plugins/owner/server" } },
+    ]);
+  });
+
+  test("a companion flag it cannot read, or one in `machine/`, throws", () => {
+    expect(() =>
+      parseServerCompanions(
+        pluginDir({
+          "server/index.ts": `import { R } from "@plugins/o/server";
+export default { contributions: [R({ companion: flag })] };`,
+        }),
+      ),
+    ).toThrow(/must be the literal `true`/);
+    expect(() =>
+      parseServerCompanions(
+        pluginDir({
+          "machine/index.ts": `import { R } from "@plugins/o/server";
+export default { contributions: [R({ companion: true })] };`,
+        }),
+      ),
+    ).toThrow(
+      /in `machine\/` — a companion is contributed from the plugin's portable `server\/index.ts`/,
+    );
   });
 });

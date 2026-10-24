@@ -8,9 +8,17 @@ import {
   maskSource,
   markerCallSpans,
   lineAt,
+  parseServerContributionDeclarations,
+  stripTypes,
   type MarkerCallSpan,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
-import type { PaneDeclaration, RouteDeclaration, SourceRef } from "../../core";
+import type {
+  PaneDeclaration,
+  RouteDeclaration,
+  ServerCompanionContribution,
+  ServerCompanionKind,
+  SourceRef,
+} from "../../core";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -121,9 +129,18 @@ export function extractContributionsBlock(
 export function findCalls(
   maskedBlock: string,
   origBlock: string,
+  opts?: {
+    /**
+     * Also match a bare `Token(…)` callee. A server contribution kind is a
+     * token bound to a `const` (`Trigger({ … })`), not a `Group.Member` slot.
+     */
+    bare?: boolean;
+  },
 ): { callee: string; argsBody: string }[] {
   const out: { callee: string; argsBody: string }[] = [];
-  const re = /([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)+)\s*\(/g; // no `{` requirement
+  const re = opts?.bare
+    ? /(?<![\w$.])([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*)\s*\(/g
+    : /([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)+)\s*\(/g; // no `{` requirement
   let m: RegExpExecArray | null;
   while ((m = re.exec(maskedBlock))) {
     const callee = origBlock.slice(m.index, m.index + m[1]!.length);
@@ -516,4 +533,103 @@ export function parsePaneDeclarations(pluginDir: string): PaneDeclaration[] {
     if (src) out.push(...paneDeclarationsIn(src, f));
   }
   return out;
+}
+
+// ── Server companions ──────────────────────────────────────────────
+
+/**
+ * The server contribution kinds one plugin opens to companions: every
+ * `defineServerContribution(…, { companions: true })` in its own `server/`
+ * (parse-utils' reading, which throws on a `companions` it cannot act on).
+ * A kind opened in `machine/` THROWS: its companions would be drawn for a half
+ * a browser host never boots, and nothing needs one — declare it in `server/`.
+ */
+export function parseServerCompanionKinds(
+  pluginDir: string,
+): ServerCompanionKind[] {
+  const out: ServerCompanionKind[] = [];
+  for (const runtime of ["server", "machine"] as const) {
+    const files: string[] = [];
+    walkFiles(join(pluginDir, runtime), files);
+    for (const f of files) {
+      const src = readIfExists(f);
+      if (!src) continue;
+      for (const d of parseServerContributionDeclarations(src, f)) {
+        if (!d.companions) continue;
+        if (runtime === "machine")
+          throw new Error(
+            `${f}: \`defineServerContribution("${d.kind}", { companions: true })\` in \`machine/\` — ` +
+              "a kind opened to companions is declared in the plugin's portable `server/`, where every host boots it.",
+          );
+        out.push({ binding: d.binding!, kind: d.kind });
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * The `companion: true` contributions in a barrel's inline `contributions:
+ * [ … ]` literal, each naming its token as imported (`sourceRef`). The flag
+ * must be the literal `true` — the closure engine ships the contribution by it
+ * alone — and the callee a bare token (`Kind({ …, companion: true })`), the
+ * binding the kind is declared under.
+ */
+function companionCallsIn(
+  file: string,
+): { callee: string; token: SourceRef | null }[] {
+  const src = readIfExists(file);
+  if (!src) return [];
+  const stripped = stripTypes(src, file);
+  const masked = maskSource(stripped);
+  const block = extractContributionsBlock(masked);
+  if (block === null) return [];
+  const imports = parseImports(stripped);
+  const out: { callee: string; token: SourceRef | null }[] = [];
+  for (const call of findCalls(
+    masked.slice(block.start, block.end),
+    stripped.slice(block.start, block.end),
+    { bare: true },
+  )) {
+    const props = parsePropsBlock(call.argsBody);
+    if (!("companion" in props)) continue;
+    if (props["companion"] !== "true")
+      throw new Error(
+        `${file}: \`${call.callee}({ companion: ${props["companion"]} })\` — a contribution's \`companion\` ` +
+          "must be the literal `true` (or absent): the closure engine reads it statically.",
+      );
+    if (call.callee.includes("."))
+      throw new Error(
+        `${file}: \`${call.callee}({ companion: true })\` — a server companion calls its kind's token by the ` +
+          "bare name it is declared under (`export const Kind = defineServerContribution(…)`), imported by name.",
+      );
+    out.push({ callee: call.callee, token: sourceRef(call.callee, imports) });
+  }
+  return out;
+}
+
+/**
+ * One plugin's server companion contributions, from its `server/index.ts`.
+ * A companion in `machine/index.ts` THROWS: the kind's owner runs on every
+ * host, a browser host boots no `machine/`, so the companion would be missing
+ * exactly where the edge promised it.
+ */
+export function parseServerCompanions(
+  pluginDir: string,
+): ServerCompanionContribution[] {
+  const machine = join(pluginDir, "machine", "index.ts");
+  const strayed = companionCallsIn(machine);
+  if (strayed.length > 0)
+    throw new Error(
+      `${machine}: \`${strayed[0]!.callee}({ companion: true })\` in \`machine/\` — a companion is contributed ` +
+        "from the plugin's portable `server/index.ts`: a browser host boots its owner but never a `machine/` half.",
+    );
+  const file = join(pluginDir, "server", "index.ts");
+  return companionCallsIn(file).map(({ callee, token }) => {
+    if (token === null)
+      throw new Error(
+        `${file}: \`${callee}({ companion: true })\` — the token is a default import; import the kind by name.`,
+      );
+    return { token };
+  });
 }

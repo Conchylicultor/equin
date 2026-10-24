@@ -89,5 +89,11 @@ export function companionManifestPath(root: string): string {
 
 /** Render the manifest file contents in-memory (used by the in-sync check). */
 export async function renderCompanionManifest(root: string): Promise<string> {
-  return renderManifest(collectCompanionSlots(await buildBarrelFreeTree(root)));
+  // The web-sdk's manifest: web slots only. A server kind's companions are
+  // held to their owner by the closure edge and by the owner itself at boot.
+  return renderManifest(
+    collectCompanionSlots(await buildBarrelFreeTree(root)).filter(
+      (s) => s.runtime === "web",
+    ),
+  );
 }

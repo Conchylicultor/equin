@@ -15,8 +15,9 @@
 //   names (no desktop ships them) that provide a host service the graph
 //   declares, added to a fixpoint — exactly one per service;
 // - the guard: every server barrel the graph's code statically loads
-//   (`importClosure`) must be in it, so a portable barrel reaching a
-//   non-portable one fails here, naming the import chain, not at worker boot.
+//   (`importClosures` — one union build per fixpoint round) must be in it,
+//   so a portable barrel reaching a non-portable one fails here, naming the
+//   import chain, not at worker boot.
 //
 // Each entry's `dependsOn` is the server registry's raw edges, kept to the
 // graph. Written beside the declaration as `bin/browser-host.generated.ts`,
@@ -30,7 +31,7 @@
 // lacking a scoped plugin renders less (see `renderBrowserHostScope`).
 
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
-import { importClosure } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
+import { importClosures } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
 import {
   asFsPath,
   type PluginId,
@@ -57,8 +58,10 @@ import { readCompositionManifestsFromDisk } from "./main-bundle";
 import {
   resolveRegistryHome,
   scanCollectedDir,
+  type BrowserHostGraphMemo,
   type RegistryGenContext,
 } from "./plugin-registry-gen";
+import type { CodegenStep } from "./regen-pipeline";
 import { writeGenerated } from "./write-generated";
 
 const DECLARATION_RE =
@@ -117,7 +120,11 @@ async function declaredComposition(
   return m[1]!;
 }
 
-/** What `importClosure` answers that the derivation reads. */
+/**
+ * What `importClosures` answers that the derivation reads: the union of some
+ * entrypoints' closures, with the chain to a module from the first entrypoint
+ * reaching it.
+ */
 export interface HostClosure {
   modules: ReadonlySet<string>;
   importChain(module: string): string[];
@@ -134,7 +141,12 @@ export interface HostGraphInputs {
   /** The server barrels a `base-exclusions` negative names. */
   candidateBarrels: readonly string[];
   read(path: string): Promise<string | null>;
-  closure(entry: string): Promise<HostClosure>;
+  /**
+   * The union closure of `entries` (in order), measured at once — the
+   * derivation asks once for the entry, then once per fixpoint round for the
+   * members no earlier closure reached.
+   */
+  closure(entries: readonly string[]): Promise<HostClosure>;
 }
 
 /** A browser host's inferred graph. */
@@ -143,6 +155,8 @@ export interface BrowserHostGraph {
   members: string[];
   /** Service id → the plugin path providing it, sorted by id. */
   providers: Record<string, string>;
+  /** How many closure measurements the derivation ran (its cost; logged by the generator). */
+  closures: number;
 }
 
 /**
@@ -202,12 +216,15 @@ export async function resolveHostGraph(
   const portable = async (barrel: string): Promise<boolean> =>
     isPortableServerBarrel(await source(barrel));
 
-  // Every module the graph's code loads, with the chain that first reached it.
-  const reached = new Map<string, string[]>();
-  const absorb = (closure: HostClosure): void => {
+  // Every module the graph's code loads, with the closure that first reached
+  // it — whose chain to it is asked for only when the guard fails on it.
+  const reached = new Map<string, HostClosure>();
+  let closures = 0;
+  const absorb = async (entries: readonly string[]): Promise<void> => {
+    closures++;
+    const closure = await inputs.closure(entries);
     for (const module of closure.modules) {
-      if (!reached.has(module))
-        reached.set(module, closure.importChain(module));
+      if (!reached.has(module)) reached.set(module, closure);
     }
   };
   const declared = new Map<string, HostServiceDecl & { module: string }>();
@@ -229,7 +246,7 @@ export async function resolveHostGraph(
     if (await portable(barrel)) members.add(barrel);
   }
   // The entry's own imports (its seed) are roots by rule.
-  absorb(await inputs.closure(entry));
+  await absorb([entry]);
   for (const module of [...reached.keys()].sort()) {
     if (SERVER_BARREL_RE.test(module) && (await portable(module))) {
       members.add(module);
@@ -237,15 +254,18 @@ export async function resolveHostGraph(
   }
 
   // A member already reached by another closure loads nothing that closure
-  // did not (dynamic imports cut on both), so only the unreached are measured.
+  // did not (dynamic imports cut on both), so only the unreached are measured
+  // — all of them in one union closure, sorted, so a module's chain is the one
+  // the first member reaching it answers.
   const measured = new Set<string>();
   const measure = async (): Promise<void> => {
+    const unreached: string[] = [];
     for (const barrel of [...members].sort()) {
       if (measured.has(barrel)) continue;
       measured.add(barrel);
-      if (reached.has(barrel)) continue;
-      absorb(await inputs.closure(barrel));
+      if (!reached.has(barrel)) unreached.push(barrel);
     }
+    if (unreached.length > 0) await absorb(unreached);
     await scanDeclarations();
   };
   await measure();
@@ -293,12 +313,12 @@ export async function resolveHostGraph(
   }
 
   // The guard: the graph's code loads no server barrel outside it.
-  for (const [module, chain] of [...reached].sort(([a], [b]) =>
+  for (const [module, closure] of [...reached].sort(([a], [b]) =>
     a.localeCompare(b),
   )) {
     if (!SERVER_BARREL_RE.test(module) || members.has(module)) continue;
     problems.push(
-      `the graph loads ${module}, which is not in it (${(await portable(module)) ? "portable, but neither in the composition nor a provider" : "not portable"})\n      via ${chain.join(" → ")}`,
+      `the graph loads ${module}, which is not in it (${(await portable(module)) ? "portable, but neither in the composition nor a provider" : "not portable"})\n      via ${closure.importChain(module).join(" → ")}`,
     );
   }
   if (problems.length > 0) {
@@ -309,7 +329,21 @@ export async function resolveHostGraph(
   return {
     members: [...members].map(pluginOfBarrel).sort(),
     providers,
+    closures,
   };
+}
+
+/** `host`'s memo slot on `ctx` (see `RegistryGenContext.browserHostGraphs`). */
+function hostMemo(
+  ctx: RegistryGenContext,
+  host: BrowserHostDecl,
+): BrowserHostGraphMemo {
+  let memo = ctx.browserHostGraphs.get(host.declaration);
+  if (memo === undefined) {
+    memo = {};
+    ctx.browserHostGraphs.set(host.declaration, memo);
+  }
+  return memo;
 }
 
 /**
@@ -319,8 +353,18 @@ export async function resolveHostGraph(
  * `needsMachine`, else this throws naming each gap. Shared by the generator,
  * `plugins-registry-in-sync` and the tests, so all three read one derivation
  * — a gap fails `build` and `push`.
+ *
+ * Memoized on `ctx` (a snapshot): every caller holding the same ctx shares
+ * one derivation, and its inference with `inferBrowserHostGraph`'s callers.
  */
-export async function deriveBrowserHostGraph(
+export function deriveBrowserHostGraph(
+  ctx: RegistryGenContext,
+  host: BrowserHostDecl,
+): Promise<DerivedBrowserHostGraph> {
+  return (hostMemo(ctx, host).derived ??= deriveUncached(ctx, host));
+}
+
+async function deriveUncached(
   ctx: RegistryGenContext,
   host: BrowserHostDecl,
 ): Promise<DerivedBrowserHostGraph> {
@@ -331,7 +375,7 @@ export async function deriveBrowserHostGraph(
     members: graph.members,
     webPlugins: graph.webPlugins,
     bundle: graph.bundle,
-    repo,
+    sources: await ctx.sourceScans(),
     blockers: (barrel) => serverBarrelBlockers(ctx.root, repo, barrel),
   });
   return { ...graph, reads };
@@ -340,10 +384,19 @@ export async function deriveBrowserHostGraph(
 /**
  * A declared host's graph, inferred from its composition (the header's rule),
  * before the coverage guard: what `deriveBrowserHostGraph` builds on, and what
- * the guard's config arm (run by `config-v2:registrations-paired`, where the
- * barrels are imported) reads.
+ * the guard's config and contribution arms (run by
+ * `config-v2:registrations-paired` and `browser-host:contributions-covered`,
+ * where the barrels are imported) read. Memoized on `ctx`, like the
+ * derivation.
  */
-export async function inferBrowserHostGraph(
+export function inferBrowserHostGraph(
+  ctx: RegistryGenContext,
+  host: BrowserHostDecl,
+): Promise<InferredBrowserHostGraph> {
+  return (hostMemo(ctx, host).inferred ??= inferUncached(ctx, host));
+}
+
+async function inferUncached(
   ctx: RegistryGenContext,
   host: BrowserHostDecl,
 ): Promise<InferredBrowserHostGraph> {
@@ -385,9 +438,9 @@ export async function inferBrowserHostGraph(
       repo.has(p),
     ),
     read: (path) => repo.read(path),
-    // What the bundler loads from this module, as the bundle will.
-    closure: (entry) =>
-      importClosure(ctx.root, entry, { dynamicImports: "cut" }),
+    // What the bundler loads from these modules, as the bundle will.
+    closure: (entries) =>
+      importClosures(ctx.root, entries, { dynamicImports: "cut" }),
   });
   const webPlugins = [...resolved.bundle]
     .filter((id) => repo.has(`plugins/${asFsPath(id)}/web/index.ts`))
@@ -505,24 +558,69 @@ export function renderBrowserHostScope(
  * Write every host's generated graph. Returns one line per host naming what its
  * composition leaves out (`available`) — the soft contributors a page scoped to
  * it does not render — for the caller to log.
+ *
+ * Each host is three `onStep` spans (ids suffixed with the host's plugin path,
+ * so two hosts' spans stay apart), so build's profiler shows where the guard's
+ * cost goes: the inference (its import closures), the coverage guard (the
+ * derivation, whose inference is then a memo hit), and the writes. `onStep`
+ * is the pipeline's (`regenerateRegistryCodegen`, which runs inline unless
+ * build threads its profiler through).
  */
 export async function generateBrowserHosts(
   ctx: RegistryGenContext,
+  onStep: CodegenStep,
 ): Promise<string[]> {
   const summaries: string[] = [];
   for (const host of discoverBrowserHosts(await ctx.repo())) {
-    const graph = await deriveBrowserHostGraph(ctx, host);
-    await writeGenerated({
-      file: `${ctx.root}/${host.generated}`,
-      content: await renderBrowserHost(ctx, graph),
-    });
-    await writeGenerated({
-      file: `${ctx.root}/${host.scopeGenerated}`,
-      content: renderBrowserHostScope(host, graph),
-    });
+    const name = `browser host ${host.pluginPath}`;
+    const inferred = await stepped(
+      onStep,
+      `browserHostInfer:${host.pluginPath}`,
+      `${name}: graph inference`,
+      () => inferBrowserHostGraph(ctx, host),
+    );
+    const graph = await stepped(
+      onStep,
+      `browserHostCoverage:${host.pluginPath}`,
+      `${name}: coverage guard`,
+      () => deriveBrowserHostGraph(ctx, host),
+    );
+    await onStep(
+      `browserHostWrite:${host.pluginPath}`,
+      `${name}: write`,
+      async () => {
+        await writeGenerated({
+          file: `${ctx.root}/${host.generated}`,
+          content: await renderBrowserHost(ctx, graph),
+        });
+        await writeGenerated({
+          file: `${ctx.root}/${host.scopeGenerated}`,
+          content: renderBrowserHostScope(host, graph),
+        });
+      },
+    );
     summaries.push(
-      `browser host ${host.pluginPath} (composition "${graph.composition}"): ${graph.members.length} server plugins, ${graph.webPlugins.length} web plugins; left out (available, ${graph.available.length}): ${graph.available.join(", ") || "none"}`,
+      `${name} (composition "${graph.composition}"): ${graph.members.length} server plugins, ${graph.webPlugins.length} web plugins, ${inferred.closures} import-closure builds; left out (available, ${graph.available.length}): ${graph.available.join(", ") || "none"}`,
     );
   }
   return summaries;
+}
+
+/** `run` as one `onStep` span, handing back its value. */
+async function stepped<T>(
+  onStep: CodegenStep,
+  id: string,
+  label: string,
+  run: () => Promise<T>,
+): Promise<T> {
+  const out: T[] = [];
+  await onStep(id, label, async () => {
+    out.push(await run());
+  });
+  if (out.length !== 1) {
+    throw new Error(
+      `onStep("${id}") ran its step ${out.length} times, not once.`,
+    );
+  }
+  return out[0]!;
 }

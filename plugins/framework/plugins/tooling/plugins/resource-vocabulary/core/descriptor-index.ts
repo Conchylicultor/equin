@@ -34,6 +34,8 @@ export interface SourceFile {
   /** Path as walked — quoted in error messages, so it must be openable. */
   path: string;
   src: string;
+  /** `maskSource(src)`, when the caller already holds it (else masked here, on demand). */
+  masked?: string;
 }
 
 export interface DescriptorInfo {
@@ -105,8 +107,8 @@ export function buildDescriptorIndex(
   opts: { ownerPlugin: boolean },
 ): Map<string, DescriptorInfo[]> {
   const index = new Map<string, DescriptorInfo[]>();
-  for (const { path, src } of files) {
-    let masked: string | null = null;
+  for (const { path, src, masked: given } of files) {
+    let masked: string | null = given ?? null;
     for (const [factory, entry] of Object.entries(
       resourceDescriptorFactories,
     )) {
@@ -213,9 +215,13 @@ function declarationTraits(
  * (marked `typeOnly`), and only parses a clause whose post-`type` head is the
  * named block.
  */
-export function parseFileBindings(src: string): FileBindings {
+export function parseFileBindings(
+  src: string,
+  /** `maskSource(src)`, when the caller already holds it. */
+  masked: string = maskSource(src),
+): FileBindings {
   const bindings: FileBindings = new Map();
-  for (const imp of findImports(src)) {
+  for (const imp of findImports(src, masked)) {
     if (imp.keyword !== "import" || imp.sideEffect) continue;
     const clause = imp.clause.replace(/^\s*type\s+/, "");
     const braceIdx = clause.indexOf("{");
@@ -254,7 +260,6 @@ export function parseFileBindings(src: string): FileBindings {
   // a runtime value — dropped rather than raised, which is the conservative
   // direction for a rule that decides whether to fail the build.
   const constRe = /^(?:export\s+)?const\s+([A-Za-z_$][\w$]*)/gm;
-  const masked = maskSource(src);
   let m: RegExpExecArray | null;
   while ((m = constRe.exec(masked))) {
     const name = m[1]!;

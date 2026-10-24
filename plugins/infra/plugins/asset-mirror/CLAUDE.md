@@ -25,12 +25,24 @@ export default {
 ```
 
 ```ts
-// web — point a consumer at the local mirror
-import { assetMirrorUrl } from "@plugins/infra/plugins/asset-mirror/core";
+// web — point a library that fetches `<base>/<file>` itself at the local mirror
+import { assetMirrorBase } from "@plugins/infra/plugins/asset-mirror/core";
+import { useAssetUrl } from "@plugins/infra/plugins/endpoints/web";
 
-const base = assetMirrorUrl("my-assets"); // "/api/asset-mirror/my-assets"
-// fetch(`${base}/logo.png`) → mirrored from https://cdn.example.com/assets/logo.png
+const base = useAssetUrl(assetMirrorBase("my-assets"));
+if (base.kind === "unavailable") return <Text>{base.message}</Text>;
+// base.url === "/api/asset-mirror/my-assets"; `${base.url}/logo.png` is
+// mirrored from https://cdn.example.com/assets/logo.png
 ```
+
+The routes are declarations (`getMirroredFile` / `getMirroredNestedFile` in
+`core/`, literal `route:`s), served by the `machine/` half: the cache is on
+disk, so they are `needsMachine`, and `useAssetUrl` answers `unavailable` on a
+host without the computer (the demo) instead of handing the library a URL that
+would reach the page's own server. The browser-host coverage guard reads them
+like any endpoint. `assetMirrorUrl(id)` — the same base as a plain string,
+spelled by hand — is only for page-only code with no transport to resolve over
+(Sonata's instrument factories); the guard refuses a scoped reader of it.
 
 ## Prewarm (offline cold start)
 
@@ -94,17 +106,29 @@ without booting the server.
 
 ## Plugin reference
 
-- Description: Generic server-side asset mirror: plugins declare a remote asset source via defineAssetMirror; files are lazily downloaded on first request, cached on local disk, and served same-origin thereafter (offline-capable after one warm-up).
+- Description: Generic server-side asset mirror: plugins declare a remote asset source via defineAssetMirror; files are lazily downloaded on first request, cached on local disk, and served same-origin thereafter (offline-capable after one warm-up). Its route is the machine/ half's.
+- Machine:
+  - Uses: `infra/endpoints.machineHandler`
+  - Routes:
+    - `GET /api/asset-mirror/:id/:file`
+    - `GET /api/asset-mirror/:id/:dir/:file`
 - Core:
-  - Uses: `framework/tooling/collected-dir.defineCollectedDir`
+  - Uses:
+    - `framework/tooling/collected-dir.defineCollectedDir`
+    - `infra/endpoints.assetBase`
+    - `infra/endpoints.AssetBase`
+    - `infra/endpoints.blob`
+    - `infra/endpoints.defineEndpoint`
   - Exports (types):
     - `AssetMirrorPrewarm`
     - `CollectedEntry`
   - Exports (values):
-    - `ASSET_MIRROR_PREFIX`
+    - `assetMirrorBase`
     - `assetMirrorPrewarmCollectedDir`
     - `assetMirrorUrl`
     - `defineAssetMirrorPrewarm`
+    - `getMirroredFile`
+    - `getMirroredNestedFile`
     - `prewarmEntries`
 - Cross-plugin:
   - Imported by:

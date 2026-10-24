@@ -14,6 +14,11 @@ import {
 } from "@plugins/framework/plugins/tooling/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
+import { createSourceScans, type SourceScans } from "./browser-host-coverage";
+import type {
+  DerivedBrowserHostGraph,
+  InferredBrowserHostGraph,
+} from "./browser-host-gen";
 import type { CollectedDirDef } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
 import {
   isTestCodePath,
@@ -32,7 +37,7 @@ import {
   type EdgeGraph,
 } from "@plugins/plugin-meta/plugins/closure/core";
 import { resolveMainComposition } from "./main-bundle";
-import { readDeclaredApps } from "./declared-apps";
+import { readDeclaredApps, type DeclaredApp } from "./declared-apps";
 import { readListed, timeSlicer } from "./scan-pacing";
 import { writeGenerated } from "./write-generated";
 
@@ -397,6 +402,29 @@ export interface RegistryGenContext {
   // and the dep pruning still run per call. It holds the PROMISE, so two
   // concurrent renders of one `<dir>` share one scan.
   dirScans: Map<string, Promise<DirEntryScan>>;
+  // Per browser host (by its declaration path), the inferred graph and the
+  // coverage-guarded derivation (`./browser-host-gen.ts`), memoized for this
+  // context's lifetime on the same argument as `dirScans`: both are pure
+  // functions of the snapshot (the tree, `repo()`'s file set, the committed
+  // sources the import closures read). Four callers ask — the generator,
+  // `plugins-registry-in-sync`, `browser-host:contributions-covered` and
+  // `config-v2:registrations-paired` — and a derivation is seconds of import
+  // closures, so ONE ctx pays it once. Promises, like `dirScans`; a rejected
+  // one (a guard failure) is every caller's same failure.
+  browserHostGraphs: Map<string, BrowserHostGraphMemo>;
+  // The coverage guard's reading of `repo()`'s file set
+  // (`./browser-host-coverage.ts`): each file read, masked and parsed at most
+  // once, and the repo-wide facts every host's scan shares (serving wrappers,
+  // every backend barrel's routes, per-plugin descriptor indexes) derived at
+  // most once — on the same snapshot argument as `dirScans`. Lazy: only a
+  // derivation asks.
+  sourceScans(): Promise<SourceScans>;
+}
+
+/** One browser host's memoized derivation halves (see `RegistryGenContext.browserHostGraphs`). */
+export interface BrowserHostGraphMemo {
+  inferred?: Promise<InferredBrowserHostGraph>;
+  derived?: Promise<DerivedBrowserHostGraph>;
 }
 
 /** The bundle-independent half of `collectEntriesWithDeps`: what one `<dir>`
@@ -406,24 +434,50 @@ interface DirEntryScan {
   rawDeps: Map<string, string[]>;
 }
 
+// One ctx per check run's file set: see `buildRegistryGenContext`.
+const contextsByRepo = new WeakMap<RepoFiles, Promise<RegistryGenContext>>();
+
 /**
  * The shared registry-generation context for `root`. A check passes its run's
  * file set as `repo` (so the scans read through it); codegen omits it and the
  * ctx lists the repo from git the first time a scan needs it.
+ *
+ * Given a `repo`, the ctx is memoized on it: every check of one run asking
+ * with the run's set gets the SAME ctx, so its memos (`dirScans`,
+ * `browserHostGraphs`) are paid once per run rather than once per check. That
+ * is the ctx's own lifetime argument — a ctx is a snapshot, and a file set is
+ * the snapshot it is built over — so the memo never outlives what it
+ * describes. (An input-keyed check's recording set is its own object, so it
+ * gets its own ctx and every read it makes is recorded.)
  */
-export async function buildRegistryGenContext(
+export function buildRegistryGenContext(
   root: string,
   repo?: RepoFiles,
 ): Promise<RegistryGenContext> {
-  if (repo !== undefined && repo.root !== root) {
+  if (repo === undefined) return buildContext(root, undefined);
+  if (repo.root !== root) {
     throw new Error(
       `buildRegistryGenContext(${root}) was handed the file set of ${repo.root}.`,
     );
   }
+  let ctx = contextsByRepo.get(repo);
+  if (ctx === undefined) {
+    ctx = buildContext(root, repo);
+    contextsByRepo.set(repo, ctx);
+  }
+  return ctx;
+}
+
+async function buildContext(
+  root: string,
+  repo: RepoFiles | undefined,
+): Promise<RegistryGenContext> {
   const tree = await buildBarrelFreeTree(root);
   const graph = classifyEdges(tree);
   const main = resolveMainComposition(graph, root);
   let listing = repo === undefined ? undefined : Promise.resolve(repo);
+  const files = (): Promise<RepoFiles> => (listing ??= loadRepoFiles(root));
+  let scans: Promise<SourceScans> | undefined;
   return {
     root,
     tree,
@@ -441,8 +495,10 @@ export async function buildRegistryGenContext(
         main.home,
       ),
     },
-    repo: () => (listing ??= loadRepoFiles(root)),
+    repo: files,
     dirScans: new Map(),
+    browserHostGraphs: new Map(),
+    sourceScans: () => (scans ??= files().then(createSourceScans)),
   };
 }
 
@@ -801,6 +857,22 @@ export interface RegistryComposition {
   home: string | null;
 }
 
+// The apps a tree declares, per tree. `readDeclaredApps` reads every plugin's
+// `core/` from disk (~0.5 s), and one ctx resolves several homes against one
+// tree — main's, each named composition's, each browser host's. A tree is a
+// snapshot (`buildBarrelFreeTree` memoizes it per root), so the answer lives
+// exactly as long as the tree it was read for.
+const declaredAppsByTree = new WeakMap<PluginTree, Map<string, DeclaredApp>>();
+
+function declaredAppsOf(tree: PluginTree): Map<string, DeclaredApp> {
+  let apps = declaredAppsByTree.get(tree);
+  if (apps === undefined) {
+    apps = readDeclaredApps(tree);
+    declaredAppsByTree.set(tree, apps);
+  }
+  return apps;
+}
+
 /**
  * A composition's manifest `home`, resolved against its bundle — THROWS on any
  * invalid home (missing, not an app, not bundled), so no build, `--skip-checks`
@@ -815,7 +887,7 @@ export function resolveRegistryHome(
 ): string | null {
   // Building a composition's registries IS deploying it: something must own `/`.
   const r = resolveCompositionHome({
-    apps: readDeclaredApps(tree),
+    apps: declaredAppsOf(tree),
     bundle,
     home,
     deployed: true,

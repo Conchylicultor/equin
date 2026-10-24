@@ -3,6 +3,9 @@ import {
   FoldMotion,
   useCollapsible,
 } from "@plugins/primitives/plugins/collapsible/web";
+import { useTransport } from "@plugins/primitives/plugins/networking/web";
+import { assetUrlOver } from "@plugins/infra/plugins/endpoints/web";
+import { mailImageProxyAsset } from "@plugins/apps/plugins/mail/plugins/remote-images/core";
 import { processEmailHtml } from "../internal/process-email-html";
 import "./mail-html.css";
 
@@ -37,10 +40,21 @@ export function MailHtml({
   onRemoteImagesDetected,
   resolveCid,
 }: MailHtmlProps): ReactElement {
-  const processed = useMemo(
-    () => processEmailHtml(html, { showRemoteImages, resolveCid }),
-    [html, showRemoteImages, resolveCid],
-  );
+  const transport = useTransport();
+  const processed = useMemo(() => {
+    // An `<img src>` inside the HTML string loads by URL, so each proxied src
+    // is the asset's URL over this subtree's transport. Where the proxy is
+    // unavailable (a host without the computer) the image stays stripped — the
+    // privacy-safe answer; the opt-in is not offered there in the first place
+    // (`RemoteImagesNotice` shows the unavailable message instead).
+    const remoteImageSrc = showRemoteImages
+      ? (remoteUrl: string) => {
+          const url = assetUrlOver(transport, mailImageProxyAsset(remoteUrl));
+          return url.kind === "ready" ? url.url : null;
+        }
+      : null;
+    return processEmailHtml(html, { remoteImageSrc, resolveCid });
+  }, [html, showRemoteImages, resolveCid, transport]);
 
   const quoted = useCollapsible();
 

@@ -3,18 +3,13 @@ import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { onPrototypesChanged } from "@plugins/apps/plugins/prototypes/plugins/files/server";
 import { onDepInstallSettled } from "@plugins/infra/plugins/deps/server";
 import { chromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/deps";
-import { PROTOTYPE_THUMB_ROUTE } from "../core";
-import { handleThumbnail } from "./internal/handlers";
 import { renderThumbnailJob, sweepThumbnailsJob } from "./internal/jobs";
 import { prototypeThumbnailsServed } from "./internal/state";
 import { syncThumbnails } from "./internal/sync";
 
 export default {
   description:
-    "Rendered PNG previews for the prototypes gallery: a content-addressed disk cache, a headless-chromium render job driven by the files watcher, the push state resource the cards read, and the immutable serving route.",
-  httpRoutes: {
-    [PROTOTYPE_THUMB_ROUTE]: handleThumbnail,
-  },
+    "Rendered PNG previews for the prototypes gallery: a content-addressed disk cache, a headless-chromium render job driven by the files watcher, and the push state resource the cards read; the immutable serving route is the machine/ half's.",
   contributions: [...prototypeThumbnailsServed.declare],
   register: [renderThumbnailJob, sweepThumbnailsJob],
   onReady: () => {

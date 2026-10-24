@@ -1,5 +1,4 @@
 import { hash64 } from "@plugins/packages/plugins/string-hash/core";
-import { getBootMode } from "./boot-mode";
 import { createResourceRuntime } from "@plugins/framework/plugins/resource-runtime/core";
 import type {
   Resource as RtResource,
@@ -186,6 +185,19 @@ function relationBasesOf(relation: string): readonly string[] {
   return relationBasesHolder(relation);
 }
 
+// The resource keys whose reads reach the database: routed to a table, reading
+// a relation, or unrouted (a loader no declaration covers) — the set the
+// change-feed boot assert below judges a host's graph by.
+function dbReadingKeys(): string[] {
+  return [
+    ...new Set([
+      ...runtime.scopedResourceTables().map((r) => r.key),
+      ...runtime.relationResourceReads().map((r) => r.key),
+      ...runtime.unroutedResourceKeys(),
+    ]),
+  ].sort();
+}
+
 /**
  * D3: a serving host whose graph serves DB-backed live reads must have a change
  * feed. Every such read recomputes on a table change only — the feed routes it
@@ -197,16 +209,47 @@ function relationBasesOf(relation: string): readonly string[] {
  */
 export function assertDbReadsHaveChangeFeed(): void {
   if (relationBasesHolder !== null) return;
-  const keys = [
-    ...new Set([
-      ...runtime.scopedResourceTables().map((r) => r.key),
-      ...runtime.relationResourceReads().map((r) => r.key),
-      ...runtime.unroutedResourceKeys(),
-    ]),
-  ].sort();
+  const keys = dbReadingKeys();
   if (keys.length === 0) return;
   throw new Error(
     `[resources] DB-backed live reads on a host with no change feed never recompute: ${keys.length} resource(s) read the database (${keys.slice(0, 5).join(", ")}${keys.length > 5 ? ", …" : ""}), but nothing set the relation bases (setRelationBases) — boot \`database/change-feed\` in this host's graph.`,
+  );
+}
+
+// The commit watermark source (Rule B): what `captureWatermark` below reads —
+// the xmin of the database snapshot a frame's value is read under, captured by
+// the flight's starter before the loader's first read. The database owns it
+// (`database/server`'s `snapshotWatermark`), and server-core/core must not
+// statically import that barrel (it imports this one — a cycle), so `database`
+// injects it in its `onReadyBlocking`, right after the driver is ready, on every
+// host with a database (the same boot-injection pattern as `setRelationBases`).
+// Read before that, `captureWatermark` THROWS — a read served before the
+// database is ready is a boot-order bug, never "no watermark". Central never
+// installs one and passes no capture (its frames carry none). `null` resets it
+// (test support). L2 consumes the same capture only as its persist floor, so an
+// L2 that degraded leaves watermarks on.
+let watermarkSource: (() => Promise<string>) | null = null;
+export function setWatermarkSource(fn: (() => Promise<string>) | null): void {
+  watermarkSource = fn;
+}
+
+/**
+ * A serving host that serves live reads must have a watermark source: every
+ * flight captures one (`captureWatermark` below — DB-backed or not), so without
+ * it each flight throws, is reported, and ships its frame tokenless — and an
+ * optimistic op whose exact ack is missed never confirms. `database` installs
+ * it in `onReadyBlocking`, so this fails a graph that serves resources without
+ * booting `database`. Called beside `assertDbReadsHaveChangeFeed` at the start
+ * of the post-ready phases.
+ */
+export function assertServedReadsHaveWatermarkSource(): void {
+  if (watermarkSource !== null) return;
+  const keys = Resource.Declare.getContributions()
+    .map((c) => c.key)
+    .sort();
+  if (keys.length === 0) return;
+  throw new Error(
+    `[resources] live reads on a host with no watermark source: ${keys.length} resource(s) are served (${keys.slice(0, 5).join(", ")}${keys.length > 5 ? ", …" : ""}), but nothing installed the snapshot watermark (setWatermarkSource) — every flight's capture would throw. Boot \`database\` in this host's graph.`,
   );
 }
 
@@ -218,12 +261,12 @@ export function assertDbReadsHaveChangeFeed(): void {
 // the runtime closures below read the CURRENT holders at call time. Before
 // injection (and on central, which never installs them) every hook is the inert
 // default: `shouldPersist` returns false → no resource is persisted, and the
-// capture/persist hooks are never reached. The runtime is constructed before the
+// persist hook is never reached. The runtime is constructed before the
 // setter runs, which is harmless because the closures dereference the holder
-// lazily. See research/2026-06-22-global-live-state-l2-persisted-materialization.md.
+// lazily. The persist floor is the flight's own watermark (`setWatermarkSource`),
+// never one of L2's. See research/2026-06-22-global-live-state-l2-persisted-materialization.md.
 export interface LiveStateSnapshotHooks {
   shouldPersist: (key: string) => boolean;
-  captureWatermark: () => Promise<string>;
   /** See `ResourceRuntimeOptions.persistSnapshot`: `meta.mode` is replace or floor. */
   persistSnapshot: (
     key: string,
@@ -424,24 +467,24 @@ const runtime = createResourceRuntime({
   // the boot-injected holder, read at call time — it throws until change-feed
   // sets it. central: omitted (identity).
   relationBases: (r) => relationBasesOf(r),
-  // L2 persisted materialization. All three read the boot-injected holder at call
-  // time (set by the live-state-snapshot plugin once the DB is ready). Until then
-  // — and on central, which never installs them — `shouldPersist` returns false,
-  // so no resource is ever persisted and the capture/persist hooks are never hit.
-  shouldPersist: (key) => liveStateSnapshotHooks?.shouldPersist(key) ?? false,
+  // The commit watermark: the boot-injected source, read at call time (see
+  // `setWatermarkSource`). Installed by `database` on every host with a
+  // database before anything is served; a capture without it is a boot-order
+  // bug, never "no watermark". The runtime reports a throwing capture and ships
+  // that one frame tokenless. central: omitted (no watermark).
   captureWatermark: () => {
-    if (!liveStateSnapshotHooks) {
-      // A browser host boots no L2 (live-state-snapshot is desktop-only): its
-      // frames ship without a commit watermark, as central's do.
-      if (getBootMode() === "browser") return Promise.resolve(undefined);
-      // The desktop installs the hooks before anything is served; a read here
-      // without them is a boot-order bug, never "no watermark".
+    if (!watermarkSource) {
       throw new Error(
-        "captureWatermark called before live-state-snapshot hooks installed",
+        "captureWatermark called before database installed the watermark source (setWatermarkSource)",
       );
     }
-    return liveStateSnapshotHooks.captureWatermark();
+    return watermarkSource();
   },
+  // L2 persisted materialization. Both read the boot-injected holder at call
+  // time (set by the live-state-snapshot plugin once the DB is ready). Until then
+  // — and on central, which never installs them — `shouldPersist` returns false,
+  // so no resource is ever persisted and the persist hook is never hit.
+  shouldPersist: (key) => liveStateSnapshotHooks?.shouldPersist(key) ?? false,
   persistSnapshot: (key, paramsKey, value, watermark, meta) => {
     if (!liveStateSnapshotHooks) {
       throw new Error(

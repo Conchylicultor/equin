@@ -15,12 +15,13 @@
 import { describe, expect, test } from "bun:test";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
-  parseServerContributionDeclarations,
+  createSourceScans,
   resolveHostConfigCoverage,
   resolveHostContributionCoverage,
   resolveHostCoverage,
   type HostConfigRegistration,
   type HostCoverageInputs,
+  type SourceScans,
 } from "./browser-host-coverage";
 
 // Fixture paths go through `pj(rel)` rather than bare `plugins/<seg>/…`
@@ -29,7 +30,7 @@ import {
 const pj = (rel: string): string => `plugins/${rel}`;
 
 /** A fixture repo over `files` (repo-relative path → source). */
-function repoOf(files: Record<string, string>): HostCoverageInputs["repo"] {
+function repoOf(files: Record<string, string>): SourceScans["repo"] {
   const paths = Object.keys(files).sort();
   return {
     has: (p) => p in files,
@@ -47,7 +48,7 @@ function inputs(
     members: ["app"],
     webPlugins: [asPluginId("app")],
     bundle: new Set(["app", "disk"]),
-    repo: repoOf(files),
+    sources: createSourceScans(repoOf(files)),
     blockers: async () => ["disk/server is not portable (via a → b)"],
     ...over,
   };
@@ -235,7 +236,7 @@ describe("resolveHostCoverage", () => {
     );
   });
 
-  test("a raw /api URL to a prefix a non-member serves throws; a prefix no barrel routes is not judged", async () => {
+  test("a raw /api URL to a prefix no member serves throws — whether a non-member serves it or none does", async () => {
     const files = {
       ...BASE,
       [pj("disk/core/index.ts")]:
@@ -254,11 +255,115 @@ describe("resolveHostCoverage", () => {
     expect(message).toContain(
       'a raw "/api/disk" URL is not served by the graph',
     );
+    const unrouted = await rejection(
+      resolveHostCoverage(
+        inputs({
+          ...files,
+          [pj("app/web/view.tsx")]: 'fetch("/api/mirror/" + id);',
+        }),
+      ),
+    );
+    expect(unrouted).toContain(
+      'a raw "/api/mirror" URL is not served by the graph (a URL built by hand cannot declare `needsMachine`',
+    );
+    expect(unrouted).toContain("nothing in the repo serves it");
+  });
+
+  test("a raw URL to a member's prefix is covered; prose naming a route is no URL", async () => {
     await resolveHostCoverage(
       inputs({
-        ...files,
+        ...BASE,
         [pj("app/web/view.tsx")]:
-          'fetch("/api/mirror/" + id); // "GET /api/disk/raw" in prose is no URL',
+          'fetch("/api/app/other"); // "GET /api/disk/raw" in prose is no URL',
+      }),
+    );
+  });
+
+  test("an httpRoutes key the scan cannot read throws, naming the barrel and the key", async () => {
+    for (const [key, why] of [
+      ["[ROUTE_KEY]", "is not readable"],
+      [`[\`GET \${BASE}/:id\`]`, "is not readable"],
+      [`\`GET \${BASE}/:id\``, "is a template with a substitution"],
+      ["[other.path]", "is not readable"],
+      ["[missing.route]", "names no endpoint declaration"],
+    ] as const) {
+      const message = await rejection(
+        resolveHostCoverage(
+          inputs({
+            ...BASE,
+            [pj("app/server/index.ts")]:
+              `import { ping } from "../core";\nexport default { portable: true, httpRoutes: { [ping.route]: h, ${key}: h } };`,
+            [pj("app/web/view.tsx")]:
+              `import { ping } from "@plugins/app/core";\nuse(ping);`,
+          }),
+        ),
+      );
+      expect(message).toContain(
+        `plugins/app/server/index.ts: \`httpRoutes\` key \`${key}\` ${why}`,
+      );
+    }
+    for (const entry of ["...more", "shorthand"]) {
+      const message = await rejection(
+        resolveHostCoverage(
+          inputs({
+            ...BASE,
+            [pj("app/server/index.ts")]:
+              `import { ping } from "../core";\nexport default { portable: true, httpRoutes: { [ping.route]: h, ${entry} } };`,
+          }),
+        ),
+      );
+      expect(message).toContain("is not a `key: handler` pair");
+    }
+    const notObject = await rejection(
+      resolveHostCoverage(
+        inputs({
+          ...BASE,
+          [pj("app/server/index.ts")]:
+            "const routes = {};\nexport default { portable: true, httpRoutes: routes };",
+        }),
+      ),
+    );
+    expect(notObject).toContain("`httpRoutes` is not one object literal");
+  });
+
+  test("a bad httpRoutes key in a NON-member barrel throws too (every backend barrel is read)", async () => {
+    const message = await rejection(
+      resolveHostCoverage(
+        inputs({
+          ...BASE,
+          [pj("disk/machine/index.ts")]:
+            "export default { httpRoutes: { [ROUTE_KEY]: h } };",
+        }),
+      ),
+    );
+    expect(message).toContain(
+      "plugins/disk/machine/index.ts: `httpRoutes` key `[ROUTE_KEY]` is not readable",
+    );
+  });
+
+  test("a handler's type arguments and an arrow in it split no entry", async () => {
+    const { reads } = await resolveHostCoverage(
+      inputs({
+        ...BASE,
+        [pj("app/server/index.ts")]:
+          `import { ping } from "../core";\nexport default { portable: true, httpRoutes: { [ping.route]: wrap<Req, Res>((r) => r.n >= 1 ? a : b), "GET /api/app/x": wrap<Map<string, number>>(h) } };`,
+        [pj("app/web/view.tsx")]:
+          `import { ping } from "@plugins/app/core";\nuse(ping);\nfetch("/api/app/x");`,
+      }),
+    );
+    expect(reads).toEqual([]);
+  });
+
+  test("a literal route key and a [decl.route] key are both read", async () => {
+    await resolveHostCoverage(
+      inputs({
+        ...BASE,
+        [pj("app/core/extra.ts")]:
+          `import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";\nexport const lit = defineEndpoint({ route: "GET /api/lit/x" });`,
+        [pj("app/server/index.ts")]:
+          `import { ping } from "../core";\nexport default { portable: true, httpRoutes: { [ping.route]: h, "GET /api/lit/x": h, 'GET /api/lit/y': h } };`,
+        [pj("app/web/view.tsx")]:
+          `import { lit } from "../core/extra";\nuse(lit);\nfetch("/api/lit/y");`,
       }),
     );
   });
@@ -300,25 +405,6 @@ describe("resolveHostConfigCoverage", () => {
     expect(problems).toEqual([
       'fixture: config "app/config.jsonc" registered on web by plugins/app/web/index.ts is not served by the graph: served by app/machine — desktop-only (no browser host boots `machine/`): move it into the plugin\'s portable `server/`',
       'fixture: config "disk/config.jsonc" registered on web by plugins/disk/web/index.ts is not served by the graph: served by disk/server, which is not portable: it reads the disk',
-    ]);
-  });
-});
-
-describe("parseServerContributionDeclarations", () => {
-  test("reads each literal kind and whether it declares absentOnHost", () => {
-    expect(
-      parseServerContributionDeclarations(`
-export const A = defineServerContribution<{ id: string }>("a.kind", { docLabel: (p) => p.id });
-export const B = defineServerContribution<{ restore(id: string): Promise<string> }>(
-  "b.kind",
-  { absentOnHost: { reason: "a reaction" } },
-);
-// defineServerContribution("in.a.comment")
-export function defineServerContribution<P>(debugName: string) {}
-`),
-    ).toEqual([
-      { kind: "a.kind", absentOnHost: false },
-      { kind: "b.kind", absentOnHost: true },
     ]);
   });
 });

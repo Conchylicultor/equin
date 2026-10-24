@@ -17,7 +17,12 @@ import {
   type PrototypeOption,
 } from "./options";
 import { readOptionSource, readPrototypeOptions } from "./option-source";
-import { prototypeUrl } from "./prototypes";
+import { ASSET_PATH } from "@plugins/infra/plugins/endpoints/core";
+import { prototypeDocument } from "./prototypes";
+
+/** The path a frame's document asset is served at. */
+const prototypeUrl = (...args: Parameters<typeof prototypeDocument>): string =>
+  prototypeDocument(...args)[ASSET_PATH];
 
 // The syntax pin for `<meta name="prototype-option">`. The gallery list, the
 // folder validator and the server's stamping all go through these functions,
@@ -202,7 +207,7 @@ describe("picksFromQuery", () => {
     expect(bad("palette=azure&palette=violet")).toContain("twice");
   });
 
-  test("round-trips through prototypeUrl", () => {
+  test("round-trips through prototypeDocument", () => {
     const url = prototypeUrl("proto-1-abcd", {
       v: "a1b2c3",
       picks: resolvePicks([PANE, PALETTE], {
@@ -431,7 +436,7 @@ describe("color picks", () => {
     }
   });
 
-  test("round-trips through prototypeUrl as %23rrggbb", () => {
+  test("round-trips through prototypeDocument as %23rrggbb", () => {
     const picks = resolvePicks([PANE, ACCENT], {
       accent: "#10b981",
       pane: "floating",

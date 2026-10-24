@@ -24,6 +24,12 @@ import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web"
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
+import { useTransport } from "@plugins/primitives/plugins/networking/web";
+import {
+  assetUrlOver,
+  type AssetUrl,
+} from "@plugins/infra/plugins/endpoints/web";
+import type { AssetPath } from "@plugins/infra/plugins/endpoints/core";
 import {
   prototypeDetailRoute,
   prototypesApp,
@@ -33,8 +39,8 @@ import {
   DEFAULT_PROTOTYPE_VIEWPORT,
   prototypesList,
   prototypePicks,
-  prototypeUrl,
-  prototypeVersionUrl,
+  prototypeDocument,
+  prototypeVersionDocument,
   pickedColor,
   resolvePicks,
   setPrototypePicks,
@@ -482,7 +488,9 @@ export function useStoredPicksOf(): (frame: PrototypeFrame) => StoredPicks {
 }
 
 /**
- * THE url of a prototype frame's document: its version under its picks.
+ * THE url of a prototype frame's document: its version under its picks, over
+ * the subtree's transport — an iframe loads it by URL (its sub-resources
+ * too), so it is `unavailable` on a host without the computer.
  *
  * A color pick alone never changes it: colors are painted into the loaded
  * document live (`useFrameColorVars`), so a drag never reloads the frame. The
@@ -493,16 +501,24 @@ export function useStoredPicksOf(): (frame: PrototypeFrame) => StoredPicks {
 export function useFrameSrc(
   frame: PrototypeFrame,
   meta: PrototypeMeta,
-): string {
+): AssetUrl {
+  const transport = useTransport();
   const stored = useFrameStoredPicks(frame);
   const options = documentOptions(meta, frame.version);
   // What the url depends on: everything but the color picks.
-  const key = prototypeDocumentSrc(
-    meta,
-    frame.version,
-    withoutColorPicks(options, stored),
+  const keyed = assetUrlOver(
+    transport,
+    prototypeDocumentAsset(
+      meta,
+      frame.version,
+      withoutColorPicks(options, stored),
+    ),
   );
-  const src = prototypeDocumentSrc(meta, frame.version, stored);
+  const key = keyed.kind === "ready" ? keyed.url : null;
+  const src = assetUrlOver(
+    transport,
+    prototypeDocumentAsset(meta, frame.version, stored),
+  );
   const [held, setHeld] = useState({ key, src });
   if (held.key === key) return held.src;
   // Set during render (React's "adjust state on a prop change" pattern), so
@@ -551,7 +567,7 @@ export function useFrameColorVars(
 }
 
 /**
- * The url of one document of the prototype — `version`, or the live folder for
+ * The address of one document of the prototype — `version`, or the live folder for
  * `null` — under `stored` picks, judged against the options THAT version
  * declares.
  *
@@ -561,13 +577,13 @@ export function useFrameColorVars(
  * - a recorded version: its frozen document. No cache-bust, since a sha
  *   addresses content that never changes.
  */
-export function prototypeDocumentSrc(
+export function prototypeDocumentAsset(
   meta: PrototypeMeta,
   version: PrototypeVersion | null,
   stored: StoredPicks,
-): string {
+): AssetPath {
   const resolved = resolvePicks(documentOptions(meta, version), stored);
   return version === null
-    ? prototypeUrl(meta.name, { v: meta.rev, picks: resolved })
-    : prototypeVersionUrl(meta.name, version.sha, { picks: resolved });
+    ? prototypeDocument(meta.name, { v: meta.rev, picks: resolved })
+    : prototypeVersionDocument(meta.name, version.sha, { picks: resolved });
 }

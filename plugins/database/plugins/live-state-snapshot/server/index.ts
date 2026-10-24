@@ -8,11 +8,11 @@ import {
   unboundedWindowKeys,
 } from "@plugins/framework/plugins/server-core/core";
 import {
+  ChangelogRetention,
   producedTableNames,
   relationBases,
 } from "@plugins/database/plugins/change-feed/server";
 import { db } from "@plugins/database/server";
-import { ExcludeFromFork } from "@plugins/database/plugins/admin/server";
 import { LIVE_STATE_SNAPSHOT_TABLE } from "@plugins/database/plugins/derived-views/core";
 import { initSnapshotSubsystem } from "./internal/boot-init";
 import { runBootCatchUp } from "./internal/boot-catch-up";
@@ -31,6 +31,11 @@ import { openProducedPersistReports } from "./internal/produced-reports";
 // trigger function). See
 // research/2026-06-22-global-live-state-l2-persisted-materialization.md.
 //
+// Portable: it runs on every host with a database — the desktop's backend on
+// the Postgres cluster, a browser host's worker on PGlite — so the changelog is
+// pruned by the same policy and the persist hooks are the same on both. Forking,
+// and so the snapshot table's fork exclusion, is the desktop's (`../machine`).
+//
 // `persist.ts` and `catch-up.ts` are db-PARAMETRIZED (no `@plugins/database/server`
 // import) so a test can import them without reaching the namespace-bound worktree
 // pool; the `db` singleton is bound HERE (a backend-only entry) and threaded into
@@ -46,28 +51,18 @@ export default {
   description:
     "L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, served only from a usable row (a key the runtime persists now, under its current definition, from a current writer). Two persist modes (a FULL recompute replaces; a persisted alias's trailing window lowers the floor), an hourly compact job, and a boot catch-up that seeds each persisted alias from its row and replays the changelog by scope — or, when history was pruned past the floor or a rollup was healed, recomputes every persisted key.",
   loadBearing: false,
+  portable: true,
+  register: [liveStateChangelogPruneJob, liveStateCompactJob],
+  // A companion of change-feed: the changelog it writes is bounded only by the
+  // prune job above, and this plugin imports change-feed, so change-feed
+  // cannot import it — the closure engine ships it wherever change-feed ships.
   contributions: [
-    // The snapshot is a cold-boot ACCELERATOR, not a correctness prerequisite —
-    // `initSnapshotSubsystem` degrades to a full recompute when it is absent, so
-    // a fork loses startup latency and nothing else.
-    //
-    // It must not be inherited, because a persisted value is computed FROM other
-    // tables and the fork empties several of them (notifications, mail, the
-    // observability set). Keeping the snapshot while emptying its sources would
-    // make a fresh worktree serve a value that disagrees with the rows behind it
-    // — and for a boot-critical resource that stale value is what the very first
-    // paint renders. Emptying both makes that mismatch unrepresentable.
-    //
-    // A table name string rather than a table object: this table is created with
-    // `CREATE TABLE IF NOT EXISTS` (see derived-views/core's imperative-tables),
-    // not by a drizzle migration, so there is no table object to pass.
-    ExcludeFromFork({
-      table: LIVE_STATE_SNAPSHOT_TABLE,
+    ChangelogRetention({
+      companion: true,
       reason:
-        "Cold-boot accelerator computed from tables the fork empties; an inherited value would disagree with the rows behind it on first paint.",
+        "live-state-snapshot's cold-boot catch-up replays the changelog; its hourly prune job (pruneChangelog) deletes the rows below the horizon no persisted snapshot needs",
     }),
   ],
-  register: [liveStateChangelogPruneJob, liveStateCompactJob],
   // Create the snapshot table and INJECT the persist hooks into the resource
   // runtime here — before the ready barrier flips and before any flush could try
   // to persist. The `onReadyBlocking` phase is graph-driven by `dependsOn`, and

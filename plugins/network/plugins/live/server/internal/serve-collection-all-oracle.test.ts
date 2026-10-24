@@ -65,10 +65,12 @@ import {
   routedTableRequirements,
   setClientBuildIdentity,
   setLiveStateSnapshotHooks,
+  setWatermarkSource,
   type PersistMeta,
   setRelationBases,
 } from "@plugins/framework/plugins/server-core/core";
 import { clearRelationBases } from "@plugins/framework/plugins/server-core/core/testing";
+import { snapshotWatermark } from "@plugins/database/server/testing";
 import {
   makeClientView,
   type ClientView,
@@ -279,14 +281,11 @@ beforeAll(async () => {
   );
   // L2 on, for this key only: the whole set is a PERSISTED alias, so the
   // runtime keeps its `{}` tuple current with nobody subscribed.
+  // The flight watermark every persist is floored by: this database's, as the
+  // served runtime's (`database` installs it on boot).
+  setWatermarkSource(() => snapshotWatermark(db));
   setLiveStateSnapshotHooks({
     shouldPersist: (key) => key === KEY,
-    captureWatermark: async () => {
-      const res = await db.execute<{ xmin: string }>(
-        sql`SELECT pg_snapshot_xmin(pg_current_snapshot())::text AS xmin`,
-      );
-      return res.rows[0]!.xmin;
-    },
     persistSnapshot: async (_key, _pk, value, _watermark, meta) => {
       persists.push({ value, meta });
     },
@@ -377,6 +376,7 @@ afterAll(async () => {
   handler.close(ws, 1000, "test");
   dropPendingPersists();
   setLiveStateSnapshotHooks(null);
+  setWatermarkSource(null);
   setClientBuildIdentity(() => null);
   await listener?.stop();
   await client?.end();

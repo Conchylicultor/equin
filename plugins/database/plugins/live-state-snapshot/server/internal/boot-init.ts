@@ -8,7 +8,6 @@ import {
 import { ensureSnapshotTable } from "./tables-ddl";
 import {
   shouldPersist,
-  captureWatermark,
   persistSnapshot,
   readPersistedReadSets,
   sweepUnusableSnapshots,
@@ -87,7 +86,6 @@ export async function initSnapshotSubsystem(
     // below uninstalls them (the catch).
     setLiveStateSnapshotHooks({
       shouldPersist,
-      captureWatermark: () => captureWatermark(db),
       persistSnapshot: async (key, paramsKey, value, watermark, meta) => {
         if (await guard.refuses(key, meta.guardTables)) return;
         await persistSnapshot(db, key, paramsKey, value, watermark, meta);
@@ -163,7 +161,8 @@ export async function initSnapshotSubsystem(
     }
   } catch (err) {
     // Uninstalled: a half-initialized L2 persists nothing, exactly as if the
-    // hooks had never been installed.
+    // hooks had never been installed. Frames keep their commit watermarks — the
+    // capture is the database's (`setWatermarkSource`), not L2's.
     setLiveStateSnapshotHooks(null);
     const msg = err instanceof Error ? (err.stack ?? err.message) : String(err);
     // Loud but non-fatal: cold-boot acceleration is off for this boot; correctness

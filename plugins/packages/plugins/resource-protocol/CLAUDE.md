@@ -131,6 +131,7 @@ yields no latency sample by construction.
     - `SubErrorReason`
   - Exports (values):
     - `BUILD_GRAPH_HEADER`
+    - `CENTRAL_RESOURCE_HTTP_ROUTE`
     - `contractVerdict`
     - `DERIVE_MAX_ID`
     - `DERIVE_MAX_SOURCES`

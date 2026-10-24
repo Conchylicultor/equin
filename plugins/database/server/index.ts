@@ -1,5 +1,9 @@
-import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import {
+  setWatermarkSource,
+  type ServerPluginDefinition,
+} from "@plugins/framework/plugins/server-core/core";
 import { db, DatabaseDriver } from "./internal/driver";
+import { snapshotWatermark } from "./internal/snapshot-watermark";
 import { loadKnownRelations } from "./internal/read-set-capture";
 import {
   applySchemaLayer,
@@ -41,6 +45,11 @@ export default {
   async onReadyBlocking() {
     const driver = DatabaseDriver.get();
     await driver.ready();
+    // The resource runtime's commit watermark is this database's snapshot xmin:
+    // installed on every host with a database, before anything is served, so
+    // every frame that fully reconciles a client carries one — whether or not
+    // the host boots L2 (which only consumes it, as its persist floor).
+    setWatermarkSource(() => snapshotWatermark(db));
     // The boot schema layer, in ONE transaction: views out (only when a
     // migration is pending) → pending migrations, each phased schema migration
     // as expand → claimed data → contract → the derived `updatedAt` triggers →

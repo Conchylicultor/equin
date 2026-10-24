@@ -24,11 +24,19 @@ import {
 import { startListener, stopListener } from "./internal/listener";
 import { buildViewDeps } from "./internal/view-deps";
 import { installRelationGraph } from "./internal/relation-bases";
+import {
+  assertChangelogRetained,
+  ChangelogRetention,
+} from "./internal/changelog-retention";
 
 export { rebuildTriggers, getCoveredTables } from "./internal/triggers";
 // Opt a high-churn observability table out of the L4 change-feed (see
 // ./internal/exclusion for the trade this makes).
 export { ExcludeFromChangeFeed } from "./internal/exclusion";
+// What bounds the changelog this plugin writes: a companion kind, contributed
+// by the plugin that prunes it (which imports this one — see
+// ./internal/changelog-retention). A serving host without one fails.
+export { ChangelogRetention } from "./internal/changelog-retention";
 export { parseLiveStatePayload, readLayout } from "./internal/parse-payload";
 export type { DbChange } from "./internal/parse-payload";
 // The single source of change routing — reused by the L2 cold-boot catch-up
@@ -139,8 +147,15 @@ export default {
   // barrier (same phase as git-watcher's startGitWatcher). Every serving host
   // runs `onReady` (the desktop's `serve`, a browser host after its seed); an
   // `exec` child does not, so it opens no LISTEN.
+  //
+  // A serving host must also boot something bounding the changelog every
+  // commit appends to (`ChangelogRetention`, a companion kind: the closure
+  // engine ships its contributor wherever this plugin ships). Asserted after
+  // the listener starts, so a graph lacking one still recomputes its readers
+  // while the failure is reported.
   onReady() {
     startListener();
+    assertChangelogRetained(ChangelogRetention.getContributions());
   },
   async onShutdown() {
     // A producer's pending window must not fire into a runtime tearing down.

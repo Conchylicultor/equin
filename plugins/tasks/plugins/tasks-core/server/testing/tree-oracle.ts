@@ -7,6 +7,7 @@ import {
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
+import { snapshotWatermark } from "@plugins/database/server/testing";
 import type { FeedChange } from "@plugins/database/plugins/change-feed/server";
 import {
   createChangeFeedListener,
@@ -271,12 +272,7 @@ export async function createTreeOracle(
 
   const runtime = createResourceRuntime({
     shouldPersist: (key) => persisted.has(key),
-    captureWatermark: async () => {
-      const res = await db.execute<{ xmin: string }>(
-        sql`SELECT pg_snapshot_xmin(pg_current_snapshot())::text AS xmin`,
-      );
-      return res.rows[0]!.xmin;
-    },
+    captureWatermark: () => snapshotWatermark(db),
     persistSnapshot: async (key, _pk, value, _watermark, meta) => {
       const list = persists.get(key) ?? [];
       list.push({ value, meta });

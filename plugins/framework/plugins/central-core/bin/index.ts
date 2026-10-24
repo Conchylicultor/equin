@@ -11,6 +11,7 @@ import {
 } from "@plugins/framework/plugins/central-core/core";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { createRequestHandler } from "@plugins/framework/plugins/http-router/core";
+import { CENTRAL_RESOURCE_HTTP_ROUTE } from "@plugins/packages/plugins/resource-protocol/core";
 import { centralEntries } from "../core/central.generated";
 import {
   computeLoadWaves,
@@ -207,7 +208,7 @@ for (const plugin of ordered) {
 // Browsers reach these paths via the gateway's central-routes manifest, which
 // this process publishes below — so they are listed like any plugin route.
 wsRoutes["/ws/central-notifications"] = notificationsWsHandler;
-httpRoutes.push(["GET /api/central-resources/:key", handleResourceHttp]);
+httpRoutes.push([CENTRAL_RESOURCE_HTTP_ROUTE, handleResourceHttp]);
 
 // The socket the gateway handed this backend, as `--socket <path>` (with a
 // transition fallback to the old environment variable — see

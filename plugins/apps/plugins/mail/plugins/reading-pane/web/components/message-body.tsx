@@ -1,19 +1,16 @@
 import { useState } from "react";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
-import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { MailHtml } from "@plugins/apps/plugins/mail/plugins/mail-html/web";
+import {
+  MailHtml,
+  RemoteImagesNotice,
+} from "@plugins/apps/plugins/mail/plugins/mail-html/web";
 import { AttachmentChip } from "@plugins/apps/plugins/mail/plugins/attachments/web";
 import type { MailAttachment } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import { MessageBodyState } from "@plugins/apps/plugins/mail/plugins/sync/web";
 import { useResolveCid } from "../internal/use-resolve-cid";
-import { symbol } from "@plugins/ui/plugins/icons/core";
-import { Icon } from "@plugins/ui/plugins/icons/web";
-
-const imageIcon = symbol("image");
 
 // Renders a message body. Mounted only when its card is expanded (the collapsible
 // unmounts its content when closed), so its `mail.message-body` subscription —
@@ -55,25 +52,11 @@ function RenderedBody({
   return (
     <Stack gap="sm">
       {remoteDetected && !showRemoteImages ? (
-        <Row
-          bordered
-          icon={<Icon icon={imageIcon} className="icon-auto" />}
-          actionsAlwaysVisible
-          actions={
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowRemoteImages(true);
-              }}
-            >
-              Display images
-            </Button>
-          }
-        >
-          <Text variant="caption" tone="muted">
-            Images are hidden to protect your privacy.
-          </Text>
-        </Row>
+        <RemoteImagesNotice
+          onDisplay={() => {
+            setShowRemoteImages(true);
+          }}
+        />
       ) : null}
 
       {html ? (

@@ -12,7 +12,8 @@ import type { TableLayoutRequirement } from "@plugins/framework/plugins/server-c
 import { rebuildTriggers } from "@plugins/database/plugins/change-feed/server/testing";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
-import type { Db } from "@plugins/database/server";
+import { currentTxId, type Db } from "@plugins/database/server";
+import { snapshotWatermark } from "@plugins/database/server/testing";
 import { createPgliteDriver } from "./pglite-driver";
 
 // The change feed's trigger layer on PGlite (research/2026-10-22-global-demo-
@@ -28,7 +29,10 @@ import { createPgliteDriver } from "./pglite-driver";
 // - notifications delivered only once their transaction commits, a
 //   transaction's `live_state` ones before its `live_state_end`, and none for a
 //   rollback;
-// - `pg_trigger.tgargs` (bytea) read back as a `Uint8Array`.
+// - `pg_trigger.tgargs` (bytea) read back as a `Uint8Array`;
+// - the snapshot watermark (`snapshotWatermark`, which every frame carries)
+//   strictly above a committed write's ack token (`currentTxId`) — Rule A↔B,
+//   which the optimistic client's watermark confirmation leans on.
 //
 // Driven through the PGlite driver's own drizzle instance (the scripts-through-
 // `exec` routing included) and its root client's `onNotification`.
@@ -148,6 +152,24 @@ describe.if(IN_CHILD)("the change feed's trigger layer on PGlite", () => {
       sql`SELECT pg_current_xact_id()::text AS x`,
     );
     expect(res.rows[0]?.x).toMatch(/^\d+$/);
+  });
+
+  test("a snapshot watermark captured after a commit lies above its ack token", async () => {
+    // PGlite serializes `query` and `transaction` under one mutex, so the
+    // capture never sees an in-flight xid: the floor is the next xid to assign
+    // — the safe direction (a frame read after the commit has seen it).
+    const token = await db.transaction(async (tx) => {
+      await tx.execute(sql`INSERT INTO widgets VALUES ('wm', 'probe')`);
+      return currentTxId(tx);
+    });
+    const watermark = await snapshotWatermark(db);
+    expect(token).toMatch(/^\d+$/);
+    expect(watermark).toMatch(/^\d+$/);
+    expect(BigInt(watermark) > BigInt(token)).toBe(true);
+    await db.execute(sql`DELETE FROM widgets WHERE id = 'wm'`);
+    // Its notifications are not this test's subject: leave none for the next.
+    await settle();
+    drain();
   });
 
   test("tgargs comes back as a Uint8Array", async () => {

@@ -269,8 +269,9 @@ by hand: the namespace is minted with `checkoutNamespace(root)` off the CHECKOUT
 `namespaceUrl`, and `/prototypes` from `prototypesApp.basePath`. The one literal
 is the detail pane's own `proto/:name/:stage?` segment — it is declared in
 `gallery/web`, which a terminal verb must not import. The same origin prefixes
-`prototype options`' document URL, which comes from `prototypeUrl()` — the
-builder the frames use — so the terminal and the pane name a variant alike.
+`prototype options`' document URL, spelled from the route the frames load
+(`getPrototypeFile`) with their query (`prototypeDocumentQuery`) — so the
+terminal and the pane name a variant alike.
 
 ## The contract this serves
 
@@ -360,6 +361,14 @@ Design: `research/2026-08-15-global-prototypes-self-contained.md`.
 
 ## Routes
 
+The three raw file routes (`GET /api/prototypes/:name`, `/:name/:file`,
+`/:name/versions/:sha/:file`) are declarations in `core/`
+(`getPrototypeEntry` / `getPrototypeFile` / `getPrototypeVersionFile`,
+`needsMachine`: the tree is on disk) whose raw handlers the `machine/` barrel
+serves through `machineHandler` (`machine/internal/files.ts`,
+`version-file.ts`, with the picks stamping beside them; the path guard is `server/internal/paths.ts`, shared with `prototypeExists`);
+the rest are the `server/` barrel's.
+
 - `GET /api/prototypes` → `PrototypeMeta[]` (every `prototypes/<name>/index.html`,
   skipping `_`-prefixed and dot-dirs; the dir name is the `name`). JSON, so it
   goes through `implement()`.
@@ -396,8 +405,8 @@ the browser keeps the old `styles.css` and an edit looks like it didn't land.
   the content); 404 for anything that does not name a version's file. A path
   prefix per version, so its relative `styles.css` resolves to the same version.
   Its `index.html` takes option picks exactly like the live route (same
-  `server/internal/picked-document.ts`), judged against the options THAT
-  version declares. Built by `prototypeVersionUrl(name, sha, { picks })`.
+  `machine/internal/picked-document.ts`), judged against the options THAT
+  version declares. Built by `prototypeVersionDocument(name, sha, { picks })`.
 - `POST /api/prototypes/:name/versions/:sha/restore` → the new `restore`
   version (`restorePrototypeVersion`, via `implement()`).
 - `PUT /api/prototypes/:name/picks` → 204, body `{ kind: "set", option, value }`
@@ -472,8 +481,11 @@ but its name is not a forbidden reference target. The check catches copied
 The `core` barrel exports the shared contracts the web consumes: `PrototypeMeta`,
 the live values `prototypesList` / `prototypeHistory` /
 `prototypePicks` (`liveValue` declarations, read with
-`useLive`), `prototypeUrl()` /
-`prototypeVersionUrl()`, the `listPrototypes` / `createPrototype` /
+`useLive`), the raw file routes (`getPrototypeEntry` / `getPrototypeFile` /
+`getPrototypeVersionFile`: `needsMachine`, served by the `machine/` half) and
+the frames' document `AssetPath`s (`prototypeDocument()` /
+`prototypeVersionDocument()`, an iframe's src resolved with `useAssetUrl`),
+the `listPrototypes` / `createPrototype` /
 `restorePrototypeVersion` / `setPrototypePicks` endpoints, the picks shapes
 (`StoredPicks`, `PicksChange`, `applyPicksChange`), the version shapes
 (`PrototypeVersion`, `PrototypeHistory`), and the id kind (`protoIdKind`,
@@ -484,7 +496,7 @@ for the `checkpoints` plugin's end-of-turn job.
 
 ## Plugin reference
 
-- Description: Registers the prototype id kind (`proto-…`) in the browser's id-kind registry. Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), mints new prototypes into it from the running checkout's prototypes/_template/, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html> (data-* for a choice, a --<name> custom property for a color), stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
+- Description: Registers the prototype id kind (`proto-…`) in the browser's id-kind registry. Owns the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), whose raw files and versions' files its machine/ half serves; mints new prototypes into it from the running checkout's prototypes/_template/, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html> (data-* for a choice, a --<name> custom property for a color), stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, restore, and checkpointPrototype).
 - Web:
   - Contributes: `IdKinds.Kind` "proto"
   - Uses: `ids.IdKinds`
@@ -520,9 +532,18 @@ for the `checkpoints` plugin's end-of-turn job.
     - `POST /api/prototypes`
     - `POST /api/prototypes/:name/versions/:sha/restore`
     - `PUT /api/prototypes/:name/picks`
+- Machine:
+  - Uses: `infra/endpoints.machineHandler`
+  - Routes:
+    - `GET /api/prototypes/:name`
+    - `GET /api/prototypes/:name/:file`
+    - `GET /api/prototypes/:name/versions/:sha/:file`
 - Core:
   - Uses:
     - `ids.defineIdKind`
+    - `infra/endpoints.assetPath`
+    - `infra/endpoints.AssetPath`
+    - `infra/endpoints.blob`
     - `infra/endpoints.defineEndpoint`
     - `infra/html-decode.decodeHtmlText`
     - `infra/html-decode.readHtmlAttr`
@@ -555,6 +576,9 @@ for the `checkpoints` plugin's end-of-turn job.
     - `DEFAULT_PROTOTYPE_VIEWPORT`
     - `describeOptionValues`
     - `foldOptions`
+    - `getPrototypeEntry`
+    - `getPrototypeFile`
+    - `getPrototypeVersionFile`
     - `groupOptions`
     - `HEADLESS_PRESET`
     - `humanizeToken`
@@ -576,12 +600,11 @@ for the `checkpoints` plugin's end-of-turn job.
     - `picksFromQuery`
     - `presetSize`
     - `protoIdKind`
-    - `PROTOTYPE_ASSET_ROUTE`
     - `PROTOTYPE_ENTRY_FILE`
-    - `PROTOTYPE_FILE_ROUTE`
-    - `PROTOTYPE_VERSION_FILE_ROUTE`
     - `PROTOTYPE_VERSION_KINDS`
     - `PROTOTYPE_VIEWPORT_WORDS`
+    - `prototypeDocument`
+    - `prototypeDocumentQuery`
     - `prototypeHistory`
     - `PrototypeHistorySchema`
     - `prototypeIdsIn`
@@ -589,12 +612,10 @@ for the `checkpoints` plugin's end-of-turn job.
     - `PrototypeOptionSchema`
     - `prototypePicks`
     - `PrototypeProblemSchema`
-    - `PROTOTYPES_API_BASE`
     - `prototypesList`
-    - `prototypeUrl`
     - `prototypeVersionCounts`
+    - `prototypeVersionDocument`
     - `PrototypeVersionSchema`
-    - `prototypeVersionUrl`
     - `PrototypeViewportSchema`
     - `readOptionSource`
     - `readPrototypeOptions`

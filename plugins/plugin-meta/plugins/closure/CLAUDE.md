@@ -94,6 +94,22 @@ Two edge kinds, both indexed forward + reverse:
   at the type level). `via` is `"companion"` (import > token > companion when
   several hold). The flag is read from the inline literal only; the
   `companions-visible` check fails on one built elsewhere.
+  **Server companions** work the same way for a server contribution kind: the
+  owner opens it with `export const Kind = defineServerContribution("<kind>",
+  { companions: true })` in its `server/`, a contributor's `server/index.ts`
+  lists `Kind({ …, companion: true })` inline, and the edge runs owner →
+  contributor (`database.change-feed` → `database.live-state-snapshot`
+  through `ChangelogRetention`: the changelog the feed writes is bounded only
+  by L2's prune job, and L2 imports the feed). Read by the contributions facet
+  (`serverCompanionKinds` from parse-utils' `parseServerContributionDeclarations`,
+  `serverCompanions` from the barrel's literal, the token resolved through its
+  `@plugins/<owner>/server` import); `collectCompanionSlots` returns them as
+  `runtime: "server"` entries (`ref` the binding, `slotId` the kind), so the
+  engine reads web and server companions from the one reading — the web
+  registry's companion manifest renders only the `web` ones. Unkeyed only (a
+  server kind dispatches on no key space). A companion naming a kind its owner
+  does not open, a kind opened in `machine/`, or a companion in a `machine/`
+  barrel (a browser host boots the owner but never that half) throws.
 - **usage rules** (`EdgeGraph.rules`, not edges) — a companion of a KEYED slot
   (`companions: { key, space }`, e.g. DataView's `Cell` keyed by `match` in the
   `field-type` space, `View` by `type` in `view-type`) is required only while

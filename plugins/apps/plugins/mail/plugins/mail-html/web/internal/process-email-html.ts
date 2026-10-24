@@ -1,5 +1,4 @@
 import DOMPurify from "dompurify";
-import { mailImageProxyUrl } from "@plugins/apps/plugins/mail/plugins/remote-images/core";
 import { parseCidSrc } from "./cid";
 import { isRemoteHttpUrl, rewriteCssHttpUrls } from "./remote-url";
 import { isQuoteDividerText } from "./quote-boundary";
@@ -14,7 +13,13 @@ export interface ProcessedEmail {
 }
 
 export interface ProcessOptions {
-  showRemoteImages: boolean;
+  /**
+   * The proxied src of a remote image, or `null` while the user has not opted
+   * into "Display images" for this message (every remote src is stripped). A
+   * remote image it answers `null` for (the proxy is unavailable on this host)
+   * is stripped too.
+   */
+  remoteImageSrc: ((remoteUrl: string) => string | null) | null;
   resolveCid?: (cid: string) => string | undefined;
 }
 
@@ -64,7 +69,7 @@ const PURIFY_CONFIG = {
  */
 export function processEmailHtml(
   html: string,
-  { showRemoteImages, resolveCid }: ProcessOptions,
+  { remoteImageSrc, resolveCid }: ProcessOptions,
 ): ProcessedEmail {
   const root = DOMPurify.sanitize(html, PURIFY_CONFIG) as unknown as HTMLElement;
 
@@ -103,8 +108,9 @@ export function processEmailHtml(
 
     if (isRemoteHttpUrl(src)) {
       hadRemoteImage = true;
-      if (showRemoteImages) {
-        img.setAttribute("src", mailImageProxyUrl(src));
+      const proxied = remoteImageSrc?.(src) ?? null;
+      if (proxied !== null) {
+        img.setAttribute("src", proxied);
       } else {
         img.removeAttribute("src");
         img.setAttribute("data-blocked-src", src);
@@ -119,7 +125,7 @@ export function processEmailHtml(
     let sawRemote = false;
     const rewritten = rewriteCssHttpUrls(style, (u) => {
       sawRemote = true;
-      return showRemoteImages ? mailImageProxyUrl(u) : null;
+      return remoteImageSrc?.(u) ?? null;
     });
     if (sawRemote) {
       hadRemoteImage = true;

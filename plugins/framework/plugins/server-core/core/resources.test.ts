@@ -4,11 +4,14 @@ import { mintReachPlan } from "@plugins/framework/plugins/resource-runtime/core"
 import { collectContributions } from "./contributions";
 import {
   Resource,
+  assertServedReadsHaveWatermarkSource,
   assertPreloadedResourcesDeclared,
   clearRelationBases,
   defineResource,
   handleResourceHttp,
+  setLiveStateSnapshotHooks,
   setRelationBases,
+  setWatermarkSource,
   undeclaredPreloadedKeys,
 } from "./resources";
 
@@ -146,5 +149,44 @@ describe("setRelationBases", () => {
         bases: ["probe_a", "probe_b"],
       },
     ]);
+  });
+});
+
+describe("setWatermarkSource", () => {
+  // The holders are process-global: leave them unset for the next suite.
+  afterAll(() => {
+    setWatermarkSource(null);
+    setLiveStateSnapshotHooks(null);
+  });
+  // A served resource, so the boot assert has something to judge.
+  const key = "set-watermark-source-probe";
+  defineResource(
+    { key, schema: z.number(), validateParams: () => {} },
+    { mode: "push", loader: () => 7 },
+  );
+
+  test("a host serving live reads fails boot without a source, naming the setter", () => {
+    setWatermarkSource(null);
+    expect(assertServedReadsHaveWatermarkSource).toThrow("setWatermarkSource");
+    setWatermarkSource(async () => "1");
+    expect(assertServedReadsHaveWatermarkSource).not.toThrow();
+  });
+
+  test("frames keep the source's watermark after L2's hooks are uninstalled (a degraded L2)", async () => {
+    // What a failed L2 init does: install its hooks, then reset them to null.
+    setLiveStateSnapshotHooks({
+      shouldPersist: () => false,
+      persistSnapshot: async () => {},
+    });
+    setLiveStateSnapshotHooks(null);
+    setWatermarkSource(async () => "4242");
+    const res = await handleResourceHttp(
+      new Request(`http://localhost/api/resources/${key}`),
+      { key },
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { value: unknown; watermark?: string };
+    expect(body.value).toBe(7);
+    expect(body.watermark).toBe("4242");
   });
 });

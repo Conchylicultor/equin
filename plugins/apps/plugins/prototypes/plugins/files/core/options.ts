@@ -24,7 +24,7 @@ import { Color } from "@plugins/primitives/plugins/css/plugins/color-picker/core
  * Either way the page carries its default in every context — double-clicked
  * off disk, in the thumbnail render, in the app — and the app only ever
  * OVERWRITES it with the picked value (the server stamps it, see
- * `server/internal/picked-document.ts`; the canvas also sets a color live on
+ * `machine/internal/picked-document.ts`; the canvas also sets a color live on
  * the frame's `<html>`, without a reload). The picker is drawn by the app,
  * outside the page, so a prototype contains no switcher of its own.
  *

@@ -52,6 +52,15 @@ guard (`browser-host-coverage.ts`) fails `build` and `push` otherwise, and
 nothing exempts it — so a plugin whose server half cannot join the worker is
 split, or excluded here.
 
+What a server plugin needs at runtime and cannot import is not added to any
+row either: it is a **server companion** (`defineServerContribution(name, {
+companions: true })` on the owner, `Kind({ …, companion: true })` in the
+contributor's `server/index.ts`), a hard edge the closure engine derives —
+`database.live-state-snapshot` (the changelog's pruner) ships with
+`database.change-feed` in every composition, the demo's worker graph
+included, with no row listing it. See
+[`closure`](../closure/CLAUDE.md).
+
 ## Manifests are a config_v2 config — no codegen
 
 Manifests live in a [`config_v2`](../../../config_v2/CLAUDE.md) config named

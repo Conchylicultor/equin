@@ -16,12 +16,14 @@ import {
   buildRegistryGenContext,
   discoverBrowserHosts,
   inferBrowserHostGraph,
-  parseServerContributionDeclarations,
   resolveHostContributionCoverage,
   serverBarrelBlockers,
   type HostContributionBarrel,
-  type ServerContributionKindDecl,
 } from "../core";
+import {
+  parseServerContributionDeclarations,
+  type ServerContributionKindDecl,
+} from "@plugins/plugin-meta/plugins/parse-utils/core";
 
 /** The plugin (`a/plugins/b`) a repo path sits in, or null outside a plugin folder. */
 function pluginOf(rel: string): string | null {
@@ -67,7 +69,7 @@ const check: Check = {
       if (isTestCodePath(rel.split("/"))) continue;
       const plugin = pluginOf(rel);
       if (plugin === null) continue;
-      for (const d of parseServerContributionDeclarations(src)) {
+      for (const d of parseServerContributionDeclarations(src, rel)) {
         kinds.set(d.kind, [...(kinds.get(d.kind) ?? []), { ...d, plugin }]);
       }
     }

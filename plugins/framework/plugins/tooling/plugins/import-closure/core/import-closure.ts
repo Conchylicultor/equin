@@ -2,6 +2,7 @@ import { mkdtempSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
+import type { BunPlugin } from "bun";
 import type TS from "typescript";
 import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
 
@@ -295,6 +296,145 @@ function propertyName(
     : undefined;
 }
 
+/** What one closure build records, shared by the single- and multi-entry readings. */
+interface ClosureRecord {
+  external: Map<string, string[]>;
+  loaded: Set<string>;
+  commandRuns: CommandRunEdge[];
+  // importer (absolute) -> the in-repo specifiers it asked for, kept only to
+  // recover an import chain on failure.
+  edges: Map<string, Set<string>>;
+}
+
+function newClosureRecord(): ClosureRecord {
+  return {
+    external: new Map(),
+    loaded: new Set(),
+    commandRuns: [],
+    edges: new Map(),
+  };
+}
+
+/**
+ * The bundler plugin every closure build runs: it records each module the
+ * bundler loads, each in-repo edge, and each specifier it externalizes, and
+ * applies the dynamic-import policy. `entry` labels an entrypoint's own
+ * external imports (an importer of `""`).
+ */
+function closurePlugin(
+  root: string,
+  entry: string,
+  opts: { dynamicImports: DynamicImportPolicy },
+  record: ClosureRecord,
+): BunPlugin {
+  const { prefixes, exact } = aliasSpecifiers(root);
+  const { external, loaded, commandRuns, edges } = record;
+  const scans = new Map<string, CommandRunScan>();
+  const scanOf = async (file: string): Promise<CommandRunScan> => {
+    let scan = scans.get(file);
+    if (scan === undefined) {
+      scan = await scanCommandRuns(file, readFileSync(file, "utf8"));
+      scans.set(file, scan);
+    }
+    return scan;
+  };
+  return {
+    name: "externalize-packages",
+    setup(build) {
+      build.onResolve({ filter: /.*/ }, async (args) => {
+        const spec = args.path;
+        if (args.kind === "dynamic-import") {
+          // Cut the graph here, whatever the specifier resolves to.
+          if (opts.dynamicImports === "cut") {
+            return { path: spec, external: true };
+          }
+          const scan = await scanOf(args.importer);
+          const commands = scan.runs.get(spec);
+          if (commands !== undefined && !scan.other.has(spec)) {
+            commandRuns.push({
+              commands,
+              declaration: relative(root, args.importer),
+              target: relative(root, Bun.resolveSync(spec, args.resolveDir)),
+            });
+            return { path: spec, external: true };
+          }
+        }
+        const inRepo =
+          spec.startsWith(".") ||
+          spec.startsWith("/") ||
+          prefixes.some((p) => spec.startsWith(p)) ||
+          exact.includes(spec);
+        if (inRepo) {
+          // Repo source; let Bun resolve it.
+          if (args.importer !== "") {
+            const specs = edges.get(args.importer);
+            if (specs === undefined) edges.set(args.importer, new Set([spec]));
+            else specs.add(spec);
+          }
+          return undefined;
+        }
+        const importer =
+          args.importer === "" ? entry : relative(root, args.importer);
+        const importers = external.get(spec);
+        if (importers === undefined) external.set(spec, [importer]);
+        else if (!importers.includes(importer)) importers.push(importer);
+        return { path: spec, external: true };
+      });
+      // Record, then fall through to the default loader: the build is
+      // unchanged, and every module the bundler parses — tree-shaken or
+      // not — is seen exactly once.
+      build.onLoad({ filter: /.*/ }, (args) => {
+        if (args.namespace === "file") {
+          loaded.add(relative(root, args.path));
+        }
+        return undefined;
+      });
+    },
+  };
+}
+
+/**
+ * The shortest chain from `entry` to `module` over the recorded `edges` (both
+ * ends included, repo-relative), or null when `module` is not reached from
+ * `entry`. Each edge's specifier is re-resolved here, so only a caller that
+ * asks for a chain pays for it; `resolved` (importer → its resolved children)
+ * carries those resolutions across the calls of one closure.
+ */
+function chainThrough(
+  root: string,
+  edges: ReadonlyMap<string, ReadonlySet<string>>,
+  entry: string,
+  module: string,
+  resolved: Map<string, string[]> = new Map(),
+): string[] | null {
+  const start = join(root, entry);
+  const goal = join(root, module);
+  const parent = new Map<string, string>([[start, start]]);
+  const queue = [start];
+  for (const node of queue) {
+    if (parent.has(goal)) break;
+    let children = resolved.get(node);
+    if (children === undefined) {
+      children = [...(edges.get(node) ?? [])].map((spec) =>
+        Bun.resolveSync(spec, dirname(node)),
+      );
+      resolved.set(node, children);
+    }
+    for (const child of children) {
+      if (parent.has(child)) continue;
+      parent.set(child, node);
+      queue.push(child);
+    }
+  }
+  if (!parent.has(goal)) return null;
+  const chain: string[] = [];
+  for (let n = goal; n !== start; n = parent.get(n) ?? start) {
+    chain.unshift(relative(root, n));
+  }
+  chain.unshift(entry);
+  return chain;
+}
+
 /**
  * The exact set of REPO source modules an entrypoint pulls in (plus the
  * out-of-tree specifiers it reaches for, and — under
@@ -328,22 +468,8 @@ export async function importClosure(
   // root spelled through a symlink would re-root every module as `../…` and
   // match nothing. Measure against the real spelling.
   const root = realpathSync(givenRoot);
-  const { prefixes, exact } = aliasSpecifiers(root);
-  const external = new Map<string, string[]>();
-  const loaded = new Set<string>();
-  const commandRuns: CommandRunEdge[] = [];
-  // importer (absolute) -> the in-repo specifiers it asked for, kept only to
-  // recover an import chain on failure.
-  const edges = new Map<string, Set<string>>();
-  const scans = new Map<string, CommandRunScan>();
-  const scanOf = async (file: string): Promise<CommandRunScan> => {
-    let scan = scans.get(file);
-    if (scan === undefined) {
-      scan = await scanCommandRuns(file, readFileSync(file, "utf8"));
-      scans.set(file, scan);
-    }
-    return scan;
-  };
+  const record = newClosureRecord();
+  const { external, loaded, commandRuns, edges } = record;
 
   const out = mkdtempSync(join(tmpdir(), "cli-import-closure-"));
   try {
@@ -352,65 +478,7 @@ export async function importClosure(
       outdir: out,
       target: "bun",
       sourcemap: "external",
-      plugins: [
-        {
-          name: "externalize-packages",
-          setup(build) {
-            build.onResolve({ filter: /.*/ }, async (args) => {
-              const spec = args.path;
-              if (args.kind === "dynamic-import") {
-                // Cut the graph here, whatever the specifier resolves to.
-                if (opts.dynamicImports === "cut") {
-                  return { path: spec, external: true };
-                }
-                const scan = await scanOf(args.importer);
-                const commands = scan.runs.get(spec);
-                if (commands !== undefined && !scan.other.has(spec)) {
-                  commandRuns.push({
-                    commands,
-                    declaration: relative(root, args.importer),
-                    target: relative(
-                      root,
-                      Bun.resolveSync(spec, args.resolveDir),
-                    ),
-                  });
-                  return { path: spec, external: true };
-                }
-              }
-              const inRepo =
-                spec.startsWith(".") ||
-                spec.startsWith("/") ||
-                prefixes.some((p) => spec.startsWith(p)) ||
-                exact.includes(spec);
-              if (inRepo) {
-                // Repo source; let Bun resolve it.
-                if (args.importer !== "") {
-                  const specs = edges.get(args.importer);
-                  if (specs === undefined)
-                    edges.set(args.importer, new Set([spec]));
-                  else specs.add(spec);
-                }
-                return undefined;
-              }
-              const importer =
-                args.importer === "" ? entry : relative(root, args.importer);
-              const importers = external.get(spec);
-              if (importers === undefined) external.set(spec, [importer]);
-              else if (!importers.includes(importer)) importers.push(importer);
-              return { path: spec, external: true };
-            });
-            // Record, then fall through to the default loader: the build is
-            // unchanged, and every module the bundler parses — tree-shaken or
-            // not — is seen exactly once.
-            build.onLoad({ filter: /.*/ }, (args) => {
-              if (args.namespace === "file") {
-                loaded.add(relative(root, args.path));
-              }
-              return undefined;
-            });
-          },
-        },
-      ],
+      plugins: [closurePlugin(root, entry, opts, record)],
     });
     if (!result.success) {
       throw new Error(
@@ -455,24 +523,12 @@ export async function importClosure(
     }
 
     const importChain = (module: string): string[] => {
-      const start = join(root, entry);
-      const goal = join(root, module);
-      const parent = new Map<string, string>([[start, start]]);
-      const queue = [start];
-      for (const node of queue) {
-        if (parent.has(goal)) break;
-        for (const spec of edges.get(node) ?? []) {
-          const child = Bun.resolveSync(spec, dirname(node));
-          if (parent.has(child)) continue;
-          parent.set(child, node);
-          queue.push(child);
-        }
-      }
+      const chain = chainThrough(root, edges, entry, module);
       // Every module the bundler loaded was reached over an edge recorded
       // above, so a loaded module with no chain means the edge record and the
       // bundler disagree — say so rather than print a message missing its
       // evidence.
-      if (!parent.has(goal)) {
+      if (chain === null) {
         throw new Error(
           `No import chain from ${entry} to ${module} through the recorded edges` +
             (loaded.has(module)
@@ -480,11 +536,6 @@ export async function importClosure(
               : ": it is not in this closure at all."),
         );
       }
-      const chain: string[] = [];
-      for (let n = goal; n !== start; n = parent.get(n) ?? start) {
-        chain.unshift(relative(root, n));
-      }
-      chain.unshift(entry);
       return chain;
     };
 
@@ -492,4 +543,87 @@ export async function importClosure(
   } finally {
     await rm(out, { recursive: true, force: true });
   }
+}
+
+/** What {@link importClosures} answers: the union of several entrypoints' closures. */
+export interface UnionImportClosure {
+  /**
+   * Every REPO module ANY of the entrypoints loads — exactly the union of each
+   * one's {@link ImportClosure.modules}, measured in one build.
+   */
+  modules: Set<string>;
+  /**
+   * The import chain to `module` from the FIRST entrypoint (in the order
+   * given) whose closure holds it — the chain that entrypoint's own
+   * {@link ImportClosure.importChain} answers. Recovered lazily, as there.
+   * Throws for a module no entrypoint reaches.
+   */
+  importChain: (module: string) => string[];
+}
+
+/**
+ * The union of several entrypoints' import closures, measured with ONE
+ * `Bun.build` over all of them: every module is parsed once, however many
+ * entrypoints reach it, where a call of {@link importClosure} per entrypoint
+ * re-parses every shared module each time (a browser host's 110 member
+ * barrels share most of their closures — one build each was ~4–8 s, the whole
+ * cost of its derivation).
+ *
+ * The edges a module asks for are a fact of the module, not of the entrypoint
+ * that reached it, so each entrypoint's own closure is still recoverable from
+ * the one edge record — which is how {@link UnionImportClosure.importChain}
+ * names the same chain a per-entrypoint call would.
+ *
+ * Only the LOADED reading is returned: tree-shaking liveness across several
+ * entrypoints of one build is the build's, not any entrypoint's (see
+ * {@link ImportClosure.live}), and the external / command-run readings have
+ * no caller here. Ask {@link importClosure} for those, one entrypoint at a
+ * time.
+ */
+export async function importClosures(
+  givenRoot: string,
+  entries: readonly string[],
+  opts: { dynamicImports: DynamicImportPolicy },
+): Promise<UnionImportClosure> {
+  if (entries.length === 0) {
+    throw new Error(
+      "importClosures was handed no entrypoint — a union of nothing is a caller bug, not an empty closure.",
+    );
+  }
+  const root = realpathSync(givenRoot);
+  const record = newClosureRecord();
+  const { loaded, edges } = record;
+  const result = await Bun.build({
+    entrypoints: entries.map((e) => join(root, e)),
+    target: "bun",
+    plugins: [closurePlugin(root, entries[0]!, opts, record)],
+  });
+  if (!result.success) {
+    throw new Error(
+      `Bun.build could not compute the import closure of ${entries.join(", ")}:\n` +
+        result.logs.map((l) => `  ${String(l)}`).join("\n"),
+    );
+  }
+  // Every entrypoint contributes at least itself; one missing means the
+  // `onLoad` record is broken, and a union read from it would pass anything.
+  const unseen = entries.filter((e) => !loaded.has(e));
+  if (unseen.length > 0) {
+    throw new Error(
+      `Bun.build's onLoad hook never saw ${unseen.length} of the ${entries.length} entrypoint(s) it built (${unseen.slice(0, 3).join(", ")}${unseen.length > 3 ? ", …" : ""}) — refusing to measure with it.`,
+    );
+  }
+  const resolved = new Map<string, string[]>();
+  const importChain = (module: string): string[] => {
+    for (const entry of entries) {
+      const chain = chainThrough(root, edges, entry, module, resolved);
+      if (chain !== null) return chain;
+    }
+    throw new Error(
+      `No import chain from any of ${entries.join(", ")} to ${module} through the recorded edges` +
+        (loaded.has(module)
+          ? ", although the bundler loaded it — the edge record is incomplete."
+          : ": it is not in this closure at all."),
+    );
+  };
+  return { modules: loaded, importChain };
 }

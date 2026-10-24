@@ -164,7 +164,8 @@ return <img src={src.src} />;
 
 - **Opaque on purpose.** `AssetPath` is not a string, so `src={attachmentUrl(id)}`
   is a tsc error — every sink resolves it — and it has no `path` field: the
-  path sits under the `ASSET_PATH` symbol, read only by `useAssetSrc`.
+  path sits under the `ASSET_PATH` symbol, read only by `useAssetSrc` /
+  `useAssetUrl`.
   Persisting an address into a document (an attachment's markdown) spells it
   from the route itself (`interpolatePath(endpoint.path, params)`).
 - **Decided by the transport.** `servesUrls` (the page's own server): `ready`
@@ -174,6 +175,24 @@ return <img src={src.src} />;
   transport, `transportScoped`). A route declared `needsMachine` on a transport
   without the computer: `unavailable`, nothing fetched.
 - `useAssetSrcs(assets)` — the same for a set (a folder's images).
+- **A sink that loads by URL on its own** — an `<iframe>` whose relative
+  sub-resources must resolve, an `<img>` inside an HTML string, a library's
+  own `fetch` — cannot take a blob URL. `useAssetUrl(asset)` /
+  `assetUrlOver(transport, asset)` answer `ready{url}` (the path, on a server
+  reachable by URL) or `unavailable{message}` (a `needsMachine` route on a
+  transport without the computer), and THROW for a portable route on a
+  transport no URL reaches (that sink would load from the page's server — use
+  `useAssetSrc`). For a library that appends the rest of the path itself
+  (`<base>/<file>`), `assetBase(endpoint, leadingParams)` builds an opaque
+  `AssetBase` — the route's path cut before its first param left open — that
+  `useAssetUrl` resolves the same way (`asset-mirror`'s `assetMirrorBase`).
+- **A raw route is a declaration too.** A GET whose handler returns its own
+  bytes / headers / status (a file, a redirect, a proxied image) is still a
+  `defineEndpoint` with a literal `route:` in `core/` — `response: blob()`,
+  `needsMachine` when it reads the disk — keyed `[decl.route]` in `httpRoutes`
+  and wrapped by `rawEndpointHandler` / `machineHandler`. The browser-host
+  coverage guard reads only `[decl.route]` and literal keys and throws on any
+  other, so a route held in a constant cannot hide from it.
 - Image sinks: `AssetThumbnail` / `UnloadedAssetImage`
   (`overlay/image-viewer`); file-viewer renderers: `UnloadedFile`.
 - Persisted markdown holding an `/api/…` address (`![](/api/attachments/<id>)`)

@@ -743,8 +743,10 @@ membership, so an etag there would be a permanent partial-stale pin — it must
 
 The **commit watermark** follows the twin rule
 (`research/2026-07-11-global-never-revert-optimistic-edits.md`): a snapshot
-watermark — `opts.captureWatermark`, bound in `server-core/core/resources.ts`
-(central has no hook, so it degrades to watermark-less) — rides only frames that
+watermark — `opts.captureWatermark`, bound in `server-core/core/resources.ts` to
+the database's `snapshotWatermark` (installed by `database` through
+`setWatermarkSource` on every host with a database, the browser worker included;
+central has no hook, so it degrades to watermark-less) — rides only frames that
 **fully reconcile** the client to server truth as of the capture: `sub-ack`,
 `update`, FULL keyed/membership deltas, and the HTTP body. A **scoped delta never
 carries one** — it re-reads only affected rows, so stamping it would hand the

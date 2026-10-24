@@ -9,6 +9,7 @@
  * at a plugin position, and not a test.
  */
 
+import { createSourceScans } from "./browser-host-coverage";
 import { test, expect, afterAll } from "bun:test";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "fs";
 import { tmpdir } from "os";
@@ -453,6 +454,8 @@ function bundleFixture(): {
     main: { id: "singularity", home: "alpha" },
     repo: () => Promise.resolve(repo),
     dirScans: new Map(),
+    browserHostGraphs: new Map(),
+    sourceScans: () => Promise.resolve(createSourceScans(repo)),
   };
   return {
     ctx,
@@ -589,6 +592,8 @@ function machineFixture(): {
     main: { id: "singularity", home: null },
     repo: () => Promise.resolve(repo),
     dirScans: new Map(),
+    browserHostGraphs: new Map(),
+    sourceScans: () => Promise.resolve(createSourceScans(repo)),
   };
   return {
     ctx,

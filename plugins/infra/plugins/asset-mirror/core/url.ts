@@ -1,18 +1,17 @@
 /**
- * URL shape shared by the asset-mirror primitive's web consumers and its server
- * route. Single source of truth for the `/api/asset-mirror/<id>/<file>` path so
- * the helper that web code calls and the route the server registers can never
- * drift apart.
+ * The mirror's base URL as a plain string, for a consumer that runs on the
+ * page's own server only and has no transport to resolve an
+ * {@link assetMirrorBase} over — Sonata's sample engines, whose instrument
+ * factories are handed no transport. Anything a browser host scopes must use
+ * `assetMirrorBase` + `useAssetUrl` instead: this file spells `/api/…` by hand,
+ * so the browser-host coverage guard refuses a scoped reader of it (a raw URL
+ * cannot declare `needsMachine`). `url.test.ts` holds it to the declared route.
  */
-
-/** Route prefix. The server registers `${ASSET_MIRROR_PREFIX}/:id/:file`. */
 export const ASSET_MIRROR_PREFIX = "/api/asset-mirror";
 
 /**
- * Same-origin base URL for a registered mirror's files: append `/<file>` to
- * fetch a single file. Hand this to any consumer that fetches `<base>/<name>`
- * (e.g. an audio sampler's `baseUrl`); the server lazily mirrors each file from
- * the registered remote source and serves it locally thereafter.
+ * Same-origin base URL for a registered mirror's files on the page's own
+ * server: append `/<file>` to fetch a single file.
  */
 export function assetMirrorUrl(id: string): string {
   return `${ASSET_MIRROR_PREFIX}/${id}`;

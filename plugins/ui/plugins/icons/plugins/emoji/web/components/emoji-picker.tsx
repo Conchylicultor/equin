@@ -9,7 +9,7 @@ import {
   type EmojiPickerListRowProps,
 } from "frimousse";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { assetMirrorUrl } from "@plugins/infra/plugins/asset-mirror/core";
+import { assetMirrorBase } from "@plugins/infra/plugins/asset-mirror/core";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -18,7 +18,7 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { EmojiSchema, type Emoji } from "../../core";
 import { EmojiGlyph } from "./emoji-glyph";
-import { useTransport } from "@plugins/primitives/plugins/networking/web";
+import { useAssetUrl } from "@plugins/infra/plugins/endpoints/web";
 import { unavailableMessage } from "@plugins/infra/plugins/endpoints/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { EMOJIBASE_LOCALE, EMOJIBASE_MIRROR_ID } from "../../shared/mirror";
@@ -35,7 +35,7 @@ const DEFAULT_COLUMNS = 9;
  */
 const EMOJI_VERSION = 15.1;
 
-const EMOJIBASE_URL = assetMirrorUrl(EMOJIBASE_MIRROR_ID);
+const EMOJIBASE = assetMirrorBase(EMOJIBASE_MIRROR_ID);
 
 /** The picker's current value, read by the (module-level, identity-stable) cell renderer. */
 const SelectedEmoji = createContext<Emoji | null>(null);
@@ -217,31 +217,32 @@ export interface EmojiPickerProps {
  * Mount it only while visible (e.g. inside an open popover): it loads its data
  * on mount.
  *
- * The mirror is the page's own server's, reached by URL (frimousse fetches
- * `<base>/<locale>/data.json` itself): under a transport no URL reaches (an
- * in-browser server — the demo) that URL would load from the page's real
- * server, so the picker says it is unavailable instead.
+ * The mirror is reached by URL (frimousse fetches `<base>/<locale>/data.json`
+ * itself), so its base comes from `useAssetUrl`: the mirror's route is
+ * desktop-only, and on a host without the computer (the demo) the picker says
+ * it is unavailable instead of pointing frimousse at the page's own server.
  */
 export function EmojiPicker(props: EmojiPickerProps) {
-  const { servesUrls } = useTransport();
-  if (!servesUrls) {
+  const base = useAssetUrl(EMOJIBASE);
+  if (base.kind === "unavailable") {
     return (
       <Text as="div" variant="caption" tone="muted">
         {unavailableMessage({ feature: "The emoji picker" })}
       </Text>
     );
   }
-  return <MirroredEmojiPicker {...props} />;
+  return <MirroredEmojiPicker {...props} emojibaseUrl={base.url} />;
 }
 
 function MirroredEmojiPicker({
+  emojibaseUrl,
   value,
   onSelect,
   variant = "compact",
   columns = DEFAULT_COLUMNS,
   leadingCategory,
   className,
-}: EmojiPickerProps) {
+}: EmojiPickerProps & { emojibaseUrl: string }) {
   const panel = variant === "panel";
   const [query, setQuery] = useState("");
   // Fixed at mount (see `leadingCategory`): a resolver frimousse is handed
@@ -260,7 +261,7 @@ function MirroredEmojiPicker({
           locale={EMOJIBASE_LOCALE}
           columns={columns}
           emojiVersion={EMOJI_VERSION}
-          emojibaseUrl={EMOJIBASE_URL}
+          emojibaseUrl={emojibaseUrl}
           resolveEmojiData={resolveEmojiData}
           // A picked emoji is parsed, not cast: an emoji the schema rejects is a
           // broken assumption about the data, and throws here rather than being

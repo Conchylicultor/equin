@@ -94,6 +94,8 @@ shared `contributionId` helper live in `core/`.
     - `DocMetaContribution`
     - `PaneDeclaration`
     - `RouteDeclaration`
+    - `ServerCompanionContribution`
+    - `ServerCompanionKind`
     - `SourceRef`
   - Exports (values):
     - `contributionId`

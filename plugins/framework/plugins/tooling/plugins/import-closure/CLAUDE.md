@@ -12,6 +12,13 @@ returns:
 - `importChain(module)` — the shortest chain from the entry to one module, for a
   failure message.
 
+`importClosures(root, entries, { dynamicImports })` measures several
+entrypoints in ONE build and returns only the union of their `modules`, with
+`importChain(module)` from the first entrypoint reaching it — the same chain
+that entrypoint's own `importClosure` names. Use it when only the union matters
+(the browser-host derivation: 110 member barrels, one build each, was the whole
+cost of the guard); `live` and `external` stay per-entrypoint readings.
+
 The full contract lives in the docblocks of `core/import-closure.ts`.
 
 A check that must keep some entrypoint light should measure it with this rather
@@ -36,8 +43,10 @@ never import this plugin back.
     - `CommandRunEdge`
     - `DynamicImportPolicy`
     - `ImportClosure`
+    - `UnionImportClosure`
   - Exports (values):
     - `importClosure`
+    - `importClosures`
     - `loadTypescript`
 - Cross-plugin:
   - Imported by: `framework/tooling/codegen`

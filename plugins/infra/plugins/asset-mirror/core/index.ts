@@ -3,11 +3,18 @@
  *
  * The asset-mirror primitive lazily mirrors a remote asset source to local disk
  * and serves it same-origin (offline-capable after one warm-up). This barrel
- * exposes only the URL helper web code needs to point a consumer at the mirror;
- * the server barrel owns `defineAssetMirror` (the registration token).
+ * exposes the mirror's route declarations and the base web code points a
+ * consumer at (`assetMirrorBase`, resolved with `useAssetUrl`); the server
+ * barrel owns `defineAssetMirror` (the registration token), the machine
+ * barrel the route.
  */
 
-export { ASSET_MIRROR_PREFIX, assetMirrorUrl } from "./url";
+export {
+  assetMirrorBase,
+  getMirroredFile,
+  getMirroredNestedFile,
+} from "./endpoints";
+export { assetMirrorUrl } from "./url";
 export { assetMirrorPrewarmCollectedDir } from "./collected-dir";
 export { defineAssetMirrorPrewarm } from "./prewarm";
 export type { AssetMirrorPrewarm } from "./prewarm";

@@ -1,4 +1,4 @@
-import { readThumbnail } from "./cache";
+import { readThumbnail } from "../../server/internal/cache";
 
 /** `<64 hex chars>.png` — the only shape this route serves. */
 const KEY_PATTERN = /^([0-9a-f]{64})\.png$/;

@@ -149,7 +149,7 @@ Design: `research/2026-08-16-apps-prototype-gallery-thumbnails.md`.
 
 ## Plugin reference
 
-- Description: The rendered-preview cover for a prototype card: the cached PNG, the caller's fallback while it renders, and a visible 'Preview failed' marker carrying the reason. Rendered PNG previews for the prototypes gallery: a content-addressed disk cache, a headless-chromium render job driven by the files watcher, the push state resource the cards read, and the immutable serving route.
+- Description: The rendered-preview cover for a prototype card: the cached PNG, the caller's fallback while it renders, and a visible 'Preview failed' marker carrying the reason. Rendered PNG previews for the prototypes gallery: a content-addressed disk cache, a headless-chromium render job driven by the files watcher, and the push state resource the cards read; the immutable serving route is the machine/ half's.
 - Server:
   - Contributes: `resource.declare` "prototypes.thumbnails"
   - Uses:
@@ -165,25 +165,34 @@ Design: `research/2026-08-16-apps-prototype-gallery-thumbnails.md`.
   - Resources: `prototypes.thumbnails` (push, notified)
 - Web:
   - Uses:
+    - `infra/endpoints.useAssetSrc`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/overlay.Overlay`
     - `primitives/css/pin.Pin`
+    - `primitives/loading.Loading`
     - `primitives/overlay/hover-card.WithHoverCard`
     - `ui/icons.Icon`
   - Exports (values):
     - `PrototypeThumbnail`
     - `usePrototypeThumbnails`
+- Machine:
+  - Uses: `infra/endpoints.machineHandler`
+  - Routes: `GET /api/prototype-thumbs/:key`
 - Core:
-  - Uses: `network/live.liveValue`
+  - Uses:
+    - `infra/endpoints.assetPath`
+    - `infra/endpoints.AssetPath`
+    - `infra/endpoints.blob`
+    - `infra/endpoints.defineEndpoint`
+    - `network/live.liveValue`
   - Exports (types):
     - `ThumbnailFailureKind`
     - `ThumbnailState`
   - Exports (values):
-    - `PROTOTYPE_THUMB_ROUTE`
-    - `PROTOTYPE_THUMBS_BASE`
+    - `getPrototypeThumbnail`
+    - `prototypeThumbnailAsset`
     - `prototypeThumbnails`
-    - `prototypeThumbnailUrl`
     - `ThumbnailFailureKindSchema`
     - `ThumbnailStateSchema`
 - Cross-plugin:

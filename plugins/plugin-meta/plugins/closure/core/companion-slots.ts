@@ -16,10 +16,16 @@ export interface CompanionEntry {
  * A slot opened to companions (`companions: true` or `{ key, space }`), with
  * every companion contributed to it across the tree. The one reading of the
  * companion facts: the closure engine turns it into edges and usage rules, and
- * the web registry's companion manifest is rendered from it — so what the build
- * ships and what the running app expects cannot disagree.
+ * the web registry's companion manifest is rendered from its `web` entries — so
+ * what the build ships and what the running app expects cannot disagree.
+ *
+ * `runtime` says which kind of extension point: a web slot, or a server
+ * contribution kind opened with `defineServerContribution(name, { companions:
+ * true })` — `ref` its token's binding, `slotId` its kind (`_kind.description`),
+ * never keyed.
  */
 export interface CompanionSlot {
+  runtime: "web" | "server";
   owner: PluginId;
   /** `Group.Member`, the spelling contributions name it by. */
   ref: string;
@@ -59,6 +65,7 @@ export function collectCompanionSlots(
       const ref = `${slot.groupName}.${slot.memberName}`;
       if (byRef.has(ref)) continue;
       byRef.set(ref, {
+        runtime: "web",
         owner: node.id,
         ref,
         slotId: slot.slotId,
@@ -102,8 +109,9 @@ export function collectCompanionSlots(
     }
   }
 
-  const slots = [...byRef.values()].sort((a, b) =>
-    a.slotId.localeCompare(b.slotId),
+  const slots = [...byRef.values(), ...collectServerCompanionKinds(tree)].sort(
+    (a, b) =>
+      a.runtime.localeCompare(b.runtime) || a.slotId.localeCompare(b.slotId),
   );
   for (const slot of slots)
     slot.companions.sort(
@@ -111,5 +119,59 @@ export function collectCompanionSlots(
         a.plugin.localeCompare(b.plugin) ||
         (a.key ?? "").localeCompare(b.key ?? ""),
     );
+  return slots;
+}
+
+/**
+ * Every server contribution kind opened to companions, with its companions:
+ * each `Kind({ …, companion: true })` in a `server/index.ts` resolved through
+ * its import to the plugin declaring `Kind` (`@plugins/<owner>/server`). A
+ * companion naming a kind its owner does not open THROWS — the flag would draw
+ * no edge, and the contribution would ship as an option.
+ */
+function collectServerCompanionKinds(tree: PluginTree): CompanionSlot[] {
+  const byOwner = new Map<string, CompanionSlot>();
+  for (const node of tree.byDir.values())
+    for (const k of getFacet(node, contributionsFacetDef)
+      ?.serverCompanionKinds ?? [])
+      byOwner.set(`${node.id}\0${k.binding}`, {
+        runtime: "server",
+        owner: node.id,
+        ref: k.binding,
+        slotId: k.kind,
+        companions: [],
+      });
+
+  for (const node of tree.byDir.values())
+    for (const { token } of getFacet(node, contributionsFacetDef)
+      ?.serverCompanions ?? []) {
+      // No specifier, or a relative one: the kind is this plugin's own, and a
+      // plugin is never its own companion (as on the web side).
+      if (token.module === undefined || token.module.startsWith(".")) continue;
+      // The kind is imported from its owner's server barrel, spelled exactly
+      // `@plugins/<owner path>/server` (the import grammar ends a specifier at
+      // the barrel folder), so the owner is read off the specifier — a type-only
+      // tree import keeps this engine browser-safe (no plugin-tree value).
+      const match = /^@plugins\/(.+)\/server$/.exec(token.module);
+      const owner = match ? tree.byPath.get(match[1]!)?.id : undefined;
+      const slot =
+        owner !== undefined
+          ? byOwner.get(`${owner}\0${token.name}`)
+          : undefined;
+      if (!slot)
+        throw new Error(
+          `${node.id}: \`${token.name}({ …, companion: true })\` (from "${token.module}") — no server ` +
+            `contribution kind opened to companions is exported as \`${token.name}\` by that barrel. Its owner ` +
+            "declares it `export const " +
+            token.name +
+            ' = defineServerContribution("<kind>", { companions: true })` in its `server/`, and the companion imports it from `@plugins/<owner>/server`.',
+        );
+      if (owner === node.id) continue;
+      slot.companions.push({ plugin: node.id });
+    }
+
+  const slots = [...byOwner.values()];
+  for (const slot of slots)
+    slot.companions.sort((a, b) => a.plugin.localeCompare(b.plugin));
   return slots;
 }

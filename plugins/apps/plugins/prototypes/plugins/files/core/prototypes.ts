@@ -1,7 +1,12 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
-import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { PrototypeProblemSchema } from "./validate";
+import {
+  assetPath,
+  blob,
+  defineEndpoint,
+  type AssetPath,
+} from "@plugins/infra/plugins/endpoints/core";
+import { PROTOTYPE_ENTRY_FILE, PrototypeProblemSchema } from "./validate";
 import type { ZodParser } from "@plugins/packages/plugins/zod-parser/core";
 import type { MocksDeclaration } from "./mocks";
 import { PrototypeViewportSchema } from "./viewport";
@@ -114,20 +119,35 @@ export const prototypesList = liveValue("prototypes.list", {
   schema: z.array(PrototypeMetaSchema),
 });
 
-/** Base path for the raw file-serving routes. */
-export const PROTOTYPES_API_BASE = "/api/prototypes";
-
 /**
- * Route key for the bare per-prototype route. Kept as a named const (not a
- * string literal in `httpRoutes`) because the response is a redirect, not JSON —
- * it can't go through `defineEndpoint`/`implement()`. Same pattern as
- * asset-mirror's `MIRROR_ROUTE_KEY`.
+ * The raw file routes, declared so every reader of them is judged (the
+ * browser-host coverage guard reads a literal `route:`) and answered
+ * `unavailable` on a host without the computer: the prototypes tree is on
+ * disk, so their raw handlers (per-file bytes / html with a custom
+ * Content-Type, or a redirect, which `implement()`'s JSON contract does not
+ * fit) are served by the plugin's `machine/` half.
  */
-export const PROTOTYPE_FILE_ROUTE = "GET /api/prototypes/:name";
+const PROTOTYPE_FILES_FEATURE = { feature: "Prototypes" };
 
 /**
- * Route key for one file inside a prototype folder. The trailing segment is what
- * makes a prototype self-contained: because the document is served at
+ * The query a document is asked for with: `?<option>=<value>` picks (plus `v`,
+ * the live route's cache-bust), which the server stamps onto its `<html>`.
+ */
+const DocumentQuerySchema = z.record(z.string(), z.string());
+
+/**
+ * The bare per-prototype route: a 302 to its `index.html`, carrying the query
+ * across — so a hand-typed or older URL still lands somewhere sensible.
+ */
+export const getPrototypeEntry = defineEndpoint({
+  route: "GET /api/prototypes/:name",
+  query: DocumentQuerySchema,
+  needsMachine: PROTOTYPE_FILES_FEATURE,
+});
+
+/**
+ * One file inside a prototype folder. The trailing segment is what makes a
+ * prototype self-contained: because the document is served at
  * `/api/prototypes/<name>/index.html`, a relative `href="styles.css"` inside it
  * resolves to `/api/prototypes/<name>/styles.css` — the same relative reference
  * that works when the file is opened straight off disk with `file://`.
@@ -136,21 +156,28 @@ export const PROTOTYPE_FILE_ROUTE = "GET /api/prototypes/:name";
  * so a prototype folder is flat by construction (`<name>/assets/x.svg` is
  * unserveable — the `prototypes:self-contained` check enforces that).
  */
-export const PROTOTYPE_ASSET_ROUTE = "GET /api/prototypes/:name/:file";
+export const getPrototypeFile = defineEndpoint({
+  route: "GET /api/prototypes/:name/:file",
+  query: DocumentQuerySchema,
+  response: blob(),
+  needsMachine: PROTOTYPE_FILES_FEATURE,
+});
 
 /**
- * Route key for one file of one recorded VERSION of a prototype. A path prefix
- * per version, for the same reason the live route has one: a relative
- * `href="styles.css"` inside that version's `index.html` resolves to the same
- * version's `styles.css`. The sha addresses the content, so the response is
- * immutable. Raw handler, like the live file route. Built by
- * {@link prototypeVersionUrl}.
+ * One file of one recorded VERSION of a prototype. A path prefix per version,
+ * for the same reason the live route has one: a relative `href="styles.css"`
+ * inside that version's `index.html` resolves to the same version's
+ * `styles.css`. The sha addresses the content, so the response is immutable.
  *
  * Six segments against the live route's four, and the router matches on the
  * segment count, so the two never compete for a URL.
  */
-export const PROTOTYPE_VERSION_FILE_ROUTE =
-  "GET /api/prototypes/:name/versions/:sha/:file";
+export const getPrototypeVersionFile = defineEndpoint({
+  route: "GET /api/prototypes/:name/versions/:sha/:file",
+  query: DocumentQuerySchema,
+  response: blob(),
+  needsMachine: PROTOTYPE_FILES_FEATURE,
+});
 
 /**
  * Typed list endpoint. JSON, so it goes through `implement()` (raw JSON
@@ -164,40 +191,50 @@ export const listPrototypes = defineEndpoint({
 });
 
 /**
- * Build the URL the iframe loads: the prototype's own `index.html`, addressed
- * through the folder so its relative sub-resources resolve. `v` cache-busts on
- * edit; `picks` become `?<option>=<value>`, which the server stamps onto the
- * page's `<html>` (`data-<option>`, or `--<option>` for a color) — so a frame reloaded by an edit comes back on
- * the variant it was showing, and the URL on its own is a link to that variant.
+ * The query a prototype document is asked for with: `v` cache-busts the live
+ * document on edit; `picks` become `?<option>=<value>`, which the server
+ * stamps onto the page's `<html>` (`data-<option>`, or `--<option>` for a
+ * color) — so a frame reloaded by an edit comes back on the variant it was
+ * showing, and the URL on its own is a link to that variant.
  */
-export function prototypeUrl(
-  name: string,
+export function prototypeDocumentQuery(
   opts: { v?: string; picks?: OptionPicks } = {},
-): string {
-  const params = new URLSearchParams();
-  if (opts.v !== undefined) params.set("v", opts.v);
-  for (const [option, value] of Object.entries(opts.picks ?? {})) {
-    params.set(option, value);
-  }
-  const qs = params.size === 0 ? "" : `?${params.toString()}`;
-  return `${PROTOTYPES_API_BASE}/${encodeURIComponent(name)}/index.html${qs}`;
+): Record<string, string> {
+  return { ...(opts.v === undefined ? {} : { v: opts.v }), ...opts.picks };
 }
 
 /**
- * Build the URL of a recorded version's document — the one builder for
- * {@link PROTOTYPE_VERSION_FILE_ROUTE}. No `v`: a version never changes. `picks`
+ * The document a frame loads: the prototype's own `index.html`, addressed
+ * through the folder so its relative sub-resources resolve. An iframe loads it
+ * by URL (its sub-resources too), so its src comes from `useAssetUrl`.
+ */
+export function prototypeDocument(
+  name: string,
+  opts: { v?: string; picks?: OptionPicks } = {},
+): AssetPath {
+  return assetPath(
+    getPrototypeFile,
+    { name, file: PROTOTYPE_ENTRY_FILE },
+    prototypeDocumentQuery(opts),
+  );
+}
+
+/**
+ * A recorded version's document. No `v`: a version never changes. `picks`
  * are stamped exactly as on the live route, but judged against THAT version's
  * own declaration (`PrototypeVersion.options`) — the live page's options may
  * not exist in it.
  */
-export function prototypeVersionUrl(
+export function prototypeVersionDocument(
   name: string,
   sha: string,
   opts: { picks?: OptionPicks } = {},
-): string {
-  const qs = new URLSearchParams(opts.picks ?? {});
-  const query = qs.size === 0 ? "" : `?${qs.toString()}`;
-  return `${PROTOTYPES_API_BASE}/${encodeURIComponent(name)}/versions/${sha}/index.html${query}`;
+): AssetPath {
+  return assetPath(
+    getPrototypeVersionFile,
+    { name, sha, file: PROTOTYPE_ENTRY_FILE },
+    prototypeDocumentQuery({ picks: opts.picks }),
+  );
 }
 
 /**

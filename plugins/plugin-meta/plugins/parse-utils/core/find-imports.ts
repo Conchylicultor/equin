@@ -64,10 +64,14 @@ const SIDE_EFFECT_RE = /\bimport\b\s*(["'`])/g;
 /**
  * Extract every static import/export-from and bare side-effect import from
  * `src`, in source order. `src` is the RAW (unmasked) source — masking happens
- * internally, so callers never touch `maskSource` for import scanning.
+ * internally, so callers never touch `maskSource` for import scanning. A caller
+ * that already holds `maskSource(src)` passes it as `masked` (a scan reading
+ * one file many ways masks it once); it must be exactly that.
  */
-export function findImports(src: string): ImportRef[] {
-  const masked = maskSource(src);
+export function findImports(
+  src: string,
+  masked: string = maskSource(src),
+): ImportRef[] {
   const out: ImportRef[] = [];
 
   // Reads the specifier from the ORIGINAL source given the opening-quote offset.

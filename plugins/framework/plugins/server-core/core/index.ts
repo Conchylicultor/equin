@@ -89,6 +89,7 @@ export {
   keptSnapshotValue,
   dropPendingPersists,
   setRelationBases,
+  setWatermarkSource,
   setLiveStateSnapshotHooks,
   setClientBuildIdentity,
   triggerResourcePush,

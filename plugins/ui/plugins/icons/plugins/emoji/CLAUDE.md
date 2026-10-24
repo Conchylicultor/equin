@@ -35,6 +35,7 @@ An emoji as a stored value, and the picker that picks one — the sibling of
 - Description: The <EmojiPicker>: a searchable, categorized emoji grid over frimousse whose emojibase data is served same-origin by the asset mirror; onSelect hands back a parsed Emoji. Plus <EmojiGlyph>, which draws an emoji in an icon's box (sized by the same size-* class). The page icon picker and <PageIcon> compose them. Registers the emojibase data mirror so the emoji picker's data is served same-origin (offline-capable after one warm-up) rather than fetched from the CDN by the browser.
 - Web:
   - Uses:
+    - `infra/endpoints.useAssetUrl`
     - `primitives/css/center.Center`
     - `primitives/css/fill.fillClasses`
     - `primitives/css/spacing.Stack`
@@ -42,7 +43,6 @@ An emoji as a stored value, and the picker that picks one — the sibling of
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
     - `primitives/loading.Loading`
-    - `primitives/networking.useTransport`
     - `primitives/search.SearchInput`
   - Exports (types):
     - `EmojiPickerLeadingCategory`

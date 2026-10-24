@@ -2,10 +2,7 @@ import { sql as drizzleSql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { z } from "zod";
-import {
-  executeOne,
-  executeRows,
-} from "@plugins/database/plugins/sql-rows/core";
+import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { PersistMeta } from "@plugins/framework/plugins/server-core/core";
 import { LIVE_STATE_SNAPSHOT_TABLE } from "@plugins/database/plugins/derived-views/core";
@@ -72,30 +69,6 @@ export function usableRowSql(exp: L2Expectation): SQL {
     AND definition IS NOT DISTINCT FROM (${JSON.stringify(exp.definitions)}::jsonb ->> resource_key)
     AND definition_at IS NOT DISTINCT FROM persisted_at
   )`;
-}
-
-// The query's `::text` cast is what makes this a plain `text` column, so the
-// watermark stays a string end to end and never passes through a JS number near
-// 2^63 (see the comment on the function below).
-const WatermarkRowSchema = z.object({ xmin: z.string() });
-
-// The durable monotonic position: the xmin of the CURRENT snapshot, in the 64-bit
-// xid8 family (never the 32-bit txid_* forms — wraparound hole). Read-only, so it
-// does not force an xid assignment. Captured BEFORE the loader's first read by the
-// runtime, so the catch-up replay predicate (xid >= position) can never
-// under-replay a write invisible to the loader's snapshot. Returned as text →
-// stored as numeric (no signed-bigint overflow near 2^63).
-export async function captureWatermark(db: NodePgDatabase): Promise<string> {
-  // A `SELECT` with no `FROM` returns exactly one row, so `executeOne` carries the
-  // "no row" throw this used to spell out by hand.
-  const row = await executeOne(db, {
-    query: drizzleSql.raw(
-      `SELECT pg_snapshot_xmin(pg_current_snapshot())::text AS xmin`,
-    ),
-    row: WatermarkRowSchema,
-    label: "captureWatermark",
-  });
-  return row.xmin;
 }
 
 // Persist a value under (resource_key, params_key) — the runtime's persist hook,

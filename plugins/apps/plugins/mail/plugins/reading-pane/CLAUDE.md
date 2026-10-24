@@ -52,8 +52,10 @@ thread subject, read off page 0):
 - **Body rendering**: `message.bodyHtml` → `<MailHtml>` (from the `mail-html`
   plugin — sanitize + privacy-safe remote images + `cid:` resolution + quote
   collapse); `message.bodyText` fallback → pre-wrapped escaped text. A per-message
-  "Display images" bar (driven by `MailHtml`'s `onRemoteImagesDetected`) flips
-  remote images on for that message only.
+  "Display images" bar (mail-html's `RemoteImagesNotice`, shown when
+  `MailHtml`'s `onRemoteImagesDetected` reports one) flips remote images on for
+  that message only — or, on a host without the computer, says the image proxy
+  is unavailable instead.
 - **Inline `cid:` images** (`internal/use-resolve-cid.ts`): `MailHtml`'s
   `resolveCid` maps a Content-ID to the matching attachment, lazily downloading it
   (via the `attachments` plugin's `useMailAttachment`) and returning the URL once
@@ -82,10 +84,10 @@ parses MIME or HTML itself.
   - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×3
     - `apps/mail/attachments` ×2
+    - `apps/mail/mail-html` ×2
     - `primitives/collapsible` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/ui-kit` ×2
-    - `apps/mail/mail-html.MailHtml`
     - `apps/mail/sync.MessageBodyState`
     - `network/live.useLive`
     - `primitives/avatar.Avatar`
@@ -102,7 +104,6 @@ parses MIME or HTML itself.
     - `primitives/live-state.ResourceErrorInline`
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
-    - `ui/icons.Icon`
   - Exports (values): `threadPane`
 - Server:
   - Contributes:

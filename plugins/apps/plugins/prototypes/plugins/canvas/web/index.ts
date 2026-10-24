@@ -43,7 +43,7 @@ export {
   PrototypeDetailProvider,
   documentOptions,
   openCanvasInApp,
-  prototypeDocumentSrc,
+  prototypeDocumentAsset,
   useFramePicks,
   useFrameSrc,
   usePrototypeDetail,

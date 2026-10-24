@@ -1,1 +1,1 @@
-export { MAIL_IMAGE_PROXY_ROUTE, mailImageProxyUrl } from "./internal/proxy";
+export { getMailImage, mailImageProxyAsset } from "./internal/proxy";

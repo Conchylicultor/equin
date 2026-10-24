@@ -90,20 +90,29 @@ function PrototypeFrameView({
       layout={layout}
       letter={letter}
       kind={PROTOTYPE_FRAME_KIND}
-      status="found"
+      status={src.kind === "ready" ? "found" : "unresolved"}
       bare={bare}
     >
-      <PrototypeFrame
-        src={src}
-        title={meta.title}
-        width={layout.width}
-        height={layout.height}
-        scale={layout.scale}
-        wholePage={wholePage}
-        pageHeight={pageHeight}
-        colorVars={colorVars}
-        onPageExtent={onPageExtent}
-      />
+      {src.kind === "ready" ? (
+        <PrototypeFrame
+          src={src.url}
+          title={meta.title}
+          width={layout.width}
+          height={layout.height}
+          scale={layout.scale}
+          wholePage={wholePage}
+          pageHeight={pageHeight}
+          colorVars={colorVars}
+          onPageExtent={onPageExtent}
+        />
+      ) : (
+        // Prose, like an unresolved source: it reflows instead of zooming.
+        <Inset pad="lg">
+          <Text variant="body" tone="muted">
+            {src.message}
+          </Text>
+        </Inset>
+      )}
     </Screen>
   );
   return <>{children(screen, null)}</>;

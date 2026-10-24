@@ -34,10 +34,24 @@ fixpoint — the `base-exclusions`-negated portable barrel providing each host
 service the graph's code declares (`core/host-services.ts`; exactly one, else
 it throws naming the service and candidates). Negatives are never flipped, so
 a negated plugin providing nothing (`review/plugin-changes`) stays out. Every
-server barrel the graph's `importClosure` reaches must be in it, or it throws
-with the import chain — the worker's boot assert, moved to build. Emitted as
+server barrel the graph's code reaches must be in it, or it throws with the
+import chain — the worker's boot assert, moved to build. Reach is measured by
+`importClosures` (`tooling/import-closure`): ONE union `Bun.build` for the
+entry, then one per fixpoint round over only the members no earlier closure
+reached — an import chain is computed only when reporting a failure. Emitted as
 `bin/browser-host.generated.ts` (`hostEntries`, `hostProviders`), held by
 `plugins-registry-in-sync`; the rule is pinned by `core/browser-host-gen.test.ts`.
+
+Derived once per snapshot: `inferBrowserHostGraph` / `deriveBrowserHostGraph`
+are memoized on the `RegistryGenContext` (`browserHostGraphs`), so its four
+callers (the generator, `plugins-registry-in-sync`,
+`browser-host:contributions-covered`, `config-v2:registrations-paired`) holding
+one ctx — a check run's file set yields one — pay one derivation. The coverage
+guard's file reading is memoized there too (`sourceScans`, see below). The
+generator reports each host as three build-profiler spans
+(`browserHostInfer:<host>`, `browserHostCoverage:<host>`,
+`browserHostWrite:<host>`); `scripts/measure-browser-host-guard.ts` times the
+derivation the way build and a check pass pay for it.
 
 The page side comes from the same derivation: `core/browser-host.generated.ts`
 (`browserHost`: the composition's id, home, web plugins — bundle ∩ web barrels —
@@ -76,8 +90,19 @@ fetcher (`useFetchEndpoint`, a `FetchEndpoint`, `useEndpoint`,
 - **Endpoints** — a declaration it imports (`endpointExports`, parse-utils) is
   served when a member's `server/` `httpRoutes` routes it, or declares
   `needsMachine`; a raw `"/api/<prefix>…` literal must hit a prefix a member
-  routes (a prefix no backend barrel routes — the resource runtime's, the
-  asset mirror's — is not judged).
+  routes, or a core-owned one: the resource runtime's own
+  (`RESOURCE_HTTP_ROUTE`) or central's (`CENTRAL_RESOURCE_HTTP_ROUTE`, mounted
+  by central-core's boot, not a barrel — the one route no `httpRoutes` holds;
+  its live-state URL is only built for a central read, which this guard
+  already requires `needsMachine`) — whether
+  another barrel routes it or none does. A route is read only from a barrel's
+  `httpRoutes` object: every key must be `[decl.route]` (a `defineEndpoint`
+  with a literal `route:`) or a `"METHOD /path"` literal, and any other key
+  (a constant, a template with a substitution, a spread) THROWS naming the
+  barrel and the key — a route the scan cannot read is never silently
+  dropped. A raw route is still a declaration: `rawEndpointHandler` /
+  `machineHandler` wrap its handler, and its consumers build an `AssetPath` /
+  `AssetBase` from it (`infra/endpoints`).
 - **Config** — the arm that needs the barrels' contributions
   (`resolveHostConfigCoverage`) cannot run in this barrel-free phase; it runs
   in `config-v2:registrations-paired` over `collectConfigRegistrations`. No
@@ -87,9 +112,10 @@ fetcher (`useFetchEndpoint`, a `FetchEndpoint`, `useEndpoint`,
   scoped web plugin whose `server/` barrel the host does not boot must not
   contribute to a kind a graph member declares — the member would answer the
   scope without it (a task category's label, a list's exposed column). The
-  declaring plugin of each kind is read statically
-  (`parseServerContributionDeclarations` over every `defineServerContribution`
-  call); a kind declared `absentOnHost: { reason }` (`Trigger`, `ReportKind`:
+  declaring plugin of each kind is read statically (parse-utils'
+  `parseServerContributionDeclarations` over every `defineServerContribution`
+  call — the same reading the contributions facet takes server companion
+  kinds from); a kind declared `absentOnHost: { reason }` (`Trigger`, `ReportKind`:
   its contributor's own reaction or bookkeeping, read by nothing a host
   serves) is not this arm's, nor is a host service's provider. Cleared by
   making the barrel portable or moving the contribution into a portable
@@ -104,6 +130,16 @@ found are emitted as `hostReads` in the page side's
 `core/browser-host.generated.ts`; the owner's boot test holds the booted
 graph's `Resource.Declare` set to them. Pinned by
 `core/browser-host-coverage.test.ts`.
+
+The reading is one `SourceScans` per snapshot (`createSourceScans`, held on
+the ctx as `sourceScans()`): each file is read once and masked at most once
+(`maskSource`), every later reading — imports, declared descriptors,
+endpoints, register calls — reuses that mask (the parse-utils and
+resource-vocabulary scanners take the caller's `masked`), and the repo-wide
+facts (the serving wrappers, every backend barrel's routes, each plugin's
+descriptor index) are derived once and shared by every host. A repo-wide pass
+text-filters before it masks: a backend file naming no register marker and no
+wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
 

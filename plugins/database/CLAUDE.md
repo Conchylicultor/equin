@@ -44,6 +44,20 @@ deadlock retry, the query deadline) lives in `machine/internal/pg-driver.ts`. A
 host without the cluster boots `plugins/pglite`. Under `bun test` the preload
 provides the desktop's driver (see `test/bun-preload.ts`).
 
+## Causal tokens: `currentTxId` and `snapshotWatermark`
+
+Both are xid8 decimal text, compared as BigInt. `currentTxId(tx)` is a write's
+ack token (read inside its transaction). `snapshotWatermark(exec)`
+(`server/internal/snapshot-watermark.ts`) is the xmin of the current snapshot:
+the resource runtime's commit watermark, which every frame that fully
+reconciles a client carries. This plugin owns it: `onReadyBlocking` installs it
+into server-core (`setWatermarkSource`) right after `driver.ready()`, on every
+host with a database — the browser worker included — and a serving host whose
+graph reads the database without one fails at boot
+(`assertDbReadsHaveWatermarkSource`). L2 (`live-state-snapshot`) only consumes
+the same capture, as a persisted value's floor. A suite that builds its own
+runtime takes the real capture from `@plugins/database/server/testing`.
+
 `database/core`'s `readDatabaseConfig` (`readFileSync`) stays in `core/` (debt):
 CLIs, checks and e2e scripts read it there.
 
@@ -324,6 +338,9 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `DATABASE_CONFIG_PATH`
     - `libpqEnv`
     - `readDatabaseConfig`
+- Test helpers:
+  - Server: `@plugins/database/server/testing`
+    - `snapshotWatermark`
 - Sub-plugins:
   - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
   - **`change-feed`** — L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations…

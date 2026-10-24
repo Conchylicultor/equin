@@ -18,6 +18,7 @@ import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import {
   deriveBrowserHostGraph,
   discoverBrowserHosts,
+  inferBrowserHostGraph,
   renderBrowserHostScope,
   resolveHostGraph,
   type HostClosure,
@@ -39,6 +40,14 @@ describe("deriveBrowserHostGraph over the repo", () => {
     expect(host).toBeDefined();
     const graph = await deriveBrowserHostGraph(ctx, host!);
     expect(graph.composition).toBe("agent-manager-demo");
+    // One derivation per ctx: every caller holding it shares the memo.
+    expect(deriveBrowserHostGraph(ctx, host!)).toBe(
+      deriveBrowserHostGraph(ctx, host!),
+    );
+    expect(await inferBrowserHostGraph(ctx, host!)).toMatchObject({
+      members: graph.members,
+      providers: graph.providers,
+    });
 
     const committed = readFileSync(join(root, host!.generated), "utf8");
     const entries = [...committed.matchAll(/\{ pluginPath: "([^"]+)"/g)].map(
@@ -117,11 +126,14 @@ function inputs(
     bundleBarrels: [],
     candidateBarrels: [],
     read: async (path) => files[path] ?? null,
-    closure: async (entry): Promise<HostClosure> => {
-      const modules = new Set([entry, ...(closures[entry] ?? [])]);
+    closure: async (entries): Promise<HostClosure> => {
+      const of = (e: string): string[] => [e, ...(closures[e] ?? [])];
       return {
-        modules,
-        importChain: (m) => (m === entry ? [entry] : [entry, m]),
+        modules: new Set(entries.flatMap(of)),
+        importChain: (m) => {
+          const entry = entries.find((e) => of(e).includes(m))!;
+          return m === entry ? [entry] : [entry, m];
+        },
       };
     },
     ...over,
@@ -162,6 +174,9 @@ describe("resolveHostGraph", () => {
     );
     expect(graph.members).toEqual(["db", "db/plugins/memory"]);
     expect(graph.providers).toEqual({ "db.driver": "db/plugins/memory" });
+    // One closure for the entry, one per round for the unreached members: the
+    // bundle's, then the provider the fixpoint added.
+    expect(graph.closures).toBe(3);
   });
 
   test("the entry's portable imports are roots", async () => {

@@ -103,6 +103,29 @@ export interface DocMetaContribution {
   companion?: true;
 }
 
+/**
+ * A server contribution kind this plugin's `server/` declares opened to
+ * companions: `export const <binding> = defineServerContribution("<kind>", {
+ * companions: true })`. The server twin of a web slot declared `companions`.
+ */
+export interface ServerCompanionKind {
+  /** The `const` the token is bound to — what a companion names it by. */
+  binding: string;
+  /** The kind's debug name (`_kind.description`). */
+  kind: string;
+}
+
+/**
+ * A `companion: true` contribution in this plugin's `server/index.ts` inline
+ * `contributions: [ … ]` literal, naming the kind's token as imported. The
+ * closure engine resolves `token` to the declaring plugin and draws its hard
+ * owner → contributor edge (`plugin-meta/closure`'s `collectCompanionSlots`).
+ */
+export interface ServerCompanionContribution {
+  /** The token called: its exported name and the specifier it came through (none when declared in the same file). */
+  token: SourceRef;
+}
+
 export interface ContributionsFacetData {
   static: Contribution[];
   runtime: DocMetaContribution[];
@@ -119,6 +142,10 @@ export interface ContributionsFacetData {
    * is declared in this plugin's own `web/`.
    */
   paneRefs: Record<string, SourceRef>;
+  /** The kinds this plugin's `server/` opens to companions. */
+  serverCompanionKinds: ServerCompanionKind[];
+  /** The companion contributions of this plugin's `server/index.ts`. */
+  serverCompanions: ServerCompanionContribution[];
 }
 
 export const contributionsFacetDef =

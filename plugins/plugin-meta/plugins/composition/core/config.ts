@@ -494,7 +494,10 @@ export const compositionsConfig = defineConfig({
         // font-family group, reorder's layout middleware, its node types and the
         // error boundary with slot-render. Each of those used to be hand-listed
         // here after equin.ai shipped without it (blank icons, slots ignoring
-        // their committed layouts).
+        // their committed layouts). The same holds server-side: a contribution
+        // `companion: true` to a server kind opened with `companions: true`
+        // ships with that kind's owner (live-state-snapshot, the changelog's
+        // pruner, with change-feed).
         //
         // Entry points (not contributors) so they're forced into the hard closure
         // unconditionally; the theme-customizer UI stays opt-in/soft.

@@ -7,6 +7,7 @@
  * set (which files it reads). Run with `bun test`.
  */
 
+import { createSourceScans } from "./browser-host-coverage";
 import { test, expect, describe } from "bun:test";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
@@ -390,6 +391,8 @@ describe("the scan over a file set", () => {
       main: { id: "singularity", home: null },
       repo: () => Promise.resolve(repo),
       dirScans: new Map(),
+      browserHostGraphs: new Map(),
+      sourceScans: () => Promise.resolve(createSourceScans(repo)),
     };
     return await renderEagerTierManifest(root, ctx);
   }

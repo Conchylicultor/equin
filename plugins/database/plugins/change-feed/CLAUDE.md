@@ -16,11 +16,29 @@ seed) and an `exec` child does not. The trigger rebuild runs under the driver's
 `bootDdl` (the desktop's widened deadline; PGlite adds none). The changelog's
 fork exclusion is the desktop's concern and lives in `machine/`.
 
-On a host without `live-state-snapshot` (the browser host) nothing reads or
-prunes `live_state_changelog`: every write statement still appends its row,
-held in the worker's in-memory database for the tab's life. Bounded only by the
-session today (a follow-up: prune it, or skip the outbox, where no catch-up
-consumer is booted).
+`live_state_changelog` is read and pruned by `live-state-snapshot` (L2), which
+is portable too and boots wherever this plugin does: the browser host's
+changelog is bounded by the same prune policy as the desktop's, not by the
+tab's life. There is no second trigger body for a host without a catch-up
+consumer.
+
+"Boots wherever this plugin does" is DERIVED, not listed. L2 imports this
+plugin (`routeChange`, `relationBases`), so this plugin cannot import it back;
+instead it declares what bounds its changelog as a **companion kind** —
+`ChangelogRetention` (`defineServerContribution<{ reason }>(
+"change-feed-changelog-retention", { companions: true })`, exported from the
+server barrel) — and L2's server barrel contributes `ChangelogRetention({
+companion: true, reason })`. The closure engine turns that into a hard
+`database.change-feed → database.live-state-snapshot` edge, so every
+composition bundling the feed bundles L2 (the agent-manager compositions and
+the demo's browser-host graph did not before: nothing imported L2). The kind
+also means something at runtime: `onReady` — which only serving hosts run —
+asserts at least one `ChangelogRetention` contribution
+(`assertChangelogRetained`), after starting the listener, so a graph assembled
+outside the closure engine reports an unbounded changelog instead of growing
+one silently. `exec` children and partial-graph test boots never reach it.
+The plugin is not `loadBearing`, so that throw is logged by the boot sequence
+rather than killing the serving backend.
 
 A serving host whose graph serves DB-backed reads but boots no change feed fails
 at boot (server-core's `assertDbReadsHaveChangeFeed`, keyed on the relation
@@ -469,6 +487,7 @@ See `research/2026-09-29-global-scoped-change-routing.md`.
     - `RoutedChange`
     - `WriteLatency`
   - Exports (values):
+    - `ChangelogRetention`
     - `changeProducerFor`
     - `defineChangeProducer`
     - `ExcludeFromChangeFeed`

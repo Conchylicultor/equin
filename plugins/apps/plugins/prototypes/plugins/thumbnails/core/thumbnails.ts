@@ -1,5 +1,11 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
+import {
+  assetPath,
+  blob,
+  defineEndpoint,
+  type AssetPath,
+} from "@plugins/infra/plugins/endpoints/core";
 
 /**
  * Why a render produced no picture. Every arm is a state the card renders, not
@@ -61,25 +67,27 @@ export const prototypeThumbnails = liveValue("prototypes.thumbnails", {
   schema: z.record(z.string(), ThumbnailStateSchema),
 });
 
-/** Base path for the cached-PNG route. */
-export const PROTOTYPE_THUMBS_BASE = "/api/prototype-thumbs";
-
 /**
- * Route key for one cached thumbnail.
+ * One cached thumbnail, `GET /api/prototype-thumbs/<key>.png`.
  *
  * Deliberately NOT under `/api/prototypes/…`: that prefix already owns
  * `GET /api/prototypes/:name/:file`, which matches any two segments, so a
  * thumbnail nested under it would be shadowed by (or shadow) raw file serving.
- * Raw handler — it returns image bytes, which `implement()`'s JSON contract
- * does not fit.
+ * Raw handler (it returns image bytes with its own cache headers) in the
+ * `machine/` half: the cache is on disk, so the route is desktop-only.
  */
-export const PROTOTYPE_THUMB_ROUTE = `GET ${PROTOTYPE_THUMBS_BASE}/:key`;
+export const getPrototypeThumbnail = defineEndpoint({
+  route: "GET /api/prototype-thumbs/:key",
+  response: blob(),
+  needsMachine: { feature: "Prototype previews" },
+});
 
 /**
- * URL for a rendered thumbnail. The path carries the content fingerprint, so
- * the response is genuinely immutable — an edit yields a different URL rather
- * than a stale hit, and the browser never has to revalidate.
+ * A rendered thumbnail, loaded with `useAssetSrc`. The path carries the
+ * content fingerprint, so the response is genuinely immutable — an edit yields
+ * a different path rather than a stale hit, and the browser never has to
+ * revalidate.
  */
-export function prototypeThumbnailUrl(key: string): string {
-  return `${PROTOTYPE_THUMBS_BASE}/${key}.png`;
+export function prototypeThumbnailAsset(key: string): AssetPath {
+  return assetPath(getPrototypeThumbnail, { key: `${key}.png` });
 }

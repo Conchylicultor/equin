@@ -136,6 +136,12 @@ companion count differs from what the static parse read. A barrel whose
 `contributions` is a live array cannot host a companion: give it its own
 sub-plugin (`reorder/plugins/slot-middleware`).
 
+Server companions (`Kind({ …, companion: true })` to a kind declared
+`defineServerContribution(name, { companions: true })`) get the same count
+comparison per `server/` barrel, and a `machine/` barrel must carry none (a
+browser host boots the kind's owner but never a `machine/` half). Only a
+barrel whose half names a companion kind's token is imported.
+
 ## `root-mounts-reached` — a root mount no served app can ship
 
 A plugin mounted from the framework's own slots (`Core.Root`, `Core.Boot`, read

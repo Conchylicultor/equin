@@ -85,3 +85,25 @@ describe("after collectContributions", () => {
     expect(Beta.getContributionsIfCollected()).toEqual([]);
   });
 });
+
+describe("a kind opened to companions", () => {
+  const Owned = defineServerContribution<{ reason: string }>("test.owned", {
+    companions: true,
+  });
+
+  test("a companion contribution carries the flag; the payload does not", () => {
+    const c = Owned({ companion: true, reason: "r" });
+    expect(c.companion).toBe(true);
+    expect(Owned.from([{ contributions: [c] }]).map((p) => p.reason)).toEqual([
+      "r",
+    ]);
+    expect(Owned({ reason: "plain" }).companion).toBeUndefined();
+  });
+
+  test("an unflagged kind rejects `companion` — at the type level, and loudly at runtime past a cast", () => {
+    // @ts-expect-error — `companion` is an excess property on a kind not opened to companions.
+    expect(() => Alpha({ name: "a", companion: true })).toThrow(
+      /"test\.alpha" is not opened to companions/,
+    );
+  });
+});

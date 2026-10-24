@@ -5,7 +5,13 @@ import {
   prototypeDetailRoute,
   prototypesApp,
 } from "@plugins/apps/plugins/prototypes/plugins/shell/core";
-import { prototypeUrl, type OptionPicks } from "../core";
+import { interpolatePath } from "@plugins/infra/plugins/endpoints/core";
+import {
+  PROTOTYPE_ENTRY_FILE,
+  getPrototypeFile,
+  prototypeDocumentQuery,
+  type OptionPicks,
+} from "../core";
 
 // Where a minted prototype can be LOOKED AT, which is the only thing a
 // prototype is for — so both verbs print it.
@@ -31,8 +37,9 @@ export async function prototypeUrlFormatter(): Promise<(id: string) => string> {
 /**
  * The raw DOCUMENT of one variant of a prototype, on this checkout's origin —
  * `http://<ns>.localhost:9000/api/prototypes/<id>/index.html?palette=azure`.
- * Built by the one document-URL builder the frames use (`prototypeUrl`), so the
- * terminal's link and the pane's frame name a variant the same way. Loading it
+ * Spelled from the route the frames load (`getPrototypeFile`) with the query
+ * they are asked for with (`prototypeDocumentQuery`), so the terminal's link
+ * and the pane's frame name a variant the same way. Loading it
  * renders that variant and writes nothing: the server stamps the query onto
  * the page, the user's picks stay as they are.
  */
@@ -43,7 +50,11 @@ export async function prototypeDocumentUrlFormatter(): Promise<{
   url: (id: string, picks: OptionPicks) => string;
 }> {
   const at = await checkoutUrl();
-  const path = (id: string, picks: OptionPicks) => prototypeUrl(id, { picks });
+  const path = (id: string, picks: OptionPicks) => {
+    const qs = new URLSearchParams(prototypeDocumentQuery({ picks }));
+    const query = qs.size === 0 ? "" : `?${qs.toString()}`;
+    return `${interpolatePath(getPrototypeFile.path, { name: id, file: PROTOTYPE_ENTRY_FILE })}${query}`;
+  };
   return { path, url: (id, picks) => at(path(id, picks)) };
 }
 

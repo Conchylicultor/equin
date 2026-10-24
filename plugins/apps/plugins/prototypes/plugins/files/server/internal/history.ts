@@ -1,7 +1,6 @@
 import { serveValue } from "@plugins/network/plugins/live/server";
 import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
 import {
-  PROTOTYPE_ENTRY_FILE,
   protoIdKind,
   prototypeHistory,
   prototypeVersionCounts,
@@ -10,18 +9,16 @@ import {
 } from "../../core";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import {
-  isFlatFileName,
   isVersionSha,
   openHistoryStore,
   type CheckpointInput,
   type HistoryStore,
 } from "../../shared/history/store";
-import { contentTypeForPath } from "./paths";
-import { hasPicks, servePickedDocument } from "./picked-document";
 
 // The server's face of the version store (`shared/history/`): the per-prototype
-// history resource, a version's files over HTTP, the restore endpoint, and
-// `checkpointPrototype` for the `checkpoints` plugin's end-of-turn job.
+// history resource, the restore endpoint, and `checkpointPrototype` for the
+// `checkpoints` plugin's end-of-turn job. A version's files over HTTP are the
+// machine half's (`machine/internal/version-file.ts`).
 //
 // Nothing here notifies the resource after a write. Every write stamps
 // `_history/<id>.git/latest.json`, and the one watcher over the tree turns that
@@ -91,47 +88,6 @@ export async function checkpointPrototype(
 /** Give every minted prototype without a history its `v0` (the folder as it is now). */
 export async function adoptPrototypeHistories(): Promise<void> {
   await store().adoptAll();
-}
-
-/**
- * `GET /api/prototypes/:name/versions/:sha/:file` → that file as it was in that
- * version. The sha addresses the content, so it is cacheable forever —
- * `immutable`, the opposite of the live route's `no-store` — and so is each
- * picked variant of it: `index.html?palette=azure` is stamped exactly as on
- * the live route, judged against the options THIS version declares. A
- * malformed name, sha or file is a 404 like an unknown one: none of them names
- * a version.
- */
-export async function handlePrototypeVersionFile(
-  req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
-  const { name, sha, file } = params;
-  if (
-    name === undefined ||
-    sha === undefined ||
-    file === undefined ||
-    !protoIdKind.is(name) ||
-    !isVersionSha(sha) ||
-    !isFlatFileName(file)
-  ) {
-    return new Response("not found", { status: 404 });
-  }
-
-  const read = await store().readVersionFile(name, sha, file);
-  if (read.kind === "not-found") {
-    return new Response("not found", { status: 404 });
-  }
-  const headers = {
-    "content-type": contentTypeForPath(file),
-    "cache-control": "public, max-age=31536000, immutable",
-  };
-  const search = new URL(req.url).searchParams;
-  if (file === PROTOTYPE_ENTRY_FILE && hasPicks(search)) {
-    const html = new TextDecoder().decode(read.bytes);
-    return servePickedDocument(html, search, headers);
-  }
-  return new Response(read.bytes, { headers });
 }
 
 /** `POST /api/prototypes/:name/versions/:sha/restore` → the new `restore` version. */

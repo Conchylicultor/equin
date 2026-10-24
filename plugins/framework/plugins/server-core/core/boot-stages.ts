@@ -14,6 +14,7 @@ import { collectContributions } from "./contributions";
 import { profilerStart, recordMemoryCheckpoint } from "./profiler";
 import {
   assertDbReadsHaveChangeFeed,
+  assertServedReadsHaveWatermarkSource,
   assertPreloadedResourcesDeclared,
   bindDeferredResources,
 } from "./resources";
@@ -414,14 +415,17 @@ async function runAllReadyPhase(ordered: LoadedServerPlugin[]): Promise<void> {
  *
  * First, D3: a serving host whose graph serves DB-backed live reads must have
  * booted a change feed (`assertDbReadsHaveChangeFeed`) — without one, a write
- * lands and no reader recomputes. Here, not in `bootPluginGraph`, so only a
- * serving host is held to it: `exec` and partial-graph test boots never reach
- * this point.
+ * lands and no reader recomputes — and one serving any live read must have a
+ * watermark source (`assertServedReadsHaveWatermarkSource`, installed by
+ * `database`) — without one, no frame carries a commit watermark and an op whose
+ * exact ack is missed never confirms. Here, not in `bootPluginGraph`, so only a serving host is held to
+ * them: `exec` and partial-graph test boots never reach this point.
  */
 export async function runPostReadyPhases(
   ordered: LoadedServerPlugin[],
 ): Promise<void> {
   assertDbReadsHaveChangeFeed();
+  assertServedReadsHaveWatermarkSource();
   await runGraphPhase(ordered, "onReady");
   recordMemoryCheckpoint("after-onReady");
   await runAllReadyPhase(ordered);
