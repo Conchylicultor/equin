@@ -25958,7 +25958,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 171 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 172 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×51
               - `primitives` ×26
               - `page` ×24
@@ -25978,6 +25978,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database/admin`
               - `improve/element-picker`
               - `map/google`
+              - `menu-bar`
               - `network/live`
               - `plugin-meta/exhibits`
               - `release`
