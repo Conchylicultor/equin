@@ -211,11 +211,11 @@ without them, the outline is regions only, which is coarse but still valid.
 
 ## Verification
 
-- **Tests**, one plugin at a time (`./singularity test <plugin>`):
+- **Tests**, one plugin at a time (`./equin test <plugin>`):
   - `agent-thread`: the message id, and `<go>` sends;
   - `ui-context`: the outline, and resolve round-trips;
   - `hints/ask`: `pickSuggestions` and `placeAfterDrag`.
-- `./singularity build`. Then, in this worktree's build at
+- `./equin build`. Then, in this worktree's build at
   `http://<worktree>.localhost:9000`:
   1. ? → Ask equin opens the card bottom-right with three suggestions.
   2. "What can I do on this page?" streams an answer about the current page.

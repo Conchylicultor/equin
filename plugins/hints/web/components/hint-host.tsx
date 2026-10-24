@@ -287,7 +287,8 @@ function tipScene(
 /** `pointAt`'s spotlight: a hole on the element and a caption card beside it. */
 function pointerScene(pointer: PointerRun, rect: HintRect | null): StageScene {
   if (!rect) return EMPTY_SCENE;
-  const box = boxAround(pointer.el, rect, ANCHOR_PADDING);
+  // One id for every spotlight, so a `pointAt` replacing another glides to it.
+  const box = boxAround("pointer", pointer.el, rect, ANCHOR_PADDING);
   const card = pointerCard(pointer.opts);
   return {
     ...EMPTY_SCENE,

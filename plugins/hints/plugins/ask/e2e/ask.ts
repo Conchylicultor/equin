@@ -10,7 +10,7 @@
 //   4. reload, reopen: the card opens where it was left
 //   5. Close (×) closes it
 //
-//   ./singularity run plugins/hints/plugins/ask/e2e/ask.ts [--out /tmp/ask] [--headed]
+//   ./equin run plugins/hints/plugins/ask/e2e/ask.ts [--out /tmp/ask] [--headed]
 
 import type { Locator, Page } from "playwright";
 import {

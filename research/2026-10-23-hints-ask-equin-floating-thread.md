@@ -41,7 +41,7 @@ implementation only to show that it can be built from what already exists.
 
 ## Phase A: the prototype (this task's deliverable)
 
-`./singularity prototype new "Ask equin"` mints the id. It is designed from
+`./equin prototype new "Ask equin"` mints the id. It is designed from
 the blank template, following `prototypes/CLAUDE.md`. Metadata:
 `<meta name="mocks" content="app:/">` (it lives over the whole app with its
 chrome) and a description.
@@ -172,6 +172,6 @@ Prototype: `proto-1792772741-le95f8`.
 - If B3 is (a), the scratch workspace's "no repo" assumption needs a sanctioned
   read-only path to the checkout. That would be a profile capability in
   `conversations/workspace`, not a one-off.
-- **Verification.** `./singularity build`, then in the agent's own build ask
+- **Verification.** `./equin build`, then in the agent's own build ask
   a question from two different apps, navigate mid-run, minimize, reply, and
   press Done. Check that the task shows under Help in the Agent Manager.
