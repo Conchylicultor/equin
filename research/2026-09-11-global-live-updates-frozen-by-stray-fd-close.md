@@ -5,7 +5,7 @@ Follow-up task: "Find the code that closes file handles twice" (filed 2026-09-11
 
 ## Symptom (as the user saw it)
 
-On `singularity.localhost:9000`, Close / Drop & Close on a conversation, dropping a
+On `equin.localhost:9000`, Close / Drop & Close on a conversation, dropping a
 task, closing a conversation from the sidebar — the click works but the screen never
 changes. No error. Refreshing shows the change. Every DB-backed live update was
 affected, not one button.

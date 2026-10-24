@@ -130,7 +130,7 @@ chasing them:
   alone before treating it as real; it passes 4/4 on both worktree and main that way.
 - `crdt-newblock-verify.ts` can fail `CONVERGENCE` with `got []`. Its context-B step waits a fixed
   5 s (`crdt-newblock-verify.ts:136`) and that is not always enough on a loaded machine. Baseline it
-  against main before treating it as real: every script takes `--base http://singularity.localhost:9000`.
+  against main before treating it as real: every script takes `--base http://equin.localhost:9000`.
 
 ### Harness notes
 

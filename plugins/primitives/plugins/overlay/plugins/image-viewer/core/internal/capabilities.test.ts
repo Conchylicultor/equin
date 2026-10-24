@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { dataUriToBlob, dataUriType, imageCapabilities } from "./capabilities";
 
-const ORIGIN = "http://singularity.localhost:9000";
+const ORIGIN = "http://equin.localhost:9000";
 const PNG_1PX =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
 
@@ -42,7 +42,7 @@ describe("imageCapabilities", () => {
     });
     // A different port is a different origin.
     expect(
-      imageCapabilities("http://singularity.localhost:9001/a.png", ORIGIN).copy,
+      imageCapabilities("http://equin.localhost:9001/a.png", ORIGIN).copy,
     ).toBe(false);
   });
 

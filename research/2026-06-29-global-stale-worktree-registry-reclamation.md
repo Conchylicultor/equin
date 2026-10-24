@@ -160,7 +160,7 @@ already main-only). Add an `onReady` in the worktree-cleanup server plugin that 
 4. DB forks: via `query_db` against `singularity`,
    `SELECT count(*) FROM pg_database` — orphan `att-*` forks with no live worktree get dropped.
 5. Confirm a *live* worktree (this one, dir present) is **not** reaped, and the main
-   `singularity` namespace still serves at `http://singularity.localhost:9000`.
+   `singularity` namespace still serves at `http://equin.localhost:9000`.
 6. Debug → Worktree Cleanup pane still lists/deletes correctly and shows the new
    "Removing registry…" step during a manual delete.
 7. (Optional) `bun test plugins/debug/plugins/worktree-cleanup` if any unit tests are added

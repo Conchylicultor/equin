@@ -3,7 +3,7 @@
 ## Context
 
 A clean-VM run (2026-09-18) with a working, deployed app was rebooted: no
-gateway, no embedded Postgres, `http://singularity.localhost:9000` dead. Only a
+gateway, no embedded Postgres, `http://equin.localhost:9000` dead. Only a
 hand-run `./equin start` brings it back, and only `docs/setup.md:49-51`
 mentions it ("does not survive a reboot, so run it again after one"). To a new
 user the first reboot looks exactly like a broken install.
@@ -145,7 +145,7 @@ Reused: `pickRuntimeEnv` / `runtimeEnvNames` / `runtimePath` (`launcher/core/int
    `kill -9 <pid>` → relaunched within ~10 s; `./equin stop` → stays down;
    `./equin start` → back.
 4. Clean-install VM (`sidequests/clean-install`): install per `docs/setup.md`,
-   reboot the Tart VM, log in, `curl http://singularity.localhost:9000` answers
+   reboot the Tart VM, log in, `curl http://equin.localhost:9000` answers
    with no manual step. (Not yet a `steps.sh` step: a step's command runs over
    the guest SSH session a reboot kills, so `run.sh` needs a reboot primitive
    first — follow-up.)

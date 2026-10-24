@@ -18,7 +18,7 @@ const OUT = "/tmp/paste-ui-context";
 // A representative capture — exactly what the element picker hands over and
 // what the user copies out of a prompt.
 const TAG =
-  '<ui-context url="http://singularity.localhost:9000/agents" plugin="improve" ' +
+  '<ui-context url="http://equin.localhost:9000/agents" plugin="improve" ' +
   'slot="action-bar.item" contribution="improve:improve" selector="div>div>span" ' +
   'source="plugins/improve/web/components/improve-button.tsx:16">' +
   "<hint>picked in the live app</hint><picked-content>Improve</picked-content></ui-context>";

@@ -235,8 +235,28 @@ export const MAIN_WORKTREE_NAME: Namespace = namespaceFor(MAIN_COMPOSITION_ID, {
 });
 
 /**
- * Extra host labels the gateway serves as an existing namespace: `equin` is
- * `singularity`, so `http://equin.localhost:9000` opens the main app.
+ * The host label a namespace is HANDED OUT under, where that is not its own
+ * name: main is `http://equin.localhost:9000`.
+ *
+ * Every address the app produces goes through `namespaceHost` / `namespaceUrl`,
+ * which read this table — so build output, e2e and agent-browser targets,
+ * agents' MCP URLs and in-app links all say `equin` without naming it. The
+ * namespace itself stays what `namespaceFor` minted (`singularity`): its spec
+ * dir, socket and database are internal identifiers, and its own name keeps
+ * resolving as a host (`namespaceFromHost`), so the old address still opens
+ * the app as a quiet alias.
+ *
+ * Exists to move the app off the `singularity` name gradually.
+ */
+export const NAMESPACE_HOST_LABELS: Readonly<
+  Partial<Record<Namespace, string>>
+> = {
+  [MAIN_WORKTREE_NAME]: "equin",
+};
+
+/**
+ * Extra host labels the gateway serves as an existing namespace — DERIVED from
+ * `NAMESPACE_HOST_LABELS` (label → the namespace it is handed out for).
  *
  * An alias is a HOST spelling only — it is never minted (`namespaceFor` cannot
  * yield one), never a spec dir, socket or database, and `namespaceFromHost`
@@ -245,15 +265,16 @@ export const MAIN_WORKTREE_NAME: Namespace = namespaceFor(MAIN_COMPOSITION_ID, {
  * checkout or composition that would take an alias's name, because the gateway
  * would never route to it.
  *
- * Exists to move the app off the `singularity` name gradually: the old host
- * keeps working while the new one is the one to use.
- *
  * KEEP IN SYNC with `hostAliases` in gateway/proxy.go — enforced by the
  * `namespace:grammar-in-sync` check.
  */
-export const NAMESPACE_HOST_ALIASES: Readonly<Record<string, Namespace>> = {
-  equin: MAIN_WORKTREE_NAME,
-};
+export const NAMESPACE_HOST_ALIASES: Readonly<Record<string, Namespace>> =
+  Object.fromEntries(
+    Object.entries(NAMESPACE_HOST_LABELS).map(([ns, label]) => [
+      label!,
+      ns as Namespace,
+    ]),
+  );
 
 /** Whether `name` is a host alias rather than a namespace of its own. */
 export function isNamespaceHostAlias(name: string): boolean {
@@ -290,7 +311,9 @@ export const GATEWAY_PORT = 9000;
 export const NAMESPACE_HOST_SUFFIX = ".localhost";
 
 /**
- * The host authority for a namespace: `<ns>.localhost:9000`.
+ * The host authority for a namespace: `<label>.localhost:9000`, where the label
+ * is the namespace's public host label (`NAMESPACE_HOST_LABELS`) or else the
+ * namespace itself.
  *
  * Use this (or `namespaceUrl`) rather than interpolating `.localhost` by hand —
  * `no-hand-built-namespace-url` enforces it. Two dozen hand-built copies is how
@@ -300,7 +323,7 @@ export function namespaceHost(
   ns: Namespace,
   port: number = GATEWAY_PORT,
 ): string {
-  return `${ns}${NAMESPACE_HOST_SUFFIX}:${port}`;
+  return `${NAMESPACE_HOST_LABELS[ns] ?? ns}${NAMESPACE_HOST_SUFFIX}:${port}`;
 }
 
 /**

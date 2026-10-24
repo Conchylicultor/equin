@@ -62,7 +62,7 @@ release other than the locked one.
 
 Postgres needs no install. `bun install` brings the server (`embedded-postgres` ships `postgres` / `initdb` / `pg_ctl`) and the client tools the app uses to fork and back up databases (`pg_dump` / `pg_restore`, from [`client-tools`](../plugins/database/plugins/client-tools/CLAUDE.md)). Both come from the same Postgres release.
 
-The app is then at <http://singularity.localhost:9000>. `start` is a one-time,
+The app is then at <http://equin.localhost:9000>. `start` is a one-time,
 system-level step. On macOS it registers the gateway with launchd
 (`~/Library/LaunchAgents/dev.singularity.gateway.plist`), so it comes back on
 its own at every login — after a reboot too — and is relaunched if it crashes;

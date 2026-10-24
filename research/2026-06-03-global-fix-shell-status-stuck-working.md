@@ -4,7 +4,7 @@
 
 Conversations that launch a long-running background shell (e.g. an agent that ran
 `./equin build` as a background task) get **stuck and never settle**. The
-conversation at `http://singularity.localhost:9000/c/conv-1780485630-h2vc/terminal`
+conversation at `http://equin.localhost:9000/c/conv-1780485630-h2vc/terminal`
 was reproduced live in this exact state.
 
 ### Root cause (confirmed from live state)

@@ -39,7 +39,7 @@ describe("pickRuntimeEnv", () => {
     const picked = pickRuntimeEnv({
       HOME: "home-value",
       SINGULARITY_CONVERSATION_ID: "conv-1",
-      SINGULARITY_PARENT_HOST: "http://singularity.localhost:9000",
+      SINGULARITY_PARENT_HOST: "http://equin.localhost:9000",
       SINGULARITY_BUILD_ID: "build-1",
       SINGULARITY_HOST_GRANT: "4",
     });

@@ -295,7 +295,7 @@ run-and-interpret work whose output decides whether (1) proceeds at all.
 
 ### Step 0 RESULT (2026-08-25) — the symptom reproduces on `main`, with no declaration at all
 
-Baselined against `http://singularity.localhost:9000`, scripts run serially, ~8 s apart, on a
+Baselined against `http://equin.localhost:9000`, scripts run serially, ~8 s apart, on a
 machine also running two type-check workers (so read the failures as "at least this bad", not as
 a clean-machine measurement):
 
@@ -417,7 +417,7 @@ machine. Run them **individually**, not back-to-back, and record exact pass/fail
 this table Step 1 cannot be interpreted — this is precisely how F1 was killed.
 
 ```
-bun plugins/page/plugins/editor/e2e/crdt-split-merge-verify.ts              --base http://singularity.localhost:9000
+bun plugins/page/plugins/editor/e2e/crdt-split-merge-verify.ts              --base http://equin.localhost:9000
 bun plugins/page/plugins/editor/e2e/crdt-reopen-verify.ts                   --base …
 bun plugins/page/plugins/editor/e2e/crdt-typing-verify.ts                   --base …
 bun plugins/page/plugins/editor-collab/e2e/crdt-multitab-agent-verify.ts    --base …

@@ -1,3 +1,9 @@
+import {
+  MAIN_WORKTREE_NAME,
+  namespaceHost,
+  namespaceUrl,
+} from "@plugins/infra/plugins/namespace/core";
+
 /**
  * Where the code behind this site lives. A site-level fact, not a component's:
  * the footer signs off with it on every page, and one address declared twice is
@@ -33,5 +39,5 @@ export const INSTALL_COMMAND = `curl -fsSL https://raw.githubusercontent.com/${R
  * Where an installed equin answers: the main namespace behind the local gateway.
  * Every copy lives at the same address, so the site can name it.
  */
-export const LOCAL_APP_HOST = "singularity.localhost:9000";
-export const LOCAL_APP_URL = `http://${LOCAL_APP_HOST}`;
+export const LOCAL_APP_HOST = namespaceHost(MAIN_WORKTREE_NAME);
+export const LOCAL_APP_URL = namespaceUrl(MAIN_WORKTREE_NAME);

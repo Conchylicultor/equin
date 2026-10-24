@@ -3,7 +3,7 @@
 ## Context
 
 `./equin release --composition website` on 2026-08-05 replaced the app served at
-`singularity.localhost:9000` with the public website, permanently, until main was rebuilt
+`equin.localhost:9000` with the public website, permanently, until main was rebuilt
 (`No registered app for id "agent-manager"`). This is not failure-specific — a fully
 successful release does the same.
 
@@ -71,7 +71,7 @@ released `website`:
 ```
 ~/.singularity/worktrees/
   singularity/                 worktree + namespace (main checkout)
-    web/                       -> served at singularity.localhost:9000
+    web/                       -> served at equin.localhost:9000
     release-web/
       website/                 scratch: main's build of the website composition
       sonata/                  scratch: main's build of the sonata composition
@@ -611,9 +611,9 @@ closure (e.g. `sonata`) — must be absent. Then boot it:
 (exit 0 = SPA mounted, zero console errors, no /api 502 storm).
 
 **S3 — the reported bug.** From this worktree, with main deployed: note
-`curl -s singularity.localhost:9000 | head -c 200`, run
+`curl -s equin.localhost:9000 | head -c 200`, run
 `./equin release --composition website --dev`, then re-fetch. Identical output, and
-`singularity.localhost:9000` still renders the agent manager. Repeat concurrently for two
+`equin.localhost:9000` still renders the agent manager. Repeat concurrently for two
 compositions and confirm two distinct `worktrees/<wt>/release-web/<id>` trees.
 
 **S4 verification evidence (2026-08-07, worktree `att-1785964183-wqzj`).** Two consecutive

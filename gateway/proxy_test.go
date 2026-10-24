@@ -299,7 +299,7 @@ func TestParseWorktree(t *testing.T) {
 		want string
 	}{
 		// Today's two shapes, unchanged.
-		{"singularity.localhost:9000", "singularity"},
+		{"alpha.localhost:9000", "alpha"},
 		{"att-1787064474-2qcq.localhost:9000", "att-1787064474-2qcq"},
 		{"sonata.localhost", "sonata"},
 		// The shape this change exists for: <composition>.<checkout>.

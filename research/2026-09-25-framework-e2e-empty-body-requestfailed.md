@@ -9,7 +9,7 @@ The report came from the screenshot harness (`e2e-harness/e2e/screenshot.ts`, th
 
 ### Diagnosis (measured, not inferred)
 
-1. **It is not clean-install specific.** `screenshot.ts --url http://singularity.localhost:9000` on
+1. **It is not clean-install specific.** `screenshot.ts --url http://equin.localhost:9000` on
    this machine prints the same six lines, every run.
 2. **It is not teardown.** In both the VM log (`~/.singularity-clean-install/si-clean-20260918-021701/26-screenshot.log`)
    and the local repro, every `REQUESTFAILED` prints **before** `wrote …-before.png`. That rules out

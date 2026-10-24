@@ -133,7 +133,7 @@ Nothing here can see that — the receipt records one build id for both halves.
 
 ## Main is read-only for a run
 
-A run against main (`--url http://singularity.localhost:9000`) can read and
+A run against main (`--url http://equin.localhost:9000`) can read and
 screenshot, but every write it causes is refused by main's backend with a `403`
 (agent-origin headers → main's agent-write gate; telemetry endpoints excepted),
 so a script that clicks a write there fails loudly instead of mutating the

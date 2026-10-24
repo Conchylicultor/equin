@@ -174,7 +174,7 @@ step_13_db_fork_TAG="documented-elsewhere"
 # Recorded finding (run 1): this is a dead end, and the wall a new user hits.
 # `db fork` asks a RUNNING backend which tables to leave out of the copy:
 #   "Could not read the fork exclusion set from any running backend:
-#    http://singularity.localhost:9000/api/db/fork-exclusions -> 404
+#    http://equin.localhost:9000/api/db/fork-exclusions -> 404
 #    Start Singularity and retry ..."
 # No backend can run until the app is built, and the build is what is asking
 # for the database. The build's own advice therefore cannot be followed on a
@@ -340,10 +340,10 @@ step_24_build_retry5_TAG="from-docs"
 
 step_25_curl_check() {
   cat <<'CMD'
-curl -sS -o /dev/null -w '%{http_code}\n' http://singularity.localhost:9000/
+curl -sS -o /dev/null -w '%{http_code}\n' http://equin.localhost:9000/
 CMD
 }
-step_25_curl_check_DOC="Root CLAUDE.md Ports section: the main namespace is always served at singularity.localhost:9000 — checks it actually answers."
+step_25_curl_check_DOC="Root CLAUDE.md Ports section: the main namespace is always served at equin.localhost:9000 — checks it actually answers."
 step_25_curl_check_TAG="from-docs"
 
 step_26_screenshot() {

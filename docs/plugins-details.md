@@ -10438,6 +10438,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `WebsiteSoon`
           - Core:
             - Uses:
+              - `infra/namespace.MAIN_WORKTREE_NAME`
+              - `infra/namespace.namespaceHost`
+              - `infra/namespace.namespaceUrl`
               - `primitives/pane.defineApp`
               - `ui/icons.symbol`
             - Exports (values):
@@ -11236,7 +11239,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `integrations/hooktheory`
     - Endpoint callers: `setup-wizard`
   - Exemptions:
-    - Exempts itself from: `timer/no-unlisted-timer` — `central/internal/refresh-loop.ts` (sanctioned)
+    - Exempts itself from:
+      - `timer/no-unlisted-timer` — `central/internal/refresh-loop.ts` (sanctioned)
+      - `namespace:legacy-host` — `central/internal/oauth-flow.test.ts` (sanctioned)
   - Plugins:
     - **`apple-signing`** — Apple code-signing config registration (web). The Accounts provider row + setup wizard UI live in the setup-wizard sub-plugin. Apple code-signing credentials: config fields + certificate upload + Tauri release env provider.
       - Web:
@@ -29675,6 +29680,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`namespace`** — Canonical namespace identity: the branded Namespace type, the <composition>.<checkout> elision rule that mints one, and the URL/host encodings derived from it.
       - Cross-plugin:
         - Imported by:
+          - `apps/website/shell`
           - `build`
           - `framework/tooling/codegen`
           - `framework/tooling/guards`
@@ -29685,7 +29691,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/closure`
           - `plugin-meta/composition`
       - Exemptions:
-        - Exempts itself from: `namespace:no-hand-built-url` — `core/namespace.ts`, `check/index.ts` (sanctioned)
+        - Exempts itself from:
+          - `namespace:no-hand-built-url` — `core/namespace.ts`, `check/index.ts` (sanctioned)
+          - `namespace:legacy-host` — `core/namespace.test.ts` (sanctioned)
       - Core:
         - Exports (types):
           - `CheckoutRef`
@@ -29700,6 +29708,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MAIN_COMPOSITION_ID`
           - `MAIN_WORKTREE_NAME`
           - `NAMESPACE_HOST_ALIASES`
+          - `NAMESPACE_HOST_LABELS`
           - `NAMESPACE_HOST_SUFFIX`
           - `NAMESPACE_LABEL_RE`
           - `NAMESPACE_RE`

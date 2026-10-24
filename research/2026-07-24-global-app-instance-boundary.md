@@ -2,8 +2,8 @@
 
 ## Context
 
-Open `http://singularity.localhost:9000/agents/…` in a browser tab, then click a bookmark to
-`http://singularity.localhost:9000/sonata`. You end up with **two** in-app tabs: the restored
+Open `http://equin.localhost:9000/agents/…` in a browser tab, then click a bookmark to
+`http://equin.localhost:9000/sonata`. You end up with **two** in-app tabs: the restored
 agent-manager tab plus a new Sonata tab.
 
 A bookmark click is a cross-document navigation, so the SPA cold-boots. `sessionStorage` survives

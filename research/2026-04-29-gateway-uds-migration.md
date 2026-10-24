@@ -162,7 +162,7 @@ End-to-end (real Bun + real gateway) is intentionally out of scope — the four 
   - "Dev Proxy" section: remove or rewrite — Vite has no proxy block; this section is already stale.
   - "Backend Contract" mention near the bottom and any `port: 9001` reference: update to UDS contract.
 - **Top-level `CLAUDE.md`**:
-  - "Ports" section: keep "9000 = singularity.localhost:9000" line; remove the "9000–10000" backend-pool line; replace with "backends communicate via Unix domain sockets, not TCP."
+  - "Ports" section: keep "9000 = equin.localhost:9000" line; remove the "9000–10000" backend-pool line; replace with "backends communicate via Unix domain sockets, not TCP."
 
 ## Verification
 

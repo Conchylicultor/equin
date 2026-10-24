@@ -147,7 +147,7 @@ for consistency reviews and for agents' screenshots.
 
 ## Verification
 
-- `gallery.html` opens by double-click and from `http://singularity.localhost:9000/prototypes/proto/proto-1790334655-cs0c`;
+- `gallery.html` opens by double-click and from `http://equin.localhost:9000/prototypes/proto/proto-1790334655-cs0c`;
   zero console errors; every data.js viz key renders in both palettes.
 - Headless screenshots (Playwright via `./equin run`, headless shell from the `chromium` dep) of the
   gallery and of each opened card in the page, compared side by side with the step-1 baseline: same

@@ -8,6 +8,7 @@ import {
   generateNonce,
   recordPendingState,
   redirectUriFor,
+  resolveOpenerOrigin,
 } from "../oauth-flow";
 import { AuthCredentialsMissingError } from "@plugins/auth/core";
 import {
@@ -61,6 +62,13 @@ export const handleOAuthStart: HttpHandler = async (req, params) => {
     });
   }
   const worktree = asNamespace(worktreeParam);
+  const openerOrigin = resolveOpenerOrigin(
+    url.searchParams.get("origin"),
+    worktree,
+  );
+  if (openerOrigin.kind === "invalid") {
+    return new Response(openerOrigin.message, { status: 400 });
+  }
   const scopesParam = url.searchParams.get("scopes");
   const requested = scopesParam
     ? scopesParam.split(",").filter((s) => s.length > 0)
@@ -80,7 +88,7 @@ export const handleOAuthStart: HttpHandler = async (req, params) => {
 
   recordPendingState(nonce, {
     providerId,
-    worktree,
+    openerOrigin: openerOrigin.origin,
     scopes,
     codeVerifier,
     createdAt: Date.now(),

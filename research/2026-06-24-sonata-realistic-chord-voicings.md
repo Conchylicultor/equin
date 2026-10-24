@@ -161,7 +161,7 @@ area: "player" })`. The component:
 ## Verification
 
 1. `./equin build` (regenerates the chord-grid drop migration + applies it).
-2. Open the song at `http://singularity.localhost:9000/sonata/song/7c0c9447-dfa6-41e7-a704-066ac6ef58b4`
+2. Open the song at `http://equin.localhost:9000/sonata/song/7c0c9447-dfa6-41e7-a704-066ac6ef58b4`
    (a UG/chord song). Confirm the **Voicing** panel appears in the player column.
 3. Toggle **Realistic voicing** OFF → play: chords jump to root position (old behavior).
    Toggle ON → play: voiced notes stay in a tight register and a low bass root sounds.

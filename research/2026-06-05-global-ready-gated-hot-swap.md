@@ -138,7 +138,7 @@ Always drain + close `resp.Body`. Both callers — cold start (`Ensure`, `:260`)
 
 1. **Build the backend changes:** `./equin build` (regenerates docs, restarts the worktree backend). Confirm checks pass (`plugins-doc-in-sync`, `eslint`, boundaries).
 2. **Probe the endpoint:** `curl -i http://<worktree>.localhost:9000/api/health/ready` → `200 {"ready":true}` once up.
-3. **Rebuild + restart the gateway:** `./equin start`, then confirm the gateway is healthy (`curl http://singularity.localhost:9000/gateway/worktrees`).
+3. **Rebuild + restart the gateway:** `./equin start`, then confirm the gateway is healthy (`curl http://equin.localhost:9000/gateway/worktrees`).
 4. **Force a slow boot to expose the old bug / confirm the fix:** make a trivial schema change (new nullable column in some plugin's `tables.ts`) so the next build generates a real migration. Run `./equin build` and watch the build button via `bun e2e/screenshot.mjs --url http://<worktree>.localhost:9000 --click "Build" ...`:
    - The "Server restarting…" / WS reconnect window should now begin **only after** the new backend is fully ready, and the reconnect should land on a migrated backend — no `sub-error: unknown-key` in the browser console, no stale-data flash.
    - Compare against `main` (pre-change) where the same migration build shows the multi-second reconnect.

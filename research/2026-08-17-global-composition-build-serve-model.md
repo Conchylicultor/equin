@@ -38,7 +38,7 @@ Flat directory names under `~/.singularity/worktrees/`, no nesting:
 
 | composition | checkout | namespace | URL |
 |---|---|---|---|
-| singularity | main | `singularity` | `singularity.localhost:9000` |
+| singularity | main | `singularity` | `equin.localhost:9000` |
 | sonata | main | `sonata` | `sonata.localhost:9000` |
 | singularity | att-XXX | `att-XXX` | `att-XXX.localhost:9000` |
 | sonata | att-XXX | `sonata.att-XXX` | `sonata.att-XXX.localhost:9000` |

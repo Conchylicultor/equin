@@ -165,9 +165,9 @@ This is indistinguishable from a normal single-tab reconnecting-WebSocket consum
 
 1. `./equin build` and open `http://claude-1776294129.localhost:9000`.
 2. **Manual multi-tab regression (the original bug)**:
-   - Tab A: `http://singularity.localhost:9000/` (no `tasks` sub).
-   - Tab B: `http://singularity.localhost:9000/tasks`.
-   - `curl -X POST http://singularity.localhost:9000/api/tasks -d '{"parentId":null}' -H 'content-type: application/json'`.
+   - Tab A: `http://equin.localhost:9000/` (no `tasks` sub).
+   - Tab B: `http://equin.localhost:9000/tasks`.
+   - `curl -X POST http://equin.localhost:9000/api/tasks -d '{"parentId":null}' -H 'content-type: application/json'`.
    - Tab B's list updates live, no reload. Must pass.
 3. **Manual leader-handoff**:
    - Two tabs on `/tasks`. Close the first-opened tab (the current leader).

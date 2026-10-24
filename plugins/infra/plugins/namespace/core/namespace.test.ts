@@ -23,6 +23,7 @@ import {
   namespaceUrl,
   MAIN_COMPOSITION_ID,
   MAIN_WORKTREE_NAME,
+  NAMESPACE_HOST_ALIASES,
   NAMESPACE_RE,
   type CheckoutRef,
 } from "./namespace";
@@ -168,6 +169,17 @@ test("namespaceFromHost round-trips namespaceHost and rejects the loopback hosts
   // A host alias reads back as the namespace it stands for, in any spelling.
   expect(namespaceFromHost("equin.localhost:9000")).toBe(MAIN_WORKTREE_NAME);
   expect(namespaceFromHost("EQUIN.localhost.")).toBe(MAIN_WORKTREE_NAME);
+  // The namespace's own name stays a host that reaches it (the legacy address).
+  expect(namespaceFromHost("singularity.localhost:9000")).toBe(
+    MAIN_WORKTREE_NAME,
+  );
+});
+
+test("main is handed out under its public host label; others under their own name", () => {
+  expect(namespaceUrl(MAIN_WORKTREE_NAME)).toBe("http://equin.localhost:9000");
+  expect(namespaceHost(MAIN_WORKTREE_NAME, 9100)).toBe("equin.localhost:9100");
+  expect(namespaceHost(asNamespace("att-x"))).toBe("att-x.localhost:9000");
+  expect(NAMESPACE_HOST_ALIASES).toEqual({ equin: MAIN_WORKTREE_NAME });
 });
 
 test("namespaceUrl builds an origin, and refuses a path that would double the slash", () => {

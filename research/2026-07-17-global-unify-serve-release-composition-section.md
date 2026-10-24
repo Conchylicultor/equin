@@ -100,7 +100,7 @@ endpoint) — the correct home for a hook that couples the two.
    export const handleServeComposition = implement(serveCompositionEndpoint, ({ body }) => {
      if (!isMain()) {
        throw new HttpError(400,
-         "Serve builds run on the main instance only — open singularity.localhost:9000.");
+         "Serve builds run on the main instance only — open equin.localhost:9000.");
      }
      triggerBuild("manual", { serveComposition: body.composition });
    });
@@ -219,7 +219,7 @@ endpoint) — the correct home for a hook that couples the two.
      --url http://<worktree>.localhost:9000/studio/compositions/comp/<id> \
      --click "Serve live" --out /tmp/serve
    ```
-4. Build-on-enable (run on **main**, `singularity.localhost:9000`, since
+4. Build-on-enable (run on **main**, `equin.localhost:9000`, since
    `--serve-composition` is main-only): toggle **Serve** on for a small composition
    → expect the info toast, a new row in the Build app history, and (after the build)
    the app live at `http://<id>.localhost:9000`. Confirm a **non-main** worktree

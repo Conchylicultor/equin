@@ -125,7 +125,7 @@ The orphan list is a homogeneous set of domain records → render as a **DataVie
 ## Verification
 
 1. `./equin build`, then open **Debug → Config Orphans** at
-   `http://singularity.localhost:9000` (main, where the reported leftovers live).
+   `http://equin.localhost:9000` (main, where the reported leftovers live).
    Expect: `config_v2.settings.nav` + `prototypes.gallery` classified
    **stranded-data / relocated** (they have base `.jsonc` overrides); `view-state`,
    `tasks-recent` classified **noise / removed**. The two *live*

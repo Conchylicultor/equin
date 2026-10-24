@@ -90,7 +90,7 @@ page, including google.com/maps (where only the rAF and LoAF parts apply).
 
 Through **Claude in Chrome**: the user's Chrome at default QoS, real GPU,
 real trackpad. In a new tab, run the following on
-`http://singularity.localhost:9000/places`, and separately on
+`http://equin.localhost:9000/places`, and separately on
 `https://www.google.com/maps` framed on the same city at the same window
 size:
 

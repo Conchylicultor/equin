@@ -10,16 +10,16 @@ into the user's real Pages sidebar. Each one's `created_at` lands 2–4s after a
 call in the transcripts, e.g.:
 
 ```
-bun plugins/page/plugins/editor/e2e/copy-paste-verify.ts --base http://singularity.localhost:9000
-git show HEAD:…/crdt-restore-verify.ts > zz-tmp-old-restore.ts && bun … --base http://singularity.localhost:9000
-bun plugins/page/plugins/editor/e2e/slash-repro.ts --base http://singularity.localhost:9000
+bun plugins/page/plugins/editor/e2e/copy-paste-verify.ts --base http://equin.localhost:9000
+git show HEAD:…/crdt-restore-verify.ts > zz-tmp-old-restore.ts && bun … --base http://equin.localhost:9000
+bun plugins/page/plugins/editor/e2e/slash-repro.ts --base http://equin.localhost:9000
 ```
 
 Two independent causes:
 
 1. **Agents point e2e at main deliberately.** The harness default is already safe —
    `target.ts:38` derives the base from `basename(REPO_ROOT)`, so a bare run hits the agent's
-   own worktree. Nobody hit main by accident. They typed `--base http://singularity.localhost:9000`
+   own worktree. Nobody hit main by accident. They typed `--base http://equin.localhost:9000`
    to get a *control* run on unmodified code ("Main is deployed without my changes, so it's a
    free control"), because rebuilding or stashing costs 20+ minutes, and — for a
    user-reported bug — main is the *only* place the bug exists. **This is a legitimate need
@@ -295,7 +295,7 @@ table, same slot, same barrels. Registration is automatic: create the barrels an
 
 Separately from the code change, the seven already-leaked pages in the `singularity` DB need
 removing — they predate the marker, so the sweep will not find them. Delete via the Pages UI
-on `http://singularity.localhost:9000` (routes through the trash chokepoint) rather than SQL:
+on `http://equin.localhost:9000` (routes through the trash chokepoint) rather than SQL:
 `block-1785248215309-k6rsw3`, `block-1785248610768-nsew3w`, `block-1785248691008-6p96mp`,
 `block-1785262627220-jajl7e`, `block-1785263519956-ob7evx`, `block-1785265154713-xlm9yd`,
 `block-1785266833278-6g45hc`. **Requires explicit user go-ahead — these are prod rows.**

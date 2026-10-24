@@ -75,6 +75,6 @@ No `package.json` needed — the sub-plugin has no additional dependencies beyon
 ```bash
 ./equin build
 # Then:
-curl http://singularity.localhost:9000/api/conversations/conv-1777882733-ycaj/transcript
+curl http://equin.localhost:9000/api/conversations/conv-1777882733-ycaj/transcript
 # Expected: {"path":"/Users/epot/.claude/projects/.../c65255dc-....jsonl"}
 ```

@@ -9,7 +9,7 @@ below are listed in *Implementation notes* at the end.
 
 An agent's headless browser (`infra/mcp/browser`) and the e2e harness
 (`e2e-harness` `withBrowser` / `agentFetch`) may open **main**
-(`singularity.localhost:9000`). That is useful: prototypes are only served by main,
+(`equin.localhost:9000`). That is useful: prototypes are only served by main,
 the bugs the user reports are on main, and an agent with no build yet has only
 main to look at. But every click there can write to the user's real data, and
 today the protection is **write, then undo at close**:

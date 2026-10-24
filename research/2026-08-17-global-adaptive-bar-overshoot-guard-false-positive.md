@@ -5,7 +5,7 @@
 Opening **Debug → Layout Lab** renders nothing but a crash banner —
 `layouts.miller / layout-lab crashed — Minified React error #185`
 ("Maximum update depth exceeded"). It reproduces on `main`
-(`http://singularity.localhost:9000/debug/layout-lab`) and in a fresh worktree
+(`http://equin.localhost:9000/debug/layout-lab`) and in a fresh worktree
 with a from-scratch artifact rebuild, so it is current source. A report row
 already exists in the main DB (`report-1786960015254-znyt5a`, `kind: crash`,
 `source: react-boundary`, url `/debug/layout-lab`).

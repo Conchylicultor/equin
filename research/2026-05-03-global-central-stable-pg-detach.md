@@ -117,7 +117,7 @@ if (existsSync(join(centralDir, "src", "index.ts"))) {
 }
 ```
 
-Add `probeCentralHealth()` next to the existing `probeHealth()` (build.ts:348-370). Same shape — 10s deadline, 250ms poll — but hits `http://singularity.localhost:9000/api/database/status` (the gateway routes `/api/database/status` to central via the central-routes manifest regardless of subdomain). Refuse to consider central healthy if `migration === "running"` — restarting central mid-migration is a real footgun on the very first install.
+Add `probeCentralHealth()` next to the existing `probeHealth()` (build.ts:348-370). Same shape — 10s deadline, 250ms poll — but hits `http://equin.localhost:9000/api/database/status` (the gateway routes `/api/database/status` to central via the central-routes manifest regardless of subdomain). Refuse to consider central healthy if `migration === "running"` — restarting central mid-migration is a real footgun on the very first install.
 
 The existing per-worktree restart at lines 564-582 stays as-is; running it after the central restart is fine (worktree backend respawn lazily reconnects to PG via the existing `awaitPgReady` retry in `server/src/db/client.ts:100-128`).
 
@@ -136,7 +136,7 @@ End-to-end smoke once implemented:
 1. `./equin build` from this worktree. Inspect `~/.singularity/worktrees/central.json` — `server` field must point at main's `central/`, not the worktree's.
 2. `cat ~/.singularity/postgres/data-pg18/postmaster.pid` — note the PID. `ps -p <pid>` confirms PG is running.
 3. `./equin build` from a *different* worktree. `central.json` content must be byte-identical. PG's PID must be unchanged (PG was not killed). Central's gateway-spawned process *was* restarted — verify by tailing gateway logs (`tail -f ~/.singularity/logs/gateway.log`) for "backend ready" on `central` after the build.
-4. While the above runs, hit `curl http://singularity.localhost:9000/api/database/status` mid-build. Expect either a brief 502 during central restart or `{"pg":"running",…}`. Worktree pages (`http://singularity.localhost:9000`) must keep loading throughout.
+4. While the above runs, hit `curl http://equin.localhost:9000/api/database/status` mid-build. Expect either a brief 502 during central restart or `{"pg":"running",…}`. Worktree pages (`http://equin.localhost:9000`) must keep loading throughout.
 5. `kill -9 <pg-pid>` to simulate a PG crash. Within ~2s the watchdog should re-spawn PG (via `pg_ctl start`) and `/api/database/status` should report `pg: "running"` again.
 6. Restart the gateway (`./equin start --force`). PG's PID *must not change* — gateway restart should not touch PG.
 7. Edit a file in main's `central/` (e.g. add a `console.log` to `database/central/index.ts`), commit on main, then `./equin build` from a worktree. New log line must appear in central's stdout (gateway logs) — proves new central code is loaded.

@@ -9,7 +9,7 @@
 //
 // Usage:
 //   ./equin run plugins/apps/plugins/website/e2e/app-screenshots.ts \
-//     --out <dir> [--url http://singularity.localhost:9000] [--only pages,sonata] \
+//     --out <dir> [--url http://equin.localhost:9000] [--only pages,sonata] \
 //     [--viewport 1440x900] [--color-scheme dark|light] [--wait 4000]
 //
 // Writes `<dir>/app-<app-id>.png`. Without --url it shoots this checkout's own

@@ -48,6 +48,12 @@ name (`sonata.att-X`) names both halves, and a single label comes back as a
   `sonata.singularity`.
 - `namespaceUrl` / `namespaceHost` / `namespaceFromHost` — the only sanctioned
   spellings of `.localhost`, enforced by the `namespace:no-hand-built-url` check.
+- `NAMESPACE_HOST_LABELS` — the host label a namespace is **handed out**
+  under when it is not its own name (main → `equin`), read by `namespaceHost`
+  so every address the app produces says it. `NAMESPACE_HOST_ALIASES` is its
+  derived inverse (what `namespaceFromHost` and the gateway's `hostAliases`
+  resolve); the namespace's own name keeps resolving too, as the old address.
+  `namespace:legacy-host` keeps that old address out of tracked files.
 - `NAMESPACE_RE` — the grammar. Every TypeScript caller imports it, boot
   included (`server-core/bin/select-registry.ts`): this module has zero imports
   and `paths/core` already reaches it, so naming it costs boot nothing. The only
@@ -81,6 +87,7 @@ Design: `research/2026-08-18-global-namespace-identity.md`.
 - Description: Canonical namespace identity: the branded Namespace type, the <composition>.<checkout> elision rule that mints one, and the URL/host encodings derived from it.
 - Cross-plugin:
   - Imported by:
+    - `apps/website/shell`
     - `build`
     - `framework/tooling/codegen`
     - `framework/tooling/guards`
@@ -91,7 +98,9 @@ Design: `research/2026-08-18-global-namespace-identity.md`.
     - `plugin-meta/closure`
     - `plugin-meta/composition`
 - Exemptions:
-  - Exempts itself from: `namespace:no-hand-built-url` — `core/namespace.ts`, `check/index.ts` (sanctioned)
+  - Exempts itself from:
+    - `namespace:no-hand-built-url` — `core/namespace.ts`, `check/index.ts` (sanctioned)
+    - `namespace:legacy-host` — `core/namespace.test.ts` (sanctioned)
 - Core:
   - Exports (types):
     - `CheckoutRef`
@@ -106,6 +115,7 @@ Design: `research/2026-08-18-global-namespace-identity.md`.
     - `MAIN_COMPOSITION_ID`
     - `MAIN_WORKTREE_NAME`
     - `NAMESPACE_HOST_ALIASES`
+    - `NAMESPACE_HOST_LABELS`
     - `NAMESPACE_HOST_SUFFIX`
     - `NAMESPACE_LABEL_RE`
     - `NAMESPACE_RE`

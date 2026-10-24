@@ -200,7 +200,7 @@ No new endpoint needed — `deleteOverride` and `getConfigRawFile` already exist
 
 1. **The actual regression (A).** `./equin build`, open the main namespace
    preprompts config
-   (`http://singularity.localhost:9000/agents/config/cd/conversations%252Fpreprompts%252Fconfig.jsonc`).
+   (`http://equin.localhost:9000/agents/config/cd/conversations%252Fpreprompts%252Fconfig.jsonc`).
    Both "Auto-implement" and "Auto-push" reappear, each with a default (no) icon.
    Confirm they're selectable again in the task/draft PrepromptSelect.
 2. **On-disk self-heal (A).** Edit one preprompt in the UI, then inspect

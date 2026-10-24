@@ -7,7 +7,7 @@ Future plugins (`backup-gdrive`, `gmail-client`, `notion-sync`, `anthropic-assis
 Two cross-cutting constraints shape the design:
 
 1. **Tokens are user state, not branch state.** Worktree Postgres forks diverge after creation, so tokens can't live in the per-worktree DB. They must live outside any fork.
-2. **OAuth requires a stable, pre-registered `redirect_uri`.** Ephemeral worktree hostnames (`claude-xxxxx.localhost:9000`) can't be registered one-by-one. Google's OAuth 2.0 policy further constrains the shape of a loopback redirect URI: subdomains of `localhost` (including our `singularity.localhost`) are rejected by Google Cloud Console with *"must end with a public top-level domain"*. Only plain `http://localhost:PORT` / `http://127.0.0.1:PORT` are accepted for Desktop-app clients.
+2. **OAuth requires a stable, pre-registered `redirect_uri`.** Ephemeral worktree hostnames (`claude-xxxxx.localhost:9000`) can't be registered one-by-one. Google's OAuth 2.0 policy further constrains the shape of a loopback redirect URI: subdomains of `localhost` (including our `equin.localhost`) are rejected by Google Cloud Console with *"must end with a public top-level domain"*. Only plain `http://localhost:PORT` / `http://127.0.0.1:PORT` are accepted for Desktop-app clients.
 
 Consequence: auth is **centralized on main**, and the registered redirect URI is `http://localhost:9000/api/auth/callback/<provider>`. Main owns the token store, the OAuth callback, and the refresh loop. Worktree server processes fetch tokens from main via a unix socket. The UI is identical everywhere thanks to the resource framework. A small gateway change makes bare `localhost:9000/api/auth/{start,callback}/*` route to the `singularity` backend.
 
@@ -500,7 +500,7 @@ Google's OAuth policy (and the loopback flow generally) forces the redirect URI 
 
 **File**: `gateway/proxy.go` (in `ServeHTTP` or `parseWorktree`).
 
-**Behavior**: when the request host is bare `localhost` / `127.0.0.1` / `[::1]` (i.e. `parseWorktree(host)` returns `""`), and the path starts with `/api/auth/start/` or `/api/auth/callback/`, treat the request as if the host were `singularity.localhost` and dispatch to the `singularity` backend. All other bare-localhost requests keep their existing 404.
+**Behavior**: when the request host is bare `localhost` / `127.0.0.1` / `[::1]` (i.e. `parseWorktree(host)` returns `""`), and the path starts with `/api/auth/start/` or `/api/auth/callback/`, treat the request as if the host were `equin.localhost` and dispatch to the `singularity` backend. All other bare-localhost requests keep their existing 404.
 
 Pseudocode sketch (not final):
 ```go
@@ -539,7 +539,7 @@ Document in `plugins/auth/CLAUDE.md`:
 
 End-to-end smoke test after implementation:
 
-1. `./equin build` in main worktree — deploys to `http://singularity.localhost:9000`. Verify the gateway also routes `http://localhost:9000/api/auth/start/` to the `singularity` backend.
+1. `./equin build` in main worktree — deploys to `http://equin.localhost:9000`. Verify the gateway also routes `http://localhost:9000/api/auth/start/` to the `singularity` backend.
 2. Sidebar → Accounts → initially shows "Google: Credentials not configured".
 3. Click Setup → follow the Google Cloud Console instructions (Desktop-app client type, redirect URI `http://localhost:9000/api/auth/callback/google`) → paste only the client ID into Settings.
 4. Back to Accounts → click Connect Google → OAuth popup opens on `http://localhost:9000/...` → complete consent → popup closes, row flips to "Connected as <email>".

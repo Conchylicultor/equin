@@ -83,7 +83,7 @@ Steps. Each one checks before it acts, so running the script again resumes where
 7. **`./equin build --allow-main`**: then read `~/.singularity/worktrees/<main ns>/build-status.json`. It must
    say `status: ok`; do not trust the exit code alone (root CLAUDE.md, step 3).
 8. **Finish**:
-   - print `http://singularity.localhost:9000`;
+   - print `http://equin.localhost:9000`;
    - print "open a new terminal (mise is now active there)";
    - if Claude is not signed in: when `/dev/tty` is readable (an interactive `curl | bash`), offer
      `claude auth login` < /dev/tty; otherwise print it as the one remaining step.
@@ -115,7 +115,7 @@ stays small enough to review by eye. I am not adding a stub-harness test for it.
      push, rerun with the real `curl … | bash` as the final confirmation.
   3. a fresh `zsh -i -c 'command -v bun mise; cd ~/singularity && ./equin --help >/dev/null'`: a new terminal
      works without hand edits.
-  4. `curl` `singularity.localhost:9000` → 200, and `build-status.json` → `ok`.
+  4. `curl` `equin.localhost:9000` → 200, and `build-status.json` → `ok`.
   5. `screenshot.ts`: the app renders.
   6. reboot (`_REBOOT=1`).
   7. the same `curl` plus a `status` check after the reboot: the app came back by itself.

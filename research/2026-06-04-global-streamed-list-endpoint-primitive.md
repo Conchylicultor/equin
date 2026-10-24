@@ -2,7 +2,7 @@
 
 ## Context
 
-`http://singularity.localhost:9000/debug/worktree-cleanup` fails with a cryptic
+`http://equin.localhost:9000/debug/worktree-cleanup` fails with a cryptic
 `SyntaxError: Unexpected token 'b', "backend un"... is not valid JSON`.
 
 Root-cause chain (all confirmed):

@@ -239,7 +239,7 @@ New `plugins/apps/plugins/deploy/plugins/local-serve/`:
   membership and closure completeness, **not** packaging, config vendoring or
   first-boot migrations), plus the main-only refusal sentence rendered up front
   when the app is open in a worktree namespace — *"Serve builds run on the main
-  instance only — open singularity.localhost:9000."*
+  instance only — open equin.localhost:9000."*
 - **`DeploymentItemActions` "serve"** — a `RowActionButton` on the deployments
   list: opens `http://<composition>.localhost:9000` when served, otherwise
   starts serving it (`useServeComposition().serve`) and toasts that the build is

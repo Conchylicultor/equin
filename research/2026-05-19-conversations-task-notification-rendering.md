@@ -64,6 +64,6 @@ Status coloring: `completed` → green, `failed` → red, default → muted.
 ## Verification
 
 1. `./equin build`
-2. Open `http://singularity.localhost:9000/c/conv-1779220117-anca` (conversation with known task notifications)
+2. Open `http://equin.localhost:9000/c/conv-1779220117-anca` (conversation with known task notifications)
 3. Verify notifications render as compact rows, not user-message cards
 4. Verify mixed messages (real text + notification) emit both events correctly

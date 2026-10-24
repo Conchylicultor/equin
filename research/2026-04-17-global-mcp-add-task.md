@@ -188,7 +188,7 @@ Without this, legacy conversations would compute `parentHost = "singularity"` vi
 ## Caveats / known limits
 
 - **No auth on the MCP endpoint.** Anyone reachable on `<host>.localhost:9000` can call `add_task` on any conversation id. Trust model is single-user laptop. If we ever multi-user, add a per-conversation HMAC token in the URL path (`/api/mcp/:id/:token`, computed from a server-side secret + conversationId — no storage).
-- **Tasks created via `add_task` only appear in the parent backend's UI.** The child conversation's own forked DB is unrelated. Users reviewing the child worktree at `<id>.localhost:9000` won't see the new task; they need to view the parent (typically `singularity.localhost:9000`).
+- **Tasks created via `add_task` only appear in the parent backend's UI.** The child conversation's own forked DB is unrelated. Users reviewing the child worktree at `<id>.localhost:9000` won't see the new task; they need to view the parent (typically `equin.localhost:9000`).
 - **DNS for `<slug>.localhost` from Claude's process must resolve.** macOS resolves `*.localhost → 127.0.0.1` by default; this should work but is the one thing to verify end-to-end before considering the feature done.
 - **Trust pre-approval is project-scoped.** The `enableAllProjectMcpServers: true` flag in `.claude/settings.json` auto-approves *every* `.mcp.json` server for this project, not just `singularity`. If we later add a second, untrusted MCP server to `.mcp.json`, it gets auto-approved too — switch to the allowlist variant `enabledMcpjsonServers: ["singularity"]` if that becomes a concern.
 
@@ -230,4 +230,4 @@ Without this, legacy conversations would compute `parentHost = "singularity"` vi
    - DB row has `parent_id = <spawning conversation's task id>` and `author = <conversationId>`
 6. Create a task from the UI; confirm `author = "user"` in the DB row.
 7. Spawn a second-level conversation (a child of a child). Confirm its synthesised task gets `author = <parent conversationId>` and the MCP URL still resolves to the correct parent backend.
-8. End-to-end smoke: open `http://singularity.localhost:9000` → spawn agent on a trivial task → ask the agent to "create a child task called 'hello' via the add_task tool" → see it appear in the tree under the agent's node, attributed to the agent's conversation id.
+8. End-to-end smoke: open `http://equin.localhost:9000` → spawn agent on a trivial task → ask the agent to "create a child task called 'hello' via the add_task tool" → see it appear in the tree under the agent's node, attributed to the agent's conversation id.

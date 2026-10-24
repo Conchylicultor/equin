@@ -21,17 +21,17 @@ const ctx = (message: string) => ({ message, source: "browser-error" });
 // strips — so the fingerprint survives a dev reload.
 const V8_STACK = [
   "TypeError: Cannot read properties of undefined (reading 'id')",
-  "    at TaskRow (https://singularity.localhost:9000/@fs/src/task-row.tsx?v=abc123:41:17)",
-  "    at renderWithHooks (https://singularity.localhost:9000/node_modules/.vite/deps/react-dom.js:12345:26)",
-  "    at mountIndeterminateComponent (https://singularity.localhost:9000/node_modules/.vite/deps/react-dom.js:99:3)",
-  "    at beginWork (https://singularity.localhost:9000/node_modules/.vite/deps/react-dom.js:7:1)",
+  "    at TaskRow (https://equin.localhost:9000/@fs/src/task-row.tsx?v=abc123:41:17)",
+  "    at renderWithHooks (https://equin.localhost:9000/node_modules/.vite/deps/react-dom.js:12345:26)",
+  "    at mountIndeterminateComponent (https://equin.localhost:9000/node_modules/.vite/deps/react-dom.js:99:3)",
+  "    at beginWork (https://equin.localhost:9000/node_modules/.vite/deps/react-dom.js:7:1)",
 ].join("\n");
 
 // The same crash as Safari/Firefox spell it: `fn@location`, no "at".
 const SAFARI_STACK = [
-  "TaskRow@https://singularity.localhost:9000/src/task-row.tsx:41:17",
-  "renderWithHooks@https://singularity.localhost:9000/src/react-dom.js:12345:26",
-  "@https://singularity.localhost:9000/src/main.tsx:3:9",
+  "TaskRow@https://equin.localhost:9000/src/task-row.tsx:41:17",
+  "renderWithHooks@https://equin.localhost:9000/src/react-dom.js:12345:26",
+  "@https://equin.localhost:9000/src/main.tsx:3:9",
 ].join("\n");
 
 describe("crashFingerprint", () => {

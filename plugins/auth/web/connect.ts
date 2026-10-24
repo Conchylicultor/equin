@@ -37,6 +37,9 @@ export function startConnectFlow(args: ConnectArgs): Promise<ConnectResult> {
     `${MAIN_ORIGIN}/api/auth/start/${encodeURIComponent(args.providerId)}`,
   );
   url.searchParams.set("worktree", args.worktree);
+  // Where the result is posted back: this page's own origin, since a namespace
+  // answers on more than one host.
+  url.searchParams.set("origin", window.location.origin);
   if (args.scopes && args.scopes.length > 0) {
     url.searchParams.set("scopes", args.scopes.join(","));
   }

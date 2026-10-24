@@ -10,7 +10,7 @@ function of background queue depth.*
 
 ## 1. The incidents (what the user experienced)
 
-On 2026-07-09, twice (≈11:07 and ≈14:25), the main app (`singularity.localhost:9000`) became
+On 2026-07-09, twice (≈11:07 and ≈14:25), the main app (`equin.localhost:9000`) became
 unusable for minutes at a time:
 
 - Page refresh took forever; most panes eventually rendered, but the **agent conversation

@@ -57,7 +57,7 @@ describe("Form B — bundled relay + human text inside a JSON envelope", () => {
     });
     const humanText =
       "messages like this are displayed as standard user-turn, while they are more internals system message.\n\nThey should be displayed correctly to not be misleading";
-    const turn = `${envelope}\n\n-----\n\n\n${humanText}\n\n---\n**URL:** http://singularity.localhost:9000/agents/c/conv-1781954037-xb20`;
+    const turn = `${envelope}\n\n-----\n\n\n${humanText}\n\n---\n**URL:** http://equin.localhost:9000/agents/c/conv-1781954037-xb20`;
 
     const unwrapped = unwrapRelayEnvelopes(turn);
     // The envelope's `{...}` block is replaced by its decoded `.text`.

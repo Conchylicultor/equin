@@ -208,7 +208,7 @@ Sequential in this worktree, so builds and edits don't collide:
    checks pass (`type-check`, `plugin-boundaries`, `plugins-registry-in-sync`,
    `plugins-doc-in-sync`, `eslint`).
 3. **Pixel check on the agents list.** Screenshot the agents tree on main
-   (`screenshot.ts --url http://singularity.localhost:9000 --path /agents …`) and
+   (`screenshot.ts --url http://equin.localhost:9000 --path /agents …`) and
    on this deploy (`screenshot.ts --path /agents …`), light and dark, and compare.
    Avatars, colours, status dots and spacing must match.
 4. In the deployed app: open the agents list's Properties control, hide "Avatar"

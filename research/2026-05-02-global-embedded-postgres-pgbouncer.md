@@ -147,7 +147,7 @@ bun install              # postinstall: pulls @embedded-postgres/* + downloads P
 ./equin start      # gateway → central → initdb (first run ~30s, may auto-migrate from system PG)
 ```
 
-Open `http://singularity.localhost:9000`. Document `SINGULARITY_USE_SYSTEM_PG=1` as escape hatch for users who explicitly want to keep system PG (skips the postinstall + central PG supervision; falls back to existing env-var logic).
+Open `http://equin.localhost:9000`. Document `SINGULARITY_USE_SYSTEM_PG=1` as escape hatch for users who explicitly want to keep system PG (skips the postinstall + central PG supervision; falls back to existing env-var logic).
 
 ## Critical files
 
@@ -182,7 +182,7 @@ End-to-end smoke (run in this order):
    - `./equin start` — observe initdb logs, PG spawn, PgBouncer spawn.
    - `psql -h ~/.singularity/postgres/socket -p 5433 -l` — confirm cluster up.
    - `./equin build` — succeeds (migrations apply on fresh embedded `singularity` DB).
-   - Open `http://singularity.localhost:9000` — app loads, no PG errors.
+   - Open `http://equin.localhost:9000` — app loads, no PG errors.
 
 2. **Auto-migration path:**
    - Start with system PG running and `singularity` + a few `att-*` DBs populated.

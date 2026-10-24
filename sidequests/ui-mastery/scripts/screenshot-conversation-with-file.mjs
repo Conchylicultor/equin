@@ -7,7 +7,7 @@
 //
 // Example:
 //   ./equin run sidequests/ui-mastery/scripts/screenshot-conversation-with-file.mjs \
-//     http://singularity.localhost:9000/c/claude-1776191308 /tmp/out.png
+//     http://equin.localhost:9000/c/claude-1776191308 /tmp/out.png
 
 import { chromium } from 'playwright';
 

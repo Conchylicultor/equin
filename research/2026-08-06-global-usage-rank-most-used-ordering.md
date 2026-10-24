@@ -47,7 +47,7 @@ its shape; deviate only where noted below.
 ### Storage: per-worktree DB
 
 Counts land in the DB of whichever backend served the page. The user drives
-conversations from `singularity.localhost:9000`, so the **main** DB accumulates the
+conversations from `equin.localhost:9000`, so the **main** DB accumulates the
 real signal; a new worktree inherits a snapshot at fork time. This is the
 idiomatic path — atomic upsert, change-feed recompute, live resource for free.
 

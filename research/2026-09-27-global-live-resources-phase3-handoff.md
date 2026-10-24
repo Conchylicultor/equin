@@ -183,7 +183,7 @@ These limits come from this worktree, not from skipped work. Say so in the revie
 - **Flaky:** `outline/toc-lands-on-right-message` (settle timing under load), `chord/piano-shot` (instrument race),
   `bell-filter` (live notification traffic).
 
-**To classify a new failure,** re-run the same script against main with `--url http://singularity.localhost:9000`. Main runs the
+**To classify a new failure,** re-run the same script against main with `--url http://equin.localhost:9000`. Main runs the
 PRE-migration code, because nothing here is committed.
 
 **Slow-op reports** for per-row `:rows` / `pushes` first loads are pre-existing: main has about 14.8k of them under the old keys.

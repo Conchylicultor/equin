@@ -15,7 +15,7 @@ flow is bound to the worktree you sit in:
 4. **Land** — you then run `./equin push` *from that worktree*; the file rides
    the normal branch → merge → push flow.
 
-**What's broken:** in the **main** namespace (`singularity.localhost:9000`) steps 1–3
+**What's broken:** in the **main** namespace (`equin.localhost:9000`) steps 1–3
 work, but **step 4 has no safe path** — main has no worktree branch to push, and the
 only way to push from main is `./equin push --from-main` (the explicitly
 dangerous, approval-gated path). So a main-app user can stage and even write the file,
@@ -195,7 +195,7 @@ Boundary note: `staging/server` importing the `worktree/server` and `jobs/server
 
 1. `./equin build` — no new migration expected (table unchanged); `./equin check`
    green (boundaries, `config-origins-in-sync`).
-2. **From the *main* app** (`http://singularity.localhost:9000`): enter edit mode, flip
+2. **From the *main* app** (`http://equin.localhost:9000`): enter edit mode, flip
    scope to "Everyone", drag a slot → confirm one row in `reorder_staged_default`
    (`mcp__singularity__query_db`, `database: "singularity"`) and **no** personal config
    write.

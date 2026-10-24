@@ -171,6 +171,6 @@ The server handler from step 4 will Haiku-generate the title from the descriptio
    - The full prompt is in the description field.
    - With Claude CLI logged out / `claude` not on PATH: title falls back to first-line-80-chars; task still gets created.
 3. **New-child-task flow:** in the conversation toolbar, open the +child popover, type a multi-sentence prompt, click Create. Expected: same as above — Haiku title, full prompt as description.
-4. **Direct API smoke test:** `curl -X POST http://singularity.localhost:9000/api/tasks -d '{"description":"refactor the gateway proxy to use a worker pool"}'` returns 200 with a Haiku-generated title.
+4. **Direct API smoke test:** `curl -X POST http://equin.localhost:9000/api/tasks -d '{"description":"refactor the gateway proxy to use a worker pool"}'` returns 200 with a Haiku-generated title.
 5. **Failure path:** temporarily rename `claude` on PATH (or set `claudeCliPath` to a non-existent binary in a unit test); verify task creation still succeeds with the fallback title.
 6. **Latency check:** improve / new-child-task submit-to-task-visible round trip is ≤3s on a normal machine.

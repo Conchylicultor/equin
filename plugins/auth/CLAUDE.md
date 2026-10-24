@@ -303,7 +303,9 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `integrations/hooktheory`
   - Endpoint callers: `setup-wizard`
 - Exemptions:
-  - Exempts itself from: `timer/no-unlisted-timer` — `central/internal/refresh-loop.ts` (sanctioned)
+  - Exempts itself from:
+    - `timer/no-unlisted-timer` — `central/internal/refresh-loop.ts` (sanctioned)
+    - `namespace:legacy-host` — `central/internal/oauth-flow.test.ts` (sanctioned)
 - Sub-plugins:
   - **`apple-signing`** [exempt] — Apple code-signing config registration (web). The Accounts provider row + setup wizard UI live in the setup-wizard sub-plugin. Apple code-signing credentials: config fields + certificate upload +…
     - Plugins:

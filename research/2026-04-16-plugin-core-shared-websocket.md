@@ -7,7 +7,7 @@ description: Extract a clean, self-contained leader abstraction so Notifications
 
 ## Context
 
-`plugin-core/notifications-client.ts` owns three concerns at once: (1) Web-Lock leader election, (2) cross-tab BroadcastChannel fanout, (3) the resource subscribe/update protocol. The leader-election concern leaked a correctness bug: `observe()` in a follower tab adds the sub to its local map but never forwards it to the leader, so the leader never sends `sub` to the server, and followers on any page that subscribes to a resource the leader isn't already watching get zero live updates. This was only visible when ≥2 tabs of the same origin were open — the user keeps 20+ on `singularity.localhost:9000`, so it manifests there and not on rarely-opened worktree namespaces.
+`plugin-core/notifications-client.ts` owns three concerns at once: (1) Web-Lock leader election, (2) cross-tab BroadcastChannel fanout, (3) the resource subscribe/update protocol. The leader-election concern leaked a correctness bug: `observe()` in a follower tab adds the sub to its local map but never forwards it to the leader, so the leader never sends `sub` to the server, and followers on any page that subscribes to a resource the leader isn't already watching get zero live updates. This was only visible when ≥2 tabs of the same origin were open — the user keeps 20+ on `equin.localhost:9000`, so it manifests there and not on rarely-opened worktree namespaces.
 
 The fix inside the current class is possible but fragile: three intertwined state machines make it easy to reintroduce similar bugs (e.g. unsub-forwarding, leader-handoff replay, queue-before-open). We want a primitive that makes this class of bug impossible by construction, so `NotificationsClient` becomes a thin consumer and future cross-tab features (logs stream, terminal, etc.) reuse the transport for free.
 
@@ -154,8 +154,8 @@ Server-side `notificationsWsHandler` is untouched — sub tracking is already pe
 
 1. `./equin build` — deploy to `http://claude-1776294129.localhost:9000`.
 2. Manual multi-tab repro of the original bug (must now pass):
-   - Open tab A on `http://singularity.localhost:9000/` (any page that doesn't subscribe `tasks`).
-   - Open tab B on `http://singularity.localhost:9000/tasks`.
+   - Open tab A on `http://equin.localhost:9000/` (any page that doesn't subscribe `tasks`).
+   - Open tab B on `http://equin.localhost:9000/tasks`.
    - In a third tab or via `curl`, `POST /api/tasks`.
    - Tab B's list updates live, no reload.
 3. Leader-handoff manual test:

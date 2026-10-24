@@ -4,7 +4,7 @@
  * socket lives in a SharedWorker, so frames are counted where they reach the
  * page — the worker's port — and attributed by the resource key they name),
  * and how many rows it drew. Run it against this build and against main
- * (`--url http://singularity.localhost:9000`) for a before/after on the same
+ * (`--url http://equin.localhost:9000`) for a before/after on the same
  * conversation.
  *
  *   ./equin run plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/e2e/open-cost.ts --conv <id> [--settle-ms 4000] [--runs 3]

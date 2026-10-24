@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { scratchLaunchFragment } from "./launch-fragment";
 
-const URL = "http://singularity.localhost:9000/api/mcp/conv-1";
+const URL = "http://equin.localhost:9000/api/mcp/conv-1";
 
 describe("scratchLaunchFragment", () => {
   test("user + the dir's own sources, and only the app's MCP server", () => {

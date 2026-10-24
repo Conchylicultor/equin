@@ -1,10 +1,14 @@
 import { createHash, randomBytes } from "node:crypto";
+import {
+  namespaceFromHost,
+  namespaceUrl,
+  type Namespace,
+} from "@plugins/infra/plugins/namespace/core";
 import type {
   AuthIdentity,
   OAuth2Config,
   ParsedTokenResponse,
 } from "@plugins/auth/core";
-import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 
 const REDIRECT_HOST = "http://localhost:9000";
 
@@ -42,7 +46,14 @@ export interface AuthorizeRequest {
 
 export interface PendingState {
   providerId: string;
-  worktree: Namespace;
+  /**
+   * The opener page's origin — the callback page's postMessage target. The
+   * origin the page is really on, not one derived from its namespace: a
+   * namespace answers on more than one host (main on `equin.localhost` and on
+   * its own name, the old address), and the browser drops a message
+   * whose target origin is not the opener's exact one.
+   */
+  openerOrigin: string;
   scopes: string[];
   codeVerifier?: string;
   createdAt: number;
@@ -205,4 +216,29 @@ export async function fetchIdentity(
   accessToken: string,
 ): Promise<AuthIdentity> {
   return oauth.fetchIdentity(accessToken);
+}
+
+/**
+ * The opener's origin, validated: it must be a host the gateway serves as the
+ * claimed namespace, since the callback page posts the result there. A bundle
+ * built before the `origin` param existed sends only `worktree` — it gets the
+ * namespace's handed-out address, which is the opener's own unless it was
+ * opened on another host of the same namespace.
+ */
+export function resolveOpenerOrigin(
+  raw: string | null,
+  worktree: Namespace,
+): { kind: "ok"; origin: string } | { kind: "invalid"; message: string } {
+  if (raw === null) return { kind: "ok", origin: namespaceUrl(worktree) };
+  if (!URL.canParse(raw)) {
+    return { kind: "invalid", message: `invalid origin query param: ${raw}` };
+  }
+  const parsed = new URL(raw);
+  if (namespaceFromHost(parsed.host) !== worktree) {
+    return {
+      kind: "invalid",
+      message: `origin ${raw} is not a host of the ${worktree} namespace`,
+    };
+  }
+  return { kind: "ok", origin: parsed.origin };
 }

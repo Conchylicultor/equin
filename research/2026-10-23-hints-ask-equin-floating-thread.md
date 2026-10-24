@@ -89,7 +89,7 @@ white pill primaries, one teal signal (`proto-1792668692-5ijcs8`).
 The layout is fluid, with no fixed widths, and it renders from `file://`.
 
 **Verification.**
-- Open it in the gallery at `http://singularity.localhost:9000` and click
+- Open it in the gallery at `http://equin.localhost:9000` and click
   through the whole flow on each `placement`.
 - Screenshot every `scene` × `placement` with
   `e2e-harness/e2e/screenshot.ts --path /api/prototypes/<id>/index.html?scene=…&placement=…`

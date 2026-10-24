@@ -117,7 +117,7 @@ Imports `CONVERSATIONS_META_TASK_ID` and `tasksResource` come from `@plugins/tas
 
 1. **Cold start, existing orphans** — restart server on current DB; expect log `[tasks] backfilled N orphan root tasks`; `SELECT id, parent_id FROM tasks_v WHERE parent_id IS NULL` returns only `task-meta-conversations`.
 2. **Restart idempotency** — second restart skips backfill (meta already exists), no re-parenting runs. Confirm via absence of log line.
-3. **New auto-conversation** — `curl -X POST http://singularity.localhost:9000/api/conversations -H 'Content-Type: application/json' -d '{"prompt":"hi"}'`; verify the returned `taskId`'s `parent_id = 'task-meta-conversations'`.
+3. **New auto-conversation** — `curl -X POST http://equin.localhost:9000/api/conversations -H 'Content-Type: application/json' -d '{"prompt":"hi"}'`; verify the returned `taskId`'s `parent_id = 'task-meta-conversations'`.
 4. **Explicit taskId path** — POST with `{taskId: "existing"}`; that task's `parent_id` is untouched (branch not entered).
 5. **UI tree** — open the tasks pane at `/tasks`; "Conversations" is a single expandable root containing every auto-created task.
 6. **Delete protection** — `DELETE /api/tasks/task-meta-conversations` with children returns 409 (existing behaviour).

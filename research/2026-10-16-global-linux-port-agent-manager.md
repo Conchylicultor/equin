@@ -38,7 +38,7 @@ self-contained"):
 - nothing of Caddy, ufw, `/srv/equin` or the release's unit touched; system-wide
   only `apt install build-essential` and Playwright's `install-deps chromium`.
 - Browser access: `ssh -L 9000:127.0.0.1:9000`, then
-  `http://singularity.localhost:9000`.
+  `http://equin.localhost:9000`.
 
 The repo is public, so the box clones it from GitHub with no credentials; a
 `push` there lands on the box's local main (remotes probe), never on GitHub.

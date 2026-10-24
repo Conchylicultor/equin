@@ -289,7 +289,7 @@ their `pane_pid`'s id.
 ```bash
 bun test plugins/conversations/plugins/transcript-watcher
 bun test plugins/conversations/server/internal
-curl -s http://singularity.localhost:9000/api/conversations/conv-1783448623-h424/turns \
+curl -s http://equin.localhost:9000/api/conversations/conv-1783448623-h424/turns \
   | jq '{count:(.turns|length), first:.turns[0].at, last:.turns[-1].at}'
 ```
 Expect turns spanning `2026-07-07T18:24` → `2026-07-08T23:10`, with the `14:18–18:58` middle segment

@@ -78,7 +78,7 @@ Failures are marked ✗. "Fix found" says where a user could have found the fix.
 | 22 | build again | ✗ exit 1 | 11s | the same check now names `rustc` |
 | 23 | put mise's tools on the PATH | ok | 0s | mise's own docs |
 | 24 | build again | **ok — deployed** | 10s | — |
-| 25 | `curl http://singularity.localhost:9000/` | ok, 200 | 0s | — |
+| 25 | `curl http://equin.localhost:9000/` | ok, 200 | 0s | — |
 | 26 | screenshot the running app | ok, renders | 5s | — |
 | 27 | is Claude Code installed? | missing | 0s | nothing mentions it |
 | 28 | reboot the machine | app gone until `./equin start` is re-run by hand | — | nothing mentions it |
@@ -113,7 +113,7 @@ backend* which tables to leave out, and no backend can run until the app is
 built. On a fresh install there is nothing to ask.
 ```
 error: Could not read the fork exclusion set from any running backend:
-  http://singularity.localhost:9000/api/db/fork-exclusions → 404
+  http://equin.localhost:9000/api/db/fork-exclusions → 404
 Start Singularity and retry …
 ```
 
@@ -191,7 +191,7 @@ confirmed here by screenshot.)
 
 **11. Nothing restarts the gateway after a reboot.**
 The machine was rebooted after the app was deployed and working. Nothing came
-back: no gateway, no Postgres, and `http://singularity.localhost:9000` simply
+back: no gateway, no Postgres, and `http://equin.localhost:9000` simply
 does not answer until `./equin start` is run again by hand. No doc
 mentions this, and a new user's first reboot looks like the install broke.
 

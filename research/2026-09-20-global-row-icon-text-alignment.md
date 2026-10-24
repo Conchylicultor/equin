@@ -8,7 +8,7 @@ feels too large," compared against the mock `proto-1789731211-jeis`.
 
 Both complaints are real, they are **two independent defects**, and only one of
 them is about the artifacts panel. Measured against the running app
-(`singularity.localhost:9000`, the row "Live subagent transcripts"):
+(`equin.localhost:9000`, the row "Live subagent transcripts"):
 
 | | measured |
 | --- | --- |

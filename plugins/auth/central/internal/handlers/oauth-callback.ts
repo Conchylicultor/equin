@@ -9,10 +9,6 @@ import {
 } from "../oauth-flow";
 import { setAccount } from "../token-store";
 import { emitAuthChanged } from "../actions";
-import {
-  namespaceUrl,
-  type Namespace,
-} from "@plugins/infra/plugins/namespace/core";
 
 /**
  * GET /api/auth/callback/:provider?code=...&state=...
@@ -36,7 +32,7 @@ export const handleOAuthCallback: HttpHandler = async (req, params) => {
       renderResultPage({
         ok: false,
         message: `OAuth provider returned an error: ${error}`,
-        worktree: null,
+        openerOrigin: null,
       }),
     );
   }
@@ -45,7 +41,7 @@ export const handleOAuthCallback: HttpHandler = async (req, params) => {
       renderResultPage({
         ok: false,
         message: "Missing code or state",
-        worktree: null,
+        openerOrigin: null,
       }),
     );
   }
@@ -56,7 +52,7 @@ export const handleOAuthCallback: HttpHandler = async (req, params) => {
       renderResultPage({
         ok: false,
         message: "OAuth state expired or unknown — please retry",
-        worktree: null,
+        openerOrigin: null,
       }),
     );
   }
@@ -65,7 +61,7 @@ export const handleOAuthCallback: HttpHandler = async (req, params) => {
       renderResultPage({
         ok: false,
         message: "Provider mismatch in callback state",
-        worktree: pending.worktree,
+        openerOrigin: pending.openerOrigin,
       }),
     );
   }
@@ -76,7 +72,7 @@ export const handleOAuthCallback: HttpHandler = async (req, params) => {
       renderResultPage({
         ok: false,
         message: `Provider "${providerId}" not registered`,
-        worktree: pending.worktree,
+        openerOrigin: pending.openerOrigin,
       }),
     );
   }
@@ -109,7 +105,7 @@ export const handleOAuthCallback: HttpHandler = async (req, params) => {
       renderResultPage({
         ok: true,
         providerId,
-        worktree: pending.worktree,
+        openerOrigin: pending.openerOrigin,
         identity,
       }),
     );
@@ -118,7 +114,7 @@ export const handleOAuthCallback: HttpHandler = async (req, params) => {
       renderResultPage({
         ok: false,
         message: err instanceof Error ? err.message : String(err),
-        worktree: pending.worktree,
+        openerOrigin: pending.openerOrigin,
       }),
     );
   }
@@ -134,15 +130,14 @@ function htmlResponse(html: string): Response {
 interface ResultPageArgs {
   ok: boolean;
   providerId?: string;
-  worktree: Namespace | null;
+  /** The opener's validated origin; `null` when the flow's state is unknown. */
+  openerOrigin: string | null;
   identity?: { accountId: string; email?: string; displayName?: string };
   message?: string;
 }
 
 function renderResultPage(args: ResultPageArgs): string {
-  const targetOrigin = args.worktree
-    ? escapeAttr(namespaceUrl(args.worktree))
-    : "*";
+  const targetOrigin = args.openerOrigin ? escapeAttr(args.openerOrigin) : "*";
   const payload = {
     type: "singularity.auth.complete",
     ok: args.ok,

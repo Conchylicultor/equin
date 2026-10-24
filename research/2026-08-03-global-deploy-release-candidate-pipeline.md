@@ -350,7 +350,7 @@ Studio compositions list today. The deploy pane becomes a second consumer.
 
 - **Serving is main-only.** `handle-serve-composition.ts:8-10` refuses off-main
   with *"Serve builds run on the main instance only — open
-  singularity.localhost:9000."*, and `compose-serve` reads **main's** resolved
+  equin.localhost:9000."*, and `compose-serve` reads **main's** resolved
   config, so a toggle from a worktree is inert (the auto-serve CLAUDE.md's
   authoritative-worktree caveat). The Rehearse step disables with that exact
   sentence when the deploy app is open in a worktree namespace. Reusing an

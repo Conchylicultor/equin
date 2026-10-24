@@ -86,6 +86,7 @@ export type ExemptableRuleId =
   | "model-provider:no-raw-model-flags"
   | "namespace-identity/no-ambient-worktree-env"
   | "namespace-identity/no-laundered-checkout-namespace"
+  | "namespace:legacy-host"
   | "namespace:no-hand-built-url"
   | "networking/no-page-transport"
   | "no-db-backed-notify"

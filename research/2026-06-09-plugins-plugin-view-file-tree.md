@@ -177,6 +177,6 @@ No DB schema changes, no new endpoints (reuses `getCodeTree` + `filePeekPane`).
 4. Click a file → a new column opens to the right showing its content; the plugin view
    column stays visible. Click another file → the same file column updates in place.
 5. Spot-check a plugin with sub-plugins vs a leaf plugin, and a plugin viewed on the main
-   namespace (`singularity.localhost:9000`) to confirm `"self"` resolves correctly in both.
+   namespace (`equin.localhost:9000`) to confirm `"self"` resolves correctly in both.
 6. Scripted check (optional): `bun e2e/screenshot.mjs --url <plugin-view-url> --click "<file>" --out /tmp/ft`.
 ```

@@ -254,7 +254,7 @@ spacing · rail · column · cluster · inline · sticky · pin · detail-sectio
 - Visual regression is the real risk — a silently-dropped utility looks like
   flattened padding, not an error. Load
   `http://<worktree>.localhost:9000` and compare against
-  `http://singularity.localhost:9000` on surfaces that exercise the rail and the
+  `http://equin.localhost:9000` on surfaces that exercise the rail and the
   ramp together: a task detail (detail-sections' `railClass`), the Pages editor
   (`BLOCK_INSET`), a Miller column layout, and a pane with a sticky header. Then
   switch the Density preset (Settings → Appearance) between Comfortable and

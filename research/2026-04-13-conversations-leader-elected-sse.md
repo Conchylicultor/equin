@@ -2,7 +2,7 @@
 
 ## Context
 
-Today every tab opens its own `EventSource` to `/api/conversations/stream`. With many tabs open on `singularity.localhost`, this saturates Chrome's per-host HTTP/1.1 connection cap (~6) and causes multi-second stalls on initial `/api/conversations` fetches (observed: >2s blank + >10s before UI). On the server side, broadcast cost is O(tabs × users) per event, which doesn't scale.
+Today every tab opens its own `EventSource` to `/api/conversations/stream`. With many tabs open on `equin.localhost`, this saturates Chrome's per-host HTTP/1.1 connection cap (~6) and causes multi-second stalls on initial `/api/conversations` fetches (observed: >2s blank + >10s before UI). On the server side, broadcast cost is O(tabs × users) per event, which doesn't scale.
 
 There is also a real bug: each page load opens **two** EventSources, because `ConversationList` (sidebar) and `ConversationView` (route pane) each create their own, doubling the cost.
 
@@ -73,7 +73,7 @@ The `ConversationEvent` discriminated union (`plugins/conversations/shared/proto
 3. Create a conversation in one tab via "New conversation". Verify all open tabs' sidebars receive the `created` event and update their list.
 4. Close the tab that holds the SSE (identifiable: it's the only one with a `/api/conversations/stream` entry in Network). Within ~100ms one of the remaining tabs should open a new `/api/conversations/stream` and continue receiving events. Confirm by triggering another action (rename, delete) and seeing it propagate.
 5. Open `chrome://inspect` → service workers / locks (or run `await navigator.locks.query()` in the console) → verify exactly one holder of `singularity:conversations:stream`.
-6. Multi-origin sanity check: open `singularity.localhost:9000` and `claude-XXX.localhost:9000` simultaneously. Each should have its own leader (different origin = different lock namespace).
+6. Multi-origin sanity check: open `equin.localhost:9000` and `claude-XXX.localhost:9000` simultaneously. Each should have its own leader (different origin = different lock namespace).
 7. **Server-restart test:** with several tabs open, run `./equin build` in another worktree. Within ~5s every tab should show the existing "Reconnected to server" toast (driven by `subscribeWsStatus`), and follower tabs' sidebars should re-fetch and reconcile. Verify by deleting a conversation while the server is mid-restart, then confirming the deletion is reflected in all tabs once the new SSE opens.
 
 ## Out of scope

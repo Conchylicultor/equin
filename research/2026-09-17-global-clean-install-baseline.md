@@ -132,7 +132,7 @@ Each checkpoint records the time taken to reach it and the failures before it.
    Postgres client tools are on the PATH. Homebrew's installer normally pulls
    in the command-line tools.
 2. **Gateway running.** `./equin start` succeeds, and
-   `curl http://singularity.localhost:9000` answers inside the guest.
+   `curl http://equin.localhost:9000` answers inside the guest.
 3. **App deployed.** `./equin build --allow-main` finishes, the deploy
    receipt says `status: ok`, and the agent manager page renders. The last is
    checked with the repo's `screenshot.ts` run inside the guest (this also
@@ -183,7 +183,7 @@ the page.
 
 - **Main is undisturbed.** Before and after the run on this Mac:
   - the process listening on port 9000 has the same PID
-  - `http://singularity.localhost:9000` answers
+  - `http://equin.localhost:9000` answers
   - nothing under `~/.singularity` was modified during the run window
     (`fd --changed-within` limited to that window, excluding the live logs
     and DB files main writes itself)

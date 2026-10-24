@@ -123,6 +123,9 @@ hover.
     - `WebsiteSoon`
 - Core:
   - Uses:
+    - `infra/namespace.MAIN_WORKTREE_NAME`
+    - `infra/namespace.namespaceHost`
+    - `infra/namespace.namespaceUrl`
     - `primitives/pane.defineApp`
     - `ui/icons.symbol`
   - Exports (values):

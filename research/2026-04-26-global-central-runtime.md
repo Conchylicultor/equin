@@ -11,7 +11,7 @@ The leakage *is* the bug. A worktree's backend has no business enumerating other
 
 We are introducing a new plugin runtime peer of `web` / `server` / `shared`, named `central`. A central plugin's HTTP and WebSocket routes are served by exactly one Bun process (gateway-supervised, reserved name `central`). The gateway is taught a path-prefix routing manifest so that selected paths from any subdomain forward to the central backend, replacing the existing OAuth bare-localhost rewrite (`gateway/proxy.go:39-47`) with a generic mechanism.
 
-After the migration: no unix sockets, no fanout, no `~/.singularity/worktrees/*.json` enumeration in plugins, no per-worktree caches of global state, no `isMain()` branches inside `auth` / `secrets`. Restarting `singularity.localhost` no longer kills auth.
+After the migration: no unix sockets, no fanout, no `~/.singularity/worktrees/*.json` enumeration in plugins, no per-worktree caches of global state, no `isMain()` branches inside `auth` / `secrets`. Restarting `equin.localhost` no longer kills auth.
 
 ## Current state — concrete pain points
 
@@ -225,7 +225,7 @@ Each phase is independently shippable and reversible. After Phase 3, the leakage
 End-to-end manual smoke:
 
 1. `./equin build` from a fresh checkout. Confirm `~/.singularity/central-routes.json` is written and the gateway logs picking it up.
-2. Connect Google in `singularity.localhost:9000` Accounts pane. Confirm popup, OAuth callback, and Accounts UI updates.
+2. Connect Google in `equin.localhost:9000` Accounts pane. Confirm popup, OAuth callback, and Accounts UI updates.
 3. Create a worktree (`./equin build` from a worktree clone). Open `<wt>.localhost:9000`. Confirm the Accounts pane shows the same connected state — without any HTTP `invalidate` fanout having fired (verify by absence in gateway logs).
 4. Disconnect Google in worktree A. Confirm worktree B's UI updates within ~1 s — pushed live from central via `/ws/central-notifications`.
 5. Restart `singularity` worktree's backend (`POST /gateway/worktrees/singularity/restart`). Confirm auth state is preserved in worktree B (central did not restart).

@@ -335,7 +335,7 @@ describe("raw", () => {
 
 describe("open", () => {
   test("only the app's own *.localhost origins", () => {
-    expect(isAppOrigin("http://singularity.localhost:9000")).toBe(true);
+    expect(isAppOrigin("http://equin.localhost:9000")).toBe(true);
     expect(isAppOrigin("http://sonata.att-1.localhost:9000")).toBe(true);
     expect(isAppOrigin("http://localhost:9000")).toBe(false);
     expect(isAppOrigin("https://evil.com")).toBe(false);

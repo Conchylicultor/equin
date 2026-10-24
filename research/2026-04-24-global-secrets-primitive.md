@@ -448,7 +448,7 @@ Seven commits, each independently buildable and testable. Each will be pushed vi
 ### Happy-path smoke
 
 1. `./equin build`. Check logs for `[secrets] keychain available` or `falling back to file`, and (first deploy only) `[secrets] migrated legacy auth tokens`.
-2. At `http://singularity.localhost:9000`, Settings → Google section. Paste clientId (plain) and clientSecret (password input). Blur to commit.
+2. At `http://equin.localhost:9000`, Settings → Google section. Paste clientId (plain) and clientSecret (password input). Blur to commit.
 3. ClientSecret field should now render `•••••••• (saved)` after commit.
 4. Accounts pane → Google → Connect. Complete Google consent. Popup closes; email shown. **Token exchange should succeed** (was the failure mode).
 5. On a worktree, any consumer calling `getAccessToken("google", {scopes:[...]})` should get a valid access token via `auth.sock`. Force expiry to exercise refresh path — refresh endpoint POST body should include `client_secret=…` (temporarily log in `oauth-flow.ts:refreshAccessToken` to verify).

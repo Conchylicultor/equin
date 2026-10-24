@@ -214,7 +214,7 @@ needs it". This is that second domain.
    - `tree-path.test.ts`: the `picks-recorded` cases.
 3. Shared state: open a prototype with options on the worktree deploy and pick a
    value. `_picks/<id>.json` appears. The same prototype open at
-   `singularity.localhost:9000` switches live (after main has this code).
+   `equin.localhost:9000` switches live (after main has this code).
    `./equin prototype options <id>` prints the pick and a URL.
 4. Render without saving: `screenshot.ts --path "/api/prototypes/<id>/index.html?palette=<v>"`
    renders that variant, and `_picks/<id>.json` is unchanged.

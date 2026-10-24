@@ -37,7 +37,7 @@
  *  - `/events/sources` — an ORDINARY pane whose header is its plain `Actions`
  *    slot. This is the surface the refactor is for, and the only one that
  *    discriminates: run this script against the pre-refactor deploy
- *    (`--url http://singularity.localhost:9000`) and this pane reports
+ *    (`--url http://equin.localhost:9000`) and this pane reports
  *    `sortables in band=0` with edit mode ON, because `renderIsolated` painted
  *    its actions outside the list middleware. Every other pane in the app that
  *    is not a rich custom header is this one.

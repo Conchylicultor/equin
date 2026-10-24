@@ -1,7 +1,7 @@
 # Prototypes viewer redesign — port of proto-1792527153-l4fzh8
 
 The mockup: `~/.singularity/apps/prototypes/proto-1792527153-l4fzh8/index.html`
-(view: `http://singularity.localhost:9000/api/prototypes/proto-1792527153-l4fzh8/index.html?tone=neutral`).
+(view: `http://equin.localhost:9000/api/prototypes/proto-1792527153-l4fzh8/index.html?tone=neutral`).
 It mocks the canvas pane (`route:/prototypes/proto/<id>`). The user's picks:
 **tone = neutral**, **chrome = always** (no fade), **accent = apricot `#e0ad80`**.
 Goal: the real app is pixel-perfect with the mock: colours, type, radii, icons,

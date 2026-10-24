@@ -1,13 +1,18 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Check } from "@plugins/framework/plugins/tooling/core";
-import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import {
+  grepCode,
+  listCandidateSources,
+} from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 // Own-plugin, so relative — the `@plugins/infra/plugins/namespace/core` alias
 // would name this plugin from inside itself. Same shape as `paths/check`
 // importing `../core/internal/paths`.
 import {
   NAMESPACE_HOST_ALIASES,
+  NAMESPACE_HOST_LABELS,
+  NAMESPACE_HOST_SUFFIX,
   NAMESPACE_LABEL_RE,
   NAMESPACE_MAX_BYTES,
 } from "../core/namespace";
@@ -27,7 +32,7 @@ import {
  *    ways; one took `host.split(".")[0]`, which silently yields `sonata` for
  *    `sonata.att-x.localhost`.
  *
- * A hardcoded literal like `http://singularity.localhost:9000` in a test fixture
+ * A hardcoded literal like `http://equin.localhost:9000` in a test fixture
  * is deliberately NOT matched. It is sample data rather than a derivation, and
  * it cannot drift from the rule because it names nothing live.
  */
@@ -174,4 +179,77 @@ const grammarInSyncCheck: Check = {
   },
 };
 
-export default [noHandBuiltNamespaceUrlCheck, grammarInSyncCheck];
+const LEGACY_HOST_RULE = "namespace:legacy-host";
+
+/**
+ * The hosts a namespace answers on but is no longer handed out under: its own
+ * name, wherever `NAMESPACE_HOST_LABELS` gives it a public label instead.
+ */
+const LEGACY_HOSTS = Object.entries(NAMESPACE_HOST_LABELS).map(
+  ([ns, label]) => ({
+    host: `${ns}${NAMESPACE_HOST_SUFFIX}`,
+    current: `${label}${NAMESPACE_HOST_SUFFIX}`,
+  }),
+);
+
+/**
+ * People and agents copy the address they read — in a doc, a hint, an e2e
+ * header, a fixture — so every one of them says the public one. The old host
+ * keeps working as an alias, which is exactly why a stale mention would never
+ * fail on its own: this check is the only thing that notices one. Code cannot
+ * spell it at all, since it derives addresses through `namespaceUrl`.
+ *
+ * Every tracked text file is in scope, prose included.
+ */
+const legacyHostCheck: Check = {
+  id: LEGACY_HOST_RULE,
+  // INPUT-KEYED: a pure function of the `git grep -l` selection, its
+  // candidates' content and the exemption manifests — all recorded.
+  inputKeyed: true,
+  description:
+    "no tracked file names a namespace by a host it is no longer handed out under (main's old address) — write the public one",
+  exemptable: {
+    [LEGACY_HOST_RULE]:
+      "names a namespace's legacy host on purpose — e.g. a test that the old address still resolves",
+  },
+  async run(ctx) {
+    const exempt = await ctx.exempt(LEGACY_HOST_RULE);
+    const offenders: string[] = [];
+    for (const { host, current } of LEGACY_HOSTS) {
+      const pattern = new RegExp(
+        String.raw`(?<![\w.-])${host.replace(/\./g, String.raw`\.`)}`,
+      );
+      const candidates = await listCandidateSources({
+        grepArg: host,
+        fixed: true,
+        pathspecs: ["."],
+      });
+      for (const { rel, src } of candidates) {
+        if (exempt.skips(rel)) continue;
+        src.split("\n").forEach((text, i) => {
+          if (pattern.test(text)) {
+            offenders.push(
+              `${rel}:${i + 1} — write ${current}\n        ${text.trim()}`,
+            );
+          }
+        });
+      }
+    }
+
+    if (offenders.length === 0) return { ok: true };
+    return {
+      ok: false,
+      message: `${offenders.length} mention(s) of a legacy namespace host:\n    ${offenders.join("\n    ")}`,
+      hint:
+        "Write the public host (`NAMESPACE_HOST_LABELS` in `plugins/infra/plugins/namespace/core`) — in docs, comments, fixtures and e2e headers alike. " +
+        "Code builds an address with `namespaceUrl(ns)` / `namespaceHost(ns)`, never a literal. " +
+        `A file that must spell the old host (a test that it still resolves) declares a \`${LEGACY_HOST_RULE}\` exemption in its plugin's \`exempt/index.ts\`.`,
+    };
+  },
+};
+
+export default [
+  noHandBuiltNamespaceUrlCheck,
+  grammarInSyncCheck,
+  legacyHostCheck,
+];

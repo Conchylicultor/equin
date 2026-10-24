@@ -14,7 +14,7 @@ Phase 1 (this round): add the variants to the prototype only. Phase 2 (after agr
 
 Captures: scratchpad `cmp-*.png` (canvas compare), `mock-full-before.png` / `app-full-before.png`
 (1920×3400). Note: this worktree has no build (build was denied), so the comparison ran against main
-via `--url http://singularity.localhost:9000` — main is at this branch's commit.
+via `--url http://equin.localhost:9000` — main is at this branch's commit.
 
 ## Difference inventory
 

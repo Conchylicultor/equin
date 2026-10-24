@@ -378,7 +378,7 @@ own `namespaceFromHost` reads `sonata.<wt>` rather than `sonata`.
 
 The build must behave identically — no namespace gains a dot in this phase, so
 `http://att-1787064474-2qcq.localhost:9000` and
-`http://singularity.localhost:9000` are unchanged. Spot-check the two surfaces
+`http://equin.localhost:9000` are unchanged. Spot-check the two surfaces
 whose parser changed: the worktree switcher still shows the current namespace,
 and Settings → Account still links correctly.
 

@@ -150,7 +150,7 @@ Tokens and secrets are per-user, so they can't live in per-worktree DB forks.
 
 | Thing | Value |
 |---|---|
-| Browser traffic | `http://<worktree>.localhost:9000` (main app: `singularity.localhost:9000`) |
+| Browser traffic | `http://<worktree>.localhost:9000` (main app: `equin.localhost:9000`) |
 | Backend sockets | `~/.singularity/sockets/<name>.sock` (+ `.next.sock` during hot swap) |
 | Postgres | `127.0.0.1:5433` (`SINGULARITY_PG_PORT` override), user `singularity`, `wal_level=logical` |
 | PgBouncer | `:6432`, transaction mode, catch-all `* =` routing (new DBs need no reconfigure) |

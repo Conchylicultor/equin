@@ -303,7 +303,7 @@ End-to-end (Playwright screenshot against a real conversation):
   conversation whose transcript contains a Workflow call (or seed one by resuming/importing the
   transcript's session id), then navigate to `http://<ns>.localhost:9000/c/<convId>`.
 - Capture with the existing harness:
-  `bun e2e/screenshot.mjs --url http://singularity.localhost:9000/c/<convId> --out /tmp/wf` then
+  `bun e2e/screenshot.mjs --url http://equin.localhost:9000/c/<convId> --out /tmp/wf` then
   scroll/locate the Workflow card. Extend the script to click a node card and screenshot the opened
   `workflow-node` pane (mirror `screenshot-conversation-with-file.mjs` click loop). Visually confirm:
   swimlane phases, the `⇉ parallel ×N` row, model badges, hover-dim highlight, and the side pane

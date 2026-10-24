@@ -205,7 +205,7 @@ EOF
     if "$claude_bin" auth login </dev/tty; then signed_in=1; fi
   fi
 
-  say "Singularity is running: http://singularity.localhost:9000"
+  say "Singularity is running: http://equin.localhost:9000"
   echo "  Checkout: $INSTALL_DIR"
   [ "$EDIT_RC" = "1" ] && echo "  Open a new terminal to use ./equin (mise is active there)."
   if [ "$signed_in" = "0" ]; then

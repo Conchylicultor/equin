@@ -7,7 +7,7 @@ Category: global (cli · build · web-artifacts · primitives)
 
 On 2026-08-19 commit `34557b01f` was merged to main at 11:30:24, 13 seconds before
 the running build (for `8d7f38a85`) finished at 11:30:37. No rebuild followed. The
-frontend served from `singularity.localhost:9000` is still `8d7f38a8`'s bundle
+frontend served from `equin.localhost:9000` is still `8d7f38a8`'s bundle
 while the backend, having restarted out of the checkout at 11:30:32, runs
 `34557b01f`'s code. The build even printed
 `BUILD OK — deployed (superseded — main moved to 34557b01f mid-build, rebuild follows)`.

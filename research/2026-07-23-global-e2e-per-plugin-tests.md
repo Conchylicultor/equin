@@ -271,7 +271,7 @@ defaulting, these run argument-free:
 
 - *No fixtures, <60 s each — run all:* `screenshot`, `perf`, `render-profile`, `sidebar-visibility`, `tabs-verify`, `history-nav`, `overscroll-hint-verify`, `shared-websocket`, `deep-link-restore` (needs a `--page-id`; create one via `POST /api/blocks` first).
 - *Self-provisioning page fixtures* — the real proof that `openBlankPage` + `blockDocText` are correct. Run at least one from **each** of the three owning plugins, since those exercise the three distinct cross-plugin import paths: `page/editor/e2e/crdt-typing-verify.ts`, `page/editor-collab/e2e/crdt-newblock-verify.ts`, `apps/pages/history/e2e/crdt-restore-verify.ts`.
-- `live-state-churn.ts` needs `--key tasks.list`. `caret-trigger-wedge.ts` creates and deletes its own scratch page — run it on the worktree, never against `singularity.localhost`.
+- `live-state-churn.ts` needs `--key tasks.list`. `caret-trigger-wedge.ts` creates and deletes its own scratch page — run it on the worktree, never against `equin.localhost`.
 - *Special setup, do not gate on these:* `image-block.ts` (needs a file at `--image`), `events-test-flow.ts` (needs the events-test routes deployed; mutates server state), `release-boot-verify.ts` (needs a staged release bundle on its own port).
 - `split-typing-window-probe.ts` is a probe: verify it still **prints**, not that it passes.
 

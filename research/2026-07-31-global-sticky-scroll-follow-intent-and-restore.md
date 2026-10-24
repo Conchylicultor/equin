@@ -2,7 +2,7 @@
 
 ## Context
 
-Reported symptom, on `http://singularity.localhost:9000/agents/c/<id>`: scroll to
+Reported symptom, on `http://equin.localhost:9000/agents/c/<id>`: scroll to
 the very bottom of a conversation, refresh, and the page lands several messages
 *up* the transcript. Then the moment a new message arrives it snaps to the end.
 

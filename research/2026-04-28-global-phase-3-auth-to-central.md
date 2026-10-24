@@ -146,7 +146,7 @@ End-to-end smoke (matches design doc §Verification):
 
 1. `./equin build` from this worktree. Confirm `~/.singularity/central-routes.json` includes `/api/auth/`, `/ws/central-notifications`, `/api/central-resources/`. Confirm `bunx tsc` in `central/` passes with the moved code.
 2. `./equin check --plugin-boundaries` and `./equin check --plugins-doc-in-sync` pass. `docs/plugins.md` shows auth/google/notion under their `central:` exports section.
-3. From `singularity.localhost:9000`, open Accounts → Connect Google. Confirm OAuth popup, callback, and Accounts UI updates to "connected".
+3. From `equin.localhost:9000`, open Accounts → Connect Google. Confirm OAuth popup, callback, and Accounts UI updates to "connected".
 4. Open this worktree at `<wt>.localhost:9000`. Accounts pane shows the same connected state without any `/api/auth/invalidate` HTTP traffic (confirm via gateway logs).
 5. Disconnect Google in worktree A. Confirm worktree B's UI updates within ~1 s, pushed through `/ws/central-notifications`.
 6. Restart `singularity`'s backend (`POST /gateway/worktrees/singularity/restart`). Confirm worktree B's auth state stays live (central was not restarted).

@@ -3,7 +3,7 @@
 ## Context
 
 An e2e script run from a worktree with no `--url` silently drives **main's** deploy
-(`http://singularity.localhost:9000`) and reports `ALL CHECKS PASSED`. It can also invent
+(`http://equin.localhost:9000`) and reports `ALL CHECKS PASSED`. It can also invent
 failures about code that is not under test — which is how it surfaced, after several rebuild
 cycles spent investigating a defect that did not exist.
 
@@ -471,7 +471,7 @@ env | grep '^SINGULARITY_WORKTREE'          # SINGULARITY_WORKTREE=singularity
 git rev-parse --show-toplevel               # .../worktrees/att-1788856801-y7ze
 ./equin run plugins/primitives/plugins/dom/plugins/overscroll-hint/e2e/overscroll-hint-verify.ts
 ```
-Today: `ALL CHECKS PASSED`, having driven — and config-reverted — `http://singularity.localhost:9000`.
+Today: `ALL CHECKS PASSED`, having driven — and config-reverted — `http://equin.localhost:9000`.
 
 **1. Unit level, no deploy needed.**
 ```
@@ -494,7 +494,7 @@ main's config untouched.
 
 **3. The env is provably inert.**
 ```
-SINGULARITY_WORKTREE=singularity SINGULARITY_E2E_BASE=http://singularity.localhost:9000 \
+SINGULARITY_WORKTREE=singularity SINGULARITY_E2E_BASE=http://equin.localhost:9000 \
   ./equin run plugins/.../overscroll-hint-verify.ts; echo "exit=$?"
 rg -n 'process\.env' plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/
 ```
@@ -527,7 +527,7 @@ rather than refusing.
 
 **6. Explicit targets and the composition case.**
 ```
-./equin run plugins/.../overscroll-hint-verify.ts --url http://singularity.localhost:9000  # passes, identity skipped
+./equin run plugins/.../overscroll-hint-verify.ts --url http://equin.localhost:9000  # passes, identity skipped
 ./equin run plugins/.../overscroll-hint-verify.ts --url http://x:9000 --composition sonata # usage error
 ./equin build --composition sonata
 ./equin run plugins/.../overscroll-hint-verify.ts; echo "exit=$?"      # refuses, lists sonata.att-…
