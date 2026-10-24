@@ -13367,14 +13367,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ids:pk-declared` — `server/internal/tables-turn-completed-event.ts` (debt)
       - `boundaries/no-platform-api` — `server/internal/lifecycle.ts`, `server/internal/locate-cut.ts`, `server/internal/status-reconciler.ts` (debt)
   - Plugins:
-    - **`agent-launch`** — What every app-launched agent starts with, whatever runtime hosts it: the agent process's allowlisted environment (the env -i wrapper, the values it delivers, its PATH and login shell — agentSessionLaunch), the fixed CLI settings, the hooks every runtime runs (the compaction hook) and the one merge of the launch's settings fragments.
+    - **`agent-launch`** — What every app-launched agent starts with, whatever runtime hosts it: the agent process's allowlisted environment (the env -i wrapper, the values it delivers, its PATH and login shell — agentSessionLaunch), the fixed CLI settings, the policy every runtime launches with (the agent-policy guards and deny rules, the compaction hook) and the one merge of the launch's settings fragments.
       - Server:
         - Uses: `conversations/compaction-context.compactionHookEntry`
         - Exports (types):
           - `AgentSessionEnv`
           - `LaunchHooks`
+          - `LaunchPolicy`
         - Exports (values):
-          - `agentLaunchHooks`
+          - `agentLaunchPolicy`
           - `agentSessionEnv`
           - `agentSessionLaunch`
           - `LAUNCH_CLI_SETTINGS`
@@ -18926,6 +18927,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LaunchContext`
           - `LaunchFragment`
           - `LaunchMcpServer`
+          - `LaunchPermissions`
           - `Resumability`
           - `ScratchProfileDef`
           - `SettingSource`
@@ -25537,7 +25539,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/boundaries` (2 debt)
               - `framework/tooling/checks` (11 debt)
               - `framework/tooling/checks/type-check` (15 debt)
-              - `framework/tooling/codegen` (30 debt)
+              - `framework/tooling/codegen` (31 debt)
               - `framework/tooling/format` (5 debt)
               - `framework/tooling/guards` (10 debt)
               - `framework/tooling/import-closure` (1 debt)
@@ -25811,7 +25813,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Register: `defineSupervisedJob('type-check.backstop')`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 112 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 113 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `plugin-meta/parse-utils` ×17
               - `config_v2` ×15
               - `framework/plugin-id` ×14
@@ -25831,6 +25833,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/macrotask-yield` ×2
               - `packages/resource-protocol` ×2
               - `fields/reorder-tree.REORDER_NODE_LEGEND`
+              - `framework/tooling/guards/agent-policy.agentPolicySettings`
               - `framework/tooling/lint.loadLintContributions`
               - `framework/tooling/web-artifacts.COMPOSITION_SPECIFIERS`
               - `packages/semaphore.createSemaphore`
@@ -25877,6 +25880,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `buildBarrelFreeTree`
               - `buildEnrichedTree`
               - `buildRegistryGenContext`
+              - `CLAUDE_SETTINGS_REL_PATH`
+              - `claudeSettingsPath`
               - `collectAllPlugins`
               - `collectBareSpecifiers`
               - `collectDataViews`
@@ -25912,6 +25917,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `formatGenerated`
               - `generateBarrelStubs`
               - `generateBrowserHosts`
+              - `generateClaudeSettings`
               - `generateCompositionRegistry`
               - `generateConfigOrigins`
               - `generateCustomUtilities`
@@ -25956,6 +25962,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `renderBarrelStubs`
               - `renderBrowserHost`
               - `renderBrowserHostScope`
+              - `renderClaudeSettings`
               - `renderCollectedDirRegistry`
               - `renderCompactDoc`
               - `renderCompanionManifest`
@@ -26008,7 +26015,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow --shadow`
           - Exemptions:
             - Exempts itself from:
-              - `boundaries/no-platform-api` — `core/app-css-utilities.ts`, `core/app-declarations-gen.ts`, `core/authored-override-seed.ts`, `core/barrel-free-tree.ts`, `core/barrel-stubs-gen.ts`, `core/companion-manifest-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/eager-tier-gen.ts`, `core/enriched-tree.ts`, `core/exempt-rule-ids-gen.ts`, `core/fields-eager-gen.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/plugin-registry-gen.ts`, `core/pre-barrel-guard.ts`, `core/reorderable-slots-gen.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/theme-declarations-gen.ts`, `core/token-group-vars-gen.ts`, `core/web-slot-contributions.ts`, `core/write-generated.ts` (debt)
+              - `boundaries/no-platform-api` — `core/app-css-utilities.ts`, `core/app-declarations-gen.ts`, `core/authored-override-seed.ts`, `core/barrel-free-tree.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/companion-manifest-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/eager-tier-gen.ts`, `core/enriched-tree.ts`, `core/exempt-rule-ids-gen.ts`, `core/fields-eager-gen.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/plugin-registry-gen.ts`, `core/pre-barrel-guard.ts`, `core/reorderable-slots-gen.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/theme-declarations-gen.ts`, `core/token-group-vars-gen.ts`, `core/web-slot-contributions.ts`, `core/write-generated.ts` (debt)
               - `marker-scan-safety/no-adhoc-marker-scan` — `core/browser-host-coverage.ts` (sanctioned)
         - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
           - Cross-plugin:
@@ -26145,6 +26152,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/namespace.asNamespace`
               - `infra/namespace.isNamespace`
               - `infra/paths.HOME_DIR`
+              - `infra/paths.REPO_ROOT`
               - `infra/paths.worktreeArtifacts`
             - Exports (types):
               - `AllowVerdict`
@@ -26175,7 +26183,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `detectPoll`
               - `fileHint`
               - `GUARDS`
-              - `MACOS_TCC_COMMANDS`
               - `matchesTool`
               - `MODULE_EXTENSION`
               - `parseArgv`
@@ -26199,6 +26206,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `python/no-system-python` — `core` (sanctioned)
               - `boundaries/no-platform-api` — `core/agent-ops.ts`, `core/argv.ts`, `core/context.ts`, `core/git-target.ts`, `core/informed-once.ts`, `core/guards/git-diff-main.ts`, `core/guards/main-edits.ts`, `core/guards/poll-loop.ts`, `core/parse-shell.ts`, `core/stop-guard.ts` (debt)
           - Plugins:
+            - **`agent-policy`** — The protections every agent runs with — the guard and stop-guard hooks and the deny rules — declared once as data: `.claude/settings.json`'s protection keys are generated from it (guards:claude-settings-in-sync) and every app launch carries it, whatever its workspace, so an agent outside the repo (a scratch workspace) is guarded too.
+              - Cross-plugin:
+                - Imported by: `framework/tooling/codegen`
+              - Core:
+                - Exports (types):
+                  - `AgentPolicySettings`
+                  - `PolicyHookCommand`
+                  - `PolicyHookGroup`
+                  - `PolicyHooks`
+                - Exports (values):
+                  - `agentPolicySettings`
+                  - `GUARD_SCRIPTS`
+                  - `GUARDS_ROOT_ENV`
+                  - `WORKSPACE_ROOT_ENV`
             - **`refusal-format`** — The text format of a guard's denial — the did-not-run banner, then 'Why it was blocked:' and the guard's own reason — written (joinRefusal) and read back (refusalReason) in one place, so a transcript viewer can show the reason without the banner.
               - Cross-plugin:
                 - Imported by:

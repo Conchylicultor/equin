@@ -161,6 +161,10 @@ export const RUNTIME_WITHHELD_ENV = {
     "the Bash tool call an e2e script was launched by; a PreToolUse guard exports it into that one command, never a backend's",
   SINGULARITY_PARENT_HOST:
     "the host an agent's MCP client dials back to; delivered into that agent's own process environment by the agent launcher",
+  SINGULARITY_GUARDS_ROOT:
+    "the checkout one agent's policy hooks run their guards from (guards/agent-policy); delivered into that agent's own process environment by the agent launcher",
+  SINGULARITY_WORKSPACE_ROOT:
+    "the workspace one agent runs in, its write guards' boundary (guards/agent-policy); delivered into that agent's own process environment by the agent launcher",
   SINGULARITY_PARENT_LIFELINE:
     "the lock file one spawn holds for the child it starts, set by infra/spawn for that child only (packages/flock lifeline.ts)",
   SINGULARITY_HOST_GRANT:

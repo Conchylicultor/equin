@@ -1,3 +1,7 @@
+import {
+  GUARDS_ROOT_ENV,
+  WORKSPACE_ROOT_ENV,
+} from "@plugins/framework/plugins/tooling/plugins/guards/plugins/agent-policy/core";
 import { runtimeShimsDir } from "@plugins/infra/plugins/launcher/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 
@@ -36,11 +40,19 @@ import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
  *   process, so it can never migrate into Claude Code's background daemon and
  *   inherit whichever process first spawned that daemon (the Sep 9 misattributed
  *   push).
+ * - `SINGULARITY_GUARDS_ROOT` — the checkout whose guard scripts the launch's
+ *   policy hooks run (guards/agent-policy): the workspace's own for a worktree,
+ *   the launching backend's for scratch.
+ * - `SINGULARITY_WORKSPACE_ROOT` — the workspace the agent runs in, the
+ *   boundary the write guards allow (any workspace kind, so a scratch dir is
+ *   bounded too).
  */
 export const AGENT_SESSION_DELIVERED_ENV = [
   "SINGULARITY_CONVERSATION_ID",
   "SINGULARITY_PARENT_HOST",
   "CLAUDE_CODE_DISABLE_AGENT_VIEW",
+  GUARDS_ROOT_ENV,
+  WORKSPACE_ROOT_ENV,
 ] as const;
 
 /** The values one agent session is launched with. */
@@ -65,11 +77,16 @@ export type AgentSessionEnv = Record<
  * conversation's id. The app never uses background sessions, so the session it
  * launched is the only place an agent may run.
  */
-export function agentSessionEnv(conversationId: string): AgentSessionEnv {
+export function agentSessionEnv(
+  conversationId: string,
+  roots: { workspaceRoot: string; guardsRoot: string },
+): AgentSessionEnv {
   return {
     SINGULARITY_CONVERSATION_ID: conversationId,
     SINGULARITY_PARENT_HOST: runtimeNamespace(),
     CLAUDE_CODE_DISABLE_AGENT_VIEW: "1",
+    [GUARDS_ROOT_ENV]: roots.guardsRoot,
+    [WORKSPACE_ROOT_ENV]: roots.workspaceRoot,
   };
 }
 

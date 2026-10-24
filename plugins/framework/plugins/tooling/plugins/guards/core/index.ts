@@ -1,6 +1,5 @@
 export { GUARDS } from "./registry";
 export { BYPASS_TOKENS } from "./bypass-tokens";
-export { MACOS_TCC_COMMANDS } from "./guards/macos-automation";
 export type {
   AllowVerdict,
   DenyVerdict,

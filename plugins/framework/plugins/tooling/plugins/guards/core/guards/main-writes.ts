@@ -4,7 +4,6 @@ import { defineGuard } from "../define-guard";
 import { parseShell } from "../parse-shell";
 import type { ShellCall } from "../parse-shell";
 import type { BashInput } from "../types";
-import { worktreeContextOf } from "../worktree-root";
 
 /**
  * Every command this guard polices must have an entry in the argv grammar —
@@ -95,16 +94,16 @@ export const mainWritesGuard = defineGuard<BashInput>({
   matcher: "Bash",
   bypassToken: ".allow-main",
   check(input, ctx) {
-    // Derive both boundaries from the worktree marker, never from raw cwd —
-    // the hook cwd tracks the shell's persistent `cd`, and a subdirectory cwd
-    // would both mis-derive the repo root (silently un-protecting main) and
-    // flag legitimate writes to sibling dirs of the agent's own worktree.
-    const wt = worktreeContextOf(ctx.cwd);
-    if (!wt) return null;
+    // Both boundaries come from the context, never from raw cwd — the hook
+    // cwd tracks the shell's persistent `cd`, and a subdirectory cwd would both
+    // mis-derive the repo root (silently un-protecting main) and flag
+    // legitimate writes to sibling dirs of the agent's own workspace.
+    const repoRoot = ctx.protectedRoot;
+    if (repoRoot === null) return null;
     const cmd = input.command;
     if (!cmd) return null;
 
-    const { worktreeRoot, repoRoot } = wt;
+    const worktreeRoot = ctx.workRoot;
 
     // A resolved, absolute path that lands inside the repo root but outside the
     // agent's own worktree IS a write to main. Relative args are resolved
@@ -140,8 +139,8 @@ export const mainWritesGuard = defineGuard<BashInput>({
 
 function violation(target: string, repoRoot: string, worktreeRoot: string) {
   return {
-    blocked: `Blocked write to main branch: ${target} is under ${repoRoot} (outside worktree ${worktreeRoot}).`,
-    why: "Writing directly to the main branch from a worktree corrupts shared state — a previous agent ran `cp <worktree>/file <main>/file` and leaked uncommitted changes.",
-    hint: `Write to files inside your worktree (${worktreeRoot}) instead.`,
+    blocked: `Blocked write to main branch: ${target} is under ${repoRoot} (outside your workspace ${worktreeRoot}).`,
+    why: "Writing directly to the main branch from another workspace corrupts shared state — a previous agent ran `cp <worktree>/file <main>/file` and leaked uncommitted changes.",
+    hint: `Write to files inside your workspace (${worktreeRoot}) instead.`,
   };
 }

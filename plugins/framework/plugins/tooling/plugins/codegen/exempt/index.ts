@@ -9,6 +9,7 @@ export default [
       "core/authored-override-seed.ts",
       "core/barrel-free-tree.ts",
       "core/barrel-stubs-gen.ts",
+      "core/claude-settings-gen.ts",
       "core/companion-manifest-gen.ts",
       "core/config-origin-gen.ts",
       "core/custom-utilities-gen.ts",

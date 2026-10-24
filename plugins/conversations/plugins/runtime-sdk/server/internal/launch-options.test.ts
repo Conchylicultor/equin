@@ -4,14 +4,17 @@ import { rewindRelaunchOptions, sdkLaunchOptions } from "./launch-options";
 const base = {
   cwd: "/w",
   claudeBin: "/bin/claude",
-  hooks: { SessionStart: [{ matcher: "compact", hooks: [] }] },
+  policy: {
+    hooks: { SessionStart: [{ matcher: "compact", hooks: [] }] },
+    permissions: { deny: ["EnterWorktree"] },
+  },
 };
 
 describe("sdkLaunchOptions", () => {
   test("a worktree launch: the CLI's default sources, no MCP override", () => {
     const o = sdkLaunchOptions({
       ...base,
-      launch: { settings: {} },
+      launch: { guardsRoot: "/w", settings: {} },
       prompt: "hi",
     });
     expect(o).toMatchObject({
@@ -26,9 +29,11 @@ describe("sdkLaunchOptions", () => {
       model: null,
       effort: null,
     });
+    expect(o.guardsRoot).toBe("/w");
     expect(o.settings).toEqual({
       promptSuggestionEnabled: false,
-      hooks: base.hooks,
+      hooks: base.policy.hooks,
+      permissions: { deny: ["EnterWorktree"] },
     });
   });
 
@@ -39,7 +44,9 @@ describe("sdkLaunchOptions", () => {
         settingSources: ["project"],
         mcpServers: { equin: { type: "http", url: "http://x/mcp" } },
         strictMcpConfig: true,
-        settings: { permissions: { deny: ["Bash"] } },
+        permissions: { allow: ["Read"], deny: ["Bash"] },
+        guardsRoot: "/repo",
+        settings: {},
       },
     });
     expect(o.settingSources).toEqual(["project"]);
@@ -47,34 +54,42 @@ describe("sdkLaunchOptions", () => {
       equin: { type: "http", url: "http://x/mcp" },
     });
     expect(o.strictMcpConfig).toBe(true);
-    expect(o.settings.permissions).toEqual({ deny: ["Bash"] });
+    // The policy's deny rules come first; the workspace's are added to them.
+    expect(o.settings.permissions).toEqual({
+      allow: ["Read"],
+      deny: ["EnterWorktree", "Bash"],
+    });
+    expect(o.guardsRoot).toBe("/repo");
     expect(o.prompt).toBeNull();
   });
 
   test("instructions ride the system prompt, not the first turn", () => {
     const o = sdkLaunchOptions({
       ...base,
-      launch: { settings: {} },
+      launch: { guardsRoot: "/w", settings: {} },
       prompt: "hi",
       appendSystemPrompt: "be terse",
     });
     expect(o).toMatchObject({ prompt: "hi", appendSystemPrompt: "be terse" });
     expect(
-      sdkLaunchOptions({ ...base, launch: { settings: {} } })
+      sdkLaunchOptions({ ...base, launch: { guardsRoot: "/w", settings: {} } })
         .appendSystemPrompt,
     ).toBeNull();
   });
 
   test("a fragment setting a key the launch already sets throws", () => {
     expect(() =>
-      sdkLaunchOptions({ ...base, launch: { settings: { hooks: {} } } }),
+      sdkLaunchOptions({
+        ...base,
+        launch: { guardsRoot: "/w", settings: { hooks: {} } },
+      }),
     ).toThrow(/hooks/);
   });
 
   test("resume and fork", () => {
     const o = sdkLaunchOptions({
       ...base,
-      launch: { settings: {} },
+      launch: { guardsRoot: "/w", settings: {} },
       resumeSessionId: "sid",
       forkSession: true,
     });
@@ -86,11 +101,14 @@ describe("sdkLaunchOptions", () => {
   test("the session id is known at launch", () => {
     const resumed = sdkLaunchOptions({
       ...base,
-      launch: { settings: {} },
+      launch: { guardsRoot: "/w", settings: {} },
       resumeSessionId: "sid",
     });
     expect(resumed.sessionId).toBe("sid");
-    const fresh = sdkLaunchOptions({ ...base, launch: { settings: {} } });
+    const fresh = sdkLaunchOptions({
+      ...base,
+      launch: { guardsRoot: "/w", settings: {} },
+    });
     expect(fresh.sessionId).toMatch(/^[0-9a-f-]{36}$/);
   });
 });
@@ -98,7 +116,7 @@ describe("sdkLaunchOptions", () => {
 describe("rewindRelaunchOptions", () => {
   const prev = sdkLaunchOptions({
     ...base,
-    launch: { settings: {} },
+    launch: { guardsRoot: "/w", settings: {} },
     prompt: "first",
     appendSystemPrompt: "be terse",
     forkSession: true,

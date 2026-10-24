@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { createContext } from "../context";
 import type { Verdict } from "../types";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
+import { worktreeContextOf } from "../worktree-root";
 import { mainWritesGuard } from "./main-writes";
 
 // A deliberately fake repo root (not under /Users — see paths:no-hardcoded-paths).
@@ -212,5 +214,44 @@ describe("main-writes guard", () => {
       // file it really edits is caught either way.
       expect(blocks(`sed -i .bak 's|../../../x|y|' local.ts`, WT)).toBe(true);
     });
+  });
+});
+
+// An app-launched agent names its workspace (SINGULARITY_WORKSPACE_ROOT); in a
+// scratch workspace — outside every checkout — the protected tree is the main
+// checkout of the code the guards run from.
+describe("main-writes guard in a launch-named workspace", () => {
+  const MAIN = worktreeContextOf(REPO_ROOT)?.repoRoot ?? REPO_ROOT;
+  const SCRATCH = "/s/state/workspaces/att-1-abcd";
+  const launched = (command: string, cwd: string, root: string) =>
+    (
+      mainWritesGuard.check(
+        { command },
+        createContext(cwd, "s", [], undefined, null, null, root),
+      ) as Verdict
+    ).kind === "deny";
+
+  test("a scratch agent cannot write into the main checkout", () => {
+    expect(launched(`cp out.xml ${MAIN}/plugins/x.xml`, SCRATCH, SCRATCH)).toBe(
+      true,
+    );
+    expect(
+      launched(`echo x > ${MAIN}/notes.txt`, `${SCRATCH}/sub`, SCRATCH),
+    ).toBe(true);
+  });
+
+  test("it writes freely inside its own workspace, from any subdirectory", () => {
+    expect(launched("cp a.txt ../b.txt", `${SCRATCH}/sub`, SCRATCH)).toBe(
+      false,
+    );
+  });
+
+  test("a launched worktree agent keeps the worktree boundary", () => {
+    expect(launched(`cp f.ts ${REPO}/plugins/f.ts`, `${WT}/gateway`, WT)).toBe(
+      true,
+    );
+    expect(launched(`cp f.ts ${WT}/plugins/f.ts`, `${WT}/gateway`, WT)).toBe(
+      false,
+    );
   });
 });

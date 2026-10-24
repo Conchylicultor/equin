@@ -250,6 +250,12 @@ export {
   renderExemptRuleIds,
 } from "./exempt-rule-ids-gen";
 export {
+  CLAUDE_SETTINGS_REL_PATH,
+  claudeSettingsPath,
+  generateClaudeSettings,
+  renderClaudeSettings,
+} from "./claude-settings-gen";
+export {
   deriveBrowserHostGraph,
   discoverBrowserHosts,
   inferBrowserHostGraph,

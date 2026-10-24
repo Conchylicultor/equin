@@ -194,7 +194,10 @@ export async function startAgentProcess(
       .map(shellWord)
       .join(" ");
   const launch = agentSessionLaunch({
-    env: agentSessionEnv(id),
+    env: agentSessionEnv(id, {
+      workspaceRoot: options.cwd,
+      guardsRoot: options.guardsRoot,
+    }),
     accountShell: userInfo().shell ?? "/bin/sh",
     claudeBin: options.claudeBin,
     command,

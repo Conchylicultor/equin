@@ -76,6 +76,7 @@ Orthogonal to the runtime (tmux | sdk): a runtime sees only the cwd and the
     - `LaunchContext`
     - `LaunchFragment`
     - `LaunchMcpServer`
+    - `LaunchPermissions`
     - `Resumability`
     - `ScratchProfileDef`
     - `SettingSource`

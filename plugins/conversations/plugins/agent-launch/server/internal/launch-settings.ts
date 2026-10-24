@@ -3,13 +3,14 @@ import {
   type CompactionHookEntry,
 } from "@plugins/conversations/plugins/compaction-context/core";
 import { compactionHookEntry } from "@plugins/conversations/plugins/compaction-context/server";
+import { agentPolicySettings } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/agent-policy/core";
 
 // The one settings object a launch hands Claude Code — the SDK's `settings`
 // option. Several
 // contributors share it: the thinking mode (`{"ultracode":true}`, from
 // effort-provider), the fixed CLI preferences (`LAUNCH_CLI_SETTINGS`), the
-// hooks (the ones every runtime needs, `agentLaunchHooks`, plus the runtime's
-// own) and the workspace's fragment. One object, merged by
+// policy every runtime launches with (`agentLaunchPolicy`: its hooks and deny
+// rules) and the workspace's fragment. One object, merged by
 // `mergeLaunchSettings` — two objects would leave which one wins to the CLI.
 
 /**
@@ -29,24 +30,45 @@ export const LAUNCH_CLI_SETTINGS: Record<string, unknown> = {
 /** A `hooks` settings map: hook event → its matcher groups. */
 export type LaunchHooks = Record<string, unknown[]>;
 
+/** The deny rules a launch carries, beside its hooks. */
+export interface LaunchPolicy {
+  hooks: LaunchHooks;
+  permissions: { deny: readonly string[] };
+}
+
 /**
- * The Claude Code hooks every app-launched agent runs with, whatever runtime
- * hosts it — the runtime adds its own beside them, in the same `hooks` map.
+ * What every app-launched agent runs with, whatever runtime hosts it and
+ * whatever its workspace — the only hooks source a runtime reads, so no launch
+ * path can leave one out.
  *
- * The compaction hook (conversations/compaction-context) rides `SessionStart`
- * on the `compact` source: right after the CLI compacts the agent's context, it
- * hands back what plugins had given the agent through tool results and the
- * summary dropped (a page's instructions), as `additionalContext`.
+ * - The agent policy (guards/agent-policy): the guard and stop-guard hooks and
+ *   the deny rules, the same declaration `.claude/settings.json` is generated
+ *   from. A scratch workspace sits outside the repo and loads no project
+ *   settings, so this is what guards it.
+ * - The compaction hook (conversations/compaction-context) rides `SessionStart`
+ *   on the `compact` source: right after the CLI compacts the agent's context,
+ *   it hands back what plugins had given the agent through tool results and
+ *   the summary dropped (a page's instructions), as `additionalContext`.
  */
-export function agentLaunchHooks(
+export function agentLaunchPolicy(
   entries: { compaction: CompactionHookEntry } = {
     compaction: compactionHookEntry(),
   },
-): LaunchHooks {
+): LaunchPolicy {
+  const policy = agentPolicySettings();
+  if ("SessionStart" in policy.hooks) {
+    throw new Error(
+      "agent policy and the compaction hook both set SessionStart — merge them explicitly",
+    );
+  }
   return {
-    SessionStart: [
-      { matcher: COMPACTION_HOOK_MATCHER, hooks: [entries.compaction] },
-    ],
+    hooks: {
+      ...policy.hooks,
+      SessionStart: [
+        { matcher: COMPACTION_HOOK_MATCHER, hooks: [entries.compaction] },
+      ],
+    },
+    permissions: policy.permissions,
   };
 }
 

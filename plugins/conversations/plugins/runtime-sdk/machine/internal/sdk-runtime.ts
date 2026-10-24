@@ -10,7 +10,7 @@ import { ContextUsageSchema } from "@plugins/conversations/core";
 import type { LaunchFragment } from "@plugins/conversations/plugins/workspace/server";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import type { EffortLevel } from "@plugins/conversations/plugins/effort-provider/core";
-import { agentLaunchHooks } from "@plugins/conversations/plugins/agent-launch/server";
+import { agentLaunchPolicy } from "@plugins/conversations/plugins/agent-launch/server";
 import { requireClaudeBin } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
 import {
@@ -96,9 +96,15 @@ function eventsExist(id: string): boolean {
 }
 
 function readOptions(id: string): AgentLaunchOptions {
-  return AgentLaunchOptionsSchema.parse(
-    JSON.parse(readFileSync(agentOptionsPath(id), "utf8")),
-  );
+  const raw = JSON.parse(readFileSync(agentOptionsPath(id), "utf8")) as Record<
+    string,
+    unknown
+  >;
+  // An options file written before launches named their guards root (Oct
+  // 2026). Its settings carry no policy hooks, so the root only bounds the
+  // write guards — its cwd, the workspace itself, is that.
+  if (!("guardsRoot" in raw)) raw.guardsRoot = raw.cwd;
+  return AgentLaunchOptionsSchema.parse(raw);
 }
 
 /**
@@ -321,7 +327,7 @@ export const sdkRuntime: ConversationRuntime = {
       cwd,
       claudeBin,
       launch,
-      hooks: agentLaunchHooks(),
+      policy: agentLaunchPolicy(),
       model: opts?.model,
       effort: opts?.effort,
       resumeSessionId: opts?.resumeSessionId,

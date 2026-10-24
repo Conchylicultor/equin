@@ -59,6 +59,21 @@ export function matchesTool(matcher: ToolMatcher, tool: string): boolean {
 export interface GuardContext {
   cwd: string;
   /**
+   * The root of the agent's own workspace — the boundary its writes are
+   * allowed under. An app launch names it (`WORKSPACE_ROOT_ENV`, any workspace
+   * kind, so a scratch dir is bounded too); a human session falls back to the
+   * worktree checkout containing `cwd`, else `cwd`. Never raw cwd when known:
+   * the hook cwd tracks the shell's persistent `cd`.
+   */
+  workRoot: string;
+  /**
+   * The main checkout this agent must not write into outside `workRoot`:
+   * the repo a worktree hangs off, or — for an app-launched agent in any other
+   * workspace (scratch) — the main checkout of the code these guards run from.
+   * `null` for a human session working in the main checkout itself.
+   */
+  protectedRoot: string | null;
+  /**
    * The Claude Code session this tool call belongs to, straight off the
    * PreToolUse payload. Guards that carry state across calls key it on this.
    */

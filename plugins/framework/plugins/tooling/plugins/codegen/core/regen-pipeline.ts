@@ -20,6 +20,7 @@ import { assertPreBarrelManifestsFresh } from "./pre-barrel-guard";
 import { assertSlotsDeclared } from "./slot-declaration-guard";
 import { syncPluginPackageNames } from "./package-names";
 import { generateExemptRuleIds } from "./exempt-rule-ids-gen";
+import { generateClaudeSettings } from "./claude-settings-gen";
 
 /**
  * Single source of truth for the ordered, non-migration **repo-tree** codegen
@@ -249,5 +250,8 @@ export async function regenerateManifestCodegen({
   }
   await onStep("exemptRuleIds", "exempt rule-id union", () =>
     generateExemptRuleIds({ root }),
+  );
+  await onStep("claudeSettings", "claude settings protections", () =>
+    generateClaudeSettings({ root }),
   );
 }

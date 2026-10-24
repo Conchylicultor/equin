@@ -21,14 +21,15 @@ failure was exactly a launch that left the delivered values out).
 
 ## Plugin reference
 
-- Description: What every app-launched agent starts with, whatever runtime hosts it: the agent process's allowlisted environment (the env -i wrapper, the values it delivers, its PATH and login shell — agentSessionLaunch), the fixed CLI settings, the hooks every runtime runs (the compaction hook) and the one merge of the launch's settings fragments.
+- Description: What every app-launched agent starts with, whatever runtime hosts it: the agent process's allowlisted environment (the env -i wrapper, the values it delivers, its PATH and login shell — agentSessionLaunch), the fixed CLI settings, the policy every runtime launches with (the agent-policy guards and deny rules, the compaction hook) and the one merge of the launch's settings fragments.
 - Server:
   - Uses: `conversations/compaction-context.compactionHookEntry`
   - Exports (types):
     - `AgentSessionEnv`
     - `LaunchHooks`
+    - `LaunchPolicy`
   - Exports (values):
-    - `agentLaunchHooks`
+    - `agentLaunchPolicy`
     - `agentSessionEnv`
     - `agentSessionLaunch`
     - `LAUNCH_CLI_SETTINGS`

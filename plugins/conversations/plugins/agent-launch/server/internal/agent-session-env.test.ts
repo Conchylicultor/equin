@@ -60,6 +60,8 @@ describe("agentSessionLaunch", () => {
     SINGULARITY_CONVERSATION_ID: "conv-test",
     SINGULARITY_PARENT_HOST: "att-test-w6l1",
     CLAUDE_CODE_DISABLE_AGENT_VIEW: "1",
+    SINGULARITY_GUARDS_ROOT: "/fixture/repo",
+    SINGULARITY_WORKSPACE_ROOT: "/fixture/workspaces/att-test-w6l1",
   };
   const launch = agentSessionLaunch({
     env: ENV,

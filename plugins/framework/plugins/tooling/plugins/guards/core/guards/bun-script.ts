@@ -1,6 +1,7 @@
 import { defineGuard } from "../define-guard";
 import { MODULE_EXTENSION } from "../module-extension";
-import { findCall } from "../parse-shell";
+import { classifyRepo } from "../git-target";
+import { findCall, type ShellCall } from "../parse-shell";
 import type { BashInput } from "../types";
 
 /**
@@ -65,16 +66,30 @@ function executedModule(args: string[]): string | undefined {
   return undefined;
 }
 
+/**
+ * Whether the module `call` executes sits in a equin checkout — the only
+ * place resolution can walk up into a checkout's `node_modules`, and the only
+ * place `./equin run` (the fix the hint names) exists. A script in a scratch
+ * workspace or any other directory outside a checkout is left alone.
+ */
+function runsInCheckout(call: ShellCall, cwd: string): boolean {
+  const script = executedModule(call.args);
+  if (script === undefined) return false;
+  const path = script.startsWith("/") ? script : `${call.cwd || cwd}/${script}`;
+  return classifyRepo(path).kind === "singularity";
+}
+
 export const bunScriptGuard = defineGuard<BashInput>({
   name: "bun-script",
   matcher: "Bash",
   bypassToken: ".allow-bun-script",
-  check(input) {
+  check(input, ctx) {
     const cmd = input.command;
     if (!cmd) return null;
     const offending = findCall(
       cmd,
-      (c) => c.name === "bun" && executedModule(c.args) !== undefined,
+      (c) => c.name === "bun" && runsInCheckout(c, ctx.cwd),
+      ctx.cwd,
     );
     if (!offending) return null;
     const script = executedModule(offending.args)!;

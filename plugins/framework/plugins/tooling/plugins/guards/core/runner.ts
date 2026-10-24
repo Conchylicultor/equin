@@ -55,6 +55,11 @@ function matches(g: Guard["matcher"], tool: string): boolean {
 export interface HookOptions {
   /** See `GuardContext.writableDataDirs` — resolved, absolute. */
   writableDataDirs: readonly string[];
+  /**
+   * The workspace root the launch named (`WORKSPACE_ROOT_ENV`), `null` in a
+   * session no app launched — see `GuardContext.workRoot`.
+   */
+  workspaceRoot: string | null;
 }
 
 export async function runHook(
@@ -73,6 +78,7 @@ export async function runHook(
       ? null
       : { id: input.agent_id, type: input.agent_type ?? "unknown" },
     input.tool_use_id ?? null,
+    options.workspaceRoot,
   );
   const toolInput = (input.tool_input ?? {}) as Record<string, unknown>;
 

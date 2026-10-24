@@ -13,6 +13,7 @@ import { createScratchWorkspace } from "./scratch-workspace";
 const trusted: string[] = [];
 const scratchWorkspace = createScratchWorkspace({
   assertTrusted: (dir) => trusted.push(dir),
+  guardsRoot: () => "/repo",
 });
 
 const order: string[] = [];

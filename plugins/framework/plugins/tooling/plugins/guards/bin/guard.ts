@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
+import { WORKSPACE_ROOT_ENV } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/agent-policy/core";
 import { runHook } from "../core/runner";
 
 /**
@@ -33,4 +34,10 @@ if (raw.trim()) {
   }
 }
 
-await runHook(input as Parameters<typeof runHook>[0], { writableDataDirs });
+// Set by an app launch for every workspace kind; absent in a human session.
+const workspaceRoot = process.env[WORKSPACE_ROOT_ENV] || null;
+
+await runHook(input as Parameters<typeof runHook>[0], {
+  writableDataDirs,
+  workspaceRoot,
+});

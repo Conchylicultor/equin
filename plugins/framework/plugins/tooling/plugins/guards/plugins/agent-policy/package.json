@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-framework-tooling-guards-agent-policy",
+  "version": "0.0.1",
+  "private": true,
+  "description": "The protections every agent runs with — the guard and stop-guard hooks and the deny rules — declared once as data: `.claude/settings.json`'s protection keys are generated from it (guards:claude-settings-in-sync) and every app launch carries it, whatever its workspace, so an agent outside the repo (a scratch workspace) is guarded too."
+}

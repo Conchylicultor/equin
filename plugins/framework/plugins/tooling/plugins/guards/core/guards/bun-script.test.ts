@@ -1,15 +1,18 @@
 import { describe, expect, test } from "bun:test";
 import { createContext } from "../context";
 import type { Verdict } from "../types";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
 import { bunScriptGuard } from "./bun-script";
 
-function verdict(command: string): Verdict {
+function verdict(command: string, cwd = REPO_ROOT): Verdict {
   // The guard's check is synchronous (hasBypass stats a path), so the result is
-  // a Verdict — and /tmp holds no `.allow-bun-script`, so the bypass is off.
-  return bunScriptGuard.check({ command }, createContext("/tmp")) as Verdict;
+  // a Verdict. The default cwd is this checkout — the guard only judges a
+  // script inside a equin checkout — and holds no `.allow-bun-script`.
+  return bunScriptGuard.check({ command }, createContext(cwd)) as Verdict;
 }
 
-const blocks = (command: string) => verdict(command).kind === "deny";
+const blocks = (command: string, cwd?: string) =>
+  verdict(command, cwd).kind === "deny";
 
 // Absolute-path prefixes for the commands fed to the parser below. They are
 // PARSER INPUT — strings this file hands to a shell parser — never paths it
@@ -42,7 +45,7 @@ describe("bun-script guard", () => {
     });
 
     test("absolute path", () => {
-      expect(blocks(`bun ${USERS}me/repo/scripts/verify.ts`)).toBe(true);
+      expect(blocks(`bun ${REPO_ROOT}/scripts/verify.ts`)).toBe(true);
     });
 
     test(".tsx counts too", () => {
@@ -88,6 +91,22 @@ describe("bun-script guard", () => {
 
     test("invoked by absolute path to the binary", () => {
       expect(blocks(`${BREW_BIN}/bun scripts/verify.ts`)).toBe(true);
+    });
+  });
+
+  describe("a script outside every equin checkout is left alone", () => {
+    // A scratch workspace has no checkout above it to walk into, and no
+    // `./equin run` for the hint to name.
+    test("relative script from a non-checkout cwd", () => {
+      expect(blocks("bun x.ts", "/tmp")).toBe(false);
+    });
+
+    test("absolute script outside a checkout, from inside one", () => {
+      expect(blocks("bun /tmp/scratch/verify.ts")).toBe(false);
+    });
+
+    test("cd out of the checkout first", () => {
+      expect(blocks("cd /tmp && bun verify.ts")).toBe(false);
     });
   });
 
@@ -204,7 +223,8 @@ describe("bun-script guard", () => {
     });
 
     test("sequence — offending bun after an unrelated command", () => {
-      expect(blocks("cd /tmp; bun run scripts/verify.ts")).toBe(true);
+      // The cd stays inside the checkout: a script under /tmp is left alone.
+      expect(blocks("cd plugins; bun run scripts/verify.ts")).toBe(true);
     });
 
     test("multi-line script — offending bun on line 2", () => {

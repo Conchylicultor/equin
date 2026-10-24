@@ -7,8 +7,15 @@
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   },
   "permissions": {
-    "allow": ["mcp__equin__query_db", "Bash(rg:*)", "Bash(ls:*)"],
-    "deny": ["EnterWorktree", "ExitWorktree"]
+    "allow": [
+      "mcp__equin__query_db",
+      "Bash(rg:*)",
+      "Bash(ls:*)"
+    ],
+    "deny": [
+      "EnterWorktree",
+      "ExitWorktree"
+    ]
   },
   "enableAllProjectMcpServers": true,
   "hooks": {
@@ -18,7 +25,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "command -v bun >/dev/null 2>&1 || { echo 'guards: bun is not on PATH, so no PreToolUse guard can run; every tool call is blocked until it is (an agent pane seeds PATH with the mise shims: runtime-tmux agentSessionPath)' >&2; exit 2; }; bun \"$CLAUDE_PROJECT_DIR/plugins/framework/plugins/tooling/plugins/guards/bin/guard.ts\""
+            "command": "command -v bun >/dev/null 2>&1 || { echo 'guards: bun is not on PATH, so no PreToolUse guard can run; every tool call is blocked until it is (an agent pane seeds PATH with the mise shims: runtime-tmux agentSessionPath)' >&2; exit 2; }; bun \"${SINGULARITY_GUARDS_ROOT:-$CLAUDE_PROJECT_DIR}/plugins/framework/plugins/tooling/plugins/guards/bin/guard.ts\""
           }
         ]
       }
@@ -28,7 +35,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun \"$CLAUDE_PROJECT_DIR/plugins/framework/plugins/tooling/plugins/guards/bin/stop-guard.ts\""
+            "command": "bun \"${SINGULARITY_GUARDS_ROOT:-$CLAUDE_PROJECT_DIR}/plugins/framework/plugins/tooling/plugins/guards/bin/stop-guard.ts\""
           }
         ]
       }
@@ -38,7 +45,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun \"$CLAUDE_PROJECT_DIR/plugins/framework/plugins/tooling/plugins/guards/bin/stop-guard.ts\""
+            "command": "bun \"${SINGULARITY_GUARDS_ROOT:-$CLAUDE_PROJECT_DIR}/plugins/framework/plugins/tooling/plugins/guards/bin/stop-guard.ts\""
           }
         ]
       }

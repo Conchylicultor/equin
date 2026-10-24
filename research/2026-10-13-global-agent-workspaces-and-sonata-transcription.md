@@ -14,7 +14,9 @@ Two constraints from the user shape the design:
 2. **That agent must not carry equin's context.** Today every conversation runs in a git
    worktree of this repo, so it boots with the root CLAUDE.md, the plugin index, the repo's
    `.claude/settings.json` guards and every `equin` MCP tool — tens of thousands of wasted tokens for
-   a task that never touches the code.
+   a task that never touches the code. *(Correction, 2026-10-24: the guards are protections, not
+   context, and were never meant to be dropped. Every launch now carries them, whatever the
+   workspace: `research/2026-10-24-global-agent-protections-every-workspace.md`.)*
 
 Hence two deliverables, the first generic and load-bearing:
 

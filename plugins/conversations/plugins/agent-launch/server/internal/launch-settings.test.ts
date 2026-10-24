@@ -1,8 +1,9 @@
+import { agentPolicySettings } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/agent-policy/core";
 import { describe, expect, test } from "bun:test";
 import { resolveEffortSettings } from "@plugins/conversations/plugins/effort-provider/core";
 import type { CompactionHookEntry } from "@plugins/conversations/plugins/compaction-context/core";
 import {
-  agentLaunchHooks,
+  agentLaunchPolicy,
   LAUNCH_CLI_SETTINGS,
   mergeLaunchSettings,
 } from "./launch-settings";
@@ -40,10 +41,19 @@ describe("launch settings", () => {
   });
 });
 
-describe("agentLaunchHooks", () => {
+describe("agentLaunchPolicy", () => {
   test("the compaction hook runs on SessionStart's compact source only", () => {
-    expect(agentLaunchHooks({ compaction: COMPACTION })).toEqual({
-      SessionStart: [{ matcher: "compact", hooks: [COMPACTION] }],
-    });
+    expect(
+      agentLaunchPolicy({ compaction: COMPACTION }).hooks.SessionStart,
+    ).toEqual([{ matcher: "compact", hooks: [COMPACTION] }]);
+  });
+
+  test("every launch carries the agent policy's hooks and deny rules", () => {
+    const policy = agentPolicySettings();
+    const launch = agentLaunchPolicy({ compaction: COMPACTION });
+    for (const [event, groups] of Object.entries(policy.hooks)) {
+      expect(launch.hooks[event]).toEqual(groups);
+    }
+    expect(launch.permissions).toEqual(policy.permissions);
   });
 });

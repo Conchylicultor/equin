@@ -5,6 +5,7 @@ export { Workspace } from "./internal/registry";
 export type {
   LaunchContext,
   LaunchFragment,
+  LaunchPermissions,
   LaunchMcpServer,
   Resumability,
   SettingSource,

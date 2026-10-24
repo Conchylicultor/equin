@@ -1,60 +1,47 @@
 import { describe, expect, test } from "bun:test";
 import { scratchLaunchFragment } from "./launch-fragment";
 
-/** The macOS automation deny rules every scratch session carries. */
-const TCC_DENY = [
-  "Bash(osascript:*)",
-  "Bash(screencapture:*)",
-  "Bash(automator:*)",
-  "Bash(cliclick:*)",
-  "Bash(peekaboo:*)",
-  "Bash(shortcuts run:*)",
-];
-
 const URL = "http://equin.localhost:9000/api/mcp/conv-1";
+const ROOT = "/repo";
 
 describe("scratchLaunchFragment", () => {
   test("user + the dir's own sources, and only the app's MCP server", () => {
-    const fragment = scratchLaunchFragment({ mcpUrl: URL });
+    const fragment = scratchLaunchFragment({ mcpUrl: URL, guardsRoot: ROOT });
     expect(fragment.settingSources).toEqual(["user", "project"]);
     expect(fragment.mcpServers).toEqual({ equin: { type: "http", url: URL } });
     expect(fragment.strictMcpConfig).toBe(true);
   });
 
-  test("the profile's permissions ride the settings fragment", () => {
+  test("the profile's permissions ride the typed field, never settings", () => {
     const permissions = { allow: ["Bash", "Read"], deny: ["WebFetch"] };
-    expect(
-      scratchLaunchFragment({ mcpUrl: URL, permissions }).settings,
-    ).toEqual({
-      permissions: { allow: ["Bash", "Read"], deny: ["WebFetch", ...TCC_DENY] },
+    const fragment = scratchLaunchFragment({
+      mcpUrl: URL,
+      guardsRoot: ROOT,
+      permissions,
     });
+    expect(fragment.permissions).toEqual(permissions);
+    expect(fragment.settings).toEqual({});
+    expect(
+      scratchLaunchFragment({ mcpUrl: URL, guardsRoot: ROOT }).permissions,
+    ).toBeUndefined();
   });
 
-  test("macOS automation is denied even without a profile deny list", () => {
-    expect(scratchLaunchFragment({ mcpUrl: URL }).settings).toEqual({
-      permissions: { deny: TCC_DENY },
-    });
-  });
-
-  test("a profile's own copy of a TCC rule is not repeated", () => {
-    const permissions = { deny: ["Bash(osascript:*)", "WebFetch"] };
+  test("the agent's guards run from the launching checkout", () => {
+    // Every guard — macos-automation included — rides the launch's agent
+    // policy, so the fragment needs no deny-list copy of any of them.
     expect(
-      scratchLaunchFragment({ mcpUrl: URL, permissions }).settings,
-    ).toEqual({
-      permissions: {
-        deny: ["Bash(osascript:*)", "WebFetch", ...TCC_DENY.slice(1)],
-      },
-    });
+      scratchLaunchFragment({ mcpUrl: URL, guardsRoot: ROOT }).guardsRoot,
+    ).toBe(ROOT);
   });
 
   test("a sandboxed profile's Bash cannot leave the sandbox", () => {
-    const settings = scratchLaunchFragment({
+    const fragment = scratchLaunchFragment({
       mcpUrl: URL,
+      guardsRoot: ROOT,
       permissions: { deny: ["Write"] },
       sandbox: true,
-    }).settings;
-    expect(settings).toEqual({
-      permissions: { deny: ["Write", ...TCC_DENY] },
+    });
+    expect(fragment.settings).toEqual({
       sandbox: {
         enabled: true,
         failIfUnavailable: true,
@@ -62,5 +49,6 @@ describe("scratchLaunchFragment", () => {
         allowUnsandboxedCommands: false,
       },
     });
+    expect(fragment.permissions).toEqual({ deny: ["Write"] });
   });
 });

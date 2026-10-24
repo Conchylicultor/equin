@@ -13,10 +13,9 @@ export const mainEditsGuard = defineGuard<FileInput>({
     if (!f) return null;
     if (!f.startsWith("/")) f = resolve(ctx.cwd, f);
 
-    // The allowed boundary is the worktree ROOT, not raw cwd — the hook cwd
+    // The allowed boundary is the workspace ROOT, not raw cwd — the hook cwd
     // tracks the shell's persistent `cd` and can sit in any subdirectory.
-    const wt = worktreeContextOf(ctx.cwd);
-    const workRoot = wt?.worktreeRoot ?? ctx.cwd;
+    const workRoot = ctx.workRoot;
     if (f === workRoot || f.startsWith(`${workRoot}/`)) return null;
 
     // `/tmp` is a symlink to `/private/tmp` on macOS, so the scratchpad the
@@ -58,15 +57,19 @@ export const mainEditsGuard = defineGuard<FileInput>({
     // Re-base a main-checkout path onto the worktree for the hint — but only
     // when f is genuinely in the main checkout. A path inside ANOTHER agent's
     // worktree must not be re-based (it would compose a nonsense path).
+    const repoRoot = ctx.protectedRoot;
     const relPath =
-      wt && f.startsWith(`${wt.repoRoot}/`) && worktreeContextOf(f) === null
-        ? f.slice(wt.repoRoot.length)
+      repoRoot &&
+      worktreeContextOf(workRoot) !== null &&
+      f.startsWith(`${repoRoot}/`) &&
+      worktreeContextOf(f) === null
+        ? f.slice(repoRoot.length)
         : null;
 
     // Built from the same values the checks above read, so the message can
     // never advertise an allowlist the guard does not actually apply.
     const allowlist = [
-      `worktree ${workRoot}`,
+      `workspace ${workRoot}`,
       "/tmp",
       ...ctx.writableDataDirs,
     ].join(", ");
@@ -75,7 +78,9 @@ export const mainEditsGuard = defineGuard<FileInput>({
       blocked: `Refusing to edit ${f} — this path is not in the allowlist (${allowlist}).`,
       hint: relPath
         ? `Edit \`${workRoot}${relPath}\` instead — your worktree IS your working copy of the repo.`
-        : `Your worktree IS your working copy of the repo — it contains everything the main repo does, including .claude/skills/ and .claude/settings.json. Edit those files at ${workRoot}/.claude/** instead of the shared root.`,
+        : worktreeContextOf(workRoot)
+          ? `Your worktree IS your working copy of the repo — it contains everything the main repo does, including .claude/skills/ and .claude/settings.json. Edit those files at ${workRoot}/.claude/** instead of the shared root.`
+          : `Write inside your workspace (${workRoot}) or /tmp instead.`,
     };
   },
 });

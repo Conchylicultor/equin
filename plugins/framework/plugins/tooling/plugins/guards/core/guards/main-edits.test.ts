@@ -124,3 +124,24 @@ describe("main-edits guard", () => {
     });
   });
 });
+
+describe("main-edits guard in a launch-named workspace", () => {
+  const SCRATCH = "/s/state/workspaces/att-1-abcd";
+  const launched = (f: string, cwd: string) =>
+    mainEditsGuard.check(
+      { file_path: f },
+      createContext(cwd, "s", [], undefined, null, null, SCRATCH),
+    ) as Verdict;
+
+  test("a scratch agent edits anywhere in its workspace, from a subdirectory cwd", () => {
+    expect(
+      launched(`${SCRATCH}/out/score.xml`, `${SCRATCH}/sub`).kind,
+    ).not.toBe("deny");
+  });
+
+  test("an edit outside it is refused, pointing back at the workspace", () => {
+    const v = launched(`${REPO}/plugins/x.ts`, `${SCRATCH}/sub`);
+    expect(v.kind).toBe("deny");
+    expect(v.kind === "deny" && v.reason).toContain(`workspace ${SCRATCH}`);
+  });
+});

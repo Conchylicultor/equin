@@ -1,6 +1,8 @@
 import { closeSync, existsSync, fstatSync, openSync, readSync } from "node:fs";
 import { join } from "node:path";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
 import { classifyRepo } from "./git-target";
+import { worktreeContextOf } from "./worktree-root";
 import type {
   AllowVerdict,
   DenyVerdict,
@@ -40,6 +42,11 @@ function readTail(path: string): TranscriptRead {
   }
 }
 
+/** The main checkout `checkout` is, or hangs off as a worktree. */
+function mainCheckoutOf(checkout: string): string {
+  return worktreeContextOf(checkout)?.repoRoot ?? checkout;
+}
+
 export function createContext(
   cwd: string,
   sessionId = "unknown",
@@ -59,9 +66,16 @@ export function createContext(
   agent: { id: string; type: string } | null = null,
   /** `tool_use_id` off the payload — see `GuardContext.toolUseId`. */
   toolUseId: string | null = null,
+  /** The launch-named workspace root — see `GuardContext.workRoot`. */
+  workspaceRoot: string | null = null,
 ): GuardContext {
+  const workRoot = workspaceRoot ?? worktreeContextOf(cwd)?.worktreeRoot ?? cwd;
   return {
     cwd,
+    workRoot,
+    protectedRoot:
+      worktreeContextOf(workRoot)?.repoRoot ??
+      (workspaceRoot === null ? null : mainCheckoutOf(REPO_ROOT)),
     sessionId,
     writableDataDirs,
     agent,

@@ -19,6 +19,11 @@ export interface LaunchMcpServer {
  * - `settingSources` — absent: the CLI's default sources.
  * - `mcpServers` — servers added to the agent's own, by name.
  * - `strictMcpConfig` — only `mcpServers`, none from the agent's own config.
+ * - `permissions` — allow / deny rules, unioned with the agent policy's deny
+ *   rules into the launch's one `permissions` key (so never under `settings`).
+ * - `guardsRoot` — the checkout whose guard scripts the launch's policy hooks
+ *   run (guards/agent-policy). Required: every kind answers where its agents'
+ *   guards come from, so none can launch unguarded.
  * - `settings` — merged into the runtime's one settings object (a key both
  *   set throws).
  */
@@ -26,7 +31,15 @@ export interface LaunchFragment {
   settingSources?: readonly SettingSource[];
   mcpServers?: Readonly<Record<string, LaunchMcpServer>>;
   strictMcpConfig?: boolean;
+  permissions?: LaunchPermissions;
+  guardsRoot: string;
   settings: Record<string, unknown>;
+}
+
+/** Claude Code permission rules a launch adds. */
+export interface LaunchPermissions {
+  allow?: readonly string[];
+  deny?: readonly string[];
 }
 
 /** One attempt's workspace: where it is, and what it was launched as. */

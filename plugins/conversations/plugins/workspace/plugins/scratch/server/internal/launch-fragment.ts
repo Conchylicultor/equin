@@ -1,5 +1,7 @@
-import type { LaunchFragment } from "@plugins/conversations/plugins/workspace/server";
-import { MACOS_TCC_COMMANDS } from "@plugins/framework/plugins/tooling/plugins/guards/core";
+import type {
+  LaunchFragment,
+  LaunchPermissions,
+} from "@plugins/conversations/plugins/workspace/server";
 
 /**
  * Claude Code's sandbox for a profile that asked for one (`sandbox: true`):
@@ -29,30 +31,25 @@ const SANDBOX = {
  * - one MCP server, strictly: the app's MCP server for this conversation and
  *   no other — its tools are scoped to the profile's allowlist server-side
  *   (`Mcp.scope`).
- * - the profile's `permissions`, and its `sandbox` ({@link SANDBOX}), merged
- *   into the runtime's settings — with every macOS automation command
- *   (`MACOS_TCC_COMMANDS`) always denied on top of the profile's own deny
- *   list. Repo agents get that from the `macos-automation` guard, which a
- *   scratch session never runs: it loads no repo `.claude/settings.json`.
+ * - the profile's `permissions`, unioned by the runtime with the agent
+ *   policy's deny rules, and its `sandbox` ({@link SANDBOX}) in the settings.
+ * - `guardsRoot`: the launching backend's checkout. No project settings are
+ *   reachable from the dir, so the launch's policy hooks (guards/agent-policy)
+ *   are the agent's only guards — every one of them, `macos-automation`
+ *   included — run from the code that launched it.
  */
 export function scratchLaunchFragment(opts: {
   mcpUrl: string;
-  permissions?: { allow?: readonly string[]; deny?: readonly string[] };
+  guardsRoot: string;
+  permissions?: LaunchPermissions;
   sandbox?: boolean;
 }): LaunchFragment {
-  const deny = [
-    ...new Set([
-      ...(opts.permissions?.deny ?? []),
-      ...MACOS_TCC_COMMANDS.map((cmd) => `Bash(${cmd}:*)`),
-    ]),
-  ];
   return {
     settingSources: ["user", "project"],
     mcpServers: { equin: { type: "http", url: opts.mcpUrl } },
     strictMcpConfig: true,
-    settings: {
-      permissions: { ...opts.permissions, deny },
-      ...(opts.sandbox ? { sandbox: SANDBOX } : {}),
-    },
+    ...(opts.permissions ? { permissions: opts.permissions } : {}),
+    guardsRoot: opts.guardsRoot,
+    settings: opts.sandbox ? { sandbox: SANDBOX } : {},
   };
 }

@@ -1,5 +1,8 @@
-import type { LaunchFragment } from "@plugins/conversations/plugins/workspace/server";
-import type { LaunchHooks } from "@plugins/conversations/plugins/agent-launch/server";
+import type {
+  LaunchFragment,
+  LaunchPermissions,
+} from "@plugins/conversations/plugins/workspace/server";
+import type { LaunchPolicy } from "@plugins/conversations/plugins/agent-launch/server";
 import {
   LAUNCH_CLI_SETTINGS,
   mergeLaunchSettings,
@@ -22,8 +25,8 @@ export interface SdkLaunchInput {
   cwd: string;
   claudeBin: string;
   launch: LaunchFragment;
-  /** The hooks every runtime runs with (`agentLaunchHooks()`). */
-  hooks: LaunchHooks;
+  /** What every runtime launches with (`agentLaunchPolicy()`). */
+  policy: LaunchPolicy;
   model?: ConversationModel;
   effort?: EffortLevel;
   resumeSessionId?: string;
@@ -36,8 +39,9 @@ export interface SdkLaunchInput {
  * The agent's launch options for one `create`: the workspace's typed fragment
  * mapped onto the SDK's own options one to one (where tmux renders it to argv),
  * and the launch's one settings object — the thinking mode, the fixed CLI
- * preferences, the hooks every runtime runs with and the workspace's fragment,
- * merged so a key two of them set throws. Unlike tmux there are no hooks of
+ * preferences, the policy every runtime launches with (hooks; its deny rules
+ * unioned with the workspace's permissions into the one `permissions` key) and
+ * the workspace's fragment, merged so a key two of them set throws. Unlike tmux there are no hooks of
  * this runtime's own: turns are confirmed by the agent's `turn_started` event
  * and questions held in `canUseTool`.
  */
@@ -45,6 +49,7 @@ export function sdkLaunchOptions(input: SdkLaunchInput): AgentLaunchOptions {
   const { launch } = input;
   return {
     cwd: input.cwd,
+    guardsRoot: launch.guardsRoot,
     claudeBin: input.claudeBin,
     // Both resolved at the process start (machine/internal/agent-process.ts).
     disclaimExec: null,
@@ -54,7 +59,10 @@ export function sdkLaunchOptions(input: SdkLaunchInput): AgentLaunchOptions {
     settings: mergeLaunchSettings(
       input.effort ? resolveEffortSettings(input.effort) : undefined,
       LAUNCH_CLI_SETTINGS,
-      { hooks: input.hooks },
+      {
+        hooks: input.policy.hooks,
+        permissions: launchPermissions(input.policy, launch.permissions),
+      },
       launch.settings,
     ),
     settingSources: [...(launch.settingSources ?? DEFAULT_SETTING_SOURCES)],
@@ -67,6 +75,17 @@ export function sdkLaunchOptions(input: SdkLaunchInput): AgentLaunchOptions {
     sessionId: launchSessionId(input.resumeSessionId, input.forkSession),
     prompt: input.prompt && input.prompt.length > 0 ? input.prompt : null,
     appendSystemPrompt: input.appendSystemPrompt || null,
+  };
+}
+
+/** The policy's deny rules plus the workspace's own allow / deny rules. */
+function launchPermissions(
+  policy: LaunchPolicy,
+  workspace: LaunchPermissions | undefined,
+): { allow?: string[]; deny: string[] } {
+  return {
+    ...(workspace?.allow ? { allow: [...workspace.allow] } : {}),
+    deny: [...policy.permissions.deny, ...(workspace?.deny ?? [])],
   };
 }
 

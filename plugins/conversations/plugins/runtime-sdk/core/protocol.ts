@@ -223,6 +223,12 @@ const McpServerSchema = z.object({ type: z.literal("http"), url: z.string() });
  */
 export const AgentLaunchOptionsSchema = z.object({
   cwd: z.string(),
+  /**
+   * The checkout whose guard scripts the launch's policy hooks run (the
+   * workspace's `LaunchFragment.guardsRoot`), delivered to the agent's
+   * environment as `SINGULARITY_GUARDS_ROOT`.
+   */
+  guardsRoot: z.string(),
   /** The system `claude` the SDK runs (`pathToClaudeCodeExecutable`). */
   claudeBin: z.string(),
   /**

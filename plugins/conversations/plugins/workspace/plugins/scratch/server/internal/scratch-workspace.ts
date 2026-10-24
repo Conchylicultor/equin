@@ -7,7 +7,9 @@ import {
   ScratchProfile,
   type WorkspaceImpl,
 } from "@plugins/conversations/plugins/workspace/server";
+import { GUARD_SCRIPTS } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/agent-policy/core";
 import { namespaceUrl } from "@plugins/infra/plugins/namespace/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { scratchWorkspacesDir } from "../../data-dirs";
 import { assertDirTrusted } from "../../core";
@@ -20,6 +22,8 @@ import { scratchLaunchFragment } from "./launch-fragment";
 // real one reads Claude Code's user config.
 export function createScratchWorkspace(deps: {
   assertTrusted: (dir: string) => void;
+  /** The checkout the agent's guards run from (see `scratchLaunchFragment`). */
+  guardsRoot: () => string;
 }): WorkspaceImpl<"scratch"> {
   return {
     kind: "scratch",
@@ -63,6 +67,7 @@ export function createScratchWorkspace(deps: {
           runtimeNamespace(),
           endpointPath(mcpRequest, { conversationId }),
         ),
+        guardsRoot: deps.guardsRoot(),
         permissions: profile.permissions,
         sandbox: profile.sandbox,
       });
@@ -83,6 +88,23 @@ export function createScratchWorkspace(deps: {
   };
 }
 
+/**
+ * This backend's checkout, once its guard scripts are known to be there: a
+ * launch must not install hooks that cannot run (a scratch agent has no other
+ * guards).
+ */
+function launchingCheckoutGuards(): string {
+  for (const rel of Object.values(GUARD_SCRIPTS)) {
+    if (!existsSync(join(REPO_ROOT, rel))) {
+      throw new Error(
+        `scratch launch: guard script missing at ${join(REPO_ROOT, rel)} — refusing to launch an unguarded agent`,
+      );
+    }
+  }
+  return REPO_ROOT;
+}
+
 export const scratchWorkspace = createScratchWorkspace({
   assertTrusted: (dir) => assertDirTrusted(dir),
+  guardsRoot: launchingCheckoutGuards,
 });

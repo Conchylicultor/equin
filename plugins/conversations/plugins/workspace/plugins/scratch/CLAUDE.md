@@ -10,7 +10,10 @@ The `scratch` workspace: `state/workspaces/<attemptId>/`, holding the profile's
   `CLAUDE.md` (`user` alone reads no cwd `CLAUDE.md` — measured). The dir is
   outside the repo, so no repo context is reachable. One MCP server (the app's,
   for this conversation), strictly; the profile's `permissions` ride the
-  settings fragment.
+  fragment's typed `permissions` (unioned with the agent policy's deny rules).
+  **Guards still apply**: every launch carries the agent policy
+  (`guards/agent-policy`), and a scratch fragment's `guardsRoot` is the
+  launching backend's checkout (asserted to hold the guard scripts).
 - **MCP**: `Mcp.scope` resolves a scratch conversation to its profile's
   `mcpTools` exactly, with no server instructions.
 - **Reaper**: `workspace.scratch-reap` (daily, main) deletes a dir a week after
