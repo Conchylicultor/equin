@@ -26,7 +26,9 @@ namespaces and URLs, never an app.
   Linux `equin-desktop window --app <id> --url <url>` (the `.desktop` Exec),
   which sets the glib prgname / gdk program class to `equin-<id>` (the
   `StartupWMClass`). A regular app (own Dock icon), ONE window titled with the
-  shim's name on `<url>?embed=1`, frame remembered per app
+  shim's name on `<url>` (never `?embed=`: the window is the app's own
+  document, not an embed — it keeps its tab set across a reload and the
+  floating global action bar; a relaunch starts fresh), frame remembered per app
   (`<app config dir of dev.equin.app.<id>>/window.json`), no IPC. One process
   per app: a per-user Unix socket `equin-app-<id>.sock` ($TMPDIR /
   $XDG_RUNTIME_DIR) — a later launch hands its URL over and exits; the

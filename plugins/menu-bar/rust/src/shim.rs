@@ -57,18 +57,19 @@ pub fn in_scope(base: &Url, url: &Url) -> bool {
     root.is_empty() || url.path() == root || url.path().starts_with(&format!("{root}/"))
 }
 
-/// `url` as the window loads it: chromeless (`?embed=1`).
-pub fn embedded(url: &Url) -> Url {
+/// `url` as the window loads it: the app's own document, so any `embed` flag
+/// is dropped — an embedded document (`primitives/embed`) keeps no tab set
+/// and draws no global action bar, and the window is not hosted by anything.
+pub fn window_url(url: &Url) -> Url {
     let mut out = url.clone();
     let rest: Vec<(String, String)> =
         url.query_pairs().filter(|(k, _)| k != "embed").map(|(k, v)| (k.into_owned(), v.into_owned())).collect();
     out.set_query(None);
-    {
+    if !rest.is_empty() {
         let mut q = out.query_pairs_mut();
         for (k, v) in &rest {
             q.append_pair(k, v);
         }
-        q.append_pair("embed", "1");
     }
     out
 }
@@ -339,11 +340,12 @@ mod tests {
     }
 
     #[test]
-    fn embedded_sets_one_embed_flag() {
-        assert_eq!(embedded(&u("http://a.localhost:9000/mail")).as_str(), "http://a.localhost:9000/mail?embed=1");
+    fn window_url_drops_the_embed_flag() {
+        assert_eq!(window_url(&u("http://a.localhost:9000/mail")).as_str(), "http://a.localhost:9000/mail");
+        assert_eq!(window_url(&u("http://a.localhost:9000/mail?embed=1")).as_str(), "http://a.localhost:9000/mail");
         assert_eq!(
-            embedded(&u("http://a.localhost:9000/mail?q=1&embed=chrome")).as_str(),
-            "http://a.localhost:9000/mail?q=1&embed=1"
+            window_url(&u("http://a.localhost:9000/mail?q=1&embed=chrome")).as_str(),
+            "http://a.localhost:9000/mail?q=1"
         );
     }
 

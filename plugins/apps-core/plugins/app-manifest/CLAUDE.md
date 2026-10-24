@@ -26,10 +26,11 @@ head tags linking them from the app's pages.
   same colour the rail's tile paints), rasterized with resvg like the release
   CLI, memoized per app and size for the process's life (its inputs only change
   with a build, which restarts it).
-- **Installed = chromeless.** An installed app's window runs in
-  `display-mode: standalone`, which `primitives/embed`'s
-  `isChromelessDocument()` answers true for, so the window draws the app alone
-  — no rail, tab bar or global action bar.
+- **Installed = the app's own document.** An installed app's window runs in
+  `display-mode: standalone`, which the app treats like any browser tab: not
+  embedded (`primitives/embed`), so it keeps its tab set across a reload, and
+  not chromeless, so it boots in solo mode with the floating global action bar
+  (the app can be improved while in use).
 - Chrome treats `*.localhost` as a secure context, so install works on
   `http://<namespace>.localhost:9000`.
 

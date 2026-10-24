@@ -1,7 +1,8 @@
 //! Window mode: one installed app's own process — a regular app with its own
 //! Dock icon (macOS: the shim bundle's identity) or window class (Linux:
 //! `equin-<id>`, the shim's `StartupWMClass`), and ONE window on the app's URL
-//! with `?embed=1`. The window gets no IPC — no capability names its label.
+//! as the app's own document (never `?embed=`, see `shim::window_url`). The
+//! window gets no IPC — no capability names its label.
 //!
 //! It keeps to its namespace (`window_scope`: the app URL's whole origin, not
 //! its base path), so the app's own ways to other apps — the launcher, a link
@@ -117,7 +118,7 @@ fn on_handoff(app: &AppHandle, scope: &Url, url: Option<Url>) {
     focus(&window);
     if let Some(url) = url {
         if shim::in_scope(scope, &url) {
-            if let Err(e) = window.navigate(shim::embedded(&url)) {
+            if let Err(e) = window.navigate(shim::window_url(&url)) {
                 eprintln!("equin-desktop: cannot navigate to {url}: {e}");
             }
         } else {
@@ -136,8 +137,8 @@ fn scope_script(scope: &Url) -> String {
 
 fn build_window(app: &AppHandle, launch: &Launch) -> tauri::Result<WebviewWindow> {
     let scope = window_scope(&launch.base);
-    let home = shim::embedded(&launch.base);
-    let mut builder = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::External(shim::embedded(&launch.url)))
+    let home = shim::window_url(&launch.base);
+    let mut builder = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::External(shim::window_url(&launch.url)))
         .title(&launch.name)
         .min_inner_size(480.0, 360.0)
         .initialization_script(scope_script(&scope))
@@ -261,7 +262,7 @@ mod tests {
 
     #[test]
     fn the_window_roams_its_namespace() {
-        let scope = window_scope(&Url::parse("http://equin.localhost:9000/mail/inbox?embed=1").unwrap());
+        let scope = window_scope(&Url::parse("http://equin.localhost:9000/mail/inbox").unwrap());
         let u = |s: &str| Url::parse(s).unwrap();
         assert!(shim::in_scope(&scope, &u("http://equin.localhost:9000/home")));
         assert!(shim::in_scope(&scope, &u("http://equin.localhost:9000/agents/c/1")));
