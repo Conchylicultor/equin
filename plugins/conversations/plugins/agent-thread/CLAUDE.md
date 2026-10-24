@@ -17,6 +17,16 @@ tool's error), the web parses an accepted call's input with it. `tool` is the
 tool's OWN name (`places_show_picks`) — calls are matched by it whatever MCP
 server serves them (`mcp__<server>__<tool>`); a transcript name throws.
 
+- `multiple` (default `false`): whether one turn keeps every accepted call of
+  the kind (tasks filed — each its own result) or only the last (a revised set
+  of picks replaces the earlier one).
+- `output` (optional zod schema): what the tool hands BACK, for a card that
+  needs something only the tool knows (the id of what it created). The handler
+  answers `threadResultReply(def, output)` (core; the output as the result's
+  one JSON text block, checked against the schema — so the schema must survive
+  a JSON round trip); `groupThread` reads it back off the call's result into
+  the accepted result's `output` (`undefined` for a kind declaring none).
+
 ## Turns — `groupThread(events, results, conversation)` (core, pure)
 
 - A turn opens at each `user-text` of the transcript as rendered
@@ -25,9 +35,12 @@ server serves them (`mcp__<server>__<tool>`); a transcript name throws.
   call of a result tool the tool **accepted**, which makes it a **result**
   (`accepted`, typed by its kind; or `invalid` when its input no longer parses
   under the schema — a state, never a guessed payload). A call the tool refused
-  stays a step, drawn red. A later result of one kind replaces the earlier one
-  in the same turn.
-- `answer` is the turn's last non-blank assistant text.
+  stays a step, drawn red. A call whose input — or, for a kind with an
+  `output`, whose result — no longer parses is `invalid`. A later result of one
+  kind replaces the earlier one in the same turn, unless the kind is
+  `multiple`.
+- `answer` is the turn's last non-blank assistant text, with the API message
+  id that carried it (`messageId`, null when the line names none).
 - Only the newest turn can be `running`: while the conversation is starting,
   working, or waiting on the user mid-turn (`waitingFor`). Every other turn is
   `done` with an answer or a result, `failed` with neither. A step still
@@ -41,7 +54,21 @@ newest turn's finished steps, its running step, its accepted results, and
 ## Web
 
 - `<AgentThread conversationId results renderResult placeholder? />` — the live
-  thread; fills its container (the host owns the frame). Status is
+  thread; fills its container (the host owns the frame) — or, with
+  `height="hug"`, is as tall as its content up to its parent element's
+  max-height (inherited), past which the turns scroll between the header and
+  the composer (a floating card; `Column fit` underneath; exhibits
+  `agent-thread/hug-short` / `hug-long`). **The header** is
+  either the default — `title`, the status (dot and words: Working… / Waiting
+  for you / Done / "3 picks" / Failed), `OpenConversationButton`, then
+  `headerAction` — or the host's own: `header={(ctx) => …}`
+  (`ThreadHeaderContext`: `conversationId`, `state`, `resultCount`), which
+  owns the whole row (the Ask equin card, whose header is its drag handle).
+  Exclusive by type (`ThreadHeaderOptions`): a `header` takes no `title` /
+  `headerAction`. A host header composes the exported pieces:
+  `<OpenConversationButton conversationId display="label" | "icon" />` (the
+  Agent Manager link; `icon` is "Open in Agent Manager") and
+  `EndThreadButton`. Status is
   `useOptimisticConversationStatus`; the composer's draft is the conversation's
   own prompt draft (`CONVERSATION_PROMPT_DRAFT_KEY`, shared with the Agent
   Manager and with Copy to draft); every turn goes through
@@ -50,6 +77,15 @@ newest turn's finished steps, its running step, its accepted results, and
   working (its rewound text goes back to the draft). A pending question mounts
   the `JsonlViewer.PendingPrompt` dispatch; sent turns show as
   `PendingTurnCard`s.
+- **An answer renders like the transcript's assistant text**:
+  `ActiveDataMarkdown` (active-data/web — the one rendering the transcript row
+  uses too), so active-data blocks and inline tags draw in the thread, each
+  block bound to its identity by the answer's `messageId` (`turn.answer`).
+  `AgentThreadView` mounts a `PromptComposerProvider` over answers and
+  composer, and `ThreadComposer` registers as its prompt
+  (`useRegisterPromptComposer`): a `<go>`'s ▶ sends the choice down the
+  composer's own send path (resume-then-send for an ended conversation), its
+  text inserts at the editor's caret, and `canSend` is the composer's own gate.
 - `<EndThreadButton conversationId onEnded? />` — **Done**, the UI's
   `exit_clean`: a ghost button (tooltip "Close the conversation and drop its
   task") that calls the conversation view's `dropAndExit` (drop-and-exit core —
@@ -116,17 +152,19 @@ waking a hibernated agent with nothing new to show. A refused resume is a toast.
     - `AgentThreadSlots.StepLabel` "TodoWrite" → `TodoWriteStepLabel`
     - `AgentThreadSlots.StepLabel` "AskUserQuestion" → `AskUserQuestionStepLabel`
     - `AgentThreadSlots.StepLabel` "^(Agent|Task)$" → `AgentStepLabel`
-  - Uses: 60 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 63 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/conversation-view/pending-turn` ×9
     - `primitives/live-state` ×7
+    - `conversations/conversation-view` ×4
     - `conversations/conversation-view/jsonl-viewer` ×3
     - `conversations/conversation-view/user-message` ×2
-    - `conversations/conversation-view` ×2
     - `infra/endpoints` ×2
     - `primitives/css/status-dot` ×2
     - `primitives/css/ui-kit` ×2
     - `primitives/dom/auto-scroll` ×2
+    - `primitives/latest-ref` ×2
     - `primitives/slot-render` ×2
+    - `active-data.ActiveDataMarkdown`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolNameLabel`
     - `conversations/hibernation.useMarkConversationViewed`
     - `conversations.useConversation`
@@ -145,10 +183,8 @@ waking a hibernated agent with nothing new to show. A refused resume is a toast.
     - `primitives/css/text.Text`
     - `primitives/dom/in-view.useInView`
     - `primitives/icon-button.IconButton`
-    - `primitives/latest-ref.useLatestRef`
     - `primitives/launch.useTaskLaunch`
     - `primitives/loading.Loading`
-    - `primitives/markdown.Markdown`
     - `primitives/pane.useOpenPane`
     - `primitives/persistent-draft.useDraft`
     - `primitives/text-editor.TextEditor`
@@ -158,6 +194,8 @@ waking a hibernated agent with nothing new to show. A refused resume is a toast.
     - `AgentThreadProps`
     - `AgentThreadViewProps`
     - `EndThreadButtonProps`
+    - `OpenConversationButtonProps`
+    - `RenderThreadHeader`
     - `RenderThreadResult`
     - `ResultWords`
     - `StartThreadOptions`
@@ -165,12 +203,15 @@ waking a hibernated agent with nothing new to show. A refused resume is a toast.
     - `StartThreadResult`
     - `StepLabelContribution`
     - `StepLabelProps`
+    - `ThreadHeaderContext`
+    - `ThreadHeaderOptions`
     - `ThreadSnapshot`
   - Exports (values):
     - `AgentThread`
     - `AgentThreadSlots`
     - `AgentThreadView`
     - `EndThreadButton`
+    - `OpenConversationButton`
     - `StepLabel`
     - `useLatestResult`
     - `useStartThread`
@@ -207,6 +248,7 @@ waking a hibernated agent with nothing new to show. A refused resume is a toast.
     - `ThreadProgress`
     - `ThreadResult`
     - `ThreadResultDef`
+    - `ThreadResultOutput`
     - `ThreadResultPayload`
     - `ThreadRun`
     - `ThreadState`
@@ -222,6 +264,7 @@ waking a hibernated agent with nothing new to show. A refused resume is a toast.
     - `resultCountOf`
     - `THREAD_RUNS_DEFAULT_LIMIT`
     - `threadProgressOf`
+    - `threadResultReply`
     - `threadRuns`
     - `threadStateOf`
 - Cross-plugin:
@@ -240,5 +283,6 @@ waking a hibernated agent with nothing new to show. A refused resume is a toast.
     - `apps/places/ask`
     - `apps/places/places-map`
     - `apps/sonata/transcription`
+    - `hints/ask`
 
 <!-- AUTOGENERATED:END -->

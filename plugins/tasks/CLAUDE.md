@@ -116,6 +116,7 @@
     - `conversations/conversation-view/dependent-count`
     - `conversations/conversation-view/drop-dependents`
     - `conversations/conversation-view/tasks-panel`
+    - `hints/ask`
     - `tasks/auto-start`
     - `tasks/auto-start/launch-option`
     - `tasks/automations`

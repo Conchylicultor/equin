@@ -208,6 +208,7 @@ the code:
     - `apps/website/pages/apps`
     - `apps/website/shell`
     - `hints`
+    - `hints/ask`
     - `layouts/miller`
     - `plugin-meta/exhibits`
     - `primitives/pane`

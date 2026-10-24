@@ -8,6 +8,8 @@ import { HintHost } from "./components/hint-host";
 import { hintsTheme } from "./internal/hints-theme";
 import {
   dispatchTour,
+  endPointer,
+  isPointing,
   isTourRunning,
   pressNextKey,
 } from "./internal/engine-store";
@@ -17,12 +19,14 @@ export { Hints } from "./slots";
 export { useHintAnchor, useHintAnchorPulse } from "./internal/anchor-registry";
 export { emitHintSignal } from "./internal/signal-bus";
 export {
+  pointAt,
   setTourData,
   startTour,
   useHintMoment,
   useTourRun,
 } from "./internal/engine-store";
 export type { TourRunView } from "./internal/engine-store";
+export type { PointAtOptions } from "./internal/pointer";
 export { useHints, useTours } from "./internal/registry";
 export { useHintSeen, useResetHints } from "./internal/seen";
 export { useHintCatalog } from "./internal/use-catalog";
@@ -31,7 +35,7 @@ export type { AnyTour } from "./internal/tour-machine";
 
 export default {
   description:
-    "The hints engine, web half: Hints.Hint / Hints.Tour declarations, useHintAnchor (ref registration, holding a floating toolbar open while its tip shows), useHintMoment (a tip shown once at its moment, lowest order first, one at a time), startTour / autoStart, emitHintSignal, the seen state and catalog reads — and the one HintHost at Core.Root drawing the active tip (halo + card) or the tour's welcome card / spotlit step on one persistent stage — every change of scene a CSS transition of the same elements — in the hints' own fixed theme (the same look in every app), every tour end pulsing ? and toasting where the tour lives.",
+    "The hints engine, web half: Hints.Hint / Hints.Tour declarations, useHintAnchor (ref registration, holding a floating toolbar open while its tip shows), useHintMoment (a tip shown once at its moment, lowest order first, one at a time), startTour / autoStart, pointAt (a one-off spotlight + caption on an element the caller resolved, refused while a tour runs), emitHintSignal, the seen state and catalog reads — and the one HintHost at Core.Root drawing the active tip (halo + card) or the tour's welcome card / spotlit step on one persistent stage — every change of scene a CSS transition of the same elements — in the hints' own fixed theme (the same look in every app), every tour end pulsing ? and toasting where the tour lives.",
   slots: Hints,
   contributions: [
     Core.Root({ component: HintHost }),
@@ -49,6 +53,16 @@ export default {
       // prevents it first, and the shortcut stands down.
       enableInInputs: true,
       handler: () => dispatchTour({ type: "end", outcome: "dismissed" }),
+    }),
+    defineShortcut({
+      id: "hints.pointer-end",
+      keys: "Escape",
+      label: "Close the spotlight",
+      group: "Hints",
+      priority: 10,
+      when: isPointing,
+      enableInInputs: true,
+      handler: () => endPointer("close"),
     }),
     defineShortcut({
       id: "hints.tour-next",

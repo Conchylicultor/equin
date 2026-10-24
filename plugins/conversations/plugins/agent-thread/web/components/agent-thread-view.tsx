@@ -16,11 +16,12 @@ import {
   StatusDot,
   type StatusDotPaint,
 } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
-import { Markdown } from "@plugins/primitives/plugins/markdown/web";
+import { ActiveDataMarkdown } from "@plugins/active-data/web";
 import {
   UserMessageCard,
   UserMessageText,
 } from "@plugins/conversations/plugins/conversation-view/plugins/user-message/web";
+import { PromptComposerProvider } from "@plugins/conversations/plugins/conversation-view/web";
 import type {
   AcceptedThreadResult,
   ThreadResult,
@@ -39,6 +40,33 @@ export type RenderThreadResult<D extends ThreadResultDef> = (
   result: AcceptedThreadResult<D>,
   ctx: { latest: boolean },
 ) => ReactNode;
+
+/** What a host-drawn header reads: where the thread stands, and whose it is. */
+export interface ThreadHeaderContext {
+  conversationId: string;
+  state: ThreadState;
+  /** The newest turn's delivered results (as `resultWords` counts them). */
+  resultCount: number;
+}
+
+/** A host's own header for the thread, drawn in place of the default one. */
+export type RenderThreadHeader = (ctx: ThreadHeaderContext) => ReactNode;
+
+/**
+ * Who draws the thread's header. Either the default — the status (dot and
+ * words) between the host's `title` and `headerAction` — or the host's own
+ * `header`, which then owns the whole row (a floating card whose header is
+ * its drag handle). Exclusive: a `header` takes no `title` or `headerAction`.
+ */
+export type ThreadHeaderOptions =
+  | {
+      header?: undefined;
+      /** Leading in the header — who the thread is with ("✦ Sonnet"). */
+      title?: ReactNode;
+      /** Trailing in the header — the host's own control (a close). */
+      headerAction?: ReactNode;
+    }
+  | { header: RenderThreadHeader; title?: never; headerAction?: never };
 
 const STATE_DOT: Record<ThreadState, StatusDotPaint> = {
   working: { colorClass: "bg-primary animate-pulse" },
@@ -116,11 +144,13 @@ function InvalidResult({ result }: { result: ThreadResult }) {
 }
 
 function TurnView<D extends ThreadResultDef>({
+  conversationId,
   turn,
   latest,
   renderResult,
   resultWords,
 }: {
+  conversationId: string;
   turn: ThreadTurn<D>;
   latest: boolean;
   renderResult: RenderThreadResult<D>;
@@ -136,7 +166,11 @@ function TurnView<D extends ThreadResultDef>({
       {thinking && <BouncingDots />}
       {turn.answer && (
         <Text as="div" variant="body">
-          <Markdown>{turn.answer.text}</Markdown>
+          <ActiveDataMarkdown
+            text={turn.answer.text}
+            conversationId={conversationId}
+            messageId={turn.answer.messageId}
+          />
         </Text>
       )}
       {turn.results.map((result) => (
@@ -158,40 +192,60 @@ function TurnView<D extends ThreadResultDef>({
   );
 }
 
-export interface AgentThreadViewProps<D extends ThreadResultDef> {
+export type AgentThreadViewProps<D extends ThreadResultDef> =
+  AgentThreadViewBaseProps<D> & ThreadHeaderOptions;
+
+interface AgentThreadViewBaseProps<D extends ThreadResultDef> {
+  /** The conversation the turns are folded from — the identity of their answers' active-data blocks. */
+  conversationId: string;
   turns: readonly ThreadTurn<D>[];
   state: ThreadState;
   renderResult: RenderThreadResult<D>;
-  /** Leading in the header — who the thread is with ("✦ Sonnet"). */
-  title?: ReactNode;
-  /** How the header counts the newest turn's results; default "N results". */
+  /** How the header and the step lists count results; default "N results". */
   resultWords?: ResultWords;
-  /** Trailing in the header — the Open conversation link, a host's close. */
-  headerAction?: ReactNode;
   /** After the last turn, inside the scroller: a pending question, sent-turn echoes. */
   trailing?: ReactNode;
-  /** Pinned under the scroller. */
+  /**
+   * Pinned under the scroller. The thread's prompt: one that registers itself
+   * (`useRegisterPromptComposer`, as `ThreadComposer` does) is what an answer's
+   * `<go>` choices send through and insert into.
+   */
   composer: ReactNode;
   /** Changing it re-follows the bottom — the user just sent a turn. */
   followKey?: number;
+  /**
+   * How tall the thread is: `fill` (default) fills its container; `hug` sizes
+   * to its content up to its PARENT element's max-height (inherited — the
+   * host's frame sets a `max-h-*`), past which the turns scroll between the
+   * header and the composer. For a floating card that grows with its thread.
+   */
+  height?: ThreadHeight;
 }
+
+/** See `AgentThreadViewBaseProps.height`. */
+export type ThreadHeight = "fill" | "hug";
 
 /**
  * An agent thread as drawn from its turns — the whole look, with every live
  * part (the composer, a pending question, the echoes) handed in. Fills its
- * container: header, the scrolling turns, the composer.
+ * container (or hugs it, `height="hug"`): header, the scrolling turns, the
+ * composer.
  */
-export function AgentThreadView<D extends ThreadResultDef>({
-  turns,
-  state,
-  renderResult,
-  title,
-  resultWords = defaultResultWords,
-  headerAction,
-  trailing,
-  composer,
-  followKey,
-}: AgentThreadViewProps<D>) {
+export function AgentThreadView<D extends ThreadResultDef>(
+  props: AgentThreadViewProps<D>,
+) {
+  const {
+    conversationId,
+    turns,
+    state,
+    renderResult,
+    resultWords = defaultResultWords,
+    trailing,
+    composer,
+    followKey,
+    height = "fill",
+  } = props;
+  const headerOptions: ThreadHeaderOptions = props;
   const { scrollRef, bottomSentinel, isFollowing, jumpToBottom } =
     useStickyScroll({ followKey });
   const attachScroll = useCallback(
@@ -204,58 +258,68 @@ export function AgentThreadView<D extends ThreadResultDef>({
   const resultCount = resultCountOf(last?.results ?? []);
 
   return (
-    <Column
-      className="h-full"
-      header={
-        <ThreadHeader
-          state={state}
-          resultCount={resultCount}
-          resultWords={resultWords}
-          title={title}
-          action={headerAction}
-        />
-      }
-      scrollBody={false}
-      body={
-        // The positioning host for the jump-to-bottom pin.
-        <div className="relative h-full min-h-0">
-          <Scroll axis="y" ref={attachScroll} className="h-full">
-            <Stack gap="lg" className="min-h-full p-md">
-              {turns.length === 0 && trailing == null ? (
-                <Center className={growClass()}>
-                  {state === "working" ? (
-                    <BouncingDots />
-                  ) : (
-                    <Text variant="caption" tone="muted">
-                      {state === "failed"
-                        ? "The agent ended before it started."
-                        : "Nothing here yet."}
-                    </Text>
-                  )}
-                </Center>
-              ) : (
-                turns.map((turn, i) => (
-                  <TurnView
-                    key={`${turn.user.at}:${i}`}
-                    turn={turn}
-                    latest={i === turns.length - 1}
-                    renderResult={renderResult}
-                    resultWords={resultWords}
-                  />
-                ))
-              )}
-              {trailing}
-            </Stack>
-            {bottomSentinel}
-          </Scroll>
-          <JumpToBottomButton
-            handle={{ isFollowing, jumpToBottom }}
-            // eslint-disable-next-line layout/no-adhoc-layout -- corner pin on an external Button (self-renders null when hidden), as in TranscriptView
-            className="absolute bottom-2 right-2 z-nav"
-          />
-        </div>
-      }
-      footer={composer}
-    />
+    // The answers above and the composer below share one prompt.
+    <PromptComposerProvider>
+      <Column
+        {...(height === "hug"
+          ? { fit: true, className: "max-h-[inherit]" }
+          : { className: "h-full" })}
+        header={
+          headerOptions.header === undefined ? (
+            <ThreadHeader
+              state={state}
+              resultCount={resultCount}
+              resultWords={resultWords}
+              title={headerOptions.title}
+              action={headerOptions.headerAction}
+            />
+          ) : (
+            headerOptions.header({ conversationId, state, resultCount })
+          )
+        }
+        scrollBody={false}
+        body={
+          // The positioning host for the jump-to-bottom pin.
+          <div className="relative h-full min-h-0">
+            <Scroll axis="y" ref={attachScroll} className="h-full">
+              <Stack gap="lg" className="min-h-full p-md">
+                {turns.length === 0 && trailing == null ? (
+                  <Center className={growClass()}>
+                    {state === "working" ? (
+                      <BouncingDots />
+                    ) : (
+                      <Text variant="caption" tone="muted">
+                        {state === "failed"
+                          ? "The agent ended before it started."
+                          : "Nothing here yet."}
+                      </Text>
+                    )}
+                  </Center>
+                ) : (
+                  turns.map((turn, i) => (
+                    <TurnView
+                      conversationId={conversationId}
+                      key={`${turn.user.at}:${i}`}
+                      turn={turn}
+                      latest={i === turns.length - 1}
+                      renderResult={renderResult}
+                      resultWords={resultWords}
+                    />
+                  ))
+                )}
+                {trailing}
+              </Stack>
+              {bottomSentinel}
+            </Scroll>
+            <JumpToBottomButton
+              handle={{ isFollowing, jumpToBottom }}
+              // eslint-disable-next-line layout/no-adhoc-layout -- corner pin on an external Button (self-renders null when hidden), as in TranscriptView
+              className="absolute bottom-2 right-2 z-nav"
+            />
+          </div>
+        }
+        footer={composer}
+      />
+    </PromptComposerProvider>
   );
 }

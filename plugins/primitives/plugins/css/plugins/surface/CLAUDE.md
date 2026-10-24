@@ -143,7 +143,7 @@ never be clobbered.
   - Exports (values): `Surface`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
-  - Imported by: 32 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 33 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×14
     - `primitives` ×6
     - `page` ×4
@@ -152,6 +152,7 @@ never be clobbered.
     - `conversations/agents`
     - `debug/queue`
     - `fields/json/config`
+    - `hints/ask`
     - `stats`
 - Exemptions:
   - Exempted by: `primitives/css/ui-kit` (0 debt)

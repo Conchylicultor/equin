@@ -28,6 +28,7 @@ import {
   answerTip,
   clearTourRequest,
   dispatchTour,
+  endPointer,
   isAnswered,
   pressPrimary,
   runTour,
@@ -48,6 +49,7 @@ import {
   type TourRun,
 } from "../internal/tour-machine";
 import { useAnchorElement, useTrackedRect } from "../internal/use-anchor";
+import { pointerCard, type PointerRun } from "../internal/pointer";
 import { hintsThemeScope } from "../internal/hints-theme";
 import { ANCHOR_PADDING, inflate, type HintRect } from "../internal/rect";
 import { HintCard, TourFarewell, WelcomeCard } from "./hint-card";
@@ -153,9 +155,10 @@ export function HintHost() {
 
   // ── The tip queue: step on every input change, and at the settle deadline ──
   const tourRunning = engine.tour !== null;
+  const pointing = engine.pointer !== null;
   const stepTips = useEventCallback(() => {
     stepTipQueue(Date.now(), (hint: Hint) => {
-      if (tourRunning || seenRows === null) return false;
+      if (tourRunning || pointing || seenRows === null) return false;
       if (seenRows.has(hint.id) || isAnswered(hint.id)) return false;
       // On screen: a tip on a scrolled-away anchor would point at nothing.
       return (
@@ -165,7 +168,10 @@ export function HintHost() {
     });
   });
   useEffect(() => subscribeAnchors(stepTips), [stepTips]);
-  useEffect(() => stepTips(), [stepTips, engine.tips, seenRows, tourRunning]);
+  useEffect(
+    () => stepTips(),
+    [stepTips, engine.tips, seenRows, tourRunning, pointing],
+  );
   useEffect(() => {
     const at = wakeAt(engine.tips);
     if (at === null) return;
@@ -185,15 +191,20 @@ export function HintHost() {
   useEffect(() => () => setHeldAnchors([]), []);
 
   const run = engine.tour;
-  const shownTip = run ? null : tip;
+  // `pointAt` refuses while a tour runs and a tour start clears it, so at most one is set.
+  const pointer = run ? null : engine.pointer;
+  const shownTip = run || pointer ? null : tip;
   const step = run && run.phase !== "intro" ? currentStep(run) : null;
   const stepTarget = run && step ? resolveStepAnchor(step, run.data) : null;
   const targetKeyOf = stepTarget ?? shownTip?.anchor ?? null;
   // A tip draws on an anchor the user can see (its eligibility); a tour step
-  // takes its anchor wherever it is and scrolls it into view.
-  const el = useAnchorElement(targetKeyOf ? targetKey(targetKeyOf) : null, {
-    onScreen: !run,
-  });
+  // takes its anchor wherever it is and scrolls it into view. A one-off
+  // spotlight (`pointAt`) brings its own element.
+  const anchorEl = useAnchorElement(
+    targetKeyOf ? targetKey(targetKeyOf) : null,
+    { onScreen: !run },
+  );
+  const el = pointer ? pointer.el : anchorEl;
   const rect = useTrackedRect(el);
   const cueEl = useAnchorElement(step?.cue ? targetKey(step.cue) : null);
   const cueRect = useTrackedRect(cueEl);
@@ -208,13 +219,16 @@ export function HintHost() {
     answerShownTip("acted"),
   );
   useStepEffects(run && step ? { run, step } : null, el);
+  usePointerEffects(pointer, rect);
 
   const scene: StageScene = {
     ...(run
       ? tourScene(run, step, el, rect, cueEl, cueRect)
-      : shownTip
-        ? tipScene(shownTip, el, rect, () => answerShownTip("dismissed"))
-        : EMPTY_SCENE),
+      : pointer
+        ? pointerScene(pointer, rect)
+        : shownTip
+          ? tipScene(shownTip, el, rect, () => answerShownTip("dismissed"))
+          : EMPTY_SCENE),
     toast: farewell,
   };
   return (
@@ -268,6 +282,54 @@ function tipScene(
       ),
     },
   };
+}
+
+/** `pointAt`'s spotlight: a hole on the element and a caption card beside it. */
+function pointerScene(pointer: PointerRun, rect: HintRect | null): StageScene {
+  if (!rect) return EMPTY_SCENE;
+  const box = boxAround(pointer.el, rect, ANCHOR_PADDING);
+  const card = pointerCard(pointer.opts);
+  return {
+    ...EMPTY_SCENE,
+    spot: { mode: "hole", box },
+    card: {
+      variant: "step",
+      target: box,
+      placement: "bottom",
+      content: (
+        <HintCard
+          body={pointer.opts.body}
+          steps={card.steps}
+          onClose={() => endPointer("close")}
+          closeLabel="Close (Esc)"
+          onBack={card.back ? () => endPointer("back") : undefined}
+          primary={{
+            label: card.primary.label,
+            onClick: () => endPointer(card.primary.end),
+          }}
+        />
+      ),
+    },
+  };
+}
+
+/**
+ * A spotlight's effects on its element: brought into view when it goes up,
+ * closed when the element leaves the page (its rect update is the signal —
+ * `autoUpdate`'s resize observer fires as its box goes), and a click on it
+ * (after its own handlers) is the user doing Next themselves.
+ */
+function usePointerEffects(pointer: PointerRun | null, rect: HintRect | null) {
+  const id = pointer?.id ?? null;
+  const el = pointer?.el ?? null;
+  useEffect(() => {
+    if (id !== null && el && !isFullyInViewport(el))
+      revealElement(el, { block: "center" });
+  }, [el, id]);
+  useEffect(() => {
+    if (el && rect && !el.isConnected) endPointer("close");
+  }, [el, rect]);
+  useActivation(el, el !== null, () => endPointer("next"));
 }
 
 function tourScene(

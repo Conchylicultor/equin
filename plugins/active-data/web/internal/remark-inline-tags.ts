@@ -1,5 +1,7 @@
 import type { RemarkPlugins } from "@plugins/primitives/plugins/markdown/web";
-import { parseAttrs } from "./tag-attrs";
+import { parseAttrs, TAG_ATTRS_SOURCE } from "./tag-attrs";
+
+const OPEN_TAG_RE = new RegExp(`^<([\\w-]+)${TAG_ATTRS_SOURCE}?>$`);
 
 /**
  * The element an inline active-data tag becomes in the markdown output: the
@@ -49,9 +51,7 @@ function pairInlineTags(
   for (let i = 0; i < children.length; i++) {
     const open = children[i]!;
     const opened =
-      open.type === "html"
-        ? /^<([\w-]+)(\s[^>]*)?>$/.exec(open.value ?? "")
-        : null;
+      open.type === "html" ? OPEN_TAG_RE.exec(open.value ?? "") : null;
     if (!opened || !tags.has(opened[1]!)) continue;
     const tag = opened[1]!;
     const closeAt = children.findIndex(

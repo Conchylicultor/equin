@@ -3,8 +3,12 @@
 Conversation-scoped markdown enhancers contributed to
 `Markdown.Enhancer` from `@plugins/primitives/plugins/markdown/web`.
 
-Three enhancers, all using `conversationPane.useDataMaybe()` to
-safely detect whether they're inside a conversation (no-op outside):
+Every enhancer (and the `file-links` inline-text walker) takes its checkout
+from `useFileLinksWorkspace()` (`primitives/file-links`) — the
+`FileLinksWorkspaceProvider` the content's HOST renders — and is a no-op
+outside one. Never read pane routes here: Markdown also renders in global
+chrome (a `Core.Root` card), where route reads throw. `useFileTarget` is the
+one path → file-peek target builder.
 
 1. **file-links** — `linkifyChildren` transform + `a` override for
    local file-path links.
@@ -27,19 +31,26 @@ safely detect whether they're inside a conversation (no-op outside):
     - `MarkdownEnhancerSlot`
     - `MarkdownEnhancerSlot`
     - `InlineTextWalkerSlot`
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/inline-text` ×4
-    - `primitives/markdown` ×4
-    - `primitives/file-links` ×2
-    - `primitives/overlay/image-viewer` ×2
-    - `primitives/text-editor/paste-images` ×2
+  - Uses:
     - `conversations/conversation-view/code/file-pane.filePeekPane`
-    - `conversations/conversation-view.conversationPane`
-    - `conversations.useConversationById`
     - `primitives/css/link-chip.LinkChip`
+    - `primitives/file-links.linkifyChildren`
+    - `primitives/file-links.parseFileLinks`
+    - `primitives/file-links.useFileLinksWorkspace`
+    - `primitives/inline-text.InlineTextWalker`
+    - `primitives/inline-text.InlineTextWalkerContext`
+    - `primitives/inline-text.InlineTextWalkerSlot`
+    - `primitives/inline-text.useInlineTextWalker`
     - `primitives/link-gesture.activationProps`
+    - `primitives/markdown.MarkdownEnhancement`
+    - `primitives/markdown.MarkdownEnhancementContext`
+    - `primitives/markdown.MarkdownEnhancerSlot`
+    - `primitives/markdown.useMarkdownEnhancement`
+    - `primitives/overlay/image-viewer.AssetThumbnail`
+    - `primitives/overlay/image-viewer.ViewerThumbnail`
     - `primitives/pane.useOpenPane`
-    - `tasks/task-detail.taskDetailPane`
+    - `primitives/text-editor/paste-images.attachmentUrl`
+    - `primitives/text-editor/paste-images.isAttachmentUrl`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --info`

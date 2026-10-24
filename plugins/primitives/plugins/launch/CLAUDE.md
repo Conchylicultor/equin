@@ -102,17 +102,27 @@ started" notification confirms it), so its props are the form's minus
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --spacing`
-  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×5
-    - `conversations` ×5
-    - `tasks` ×3
-    - `page` ×2
+  - Imported by:
     - `active-data/task`
+    - `apps/agent-manager/welcome`
+    - `apps/home/app-cards`
+    - `apps/prototypes/canvas`
+    - `apps/prototypes/gallery`
+    - `apps/sonata/transcription`
     - `config_v2/settings/conflict-agent`
-    - `hints/help-menu`
+    - `conversations/agent-thread`
+    - `conversations/conversation-view/fork-conversation`
+    - `conversations/conversation-view/jsonl-viewer/investigate-event`
+    - `conversations/conversation-view/rewind`
+    - `conversations/conversations-view`
+    - `page/annotations/todo/task-link`
+    - `page/prompt/block`
     - `primitives/launch/investigate`
     - `reports/launch-fix`
     - `screenshot`
+    - `tasks/attempt-view`
+    - `tasks/task-description`
+    - `tasks/task-list`
 - Sub-plugins:
   - **`investigate`** — The one 'launch an agent to investigate this failure' affordance: <InvestigateAction> — a fixed icon, label and popover, briefed by the caller, filed about the failed record (tasks/task-subject) so…
 

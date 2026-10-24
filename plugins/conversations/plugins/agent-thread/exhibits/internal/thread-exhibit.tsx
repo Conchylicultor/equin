@@ -14,16 +14,30 @@ import { showPicks, type ThreadFixture } from "./fixtures";
  * sends nothing, Open conversation goes nowhere, and a pending question shows
  * no answer form (that card reads the conversation's held question live).
  */
-export function ThreadExhibit({ fixture }: { fixture: ThreadFixture }) {
+export function ThreadExhibit({
+  fixture,
+  height = "fill",
+}: {
+  fixture: ThreadFixture;
+  /** `hug`: a floating card's frame — a max height the thread grows up to. */
+  height?: "fill" | "hug";
+}) {
   const [draft, setDraft] = useState("");
   const turns = groupThread(fixture.events, [showPicks], fixture.conversation);
   const working =
     fixture.conversation.status === "working" ||
     fixture.conversation.status === "starting";
   return (
-    // A host's panel: the thread fills it.
-    <div className="h-[36rem]">
+    // A host's panel: the thread fills it — or, hugging, a floating card's
+    // frame it grows up to, then scrolls inside.
+    <div
+      className={
+        height === "hug" ? "max-h-[24rem] border border-border" : "h-[36rem]"
+      }
+    >
       <AgentThreadView
+        height={height}
+        conversationId="conv-agent-thread-exhibit"
         turns={turns}
         state={threadStateOf(turns, fixture.conversation)}
         renderResult={(result, { latest }) => (

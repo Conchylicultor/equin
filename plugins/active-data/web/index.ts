@@ -19,6 +19,7 @@ export {
   useActiveDataSegments,
 } from "./internal/segment-active-data";
 export type { ActiveDataSegment } from "./internal/segment-active-data";
+export { ActiveDataMarkdown } from "./internal/active-data-markdown";
 export { useActiveDataLinkify } from "./internal/linkify-active-data";
 export {
   ActiveDataIdentityProvider,

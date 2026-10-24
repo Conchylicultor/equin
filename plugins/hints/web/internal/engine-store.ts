@@ -9,6 +9,12 @@ import type {
   TourTrigger,
 } from "../../core";
 import {
+  pointerEndCallback,
+  type PointAtOptions,
+  type PointerEnd,
+  type PointerRun,
+} from "./pointer";
+import {
   emptyTipQueue,
   removeTip,
   requestTip,
@@ -37,12 +43,15 @@ interface EngineState {
   readonly tour: TourRun | null;
   /** A `startTour(id)` the host has not resolved against the registry yet. */
   readonly requestedTour: string | null;
+  /** The one-off spotlight `pointAt` put up — never while a tour runs. */
+  readonly pointer: PointerRun | null;
 }
 
 const initialState: EngineState = {
   tips: emptyTipQueue,
   tour: null,
   requestedTour: null,
+  pointer: null,
 };
 // eslint-disable-next-line scoped-store/no-module-mutable-store -- page-global by design: one hint engine per page; its writers (moments in any surface, the help menu, global shortcuts) live outside any one surface tree
 let state = initialState;
@@ -174,7 +183,8 @@ export function startTour(id: string): void {
 export function runTour(tour: AnyTour): void {
   if (state.tour) dispatchTour({ type: "end", outcome: "dismissed" });
   answered.add(tour.id);
-  set({ ...state, tour: beginTour(tour), requestedTour: null });
+  // A tour supersedes a one-off spotlight: it closes, its callbacks unrun.
+  set({ ...state, tour: beginTour(tour), requestedTour: null, pointer: null });
   emit({ type: "started", tour });
 }
 
@@ -276,4 +286,58 @@ export function pressNextKey(): void {
  */
 export function actOnAnchor(gesture: GestureAdvance): void {
   press({ by: "gesture", gesture });
+}
+
+// ── pointAt: a one-off spotlight ────────────────────────────────────────
+
+let pointerSeq = 0;
+
+/**
+ * Spotlights the element `target()` returns — a hole on it and a caption card
+ * beside it (`body`; Back when `onBack`, Next when `onNext`, else Done; dots
+ * when `step`) — drawn by the same stage as tours and tracked the same way.
+ * No declared anchor, no seen state: the caller has already found the element
+ * (`resolveUiContext`, a ref).
+ *
+ * `target` is called once, now. Fails loudly rather than spotlighting nothing
+ * or something else: it throws when `target()` returns null (resolve first),
+ * when it is not an `HTMLElement`, and while a tour runs (the tour owns the
+ * stage; a spotlight over its step would draw a second card on top of it).
+ *
+ * A second call replaces the first (its callbacks unrun). It ends on Back
+ * (`onBack`), Next or a click on the spotlit element (`onNext`), and Done / × /
+ * Esc / the element leaving the page (no callback). It closes BEFORE the
+ * callback runs, so a callback may `pointAt` the next element. A tour starting
+ * closes it.
+ */
+export function pointAt(
+  target: () => Element | null,
+  opts: PointAtOptions,
+): void {
+  if (state.tour)
+    throw new Error(
+      `pointAt: the "${state.tour.tour.id}" tour is running — it owns the stage; end it first`,
+    );
+  const el = target();
+  if (el === null)
+    throw new Error(
+      "pointAt: target() returned null — resolve the element before pointing at it",
+    );
+  if (!(el instanceof HTMLElement))
+    throw new Error(
+      `pointAt: target() returned a <${el.tagName.toLowerCase()}>, not an HTMLElement`,
+    );
+  set({ ...state, pointer: { id: ++pointerSeq, el, opts } });
+}
+
+/** Ends the spotlight (a no-op when none is up), then runs that end's callback. */
+export function endPointer(how: PointerEnd): void {
+  const pointer = state.pointer;
+  if (!pointer) return;
+  set({ ...state, pointer: null });
+  pointerEndCallback(pointer.opts, how)?.();
+}
+
+export function isPointing(): boolean {
+  return state.pointer !== null;
 }

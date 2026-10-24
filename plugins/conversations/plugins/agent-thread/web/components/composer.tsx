@@ -1,10 +1,13 @@
-import { useCallback } from "react";
+import { useCallback, useRef, type MutableRefObject } from "react";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
-import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import {
+  useEventCallback,
+  useLatestRef,
+} from "@plugins/primitives/plugins/latest-ref/web";
 import {
   getEndpointErrorMessage,
   useEndpointMutation,
@@ -13,7 +16,10 @@ import { showToast } from "@plugins/shell/plugins/toast/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { canSendTurn, stopConversation } from "@plugins/conversations/core";
 import type { ConversationEntry } from "@plugins/conversations/core";
-import { isDraftEmpty } from "@plugins/conversations/plugins/conversation-view/web";
+import {
+  isDraftEmpty,
+  useRegisterPromptComposer,
+} from "@plugins/conversations/plugins/conversation-view/web";
 import {
   conversationPromptDraft,
   useSendConversationTurn,
@@ -36,6 +42,8 @@ export interface ThreadComposerViewProps {
   /** A send or a stop is in flight. */
   busy?: boolean;
   namespace: string;
+  /** Receives the editor's insert-at-caret handle once it is mounted. */
+  insertRef?: MutableRefObject<((text: string) => void) | null>;
 }
 
 /** The thread's prompt line: a slim editor and one trailing Send / Stop button. */
@@ -48,6 +56,7 @@ export function ThreadComposerView({
   onStop,
   busy = false,
   namespace,
+  insertRef,
 }: ThreadComposerViewProps) {
   return (
     <Stack
@@ -67,6 +76,7 @@ export function ThreadComposerView({
           minRows={1}
           maxHeight="8rem"
           namespace={namespace}
+          {...(insertRef ? { insertRef } : {})}
         />
       </Fill>
       {onStop ? (
@@ -107,6 +117,10 @@ function failed(title: string, err: unknown): void {
  * Every turn goes through `useSendConversationTurn`. A conversation whose process
  * ended (gone, done) is resumed first and the turn sent once it is back, so
  * the user can always reply — unless it has no Claude session to resume.
+ *
+ * It is the thread's prompt (`useRegisterPromptComposer`), so an answer's
+ * `<go>` choices reach it: ▶ sends the choice down the same path as Enter, and
+ * the choice's text inserts at the editor's caret.
  */
 export function ThreadComposer({
   conversation,
@@ -149,37 +163,57 @@ export function ThreadComposer({
     !sendAvailability.available ||
     (ended ? !resumable || resumePending : !canSendTurn({ status }));
 
+  // Every turn's way out — the draft's (Enter) and a quick send's (a `<go>`'s
+  // ▶) alike: straight to the agent, or through a resume when it ended.
+  // `onNotSent` runs when the resume failed and nothing was sent.
+  const deliver = useCallback(
+    (text: string, onNotSent?: () => void) => {
+      if (!ended) {
+        sendConversationTurn(id, { text });
+        return;
+      }
+      // Resume needs the computer like a send does, so the gate already
+      // holds whenever this is unavailable.
+      if (resume.kind === "unavailable") throw new Error(resume.message);
+      resume.mutate(
+        { params: { id } },
+        {
+          onSuccess: () => sendConversationTurn(id, { text }),
+          ...(onNotSent ? { onError: onNotSent } : {}),
+        },
+      );
+    },
+    [ended, id, resume, sendConversationTurn],
+  );
+
   const send = useCallback(() => {
     const text = draftRef.current;
     if (isDraftEmpty(text) || disabled) return;
     // Spent the moment it is sent, as in the conversation's own prompt: the
     // turn's record holds the text for Retry.
     clearDraft();
-    if (!ended) {
-      sendConversationTurn(id, { text });
-      return;
-    }
-    // Resume needs the computer like a send does, so the gate above already
-    // holds whenever this is unavailable.
-    if (resume.kind === "unavailable") throw new Error(resume.message);
-    resume.mutate(
-      { params: { id } },
-      {
-        onSuccess: () => sendConversationTurn(id, { text }),
-        // Nothing was sent: the words go back where they were typed.
-        onError: () => setDraft(text),
-      },
-    );
-  }, [
-    draftRef,
-    disabled,
-    clearDraft,
-    ended,
-    id,
-    resume,
-    setDraft,
-    sendConversationTurn,
-  ]);
+    // Nothing was sent: the words go back where they were typed.
+    deliver(text, () => setDraft(text));
+  }, [draftRef, disabled, clearDraft, deliver, setDraft]);
+
+  // A turn of its own, through the same gate as Enter; the draft is untouched.
+  // A stable identity: it is published to the provider above, and `deliver`
+  // changes every render (the resume mutation's handle does), so a callback
+  // over it would re-register — and re-render this — forever.
+  const sendText = useEventCallback((text: string) => {
+    if (disabled) return;
+    deliver(text);
+  });
+  const insertRef = useRef<((text: string) => void) | null>(null);
+  const insert = useCallback((text: string) => {
+    const insertNow = insertRef.current;
+    // The editor is mounted with this composer, so a missing handle is a
+    // broken wiring, not a state to absorb.
+    if (!insertNow)
+      throw new Error("Thread editor insert handle is not mounted");
+    insertNow(text);
+  }, []);
+  useRegisterPromptComposer({ insert, send: sendText, canSend: !disabled });
 
   const working = turnRunning || status === "starting";
   return (
@@ -202,6 +236,7 @@ export function ThreadComposer({
       }
       busy={resumePending || stopPending}
       namespace={`agent-thread-${id}`}
+      insertRef={insertRef}
     />
   );
 }

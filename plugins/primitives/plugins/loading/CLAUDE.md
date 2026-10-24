@@ -81,7 +81,7 @@ result.
     - `ui/tokens/type-scale --font-size-body`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-body`
-  - Imported by: 198 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 199 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×64
     - `ui` ×21
     - `conversations` ×19
@@ -102,6 +102,7 @@ result.
     - `config_v2/settings`
     - `fields/secret/config`
     - `framework/browser-server/demo/scope`
+    - `hints/ask`
     - `history/dialog`
     - `infra/background/catalog`
     - `layouts/route-fallback`

@@ -1,4 +1,4 @@
-// @hash 2ea18107e946
+// @hash 6eb586012ad2
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,9 +7,9 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
+    "hints.ask:ask",
     "hints.help-menu:replay-tour",
     "hints.help-menu:show-tips",
-    "hints.help-menu:read-guide",
-    "hints.help-menu:ask"
+    "hints.help-menu:read-guide"
   ]
 }

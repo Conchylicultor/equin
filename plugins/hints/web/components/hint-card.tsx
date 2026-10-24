@@ -17,11 +17,14 @@ export interface HintCardAction {
 }
 
 export interface HintCardProps {
-  readonly title: ReactNode;
+  /** Absent on a caption (`pointAt`): the body is all there is to say. */
+  readonly title?: ReactNode;
   readonly body: ReactNode;
   /** A tour's progress: one dot per step, `index` current. Absent on a tip. */
   readonly steps?: { readonly count: number; readonly index: number };
   readonly onClose?: () => void;
+  /** The × button's accessible name. Default: a tour's "Skip the tour (Esc)". */
+  readonly closeLabel?: string;
   /** A quiet line left of the buttons ("Hover it to unfold"). */
   readonly footnote?: ReactNode;
   readonly alt?: HintCardAction;
@@ -39,34 +42,59 @@ export function HintCard({
   body,
   steps,
   onClose,
+  closeLabel = "Skip the tour (Esc)",
   footnote,
   alt,
   onBack,
   primary,
 }: HintCardProps) {
+  const close = onClose && (
+    <button
+      type="button"
+      className="hint-close"
+      aria-label={closeLabel}
+      onClick={onClose}
+    >
+      <Icon icon={closeIcon} />
+    </button>
+  );
+  const titleText = title !== undefined && (
+    <Text as="h2" variant="subheading" tone="strong">
+      {title}
+    </Text>
+  );
+  const bodyText = (
+    <Text
+      as="div"
+      variant="body"
+      tone={title === undefined ? "strong" : "muted"}
+      className="hint-card-body"
+    >
+      {body}
+    </Text>
+  );
+  // The × sits on the card's first row, whatever that row holds — the step
+  // dots, else the title, else the body (a caption) — so no row is ever only
+  // the ×, and a card without a title starts with its words.
   return (
     <ControlSizeProvider size="sm">
-      {(steps || onClose) && (
-        <div className="hint-card-top">
-          {steps && <StepDots {...steps} />}
-          {onClose && (
-            <button
-              type="button"
-              className="hint-close"
-              aria-label="Skip the tour (Esc)"
-              onClick={onClose}
-            >
-              <Icon icon={closeIcon} />
-            </button>
-          )}
-        </div>
+      {steps ? (
+        <>
+          <div className="hint-card-top">
+            <StepDots {...steps} />
+            {close}
+          </div>
+          {titleText}
+          {bodyText}
+        </>
+      ) : title !== undefined ? (
+        <>
+          <HeadRow close={close}>{titleText}</HeadRow>
+          {bodyText}
+        </>
+      ) : (
+        <HeadRow close={close}>{bodyText}</HeadRow>
       )}
-      <Text as="h2" variant="subheading" tone="strong">
-        {title}
-      </Text>
-      <Text as="div" variant="body" tone="muted" className="hint-card-body">
-        {body}
-      </Text>
       <div className="hint-card-foot">
         {footnote && (
           <Text as="span" variant="caption" className="hint-footnote">
@@ -91,6 +119,23 @@ export function HintCard({
         )}
       </div>
     </ControlSizeProvider>
+  );
+}
+
+/** The card's first row: its text, then the × (when there is one) in its own track. */
+function HeadRow({
+  close,
+  children,
+}: {
+  close: ReactNode;
+  children: ReactNode;
+}) {
+  if (!close) return <>{children}</>;
+  return (
+    <div className="hint-card-head">
+      <div className="hint-card-head-text">{children}</div>
+      {close}
+    </div>
   );
 }
 

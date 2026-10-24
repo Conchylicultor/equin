@@ -27,6 +27,7 @@ text input when no contribution matches.
     - `DynamicEnum.Options` ← `conversations.conversation-view.launch-prompts`
     - `DynamicEnum.Options` ← `conversations.model-provider`
     - `DynamicEnum.Options` ← `fields.dynamic-enum.config`
+    - `DynamicEnum.Options` ← `hints.ask`
     - `DynamicEnum.Options` ← `tasks.automations`
     - `DynamicEnum.Options` ← `ui.breadcrumb-separator`
     - `DynamicEnum.Options` ← `ui.segmented-progress-bar`
@@ -67,6 +68,7 @@ text input when no contribution matches.
     - `conversations/conversation-category`
     - `conversations/conversation-view/launch-prompts`
     - `conversations/model-provider`
+    - `hints/ask`
     - `tasks/automations`
     - `ui/segmented-progress-bar`
     - `ui/tab-bar`

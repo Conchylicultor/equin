@@ -216,6 +216,41 @@ Bound to the interface by a `keyof` set comparison **and** mutual assignability 
 assignability alone silently accepts an omitted *optional* field, since
 `{…no owner}` and `UiContextMeta` are assignable both ways.
 
+## The page outline, and finding an element again
+
+An agent that has never seen the page can still name its controls, in the
+token's own two fields — no hand-written anchor labels anywhere.
+
+- **`collectOutline(root, { exclude?, limit? }): UiOutline`** — every shown
+  interactive element with an accessible name under `root` (native controls
+  and their ARIA twins: `INTERACTIVE_SELECTOR` in `web/internal/shown.ts`), as
+  `{ path, element, count }`: `path` is `formatLineagePath(collectLineage(el))`
+  (what `<ui-context path=…>` writes, `""` outside every node) and `element`
+  the descriptor `collectMeta` writes (`describeElement`, shared — never
+  re-derived). Same pair twice (a list's row actions) is one entry with a
+  `count`. Document order of first appearance, capped at `limit` distinct
+  entries (default `DEFAULT_OUTLINE_LIMIT` = 150), `truncated` says so. A
+  hidden / `aria-hidden` / inert / excluded subtree is pruned whole; a control
+  counts only when drawn (a box with area, not `visibility: hidden`). A
+  scroll away is still on the page and kept. Only what is rendered: a control
+  inside a closed popover is not listed (its opener is).
+- **`formatOutline(outline): string`** — the model-facing text: an indented
+  tree of lineage segments (shared prefixes once, a single-child chain folded
+  onto one line with ` > `) whose leaves are descriptors (`×N` for a count).
+  An entry's `path` is the segment lines above it joined by ` > `.
+- **`resolveUiContext({ path, element })`** — the inverse of `collectMeta` and
+  of an outline entry: `found` (one shown match) · `ambiguous` (several; `el`
+  is the first in document order, `count`) · `gone` (none — another page, a
+  closed popover, a stale name; also an `element` that is not a descriptor).
+  Compared in canonical spellings (parsed and re-formatted). Scoped, so a
+  click resolves fast: candidates are the descriptor's tag / role / type
+  under the markers of the path's innermost node plus every portaled lineage
+  host; only those are described and walked.
+
+The contribution half of a path exists only where `element-picker`'s
+middleware is in the composition; without it an outline is regions only —
+coarser, still valid, and still resolvable.
+
 ## Not this plugin's business
 
 `data-pane-id` — a separate, load-bearing DOM convention with five independent
@@ -226,21 +261,29 @@ marker is *additive* alongside it; nothing here reads or writes it.
 
 ## Plugin reference
 
-- Description: The UI-context lineage: the node model (contribution | region), its DOM attribute grammar, the portal-crossing chain helpers, the <UiRegion> producer, the collectLineage walk, and the <ui-context> token (collectMeta / serialize / parse). A neutral leaf so both the element picker (its element-picker sub-plugin) and reports/render-loop can ask 'what composed this element?' without either depending on the other.
+- Description: The UI-context lineage: the node model (contribution | region), its DOM attribute grammar, the portal-crossing chain helpers, the <UiRegion> producer, the collectLineage walk, and the <ui-context> token (collectMeta / serialize / parse), the page outline (collectOutline / formatOutline: every shown named control as its { path, element } pair) with its inverse resolveUiContext (found / ambiguous / gone). A neutral leaf so both the element picker (its element-picker sub-plugin) and reports/render-loop can ask 'what composed this element?' without either depending on the other.
 - Web:
   - Uses:
     - `primitives/css/ui-kit.PortalForwardProvider`
     - `primitives/css/ui-kit.usePortalForwardedAttrs`
   - Exports (types):
+    - `CollectOutlineOptions`
     - `ContributionNodeAttrs`
     - `RegionNodeAttrs`
+    - `UiContextRef`
+    - `UiContextResolution`
+    - `UiOutline`
+    - `UiOutlineEntry`
   - Exports (values):
     - `appendLineage`
     - `BOXLESS_ATTR`
     - `collectLineage`
     - `collectLineageMeta`
     - `collectMeta`
+    - `collectOutline`
     - `contributionNodeAttrs`
+    - `DEFAULT_OUTLINE_LIMIT`
+    - `formatOutline`
     - `isBoxlessMarker`
     - `LINEAGE_ATTR`
     - `nearestOwner`
@@ -248,10 +291,13 @@ marker is *additive* alongside it; nothing here reads or writes it.
     - `NODE_ATTR`
     - `readLineageNode`
     - `regionNodeAttrs`
+    - `resolveUiContext`
     - `UiRegion`
 - Cross-plugin:
   - Imported by:
+    - `active-data/show-me`
     - `apps/website/improve`
+    - `hints/ask`
     - `layouts/full-pane`
     - `layouts/miller`
     - `primitives/adaptive-bar`

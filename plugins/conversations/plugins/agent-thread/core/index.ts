@@ -1,7 +1,15 @@
 export { THREAD_RUNS_DEFAULT_LIMIT, threadRuns } from "./internal/runs";
 export type { ThreadRun } from "./internal/runs";
-export { defineThreadResult, resultCountOf } from "./internal/result";
-export type { ThreadResultDef, ThreadResultPayload } from "./internal/result";
+export {
+  defineThreadResult,
+  resultCountOf,
+  threadResultReply,
+} from "./internal/result";
+export type {
+  ThreadResultDef,
+  ThreadResultOutput,
+  ThreadResultPayload,
+} from "./internal/result";
 export { groupThread } from "./internal/group-thread";
 export type {
   AcceptedThreadResult,

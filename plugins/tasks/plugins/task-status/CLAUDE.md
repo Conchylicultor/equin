@@ -35,6 +35,7 @@ Single source of truth for `TaskStatus` display metadata. All plugins that rende
     - `conversations/conversation-view/dependencies`
     - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
     - `conversations/conversation-view/tasks-panel`
+    - `hints/ask`
     - `page/annotations/todo/task-link`
     - `tasks/automations`
     - `tasks/task-deps-tree`

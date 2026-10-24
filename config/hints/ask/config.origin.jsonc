@@ -1,0 +1,7 @@
+// @hash ace152291b43
+{
+  // The model that answers your questions. Sonnet answers fastest; a stronger model digs deeper.
+  "model": "sonnet",
+  // The model a task Ask equin files for you launches with (in its own worktree, at once).
+  "taskModel": "opus"
+}

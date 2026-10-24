@@ -10,6 +10,7 @@ export {
   useActiveConversations,
   useConversationTitleBySlug,
 } from "./use-conversations";
+export { ConversationFileLinks } from "./conversation-file-links";
 export default {
   collapsed: true,
   description: "Conversation domain: shared hooks and client-side API.",

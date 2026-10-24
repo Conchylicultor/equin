@@ -62,4 +62,20 @@ describe("Column", () => {
     expect(root.children.length).toBe(1);
     expect(root.querySelector('[data-testid="bdy"]')).not.toBeNull();
   });
+
+  it("fit lays out as a grid with one row track per present slot", () => {
+    render(
+      <Column
+        data-testid="fit"
+        fit
+        header={<span>H</span>}
+        body={<span>B</span>}
+      />,
+    );
+    const root = document.querySelector<HTMLElement>('[data-testid="fit"]')!;
+    expect(root.classList.contains("grid")).toBe(true);
+    expect(root.classList.contains("flex")).toBe(false);
+    expect(root.style.gridTemplateRows).toBe("auto minmax(0, 1fr)");
+    expect(root.style.gridTemplateColumns).toBe("minmax(0, 1fr)");
+  });
 });

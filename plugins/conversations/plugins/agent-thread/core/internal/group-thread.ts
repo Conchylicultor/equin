@@ -4,7 +4,7 @@ import {
   type ToolCallEvent,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
-import type { ThreadResultDef } from "./result";
+import { parseThreadResultOutput, type ThreadResultDef } from "./result";
 
 /**
  * Where one tool call stands: `running` while it has no result and its turn is
@@ -21,20 +21,24 @@ export interface ThreadStep {
 
 /**
  * One result a turn delivered, typed by its kind. `accepted` is a call the
- * tool took whose input parses under the kind's schema; `invalid` is a call
- * the tool took whose input does NOT parse here (the schema changed since the
+ * tool took whose input parses under the kind's schema — and, for a kind
+ * declaring an `output`, whose result parses under that one (`output`;
+ * `undefined` for a kind declaring none); `invalid` is a call the tool took
+ * whose input or output does NOT parse here (the schema changed since the
  * transcript was written) — a state the view renders, never a payload to
  * guess from. A call the tool refused (its result an error) is not a result
  * at all: it is a step, drawn red.
  *
- * Distributes over a union of kinds, so `def` and `payload` stay paired.
+ * Distributes over a union of kinds, so `def`, `payload` and `output` stay
+ * paired.
  */
 export type ThreadResult<D extends ThreadResultDef = ThreadResultDef> =
-  D extends ThreadResultDef<infer T>
+  D extends ThreadResultDef<infer T, infer O>
     ? | {
           kind: "accepted";
           def: D;
           payload: T;
+          output: O;
           at: string;
           toolUseId: string;
         }
@@ -58,13 +62,27 @@ export type AcceptedThreadResult<D extends ThreadResultDef = ThreadResultDef> =
  */
 export type ThreadTurnState = "running" | "done" | "failed";
 
+/**
+ * A turn's answer: its text, when it was written, and the API message that
+ * carried it — the identity of the active-data blocks it holds (null on a
+ * transcript line that names none).
+ */
+export interface ThreadAnswer {
+  text: string;
+  at: string;
+  messageId: string | null;
+}
+
 /** One exchange: what the user said, and everything the agent did about it. */
 export interface ThreadTurn<D extends ThreadResultDef = ThreadResultDef> {
   user: { text: string; at: string };
   steps: ThreadStep[];
   /** The turn's last assistant text, or null when it wrote none. */
-  answer: { text: string; at: string } | null;
-  /** In delivery order; a later call of one kind replaces the earlier one. */
+  answer: ThreadAnswer | null;
+  /**
+   * In delivery order. A later call of one kind replaces the earlier one,
+   * unless the kind is `multiple` (each call is its own result).
+   */
   results: ThreadResult<D>[];
   state: ThreadTurnState;
 }
@@ -87,19 +105,41 @@ function lastTurnRuns(conversation: ThreadConversation): boolean {
 interface TurnDraft {
   user: { text: string; at: string };
   calls: ToolCallEvent[];
-  answer: { text: string; at: string } | null;
+  answer: ThreadAnswer | null;
 }
 
 function resultOf<D extends ThreadResultDef>(
   def: D,
   event: ToolCallEvent,
+  content: string,
 ): ThreadResult<D> {
-  const parsed = def.schema.safeParse(event.input);
   const base = { def, at: event.at, toolUseId: event.toolUseId };
+  const parsed = def.schema.safeParse(event.input);
+  if (!parsed.success) {
+    return {
+      kind: "invalid",
+      error: parsed.error.message,
+      ...base,
+    } as ThreadResult<D>;
+  }
+  if (def.output === undefined) {
+    return {
+      kind: "accepted",
+      payload: parsed.data,
+      output: undefined,
+      ...base,
+    } as ThreadResult<D>;
+  }
+  const output = parseThreadResultOutput(def.output, content);
   return (
-    parsed.success
-      ? { kind: "accepted", payload: parsed.data, ...base }
-      : { kind: "invalid", error: parsed.error.message, ...base }
+    output.ok
+      ? {
+          kind: "accepted",
+          payload: parsed.data,
+          output: output.output,
+          ...base,
+        }
+      : { kind: "invalid", error: output.error, ...base }
   ) as ThreadResult<D>;
 }
 
@@ -109,13 +149,15 @@ function closeTurn<D extends ThreadResultDef>(
   running: boolean,
 ): ThreadTurn<D> {
   const steps: ThreadStep[] = [];
-  // Keyed by kind: re-inserting moves a replacing call to its own position.
+  // Keyed by kind (by call for a `multiple` kind): re-inserting moves a
+  // replacing call to its own position.
   const results = new Map<string, ThreadResult<D>>();
   for (const event of draft.calls) {
     const def = defs.get(toolName(event.name).name);
     if (def && event.result && !event.result.isError) {
-      results.delete(def.tool);
-      results.set(def.tool, resultOf(def, event));
+      const key = def.multiple ? `call:${event.toolUseId}` : `kind:${def.tool}`;
+      results.delete(key);
+      results.set(key, resultOf(def, event, event.result.content));
       continue;
     }
     steps.push({
@@ -185,7 +227,11 @@ export function groupThread<D extends ThreadResultDef>(
     if (!draft) continue;
     if (event.kind === "tool-call") draft.calls.push(event);
     else if (event.kind === "assistant-text" && event.text.trim() !== "")
-      draft.answer = { text: event.text, at: event.at };
+      draft.answer = {
+        text: event.text,
+        at: event.at,
+        messageId: event.messageId ?? null,
+      };
   }
 
   const runs = lastTurnRuns(conversation);

@@ -10,7 +10,28 @@ import {
 import type React from "react";
 import type { ReactNode } from "react";
 
-export interface ColumnProps extends React.HTMLAttributes<HTMLElement> {
+/**
+ * How the column is sized: `fill` fills its flex-col parent (`min-h-0
+ * flex-1`); `fit` hugs its content up to its own `max-h-*` (in `className`),
+ * past which the body takes what is left and scrolls. Mutually exclusive.
+ */
+type ColumnSizing =
+  | {
+      /** Emit the flex-child fill pair (`min-h-0 flex-1`) so the column fills
+       *  its own flex-col parent. Defaults to false. */
+      fill?: boolean;
+      fit?: false;
+    }
+  | {
+      /** Hug the content up to the column's own max-height (a `max-h-*` in
+       *  `className`), then scroll the body. Laid out as a grid (`fitRows`). */
+      fit: true;
+      fill?: false;
+    };
+
+export type ColumnProps = ColumnBaseProps & ColumnSizing;
+
+interface ColumnBaseProps extends React.HTMLAttributes<HTMLElement> {
   /** Rigid top region — never shrinks (`shrink-0`). */
   header?: ReactNode;
   /** Flexible middle region — by default wrapped in `<Scroll axis="y" fill>` so
@@ -24,9 +45,6 @@ export interface ColumnProps extends React.HTMLAttributes<HTMLElement> {
   /** Hide the scrollbar chrome on the managed `Scroll` body while keeping it
    *  scrollable. Only applies when `scrollBody` is true. Defaults to false. */
   hideScrollbar?: boolean;
-  /** Emit the flex-child fill pair (`min-h-0 flex-1`) so the column fills its own
-   *  flex-col parent. Defaults to false. */
-  fill?: boolean;
   /** Gap role from the spacing ramp between regions. Defaults to `none` (flush). */
   gap?: SpaceStep;
   /** Host element/component. Defaults to a `div`. */
@@ -52,6 +70,29 @@ export interface ColumnProps extends React.HTMLAttributes<HTMLElement> {
  * `flex-1`). Only present slots render — an absent slot produces no region. Caller
  * `className` composes last.
  */
+/**
+ * The `fit` column's row tracks, one per PRESENT slot: header and footer
+ * `auto`, the body `minmax(0, 1fr)`. A grid with a max-height sizes its `fr`
+ * row against that max once its content would exceed it — so the column hugs
+ * its content, then stops at its max and the body row takes what is left
+ * (definite, so a `h-full` child of the body resolves against it). A flex
+ * column cannot: a flexed item's height is not definite under an `auto`-height
+ * container, so a non-scrolling body wrapper's `h-full` child overflows it.
+ */
+function fitRows(slots: {
+  header: boolean;
+  body: boolean;
+  footer: boolean;
+}): string {
+  return [
+    slots.header && "auto",
+    slots.body && "minmax(0, 1fr)",
+    slots.footer && "auto",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 export function Column({
   header,
   body,
@@ -59,6 +100,7 @@ export function Column({
   scrollBody = true,
   hideScrollbar = false,
   fill = false,
+  fit = false,
   gap = "none",
   as: As = "div",
   ref,
@@ -74,12 +116,28 @@ export function Column({
       <As
         ref={ref}
         className={cn(
-          "flex flex-col whitespace-normal",
+          fit ? "grid" : "flex flex-col",
+          "whitespace-normal",
           rampClass("gap", gap),
           fill && "min-h-0 flex-1",
           className,
         )}
         {...rest}
+        style={
+          fit
+            ? {
+                // One column that never grows past the column's own width
+                // (an `auto` track would widen to a long unbreakable line).
+                gridTemplateColumns: "minmax(0, 1fr)",
+                gridTemplateRows: fitRows({
+                  header: header != null,
+                  body: body != null,
+                  footer: footer != null,
+                }),
+                ...rest.style,
+              }
+            : rest.style
+        }
       >
         {header != null && <div className="shrink-0">{header}</div>}
         {body != null &&

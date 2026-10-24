@@ -9,7 +9,10 @@ Each `ActiveData.Tag` contribution declares a `display` mode:
 - **`display: 'block'`** — agent wraps content in `<tag>…</tag>`. The host
   pre-extracts these before markdown parsing, so blank lines inside the tag
   body are handled correctly. Requires `tag: string`. The component receives
-  `content` (trimmed inner text) and `attrs` (parsed tag attributes).
+  `content` (trimmed inner text) and `attrs` (parsed tag attributes). A
+  quoted attribute value may hold `>` (`show-me`'s lineage `path`): the
+  segmenter and the inline pairing share one open-tag grammar,
+  `TAG_ATTRS_SOURCE` (`internal/tag-attrs.ts`).
 - **`display: 'code'`** — a token applied only inside backtick-wrapped inline
   code spans, never to regular text nodes. Two gates, and a claim protocol
   between them — see below.
@@ -64,7 +67,11 @@ Rules that look optional and aren't:
   token would still be a committed node in the user's document with no host to
   catch it. A pattern whose validity needs I/O goes in `display:'code'`.
 
-Hosts wire two helpers:
+A host that shows an agent's message renders it with
+`<ActiveDataMarkdown text conversationId messageId />` — the segments below,
+each block in its `ActiveDataIdentityProvider`, the prose through `Markdown`.
+The transcript row and an embedded agent thread both do, so a block cannot
+differ between them. Underneath, it wires two helpers:
 
 - `useActiveDataSegments(rawText)` — splits the raw string into `markdown`
   segments (passed to `<ReactMarkdown>`) and `block` segments (rendered
@@ -87,7 +94,7 @@ per-widget payload server-side, keyed by
 
 The host renderer wraps each block segment in
 `<ActiveDataIdentityProvider conversationId messageId tag occurrenceIndex>`
-(JSONL `assistant-text-row` does this — `messageId` is Claude's per-event
+(`ActiveDataMarkdown` does this — `messageId` is Claude's per-event
 uuid, `occurrenceIndex` is the count of prior block segments with the same
 tag in the message). Inside the contributed component:
 
@@ -132,12 +139,13 @@ Behavior:
     - `ActiveData.Tag` ← `active-data.commit-link`
     - `ActiveData.Tag` ← `active-data.go`
     - `ActiveData.Tag` ← `active-data.plugin-link`
+    - `ActiveData.Tag` ← `active-data.show-me`
     - `ActiveData.Tag` ← `active-data.task`
   - Contributes:
     - `MarkdownEnhancerSlot`
     - `InlineTextWalkerSlot`
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/markdown` ×5
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/markdown` ×6
     - `primitives/text-editor/inline-chip` ×5
     - `primitives/inline-text` ×4
     - `infra/endpoints` ×2
@@ -157,6 +165,7 @@ Behavior:
   - Exports (values):
     - `ActiveData`
     - `ActiveDataIdentityProvider`
+    - `ActiveDataMarkdown`
     - `claimed`
     - `claimPending`
     - `codeTag`
@@ -202,20 +211,26 @@ Behavior:
     - `active-data/commit-link`
     - `active-data/go`
     - `active-data/plugin-link`
+    - `active-data/show-me`
     - `active-data/task`
+    - `conversations/agent-thread`
     - `conversations/conversation-view/jsonl-viewer/assistant-text`
+- Test helpers:
+  - Web: `@plugins/active-data/web/testing`
+    - `activeDataPlugin`
 - Sub-plugins:
   - **`attempt`** — Renders raw `att-<id>` strings inline as clickable chips named after the attempt's conversation, opening that conversation (the attempt pane when it has none), and presents the attempt id kind to…
   - **`build-run`** — Renders a bare `build-<id>` in a transcript as the generic id chip (`Build <short commit>`) that opens the build's run-detail pane, and presents the build-run id kind to the id registry. The…
   - **`commit-link`** — Renders commit shas in backtick-wrapped inline code as clickable chips that open the commit-detail pane, with the subject, author and date on hover. Resolves the sha against the main checkout's…
   - **`conv`** — Renders raw `conv-<id>` strings inline as clickable chips that open the referenced conversation in the right side pane alongside the host conversation, and presents the conversation id kind (title +…
   - **`event-source`** — Renders a bare `evs-<id>` in a transcript as the generic id chip (the source's name) that opens the event source's detail pane, and presents the event-source id kind to the id registry. The…
-  - **`go`** — Renders <go>…</go> in an agent's reply — a part of the answer the user can pick as their reply — as one tinted unit, [text | ▶]: ▶ sends it back as <go>…</go> (the agent reads the part of its answer…
+  - **`go`** [test helpers] — Renders <go>…</go> in an agent's reply — a part of the answer the user can pick as their reply — as one tinted unit, [text | ▶]: ▶ sends it back as <go>…</go> (the agent reads the part of its answer…
   - **`id-chip`** — Id chips, web half: idChip({ presenter, surfaces, component? }) mints a kind's IdKinds.Presenter together with its inline chip — the pattern derived from the kind (never re-typed), a generic title +…
   - **`page-link`** — Renders raw `block-<id>` strings inline as clickable chips that open what the id names: a page id opens the page-detail pane, a content-block id opens the block-detail pane (that block as a page of…
   - **`plugin-link`** — Renders plugin IDs in backtick-wrapped inline code as clickable chips that open the plugin-view pane. Models emit the plugin's dotted id (e.g. `tasks`, `active-data.conv`) and the chip validates and…
   - **`prototype`** — Renders raw `proto-<id>` strings inline as clickable chips (the generic id chip: the mock's title) that open the mock in the prototype-detail pane, and presents the prototype id kind to the id…
   - **`report`** — Renders a bare `report-<id>` in a transcript as the generic id chip (the report's kind and message) that opens the report's detail pane, and presents the report id kind to the id registry. The…
+  - **`show-me`** — Renders <show-me path="…" element="…">label</show-me> in an agent's reply — an element of the live page named by its ui-context lineage path and element descriptor (an outline entry) — as a target…
   - **`song`** — Renders a bare `song-<id>` in a transcript or a page as the generic id chip (the song's title) that opens it in Sonata's player, and presents the song id kind to the id registry. The song id chip's…
   - **`task`** — Renders <task>prompt</task> tags as editable cards with Create + Launch actions. Models suggest tasks inline; users tweak and act without leaving the transcript.
   - **`task-link`** — Renders raw `task-<id>` strings inline as clickable chips that open the task detail pane, and presents the task id kind (title + open) to the id registry. Models emit the bare id, no tag wrapping…

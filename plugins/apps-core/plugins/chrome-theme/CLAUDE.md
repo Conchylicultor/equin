@@ -105,6 +105,7 @@ layout, graphite tone, underline tabs).
     - `apps-core/app-launcher`
     - `apps-core/app-rail`
     - `apps-core/tab-bar`
+    - `hints/ask`
     - `plugin-meta/exhibits`
     - `shell/global-action-bar`
     - `shell/toast`

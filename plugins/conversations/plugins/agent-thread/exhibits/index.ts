@@ -28,4 +28,16 @@ export default [
     widths: [420, 640],
     load: () => import("./internal/question"),
   }),
+  appExhibit({
+    id: "agent-thread/hug-short",
+    label: "Agent thread hugging its content (short)",
+    widths: [420],
+    load: () => import("./internal/hug-short"),
+  }),
+  appExhibit({
+    id: "agent-thread/hug-long",
+    label: "Agent thread hugging its content (capped, scrolls)",
+    widths: [420],
+    load: () => import("./internal/hug-long"),
+  }),
 ];

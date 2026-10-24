@@ -17,6 +17,7 @@ import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { FileLinksWorkspaceProvider } from "@plugins/primitives/plugins/file-links/web";
 
 export function ConversationView() {
   const { convId } = conversationPane.useParams();
@@ -77,7 +78,12 @@ function ConversationBody({
 }) {
   const workspace = useAttemptWorkspaceKind(conversation.attemptId);
   return (
-    <>
+    // File paths in the transcript (and every popover off it) name this
+    // conversation's attempt worktree — declared here, by the host.
+    <FileLinksWorkspaceProvider
+      workspace={conversation.attemptId}
+      root={conversation.worktreePath}
+    >
       <ActiveRelateSync />
       <PaneChrome pane={conversationPane}>
         <Clip fill as={Stack} className="h-full">
@@ -147,6 +153,6 @@ function ConversationBody({
           </Clip>
         </Clip>
       </PaneChrome>
-    </>
+    </FileLinksWorkspaceProvider>
   );
 }

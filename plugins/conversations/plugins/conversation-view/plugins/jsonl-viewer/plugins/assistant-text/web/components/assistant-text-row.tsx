@@ -1,8 +1,5 @@
 import { useRef } from "react";
-import {
-  ActiveDataIdentityProvider,
-  useActiveDataSegments,
-} from "@plugins/active-data/web";
+import { ActiveDataMarkdown } from "@plugins/active-data/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import {
@@ -10,7 +7,6 @@ import {
   useStreamingRow,
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { EventRowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/row-actions/web";
-import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useSteadyReveal } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/steady-reveal/web";
@@ -52,7 +48,6 @@ export function AssistantTextBody({
   rowActions?: boolean;
 }) {
   const { convId } = conversationPane.useParams();
-  const segments = useActiveDataSegments(text);
   // First in the text so the prose wraps around it rather than running under it.
   const actions = rowActions ? <EventRowActions float /> : null;
 
@@ -64,31 +59,11 @@ export function AssistantTextBody({
         {markdown ? (
           <Text as="div" variant="body">
             {actions}
-            {(() => {
-              const counts = new Map<string, number>();
-              return segments.map((seg, i) => {
-                if (seg.type !== "block") {
-                  return <Markdown key={i}>{seg.text}</Markdown>;
-                }
-                const idx = counts.get(seg.tag) ?? 0;
-                counts.set(seg.tag, idx + 1);
-                const block = (
-                  <seg.component content={seg.content} attrs={seg.attrs} />
-                );
-                if (!messageId) return <span key={i}>{block}</span>;
-                return (
-                  <ActiveDataIdentityProvider
-                    key={i}
-                    conversationId={convId}
-                    messageId={messageId}
-                    tag={seg.tag}
-                    occurrenceIndex={idx}
-                  >
-                    {block}
-                  </ActiveDataIdentityProvider>
-                );
-              });
-            })()}
+            <ActiveDataMarkdown
+              text={text}
+              conversationId={convId}
+              messageId={messageId}
+            />
           </Text>
         ) : (
           <Text

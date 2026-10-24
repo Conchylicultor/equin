@@ -15,6 +15,6 @@
     "hints.help-menu:replay-tour",
     "hints.help-menu:show-tips",
     "hints.help-menu:read-guide",
-    "hints.help-menu:ask"
+    "hints.ask:ask"
   ]
 }

@@ -17,6 +17,7 @@ import {
   type TaskListItem,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { useTask } from "@plugins/tasks/web";
+import { FileLinksWorkspaceProvider } from "@plugins/primitives/plugins/file-links/web";
 import { TaskDetailFlushProvider } from "./context";
 import { TaskDetail } from "./components/task-detail";
 
@@ -100,9 +101,13 @@ function TaskDetailBody(): ReactElement {
 
   return (
     <TaskDetailFlushProvider key={taskId}>
-      <PaneChrome pane={taskDetailPane}>
-        <TaskDetail taskId={taskId} />
-      </PaneChrome>
+      {/* A task is about the repo as it is on main: paths in its description
+          and sections name main's checkout. */}
+      <FileLinksWorkspaceProvider workspace="main">
+        <PaneChrome pane={taskDetailPane}>
+          <TaskDetail taskId={taskId} />
+        </PaneChrome>
+      </FileLinksWorkspaceProvider>
     </TaskDetailFlushProvider>
   );
 }

@@ -114,6 +114,10 @@
       "name": "@singularity/plugin-active-data-report",
       "version": "0.0.1",
     },
+    "plugins/active-data/plugins/show-me": {
+      "name": "@singularity/plugin-active-data-show-me",
+      "version": "0.0.1",
+    },
     "plugins/active-data/plugins/song": {
       "name": "@singularity/plugin-active-data-song",
       "version": "0.0.1",
@@ -3629,6 +3633,10 @@
         "@floating-ui/react-dom": "^2.1.9",
       },
     },
+    "plugins/hints/plugins/ask": {
+      "name": "@singularity/plugin-hints-ask",
+      "version": "0.0.1",
+    },
     "plugins/hints/plugins/help-menu": {
       "name": "@singularity/plugin-hints-help-menu",
       "version": "0.0.1",
@@ -7079,6 +7087,8 @@
 
     "@singularity/plugin-active-data-report": ["@singularity/plugin-active-data-report@workspace:plugins/active-data/plugins/report"],
 
+    "@singularity/plugin-active-data-show-me": ["@singularity/plugin-active-data-show-me@workspace:plugins/active-data/plugins/show-me"],
+
     "@singularity/plugin-active-data-song": ["@singularity/plugin-active-data-song@workspace:plugins/active-data/plugins/song"],
 
     "@singularity/plugin-active-data-task": ["@singularity/plugin-active-data-task@workspace:plugins/active-data/plugins/task"],
@@ -8772,6 +8782,8 @@
     "@singularity/plugin-fullscreen": ["@singularity/plugin-fullscreen@workspace:plugins/fullscreen"],
 
     "@singularity/plugin-hints": ["@singularity/plugin-hints@workspace:plugins/hints"],
+
+    "@singularity/plugin-hints-ask": ["@singularity/plugin-hints-ask@workspace:plugins/hints/plugins/ask"],
 
     "@singularity/plugin-hints-help-menu": ["@singularity/plugin-hints-help-menu@workspace:plugins/hints/plugins/help-menu"],
 

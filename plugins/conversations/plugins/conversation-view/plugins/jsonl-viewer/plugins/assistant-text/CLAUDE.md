@@ -11,8 +11,7 @@
     - `JsonlRowActions.Item` "markdown-toggle" → `MarkdownToggleAction`
     - `JsonlRowActions.Item` "copy-assistant-text" → `CopyAssistantTextAction`
   - Uses:
-    - `active-data.ActiveDataIdentityProvider`
-    - `active-data.useActiveDataSegments`
+    - `active-data.ActiveDataMarkdown`
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
     - `conversations/conversation-view/jsonl-viewer.useRowMarkdown`
@@ -23,7 +22,6 @@
     - `conversations/conversation-view/jsonl-viewer/steady-reveal.useSteadyReveal`
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
-    - `primitives/markdown.Markdown`
     - `primitives/select-scope.ContentScope`
 - Cross-plugin:
   - Uses tokens:

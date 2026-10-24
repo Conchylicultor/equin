@@ -101,11 +101,13 @@
     - `network/live.mapRow`
     - `network/live.useLive`
     - `network/live.useLiveRow`
+    - `primitives/file-links.FileLinksWorkspaceProvider`
     - `primitives/live-state.foldResource`
     - `primitives/live-state.mapResource`
     - `primitives/live-state.ResourceResult`
     - `primitives/live-state.useCombinedResources`
   - Exports (values):
+    - `ConversationFileLinks`
     - `useActiveConversations`
     - `useConversation`
     - `useConversationById`
@@ -199,13 +201,14 @@
     - `SYSTEM_CATEGORY_ID`
     - `withdrawConversationTurn`
 - Cross-plugin:
-  - Imported by: 53 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 54 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×38
     - `apps` ×5
     - `review` ×3
     - `active-data` ×2
     - `tasks` ×2
     - `debug/profiling/ops`
+    - `hints/ask`
     - `infra/mcp/browser`
     - `page/annotations/agent-notes/agent-page`
   - Endpoint callers:

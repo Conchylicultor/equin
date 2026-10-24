@@ -26,8 +26,10 @@ function ownText(el: Element): string {
 
 /** The element's descriptor: tag (+ role, + an input/button `type`) + the best
  * available accessible text. Spelled by the shared core formatter, so the chip
- * can parse it back into a human label. */
-function describeElement(el: Element): string {
+ * can parse it back into a human label — and shared with the page outline and
+ * `resolveUiContext`, so an outline entry, a pick and a resolve describe an
+ * element the same way. */
+export function describeElement(el: Element): string {
   const name =
     el.getAttribute("aria-label") ||
     (el as HTMLElement).title ||

@@ -29,6 +29,7 @@
     - `network/live.useLive`
     - `primitives/app-shell.opensPane`
     - `primitives/detail-sections.defineDetailSections`
+    - `primitives/file-links.FileLinksWorkspaceProvider`
     - `primitives/live-state.foldResource`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
@@ -52,8 +53,8 @@
     - `active-data/task-link`
     - `apps/pages/prompt-origin`
     - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
-    - `conversations/conversation-view/markdown-extensions`
     - `conversations/conversation-view/tasks-panel`
+    - `hints/ask`
     - `tasks/automations`
     - `tasks/sidequest-autopilot`
     - `tasks/task-attachments`

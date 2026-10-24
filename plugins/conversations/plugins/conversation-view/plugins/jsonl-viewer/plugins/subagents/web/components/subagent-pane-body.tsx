@@ -23,6 +23,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
+import { ConversationFileLinks } from "@plugins/conversations/web";
 import {
   subagentReport,
   subagentTranscript,
@@ -308,6 +309,22 @@ export function SubagentPaneBody({
   /** The PARENT conversation — what both resources are keyed by. */
   conversationId: string;
   /** Which sub-agent: by the call that launched it, or by its own id. */
+  subagent: SubagentRef;
+}) {
+  // A sub-agent works in its parent's worktree: paths in its report and
+  // transcript name that checkout.
+  return (
+    <ConversationFileLinks conversationId={conversationId}>
+      <SubagentPaneGate conversationId={conversationId} subagent={subagent} />
+    </ConversationFileLinks>
+  );
+}
+
+function SubagentPaneGate({
+  conversationId,
+  subagent,
+}: {
+  conversationId: string;
   subagent: SubagentRef;
 }) {
   const subagents = useConversationSubagents(conversationId);

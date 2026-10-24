@@ -155,6 +155,28 @@ const ref = useHintAnchor(hintsHelpAnchor);
 const pulsing = useHintAnchorPulse(hintsHelpAnchor);   // draw a ring while true
 ```
 
+## A one-off spotlight: `pointAt`
+
+```ts
+pointAt(() => el, { body: "The Share button", onBack?, onNext?, step?: { index, total } });
+```
+
+For a caller that found an element itself (`active-data/show-me` via
+`resolveUiContext`): no declared anchor, no seen state. The host draws it as a
+transient scene on the same stage (hole + caption card: body, dots when
+`step`, Back when `onBack`, Next when `onNext` else Done, ×), tracked by the
+same `autoUpdate`, revealed into view when it goes up.
+
+- **Loud, not ignored**: it throws when `target()` is null or not an
+  `HTMLElement`, and **while a tour runs** (the tour owns the stage; quietly
+  dropping the call would leave the caller's click doing nothing). A tour
+  starting closes a spotlight. Tips wait while one is up.
+- Ends: Next or a click on the element (after its own handlers) → `onNext`;
+  Back → `onBack`; Done / × / Esc (`hints.pointer-end`) / the element leaving
+  the page → no callback. It closes **before** the callback, so `onNext` may
+  `pointAt` the next element; a new call replaces the current one.
+- The pure part (`pointerCard`, `pointerEndCallback`) is `web/internal/pointer.ts`.
+
 ## Anchors, holding the toolbar open
 
 `useHintAnchor(target)` (target may be `null`/`undefined` — a generic
@@ -247,7 +269,7 @@ Exhibits: `hints/card`, `hints/spotlight`, `hints/welcome`.
 
 ## Plugin reference
 
-- Description: The hints engine, web half: Hints.Hint / Hints.Tour declarations, useHintAnchor (ref registration, holding a floating toolbar open while its tip shows), useHintMoment (a tip shown once at its moment, lowest order first, one at a time), startTour / autoStart, emitHintSignal, the seen state and catalog reads — and the one HintHost at Core.Root drawing the active tip (halo + card) or the tour's welcome card / spotlit step on one persistent stage — every change of scene a CSS transition of the same elements — in the hints' own fixed theme (the same look in every app), every tour end pulsing ? and toasting where the tour lives. Owns the hint_seen table — one row per hint or tour the user has met (outcome, seen_at) — served as the hints.seen live collection (boot-preloaded), with the mark-seen upsert and the reset-by-ids delete.
+- Description: The hints engine, web half: Hints.Hint / Hints.Tour declarations, useHintAnchor (ref registration, holding a floating toolbar open while its tip shows), useHintMoment (a tip shown once at its moment, lowest order first, one at a time), startTour / autoStart, pointAt (a one-off spotlight + caption on an element the caller resolved, refused while a tour runs), emitHintSignal, the seen state and catalog reads — and the one HintHost at Core.Root drawing the active tip (halo + card) or the tour's welcome card / spotlit step on one persistent stage — every change of scene a CSS transition of the same elements — in the hints' own fixed theme (the same look in every app), every tour end pulsing ? and toasting where the tour lives. Owns the hint_seen table — one row per hint or tour the user has met (outcome, seen_at) — served as the hints.seen live collection (boot-preloaded), with the mark-seen upsert and the reset-by-ids delete.
 - Web:
   - Slots:
     - `Hints.Hint`
@@ -261,6 +283,7 @@ Exhibits: `hints/card`, `hints/spotlight`, `hints/welcome`.
   - Contributes:
     - `Core.Root` → `HintHost`
     - `ThemeEngine.FixedTheme` "Onboarding hints"
+    - `Shortcuts.Shortcut` "hints.pointer-end (Escape)"
     - `Shortcuts.Shortcut` "hints.tour-back (ArrowLeft)"
     - `Shortcuts.Shortcut` "hints.tour-end (Escape)"
     - `Shortcuts.Shortcut` "hints.tour-next (ArrowRight)"
@@ -287,10 +310,12 @@ Exhibits: `hints/card`, `hints/spotlight`, `hints/welcome`.
   - Exports (types):
     - `AnyTour`
     - `HintCatalogEntry`
+    - `PointAtOptions`
     - `TourRunView`
   - Exports (values):
     - `emitHintSignal`
     - `Hints`
+    - `pointAt`
     - `setTourData`
     - `startTour`
     - `useHintAnchor`
@@ -390,6 +415,7 @@ Exhibits: `hints/card`, `hints/spotlight`, `hints/welcome`.
   - Imported by:
     - `active-data/id-chip`
     - `active-data/prototype`
+    - `active-data/show-me`
     - `apps/home/app-cards`
     - `apps/home/tour`
     - `apps/prototypes/canvas`
@@ -401,6 +427,7 @@ Exhibits: `hints/card`, `hints/spotlight`, `hints/welcome`.
     - `shell/global-action-bar`
     - `tasks/task-draft-form`
 - Sub-plugins:
+  - **`ask`** — Ask equin, web half: the ? menu's entry (Ask equin how to… / Back to your question), and the AskHost at Core.Root — a draggable card in the chrome's theme holding one threaded conversation with the…
   - **`help-menu`** — The ? "Getting started" menu on the global action bar — the hints engine's help anchor, ringed while a tour end pulses it — rendering the open HelpMenu.Entry slot: Replay the tour (the primary…
 
 <!-- AUTOGENERATED:END -->

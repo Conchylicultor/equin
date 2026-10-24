@@ -126,6 +126,7 @@ registry readers are headless.
     - `apps/website/improve`
     - `conversations/agent-thread`
     - `conversations/agents`
+    - `hints/ask`
     - `primitives/prompt-editor`
     - `primitives/text-editor/composer`
     - `primitives/text-editor/inline-chip`

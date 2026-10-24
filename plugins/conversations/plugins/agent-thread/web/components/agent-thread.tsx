@@ -9,11 +9,8 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import {
   PendingTurnCard,
   useOptimisticConversationStatus,
@@ -41,22 +38,30 @@ import {
   UserBubble,
   type RenderThreadResult,
   type ResultWords,
+  type ThreadHeaderOptions,
+  type ThreadHeight,
 } from "./agent-thread-view";
+import { OpenConversationButton } from "./open-conversation";
 import { ThreadComposer } from "./composer";
 
-export interface AgentThreadProps<D extends ThreadResultDef> {
+export type AgentThreadProps<D extends ThreadResultDef> =
+  AgentThreadBaseProps<D> & ThreadHeaderOptions;
+
+interface AgentThreadBaseProps<D extends ThreadResultDef> {
   conversationId: string;
   /** The result kinds this host renders; their accepted calls are results, not steps. */
   results: readonly D[];
   renderResult: RenderThreadResult<D>;
   /** The composer's placeholder. */
   placeholder?: string;
-  /** Leading in the header — who the thread is with ("✦ Sonnet"). */
-  title?: ReactNode;
-  /** How the header counts the newest turn's results ("3 picks"); default "3 results". */
+  /** How the header and the step lists count results ("3 picks"); default "3 results". */
   resultWords?: ResultWords;
-  /** In the header after Open conversation — the host's own control (a close). */
-  headerAction?: ReactNode;
+  /**
+   * `fill` (default): fills its container. `hug`: as tall as its content, up
+   * to its parent element's max-height, then the turns scroll (a floating
+   * card). See `AgentThreadView`'s `height`.
+   */
+  height?: ThreadHeight;
 }
 
 /** A sent turn's echo: the thread's own user bubble, its status under it. */
@@ -68,23 +73,6 @@ const renderEcho: RenderEcho = (turn, status) => (
     </Stack>
   </Stack>
 );
-
-/** Open the full conversation in the Agent Manager (it crosses apps by itself). */
-function OpenConversation({ conversationId }: { conversationId: string }) {
-  const openPane = useOpenPane();
-  return (
-    <Button
-      variant="ghost"
-      {...openPane.link(
-        conversationPane,
-        { convId: conversationId },
-        { mode: "push" },
-      )}
-    >
-      Open conversation
-    </Button>
-  );
-}
 
 /**
  * The user has seen what the thread said: stamp the conversation viewed while
@@ -126,7 +114,9 @@ function LiveThread<D extends ThreadResultDef>({
   results,
   renderResult,
   placeholder,
+  resultWords,
   header,
+  height,
 }: {
   conversation: ConversationEntry;
   events: readonly JsonlEvent[];
@@ -135,7 +125,9 @@ function LiveThread<D extends ThreadResultDef>({
   results: readonly D[];
   renderResult: RenderThreadResult<D>;
   placeholder: string;
-  header: ThreadHeaderParts;
+  resultWords: ResultWords | undefined;
+  header: ThreadHeaderOptions;
+  height: ThreadHeight;
 }) {
   const status = useOptimisticConversationStatus(conversation);
   const turnRunning = useTurnRunning(conversation);
@@ -155,24 +147,35 @@ function LiveThread<D extends ThreadResultDef>({
   const [onScreen, setOnScreen] = useState(false);
   useInView(boxRef, (entry) => setOnScreen(entry.isIntersecting));
   useMarkViewedWhileVisible(conversation, latestOutputAt(turns), onScreen);
+  const viewHeader: ThreadHeaderOptions =
+    header.header === undefined
+      ? {
+          title: header.title,
+          // The default header ends with the link to the full conversation.
+          headerAction: (
+            <>
+              <OpenConversationButton conversationId={conversation.id} />
+              {header.headerAction}
+            </>
+          ),
+        }
+      : { header: header.header };
 
   return (
     // The box whose intersection says the thread is on screen.
-    <div ref={boxRef} className="h-full">
+    // Hugging, it passes its parent's max-height on to the thread's column.
+    <div
+      ref={boxRef}
+      className={height === "hug" ? "max-h-[inherit]" : "h-full"}
+    >
     <AgentThreadView
+        height={height}
+        conversationId={conversation.id}
       turns={turns}
       state={state}
       renderResult={renderResult}
-        title={header.title}
-        {...(header.resultWords === undefined
-          ? {}
-          : { resultWords: header.resultWords })}
-        headerAction={
-          <>
-            <OpenConversation conversationId={conversation.id} />
-            {header.headerAction}
-          </>
-        }
+        {...(resultWords === undefined ? {} : { resultWords })}
+        {...viewHeader}
       followKey={pendingTurns.length}
       trailing={
         <>
@@ -214,13 +217,6 @@ function LiveThread<D extends ThreadResultDef>({
   );
 }
 
-/** The host's parts of the thread's header. */
-interface ThreadHeaderParts {
-  title: ReactNode;
-  resultWords: ResultWords | undefined;
-  headerAction: ReactNode;
-}
-
 type AnsweredPending = Exclude<
   ResourceResult<PendingTurn[]>,
   { status: "loading" }
@@ -250,15 +246,17 @@ function Missing() {
  * Read live from the transcript, so it and the Agent Manager never disagree;
  * the conversation keeps running whether or not this is mounted.
  */
-export function AgentThread<D extends ThreadResultDef>({
-  conversationId,
-  results,
-  renderResult,
-  placeholder = "Reply…",
-  title,
-  resultWords,
-  headerAction,
-}: AgentThreadProps<D>) {
+export function AgentThread<D extends ThreadResultDef>(
+  props: AgentThreadProps<D>,
+) {
+  const {
+    conversationId,
+    results,
+    renderResult,
+    placeholder = "Reply…",
+    resultWords,
+    height = "fill",
+  } = props;
   const raw = useThreadTranscript(conversationId);
   const events = useVisibleTranscript(raw);
   const row = useConversation(conversationId);
@@ -299,7 +297,9 @@ export function AgentThread<D extends ThreadResultDef>({
             results={results}
             renderResult={renderResult}
             placeholder={placeholder}
-            header={{ title, resultWords, headerAction }}
+            resultWords={resultWords}
+            header={props}
+            height={height}
           />
         )
       }

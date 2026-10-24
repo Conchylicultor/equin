@@ -26,6 +26,7 @@ import {
   fileRefForPath,
   type FileRef,
 } from "@plugins/primitives/plugins/file-viewer/core";
+import { FileLinksWorkspaceProvider } from "@plugins/primitives/plugins/file-links/web";
 import {
   FilePeekHeaderProvider,
   FilePeekTitle,
@@ -56,7 +57,18 @@ export const filePeekPane = Pane.define({
   useResolve: false,
 });
 
+// Paths inside the peeked file (a markdown file's links, say) name the same
+// checkout the file was read from.
 function FilePeekPaneBody() {
+  const { worktree } = filePeekPane.useParams();
+  return (
+    <FileLinksWorkspaceProvider workspace={worktree}>
+      <FilePeekPaneContent />
+    </FileLinksWorkspaceProvider>
+  );
+}
+
+function FilePeekPaneContent() {
   const openPane = useOpenPane();
   const convId = conversationPane.useRouteEntry()?.params.convId;
 

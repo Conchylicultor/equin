@@ -178,6 +178,7 @@ looks equivalent and silently discards the caller's.
     - `apps/prototypes/present`
     - `apps/sonata/audio/metronome`
     - `hints`
+    - `hints/ask`
     - `page/editor`
     - `primitives/adaptive-bar`
     - `primitives/overlay/floating-surface`

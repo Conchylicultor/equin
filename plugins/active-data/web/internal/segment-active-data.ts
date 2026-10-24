@@ -6,7 +6,7 @@ import {
 } from "@plugins/framework/plugins/web-sdk/core";
 import { ActiveData } from "../slots";
 import type { ActiveDataBlockContribution } from "../slots";
-import { parseAttrs } from "./tag-attrs";
+import { parseAttrs, TAG_ATTRS_SOURCE } from "./tag-attrs";
 import { isBlockForm } from "../../core";
 
 type SealedBlockContribution = SealContributions<ActiveDataBlockContribution>;
@@ -52,7 +52,10 @@ export function buildSegments(
   const escaped = blockContribs
     .map((c) => c.tag.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
     .join("|");
-  const re = new RegExp(`<(${escaped})(\\s[^>]*)?>([\\s\\S]*?)<\\/\\1>`, "g");
+  const re = new RegExp(
+    `<(${escaped})${TAG_ATTRS_SOURCE}?>([\\s\\S]*?)<\\/\\1>`,
+    "g",
+  );
 
   const segments: ActiveDataSegment[] = [];
   let cursor = 0;

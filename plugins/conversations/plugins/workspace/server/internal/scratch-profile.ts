@@ -29,6 +29,15 @@ export interface ScratchProfileDef<I> {
   /** Merged into the launch's `--settings` as `permissions`. */
   permissions?: { allow?: readonly string[]; deny?: readonly string[] };
   /**
+   * Run Bash in Claude Code's sandbox: its commands may read anywhere but
+   * write only inside the scratch dir, reach no network, and cannot ask to
+   * run outside it (no `dangerouslyDisableSandbox`). The session refuses to
+   * start when the sandbox cannot — never a silent unsandboxed shell. The
+   * session runs in bypass mode, so this is what makes a shell safe to give a
+   * profile that must not change anything outside its dir.
+   */
+  sandbox?: boolean;
+  /**
    * Runs in the spawn job after `CLAUDE.md` is written, before the session
    * starts: materialize inputs, ensure deps, write `<dir>/bin/` wrappers.
    * Must be idempotent (a retried spawn runs it again).

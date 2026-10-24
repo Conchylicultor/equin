@@ -439,13 +439,13 @@ downstream can widen the set, because nothing downstream resolves one.
     - `subagent-activity` (push, notified)
     - `subagent-transcript` (push, notified)
 - Web:
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/live-state` ×3
     - `primitives/relative-time` ×3
     - `conversations/conversation-view/jsonl-viewer` ×2
+    - `conversations` ×2
     - `primitives/css/spacing` ×2
     - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
-    - `conversations.useConversationById`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/fill.Fill`

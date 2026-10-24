@@ -32,6 +32,16 @@ describe("buildSegments", () => {
     });
   });
 
+  test("a quoted attribute value may hold `>`", () => {
+    const segments = buildSegments(
+      '<go path="a > b">\n- [ ] x\n</go>',
+      contribs,
+    );
+    expect(segments).toMatchObject([
+      { type: "block", attrs: { path: "a > b" }, content: "- [ ] x" },
+    ]);
+  });
+
   test("a tag inside a fenced block stays markdown", () => {
     const text = "```\n<go>\n- [ ] x\n</go>\n```";
     expect(buildSegments(text, contribs)).toEqual([{ type: "markdown", text }]);

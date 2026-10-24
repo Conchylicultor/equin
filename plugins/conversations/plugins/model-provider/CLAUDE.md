@@ -127,6 +127,7 @@ Single source of truth for the models an agent can run, and for what the user as
     - `conversations/conversation-view/launch-prompts`
     - `conversations/conversations-view`
     - `debug/claude-cli-calls`
+    - `hints/ask`
     - `infra/claude-cli`
     - `primitives/launch`
     - `tasks`

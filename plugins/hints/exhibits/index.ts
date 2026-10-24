@@ -12,6 +12,13 @@ export default [
     load: () => import("./internal/card"),
   }),
   appExhibit({
+    id: "hints/caption",
+    label: "Show me caption (no title)",
+    home: "chrome",
+    widths: [360, 640],
+    load: () => import("./internal/caption"),
+  }),
+  appExhibit({
     id: "hints/spotlight",
     label: "Tour step spotlight",
     home: "chrome",

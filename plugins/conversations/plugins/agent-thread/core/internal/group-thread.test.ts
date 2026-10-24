@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
-import { defineThreadResult } from "./result";
+import { defineThreadResult, threadResultReply } from "./result";
 import { groupThread } from "./group-thread";
 import { latestResultOf, threadProgressOf, threadStateOf } from "./progress";
 
@@ -20,6 +20,18 @@ const summary = defineThreadResult({
   tool: "places_summary",
   schema: z.object({ text: z.string() }),
 });
+
+const filed = defineThreadResult({
+  tool: "file_task",
+  schema: z.object({ title: z.string() }),
+  output: z.object({ taskId: z.string() }),
+  multiple: true,
+});
+
+/** A result's text as the tool's reply wrote it. */
+function replied(taskId: string): string {
+  return threadResultReply(filed, { taskId }).content[0]!.text;
+}
 
 let clock = Date.parse("2026-10-19T09:00:00Z");
 function at(): string {
@@ -51,10 +63,11 @@ const user = (text: string): JsonlEvent => ({
   text,
   uuid: `u-${++ids}`,
 });
-const say = (text: string): JsonlEvent => ({
+const say = (text: string, messageId?: string): JsonlEvent => ({
   kind: "assistant-text",
   at: at(),
   text,
+  ...(messageId === undefined ? {} : { messageId }),
 });
 
 const harness: JsonlEvent[] = [
@@ -164,6 +177,71 @@ describe("groupThread", () => {
     });
   });
 
+  test("a multiple kind keeps every accepted call of the turn, in order", () => {
+    const events = [
+      user("two wishes"),
+      call(
+        "mcp__equin__file_task",
+        { title: "A" },
+        { content: replied("task-a") },
+      ),
+      call("mcp__equin__places_show_picks", PICKS_INPUT, { content: "ok" }),
+      call(
+        "mcp__equin__file_task",
+        { title: "B" },
+        { content: replied("task-b") },
+      ),
+    ];
+    const [turn] = groupThread(events, [filed, picks], IDLE);
+    expect(
+      turn!.results.map((r) =>
+        r.kind === "accepted" && "title" in r.payload
+          ? r.payload.title
+          : r.def.tool,
+      ),
+    ).toEqual(["A", "places_show_picks", "B"]);
+  });
+
+  test("an output kind carries what its tool handed back", () => {
+    const events = [
+      user("file it"),
+      call(
+        "mcp__equin__file_task",
+        { title: "A" },
+        { content: replied("task-a") },
+      ),
+    ];
+    const [turn] = groupThread(events, [filed], IDLE);
+    const result = turn!.results[0]!;
+    if (result.kind !== "accepted") throw new Error("expected accepted");
+    expect(result.output).toEqual({ taskId: "task-a" });
+  });
+
+  test("a kind without an output carries none", () => {
+    const [turn] = groupThread(searchTurn, [picks], IDLE);
+    const result = turn!.results[0]!;
+    if (result.kind !== "accepted") throw new Error("expected accepted");
+    expect(result.output).toBeUndefined();
+  });
+
+  test("an accepted call whose output does not parse is an invalid result", () => {
+    const events = [
+      user("file it"),
+      call(
+        "mcp__equin__file_task",
+        { title: "A" },
+        { content: "Filed task task-a" },
+      ),
+      call(
+        "mcp__equin__file_task",
+        { title: "B" },
+        { content: JSON.stringify({ id: "task-b" }) },
+      ),
+    ];
+    const [turn] = groupThread(events, [filed], IDLE);
+    expect(turn!.results.map((r) => r.kind)).toEqual(["invalid", "invalid"]);
+  });
+
   test("an accepted call whose input no longer parses is an invalid result", () => {
     const events = [
       user("q"),
@@ -207,6 +285,24 @@ describe("groupThread", () => {
     expect(turn!.state).toBe("running");
   });
 
+  test("the answer carries the message it was written in", () => {
+    const [turn] = groupThread(
+      [user("q"), say("First.", "msg_a"), say("Last.", "msg_b")],
+      [],
+      IDLE,
+    );
+    expect(turn!.answer).toEqual({
+      text: "Last.",
+      at: expect.any(String),
+      messageId: "msg_b",
+    });
+  });
+
+  test("an answer from a line that names no message has a null message id", () => {
+    const [turn] = groupThread([user("q"), say("Hi.")], [], IDLE);
+    expect(turn!.answer?.messageId).toBeNull();
+  });
+
   test("blank assistant text is not an answer", () => {
     const [turn] = groupThread([user("q"), say("  \n")], [], IDLE);
     expect(turn!.answer).toBeNull();
@@ -215,6 +311,14 @@ describe("groupThread", () => {
 
   test("a result kind listed twice is a mistake", () => {
     expect(() => groupThread([], [picks, picks], IDLE)).toThrow(/twice/);
+  });
+});
+
+describe("threadResultReply", () => {
+  test("refuses an output its kind could not read back", () => {
+    expect(() =>
+      threadResultReply(filed, { taskId: 1 } as unknown as { taskId: string }),
+    ).toThrow(/does not parse/);
   });
 });
 

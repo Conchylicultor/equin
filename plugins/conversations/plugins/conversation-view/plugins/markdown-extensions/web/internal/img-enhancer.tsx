@@ -13,15 +13,12 @@ import {
   useMarkdownEnhancement,
   type MarkdownEnhancement,
 } from "@plugins/primitives/plugins/markdown/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { useConversationById } from "@plugins/conversations/web";
-import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
-import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
+import { useFileLinksWorkspace } from "@plugins/primitives/plugins/file-links/web";
 import {
   fileRefForPath,
   fileUrl,
 } from "@plugins/primitives/plugins/file-viewer/core";
+import { useFileTarget } from "./use-file-target";
 
 const IMG_HREF_RE = /\.(png|jpe?g|gif|webp|svg|bmp|avif|ico)(?:[?#].*)?$/i;
 
@@ -41,20 +38,13 @@ function basename(src: string): string {
 }
 
 export function ImgEnhancer({ children }: { children: ReactNode }) {
-  const convId = conversationPane.useRouteEntry()?.params.convId ?? null;
-  const conversation = useConversationById(convId);
-  const taskEntry = taskDetailPane.useRouteEntry();
-  const openPane = useOpenPane();
-  const worktree = conversation?.attemptId ?? (taskEntry ? "main" : undefined);
-  // Known only for a conversation's worktree: an absolute path inside it reads
-  // from git; any other absolute or `~` path reads from the host.
-  const worktreePath = conversation?.worktreePath;
-
-  const fileTarget = useMemo(() => {
-    if (!worktree) return undefined;
-    return (path: string) =>
-      openPane.to(filePeekPane, { worktree, filePath: path }, { mode: "push" });
-  }, [worktree, openPane]);
+  // The checkout the content's host declared. Its root is known only for a
+  // conversation's worktree: an absolute path inside it reads from git; any
+  // other absolute or `~` path reads from the host.
+  const scope = useFileLinksWorkspace();
+  const worktree = scope?.workspace;
+  const worktreePath = scope?.root;
+  const fileTarget = useFileTarget();
 
   const enhancement = useMemo((): MarkdownEnhancement | null => {
     if (!worktree) return null;

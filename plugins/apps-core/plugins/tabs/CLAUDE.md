@@ -37,6 +37,12 @@ by parsing the URL. So the theme can never diverge from what the focused surface
 shows. The canonicalization redirect (apps-layout) stays URL-driven
 (`matchAppForPath`) — that is a legitimately different question.
 
+The focused tab's content title is the same kind of page-global signal:
+`TabsProvider` publishes `titles[focusedTabId]` on every focus or title change,
+and `useFocusedTabTitle()` reads it anywhere — a `Core.Root` host (Ask equin)
+sits outside `TabsProvider` and cannot call `useTabs()`. `undefined` means the
+tab shows its app's index or an untitled pane, not "unknown".
+
 Because `tabId`s are sessionStorage-stable, a snapshot stamped before a reload
 still matches after it, so back/forward keeps working across reloads.
 
@@ -166,7 +172,7 @@ same browser tab from finding the blob. Both call sites are marked for removal.
 
 ## Plugin reference
 
-- Description: Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, and the surface-written placement-capabilities registry.
+- Description: Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, the focused tab's title as a module signal (useFocusedTabTitle, readable outside TabsProvider), and the surface-written placement-capabilities registry.
 - Web:
   - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×18
@@ -205,22 +211,23 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `useAppLink`
     - `useAppLinkProps`
     - `useDefaultPlacement`
+    - `useFocusedTabTitle`
     - `useNavigate`
     - `usePlacementCapabilities`
     - `useSurfaceFocused`
     - `useSurfaceMode`
     - `useTabs`
 - Cross-plugin:
-  - Imported by: 37 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×11
     - `apps-core` ×9
     - `debug` ×7
+    - `hints` ×2
     - `primitives` ×2
     - `shell` ×2
     - `active-data/song`
     - `build`
     - `config_v2/config-link`
-    - `hints`
     - `tasks/worktree-identity`
     - `ui/theme-engine/quick-theme`
 

@@ -41,6 +41,7 @@ import {
   makeShellHistoryAdapter,
   serializePaneState,
 } from "./shell-history-adapter";
+import { setFocusedTabTitle } from "./focused-tab-title-store";
 import {
   peekDefaultPlacement,
   peekExitPlacement,
@@ -913,6 +914,14 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   useEffect(() => {
     setFocusedApp(focusedAppId);
   }, [focusedAppId]);
+
+  // The focused tab's content title, for the same out-of-provider readers
+  // (`useFocusedTabTitle`): a Core.Root host cannot call `useTabs()`.
+  const focusedTabTitle =
+    focusedTabId === undefined ? undefined : titles[focusedTabId];
+  useEffect(() => {
+    setFocusedTabTitle(focusedTabTitle);
+  }, [focusedTabTitle]);
 
   // Publish the cross-app navigator at module scope so out-of-provider callers
   // (the floating bar, a sibling Core.Root) can reach it via the free

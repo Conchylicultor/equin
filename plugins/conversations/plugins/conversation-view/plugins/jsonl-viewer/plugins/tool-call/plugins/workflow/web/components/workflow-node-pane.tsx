@@ -1,6 +1,7 @@
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { ConversationFileLinks } from "@plugins/conversations/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   Badge,
@@ -16,6 +17,15 @@ import { useWorkflowNode } from "../internal/use-workflow-node";
 
 export function WorkflowNodePaneBody() {
   const convId = conversationPane.useRouteEntry()?.params.convId;
+  // The step's prompt names files in its conversation's worktree.
+  return (
+    <ConversationFileLinks conversationId={convId ?? null}>
+      <WorkflowNodePaneContent convId={convId} />
+    </ConversationFileLinks>
+  );
+}
+
+function WorkflowNodePaneContent({ convId }: { convId: string | undefined }) {
   const { toolUseId, nodeId } = workflowNodePane.useParams();
   const state = useWorkflowNode(convId, toolUseId, nodeId);
 

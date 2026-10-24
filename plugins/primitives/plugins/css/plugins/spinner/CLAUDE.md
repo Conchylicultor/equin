@@ -26,6 +26,7 @@
     - `conversations/agent-thread`
     - `conversations/conversation-view/op-status`
     - `debug/worktree-cleanup`
+    - `hints/ask`
     - `page/place`
     - `primitives/folder-picker`
     - `primitives/loading`

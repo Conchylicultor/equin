@@ -108,16 +108,16 @@ Consumers read only the generic aggregate:
     - `task-categories:rows` (keyed, point)
     - `task-category.registry` (push, fixed)
 - Cross-plugin:
-  - Imported by: 25 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 26 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×6
     - `tasks` ×4
     - `conversations` ×3
+    - `hints` ×2
     - `page` ×2
     - `backup`
     - `build`
     - `config_v2/settings`
     - `debug/background/investigate`
-    - `hints/help-menu`
     - `improve`
     - `infra/deps/updates`
     - `release`

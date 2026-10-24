@@ -35,6 +35,7 @@ The host-global model catalog — which model versions this machine knows, which
     - `conversations`
     - `conversations/agents`
     - `conversations/model-provider/catalog/baseline`
+    - `hints/ask`
     - `infra/claude-cli`
     - `tasks`
     - `tasks/auto-start/launch-option`

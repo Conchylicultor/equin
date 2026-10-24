@@ -524,7 +524,7 @@ serves them.
     - `TaskStatusSchema`
     - `TRAILER_LOG_FORMAT`
 - Cross-plugin:
-  - Imported by: 66 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 67 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×26
     - `tasks` ×17
     - `active-data` ×5
@@ -536,6 +536,7 @@ serves them.
     - `backup/sources/transcripts`
     - `code-explorer`
     - `database/query`
+    - `hints/ask`
     - `improve`
     - `plugin-meta/plugin-health`
   - Extended by:

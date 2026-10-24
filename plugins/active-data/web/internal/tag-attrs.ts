@@ -1,3 +1,11 @@
+/**
+ * An open tag's attribute run, quoted values allowed to hold `>` — a
+ * `<show-me path="a > b">` names a lineage path, whose separator is ` > `.
+ * The source of a regex group (no flags, no anchors), for the segmenter and the
+ * inline pairing to embed, so both read an open tag the same way.
+ */
+export const TAG_ATTRS_SOURCE = String.raw`(\s(?:[^>"']|"[^"]*"|'[^']*')*)`;
+
 /** The attributes of an active-data open tag (`<task model="opus">` → `{ model: "opus" }`); a bare name is `""`. */
 export function parseAttrs(attrStr: string): Record<string, string> {
   const attrs: Record<string, string> = {};

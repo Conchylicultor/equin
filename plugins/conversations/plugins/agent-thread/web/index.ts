@@ -28,11 +28,16 @@ export { AgentThread } from "./components/agent-thread";
 export type { AgentThreadProps } from "./components/agent-thread";
 export { AgentThreadView } from "./components/agent-thread-view";
 export { EndThreadButton } from "./components/end-thread-button";
+export { OpenConversationButton } from "./components/open-conversation";
+export type { OpenConversationButtonProps } from "./components/open-conversation";
 export type { EndThreadButtonProps } from "./components/end-thread-button";
 export type {
   AgentThreadViewProps,
+  RenderThreadHeader,
   RenderThreadResult,
   ResultWords,
+  ThreadHeaderContext,
+  ThreadHeaderOptions,
 } from "./components/agent-thread-view";
 export { StepLabel } from "./components/step-list";
 export {

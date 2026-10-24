@@ -20,6 +20,7 @@
     - `conversations/conversation-view/code.useEditedFiles`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/text.Text`
+    - `primitives/file-links.FileLinksWorkspaceProvider`
     - `primitives/file-viewer.FileContent`
     - `primitives/file-viewer.FileRenderersHandle`
     - `primitives/file-viewer.FileTabs`

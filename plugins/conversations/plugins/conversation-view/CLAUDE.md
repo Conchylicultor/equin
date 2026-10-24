@@ -31,7 +31,7 @@
     - `conversationPane.Actions` ← `conversations.conversation-view.track`
     - `conversationPane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "conversation"
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×5
     - `conversations/conversation-view/action-bar.ActionBarView`
     - `conversations/conversation-view/jsonl-viewer.JsonlPane`
@@ -44,6 +44,7 @@
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.ControlSizeProvider`
+    - `primitives/file-links.FileLinksWorkspaceProvider`
     - `primitives/loading.Loading`
     - `primitives/scope/surface-id.useSurfaceTabId`
     - `primitives/slot-render.defineRenderSlot`
@@ -58,6 +59,7 @@
     - `ConversationView`
     - `draftToPlainText`
     - `isDraftEmpty`
+    - `PromptComposerProvider`
     - `useAttemptWorkspaceKind`
     - `useConversationOpener`
     - `usePromptComposer`
@@ -70,8 +72,8 @@
     - `ui/tokens/density --space-xl`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/type-scale --measure-reading`
-  - Imported by: 62 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×50
+  - Imported by: 61 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×49
     - `active-data` ×5
     - `tasks` ×2
     - `apps/home/tour`

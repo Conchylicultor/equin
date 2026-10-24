@@ -57,12 +57,14 @@ export function createScratchWorkspace(deps: {
     async onFinish() {},
 
     launch({ spec }, { conversationId }) {
+      const profile = ScratchProfile.get(spec.profile);
       return scratchLaunchFragment({
         mcpUrl: namespaceUrl(
           runtimeNamespace(),
           endpointPath(mcpRequest, { conversationId }),
         ),
-        permissions: ScratchProfile.get(spec.profile).permissions,
+        permissions: profile.permissions,
+        sandbox: profile.sandbox,
       });
     },
 

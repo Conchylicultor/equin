@@ -13,6 +13,7 @@ export { ConversationView } from "./components/conversation-view";
 export { useAttemptWorkspaceKind } from "./use-attempt-workspace-kind";
 export { draftToPlainText, isDraftEmpty } from "./prompt-draft-utils";
 export {
+  PromptComposerProvider,
   usePromptComposer,
   useRegisterPromptComposer,
   type PromptComposer,

@@ -21,6 +21,7 @@ export const browserHost = {
     "active-data.id-chip",
     "active-data.plugin-link",
     "active-data.report",
+    "active-data.show-me",
     "active-data.task",
     "active-data.task-link",
     "apps-core",

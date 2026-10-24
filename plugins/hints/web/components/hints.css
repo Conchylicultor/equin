@@ -164,6 +164,23 @@
 .hint-card-body {
   margin-top: 6px;
 }
+/* A card without step dots starts with its words: the title (or, on a
+   caption, the body) shares the first row with the ×. */
+.hint-card-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px;
+}
+/* The 26px × centres on the first line instead of pushing the row taller. */
+.hint-card-head > .hint-close {
+  margin: -3px -6px -3px 0;
+}
+/* The first thing in the card takes no gap above it. */
+.hint-card > .hint-card-body:first-child,
+.hint-card-head-text > .hint-card-body {
+  margin-top: 0;
+}
 .hint-footnote {
   display: inline-flex;
   align-items: center;

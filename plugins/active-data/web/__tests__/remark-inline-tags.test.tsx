@@ -49,6 +49,16 @@ describe("remarkInlineTags", () => {
     expect(p.textContent).toBe("Done. Push it now.");
   });
 
+  test("a quoted attribute value may hold `>`", () => {
+    const root = md('See <go path="a > b" element="button — Share">it</go>.');
+    const mark = root.querySelector("mark")!;
+    expect(JSON.parse(mark.dataset.attrs!)).toEqual({
+      path: "a > b",
+      element: "button — Share",
+    });
+    expect(mark.textContent).toBe("it");
+  });
+
   test("pairs inside a list item", () => {
     const root = md("- a <go>b</go>");
     expect(root.querySelector("li mark")!.textContent).toBe("b");

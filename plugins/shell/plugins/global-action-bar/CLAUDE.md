@@ -157,6 +157,7 @@ tab bar, which an embed does not paint.
     - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/home/tour`
+    - `hints/ask`
     - `reorder/edit-mode`
     - `shell/notifications`
 

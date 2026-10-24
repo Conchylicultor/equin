@@ -18,4 +18,21 @@ describe("scratchLaunchFragment", () => {
     ).toEqual({ permissions });
     expect(scratchLaunchFragment({ mcpUrl: URL }).settings).toEqual({});
   });
+
+  test("a sandboxed profile's Bash cannot leave the sandbox", () => {
+    const settings = scratchLaunchFragment({
+      mcpUrl: URL,
+      permissions: { deny: ["Write"] },
+      sandbox: true,
+    }).settings;
+    expect(settings).toEqual({
+      permissions: { deny: ["Write"] },
+      sandbox: {
+        enabled: true,
+        failIfUnavailable: true,
+        autoAllowBashIfSandboxed: true,
+        allowUnsandboxedCommands: false,
+      },
+    });
+  });
 });
