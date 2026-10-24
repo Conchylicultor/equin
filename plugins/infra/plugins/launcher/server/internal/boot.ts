@@ -470,12 +470,33 @@ export function gatewayLaunchSpec(opts: GatewayLaunchOptions): {
   stdioLog: string;
   logsDir: string;
 } {
+  return {
+    argv: [builtFile(opts.gateway), ...gatewayLaunchFlags(opts)],
+    // Nothing the gateway reads is relative (every path is a flag), but
+    // its children resolve their toolchain from it — see `cwd` above.
+    cwd: opts.cwd,
+    // The declared subset of the LIVE `process.env` — never an implicit
+    // inherit (which would miss the release launcher's mutations) and never
+    // the whole thing (which hands the starter's shell to every backend).
+    env: pickRuntimeEnv(process.env),
+    stdioLog: GATEWAY_STDIO_LOG,
+    logsDir: gatewayLogs.path,
+  };
+}
+
+/**
+ * The gateway's flags — {@link gatewayLaunchSpec}'s argv after the binary. A
+ * function of its own because they do not depend on which build runs: the
+ * health report's drift row compares an installed gateway's flags with these
+ * before main's new binary is even built.
+ */
+export function gatewayLaunchFlags(
+  opts: Omit<GatewayLaunchOptions, "gateway">,
+): string[] {
   const logsDir = gatewayLogs.ensure();
   gatewayState.ensure();
   gatewayLocks.ensure();
-  return {
-    argv: [
-      builtFile(opts.gateway),
+  return [
       "-listen",
       listenFlag({ host: opts.bindHost, port: opts.port }),
       "-log-level",
@@ -514,17 +535,7 @@ export function gatewayLaunchSpec(opts: GatewayLaunchOptions): {
       // boundaries (us → gateway, gateway → child) cannot disagree.
       "-child-env",
       runtimeEnvNames().join(","),
-    ],
-    // Nothing the gateway reads is relative (every path is a flag above), but
-    // its children resolve their toolchain from it — see `cwd` above.
-    cwd: opts.cwd,
-    // The declared subset of the LIVE `process.env` — never an implicit
-    // inherit (which would miss the release launcher's mutations) and never
-    // the whole thing (which hands the starter's shell to every backend).
-    env: pickRuntimeEnv(process.env),
-    stdioLog: GATEWAY_STDIO_LOG,
-    logsDir,
-  };
+  ];
 }
 
 /**

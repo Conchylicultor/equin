@@ -15,6 +15,7 @@ export {
   bundledGateway,
   spawnGatewayDaemon,
   gatewayLaunchSpec,
+  gatewayLaunchFlags,
   awaitPgReady,
   bootSelfContainedApp,
   seedReleaseAssetMirror,
@@ -23,6 +24,11 @@ export {
   gatewayPidFile,
 } from "./internal/boot";
 export type { GatewayLaunchOptions } from "./internal/boot";
+export {
+  DEV_GATEWAY_LOG_LEVEL,
+  DEV_GATEWAY_PORT,
+  devGatewayLaunchOptions,
+} from "./internal/dev-launch";
 export { GATEWAY_SERVICE, gatewayServiceJob } from "./internal/gateway-service";
 export {
   LISTEN_ENV,

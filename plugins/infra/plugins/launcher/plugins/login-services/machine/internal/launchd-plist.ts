@@ -1,4 +1,5 @@
 import type { LoginServiceSpec } from "../../core";
+import type { InstalledJob } from "./login-service";
 
 /**
  * Render a launchd property list for a per-user LaunchAgent — pure, so the exact
@@ -63,6 +64,33 @@ ${envEntries}
 </dict>
 </plist>
 `;
+}
+
+/**
+ * Read the launch back out of a plist {@link renderLaunchAgentPlist} wrote: its
+ * `ProgramArguments` and `WorkingDirectory`. Null when the file is not one of
+ * ours (no such keys) — a hand-edited plist is "unknown", never a guess.
+ */
+export function parseLaunchAgentPlist(xml: string): InstalledJob | null {
+  const args = /<key>ProgramArguments<\/key>\s*<array>([\s\S]*?)<\/array>/.exec(
+    xml,
+  );
+  const cwd = /<key>WorkingDirectory<\/key>\s*<string>([^<]*)<\/string>/.exec(
+    xml,
+  );
+  if (args === null || cwd === null) return null;
+  const argv = [...args[1]!.matchAll(/<string>([^<]*)<\/string>/g)].map((m) =>
+    unescapeXml(m[1]!),
+  );
+  return { argv, cwd: unescapeXml(cwd[1]!) };
+}
+
+function unescapeXml(v: string): string {
+  return v
+    .replaceAll("&quot;", '"')
+    .replaceAll("&gt;", ">")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&amp;", "&");
 }
 
 function escapeXml(v: string): string {

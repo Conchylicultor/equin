@@ -42,12 +42,25 @@ export interface LoginService {
    * no definition.
    */
   isCurrent(job: LoginServiceJob): boolean;
+  /**
+   * The launch the written definition holds (argv and cwd), read back — null
+   * when there is no definition or it is not one this service wrote. For a
+   * reader that cannot rebuild the whole job (its environment is the
+   * starter's) but can compare the launch: the gateway's drift row.
+   */
+  installedJob(): InstalledJob | null;
   /** Delete the definition, so the service no longer starts by itself. */
   remove(): Promise<boolean>;
   /** Load (and so start) the written job; resolves with its pid once it runs. */
   load(): Promise<number>;
   /** Stop the service through the manager. The definition stays. */
   unload(): Promise<void>;
+}
+
+/** The part of a written job a reader can compare without its environment. */
+export interface InstalledJob {
+  argv: string[];
+  cwd: string;
 }
 
 export type LoginServiceState =

@@ -108,7 +108,9 @@ gateway already running under the manager and no `--force`, `start` only asks
 `LoginService.isCurrent(job)` and, when the written job differs, prints a stale
 notice with `./equin start --only dev.singularity.gateway --force` — the plist
 is not rewritten, the binary neither signed nor held, so the plist keeps naming
-the binary that runs and the sweep keeps off it. When `start` launches, the
+the binary that runs and the sweep keeps off it. The health report's Gateway row
+(`infra/launcher/gateway-drift`) says the same from the app, with
+`./equin start --force`. When `start` launches, the
 plist (or the detached spawn) names that path and it
 `holdDep`s the install as `machine-gateway`, so the daily deps sweep never
 deletes the binary launchd will relaunch, however long main has moved on; the

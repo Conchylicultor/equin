@@ -68,6 +68,10 @@ unload + `awaitProcessGone` when loaded, truncate the stdio log, load.
 under `cache/deps/<id>/<identity>/`, so a new dependency identity renders a
 different definition. `LoginService.isCurrent(job)` asks the same without
 writing (the gateway's staleness notice in `start`).
+`LoginService.installedJob()` reads the written definition's argv and cwd back
+(`parseLaunchAgentPlist` / `parseSystemdUserUnit`, the renderers' pure inverses,
+round-trip tested) for a reader that cannot rebuild the whole job — its
+environment is the starter's: the gateway's drift row (`launcher/gateway-drift`).
 
 `awaitProcessGone` / `terminateProcess` live here (`machine/internal/process.ts`),
 moved from the launcher's `server` barrel: this machine half could not import
@@ -106,9 +110,12 @@ folder needs only its boundary row, not a barrel's doc and shipping policy.
     - `LoginServiceJob`
     - `LoginServiceSession`
     - `LoginServiceSpec`
+- Cross-plugin:
+  - Imported by: `infra/launcher/gateway-drift`
 - Machine:
   - Exports (types):
     - `DefineLoginServiceSpec`
+    - `InstalledJob`
     - `LoginService`
     - `LoginServiceDeclaration`
     - `LoginServiceManager`

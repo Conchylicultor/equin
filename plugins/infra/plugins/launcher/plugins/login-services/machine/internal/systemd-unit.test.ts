@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { LoginServiceSpec } from "../../core";
-import { renderSystemdUserUnit } from "./systemd-unit";
+import { parseSystemdUserUnit, renderSystemdUserUnit } from "./systemd-unit";
 
 const job: LoginServiceSpec = {
   label: "dev.singularity.gateway",
@@ -117,5 +117,22 @@ describe("renderSystemdUserUnit — a graphical service", () => {
     expect(unit).toContain(
       "Restart=on-failure\nRestartSec=10\nTimeoutStopSec=20\nKillMode=process",
     );
+  });
+});
+
+describe("parseSystemdUserUnit", () => {
+  test("reads back the argv and cwd it rendered, unescaped", () => {
+    const argv = [...job.argv, `a"b\\c 50% $x $$y`, ""];
+    const cwd = "/h/me/50%/repo";
+    expect(
+      parseSystemdUserUnit(renderSystemdUserUnit({ ...job, argv, cwd })),
+    ).toEqual({ argv, cwd });
+  });
+
+  test("a unit that is not one of ours is null", () => {
+    expect(parseSystemdUserUnit("[Service]\nType=simple\n")).toBeNull();
+    expect(
+      parseSystemdUserUnit("ExecStart=/bin/gw -x\nWorkingDirectory=/\n"),
+    ).toBeNull();
   });
 });

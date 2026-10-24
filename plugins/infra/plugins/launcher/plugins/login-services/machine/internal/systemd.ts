@@ -7,10 +7,11 @@ import { retryUntil, exponential } from "@plugins/packages/plugins/retry/core";
 import type { LoginServiceId } from "../../core";
 import {
   isDefinitionCurrent,
+  readDefinition,
   removeDefinition,
   writeDefinition,
 } from "./definition-file";
-import { renderSystemdUserUnit } from "./systemd-unit";
+import { parseSystemdUserUnit, renderSystemdUserUnit } from "./systemd-unit";
 import type {
   LoginService,
   LoginServiceManager,
@@ -169,6 +170,10 @@ function systemdService(id: LoginServiceId): LoginService {
       writeDefinition(unitPath(), renderSystemdUserUnit({ ...id, ...job })),
     isCurrent: (job) =>
       isDefinitionCurrent(unitPath(), renderSystemdUserUnit({ ...id, ...job })),
+    installedJob: () => {
+      const content = readDefinition(unitPath());
+      return content === null ? null : parseSystemdUserUnit(content);
+    },
     remove,
     load,
     unload: async () => {

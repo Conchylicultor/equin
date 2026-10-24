@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import type { LoginServiceSpec } from "../../core";
-import { renderLaunchAgentPlist } from "./launchd-plist";
+import { parseLaunchAgentPlist, renderLaunchAgentPlist } from "./launchd-plist";
 
 const job: LoginServiceSpec = {
   label: "dev.singularity.gateway",
@@ -147,5 +147,18 @@ describe("renderLaunchAgentPlist — a graphical service", () => {
       timeoutMs: 10_000,
     });
     expect(res.exitCode).toBe(0);
+  });
+});
+
+describe("parseLaunchAgentPlist", () => {
+  test("reads back the argv and cwd it rendered, unescaped", () => {
+    const argv = [...job.argv, `a&b<c>"d"`];
+    expect(
+      parseLaunchAgentPlist(renderLaunchAgentPlist({ ...job, argv })),
+    ).toEqual({ argv, cwd: job.cwd });
+  });
+
+  test("a plist that is not one of ours is null", () => {
+    expect(parseLaunchAgentPlist("<plist><dict></dict></plist>")).toBeNull();
   });
 });

@@ -83,6 +83,9 @@ function fakeService(registration: Registration, writtenFrom: typeof oldBuild) {
       return { path: definitionPath, changed };
     },
     isCurrent: (job) => render(job) === definition,
+    installedJob: () => {
+      throw new Error("not under test");
+    },
     remove: async () => {
       throw new Error("not under test");
     },

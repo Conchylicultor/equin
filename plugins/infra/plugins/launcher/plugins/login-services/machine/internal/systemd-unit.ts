@@ -1,4 +1,5 @@
 import type { LoginServiceSpec } from "../../core";
+import type { InstalledJob } from "./login-service";
 
 /**
  * Render a systemd user unit for a login service — pure, so the exact job the
@@ -54,6 +55,31 @@ StandardError=append:${path(spec.stdioLog)}
 [Install]
 WantedBy=${wantedBy}
 `;
+}
+
+/**
+ * Read the launch back out of a unit {@link renderSystemdUserUnit} wrote: its
+ * `ExecStart` words (each double-quoted, C-escaped, `$$` and `%%` doubled) and
+ * `WorkingDirectory`. Null when the file is not one of ours — a hand-edited
+ * unit is "unknown", never a guess.
+ */
+export function parseSystemdUserUnit(unit: string): InstalledJob | null {
+  const exec = /^ExecStart=(.*)$/m.exec(unit)?.[1];
+  const cwd = /^WorkingDirectory=(.*)$/m.exec(unit)?.[1];
+  if (exec === undefined || cwd === undefined) return null;
+  const argv: string[] = [];
+  const word = /"((?:[^"\\]|\\.)*)"(?: |$)/y;
+  while (word.lastIndex < exec.length) {
+    const m = word.exec(exec);
+    if (m === null) return null;
+    argv.push(
+      m[1]!
+        .replace(/\\(.)/g, "$1")
+        .replaceAll("$$", () => "$")
+        .replaceAll("%%", "%"),
+    );
+  }
+  return { argv, cwd: cwd.replaceAll("%%", "%") };
 }
 
 /** `%` starts a unit specifier everywhere in a unit file. */

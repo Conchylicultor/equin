@@ -23,6 +23,7 @@ export { reconcileLoginService } from "./internal/reconcile";
 export type { ReconcileOutcome, ReconcilePolicy } from "./internal/reconcile";
 export { awaitProcessGone, terminateProcess } from "./internal/process";
 export type {
+  InstalledJob,
   LoginService,
   LoginServiceManager,
   LoginServiceState,

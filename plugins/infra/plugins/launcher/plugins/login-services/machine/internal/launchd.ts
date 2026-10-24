@@ -9,10 +9,11 @@ import { retryUntil, exponential } from "@plugins/packages/plugins/retry/core";
 import type { LoginServiceId } from "../../core";
 import {
   isDefinitionCurrent,
+  readDefinition,
   removeDefinition,
   writeDefinition,
 } from "./definition-file";
-import { renderLaunchAgentPlist } from "./launchd-plist";
+import { parseLaunchAgentPlist, renderLaunchAgentPlist } from "./launchd-plist";
 import type {
   LoginService,
   LoginServiceManager,
@@ -122,6 +123,10 @@ function launchdService(id: LoginServiceId): LoginService {
         plistPath(),
         renderLaunchAgentPlist({ ...id, ...job }),
       ),
+    installedJob: () => {
+      const content = readDefinition(plistPath());
+      return content === null ? null : parseLaunchAgentPlist(content);
+    },
     remove: async () => removeDefinition(plistPath()),
     load,
     // launchd SIGTERMs it (SIGKILL after the plist's ExitTimeOut). The plist

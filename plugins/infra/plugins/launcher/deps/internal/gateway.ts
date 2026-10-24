@@ -1,5 +1,13 @@
 import { join } from "node:path";
-import { signBinary } from "@plugins/infra/plugins/codesign/deps";
+import {
+  isSignedBy,
+  machineHost,
+  readConfiguredValue,
+  readLocalIdentity,
+  resolveConfigured,
+  signBinary,
+  type CodesignHost,
+} from "@plugins/infra/plugins/codesign/deps";
 import {
   defineDep,
   type DepTarget,
@@ -121,4 +129,33 @@ export async function signGateway(
       `Gateway signed by the ${outcome.identity.kind} identity "${outcome.identity.label}" (${outcome.identity.sha1})`,
     );
   }
+}
+
+/**
+ * Whether the gateway binary at `path` carries the signature `signGateway`
+ * would give it now — asked WITHOUT side effects (the local identity is read,
+ * never minted; nothing is re-signed), for a reader that only reports.
+ *
+ * - `unsupported` — not macOS: nothing is signed there;
+ * - `no-identity` — this machine has no local identity yet (the next `start`
+ *   creates one and signs);
+ * - `signed` / `unsigned` — by that identity, as `dev.singularity.gateway`.
+ */
+export async function gatewaySignature(
+  path: string,
+  host: CodesignHost = machineHost(),
+): Promise<"unsupported" | "no-identity" | "signed" | "unsigned"> {
+  if (host.platform !== "darwin") return "unsupported";
+  const configured = readConfiguredValue(host);
+  let sha1: string;
+  if (configured !== null) {
+    sha1 = (await resolveConfigured(configured, host)).sha1;
+  } else {
+    const local = readLocalIdentity(host);
+    if (local.kind !== "present") return "no-identity";
+    sha1 = local.identity.sha1;
+  }
+  return (await isSignedBy(path, GATEWAY_CODESIGN_IDENTIFIER, sha1, host))
+    ? "signed"
+    : "unsigned";
 }

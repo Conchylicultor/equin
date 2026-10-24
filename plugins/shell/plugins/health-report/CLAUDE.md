@@ -128,6 +128,7 @@ detail is rendered through `renderIsolated`.
     - `HealthReport.Row` ← `debug.queue-health`
     - `HealthReport.Row` ← `debug.sentinel`
     - `HealthReport.Row` ← `infra.health`
+    - `HealthReport.Row` ← `infra.launcher.gateway-drift`
     - `HealthReport.Row` ← `infra.mcp.browser`
     - `HealthReport.Row` ← `primitives.dom.web-storage.health`
     - `HealthReport.Row` ← `reports.resource-errors`
@@ -181,6 +182,7 @@ detail is rendered through `renderIsolated`.
     - `debug/queue-health`
     - `debug/sentinel`
     - `infra/health`
+    - `infra/launcher/gateway-drift`
     - `infra/mcp/browser`
     - `primitives/dom/web-storage/health`
     - `reports/resource-errors`

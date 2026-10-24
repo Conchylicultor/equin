@@ -31,6 +31,11 @@ export function isDefinitionCurrent(path: string, content: string): boolean {
   return existsSync(path) && readFileSync(path, "utf-8") === content;
 }
 
+/** The definition file's content, or null when there is none. */
+export function readDefinition(path: string): string | null {
+  return existsSync(path) ? readFileSync(path, "utf-8") : null;
+}
+
 /** Delete a job definition file; whether there was one. */
 export function removeDefinition(path: string): boolean {
   if (!existsSync(path)) return false;

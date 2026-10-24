@@ -29761,8 +29761,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `awaitPgReady`
           - `bootSelfContainedApp`
           - `bundledGateway`
+          - `DEV_GATEWAY_LOG_LEVEL`
+          - `DEV_GATEWAY_PORT`
+          - `devGatewayLaunchOptions`
           - `ensureDatabaseConfig`
           - `GATEWAY_SERVICE`
+          - `gatewayLaunchFlags`
           - `gatewayLaunchSpec`
           - `gatewayPidFile`
           - `gatewayServiceJob`
@@ -29784,6 +29788,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register: `defineDaemon('launcher.gateway')`
       - Deps:
         - Uses:
+          - `infra/codesign.CodesignHost`
+          - `infra/codesign.isSignedBy`
+          - `infra/codesign.machineHost`
+          - `infra/codesign.readConfiguredValue`
+          - `infra/codesign.readLocalIdentity`
+          - `infra/codesign.resolveConfigured`
           - `infra/codesign.signBinary`
           - `infra/deps.defineDep`
           - `infra/deps.DepTarget`
@@ -29793,6 +29803,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/deps/build.builtFile`
         - Exports (values):
           - `gatewayBinary`
+          - `gatewaySignature`
           - `signGateway`
       - Cross-plugin:
         - Imported by: `release`
@@ -29816,6 +29827,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtimePath`
           - `runtimeShimsDir`
       - Plugins:
+        - **`gateway-drift`** — Gateway drift, shown: the health report's Gateway row — attention while the machine's login-service gateway (installed or running) differs from what ./equin start --force would install now from main, naming each difference (binary, -listen and the other flags, cwd, signature) and the command; folded with Connection, Database and Live reads while current.
+          - Web:
+            - Contributes: `HealthReport.Row` "Gateway"
+            - Uses:
+              - `network/live.useLive`
+              - `shell/health-report.HealthReport`
+          - Server:
+            - Contributes: `resource.declare` "gateway-drift"
+            - Resources: `gateway-drift` (push, notified, whole: one phrase per kind of difference (binary, each changed flag, cwd, signature, running vs installed) — a fixed handful)
+          - Machine:
+            - Uses:
+              - `infra/launcher/login-services.loginService`
+              - `network/live.serveValue`
+            - Register: `defineRefReaction('launcher.gateway-drift (refs/heads/main)')`
+          - Core:
+            - Uses:
+              - `network/live.liveValue`
+              - `packages/list-bound.wholeList`
+            - Exports (types): `GatewayDrift`
+            - Exports (values):
+              - `GATEWAY_REFRESH_COMMAND`
+              - `gatewayDrift`
+              - `GatewayDriftSchema`
         - **`login-services`** — Per-user login services, generalized from the gateway's: a LoginService over a LoginServiceSpec (label, argv, cwd, env, stdio log, session background | graphical), rendered as a launchd LaunchAgent on macOS (graphical → LimitLoadToSessionType=Aqua) or a systemd user unit on Linux (graphical → graphical-session.target, no lingering); defineLoginService and the collected login-services/ registry, so ./equin start / stop bring every declared service up and down without naming one. On main's boot, every declared service a start registered follows main: reloaded when main's build of its dependency changed its job (rewritten only, when stopped), the dependency requested through deps first when it is not built yet.
           - Core:
             - Uses: `framework/tooling/collected-dir.defineCollectedDir`
@@ -29824,9 +29858,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `LoginServiceJob`
               - `LoginServiceSession`
               - `LoginServiceSpec`
+          - Cross-plugin:
+            - Imported by: `infra/launcher/gateway-drift`
           - Machine:
             - Exports (types):
               - `DefineLoginServiceSpec`
+              - `InstalledJob`
               - `LoginService`
               - `LoginServiceDeclaration`
               - `LoginServiceManager`
@@ -32237,12 +32274,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
-        - Imported by: 283 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 284 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×76
           - `conversations` ×50
           - `debug` ×28
           - `tasks` ×28
-          - `infra` ×16
+          - `infra` ×17
           - `active-data` ×12
           - `page` ×12
           - `primitives` ×10
@@ -32478,10 +32515,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `createKeyedMutex`
     - **`list-bound`** — A list's bound, declared in its zod schema: cappedList / cappedRecord (a checked max) and wholeList / wholeRecord (loaded whole, with a written reason), tagged in _def so the tag survives zod's clones; listShapeOf walks every array, record, map and set a schema reaches and reports each one's bound and the bare ones, listBoundsOf refuses a bare one.
       - Cross-plugin:
-        - Imported by: 83 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+        - Imported by: 84 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
           - `apps` ×13
           - `conversations` ×13
-          - `infra` ×12
+          - `infra` ×13
           - `debug` ×11
           - `primitives` ×5
           - `tasks` ×4
@@ -46692,6 +46729,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HealthReport.Row` ← `debug.queue-health`
           - `HealthReport.Row` ← `debug.sentinel`
           - `HealthReport.Row` ← `infra.health`
+          - `HealthReport.Row` ← `infra.launcher.gateway-drift`
           - `HealthReport.Row` ← `infra.mcp.browser`
           - `HealthReport.Row` ← `primitives.dom.web-storage.health`
           - `HealthReport.Row` ← `reports.resource-errors`
@@ -46745,6 +46783,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/queue-health`
           - `debug/sentinel`
           - `infra/health`
+          - `infra/launcher/gateway-drift`
           - `infra/mcp/browser`
           - `primitives/dom/web-storage/health`
           - `reports/resource-errors`

@@ -3962,6 +3962,10 @@
     "plugins/infra/plugins/launcher": {
       "name": "@singularity/plugin-infra-launcher",
     },
+    "plugins/infra/plugins/launcher/plugins/gateway-drift": {
+      "name": "@singularity/plugin-infra-launcher-gateway-drift",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/launcher/plugins/login-services": {
       "name": "@singularity/plugin-infra-launcher-login-services",
     },
@@ -9055,6 +9059,8 @@
     "@singularity/plugin-infra-jobs-supervised-job": ["@singularity/plugin-infra-jobs-supervised-job@workspace:plugins/infra/plugins/jobs/plugins/supervised-job"],
 
     "@singularity/plugin-infra-launcher": ["@singularity/plugin-infra-launcher@workspace:plugins/infra/plugins/launcher"],
+
+    "@singularity/plugin-infra-launcher-gateway-drift": ["@singularity/plugin-infra-launcher-gateway-drift@workspace:plugins/infra/plugins/launcher/plugins/gateway-drift"],
 
     "@singularity/plugin-infra-launcher-login-services": ["@singularity/plugin-infra-launcher-login-services@workspace:plugins/infra/plugins/launcher/plugins/login-services"],
 

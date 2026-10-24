@@ -26,8 +26,9 @@ import {
   spawnGatewayDaemon,
   gatewayLaunchSpec,
   awaitGatewayReady,
-  resolveListenAddress,
   LISTEN_ENV,
+  DEV_GATEWAY_PORT,
+  devGatewayLaunchOptions,
   GATEWAY_SERVICE,
   gatewayServiceJob,
   type GatewayLaunchOptions,
@@ -44,10 +45,6 @@ import {
   type LoginServiceManager,
   type ReconcileOutcome,
 } from "@plugins/infra/plugins/launcher/plugins/login-services/machine";
-
-// The dev gateway always listens on the default port: every backend reaches
-// central through `localhost:9000`.
-const DEFAULT_PORT = 9000;
 
 type Opts = { force?: boolean; logLevel: string; only?: string };
 
@@ -140,7 +137,7 @@ async function startAsLoginService(
   if (
     managedPid === null &&
     legacyPid === null &&
-    (await isGatewayListening(DEFAULT_PORT))
+    (await isGatewayListening(DEV_GATEWAY_PORT))
   ) {
     printRunning(
       "Gateway is already running on port 9000 (started externally).",
@@ -183,7 +180,7 @@ async function startAsLoginService(
   // The manager appends; truncate so the tail quoted on a failed start is this boot's.
   writeFileSync(spec.stdioLog, "");
   const pid = await loginService.load();
-  await awaitGatewayReady({ pid, port: DEFAULT_PORT });
+  await awaitGatewayReady({ pid, port: DEV_GATEWAY_PORT });
   printRunning(
     `Gateway started under ${manager} (PID ${pid}); it starts again at every ${loginService.startsAt}`,
   );
@@ -273,7 +270,7 @@ async function startDetached(opts: Opts): Promise<void> {
   const existingPid = readPid();
   const pidAlive = existingPid !== null && isRunning(existingPid);
 
-  if (!pidAlive && (await isGatewayListening(DEFAULT_PORT))) {
+  if (!pidAlive && (await isGatewayListening(DEV_GATEWAY_PORT))) {
     printRunning(
       "Gateway is already running on port 9000 (started externally).",
     );
@@ -297,7 +294,7 @@ async function startDetached(opts: Opts): Promise<void> {
   // Wait for the gateway to actually serve before claiming success. It exits
   // when a managed service fails to start, so printing unconditionally
   // reported success for an already-dead gateway.
-  await awaitGatewayReady({ pid, port: DEFAULT_PORT });
+  await awaitGatewayReady({ pid, port: DEV_GATEWAY_PORT });
   printRunning(`Gateway started (PID ${pid})`);
   console.log(
     "  Not registered with a service manager on this OS: run `./equin start` again after a reboot.",
@@ -324,10 +321,7 @@ async function prepareGateway(opts: Opts): Promise<GatewayLaunchOptions> {
   console.log(`Gateway binary: ${gateway.dir} (${gateway.identity})`);
   return {
     gateway,
-    cwd: repoRoot,
-    port: DEFAULT_PORT,
-    bindHost: devBindHost(),
-    logLevel: opts.logLevel,
+    ...devGatewayLaunchOptions({ repoRoot, logLevel: opts.logLevel }),
   };
 }
 
@@ -349,26 +343,9 @@ async function adoptGatewayLaunch(launch: GatewayLaunchOptions): Promise<void> {
   ensureDatabaseConfig(launch.cwd, console.log);
   console.log(
     launch.bindHost === null
-      ? `Binding the gateway to every interface (${LISTEN_ENV}=:${DEFAULT_PORT})`
-      : `Binding the gateway to ${launch.bindHost}:${DEFAULT_PORT}`,
+      ? `Binding the gateway to every interface (${LISTEN_ENV}=:${DEV_GATEWAY_PORT})`
+      : `Binding the gateway to ${launch.bindHost}:${DEV_GATEWAY_PORT}`,
   );
-}
-
-/**
- * Where the dev gateway binds: loopback by default (127.0.0.1 and [::1]), or the
- * host `SINGULARITY_LISTEN` names — the one listen override a release honours
- * too. Every interface is the explicit opt-in `SINGULARITY_LISTEN=:9000`, so the
- * agent manager is off-box only when someone asked for it. Only the HOST may
- * change: every backend reaches central at `localhost:9000`.
- */
-function devBindHost(): string | null {
-  const addr = resolveListenAddress(DEFAULT_PORT);
-  if (addr.port !== DEFAULT_PORT) {
-    throw new Error(
-      `${LISTEN_ENV} names port ${addr.port}, but the dev gateway must listen on ${DEFAULT_PORT} (backends reach central at localhost:${DEFAULT_PORT}). Set only the host, e.g. ${LISTEN_ENV}=127.0.0.1:${DEFAULT_PORT}.`,
-    );
-  }
-  return addr.host;
 }
 
 function printRunning(headline: string): void {
