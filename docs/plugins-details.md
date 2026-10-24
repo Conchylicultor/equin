@@ -31501,8 +31501,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `PaneLayoutHost`
     - **`miller`** — Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
       - Web:
-        - Uses: 28 symbols — full list in [`plugins/layouts/plugins/miller/REFERENCE.md`](../plugins/layouts/plugins/miller/REFERENCE.md)
+        - Uses: 29 symbols — full list in [`plugins/layouts/plugins/miller/REFERENCE.md`](../plugins/layouts/plugins/miller/REFERENCE.md)
           - `primitives/pane` ×12
+          - `primitives/dom/auto-scroll` ×2
           - `primitives/hover-reveal` ×2
           - `primitives/sortable-list` ×2
           - `layouts/route-fallback.DeferredRouteFallback`
@@ -31510,7 +31511,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/spacing.Stack`
           - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.cn`
-          - `primitives/dom/auto-scroll.scrollChildIntoView`
           - `primitives/dom/web-storage.defineStore`
           - `primitives/error-boundary.PluginErrorBoundary`
           - `primitives/latest-ref.useLatestRef`
@@ -40232,7 +40232,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review/plugin-changes/file-changes`
     - **`dom`** — How do I read and drive the real DOM, and where is the one place allowed to do it? — the guarded selection read (dom-selection), element measurement (element-size), on-screen detection (in-view), scroll ownership (auto-scroll), the wasted-scroll bounce (overscroll-hint), reveal-on-activation (scroll-reveal), and copying what an element stands for (copy-source-text).
       - Plugins:
-        - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), scroll carried from one document to the next (captureDocumentScroll / restoreDocumentScroll, for a reloaded same-origin iframe), and the shared findScrollParent discovery.
+        - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), scroll carried from one document to the next (captureDocumentScroll / restoreDocumentScroll, for a reloaded same-origin iframe), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves), and the shared findScrollParent discovery.
           - Web:
             - Uses:
               - `primitives/css/ui-kit.Button`
@@ -40262,6 +40262,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `announceNavigation`
               - `captureDocumentScroll`
+              - `cloneWithScroll`
               - `findScrollParent`
               - `FOLLOW_MOTION_ATTR`
               - `JumpToBottomButton`

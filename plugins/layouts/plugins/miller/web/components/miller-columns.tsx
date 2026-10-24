@@ -14,8 +14,8 @@ import {
   SortableItem,
   SortableList,
 } from "@plugins/primitives/plugins/sortable-list/web";
-import { COLUMN_ATTR, useColumnAppear } from "../hooks/use-column-appear";
 import { Column } from "./column";
+import { COLUMN_ATTR, ColumnMotion } from "./column-motion";
 
 export function MillerColumns() {
   // Label only — the match itself comes from the surface.
@@ -42,7 +42,6 @@ export function MillerColumns() {
     }
     lastLength.current = len;
   }, [match?.panes.length]);
-  useColumnAppear(ref, match?.panes);
 
   const handleMove = useCallback(
     (activeId: string, overId: string) => {
@@ -72,35 +71,38 @@ export function MillerColumns() {
       {/* The horizontal flex row IS the x-scroll container: the SortableItem
           columns are its direct flex children, and the growth effect reveals
           this element's `lastElementChild` (the newest column) into view.
+          `relative`: a closing column's ghost (ColumnMotion) is drawn
+          absolutely over its last rect, in this row's scroll coordinates.
           flex-row + scroll-container can't be split without breaking the
           direct-child flex relationship dnd-kit relies on. */}
       {/* eslint-disable-next-line layout/no-adhoc-layout -- flex-row x-scroll container holding the sortable columns as direct children */}
-      <div ref={ref} className="flex h-full overflow-x-auto">
-        <SortableList
-          items={itemIds}
-          onMove={handleMove}
-          orientation="horizontal"
-        >
-          {match.panes.map((entry, i) => {
-            const isLast = i === match.panes.length - 1;
-            return (
-              <SortableItem
-                key={entry.instanceId}
-                id={String(entry.instanceId)}
-                handle
-                disabled={!canReorder}
-                wrapperProps={{ [COLUMN_ATTR]: entry.uuid }}
-                // The leaf column flex-grows to fill remaining width; fixed-width
-                // columns stay rigid. The grow/shrink choice is per-column state,
-                // so it stays raw.
-                // eslint-disable-next-line layout/no-adhoc-layout -- per-column flex-grow/shrink role in miller's row
-                className={(state) =>
-                  `flex h-full${isLast ? " min-w-[200px] flex-1" : " shrink-0"}${state.isDragging ? " opacity-50" : ""}`
-                }
-              >
-                {(state) => (
-                  <PaneInstanceContext.Provider value={entry.instanceId}>
-                    {/* The column as a named lineage region, so a picked element
+      <div ref={ref} className="relative flex h-full overflow-x-auto">
+        <ColumnMotion rowRef={ref} panes={match.panes}>
+          <SortableList
+            items={itemIds}
+            onMove={handleMove}
+            orientation="horizontal"
+          >
+            {match.panes.map((entry, i) => {
+              const isLast = i === match.panes.length - 1;
+              return (
+                <SortableItem
+                  key={entry.instanceId}
+                  id={String(entry.instanceId)}
+                  handle
+                  disabled={!canReorder}
+                  wrapperProps={{ [COLUMN_ATTR]: entry.uuid }}
+                  // The leaf column flex-grows to fill remaining width; fixed-width
+                  // columns stay rigid. The grow/shrink choice is per-column state,
+                  // so it stays raw.
+                  // eslint-disable-next-line layout/no-adhoc-layout -- per-column flex-grow/shrink role in miller's row
+                  className={(state) =>
+                    `flex h-full${isLast ? " min-w-[200px] flex-1" : " shrink-0"}${state.isDragging ? " opacity-50" : ""}`
+                  }
+                >
+                  {(state) => (
+                    <PaneInstanceContext.Provider value={entry.instanceId}>
+                      {/* The column as a named lineage region, so a picked element
                         reports the pane that contains it AND the plugin that
                         owns it. Wrapped HERE rather than inside `Column`: the
                         region then covers the column body, its CollapsedBar and
@@ -109,36 +111,37 @@ export function MillerColumns() {
                         the position — miller panes are SIBLINGS, so an upward
                         walk from column 3 can never infer "3 of 3"; only the map
                         site knows it. */}
-                    <UiRegion
-                      kind="pane"
-                      id={entry.pane.id}
-                      label={`column ${i + 1} of ${match.panes.length}`}
-                      pluginId={paneOwnerFor(entry.pane)}
-                    >
-                      {/* Per-column boundary: a crash inside one pane is
+                      <UiRegion
+                        kind="pane"
+                        id={entry.pane.id}
+                        label={`column ${i + 1} of ${match.panes.length}`}
+                        pluginId={paneOwnerFor(entry.pane)}
+                      >
+                        {/* Per-column boundary: a crash inside one pane is
                           contained to that column; sibling panes survive.
                           The outer boundary remains as a backstop for the
                           row scaffolding (SortableList, drag). */}
-                      <PluginErrorBoundary
-                        slot="layouts.miller"
-                        label={entry.pane.id}
-                      >
-                        <Column
-                          entry={entry}
-                          isFirst={i === 0}
-                          isLast={isLast}
-                          dragHandleProps={
-                            canReorder ? state.handleProps : undefined
-                          }
-                        />
-                      </PluginErrorBoundary>
-                    </UiRegion>
-                  </PaneInstanceContext.Provider>
-                )}
-              </SortableItem>
-            );
-          })}
-        </SortableList>
+                        <PluginErrorBoundary
+                          slot="layouts.miller"
+                          label={entry.pane.id}
+                        >
+                          <Column
+                            entry={entry}
+                            isFirst={i === 0}
+                            isLast={isLast}
+                            dragHandleProps={
+                              canReorder ? state.handleProps : undefined
+                            }
+                          />
+                        </PluginErrorBoundary>
+                      </UiRegion>
+                    </PaneInstanceContext.Provider>
+                  )}
+                </SortableItem>
+              );
+            })}
+          </SortableList>
+        </ColumnMotion>
       </div>
     </PluginErrorBoundary>
   );

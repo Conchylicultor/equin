@@ -17,6 +17,8 @@ that wants it. Today that is six roles:
 - **the reader's anchor kept across a resize above it** — `KeepAnchorAcross`
 - **scroll carried to a new document** — `captureDocumentScroll` /
   `restoreDocumentScroll`
+- **scroll carried to a clone** — `cloneWithScroll` (a stand-in drawn while
+  React removes the original, e.g. a miller column fading out)
 - **scroll-container discovery** — `findScrollParent`
 
 ## `KeepAnchorAcross` — content resized above the reader must not move them
@@ -205,7 +207,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
 
 ## Plugin reference
 
-- Description: The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), scroll carried from one document to the next (captureDocumentScroll / restoreDocumentScroll, for a reloaded same-origin iframe), and the shared findScrollParent discovery.
+- Description: The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), scroll carried from one document to the next (captureDocumentScroll / restoreDocumentScroll, for a reloaded same-origin iframe), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves), and the shared findScrollParent discovery.
 - Web:
   - Uses:
     - `primitives/css/ui-kit.Button`
@@ -235,6 +237,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
   - Exports (values):
     - `announceNavigation`
     - `captureDocumentScroll`
+    - `cloneWithScroll`
     - `findScrollParent`
     - `FOLLOW_MOTION_ATTR`
     - `JumpToBottomButton`
