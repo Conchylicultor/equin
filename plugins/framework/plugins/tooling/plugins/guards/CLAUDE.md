@@ -108,8 +108,10 @@ typed. A reader it does not know, or a piped stage that never reads stdin
 
 A plugin adds guards for its own files by default-exporting a `Guard` (or an
 array) from its `guard/index.ts`; `core/guard.generated.ts` collects them, after
-the built-in `GUARDS`, and the runner never names one. `fileHint()` is the
-inform-only kind. `once` informs each agent at most once per session
+the built-in `GUARDS`, and the runner never names one. A matcher is a built-in
+tool or a whole MCP server (`mcp__<server>__*`); the hook only runs for tools
+the `.claude/settings.json` matcher names (`guards:hook-matcher-covers-guards`).
+`fileHint()` is the inform-only kind. `once` informs each agent at most once per session
 (`core/informed-once.ts`, not the transcript: a subagent's hook context is not
 in the transcript its payload names). Keep an inform under ~10k characters:
 past that Claude Code shows the agent only a 2 KB preview.
@@ -141,6 +143,7 @@ can blind or deafen all of them at once.
     - `infra/paths.worktreeArtifacts`
   - Exports (types):
     - `AllowVerdict`
+    - `BuiltinTool`
     - `CommandClass`
     - `DenyVerdict`
     - `FileHintSpec`
@@ -149,6 +152,7 @@ can blind or deafen all of them at once.
     - `GuardContext`
     - `InformVerdict`
     - `KnownCommand`
+    - `McpServerTools`
     - `ParsedArgv`
     - `PollDecision`
     - `RewriteVerdict`
@@ -166,6 +170,7 @@ can blind or deafen all of them at once.
     - `detectPoll`
     - `fileHint`
     - `GUARDS`
+    - `matchesTool`
     - `MODULE_EXTENSION`
     - `parseArgv`
     - `parseShell`

@@ -38,8 +38,23 @@ export type Verdict =
 export type TranscriptRead =
   { kind: "read"; text: string } | { kind: "unavailable"; why: string };
 
-export type ToolMatcher =
+/** A built-in Claude Code tool a guard can judge. */
+export type BuiltinTool =
   "Bash" | "Write" | "Edit" | "Read" | "NotebookEdit" | "Agent";
+/**
+ * Every tool of one MCP server — `mcp__<server>__*` (Claude Code names an MCP
+ * tool `mcp__<server>__<tool>`). A whole server, not one tool: a guard about an
+ * MCP server is about the server, and its tool list changes under us.
+ */
+export type McpServerTools = `mcp__${string}__*`;
+export type ToolMatcher = BuiltinTool | McpServerTools;
+
+/** Whether `matcher` covers the tool named `tool`. */
+export function matchesTool(matcher: ToolMatcher, tool: string): boolean {
+  return matcher.endsWith("__*")
+    ? tool.startsWith(matcher.slice(0, -1))
+    : matcher === tool;
+}
 
 export interface GuardContext {
   cwd: string;

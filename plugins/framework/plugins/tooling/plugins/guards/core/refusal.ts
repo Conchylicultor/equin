@@ -1,5 +1,5 @@
 import { parseShell } from "./parse-shell";
-import type { ToolMatcher } from "./types";
+import type { BuiltinTool } from "./types";
 import {
   REFUSAL_HEADER,
   joinRefusal,
@@ -17,11 +17,12 @@ import {
  *
  * So the runner puts this in front of every denial rather than leaving each
  * guard to remember it. It is keyed by tool, not by guard: what "did not run"
- * means depends on the tool, and `Record<ToolMatcher, …>` makes a new tool
- * matcher a tsc error until it says what did not happen.
+ * means depends on the tool, and `Record<BuiltinTool, …>` makes a new built-in
+ * tool a tsc error until it says what did not happen. An MCP tool gets the
+ * generic banner: its effects are the server's, unknown here.
  */
 const NOT_DONE: Record<
-  ToolMatcher,
+  BuiltinTool,
   (input: Record<string, unknown>) => string
 > = {
   Bash: (input) => bashNotRun(stringField(input, "command")),
@@ -60,7 +61,7 @@ export function withRefusalBanner(
   input: Record<string, unknown>,
   reason: string,
 ): string {
-  const notDone = (NOT_DONE as Record<string, (typeof NOT_DONE)[ToolMatcher]>)[
+  const notDone = (NOT_DONE as Record<string, (typeof NOT_DONE)[BuiltinTool]>)[
     tool
   ];
   const lines = notDone

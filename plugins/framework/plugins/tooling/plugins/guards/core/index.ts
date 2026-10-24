@@ -8,9 +8,12 @@ export type {
   Guard,
   GuardContext,
   Verdict,
+  BuiltinTool,
+  McpServerTools,
   ToolMatcher,
   TranscriptRead,
 } from "./types";
+export { matchesTool } from "./types";
 export { readTaskReport } from "./task-reports";
 export type { TaskReport } from "./task-reports";
 export { defineGuard } from "./define-guard";

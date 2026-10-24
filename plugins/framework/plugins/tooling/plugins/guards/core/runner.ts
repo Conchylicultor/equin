@@ -2,7 +2,7 @@ import { loadGuards } from "./load-guards";
 import { recordInformed, wasInformed } from "./informed-once";
 import { createContext } from "./context";
 import { withRefusalBanner } from "./refusal";
-import type { Guard, ToolMatcher } from "./types";
+import { matchesTool, type Guard } from "./types";
 
 export interface HookInput {
   tool_name?: string;
@@ -40,7 +40,7 @@ export interface HookInput {
 }
 
 function matches(g: Guard["matcher"], tool: string): boolean {
-  return Array.isArray(g) ? g.includes(tool as ToolMatcher) : g === tool;
+  return (Array.isArray(g) ? g : [g]).some((m) => matchesTool(m, tool));
 }
 
 /**

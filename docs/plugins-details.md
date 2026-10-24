@@ -25647,6 +25647,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/paths.worktreeArtifacts`
             - Exports (types):
               - `AllowVerdict`
+              - `BuiltinTool`
               - `CommandClass`
               - `DenyVerdict`
               - `FileHintSpec`
@@ -25655,6 +25656,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `GuardContext`
               - `InformVerdict`
               - `KnownCommand`
+              - `McpServerTools`
               - `ParsedArgv`
               - `PollDecision`
               - `RewriteVerdict`
@@ -25672,6 +25674,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `detectPoll`
               - `fileHint`
               - `GUARDS`
+              - `matchesTool`
               - `MODULE_EXTENSION`
               - `parseArgv`
               - `parseShell`

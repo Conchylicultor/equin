@@ -363,9 +363,13 @@ const session = query({
     // the `showThinkingSummaries` setting (the interactive CLI honours it), so
     // without the flag the API omits it and every thinking block arrives
     // empty. The flag, not `thinking: { display }`, so the CLI still picks
-    // the thinking type per model.
+    // the thinking type per model. `chrome`: Claude-in-Chrome, which only the
+    // interactive CLI enables by default — under the SDK it is off unless
+    // asked for. The `prefer-agent-browser` guard (infra/mcp/browser) steers
+    // its first use toward the agent browser.
     extraArgs: {
       "thinking-display": "summarized",
+      chrome: null,
       ...(options.effort ? { effort: options.effort } : {}),
     },
     ...(options.resume ? { resume: options.resume } : {}),
