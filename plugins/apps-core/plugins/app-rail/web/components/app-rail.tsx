@@ -7,7 +7,8 @@ import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/we
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
-import { Apps, isListedApp, useActiveApp } from "@plugins/apps-core/web";
+import { Apps, useAppListing, useActiveApp } from "@plugins/apps-core/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { AppIconView } from "@plugins/apps-core/plugins/app-icon/web";
 import { chromeThemeScope } from "@plugins/apps-core/plugins/chrome-theme/web";
 import { useActivateApp } from "@plugins/apps-core/plugins/tabs/web";
@@ -19,6 +20,9 @@ export function AppRail() {
   // (single source of truth — no `w-10`-vs-`2.5rem` drift).
   const activeAppId = useActiveApp()?.id;
   const activate = useActivateApp();
+  const listing = useAppListing();
+  // The rail's error boundary shows it: which apps exist is not known.
+  if (listing.status === "error") throw listing.error;
   return (
     <Theme
       as={Stack}
@@ -33,10 +37,15 @@ export function AppRail() {
       // eslint-disable-next-line layout/no-adhoc-layout -- rigid rail sibling of the flexible body in the framing row; shrink-0 keeps its fixed width
       className="relative z-nav w-(--app-rail-width) shrink-0 border-r py-xs"
     >
+      {listing.status === "loading" ? (
+        // Which apps this user is offered is not known yet.
+        <Loading variant="block" className="size-7.5" />
+      ) : (
       <Apps.App.Render>
         {(entry) =>
-          // An unlisted app (the menu-bar panel) is opened from outside equin.
-          !isListedApp(entry) ? null : (
+            // An unlisted app (the menu-bar panel, a developer app outside
+            // Developer mode) is not offered here.
+            !listing.data(entry) ? null : (
           <WithTooltip content={entry.app.name} side="right">
             <Center
               as="button"
@@ -68,6 +77,7 @@ export function AppRail() {
           )
         }
       </Apps.App.Render>
+      )}
     </Theme>
   );
 }

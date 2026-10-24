@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-audience",
+  "description": "Who the user is — a regular user or a developer (Developer mode) — so features can declare who they are for instead of branching on a flag.",
+  "private": true,
+  "version": "0.0.1"
+}

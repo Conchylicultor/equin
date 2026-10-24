@@ -48,10 +48,11 @@ defaults.
   - Contributes:
     - `Desktop.Overlay` "Desktop overlay" → `LauncherOverlay`
     - `Shortcuts.Shortcut` "desktop.launcher (mod+k)"
-  - Uses: 47 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 50 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/desktop/windows` ×11
     - `apps-core` ×3
     - `primitives/css/ui-kit` ×3
+    - `primitives/live-state` ×3
     - `primitives/shortcuts` ×3
     - `apps-core/tabs` ×2
     - `apps/desktop/shell` ×2
@@ -70,7 +71,7 @@ defaults.
     - `primitives/css/text.Text`
     - `primitives/css/yield.yieldClass`
     - `primitives/dom/scroll-reveal.useRevealOnActive`
-    - `primitives/live-state.foldResource`
+    - `primitives/loading.Loading`
     - `primitives/overlay/cursor-menu.CursorAnchoredMenu`
     - `primitives/overlay/tooltip.Kbd`
     - `primitives/scope/install-sink.defineInstallSink`

@@ -119,6 +119,9 @@ so ⌘/middle-click opens a desktop in a new browser tab.
     - `Apps.TabBarActions` ← `shell.global-action-bar`
     - `Apps.TabBar` ← `apps-core.tab-bar`
   - Uses:
+    - `audience.useAudience`
+    - `primitives/live-state.mapResource`
+    - `primitives/live-state.ResourceResult`
     - `primitives/pane.currentRoutePath`
     - `primitives/pane.stripBasePath`
     - `primitives/pane.useSurfaceAppId`
@@ -129,6 +132,7 @@ so ⌘/middle-click opens a desktop in a new browser tab.
     - `ActiveApp`
     - `AppEntry`
     - `AppLaunch`
+    - `AppListing`
     - `HomeApp`
     - `OverlayContribution`
     - `Placement`
@@ -139,7 +143,6 @@ so ⌘/middle-click opens a desktop in a new browser tab.
   - Exports (values):
     - `Apps`
     - `homeApp`
-    - `isListedApp`
     - `isTabApp`
     - `matchAppForPath`
     - `resolveAppForPath`
@@ -147,6 +150,7 @@ so ⌘/middle-click opens a desktop in a new browser tab.
     - `setFocusedApp`
     - `surfaceModeForPrefix`
     - `useActiveApp`
+    - `useAppListing`
     - `useCurrentAppId`
     - `useFocusedAppId`
     - `useHomeApp`

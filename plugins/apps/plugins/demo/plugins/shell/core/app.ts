@@ -6,4 +6,5 @@ export const demoApp = defineApp({
   name: "Demo",
   basePath: "/demo",
   icon: symbol("smart-display"),
+  audience: "developer",
 });

@@ -24,7 +24,7 @@ one?" — opens the New app screen (`new-app`'s `newAppPane`).
   - Contributes: `Home.Section` "Apps" → `AppGrid`
   - Uses:
     - `apps-core.Apps`
-    - `apps-core.isListedApp`
+    - `apps-core.useAppListing`
     - `apps-core.useCurrentAppId`
     - `apps-core/app-launcher.appRow`
     - `apps-core/app-launcher.AppRow`
@@ -40,6 +40,7 @@ one?" — opens the New app screen (`new-app`'s `newAppPane`).
     - `primitives/data-view.defineDataView`
     - `primitives/data-view/capsule-toolbar.capsuleToolbar`
     - `primitives/link-gesture.linkProps`
+    - `primitives/live-state.foldResource`
     - `primitives/pane.useOpenPane`
     - `ui/icons.Icon`
 - Core:

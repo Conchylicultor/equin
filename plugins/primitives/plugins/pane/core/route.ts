@@ -126,6 +126,12 @@ export interface AppRef {
    * menu-bar panel the native helper loads). Omitted, the app is listed.
    */
   readonly listed?: false;
+  /**
+   * Who the app is for. `developer` keeps it out of the launchers unless the
+   * user is in Developer mode (`@plugins/audience`) — still reachable at its
+   * URL. Omitted, the app is for everyone.
+   */
+  readonly audience?: "developer";
 }
 
 /**
@@ -149,6 +155,7 @@ export function defineApp(def: {
   iconColor?: AvatarColor;
   colorMode?: AppColorMode;
   listed?: false;
+  audience?: "developer";
 }): AppRef {
   return Object.freeze({
     id: def.id,
@@ -160,6 +167,7 @@ export function defineApp(def: {
     ...(def.colorMode !== undefined &&
       def.colorMode !== "global" && { colorMode: def.colorMode }),
     ...(def.listed === false && { listed: false as const }),
+    ...(def.audience !== undefined && { audience: def.audience }),
   });
 }
 

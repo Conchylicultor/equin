@@ -1,5 +1,6 @@
 import { stripBasePath } from "@plugins/primitives/plugins/pane/web";
 import type { AppRef } from "@plugins/primitives/plugins/pane/core";
+import { reachesAudience, type Audience } from "@plugins/audience/core";
 import type { ActiveApp } from "./use-active-app";
 
 /**
@@ -15,14 +16,21 @@ export function isTabApp(
 }
 
 /**
- * Whether launchers offer the app — the rail, the app galleries and launcher
- * grids. An app declaring `defineApp({ listed: false })` is opened at its URL by
- * something outside equin (the menu-bar panel) and is never picked from inside
- * it; it still owns its URL, its tab and its `app:<id>` scope. The one
- * predicate every launcher filters on.
+ * Whether launchers offer the app to `audience` — the rail, the app galleries
+ * and launcher grids. An app declaring `defineApp({ listed: false })` is opened
+ * at its URL by something outside equin (the menu-bar panel) and is never
+ * picked from inside it; one declaring `audience: "developer"` is offered only
+ * in Developer mode. Either way it still owns its URL, its tab and its
+ * `app:<id>` scope. The one predicate every launcher filters on — read it
+ * through {@link useAppListing}, which supplies the user's audience.
  */
-export function isListedApp(entry: { app: AppRef }): boolean {
-  return entry.app.listed !== false;
+export function isListedApp(
+  entry: { app: AppRef },
+  audience: Audience,
+): boolean {
+  return (
+    entry.app.listed !== false && reachesAudience(entry.app.audience, audience)
+  );
 }
 
 /** Path-prefix match: an app owns `pathname` if it equals or parents it. */

@@ -8,8 +8,8 @@
 - Web:
   - Uses:
     - `apps-core.Apps`
-    - `apps-core.isListedApp`
     - `apps-core.useActiveApp`
+    - `apps-core.useAppListing`
     - `apps-core/app-icon.AppIconView`
     - `apps-core/chrome-theme.chromeThemeScope`
     - `apps-core/tabs.useActivateApp`
@@ -20,6 +20,7 @@
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.WithTooltip`
     - `primitives/link-gesture.activationProps`
+    - `primitives/loading.Loading`
   - Exports (values): `AppRail`
 - Cross-plugin:
   - Uses tokens:

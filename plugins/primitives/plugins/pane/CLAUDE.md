@@ -893,9 +893,9 @@ See "Open questions" in the design doc.
 - Load-bearing: yes
 - Web:
   - Slots: `Pane.Register`
-  - Slot contributors: 91 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Pane.Register` ×91
-  - Contributes: 118 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 92 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Pane.Register` ×92
+  - Contributes: 119 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `SlotRender.ItemMiddleware`
     - `WebsiteHeader` "title" → `PaneTitleItem`
     - `accountPane.Actions` "title" → `PaneTitleItem`
@@ -998,6 +998,7 @@ See "Open questions" in the design doc.
     - `serverDetailPane.Actions` "title" → `PaneTitleItem`
     - `serversRootPane.Actions` "title" → `PaneTitleItem`
     - `settings-config-index.actions` "title" → `PaneTitleItem`
+    - `settings-profile.actions` "title" → `PaneTitleItem`
     - `shellOutputPane.Actions` "title" → `PaneTitleItem`
     - `slow-op-detail.actions` "title" → `PaneTitleItem`
     - `slowEventsPane.Actions` "title" → `PaneTitleItem`
@@ -1144,7 +1145,7 @@ See "Open questions" in the design doc.
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-md`
     - `ui/tokens/shape --spacing`
-  - Imported by: 181 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 182 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×66
     - `conversations` ×30
     - `debug` ×27
@@ -1158,6 +1159,7 @@ See "Open questions" in the design doc.
     - `reports` ×2
     - `stats` ×2
     - `ui` ×2
+    - `audience/settings`
     - `auth`
     - `backup`
     - `build`

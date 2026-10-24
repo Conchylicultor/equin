@@ -1,0 +1,5 @@
+// @hash 064cf314a33f
+{
+  // Use equin as a developer: the developer apps (Studio, Debug, Deploy, …) appear in the app gallery and launchers. Off, they stay out of the way — still reachable at their URL.
+  "developerMode": false
+}

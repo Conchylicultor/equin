@@ -16,12 +16,12 @@ export {
   type ActiveApp,
 } from "./internal/use-active-app";
 export {
-  isListedApp,
   isTabApp,
   matchAppForPath,
   resolveAppForPath,
   type ResolvedApp,
 } from "./internal/resolve-app";
+export { useAppListing, type AppListing } from "./internal/use-app-listing";
 export { homeApp, useHomeApp, type HomeApp } from "./internal/home-app";
 export {
   routePrefixForMode,

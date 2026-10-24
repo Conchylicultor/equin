@@ -81,8 +81,8 @@ result.
     - `ui/tokens/type-scale --font-size-body`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-body`
-  - Imported by: 204 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×65
+  - Imported by: 207 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×66
     - `ui` ×21
     - `conversations` ×19
     - `debug` ×19
@@ -94,10 +94,11 @@ result.
     - `review` ×4
     - `auth` ×3
     - `active-data` ×2
+    - `apps-core` ×2
     - `integrations` ×2
     - `map` ×2
     - `menu-bar` ×2
-    - `apps-core/layout`
+    - `audience/settings`
     - `backup`
     - `code-explorer/commit-detail`
     - `config_v2/settings`

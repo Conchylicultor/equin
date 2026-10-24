@@ -613,6 +613,12 @@
       "parent": null
     },
     {
+      "paneId": "settings-profile",
+      "segment": "profile",
+      "appIndex": false,
+      "parent": null
+    },
+    {
       "paneId": "shell-output",
       "segment": "shell/:shellId",
       "appIndex": false,

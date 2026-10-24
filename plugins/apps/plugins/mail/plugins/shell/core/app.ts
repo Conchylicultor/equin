@@ -6,4 +6,5 @@ export const mailApp = defineApp({
   name: "Mail",
   basePath: "/mail",
   icon: symbol("mail"),
+  audience: "developer",
 });

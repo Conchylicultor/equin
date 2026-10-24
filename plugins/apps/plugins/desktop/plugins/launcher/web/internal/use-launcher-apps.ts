@@ -1,6 +1,10 @@
 import { useMemo } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
-import { Apps, isListedApp, isTabApp } from "@plugins/apps-core/web";
+import { Apps, isTabApp, useAppListing } from "@plugins/apps-core/web";
+import {
+  mapResource,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useTabs } from "@plugins/apps-core/plugins/tabs/web";
 import type { AppIcon } from "@plugins/apps-core/plugins/app-icon/core";
 import { isNodeData, useReorderedEntries } from "@plugins/reorder/web";
@@ -25,11 +29,12 @@ export interface LauncherApp {
 /**
  * Every launchable app — the apps that open in a tab, so not the desktop's own
  * surface-mode entry — in the order the app rail shows them (the `Apps.App`
- * slot's reorder layout, hidden apps left out), each with its window count on
+ * slot's reorder layout, hidden and unlisted apps left out), each with its window count on
  * the active desktop.
  */
-export function useLauncherApps(): LauncherApp[] {
+export function useLauncherApps(): ResourceResult<LauncherApp[]> {
   const contributions = Apps.App.useContributions();
+  const listing = useAppListing();
   // The contributions carry `_pluginId` + `id`, all the reorder key needs; they
   // lack `_slot`, so widen through `unknown` (as the app launcher popover does).
   const { entries } = useReorderedEntries(
@@ -39,18 +44,20 @@ export function useLauncherApps(): LauncherApp[] {
   const counts = useWindowsOfApp();
   return useMemo(
     () =>
-      entries
-        .filter((e) => !isNodeData(e))
-        .map((e) => e as unknown as (typeof contributions)[number])
-        .filter(isTabApp)
-        .filter(isListedApp)
-        .map((a) => ({
-          id: a.id,
-          name: a.app.name,
-          icon: a.icon,
-          windows: counts.get(a.id)?.length ?? 0,
-        })),
-    [entries, counts],
+      mapResource(listing, (isListed) =>
+        entries
+          .filter((e) => !isNodeData(e))
+          .map((e) => e as unknown as (typeof contributions)[number])
+          .filter(isTabApp)
+          .filter(isListed)
+          .map((a) => ({
+            id: a.id,
+            name: a.app.name,
+            icon: a.icon,
+            windows: counts.get(a.id)?.length ?? 0,
+          })),
+      ),
+    [entries, counts, listing],
   );
 }
 

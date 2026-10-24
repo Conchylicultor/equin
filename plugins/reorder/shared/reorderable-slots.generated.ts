@@ -122,6 +122,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "apps.website.pages.vision.section", pluginId: "apps.website.pages.vision", configName: "section" },
   { slotId: "apps.website.shell.header", pluginId: "apps.website.shell", configName: "header" },
   { slotId: "apps.website.shell.section", pluginId: "apps.website.shell", configName: "section" },
+  { slotId: "audience.settings.settings-profile.actions", pluginId: "audience.settings", configName: "settings-profile.actions" },
   { slotId: "auth.accounts-account.actions", pluginId: "auth", configName: "accounts-account.actions" },
   { slotId: "auth.accounts.actions", pluginId: "auth", configName: "accounts.actions" },
   { slotId: "backup.backup-run.actions", pluginId: "backup", configName: "backup-run.actions" },

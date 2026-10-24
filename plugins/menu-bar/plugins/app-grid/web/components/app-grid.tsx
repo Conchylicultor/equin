@@ -1,5 +1,10 @@
 import { useMemo } from "react";
-import { Apps, useCurrentAppId, useHomeApp } from "@plugins/apps-core/web";
+import {
+  Apps,
+  useAppListing,
+  useCurrentAppId,
+  useHomeApp,
+} from "@plugins/apps-core/web";
 import { useActivateApp } from "@plugins/apps-core/plugins/tabs/web";
 import {
   DataView,
@@ -26,7 +31,10 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useNativeHost } from "@plugins/menu-bar/web";
 import { menuBarInstalled } from "@plugins/menu-bar/core";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  foldResource,
+  mapResource,
+} from "@plugins/primitives/plugins/live-state/web";
 import { AppGridActions } from "./pin-action";
 
 const MENU_BAR_APPS_VIEW = defineDataView("menu-bar.apps");
@@ -95,9 +103,15 @@ export function MenuBarAppGrid() {
   const activate = useActivateApp();
   const host = useNativeHost();
   const installed = useLive(menuBarInstalled);
+  const listing = useAppListing();
   const rows = useMemo(
-    () => apps.filter((a) => a.id !== currentId && a.id !== homeId).map(appRow),
-    [apps, currentId, homeId],
+    () =>
+      mapResource(listing, (isListed) =>
+        apps
+          .filter((a) => a.id !== currentId && a.id !== homeId && isListed(a))
+          .map(appRow),
+      ),
+    [apps, currentId, homeId, listing],
   );
   // The helper is still answering: a tile cannot know yet where it opens.
   if (host.kind === "pending")
@@ -122,6 +136,11 @@ export function MenuBarAppGrid() {
         });
   if (installedIds === null)
     return <Loading variant="block" className="h-40 w-full" />;
+  // The section's error boundary shows it: which apps this user is offered is
+  // not known.
+  if (rows.status === "error") throw rows.error;
+  if (rows.status === "loading")
+    return <Loading variant="block" className="h-40 w-full" />;
   const rowActivation = (row: AppRow): Activation => {
     if (launchApp !== null && installedIds.includes(row.id)) {
       const url = appUrl(row.entry.app.basePath);
@@ -143,7 +162,7 @@ export function MenuBarAppGrid() {
       )}
     >
       <DataView<AppRow>
-        rows={rows}
+        rows={rows.data}
         rowKey={(a) => a.id}
         collection={installedApp}
         overrides={appGridOverrides}

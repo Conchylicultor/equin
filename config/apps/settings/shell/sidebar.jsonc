@@ -1,4 +1,4 @@
-// @hash d83ddba194e7
+// @hash a13c4ab85b38
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -12,6 +12,7 @@
     "apps.settings.config:config",
     "apps.settings.accounts:accounts",
     "apps.settings.appearance:appearance",
+    "audience.settings:profile",
     "infra.deps:dependencies"
   ]
 }

@@ -6,4 +6,5 @@ export const websiteApp = defineApp({
   name: "equin",
   basePath: "/website",
   icon: symbol("public"),
+  audience: "developer",
 });

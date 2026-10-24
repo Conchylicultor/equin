@@ -3,12 +3,17 @@ import { afterOpen } from "@plugins/primitives/plugins/link-gesture/core";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import {
   Apps,
-  isListedApp,
+  useAppListing,
   useHomeApp,
   useActiveApp,
   type ActiveApp,
 } from "@plugins/apps-core/web";
 import { isNodeData, useReorderedEntries } from "@plugins/reorder/web";
+import {
+  foldResource,
+  mapResource,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
 import {
   useActivateApp,
   useAppLinkProps,
@@ -72,14 +77,19 @@ const LAUNCHER_TOOLBAR: HostedToolbar = {
   frame: LauncherFrame,
 };
 
+const NO_APPS: readonly AppRow[] = [];
+
 /**
  * Every installed app but the gallery, in the order the app rail shows them
  * (the `Apps.App` slot's reorder config, read through the same tree its
  * `Render` applies — so the two cannot disagree), apps the user hid included
  * in neither. Layout nodes (spacers, dividers) are the rail's, not apps.
  */
-function useLaunchableApps(galleryId: string | undefined): ActiveApp[] {
+function useLaunchableApps(
+  galleryId: string | undefined,
+): ResourceResult<ActiveApp[]> {
   const apps = Apps.App.useContributions();
+  const listing = useAppListing();
   // The contributions carry `_pluginId` + `id`, all the reorder key needs; they
   // lack `_slot`, so widen through `unknown`.
   const { entries } = useReorderedEntries(
@@ -88,11 +98,13 @@ function useLaunchableApps(galleryId: string | undefined): ActiveApp[] {
   );
   return useMemo(
     () =>
-      entries
-        .filter((e) => !isNodeData(e))
-        .map((e) => e as unknown as ActiveApp)
-        .filter((a) => a.id !== galleryId && isListedApp(a)),
-    [entries, galleryId],
+      mapResource(listing, (isListed) =>
+        entries
+          .filter((e) => !isNodeData(e))
+          .map((e) => e as unknown as ActiveApp)
+          .filter((a) => a.id !== galleryId && isListed(a)),
+      ),
+    [entries, galleryId, listing],
   );
 }
 
@@ -129,7 +141,17 @@ export function AppLauncher({ form }: { form: AppShellBrandForm }) {
   const home = useHomeApp();
   const gallery = home.kind === "app" ? home.app : undefined;
   const launchable = useLaunchableApps(gallery?.id);
-  const rows = useMemo(() => launchable.map(appRow), [launchable]);
+  // The DataView renders the loading and failed states (`readiness`); only a
+  // known listing's rows reach the view.
+  const rows = useMemo(
+    () =>
+      foldResource(launchable, {
+        loading: () => NO_APPS,
+        error: () => NO_APPS,
+        ready: (apps) => apps.map(appRow),
+      }),
+    [launchable],
+  );
   const active = useActiveApp();
   const activeId = active?.id;
   const activate = useActivateApp();
@@ -181,6 +203,7 @@ export function AppLauncher({ form }: { form: AppShellBrandForm }) {
           >
             <DataView<AppRow>
               rows={rows}
+              readiness={launchable}
               rowKey={(a) => a.id}
               collection={installedApp}
               overrides={appRowOverrides}

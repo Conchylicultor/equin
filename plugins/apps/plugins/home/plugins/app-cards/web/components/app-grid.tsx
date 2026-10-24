@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { Apps, isListedApp, useCurrentAppId } from "@plugins/apps-core/web";
+import { Apps, useAppListing, useCurrentAppId } from "@plugins/apps-core/web";
+import { foldResource } from "@plugins/primitives/plugins/live-state/web";
 import { useActivateApp } from "@plugins/apps-core/plugins/tabs/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
@@ -26,6 +27,8 @@ import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const addIcon = symbol("add");
+
+const NO_APPS: readonly AppRow[] = [];
 
 const HOME_APPS_VIEW = defineDataView("home.apps");
 
@@ -57,9 +60,18 @@ export function AppGrid() {
   // windows can be open, so the global focused tab is the wrong target.
   const activate = useActivateApp();
   const galleryRef = useHintAnchor(homeGalleryAnchor);
+  const listing = useAppListing();
+  // The DataView renders the loading and failed states (`readiness`); only a
+  // known listing's rows reach the view.
   const rows = useMemo(
-    () => apps.filter((a) => a.id !== currentId && isListedApp(a)).map(appRow),
-    [apps, currentId],
+    () =>
+      foldResource(listing, {
+        loading: () => NO_APPS,
+        error: () => NO_APPS,
+        ready: (isListed) =>
+          apps.filter((a) => a.id !== currentId && isListed(a)).map(appRow),
+      }),
+    [apps, currentId, listing],
   );
 
   const creators: CreateOption[] = [
@@ -76,6 +88,7 @@ export function AppGrid() {
     <Stack gap="none" ref={galleryRef}>
       <DataView<AppRow>
         rows={rows}
+        readiness={listing}
         rowKey={(a) => a.id}
         // The same tile and name the app launcher draws; the client fields of
         // the kind (usage stats, …) join them.

@@ -1,4 +1,4 @@
-// @hash d83ddba194e7
+// @hash a13c4ab85b38
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -10,6 +10,7 @@
     "apps.settings.accounts:accounts",
     "apps.settings.appearance:appearance",
     "apps.settings.config:config",
+    "audience.settings:profile",
     "infra.deps:dependencies"
   ]
 }

@@ -18,6 +18,7 @@ import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { CursorAnchoredMenu } from "@plugins/primitives/plugins/overlay/plugins/cursor-menu/web";
 import { useConfigResult, useSetConfig } from "@plugins/config_v2/web";
 import { foldResource } from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { shelfConfig } from "@plugins/apps/plugins/desktop/plugins/shell/core";
@@ -74,6 +75,24 @@ interface AppMenu {
  */
 export function LauncherPanel({ onClose }: { onClose(): void }) {
   const apps = useLauncherApps();
+  // The desktop's error boundary shows it: which apps exist is not known.
+  if (apps.status === "error") throw apps.error;
+  if (apps.status === "loading")
+    return (
+      <Layer layer="overlay" onPointerDown={onClose}>
+        <Loading variant="block" />
+      </Layer>
+    );
+  return <LauncherPanelBody apps={apps.data} onClose={onClose} />;
+}
+
+function LauncherPanelBody({
+  apps,
+  onClose,
+}: {
+  apps: LauncherApp[];
+  onClose(): void;
+}) {
   const commands = useLauncherCommands();
   const { activate, newWindow } = useAppActions();
   const [query, setQuery] = useState("");

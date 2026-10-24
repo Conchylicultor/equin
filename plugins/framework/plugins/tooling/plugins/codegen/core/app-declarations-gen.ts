@@ -41,6 +41,7 @@ interface ProjectedApp {
     iconColor?: string;
     colorMode?: string;
     listed?: false;
+    audience?: "developer";
   };
   launch: "tab" | "surface";
 }
@@ -59,6 +60,7 @@ async function collectAppDeclarations(root: string): Promise<ProjectedApp[]> {
           ...(app.iconColor !== undefined && { iconColor: app.iconColor }),
           ...(app.colorMode !== undefined && { colorMode: app.colorMode }),
           ...(app.listed === false && { listed: false as const }),
+          ...(app.audience !== undefined && { audience: app.audience }),
         },
         launch: c.surfaceMode !== undefined ? "surface" : "tab",
       };

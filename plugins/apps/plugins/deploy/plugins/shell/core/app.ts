@@ -6,4 +6,5 @@ export const deployApp = defineApp({
   name: "Deploy",
   basePath: "/deploy",
   icon: symbol("cloud"),
+  audience: "developer",
 });
