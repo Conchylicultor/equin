@@ -2,6 +2,7 @@ import { APP_TILE_PALETTE } from "@plugins/apps-core/plugins/app-icon/core";
 import { defineTheme } from "@plugins/ui/plugins/theme-engine/core";
 import { colorPaletteGroup } from "@plugins/ui/plugins/tokens/plugins/color-palette/core";
 import { categoricalGroup } from "@plugins/ui/plugins/tokens/plugins/categorical/core";
+import { typeScaleGroup } from "@plugins/ui/plugins/tokens/plugins/type-scale/core";
 
 const WHITE = "oklch(1 0 0)";
 const BLACK = "oklch(0 0 0)";
@@ -85,6 +86,23 @@ const categorical = categoricalGroup.fragment({
 });
 
 /**
+ * Home's headlines ("Apps", "New app") are the display role at the mock's
+ * 34px semibold — a launcher's title, not a marketing hero's 48px bold.
+ */
+const typeScale = typeScaleGroup.fragment({
+  light: {
+    fontSizeDisplay: "2.125rem",
+    lineHeightDisplay: "2.5rem",
+    fontWeightDisplay: "var(--font-weight-semibold)",
+  },
+  dark: {
+    fontSizeDisplay: "2.125rem",
+    lineHeightDisplay: "2.5rem",
+    fontWeightDisplay: "var(--font-weight-semibold)",
+  },
+});
+
+/**
  * Home's own theme — the launcher's look: a black page and ocean tiles.
  * Selected for the home app in `config/ui/theme-engine/@app/home/theme.jsonc`,
  * and scoped to the Home tab (`data-theme-scope="app:home"`), so agent avatars
@@ -94,5 +112,5 @@ const categorical = categoricalGroup.fragment({
 export const homeTheme = defineTheme({
   id: "home",
   label: "Home",
-  fragments: [colorPalette, categorical],
+  fragments: [colorPalette, categorical, typeScale],
 });

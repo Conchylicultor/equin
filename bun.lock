@@ -578,6 +578,10 @@
       "name": "@singularity/plugin-apps-home-app-cards",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/home/plugins/new-app": {
+      "name": "@singularity/plugin-apps-home-new-app",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/home/plugins/shell": {
       "name": "@singularity/plugin-apps-home-shell",
       "version": "0.0.1",
@@ -7421,6 +7425,8 @@
     "@singularity/plugin-apps-home": ["@singularity/plugin-apps-home@workspace:plugins/apps/plugins/home"],
 
     "@singularity/plugin-apps-home-app-cards": ["@singularity/plugin-apps-home-app-cards@workspace:plugins/apps/plugins/home/plugins/app-cards"],
+
+    "@singularity/plugin-apps-home-new-app": ["@singularity/plugin-apps-home-new-app@workspace:plugins/apps/plugins/home/plugins/new-app"],
 
     "@singularity/plugin-apps-home-shell": ["@singularity/plugin-apps-home-shell@workspace:plugins/apps/plugins/home/plugins/shell"],
 

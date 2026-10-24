@@ -50,8 +50,8 @@ exemption, e.g. Sonata's hold-to-scrub seek) must apply the same three rules.
     - `useFocusedSurfaceId`
     - `useSurfaceShortcuts`
 - Cross-plugin:
-  - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×12
+  - Imported by: 30 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×13
     - `primitives` ×12
     - `apps-core` ×2
     - `hints`

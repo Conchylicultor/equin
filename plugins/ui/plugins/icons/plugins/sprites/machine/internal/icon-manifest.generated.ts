@@ -290,6 +290,7 @@ export const ICON_MANIFEST: {
     "share",
     "shield",
     "shopping-bag",
+    "shuffle",
     "signal-cellular-alt",
     "slideshow",
     "smart-display",

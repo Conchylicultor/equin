@@ -163,7 +163,6 @@ not yet supported — see the open question in
     - `apps/demo/shell`
     - `apps/deploy/shell`
     - `apps/events/shell`
-    - `apps/home/shell`
     - `apps/keyboard-party/shell`
     - `apps/mail/shell`
     - `apps/pages/shell`

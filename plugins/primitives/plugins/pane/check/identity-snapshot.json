@@ -427,6 +427,18 @@
       "parent": null
     },
     {
+      "paneId": "home-new-app",
+      "segment": "new",
+      "appIndex": false,
+      "parent": "home-root"
+    },
+    {
+      "paneId": "home-root",
+      "segment": "",
+      "appIndex": true,
+      "parent": null
+    },
+    {
       "paneId": "live-state-health",
       "segment": "live-state",
       "appIndex": false,

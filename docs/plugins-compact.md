@@ -19,7 +19,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`desktop`** [exempt] [10 sub-plugins] — Desktop — the floating-window desktop mode as an app: windows over a wallpaper, one bottom shelf (launcher, pinned apps, running windows, tray), virtual desktops, overview and a window switcher.
     - **`events`** [exempt] [22 sub-plugins] — Events — track events from pluggable sources in one database.
     - **`file-explorer`** [exempt] [5 sub-plugins] — File explorer app.
-    - **`home`** [4 sub-plugins] — Home — app launcher and entry point. The Apps task category: the category tasks filed from the Home app's cards, such as building a new app, are grouped under.
+    - **`home`** [5 sub-plugins] — Home — app launcher and entry point. The Apps task category: the category tasks filed from the Home app's cards, such as building a new app, are grouped under.
     - **`keyboard-party`** — Keyboard Party — a keyboard toy for a small child: every key answers with its own animation and sound.
       - Plugins:
         - **`party`** — Keyboard Party's stage: every key plays its own animation and sound (letters bring a picture, a word and speech; digits count; space, Enter, arrows, Backspace and modifiers each have their own…

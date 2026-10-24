@@ -311,6 +311,7 @@ export const LUCIDE_MAP = {
   share: "share-2",
   shield: "shield",
   "shopping-bag": "shopping-bag",
+  shuffle: "shuffle",
   "signal-cellular-alt": "signal",
   slideshow: "presentation",
   "smart-display": "monitor-play",

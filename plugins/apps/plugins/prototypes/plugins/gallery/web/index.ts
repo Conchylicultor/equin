@@ -27,10 +27,6 @@ import { TagHeaderAction } from "./components/tag-chip";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { prototypesGalleryPane } from "./panes";
-export {
-  mintPrototypeFolder,
-  newPrototypePrompt,
-} from "./components/new-prototype";
 export { PrototypeCardActions } from "./slots";
 export type { PrototypeGalleryRow } from "./slots";
 

@@ -404,10 +404,10 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
   - Uses tokens:
     - `ui/tokens/shadow --shadow`
     - `ui/tokens/shape --spacing`
-  - Imported by: 337 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×87
+  - Imported by: 339 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×88
     - `conversations` ×58
-    - `primitives` ×41
+    - `primitives` ×42
     - `page` ×40
     - `fields` ×35
     - `debug` ×15

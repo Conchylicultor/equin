@@ -85,6 +85,7 @@ Ordering for both surfaces lives in
   - Uses tokens: `ui/tokens/type-scale --font-weight-medium`
   - Imported by:
     - `apps/agent-manager/welcome`
+    - `apps/home/new-app`
     - `conversations/workspace/launch-option`
     - `plugin-meta/plugin-health`
     - `primitives/launch`

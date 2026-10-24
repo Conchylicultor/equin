@@ -1,7 +1,12 @@
 import { useState, type KeyboardEvent, type ReactNode, type Ref } from "react";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
-import { runActivation } from "@plugins/primitives/plugins/link-gesture/core";
+import {
+  runActivation,
+  type Activation,
+} from "@plugins/primitives/plugins/link-gesture/core";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import {
   ControlSizeProvider,
   cn,
@@ -259,7 +264,7 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
   const vis = resolveBodyFields(props.fields, props.state.properties);
   // Documented cast boundary: `options` is `viewOptions.icons`, opaque to the host.
-  const { useTileRef, menu } = (props.options ??
+  const { useTileRef, menu, addTile } = (props.options ??
     {}) as IconsViewOptions<unknown>;
   const geometry: Geometry = menu
     ? MENU_GEOMETRY
@@ -490,6 +495,7 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
 
   // One section's body: its grid inside the section's `SectionBody` band, which
   // pays the rail and ends in the fold line.
+  const lastSection = sections.at(-1);
   const renderSection = (
     section: DataViewSection<unknown>,
     activeId: string | null,
@@ -509,6 +515,11 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
           gridColumns={gridColumns}
           activeId={activeId}
           renderEntry={renderEntry}
+          trailing={
+            addTile && section === lastSection ? (
+              <AddTile {...addTile} geometry={geometry} />
+            ) : null
+          }
         />
       )}
     </SectionBody>
@@ -598,6 +609,7 @@ function IconsGrid({
   gridColumns,
   activeId,
   renderEntry,
+  trailing,
 }: {
   section: DataViewSection<unknown>;
   placeholders: DataViewPagePlaceholders | undefined;
@@ -608,6 +620,8 @@ function IconsGrid({
     entry: DataViewRowEntry<unknown>,
     group: string | null,
   ) => ReactNode;
+  /** A cell after the last tile (the add tile), in the plain grid only. */
+  trailing: ReactNode;
 }): ReactNode {
   const entries = section.entries;
   const phase = useGridPhase(
@@ -641,6 +655,7 @@ function IconsGrid({
         <Grid {...gridColumns} gap={geometry.gap} className={geometry.classes}>
           {Array.from({ length: phase.pad(columns) }, (_, i) => spacer(i))}
           {entries.map((entry) => renderEntry(entry, section.key))}
+          {trailing}
         </Grid>
       </>
     );
@@ -678,6 +693,60 @@ function IconsGrid({
         </VirtualRows>
       ) : null}
     </>
+  );
+}
+
+/**
+ * The add tile: the tiles' own cell and caption around an empty dashed
+ * outline holding `icon` — a place for one more, not a row. Faint until
+ * hovered or keyboard-focused, then full strength, lifting like a tile.
+ */
+function AddTile({
+  label,
+  icon,
+  activation,
+  geometry,
+}: {
+  label: string;
+  icon: IconRef;
+  activation: Activation;
+  geometry: Geometry;
+}): ReactNode {
+  return (
+    <Stack
+      gap={geometry.tileGap}
+      align="center"
+      role="button"
+      tabIndex={0}
+      {...activationProps(activation)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          runActivation(activation);
+        }
+      }}
+      className={cn("group/icon focus-ring relative", geometry.tilePad)}
+    >
+      <Center
+        className={cn(
+          "size-[var(--icons-tile)] rounded-squircle border-[1.5px] border-dashed border-input text-faint-foreground",
+          "transition-[transform,color,border-color,background-color] duration-200 ease-[cubic-bezier(.3,.7,.4,1.3)]",
+          "group-hover/icon:-translate-y-0.5 group-hover/icon:border-foreground/35 group-hover/icon:bg-foreground/[.03] group-hover/icon:text-foreground",
+          "group-focus-visible/icon:-translate-y-0.5 group-focus-visible/icon:text-foreground",
+          "group-active/icon:translate-y-0 group-active/icon:scale-[.96]",
+          "[&_svg]:size-[calc(var(--icons-tile)*0.46)]",
+        )}
+      >
+        <Icon icon={icon} />
+      </Center>
+      <Text
+        as="div"
+        variant="caption"
+        className="max-w-full truncate text-center text-faint-foreground transition-colors group-hover/icon:text-foreground group-focus-visible/icon:text-foreground"
+      >
+        {label}
+      </Text>
+    </Stack>
   );
 }
 

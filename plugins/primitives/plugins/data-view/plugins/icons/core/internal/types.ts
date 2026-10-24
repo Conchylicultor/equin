@@ -1,5 +1,7 @@
 import type { Ref } from "react";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
+import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
+import type { IconRef } from "@plugins/ui/plugins/icons/core";
 
 /**
  * Per-view options for the icons view, threaded through
@@ -25,4 +27,12 @@ export interface IconsViewOptions<TRow> {
    * density prop is ignored.
    */
   menu?: { columns: number };
+  /**
+   * A tile after the last one that makes one more — a launcher's "New app":
+   * drawn as an empty dashed outline around `icon`, with `label` under it, in
+   * the same cell as every tile. It is no row, so search, sort, drag and the
+   * row count never see it; it is hidden while nothing matches (the empty
+   * state speaks then).
+   */
+  addTile?: { label: string; icon: IconRef; activation: Activation };
 }

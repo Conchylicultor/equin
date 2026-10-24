@@ -41,6 +41,12 @@ phone home screen. Contributes one `DataViewSlots.View("icons")` entry.
   once per rendered tile, returning the ref attached to the WHOLE tile (square
   and name) — e.g. Home's gallery registers each tile as a hint anchor, so the
   tour's card sits beside the app rather than over its name.
+- **`viewOptions.icons.addTile`** (`{ label, icon, activation }`): a tile
+  after the last one that makes one more (Home's "New app") — an empty dashed
+  squircle around `icon`, the label under it, faint until hovered. It is no
+  row: search, sort, drag and the arrow keys never see it, and it is hidden
+  while nothing matches (the empty state speaks then). Drawn in the last
+  section's plain grid only (not in a windowed one).
 - **Roving focus**: the activating tiles are ONE tab stop — the last-focused
   tile, else the selected one, else the first. The view root owns the keys:
   ArrowLeft/Right step in render order, ArrowUp/Down go to the nearest tile
@@ -96,7 +102,7 @@ through the real body, `web/__tests__/paged-conformance.test.tsx` (data-view's
 - Description: Icons view child for the data-view primitive: a centred launcher grid of fixed-size tiles (the row's leading avatar filling a squircle) with the name underneath, drag-to-reorder in manual order.
 - Web:
   - Contributes: `DataViewSlots.View` "Icons" → `IconsView`
-  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×22
     - `primitives/avatar` ×2
     - `primitives/css/ui-kit` ×2
@@ -110,10 +116,13 @@ through the real body, `web/__tests__/paged-conformance.test.tsx` (data-view's
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/link-gesture.activationProps`
     - `primitives/virtual-rows.VirtualRows`
+    - `ui/icons.Icon`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --accent`
+    - `ui/tokens/color-palette --faint-foreground`
     - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --input`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --ring`
     - `ui/tokens/density --space-2xl`

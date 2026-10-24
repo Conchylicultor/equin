@@ -18,19 +18,11 @@ import type { IconsViewOptions } from "@plugins/primitives/plugins/data-view/plu
 import { useHintAnchor } from "@plugins/hints/web";
 import { appTileAnchor, homeGalleryAnchor } from "../../core";
 import { installedApp } from "@plugins/apps-core/plugins/app-launcher/core";
-import { openDialog } from "@plugins/primitives/plugins/overlay/plugins/imperative-dialog/web";
-import { LaunchAgentForm } from "@plugins/primitives/plugins/launch/web";
-import { APPS_CATEGORY_ID } from "@plugins/apps/plugins/home/core";
-import {
-  mintPrototypeFolder,
-  newPrototypePrompt,
-} from "@plugins/apps/plugins/prototypes/plugins/gallery/web";
-import {
-  useFetchEndpoint,
-  type FetchEndpoint,
-} from "@plugins/infra/plugins/endpoints/web";
-import { useToast, type Toast } from "@plugins/shell/plugins/notifications/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { newAppPane } from "@plugins/apps/plugins/home/plugins/new-app/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
+import { linkProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const addIcon = symbol("add");
@@ -42,112 +34,23 @@ function useAppTileRef(row: AppRow) {
   return useHintAnchor(appTileAnchor.at(row.id));
 }
 
-/** The icons view's options: every tile is an anchor the onboarding tour can point at. */
-const homeAppViewOptions: { icons: IconsViewOptions<AppRow> } = {
-  icons: { useTileRef: useAppTileRef },
-};
-
-const PROTOTYPE_FIRST = "prototype-first";
-
-// The prompt every "New app" agent starts from. It points at the create-app
-// skill (where an app lives and how its shell is shaped) and asks for a plan
-// first, since an app is a feature, not a one-line change. The user's own words
-// follow as the description of what to build.
-//
-// With "Prototype first", the agent designs a throwaway mock before any plugin
-// code — the same instructions a "New prototype" agent gets, in a folder minted
-// here — and waits for the user's review of it in Prototypes.
-function newAppPrompt(userText: string, prototypeId: string | null): string {
-  const app = [
-    "Read the `create-app` skill before writing anything, and follow it.",
-    "Start with the `plan` skill: an app is a feature, so design it (what it",
-    "shows, its data, which existing plugins it composes) and check the design",
-    "with me before implementing.",
-    "",
-    "Then implement it, run `./equin build`, and give me the app's URL so I",
-    "can try it in your worktree. Do not push.",
-  ];
-  const parts = ["Build a new top-level Singularity app."];
-  if (prototypeId) {
-    parts.push(
-      [
-        "Work in two steps.",
-        "",
-        "## Step 1 — prototype",
-        "",
-        "Before any plugin code, design the app as a throwaway prototype. The",
-        "rules below hold until I approve the prototype:",
-        "",
-        newPrototypePrompt(prototypeId),
-        "",
-        "When it is ready, stop and ask me to review it in the Prototypes app.",
-        "Iterate on it with me until I approve it.",
-        "",
-        "## Step 2 — the app",
-        "",
-        "Build the app from the approved prototype.",
-        ...app,
-        "Once the app is built, add",
-        '`<meta name="mocks" content="app:/<the app\'s path>">` to the prototype so',
-        "the prototype canvas can put the mock beside the real app (+ Real app).",
-      ].join("\n"),
-    );
-  } else {
-    parts.push(app.join("\n"));
-  }
-  parts.push(
-    userText.trim()
-      ? `The app I want:\n${userText.trim()}`
-      : "I have not described the app yet — ask me what it should do.",
-  );
-  return parts.join("\n\n");
-}
-
-/** Opens the launch-agent form for a new app. A dialog rather than a popover,
- *  because the create affordance renders in several shapes (the capsule's round
- *  `+`, the no-match empty state's "Build one?") and a dialog serves them all
- *  from one callback. Launching files a task under the Apps category and starts
- *  it in the background; the bell announces the conversation, like "New
- *  prototype". */
-function newApp(fetchEndpoint: FetchEndpoint, toast: Toast): void {
-  void openDialog(
-    (close) => (
-      <LaunchAgentForm
-        draftKey="new-app"
-        title="New app"
-        description="Describe the app you want. An agent plans it with you, builds it in its own worktree, and hands you a link to try it before anything ships."
-        placeholder="What should the app do? e.g. a reading list that saves links and tracks what I've finished…"
-        toggles={[
-          {
-            id: PROTOTYPE_FIRST,
-            label: "Prototype first",
-            description:
-              "Design a throwaway mockup you review in Prototypes before any app code.",
-          },
-        ]}
-        getRequest={async (userText, toggles) => {
-          // Minted before launch, so the agent is handed a folder that exists;
-          // a failed mint rejects and the launch never happens.
-          const prototypeId = toggles[PROTOTYPE_FIRST]
-            ? await mintPrototypeFolder(fetchEndpoint, toast)
-            : null;
-          return {
-            prompt: newAppPrompt(userText, prototypeId),
-            categoryId: APPS_CATEGORY_ID,
-          };
-        }}
-        // Close on either outcome: the task is filed whether or not the
-        // agent started.
-        onSubmitted={() => close()}
-      />
-    ),
-    { size: "lg" },
-  );
+/** The icons view's options: every tile is an anchor the onboarding tour can
+ *  point at, and the grid ends in a New app tile. */
+function homeAppViewOptions(newApp: LinkTarget): {
+  icons: IconsViewOptions<AppRow>;
+} {
+  return {
+    icons: {
+      useTileRef: useAppTileRef,
+      addTile: { label: "New app", icon: addIcon, activation: newApp },
+    },
+  };
 }
 
 export function AppGrid() {
-  const fetchEndpoint = useFetchEndpoint();
-  const toast = useToast();
+  const openPane = useOpenPane();
+  // Every way to make an app opens the New app screen.
+  const newApp = openPane.to(newAppPane, {}, { mode: "root" });
   const apps = Apps.App.useContributions();
   const currentId = useCurrentAppId();
   // Lands in the grid's OWN surface tab — in desktop mode multiple Home
@@ -164,7 +67,7 @@ export function AppGrid() {
       id: "new-app",
       label: "New app",
       icon: <Icon icon={addIcon} className="size-4" />,
-      onSelect: () => newApp(fetchEndpoint, toast),
+      onSelect: newApp.open,
     },
   ];
 
@@ -181,7 +84,7 @@ export function AppGrid() {
         // Icons is the launcher (tile + name only); the table shows every field,
         // contributed ones included.
         views={["icons", "table"]}
-        viewOptions={homeAppViewOptions}
+        viewOptions={homeAppViewOptions(newApp)}
         defaultView="icons"
         toolbar={capsuleToolbar}
         searchPlaceholder="Search apps"
@@ -195,11 +98,7 @@ export function AppGrid() {
         emptyState={
           <>
             No app matches.{" "}
-            <Button
-              variant="link"
-              aspect="inline"
-              onClick={() => newApp(fetchEndpoint, toast)}
-            >
+            <Button variant="link" aspect="inline" {...linkProps(newApp)}>
               Build one?
             </Button>
           </>

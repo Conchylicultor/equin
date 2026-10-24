@@ -105,7 +105,7 @@ started" notification confirms it), so its props are the form's minus
   - Imported by:
     - `active-data/task`
     - `apps/agent-manager/welcome`
-    - `apps/home/app-cards`
+    - `apps/home/new-app`
     - `apps/prototypes/canvas`
     - `apps/prototypes/gallery`
     - `apps/sonata/transcription`

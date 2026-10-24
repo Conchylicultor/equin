@@ -20,8 +20,17 @@ Entry-point app: a phone-home-screen launcher of every installed app, shown at
   round New app button. Below 560px of capsule width the three circles fold
   into one control; below the DataView's own compact breakpoint the capsule
   gives way to the standard compact fold.
-- **New app** — the capsule's button and the no-match empty state's "Build
-  one?" both call a stub; no create-app flow exists yet.
+- **Panes** — Home is a full-pane surface (`shell`'s `HomeLayout`): the
+  launcher is the index pane (`homeRootPane`, `/home`), and New app
+  (`new-app`, `/home/new`) replaces it. Routes live in `shell/core/routes.ts`.
+- **New app** — the capsule's button, the grid's trailing dashed "New app"
+  tile (the icons view's `addTile`) and the no-match empty state's "Build
+  one?" all open the New app screen (`new-app`): one prompt that files a task
+  under the Apps category with a deliberately minimal prompt ("I want to build
+  a new app. Create a prototype first." + the description) and opens its
+  conversation in the Agent Manager. The repo's own instructions —
+  `prototypes/CLAUDE.md`, the `create-app` skill — tell the agent how, so the
+  prompt does not restate them. Design: proto-1792811301-yksedx.
 - **Theme** (`shell/web/internal/theme.ts`) — Home contributes its own theme via
   `ThemeEngine.Theme`: a black page and an ocean categorical palette for the
   tiles. `config/ui/theme-engine/@app/home/theme.jsonc` selects it for the
@@ -42,7 +51,8 @@ Entry-point app: a phone-home-screen launcher of every installed app, shown at
   - Exports (values): `APPS_CATEGORY_ID`
 - Sub-plugins:
   - **`app-cards`** — Launcher grid of one card per installed app (a DataView of the installedApp row kind; plugins add fields to it as client fields of that kind), plus the new-app placeholder.
-  - **`shell`** — App shell for Home. Registers the /home app entry, defines the Home.Section slot, and contributes Home's own theme (a black page and the ocean tile palette), which the home app selects.
+  - **`new-app`** — Home's New app screen (/home/new): one prompt — the standard composer field, its Create button opening the launched conversation — above the Prototype → App steps every new app goes through, with a…
+  - **`shell`** — App shell for Home. Registers the /home app entry and its launcher pane (the index of a full-pane surface), defines the Home.Section slot, and contributes Home's own theme (a black page and the…
   - **`tour`** — Home's onboarding tour (Hints.Tour, primary, auto-started once): the welcome card, then the app gallery, the toolbar (hover to unfold while it floats; Next while docked), Improve — 'Try it' opens it…
   - **`usage-fields`** — Declares per-app usage stats as client fields of the installed-app row kind: opens and active time over 7 days and all time, and when the app was last opened — sortable, filterable fields shown as…
 

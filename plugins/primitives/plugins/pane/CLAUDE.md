@@ -893,9 +893,9 @@ See "Open questions" in the design doc.
 - Load-bearing: yes
 - Web:
   - Slots: `Pane.Register`
-  - Slot contributors: 89 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Pane.Register` ×89
-  - Contributes: 116 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 91 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Pane.Register` ×91
+  - Contributes: 118 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `SlotRender.ItemMiddleware`
     - `WebsiteHeader` "title" → `PaneTitleItem`
     - `accountPane.Actions` "title" → `PaneTitleItem`
@@ -957,6 +957,7 @@ See "Open questions" in the design doc.
     - `graphCanvasPane.Actions` "title" → `PaneTitleItem`
     - `healthMonitorPane.Actions` "title" → `PaneTitleItem`
     - `heapSnapshotPane.Actions` "title" → `PaneTitleItem`
+    - `homeRootPane.Actions` "title" → `PaneTitleItem`
     - `icons.actions` "title" → `PaneTitleItem`
     - `liveStateEmitPane.Actions` "title" → `PaneTitleItem`
     - `liveStateHealthPane.Actions` "title" → `PaneTitleItem`
@@ -969,6 +970,7 @@ See "Open questions" in the design doc.
     - `mcp-tool.actions` "title" → `PaneTitleItem`
     - `mcp-tools.actions` "title" → `PaneTitleItem`
     - `memoryPane.Actions` "title" → `PaneTitleItem`
+    - `newAppPane.Actions` "title" → `PaneTitleItem`
     - `notifications.actions` "title" → `PaneTitleItem`
     - `opDetailPane.Actions` "title" → `PaneTitleItem`
     - `pageDetailPane.Actions` "title" → `PaneTitleItem`
@@ -1142,8 +1144,8 @@ See "Open questions" in the design doc.
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-md`
     - `ui/tokens/shape --spacing`
-  - Imported by: 179 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×64
+  - Imported by: 181 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×66
     - `conversations` ×30
     - `debug` ×27
     - `active-data` ×10
