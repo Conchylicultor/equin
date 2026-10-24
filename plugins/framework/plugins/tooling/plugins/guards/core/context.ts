@@ -1,5 +1,6 @@
 import { closeSync, existsSync, fstatSync, openSync, readSync } from "node:fs";
 import { join } from "node:path";
+import { classifyRepo } from "./git-target";
 import type {
   AllowVerdict,
   DenyVerdict,
@@ -74,7 +75,12 @@ export function createContext(
       return readTail(transcriptPath);
     },
     hasBypass(token: string): boolean {
-      return existsSync(join(cwd, token));
+      // At the checkout root, not the raw cwd: the hook's cwd follows the
+      // session shell's persistent `cd`, so a file created at the root would
+      // stop counting the moment the agent cd'd into a subdirectory.
+      const repo = classifyRepo(cwd);
+      const root = repo.kind === "not-a-repo" ? cwd : repo.root;
+      return existsSync(join(root, token));
     },
     allow(): AllowVerdict {
       return { kind: "allow" };

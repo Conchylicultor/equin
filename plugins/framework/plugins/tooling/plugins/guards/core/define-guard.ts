@@ -39,7 +39,7 @@ function formatEpilogue(bypassToken?: string): string {
   let epilogue =
     "If you believe this block is a false positive: STOP immediately, report the blocked command and your reasoning to the user, and wait for instructions. Do NOT attempt to work around this guard — not by restructuring the command, not by using alternative tools, not by any other means.";
   if (bypassToken) {
-    epilogue += ` If the user explicitly approves, they will tell you to create $PWD/${bypassToken} to bypass.`;
+    epilogue += ` If the user explicitly approves, they will tell you to create ${bypassToken} at the root of your checkout (not the current directory) to bypass.`;
   }
   return epilogue;
 }
