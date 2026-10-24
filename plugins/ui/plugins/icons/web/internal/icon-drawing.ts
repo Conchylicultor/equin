@@ -27,7 +27,8 @@ import { iconFamily } from "./family-store";
 export type DrawingSource =
   | { kind: "sprite"; key: SpriteKey }
   | { kind: "runtime" }
-  | { kind: "family"; family: string; glyph: string }
+  /** `active`: the glyph's active form is drawn (it has one, and the icon is active). */
+  | { kind: "family"; family: string; glyph: string; active: boolean }
   /** A strict family's gap glyph, standing in for `name` it does not map. */
   | { kind: "gap"; family: string; name: SymbolName };
 
@@ -75,6 +76,7 @@ function familyChain(id: string): readonly IconFamily[] {
 function familyDrawing(
   familyId: string,
   name: SymbolName,
+  active: boolean,
 ): {
   drawing: Drawing | null;
   wants: DrawingWant[];
@@ -87,10 +89,7 @@ function familyDrawing(
     if (id === undefined) continue;
     if (f.kind === "inline") {
       return {
-        drawing: {
-          id: familyGlyphId(f.id, id),
-          source: { kind: "family", family: f.id, glyph: id },
-        },
+        drawing: inlineGlyphDrawing(f, id, active),
         wants,
         strictEnd: undefined,
       };
@@ -109,6 +108,19 @@ function familyDrawing(
     drawing: null,
     wants,
     strictEnd: last?.coverage === "strict" ? last.id : undefined,
+  };
+}
+
+/** An inline family's glyph — its active form when `active` and it has one. */
+function inlineGlyphDrawing(
+  f: IconFamily & { kind: "inline" },
+  glyph: string,
+  active: boolean,
+): Drawing {
+  const drawActive = active && f.glyphs[glyph]?.active !== undefined;
+  return {
+    id: familyGlyphId(f.id, glyph, drawActive),
+    source: { kind: "family", family: f.id, glyph, active: drawActive },
   };
 }
 
@@ -211,15 +223,12 @@ export function resolveIconDrawing(
         );
       }
       return {
-        drawing: {
-          id: familyGlyphId(f.id, icon.name),
-          source: { kind: "family", family: f.id, glyph: icon.name },
-        },
+        drawing: inlineGlyphDrawing(f, icon.name, active),
         wants: [],
       };
     }
     case "symbol": {
-      const family = familyDrawing(style.family, icon.name);
+      const family = familyDrawing(style.family, icon.name, active);
       if (family.drawing !== null) return family;
       if (family.strictEnd !== undefined) {
         // A strict family's scope never borrows another family's drawing: an

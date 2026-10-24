@@ -188,6 +188,8 @@ const glyphs = {
   },
   pin: {
     body: `<g ${m("nudge-down")}><path d="M9 3.5h6"/><path d="M10 3.5v5.5l-3 3v2h10v-2l-3-3V3.5"/><path d="M12 14v6.5"/></g>`,
+    // Pinned: the head filled.
+    active: `<g ${m("nudge-down")}><path d="M9 3.5h6"/><path fill="currentColor" d="M10 3.5v5.5l-3 3v2h10v-2l-3-3V3.5z"/><path d="M12 14v6.5"/></g>`,
   },
   "bookmark-plus": {
     body:
@@ -524,6 +526,7 @@ const glyphs = {
   },
   star: {
     body: `<path ${m("twinkle", undefined, [12, 12.4])} d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/>`,
+    active: `<path ${m("twinkle", undefined, [12, 12.4])} fill="currentColor" d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/>`,
   },
   sparkles: {
     body:

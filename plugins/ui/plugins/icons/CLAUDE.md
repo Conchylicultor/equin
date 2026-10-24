@@ -146,6 +146,11 @@ hidden in the page as `<symbol id="fam-<family>-<glyph>">`.
   scope's Material style. A family not (yet) contributed ends the chain early —
   its plugin may load in a later tier, so its scopes draw Material meanwhile. A
   fallback loop throws.
+- **Active forms**: a family has no fill axis, so an inline glyph declares
+  what `<Icon active>` draws as its own `active` body (sheet id
+  `famact-<family>-<glyph>`, beside `fam-…`). A glyph without one draws the
+  same at rest and active — give one to every glyph a toggle shows. A sprite
+  family (Lucide) has none: its icons draw the same either way.
 - **Coverage is required** (`IconFamilyCoverage`, a discriminated union, so tsc
   makes every family state it): `coverage: "fallback"` (with an optional
   `fallback` family — the chain above) or `coverage: "strict"` (no `fallback`

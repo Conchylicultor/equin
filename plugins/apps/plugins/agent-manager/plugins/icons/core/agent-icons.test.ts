@@ -60,6 +60,11 @@ describe("agentIcons", () => {
     expect(mapped).toEqual(expected);
   });
 
+  test("the toggle glyphs draw a filled active form", () => {
+    expect(agentIcons.glyphs.pin.active).toContain('fill="currentColor"');
+    expect(agentIcons.glyphs.star.active).toContain('fill="currentColor"');
+  });
+
   test("every glyph moves, and a draw part carries pathLength", () => {
     for (const [name, glyph] of Object.entries(agentIcons.glyphs)) {
       expect({ name, animated: glyph.animated }).toEqual({

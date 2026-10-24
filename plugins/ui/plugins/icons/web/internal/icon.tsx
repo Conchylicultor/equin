@@ -32,7 +32,8 @@ export interface IconProps extends Omit<
   icon: IconRef;
   /**
    * Draw the icon in its active form — the theme's `iconActiveFill` (filled by
-   * default): a selected nav item, a pinned row, an on toggle.
+   * default), or an app-drawn family glyph's own `active` form: a selected nav
+   * item, a pinned row, an on toggle.
    */
   active?: boolean;
   /** An accessible name, drawn as the svg's `<title>`; the icon is then no longer hidden from assistive tech. */
@@ -100,10 +101,11 @@ function inlineGlyphMarkup(source: DrawingSource | undefined): string | null {
     byGlyph = new Map();
     inlineMarkup.set(family, byGlyph);
   }
-  let markup = byGlyph.get(source.glyph);
+  const key = source.active ? `${source.glyph}:active` : source.glyph;
+  let markup = byGlyph.get(key);
   if (markup === undefined) {
-    markup = familyGlyphBody(family, glyph);
-    byGlyph.set(source.glyph, markup);
+    markup = familyGlyphBody(family, glyph, source.active);
+    byGlyph.set(key, markup);
   }
   return markup;
 }

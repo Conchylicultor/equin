@@ -11,6 +11,10 @@ app-shell sidebar. The Mist theme selects it (`iconFamily: "agent"`,
   `bot`, …); **`symbols` keys** are the Material names the agent manager's
   chrome writes (`checklist`, `precision-manufacturing`, …). Map a Material
   name only when the drawing genuinely fits it.
+- **Active forms**: a glyph drawn `active` (a pinned pin, an on star) needs
+  its own `active` body — the family has no fill axis, so without one
+  `<Icon active>` looks exactly like the icon at rest. Give one to every glyph
+  a toggle draws.
 - **Coverage is `fallback`** (to Lucide): an unmapped name draws Lucide, and
   Debug → Icons lists it. Flip to `strict` once that list is empty.
 

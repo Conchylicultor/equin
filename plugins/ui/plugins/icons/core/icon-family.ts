@@ -30,16 +30,23 @@ export function isIconFamilyId(value: string): value is IconFamilyId {
  *
  * A part that moves carries `data-motion="<kind>"` (`ICON_MOTIONS`), and may add
  * `data-motion-delay="<ms>"` and `data-motion-origin="<x> <y>"` (grid units).
+ *
+ * `active` is the glyph's ACTIVE form — what `<Icon active>` draws (a pinned
+ * pin, an on star): a family has no fill axis, so without one the active icon
+ * looks exactly like the one at rest. Same paint and rules as `body`; a part
+ * is filled by its own `fill="currentColor"`.
  */
 export interface IconGlyphSource {
   readonly body: string;
+  readonly active?: string;
   readonly paint?: "stroke" | "fill";
 }
 
 /**
- * A defined glyph: its source, with `body` the DRAWN body (each moving part's
- * delay and origin written as its inline style, `pathLength="1"` on a `draw`
- * part), and `animated` — derived, true when the body holds a moving part. An
+ * A defined glyph: its source, with `body` (and `active`) the DRAWN body (each
+ * moving part's delay and origin written as its inline style, `pathLength="1"`
+ * on a `draw` part), and `animated` — derived, true when either form holds a
+ * moving part. An
  * animated glyph is drawn inline by `<Icon>` (a `<use>` shadow tree is out of
  * the page CSS's reach), every other one through `<use>`.
  */
@@ -246,9 +253,16 @@ export function defineIconFamily<G extends string>(
   const glyphs = {} as Record<G, IconGlyph>;
   for (const name of Object.keys(def.glyphs) as G[]) {
     const source = def.glyphs[name];
+    const rest = drawnBody(def.id, name, source.body);
+    const active =
+      source.active === undefined
+        ? undefined
+        : drawnBody(def.id, `${name} (active)`, source.active);
     glyphs[name] = {
       ...source,
-      ...drawnBody(def.id, name, source.body),
+      body: rest.body,
+      ...(active === undefined ? {} : { active: active.body }),
+      animated: rest.animated || active?.animated === true,
     };
   }
   return {
@@ -259,9 +273,17 @@ export function defineIconFamily<G extends string>(
   };
 }
 
-/** The sheet `<symbol>` id of an app-drawn family's glyph. */
-export function familyGlyphId(family: IconFamilyId, glyph: string): string {
-  return `fam-${family}-${glyph}`;
+/**
+ * The sheet `<symbol>` id of an app-drawn family's glyph — of its active form
+ * when `active` (its own prefix, so no glyph name can collide with it). Only a
+ * glyph that has an active form has an active id.
+ */
+export function familyGlyphId(
+  family: IconFamilyId,
+  glyph: string,
+  active = false,
+): string {
+  return `${active ? "famact" : "fam"}-${family}-${glyph}`;
 }
 
 /**
@@ -282,29 +304,37 @@ function strokePaint(family: InlineIconFamily): string {
 }
 
 /**
- * One glyph as drawn: its body inside the one `<g>` carrying the family's
- * paint. The `<symbol>` content of the sheet, and what `<Icon>` draws inline
- * for an animated glyph — one markup, so the two cannot differ.
+ * One glyph as drawn: its body (its active form's, when `active` and it has
+ * one) inside the one `<g>` carrying the family's paint. The `<symbol>`
+ * content of the sheet, and what `<Icon>` draws inline for an animated glyph —
+ * one markup, so the two cannot differ.
  */
 export function familyGlyphBody(
   family: InlineIconFamily,
   glyph: IconGlyph,
+  active = false,
 ): string {
   const paint =
     glyph.paint === "fill"
       ? 'fill="currentColor" stroke="none"'
       : strokePaint(family);
-  return `<g ${paint}>${glyph.body}</g>`;
+  return `<g ${paint}>${active ? (glyph.active ?? glyph.body) : glyph.body}</g>`;
 }
 
 /**
  * The `<symbol>` markup of every glyph of an inline family, for the sheet —
- * plus, for a strict family, its gap glyph.
+ * each glyph's active form beside it, and, for a strict family, its gap glyph.
  */
 export function familyGlyphMarkup(family: InlineIconFamily): string {
-  const symbols = Object.entries<IconGlyph>(family.glyphs).map(
-    ([name, glyph]) =>
+  const symbols = Object.entries<IconGlyph>(family.glyphs).flatMap(
+    ([name, glyph]) => [
       `<symbol id="${familyGlyphId(family.id, name)}" viewBox="0 0 24 24">${familyGlyphBody(family, glyph)}</symbol>`,
+      ...(glyph.active === undefined
+        ? []
+        : [
+            `<symbol id="${familyGlyphId(family.id, name, true)}" viewBox="0 0 24 24">${familyGlyphBody(family, glyph, true)}</symbol>`,
+          ]),
+    ],
   );
   if (family.coverage === "strict") {
     symbols.push(

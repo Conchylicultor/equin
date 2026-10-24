@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   defineIconFamily,
   familyGapId,
+  familyGlyphId,
   familyGlyphMarkup,
 } from "./icon-family";
 import { ICON_MOTIONS } from "./icon-motion";
@@ -98,5 +99,47 @@ describe("defineIconFamily — coverage", () => {
     expect(familyGlyphMarkup(withBody('<path d="M1 1"/>'))).not.toContain(
       "famgap-",
     );
+  });
+});
+
+describe("defineIconFamily — active form", () => {
+  const f = defineIconFamily({
+    id: "active-test",
+    label: "Active test",
+    coverage: "fallback",
+    stroke: 1.6,
+    glyphs: {
+      pin: {
+        body: '<path d="M1 1"/>',
+        active: '<path fill="currentColor" d="M1 1z"/>',
+      },
+      x: { body: '<path d="M2 2"/>' },
+    },
+    symbols: { keep: "pin", close: "x" },
+  });
+
+  test("the sheet holds an active symbol only for a glyph that has an active form", () => {
+    const markup = familyGlyphMarkup(f);
+    expect(markup).toContain(
+      `<symbol id="${familyGlyphId("active-test", "pin", true)}" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path fill="currentColor" d="M1 1z"/></g></symbol>`,
+    );
+    expect(markup).not.toContain(familyGlyphId("active-test", "x", true));
+  });
+
+  test("an active part makes the glyph animated", () => {
+    const g = defineIconFamily({
+      id: "active-motion",
+      label: "Active motion",
+      coverage: "fallback",
+      stroke: 1.6,
+      glyphs: {
+        x: {
+          body: '<path d="M1 1"/>',
+          active: '<path data-motion="pop" d="M1 1"/>',
+        },
+      },
+      symbols: { close: "x" },
+    });
+    expect(g.glyphs.x.animated).toBe(true);
   });
 });
