@@ -12,6 +12,14 @@
   height: calc(var(--wd-dot, 6px) * 7 / 3);
 }
 
+/* A hit area a little larger than the dots, so a poke need not land on a 4px dot. */
+.working-dots::before {
+  content: "";
+  position: absolute;
+  inset: calc(var(--wd-dot, 6px) * -1);
+  touch-action: none;
+}
+
 /* Two stacked layers: the halos, then the dots (the dots' layer carries the goo filter). */
 .working-dots-layer {
   position: absolute;

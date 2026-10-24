@@ -18,9 +18,21 @@ way something alive does rather than looping a keyframe.
   fast dots stretch along their path; between passes it holds for a varying
   time with a faint out-of-step breath. Rhythms are keyed to where a dot IS,
   not which element it is, so leap's hand-over never pops.
-- **One mix, no modes.** Every style is in the pool, picked uniformly at one
-  fixed energy (speed, amplitude, hold length). Never the same style twice in
-  a row; a style repeats 1–3 times (orbit once).
+- **One mix, no modes.** Every style (gooey, wave, leap, orbit, ring, glow) is
+  in the pool, picked uniformly at one fixed energy (speed, amplitude, hold
+  length). Never the same style twice in a row; a style repeats 1–3 times
+  (orbit and ring once).
+- **Alive to the pointer.** *Sniff*: the dot nearest a pointer that is right
+  at the row (a few px — never from across the line) reaches toward it,
+  tentatively, never past it; a pointer left still is minded less. *Poke*:
+  pressed, the row huddles; released, it answers with a reaction drawn by
+  weight and never the same twice running (`web/internal/reactions.ts`:
+  scatter, hop, gulp, shiver, bolt, spin) — pure kick lists to each dot's
+  wobbly jolt spring. A poke cuts the pass short by handing each dot's pose to
+  its jolt spring (no seam) and leaves excitement behind: faster moves,
+  shorter holds, a glow, bigger reactions on quick repeats. When leap ends
+  with the dots traded, each dot's spring state moves with it to the element
+  now in its place, so a jiggle or a reach never pops.
 - **One rendering for every style.** The dots always draw through the goo
   filter (blur + alpha threshold), which also shaves a small dot's edge — so a
   style drawn without it would show bigger dots. Halos sit on their own
@@ -44,7 +56,7 @@ truncation.
 
 ## Plugin reference
 
-- Description: Three-dot working indicator with organic motion: <WorkingDots> varies each pass (duration, amplitude, lag) through smooth noise, carries the dots on springs with a faint overshoot and stretch, holds between passes with a breath, and cycles through every style (gooey, wave, leap, orbit, glow). Sized from the ambient ControlSize; pauses off screen; still under reduced motion. <WorkingText> is the label beside it: a highlight sweeping across the words, each new label sliding in.
+- Description: Three-dot working indicator with organic motion: <WorkingDots> varies each pass (duration, amplitude, lag) through smooth noise, carries the dots on springs with a faint overshoot and stretch, holds between passes with a breath, and cycles through every style (gooey, wave, leap, orbit, ring, glow). Alive to the pointer: the nearest dot reaches toward a pointer at the row, and a poke draws a varied reaction (scatter, hop, gulp, shiver, bolt, spin). Sized from the ambient ControlSize; pauses off screen; still under reduced motion. <WorkingText> is the label beside it: a highlight sweeping across the words, each new label sliding in.
 - Web:
   - Uses:
     - `primitives/css/ui-kit.cn`

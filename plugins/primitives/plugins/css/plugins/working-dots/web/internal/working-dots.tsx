@@ -27,7 +27,8 @@ const DOTS = [0, 1, 2];
 
 /**
  * Three dots that say "working", moving organically: varied passes, springs,
- * holds with a breath, and every style in turn. See CLAUDE.md.
+ * holds with a breath, and every style in turn. Alive to the pointer: the
+ * nearest dot reaches toward it, and a poke draws a reaction. See CLAUDE.md.
  */
 export function WorkingDots({ className }: WorkingDotsProps) {
   const size = useControlSize();
@@ -41,10 +42,10 @@ export function WorkingDots({ className }: WorkingDotsProps) {
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const dots = [...row.querySelectorAll<HTMLElement>(".working-dots-dot")];
     const halos = [...row.querySelectorAll<HTMLElement>(".working-dots-halo")];
-    const engine = createDotsEngine({ dots, halos });
+    const engine = createDotsEngine({ box: row, dots, halos });
     engineRef.current = engine;
     return () => {
-      engine.stop();
+      engine.destroy();
       engineRef.current = null;
     };
   }, [filterId]);

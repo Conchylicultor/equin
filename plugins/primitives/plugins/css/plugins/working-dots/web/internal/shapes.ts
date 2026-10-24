@@ -17,7 +17,8 @@ export interface DotPose {
   halo?: number;
 }
 
-export type DotStyleName = "gooey" | "wave" | "leap" | "orbit" | "glow";
+export type DotStyleName =
+  "gooey" | "wave" | "leap" | "orbit" | "ring" | "glow";
 
 export interface DotStyle {
   /** Most passes in one run of this style (default 3). */
@@ -37,6 +38,13 @@ export const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
 const hump = (q: number) => Math.sin(Math.PI * clamp01(q)) ** 2;
 /** Dot i's own window of the pass, so a swell runs along the row. */
 const stagger = (p: number, i: number) => clamp01((p - i * 0.25) / 0.5);
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+const easeInOut = (t: number) => 0.5 - 0.5 * Math.cos(Math.PI * clamp01(t));
+/** Ring radius, in shape units. */
+const RING_R = 5.5;
+/** Into the ring over the first fifth of a pass and out over the last, landing with zero speed. */
+const gather = (p: number) =>
+  p < 0.22 ? easeInOut(p / 0.22) : p > 0.78 ? easeInOut((1 - p) / 0.22) : 1;
 
 export const DOT_STYLES: Record<DotStyleName, DotStyle> = {
   // The middle dot rolls into the left dot, through, into the right one, and back — melting into each.
@@ -71,6 +79,23 @@ export const DOT_STYLES: Record<DotStyleName, DotStyle> = {
       return {
         x: sign * PITCH * (Math.cos(t) - 1),
         y: sign * PITCH * Math.sin(t),
+      };
+    },
+  },
+  // The dots fold into a ring round the middle one and chase each other round it twice — the
+  // leader lit, the followers smaller, bunching as they speed up (each dot runs a little behind
+  // the one before), spreading as they slow — then unfold back into the row.
+  ring: {
+    maxReps: 1,
+    pose: (p, i, a) => {
+      const g = gather(p);
+      const t = Math.PI + 4 * Math.PI * p - 0.55 * i;
+      const rest = REST_X[i]!;
+      return {
+        x: lerp(rest, PITCH + RING_R * a * Math.cos(t), g) - rest,
+        y: g * RING_R * a * Math.sin(t),
+        s: 1 - 0.14 * i * g,
+        halo: i === 0 ? 0.6 * g : 0,
       };
     },
   },

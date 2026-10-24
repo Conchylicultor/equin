@@ -38020,7 +38020,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `screenshot/draw-on-app`
           - Exemptions:
             - Exempted by: `primitives/css/ui-kit` (0 debt)
-        - **`working-dots`** — Three-dot working indicator with organic motion: <WorkingDots> varies each pass (duration, amplitude, lag) through smooth noise, carries the dots on springs with a faint overshoot and stretch, holds between passes with a breath, and cycles through every style (gooey, wave, leap, orbit, glow). Sized from the ambient ControlSize; pauses off screen; still under reduced motion. <WorkingText> is the label beside it: a highlight sweeping across the words, each new label sliding in.
+        - **`working-dots`** — Three-dot working indicator with organic motion: <WorkingDots> varies each pass (duration, amplitude, lag) through smooth noise, carries the dots on springs with a faint overshoot and stretch, holds between passes with a breath, and cycles through every style (gooey, wave, leap, orbit, ring, glow). Alive to the pointer: the nearest dot reaches toward a pointer at the row, and a poke draws a varied reaction (scatter, hop, gulp, shiver, bolt, spin). Sized from the ambient ControlSize; pauses off screen; still under reduced motion. <WorkingText> is the label beside it: a highlight sweeping across the words, each new label sliding in.
           - Web:
             - Uses:
               - `primitives/css/ui-kit.cn`
