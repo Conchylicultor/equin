@@ -16,6 +16,7 @@ import {
   type MapPinMarkFn,
   type MapPinProps,
 } from "@plugins/map/web";
+import { hoverRevealClass } from "@plugins/primitives/plugins/hover-reveal/web";
 import { hash53 } from "@plugins/packages/plugins/string-hash/core";
 import { readPlaceVisual } from "../internal/place-visual";
 import { DROP_HEAD_PX, placeDropSvg } from "./place-drop";
@@ -183,7 +184,10 @@ function Beside({
   );
 }
 
-/** The place's name: while hovered, and always on the selected place. */
+/**
+ * The place's name: while hovered, and always on the selected place. Always
+ * mounted and faded in, never mounted on show — a mount has no transition.
+ */
 function Name({
   label,
   shown,
@@ -195,9 +199,9 @@ function Name({
   tiles: MapTileScheme;
   mark: MapMark;
 }) {
-  if (!label || !shown) return null;
+  if (!label) return null;
   return (
-    <Beside mark={mark}>
+    <Beside mark={mark} className={hoverRevealClass(shown)}>
       <MapLabel tiles={tiles}>{label}</MapLabel>
     </Beside>
   );

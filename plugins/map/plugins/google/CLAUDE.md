@@ -66,7 +66,11 @@ The only map-vendor code in the repo. Everything else draws maps through
   presses and clicks at the pin so they do not pan the map or count as a map
   click. The wheel is NOT stopped (unlike Google's
   `preventMapHitsAndGesturesFrom`): scrolling over a pin zooms the map like
-  anywhere else, instead of scrolling the page.
+  anywhere else, instead of scrolling the page. Its content is a function of
+  `entered`: `false` until the container has been placed on the map and
+  painted (two frames after Google's first `draw()` places it), so
+  `PinCanvas` renders a lifted pin at rest first (`active` / `hovered`
+  false — the sprite's look) and its transitions animate the lift.
 - **Clustering** (`crowd.kind === "cluster"`): pins are projected to world
   pixels (`getProjection().fromLatLngToPoint` × 2^zoom), which depend on the
   zoom alone, so only `zoom_changed` re-clusters, never a pan. A cluster is

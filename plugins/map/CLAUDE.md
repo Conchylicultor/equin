@@ -146,7 +146,10 @@ Plain data, no React:
   `{ pin, tiles }` and the renderer's `MapPinState`: `active`, `hovered`
   (the pointer's hover OR the host's linked `hoveredId` — a pin draws its hover
   look from this prop, never from CSS `:hover`, which a linked hover never
-  triggers, so a row-hovered pin would lift into the DOM at rest), `scale`
+  triggers, so a row-hovered pin would lift into the DOM at rest; a lifted
+  pin is first rendered with `active` / `hovered` both `false`, then its real
+  state once on screen, so its CSS transitions animate the lift — fade a name
+  in rather than mounting it), `scale`
   (`near`: anchored at its bottom centre; `far`, spots mode only: anchored at
   its CENTRE, so draw centred) and `spot` (`{ count, hushed }`, on a far spot's
   lead only: draw the count beside the pin, faded while `hushed` — a pin of the

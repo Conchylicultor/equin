@@ -332,14 +332,17 @@ export function PinCanvas({
           zIndex={item.id === hoveredId ? HOVERED_Z_INDEX : item.z}
           onActivate={() => activateItem(item)}
         >
-          {item.kind === "pin"
-            ? renderPin(item.pin, {
-                active: item.id === activeId,
-                hovered: item.id === hoveredId,
-                scale: item.scale,
-                ...(item.spot === undefined ? {} : { spot: item.spot }),
-              })
-            : renderCluster(item.pins)}
+          {(entered) =>
+            item.kind === "pin"
+              ? renderPin(item.pin, {
+                  // At rest until entered: the lift animates from the sprite.
+                  active: entered && item.id === activeId,
+                  hovered: entered && item.id === hoveredId,
+                  scale: item.scale,
+                  ...(item.spot === undefined ? {} : { spot: item.spot }),
+                })
+              : renderCluster(item.pins)
+          }
         </OverlayPin>
       ))}
       <PinList

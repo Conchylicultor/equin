@@ -37,7 +37,15 @@ interface OverlayPinProps {
   onActivate: () => void;
   /** The pointer entered (`true`) or left (`false`) the pin. */
   onHoverChange?: (hovered: boolean) => void;
-  children: ReactNode;
+  /**
+   * The content, given whether it has ENTERED: `false` from its mount until it
+   * has been on the map and painted once, then `true`. Draw the rest look (the
+   * canvas sprite it replaces) until then and the lifted look after, so the
+   * content's own CSS transitions animate the lift — a first render has no
+   * earlier style to transition from, and the container is not even in the
+   * document until Google adds the overlay.
+   */
+  children: (entered: boolean) => ReactNode;
 }
 
 /**
@@ -62,6 +70,7 @@ export function OverlayPin({
 }: OverlayPinProps) {
   const map = useMap();
   const [hovered, setHovered] = useState(false);
+  const [entered, setEntered] = useState(false);
   const maps = useMapsLibrary("maps");
   // Built, not attached: attaching is the effect below.
   const overlay = useMemo(
@@ -78,6 +87,22 @@ export function OverlayPin({
   useEffect(() => {
     overlay?.moveTo(position);
   }, [overlay, position]);
+
+  // Entered once the placed container has been painted: two frames after its
+  // first placement, so the rest look has a computed style to transition from.
+  useEffect(() => {
+    if (overlay === null) return;
+    let frame: number | null = null;
+    const offPlaced = overlay.whenPlaced(() => {
+      frame = requestAnimationFrame(() => {
+        frame = requestAnimationFrame(() => setEntered(true));
+      });
+    });
+    return () => {
+      offPlaced();
+      if (frame !== null) cancelAnimationFrame(frame);
+    };
+  }, [overlay]);
 
   useEffect(() => {
     overlay?.stackAt(hovered ? HOVERED_Z_INDEX : zIndex);
@@ -111,7 +136,7 @@ export function OverlayPin({
         onHoverChange?.(false);
       }}
     >
-      {children}
+      {children(entered)}
     </div>,
     overlay.container,
   );
@@ -144,6 +169,11 @@ interface PinOverlay extends google.maps.OverlayView {
   moveTo(position: LatLng): void;
   stackAt(zIndex: number): void;
   anchorAt(anchor: OverlayAnchor): void;
+  /**
+   * Call `listener` once the container is first placed on the map (at once if
+   * it already is); returns its removal.
+   */
+  whenPlaced(listener: () => void): () => void;
 }
 
 /**
@@ -154,6 +184,8 @@ function createPinOverlay(maps: google.maps.MapsLibrary): PinOverlay {
   class Overlay extends maps.OverlayView implements PinOverlay {
     readonly container = document.createElement("div");
     private position: LatLng | null = null;
+    private placed = false;
+    private readonly placedListeners = new Set<() => void>();
 
     constructor() {
       super();
@@ -176,6 +208,15 @@ function createPinOverlay(maps: google.maps.MapsLibrary): PinOverlay {
       this.container.style.transform = anchorTransform(anchor);
     }
 
+    whenPlaced(listener: () => void) {
+      if (this.placed) {
+        listener();
+        return () => {};
+      }
+      this.placedListeners.add(listener);
+      return () => this.placedListeners.delete(listener);
+    }
+
     override onAdd() {
       const panes = this.getPanes();
       if (panes == null) throw new Error("OverlayView added without panes");
@@ -192,6 +233,10 @@ function createPinOverlay(maps: google.maps.MapsLibrary): PinOverlay {
       if (point === null) return;
       this.container.style.left = `${point.x}px`;
       this.container.style.top = `${point.y}px`;
+      if (this.placed) return;
+      this.placed = true;
+      for (const listener of this.placedListeners) listener();
+      this.placedListeners.clear();
     }
 
     override onRemove() {

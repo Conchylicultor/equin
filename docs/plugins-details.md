@@ -5704,7 +5704,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
               - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
               - `JsonlViewerTool.Renderer` "mcp__equin__places_show_picks" → `PicksToolView`
-            - Uses: 123 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+            - Uses: 124 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `primitives/data-view` ×10
               - `map` ×9
               - `apps/places/places-core` ×8
@@ -5714,6 +5714,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live` ×4
               - `primitives/css/ui-kit` ×4
               - `primitives/overlay/image-viewer` ×4
+              - `primitives/hover-reveal` ×3
               - `primitives/link-gesture/new-tab` ×3
               - `ui/icons` ×3
               - `conversations/conversation-view/jsonl-viewer/tool-call` ×2
@@ -5721,7 +5722,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/layer` ×2
               - `primitives/css/rigid` ×2
               - `primitives/css/text` ×2
-              - `primitives/hover-reveal` ×2
               - `primitives/pane` ×2
               - `primitives/persistent-draft` ×2
               - `primitives/relative-time` ×2

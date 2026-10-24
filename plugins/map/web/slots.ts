@@ -163,7 +163,11 @@ export interface MapPinState {
    * The pin is hovered — under the pointer, or linked from outside the map
    * (`MapView`'s `hoveredId`: a list row, a card). Draw the hover look from
    * this, never from CSS `:hover`: a linked hover has no pointer on the pin,
-   * so a `:hover`-only look would lift it into the DOM at rest.
+   * so a `:hover`-only look would lift it into the DOM at rest. A lifted
+   * pin's first frames come with `hovered` and `active` both `false` (the
+   * sprite it replaces), then the real state — so a CSS transition between
+   * the rest and hover looks animates the lift; keep transient parts (a name)
+   * mounted and faded, since a mount does not transition.
    */
   hovered: boolean;
   scale: MapPinScale;
