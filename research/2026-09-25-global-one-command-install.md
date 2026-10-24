@@ -92,7 +92,7 @@ What the script does **not** do: install Homebrew (not needed any more), touch t
 `./equin push`.
 
 Docs:
-- `README.md`: one paragraph on what Singularity is, the one-liner, the in-clone form, and a link to `docs/setup.md`.
+- `README.md`: one paragraph on what equin is, the one-liner, the in-clone form, and a link to `docs/setup.md`.
 - `docs/setup.md`: lead with "Quick install: the one-liner", and keep the existing manual sequence as "What it does,
   step by step".
 

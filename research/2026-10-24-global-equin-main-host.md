@@ -1,6 +1,6 @@
 # Step 3 of the rename: the app hands out `equin.localhost`
 
-Track page: *Rename Singularity to Equin* (block-dc049371-1f5f-413d-af7b-6e12b531d579).
+Track page: *Rename equin to Equin* (block-dc049371-1f5f-413d-af7b-6e12b531d579).
 
 ## Context
 
@@ -136,7 +136,7 @@ for prose and fixtures. Code cannot spell it by derivation.
   decision item).
 - A redirect from the old host (the old host stays a working alias).
 - Migrating browser state in code (see below).
-- User-visible "Singularity" labels (step 4). For example, the
+- User-visible "equin" labels (step 4). For example, the
   `singularity.auth.complete` postMessage type is an internal wire tag and stays.
 
 ## Manual state copy (for the user, once)

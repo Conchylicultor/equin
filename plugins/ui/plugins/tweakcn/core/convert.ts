@@ -15,7 +15,7 @@ export interface TweakcnFragment {
   dark: Record<string, string>;
 }
 
-/** Pick keys from source, renaming via keyMap (tweakcn key → Singularity key). */
+/** Pick keys from source, renaming via keyMap (tweakcn key → equin key). */
 function pick(
   source: Record<string, string>,
   keyMap: Record<string, string>,
@@ -96,7 +96,7 @@ export function tweakcnPalettePreview(cssVars: TweakcnCssVars): {
 }
 
 /**
- * Convert a tweakcn theme into the token-group fragments of a Singularity theme.
+ * Convert a tweakcn theme into the token-group fragments of an equin theme.
  *
  * tweakcn carries colour, sidebar, shape, shadow, chart and font identity — never
  * a type scale, density or categorical palette — so those groups are simply not

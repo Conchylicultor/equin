@@ -63,7 +63,7 @@ function composePrompt(
 ): string {
   const extra = context?.trim();
   return [
-    `Work on the TODO card \`${blockId}\` in Singularity page \`${pageId}\`.`,
+    `Work on the TODO card \`${blockId}\` in equin page \`${pageId}\`.`,
     "",
     "<todo>",
     cardSnapshot(cardMarkdown),

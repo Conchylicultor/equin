@@ -1,7 +1,7 @@
 # Sync redesign — sub-design 3: wire protocol & transport
 
 Status: research / option survey
-Scope: the bytes-on-the-wire layer of Singularity's sync system. What flows server↔client, how disconnects are recovered, and what physical transport carries it.
+Scope: the bytes-on-the-wire layer of equin's sync system. What flows server↔client, how disconnects are recovered, and what physical transport carries it.
 
 This is a sibling to two other sub-designs (reactivity engine; mutation / write path) — this doc deliberately stays at the wire level and points out where it is constrained by sibling decisions.
 
@@ -23,7 +23,7 @@ The mature systems we surveyed below all answer three more or less independent q
 
 | Unit | Examples | Implications |
 |---|---|---|
-| **Full snapshot** of a query result | Hasura live queries, Singularity today | Trivially correct. Big payloads. Diff is the *client's* problem (React reconciler, virtualized list keys). Replay = "re-send current truth". |
+| **Full snapshot** of a query result | Hasura live queries, equin today | Trivially correct. Big payloads. Diff is the *client's* problem (React reconciler, virtualized list keys). Replay = "re-send current truth". |
 | **Row delta / patch op** (`put`/`del` keyed by primary key) | Replicache, ElectricSQL Shape Log, PowerSync ops | Need a stable per-row identity. Need the server to know which rows the client *had*. Replay = "resend ops since cursor X". |
 | **Op log / mutation log** (named user-level operations + args) | Linear sync actions, Replicache push | Carries semantic intent, not just current values. Useful for audit/CRDT/replay. Requires mutation registry on both sides. |
 | **CRDT update** (binary blob with embedded vector clocks) | Yjs, Automerge | Self-merging, no server arbiter required. Opaque to the wire layer; you can't render a CRDT update without applying it. |
@@ -35,7 +35,7 @@ Choosing the unit determines what the *next* two axes can look like.
 
 | Strategy | Examples | Cost on server |
 |---|---|---|
-| **Re-sync from scratch** | Singularity today; Figma for whole document | Trivial server. No bounded "missed events" — clients see only "new truth". |
+| **Re-sync from scratch** | equin today; Figma for whole document | Trivial server. No bounded "missed events" — clients see only "new truth". |
 | **Cookie / opaque resume token** | Replicache (`cookie`), Matrix (`since`), Discord (`session_id` + `seq`) | Server stores enough state per cookie to compute the diff. Cookie may carry a Lamport-ish version. |
 | **Op-log catchup from offset** | ElectricSQL (`offset`), PowerSync (`last_op_id`), Linear (`lastSyncId`), Phoenix Channel rejoin | Server keeps an ordered log per topic, capped. Clients past the cap fall back to (a). |
 | **Vector-clock / state-vector exchange** | Yjs (`SyncStep1` carries a state vector, server replies with the missing updates) | Symmetric, peer-to-peer friendly. Slightly larger handshake. |
@@ -266,7 +266,7 @@ Long-poll HTTP. Client sends `GET /sync?since=<token>&timeout=30000`; server hol
 
 | Framework | Protocol unit | Transport | Replay mechanism | Partial sync / pagination | Ordering | Bin/JSON |
 |---|---|---|---|---|---|---|
-| Singularity (today) | Full snapshot per `(key,params)` or "invalidate, refetch" | WS | None — resub everything at v=0 | Bake into params | Per-resource version | JSON |
+| equin (today) | Full snapshot per `(key,params)` or "invalidate, refetch" | WS | None — resub everything at v=0 | Bake into params | Per-resource version | JSON |
 | Replicache | KV patch ops (`put`/`del`/`clear`) | HTTP push/pull + WS doorbell | Opaque server cookie | Server picks Client View | Server-defined; mutations have monotonic id | JSON |
 | Zero | Row-level diffs from IVM | WS | Server-side CVR | Per-query, IVM driven | Server | JSON-ish (compact) |
 | ElectricSQL | Row-op log (`insert`/`update`/`delete`) | HTTP (initial + long-poll live) | LSN-derived `offset` | Per-shape; many shapes per table | Postgres LSN | JSON |
@@ -279,13 +279,13 @@ Long-poll HTTP. Client sends `GET /sync?since=<token>&timeout=30000`; server hol
 | Discord | Typed event with `seq` | WS | `session_id` + `seq` resume | None — fixed event types | Monotonic per session | JSON (Etf optional) |
 | Matrix `/sync` | Room event | HTTP long-poll | `since` token | `filter` param | Per-room | JSON |
 
-The pattern: every system that survives disconnects cleanly has *some* monotonic cursor (cookie / offset / seq / LSN / state vector) that the client returns on reconnect, and the server can compute "what's new since X" against. The systems that don't (Figma, Phoenix vanilla, graphql-ws, current Singularity) just re-snapshot.
+The pattern: every system that survives disconnects cleanly has *some* monotonic cursor (cookie / offset / seq / LSN / state vector) that the client returns on reconnect, and the server can compute "what's new since X" against. The systems that don't (Figma, Phoenix vanilla, graphql-ws, current equin) just re-snapshot.
 
 ---
 
-## 5. Options for Singularity
+## 5. Options for equin
 
-Three architectures worth designing in detail. None of them require the full Zero / PowerSync stack — Singularity is single-user and single-process per worktree, so we can make simpler choices than a cloud sync engine.
+Three architectures worth designing in detail. None of them require the full Zero / PowerSync stack — equin is single-user and single-process per worktree, so we can make simpler choices than a cloud sync engine.
 
 ### Option A — JSON delta-stream over SSE, with separate HTTP for initial snapshot
 
@@ -405,17 +405,17 @@ Cons:
 
 ## 6. Open questions (cross-sub-design)
 
-1. **Is the unit even "row delta" derivable?** Sub-design 1 (reactivity engine) decides whether resources can produce a per-row diff at all, or just a recomputed snapshot. If it's the latter, options A/B/C are forced back to "send the whole snapshot, with a cookie" — which is still a strict improvement over today, but loses a lot of the value of fine-grained patches. Zero gets row deltas because IVM produces them; ElectricSQL gets them because Postgres logical decoding does. Singularity's loaders are arbitrary TS functions today — the reactivity sub-design has to address this directly.
+1. **Is the unit even "row delta" derivable?** Sub-design 1 (reactivity engine) decides whether resources can produce a per-row diff at all, or just a recomputed snapshot. If it's the latter, options A/B/C are forced back to "send the whole snapshot, with a cookie" — which is still a strict improvement over today, but loses a lot of the value of fine-grained patches. Zero gets row deltas because IVM produces them; ElectricSQL gets them because Postgres logical decoding does. equin's loaders are arbitrary TS functions today — the reactivity sub-design has to address this directly.
 
-2. **What is the upstream shape?** Sub-design 2 (mutations / write path) decides whether mutations are named operations with args (Replicache/Zero/Linear) or arbitrary HTTP POSTs (current Singularity). If it's the former, the wire protocol in option B should carry them as a `mutate` frame with a client-generated id, so optimistic UI and server reconciliation share an identifier. If it's the latter, mutations stay on plain HTTP and the WS/SSE channel is purely downstream + acks.
+2. **What is the upstream shape?** Sub-design 2 (mutations / write path) decides whether mutations are named operations with args (Replicache/Zero/Linear) or arbitrary HTTP POSTs (current equin). If it's the former, the wire protocol in option B should carry them as a `mutate` frame with a client-generated id, so optimistic UI and server reconciliation share an identifier. If it's the latter, mutations stay on plain HTTP and the WS/SSE channel is purely downstream + acks.
 
-3. **Do we want server-defined ordering or causal ordering?** Linear chose a single global `lastSyncId`; Yjs chose per-author state vectors; PowerSync chose per-bucket op ids. Singularity is single-process per worktree, so a single monotonic counter would work — but this couples every resource's resume cursor to a global write counter. Per-resource counters are slightly more bookkeeping but isolate hot resources from each other.
+3. **Do we want server-defined ordering or causal ordering?** Linear chose a single global `lastSyncId`; Yjs chose per-author state vectors; PowerSync chose per-bucket op ids. equin is single-process per worktree, so a single monotonic counter would work — but this couples every resource's resume cursor to a global write counter. Per-resource counters are slightly more bookkeeping but isolate hot resources from each other.
 
 4. **Replay-buffer eviction policy?** Whatever the cursor, the server needs to keep "ops since X" in memory long enough for laptop-sleeps to complete. A 5-minute sleep is normal; a meeting-length 30-minute gap is plausible. PowerSync's "if you fall off the buffer, resync from scratch with checksum verification" is a clean fallback worth copying.
 
 5. **Heartbeat / liveness per-subscription?** Issue #8 calls out that today there's no per-subscription health signal. Discord's Heartbeat opcode covers the *connection*, not individual subscriptions. The right answer might be: server emits a `checkpoint` frame for every active sub on a keepalive timer (e.g. every 15s with no real ops), so each sub's resume cursor stays fresh and the client can detect a stuck loader independently.
 
-6. **Backpressure?** None of the surveyed JSON-over-WS protocols implement explicit window management; they rely on TCP. WebTransport's per-stream credits would change this, but Safari only just added support. For Singularity at modest scale, TCP-level backpressure plus a `pause`/`resume` per-subscription frame is probably enough — but it should be in v1 of the protocol so we don't have to retrofit it.
+6. **Backpressure?** None of the surveyed JSON-over-WS protocols implement explicit window management; they rely on TCP. WebTransport's per-stream credits would change this, but Safari only just added support. For equin at modest scale, TCP-level backpressure plus a `pause`/`resume` per-subscription frame is probably enough — but it should be in v1 of the protocol so we don't have to retrofit it.
 
 ---
 

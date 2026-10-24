@@ -1,4 +1,4 @@
-# Singularity
+# equin
 
 A self-evolving app for the agentic era.
 

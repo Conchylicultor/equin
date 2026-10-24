@@ -2,7 +2,7 @@
 
 ## Context
 
-Singularity's frontend is built on a plugin system with two primitives: **slots** (typed extension points) and **contributions** (data provided to slots). Every feature is a plugin.
+equin's frontend is built on a plugin system with two primitives: **slots** (typed extension points) and **contributions** (data provided to slots). Every feature is a plugin.
 
 The server has no code yet. The terminal plugin needs a backend, and other plugins will too. This design establishes the **server-side plugin pattern** — a shared Bun server where plugins register handlers, mirroring the frontend's philosophy of minimal primitives and static registration.
 

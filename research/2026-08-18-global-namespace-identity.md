@@ -56,7 +56,7 @@ capability-plus-consolidation change with no behavioral diff.
 Checked before designing, since it was the one piece outside our control.
 Chromium reaches the gateway at `sonata.att-….localhost:9000` and at
 `a.b.c.localhost:9000` — it returns the gateway's own
-`Singularity gateway. Use <name>.localhost.` body, i.e. DNS resolved and only
+`equin gateway. Use <name>.localhost.` body, i.e. DNS resolved and only
 `parseWorktree` refused. macOS's system resolver (the CFNetwork path Safari
 uses) maps `*.localhost` at any depth to loopback: both `ping sonata.foo.localhost`
 and `curl http://a.b.c.localhost:9000` reach `::1`. Chrome and Safari are the two
@@ -362,7 +362,7 @@ rm -rf ~/.singularity/worktrees/sonata.$WT
 ```
 
 Before the change this returns 404 with the gateway's
-`Singularity gateway. Use <name>.localhost.` body. After it, 200 — which proves
+`equin gateway. Use <name>.localhost.` body. After it, 200 — which proves
 the gateway half with nothing in Phase 4 built yet. Also open
 `http://sonata.$WT.localhost:9000` in Chrome to confirm the SPA loads and its
 own `namespaceFromHost` reads `sonata.<wt>` rather than `sonata`.

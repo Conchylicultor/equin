@@ -4,7 +4,7 @@
 
 ## 1. Problem restatement
 
-Today a Singularity plugin author who wants to expose *one* piece of data writes **five** things in lock-step:
+Today an equin plugin author who wants to expose *one* piece of data writes **five** things in lock-step:
 
 1. A Drizzle table in `<plugin>/server/internal/tables.ts`.
 2. A `defineResource({ key: "foo", loader, dependsOn })` on the server, with a hand-written `dependsOn` graph and a manual `.notify()` call from every mutation site.
@@ -275,10 +275,10 @@ Design choices:
 
 Two clusters emerge:
 
-- **RPC-shaped** (tRPC, Hono, Eden, TanStack, Server Actions): "describe a typed function, get a typed call site". Reactivity is bolted on (React Query, manual invalidation). Strong fit for Singularity's plugin model — a plugin owns a sub-router/module.
+- **RPC-shaped** (tRPC, Hono, Eden, TanStack, Server Actions): "describe a typed function, get a typed call site". Reactivity is bolted on (React Query, manual invalidation). Strong fit for equin's plugin model — a plugin owns a sub-router/module.
 - **Database-shaped** (Convex, Zero, Replicache): "describe the data; reads, writes and reactivity fall out of one model". Reactivity is structural (read-set / write-set, or shared mutators). Strong fit for solving issues #1–#4 in one shot, but binds the API to one specific reactivity engine.
 
-## 4. Options for Singularity
+## 4. Options for equin
 
 Three distinct shapes worth iterating on. None is final; each implies different commitments from the sibling sub-designs (reactivity, wire, cache).
 

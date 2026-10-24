@@ -396,7 +396,7 @@ Fallbacks:
 1. Go to Google Cloud Console → APIs & Services → Credentials → Create Credentials → OAuth client ID.
 2. Application type: **Desktop app** (not Web application).
 3. Add Authorized redirect URI: `http://localhost:9000/api/auth/callback/google`.
-4. Copy the client ID into Singularity Settings → Accounts → Google. (Client secret not needed.)
+4. Copy the client ID into equin Settings → Accounts → Google. (Client secret not needed.)
 5. On first Connect, Google shows an unverified-app warning for sensitive scopes — expected until we own a verified OAuth app.
 
 ## J. Accounts pane (UI)
@@ -511,7 +511,7 @@ if worktreeName == "" {
     } else if strings.HasPrefix(r.URL.Path, "/gateway/") {
         // existing gateway-internal handling
     } else {
-        http.Error(w, "Singularity gateway. Use <name>.localhost.", http.StatusNotFound)
+        http.Error(w, "equin gateway. Use <name>.localhost.", http.StatusNotFound)
         return
     }
 }

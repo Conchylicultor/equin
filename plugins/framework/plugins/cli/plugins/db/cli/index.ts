@@ -21,7 +21,7 @@ export default defineCliCommand({
       name: "fork",
       description:
         "Fork the main 'singularity' DB into [target]. For worktrees created " +
-        "outside Singularity (git worktree add), which get no fork on creation. " +
+        "outside equin (git worktree add), which get no fork on creation. " +
         "Idempotent: a no-op if the DB already exists, unless --replace. " +
         "Requires a running backend (this worktree's, else main's) to read " +
         "which tables must not be copied.",

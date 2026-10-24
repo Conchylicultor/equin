@@ -5,7 +5,7 @@ contracts; the implementation is delegated to sub-agents per the workstream tabl
 
 ## Context
 
-There is no surface in Singularity for *"what is happening, and when"*. The information
+There is no surface in equin for *"what is happening, and when"*. The information
 exists — on venue pages, in ticketing apps (Shotgun), in group platforms (Meetup), in
 email — but each lives behind its own reader, in its own vocabulary, and none of them
 answer the only question that matters: **what should I go to.**

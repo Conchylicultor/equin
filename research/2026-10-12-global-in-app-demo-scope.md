@@ -8,7 +8,7 @@ be **integrated in the app**: the website renders the real component tree
 in-process. No separate build, no static bundle, no iframe.
 
 Decided with the user:
-- The public website is served by a **real Singularity instance**. Only the
+- The public website is served by a **real equin instance**. Only the
   embedded demo is fake; the rest of the page boots against the real server.
 - Visitors get **row-level writes**: checking a task or typing in a page works,
   and each visitor's changes are thrown away when they leave.

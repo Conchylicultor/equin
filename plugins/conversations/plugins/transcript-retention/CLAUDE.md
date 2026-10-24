@@ -6,7 +6,7 @@ deleted by Claude Code's own cleanup.
 ## Why this exists
 
 Claude Code deletes transcript files under `~/.claude/projects/<dir>/<session>.jsonl`
-whose **mtime** is older than `cleanupPeriodDays` (default 30). Singularity reads
+whose **mtime** is older than `cleanupPeriodDays` (default 30). equin reads
 those files directly as the *sole* source of truth for conversation content — it
 never copies them into Postgres. A conversation's mtime only refreshes when it
 takes a new turn, so an **active-but-idle** conversation (one a user could still

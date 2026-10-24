@@ -6,7 +6,7 @@ The theme engine supports token groups (color-palette, sidebar-palette, shape, s
 
 The core challenge: the slot system is static (`PluginProvider` collects contributions via `useMemo` and never re-evaluates), but imported themes arrive at runtime. The solution is a **hook-carrier slot** — a static contribution that carries a React hook which produces dynamic data at render time, modeled after the existing `DynamicEnum.Options.useOptions` and `ColorTransformContribution.useAdjustment` patterns.
 
-## tweakcn → Singularity Mapping
+## tweakcn → equin Mapping
 
 tweakcn's `cssVars` structure maps 1:1 to our 6 token groups (kebab → camelCase conversion):
 

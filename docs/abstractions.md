@@ -1,6 +1,6 @@
 # Abstractions
 
-A high-level map of the generic systems Singularity is built on. Each item is a building block that is not tied to the agent-manager app and could host other apps on top.
+A high-level map of the generic systems equin is built on. Each item is a building block that is not tied to the agent-manager app and could host other apps on top.
 
 See [`plugins-details.md`](plugins-details.md) for the specific plugins used by the agent manager.
 

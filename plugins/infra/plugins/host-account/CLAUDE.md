@@ -1,6 +1,6 @@
 # host-account
 
-Who is the user, as the machine knows them? Singularity runs one instance per
+Who is the user, as the machine knows them? equin runs one instance per
 user (`research/2026-07-02-global-adr-single-instance-per-user.md`), so the OS
 account the backend runs as IS the user's own account. This plugin owns that
 answer: a surface that greets the user or names their workspace ("Etienne's

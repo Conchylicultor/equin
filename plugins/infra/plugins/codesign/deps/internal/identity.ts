@@ -14,7 +14,7 @@ import { machineHost, runOk, type CodesignHost } from "./host";
 /** The environment variable naming a configured identity (wins over the file). */
 export const CODESIGN_IDENTITY_ENV = "SINGULARITY_CODESIGN_IDENTITY";
 /** The common name of the local certificate this plugin creates. */
-export const LOCAL_IDENTITY_NAME = "Singularity Local Code Signing";
+export const LOCAL_IDENTITY_NAME = "equin Local Code Signing";
 /** 20 years: the local certificate should outlive the machine. */
 const LOCAL_CERT_DAYS = 7300;
 

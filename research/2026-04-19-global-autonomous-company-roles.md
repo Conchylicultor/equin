@@ -1,13 +1,13 @@
 # Autonomous Company — Roles & Functions
 
-Part 1 of 4 on turning Singularity into a self-running company. See also:
+Part 1 of 4 on turning equin into a self-running company. See also:
 - [Plugin primitive design](2026-04-19-global-autonomous-company-primitive.md)
 - [Supporting infra concepts](2026-04-19-global-autonomous-company-infra.md)
 - [Roadmap](2026-04-19-global-autonomous-company-roadmap.md)
 
 ## Context
 
-Singularity today is a coding-agent manager: humans create tasks, agents execute them. The vision extends further — Singularity as the hub for a **self-running company** where agents handle not only engineering but marketing, support, ops, finance, and strategy, with humans supervising by exception.
+equin today is a coding-agent manager: humans create tasks, agents execute them. The vision extends further — equin as the hub for a **self-running company** where agents handle not only engineering but marketing, support, ops, finance, and strategy, with humans supervising by exception.
 
 This doc catalogs the full surface area: every function a real software company performs, reframed as agent roles. It does not specify how each role is implemented — that depends on the plugin primitive (part 2) and infra layer (part 3). It does specify *what* agents should be able to do, organized so the roadmap (part 4) can sequence them by blast radius.
 

@@ -85,7 +85,7 @@ export function registerDb(program: Command) {
     .argument("[target]", "database to create (defaults to the current worktree)")
     .description(
       "Fork the main 'singularity' DB into [target]. For worktrees created " +
-        "outside Singularity (git worktree add), which get no fork on creation. " +
+        "outside equin (git worktree add), which get no fork on creation. " +
         "Idempotent: a no-op if the DB already exists.",
     )
     .action(async (target?: string) => {
@@ -145,7 +145,7 @@ async function waitForWorktreeDatabase(name: string): Promise<void> {
   }
 
   // No DB and no restore in flight. Either a standard-path job is still queued/
-  // gated, or this worktree was created outside Singularity and has no job at
+  // gated, or this worktree was created outside equin and has no job at
   // all. Grace-poll briefly for the queued case, then fail actionably.
   const done = await retryUntil(
     async (a) => {
@@ -160,7 +160,7 @@ async function waitForWorktreeDatabase(name: string): Promise<void> {
     [
       `ERROR: no database for "${name}" and no fork in flight.`,
       "",
-      "If this worktree was created outside Singularity (git worktree add),",
+      "If this worktree was created outside equin (git worktree add),",
       "create its database with:",
       "",
       "    ./equin db fork",

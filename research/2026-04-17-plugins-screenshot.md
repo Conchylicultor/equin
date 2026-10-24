@@ -8,7 +8,7 @@ status: proposed
 
 ## Context
 
-Singularity needs a quick way to grab a screenshot of the current page and immediately open it in a lightweight in-app editor (crop + freehand annotation) so users can copy / save the result. This is a top-level plugin contributing a button to the **Shell.Toolbar** (the global app toolbar, not the per-conversation toolbar). When clicked, it captures the current viewport DOM, copies the PNG to the system clipboard, and opens a **new browser tab** at `/screenshot/:id` with the captured image as the main view and a side pane with tools.
+equin needs a quick way to grab a screenshot of the current page and immediately open it in a lightweight in-app editor (crop + freehand annotation) so users can copy / save the result. This is a top-level plugin contributing a button to the **Shell.Toolbar** (the global app toolbar, not the per-conversation toolbar). When clicked, it captures the current viewport DOM, copies the PNG to the system clipboard, and opens a **new browser tab** at `/screenshot/:id` with the captured image as the main view and a side pane with tools.
 
 ## High-level flow
 

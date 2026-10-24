@@ -42,7 +42,7 @@ Import and use `SidebarHeader` (already exported from sidebar.tsx but unused):
       <span className="text-primary-foreground text-xs font-bold">S</span>
     </div>
     <div className="flex flex-col">
-      <span className="text-sm font-semibold tracking-tight">Singularity</span>
+      <span className="text-sm font-semibold tracking-tight">equin</span>
       <span className="text-[10px] text-muted-foreground leading-none">Agent Manager</span>
     </div>
   </div>
@@ -76,7 +76,7 @@ Add `MdTerminal` icon before each channel name.
 
 **File:** `plugins/shell/web/components/shell-layout.tsx`
 
-Render footer always (currently hidden when empty). Show "Singularity" as subtle fallback text. Bump height from `h-6` → `h-7`.
+Render footer always (currently hidden when empty). Show "equin" as subtle fallback text. Bump height from `h-6` → `h-7`.
 
 ### 7. Subtle main area background
 

@@ -175,7 +175,7 @@ describe("fetchEndpoint needsMachine", () => {
     expect(res).toEqual({
       kind: "unavailable",
       message:
-        "Launching an agent isn't available in this version of the app — it needs Singularity running on your computer.",
+        "Launching an agent isn't available in this version of the app — it needs equin running on your computer.",
     });
     expect(fn).toHaveBeenCalledTimes(0);
   });

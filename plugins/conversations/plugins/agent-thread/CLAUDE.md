@@ -1,7 +1,7 @@
 # agent-thread
 
 The embedded conversation view: a conversation an app started on the user's
-behalf, shown inside the app's own surface as a thread. Design: the Singularity
+behalf, shown inside the app's own surface as a thread. Design: the equin
 page "Embedded conversation view" (block-b8192e78-a010-421e-8443-c7d0ba327b3c).
 
 A run is an ordinary conversation (launched under a scratch profile, in the

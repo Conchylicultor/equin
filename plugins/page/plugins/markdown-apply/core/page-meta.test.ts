@@ -6,7 +6,7 @@ const META: PageMeta = {
   created: new Date("2026-07-14T09:12:34.567Z"),
   edited: new Date("2026-10-07T18:02:59Z"),
   breadcrumb: [
-    { id: "block-root", title: "Singularity" },
+    { id: "block-root", title: "equin" },
     { id: "block-mid", title: 'Say "hi" \\ <now>' },
     { id: "block-self", title: "" },
   ],
@@ -33,7 +33,7 @@ describe("pageMetaHeader", () => {
         '    <tag name="Say \\"hi\\""/>',
         "  </tags>",
         "  <breadcrumb>",
-        '    <page id="block-root" title="Singularity"/>',
+        '    <page id="block-root" title="equin"/>',
         '    <page id="block-mid" title="Say \\"hi\\" \\\\ <now>"/>',
         '    <page id="block-self" title=""/>',
         "  </breadcrumb>",
@@ -179,7 +179,7 @@ describe("splitPageMeta", () => {
   test("changed values are still a header — they are read-only, not judged", () => {
     const edited = pageMetaHeader(META)
       .replace("2026-10-07T18:02Z", "1999-01-01T00:00Z")
-      .replace('title="Singularity"', 'title="Renamed"');
+      .replace('title="equin"', 'title="Renamed"');
     const split = splitPageMeta(edited + DOC);
     expect(split.ok && split.rest).toBe(DOC);
   });

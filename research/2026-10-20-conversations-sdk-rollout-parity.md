@@ -45,7 +45,7 @@ After those comes the Phase 2 decision.
    - `turn-ledger/server/internal/store.ts:39` `isHooklessText` marks every `/…` or `!…` turn `hookless`.
    - Hookless rows are excluded from confirmation candidates (`transition.ts:121`). So a `/compact` turn on sdk is likely never confirmed, even though sdk reports it with `turn_started`.
    - `recordPromptHookLaunch` and the `conversation_prompt_hooks` table only record "launched", which on sdk is always true.
-6. **32 s stall.** The CLI held a queued turn until its MCP servers were connected (`deferred_tools_delta` / `mcp_instructions_delta`), right after a backend restart. The Singularity MCP server is that backend. It was seen once.
+6. **32 s stall.** The CLI held a queued turn until its MCP servers were connected (`deferred_tools_delta` / `mcp_instructions_delta`), right after a backend restart. The equin MCP server is that backend. It was seen once.
 7. **Phase 2.**
    - **Not needed for AskUserQuestion.** The card comes from the question-relay hold, fed by `events.jsonl`. In 4 real cases, the transcript's `tool_use` was written 5–11 ms *before* the `permission_request`.
    - **Content latency is not the transcript-vs-SDK timing.** Transcript entries are timestamped within 0–15 ms of the SDK message (median about 2 ms). The cost is in the pipeline after that:

@@ -27,7 +27,7 @@ is what keeps every such control agreeing on what a ⌘-click means.
   at an app path (open-app's button, whose default flips between a browser tab
   on another origin and a framed pane). Prefer `linkProps`.
 
-A new in-app (Singularity) tab is not a link gesture: it is reachable only from
+A new in-app (equin) tab is not a link gesture: it is reachable only from
 an explicit menu entry (`navigate(url, { newTab: true })`).
 
 A leaf on purpose (imports only React's `MouseEvent` type and the

@@ -192,6 +192,6 @@ CLI held the queued turn until its MCP servers were up. It did not recur:
 The interactive CLI writes the prompt to its transcript sooner but answers no
 sooner (7.9–10.9 s to the first reply, against 5.5–7.5 s). The stall looks
 like a CLI wait on MCP startup, seen once, right after a backend restart (the
-Singularity MCP server is that backend); not reproduced in five launches since. (A 2.5 s
+equin MCP server is that backend); not reproduced in five launches since. (A 2.5 s
 send → agent gap on the third turn was the worktree backend being started on
 demand by the gateway, ready 114 ms before the turn reached the agent.)

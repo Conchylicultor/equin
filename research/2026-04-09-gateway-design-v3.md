@@ -52,7 +52,7 @@ By owning the launch convention rather than reading it from a file, every worktr
 - **Ready timeout**: 15s, configurable globally via `--ready-timeout` (not per worktree).
 - **Filename → name**: `head.json` → `head.localhost:9000`. Filename must match `^[a-z0-9][a-z0-9-]{0,62}$`; files that don't are skipped with a warning at load time.
 
-If a worktree ever needs a different launch command, env var, or timeout, that's a future extension to the schema. For v1, there is no use case for it: Singularity owns the whole stack and every worktree is a checkout of the same codebase. Adding flexibility now is speculative.
+If a worktree ever needs a different launch command, env var, or timeout, that's a future extension to the schema. For v1, there is no use case for it: equin owns the whole stack and every worktree is a checkout of the same codebase. Adding flexibility now is speculative.
 
 ### Validation
 
@@ -166,7 +166,7 @@ Each step leaves the gateway in a runnable state. Same intent as v2 but with the
 6. `proxy.go` WS hijack + `activeConns` bookkeeping.
 7. `registry.go` sweeper — idle teardown.
 8. End-to-end manual test with two fake worktrees running trivial Go HTTP servers.
-9. Wire to real Singularity backend after `server/src/index.ts` reads `PORT` from env.
+9. Wire to real equin backend after `server/src/index.ts` reads `PORT` from env.
 
 ---
 

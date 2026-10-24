@@ -1,4 +1,4 @@
-// Is an encoded Claude project dir a Singularity project (the main repo or one
+// Is an encoded Claude project dir an equin project (the main repo or one
 // of its worktrees)? Claude encodes project paths by replacing `/`, `.`, and `_`
 // with `-`, so /Users/<user>/.../singularity becomes `-Users-<user>-...-singularity`
 // and a worktree under it becomes `-Users-<user>-...-singularity--claude-worktrees-...`.

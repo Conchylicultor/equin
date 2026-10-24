@@ -1,3 +1,4 @@
+import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
 import {
   parsePublicUrl,
   safeFetch,
@@ -14,7 +15,7 @@ const OPENVERSE_ENDPOINT = "https://api.openverse.org/v1/images/";
  * Openverse rejects requests without a `User-Agent` (returns 401), so identify
  * the app explicitly — see https://api.openverse.org/v1/#tag/auth.
  */
-const USER_AGENT = "Singularity/1.0 (+https://equin.ai; desktop wallpaper picker)";
+const USER_AGENT = `${PRODUCT_NAME}/1.0 (+https://equin.ai; desktop wallpaper picker)`;
 /**
  * Cap the result grid at the search's own cap — one page is plenty for picking
  * a wallpaper. 20 is also the most Openverse serves an anonymous request: a

@@ -1,6 +1,7 @@
 import { program } from "commander";
 import { loadCollectedDir } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
 import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
+import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
 import { isCliCommand, isCliEntryPresent, type CliCommand } from "../core";
 import { cliEntries } from "../core/cli.generated";
 import { registerCommands } from "./register-commands";
@@ -28,7 +29,7 @@ import { runCli } from "./run-cli";
  * `./equin build` no longer pays to load every other command's body.
  */
 
-program.name(CLI_NAME).description("Equin agent CLI");
+program.name(CLI_NAME).description(`${PRODUCT_NAME} agent CLI`);
 
 // `strict`: a declaration that throws at load must not read as "that command
 // does not exist" — `./equin build` reporting "unknown command" would

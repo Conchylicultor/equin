@@ -2,7 +2,7 @@
 
 ## Context
 
-When a Claude conversation's underlying process exits (status `gone`), the user has no way to continue it from the UI — they have to start a brand-new conversation. The Claude CLI already supports continuing a previous session via `claude --resume <session-id>`, and Singularity already persists each conversation's `claudeSessionId` on the conversation row (populated by the poller from `~/.claude/sessions/<pid>.json`). We want a "Resume" button in the conversation's prompt bar that re-spawns the runtime with `--resume`, so the conversation flips from `gone` back to live **in the same row** (same task, same attempt, same worktree, same conversation list entry).
+When a Claude conversation's underlying process exits (status `gone`), the user has no way to continue it from the UI — they have to start a brand-new conversation. The Claude CLI already supports continuing a previous session via `claude --resume <session-id>`, and equin already persists each conversation's `claudeSessionId` on the conversation row (populated by the poller from `~/.claude/sessions/<pid>.json`). We want a "Resume" button in the conversation's prompt bar that re-spawns the runtime with `--resume`, so the conversation flips from `gone` back to live **in the same row** (same task, same attempt, same worktree, same conversation list entry).
 
 Per the user's choice:
 

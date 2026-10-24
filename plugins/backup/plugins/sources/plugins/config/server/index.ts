@@ -5,7 +5,7 @@ import { configSourceConfig } from "../shared/config";
 import { assembleConfig } from "./internal/assemble-config";
 
 export default {
-  description: "Backs up Singularity config files into the backup archive.",
+  description: "Backs up equin config files into the backup archive.",
   contributions: [
     ConfigV2.Register({ descriptor: configSourceConfig }),
     BackupSource({

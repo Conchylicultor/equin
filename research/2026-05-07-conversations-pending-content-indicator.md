@@ -19,7 +19,7 @@ Both fields come from one file read per tick, replacing the pane-title heuristic
 
 The session file (`~/.claude/sessions/<pid>.json`) uses these status values (observed from CLI v2.1.132):
 
-| Session `status` | Meaning | Maps to Singularity | `waitingFor` |
+| Session `status` | Meaning | Maps to equin | `waitingFor` |
 |---|---|---|---|
 | `busy` | Claude is computing | `working` | never set |
 | `idle` | Turn done, prompt shown | `waiting` | never set |

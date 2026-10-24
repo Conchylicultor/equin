@@ -523,7 +523,7 @@ function archivedMetaOf(
   return out;
 }
 
-// Classify every project dir the MERGED set knows about as Singularity-related
+// Classify every project dir the MERGED set knows about as equin-related
 // or not, by matching the encoded dir name against the main repo basename (see
 // `isSingularityProjectDir` for the encoding and why the user prefix is ignored).
 //

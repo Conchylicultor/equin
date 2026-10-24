@@ -4,7 +4,7 @@
 
 Chips render huge under any tweakcn community theme. Root cause: `Badge` md uses the `text-caption` utility (`@utility text-caption { font-size: var(--font-size-caption) }`), and `--font-size-caption` is a runtime-injected theme var with no static fallback. `ThemeInjector` only emits the keys the **active preset** supplies (`buildVarsBlock` iterates the merged values map and skips absent keys), and tweakcn presets are *sparse* — `convertTweakcnTheme` (`plugins/ui/plugins/tweakcn/core/convert.ts`) copies only keys present in the source theme. A tweakcn theme carries colors + font families but not the type scale, so `--font-size-caption` is never emitted → `font-size` falls through to the inherited (large) value.
 
-This is **not** a font-size-specific bug. The same `pick()`-drops-missing-keys behavior means a tweakcn import also silently drops `--success` / `--warning` / `--info` (Singularity-specific color tokens absent from standard shadcn themes), and partial `shape`/font values. The injector treats a **sparse preset as the complete set**, so any token a preset is silent on vanishes.
+This is **not** a font-size-specific bug. The same `pick()`-drops-missing-keys behavior means a tweakcn import also silently drops `--success` / `--warning` / `--info` (equin-specific color tokens absent from standard shadcn themes), and partial `shape`/font values. The injector treats a **sparse preset as the complete set**, so any token a preset is silent on vanishes.
 
 The fix is the correct definition of what a preset is: **the token-group schema default is the single source of truth; a preset is a sparse override layered on top.** Plus a build-time guard for the adjacent class (references to tokens nothing declares).
 

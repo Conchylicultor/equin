@@ -2,7 +2,7 @@
 
 ## Context
 
-The current app layout (the "panes" — `layouts/miller`, framing, the live shell) doesn't satisfy the user, and they want a clean way to **iterate on UI design**. There are already hand-made mockups outside the repo in `~/__A__/dev/design/` (two sets: `singularity/` and `Singularity 2`/Helix), built as standalone HTML + JSX + CSS using CDN React + Babel-in-browser.
+The current app layout (the "panes" — `layouts/miller`, framing, the live shell) doesn't satisfy the user, and they want a clean way to **iterate on UI design**. There are already hand-made mockups outside the repo in `~/__A__/dev/design/` (two sets: `singularity/` and `equin 2`/Helix), built as standalone HTML + JSX + CSS using CDN React + Babel-in-browser.
 
 The agreed model is **two phases**:
 
@@ -34,7 +34,7 @@ prototypes/
     harness.js        # fetches the prototype's meta.json, injects its <link>/<script type="text/babel"> tags, mounts window.App into #root
     tokens.css        # design tokens snapshotted from the real app (one source, replaces per-mock OKLCH blocks)
     fixtures.js       # shared realistic fake data (window.RUNS/EVENTS/PUSHES)
-  helix/              # migrated from "Singularity 2" (Helix)
+  helix/              # migrated from "equin 2" (Helix)
     meta.json         # { name, blurb, theme, viewport }
     app.jsx           # defines window.App (global; no imports — Babel-in-browser)
     styles.css
@@ -92,7 +92,7 @@ Each of the 4 new plugin dirs needs a `CLAUDE.md` (the `plugins-have-claudemd` c
 - Reuse: `REPO_ROOT` from `@plugins/infra/plugins/paths/server`; `Apps.App` (`@plugins/apps/web`); `AppShellLayout`, `sidebarNavItem` (`@plugins/primitives/plugins/app-shell/web`); `Pane.define`/`Pane.Register`, `openPane` (`@plugins/primitives/plugins/pane/web`); `DataView` (`@plugins/primitives/plugins/data-view/web`); `useResource`/`defineResource` (`@plugins/primitives/plugins/live-state`); `createFileWatcher` (`@plugins/infra/plugins/file-watcher/server`); `TaskDraftPopover` (`@plugins/tasks/plugins/task-draft-form/web`).
 - Edit: `plugins/framework/plugins/tooling/plugins/lint/core/build-lint-config.ts` (add `prototypes/**` ignore).
 - New: `prototypes/` content dir; `plugins/apps/plugins/prototypes/**` (4 plugins).
-- Migrate from (outside repo): `~/__A__/dev/design/Singularity 2/` and `~/__A__/dev/design/singularity/`.
+- Migrate from (outside repo): `~/__A__/dev/design/equin 2/` and `~/__A__/dev/design/singularity/`.
 
 ## Out of scope (phase 2, later)
 

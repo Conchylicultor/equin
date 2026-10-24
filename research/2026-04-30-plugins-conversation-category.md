@@ -8,7 +8,7 @@ category: plugins
 
 ## Context
 
-We want every conversation in Singularity to surface, at a glance, what *kind* of work it is:
+We want every conversation in equin to surface, at a glance, what *kind* of work it is:
 
 - General question
 - Small feature

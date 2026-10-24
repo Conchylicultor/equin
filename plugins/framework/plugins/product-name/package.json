@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-framework-product-name",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The product's own name, as data: PRODUCT_NAME (`equin`, always lowercase — what every person and agent reads) and LEGACY_PRODUCT_NAMES (the names it went by before, never written again), enforced by the product-name:legacy check over every tracked file. A dependency-free leaf, so a browser bundle, a server or a script can import it."
+}

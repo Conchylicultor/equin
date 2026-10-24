@@ -114,7 +114,7 @@ Also test: re-signing a binary while it is running (does it crash the process?),
      silently, since that would change the identity and drop grants.
   2. **Local (default for users without an Apple cert):** under a flock, create a keychain in
      `~/.singularity/codesign/` (0700, declared via `data-dirs`) with a random password in a 0600 file,
-     a 20-year cert named "Singularity Local Code Signing" with the codeSigning extended key usage
+     a 20-year cert named "equin Local Code Signing" with the codeSigning extended key usage
      (`/usr/bin/openssl`; for OpenSSL 3, export the p12 with `-legacy`), `security import -T /usr/bin/codesign`,
      `set-key-partition-list -S apple-tool:,apple: -k <pw>`, and auto-lock off. The user's keychain
      search list and trust settings are never touched; the keychain is passed with `codesign --keychain`.

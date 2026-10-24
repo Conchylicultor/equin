@@ -1,10 +1,10 @@
 # Browser App — Vision & Implementation Spec
 
-A **minimal web browser** as a top-level Singularity app (`/browser`, globe icon).
+A **minimal web browser** as a top-level equin app (`/browser`, globe icon).
 
 ## Vision
 
-Singularity runs inside a real browser, so the "browser app" is necessarily an
+equin runs inside a real browser, so the "browser app" is necessarily an
 **iframe-based webview**. We embrace that constraint *honestly*:
 
 - Render embeddable pages inside an `<iframe>`.

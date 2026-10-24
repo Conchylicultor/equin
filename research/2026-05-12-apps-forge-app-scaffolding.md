@@ -2,7 +2,7 @@
 
 ## Context
 
-We're adding a new "Forge" sub-app under the `apps` umbrella plugin. It will eventually house plugin graph inspection, plugin publish workflows, and other meta-tooling for the Singularity plugin system. For now we only need the base scaffolding: shell registration (app switcher entry, sidebar, toolbar), an empty main pane — all mirroring the `file-explorer` app exactly.
+We're adding a new "Forge" sub-app under the `apps` umbrella plugin. It will eventually house plugin graph inspection, plugin publish workflows, and other meta-tooling for the equin plugin system. For now we only need the base scaffolding: shell registration (app switcher entry, sidebar, toolbar), an empty main pane — all mirroring the `file-explorer` app exactly.
 
 ## Structure
 

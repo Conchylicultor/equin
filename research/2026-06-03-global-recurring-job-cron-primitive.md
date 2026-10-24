@@ -3,7 +3,7 @@
 ## Context
 
 Claude Code deletes session-transcript JSONL files (`~/.claude/projects/<dir>/<session>.jsonl`)
-whose **mtime** is older than `cleanupPeriodDays` (default 30). Singularity reads those
+whose **mtime** is older than `cleanupPeriodDays` (default 30). equin reads those
 files directly as the *sole* source of truth for conversation content — it never copies
 them into Postgres — so when an **active-but-idle** conversation's JSONL ages out, its
 transcript viewer goes permanently blank. A conversation's mtime only refreshes when it

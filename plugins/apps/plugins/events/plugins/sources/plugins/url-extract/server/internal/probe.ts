@@ -1,3 +1,4 @@
+import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
 import { NonRetryableError } from "@plugins/infra/plugins/jobs/server";
 import {
   assertResolvesPublic,
@@ -43,8 +44,7 @@ const MAX_TEXT_CHARS = 200_000;
  */
 const MAX_MODEL_HTML_CHARS = 400_000;
 
-const USER_AGENT =
-  "Mozilla/5.0 (compatible; SingularityBot/1.0; +events-extractor)";
+const USER_AGENT = `Mozilla/5.0 (compatible; ${PRODUCT_NAME}-bot/1.0; +events-extractor)`;
 
 /**
  * What `probe` hands `extract`: the page already read, so the expensive phase

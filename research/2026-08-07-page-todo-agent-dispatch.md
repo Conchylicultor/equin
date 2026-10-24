@@ -121,7 +121,7 @@ misfiled — worth a follow-up, not a change here.)
 **The prompt** (server-composed, card text kept short):
 
 ```
-Work on the TODO card `block-77` in Singularity page `page-4`.
+Work on the TODO card `block-77` in equin page `page-4`.
 
 <todo>
 Fix the parser for UTF-16 input

@@ -95,7 +95,7 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 brew --version
 CMD
 }
-step_06_install_homebrew_DOC="Not in docs/setup.md at all — this is the fix for step 3, found the way a new user would find it (Homebrew's own site), not from any Singularity doc."
+step_06_install_homebrew_DOC="Not in docs/setup.md at all — this is the fix for step 3, found the way a new user would find it (Homebrew's own site), not from any equin doc."
 step_06_install_homebrew_TAG="undocumented-knowledge"
 
 step_07_bun() {
@@ -175,7 +175,7 @@ step_13_db_fork_TAG="documented-elsewhere"
 # `db fork` asks a RUNNING backend which tables to leave out of the copy:
 #   "Could not read the fork exclusion set from any running backend:
 #    http://equin.localhost:9000/api/db/fork-exclusions -> 404
-#    Start Singularity and retry ..."
+#    Start equin and retry ..."
 # No backend can run until the app is built, and the build is what is asking
 # for the database. The build's own advice therefore cannot be followed on a
 # fresh install.

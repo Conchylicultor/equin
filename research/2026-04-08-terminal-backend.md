@@ -2,7 +2,7 @@
 
 ## Context
 
-Singularity needs a terminal so users can interact with shells (and eventually Claude Code agents in worktrees). The server infrastructure exists — `Bun.serve()` on port 9001 with HTTP/WS routing and a `WsHandler` interface. This design covers the first server-side plugin: `plugins/terminal/server/`, which manages PTY sessions via `bun-pty` exposed over WebSocket.
+equin needs a terminal so users can interact with shells (and eventually Claude Code agents in worktrees). The server infrastructure exists — `Bun.serve()` on port 9001 with HTTP/WS routing and a `WsHandler` interface. This design covers the first server-side plugin: `plugins/terminal/server/`, which manages PTY sessions via `bun-pty` exposed over WebSocket.
 
 ## Architecture
 

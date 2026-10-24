@@ -2,7 +2,7 @@
 
 ## Context
 
-The `sidequests/claude-web/` project runs Claude Code in the browser via ttyd + tmux. It works well but lives outside the Singularity app. This plugin brings the same functionality into the app: a sidebar listing Claude tmux sessions, a button to create new ones, and terminal panes that attach to them.
+The `sidequests/claude-web/` project runs Claude Code in the browser via ttyd + tmux. It works well but lives outside the equin app. This plugin brings the same functionality into the app: a sidebar listing Claude tmux sessions, a button to create new ones, and terminal panes that attach to them.
 
 The key insight from claude-web: tmux sits between the browser and Claude. When the tab closes, tmux detaches but Claude keeps running. Reconnecting is just `tmux attach`.
 

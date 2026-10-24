@@ -2,7 +2,7 @@
 
 ## Context
 
-Per-conversation progress tracking for the Singularity agent manager. After each assistant turn, a Haiku model classifies the conversation into one of four sequential phases (`research → plan → implementation → pushed`). Additionally, when a push event lands in the DB the phase is immediately forced to `pushed` without waiting for another turn. A 4-dot progress bar appears in the conversation toolbar (left of other chips) and in the sidebar conversation list item (compact chip).
+Per-conversation progress tracking for the equin agent manager. After each assistant turn, a Haiku model classifies the conversation into one of four sequential phases (`research → plan → implementation → pushed`). Additionally, when a push event lands in the DB the phase is immediately forced to `pushed` without waiting for another turn. A 4-dot progress bar appears in the conversation toolbar (left of other chips) and in the sidebar conversation list item (compact chip).
 
 ---
 

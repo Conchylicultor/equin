@@ -38,7 +38,7 @@ function shellDetachIn(parsed: ShellParseResult): boolean {
 }
 
 /**
- * Long Singularity ops must run as a tool-level background task.
+ * Long equin ops must run as a tool-level background task.
  *
  * The foreground path caps at 600 s, which is below the median build. When it
  * expires the agent gets `Command timed out after 10m 0s` and nothing else — no

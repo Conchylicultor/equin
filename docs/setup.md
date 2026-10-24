@@ -1,6 +1,6 @@
 # Setup
 
-One-time environment setup for developing Singularity.
+One-time environment setup for developing equin.
 
 ## Quick install
 
@@ -88,7 +88,7 @@ one root command that installs them (Playwright's own `install-deps chromium`).
 
 ## Postgres
 
-Singularity ships an embedded Postgres 18 cluster, supervised by the gateway — see [`plugins/database/`](../plugins/database/CLAUDE.md). Binaries come from `@embedded-postgres/<platform>` (installed via `bun install`); `initdb` runs on first start, the cluster lives in `~/.singularity/postgres/data-pg18/`, and `postgres` listens on a Unix socket at `~/.singularity/postgres/socket` on port `5433`.
+equin ships an embedded Postgres 18 cluster, supervised by the gateway — see [`plugins/database/`](../plugins/database/CLAUDE.md). Binaries come from `@embedded-postgres/<platform>` (installed via `bun install`); `initdb` runs on first start, the cluster lives in `~/.singularity/postgres/data-pg18/`, and `postgres` listens on a Unix socket at `~/.singularity/postgres/socket` on port `5433`.
 
 The base database is called `singularity`, and the script that starts the cluster creates it — empty, on every start, so you never create it yourself and a deleted one comes back. The first backend to boot against it applies the migrations.
 

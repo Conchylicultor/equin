@@ -7,17 +7,17 @@ Part 4 of 4. See also:
 
 ## Context
 
-Turning Singularity into a self-running company is a multi-phase program. This doc sequences the work.
+Turning equin into a self-running company is a multi-phase program. This doc sequences the work.
 
 **Operating principle.** Each phase produces a *working autonomous company at its own scope*, not a half-built one waiting for the next phase. Progress is measured by one metric: **the fraction of the company's activity that needs human touch today**, trending toward zero.
 
-**Dogfooding principle.** The first customer is always Singularity itself. A new role, plugin, or infra concept ships first by being used *on* Singularity's own development before being exposed outward.
+**Dogfooding principle.** The first customer is always equin itself. A new role, plugin, or infra concept ships first by being used *on* equin's own development before being exposed outward.
 
 ---
 
 ## Phase 0 — Self-improving coding studio
 
-**Goal.** Singularity can meaningfully improve itself without a human picking every task.
+**Goal.** equin can meaningfully improve itself without a human picking every task.
 
 **Scope (handled by the user, per our discussion).**
 - Manager-agent plugin — decomposes stated goals into tasks, assigns them
@@ -168,7 +168,7 @@ Plus one **North-Star metric** across all phases: **fraction of company activity
 
 1. **Primitive churn.** If Phase 1's primitive shape changes after Phase 3 plugins exist, we pay migration cost. Mitigation: validate the primitive with 2–3 concrete plugins before declaring it stable.
 2. **Trust envelope collapse.** If promotions happen too fast (or too slow), the system either goes rogue or never benefits from autonomy. Mitigation: evaluation framework in Phase 2, strict promotion criteria in Phase 4.
-3. **Dogfood gap.** Outward functions have no obvious Singularity-internal analog (we have no paying customers to support). Mitigation: use the primitive internally first (e.g., "support" = triaging internal bug reports from agents) before pointing at external traffic.
+3. **Dogfood gap.** Outward functions have no obvious equin-internal analog (we have no paying customers to support). Mitigation: use the primitive internally first (e.g., "support" = triaging internal bug reports from agents) before pointing at external traffic.
 4. **Infra debt.** If any of the [infra concepts](2026-04-19-global-autonomous-company-infra.md) is skipped in Phase 2, it's much more expensive to retrofit later. Mitigation: treat the minimum viable subset as a hard gate for Phase 3.
 5. **Strategy prematurely autonomous.** Phase 6 is the most likely place for catastrophic drift. Mitigation: strategy stays `approve`-gated much longer than other functions — this is by design.
 

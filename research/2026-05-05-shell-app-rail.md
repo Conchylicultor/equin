@@ -2,7 +2,7 @@
 
 ## Context
 
-Singularity is evolving from a single-purpose agent manager into a multi-app platform (agent manager + deploy platform, more to come). We need a narrow icon rail on the far left to switch between apps — minimal, small icons only, no labels.
+equin is evolving from a single-purpose agent manager into a multi-app platform (agent manager + deploy platform, more to come). We need a narrow icon rail on the far left to switch between apps — minimal, small icons only, no labels.
 
 ## Approach
 

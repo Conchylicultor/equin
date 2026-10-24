@@ -2,7 +2,7 @@
 
 ## Context
 
-Singularity lets users run multiple isolated instances of the agent-manager app — one per agent worktree — and switch between them seamlessly. v1 (at the user's previous company) used path-prefix routing (`localhost:9000/<worktree>/...`) because the core app couldn't be modified. Singularity owns the whole stack, so we can do better.
+equin lets users run multiple isolated instances of the agent-manager app — one per agent worktree — and switch between them seamlessly. v1 (at the user's previous company) used path-prefix routing (`localhost:9000/<worktree>/...`) because the core app couldn't be modified. equin owns the whole stack, so we can do better.
 
 This design specifies a Go reverse-proxy gateway that:
 1. Listens on `:9000` and routes `<worktree>.localhost:9000` → that worktree's backend.
@@ -55,7 +55,7 @@ Cold-start cost (~1–2s with Bun) is the accepted trade-off for that simplicity
 
 ## Registry: file format and location
 
-**Location**: `~/.singularity/worktrees/<name>.json` (user-global, single source of truth across the machine — chosen so multiple Singularity checkouts can coexist without duplicated registration).
+**Location**: `~/.singularity/worktrees/<name>.json` (user-global, single source of truth across the machine — chosen so multiple equin checkouts can coexist without duplicated registration).
 
 **Format**:
 ```json
@@ -420,7 +420,7 @@ Each step leaves the gateway in a runnable state.
 9. `proxy/ws` — hijack proxy + activeConns bookkeeping.
 10. `sweeper` — idle teardown.
 11. End-to-end manual test with two fake worktrees running trivial Go HTTP servers.
-12. Wire to real Singularity backend after `server/` learns to serve `web/dist` (separate task).
+12. Wire to real equin backend after `server/` learns to serve `web/dist` (separate task).
 
 ---
 

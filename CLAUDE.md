@@ -1,12 +1,12 @@
-# Singularity
+# equin
 
-Singularity is a self-evolving app for the agentic era. The goal is to have an app which can replace all others, customized for each individual user, at the boundary of an application and an operating system. The vision has a few steps:
+equin is a self-evolving app for the agentic era. The goal is to have an app which can replace all others, customized for each individual user, at the boundary of an application and an operating system. The vision has a few steps:
 
 - At first, the app itself is an Agent manager app whose goal is to fix todos faster than they are created. The app will be used to improve itself.
 
   The app is a nested todo list of tasks agents need to execute. Each agent executes in its own isolated `worktree` (including this current session) and deploys to `http://<worktree>.localhost:9000`. The UI allows seamless switching between namespaces to inspect agent work.
 
-- The app evolves into a Notion-like WeChat: a single unified surface where agents compose user-tailored apps on the fly from plugin building blocks. Notion gives users composable blocks (databases, pages, views) to fit their workflow; Singularity does the same at the *app* level, with agents doing the composing. The agent manager becomes one such composition among many, sharing the same plugins and primitives.
+- The app evolves into a Notion-like WeChat: a single unified surface where agents compose user-tailored apps on the fly from plugin building blocks. Notion gives users composable blocks (databases, pages, views) to fit their workflow; equin does the same at the *app* level, with agents doing the composing. The agent manager becomes one such composition among many, sharing the same plugins and primitives.
 
 - A plugin marketplace where users contribute and share building blocks. Each user gets a unique composition assembled by agents from marketplace plugins — not a one-size-fits-all tool, but a personal OS shaped to their workflow.
 
@@ -35,10 +35,10 @@ RULES:
 
 ### MCP Tools
 
-Agents have access to MCP tools provided by the Singularity server. Key tools:
+Agents have access to MCP tools provided by the equin server. Key tools:
 
 - `query_db` — Read-only SQL query against the worktree's PostgreSQL database. For **debugging and inspection only** — mutations are rejected at the DB level. Defaults to the agent's own worktree DB; pass `database` to query another worktree or `"singularity"` for main.
-- `add_task` — **When the user asks to "add a task", always use this MCP tool.** Never use the TaskCreate tool (that is for the agent's own internal task tracking during implementation, not for adding tasks to the Singularity task system).
+- `add_task` — **When the user asks to "add a task", always use this MCP tool.** Never use the TaskCreate tool (that is for the agent's own internal task tracking during implementation, not for adding tasks to the equin task system).
 - `read_page` / `edit_page` / `write_agent_note` — pages, shaped like `Read` / `Edit` / `Write`. **These write to the SHARED instance (normally main), not your worktree** — the opposite default from `query_db`, because pages are prod documents you edit collaboratively with the user, not something to test on. **You may only write INSIDE an agent-authored block: an `<agent-inline>` card, or an `<agent-page>`.** `edit_page` takes any block id, but every block its diff creates, rewrites, moves or deletes must sit in one (a tagless `<agent-inline>` in your replacement text mints a card; a tagless `<agent-page title="…">…</agent-page>` mints a sub-page whose whole content is yours, written afterwards by its own id); a page's own prose is read-only — you annotate it, you do not edit it. Pages can carry instructions from their author: `read_page` hands you the ones covering what you read, a write is refused until you have received them, and global ones arrive when the conversation starts.
 
 ## Architecture
@@ -52,7 +52,7 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
 
 Think carefully about the plugin's boundaries, APIs, etc. when designing plugins, as it is the load-bearing infra of the entire project.
 
-**Deployment model — one instance per user.** Singularity runs as exactly one instance per user: the marketplace shares *plugins*, not runtime, and multi-tenancy is a non-goal. This is a recorded architectural decision — read it before touching auth, the gateway, DB forks, secrets, or the live-state subscription path: [`research/2026-07-02-global-adr-single-instance-per-user.md`](research/2026-07-02-global-adr-single-instance-per-user.md).
+**Deployment model — one instance per user.** equin runs as exactly one instance per user: the marketplace shares *plugins*, not runtime, and multi-tenancy is a non-goal. This is a recorded architectural decision — read it before touching auth, the gateway, DB forks, secrets, or the live-state subscription path: [`research/2026-07-02-global-adr-single-instance-per-user.md`](research/2026-07-02-global-adr-single-instance-per-user.md).
 
 ### Collection-consumer separation
 
@@ -204,7 +204,7 @@ Browser/server logs persist to `~/.singularity/worktrees/<wt>/logs/<channel>.jso
 
 ## Sidequests
 
-Independent projects that live in `sidequests/`, not directly related to Singularity. Each has its own `CLAUDE.md`.
+Independent projects that live in `sidequests/`, not directly related to equin. Each has its own `CLAUDE.md`.
 
 - [`sidequests/ui-mastery/`](sidequests/ui-mastery/CLAUDE.md) — Research and tooling to make agents produce professional UI. **Read before any UI polish work.** Feature agents build functionality; polish agents apply UI Mastery knowledge separately.
 - [`sidequests/monitors/`](sidequests/monitors/CLAUDE.md) — Host-level launchd monitors that watch the machine from outside the app, for failures the app's own observability cannot survive (FD leaks before a crash; worktree checkouts deleted under a live conversation). None are auto-installed.

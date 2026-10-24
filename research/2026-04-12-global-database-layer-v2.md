@@ -2,7 +2,7 @@
 
 ## Context
 
-Singularity needs persistent storage for plugin state (first concrete use cases: conversations, todos). The server is currently stateless. Requirements:
+equin needs persistent storage for plugin state (first concrete use cases: conversations, todos). The server is currently stateless. Requirements:
 
 1. **Schema defined in TypeScript** — no hand-written SQL or migration files.
 2. **Parallel-agent safe** — multiple worktrees can evolve schema independently; merges compose without manual reconciliation.

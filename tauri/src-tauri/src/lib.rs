@@ -1,4 +1,4 @@
-//! Equin desktop shell.
+//! equin desktop shell.
 //!
 //! Generic over composition — it holds **no app-specific knowledge**. It reads
 //! the app name + port from the bundled `RELEASE.json`, brings up the

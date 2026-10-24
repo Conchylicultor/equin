@@ -1,4 +1,4 @@
-# ADR: One Singularity instance per user
+# ADR: One equin instance per user
 
 > **Status:** Accepted (2026-07-02). Architectural decision record.
 > Companion to the [communications audit](./2026-07-02-comms-audit/00-overview.md)
@@ -12,7 +12,7 @@
 
 ## Context
 
-Singularity's [vision](./2026-06-21-global-live-state-ivm-and-instant-client-vision.md)
+equin's [vision](./2026-06-21-global-live-state-ivm-and-instant-client-vision.md)
 (and [`CLAUDE.md`](../CLAUDE.md)) is a self-evolving, per-user app: a plugin
 marketplace where **users share building blocks, and agents compose a personal
 OS from them**. Nowhere in that vision is a shared, multi-tenant runtime — each
@@ -36,7 +36,7 @@ undone piecemeal.
 
 ## Decision
 
-**Singularity runs as exactly one instance per user.** Concretely:
+**equin runs as exactly one instance per user.** Concretely:
 
 1. **The marketplace shares plugins, not runtime.** Users contribute and
    install building blocks (plugins, compositions); they do **not** share a
@@ -48,7 +48,7 @@ undone piecemeal.
    instance.
 3. **Multi-device access = an authenticated gateway to your own instance** —
    not multiple users on one instance. The future story for "reach my
-   Singularity from my phone" is *session auth + TLS at the gateway* fronting
+   equin from my phone" is *session auth + TLS at the gateway* fronting
    the same single-owner runtime (see Future work). The number of *devices*
    may grow; the number of *tenants per instance* stays one.
 4. **Multi-tenancy is a non-goal.** Serving mutually-distrusting users from one

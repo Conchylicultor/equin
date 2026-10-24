@@ -1,7 +1,7 @@
 # events
 
 One events database — *"what is happening, and when"* — fed by pluggable
-**sources**, delivered as a top-level Singularity app at `/events`.
+**sources**, delivered as a top-level equin app at `/events`.
 
 This top-level plugin is an empty namespace only (no slots, no logic, per the
 `create-app` skill). All content lives in sub-plugins:

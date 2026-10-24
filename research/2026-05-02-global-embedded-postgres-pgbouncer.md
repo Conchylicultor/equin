@@ -2,7 +2,7 @@
 
 ## Context
 
-Singularity hits "too many clients" PG exhaustion. Each worktree process opens ~7 PG connections (app pool max 5, admin pool 1, graphile-worker Runner + WorkerUtils each holding a LISTEN connection). With ~15–20 active worktrees against PG default `max_connections=100`, exhaustion is unavoidable.
+equin hits "too many clients" PG exhaustion. Each worktree process opens ~7 PG connections (app pool max 5, admin pool 1, graphile-worker Runner + WorkerUtils each holding a LISTEN connection). With ~15–20 active worktrees against PG default `max_connections=100`, exhaustion is unavoidable.
 
 Beyond the immediate fix, the eventual desktop deploy (Electron-style, no user PG setup) requires bundling PG anyway. Solving both at once: **single embedded PG instance, multi-DB inside it (preserves the existing one-DB-per-worktree model), fronted by PgBouncer in transaction mode for connection pooling. Owned by the central runtime — first central plugin to supervise child processes.**
 

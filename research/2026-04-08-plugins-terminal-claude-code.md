@@ -2,7 +2,7 @@
 
 ## Context
 
-Singularity needs a terminal plugin to launch and manage Claude Code agent instances. Each agent runs in its own git worktree, so the terminal must be spawnable with a configurable working directory. Multiple instances run in parallel.
+equin needs a terminal plugin to launch and manage Claude Code agent instances. Each agent runs in its own git worktree, so the terminal must be spawnable with a configurable working directory. Multiple instances run in parallel.
 
 This design is **blocked on two prerequisite architectural decisions** that affect the entire plugin system, not just the terminal. Those must be designed separately before the terminal plugin can be fully specified.
 

@@ -98,7 +98,7 @@ curl http://test-feature.localhost:9000/gateway/worktrees
 # → includes test-feature
 
 open http://test-feature.localhost:9000
-# → Singularity UI loads
+# → equin UI loads
 ```
 
 ## Critical Files

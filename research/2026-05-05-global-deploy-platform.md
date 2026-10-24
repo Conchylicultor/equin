@@ -2,9 +2,9 @@
 
 ## Context
 
-All deployment operations today happen via CLI and SSH — provisioning the Hetzner server, bootstrapping it, deploying code, checking health, tailing logs. The goal is to bring all of this into the Singularity UI as a first-class plugin, so that the full lifecycle of a remote server is managed from the same surface where agents work.
+All deployment operations today happen via CLI and SSH — provisioning the Hetzner server, bootstrapping it, deploying code, checking health, tailing logs. The goal is to bring all of this into the equin UI as a first-class plugin, so that the full lifecycle of a remote server is managed from the same surface where agents work.
 
-This is the "Coolify built into Singularity" idea: a deployment dashboard that knows about our stack (Go gateway + Bun server + Vite SPA + Postgres) and can manage the full deploy lifecycle for equin.ai and future products.
+This is the "Coolify built into equin" idea: a deployment dashboard that knows about our stack (Go gateway + Bun server + Vite SPA + Postgres) and can manage the full deploy lifecycle for equin.ai and future products.
 
 Reference docs:
 - [Infra setup status](./2026-05-05-equin-ai-infra-setup.md) — Hetzner server details, bootstrap plan

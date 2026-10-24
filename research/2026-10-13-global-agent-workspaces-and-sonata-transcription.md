@@ -11,7 +11,7 @@ Two constraints from the user shape the design:
 
 1. **It is an agent task you can watch** (open the conversation, read along, step in on an ambiguous
    bar) — not a hidden one-shot job.
-2. **That agent must not carry Singularity's context.** Today every conversation runs in a git
+2. **That agent must not carry equin's context.** Today every conversation runs in a git
    worktree of this repo, so it boots with the root CLAUDE.md, the plugin index, the repo's
    `.claude/settings.json` guards and every `equin` MCP tool — tens of thousands of wasted tokens for
    a task that never touches the code.

@@ -38,7 +38,7 @@ const FAMILIES = SELECTABLE_FAMILIES.map((f) => `"${f}"`).join(", ");
 
 export const addTaskTool = Mcp.tool({
   name: "add_task",
-  description: `Add a task to the Singularity task tree.
+  description: `Add a task to the equin task tree.
 
 Task titles and descriptions should state the PROBLEM or ISSUE to solve —
 not instructions on how to solve it, and no hints or suggestions either.

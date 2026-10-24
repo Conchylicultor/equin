@@ -49,7 +49,7 @@ type Config struct {
 	ChildEnv ChildEnv
 }
 
-// dataRoot resolves the Singularity data root (`~/.singularity` by default).
+// dataRoot resolves the equin data root (`~/.singularity` by default).
 //
 // It exists ONLY to derive the defaults of the path flags below. Every path the
 // gateway uses is a flag, so the launcher can hand it fully-resolved locations

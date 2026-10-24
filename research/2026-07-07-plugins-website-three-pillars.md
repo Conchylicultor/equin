@@ -2,7 +2,7 @@
 
 ## Context
 
-The equin public site (`plugins/apps/plugins/website/`) currently presents Singularity as a flat 6-card features grid that mixes three fundamentally different stories. The user wants the site to explicitly display the **three pillars**, which reinforce/demonstrate each other but target different audiences:
+The equin public site (`plugins/apps/plugins/website/`) currently presents equin as a flat 6-card features grid that mixes three fundamentally different stories. The user wants the site to explicitly display the **three pillars**, which reinforce/demonstrate each other but target different audiences:
 
 1. **The apps** (Pages, Mail, Sonata, Workflows, …) — what end-users care about.
 2. **The agent manager** — the agents that build the apps and plugins.

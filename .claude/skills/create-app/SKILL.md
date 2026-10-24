@@ -1,7 +1,7 @@
 ---
 name: create-app
 description: >
-  Rules for creating a new top-level app in the Singularity platform.
+  Rules for creating a new top-level app in the equin platform.
   Read BEFORE creating any new app.
 ---
 

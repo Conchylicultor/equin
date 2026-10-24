@@ -19,7 +19,7 @@ import { SUPERSEDED_FLAG } from "../../server/internal/superseded-trigger";
 // `payload->>'jobName'` encoding, the `_private_jobs`/`_private_tasks` table
 // names, and the "terminally dead" predicate can never drift across call sites.
 
-// Every Singularity job is stored under one of this plugin's graphile tasks (one
+// Every equin job is stored under one of this plugin's graphile tasks (one
 // per hold class, plus the legacy task); the real job name lives in the payload.
 // `(unknown)` guards the (theoretical) row with no jobName.
 export const jobNameExpr = sql`coalesce(j.payload->>'jobName', '(unknown)')`;

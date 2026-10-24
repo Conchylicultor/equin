@@ -33,7 +33,7 @@ const outcome = await signBinary(path, { identifier: "dev.singularity.gateway", 
    forwarded to backends (`launcher/core` runtime-env), because a backend's
    `deps.install` job can build the gateway too.
 2. **Local** (the default, for anyone without an Apple certificate): the
-   machine's own self-signed certificate, "Singularity Local Code Signing".
+   machine's own self-signed certificate, "equin Local Code Signing".
    It lasts 20 years, has the codeSigning extended key usage, and is made by
    `/usr/bin/openssl`. It lives in `state/codesign/local/{cert,key}.pem`, with
    the directory at 0700 and the key at 0600. It is created on first use,

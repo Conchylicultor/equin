@@ -4,7 +4,7 @@
 
 ## Context
 
-We want to prepare Singularity for a multi-user future without retrofitting the app to be multi-tenant. The proposed model is **workspace-per-user**: each user gets their own isolated environment (container or microVM) running an unmodified single-tenant Singularity, with their own Postgres, filesystem, and `~/.singularity/`. Authentication is handled at an edge proxy (Cloudflare Access, oauth2-proxy, …) so Singularity itself never sees credentials — it just trusts an identity header from upstream. Cross-user data leaks become architecturally impossible because there is no shared DB or shared FS.
+We want to prepare equin for a multi-user future without retrofitting the app to be multi-tenant. The proposed model is **workspace-per-user**: each user gets their own isolated environment (container or microVM) running an unmodified single-tenant equin, with their own Postgres, filesystem, and `~/.singularity/`. Authentication is handled at an edge proxy (Cloudflare Access, oauth2-proxy, …) so equin itself never sees credentials — it just trusts an identity header from upstream. Cross-user data leaks become architecturally impossible because there is no shared DB or shared FS.
 
 This doc enumerates the open infra/architectural questions and tradeoffs so an investigation agent can dig deeper and produce a recommendation.
 
@@ -101,7 +101,7 @@ The current model is `<worktree>.localhost:9000`. Per-user adds another dimensio
 
 **Validation needed:** does Cloudflare Access support wildcard-of-wildcard policy targeting? Does the current per-worktree origin assumption matter for security (cookie scoping)?
 
-## Open question 7 — Code changes inside Singularity
+## Open question 7 — Code changes inside equin
 
 Investigation in this worktree found ~7 modules independently call `homedir()`:
 
@@ -154,7 +154,7 @@ Separate concern from cross-user isolation. Today, a Claude agent running in a u
 A follow-up doc (`research/2026-MM-DD-global-per-user-workspaces-v2.md`) that:
 
 1. **Resolves Q1 (edge)** with a concrete recommendation backed by a working hello-world (CF Access in front of a dummy bun container, identity header observed in request logs).
-2. **Resolves Q2 (runtime)** with a working Dockerfile that boots Singularity end-to-end (bun server + go gateway + postgres + claude CLI + tmux), plus measured cold-start time for both Docker-on-Hetzner and Fly Machines.
+2. **Resolves Q2 (runtime)** with a working Dockerfile that boots equin end-to-end (bun server + go gateway + postgres + claude CLI + tmux), plus measured cold-start time for both Docker-on-Hetzner and Fly Machines.
 3. **Resolves Q5 (spawner)** by sketching the spawner API (HTTP + state model), or pointing at a prior-art tool we should adopt.
 4. **Confirms Q9 risks** — at minimum: claude CLI in container, postgres-on-volume restart, tmux init-quirks.
 5. **Updates the path-refactor scope** with anything missed from the static survey above.

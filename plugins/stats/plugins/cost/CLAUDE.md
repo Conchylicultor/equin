@@ -174,7 +174,7 @@ reads it (`useScope`) and passes it as the `scope` param of its live value, so
 the chart re-reads when the toggle flips. Scope classification is a pure
 predicate over the encoded project-dir name (`classify-projects.ts`) evaluated
 over `archive ∪ live` — never a `readdir` of `~/.claude/projects`, which would
-resolve a deleted project to "not Singularity" and hide its archived sessions from
+resolve a deleted project to "not equin" and hide its archived sessions from
 the default view.
 
 **The values (interim — metrics P2 deletes them).** `shared/values.ts` declares

@@ -141,7 +141,7 @@ The explorer is a `DataView` (rule: collections of domain records). The tree vie
   - Exported from its web barrel so the conversation entry can embed it (`embedded` = no places sidebar, rooted at a worktree, cannot navigate above the root).
 - **`places`** (new):
   - `FileExplorer.Place` slot `{ group: "favorites" | "locations" | "worktrees", label, icon, path }`, rendered into `FileExplorer.Sidebar` as a DataView list. Contributors:
-    - favorites: Home, Downloads, the Singularity main checkout (from `infra/spawn` `getMainRepoRoot`);
+    - favorites: Home, Downloads, the equin main checkout (from `infra/spawn` `getMainRepoRoot`);
     - locations: Macintosh HD (`/`, named from `volume`) and Trash (`~/.Trash`, `denied` state handled).
   - The storage meter reads `host-fs volume`.
 - **`git`** (new): git awareness when the current path is inside a checkout.
@@ -157,7 +157,7 @@ The explorer is a `DataView` (rule: collections of domain records). The tree vie
 
 | Today | After |
 |---|---|
-| Agent-manager sidebar "Explorer" → `code/:worktree` (main) | Removed. The app rail `/files` + the Singularity place replace it |
+| Agent-manager sidebar "Explorer" → `code/:worktree` (main) | Removed. The app rail `/files` + the equin place replace it |
 | Conversation action-bar "Explorer" → `convFileTreePane` (attempt worktree) | Same button and pane id. The body renders `<FileBrowser embedded root={worktreePath}>` with git on, so diff vs main is preserved |
 | `FileTree` (git ls-files, whole tree) | Deleted. Remaining consumer `plugin-meta/plugin-view/file-tree` migrates to `FileBrowser embedded` (or a `host-fs`-backed tree) |
 | `/api/code/:worktree/{file,diff,image,push,commit,commit-info,resolve}` (git-ref reads) | **Kept.** They serve refs, diffs, pushes and commits, which host-fs does not. code-explorer shrinks to that git-file API + `code-api` + `commit-detail` + `file-resolve`. Renaming it (e.g. `infra/git/plugins/worktree-files`) is a follow-up |

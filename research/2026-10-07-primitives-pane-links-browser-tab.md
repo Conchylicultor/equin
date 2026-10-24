@@ -3,7 +3,7 @@
 ## Context
 
 Middle-clicking the pane chrome's **Open in <App>** / **Expand pane** button opens a new
-*Singularity* tab (in-app, `navigate(url, { newTab: true })`). The user wants it to open a new
+*equin* tab (in-app, `navigate(url, { newTab: true })`). The user wants it to open a new
 **browser (Chrome) tab** — and wants that for every button that opens a pane, without callers
 building URLs.
 
@@ -22,7 +22,7 @@ Decided with the user:
 
 - **Plain click** = today's `openPane` (unchanged).
 - **Middle-click and ⌘/Ctrl-click** = new browser tab at the URL of the route the plain click
-  *would* produce (browser convention). A new Singularity tab is only reachable from explicit
+  *would* produce (browser convention). A new equin tab is only reachable from explicit
   menu entries (e.g. Prototypes' existing "Open in a new app tab").
 - No new top-level concept: `openPane` gains a `.link(...)` form with **the same arguments**.
   The imperative call stays for callbacks (onSelect, post-mutation, effects).

@@ -263,9 +263,9 @@ oracle during conversion.
 
 ---
 
-## Execution — chained sub-tasks (one Singularity task per batch)
+## Execution — chained sub-tasks (one equin task per batch)
 
-Implemented as a **linear chain** of Singularity tasks (`add_task` with `target` + `autostart: opus-4-8`).
+Implemented as a **linear chain** of equin tasks (`add_task` with `target` + `autostart: opus-4-8`).
 Each agent, on finishing its batch, calls **`exit_clean`**, which completes the task and auto-launches
 the next batch in the chain — no manual hand-off. Linear (not parallel) so each batch sees the prior
 batch's real outcome, and **the single-writer allowlist concern disappears**: only one batch runs at a

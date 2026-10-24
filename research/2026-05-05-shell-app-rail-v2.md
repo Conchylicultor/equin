@@ -2,7 +2,7 @@
 
 ## Context
 
-Singularity is evolving from a single-purpose agent manager into a multi-app platform. Each app should own its entire shell (layout, sidebar, toolbar), not just a pane inside a shared shell. A new **`apps` plugin** wraps the shell layer itself: it takes over `Core.Root`, renders a narrow icon rail, and displays whichever app's shell is active.
+equin is evolving from a single-purpose agent manager into a multi-app platform. Each app should own its entire shell (layout, sidebar, toolbar), not just a pane inside a shared shell. A new **`apps` plugin** wraps the shell layer itself: it takes over `Core.Root`, renders a narrow icon rail, and displays whichever app's shell is active.
 
 V1 scope: build the infrastructure + wire up the Agent Manager as the first (and only) app. No sidebar changes, no deploy changes — deploy contributes its own app shell in a follow-up.
 

@@ -138,7 +138,7 @@ const m = useEndpointMutation(launchTask);                  // { kind: "unavaila
   3. A `machine/` barrel's `httpRoutes` (`MachinePluginDefinition`) take only `MachineHttpHandler`s, and a `server/` barrel's (`ServerPluginDefinition`) refuse them — so a portable endpoint is never served by machine code alone (a silent 404 on every other host), and a machine one never by `server/`.
   4. Every client call site handles the unavailable arm: `fetchEndpoint` answers `MachineResult<T>` (`{ kind: "ok"; value } | { kind: "unavailable"; message }`), `useEndpoint` reads one, and `useEndpointMutation` is unavailable at the HOOK level, so `mutate` is unreachable without narrowing. Portable endpoints are unchanged.
 - **Decided by the transport.** `Transport.machine` (`primitives/networking`) is required: `pageTransport` is `true`, `browserServerTransport` `false`. A subtree's transport is fixed, so the arm is stable across renders. Under `machine: false` nothing is sent.
-- **One sentence** — `unavailableMessage(feature)` (core): "Launching an agent isn't available in this version of the app — it needs Singularity running on your computer."
+- **One sentence** — `unavailableMessage(feature)` (core): "Launching an agent isn't available in this version of the app — it needs equin running on your computer."
 - **`useMachineAvailability(declaration)`** takes any `{ needsMachine }` declaration — an endpoint or a live read (`network/live`) — for a control that renders disabled with the message (Welcome's send button, the launch form).
 - **Residual gap:** an `await fetchEndpoint(machineDef, …)` whose value is never read ignores the arm silently. Prefer the hook form, or read the result.
 - **A browser host serves the rest — proven at build.** The browser-host coverage guard (codegen's `core/browser-host-coverage.ts`, run by `deriveBrowserHostGraph`, so a gap fails `build` and `push`; nothing exempts it) requires every endpoint a host's scoped page calls — a declaration it imports, or a raw `/api/<prefix>` URL it builds — to be routed by a `server/` barrel of the host's graph, or declared `needsMachine`. Its reading of a declaration is `endpointExports` (`plugin-meta/parse-utils`): the `route:` must be one string literal. So a host's `409 { reason: "unsupported" }` refusal (`unsupportedEndpointResponse`) is a gap the guard missed: the fetcher throws and reports it like any other failure.
@@ -392,6 +392,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `useMachineAvailability`
 - Core:
   - Uses:
+    - `framework/product-name.PRODUCT_NAME`
     - `infra/request-origin.AGENT_WRITE_HEADER`
     - `infra/request-origin.originOf`
     - `infra/runtime-identity.isMain`

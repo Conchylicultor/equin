@@ -8,7 +8,7 @@ subcommand help by construction.
 
 Forks the main `singularity` database into `[target]` (default: this worktree's
 name). It exists for checkouts made with a bare `git worktree add`, outside
-Singularity — those get no fork on creation, so they come up with no database at
+equin — those get no fork on creation, so they come up with no database at
 all. Idempotent: a no-op when the DB already exists.
 
 The interesting part is what it *refuses* to do. Which tables a fork must not

@@ -24,7 +24,7 @@ interface TaskReminderPayload {
 }
 ```
 
-`itemCount` can be 0 (empty reminder). The `status` values come from Claude Code's internal task system, not Singularity's `TaskStatus` enum — they overlap but aren't guaranteed identical.
+`itemCount` can be 0 (empty reminder). The `status` values come from Claude Code's internal task system, not equin's `TaskStatus` enum — they overlap but aren't guaranteed identical.
 
 ## Design
 

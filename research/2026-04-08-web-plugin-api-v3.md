@@ -2,7 +2,7 @@
 
 ## Context
 
-Every feature in Singularity is a plugin — including the app shell. The main app (`web/`) is a minimal bootstrap: it collects plugins, provides context, and renders root contributions.
+Every feature in equin is a plugin — including the app shell. The main app (`web/`) is a minimal bootstrap: it collects plugins, provides context, and renders root contributions.
 
 Key insight: **everything is a contribution to a slot**. No special `root` or `background` fields. No `dependencies` array (imports enforce that at build time). The plugin definition is minimal.
 

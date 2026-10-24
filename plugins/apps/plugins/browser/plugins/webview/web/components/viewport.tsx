@@ -95,7 +95,7 @@ export function Viewport() {
         const src = enabled && tab.url !== "" ? proxyUrl(tab.url) : tab.url;
         // SECURITY: proxied content is served from OUR origin. If the iframe
         // kept `allow-same-origin` while same-origin (proxied), the foreign
-        // page's JS would be same-origin with the Singularity app and could
+        // page's JS would be same-origin with the equin app and could
         // reach `window.parent`. So we DROP `allow-same-origin` for proxied
         // (same-origin) src — opaque, isolated origin — and only add it back
         // for direct cross-origin loads (where a site is same-origin with

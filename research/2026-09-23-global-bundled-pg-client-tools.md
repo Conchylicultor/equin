@@ -94,7 +94,7 @@ The admin plugin imports `@plugins/database/plugins/client-tools/server`. The CL
 2. User: create the repo, add the secret, tag `v18.3.0`, and confirm all four packages are on npm.
 3. In this worktree: steps 2–6 above, then `./equin build`.
 
-Step 3 can't install until step 2 has published. Until then, the Singularity side can be developed against a local `file:` path to the built package, but it can't be pushed.
+Step 3 can't install until step 2 has published. Until then, the equin side can be developed against a local `file:` path to the built package, but it can't be pushed.
 
 ## Verification
 

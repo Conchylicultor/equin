@@ -8,13 +8,13 @@ Today `plugins/backup/` hardcodes **what** it saves. `assemble-archive.ts` conta
 - Adding a new thing to back up means editing the engine — the opposite of the collection-consumer separation rule the project enforces everywhere else.
 - The **target** side is already generic (`BackupTarget` contribution, one sub-plugin per target). The **source** side never got the same treatment.
 
-This change makes the source side symmetric with the target side: the engine becomes a pure orchestrator that loops registered `BackupSource` contributions and never names one. Each source is its own toggleable sub-plugin. We migrate the 3 existing blobs and add 5 new sources (config files, active-conversation transcripts, Claude settings, Singularity platform files, project memory). The manifest becomes a generic `sources[]` the UI renders without special-casing, and the backup pane gets a gear that opens the config page (reusing `ConfigGearButton`).
+This change makes the source side symmetric with the target side: the engine becomes a pure orchestrator that loops registered `BackupSource` contributions and never names one. Each source is its own toggleable sub-plugin. We migrate the 3 existing blobs and add 5 new sources (config files, active-conversation transcripts, Claude settings, equin platform files, project memory). The manifest becomes a generic `sources[]` the UI renders without special-casing, and the backup pane gets a gear that opens the config page (reusing `ConfigGearButton`).
 
 ### Decisions (confirmed with user)
 
 - **Layout:** introduce `plugins/backup/plugins/sources/<name>/` **and** `plugins/backup/plugins/targets/<name>/`; move the existing `local` / `google-drive` targets under `targets/` for symmetry.
 - **Transcripts = active conversations only** — not the ~2GB of historical transcripts. Enumerate via `listActiveConversations()` + `findTranscriptPath()`.
-- **Extra sources:** Claude platform settings, Singularity platform files, project memory — each its own sub-plugin.
+- **Extra sources:** Claude platform settings, equin platform files, project memory — each its own sub-plugin.
 - **Gear:** reuse `ConfigGearButton` to redirect to the config page (no custom toggle popover).
 
 ## Architecture

@@ -151,7 +151,7 @@ The WS endpoint on central is the gateway path `/ws/notifications` *with the hos
       worktreeName = backend  // forward to central regardless of host
   } else if worktreeName == "" {
       // remaining bare-localhost paths still 404
-      http.Error(w, "Singularity gateway. Use <name>.localhost.", http.StatusNotFound)
+      http.Error(w, "equin gateway. Use <name>.localhost.", http.StatusNotFound)
       return
   }
   ```

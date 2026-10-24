@@ -2,7 +2,7 @@
 
 ## Context
 
-We want a place in the app to track whether Singularity is actually making us
+We want a place in the app to track whether equin is actually making us
 more productive — how fast TODOs get completed vs. created, commit velocity,
 conversation throughput, etc. This plan introduces a root `stats` plugin in
 the sidebar whose body is a vertical stack of charts. Each chart is its own

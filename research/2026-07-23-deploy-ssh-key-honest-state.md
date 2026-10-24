@@ -212,7 +212,7 @@ user-facing copy exists:
 
 - `public-key-pasted` — "That's the public half. Paste the private key — the file
   starting with `-----BEGIN OPENSSH PRIVATE KEY-----`, not the `.pub` one."
-- `passphrase-protected` — "This key is passphrase-protected. Singularity
+- `passphrase-protected` — "This key is passphrase-protected. equin
   connects unattended and has no one to type a passphrase. Paste a key made
   without one (`ssh-keygen -t ed25519 -N \"\"`), or generate one here."
 - others — "`ssh-keygen` couldn't read that as a private key: `<stderr tail>`".

@@ -1,6 +1,6 @@
 # Plugin Core
 
-Framework for Singularity's plugin system. Every feature is a plugin — including the app shell.
+Framework for equin's plugin system. Every feature is a plugin — including the app shell.
 
 ## Concepts
 

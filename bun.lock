@@ -3198,6 +3198,10 @@
       "name": "@singularity/plugin-framework-plugin-loader",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/product-name": {
+      "name": "@singularity/plugin-framework-product-name",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/resource-runtime": {
       "name": "@singularity/plugin-framework-resource-runtime",
       "version": "0.0.1",
@@ -8701,6 +8705,8 @@
     "@singularity/plugin-framework-plugin-id": ["@singularity/plugin-framework-plugin-id@workspace:plugins/framework/plugins/plugin-id"],
 
     "@singularity/plugin-framework-plugin-loader": ["@singularity/plugin-framework-plugin-loader@workspace:plugins/framework/plugins/plugin-loader"],
+
+    "@singularity/plugin-framework-product-name": ["@singularity/plugin-framework-product-name@workspace:plugins/framework/plugins/product-name"],
 
     "@singularity/plugin-framework-resource-runtime": ["@singularity/plugin-framework-resource-runtime@workspace:plugins/framework/plugins/resource-runtime"],
 

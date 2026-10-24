@@ -5,7 +5,7 @@ import { parseSystemdUserUnit, renderSystemdUserUnit } from "./systemd-unit";
 const job: LoginServiceSpec = {
   label: "dev.singularity.gateway",
   session: "background",
-  description: "Singularity gateway",
+  description: "equin gateway",
   argv: [
     "/h/me/.singularity/cache/deps/gateway-binary/abc/env/gateway",
     "-listen",
@@ -70,14 +70,14 @@ describe("renderSystemdUserUnit — the gateway's unit, byte for byte", () => {
         label: "dev.singularity.gateway",
         session: "background",
         description:
-          "Singularity gateway (and through it Postgres, PgBouncer and every backend)",
+          "equin gateway (and through it Postgres, PgBouncer and every backend)",
         argv: ["/bin/gw", "-x"],
         cwd: "/h/me/repo",
         env: { Z: "1", A: "2" },
         stdioLog: "/h/me/logs/gateway-stdio.log",
       }),
     ).toBe(`[Unit]
-Description=Singularity gateway (and through it Postgres, PgBouncer and every backend)
+Description=equin gateway (and through it Postgres, PgBouncer and every backend)
 
 [Service]
 Type=simple

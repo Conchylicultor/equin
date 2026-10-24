@@ -9,7 +9,7 @@ import { parseLaunchAgentPlist, renderLaunchAgentPlist } from "./launchd-plist";
 const job: LoginServiceSpec = {
   label: "dev.singularity.gateway",
   session: "background",
-  description: "Singularity gateway",
+  description: "equin gateway",
   argv: [
     "/h/me/.singularity/cache/deps/gateway-binary/abc/env/gateway",
     "-listen",
@@ -66,7 +66,7 @@ describe("renderLaunchAgentPlist — the gateway's job, byte for byte", () => {
       renderLaunchAgentPlist({
         label: "dev.singularity.gateway",
         session: "background",
-        description: "Singularity gateway",
+        description: "equin gateway",
         argv: ["/bin/gw", "-x"],
         cwd: "/h/me/repo",
         env: { Z: "1", A: "2" },

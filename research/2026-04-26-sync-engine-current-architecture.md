@@ -1,6 +1,6 @@
 # Current sync engine: architecture reference
 
-Self-contained snapshot of how Singularity's data/sync layer works **today**. Companion to:
+Self-contained snapshot of how equin's data/sync layer works **today**. Companion to:
 
 - `research/2026-04-26-sync-engine-issues.md` — the pain points being addressed.
 - `research/2026-04-26-sync-design-{1..5}-*.md` — the five sub-design plans.

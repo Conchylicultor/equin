@@ -187,7 +187,7 @@ Two more live values are declared in `core/resources.ts` and served here:
 
 ## No-polling exception
 
-Singularity bans `setInterval`/`setTimeout` polling. Gmail's steady-state delta
+equin bans `setInterval`/`setTimeout` polling. Gmail's steady-state delta
 is the **sanctioned exception**: Gmail push notifications (`users.watch` →
 Pub/Sub) require a public inbound HTTPS endpoint + topic that a per-worktree
 backend behind the gateway cannot expose. `history.list` is pull-only — there is

@@ -17,4 +17,4 @@ In v1, the architecture was:
 
 **How to apply:** Any networking/routing decision must account for this multi-instance topology. The frontend must never hardcode ports. The gateway is the single entry point.
 
-**Note on v1 constraint:** v1 used path-prefix routing only because the core app was owned by another team and could not be modified. In Singularity the user owns the whole stack, so subdomain routing (`<worktree>.localhost:9000`) is viable and strongly preferred — it avoids the base-path tax entirely.
+**Note on v1 constraint:** v1 used path-prefix routing only because the core app was owned by another team and could not be modified. In equin the user owns the whole stack, so subdomain routing (`<worktree>.localhost:9000`) is viable and strongly preferred — it avoids the base-path tax entirely.

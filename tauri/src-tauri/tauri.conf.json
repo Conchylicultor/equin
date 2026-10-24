@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Equin",
+  "productName": "equin",
   "version": "0.1.0",
   "identifier": "ai.equin.app",
   "build": {
@@ -10,7 +10,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Equin",
+        "title": "equin",
         "width": 1280,
         "height": 800,
         "minWidth": 640,

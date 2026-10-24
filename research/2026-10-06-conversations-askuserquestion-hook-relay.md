@@ -160,7 +160,7 @@ It owns the pending question from the hook to the answer. It has `core`, `server
     uses. Both variables are already on the pane's env allowlist (`agent-session-env.ts`).
 - **Hook fragment** (`core`): `questionRelayHook({ scriptPath })` returns one PreToolUse hook
   entry: `{type:"command", command:"bun '<abs path>'", timeout:<Phase 0 max>, statusMessage:"Waiting
-  for your answer in Singularity…"}`.
+  for your answer in equin…"}`.
   - `scriptPath` is resolved at launch from the launching backend's checkout (`getWorktreeRoot`).
 
 ### 2. Launch wiring (`runtime-tmux`)

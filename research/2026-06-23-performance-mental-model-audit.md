@@ -1,8 +1,8 @@
-# Performance Mental Model — Singularity Audit
+# Performance Mental Model — equin Audit
 
 ## 0. The shape of the problem
 
-Singularity runs **~16 worktree backend processes** plus a central runtime against **one** shared embedded Postgres cluster on a single machine, each deploying a ~540-plugin SPA. So "performance" here is really four distinct pressures, and the codebase has a distinct mental model for each:
+equin runs **~16 worktree backend processes** plus a central runtime against **one** shared embedded Postgres cluster on a single machine, each deploying a ~540-plugin SPA. So "performance" here is really four distinct pressures, and the codebase has a distinct mental model for each:
 
 1. **Cold-boot latency** — get the SPA to real data before first paint, without a WS round-trip storm.
 2. **Steady-state freshness without recompute** — a DB write must reach exactly the subscribed UI that read the changed rows, recomputing the minimum (push, not poll; incremental, not full-scan).

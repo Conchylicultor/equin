@@ -2,7 +2,7 @@
 
 ## Context
 
-Singularity needs a first-class concept of **tasks**: a nested todo list of things agents work on, each task potentially having multiple **attempts** (tries at solving it), each attempt potentially spanning multiple conversations (to support future branching). This plan covers the first slice: schema + an empty task pane reachable from the sidebar. The pane will later be composed of independent sub-panes, so this plan also defines the meta-plugin extension surface (a slot that child plugins will contribute to), even though no child plugin exists yet.
+equin needs a first-class concept of **tasks**: a nested todo list of things agents work on, each task potentially having multiple **attempts** (tries at solving it), each attempt potentially spanning multiple conversations (to support future branching). This plan covers the first slice: schema + an empty task pane reachable from the sidebar. The pane will later be composed of independent sub-panes, so this plan also defines the meta-plugin extension surface (a slot that child plugins will contribute to), even though no child plugin exists yet.
 
 Model the plugin after [`plugins/stats/`](../plugins/stats/) (cleanest "sidebar + route + slot-for-children" reference) and [`plugins/conversations/plugins/conversation-view/plugins/code/`](../plugins/conversations/plugins/conversation-view/plugins/code/) (reference for a meta-plugin with its own slot and server API).
 

@@ -8,7 +8,7 @@ import { resolveConversationTranscriptPaths } from "@plugins/conversations/plugi
 const log = Log.channel("transcript-retention");
 
 // Claude Code deletes session JSONL transcripts whose mtime is older than
-// `cleanupPeriodDays` (default 30). Singularity reads those files directly as
+// `cleanupPeriodDays` (default 30). equin reads those files directly as
 // the SOLE source of truth for conversation content — it never copies them
 // into Postgres — so an active-but-idle conversation would silently lose its
 // transcript once 30 idle days pass. Touching every retained conversation's

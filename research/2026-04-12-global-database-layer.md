@@ -2,7 +2,7 @@
 
 ## Context
 
-Singularity needs persistent storage for conversation status, metadata, and todos. Today the server is stateless (Bun + plugin routes, no DB). We want:
+equin needs persistent storage for conversation status, metadata, and todos. Today the server is stateless (Bun + plugin routes, no DB). We want:
 
 1. **Schema defined in TypeScript** — no hand-written SQL, no hand-written migration files.
 2. **Parallel-agent safe** — multiple agents working in different worktrees can each evolve the schema. When they merge back to main, migrations compose without manual reconciliation.

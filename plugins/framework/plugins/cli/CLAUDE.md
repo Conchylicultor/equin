@@ -238,7 +238,7 @@ must be armed strictly after that loop or it is silently overwritten.
 ## The artifact / deploy seam
 
 `--composition` once meant "deploy this checkout, but filtered" — so cutting a
-release required a machine that was already a Singularity dev box, and the
+release required a machine that was already an equin dev box, and the
 artifact was a function of the developer's environment rather than of the source.
 The flag is back, and the split it was missing is a **posture** of the one verb
 rather than a second command: `build --hermetic --composition <name…>` is the

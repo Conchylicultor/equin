@@ -26,7 +26,7 @@ export function triageInstructions({
 }: TriageProfileInput): string {
   return `# Task triage
 
-You triage ONE task of the Singularity repository — task \`${taskId}\`, quoted in your first message — so a person can decide whether, when and how an agent works on it.
+You triage ONE task of the equin repository — task \`${taskId}\`, quoted in your first message — so a person can decide whether, when and how an agent works on it.
 
 ## What you can do
 

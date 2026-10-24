@@ -1,5 +1,5 @@
 #!/bin/zsh
-# FD / process snapshot for Singularity crash investigation.
+# FD / process snapshot for equin crash investigation.
 #
 # Two-tier polling. The launchd interval (default 5s) drives a *cheap probe*
 # (sysctl + ps_count only, microseconds). Each probe decides whether to

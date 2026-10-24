@@ -127,7 +127,7 @@ export const launchTask = defineEndpoint({
 - An overload returns `MachineEndpointDef<…> = EndpointDef<…> & { readonly needsMachine: MachineFeature }`.
   The existing 5 generics stay untouched.
 - `unavailableMessage(feature)` is in `core`, composed once: "Launching an agent isn't available in
-  this version of the app — it needs Singularity running on your computer."
+  this version of the app — it needs equin running on your computer."
 
 **Server:**
 - `implement(def, handler)` types `def` as `EndpointDef<…> & { needsMachine?: never }`, so a machine

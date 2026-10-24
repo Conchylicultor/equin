@@ -221,7 +221,7 @@ describe("resolveSigningIdentity", () => {
     expect(readLocalIdentity(host).kind).toBe("absent");
     const first = await ensureLocalIdentity(host);
     expect(first.kind).toBe("local");
-    expect(first.label).toBe("Singularity Local Code Signing");
+    expect(first.label).toBe("equin Local Code Signing");
     expect(first.sha1).toMatch(/^[0-9A-F]{40}$/);
     expect(statSync(host.dir).mode & 0o777).toBe(0o700);
     expect(statSync(first.keyPath).mode & 0o777).toBe(0o600);

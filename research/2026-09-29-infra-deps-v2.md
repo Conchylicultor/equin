@@ -7,7 +7,7 @@ library choices still hold for it.
 
 ## Context
 
-Singularity keeps growing features that need something heavy from outside:
+equin keeps growing features that need something heavy from outside:
 Chromium, a 116 MB dataset, a native shim, and soon a Python env with torch.
 Two problems keep coming back:
 

@@ -59,7 +59,7 @@ So the admission math allows 4 fleets × ~4 tsc workers + eslint + vite ≈ 20+ 
 macOS schedules by QoS tier, roughly: **user-interactive** (UI threads of apps, boosted further for the frontmost app by RunningBoard) > **user-initiated** > **default** > **utility** > **background/darwinbg** (pinned to E-cores on Apple Silicon + IO-throttled).
 
 - GUI apps' main threads run in the top tiers → they sit **above** the storm of default-tier bun workers. That's why the rest of the Mac feels fine.
-- The main Singularity backend is a headless daemon whose event-loop thread runs at **default** — the *same* tier as every undemoted type-check worker. It doesn't get starved because it's special; it gets starved because it's *ordinary*.
+- The main equin backend is a headless daemon whose event-loop thread runs at **default** — the *same* tier as every undemoted type-check worker. It doesn't get starved because it's special; it gets starved because it's *ordinary*.
 
 So there are two symmetric moves, and they multiply:
 

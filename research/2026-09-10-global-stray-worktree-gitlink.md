@@ -42,7 +42,7 @@ deliberate entry. **Removing it finishes that cleanup.**
 
 ### Does anything still allow it?
 
-The `.gitignore` entry closes the original vector (a Singularity agent
+The `.gitignore` entry closes the original vector (an equin agent
 worktree lives at `<main>/.claude/worktrees/<id>`, which `git add -A` from main
 now skips). What remains open:
 

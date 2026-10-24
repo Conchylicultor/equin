@@ -15,7 +15,7 @@ import { ALL_JOB_TASKS } from "@plugins/infra/plugins/jobs/server";
 // to find the row it just enqueued.
 
 /**
- * Every graphile task identifier a Singularity job row can sit on, as a SQL list
+ * Every graphile task identifier an equin job row can sit on, as a SQL list
  * for an `IN (…)`.
  *
  * Composed from the jobs plugin's own `ALL_JOB_TASKS`, never spelled here. Since

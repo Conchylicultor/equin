@@ -29,7 +29,7 @@ consequences:
    function of the developer's environment, not just of (source, composition).
 3. **It compounds with `platformTag()`** (`release.ts:110-119`, `process.platform/arch`):
    the only way to ship a linux artifact is to own a linux machine that is already a
-   Singularity dev box.
+   equin dev box.
 
 Intended outcome: a release can be cut on any bare host from a fresh `git clone`, with
 the dev inner loop byte-identical.

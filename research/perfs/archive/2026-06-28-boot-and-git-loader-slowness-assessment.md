@@ -104,7 +104,7 @@ hot path, and our cache table is thrashing."
 - **You still have to compute the snapshot.** Zero changes *where queries run*, not whether the
   underlying work is expensive.
 
-Keep Zero on the table for the day Singularity wants **multi-device / offline sync** — that's a
+Keep Zero on the table for the day equin wants **multi-device / offline sync** — that's a
 real reason. Decouple that from this performance problem.
 
 ## 6. Recommendations (each must be benchmarked before/after)

@@ -4,7 +4,7 @@
 
 You want to go back to an earlier message in a conversation and continue from
 there, dropping everything after it. The native CLI does this with `/rewind`,
-but Singularity wraps the interactive CLI in a tmux pane, so the only way to
+but equin wraps the interactive CLI in a tmux pane, so the only way to
 reach that command is to send keystrokes through a menu — fragile.
 
 This plan takes a different route, validated by experiment on CLI 2.1.276:

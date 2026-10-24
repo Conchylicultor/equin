@@ -6,7 +6,7 @@
 > [IVM/instant-client vision](./2026-06-21-global-live-state-ivm-and-instant-client-vision.md),
 > whose Axis A this plan begins executing.
 >
-> Execution note: tracks are filed as Singularity tasks and implemented by
+> Execution note: tracks are filed as equin tasks and implemented by
 > Fable agents with ultracode — scopes are deliberately large per task.
 
 ## Context
@@ -40,7 +40,7 @@ Decisions already made (user-confirmed 2026-07-02):
   investment; the in-house stack is the committed direction).
 - **A1 scope: minimal subset first** (single-table selects incl. 1:1 views +
   simple FK joins; arbitrary loaders remain the escape hatch).
-- **Deployment model: one Singularity instance per user** — recorded as an
+- **Deployment model: one equin instance per user** — recorded as an
   architectural decision; the marketplace shares plugins, not runtime.
 - **Tracking: file large-scope tasks** after plan approval.
 

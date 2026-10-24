@@ -11,7 +11,7 @@ panel listing the heading titles, indented, with the current one in the accent
 color. It answers "where am I in this document?" continuously, and "take me
 there" on click — while costing almost no screen space at rest.
 
-Singularity has one thing in this shape today and it is weaker on both counts:
+equin has one thing in this shape today and it is weaker on both counts:
 `plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/message-toc/`
 — a top-right pill reading "☰ 12 messages" that expands into a flat list of user
 turns. It has **no current-position indicator at all** (no IntersectionObserver,

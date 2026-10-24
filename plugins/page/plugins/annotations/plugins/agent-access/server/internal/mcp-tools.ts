@@ -264,7 +264,7 @@ function opensWithHeader(text: string, readHeader: string): boolean {
 
 export const readPageTool = Mcp.tool({
   name: "read_page",
-  description: `Read a Singularity page — or any block within one — as markdown.
+  description: `Read an equin page — or any block within one — as markdown.
 
 **This tool reads the SHARED instance (normally main), not your worktree** — the
 opposite default from \`query_db\`, because pages are prod documents you edit

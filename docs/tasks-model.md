@@ -1,6 +1,6 @@
 # Tasks, attempts, conversations, pushes
 
-The mental model behind Singularity's core entities and their statuses.
+The mental model behind equin's core entities and their statuses.
 
 ## The four entities
 

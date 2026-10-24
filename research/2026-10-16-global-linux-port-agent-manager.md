@@ -6,7 +6,7 @@ agents on a Linux host, with the macOS path unchanged.
 
 ## Context
 
-Singularity's dev stack (gateway → Postgres/PgBouncer → central → backends →
+equin's dev stack (gateway → Postgres/PgBouncer → central → backends →
 tmux agent sessions) had only ever run on macOS. The self-contained `release`
 already ran the *website* composition on Ubuntu, so the binaries (Go gateway,
 `@embedded-postgres/linux-x64`, PgBouncer, parcel-watcher) were known to work;

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * The OS account this Singularity instance runs as — one instance per user, so
+ * The OS account this equin instance runs as — one instance per user, so
  * it is the user's own account (`research/2026-07-02-global-adr-single-instance-per-user.md`).
  *
  * - `username` — the login name (`os.userInfo().username`), always known.

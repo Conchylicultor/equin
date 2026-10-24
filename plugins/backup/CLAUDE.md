@@ -239,13 +239,13 @@ row with a rising count and a new source starting to fail mints its own.
     - Plugins:
       - **`attachments`** [exempt] — Config UI for the attachments backup source. Backs up file attachments into the backup archive.
       - **`claude-settings`** [exempt] — Config UI for the Claude settings backup source. Backs up Claude CLI settings and history into the backup archive.
-      - **`config`** [exempt] — Config UI for the config backup source. Backs up Singularity config files into the backup archive.
+      - **`config`** [exempt] — Config UI for the config backup source. Backs up equin config files into the backup archive.
       - **`cost-history`** [exempt] — Config UI for the cost-history backup source. Backs up the permanent cost-history archive (year-sharded session records and the merged price table) into the backup archive.
       - **`databases`** [exempt] — Config UI for the databases backup source. Backs up worktree databases into the backup archive.
       - **`project-memory`** [exempt] — Config UI for the project memory backup source. Backs up Claude Code project memory files into the backup archive.
       - **`prototypes`** [exempt] — Config UI for the prototypes backup source. Backs up the throwaway UI prototypes into the backup archive — they live outside git on purpose, so this is what makes them recoverable.
       - **`secrets`** [exempt] — Config UI for the secrets backup source. Backs up encrypted secrets into the backup archive.
-      - **`singularity-platform`** [exempt] — Config UI for the Singularity platform backup source. Backs up Singularity platform files (auth, database config) into the backup archive.
+      - **`singularity-platform`** [exempt] — Config UI for the equin platform backup source. Backs up equin platform files (auth, database config) into the backup archive.
       - **`transcripts`** [exempt] — Config UI for the transcripts backup source. Backs up retained-conversation transcripts (active, plus every conversation of a held task) into the backup archive.
   - **`targets`** — Umbrella for pluggable backup targets, each a self-gating sub-plugin contributing a BackupTarget.
     - Plugins:

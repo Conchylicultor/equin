@@ -2,11 +2,11 @@
 
 ## Context
 
-Singularity has no visibility into how many tokens it consumes or what it costs to run. The existing `plugins/stats/` umbrella ships `commits` and `tasks` charts but nothing about Claude usage. The user asked for stats showing total tokens / price per conversation so they can answer "how much does Singularity cost me to run?".
+equin has no visibility into how many tokens it consumes or what it costs to run. The existing `plugins/stats/` umbrella ships `commits` and `tasks` charts but nothing about Claude usage. The user asked for stats showing total tokens / price per conversation so they can answer "how much does equin cost me to run?".
 
-Claude Code already records every session as a JSONL file under `~/.claude/projects/<project>/<sessionId>.jsonl`, and the `ccusage` npm package (v18.0.11) parses these files into typed aggregates with pre-computed USD costs. Conversations in our DB store the matching `claudeSessionId` (verified: `findTranscriptPath` globs `*/${sessionId}.jsonl` against the same directory ccusage reads), so we can join ccusage output to our `_conversations` table for per-conversation breakdowns — which is the unique value Singularity can add over plain ccusage.
+Claude Code already records every session as a JSONL file under `~/.claude/projects/<project>/<sessionId>.jsonl`, and the `ccusage` npm package (v18.0.11) parses these files into typed aggregates with pre-computed USD costs. Conversations in our DB store the matching `claudeSessionId` (verified: `findTranscriptPath` globs `*/${sessionId}.jsonl` against the same directory ccusage reads), so we can join ccusage output to our `_conversations` table for per-conversation breakdowns — which is the unique value equin can add over plain ccusage.
 
-This plan adds a third sub-plugin under `plugins/stats/` that surfaces machine-wide Claude usage with a Singularity-aware filter and a per-conversation drilldown.
+This plan adds a third sub-plugin under `plugins/stats/` that surfaces machine-wide Claude usage with an equin-aware filter and a per-conversation drilldown.
 
 ## Approach
 
@@ -42,9 +42,9 @@ Each is a separate `Stats.Chart` contribution so the user can see them stacked i
 
 ### Filtering scope
 
-ccusage returns data for **every** Claude Code session on the machine — including ad-hoc sessions outside Singularity. Default surface = all data (matches ccusage's natural output and the user phrasing "how much singularity cost" since on a dev machine ≈ all usage IS Singularity-driven).
+ccusage returns data for **every** Claude Code session on the machine — including ad-hoc sessions outside equin. Default surface = all data (matches ccusage's natural output and the user phrasing "how much singularity cost" since on a dev machine ≈ all usage IS equin-driven).
 
-A "Singularity only" toggle (top-right of the card, same UX as the `Filter rebases` toggle in `commits`) intersects the data with `_conversations.claudeSessionId`s known to our DB. Persisted as a config field — see `plugins/stats/plugins/commits/shared/config.ts` for the pattern. **Skip** for v1 if it bloats scope; the join is needed for the Top Conversations table anyway, so it's cheap to add.
+A "equin only" toggle (top-right of the card, same UX as the `Filter rebases` toggle in `commits`) intersects the data with `_conversations.claudeSessionId`s known to our DB. Persisted as a config field — see `plugins/stats/plugins/commits/shared/config.ts` for the pattern. **Skip** for v1 if it bloats scope; the join is needed for the Top Conversations table anyway, so it's cheap to add.
 
 ## Files
 
@@ -85,6 +85,6 @@ A "Singularity only" toggle (top-right of the card, same UX as the `Filter rebas
 1. `./equin build` from the worktree — confirm new sub-plugin gets picked up by codegen, server restarts cleanly, `plugin-boundaries` check passes.
 2. Open `http://<worktree>.localhost:9000/stats` — confirm four new chart sections render below "Commits" and "Lines changed".
 3. Eyeball the totals — pick a known-cost session and cross-check against `bunx ccusage` CLI output (which reads the same files); numbers should match exactly since we use the same loader.
-4. Confirm the join: at least one row in the Top Conversations table should show a real Singularity conversation title (not a bare session UUID).
+4. Confirm the join: at least one row in the Top Conversations table should show a real equin conversation title (not a bare session UUID).
 5. Click a Top Conversations row — navigates to that conversation's pane.
 6. With ccusage's `~/.claude/projects` empty (or no sessions matching), all charts render `ChartState`'s "no data" empty state instead of crashing.

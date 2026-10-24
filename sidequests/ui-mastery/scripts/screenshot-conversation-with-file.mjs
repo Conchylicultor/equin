@@ -1,4 +1,4 @@
-// Screenshot a Singularity conversation with the edited-files pane open
+// Screenshot an equin conversation with the edited-files pane open
 // and one file selected in the right code pane.
 //
 // Usage:

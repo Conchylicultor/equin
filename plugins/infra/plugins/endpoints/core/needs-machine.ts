@@ -1,3 +1,5 @@
+import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
+
 /**
  * A desktop-only feature: what a declaration that needs the computer (an
  * endpoint or a live read declared `needsMachine`) is called in the sentence a
@@ -12,7 +14,7 @@ export interface MachineFeature {
  * declaration with, composed here so every surface says it the same way.
  */
 export function unavailableMessage(feature: MachineFeature): string {
-  return `${feature.feature} isn't available in this version of the app — it needs Singularity running on your computer.`;
+  return `${feature.feature} isn't available in this version of the app — it needs ${PRODUCT_NAME} running on your computer.`;
 }
 
 /** The answer a `needsMachine` declaration gets on a host without the computer. */

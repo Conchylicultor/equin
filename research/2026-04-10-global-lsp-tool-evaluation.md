@@ -2,7 +2,7 @@
 
 ## Context
 
-This document records the empirical behavior of the `LSP` tool exposed by the Claude Code harness, tested against the Singularity codebase on 2026-04-10. It is not a design doc — it is a debugging reference for when the tool misbehaves and we need to know what is "by design", what is a quirk, and what is a real bug.
+This document records the empirical behavior of the `LSP` tool exposed by the Claude Code harness, tested against the equin codebase on 2026-04-10. It is not a design doc — it is a debugging reference for when the tool misbehaves and we need to know what is "by design", what is a quirk, and what is a real bug.
 
 The motivation was a surprising result during normal use: an initial `findReferences` call on `defineSlot` returned only 2 references in 1 file, while `grep` showed 8 files. That triggered a full audit.
 
@@ -53,9 +53,9 @@ All tests run against `plugin-core/` and `plugins/terminal/` files unless noted.
 - `line`/`character` parameters are required by schema but **ignored** — the same result is returned regardless of cursor position.
 
 ### `workspaceSymbol` ✅ (with caveats)
-- Returns **all** symbols in the workspace. In Singularity: 279 symbols across 36 files.
+- Returns **all** symbols in the workspace. In equin: 279 symbols across 36 files.
 - `line`/`character` parameters are required by schema but **ignored**. Verified by calling from two different files with two different positions — identical 279-symbol payload.
-- **No query parameter.** You cannot filter by name. You always get the whole list. For a large monorepo this could blow context — for Singularity it's fine.
+- **No query parameter.** You cannot filter by name. You always get the whole list. For a large monorepo this could blow context — for equin it's fine.
 - **Side effect:** appears to load all workspace files into the TS server's program, which un-laziness `findReferences`, `incomingCalls`, etc. for the rest of the session. This is the warming trick.
 
 ### `goToImplementation` ✅
@@ -89,7 +89,7 @@ The harness exposes **no `didOpen` API and no warm-up call**. Reading a file via
 
 **The reliable workaround:** call `workspaceSymbol` once at the start of a session. This appears to load every workspace file into the TS program. After that, `findReferences` / `incomingCalls` / `outgoingCalls` return complete results.
 
-For Singularity-sized projects this is fine. For very large monorepos it may be too eager and cost a lot of memory in the language server process — at which point the workaround is to manually pre-touch only the files you care about by calling a cheap operation like `documentSymbol` on each.
+For equin-sized projects this is fine. For very large monorepos it may be too eager and cost a lot of memory in the language server process — at which point the workaround is to manually pre-touch only the files you care about by calling a cheap operation like `documentSymbol` on each.
 
 ## Edge cases & error handling
 
@@ -104,7 +104,7 @@ For Singularity-sized projects this is fine. For very large monorepos it may be 
 | Position past EOF | Graceful "no info" — no error |
 | Position on whitespace adjacent to a symbol | Often still resolves (TS server is permissive) |
 
-The TypeScript server is the only one configured. Python (`.py`), Go (`.go`), and JSON files would all return "No LSP server available". Singularity's future `cli/` (Python) and `gateway/` (Go) directories will need additional servers configured in the harness if we want LSP support there.
+The TypeScript server is the only one configured. Python (`.py`), Go (`.go`), and JSON files would all return "No LSP server available". equin's future `cli/` (Python) and `gateway/` (Go) directories will need additional servers configured in the harness if we want LSP support there.
 
 ## Quirks worth flagging
 

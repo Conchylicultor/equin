@@ -2,7 +2,7 @@
 
 ## Context
 
-The user has a monolithic React component (~500 LOC) implementing a chord progression player with piano keyboard visualization, audio synthesis (piano/epiano/synth), BPM-driven sequencing, and AI chord generation. They want it decomposed into an extensible plugin tree within Singularity. The app will evolve into a full Synthesia-like piano app.
+The user has a monolithic React component (~500 LOC) implementing a chord progression player with piano keyboard visualization, audio synthesis (piano/epiano/synth), BPM-driven sequencing, and AI chord generation. They want it decomposed into an extensible plugin tree within equin. The app will evolve into a full Synthesia-like piano app.
 
 Key decisions:
 - **Standalone app** with its own rail icon and `/sonata` route

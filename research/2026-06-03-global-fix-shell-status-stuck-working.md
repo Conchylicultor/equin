@@ -40,7 +40,7 @@ stays `working` permanently.
 
 ### Goal
 
-Treat the `shell` status as `working` **only when Singularity itself knows a build or
+Treat the `shell` status as `working` **only when equin itself knows a build or
 push is in flight** for that worktree. Any other never-ending background shell falls
 through to the normal title reading (`✳ ready → waiting`), so a stalled agent
 correctly surfaces for the user instead of looking busy forever.
@@ -175,7 +175,7 @@ let working: boolean;
 if (SPINNER_RE.test(trimmed)) {
   working = true;                       // actively computing
 } else if (session.status === "shell") {
-  // A background subprocess is attached. Treat as working ONLY when Singularity
+  // A background subprocess is attached. Treat as working ONLY when equin
   // knows a build/push is in flight for this worktree — that operation will
   // complete and resume the agent. Any other never-ending background shell
   // (dev server, tail -f, a build whose completion marker never matched) falls

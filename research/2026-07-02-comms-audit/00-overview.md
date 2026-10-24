@@ -1,6 +1,6 @@
 # Communications Audit — Overview & Mental Model
 
-> Full audit of every DB ↔ Server ↔ Client communication path in Singularity:
+> Full audit of every DB ↔ Server ↔ Client communication path in equin:
 > the raw pieces, the abstractions layered on top, how they connect, and the
 > public APIs with real consumer examples.
 >
@@ -21,7 +21,7 @@
 
 ## 1. The one-paragraph summary
 
-Singularity has **one sanctioned way to do each kind of communication**, and
+equin has **one sanctioned way to do each kind of communication**, and
 checks/lints that ban hand-rolled alternatives. Reads that must stay fresh go
 through **live-state resources** (server-computed values pushed over a shared,
 leader-elected WebSocket). One-shot reads and writes go through **typed

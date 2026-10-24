@@ -114,7 +114,7 @@ implementation moves from optimistic-POST to Y-transaction.
 2. **`plugins/primitives/plugins/yjs-transport`** (web) — `createYjsTransport(pageId)
    → { send, onMessage, connect, disconnect, status }` over the existing cross-tab
    `SharedWebSocket` to `/ws/yjs/:pageId`. Keeps `CollabProvider` ignorant of
-   Singularity networking.
+   equin networking.
 3. **`plugins/page/plugins/editor-collab`** (server) — `wsRoutes:
    { "/ws/yjs/:pageId" }` relay; `PageDocRegistry` (hydrate/ref-count/evict); the
    debounced projection (`Y.Doc → page_blocks → blocksChanged`); persistence
@@ -125,7 +125,7 @@ implementation moves from optimistic-POST to Y-transaction.
    `yjs-block-ops.ts` (`applyBlockOpToDoc(doc, op)`) backs the unchanged
    `BlockEditorAPI`.
 
-**Transport decision** (deviation): build a Singularity-native provider over
+**Transport decision** (deviation): build an equin-native provider over
 `SharedWebSocket` using `y-protocols/sync`+`awareness` for framing — do **not**
 adopt `y-websocket`, which opens its own per-tab socket and bypasses the shared
 cross-tab leader, reconnect, and net-diagnostics the app relies on. Server side

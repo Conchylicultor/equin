@@ -32,7 +32,7 @@
 //         <tag name="In progress"/>
 //       </tags>
 //       <breadcrumb>
-//         <page id="block-…" title="Singularity"/>
+//         <page id="block-…" title="equin"/>
 //         <page id="block-…" title="Hosted"/>
 //       </breadcrumb>
 //       <backlinks>

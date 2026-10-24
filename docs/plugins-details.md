@@ -4004,7 +4004,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `live-state/no-handrolled-result` — `web/components/git-fields.tsx` (sanctioned)
               - `boundaries/no-platform-api` — `server/internal/checkout.ts`, `server/internal/status.ts` (debt)
-        - **`places`** — The file explorer's Places sidebar: the places of every FileExplorer.Places source (its own: Home, Downloads, the Singularity checkout, the user's pinned favorites, the startup volume, Trash) as a DataView list in Favorites / Worktrees / Locations sections with the current folder's place active, and the startup volume's storage meter at its foot. Host paths dragged onto Favorites (HOST_PATHS_MIME) are pinned there — a folder opens itself, a file its folder with the file previewed — kept in the file-explorer places config; a pin's row offers Remove from Favorites, and the browser's row ⋯ menu Add to Favorites. Where the file explorer's Singularity place leads: serves the file-explorer.main-checkout value, the main checkout's path; registers the pinned-favorites config.
+        - **`places`** — The file explorer's Places sidebar: the places of every FileExplorer.Places source (its own: Home, Downloads, the equin checkout, the user's pinned favorites, the startup volume, Trash) as a DataView list in Favorites / Worktrees / Locations sections with the current folder's place active, and the startup volume's storage meter at its foot. Host paths dragged onto Favorites (HOST_PATHS_MIME) are pinned there — a folder opens itself, a file its folder with the file previewed — kept in the file-explorer places config; a pin's row offers Remove from Favorites, and the browser's row ⋯ menu Add to Favorites. Where the file explorer's equin place leads: serves the file-explorer.main-checkout value, the main checkout's path; registers the pinned-favorites config.
           - Web:
             - Slots: `row-actions`
             - Slot contributors: `row-actions` ← `apps.file-explorer.places`
@@ -11757,7 +11757,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/paths.CLAUDE_DIR`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/assemble-claude-settings.ts` (debt)
-        - **`config`** — Config UI for the config backup source. Backs up Singularity config files into the backup archive.
+        - **`config`** — Config UI for the config backup source. Backs up equin config files into the backup archive.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "config"
             - Uses: `config_v2.ConfigV2`
@@ -11849,14 +11849,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2.getConfig`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/assemble-secrets.ts` (debt)
-        - **`singularity-platform`** — Config UI for the Singularity platform backup source. Backs up Singularity platform files (auth, database config) into the backup archive.
+        - **`singularity-platform`** — Config UI for the equin platform backup source. Backs up equin platform files (auth, database config) into the backup archive.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "config"
             - Uses: `config_v2.ConfigV2`
           - Server:
             - Contributes:
               - `ConfigV2.Register` "config"
-              - `backup.source` "Singularity Platform"
+              - `backup.source` "equin platform"
             - Uses:
               - `backup.BackupSource`
               - `config_v2.ConfigV2`
@@ -14399,7 +14399,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/artifacts/skill`
               - `debug/browser-recordings`
           - Plugins:
-            - **`page`** — Singularity pages as a conversation artifact: every page the transcript's edit_page / write_agent_note / read_page calls acted on, listed as a row that opens the page beside the chat — or, for a call scoped to one block of a page, the block view. A write edited the page it wrote into and created every <agent-page> its report says it minted (each its own row), and a read referenced it. Keyed by the page id the apply report names, falling back to the block the call was scoped to; each key resolves through page-tree's useBlockTarget, titled with its page (and, for a block, its type's label). Server half of the page artifact kind: its pure extractor, run over the whole transcript by the artifacts host.
+            - **`page`** — equin pages as a conversation artifact: every page the transcript's edit_page / write_agent_note / read_page calls acted on, listed as a row that opens the page beside the chat — or, for a call scoped to one block of a page, the block view. A write edited the page it wrote into and created every <agent-page> its report says it minted (each its own row), and a read referenced it. Keyed by the page id the apply report names, falling back to the block the call was scoped to; each key resolves through page-tree's useBlockTarget, titled with its page (and, for a block, its type's label). Server half of the page artifact kind: its pure extractor, run over the whole transcript by the artifacts host.
               - Web:
                 - Contributes: `ConversationArtifacts.Kind` "Pages"
                 - Uses:
@@ -16466,7 +16466,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/density --space-sm`
                       - `ui/tokens/shape --radius`
                       - `ui/tokens/shape --spacing`
-                - **`page-tools`** — Shared appearance for the Singularity page MCP tool rows (read_page / write_agent_note / edit_page): the page-identity chip, the apply-report chips, the markdown body, and the refusal block. Contributes no renderer itself — one sub-plugin per tool does.
+                - **`page-tools`** — Shared appearance for the equin page MCP tool rows (read_page / write_agent_note / edit_page): the page-identity chip, the apply-report chips, the markdown body, and the refusal block. Contributes no renderer itself — one sub-plugin per tool does.
                   - Web:
                     - Uses:
                       - `apps/pages/page-tree.pageDetailPane`
@@ -25099,6 +25099,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `computeLoadWaves`
           - `topoSortPlugins`
+    - **`product-name`** — The product's own name, as data: PRODUCT_NAME (`equin`, always lowercase — what every person and agent reads) and LEGACY_PRODUCT_NAMES (the names it went by before, never written again), enforced by the product-name:legacy check over every tracked file. A dependency-free leaf, so a browser bundle, a server or a script can import it.
+      - Cross-plugin:
+        - Imported by: `infra/endpoints`
+      - Exemptions:
+        - Exempts itself from: `product-name:legacy` — `core/internal/product-name.ts`, `check/index.ts` (sanctioned)
+      - Core:
+        - Exports (values):
+          - `LEGACY_PRODUCT_NAMES`
+          - `PRODUCT_NAME`
     - **`resource-runtime`**
       - Core:
         - Uses: 21 symbols — full list in [`plugins/framework/plugins/resource-runtime/REFERENCE.md`](../plugins/framework/plugins/resource-runtime/REFERENCE.md)
@@ -27163,7 +27172,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `improve/element-picker`
       - `screenshot/draw-on-app`
   - Plugins:
-    - **`element-picker`** — The element picker wired into Singularity's Improve flow: a 'Pick UI element' segment of the Improve pill that opens the Improve popover with the picked element as a <ui-context/> chip, and an 'Attach UI element' button in the task-draft form. The picker, its overlay and the chip are primitives/ui-context/element-picker.
+    - **`element-picker`** — The element picker wired into equin's Improve flow: a 'Pick UI element' segment of the Improve pill that opens the Improve popover with the picked element as a <ui-context/> chip, and an 'Attach UI element' button in the task-draft form. The picker, its overlay and the chip are primitives/ui-context/element-picker.
       - Web:
         - Contributes:
           - `ImproveSlots.Segment` "element-picker" → `ElementPickerButton`
@@ -28216,6 +28225,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useMachineAvailability`
       - Core:
         - Uses:
+          - `framework/product-name.PRODUCT_NAME`
           - `infra/request-origin.AGENT_WRITE_HEADER`
           - `infra/request-origin.originOf`
           - `infra/runtime-identity.isMain`

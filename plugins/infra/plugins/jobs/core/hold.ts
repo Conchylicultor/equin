@@ -190,7 +190,7 @@ export const TOTAL_JOB_SLOTS: number = RUNNERS.reduce(
   0,
 );
 
-/** Every graphile task identifier a Singularity job row can carry: one per class
+/** Every graphile task identifier an equin job row can carry: one per class
  * plus the legacy task. Composed by the queue-scoping SQL rather than re-typed. */
 export const ALL_JOB_TASKS: readonly string[] = [
   ...HOLD_CLASSES.map((hold) => HOLD_SPECS[hold].task),

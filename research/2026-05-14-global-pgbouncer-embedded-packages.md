@@ -2,7 +2,7 @@
 
 ## Context
 
-Singularity embeds PostgreSQL via `@embedded-postgres/*` npm packages (per-platform optionalDependencies). With 10+ worktrees active, each holding ~13 PG connections, the `max_connections=500` ceiling creates congestion. PgBouncer (connection pooler) is the fix, but it needs to be embedded the same way PG is — no system dependency, just `bun install`.
+equin embeds PostgreSQL via `@embedded-postgres/*` npm packages (per-platform optionalDependencies). With 10+ worktrees active, each holding ~13 PG connections, the `max_connections=500` ceiling creates congestion. PgBouncer (connection pooler) is the fix, but it needs to be embedded the same way PG is — no system dependency, just `bun install`.
 
 The repo `equinai/pgbouncer-embedded` is created. This plan covers: populating it with a CI matrix that builds PgBouncer statically for 4 platforms and publishes `@equin/pgbouncer-{platform}` to npm.
 
@@ -167,7 +167,7 @@ git tag v1.25.2 && git push origin v1.25.2
 - Publish job publishes 4 packages to npm
 - `npm info @equin/pgbouncer-darwin-arm64` shows the package
 
-### 6. Test consumption in Singularity (separate task, not this plan)
+### 6. Test consumption in equin (separate task, not this plan)
 
 Add to `plugins/database/plugins/embedded/package.json`:
 ```json
@@ -187,4 +187,4 @@ Run `bun install`, verify `node_modules/@equin/pgbouncer-darwin-arm64/native/bin
 
 ## Follow-up (separate task)
 
-Wire PgBouncer into Singularity as `plugins/database/plugins/pgbouncer/` — lifecycle, config generation, connection routing. Covered by existing research doc `research/2026-05-02-global-embedded-postgres-pgbouncer.md`.
+Wire PgBouncer into equin as `plugins/database/plugins/pgbouncer/` — lifecycle, config generation, connection routing. Covered by existing research doc `research/2026-05-02-global-embedded-postgres-pgbouncer.md`.

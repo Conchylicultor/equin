@@ -2,7 +2,7 @@
 
 ## Context
 
-Every feature in Singularity is a plugin — including the app shell itself. The main app (`web/`) is a minimal bootstrap that collects plugins and renders the root.
+Every feature in equin is a plugin — including the app shell itself. The main app (`web/`) is a minimal bootstrap that collects plugins and renders the root.
 
 Key change from v1: instead of the host defining fixed layout regions, **any plugin can define slots** (typed extension points) that other plugins contribute to. The shell is just a plugin that happens to define the top-level layout slots.
 

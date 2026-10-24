@@ -58,7 +58,7 @@ Catalogue of pain points in the existing data/sync layer (`server/src/resources.
 ## 9. Authorization has no place to live
 
 - Every handler is `(req: Request) => Promise<Response>`. Read auth, write auth, rate limiting, audit logging — all would have to be re-implemented per-handler.
-- Resource loaders run server-side with full DB access, no caller context. Even if Singularity grew a notion of identity, the loader has nowhere to receive it.
+- Resource loaders run server-side with full DB access, no caller context. Even if equin grew a notion of identity, the loader has nowhere to receive it.
 - The single-user/local assumption is baked into the absence of an auth layer, not into a deliberate "no-auth" mode that could be flipped.
 
 ## 10. Schema migrations are a separate, fragile track

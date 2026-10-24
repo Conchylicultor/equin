@@ -11,7 +11,7 @@ The two-tier design lets us catch in-progress leaks within ~5s while keeping the
 
 ## Why
 
-Originally set up because Singularity was the leading suspect for "too many files open" crashes (long-lived gateway, many spawned bun backends, accumulating worktrees / Postgres DBs / tmux sessions). The monitor captured a real spike on 2026-04-26 and showed the leak was a runaway **Claude CLI** child process (pid held 65,489 FDs in <30s; `lsof` itself failed mid-run; system rebooted seconds later). Singularity processes were normal throughout. The monitor is being kept active to catch future repeats and gather full forensics.
+Originally set up because equin was the leading suspect for "too many files open" crashes (long-lived gateway, many spawned bun backends, accumulating worktrees / Postgres DBs / tmux sessions). The monitor captured a real spike on 2026-04-26 and showed the leak was a runaway **Claude CLI** child process (pid held 65,489 FDs in <30s; `lsof` itself failed mid-run; system rebooted seconds later). equin processes were normal throughout. The monitor is being kept active to catch future repeats and gather full forensics.
 
 ## What it captures
 

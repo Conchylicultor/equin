@@ -6,7 +6,7 @@
 
 ## 1. Problem restatement
 
-Singularity's current sync layer treats each handler as a bare `(req, params) => Response` and each resource loader as a server-context-free `(params) => value`. Five concerns have nowhere to live: (a) caller identity / read-write authorization, (b) reactive sources that aren't a Postgres query — file watchers, `git log`, transcript JSONL tails, (c) introspection of "who is subscribed, what fired, why didn't this update", (d) speculative branching ("what if I rename these 50 tasks?") and time-travel within a single worktree, (e) running the broker outside one Bun process. These concerns interlock — auth needs a context object that observability also wants to read; branching needs an event log that observability would also use; multi-process broadcasting changes how `notify()` flows. The aim of this sub-design is to define one **request/operation context** primitive plus a small set of optional layers on top of it, so the other sub-designs can adopt them without paying the full cost up front.
+equin's current sync layer treats each handler as a bare `(req, params) => Response` and each resource loader as a server-context-free `(params) => value`. Five concerns have nowhere to live: (a) caller identity / read-write authorization, (b) reactive sources that aren't a Postgres query — file watchers, `git log`, transcript JSONL tails, (c) introspection of "who is subscribed, what fired, why didn't this update", (d) speculative branching ("what if I rename these 50 tasks?") and time-travel within a single worktree, (e) running the broker outside one Bun process. These concerns interlock — auth needs a context object that observability also wants to read; branching needs an event log that observability would also use; multi-process broadcasting changes how `notify()` flows. The aim of this sub-design is to define one **request/operation context** primitive plus a small set of optional layers on top of it, so the other sub-designs can adopt them without paying the full cost up front.
 
 ---
 
@@ -25,7 +25,7 @@ Today every plugin route is `(req, params) => Response`; resource loaders are `(
 
 Every mature sync/RPC layer threads a **single context object** through every server-side function — query, mutation, action, subscription, route handler. The context carries identity, transaction, telemetry span, request id, and pluggable extensions. Authorization is then either (a) **imperative**: middleware that throws `UNAUTHORIZED` before calling `next()` (tRPC, Hono), or (b) **declarative**: a row policy compiled into the query (Hasura, Postgres RLS). Imperative wins on flexibility (cross-table rules, rate limits, audit hooks); declarative wins on guarantee — you cannot accidentally write a query that bypasses the rule.
 
-For Singularity — single-tenant local app evolving into multi-agent speculation — the imperative path is the right starting point. There is no real *user* yet, but there is already a meaningful caller distinction: human user via the gateway, agent via MCP, internal job from the queue, recursive call from another resource. Each is an *Actor* with different write rights ("agents can't drop tasks they didn't create", "MCP cannot impersonate another agent's worktree").
+For equin — single-tenant local app evolving into multi-agent speculation — the imperative path is the right starting point. There is no real *user* yet, but there is already a meaningful caller distinction: human user via the gateway, agent via MCP, internal job from the queue, recursive call from another resource. Each is an *Actor* with different write rights ("agents can't drop tasks they didn't create", "MCP cannot impersonate another agent's worktree").
 
 ### Sketch — `OpCtx` as the universal first argument
 
@@ -92,7 +92,7 @@ There are two viable patterns, and a hybrid:
 2. **Make external triggers a first-class verb** (TanStack). The resource loader can be *anything* (DB query, file read, git shell-out); the resource also exposes an *`invalidate(params)`* that any external system (FS watcher, polling job, `LISTEN/NOTIFY`) can call.
 3. **Hybrid with explicit `source` adapters**: declare *what* the source is (table set, file glob, polling interval, external pubsub channel), and the engine handles the trigger plumbing.
 
-Pattern #3 is the right north star for Singularity — it lifts the reactive-trigger metadata out of imperative code, which is the same move that fixes issues #1, #2, and #17. But pattern #2 is a *strict subset* of #3 and is achievable today.
+Pattern #3 is the right north star for equin — it lifts the reactive-trigger metadata out of imperative code, which is the same move that fixes issues #1, #2, and #17. But pattern #2 is a *strict subset* of #3 and is achievable today.
 
 ### Sketch — `defineSource` adapters
 
@@ -160,7 +160,7 @@ Two observations across mature systems:
 1. **Request ID propagation.** A request id (or causation chain) is generated at the edge and threaded through every span — server function, DB query, downstream cascade, WS broadcast, client cache update. It's the join key for "show me everything caused by X". Convex, Apollo, OTel all do this.
 2. **Introspection is itself queryable.** Materialize exposes its dataflow as SQL views; Convex exposes its function log as a streaming endpoint; Apollo exposes its cache as a tree the devtool can render. The debug surface is a *consumer of the same primitives*, not a separate logging path.
 
-For Singularity, this means: the request id (already on `OpCtx`) propagates through every notify cascade, every WS push, every subscription ack — and the `_debug` endpoint becomes a *resource* like any other (`defineResource({ key: "_resources.debug", source: ... })`). The Queue debug pane and a new Resources debug pane both consume the same shape.
+For equin, this means: the request id (already on `OpCtx`) propagates through every notify cascade, every WS push, every subscription ack — and the `_debug` endpoint becomes a *resource* like any other (`defineResource({ key: "_resources.debug", source: ... })`). The Queue debug pane and a new Resources debug pane both consume the same shape.
 
 ### Sketch — observability as a resource
 
@@ -236,7 +236,7 @@ Two orthogonal axes:
 1. **Where does the branch live?** Storage (Neon), schema-only (PlanetScale), application-layer event log (Replicache, Automerge), per-process snapshot (Dolt SQL session).
 2. **How is it merged?** Reset-and-replay (Replicache), three-way merge (PlanetScale, Dolt, Git), CRDT auto-merge (Automerge, Yjs), or "no merge — branches are scratch space" (Figma's branching, draft documents).
 
-For Singularity's *immediate* use case ("agent speculates 50 task renames; user says yes/no"), the key insight is: **agents already work in a forked Postgres DB per worktree**. Adding *intra-worktree* branching is the missing layer. The right primitive is **scoped transactions** with persistence:
+For equin's *immediate* use case ("agent speculates 50 task renames; user says yes/no"), the key insight is: **agents already work in a forked Postgres DB per worktree**. Adding *intra-worktree* branching is the missing layer. The right primitive is **scoped transactions** with persistence:
 
 - A "scratch branch" is a Postgres `SAVEPOINT` that may live across many round trips, recorded in a `_branches` table.
 - Or, more ambitious: every mutation produces an event in an append-only `_mutation_log` (id, requestId, op, args, by_actor, at). Replay is "fold this log onto the snapshot at offset N". This is the same primitive that fixes #18's undo *and* gives observability §4 its causation chain *and* gives multi-process §6 its replay-on-reconnect story.
@@ -311,7 +311,7 @@ Issue #19: resources, jobs, events, and the WS broker all live in one Bun proces
 
 ### The pattern
 
-The Singularity scaling boundary is unusual: each worktree is already its own logical "room" (its own DB, its own gateway namespace, its own Bun process). The cross-process problem inside *one* worktree is currently theoretical (we're single-process per worktree) but real for: (a) splitting hot loaders into a worker process, (b) running a leader-elected WS broker so tabs share connections, (c) the future "multi-machine" speculation Aaron Boodman gestures at in the Replicache / Zero podcast.
+The equin scaling boundary is unusual: each worktree is already its own logical "room" (its own DB, its own gateway namespace, its own Bun process). The cross-process problem inside *one* worktree is currently theoretical (we're single-process per worktree) but real for: (a) splitting hot loaders into a worker process, (b) running a leader-elected WS broker so tabs share connections, (c) the future "multi-machine" speculation Aaron Boodman gestures at in the Replicache / Zero podcast.
 
 The cleanest model is the **Durable-Object-per-worktree** analogue: each worktree's gateway namespace owns the broker; everything else is a client of it. Inside the worktree, a single broker serializes notifies and fans out to subscribers. Cross-worktree communication is gateway-mediated (already true today). Cross-process inside a worktree (long-running loaders, jobs queue) talks to the broker over an internal channel — Postgres `LISTEN/NOTIFY` for single-machine, Redis pub/sub or NATS if we ever multi-machine.
 
@@ -356,7 +356,7 @@ The cross-cutting constraint on the **wire protocol sub-design**: messages shoul
 
 ## 7. Cross-cutting comparison table
 
-| Concern | Existing pattern in Singularity | Minimal addition | Ambitious redesign |
+| Concern | Existing pattern in equin | Minimal addition | Ambitious redesign |
 | --- | --- | --- | --- |
 | **Auth / middleware** | Bare `(req, params) => Response`; no caller context anywhere; loaders run with system creds | Add `OpCtx` as the first arg of route + resource handlers; populate `actor` from gateway header; `requireAgent` / `requireHuman` middlewares | Declarative permissions on resources (`canRead(actor, row)`) compiled into the loader; per-subscriber filtering on broadcast |
 | **Non-DB sources** | Manual `notify()` from wherever change is detected (FS watcher, git poller, JSONL tail) | `defineSource` adapters: `dbTableSource`, `fileGlobSource`, `pollSource`, `pgListenSource` | Source registry exposed as a resource; dynamic source wiring; "project the world into the DB" feeders for cross-process consistency |
@@ -366,7 +366,7 @@ The cross-cutting constraint on the **wire protocol sub-design**: messages shoul
 
 ---
 
-## 8. Options for Singularity
+## 8. Options for equin
 
 These five concerns interact. Below, each has 1–2 options chosen so they don't lock out the others.
 

@@ -4,14 +4,14 @@
 
 ## Plugin reference
 
-- Description: Config UI for the Singularity platform backup source. Backs up Singularity platform files (auth, database config) into the backup archive.
+- Description: Config UI for the equin platform backup source. Backs up equin platform files (auth, database config) into the backup archive.
 - Web:
   - Contributes: `ConfigV2.WebRegister` "config"
   - Uses: `config_v2.ConfigV2`
 - Server:
   - Contributes:
     - `ConfigV2.Register` "config"
-    - `backup.source` "Singularity Platform"
+    - `backup.source` "equin platform"
   - Uses:
     - `backup.BackupSource`
     - `config_v2.ConfigV2`

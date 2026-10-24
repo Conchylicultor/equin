@@ -57,7 +57,7 @@ In-memory loaders never call `pool.query`, so they're never gated (the config pa
 - **Subsumed into the one path:** single-flight (a property of refill, not a primitive call site); push-vs-refill-per-subscriber (everyone reads the same cached value).
 - **Kept, because it's a genuinely separate concern:** `debounceMs` (coalesce invalidations over time — not a contention band-aid); the `inflight` primitive (reused inside refill); endpoints `dedupe` (HTTP layer).
 
-This is the modern sync-engine shape (Linear/Convex/RSC: compute once, hold in memory, fan out). Singularity already half-implements it via `push` mode — the end state just makes *every* access go through the cache, and makes the DB gate guard the one scarce resource.
+This is the modern sync-engine shape (Linear/Convex/RSC: compute once, hold in memory, fan out). equin already half-implements it via `push` mode — the end state just makes *every* access go through the cache, and makes the DB gate guard the one scarce resource.
 
 ## Tasks (each self-contained and independently shippable, in order)
 

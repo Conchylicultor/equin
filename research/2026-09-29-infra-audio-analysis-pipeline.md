@@ -5,7 +5,7 @@ That doc sets the goal and the two contracts. This one is A's own plan.
 
 ## Context
 
-Singularity has no audio analysis today. Nothing in the repo provisions Python,
+equin has no audio analysis today. Nothing in the repo provisions Python,
 uv, ffmpeg or yt-dlp. Aligning a UG sheet to a recording (task B) needs the
 **beat features** for any `videoId`: beats, downbeats, per-beat chroma and bass
 chroma, the duration and an analysis version. They are computed out of process

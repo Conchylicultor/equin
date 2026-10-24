@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-command install of Singularity, from a clean machine to a running app.
+# One-command install of equin, from a clean machine to a running app.
 #
 #   curl -fsSL https://raw.githubusercontent.com/Conchylicultor/singularity/main/install.sh | bash
 #   ./install.sh                  # from inside a clone or fork you already have
@@ -64,7 +64,7 @@ main() {
 
   cat <<EOF
 
-  Singularity installer. This will:
+  equin installer. This will:
     1. install the Xcode command-line tools, if missing (macOS), or git and a
        C compiler (Linux, apt) — and enable lingering so the app runs with
        nobody logged in (Linux); asks for your password once
@@ -139,7 +139,7 @@ EOF
   if [ "$EDIT_RC" = "1" ]; then
     if ! grep -qs "mise activate" "$RC"; then
       say "Activating mise in new terminals ($RC)"
-      printf '\n# mise: the Bun/Go/Rust releases Singularity runs on\n%s\n' "$ACTIVATE" >> "$RC"
+      printf '\n# mise: the Bun/Go/Rust releases equin runs on\n%s\n' "$ACTIVATE" >> "$RC"
     fi
   fi
   # This process: mise's shims on PATH, which is what the doctor calls active.
@@ -205,7 +205,7 @@ EOF
     if "$claude_bin" auth login </dev/tty; then signed_in=1; fi
   fi
 
-  say "Singularity is running: http://equin.localhost:9000"
+  say "equin is running: http://equin.localhost:9000"
   echo "  Checkout: $INSTALL_DIR"
   [ "$EDIT_RC" = "1" ] && echo "  Open a new terminal to use ./equin (mise is active there)."
   if [ "$signed_in" = "0" ]; then

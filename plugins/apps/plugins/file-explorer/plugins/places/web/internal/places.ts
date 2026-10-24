@@ -32,11 +32,11 @@ function fixedPlace(
   };
 }
 
-/** The Singularity main checkout — its path is the server's to say. */
+/** The equin main checkout — its path is the server's to say. */
 function useSingularityPlace(): PlacesState {
   const checkout = useLive(fileExplorerMainCheckout);
   const home = useHomeDir();
-  const label = "Singularity";
+  const label = "equin";
   if (checkout.status === "error") {
     return {
       kind: "failed",

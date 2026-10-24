@@ -1,6 +1,6 @@
 # Live-State Work-Admission — the global mental model
 
-> North-star + mental model for why Singularity keeps getting slow, gets patched,
+> North-star + mental model for why equin keeps getting slow, gets patched,
 > and gets slow again — and the single structural change that makes "fast" an
 > invariant the architecture *defends* rather than a state agents *restore by hand*.
 >

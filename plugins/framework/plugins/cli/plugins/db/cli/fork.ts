@@ -56,7 +56,7 @@ async function fetchForkExclusions(worktree: string): Promise<ForkExclusions> {
   throw new Error(
     `Could not read the fork exclusion set from any running backend:\n  ${failures.join(
       "\n  ",
-    )}\nStart Singularity and retry — forking without the exclusions would copy ` +
+    )}\nStart equin and retry — forking without the exclusions would copy ` +
       `every observability and mail table (~2 GB of traces, messages and notifications).`,
   );
 }

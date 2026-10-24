@@ -7,7 +7,7 @@ written, where do they get stuck, and how long does each step take?
 
 ## Why a VM
 
-This Mac already runs a real Singularity instance: gateway on the hardcoded
+This Mac already runs a real equin instance: gateway on the hardcoded
 port 9000, embedded Postgres, state under `~/.singularity`. A second macOS
 user account would still see this Mac's Homebrew and would collide on port
 9000, so it isn't clean. Instead this runs inside a throwaway VM via

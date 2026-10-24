@@ -50,7 +50,7 @@ Documented; advanced interception (service-worker rewrite, POST proxying) is a f
 ### Security model (critical)
 
 Proxied content is served from **our** gateway origin. If the iframe kept
-`allow-same-origin`, the foreign page's JS would be same-origin with the Singularity app and
+`allow-same-origin`, the foreign page's JS would be same-origin with the equin app and
 could reach `window.parent`. **Rule:** the iframe drops `allow-same-origin` whenever its
 `src` is same-origin (i.e. proxied) — proxied content runs in an opaque, isolated origin
 (`allow-scripts allow-forms allow-popups` only). Cross-origin direct loads keep

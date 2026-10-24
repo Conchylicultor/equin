@@ -285,7 +285,7 @@ Default (2025): Kamal 2 + GHCR + GitHub Actions
 
 ---
 
-## Relevance to Singularity/equin
+## Relevance to equin/equin
 
 Our stack: Go gateway + Bun/TS server + Vite SPA + PostgreSQL → Hetzner VPS + Caddy.
 

@@ -108,7 +108,7 @@ just a page — with a header stating where it comes from:
     <tag name="In progress"/>
   </tags>
   <breadcrumb>
-    <page id="…" title="Singularity"/>
+    <page id="…" title="equin"/>
     <page id="…" title="Hosted"/>     ← the page holding the root, always last
   </breadcrumb>
   <backlinks>                        ← `<backlinks/>` when nothing links here

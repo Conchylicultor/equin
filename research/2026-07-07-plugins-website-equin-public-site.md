@@ -1,12 +1,12 @@
-# Website app — the public-facing site of Singularity (equin)
+# Website app — the public-facing site of equin (equin)
 
 ## Context
 
-Singularity's public brand is **equin** (domain equin.ai). The deployment roadmap
+equin's public brand is **equin** (domain equin.ai). The deployment roadmap
 ([2026-05-04-global-equin-ai-deployment-roadmap.md](./2026-05-04-global-equin-ai-deployment-roadmap.md))
 plans a stripped-down public deployment serving a blog, download page, and interactive demo.
 Its "Step 3 — profile system" has since landed as the composition/release engine; this plan is
-**Step 4: the site itself**, built as a normal Singularity app so it can be authored, previewed,
+**Step 4: the site itself**, built as a normal equin app so it can be authored, previewed,
 and iterated locally today.
 
 Scope decisions (confirmed with the user):

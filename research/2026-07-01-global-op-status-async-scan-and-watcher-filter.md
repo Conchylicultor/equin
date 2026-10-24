@@ -159,7 +159,7 @@ tracked separately, not done here.
 
 Per the repo's "fix the structural issue" rule, this class — *synchronous IO reachable
 from a live-state loader freezing the whole flush cycle* — should be prevented, not
-just patched here. **File each as a Singularity task via the `add_task` MCP tool during
+just patched here. **File each as an equin task via the `add_task` MCP tool during
 implementation** (not part of this change's diff):
 
 - A lint rule or `./equin check` that flags `*Sync` `node:fs` calls in server

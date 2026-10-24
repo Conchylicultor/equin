@@ -7,7 +7,7 @@ Part 2 of 4. See also:
 
 ## Context
 
-Singularity's plugin system today has three primitives: **slots** (typed extension points), **commands** (request-response actions between plugins), and **resources** (live state synced via a single WS). These cover the human-facing app well.
+equin's plugin system today has three primitives: **slots** (typed extension points), **commands** (request-response actions between plugins), and **resources** (live state synced via a single WS). These cover the human-facing app well.
 
 For an autonomous company, every plugin must expose two symmetric surfaces:
 - A **UI surface** — how humans monitor and intervene

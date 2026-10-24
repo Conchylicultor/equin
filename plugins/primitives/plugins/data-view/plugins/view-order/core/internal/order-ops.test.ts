@@ -356,7 +356,7 @@ describe("computeMoveWrites round-trip stability (the real gate)", () => {
 
 describe("computeInsertWrites", () => {
   test("a row not created yet lands in the gap it was dropped in", () => {
-    // Home, Downloads, Singularity built in, one pin; nothing arranged yet. A
+    // Home, Downloads, equin built in, one pin; nothing arranged yet. A
     // new pin dropped after Home: Home is materialized as its anchor.
     const orderedKeys = ["home", "dl", "sing", "pin:a"];
     const writes = computeInsertWrites({

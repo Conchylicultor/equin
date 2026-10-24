@@ -5,7 +5,7 @@
 Claude Code exposes a per-session **effort** setting that controls how much reasoning
 budget the agent gets (`low` → `max`), plus a special **`ultracode`** mode that pairs
 `xhigh` effort with standing permission to auto-orchestrate dynamic multi-agent
-workflows. Today Singularity launches every conversation at the CLI's default effort —
+workflows. Today equin launches every conversation at the CLI's default effort —
 there is no way to dial a harder-thinking agent for a heavy task or a cheaper one for a
 trivial task.
 

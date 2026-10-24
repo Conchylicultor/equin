@@ -3,7 +3,7 @@
 ## Context
 
 When an agent calls `AskUserQuestion`, the Claude CLI blocks in an interactive
-TUI menu inside its tmux pane. Singularity surfaces this state as
+TUI menu inside its tmux pane. equin surfaces this state as
 `conversation.waitingFor === "question"` and shows a banner — *"Content pending
 in terminal — waiting for your input"* (`jsonl-pane.tsx:80`). Today the only way
 to answer is to open the terminal pane and drive the TUI by hand.

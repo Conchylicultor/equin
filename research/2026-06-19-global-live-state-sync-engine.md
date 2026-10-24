@@ -114,7 +114,7 @@ Production sync engines cluster into four archetypes:
 | **Differential-dataflow IVM** | Zero/Materialite, Materialize, DBSP, **pg_ivm** | compiled query graph | true O(Δ) | dataflow engine / PG extension |
 | **Persisted model-graph + catch-up** | Linear | model decorators (MobX) | per-property patch | client object pool + `lastSyncId` |
 
-**What fits Singularity (single-user, embedded Postgres, ~1 active worktree):**
+**What fits equin (single-user, embedded Postgres, ~1 active worktree):**
 
 - **Convex's idea, not its engine.** Read-set capture is the right *dependency*
   primitive — but we get it almost for free (§5): the DB pool wrapper already runs

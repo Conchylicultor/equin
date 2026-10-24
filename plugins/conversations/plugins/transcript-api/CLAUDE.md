@@ -4,7 +4,7 @@
 
 A conversation is **not** one JSONL file. Claude Code relocates a live session into
 a new id (a fork copies its ancestor's lines verbatim; a fresh daemon-hosted session
-inherits nothing), and each id gets its own `<sessionId>.jsonl`. Singularity records
+inherits nothing), and each id gets its own `<sessionId>.jsonl`. equin records
 that succession as the conversation's **session chain**, and this endpoint returns
 the chain's files in order, oldest → newest. Read them in that order and dedup by
 `uuid` (first occurrence wins) to reconstruct the conversation — or just call

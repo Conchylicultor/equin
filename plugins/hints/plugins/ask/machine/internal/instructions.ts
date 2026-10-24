@@ -20,7 +20,7 @@ export function askInstructions(input: AskInput, checkout: string): string {
       : input.outline;
   return `# Ask equin: answer the user's how-to question
 
-The user is asking how to do something in equin (this app — Singularity).
+The user is asking how to do something in equin (this app).
 They asked from a small card floating over the page they are on, and they read
 your answer there, so keep it short: plain words a user can follow in the UI,
 where to find it and the steps. They can reply in the same thread, so stay

@@ -35,7 +35,7 @@ export function userMessage(err: InvalidSshKeyError): string {
     case "public-key-pasted":
       return "That's the public half. Paste the private key — the file starting with `-----BEGIN OPENSSH PRIVATE KEY-----`, not the `.pub` one.";
     case "passphrase-protected":
-      return 'This key is passphrase-protected. Singularity connects unattended and has no one to type a passphrase. Paste a key made without one (`ssh-keygen -t ed25519 -N ""`), or generate one here.';
+      return 'This key is passphrase-protected. equin connects unattended and has no one to type a passphrase. Paste a key made without one (`ssh-keygen -t ed25519 -N ""`), or generate one here.';
     case "not-a-private-key":
     case "unsupported-format":
       return `\`ssh-keygen\` couldn't read that as a private key: ${err.message}`;

@@ -127,7 +127,7 @@ radius and drop the `shape` axis — say the word and the plan loses one prop.
      label now truncates with `…` instead of overflowing.
    - **LinkChip** — attempt/task link inside conversation markdown: still inline,
      baseline-aligned, truncates when narrow, `mono` ids still monospaced.
-   - **ToggleChip / SegmentedControl** — stats cost "Singularity only" toggle,
+   - **ToggleChip / SegmentedControl** — stats cost "equin only" toggle,
      enum/bool field filters, surface placement control: still `rounded-full`,
      correct height beside buttons at each density, hover/active/disabled states,
      radio semantics intact.

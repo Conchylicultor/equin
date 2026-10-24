@@ -2,9 +2,9 @@
 
 ## Context
 
-Singularity will be publicly branded as **equin** (domain: equin.ai). The goal is to deploy a stripped-down, read-only version of the app at equin.ai — serving a blog, download page, and a read-only interactive demo — while building the infrastructure and tooling that will eventually support automated deployments, updates, and future equin products.
+equin will be publicly branded as **equin** (domain: equin.ai). The goal is to deploy a stripped-down, read-only version of the app at equin.ai — serving a blog, download page, and a read-only interactive demo — while building the infrastructure and tooling that will eventually support automated deployments, updates, and future equin products.
 
-This is the foundational deployment story: every future equin product is a Singularity **profile** (a named subset of plugins + config), built from the same codebase and deployed the same way.
+This is the foundational deployment story: every future equin product is an equin **profile** (a named subset of plugins + config), built from the same codebase and deployed the same way.
 
 ---
 
@@ -86,7 +86,7 @@ This is the foundational primitive for equin as a product platform. Every equin 
 
 ### Blog
 
-- [ ] **Decision:** Static site generator (Astro, Next.js static export) vs Singularity plugin serving MDX
+- [ ] **Decision:** Static site generator (Astro, Next.js static export) vs equin plugin serving MDX
   - Static is simpler and Cloudflare-cacheable; plugin approach keeps everything in one deploy
 - [ ] Content: announcement post, vision, changelog
 
@@ -163,7 +163,7 @@ This is the foundational primitive for equin as a product platform. Every equin 
 | 2 | Gateway TLS | Caddy terminates (recommended) vs gateway handles TLS itself |
 | 3 | Profile: plugin exclusion vs capability flags | Build-time exclusion (cleaner) vs runtime flags (incremental) |
 | 4 | equin.ai shell | Extend existing shell vs new marketing shell plugin |
-| 5 | Blog approach | Static SSG vs Singularity plugin |
+| 5 | Blog approach | Static SSG vs equin plugin |
 | 6 | Demo data | Static fixtures vs live read-only Postgres |
 | 7 | CI artifact format | Docker vs rsync tarball |
 | 8 | Deploy trigger | Every main push vs explicit release tag |

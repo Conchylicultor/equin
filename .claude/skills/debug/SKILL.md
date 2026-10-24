@@ -1,7 +1,7 @@
 ---
 name: debug
 description: >
-  Decision tree for debugging Singularity — start at the alert funnel (Reports)
+  Decision tree for debugging equin — start at the alert funnel (Reports)
   and the incident Timeline, THEN branch by symptom to the right surface.
   Read BEFORE debugging anything.
 ---

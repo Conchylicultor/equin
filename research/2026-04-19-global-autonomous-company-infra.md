@@ -124,7 +124,7 @@ Each concept gets:
 
 ### 11. Multi-tenancy / namespace isolation
 
-**What it is.** If Singularity ever hosts more than one company, or more than one environment (staging vs. prod), the substrate needs strict namespace boundaries: separate memory, credentials, event logs, budgets.
+**What it is.** If equin ever hosts more than one company, or more than one environment (staging vs. prod), the substrate needs strict namespace boundaries: separate memory, credentials, event logs, budgets.
 
 **Why it matters.** Cross-tenant leaks are catastrophic. Even for single-tenant, staging/prod separation matters for testing new agent roles safely.
 

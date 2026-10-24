@@ -212,7 +212,7 @@ export async function renderGlobalSection(
 
   const parts = [
     `## Page instructions\n\n` +
-      `Singularity pages can carry instructions from their author, the way a ` +
+      `equin pages can carry instructions from their author, the way a ` +
       `CLAUDE.md file carries instructions for a folder. They cover the page they ` +
       `sit on (an instructions page covers its parent page) and every page below ` +
       `it. read_page hands you the ones covering what you read, in a ` +

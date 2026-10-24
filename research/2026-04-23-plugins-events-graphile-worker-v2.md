@@ -30,7 +30,7 @@ The rest of §1 below is preserved for historical reference but no longer repres
 
 ### Problem
 
-Today `emit()` reads the trigger table and calls `action.run()` inline. Handlers may touch any DB they want, but `emit()` itself does not share a transaction with the caller. In practice, callers in Singularity today don't wrap emit+write in a tx either — mostly because there's only one production user (events-test).
+Today `emit()` reads the trigger table and calls `action.run()` inline. Handlers may touch any DB they want, but `emit()` itself does not share a transaction with the caller. In practice, callers in equin today don't wrap emit+write in a tx either — mostly because there's only one production user (events-test).
 
 After Graphile: `emit()` writes to `graphile_worker.jobs` (via Graphile's own `pg.Pool`). If the caller is mid-transaction and rolls back, the job inserts stay committed — classic dual-write, and now far more visible because it's the primary failure mode.
 

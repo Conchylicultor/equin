@@ -1,3 +1,4 @@
+import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
 import { createAttachment } from "@plugins/infra/plugins/attachments/server";
 import {
   decodeHtmlText,
@@ -12,8 +13,7 @@ import type { LinkPreview } from "../../core";
 
 const MAX_HTML_BYTES = 512 * 1024; // cap the HTML we parse
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // cap downloaded images
-const USER_AGENT =
-  "Mozilla/5.0 (compatible; SingularityBot/1.0; +link-preview)";
+const USER_AGENT = `Mozilla/5.0 (compatible; ${PRODUCT_NAME}-bot/1.0; +link-preview)`;
 
 /**
  * The page answered with a non-2xx status: a determinate answer about that

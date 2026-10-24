@@ -31,7 +31,7 @@ const GIT_TIMEOUT_MS = 60_000;
 
 /** Who every version is committed as — the store, never the user. */
 const STORE_IDENTITY = {
-  name: "Singularity prototypes",
+  name: "equin prototypes",
   email: "prototypes@singularity.invalid",
 };
 

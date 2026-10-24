@@ -2,7 +2,7 @@
 
 ## Context
 
-Singularity's plugin system has one primitive: **slots** (static, declarative contributions collected at registration time). There is no mechanism for runtime imperative actions between plugins.
+equin's plugin system has one primitive: **slots** (static, declarative contributions collected at registration time). There is no mechanism for runtime imperative actions between plugins.
 
 **First concrete use case:** a task list plugin tells the terminal plugin "open a Claude Code terminal at `/path/to/worktree`."
 

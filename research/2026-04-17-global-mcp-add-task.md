@@ -2,7 +2,7 @@
 
 ## Context
 
-Today, agents running inside Singularity-spawned conversations have no programmatic way to create child tasks under their own task. They can edit code, but task-tree changes have to go through the human user (via the UI). We want agents to decompose work themselves: a Claude session working on "implement X" should be able to spawn child tasks like "write tests for X" or "document X" and have them appear under its own node in the task tree.
+Today, agents running inside equin-spawned conversations have no programmatic way to create child tasks under their own task. They can edit code, but task-tree changes have to go through the human user (via the UI). We want agents to decompose work themselves: a Claude session working on "implement X" should be able to spawn child tasks like "write tests for X" or "document X" and have them appear under its own node in the task tree.
 
 The mechanism: a per-conversation HTTP MCP server endpoint hosted on the **parent** backend (the one that spawned the conversation), exposing an `add_task(title, description?)` tool. The conversation's `spawnedBy` field already records which backend owns its data; we use that to construct the MCP URL.
 

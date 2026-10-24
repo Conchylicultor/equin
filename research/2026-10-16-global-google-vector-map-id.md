@@ -78,7 +78,7 @@ is saved. Its title is "Smooth zoom (vector map), optional".
    - `StepLink` to Console → Google Maps Platform → Map Styles → Create style.
    - Then the JSON tab → Import, with
      `StepCommand text={BASEMAP_STYLE_JSON} title="Copy style JSON"`.
-   - `StepNote`: save it under a name, for example "Singularity basemap".
+   - `StepNote`: save it under a name, for example "equin basemap".
 2. **Create the Map ID.**
    - `StepLink` to Map Management → Create Map ID, with type **JavaScript**
      and **Vector**.

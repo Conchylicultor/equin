@@ -2,7 +2,7 @@
 
 ## Context
 
-This is step 2 of the "Rename Singularity to Equin" track (wiki page `block-dc049371-…`). Step 1 made `./equin` the CLI and left the old `singularity` entry as a one-line shim. `CLI_NAME` and `CLI_NAMES` live in `plugins/framework/plugins/cli/core/internal/cli-name.ts`, and the guards treat both names as one command. Step 1 also moved the root CLAUDE.md, the skills and the guard hints over to `./equin`.
+This is step 2 of the "Rename equin to Equin" track (wiki page `block-dc049371-…`). Step 1 made `./equin` the CLI and left the old `singularity` entry as a one-line shim. `CLI_NAME` and `CLI_NAMES` live in `plugins/framework/plugins/cli/core/internal/cli-name.ts`, and the guards treat both names as one command. Step 1 also moved the root CLAUDE.md, the skills and the guard hints over to `./equin`.
 
 Everything else still told agents to run the old `singularity` CLI: about 10,400 mentions in about 4,800 tracked files.
 

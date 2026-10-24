@@ -36,7 +36,7 @@ plugins/backup/
         │   ├── index.ts              # BackupTarget({ id: "google-drive", run })
         │   └── internal/
         │       ├── upload.ts         # Resumable upload to Drive via REST
-        │       ├── folder.ts         # Ensure "Singularity Backups" folder exists
+        │       ├── folder.ts         # Ensure "equin Backups" folder exists
         │       └── retention.ts      # Delete oldest files beyond keepLast
         └── web/index.ts              # Config.Spec, connect CTA
 ```
@@ -221,7 +221,7 @@ export const googleDriveBackupConfig = defineConfig({
 1. Read config — if `!enabled`, return `{ ok: true, detail: "disabled" }`
 2. Call `getTokenFromCentral({ providerId: "google", scopes: ["https://www.googleapis.com/auth/drive.file"] })`
 3. If `!result.ok && result.needsConsent` → return `{ ok: false, needsConsent: true, detail: "Google account not connected or missing Drive scope" }`
-4. Ensure folder exists (`folder.ts`) — search for "Singularity Backups" folder, create if missing, cache the folderId
+4. Ensure folder exists (`folder.ts`) — search for "equin Backups" folder, create if missing, cache the folderId
 5. Resumable upload (`upload.ts`) — initiate session, stream the tar.gz
 6. Retention (`retention.ts`) — list files in folder by `createdTime`, delete oldest beyond `keepLast`
 7. Return `{ ok: true, detail: webViewLink }`
@@ -248,14 +248,14 @@ Uses raw `fetch` — no `googleapis` npm dependency.
 
 ```
 GET https://www.googleapis.com/drive/v3/files
-  ?q=name='Singularity Backups' and mimeType='application/vnd.google-apps.folder' and trashed=false
+  ?q=name='equin Backups' and mimeType='application/vnd.google-apps.folder' and trashed=false
   &fields=files(id)
 ```
 
 If empty, create:
 ```
 POST https://www.googleapis.com/drive/v3/files
-  Body: { name: "Singularity Backups", mimeType: "application/vnd.google-apps.folder" }
+  Body: { name: "equin Backups", mimeType: "application/vnd.google-apps.folder" }
 ```
 
 Cache folderId in-memory (reset on server restart).

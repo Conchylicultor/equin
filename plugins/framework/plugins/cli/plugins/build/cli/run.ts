@@ -331,7 +331,7 @@ async function waitForWorktreeDatabase(name: string): Promise<void> {
   }
 
   // No DB and no restore in flight. Either a standard-path job is still queued/
-  // gated, or this worktree was created outside Singularity and has no job at
+  // gated, or this worktree was created outside equin and has no job at
   // all. Grace-poll for the queued case, then fail actionably. 60 s, not less:
   // the fork runs in a detached `supervised-exec` child, which spends an exec
   // boot of the whole plugin graph (then the fork plan) before it creates the
@@ -350,10 +350,10 @@ async function waitForWorktreeDatabase(name: string): Promise<void> {
     [
       `ERROR: no database for "${name}" and no fork in flight after 60s.`,
       "",
-      "If this worktree was created from Singularity, its fork may have failed.",
+      "If this worktree was created from equin, its fork may have failed.",
       forkDiagnosisHint(),
       "",
-      "If this worktree was created outside Singularity (git worktree add),",
+      "If this worktree was created outside equin (git worktree add),",
       "create its database with:",
       "",
       "    ./equin db fork",

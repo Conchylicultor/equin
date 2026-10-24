@@ -101,7 +101,7 @@ The body is a direct lift of `shell-layout.tsx` with these substitutions:
 - `Shell.Toolbar` → `toolbarSlot` prop
 - `DEFAULT_COLLAPSED` → `defaultCollapsed ?? new Set()` prop
 - `SIDEBAR_GROUPS` → `sidebarGroupIcons` prop
-- Hardcoded `<SidebarHeader>` with Singularity logo → `{header && <SidebarHeader ...>{header}</SidebarHeader>}`
+- Hardcoded `<SidebarHeader>` with equin logo → `{header && <SidebarHeader ...>{header}</SidebarHeader>}`
 - `slot="shell.sidebar"` / `slot="shell.toolbar"` on `PluginErrorBoundary` → dynamic `slot={sidebarSlot.id}` / `slot={toolbarSlot.id}`
 
 Internal helpers `ToolbarItem` and `PaneSectionLabel` move into this file unchanged.

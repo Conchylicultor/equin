@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Config UI for the config backup source. Backs up Singularity config files into the backup archive.
+- Description: Config UI for the config backup source. Backs up equin config files into the backup archive.
 - Web:
   - Contributes: `ConfigV2.WebRegister` "config"
   - Uses: `config_v2.ConfigV2`

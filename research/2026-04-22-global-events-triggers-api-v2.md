@@ -201,7 +201,7 @@ async function tickOnce() {
 
 **Why poll vs. LISTEN/NOTIFY:** cron is a wall-clock event; nobody emits it. Polling is the only mechanism. The codebase already has two 1s `setInterval` pollers ([conversations poller](../plugins/conversations/server/internal/poller.ts), [push-watcher](../plugins/tasks/server/internal/push-watcher.ts)), so this is idiomatic. 5s tick caps user-visible lag at 5s — fine for cron.
 
-**Missed runs on restart:** if the server was down for an hour, `next_run_at` for all due rows is in the past — they all fire on the next tick. The `LIMIT 100` per tick throttles the catch-up. `cron-parser` will return `now()`'s next occurrence, not a retroactive stack; so "every 5 min" missed for an hour fires *once* on resume, not 12 times. That's the right default for Singularity (you don't want 12 agent launches queued because the laptop slept). If we need strict "fire once per missed slot", add a `catchup_mode` column later.
+**Missed runs on restart:** if the server was down for an hour, `next_run_at` for all due rows is in the past — they all fire on the next tick. The `LIMIT 100` per tick throttles the catch-up. `cron-parser` will return `now()`'s next occurrence, not a retroactive stack; so "every 5 min" missed for an hour fires *once* on resume, not 12 times. That's the right default for equin (you don't want 12 agent launches queued because the laptop slept). If we need strict "fire once per missed slot", add a `catchup_mode` column later.
 
 ### What about "task row changed" → "task.completed" emit?
 

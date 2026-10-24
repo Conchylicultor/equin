@@ -1,4 +1,4 @@
-// Standalone Playwright perf harness for Singularity — agent-readable frontend metrics.
+// Standalone Playwright perf harness for equin — agent-readable frontend metrics.
 //
 // Installs PerformanceObservers before navigation (to catch LCP/CLS/longtask
 // from the very first paint), then collects navigation timings, resource

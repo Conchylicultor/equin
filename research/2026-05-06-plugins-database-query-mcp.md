@@ -145,7 +145,7 @@ Add under `## Agent Workflow`, after the rules section:
 ```markdown
 ### MCP Tools
 
-Agents have access to MCP tools provided by the Singularity server. Key tools:
+Agents have access to MCP tools provided by the equin server. Key tools:
 
 - `query_db` — Read-only SQL query against the worktree's PostgreSQL database. For **debugging and inspection only** — mutations are rejected at the DB level. Defaults to the agent's own worktree DB; pass `database` to query another worktree or `"singularity"` for main.
 ```

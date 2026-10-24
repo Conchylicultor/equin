@@ -2,7 +2,7 @@
 
 ## Context
 
-Every feature in Singularity is a plugin. The main app (`web/`) is a thin shell that collects plugin contributions and renders them. Plugins are hardcoded (static imports, known at build time) for simplicity and type-safety.
+Every feature in equin is a plugin. The main app (`web/`) is a thin shell that collects plugin contributions and renders them. Plugins are hardcoded (static imports, known at build time) for simplicity and type-safety.
 
 This design covers the frontend plugin API only. The server-side half (`plugins/{name}/server/`) will come later.
 

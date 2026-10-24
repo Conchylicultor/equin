@@ -9,7 +9,7 @@ import { gitPushGuard } from "./git-push";
 const root = mkdtempSync(join(tmpdir(), "git-push-guard-"));
 afterAll(() => rmSync(root, { recursive: true, force: true }));
 
-// A Singularity checkout: a `.git` FILE (as in a worktree) plus the CLI.
+// An equin checkout: a `.git` FILE (as in a worktree) plus the CLI.
 const singularity = join(root, "singularity-wt");
 mkdirSync(join(singularity, "plugins/framework/plugins/cli/bin"), {
   recursive: true,
@@ -34,12 +34,12 @@ const blocks = (command: string, cwd: string) =>
   (gitPushGuard.check({ command }, createContext(cwd)) as Verdict).kind ===
   "deny";
 
-describe("git-push guard targets only Singularity checkouts", () => {
-  test("blocks a push from a Singularity checkout", () => {
+describe("git-push guard targets only equin checkouts", () => {
+  test("blocks a push from an equin checkout", () => {
     expect(blocks("git push origin main", singularity)).toBe(true);
   });
 
-  test("blocks from a subdirectory of a Singularity checkout", () => {
+  test("blocks from a subdirectory of an equin checkout", () => {
     expect(blocks("git push", join(singularity, "src/deep"))).toBe(true);
   });
 
@@ -52,7 +52,7 @@ describe("git-push guard targets only Singularity checkouts", () => {
     expect(blocks(`cd ${other} && git push`, singularity)).toBe(false);
   });
 
-  test("follows cd into a Singularity checkout", () => {
+  test("follows cd into an equin checkout", () => {
     expect(blocks(`cd ${singularity} && git push`, other)).toBe(true);
   });
 
@@ -62,16 +62,16 @@ describe("git-push guard targets only Singularity checkouts", () => {
     expect(blocks(`git -c a.b=c -C ${singularity} push`, other)).toBe(true);
   });
 
-  test("a Singularity push later in the chain is still caught", () => {
+  test("an equin push later in the chain is still caught", () => {
     expect(blocks(`git push; git -C ${singularity} push`, other)).toBe(true);
   });
 
-  test("an unfollowed repository spelling is treated as Singularity", () => {
+  test("an unfollowed repository spelling is treated as equin", () => {
     expect(blocks(`git --git-dir=${other}/.git push`, other)).toBe(true);
     expect(blocks("GIT_DIR=.git git push", other)).toBe(true);
   });
 
-  test("a directory that is no repo is treated as Singularity", () => {
+  test("a directory that is no repo is treated as equin", () => {
     expect(blocks("git push", notARepo)).toBe(true);
   });
 

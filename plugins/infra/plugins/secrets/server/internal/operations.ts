@@ -47,12 +47,14 @@ function isCentralOffline(err: EndpointError): boolean {
   if (err.status === 502 || err.status === 503 || err.status === 504) {
     return true;
   }
-  // The gateway answers this exact text while the central-routes manifest
-  // hasn't loaded yet.
+  // The gateway answers "<product> gateway. Use <name>.localhost." while the
+  // central-routes manifest hasn't loaded yet. Matched on the part after the
+  // product name, so a gateway binary built before the rename (which still says
+  // its old name) is recognised too.
   return (
     err.status === 404 &&
     typeof err.body === "string" &&
-    err.body.includes("Singularity gateway")
+    err.body.includes("gateway. Use <name>.localhost")
   );
 }
 

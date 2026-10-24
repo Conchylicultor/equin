@@ -4,7 +4,7 @@
 
 The user wants an app that entertains their child: every keyboard key answers
 with its own animation and sound. Approved prototype: `proto-1792778741-ozou7w`
-("Keyboard Party"). The real app reproduces it inside Singularity at
+("Keyboard Party"). The real app reproduces it inside equin at
 `/keyboard-party`.
 
 ## What it shows

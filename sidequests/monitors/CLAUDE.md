@@ -1,6 +1,6 @@
 # Monitors — host-level observers that outlive the app
 
-Standalone launchd jobs that watch the machine from **outside** Singularity.
+Standalone launchd jobs that watch the machine from **outside** equin.
 
 Each answers a question the app cannot answer about itself: the app's own
 observability dies with the process, and the failures worth chasing here are

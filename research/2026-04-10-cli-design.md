@@ -2,7 +2,7 @@
 
 ## Context
 
-Singularity manages agents (Claude Code instances), each running in its own git worktree with its own server and frontend. Today, setting up a worktree is manual: create the git worktree, install deps, build the frontend, hand-write a registry JSON so the gateway discovers it. That's ~5 commands and easy to get wrong.
+equin manages agents (Claude Code instances), each running in its own git worktree with its own server and frontend. Today, setting up a worktree is manual: create the git worktree, install deps, build the frontend, hand-write a registry JSON so the gateway discovers it. That's ~5 commands and easy to get wrong.
 
 The CLI automates it. v1 scope: worktree lifecycle (`create`, `list`, `remove`) and platform health (`status`). No agent launching, no session tracking — those are v2.
 
@@ -38,7 +38,7 @@ Runs TypeScript directly via `bun cli/src/index.ts` — no build step.
    → git worktree add, bun install, bun build, write registry JSON
    → prints: ✓ cli-design.localhost:9000 ready
 
-2. Open cli-design.localhost:9000 → Singularity UI for that worktree
+2. Open cli-design.localhost:9000 → equin UI for that worktree
 3. Open terminal → Claude Code starts in the worktree
 4. Agent works, commits, user reviews
 
@@ -333,7 +333,7 @@ singularity wt list
 
 # 5. Open in browser
 open http://test-agent.localhost:9000
-# → Singularity UI loads
+# → equin UI loads
 
 # 6. Check status
 singularity status

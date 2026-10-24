@@ -8,7 +8,7 @@ the parent `ui-context`'s; this plugin owns the interaction, the one producer
 that has to be opt-in, and the chip that draws a token.
 
 It imports only primitives, so any composition can pick — the equin website's
-Improve popover as well as Singularity's own (`improve/element-picker`, which is
+Improve popover as well as equin's own (`improve/element-picker`, which is
 now just the action-bar and task-draft buttons on top of `PickerButton`).
 
 ## API

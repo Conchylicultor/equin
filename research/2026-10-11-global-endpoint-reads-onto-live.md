@@ -994,7 +994,7 @@ Batch B9 covers the interim Stats values: Cost (8 sites), Commits (4), Pushes (3
 
 Everything below ran on `http://att-1791598784-yegtlr.localhost:9000/agents/stats`, using the `browser_*` session. Shots are in `/tmp/live-migration-shots/B9-*`. Before main's endpoints were touched, its old answers were captured by curl into `/tmp/b9-main/`.
 
-- **Cost (verified, numbers equal main).** The KPI cards under "Singularity only" show Total spent $27,196.91, Total tokens 36.9B (2,139 sessions), Last 7 days $2,433.33, Avg / active day $251.82 over 108 days, Input 4.4M, Output 111.2M, Cache creation 967.8M and Cache read 35.9B. These are byte-equal to main's `GET /api/stats/cost/totals?scope=singularity`.
+- **Cost (verified, numbers equal main).** The KPI cards under "equin only" show Total spent $27,196.91, Total tokens 36.9B (2,139 sessions), Last 7 days $2,433.33, Avg / active day $251.82 over 108 days, Input 4.4M, Output 111.2M, Cache creation 967.8M and Cache read 35.9B. These are byte-equal to main's `GET /api/stats/cost/totals?scope=singularity`.
   - The distribution buckets are identical to main's, all 16 (for example `< $0.01` 96, `$2–5` 405, `$500–1k` 1).
   - The top table's first rows match main's `/sessions`: $951.67, $279.64, $252.68, each with its title and status.
   - The daily-by-model, sessions-per-family, cumulative, token-mix and average-per-conversation charts all render with data (`B9-cost-kpis-daily-cumulative.png`, `B9-cost-tokenmix-avg.png`, `B9-cost-distribution-top.png`).
@@ -1047,7 +1047,7 @@ Everything below ran on `http://att-1791598784-yegtlr.localhost:9000/agents/stat
 
 - **`throttleMs` is no rate limit on a busy server** (task-1792636104-uyhq3k). The runtime drains a throttled entry whenever any other entry flushes. Cost now coalesces at the source. The pushes (5 s), tasks (1 s) and commits-by-category (2 s) throttles have the same weakness; their loaders are cheap (≤ 300 ms), so it costs little there.
 - **Commits under host duress:** a cold `git log` parse took 91 s, and the gateway answered the first on-demand HTTP reads with 502 before the client's retry succeeded. The old endpoint paid the same parse, but behind a 30 s TTL. A memo warmed on ref advance would keep the first read from paying for it (task-1792636107-t4nqnp).
-- **Cost "Singularity only" freshness is daily:** classification comes from the archive capture. This predates B9.
+- **Cost "equin only" freshness is daily:** classification comes from the archive capture. This predates B9.
 - **The `price-table.test.ts` baseline failure** predates B9 and is unrelated to it.
 - `./equin exempt list --rule live/no-endpoint-read --debt`: **14** exemptions remain (31 before B9), all debt.
 

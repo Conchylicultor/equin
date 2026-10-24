@@ -1,6 +1,6 @@
 # element-picker
 
-The element picker wired into Singularity's Improve flow — two buttons, both
+The element picker wired into equin's Improve flow — two buttons, both
 `PickerButton` from `primitives/ui-context/element-picker`:
 
 - **Improve pill** (`MdAdsClick`, "Pick UI element") — the second segment of the
@@ -40,7 +40,7 @@ gets `source`/`owner` from it).
 
 ## Plugin reference
 
-- Description: The element picker wired into Singularity's Improve flow: a 'Pick UI element' segment of the Improve pill that opens the Improve popover with the picked element as a <ui-context/> chip, and an 'Attach UI element' button in the task-draft form. The picker, its overlay and the chip are primitives/ui-context/element-picker.
+- Description: The element picker wired into equin's Improve flow: a 'Pick UI element' segment of the Improve pill that opens the Improve popover with the picked element as a <ui-context/> chip, and an 'Attach UI element' button in the task-draft form. The picker, its overlay and the chip are primitives/ui-context/element-picker.
 - Web:
   - Contributes:
     - `ImproveSlots.Segment` "element-picker" → `ElementPickerButton`

@@ -2,7 +2,7 @@
 
 > Companion to [`2026-04-26-sync-design-1-api-surface-v2.md`](./2026-04-26-sync-design-1-api-surface-v2.md). v2 commits to **5 author-facing symbols**. The critique flagged 12 places where the 5-symbol surface is either incomplete or quietly hands a hard problem to an unspecified sub-design. This doc surveys how Convex, Replicache, Zero, Meteor, tRPC, GraphQL Subscriptions, Phoenix LiveView, Rails/Ecto, Temporal, and Postgres-native primitives solve each one — and recommends what v3 should adopt.
 >
-> Each section follows the same shape: **the issue**, **three to four prior-art mechanisms with the actual surface**, **the pattern that drops out**, **what to borrow for Singularity**.
+> Each section follows the same shape: **the issue**, **three to four prior-art mechanisms with the actual surface**, **the pattern that drops out**, **what to borrow for equin**.
 
 ---
 
@@ -329,7 +329,7 @@ defmodule Conversations.Poller do
 end
 ```
 
-Native to the runtime. Singularity's Bun process plays the same role.
+Native to the runtime. equin's Bun process plays the same role.
 
 ### 5.4 Pattern + recommendation
 
@@ -517,7 +517,7 @@ Both rely on a single canonical server. Multi-process scaling is the canonical-s
 
 ### 9.5 Pattern + recommendation
 
-Singularity already runs Postgres per worktree, with `__singularity_migrations` etc. Postgres LISTEN/NOTIFY is the cheapest fan-out:
+equin already runs Postgres per worktree, with `__singularity_migrations` etc. Postgres LISTEN/NOTIFY is the cheapest fan-out:
 
 ```ts
 // inside Sync.emit
@@ -596,7 +596,7 @@ Three quality tiers:
 - **Tier 2 (Convex)**: per-query localStore, cross-query coherence via re-running, identity unstable across rebind.
 - **Tier 3 (Replicache/Zero)**: speculative tx, identity stable, mutators must be pure data.
 
-**Recommendation: target Tier 2 (Convex)**, because Singularity's mutations are *not* pure data (they call tmux, fork DBs). Tier 3 needs that purity. Tier 2 fits.
+**Recommendation: target Tier 2 (Convex)**, because equin's mutations are *not* pure data (they call tmux, fork DBs). Tier 3 needs that purity. Tier 2 fits.
 
 Spec the localStore as:
 
@@ -682,7 +682,7 @@ type QueryCtx = {
 
 `Identity` starts as `{ kind: "local-user" }` (single-user assumption). Plugins that don't need it ignore the field. When multi-tenant arrives, the field grows; existing handlers don't break. **Adding the field after the fact is a breaking change to every handler**; reserving is free.
 
-For Singularity-specific context (the originating worktree, `spawnedBy`, etc.), pack it into `identity` at the same time — there's no reason to have two ctx slots.
+For equin-specific context (the originating worktree, `spawnedBy`, etc.), pack it into `identity` at the same time — there's no reason to have two ctx slots.
 
 ---
 

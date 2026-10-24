@@ -28,7 +28,7 @@ export async function assembleSingularityPlatform(
   if (!enabled) {
     return {
       id: "singularity-platform",
-      name: "Singularity Platform",
+      name: "equin platform",
       outcome: "skipped",
       items: [],
       sizeBytes: 0,
@@ -69,7 +69,7 @@ export async function assembleSingularityPlatform(
 
   return {
     id: "singularity-platform",
-    name: "Singularity Platform",
+    name: "equin platform",
     outcome: "included",
     items,
     sizeBytes,

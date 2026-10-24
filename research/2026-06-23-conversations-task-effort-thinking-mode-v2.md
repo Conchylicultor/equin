@@ -9,7 +9,7 @@
 
 Claude Code has a per-session **effort** setting (`low`→`max`) plus a special
 **`ultracode`** mode (= `xhigh` reasoning **+** auto-orchestration of dynamic multi-agent
-workflows). Singularity currently launches every conversation at the CLI default — no way
+workflows). equin currently launches every conversation at the CLI default — no way
 to dial effort per task. Goal: pick a **thinking mode per task** (like the existing
 per-task preprompt) and apply it when a conversation starts under that task.
 

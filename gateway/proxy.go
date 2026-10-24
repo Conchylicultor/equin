@@ -64,7 +64,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if worktreeName == "" {
-		http.Error(w, "Singularity gateway. Use <name>.localhost.", http.StatusNotFound)
+		http.Error(w, "equin gateway. Use <name>.localhost.", http.StatusNotFound)
 		return
 	}
 

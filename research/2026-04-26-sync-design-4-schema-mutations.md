@@ -4,7 +4,7 @@
 
 ## 1. Problem restatement
 
-Today, the Singularity sync layer treats schema, validation, transactional writes, and optimistic UI as **four separately-maintained tracks of glue code**. Drizzle owns table shape; an ad-hoc mix of `typeof body.x !== "string"` and per-plugin Zod owns request validation; mutation handlers do their own DB calls then hand-fire `someResource.notify()` post-commit (not in the txn); optimistic UI is a `useState` shadow that each plugin reinvents. The result is silent staleness when an author forgets a `notify`, half-applied state on mid-mutation crash, racy "snapshot N for resource A, snapshot N-1 for resource B" reads, and a janky UI that waits for a full HTTP→WS round trip on every click. The four tracks need to collapse into **one primitive** where defining a table also defines its validators, its mutations, its sync emissions, and its optimistic-update semantics — so a plugin author writes "what is a task and how do I create one" once, and the system derives the rest.
+Today, the equin sync layer treats schema, validation, transactional writes, and optimistic UI as **four separately-maintained tracks of glue code**. Drizzle owns table shape; an ad-hoc mix of `typeof body.x !== "string"` and per-plugin Zod owns request validation; mutation handlers do their own DB calls then hand-fire `someResource.notify()` post-commit (not in the txn); optimistic UI is a `useState` shadow that each plugin reinvents. The result is silent staleness when an author forgets a `notify`, half-applied state on mid-mutation crash, racy "snapshot N for resource A, snapshot N-1 for resource B" reads, and a janky UI that waits for a full HTTP→WS round trip on every click. The four tracks need to collapse into **one primitive** where defining a table also defines its validators, its mutations, its sync emissions, and its optimistic-update semantics — so a plugin author writes "what is a task and how do I create one" once, and the system derives the rest.
 
 ## 2. The four sub-problems
 
@@ -230,7 +230,7 @@ ElectricSQL's own "write patterns" guide enumerates four levels — REST-only, `
 
 **Prisma** keeps `schema.prisma` as the source of truth. `prisma migrate dev` diffs the schema against the shadow DB and writes timestamped SQL migrations; `prisma migrate deploy` applies them in CI. Hybrid: declarative authoring, imperative artefacts. ([Prisma Migrate](https://www.prisma.io/docs/orm/prisma-migrate))
 
-**Drizzle** (current Singularity stack) — `drizzle-kit generate` mirrors the Prisma flow. `drizzle-zod` derives Zod validators from the same Drizzle table:
+**Drizzle** (current equin stack) — `drizzle-kit generate` mirrors the Prisma flow. `drizzle-zod` derives Zod validators from the same Drizzle table:
 
 ```ts
 const users = pgTable('users', {
@@ -302,7 +302,7 @@ const encoded = Schema.encodeSync(Person)(decoded);
 ```
 ([Effect Schema intro](https://effect.website/docs/schema/introduction))
 
-The relevance for Singularity: a single schema can describe the wire shape, the DB shape, and the in-memory shape *and* the encoder/decoder between them — the same primitive that drives validation also drives migration codecs (issue #10).
+The relevance for equin: a single schema can describe the wire shape, the DB shape, and the in-memory shape *and* the encoder/decoder between them — the same primitive that drives validation also drives migration codecs (issue #10).
 
 ## 4. Cross-framework comparison
 
@@ -321,7 +321,7 @@ The relevance for Singularity: a single schema can describe the wire shape, the 
 | RTK Query | n/a | none | n/a | `updateQueryData(...).undo` | App-level | n/a |
 | Firestore | none | none | `runTransaction` (online only) | Default offline write queue | LWW per field | Schemaless |
 
-## 5. Options for Singularity
+## 5. Options for equin
 
 Three concrete designs, each consistent with the architecture rules in `CLAUDE.md` (plugin barrels, no cross-plugin deep imports, Drizzle as the storage primitive). All three assume a separate sub-design solves live-query reactivity; here we focus only on schema + mutation + optimism.
 
@@ -438,7 +438,7 @@ The build step generates: a Drizzle table for runtime queries; a migration plan 
 
 **The migration win.** Schema changes are *one edit* — changing `S.String.pipe(S.maxLength(200))` to `300` widens the validator and triggers no SQL diff; renaming `title` to `name` produces a versioned migration *and* a codec entry that lets older clients keep speaking the old wire format until they update. Solves issue #10 holistically.
 
-**Tradeoffs.** Largest scope. Needs a non-trivial codegen layer (or a runtime that introspects the Effect Schema → Drizzle bridge). High payoff if Singularity grows into a multi-tenant or multi-version-of-clients world; possibly over-engineered for the current single-process worktree model. Could be staged as a *follow-up* to Option A or B once the mutation primitive is in place.
+**Tradeoffs.** Largest scope. Needs a non-trivial codegen layer (or a runtime that introspects the Effect Schema → Drizzle bridge). High payoff if equin grows into a multi-tenant or multi-version-of-clients world; possibly over-engineered for the current single-process worktree model. Could be staged as a *follow-up* to Option A or B once the mutation primitive is in place.
 
 ### Recommendation
 
@@ -451,7 +451,7 @@ The author-facing surface for Option A is small: one `mutation({ name, input, ha
 1. **Optimistic store shape (depends on sub-design #2 / live-query engine).** The optimistic patch needs a *local cache to patch into*. Today's `defineResource` returns whole snapshots, not row-addressable collections, so an optimistic insert can't be expressed as "add row X to collection Y". Either (a) the live-query engine adopts row-addressable collections (TanStack DB style) and Option A's `optimistic` callback becomes natural, or (b) we keep snapshot resources and optimistic updates remain expressed as `(prevSnapshot) => nextSnapshot` patches — workable but coarse.
 2. **Mutator/handler split (depends on sub-design #3 / API surface).** Option B requires the mutator to be importable cross-runtime. The plugin-boundary rules say `@plugins/foo/shared` is the only place for cross-runtime code; mutators would live there, with server-only overrides in `@plugins/foo/server`.
 3. **In-transaction notify ordering.** Emitting "resource invalidated" inside the Drizzle txn callback raises ordering concerns: subscribers shouldn't receive the notification until commit succeeds. Either we (a) buffer notifications and flush on commit (one-way coupling to the txn outcome), or (b) listen to Postgres `LISTEN/NOTIFY` for confirmed commits (clean, but couples sync to PG). Listed here, decided in sub-design #2.
-4. **Mutation log / event sourcing.** Both Replicache and Linear keep a per-client *log* of pending mutations. Singularity could persist this in IndexedDB on the client and in Postgres on the server, which would also unlock undo/redo (issue #18) and "what did agent X do in the last hour" (issue #15). This is orthogonal to Options A–C but most natural to add atop Option B.
+4. **Mutation log / event sourcing.** Both Replicache and Linear keep a per-client *log* of pending mutations. equin could persist this in IndexedDB on the client and in Postgres on the server, which would also unlock undo/redo (issue #18) and "what did agent X do in the last hour" (issue #15). This is orthogonal to Options A–C but most natural to add atop Option B.
 5. **Cross-plugin mutations.** A mutation in plugin A that writes to plugin B's table (e.g. `agents.createAgent` writing a meta-task into `tasks-core`) needs an explicit dependency edge — same problem as today's cross-plugin `notify`. The `mutation()` primitive can require declaring `tables: [Tasks, Agents]` so the plugin-boundary checker can verify that any cross-plugin write goes through the owning plugin's exposed mutation rather than reaching into its tables directly.
 6. **Validator parity client/server.** drizzle-zod gives us *insert*-shape validators for free; *update* shape is trickier (partial + business rules). The mutation primitive must let the author refine the derived schema without re-typing it (`createInsertSchema(_tasks, { title: (s) => s.trim() })`). Effect Schema has stronger ergonomics here but is a bigger swap.
 7. **Migration co-location with mutations.** A mutation that depends on a column being NOT NULL only works after the migration has run. Today these are two PRs; with Option A they're still two PRs but the mutation's input validator forces early failure if the schema rolls back. Worth a follow-up to make a mutation declare its required schema version.

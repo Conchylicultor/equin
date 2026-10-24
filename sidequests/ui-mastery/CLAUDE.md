@@ -19,7 +19,7 @@ Build a knowledge base and methodology that agents can use to produce profession
 
 ## Separation of concerns
 
-This sidequest produces **knowledge and tooling**. It does NOT directly modify Singularity's UI. The workflow:
+This sidequest produces **knowledge and tooling**. It does NOT directly modify equin's UI. The workflow:
 
 - **UI Mastery agents** — Research, audit, produce recommendations and patterns
 - **Feature agents** — Build functional features (don't worry about polish)

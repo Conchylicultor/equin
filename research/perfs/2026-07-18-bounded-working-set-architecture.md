@@ -3,12 +3,12 @@
 **Track:** [Host saturation — agent build/check fleets starve the main backend](./2026-07-08-host-saturation-agent-checks-starve-main.md) (Ongoing).
 **Born from:** the 2026-07-17 compressor-thrash recurrence (see the addendum in
 [`2026-07-11-compressor-thrash-subscription-replay-storm.md`](./2026-07-11-compressor-thrash-subscription-replay-storm.md))
-and the question *"VS Code server on the same dying machine stays usable — why can't Singularity?"*.
+and the question *"VS Code server on the same dying machine stays usable — why can't equin?"*.
 This doc records the architectural answer as direction; it is philosophy + sequencing, not an episode log.
 
 ## The problem in one sentence
 
-A single Singularity interaction (one pane navigation) triggers work whose memory working set is
+A single equin interaction (one pane navigation) triggers work whose memory working set is
 **O(total application state)** — loaders re-aggregating whole collections, delivery materializing +
 serializing full resource values, the GC marking the entire heap — so when the host squeezes the
 backend's residency, that one interaction falls off the thrashing cliff and takes minutes; apps whose
@@ -44,7 +44,7 @@ sweep over a structure larger than the process's allowed residency evicts its ow
 reaching its end; every pass refaults everything (the process steals residency from itself). Below
 the knee: normal speed. Above it: 100–500× collapse — a 1 s delivery becomes 393 s.
 
-Three things put Singularity's paint path above the knee while VS Code's file-open stays below it:
+Three things put equin's paint path above the knee while VS Code's file-open stays below it:
 
 1. **Wide sweeps per interaction** — loaders re-aggregate whole collections; delivery walks +
    serializes multi-MB object graphs; the GC mark phase walks the *entire* live heap (heap size is
@@ -72,14 +72,14 @@ Every standard architecture practice below is a way of enforcing that bound some
 Request path: query → stream rows → respond. The heap holds only in-flight request data. Bulk state
 sits in Postgres/SQLite, whose B-trees make *fetching one record touch O(log n) pages* and whose
 bounded, LRU-evicted buffer pools are precisely a data structure designed to run mostly-non-resident
-without collapsing. **Singularity today:** live-state materializes every resource's full value as
+without collapsing. **equin today:** live-state materializes every resource's full value as
 object graphs in the backend heap — an unbounded, unevictable, GC-scanned in-process cache.
 
 ### 2. Derived data is maintained incrementally at write time, never recomputed at read time
 
 CQRS / materialized-view discipline: reads fetch a precomputed row (working set = the row); writes pay
 a small incremental delta. If reads never recompute, read cost cannot scale with collection size.
-**Singularity today:** loaders like `conversation-categories` re-aggregate at read time — which is why
+**equin today:** loaders like `conversation-categories` re-aggregate at read time — which is why
 loaders are expensive, why the `read-admit` gate exists, and why there is a convoy to wedge. The
 right primitive already exists in-tree: `database/derived-tables` (trigger-maintained rollups —
 hand-rolled IVM). The structural move is making it the norm for resources, not the exception.
@@ -89,13 +89,13 @@ hand-rolled IVM). The structural move is making it the norm for resources, not t
 GC mark walks the whole live heap, so heap size is transitively part of *every* interaction's working
 set. Mature systems keep the GC'd heap at tens of MB and push bulk data to storage / byte buffers /
 separate processes (GC sees one pointer, not a million objects). A backend whose heap is 80 MB has
-nothing for the compressor to take hostage. **Singularity today:** heap churns 200–600 MB+ under
+nothing for the compressor to take hostage. **equin today:** heap churns 200–600 MB+ under
 delivery backlog (the ±60–70 MB/10 s sawtooth), spreading live pages wide — the ideal paging victim.
 
 ### 4. Everything user-facing is windowed
 
 Keyset pagination, virtual scrolling, bounded queries — O(one screen), never O(the collection).
-**Singularity today:** the newest code already does this (mail inbox is a server-delegated keyset
+**equin today:** the newest code already does this (mail inbox is a server-delegated keyset
 DataView; `virtual-rows`), but the older resource model predates it: `config-v2.values` = 153 pks,
 `page-block-doc` = per-block keys, full-collection task/conversation resources.
 
@@ -117,7 +117,7 @@ resilient path must be the only path). This is exactly what the `database/zero` 
 (zero-cache + SQLite replica + `zero-test` rendering the tasks slice). The 07-17 episode is the
 strongest argument yet that the pilot is the strategic direction.
 
-## Structural sequence for Singularity
+## Structural sequence for equin
 
 1. **Stop warehousing materialized values in the backend heap.** Resource values belong in storage
    (they are already persisted to `live_state_snapshot`; the heap copy is the liability). The backend
@@ -145,7 +145,7 @@ paints in < 2 s from last-known state.
 
 - **The host still thrashes** — self-inflicted fleet pressure (concurrent builds + agent sessions +
   Chrome filling 64 GB) needs **fleet memory admission + duress-gating deploys** (fix 3 of the 07-11
-  doc, still unbuilt). Bounded working sets move Singularity to the shallow side of the cliff
+  doc, still unbuilt). Bounded working sets move equin to the shallow side of the cliff
   (minutes → seconds); admission stops the episodes from forming.
 - **Observability gaps** (silent failed hot restart, never-ready-boot report kind, surface
   consolidation) — owned by the debug-surface consolidation workstream (2026-07-17 session).

@@ -28,7 +28,7 @@ export function gatewayServiceJob(
 ): LoginServiceJob {
   return {
     description:
-      "Singularity gateway (and through it Postgres, PgBouncer and every backend)",
+      "equin gateway (and through it Postgres, PgBouncer and every backend)",
     argv: spec.argv,
     cwd: spec.cwd,
     env: spec.env,

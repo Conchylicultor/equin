@@ -1,10 +1,10 @@
 ---
-name: Singularity vision — Notion-like composable apps
-description: Long-term vision for Singularity as a unified surface where agents dynamically compose user-tailored apps from building blocks (Notion-meets-WeChat model)
+name: equin vision — Notion-like composable apps
+description: Long-term vision for equin as a unified surface where agents dynamically compose user-tailored apps from building blocks (Notion-meets-WeChat model)
 type: project
 originSessionId: c863f1f5-473d-4e20-9f3c-f5a86ab12448
 ---
-Singularity is heading toward a "Notion-like WeChat" model: a single unified surface where agents dynamically create apps on the fly, tailored to each user's unique use-case. Like Notion gives users composable building blocks (databases, pages, views) to fit their workflow, Singularity does this at the *app* level — composing whole apps per user, all inside one experience.
+equin is heading toward a "Notion-like WeChat" model: a single unified surface where agents dynamically create apps on the fly, tailored to each user's unique use-case. Like Notion gives users composable building blocks (databases, pages, views) to fit their workflow, equin does this at the *app* level — composing whole apps per user, all inside one experience.
 
 **Why:** Generic apps force users into one-size-fits-all workflows. Agents now make it feasible to generate per-user, per-use-case apps cheaply. The unified surface (WeChat-like) keeps the experience cohesive instead of fragmenting into many disconnected tools.
 

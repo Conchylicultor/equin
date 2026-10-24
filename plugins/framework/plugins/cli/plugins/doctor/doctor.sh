@@ -1,5 +1,5 @@
 #!/bin/sh
-# Singularity's prerequisite check: names EVERY missing prerequisite in one run,
+# equin's prerequisite check: names EVERY missing prerequisite in one run,
 # each with the command that fixes it, then exits 1 if anything REQUIRED was
 # missing. A recommended one (Claude Code) is named with its fix too, but does
 # not fail the run: nothing that stands the app up uses it, and the running app
@@ -174,10 +174,10 @@ else
 fi
 
 if [ "$missing" -eq 0 ]; then
-  echo "Singularity prerequisites: all required present.$recommended"
+  echo "equin prerequisites: all required present.$recommended"
   exit 0
 fi
-echo "Singularity prerequisites: $missing missing.$report$recommended
+echo "equin prerequisites: $missing missing.$report$recommended
 
 Setup, in order: docs/setup.md"
 exit 1

@@ -2,7 +2,7 @@
 
 ## Context
 
-Singularity's frontend plugin system (slots + contributions) solves a real composition problem: multiple plugins contribute UI fragments to a shared layout without knowing about each other. The shell doesn't know what's in the sidebar — it just renders whatever was contributed.
+equin's frontend plugin system (slots + contributions) solves a real composition problem: multiple plugins contribute UI fragments to a shared layout without knowing about each other. The shell doesn't know what's in the sidebar — it just renders whatever was contributed.
 
 Does this pattern translate to the server? **No.** On the server, each plugin owns its URL paths entirely. There's no "multiple plugins contributing handlers to the same endpoint" scenario:
 

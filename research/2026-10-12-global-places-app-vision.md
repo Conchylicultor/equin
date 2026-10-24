@@ -10,7 +10,7 @@ Saved places today live in Google Maps lists or Mapstr: flat lists, weak
 filters, no way to ask "French restaurants in Paris I haven't tried, that Alex
 recommended". What Mapstr gets right is its **tag system**: one glance at the map
 tells you what each place is and how it relates to you. Places keeps that and
-adds Singularity's strengths — records in a DataView (arbitrary queries, saved
+adds equin's strengths — records in a DataView (arbitrary queries, saved
 views, map / gallery / list), and later agents.
 
 ## The jobs
@@ -74,7 +74,7 @@ The proto-1791018718-iear **drop** (teardrop, white 2px outline, ground shadow):
   inherited), icon (Material picker), Google types, place count, add child, delete.
 - **Add place**: Google search → pick → saved with its automatic tags.
 
-## Building blocks it adds to Singularity (reusable)
+## Building blocks it adds to equin (reusable)
 
 - `location` field type (lat/lng + address).
 - DataView **map view** (`data-view/plugins/map`).

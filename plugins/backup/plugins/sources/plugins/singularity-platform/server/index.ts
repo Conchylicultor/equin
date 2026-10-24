@@ -6,12 +6,12 @@ import { assembleSingularityPlatform } from "./internal/assemble-singularity-pla
 
 export default {
   description:
-    "Backs up Singularity platform files (auth, database config) into the backup archive.",
+    "Backs up equin platform files (auth, database config) into the backup archive.",
   contributions: [
     ConfigV2.Register({ descriptor: singularityPlatformSourceConfig }),
     BackupSource({
       id: "singularity-platform",
-      name: "Singularity Platform",
+      name: "equin platform",
       assemble: assembleSingularityPlatform,
     }),
   ],

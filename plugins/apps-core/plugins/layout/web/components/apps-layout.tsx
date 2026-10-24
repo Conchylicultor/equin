@@ -40,6 +40,7 @@ import {
 } from "@plugins/apps-core/plugins/tabs/web";
 import { AppTabsBody } from "@plugins/apps-core/plugins/tab-surface/web";
 import { isChromelessDocument } from "@plugins/primitives/plugins/embed/web";
+import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
 import { resolveUnmatchedUrl } from "../internal/unmatched-url";
 
 /**
@@ -85,9 +86,9 @@ function RaillessFraming({ body }: Pick<RailFramingProps, "body">) {
 
 /**
  * Mirrors the focused tab's content title into the browser document title
- * (`<Entity> — <App> — Equin`), reusing the same per-tab titles the tab
+ * (`<Entity> — <App> — equin`), reusing the same per-tab titles the tab
  * bar shows. One global sync, so the browser tab name is never the stale static
- * "Equin".
+ * "equin".
  */
 function DocumentTitleSync() {
   const { tabs, focusedTabId, titles } = useTabs();
@@ -96,7 +97,9 @@ function DocumentTitleSync() {
   const appName = apps.find((a) => a.id === focused?.appId)?.app.name;
   const entity = focused ? titles[focused.tabId] : undefined;
   useEffect(() => {
-    document.title = [entity, appName, "Equin"].filter(Boolean).join(" — ");
+    document.title = [entity, appName, PRODUCT_NAME]
+      .filter(Boolean)
+      .join(" — ");
   }, [entity, appName]);
   return null;
 }

@@ -1,6 +1,6 @@
 # mail
 
-A Gmail-class mail client, delivered as a top-level Singularity app at `/mail`.
+A Gmail-class mail client, delivered as a top-level equin app at `/mail`.
 
 This top-level plugin is an empty namespace only (no slots, no logic). All
 content lives in sub-plugins:

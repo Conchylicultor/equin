@@ -37,8 +37,8 @@ That's it. No renderer-specific annotations on the story. The renderer decides h
 - Not a CMS. There's no publish pipeline, no themes, no SEO fields.
 - Not an AI writing tool (yet). Generation is a future layer — the story is human-authored first.
 
-## Within Singularity
+## Within equin
 
-Story Builder is a Singularity app (`/story`). The block editor is a reusable primitive (sidequest or plugin) — it's useful beyond this app. The renderer plugin architecture uses Singularity's existing slot/contribution system. Stories are persisted in the DB as block trees.
+Story Builder is an equin app (`/story`). The block editor is a reusable primitive (sidequest or plugin) — it's useful beyond this app. The renderer plugin architecture uses equin's existing slot/contribution system. Stories are persisted in the DB as block trees.
 
 The generation layer (AI helps you refine the story, or generates renderer-specific enhancements) is a future iteration. The interaction model — how the AI and the author collaborate on the narrative — is deliberately left open. The story-as-tree structure gives the AI a natural interface: suggest blocks, reorder sections, expand sparse nodes, collapse verbose ones.

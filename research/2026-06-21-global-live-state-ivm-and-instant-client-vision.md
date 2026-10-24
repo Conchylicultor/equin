@@ -7,7 +7,7 @@
 
 ## Context
 
-Singularity's live-state is a **server-push** model: the source of truth and the
+equin's live-state is a **server-push** model: the source of truth and the
 query execution stay on the server; deltas push to the browser over a
 leader-elected WebSocket. It already has most of a reactive dataflow engine —
 the `dependsOn` DAG (the dataflow graph), the L4 change-feed (the input delta
@@ -32,7 +32,7 @@ remain — and they are the two axes of this doc:
    instant filtering/sorting, offline, and instant optimistic writes.
 
 **Reframe up front:** parity on *every* axis means becoming one of those systems.
-For Singularity's actual workload — a personal OS, mostly single-user/small-group,
+For equin's actual workload — a personal OS, mostly single-user/small-group,
 server-trusted, modest concurrency — the axes where a sync engine wins (offline,
 massive fan-out, write firehose) matter far less than the axis users *feel*
 (instant local interaction). So the goal is not "beat Materialize at IVM"; it is

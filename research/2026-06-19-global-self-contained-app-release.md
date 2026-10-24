@@ -5,7 +5,7 @@
 
 ## Context
 
-Today Singularity only runs as the multi-namespace agent-manager: every app is served through the Go gateway at `http://<worktree>.localhost:9000`, identity is derived from a git worktree, and there is no way to ship a single app to an end user. We want to **release an individual composed app as a self-contained product** — starting with **Sonata** (the music app), stripped of the agent-manager / self-improvement / studio chrome — and to be able to launch it **either as a web deployment or as a Tauri desktop binary**.
+Today equin only runs as the multi-namespace agent-manager: every app is served through the Go gateway at `http://<worktree>.localhost:9000`, identity is derived from a git worktree, and there is no way to ship a single app to an end user. We want to **release an individual composed app as a self-contained product** — starting with **Sonata** (the music app), stripped of the agent-manager / self-improvement / studio chrome — and to be able to launch it **either as a web deployment or as a Tauri desktop binary**.
 
 The clean-design framing: do not special-case Sonata. Build a **reusable release pipeline** — a named composition + a static run profile — that any app can be packaged through. Sonata is the first consumer and the v0 proof.
 

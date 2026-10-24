@@ -1,4 +1,4 @@
-# Vision: A Gmail-class mail client, composed from Singularity primitives
+# Vision: A Gmail-class mail client, composed from equin primitives
 
 **Status:** Vision / north-star. Per-phase design happens in each implementation task ("Plan first.").
 **Date:** 2026-06-29
@@ -8,7 +8,7 @@
 
 ## 1. Vision
 
-A full Gmail-class mail client, delivered the Singularity way: **not an email app written from scratch, but a thin Gmail-sync core wired into the primitives we already have.** The inbox is a `data-view`. Search is the `search/engine`. Background sync is `jobs` + `events`. Live updates are `live-state`. Compose is the `text-editor`. Attachments are `infra/attachments`. The novel surface area is deliberately small: a Gmail sync engine, a mail data model, and mail-specific UI sections.
+A full Gmail-class mail client, delivered the equin way: **not an email app written from scratch, but a thin Gmail-sync core wired into the primitives we already have.** The inbox is a `data-view`. Search is the `search/engine`. Background sync is `jobs` + `events`. Live updates are `live-state`. Compose is the `text-editor`. Attachments are `infra/attachments`. The novel surface area is deliberately small: a Gmail sync engine, a mail data model, and mail-specific UI sections.
 
 This is also the first real test of the "Notion-like WeChat" thesis at app scale — a mail client that is itself a *composition* of marketplace-style plugins, sharing the same primitives as every other app, so that later an agent could recompose "mail + tasks + calendar" into one personal surface.
 

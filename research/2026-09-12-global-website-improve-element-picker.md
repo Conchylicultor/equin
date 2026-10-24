@@ -4,7 +4,7 @@
 
 The Improve popover on the equin website (header button, from
 `research/2026-09-11-plugins-website-improve-button.md`) has a plain text field.
-A visitor can't point at the part of the page they mean. Singularity's own
+A visitor can't point at the part of the page they mean. equin's own
 Improve can: "Pick UI element" puts an outline over the page, you click an
 element, and a `<ui-context/>` chip lands in the text at the caret. That
 follow-up was filed as `task-1789122717775-lj8anm`.
@@ -21,7 +21,7 @@ This plan brings the same experience to the website:
 
 The website ships as its own `website` composition. Anything the website imports
 is built into that composition, so it cannot reach tasks, conversations, auth,
-Singularity's Improve app, `active-data` or the page editor. Today two things
+equin's Improve app, `active-data` or the page editor. Today two things
 block it:
 
 1. **The picker lives in the wrong place.** The overlay, its hit-testing, the chip
@@ -34,7 +34,7 @@ block it:
    hook that reads and writes the server.
 
 There is also a constraint that a quick fix would break. The website is **also**
-an app inside the main Singularity composition, where `active-data` and the
+an app inside the main equin composition, where `active-data` and the
 picker are present. The text editor's list of token types is global. If the
 website registered its own `<ui-context>` token, the main app would have two
 registrations for the same characters. So there has to be **one** registration,
@@ -156,7 +156,7 @@ draws the `<ui-context>` token as a chip.
     `[data-element-picker]`, so the hit-testing skips it.
   - `PickerButton` (the `IconButton` form, still disabled while armed) is built
     on `ElementPicker`.
-- **`improve/element-picker` shrinks to Singularity glue:** the `ActionBar.Item`
+- **`improve/element-picker` shrinks to equin glue:** the `ActionBar.Item`
   and the `TaskDraftFormSlots.Action`, both built on `PickerButton` from
   `ui-context/element-picker`.
 - **The `vite/` source-location transform stays where it is.** It is found by a

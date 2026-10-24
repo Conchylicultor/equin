@@ -33,7 +33,7 @@ Shell.Route({ pattern: "/", resolve: () => welcomePane() })
 
 **`plugins/welcome/web/components/welcome-view.tsx`** — The component:
 - Centered layout, `max-w-md`
-- Branding: "S" logo, "Singularity", "Agent Manager"
+- Branding: "S" logo, "equin", "Agent Manager"
 - Stats row: total / active / idle sessions (fetched from `GET /api/claude-sessions`)
 - "New Session" button (POST + `Shell.OpenPane`)
 - Recent sessions list (top 3, clickable)

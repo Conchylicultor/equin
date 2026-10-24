@@ -114,7 +114,7 @@ built. On a fresh install there is nothing to ask.
 ```
 error: Could not read the fork exclusion set from any running backend:
   http://equin.localhost:9000/api/db/fork-exclusions → 404
-Start Singularity and retry …
+Start equin and retry …
 ```
 
 **5. The repo's own setup task silently does nothing on a clean machine.**

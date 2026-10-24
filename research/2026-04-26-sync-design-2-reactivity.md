@@ -161,7 +161,7 @@ TanStack Query ([invalidation docs](https://tanstack.com/query/v5/docs/framework
 | SolidJS / MobX | Runtime: getter / Proxy | Per-signal / per-property | No | N/A | N/A | JS |
 | TanStack Query (today) | Hand-asserted key prefix | Full payload | No | N/A | Manual via key | None |
 
-## 5. Options for Singularity
+## 5. Options for equin
 
 Three coherent architectures, each picking a different point in the family-(a) vs family-(b) space. All assume the existing constraint: Postgres-per-worktree, single-tenant local app, plugins must register their own queries, runtime is Bun + TypeScript.
 

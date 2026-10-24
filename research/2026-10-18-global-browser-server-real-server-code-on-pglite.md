@@ -106,7 +106,7 @@ The split sits where the host differs (the platform and the substrate), so every
   - The host capability is set once by each composition root: Bun `machine: true`, the browser `false`.
   - Reading the capability unset throws.
 - **Client:** `fetchEndpoint`, `useEndpoint` and `useEndpointMutation` of a `needsMachine` endpoint return `{ kind: "ok", value } | { kind: "unavailable", message }`, chosen by a conditional type on the def.
-  - The `message` is composed once from `feature`: "Launching an agent isn't available in this version of the app — it needs Singularity running on your computer."
+  - The `message` is composed once from `feature`: "Launching an agent isn't available in this version of the app — it needs equin running on your computer."
   - Call sites cannot reach the value without handling the unavailable arm. That is tsc enforcement, not a lint.
 - **Slice scope:**
   - Mark the machine endpoints the agent-manager demo reaches: launch/start agent, send turn, push. Take the list from the leak ledger in `research/2026-10-13-global-in-app-demo-scope-v2.md`.

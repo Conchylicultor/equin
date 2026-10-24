@@ -1,6 +1,6 @@
 # Server
 
-Shared backend for Singularity. A single Bun process that routes HTTP requests and WebSocket connections to handlers provided by plugins.
+Shared backend for equin. A single Bun process that routes HTTP requests and WebSocket connections to handlers provided by plugins.
 
 See the top-level [`CLAUDE.md`](../../../../CLAUDE.md) for overall architecture and [`plugins/framework/plugins/web-sdk/CLAUDE.md`](../web-sdk/CLAUDE.md) for the frontend plugin system.
 

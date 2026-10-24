@@ -6,7 +6,7 @@ After re-reasoning from first principles about how SPA + backend apps are canoni
 
 1. **Static serving model reverted to "gateway serves statics directly"** (Model A). The gateway reads each worktree's `web/dist` and serves files itself. The backend is no longer required to grow a static-serving feature. Page loads are instant; backend cold-start happens only on the first `/api/*` or `/ws/*` request. This restores the lazy-spawn property the architecture was designed to provide — opening a worktree page costs zero backend processes.
 
-2. **Dashboard removed from gateway scope**. The dashboard will be a frontend plugin inside the Singularity app itself, querying `/gateway/worktrees`. The gateway no longer renders HTML or embeds templates.
+2. **Dashboard removed from gateway scope**. The dashboard will be a frontend plugin inside the equin app itself, querying `/gateway/worktrees`. The gateway no longer renders HTML or embeds templates.
 
 Everything else (Go, subdomain routing, lazy spawn, idle teardown, port allocation, discovery, `/gateway/*` API, `~/.singularity/worktrees/`) is unchanged.
 
@@ -14,14 +14,14 @@ Everything else (Go, subdomain routing, lazy spawn, idle teardown, port allocati
 
 ## Context
 
-Singularity lets users run multiple isolated instances of the agent-manager app — one per agent worktree — and switch between them seamlessly. We need a gateway that listens on a single port, routes by subdomain, owns backend lifecycles, and treats each worktree as a deployable unit.
+equin lets users run multiple isolated instances of the agent-manager app — one per agent worktree — and switch between them seamlessly. We need a gateway that listens on a single port, routes by subdomain, owns backend lifecycles, and treats each worktree as a deployable unit.
 
 The deployable unit is **two artifacts**: a static frontend bundle (`web/dist`) and a backend service (a `bun` process). This split is the standard modern web architecture (Vercel, Netlify, Cloudflare Pages, Amplify, every K8s app). It exists because the two halves have fundamentally different characteristics:
 
 - Statics are cheap to serve, cacheable, always-warm, zero memory.
 - Backends are expensive to start, stateful, scale-sensitive, idle-able.
 
-Collapsing them into one process trades runtime efficiency for mental-model simplicity. Singularity's whole point is runtime efficiency (lazy spawn, idle teardown), so the split is the right choice.
+Collapsing them into one process trades runtime efficiency for mental-model simplicity. equin's whole point is runtime efficiency (lazy spawn, idle teardown), so the split is the right choice.
 
 This doc specifies a Go reverse-proxy gateway that:
 
@@ -227,7 +227,7 @@ if worktree == "" {
     if registry.Has("head") {
         http.Redirect(w, r, "http://head.localhost"+r.URL.RequestURI(), http.StatusFound)
     } else {
-        http.Error(w, "Singularity gateway. Use <name>.localhost:9000.", http.StatusNotFound)
+        http.Error(w, "equin gateway. Use <name>.localhost:9000.", http.StatusNotFound)
     }
     return
 }
@@ -514,7 +514,7 @@ Each step leaves the gateway in a runnable state.
 8. `proxy/ws` — hijack proxy + activeConns bookkeeping.
 9. `sweeper` — idle teardown.
 10. End-to-end manual test with two fake worktrees running trivial Go HTTP servers.
-11. Wire to real Singularity backend after `server/src/index.ts` reads `PORT` from env (one-line change).
+11. Wire to real equin backend after `server/src/index.ts` reads `PORT` from env (one-line change).
 
 ---
 

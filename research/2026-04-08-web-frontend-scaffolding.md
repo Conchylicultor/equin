@@ -2,7 +2,7 @@
 
 ## Context
 
-Singularity needs its core frontend app. Nothing exists yet under `web/`. This plan sets up a minimal, running Vite+React app with shadcn/ui, Tailwind v4, and atomic design folder structure — the foundation everything else builds on.
+equin needs its core frontend app. Nothing exists yet under `web/`. This plan sets up a minimal, running Vite+React app with shadcn/ui, Tailwind v4, and atomic design folder structure — the foundation everything else builds on.
 
 ## Tech Stack
 
@@ -66,6 +66,6 @@ web/
 ## Verification
 
 - `bun run dev` starts without errors
-- Page renders "Singularity" centered
+- Page renders "equin" centered
 - Tailwind classes work (visible styling on the h1)
 - `bun run build` completes without TypeScript errors

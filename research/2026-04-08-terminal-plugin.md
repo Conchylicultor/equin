@@ -2,7 +2,7 @@
 
 ## Context
 
-Singularity needs a terminal panel so users can interact with shells (and eventually agent worktrees). This is the first plugin with a backend component, so the design also establishes the **server-side plugin pattern** — a shared Bun server at `server/` where plugins register WebSocket/HTTP handlers, mirroring the frontend's slot/contribution model.
+equin needs a terminal panel so users can interact with shells (and eventually agent worktrees). This is the first plugin with a backend component, so the design also establishes the **server-side plugin pattern** — a shared Bun server at `server/` where plugins register WebSocket/HTTP handlers, mirroring the frontend's slot/contribution model.
 
 The Go backend plan in CLAUDE.md is superseded — TypeScript/Bun is the backend language.
 
