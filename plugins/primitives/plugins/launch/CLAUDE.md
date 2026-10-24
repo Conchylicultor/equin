@@ -114,7 +114,6 @@ started" notification confirms it), so its props are the form's minus
     - `conversations/conversation-view/fork-conversation`
     - `conversations/conversation-view/jsonl-viewer/investigate-event`
     - `conversations/conversation-view/rewind`
-    - `conversations/conversations-view`
     - `page/annotations/todo/task-link`
     - `page/prompt/block`
     - `primitives/launch/investigate`

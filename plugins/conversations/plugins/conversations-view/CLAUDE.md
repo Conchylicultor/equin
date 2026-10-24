@@ -6,36 +6,15 @@
 
 - Description: Sidebar list of all conversations.
 - Web:
-  - Contributes:
-    - `Shell.Sidebar` "New conversation" → `LaunchSidebarItem`
-    - `Shell.Sidebar` "Conversations" → `ConversationsSidebar`
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×6
-    - `primitives/css/fill` ×2
-    - `primitives/launch` ×2
-    - `primitives/pane` ×2
+  - Contributes: `Shell.Sidebar` "Conversations" → `ConversationsSidebar`
+  - Uses:
     - `conversations/conversation-view.conversationPane`
     - `conversations/conversations-view/data-view.ConversationsSidebarDataView`
-    - `conversations/model-provider.useDefaultModel`
     - `conversations/pane-restore.loadRouteForConversation`
     - `infra/endpoints.useFetchEndpoint`
-    - `primitives/css/line.Line`
-    - `primitives/css/spacing.insetClass`
-    - `primitives/css/status-dot.StatusDot`
-    - `primitives/icon-button.IconButton`
+    - `primitives/pane.useOpenPane`
+    - `primitives/pane.usePaneStore`
     - `shell.Shell`
-    - `ui/icons.Icon`
-- Cross-plugin:
-  - Uses tokens:
-    - `ui/tokens/color-palette --primary`
-    - `ui/tokens/color-palette --primary-text`
-    - `ui/tokens/density --control-height-md`
-    - `ui/tokens/density --space-xs`
-    - `ui/tokens/shape --radius`
-    - `ui/tokens/sidebar-palette --sidebar-accent`
-    - `ui/tokens/sidebar-palette --sidebar-accent-foreground`
-    - `ui/tokens/sidebar-palette --sidebar-border`
-    - `ui/tokens/type-scale --font-weight-semibold`
 - Sub-plugins:
   - **`data-view`** — Umbrella for the DataView conversation-list sidebar: owns the merged multi-source DataView surface (one config, one unified switcher) mounted directly by the conversations-view mount point.…
   - **`grouped`** — Registers the conversation-group id kind (`cgrp-…`) in the browser's id registry, the twin of the server registration. Conversation-group persistence (tables + addMemberToGroup) backing the improve…

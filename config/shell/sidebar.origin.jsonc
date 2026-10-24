@@ -1,4 +1,4 @@
-// @hash 6096df28c4f6
+// @hash 6a2dd9a103a2
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -9,7 +9,6 @@
   "items": [
     "conversations.agents:agents",
     "conversations.all-conversations:all-conversations",
-    "conversations.conversations-view:launch",
     "conversations.conversations-view:conversations",
     "stats:stats",
     "tasks.automations:automations",

@@ -1,4 +1,4 @@
-// @hash 6096df28c4f6
+// @hash 6a2dd9a103a2
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -28,7 +28,6 @@
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
-    "conversations.conversations-view:launch",
     "tasks.task-detail:tasks",
     "conversations.agents:agents",
     "tasks.automations:automations",

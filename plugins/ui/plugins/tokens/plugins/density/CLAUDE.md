@@ -41,10 +41,10 @@
   - Uses tokens:
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
-  - Tokens used by: 326 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Tokens used by: 325 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×69
     - `apps` ×66
-    - `conversations` ×49
+    - `conversations` ×48
     - `debug` ×28
     - `page` ×20
     - `ui` ×17

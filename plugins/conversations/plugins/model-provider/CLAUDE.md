@@ -126,7 +126,6 @@ Single source of truth for the models an agent can run, and for what the user as
     - `conversations/conversation-view/jsonl-viewer/tool-call/agent`
     - `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
     - `conversations/conversation-view/launch-prompts`
-    - `conversations/conversations-view`
     - `debug/claude-cli-calls`
     - `hints/ask`
     - `infra/claude-cli`

@@ -31,7 +31,6 @@
   - Tokens used by:
     - `apps-core/app-launcher`
     - `apps/file-explorer/places`
-    - `conversations/conversations-view`
     - `conversations/conversations-view/data-view`
     - `primitives/app-shell`
     - `primitives/css/theme-boundary`
