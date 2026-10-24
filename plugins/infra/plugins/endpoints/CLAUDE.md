@@ -360,7 +360,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
 
 ## Plugin reference
 
-- Description: Typed endpoint contract primitive. useFetchEndpoint (a FetchEndpoint bound to the subtree's transport; fetchEndpointOver(t) for sanctioned page-level code), useEndpoint, and useEndpointMutation consume endpoint definitions on the client; useAssetSrc turns an AssetPath (a GET endpoint's asset) into what an element loads over the subtree's transport (the path, a blob URL, or unavailable). Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; callEndpoint() calls one from off the page (a backend, the CLI) through its contract; useFetchEndpoint/useEndpoint consume on the client.
+- Description: Typed endpoint contract primitive. useFetchEndpoint (a FetchEndpoint bound to the subtree's transport; fetchEndpointOver(t) for sanctioned page-level code), useEndpoint, and useEndpointMutation consume endpoint definitions on the client; useAssetSrc turns an AssetPath (a GET endpoint's asset) into what an element loads over the subtree's transport (the path, a blob URL, or unavailable); useAssetUrl / assetUrlOver hand a sink that loads by URL on its own (a library's fetch, an HTML string, an iframe) an AssetPath's or AssetBase's URL, or unavailable. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; callEndpoint() calls one from off the page (a backend, the CLI) through its contract; useFetchEndpoint/useEndpoint consume on the client.
 - Load-bearing: yes
 - Web:
   - Uses:
@@ -372,9 +372,11 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `primitives/networking.useTransportScoped`
   - Exports (types):
     - `AssetSrc`
+    - `AssetUrl`
     - `EndpointErrorInfo`
     - `FetchEndpoint`
   - Exports (values):
+    - `assetUrlOver`
     - `EndpointAgentWriteRefusedError`
     - `EndpointError`
     - `endpointErrorSink`
@@ -383,6 +385,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `getEndpointErrorMessage`
     - `useAssetSrc`
     - `useAssetSrcs`
+    - `useAssetUrl`
     - `useEndpoint`
     - `useEndpointMutation`
     - `useFetchEndpoint`
@@ -398,6 +401,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `packages/semaphore.createSemaphore`
   - Exports (types):
     - `AgentWrite`
+    - `AssetBase`
     - `AssetPath`
     - `Codec`
     - `EndpointAnswer`
@@ -412,6 +416,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
   - Exports (values):
     - `agentWriteRefusedMessage`
     - `ASSET_PATH`
+    - `assetBase`
     - `assetPath`
     - `blob`
     - `dateString`
@@ -435,17 +440,17 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `unmatchedApiResponse`
     - `unsupportedEndpointResponse`
 - Cross-plugin:
-  - Imported by: 231 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×56
+  - Imported by: 236 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×59
     - `conversations` ×32
+    - `infra` ×20
     - `page` ×20
     - `debug` ×19
-    - `infra` ×19
     - `tasks` ×19
     - `primitives` ×16
     - `build` ×8
+    - `ui` ×7
     - `reports` ×6
-    - `ui` ×6
     - `auth` ×5
     - `active-data` ×2
     - `apps-core` ×2

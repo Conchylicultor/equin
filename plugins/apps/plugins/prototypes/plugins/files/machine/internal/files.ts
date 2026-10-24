@@ -3,7 +3,10 @@ import { PROTOTYPE_ENTRY_FILE, getPrototypeFile } from "../../core";
 import { HISTORY_DIR_NAME } from "../../shared/history/store";
 import { PICKS_DIR_NAME } from "../../shared/picks";
 import { isRetiredDirName } from "../../shared/retired";
-import { contentTypeForPath, resolvePrototypeFile } from "../../server/internal/paths";
+import {
+  contentTypeForPath,
+  resolvePrototypeFile,
+} from "../../server/internal/paths";
 import { hasPicks, servePickedDocument } from "./picked-document";
 
 // The live prototypes tree's raw files over HTTP — desktop-only: they are read

@@ -147,8 +147,8 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
 
 - Description: Plugin doc generation and registry codegen
 - Core:
-  - Uses: 109 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `plugin-meta/parse-utils` ×16
+  - Uses: 112 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `plugin-meta/parse-utils` ×17
     - `config_v2` ×15
     - `framework/plugin-id` ×14
     - `framework/tooling/resource-vocabulary` ×10
@@ -158,17 +158,17 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `plugin-meta/facets` ×5
     - `plugin-meta/plugin-tree` ×4
     - `framework/slot-declaration` ×3
+    - `framework/tooling/import-closure` ×3
     - `config_v2/ledger` ×2
     - `framework/tooling/boundaries` ×2
     - `framework/tooling/format` ×2
-    - `framework/tooling/import-closure` ×2
     - `framework/tooling` ×2
     - `infra/namespace` ×2
     - `packages/macrotask-yield` ×2
+    - `packages/resource-protocol` ×2
     - `fields/reorder-tree.REORDER_NODE_LEGEND`
     - `framework/tooling/lint.loadLintContributions`
     - `framework/tooling/web-artifacts.COMPOSITION_SPECIFIERS`
-    - `packages/resource-protocol.RESOURCE_HTTP_ROUTE`
     - `packages/semaphore.createSemaphore`
     - `plugin-meta/facets/contributions.contributionsFacetDef`
     - `plugin-meta/facets/exemptions.exemptionsFacetDef`
@@ -203,7 +203,6 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `RegistryComposition`
     - `RegistryGenContext`
     - `ReorderableSlotEntry`
-    - `ServerContributionKindDecl`
     - `WatchedSlotHit`
   - Exports (values):
     - `appDeclarationsManifestPath`
@@ -271,7 +270,6 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `parseCustomUtilities`
     - `parseHostServiceDeclarations`
     - `parseNamedCompositionRegistryFileName`
-    - `parseServerContributionDeclarations`
     - `parseSpaceRamp`
     - `pluginClaudeMdPath`
     - `pluginCompactDocPath`

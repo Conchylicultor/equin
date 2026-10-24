@@ -72,7 +72,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`conversations`** [load-bearing] [test helpers] [exempt] [172 sub-plugins] — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
 
-- **`database`** [load-bearing] [exempt] — Core database infrastructure: the app's `db` over the host's DatabaseDriver, DB readiness and the boot schema layer.
+- **`database`** [load-bearing] [test helpers] [exempt] — Core database infrastructure: the app's `db` over the host's DatabaseDriver, DB readiness and the boot schema layer.
   - Plugins:
     - **`admin`** [test helpers] [exempt] — Admin operations for the database plugin — fork, backup, drop, list.
     - **`change-feed`** [test helpers] — L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations…
@@ -87,7 +87,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`derived-views`** — Rebuilds plain DB views from source on every boot, in dependency order. Plain views are derived code (declared via the View contribution), not stateful migration schema.
     - **`embedded`** [load-bearing] [exempt] — Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.
     - **`fork`** — Durable, self-healing worktree DB fork: a graphile job that forks the singularity DB per worktree (idempotent, atomic), plus a scheduled sweep of orphaned temp forks.
-    - **`live-state-snapshot`** — L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, served only from a usable row (a key the runtime persists now, under its current definition, from a…
+    - **`live-state-snapshot`** [test helpers] — L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, served only from a usable row (a key the runtime persists now, under its current definition, from a…
     - **`migrations`** [test helpers] [exempt] — DDL lifecycle: migration runner and SQL files.
       - Plugins:
         - **`bundled-source`** (excluded) — The migration history bundled as text: provides the MigrationSource host service from the committed data/*.sql inlined at build time, for a host without the repo on disk (a browser worker host).…

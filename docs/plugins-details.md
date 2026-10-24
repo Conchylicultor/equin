@@ -4442,13 +4442,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/mail/reading-pane`
               - `apps/mail/sync`
               - `apps/mail/threads`
-        - **`mail-html`** — Privacy-safe email HTML renderer: <MailHtml> runs a DOMPurify sanitize → remote-image gating (proxied only after opt-in) → cid: inline-image resolution → quoted-history collapse pipeline, injected inside a style-scoped container.
+        - **`mail-html`** — Privacy-safe email HTML renderer: <MailHtml> runs a DOMPurify sanitize → remote-image gating (proxied only after opt-in) → cid: inline-image resolution → quoted-history collapse pipeline, injected inside a style-scoped container; <RemoteImagesNotice> is the Display images opt-in above it, or the proxy's unavailable message on a host without the computer.
           - Web:
             - Uses:
+              - `infra/endpoints.assetUrlOver`
+              - `infra/endpoints.useMachineAvailability`
               - `primitives/collapsible.FoldMotion`
               - `primitives/collapsible.useCollapsible`
+              - `primitives/css/row.Row`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/networking.useTransport`
+              - `ui/icons.Icon`
             - Exports (types): `MailHtmlProps`
-            - Exports (values): `MailHtml`
+            - Exports (values):
+              - `MailHtml`
+              - `RemoteImagesNotice`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --border`
@@ -4465,10 +4474,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: 29 symbols — full list in [`plugins/apps/plugins/mail/plugins/reading-pane/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/reading-pane/REFERENCE.md)
               - `primitives/pane` ×3
               - `apps/mail/attachments` ×2
+              - `apps/mail/mail-html` ×2
               - `primitives/collapsible` ×2
               - `primitives/css/spacing` ×2
               - `primitives/css/ui-kit` ×2
-              - `apps/mail/mail-html.MailHtml`
               - `apps/mail/sync.MessageBodyState`
               - `network/live.useLive`
               - `primitives/avatar.Avatar`
@@ -4485,7 +4494,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/live-state.ResourceErrorInline`
               - `primitives/loading.Loading`
               - `primitives/relative-time.RelativeTime`
-              - `ui/icons.Icon`
             - Exports (values): `threadPane`
           - Server:
             - Contributes:
@@ -4509,15 +4517,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family --font-sans`
               - `ui/tokens/shape --radius`
             - Imported by: `apps/mail/threads`
-        - **`remote-images`** — SSRF-guarded, image-content-type-restricted proxy for remote email images (GET /api/mail/image?url=). Same-origin; fetches through safeFetch, refuses non-image responses (415), and only ever hit after the user opts into 'Display images' — so it is neither a tracking-pixel leak nor an open proxy.
-          - Server:
-            - Uses:
-              - `infra/safe-fetch.safeFetch`
-              - `infra/safe-fetch.SsrfError`
+        - **`remote-images`** — SSRF-guarded, image-content-type-restricted proxy for remote email images (GET /api/mail/image?url=, needsMachine). Same-origin; fetches through safeFetch, refuses non-image responses (415), and only ever hit after the user opts into 'Display images' — so it is neither a tracking-pixel leak nor an open proxy.
+          - Machine:
+            - Uses: `infra/endpoints.machineHandler`
+            - Routes: `GET /api/mail/image`
           - Core:
+            - Uses:
+              - `infra/endpoints.assetPath`
+              - `infra/endpoints.AssetPath`
+              - `infra/endpoints.blob`
+              - `infra/endpoints.defineEndpoint`
             - Exports (values):
-              - `MAIL_IMAGE_PROXY_ROUTE`
-              - `mailImageProxyUrl`
+              - `getMailImage`
+              - `mailImageProxyAsset`
         - **`search`** — Mail on-demand search: a Search sidebar entry opening a query surface over the mail.search paged value (Gmail's ranked threads, reaching mail older than the sync window), drawn as a DataView of the hits' live mail.threads rows, plus a reader pane for a hit's newest matched message (its live row + its mail.message-body value).
           - Web:
             - Slots:
@@ -5771,12 +5783,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeFrameActions` "close" → `CloseFrameAction`
               - `PrototypeVersionActions` "compare" → `CompareVersionAction`
               - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-            - Uses: 88 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
+            - Uses: 91 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
               - `primitives/css/ui-kit` ×9
               - `primitives/data-view` ×6
+              - `infra/endpoints` ×5
               - `primitives/collapsible` ×5
               - `hints` ×3
-              - `infra/endpoints` ×3
               - `primitives/hover-reveal` ×3
               - `primitives/persistent-draft` ×3
               - `primitives/action-presentation` ×2
@@ -5817,6 +5829,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/error-boundary.PluginErrorBoundary`
               - `primitives/launch.LaunchAgentPopover`
               - `primitives/loading.Loading`
+              - `primitives/networking.useTransport`
               - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
               - `primitives/overlay/popover.InlinePopover`
               - `primitives/overlay/portal-host.PortalHost`
@@ -5864,7 +5877,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `prototypeDetailPane`
               - `PrototypeDetailProvider`
               - `PrototypeDetailWrap`
-              - `prototypeDocumentSrc`
+              - `prototypeDocumentAsset`
               - `PrototypeFrameActions`
               - `prototypeFrames`
               - `PrototypeVersionActions`
@@ -5989,7 +6002,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/canvas.TitleActionButton`
               - `apps/prototypes/canvas.usePrototypeDetail`
               - `primitives/copy-to-clipboard.useCopyToClipboard`
-        - **`files`** — Registers the prototype id kind (`proto-…`) in the browser's id-kind registry. Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), mints new prototypes into it from the running checkout's prototypes/_template/, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html> (data-* for a choice, a --<name> custom property for a color), stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
+        - **`files`** — Registers the prototype id kind (`proto-…`) in the browser's id-kind registry. Owns the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), whose raw files and versions' files its machine/ half serves; mints new prototypes into it from the running checkout's prototypes/_template/, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html> (data-* for a choice, a --<name> custom property for a color), stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, restore, and checkpointPrototype).
           - Web:
             - Contributes: `IdKinds.Kind` "proto"
             - Uses: `ids.IdKinds`
@@ -6025,9 +6038,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `POST /api/prototypes`
               - `POST /api/prototypes/:name/versions/:sha/restore`
               - `PUT /api/prototypes/:name/picks`
+          - Machine:
+            - Uses: `infra/endpoints.machineHandler`
+            - Routes:
+              - `GET /api/prototypes/:name`
+              - `GET /api/prototypes/:name/:file`
+              - `GET /api/prototypes/:name/versions/:sha/:file`
           - Core:
             - Uses:
               - `ids.defineIdKind`
+              - `infra/endpoints.assetPath`
+              - `infra/endpoints.AssetPath`
+              - `infra/endpoints.blob`
               - `infra/endpoints.defineEndpoint`
               - `infra/html-decode.decodeHtmlText`
               - `infra/html-decode.readHtmlAttr`
@@ -6060,6 +6082,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DEFAULT_PROTOTYPE_VIEWPORT`
               - `describeOptionValues`
               - `foldOptions`
+              - `getPrototypeEntry`
+              - `getPrototypeFile`
+              - `getPrototypeVersionFile`
               - `groupOptions`
               - `HEADLESS_PRESET`
               - `humanizeToken`
@@ -6081,12 +6106,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `picksFromQuery`
               - `presetSize`
               - `protoIdKind`
-              - `PROTOTYPE_ASSET_ROUTE`
               - `PROTOTYPE_ENTRY_FILE`
-              - `PROTOTYPE_FILE_ROUTE`
-              - `PROTOTYPE_VERSION_FILE_ROUTE`
               - `PROTOTYPE_VERSION_KINDS`
               - `PROTOTYPE_VIEWPORT_WORDS`
+              - `prototypeDocument`
+              - `prototypeDocumentQuery`
               - `prototypeHistory`
               - `PrototypeHistorySchema`
               - `prototypeIdsIn`
@@ -6094,12 +6118,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeOptionSchema`
               - `prototypePicks`
               - `PrototypeProblemSchema`
-              - `PROTOTYPES_API_BASE`
               - `prototypesList`
-              - `prototypeUrl`
               - `prototypeVersionCounts`
+              - `prototypeVersionDocument`
               - `PrototypeVersionSchema`
-              - `prototypeVersionUrl`
               - `PrototypeViewportSchema`
               - `readOptionSource`
               - `readPrototypeOptions`
@@ -6348,7 +6370,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/gallery`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/import-status-files.ts`, `server/internal/legacy-trash.ts` (debt)
-        - **`thumbnails`** — The rendered-preview cover for a prototype card: the cached PNG, the caller's fallback while it renders, and a visible 'Preview failed' marker carrying the reason. Rendered PNG previews for the prototypes gallery: a content-addressed disk cache, a headless-chromium render job driven by the files watcher, the push state resource the cards read, and the immutable serving route.
+        - **`thumbnails`** — The rendered-preview cover for a prototype card: the cached PNG, the caller's fallback while it renders, and a visible 'Preview failed' marker carrying the reason. Rendered PNG previews for the prototypes gallery: a content-addressed disk cache, a headless-chromium render job driven by the files watcher, and the push state resource the cards read; the immutable serving route is the machine/ half's.
           - Server:
             - Contributes: `resource.declare` "prototypes.thumbnails"
             - Uses:
@@ -6364,25 +6386,34 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Resources: `prototypes.thumbnails` (push, notified)
           - Web:
             - Uses:
+              - `infra/endpoints.useAssetSrc`
               - `network/live.useLive`
               - `primitives/css/badge.Badge`
               - `primitives/css/overlay.Overlay`
               - `primitives/css/pin.Pin`
+              - `primitives/loading.Loading`
               - `primitives/overlay/hover-card.WithHoverCard`
               - `ui/icons.Icon`
             - Exports (values):
               - `PrototypeThumbnail`
               - `usePrototypeThumbnails`
+          - Machine:
+            - Uses: `infra/endpoints.machineHandler`
+            - Routes: `GET /api/prototype-thumbs/:key`
           - Core:
-            - Uses: `network/live.liveValue`
+            - Uses:
+              - `infra/endpoints.assetPath`
+              - `infra/endpoints.AssetPath`
+              - `infra/endpoints.blob`
+              - `infra/endpoints.defineEndpoint`
+              - `network/live.liveValue`
             - Exports (types):
               - `ThumbnailFailureKind`
               - `ThumbnailState`
             - Exports (values):
-              - `PROTOTYPE_THUMB_ROUTE`
-              - `PROTOTYPE_THUMBS_BASE`
+              - `getPrototypeThumbnail`
+              - `prototypeThumbnailAsset`
               - `prototypeThumbnails`
-              - `prototypeThumbnailUrl`
               - `ThumbnailFailureKindSchema`
               - `ThumbnailStateSchema`
           - Cross-plugin:
@@ -18982,6 +19013,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `DATABASE_CONFIG_PATH`
       - `libpqEnv`
       - `readDatabaseConfig`
+  - Test helpers:
+    - Server: `@plugins/database/server/testing`
+      - `snapshotWatermark`
   - Plugins:
     - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
       - Server:
@@ -19034,7 +19068,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build/serve-composition`
           - `database/db-test-fixture/sweep`
           - `database/fork`
-          - `database/live-state-snapshot`
           - `database/query`
           - `debug/boot-profile`
           - `debug/latency-ledger`
@@ -19079,6 +19112,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RoutedChange`
           - `WriteLatency`
         - Exports (values):
+          - `ChangelogRetention`
           - `changeProducerFor`
           - `defineChangeProducer`
           - `ExcludeFromChangeFeed`
@@ -19375,10 +19409,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by: `conversations/workspace/worktree`
     - **`live-state-snapshot`** — L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, served only from a usable row (a key the runtime persists now, under its current definition, from a current writer). Two persist modes (a FULL recompute replaces; a persisted alias's trailing window lowers the floor), an hourly compact job, and a boot catch-up that seeds each persisted alias from its row and replays the changelog by scope — or, when history was pruned past the floor or a rollup was healed, recomputes every persisted key.
       - Server:
-        - Contributes: `fork-data-exclusion` "live_state_snapshot"
+        - Contributes:
+          - `change-feed-changelog-retention` "live-state-snapshot's cold-boot catch-up replays the changelog; its hourly prune job (pruneChangelog) deletes the rows below the horizon no persisted snapshot needs"
+          - `fork-data-exclusion` "live_state_snapshot"
         - Uses:
           - `database.db`
-          - `database/admin.ExcludeFromFork`
+          - `database/change-feed.ChangelogRetention`
           - `database/change-feed.producedTableNames`
           - `database/change-feed.readLayout`
           - `database/change-feed.relationBases`
@@ -19397,6 +19433,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `debug/profiling/boot-bench`
           - `infra/boot-snapshot`
+      - Test helpers:
+        - Server: `@plugins/database/plugins/live-state-snapshot/server/testing`
+          - `pruneChangelog` — Prune the durable changelog, and record what it deleted in the SAME statement: the prune horizon (`max_pruned_xid`) moves to the highest xid this run deleted, never down.
     - **`migrations`** — DDL lifecycle: migration runner and SQL files.
       - Server:
         - Contributes: `host-service:database.migration-source` "database.migration-source"
@@ -25113,6 +25152,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `setLiveStateSnapshotHooks`
           - `setProfilerHooks`
           - `setRelationBases`
+          - `setWatermarkSource`
           - `triggerResourcePush`
           - `unboundedWindowKeys`
           - `unfedResourceTables`
@@ -25603,8 +25643,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Register: `defineSupervisedJob('type-check.backstop')`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 109 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
-              - `plugin-meta/parse-utils` ×16
+            - Uses: 112 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+              - `plugin-meta/parse-utils` ×17
               - `config_v2` ×15
               - `framework/plugin-id` ×14
               - `framework/tooling/resource-vocabulary` ×10
@@ -25614,17 +25654,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/facets` ×5
               - `plugin-meta/plugin-tree` ×4
               - `framework/slot-declaration` ×3
+              - `framework/tooling/import-closure` ×3
               - `config_v2/ledger` ×2
               - `framework/tooling/boundaries` ×2
               - `framework/tooling/format` ×2
-              - `framework/tooling/import-closure` ×2
               - `framework/tooling` ×2
               - `infra/namespace` ×2
               - `packages/macrotask-yield` ×2
+              - `packages/resource-protocol` ×2
               - `fields/reorder-tree.REORDER_NODE_LEGEND`
               - `framework/tooling/lint.loadLintContributions`
               - `framework/tooling/web-artifacts.COMPOSITION_SPECIFIERS`
-              - `packages/resource-protocol.RESOURCE_HTTP_ROUTE`
               - `packages/semaphore.createSemaphore`
               - `plugin-meta/facets/contributions.contributionsFacetDef`
               - `plugin-meta/facets/exemptions.exemptionsFacetDef`
@@ -25659,7 +25699,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `RegistryComposition`
               - `RegistryGenContext`
               - `ReorderableSlotEntry`
-              - `ServerContributionKindDecl`
               - `WatchedSlotHit`
             - Exports (values):
               - `appDeclarationsManifestPath`
@@ -25727,7 +25766,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `parseCustomUtilities`
               - `parseHostServiceDeclarations`
               - `parseNamedCompositionRegistryFileName`
-              - `parseServerContributionDeclarations`
               - `parseSpaceRamp`
               - `pluginClaudeMdPath`
               - `pluginCompactDocPath`
@@ -26006,8 +26044,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CommandRunEdge`
               - `DynamicImportPolicy`
               - `ImportClosure`
+              - `UnionImportClosure`
             - Exports (values):
               - `importClosure`
+              - `importClosures`
               - `loadTypescript`
           - Cross-plugin:
             - Imported by: `framework/tooling/codegen`
@@ -26976,17 +27016,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`infra`** — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
   - Plugins:
-    - **`asset-mirror`** — Generic server-side asset mirror: plugins declare a remote asset source via defineAssetMirror; files are lazily downloaded on first request, cached on local disk, and served same-origin thereafter (offline-capable after one warm-up).
+    - **`asset-mirror`** — Generic server-side asset mirror: plugins declare a remote asset source via defineAssetMirror; files are lazily downloaded on first request, cached on local disk, and served same-origin thereafter (offline-capable after one warm-up). Its route is the machine/ half's.
+      - Machine:
+        - Uses: `infra/endpoints.machineHandler`
+        - Routes:
+          - `GET /api/asset-mirror/:id/:file`
+          - `GET /api/asset-mirror/:id/:dir/:file`
       - Core:
-        - Uses: `framework/tooling/collected-dir.defineCollectedDir`
+        - Uses:
+          - `framework/tooling/collected-dir.defineCollectedDir`
+          - `infra/endpoints.assetBase`
+          - `infra/endpoints.AssetBase`
+          - `infra/endpoints.blob`
+          - `infra/endpoints.defineEndpoint`
         - Exports (types):
           - `AssetMirrorPrewarm`
           - `CollectedEntry`
         - Exports (values):
-          - `ASSET_MIRROR_PREFIX`
+          - `assetMirrorBase`
           - `assetMirrorPrewarmCollectedDir`
           - `assetMirrorUrl`
           - `defineAssetMirrorPrewarm`
+          - `getMirroredFile`
+          - `getMirroredNestedFile`
           - `prewarmEntries`
       - Cross-plugin:
         - Imported by:
@@ -27921,7 +27973,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `utcDay`
           - Cli:
             - Exports (values): `upgradeThisWorktree`
-    - **`endpoints`** — Typed endpoint contract primitive. useFetchEndpoint (a FetchEndpoint bound to the subtree's transport; fetchEndpointOver(t) for sanctioned page-level code), useEndpoint, and useEndpointMutation consume endpoint definitions on the client; useAssetSrc turns an AssetPath (a GET endpoint's asset) into what an element loads over the subtree's transport (the path, a blob URL, or unavailable). Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; callEndpoint() calls one from off the page (a backend, the CLI) through its contract; useFetchEndpoint/useEndpoint consume on the client.
+    - **`endpoints`** — Typed endpoint contract primitive. useFetchEndpoint (a FetchEndpoint bound to the subtree's transport; fetchEndpointOver(t) for sanctioned page-level code), useEndpoint, and useEndpointMutation consume endpoint definitions on the client; useAssetSrc turns an AssetPath (a GET endpoint's asset) into what an element loads over the subtree's transport (the path, a blob URL, or unavailable); useAssetUrl / assetUrlOver hand a sink that loads by URL on its own (a library's fetch, an HTML string, an iframe) an AssetPath's or AssetBase's URL, or unavailable. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; callEndpoint() calls one from off the page (a backend, the CLI) through its contract; useFetchEndpoint/useEndpoint consume on the client.
       - Web:
         - Uses:
           - `primitives/networking.fetchWithRetry`
@@ -27932,9 +27984,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/networking.useTransportScoped`
         - Exports (types):
           - `AssetSrc`
+          - `AssetUrl`
           - `EndpointErrorInfo`
           - `FetchEndpoint`
         - Exports (values):
+          - `assetUrlOver`
           - `EndpointAgentWriteRefusedError`
           - `EndpointError`
           - `endpointErrorSink`
@@ -27943,6 +27997,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `getEndpointErrorMessage`
           - `useAssetSrc`
           - `useAssetSrcs`
+          - `useAssetUrl`
           - `useEndpoint`
           - `useEndpointMutation`
           - `useFetchEndpoint`
@@ -27958,6 +28013,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/semaphore.createSemaphore`
         - Exports (types):
           - `AgentWrite`
+          - `AssetBase`
           - `AssetPath`
           - `Codec`
           - `EndpointAnswer`
@@ -27972,6 +28028,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `agentWriteRefusedMessage`
           - `ASSET_PATH`
+          - `assetBase`
           - `assetPath`
           - `blob`
           - `dateString`
@@ -27995,17 +28052,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 231 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×56
+        - Imported by: 236 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×59
           - `conversations` ×32
+          - `infra` ×20
           - `page` ×20
           - `debug` ×19
-          - `infra` ×19
           - `tasks` ×19
           - `primitives` ×16
           - `build` ×8
+          - `ui` ×7
           - `reports` ×6
-          - `ui` ×6
           - `auth` ×5
           - `active-data` ×2
           - `apps-core` ×2
@@ -30185,7 +30242,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/events/sources/dmda`
           - `apps/events/sources/salsanueva`
           - `apps/events/sources/url-extract`
-          - `apps/mail/remote-images`
           - `apps/sonata/sources/ultimate-guitar`
           - `infra/safe-fetch/browser-fetch`
           - `stats/cost`
@@ -32190,6 +32246,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SubErrorReason`
         - Exports (values):
           - `BUILD_GRAPH_HEADER`
+          - `CENTRAL_RESOURCE_HTTP_ROUTE`
           - `contractVerdict`
           - `DERIVE_MAX_ID`
           - `DERIVE_MAX_SOURCES`
@@ -35452,6 +35509,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DocMetaContribution`
               - `PaneDeclaration`
               - `RouteDeclaration`
+              - `ServerCompanionContribution`
+              - `ServerCompanionKind`
               - `SourceRef`
             - Exports (values):
               - `contributionId`
@@ -36016,6 +36075,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ImportRef`
           - `MarkerCall`
           - `MarkerCallSpan`
+          - `ServerContributionKindDecl`
           - `StaticCallIdResult`
           - `StringFieldResult`
           - `StringLiteralResult`
@@ -36033,6 +36093,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `parseBarrelExports`
           - `parseBoolField`
           - `parseDefineGroup`
+          - `parseServerContributionDeclarations`
           - `parseStaticCallId`
           - `parseStringField`
           - `readIfExists`
@@ -37905,8 +37966,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×8
               - `ui/tokens/density` ×4
               - `ui/tokens/shape` ×3
-            - Imported by: 68 plugins — full list in [`plugins/primitives/plugins/css/plugins/row/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/row/REFERENCE.md)
-              - `apps` ×16
+            - Imported by: 69 plugins — full list in [`plugins/primitives/plugins/css/plugins/row/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/row/REFERENCE.md)
+              - `apps` ×17
               - `ui` ×13
               - `page` ×10
               - `primitives` ×9
@@ -38277,8 +38338,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×36
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 388 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `apps` ×105
+            - Imported by: 389 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+              - `apps` ×106
               - `conversations` ×73
               - `primitives` ×43
               - `debug` ×37
@@ -38570,9 +38631,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family` ×4
               - `ui/tokens/material` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 434 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 435 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×109
-              - `apps` ×95
+              - `apps` ×96
               - `conversations` ×55
               - `page` ×25
               - `debug` ×24
@@ -41194,8 +41255,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 204 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
-          - `apps` ×65
+        - Imported by: 205 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+          - `apps` ×66
           - `ui` ×21
           - `conversations` ×19
           - `debug` ×19
@@ -41779,10 +41840,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useTransport`
           - `useTransportScoped`
       - Cross-plugin:
-        - Imported by: 29 plugins — full list in [`plugins/primitives/plugins/networking/REFERENCE.md`](../plugins/primitives/plugins/networking/REFERENCE.md)
+        - Imported by: 30 plugins — full list in [`plugins/primitives/plugins/networking/REFERENCE.md`](../plugins/primitives/plugins/networking/REFERENCE.md)
+          - `apps` ×6
           - `primitives` ×6
           - `conversations` ×5
-          - `apps` ×4
           - `debug` ×3
           - `framework` ×3
           - `infra` ×2
@@ -41790,7 +41851,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live`
           - `shell/notifications`
           - `tasks/tasks-core`
-          - `ui/icons/emoji`
       - Exemptions:
         - Exempts itself from:
           - `no-raw-websocket` — `web/shared-ws.worker.ts`, `web/use-reconnecting-ws.ts` (sanctioned)
@@ -49489,6 +49549,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`emoji`** — The <EmojiPicker>: a searchable, categorized emoji grid over frimousse whose emojibase data is served same-origin by the asset mirror; onSelect hands back a parsed Emoji. Plus <EmojiGlyph>, which draws an emoji in an icon's box (sized by the same size-* class). The page icon picker and <PageIcon> compose them. Registers the emojibase data mirror so the emoji picker's data is served same-origin (offline-capable after one warm-up) rather than fetched from the CDN by the browser.
           - Web:
             - Uses:
+              - `infra/endpoints.useAssetUrl`
               - `primitives/css/center.Center`
               - `primitives/css/fill.fillClasses`
               - `primitives/css/spacing.Stack`
@@ -49496,7 +49557,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
               - `primitives/loading.Loading`
-              - `primitives/networking.useTransport`
               - `primitives/search.SearchInput`
             - Exports (types):
               - `EmojiPickerLeadingCategory`
