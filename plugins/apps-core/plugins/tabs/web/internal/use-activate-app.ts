@@ -31,22 +31,27 @@ export function useActivateApp(): (
   const home = useHomeApp();
   return (entry) => {
     const tabId = ownTabId ?? focusedTabId;
-    // A surface-mode app is an action, not a destination: it owns no URL. Picked
-    // from the home app (the gallery), it is also what the gallery tab was open
+    // A surface-mode app switches this page's surface to its mode; its URL is
+    // its base path as a route prefix (bare `/desktop`: that mode, nothing
+    // open), so ⌘/middle-click opens it fresh in a new browser tab. Picked from
+    // the home app (the gallery), it is also what the gallery tab was open
     // for — the tab is consumed, as a tab app's pick swaps it in place — so the
     // desktop opens clear rather than holding a Home window.
     const mode = entry.surfaceMode;
     if (mode !== undefined)
-      return () => {
-        setSurfaceMode(mode);
-        const launchedFrom = tabs.find((t) => t.tabId === tabId);
-        if (
-          launchedFrom !== undefined &&
-          home.kind === "app" &&
-          launchedFrom.appId === home.app.id
-        ) {
-          closeTab(launchedFrom.tabId);
-        }
+      return {
+        open: () => {
+          setSurfaceMode(mode);
+          const launchedFrom = tabs.find((t) => t.tabId === tabId);
+          if (
+            launchedFrom !== undefined &&
+            home.kind === "app" &&
+            launchedFrom.appId === home.app.id
+          ) {
+            closeTab(launchedFrom.tabId);
+          }
+        },
+        href: () => entry.app.basePath,
       };
     return {
       open: () =>

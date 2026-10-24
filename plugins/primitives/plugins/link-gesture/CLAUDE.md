@@ -30,7 +30,9 @@ is what keeps every such control agreeing on what a ⌘-click means.
 A new in-app (Singularity) tab is not a link gesture: it is reachable only from
 an explicit menu entry (`navigate(url, { newTab: true })`).
 
-A leaf on purpose (imports only React's `MouseEvent` type), so both the pane
+A leaf on purpose (imports only React's `MouseEvent` type and the
+`pane/route-prefix` leaf, which `openInBrowserTab` puts in front of an in-app
+path so a desktop's link opens a desktop), so both the pane
 primitive (`useOpenPane().link`, Promote) and `apps-core/tabs`' `appLinkProps`
 compose it without either depending on the other.
 
@@ -91,6 +93,14 @@ resolver returning one. Fix: spread `openPane.link(…)`, or pass `openPane.to(�
 ## Plugin reference
 
 - Description: The browser's link gestures as spreadable handler props: plain click opens here, ⌘/Ctrl- and middle-click open the destination's URL in a new browser tab. A <button> gets none of this for free, so every navigating control reads it from one place.
+- Web:
+  - Uses: `primitives/pane/route-prefix.withActiveRoutePrefix`
+  - Exports (types): `LinkGestureProps`
+  - Exports (values):
+    - `activationProps`
+    - `linkGestureProps`
+    - `linkProps`
+    - `openInBrowserTab`
 - Cross-plugin:
   - Imported by: 45 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×13
@@ -107,13 +117,6 @@ resolver returning one. Fix: spread `openPane.link(…)`, or pass `openPane.to(�
     - `integrations/google-maps/usage`
     - `plugin-meta/plugin-view`
     - `shell/notifications`
-- Web:
-  - Exports (types): `LinkGestureProps`
-  - Exports (values):
-    - `activationProps`
-    - `linkGestureProps`
-    - `linkProps`
-    - `openInBrowserTab`
 - Core:
   - Exports (types):
     - `Activation`

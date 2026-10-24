@@ -13,12 +13,12 @@ import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   createPaneStore,
   currentRoutePath,
+  currentRoutePrefix,
   parseUrl,
   routeHomeApp,
   setLiveStore,
   setHistoryAdapter,
   appNavSink,
-  type HistoryAdapter,
   type ParsedRoute,
   type PaneSlot,
   type PaneStore,
@@ -35,11 +35,15 @@ import {
   useActiveApp,
   homeApp,
   resolveAppForPath,
+  routePrefixForMode,
   setFocusedApp,
+  surfaceModeForPrefix,
 } from "@plugins/apps-core/web";
+import { setActiveRoutePrefix } from "@plugins/primitives/plugins/pane/plugins/route-prefix/web";
 import {
   makeShellHistoryAdapter,
   serializePaneState,
+  type ShellHistoryAdapter,
 } from "./shell-history-adapter";
 import { setFocusedTabTitle } from "./focused-tab-title-store";
 import {
@@ -366,6 +370,9 @@ export function bootTabs(
   // URL's app, never the last-focused app from a previous session.
   const resolved = resolveAppForPath(currentRoutePath(), apps);
   const urlAppId = resolved?.app.id ?? seedAppId;
+  // A route prefix in the address bar names the surface mode it was written
+  // in (`/desktop/agents/c/x` — the desktop, focused on that window).
+  const urlMode = surfaceModeForPrefix(currentRoutePrefix(), apps);
   // Parse the URL into the tri-state route. A URL that matches no app (bare `/`,
   // or a stale link — apps-layout redirects it) is treated as a bare-root match,
   // preserving the historical "empty route ⇒ index" behavior for the seed tab.
@@ -377,12 +384,28 @@ export function bootTabs(
   // reload, so no other app's tab is dropped; the focused tab is chosen and made
   // live from the URL below.
   const persisted = loadPersistedTabs();
+  // The surface mode: the URL's prefix wins, as the URL's app wins over the
+  // persisted focus. With no prefix, the persisted mode — unless that mode
+  // writes one, which the address bar would then carry (a link typed into
+  // the same instance): it is not this boot's mode, so the default is. "" is
+  // deliberately NOT the registry default — see the note at the return below.
+  const persistedMode = persisted?.mode ?? "";
+  const mode =
+    urlMode ??
+    (routePrefixForMode(persistedMode, apps) === undefined
+      ? persistedMode
+      : "");
   // The instance was left EMPTY (the desktop with every window closed) and the
-  // address bar is still the empty surface's bare root: come back empty. A URL
-  // naming an app opens it, as on any boot. `TabsProvider` seeds the home app
-  // once the restored mode turns out not to allow an empty surface.
-  if (persisted?.tabs.length === 0 && !resolved) {
-    return { tabs: [], focusedTabId: undefined, mode: persisted.mode ?? "" };
+  // address bar is still the empty surface's bare root: come back empty. So
+  // does a bare route prefix (`/desktop`) on a fresh instance — that mode with
+  // nothing open. A URL naming an app opens it, as on any boot. `TabsProvider`
+  // seeds the home app once the mode turns out not to allow an empty surface.
+  if (
+    !resolved &&
+    (persisted?.tabs.length === 0 ||
+      (persisted === null && urlMode !== undefined))
+  ) {
+    return { tabs: [], focusedTabId: undefined, mode };
   }
   const tabs: Tab[] = (persisted?.tabs ?? []).map((p) =>
     rebuildBackgroundTab(p, apps),
@@ -466,15 +489,14 @@ export function bootTabs(
   }
   focused.store.live = true;
 
-  // Restore the persisted surface mode, or seed "" — deliberately NOT the
-  // registry default. `bootTabs` runs inside a `useState` initializer, i.e.
-  // during render, where sampling the placement registry would read whatever
-  // happened to be installed at that instant and freeze it. It never needed to:
-  // `TabsProvider` re-derives the mode against `usePlacementCapabilities()` on
-  // every render, and "" is not a registered id, so it resolves to the default
-  // the moment the registry populates — reactively, which the sample was not.
-  const mode = persisted?.mode ?? "";
-
+  // `mode` (above) is the URL's or the persisted surface mode, or "" —
+  // deliberately NOT the registry default. `bootTabs` runs inside a `useState`
+  // initializer, i.e. during render, where sampling the placement registry
+  // would read whatever happened to be installed at that instant and freeze it.
+  // It never needed to: `TabsProvider` re-derives the mode against
+  // `usePlacementCapabilities()` on every render, and "" is not a registered
+  // id, so it resolves to the default the moment the registry populates —
+  // reactively, which the sample was not.
   return { tabs, focusedTabId: focused.tabId, mode };
 }
 
@@ -557,9 +579,17 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   // eslint-disable-next-line react-hooks/refs -- intentional render-sync of a hybrid ref also written imperatively inside setMode; see the note above.
   modeRef.current = mode;
 
+  // The route prefix the address bar carries in this mode (the desktop's
+  // `/desktop`). Keyed on the REQUESTED mode, not the resolved one: a mode of
+  // the deferred tier (the desktop's) resolves to the default until its
+  // placement registers, and the boot stamp must not drop the prefix the URL
+  // was opened with meanwhile. Written in render (idempotent) so it is in place
+  // before the first commit; `applyMode` writes it imperatively too.
+  setActiveRoutePrefix(routePrefixForMode(rawMode, apps));
+
   // The installed shell history adapter — the one writer for the empty
   // surface's URL, which no pane store can write (none is live).
-  const adapterRef = useRef<HistoryAdapter | null>(null);
+  const adapterRef = useRef<ShellHistoryAdapter | null>(null);
 
   const persist = useCallback(() => {
     savePersistedTabs(tabsRef.current, focusedRef.current, modeRef.current);
@@ -1079,20 +1109,36 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   // exit can pop back to it. Pure surface state — no tab/focus/liveness change,
   // so the surface re-renders every (still-mounted) tab under the new mode with
   // no reload (Chrome-style keep-alive).
-  const setMode = useCallback(
-    (next: Placement) => {
+  //
+  // A mode that owns a route prefix (the desktop's `/desktop`) shows in the
+  // address bar: `project` re-writes the current entry in place under the new
+  // mode's prefix (entering the desktop turns `/agents/c/x` into
+  // `/desktop/agents/c/x`, leaving turns it back) — a replace, so a mode switch
+  // is not a Back target. A restore passes `false`: the browser already moved
+  // the URL there, and restoration never writes history.
+  const applyMode = useCallback(
+    (next: Placement, project: boolean) => {
       if (modeRef.current === next) return;
       previousModeRef.current = modeRef.current;
       modeRef.current = next;
       setModeState(next);
+      setActiveRoutePrefix(routePrefixForMode(next, appsRef.current));
       persist();
       // Leaving the desktop with no window open: the next mode needs a tab.
       if (tabsRef.current.length === 0 && !peekPlacementAllowsEmpty(next)) {
         seedHome();
+      } else if (project) {
+        adapterRef.current?.reproject();
       }
     },
-    [persist, seedHome],
+    [persist, seedHome, appsRef],
   );
+  const setMode = useCallback(
+    (next: Placement) => applyMode(next, true),
+    [applyMode],
+  );
+  // For the history adapter, installed once: always the latest `applyMode`.
+  const applyModeRef = useLatestRef(applyMode);
 
   // An empty surface restored by boot whose mode turns out not to allow one (a
   // removed mode, or one the registry resolves elsewhere): seed the home app
@@ -1203,6 +1249,20 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       },
       setFocusedApp,
       persist,
+      syncModeFromUrl: () => {
+        // The entry was written under the mode its prefix names: go back to
+        // it. An unprefixed entry leaves a prefixed mode for the default one.
+        const urlMode = surfaceModeForPrefix(
+          currentRoutePrefix(),
+          appsRef.current,
+        );
+        if (urlMode !== undefined) applyModeRef.current(urlMode, false);
+        else if (
+          routePrefixForMode(modeRef.current, appsRef.current) !== undefined
+        ) {
+          applyModeRef.current(peekDefaultPlacement(), false);
+        }
+      },
     });
     adapterRef.current = adapter;
     const uninstallAdapter = setHistoryAdapter(adapter);
@@ -1220,7 +1280,14 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       });
     }
     return uninstallAdapter;
-  }, [refocusForRestore, rebuildTabApp, activateWithoutMirror, persist]);
+  }, [
+    refocusForRestore,
+    rebuildTabApp,
+    activateWithoutMirror,
+    persist,
+    applyModeRef,
+    appsRef,
+  ]);
 
   const api = useMemo<TabsApi>(
     () => ({

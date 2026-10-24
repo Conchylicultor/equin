@@ -52,10 +52,12 @@ export interface TabBarContribution {
  *  - `component` — the app's layout: picking it opens (or swaps in) a tab
  *    showing it, at its base path. Every regular app.
  *  - `surfaceMode` — a surface-mode app (the desktop): picking it switches the
- *    surface to that `Surface.Placement` id. It never becomes a tab and owns no
- *    URL — {@link isTabApp} keeps it out of URL matching and the tab set — but
- *    it is still an app: listed in the launchers, and given its own `app:<id>`
- *    theme and config scope like any other.
+ *    surface to that `Surface.Placement` id. It never becomes a tab —
+ *    {@link isTabApp} keeps it out of URL matching and the tab set — and its
+ *    URL is its base path as a route PREFIX, written in front of the focused
+ *    tab's own URL while its mode shows (`/desktop/agents/c/42`). It is still
+ *    an app: listed in the launchers, installable, and given its own
+ *    `app:<id>` theme and config scope like any other.
  */
 export type AppLaunch =
   | { component: ComponentType; surfaceMode?: never }

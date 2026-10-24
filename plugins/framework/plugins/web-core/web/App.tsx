@@ -131,6 +131,10 @@ function resolveActiveAppPrefix(
     eagerEntries.map((e) => [e.id, e.pluginPath] as const),
   );
   const apps: { path: string; pluginPath: string }[] = [];
+  // A surface-mode app's base path is a route PREFIX, not a route: in front of
+  // the focused tab's own URL (`/desktop/agents/c/x` is the agent manager, shown
+  // on the desktop). Same shape test — its entry carries `surfaceMode`.
+  const prefixes: string[] = [];
   for (const p of eagerPlugins) {
     const pluginPath = idToPath.get(p.id);
     if (!pluginPath) continue;
@@ -149,6 +153,7 @@ function resolveActiveAppPrefix(
       const app = c.app as { basePath?: unknown } | undefined;
       if (typeof app?.basePath === "string") {
         apps.push({ path: app.basePath, pluginPath });
+        if (typeof c.surfaceMode === "string") prefixes.push(app.basePath);
       }
     }
   }
@@ -157,7 +162,10 @@ function resolveActiveAppPrefix(
   // contribution shape (its `component` is opaque), which fights our raw
   // unsealed contributions. The match logic is identical (see resolve-app.ts).
   // eslint-disable-next-line pane/no-raw-location-path -- pre-boot: `currentRoutePath()` lives in pane/web, which this eager boot root must not pull in; the pure core normalizer is the same canonicalization.
-  const pathname = normalizeRoutePath(window.location.pathname);
+  const raw = normalizeRoutePath(window.location.pathname);
+  // Bare, the prefix is that app's own page (the empty desktop): matched as is.
+  const prefix = prefixes.find((p) => raw.startsWith(p + "/"));
+  const pathname = prefix === undefined ? raw : raw.slice(prefix.length);
   const matched = [...apps]
     .sort((a, b) => b.path.length - a.path.length)
     .find((a) => pathname === a.path || pathname.startsWith(a.path + "/"));

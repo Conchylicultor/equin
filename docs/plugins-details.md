@@ -10557,6 +10557,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/pane.currentRoutePath`
       - `primitives/pane.stripBasePath`
       - `primitives/pane.useSurfaceAppId`
+      - `primitives/pane/route-prefix.setRoutePrefixes`
       - `primitives/slot-render.defineRenderSlot`
       - `primitives/slot-render.RenderSlot`
     - Exports (types):
@@ -10577,11 +10578,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `isTabApp`
       - `matchAppForPath`
       - `resolveAppForPath`
+      - `routePrefixForMode`
       - `setFocusedApp`
+      - `surfaceModeForPrefix`
       - `useActiveApp`
       - `useCurrentAppId`
       - `useFocusedAppId`
       - `useHomeApp`
+      - `useInstallRoutePrefixes`
       - `usePathname`
   - Cross-plugin:
     - Imported by: 56 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
@@ -10716,7 +10720,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/home/app-cards`
           - `apps/home/usage-fields`
           - `menu-bar/app-grid`
-    - **`app-manifest`** — Makes every tab app installable as its own OS app: serves GET /api/apps/:appId/manifest.webmanifest (id / start_url / scope = the app's base path, its tile colour, its icon PNGs) from the generated app declarations, and links it from each app's pages through a DocumentHead.Fragment (manifest, theme-color, apple-touch-icon). Surface-mode apps have no URL and are not installable.
+    - **`app-manifest`** — Makes every listed app installable as its own OS app: serves GET /api/apps/:appId/manifest.webmanifest (id / start_url / scope = the app's base path, its tile colour, its icon PNGs) from the generated app declarations, and links it from each app's pages through a DocumentHead.Fragment (manifest, theme-color, apple-touch-icon). A surface-mode app (the desktop) installs at its base path, the route prefix of every page it shows.
       - Server:
         - Contributes: `DocumentHead.Fragment` "app-manifest"
         - Uses:
@@ -10888,10 +10892,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`layout`** — Apps layout: the Core.Root composition wiring the tab bar, rail framing, and surface together, with the default-app redirect and document-title sync.
       - Web:
         - Contributes: `Core.Root` → `AppsLayout`
-        - Uses: 25 symbols — full list in [`plugins/apps-core/plugins/layout/REFERENCE.md`](../plugins/apps-core/plugins/layout/REFERENCE.md)
+        - Uses: 27 symbols — full list in [`plugins/apps-core/plugins/layout/REFERENCE.md`](../plugins/apps-core/plugins/layout/REFERENCE.md)
           - `apps-core/tabs` ×7
-          - `apps-core` ×5
-          - `primitives/pane` ×3
+          - `apps-core` ×6
+          - `primitives/pane` ×4
           - `primitives/css/ui-kit` ×2
           - `apps-core/tab-surface.AppTabsBody`
           - `primitives/css/badge.Badge`
@@ -11020,12 +11024,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/surface`
     - **`tabs`** — Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, the focused tab's title as a module signal (useFocusedTabTitle, readable outside TabsProvider), and the surface-written placement-capabilities registry.
       - Web:
-        - Uses: 40 symbols — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
-          - `primitives/pane` ×18
-          - `apps-core` ×7
+        - Uses: 45 symbols — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+          - `primitives/pane` ×19
+          - `apps-core` ×9
           - `primitives/scope/app-instance` ×5
           - `primitives/embed` ×3
           - `primitives/link-gesture` ×2
+          - `primitives/pane/route-prefix` ×2
           - `primitives/dom/web-storage.defineStore`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/scope/install-sink.defineInstallSink`
@@ -31785,16 +31790,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `tasks/menu-bar-task`
     - Endpoint callers: `app-grid`
   - Plugins:
-    - **`app-grid`** — The menu-bar panel's app grid (MenuBar.Section 'apps'): every Apps.App with a URL — the current app and surface-mode apps (the desktop) left out — as the icons DataView over the installedApp row kind, laid out as a menu's grid (viewOptions.icons.menu: four cells sharing the panel's width) (the tile and name Home and the launcher draw), each tile wearing its app's badge. Scrolling past four rows; drag reorders it, persisted per view (defineDataView('menu-bar.apps')). A tile opens its app in its own OS window through the helper when it is installed (launchApp), else in the default browser (openUrl), or in this tab when the panel is not inside the helper. On hover a tile offers + (AppGridActions 'install'): installs the app as an OS app through POST /api/menu-bar/install/:appId — hidden once installed (menu-bar.installed) or where the host cannot install (menu-bar.capabilities), a spinner while pending, an error mark when the install failed.
+    - **`app-grid`** — The menu-bar panel's app grid (MenuBar.Section 'apps'): every Apps.App but the current app and the home app (the desktop included: its URL is its base path as a route prefix) — as the icons DataView over the installedApp row kind, laid out as a menu's grid (viewOptions.icons.menu: four cells sharing the panel's width) (the tile and name Home and the launcher draw), each tile wearing its app's badge. Scrolling past four rows; drag reorders it, persisted per view (defineDataView('menu-bar.apps')). A tile opens its app in its own OS window through the helper when it is installed (launchApp), else in the default browser (openUrl), or in this tab when the panel is not inside the helper. On hover a tile offers + (AppGridActions 'install'): installs the app as an OS app through POST /api/menu-bar/install/:appId — hidden once installed (menu-bar.installed) or where the host cannot install (menu-bar.capabilities), a spinner while pending, an error mark when the install failed.
       - Web:
         - Slots: `item-actions`
         - Slot contributors: `item-actions` ← `menu-bar.app-grid`
         - Contributes:
           - `MenuBar.Section` "Apps" → `MenuBarAppGrid`
           - `item-actions` "install" → `InstallAppAction`
-        - Uses: 27 symbols — full list in [`plugins/menu-bar/plugins/app-grid/REFERENCE.md`](../plugins/menu-bar/plugins/app-grid/REFERENCE.md)
+        - Uses: 26 symbols — full list in [`plugins/menu-bar/plugins/app-grid/REFERENCE.md`](../plugins/menu-bar/plugins/app-grid/REFERENCE.md)
           - `primitives/data-view` ×5
-          - `apps-core` ×4
+          - `apps-core` ×3
           - `apps-core/app-launcher` ×2
           - `menu-bar` ×2
           - `primitives/css/ui-kit` ×2
@@ -41233,6 +41238,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/syntax-highlight/code-preview/mermaid`
           - `primitives/text-editor`
     - **`link-gesture`** — The browser's link gestures as spreadable handler props: plain click opens here, ⌘/Ctrl- and middle-click open the destination's URL in a new browser tab. A <button> gets none of this for free, so every navigating control reads it from one place.
+      - Web:
+        - Uses: `primitives/pane/route-prefix.withActiveRoutePrefix`
+        - Exports (types): `LinkGestureProps`
+        - Exports (values):
+          - `activationProps`
+          - `linkGestureProps`
+          - `linkProps`
+          - `openInBrowserTab`
       - Cross-plugin:
         - Imported by: 45 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
           - `primitives` ×13
@@ -41249,13 +41262,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `integrations/google-maps/usage`
           - `plugin-meta/plugin-view`
           - `shell/notifications`
-      - Web:
-        - Exports (types): `LinkGestureProps`
-        - Exports (values):
-          - `activationProps`
-          - `linkGestureProps`
-          - `linkProps`
-          - `openInBrowserTab`
       - Core:
         - Exports (types):
           - `Activation`
@@ -42803,7 +42809,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `welcomePane.Actions` "title" → `PaneTitleItem`
           - `workflow-node.actions` "title" → `PaneTitleItem`
           - `worktreeCleanupPane.Actions` "title" → `PaneTitleItem`
-        - Uses: 38 symbols — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Uses: 39 symbols — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `primitives/css/ui-kit` ×4
           - `primitives/slot-render` ×4
           - `primitives/live-state` ×3
@@ -42828,6 +42834,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/icon-button.IconButton`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/loading.Loading`
+          - `primitives/pane/route-prefix.splitRoutePrefix`
           - `primitives/scope/install-sink.defineInstallSink`
           - `primitives/scope/surface-id.SurfaceIdContext`
           - `primitives/select-scope.ContentScope`
@@ -42873,6 +42880,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `clearRoute`
           - `createPaneStore`
           - `currentRoutePath`
+          - `currentRoutePrefix`
           - `definePaneHeaderSlot`
           - `defineRoute`
           - `openPane`
@@ -42988,6 +42996,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `createTestSurfaceStore` — A surface store, bound as the live store so the imperative free functions and the module-level history listener agree with it.
           - `defaultStore`
           - `TestSurface` — A pane surface: `PluginProvider` + the real `PaneSurfaceProvider`.
+      - Plugins:
+        - **`route-prefix`** — Route prefixes: a leading address-bar segment owned by a surface mode rather than an app (the desktop's /desktop, written before the focused window's URL). The known prefixes every read strips (splitRoutePrefix, used by pane's currentRoutePath) and the active prefix the current mode writes (withActiveRoutePrefix, used by the shell history adapter and openInBrowserTab). A leaf, so both the pane primitive and link-gesture read it.
+          - Cross-plugin:
+            - Imported by:
+              - `apps-core`
+              - `apps-core/tabs`
+              - `primitives/link-gesture`
+              - `primitives/pane`
+          - Web:
+            - Exports (types): `SplitRoutePath`
+            - Exports (values):
+              - `activeRoutePrefix`
+              - `setActiveRoutePrefix`
+              - `setRoutePrefixes`
+              - `splitRoutePrefix`
+              - `withActiveRoutePrefix`
+          - Test helpers:
+            - Web: `@plugins/primitives/plugins/pane/plugins/route-prefix/web/testing`
+              - `resetRoutePrefixForTests` — Drop the installed state between tests.
     - **`passthrough`** — The open-passthrough contract: a primitive that accepts props it does not name promises they land on ONE node, and `ref` is that node's name. Owns the Passthrough props marker, the splitPassthrough router for the rare second destination, and the two lint rules that keep the promise true.
       - Core:
         - Exports (types): `Passthrough`

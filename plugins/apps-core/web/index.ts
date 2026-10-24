@@ -23,6 +23,11 @@ export {
   type ResolvedApp,
 } from "./internal/resolve-app";
 export { homeApp, useHomeApp, type HomeApp } from "./internal/home-app";
+export {
+  routePrefixForMode,
+  surfaceModeForPrefix,
+  useInstallRoutePrefixes,
+} from "./internal/surface-prefix";
 export { useCurrentAppId } from "./use-current-app-id";
 export { setFocusedApp, useFocusedAppId } from "./internal/focused-app-store";
 export type { Placement } from "../core";

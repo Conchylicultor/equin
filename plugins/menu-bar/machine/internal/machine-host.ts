@@ -55,9 +55,9 @@ export function machineShimHost(): ShimHost | null {
 }
 
 /**
- * The app a shim opens, by id: a tab app on the MAIN namespace (an installed
- * app is the user's app, whichever checkout installed it). Undefined for an
- * unknown or surface-mode app.
+ * The app a shim opens, by id: an installable app on the MAIN namespace (an
+ * installed app is the user's app, whichever checkout installed it). Undefined
+ * for an unknown or unlisted app.
  */
 export function shimApp(appId: string): ShimApp | undefined {
   const app = installableApp(declaredApps, appId);

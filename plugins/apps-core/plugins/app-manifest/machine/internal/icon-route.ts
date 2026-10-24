@@ -12,7 +12,7 @@ export const handleAppIcon = machineHandler(getAppIconPng, (_req, params) => {
   const size = parseAppIconFile(params.file ?? "");
   if (app === undefined || size === null) {
     return new Response(
-      `No icon "${params.file}" for app "${params.appId}" (sizes: 192, 512, 1024 PNG; tab apps only).`,
+      `No icon "${params.file}" for app "${params.appId}" (sizes: 192, 512, 1024 PNG; listed apps only).`,
       { status: 404 },
     );
   }

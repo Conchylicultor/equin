@@ -11,6 +11,8 @@ import {
   getNavigationType,
 } from "@plugins/primitives/plugins/scope/plugins/app-instance/web";
 import { resetAppInstanceForTests } from "@plugins/primitives/plugins/scope/plugins/app-instance/web/testing";
+import { setRoutePrefixes } from "@plugins/primitives/plugins/pane/plugins/route-prefix/web";
+import { resetRoutePrefixForTests } from "@plugins/primitives/plugins/pane/plugins/route-prefix/web/testing";
 import { bootTabs } from "../internal/use-tabs";
 import { isDeadUnresolvedLink } from "../internal/load-scope";
 import type { PersistedTabs } from "../internal/tabs-store";
@@ -315,6 +317,76 @@ describe("bootTabs — app instances (fresh state vs. preserved state)", () => {
     // Reusing the entry's id keeps the surrounding entries recognisable to the
     // shell adapter's restore(), instead of minting a stranger.
     expect(boot.focusedTabId).toBe("t-gone");
+  });
+});
+
+describe("bootTabs — a surface mode's route prefix (/desktop)", () => {
+  // The desktop: a surface-mode app whose base path is the desktop mode's
+  // route prefix. `useInstallRoutePrefixes` installs it in the app.
+  const DESKTOP_APPS = [
+    fakeApp("pages", "/pages"),
+    {
+      id: "desktop",
+      app: { id: "desktop", name: "Desktop", basePath: "/desktop" },
+      surfaceMode: "floating",
+    },
+  ] as unknown as AppList;
+
+  beforeEach(() => setRoutePrefixes(["/desktop"]));
+  afterEach(() => resetRoutePrefixForTests());
+
+  it("/desktop/<route> boots the URL's app in the desktop mode", () => {
+    navType("navigate");
+    setPath("/desktop/pages/page/abc");
+    const boot = bootTabs(DESKTOP_APPS, "pages");
+    expect(boot.mode).toBe("floating");
+    const focused = boot.tabs.find((t) => t.tabId === boot.focusedTabId)!;
+    expect(focused.appId).toBe("pages");
+    expect(focused.store.getRouteState()).toEqual({
+      kind: "unresolved",
+      rawPath: "page/abc",
+    });
+  });
+
+  it("bare /desktop on a fresh instance boots the empty desktop", () => {
+    navType("navigate");
+    setPath("/desktop");
+    const boot = bootTabs(DESKTOP_APPS, "pages");
+    expect(boot).toEqual({
+      tabs: [],
+      focusedTabId: undefined,
+      mode: "floating",
+    });
+  });
+
+  it("the URL's prefix wins over the persisted mode", () => {
+    persist({
+      tabs: [{ tabId: "t1", appId: "pages", route: [], rawPath: "" }],
+      focusedTabId: "t1",
+      mode: "docked",
+    });
+    setPath("/desktop/pages");
+    expect(bootTabs(DESKTOP_APPS, "pages").mode).toBe("floating");
+  });
+
+  it("an unprefixed URL leaves a persisted prefixed mode for the default", () => {
+    persist({
+      tabs: [{ tabId: "t1", appId: "pages", route: [], rawPath: "" }],
+      focusedTabId: "t1",
+      mode: "floating",
+    });
+    setPath("/pages");
+    expect(bootTabs(DESKTOP_APPS, "pages").mode).toBe("");
+  });
+
+  it("an unprefixed URL keeps a persisted mode that writes no prefix", () => {
+    persist({
+      tabs: [{ tabId: "t1", appId: "pages", route: [], rawPath: "" }],
+      focusedTabId: "t1",
+      mode: "docked",
+    });
+    setPath("/pages");
+    expect(bootTabs(DESKTOP_APPS, "pages").mode).toBe("docked");
   });
 });
 

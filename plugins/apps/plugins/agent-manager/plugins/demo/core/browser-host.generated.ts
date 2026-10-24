@@ -493,6 +493,7 @@ export const browserHost = {
     "primitives.overlay.surface-overlay",
     "primitives.overlay.tooltip",
     "primitives.pane",
+    "primitives.pane.route-prefix",
     "primitives.persistent-draft",
     "primitives.prompt-editor",
     "primitives.prompt-editor.voice-input",

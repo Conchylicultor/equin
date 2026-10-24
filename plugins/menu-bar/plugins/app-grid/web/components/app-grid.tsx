@@ -1,10 +1,5 @@
 import { useMemo } from "react";
-import {
-  Apps,
-  isTabApp,
-  useCurrentAppId,
-  useHomeApp,
-} from "@plugins/apps-core/web";
+import { Apps, useCurrentAppId, useHomeApp } from "@plugins/apps-core/web";
 import { useActivateApp } from "@plugins/apps-core/plugins/tabs/web";
 import {
   DataView,
@@ -77,7 +72,7 @@ function appUrl(basePath: string): string {
 }
 
 /**
- * Every app with a URL as the compact icons DataView — the tile and name Home
+ * Every app as the compact icons DataView — the tile and name Home
  * and the launcher draw, four to a row, scrolling past four rows. Dragging a
  * tile reorders the grid (persisted per view, `view-order`). A tile opens its
  * app: its own OS window (`launchApp`) when it is installed and the helper can
@@ -85,8 +80,8 @@ function appUrl(basePath: string): string {
  * one, else in this tab. Each tile carries the install **+** on hover
  * (`AppGridActions`, hidden once installed or where the host cannot install).
  *
- * Surface-mode apps (the desktop) are left out: they are a mode of the main
- * browser tab, with no URL a window could open.
+ * The desktop (a surface-mode app) is a tile like any other: its URL is its
+ * base path as a route prefix (`/desktop` — the desktop with no window open).
  */
 export function MenuBarAppGrid() {
   const apps = Apps.App.useContributions();
@@ -99,10 +94,7 @@ export function MenuBarAppGrid() {
   const host = useNativeHost();
   const installed = useLive(menuBarInstalled);
   const rows = useMemo(
-    () =>
-      apps
-        .filter((a) => isTabApp(a) && a.id !== currentId && a.id !== homeId)
-        .map(appRow),
+    () => apps.filter((a) => a.id !== currentId && a.id !== homeId).map(appRow),
     [apps, currentId, homeId],
   );
   // The helper is still answering: a tile cannot know yet where it opens.

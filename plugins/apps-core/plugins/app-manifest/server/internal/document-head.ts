@@ -22,8 +22,9 @@ function attr(value: string): string {
  */
 async function render(): Promise<HeadFragments> {
   const head: HeadFragments = {};
-  for (const { app, launch } of declaredApps) {
-    if (launch !== "tab") continue;
+  // Every app, the surface-mode desktop included: its base path prefixes every
+  // page it shows (`/desktop/agents/c/x`), so installing from one installs it.
+  for (const { app } of declaredApps) {
     // An unlisted app installs as nothing — and says so at its own path, so a
     // base path nested in another app's (`/home/menu-bar`) does not inherit
     // that app's manifest by longest match.

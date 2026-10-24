@@ -24,6 +24,7 @@ export {
   routeHomeApp,
   stripBasePath,
   currentRoutePath,
+  currentRoutePrefix,
   useRoute,
   useRouteState,
   usePaneTitle,

@@ -8,7 +8,7 @@ export const handleAppManifest = implement(getAppManifest, ({ params }) => {
   if (app === undefined) {
     throw new HttpError(
       404,
-      `No installable app "${params.appId}" (unknown, or a surface-mode app with no URL).`,
+      `No installable app "${params.appId}" (unknown, or unlisted).`,
     );
   }
   return appManifestFor(app);

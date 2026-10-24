@@ -13,6 +13,7 @@ import {
 } from "@plugins/primitives/plugins/scope/plugins/app-instance/web";
 import { resolveAppForPath, type ActiveApp } from "@plugins/apps-core/web";
 import { embedMode, embedUrl } from "@plugins/primitives/plugins/embed/web";
+import { withActiveRoutePrefix } from "@plugins/primitives/plugins/pane/plugins/route-prefix/web";
 import type { Tab } from "./tabs-store";
 
 // ---------------------------------------------------------------------------
@@ -89,6 +90,38 @@ export interface ShellHistoryDeps {
   setFocusedApp(appId: string | undefined): void;
   /** Persist the tab set to sessionStorage. */
   persist(): void;
+  /**
+   * Put the surface in the mode the just-restored entry's route prefix names
+   * (the desktop for `/desktop/…`; the default for an unprefixed entry while
+   * a prefixed mode is on) WITHOUT writing history.
+   */
+  syncModeFromUrl(): void;
+}
+
+/**
+ * The shell adapter: the pane primitive's seam, plus `reproject` — re-write the
+ * CURRENT entry's URL in place under the active route prefix, for a surface
+ * mode switch (entering the desktop prefixes the address bar with `/desktop`).
+ */
+export interface ShellHistoryAdapter extends HistoryAdapter {
+  reproject(): void;
+}
+
+/**
+ * The address bar's form of an in-app URL: under the surface mode's route
+ * prefix (`/desktop/agents/c/x`), and re-stamped with the `?embed=…` flag an
+ * embedded document was opened with.
+ */
+function projectUrl(url: string): string {
+  // The pane store builds `url` from the route alone, so the `?embed=…` an
+  // embedded document was opened with would be gone after its first
+  // navigation. Re-stamping it keeps the address honest: a reload of the
+  // frame after in-frame clicks comes back embedded the same way. (The
+  // chrome itself keys on the boot-time read, not on this — see
+  // `primitives/embed`.)
+  const prefixed = withActiveRoutePrefix(url);
+  const embed = embedMode();
+  return embed === undefined ? prefixed : embedUrl(prefixed, embed);
 }
 
 /**
@@ -114,7 +147,7 @@ export function serializePaneState(state: RouteState): PaneHistoryState {
  */
 export function makeShellHistoryAdapter(
   deps: ShellHistoryDeps,
-): HistoryAdapter {
+): ShellHistoryAdapter {
   function commit({ url, state, mode }: LocationChange): void {
     const focused = deps.focused();
     // Merge the focused-tab snapshot into the route payload so the entry is a
@@ -133,24 +166,32 @@ export function makeShellHistoryAdapter(
         })
       : state;
     const method = mode === "replace" ? "replaceState" : "pushState";
-    // The pane store builds `url` from the route alone, so the `?embed=…` an
-    // embedded document was opened with would be gone after its first
-    // navigation. Re-stamping it keeps the address honest: a reload of the
-    // frame after in-frame clicks comes back embedded the same way. (The
-    // chrome itself keys on the boot-time read, not on this — see
-    // `primitives/embed`.)
-    const embed = embedMode();
-    window.history[method](
-      composite,
-      "",
-      embed === undefined ? url : embedUrl(url, embed),
-    );
+    window.history[method](composite, "", projectUrl(url));
     // Programmatic navigation announces `shell:navigate` ONLY — never a
     // synthetic popstate (that is reserved for real browser back/forward).
     window.dispatchEvent(new CustomEvent("shell:navigate"));
   }
 
+  function reproject(): void {
+    // The entry is the same snapshot; only its address changes — replaced in
+    // place through `commit`, which re-stamps the focused tab as it already
+    // was. Query and hash ride along (the embed flag is re-stamped over its own).
+    const { search, hash } = window.location;
+    commit({
+      url: currentRoutePath() + search + hash,
+      state: (window.history.state ?? {}) as PaneHistoryState,
+      mode: "replace",
+    });
+  }
+
   function restore(): void {
+    restoreSnapshot();
+    // After the tabs: leaving a prefixed mode needs a tab to show (an empty
+    // desktop's mode switch would otherwise seed one, writing history).
+    deps.syncModeFromUrl();
+  }
+
+  function restoreSnapshot(): void {
     // Runs AFTER the browser already updated the URL + `history.state`.
     const raw = (window.history.state ?? {}) as CompositeState;
     const focused = deps.focused();
@@ -229,5 +270,5 @@ export function makeShellHistoryAdapter(
     deps.persist();
   }
 
-  return { commit, restore };
+  return { commit, restore, reproject };
 }

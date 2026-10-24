@@ -52,7 +52,9 @@ async function render(): Promise<HeadFragments> {
   const globalMode = parseConfiguredColorMode(
     getConfig(themeSelectionConfig).colorMode,
   );
-  // Tab apps only: a surface-mode app (the desktop) owns no path to key by.
+  // Tab apps only. A surface-mode app's base path (`/desktop`) is a route
+  // prefix in front of another app's URL, and while its mode shows, `:root`
+  // wears the base theme — the `""` entry these pages already fall back to.
   const apps = declaredApps
     .filter(({ launch }) => launch === "tab")
     .map(({ app }) => ({

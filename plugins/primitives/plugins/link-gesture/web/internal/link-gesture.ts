@@ -1,3 +1,4 @@
+import { withActiveRoutePrefix } from "@plugins/primitives/plugins/pane/plugins/route-prefix/web";
 import type { MouseEvent } from "react";
 import type { Activation, LinkTarget } from "../../core";
 
@@ -96,14 +97,17 @@ export function activationProps(
 
 /**
  * Open a URL in a new browser tab — the one place that is spelled. Takes an
- * app path of THIS origin (`/agents/c/42`) or an absolute URL (another
+ * app path of THIS origin (`/agents/c/42`, opened under the active route
+ * prefix — `pane/plugins/route-prefix`) or an absolute URL (another
  * worktree's origin, an external site). Always `noopener`, so the new tab
  * cannot reach back into this one through `window.opener`; `noreferrer` too
  * when it leaves this origin, so an external site is not told where it was
  * opened from.
  */
 export function openInBrowserTab(url: string): void {
-  const target = new URL(url, window.location.origin);
+  // An in-app path opens the way this page shows it: under the surface mode's
+  // route prefix (the desktop's `/desktop`), so the new tab comes up the same.
+  const target = new URL(withActiveRoutePrefix(url), window.location.origin);
   const features =
     target.origin === window.location.origin
       ? "noopener"

@@ -5,7 +5,8 @@ import type { ActiveApp } from "./use-active-app";
 /**
  * Whether an app entry opens as a tab (it has a `component`), as opposed to a
  * surface-mode app (the desktop), which switches the surface and never owns a
- * tab or a URL. The one predicate every tab-side reader filters on.
+ * tab (its URL is a route PREFIX in front of a tab's URL, stripped before any
+ * matching). The one predicate every tab-side reader filters on.
  */
 export function isTabApp(
   entry: ActiveApp,

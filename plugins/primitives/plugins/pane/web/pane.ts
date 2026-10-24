@@ -13,6 +13,7 @@ import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { SurfaceIdContext } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { defineInstallSink } from "@plugins/primitives/plugins/scope/plugins/install-sink/web";
+import { splitRoutePrefix } from "@plugins/primitives/plugins/pane/plugins/route-prefix/web";
 import {
   fillSegment,
   MissingRouteParamError,
@@ -2086,7 +2087,9 @@ function normalizeAppPath(path: string): string {
 /**
  * THE sanctioned read of the browser's route path — `window.location.pathname`
  * canonicalized by {@link normalizeRoutePath} (repeated `/` runs collapsed,
- * exactly one leading `/`). Every routing consumer — app matching, base-path
+ * exactly one leading `/`), with the route prefix it carries stripped (the
+ * desktop's `/desktop` — `pane/plugins/route-prefix`; the history writer puts
+ * it back). Every routing consumer — app matching, base-path
  * stripping, URL→route parsing, and the URL a history entry projects — goes
  * through this, so a hand-typed `//agents/c/x` can neither throw a SecurityError
  * on `replaceState` (scheme-relative resolution) nor silently match no app.
@@ -2095,6 +2098,19 @@ function normalizeAppPath(path: string): string {
  * that reads `location.pathname` directly.
  */
 export function currentRoutePath(): string {
+  return splitRoutePrefix(readLocationPath()).path;
+}
+
+/**
+ * The route prefix the address bar carries (`/desktop` in
+ * `/desktop/agents/c/x`), or `undefined` — the surface mode the URL names,
+ * which {@link currentRoutePath} strips (`pane/plugins/route-prefix`).
+ */
+export function currentRoutePrefix(): string | undefined {
+  return splitRoutePrefix(readLocationPath()).prefix;
+}
+
+function readLocationPath(): string {
   // eslint-disable-next-line pane/no-raw-location-path -- THE sanctioned reader
   return normalizeRoutePath(window.location.pathname);
 }

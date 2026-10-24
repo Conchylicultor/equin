@@ -18,7 +18,7 @@ const INSTALL_MACHINE = { feature: "Installing apps" } as const;
  *   (`menu-bar.install-requests` carries the pending row, then the failure if
  *   the build fails).
  *
- * An unknown or surface-mode app is a 404; a host without the capability a 409.
+ * An unknown or unlisted app is a 404; a host without the capability a 409.
  */
 export const installApp = defineEndpoint({
   route: "POST /api/menu-bar/install/:appId",

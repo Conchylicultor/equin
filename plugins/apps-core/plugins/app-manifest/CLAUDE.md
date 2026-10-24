@@ -1,14 +1,16 @@
 # app-manifest
 
-Makes every tab app installable as its own OS app (Chrome / Edge "Install",
+Makes every listed app installable as its own OS app (Chrome / Edge "Install",
 Safari "Add to Dock"): one web-app manifest per app, its icon as PNGs, and the
 head tags linking them from the app's pages.
 
 - **The app set** is `declaredApps` (`apps-core/server`), generated at build
   from the `Apps.App` contributions — each app's whole `AppRef` (id, name, base
-  path, `icon`, `iconColor`) and its launch kind. A surface-mode app (the
-  desktop) owns no URL, so it is not installable: its manifest and icons are a
-  404 (`installableApp`).
+  path, `icon`, `iconColor`) and its launch kind. Every listed app installs
+  (`installableApp`) — a surface-mode app (the desktop) too: its base path is
+  the route prefix of every page it shows (`/desktop/agents/c/x`, see
+  `apps-core`), so `/desktop` is its scope. An unlisted app's manifest and
+  icons are a 404.
 - **`server/` (portable)** — `GET /api/apps/:appId/manifest.webmanifest`
   (`getAppManifest`, `appManifestFor`): `id`, `start_url` and `scope` are the
   app's base path (distinct per app, so no two scopes overlap; the scope is the
@@ -35,7 +37,7 @@ head tags linking them from the app's pages.
 
 ## Plugin reference
 
-- Description: Makes every tab app installable as its own OS app: serves GET /api/apps/:appId/manifest.webmanifest (id / start_url / scope = the app's base path, its tile colour, its icon PNGs) from the generated app declarations, and links it from each app's pages through a DocumentHead.Fragment (manifest, theme-color, apple-touch-icon). Surface-mode apps have no URL and are not installable.
+- Description: Makes every listed app installable as its own OS app: serves GET /api/apps/:appId/manifest.webmanifest (id / start_url / scope = the app's base path, its tile colour, its icon PNGs) from the generated app declarations, and links it from each app's pages through a DocumentHead.Fragment (manifest, theme-color, apple-touch-icon). A surface-mode app (the desktop) installs at its base path, the route prefix of every page it shows.
 - Server:
   - Contributes: `DocumentHead.Fragment` "app-manifest"
   - Uses:

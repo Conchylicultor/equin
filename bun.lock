@@ -5525,6 +5525,10 @@
       "name": "@singularity/plugin-primitives-pane",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/pane/plugins/route-prefix": {
+      "name": "@singularity/plugin-primitives-pane-route-prefix",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/passthrough": {
       "name": "@singularity/plugin-primitives-passthrough",
       "version": "0.0.1",
@@ -9767,6 +9771,8 @@
     "@singularity/plugin-primitives-overlay-tooltip": ["@singularity/plugin-primitives-overlay-tooltip@workspace:plugins/primitives/plugins/overlay/plugins/tooltip"],
 
     "@singularity/plugin-primitives-pane": ["@singularity/plugin-primitives-pane@workspace:plugins/primitives/plugins/pane"],
+
+    "@singularity/plugin-primitives-pane-route-prefix": ["@singularity/plugin-primitives-pane-route-prefix@workspace:plugins/primitives/plugins/pane/plugins/route-prefix"],
 
     "@singularity/plugin-primitives-passthrough": ["@singularity/plugin-primitives-passthrough@workspace:plugins/primitives/plugins/passthrough"],
 

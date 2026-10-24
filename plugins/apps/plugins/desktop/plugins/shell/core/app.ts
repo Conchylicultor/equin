@@ -7,8 +7,10 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
  * config scope and its one data dir, like any app; what it does NOT have is a
  * tab: picking it switches the surface to {@link DESKTOP_PLACEMENT_ID} (its
  * `Apps.App` entry is a `surfaceMode` launch), and its windows are the shell's
- * ordinary in-app tabs. `basePath` is never routed — a surface-mode app is kept
- * out of URL matching (`isTabApp`).
+ * ordinary in-app tabs. `basePath` is never routed as an app of its own: it is
+ * the ROUTE PREFIX of the desktop mode — written in front of the focused
+ * window's URL (`/desktop/agents/c/42`; bare `/desktop` is the desktop with
+ * no window), so the desktop opens, reloads and installs by URL.
  */
 export const desktopApp = defineApp({
   id: "desktop",

@@ -10,17 +10,18 @@ import {
 } from "./endpoints";
 
 /**
- * The app `appId` names among `apps` when it can be installed — a tab app,
- * which owns a URL. A surface-mode app (the desktop) has no URL to open in a
- * window of its own, so it is not installable; nor is an unlisted app
- * (`defineApp({ listed: false })`), which only something outside equin opens.
+ * The app `appId` names among `apps` when it can be installed — any app, since
+ * each owns a URL: a tab app its routes, a surface-mode app (the desktop) its
+ * base path as a route prefix (`/desktop`, `/desktop/agents/c/x`). Not an
+ * unlisted app (`defineApp({ listed: false })`), which only something outside
+ * equin opens.
  */
 export function installableApp(
   apps: readonly AppDeclaration[],
   appId: string,
 ): AppDeclaration["app"] | undefined {
   const found = apps.find((d) => d.app.id === appId);
-  return found?.launch === "tab" && found.app.listed !== false
+  return found !== undefined && found.app.listed !== false
     ? found.app
     : undefined;
 }

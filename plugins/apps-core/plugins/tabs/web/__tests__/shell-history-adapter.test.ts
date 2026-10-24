@@ -9,6 +9,11 @@ import {
   type ShellHistoryDeps,
 } from "../internal/shell-history-adapter";
 import type { Tab } from "../internal/tabs-store";
+import {
+  setActiveRoutePrefix,
+  setRoutePrefixes,
+} from "@plugins/primitives/plugins/pane/plugins/route-prefix/web";
+import { resetRoutePrefixForTests } from "@plugins/primitives/plugins/pane/plugins/route-prefix/web/testing";
 
 // Unit-tests the shell history adapter as the pure factory it is: `commit`
 // stamps the FOCUSED tab's { tabId, appId } onto every entry, and `restore`
@@ -52,6 +57,7 @@ function makeDeps(opts: {
   const restoreLiveRoute = vi.fn();
   const setFocusedApp = vi.fn();
   const persist = vi.fn();
+  const syncModeFromUrl = vi.fn();
   const deps: ShellHistoryDeps = {
     focused: () => opts.focused,
     tabs: () => opts.tabs ?? [],
@@ -62,6 +68,7 @@ function makeDeps(opts: {
     restoreLiveRoute,
     setFocusedApp,
     persist,
+    syncModeFromUrl,
   };
   return {
     deps,
@@ -71,6 +78,7 @@ function makeDeps(opts: {
     restoreLiveRoute,
     setFocusedApp,
     persist,
+    syncModeFromUrl,
   };
 }
 
@@ -80,7 +88,62 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  resetRoutePrefixForTests();
   window.history.replaceState(null, "", "/");
+});
+
+describe("route prefix — a surface mode's address (/desktop)", () => {
+  beforeEach(() => setRoutePrefixes(["/desktop"]));
+
+  it("commit writes the active prefix in front of the route's URL", () => {
+    setActiveRoutePrefix("/desktop");
+    const { deps } = makeDeps({ focused: { tabId: "T1", appId: "pages" } });
+    makeShellHistoryAdapter(deps).commit({
+      url: "/pages/x",
+      state: { route: [] },
+      mode: "push",
+    });
+    expect(window.location.pathname).toBe("/desktop/pages/x");
+  });
+
+  it("the empty surface's bare root is the bare prefix", () => {
+    setActiveRoutePrefix("/desktop");
+    const { deps } = makeDeps({ focused: null });
+    makeShellHistoryAdapter(deps).commit({
+      url: "/",
+      state: { route: [] },
+      mode: "replace",
+    });
+    expect(window.location.pathname).toBe("/desktop");
+  });
+
+  it("reproject re-writes the current entry in place under the new prefix", () => {
+    const { deps } = makeDeps({ focused: { tabId: "T1", appId: "pages" } });
+    const adapter = makeShellHistoryAdapter(deps);
+    window.history.replaceState({ tabId: "T1" }, "", "/pages/x?q=1");
+    const pushSpy = vi.spyOn(window.history, "pushState");
+
+    setActiveRoutePrefix("/desktop");
+    adapter.reproject();
+    expect(window.location.pathname).toBe("/desktop/pages/x");
+    expect(window.location.search).toBe("?q=1");
+    expect(window.history.state).toMatchObject({ tabId: "T1", appId: "pages" });
+
+    setActiveRoutePrefix(undefined);
+    adapter.reproject();
+    expect(window.location.pathname).toBe("/pages/x");
+    expect(pushSpy).not.toHaveBeenCalled();
+  });
+
+  it("restore resolves the app under the prefix and syncs the mode after", () => {
+    const { deps, rebuildAppInPlace, syncModeFromUrl } = makeDeps({
+      focused: { tabId: "T1", appId: "pages" },
+    });
+    window.history.replaceState({}, "", "/desktop/story/s/1");
+    makeShellHistoryAdapter(deps).restore();
+    expect(rebuildAppInPlace).toHaveBeenCalledWith("T1", "story");
+    expect(syncModeFromUrl).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("serializePaneState", () => {

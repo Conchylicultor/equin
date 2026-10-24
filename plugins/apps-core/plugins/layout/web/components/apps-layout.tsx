@@ -15,6 +15,7 @@ import {
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
+  currentRoutePrefix,
   setBasePath,
   useSyncPaneRegistry,
   useRenderSync,
@@ -25,6 +26,7 @@ import {
   useActiveApp,
   usePathname,
   useHomeApp,
+  useInstallRoutePrefixes,
   matchAppForPath,
 } from "@plugins/apps-core/web";
 import {
@@ -100,6 +102,9 @@ function DocumentTitleSync() {
 }
 
 export function AppsLayout() {
+  // First, before any routing read: a surface mode's route prefix (`/desktop`)
+  // is stripped from every read of the address bar.
+  useInstallRoutePrefixes();
   const activeApp = useActiveApp();
   const pathname = usePathname();
   const apps = Apps.App.useContributions();
@@ -124,10 +129,14 @@ export function AppsLayout() {
 
   // ONE rule decides both the redirect and what the tabs area paints, so the two
   // can never disagree (see `resolveUnmatchedUrl` for the full case table).
+  // A bare route prefix (`/desktop`) is that surface mode with nothing open: its
+  // own address, owned by the surface-mode app — never a bare root to
+  // canonicalize, nor a broken link.
+  const barePrefix = pathname === "/" && currentRoutePrefix() !== undefined;
   const outcome = resolveUnmatchedUrl({
-    matched: !!urlMatchedId,
+    matched: !!urlMatchedId || barePrefix,
     home: home.kind,
-    isBareRoot: pathname === "/",
+    isBareRoot: pathname === "/" && !barePrefix,
     deferredComplete,
     anyAppShellLoadError,
   });

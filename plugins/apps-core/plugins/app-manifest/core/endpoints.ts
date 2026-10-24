@@ -28,9 +28,9 @@ export const WebAppManifestSchema = z.object({
 export type WebAppManifest = z.infer<typeof WebAppManifestSchema>;
 
 /**
- * `GET /api/apps/:appId/manifest.webmanifest` — one tab app's manifest, from
- * the apps the browser registers (`declaredApps`). A surface-mode app (no URL)
- * or an unknown id is a 404. Portable: pure data.
+ * `GET /api/apps/:appId/manifest.webmanifest` — one app's manifest, from the
+ * apps the browser registers (`declaredApps`). An unlisted app or an unknown
+ * id is a 404. Portable: pure data.
  */
 export const getAppManifest = defineEndpoint({
   route: "GET /api/apps/:appId/manifest.webmanifest",

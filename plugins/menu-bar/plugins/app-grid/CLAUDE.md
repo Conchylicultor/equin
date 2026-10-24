@@ -4,16 +4,16 @@
 
 ## Plugin reference
 
-- Description: The menu-bar panel's app grid (MenuBar.Section 'apps'): every Apps.App with a URL — the current app and surface-mode apps (the desktop) left out — as the icons DataView over the installedApp row kind, laid out as a menu's grid (viewOptions.icons.menu: four cells sharing the panel's width) (the tile and name Home and the launcher draw), each tile wearing its app's badge. Scrolling past four rows; drag reorders it, persisted per view (defineDataView('menu-bar.apps')). A tile opens its app in its own OS window through the helper when it is installed (launchApp), else in the default browser (openUrl), or in this tab when the panel is not inside the helper. On hover a tile offers + (AppGridActions 'install'): installs the app as an OS app through POST /api/menu-bar/install/:appId — hidden once installed (menu-bar.installed) or where the host cannot install (menu-bar.capabilities), a spinner while pending, an error mark when the install failed.
+- Description: The menu-bar panel's app grid (MenuBar.Section 'apps'): every Apps.App but the current app and the home app (the desktop included: its URL is its base path as a route prefix) — as the icons DataView over the installedApp row kind, laid out as a menu's grid (viewOptions.icons.menu: four cells sharing the panel's width) (the tile and name Home and the launcher draw), each tile wearing its app's badge. Scrolling past four rows; drag reorders it, persisted per view (defineDataView('menu-bar.apps')). A tile opens its app in its own OS window through the helper when it is installed (launchApp), else in the default browser (openUrl), or in this tab when the panel is not inside the helper. On hover a tile offers + (AppGridActions 'install'): installs the app as an OS app through POST /api/menu-bar/install/:appId — hidden once installed (menu-bar.installed) or where the host cannot install (menu-bar.capabilities), a spinner while pending, an error mark when the install failed.
 - Web:
   - Slots: `item-actions`
   - Slot contributors: `item-actions` ← `menu-bar.app-grid`
   - Contributes:
     - `MenuBar.Section` "Apps" → `MenuBarAppGrid`
     - `item-actions` "install" → `InstallAppAction`
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×5
-    - `apps-core` ×4
+    - `apps-core` ×3
     - `apps-core/app-launcher` ×2
     - `menu-bar` ×2
     - `primitives/css/ui-kit` ×2
