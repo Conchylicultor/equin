@@ -174,6 +174,7 @@ finish and report.
     - `primitives/log-channels.Log`
     - `tasks/automations.automationConfigRegistration`
     - `tasks/automations.defineAutomation`
+    - `tasks/task-track.getTaskTrack`
     - `tasks/task-track.listSidequestTasks`
     - `tasks/task-track.taskTrackChanged`
     - `tasks/task-triage.requestTriage`

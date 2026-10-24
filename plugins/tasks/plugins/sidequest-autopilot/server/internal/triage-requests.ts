@@ -3,7 +3,10 @@ import { getConfig } from "@plugins/config_v2/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
-import { listSidequestTasks } from "@plugins/tasks/plugins/task-track/server";
+import {
+  getTaskTrack,
+  listSidequestTasks,
+} from "@plugins/tasks/plugins/task-track/server";
 import { requestTriage } from "@plugins/tasks/plugins/task-triage/server";
 import { sidequestAutopilotConfig } from "../../shared/config";
 
@@ -24,7 +27,9 @@ async function requestSidequestTriage(taskId: string): Promise<void> {
 /**
  * A task may have become a ready sidequest — it became one (`tasks.trackChanged`
  * to sidequest) or a sidequest became ready (`tasks.statusChanged` to new).
- * Asks for its triage if it has none.
+ * Asks for its triage if it has none. The status event fires for every task
+ * (each one is created `new`), so a task on the main track is skipped here: a
+ * task filed as a sidequest is caught by its own `trackChanged`.
  */
 export const triageOnTaskJob = defineJob({
   name: "sidequest-autopilot.triage-on-task",
@@ -35,7 +40,9 @@ export const triageOnTaskJob = defineJob({
   event: z.object({ taskId: z.string() }).passthrough(),
   dedup: "none",
   run: async ({ event }) => {
-    if (event !== undefined) await requestSidequestTriage(event.taskId);
+    if (event === undefined) return;
+    if ((await getTaskTrack(event.taskId)) !== "sidequest") return;
+    await requestSidequestTriage(event.taskId);
   },
 });
 
