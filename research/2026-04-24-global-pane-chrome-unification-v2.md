@@ -269,7 +269,7 @@ wrap the existing `icon` + `onClick` in a small component. Files:
 
 ## Verification
 
-1. `./singularity build` and load the app at
+1. `./equin build` and load the app at
    `http://<worktree>.localhost:9000`.
 2. Visit `/c/<convId>`. Confirm:
    - Single top bar with ‹ › history, the ConversationTitle popover,

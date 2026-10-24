@@ -156,7 +156,7 @@ Full inventory captured below.
 Mirror `control-size` exactly — a lint-only plugin (no runtime barrel). Discovery is automatic:
 the codegen scans for `defineCollectedDir("lint")` and `eslint.config.ts` walks every
 `lint/index.ts`, enabling each rule repo-wide as `error`. **No registry edits** — just run
-`./singularity build` to regenerate `lint.generated.ts`.
+`./equin build` to regenerate `lint.generated.ts`.
 
 **New plugin:** `plugins/primitives/plugins/z-layers/`
 ```
@@ -212,9 +212,9 @@ per-rule `exemptConfigs`.
 
 ## Verification
 
-1. `./singularity build` — regenerates `lint.generated.ts` (picks up `z-layers`), rebuilds CSS
+1. `./equin build` — regenerates `lint.generated.ts` (picks up `z-layers`), rebuilds CSS
    (new `z-*` utilities), regenerates plugin docs (new plugin).
-2. `./singularity check eslint` — passes (allowlist covers remaining raw z); confirm the rule
+2. `./equin check eslint` — passes (allowlist covers remaining raw z); confirm the rule
    *fires* by temporarily adding a `z-50` to a non-exempt file.
 3. **The bug, end-to-end** — scripted Playwright on a conversation view:
    ```bash

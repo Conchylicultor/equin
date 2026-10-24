@@ -81,7 +81,7 @@ Endpoints: `useEndpoint` and `useEndpointMutation` fetch through
 api.fetch(endpoint, args)`. A lint rule (`endpoints/no-contextless-fetch`) bans
 bare `fetchEndpoint` in web code. Each plugin not yet migrated carries a
 `kind: "debt"` exemption with a task, so the migration can be gradual and is
-tracked by `./singularity exempt list --debt`. Code that genuinely runs outside
+tracked by `./equin exempt list --debt`. Code that genuinely runs outside
 React, such as boot tasks and module stores, is host-level by nature and keeps an
 explicit `fetchEndpointAtRoot`. The name says what it reaches.
 
@@ -160,7 +160,7 @@ it also works on real data, without a `DemoScope`.
   deterministic ids and `ctx.now` is the pinned recording clock.
 - A scenario is declared by its owner, for example
   `apps/agent-manager/demo/scenarios.ts`: `{ id, app, routes[] }`.
-- `./singularity demo record <scenario>` does the following:
+- `./equin demo record <scenario>` does the following:
   1. creates a throwaway database and migrates it;
   2. runs every seed for that scenario;
   3. boots a backend on it;
@@ -224,14 +224,14 @@ screenshots through a route such as `/website/demo/<scenario>`.
 
 ## Verification
 
-- **Phase 0:** `./singularity check` and `./singularity test` for live-state,
+- **Phase 0:** `./equin check` and `./equin test` for live-state,
   endpoints and optimistic-mutation. The existing live e2e scripts
   (`network/live/e2e/reconnect-after-gap.ts`,
   `tasks-core/e2e/tree-live-verify.ts`) must pass unchanged, and the app must
   behave the same.
 - **Phase 1:** a jsdom test mounts a `DemoScope` next to a real
   `LiveBackendProvider` with the same key and asserts there's no crosstalk. Then
-  `./singularity build` and `screenshot.ts --path /website` show agent-manager
+  `./equin build` and `screenshot.ts --path /website` show agent-manager
   `/tasks` with pack data, and the host page still shows real data.
 - **Phase 3:** an e2e script checks a task in the demo, asserts the row updates
   and no op stays pending, reloads, and asserts the change is gone.

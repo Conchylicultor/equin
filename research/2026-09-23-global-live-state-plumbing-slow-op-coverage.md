@@ -61,7 +61,7 @@ recordSpan(kind, label, ms, detail?)
   folds the rest into one `(other)` entry, so a row cannot grow without bound.
 - New `measures: Partial<Record<SpanMeasure, {max, last}>>` column.
 - `recentSamples` entries also carry the sample's `variant` and `measures`.
-- The migration comes from `./singularity build`.
+- The migration comes from `./equin build`.
 
 A resource stays **one row**, and that row lists which param sets were slow. This keeps the
 row count bounded while still answering "which params".
@@ -119,14 +119,14 @@ Every new runtime hook is optional and does nothing when absent, matching `wrapL
 
 ## Verification
 
-- Unit tests (`./singularity test <plugin>`):
+- Unit tests (`./equin test <plugin>`):
   - recorder: detail reaches `SlowSpan` for both kinds of span, and `measuresMax` is
     computed.
   - slow-ops: variant merging keeps the top 10 and folds the rest into `(other)`.
   - resource-runtime: `wrapLoad` gets the variant and `scopedIds`; `wrapHttp` wraps a 304;
     `wrapMembership` wraps a window refill; `onDelivered` gets `frameChars`.
   - change-feed: the listener records a `route` span.
-- `./singularity build` (generates the slow_ops migration), then `./singularity check`.
+- `./equin build` (generates the slow_ops migration), then `./equin check`.
 - Live check against this worktree's deploy:
   - `get_runtime_profile` shows `route` rows (one per table), `membership` rows, an
     `http GET /api/resources/<key>` row after a WS-invalidate refetch, and

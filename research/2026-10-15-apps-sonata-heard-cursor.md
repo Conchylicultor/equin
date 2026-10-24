@@ -159,8 +159,8 @@ change.
   - a driven resync is anchored at heard time: `timeline.positionAt(now − L)` equals the medium's
     beat
   - the end-of-song stop fires L later
-- **Run:** `./singularity test plugins/apps/plugins/sonata`.
-- **Manual:** after `./singularity build`, on Bluetooth headphones, play a song with sharp onsets.
+- **Run:** `./equin test plugins/apps/plugins/sonata`.
+- **Manual:** after `./equin build`, on Bluetooth headphones, play a song with sharp onsets.
   The lit keys and the piano-roll strike should land on the sound. Switching the output device
   mid-play should step the cursor and keep it in sync. Built-in speakers should look unchanged
   (a lag of about 10–30 ms).

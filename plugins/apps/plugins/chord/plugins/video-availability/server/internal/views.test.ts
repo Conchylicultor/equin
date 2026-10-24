@@ -6,10 +6,10 @@
  * drizzle definition — the same `compileCreateView` the boot rebuild runs — so
  * what is asserted is the view that ships, read back through its decoder.
  *
- * Requires the running embedded cluster (`./singularity build` first);
+ * Requires the running embedded cluster (`./equin build` first);
  * `createTestDb` throws loudly rather than skipping when it is not up.
  *
- * Run: `./singularity test plugins/apps/plugins/chord/plugins/video-availability`
+ * Run: `./equin test plugins/apps/plugins/chord/plugins/video-availability`
  */
 
 import { afterAll, beforeAll, expect, test } from "bun:test";

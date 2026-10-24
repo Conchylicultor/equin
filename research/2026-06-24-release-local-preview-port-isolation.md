@@ -196,7 +196,7 @@ script's `pg_ctl -w -t 30` is post-initdb readiness and stays.
 
 ## Verification
 
-1. `./singularity build` in the worktree (regenerates migrations, rebuilds, restarts,
+1. `./equin build` in the worktree (regenerates migrations, rebuilds, restarts,
    registers gateway). Confirm clean boot — dev cluster unaffected (`SINGULARITY_PG_PORT`
    unset ⇒ 5433).
 2. In Studio → Release: run a release for a small composition, wait for `succeeded`.
@@ -210,7 +210,7 @@ script's `pg_ctl -w -t 30` is post-initdb readiness and stays.
    `pgrep -f pgbouncer`/`postgres` against the tmp dir) that gateway, backend, PG,
    **and** PgBouncer are all gone and `/tmp/sgp-XXXXXX` is removed. The override port
    is free for re-preview.
-6. Cross-restart sweep: start a preview, then `./singularity build` (restarts the dev
+6. Cross-restart sweep: start a preview, then `./equin build` (restarts the dev
    backend). Confirm the boot sweep tears down the orphaned stack (no listener on the
    override port, `/tmp/sgp-*` cleaned).
 7. Cold-deadline: confirm a from-scratch preview boots within 90s even under load.

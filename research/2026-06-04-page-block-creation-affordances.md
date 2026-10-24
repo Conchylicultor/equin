@@ -154,8 +154,8 @@ In the `text` plugin (consumes editor exports):
 
 ## Verification
 
-1. `./singularity build` (regenerates nothing DB-wise; confirm no new migration is produced).
-2. `./singularity check` — boundaries, lint, docs-in-sync.
+1. `./equin build` (regenerates nothing DB-wise; confirm no new migration is produced).
+2. `./equin check` — boundaries, lint, docs-in-sync.
 3. Open the Pages app: `http://<worktree>.localhost:9000/pages` (create/select a page), or the
    page debug pane.
 4. Manual / scripted (`bun e2e/screenshot.mjs`) checks:

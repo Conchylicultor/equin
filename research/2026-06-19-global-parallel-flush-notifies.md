@@ -150,9 +150,9 @@ No changes to `scheduleNotify`, `scheduleFlush`, `withNotifyBatch`, `mergePendin
 
 ## Verification
 
-1. **Build:** `./singularity build` (regenerates nothing schema-side; just type-checks +
+1. **Build:** `./equin build` (regenerates nothing schema-side; just type-checks +
    restarts).
-2. **Type/lint:** `./singularity check type-check`.
+2. **Type/lint:** `./equin check type-check`.
 3. **Unit test (new, co-located bun:test next to source):**
    `plugins/framework/plugins/resource-runtime/core/runtime.test.ts` (or extend an existing
    one). Build a runtime with `createResourceRuntime`, register:

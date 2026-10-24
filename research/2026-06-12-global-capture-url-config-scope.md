@@ -158,7 +158,7 @@ contribution (lines ~18–22).
 This is the replacement for the deleted constant. Two-step because the override
 must carry the base origin's hash:
 
-1. Run `./singularity build` once so codegen writes the base origin
+1. Run `./equin build` once so codegen writes the base origin
    `config/tasks/task-draft-form/config.origin.jsonc` (first line `// @hash <12-hex>`).
 2. Create `config/tasks/task-draft-form/@app/agent-manager/config.jsonc`:
    ```jsonc
@@ -169,7 +169,7 @@ must carry the base origin's hash:
    ```
    Partial delta is fine — schema default-backfill fills the rest. The scoped
    override anchors to the **base** origin; no scoped origin is ever committed.
-3. Run `./singularity build` again. Propagation resolves the scope as
+3. Run `./equin build` again. Propagation resolves the scope as
    `baseEffective ⊕ delta` and pre-hydrates it in the boot snapshot, so the
    agent-manager paints `false` on the first frame (no flash).
 
@@ -189,9 +189,9 @@ must carry the base origin's hash:
 
 ## Verification
 
-1. `./singularity build` (twice, per step 6) — confirm origin + server registration generate cleanly.
-2. `./singularity check config-origins-in-sync` — validates the `@app` override's `// @hash` against the base origin and the doc against the schema.
-3. `./singularity check type-check plugin-boundaries` — confirms the field removal has no stragglers and the new server barrel obeys boundary rules.
+1. `./equin build` (twice, per step 6) — confirm origin + server registration generate cleanly.
+2. `./equin check config-origins-in-sync` — validates the `@app` override's `// @hash` against the base origin and the doc against the schema.
+3. `./equin check type-check plugin-boundaries` — confirms the field removal has no stragglers and the new server barrel obeys boundary rules.
 4. End-to-end via Playwright (`e2e/screenshot.mjs`):
    - In a **non-agent-manager** app (e.g. `http://<wt>.localhost:9000/pages`), open the Improve / task-draft popover and confirm the **URL toggle is pre-checked** (global default `true`).
    - In the **agent manager** (`http://<wt>.localhost:9000/agents`), open the task-draft popover and confirm the **URL toggle is unchecked** (committed `app:agent-manager` scope → `false`). This reproduces the exact behavior the deleted constant produced.

@@ -149,7 +149,7 @@ Modified (editor plugin — its designed extension points):
 
 ## Verification
 
-1. `./singularity build` — regenerates the plugin registry (picks up the 3 new
+1. `./equin build` — regenerates the plugin registry (picks up the 3 new
    plugins) and runs checks (`type-check`, `plugins-registry-in-sync`,
    `plugins-doc-in-sync`, `plugin-boundaries`).
 2. Pure tests:

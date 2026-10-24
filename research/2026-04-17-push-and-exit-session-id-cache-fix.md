@@ -100,7 +100,7 @@ prior result (including null for 'not found')" line is now wrong.
    UPDATE conversations SET claude_session_id = NULL
    WHERE id = 'claude-1776427064-59ei';
    ```
-2. `./singularity build` — server restart clears the in-memory pidCache.
+2. `./equin build` — server restart clears the in-memory pidCache.
 3. Wait one poller tick (~1s) and re-query the row:
    ```bash
    psql -d claude-1776411743-en61 -tAc \

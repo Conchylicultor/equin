@@ -147,8 +147,8 @@ const check: Check = {
       hintParts.push(
         "Remove the BRANCH-LOCAL copies only — never a published one (published migrations are " +
           "immutable). A branch-local data migration (no snapshot header): delete its " +
-          ".sql; `./singularity build` regenerates the journal. A branch-local schema migration: " +
-          "rebase onto `main` and re-run `./singularity build --reset-migration --migration-name " +
+          ".sql; `./equin build` regenerates the journal. A branch-local schema migration: " +
+          "rebase onto `main` and re-run `./equin build --reset-migration --migration-name " +
           "<slug>`. If every copy is branch-local, keep the earliest-timestamp one.",
       );
     }
@@ -162,7 +162,7 @@ const check: Check = {
       hintParts.push(
         "Each migration's sha8 must be unique. Custom/backfill migrations once all hashed to " +
           "the empty drizzle placeholder (b3cc75fa); renameMigrations now uniquifies the body " +
-          "at generate time. Rebase onto main and re-run `./singularity build " +
+          "at generate time. Rebase onto main and re-run `./equin build " +
           "--reset-migration --migration-name <slug>` to regenerate the branch-local migration " +
           "with a distinct hash.",
       );

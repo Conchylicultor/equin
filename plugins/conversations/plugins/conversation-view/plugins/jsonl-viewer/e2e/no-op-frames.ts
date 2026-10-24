@@ -11,7 +11,7 @@
  * Expected: notifyStats.feed grows (routed recomputes happen) while frames
  * during the write phase are 0 for every value whose content did not change.
  *
- *   ./singularity run plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/e2e/no-op-frames.ts \
+ *   ./equin run plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/e2e/no-op-frames.ts \
  *     --others conv-a,conv-b,… [--conv <id>] [--shell <id>] [--subagent-key <key>] [--own-writes 2]
  *
  * Without `--others` it asks nothing of the DB: pass ~8 non-hibernated

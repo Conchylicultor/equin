@@ -149,7 +149,7 @@ the type-level fix is the correct structural answer.
 
 ## Verification
 
-1. `./singularity build` — must compile clean (the `type-check` check covers
+1. `./equin build` — must compile clean (the `type-check` check covers
    tsc + type-aware ESLint across all targets).
 2. **Negative check (manual, throwaway):** temporarily annotate one predicate
    `fieldValue: FieldValue` and confirm `tsc` errors at the `const` — proves the

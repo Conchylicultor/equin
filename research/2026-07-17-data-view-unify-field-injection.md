@@ -170,7 +170,7 @@ file.
 
 ## Verification
 
-1. `./singularity build` from the worktree — must pass `type-check` (the deleted
+1. `./equin build` from the worktree — must pass `type-check` (the deleted
    `Global*` types have no stragglers — confirmed only the 4 files above reference
    them), `plugin-boundaries`, and `plugins-doc-in-sync` (the barrel export delta +
    CLAUDE.md rewrite regenerate the autogen reference block; commit the regen).

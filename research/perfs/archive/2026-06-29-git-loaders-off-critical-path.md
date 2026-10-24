@@ -178,7 +178,7 @@ revisit unification only if a third consumer appears.
    (`worktree: "singularity"`, `mode: "both"`, then again with `loadConcurrency: 4`)
    and save the JSON. Expect `firstSubscribe.{edited-files,commits-graph.delta,
    commits-graph.graph}.loaderMs` ~ multiple seconds, rising under load.
-2. Implement §1–4, then `./singularity build` in the worktree.
+2. Implement §1–4, then `./equin build` in the worktree.
 3. **After:** re-run the identical `benchmark_boot` calls (pin the same
    `conversationId`/`attemptId` via the params the baseline reported). Expect:
    - `loaderMs` (sub-ack) drops to low-ms and **stays flat under `loadConcurrency`**
@@ -192,7 +192,7 @@ revisit unification only if a third consumer appears.
    chip appear (populated, correct counts) within a beat of load; commit/rebase in
    the worktree and confirm both update live (watcher + refHead cascades intact);
    land a push and confirm the chip's push count updates.
-5. `./singularity check` (boundaries, no-db-backed-notify, lint, type-check) clean.
+5. `./equin check` (boundaries, no-db-backed-notify, lint, type-check) clean.
 6. Optional: `bun test plugins/debug/plugins/profiling/plugins/boot-bench` (extend
    `aggregate.test.ts` for the new `firstPopulateMs` field).
 

@@ -16,7 +16,7 @@
 // must never type into a page a human owns.
 //
 // Usage:
-//   ./singularity run plugins/page/plugins/formatting/plugins/link/e2e/link-hover-verify.ts [--url <deploy>]
+//   ./equin run plugins/page/plugins/formatting/plugins/link/e2e/link-hover-verify.ts [--url <deploy>]
 //
 // Exits non-zero on the first failed assertion, after dumping a screenshot.
 import {

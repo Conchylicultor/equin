@@ -6,7 +6,7 @@
 //   - the bar's toggle pauses it from the library.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/sonata/plugins/library/e2e/background-playback.ts \
+//   ./equin run plugins/apps/plugins/sonata/plugins/library/e2e/background-playback.ts \
 //     --song <songId> [--url http://<worktree>.localhost:9000] [--headed]
 
 import {

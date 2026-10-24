@@ -16,7 +16,7 @@ export const PROGRESS_FILE = buildProgressLogDir.file("build-progress.jsonl");
 const progressSink = defineFileSink({
   id: "build-progress",
   description:
-    "Per-build progress log (`./singularity build`): one JSONL line per build " +
+    "Per-build progress log (`./equin build`): one JSONL line per build " +
     "open, top-level span enter/leave (with RSS), 30s heartbeat, and completion — " +
     "so a wedged build names the phase it is stuck in AND whether its heap was " +
     "climbing. Host-global across worktrees.",

@@ -140,25 +140,25 @@ step_11_start() {
   cat <<'CMD'
 eval "$(/opt/homebrew/bin/brew shellenv)"
 cd ~/singularity
-./singularity start
+./equin start
 CMD
 }
-step_11_start_DOC="Root CLAUDE.md CLI section: \`./singularity start\` brings up the gateway — a one-time, system-level step."
+step_11_start_DOC="Root CLAUDE.md CLI section: \`./equin start\` brings up the gateway — a one-time, system-level step."
 step_11_start_TAG="from-docs"
 
 step_12_build() {
   cat <<'CMD'
 eval "$(/opt/homebrew/bin/brew shellenv)"
 cd ~/singularity
-./singularity build --allow-main
+./equin build --allow-main
 CMD
 }
-step_12_build_DOC="Root CLAUDE.md CLI section: \`./singularity build\`, run once against main to deploy the app for the first time."
+step_12_build_DOC="Root CLAUDE.md CLI section: \`./equin build\`, run once against main to deploy the app for the first time."
 step_12_build_TAG="from-docs"
 # Recorded finding (run 1): the first build of a fresh clone fails after 62s
 # with 'no database for "singularity" and no fork in flight after 60s'. The
 # base database the whole app runs on is never created by anything in
-# docs/setup.md. The error does name a fix (`./singularity db fork`), which
+# docs/setup.md. The error does name a fix (`./equin db fork`), which
 # is the next step.
 step_12_build_EXPECT_FAIL=1
 
@@ -166,7 +166,7 @@ step_13_db_fork() {
   cat <<'CMD'
 eval "$(/opt/homebrew/bin/brew shellenv)"
 cd ~/singularity
-./singularity db fork
+./equin db fork
 CMD
 }
 step_13_db_fork_DOC="Not in docs/setup.md. The build's own failure message names this command, so a new user can find it — but only after the build fails."
@@ -198,7 +198,7 @@ step_15_createdb() {
 eval "$(/opt/homebrew/bin/brew shellenv)"
 cd ~/singularity
 createdb -h ~/.singularity/postgres/socket -p 5433 -U singularity singularity
-./singularity apply-migrations
+./equin apply-migrations
 CMD
 }
 step_15_createdb_DOC="Nowhere in any doc. Reconstructed from mise.toml's setup task, but pointed at the embedded cluster socket instead of a system Postgres on 5432."
@@ -206,7 +206,7 @@ step_15_createdb_TAG="undocumented-knowledge"
 # Recorded finding (run 1): `createdb` against the embedded cluster's socket
 # works, but the command that is supposed to seed it crashes:
 #   "[runtime-identity] this process has not declared a runtime namespace."
-# So ./singularity apply-migrations — the CLI command that exists for exactly
+# So ./equin apply-migrations — the CLI command that exists for exactly
 # this fresh-clone case — is broken on main today. The database is left
 # created but empty.
 step_15_createdb_EXPECT_FAIL=1
@@ -215,7 +215,7 @@ step_16_build_retry() {
   cat <<'CMD'
 eval "$(/opt/homebrew/bin/brew shellenv)"
 cd ~/singularity
-./singularity build --allow-main
+./equin build --allow-main
 CMD
 }
 step_16_build_retry_DOC="The build from step 12, retried now that a database exists."
@@ -231,7 +231,7 @@ step_17_gateway_restart() {
   cat <<'CMD'
 eval "$(/opt/homebrew/bin/brew shellenv)"
 cd ~/singularity
-./singularity start --force
+./equin start --force
 sleep 20
 psql -h ~/.singularity/postgres/socket -p 5433 -U singularity -d singularity -tAc "select count(*) from information_schema.tables where table_schema = 'public'"
 CMD
@@ -243,7 +243,7 @@ step_18_build_retry2() {
   cat <<'CMD'
 eval "$(/opt/homebrew/bin/brew shellenv)"
 cd ~/singularity
-./singularity build --allow-main
+./equin build --allow-main
 CMD
 }
 step_18_build_retry2_DOC="The build again, after the gateway restart."
@@ -284,7 +284,7 @@ step_20_build_retry3() {
   cat <<'CMD'
 eval "$(/opt/homebrew/bin/brew shellenv)"
 cd ~/singularity
-./singularity build --allow-main
+./equin build --allow-main
 CMD
 }
 step_20_build_retry3_DOC="The build again, with a fully migrated database behind it."
@@ -302,7 +302,7 @@ step_22_build_retry4() {
   cat <<'CMD'
 eval "$(/opt/homebrew/bin/brew shellenv)"
 cd ~/singularity
-./singularity build --allow-main
+./equin build --allow-main
 CMD
 }
 step_22_build_retry4_DOC="The build again."
@@ -332,7 +332,7 @@ step_24_build_retry5() {
 eval "$(/opt/homebrew/bin/brew shellenv)"
 export PATH="$HOME/.local/share/mise/shims:$PATH"
 cd ~/singularity
-./singularity build --allow-main
+./equin build --allow-main
 CMD
 }
 step_24_build_retry5_DOC="The build again, with every pinned tool reachable."
@@ -351,7 +351,7 @@ step_26_screenshot() {
 eval "$(/opt/homebrew/bin/brew shellenv)"
 export PATH="$HOME/.local/share/mise/shims:$PATH"
 cd ~/singularity
-./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --out /tmp/clean-install-shot
+./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --out /tmp/clean-install-shot
 ls -la /tmp/clean-install-shot*
 CMD
 }

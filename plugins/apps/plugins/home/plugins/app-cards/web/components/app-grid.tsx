@@ -64,7 +64,7 @@ function newAppPrompt(userText: string, prototypeId: string | null): string {
     "shows, its data, which existing plugins it composes) and check the design",
     "with me before implementing.",
     "",
-    "Then implement it, run `./singularity build`, and give me the app's URL so I",
+    "Then implement it, run `./equin build`, and give me the app's URL so I",
     "can try it in your worktree. Do not push.",
   ];
   const parts = ["Build a new top-level Singularity app."];

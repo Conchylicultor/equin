@@ -297,7 +297,7 @@ LiteLLM has since dropped); skip `index.json`, which is rebuildable.
 add `scripts/verify-vs-ccusage.ts` (keeps `ccusage` as a dev-only dep). Rewrite
 `plugins/stats/plugins/cost/CLAUDE.md` prose: we own pricing; the archive is permanent and
 unbounded at ~25 MB/yr; the April→June 2026 gap is unrecoverable; the divergences below.
-Regenerate autogen blocks via `./singularity build`.
+Regenerate autogen blocks via `./equin build`.
 
 ### Deferred (do not bundle)
 
@@ -327,9 +327,9 @@ permanently baked into the archive. If it drifts, the fix is to record each file
 
 ## Verification
 
-1. `./singularity build`, then open `http://att-1786017041-srcw.localhost:9000` → Stats.
+1. `./equin build`, then open `http://att-1786017041-srcw.localhost:9000` → Stats.
    Confirm charts render and the cumulative total is ~8% above today's figure.
-2. `./singularity test plugins/stats/plugins/cost` — both runner buckets.
+2. `./equin test plugins/stats/plugins/cost` — both runner buckets.
 3. `bun plugins/stats/plugins/cost/scripts/verify-vs-ccusage.ts` — expect the 1h-corrected
    total to exceed ccusage's by ~8%, and the 5m-only control figure to land within ~0.5%
    (the dedup gap). This is the regression gate.
@@ -342,4 +342,4 @@ permanently baked into the archive. If it drifts, the fix is to record each file
 6. `mcp__singularity__query_db` on `_reports` after pointing the price table at a fixture
    missing a model — expect exactly one deduped `cost-unpriced-model` row, and none for
    `<synthetic>`.
-7. `./singularity check`.
+7. `./equin check`.

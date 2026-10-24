@@ -207,7 +207,7 @@ Add the new plugin entry under `conversation-view` → `plugins:`, matching the 
 
 ## Verification
 
-1. `./singularity build` — regenerates migrations (none should change), builds frontend + server, reloads gateway.
+1. `./equin build` — regenerates migrations (none should change), builds frontend + server, reloads gateway.
 2. Open `http://<worktree>.localhost:9000/c/<any-conversation-id>`.
 3. In the toolbar, the Tasks (✓) button should appear on the right side (non-`status` group). Click it:
    - Right pane opens.

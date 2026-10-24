@@ -64,7 +64,7 @@ async function callEndpoint<T, B = never>(
     throw new Error(
       `[e2e] agent-write ${phase} failed: ${def.method} ${def.path} → HTTP ${res.status} ${body}\n` +
         `  If this is a 404, the deployed server predates the shared agent-write ledger —\n` +
-        `  run \`./singularity build\` to redeploy this worktree.`,
+        `  run \`./equin build\` to redeploy this worktree.`,
     );
   }
   if (!def.responseCodec) {

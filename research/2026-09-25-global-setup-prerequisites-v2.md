@@ -1,7 +1,7 @@
 # Setup prerequisites, v2: a mise-owned doctor, the ordered setup doc
 
 Supersedes `2026-09-25-global-setup-prerequisites.md`. v1 put the check in a standalone
-shell script and added a `./singularity prereqs` command. v2 moves the check into mise,
+shell script and added a `./equin prereqs` command. v2 moves the check into mise,
 drops the command, and adds the pieces that the roadmap page asked for and v1 missed.
 
 ## Context
@@ -27,7 +27,7 @@ have since landed on main (1a7bfdf45, 95df8994d). This plan covers what remains:
 
 Owner constraints, from that page:
 - Prefer putting logic in mise over bash.
-- The chain is: install mise → `mise install` → `./singularity start`.
+- The chain is: install mise → `mise install` → `./equin start`.
 - A future `install.sh` should be only a minimal wrapper around that chain.
 
 ## Design
@@ -58,7 +58,7 @@ here. Floors, holds and shadowing stay with `toolchain:resolved`. The doctor onl
 - **`mise install`**: the `postinstall` hook becomes `mise run setup && mise run doctor`.
   A new user finds out everything that is missing at the step they are already told to
   run. The hook's failure is visible, but it does not undo the install.
-- **`./singularity start` and `./singularity build`, as their first step.** This catches
+- **`./equin start` and `./equin build`, as their first step.** This catches
   things that broke after install (logged out, shims dropped off PATH) before any costly
   work. It lives in `bootstrap/cli` as `assertPrerequisites()`, which spawns
   `mise run doctor` via `spawnCaptured` and prints its report on failure. If `mise`
@@ -66,7 +66,7 @@ here. Floors, holds and shadowing stay with `toolchain:resolved`. The doctor onl
   `start` calls it before `assertSupportedHost()`, and `build` calls it before
   generation and checks. The release `launch` does **not** call it: a bundle needs no
   dev toolchain.
-- **On demand**: `mise run doctor`. No `./singularity` spelling, since that would need
+- **On demand**: `mise run doctor`. No `./equin` spelling, since that would need
   Bun, which the doctor may be reporting as missing.
 
 ### 3. Git hooks become automatic
@@ -107,7 +107,7 @@ sequence:
 4. `git clone …` and `cd` into it.
 5. `mise install`. This installs the locked toolchain, trusts worktrees, sets the git
    hooks and runs the doctor, which must end all green.
-6. `./singularity start`, then `./singularity build --allow-main`.
+6. `./equin start`, then `./equin build --allow-main`.
 
 The non-root, "don't install Bun/Go another way", Postgres and "cloned someone else's
 repo" sections stay as they are.
@@ -140,9 +140,9 @@ covers versus `toolchain:resolved`.
 - A `toolchain:resolved` test: a runtime PATH with no shims returns `ok:false`, names
   every tool and gives the shims hint, and does not throw.
 - Manual:
-  - `env -i HOME=$HOME PATH=/usr/bin:/bin ./singularity build` prints the Bun
+  - `env -i HOME=$HOME PATH=/usr/bin:/bin ./equin build` prints the Bun
     guidance.
   - `mise run doctor` on this machine is all green, which also confirms the
     `claude auth status` field.
-  - `./singularity build` succeeds, with the doctor at the top of its output.
+  - `./equin build` succeeds, with the doctor at the top of its output.
 - After merge, worth one re-run of the clean-VM harness (`sidequests/clean-install/`).

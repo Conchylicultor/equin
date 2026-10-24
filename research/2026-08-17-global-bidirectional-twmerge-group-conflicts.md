@@ -158,7 +158,7 @@ Rewrite the eight group decls per the table above (lines 400, 411–412, 424,
 - 647–648 — `rail-follow`'s "It is in the `px` group, not a rail group" (this stays true and stays `extend px`: it writes exactly `padding-inline` and nothing else, so the builtin group is the honest classification).
 
 **5. Regenerate and test.**
-`./singularity build` regenerates `custom-utilities.generated.ts`. Then rewrite
+`./equin build` regenerates `custom-utilities.generated.ts`. Then rewrite
 `…/ui-kit/web/lib/utils.test.ts` in two tiers:
 - **Table tier, driven from `CUSTOM_UTILITY_REGISTRY`** — for every (group, target) pair in the *closed* relation set, assert both orders. A new group cannot ship untested. Needs a builtin→representative-class map (`p`→`p-2`, `size`→`size-8`, …) that **throws** on an id with no representative, so adding a relation to an unmapped group fails loudly rather than silently skipping. Raw utilities need the `no-adhoc-spacing` / `no-adhoc-typography` disables the file already uses.
 - **Composition tier, hand-written** — the table tier proves less than it looks: `icon-auto` reaches real code almost entirely as `[&_svg:not([class*='size-'])]:icon-auto`, and tailwind-merge keys conflicts by `modifierId + group`, so a variant-prefixed class can never conflict with a bare `size-4`. Assert the real shapes: `cn(BASE, callerClassName)` for `OverlayPanel`, `Badge`, `Row`, `Card`, `Button`.
@@ -216,10 +216,10 @@ string. Delete it after one session.
 
 ## Verification
 
-1. `./singularity check app-css-utilities-in-sync` — marker grammar valid and the generated file in sync.
-2. `./singularity test plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils.test.ts` — both tiers.
-3. `./singularity check` — `type-check` covers the `RegistryEntry` shape change across the generator, the generated file and `utils.ts`.
-4. `./singularity build` (background), then look at, in this order:
+1. `./equin check app-css-utilities-in-sync` — marker grammar valid and the generated file in sync.
+2. `./equin test plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils.test.ts` — both tiers.
+3. `./equin check` — `type-check` covers the `RegistryEntry` shape change across the generator, the generated file and `utils.ts`.
+4. `./equin build` (background), then look at, in this order:
    - **Debug → Layout Lab** — the layout-primitive fixture catalog across its width sweep; the broadest single surface for padding regressions.
    - a **popover and a dialog** — `OverlayPanel`'s `rail-*` padding role.
    - **`SectionCard`** — `rail-x-lg pb-lg`, the one literal rail+padding pairing in the repo.

@@ -13,7 +13,7 @@ import { buildOutcomeExpr, buildStatusExpr } from "./status-sql";
  * Builds, as an arm of the merged run space.
  *
  * `label` is the targets joined, because that is what a build *is of*:
- * `./singularity build --composition sonata website` is one invocation carrying
+ * `./equin build --composition sonata website` is one invocation carrying
  * two target chips, and the ledger records it as one row. A plain build reads
  * `singularity`.
  *

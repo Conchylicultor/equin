@@ -150,9 +150,9 @@ runtime barrel `@plugins/primitives/plugins/loading/web`.
 
 ## Verification
 
-1. `./singularity build` — compiles frontend + server, runs checks (incl.
+1. `./equin build` — compiles frontend + server, runs checks (incl.
    `type-check` which catches unused imports and the eslint rules).
-2. `./singularity check eslint` (or the full `./singularity check`) — confirm
+2. `./equin check eslint` (or the full `./equin check`) — confirm
    `no-adhoc-loading-text` passes with an **empty** allowlist and
    `plugin-boundaries` passes (no new cycles).
 3. `rg -n "Placeholder>Loading" --glob '*.tsx' plugins/` → **0 results**.

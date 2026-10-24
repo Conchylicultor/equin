@@ -133,9 +133,9 @@ offset, separate concern; can be one field on the clock later.
 
 ## Verification
 
-1. `./singularity test plugins/apps/plugins/sonata/plugins/score` — `timeline.test.ts`:
+1. `./equin test plugins/apps/plugins/sonata/plugins/score` — `timeline.test.ts`:
    `retempo` keeps `beatAt(t)` continuous at `t`; round-trips `timeAt∘cAt`; loop
    iterations with a tempo map that changes inside the loop; `resync` picks the nearest iteration.
-2. `./singularity test plugins/apps/plugins/sonata/plugins/audio/plugins/engine` — port `scheduler.test.ts` to drive a store; **regression test**: loop A–B, 200 `retempo`s at random clock times between "frames", then assert every dispatched note's `when` equals the time the session cursor reaches that note's beat (`beatAt`) — exact, not within tolerance.
-3. `./singularity test plugins/apps/plugins/sonata/plugins/session` — `session.test.tsx` / `transport-driver.test.tsx` updated; new test: tick, advance clock 10 ms, change tempo, tick → cursor equals `timeline.beatAt(now)` (fails on today's code by the lost 10 ms).
-4. `./singularity build`, then by ear on `http://<worktree>.localhost:9000/sonata/song/song-1791906309-k4zovl`: set an A–B loop, drag the speed wheel back and forth for several seconds, let it loop 5+ times — the cursor and the notes stay together. Also check: plain playback, seek while playing, metronome on, a song with a recording (driven mode).
+2. `./equin test plugins/apps/plugins/sonata/plugins/audio/plugins/engine` — port `scheduler.test.ts` to drive a store; **regression test**: loop A–B, 200 `retempo`s at random clock times between "frames", then assert every dispatched note's `when` equals the time the session cursor reaches that note's beat (`beatAt`) — exact, not within tolerance.
+3. `./equin test plugins/apps/plugins/sonata/plugins/session` — `session.test.tsx` / `transport-driver.test.tsx` updated; new test: tick, advance clock 10 ms, change tempo, tick → cursor equals `timeline.beatAt(now)` (fails on today's code by the lost 10 ms).
+4. `./equin build`, then by ear on `http://<worktree>.localhost:9000/sonata/song/song-1791906309-k4zovl`: set an A–B loop, drag the speed wheel back and forth for several seconds, let it loop 5+ times — the cursor and the notes stay together. Also check: plain playback, seek while playing, metronome on, a song with a recording (driven mode).

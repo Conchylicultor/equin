@@ -144,7 +144,7 @@ its phrasing:
 
 ## Verification
 
-- **No code/build impact** — this is docs + a skill file. No `./singularity build`
+- **No code/build impact** — this is docs + a skill file. No `./equin build`
   required for the skill to be picked up.
 - **Frontmatter sanity:** confirm `.claude/skills/css/SKILL.md` parses like its
   siblings (`name: css`, block-scalar `description`).
@@ -154,5 +154,5 @@ its phrasing:
   today with the exact barrel path in the inventory table; the future set lives
   only under `## Planned primitives`.
 - **Discoverability:** the new bullet appears in root `CLAUDE.md` next to `theme`.
-- Optional: `./singularity check` stays green (no checks gate skill docs, but
+- Optional: `./equin check` stays green (no checks gate skill docs, but
   confirms nothing was disturbed).

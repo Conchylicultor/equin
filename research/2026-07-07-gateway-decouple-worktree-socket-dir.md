@@ -131,7 +131,7 @@ unchanged.)
 
 ## Verification
 
-1. **Build & deploy the worktree:** `./singularity build` (rebuilds the gateway
+1. **Build & deploy the worktree:** `./equin build` (rebuilds the gateway
    Go binary + TS backend). Confirm the dev app still comes up at
    `http://<worktree>.localhost:9000` — proves the unset-override fallback is
    byte-identical (dev sockets still at `<SINGULARITY_DIR>/sockets`).
@@ -147,7 +147,7 @@ unchanged.)
    dir and launch it directly:
    - Produce an artifact whose `<out>` root is deep enough that
      `<out>/data/sockets/<comp>.next.sock` would exceed 104 bytes (e.g. via the
-     Studio Release pane, or `./singularity release --composition <c> <target> --dev --out <deep>/…/<run-id>`).
+     Studio Release pane, or `./equin release --composition <c> <target> --dev --out <deep>/…/<run-id>`).
    - `<out>/launch &` and hit `http://<comp>.localhost:<port>` (or `/api/health/ready`).
    - **Before the fix:** gateway logs `worktree … exceeds 104-byte limit` and the
      backend never becomes ready.
@@ -155,6 +155,6 @@ unchanged.)
      `/tmp/sgw-XXXXXX`, the readiness probe returns `200`, and the page loads.
    - Sanity-check `ls /tmp/sgw-*` shows `<comp>.sock` living in the short dir.
 
-4. **Checks:** `./singularity check` (runs as part of build) — plugin
+4. **Checks:** `./equin check` (runs as part of build) — plugin
    boundaries / doc-in-sync remain green (no new cross-plugin edges; only a Go
    env read, a TS env set, and prose/comments changed).

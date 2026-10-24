@@ -144,7 +144,7 @@ uncommitted worktree edit (the file changes without moving HEAD) — the exact t
 documents (its worktree side switches off SHA to a generation). A debounced `createFileWatcher` on
 `PLUGINS_DIR` bumps a monotonic `generation`, fed as the `signatureFn` into `createGitStateMemo`
 (reused verbatim for single-flight + per-key coalesce + skip-heavy-slot-on-hit). Push-based (respects
-no-polling). The server restarts on every `./singularity build`, so the cache is naturally
+no-polling). The server restarts on every `./equin build`, so the cache is naturally
 cold-once-per-boot; the watcher only covers live edits between builds.
 
 `plugin-tree/server/internal/plugin-tree-cache.ts` (new):
@@ -232,12 +232,12 @@ onto one build.
 - **≤1-event mid-build staleness** self-heals on the next `get` (new generation → rebuild) — matches the
   documented git-read-cache staleness-sharing contract.
 - **Boundary/registry:** new server barrel must be picked up by `server.generated.ts` via build; run
-  `./singularity check plugin-boundaries` (legal barrel, no re-export, no cycle:
+  `./equin check plugin-boundaries` (legal barrel, no re-export, no cycle:
   `plugin-tree/server → infra/*/server + own core`).
 
 ## Verification (end-to-end)
 
-1. `./singularity build`; confirm boot (new barrel registers; no boundary/cycle check failure).
+1. `./equin build`; confirm boot (new barrel registers; no boundary/cycle check failure).
 2. **Warm latency:** hit `GET /api/plugin-view/tree` twice → `get_runtime_profile` shows max drop from
    ~10 s to ms on the 2nd call, with a `git-memo-hit:plugin-meta.plugin-tree` marker (miss on the 1st).
 3. **Cold-build containment:** around a cold build, `stall-profiles.jsonl` / `health.jsonl`

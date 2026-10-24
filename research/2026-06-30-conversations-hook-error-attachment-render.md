@@ -83,7 +83,7 @@ New plugin under
   - Do **not** render a timestamp (jsonl-viewer rule — `EventRow` adds it).
 
 No changes to the parser, dispatch slot, generic fallback, or any registry by
-hand — `./singularity build` regenerates `web.generated.ts` and the docs/CLAUDE.md
+hand — `./equin build` regenerates `web.generated.ts` and the docs/CLAUDE.md
 reference blocks from the filesystem.
 
 ### Reused, unchanged
@@ -101,7 +101,7 @@ Benign unhandled subtypes (`file`, `directory`, `ultra_effort_enter`,
 
 ## Verification
 
-1. `./singularity build` (regenerates registry + docs; fails loudly on boundary
+1. `./equin build` (regenerates registry + docs; fails loudly on boundary
    or doc-sync drift).
 2. Confirm the new plugin is wired: it should appear under the attachment
    `JsonlViewerAttachment.Renderer` slot in the regenerated

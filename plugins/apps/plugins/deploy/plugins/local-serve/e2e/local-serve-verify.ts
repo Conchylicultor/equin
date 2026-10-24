@@ -4,7 +4,7 @@
  *
  * Manual only (nothing runs this automatically):
  *
- *   ./singularity run plugins/apps/plugins/deploy/plugins/local-serve/e2e/local-serve-verify.ts [--headed]
+ *   ./equin run plugins/apps/plugins/deploy/plugins/local-serve/e2e/local-serve-verify.ts [--headed]
  *
  * It reads the first deployment out of the running app rather than seeding one,
  * for the same reason the remote-deploy script does: a deployment names a real

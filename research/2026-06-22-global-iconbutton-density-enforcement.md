@@ -119,13 +119,13 @@ props), `new-child-task` + `dnd-list-middleware` (`trigger={…}` prop values),
 
 ## Verification
 
-1. `./singularity build` — runs codegen (regenerates the CLAUDE.md autogen blocks + lint
+1. `./equin build` — runs codegen (regenerates the CLAUDE.md autogen blocks + lint
    discovery), then `type-check` (TS + type-aware ESLint, which now includes both new rules)
    and `eslint`. Must pass clean — confirms every flagged site is migrated or disabled.
 2. **Rule fires as intended (negative test):** temporarily add `className="size-6"` to any
    `<IconButton>` and a bare `<Button aspect="icon"><MdRefresh/></Button>` in a scratch file;
    `bunx eslint <file>` reports `adhocControlSize` + `prefer-icon-button`; revert.
-3. **No false positives:** confirm `./singularity check eslint` (or the `type-check` lint pass)
+3. **No false positives:** confirm `./equin check eslint` (or the `type-check` lint pass)
    reports zero violations across the keep-bare set (`edge-actions`, `row-action-button`,
    `group-container`, `pane-icon-action`, `dnd-list-middleware`, `new-child-task`,
    `exit-menu`, `launch-control:164`, `sidebar`/`sheet`).

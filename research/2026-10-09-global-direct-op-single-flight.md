@@ -2,7 +2,7 @@
 
 ## Context
 
-On 2026-10-09 the "Sonata prototype redesign" conversation (worktree `att-1791476180-qcx5`) fanned out ~14 subagents, each running `./singularity check type-check`. That gave 11 concurrent runs (4 granted, 7 queued) plus relaunches, with each type-check worker at 15–20 GB. About 100 GB went into the compressor on a 64 GB host. Checks with a p50 of about 2 min ran for more than 1 h, and every other worktree's builds and E2E runs sat behind the host CPU grant.
+On 2026-10-09 the "Sonata prototype redesign" conversation (worktree `att-1791476180-qcx5`) fanned out ~14 subagents, each running `./equin check type-check`. That gave 11 concurrent runs (4 granted, 7 queued) plus relaunches, with each type-check worker at 15–20 GB. About 100 GB went into the compressor on a 64 GB host. Checks with a p50 of about 2 min ran for more than 1 h, and every other worktree's builds and E2E runs sat behind the host CPU grant.
 
 Today, nothing lets two callers in one worktree share a run:
 
@@ -133,17 +133,17 @@ A joiner's request saw tree T, and so did the leader at its start. The leader's 
 
 ## Verification
 
-1. **Unit tests for `single-flight`** (`./singularity test plugins/packages/plugins/single-flight`). Spawn real child processes for:
+1. **Unit tests for `single-flight`** (`./equin test plugins/packages/plugins/single-flight`). Spawn real child processes for:
    - leader plus 5 joiners: one body runs and all adopt;
    - leader SIGKILL: a joiner re-leads;
    - leader not adoptable (interrupted): a joiner re-runs;
    - a stale verdict file from an earlier leader: never adopted;
    - different keys: run in parallel.
 2. **`direct-op.test.ts`:** a joiner never calls `withHostGrant`, writes the `in-flight` wait, and completes with the leader's outcome.
-3. **End to end, check:** in a worktree, `./singularity check type-check --no-cache` warms nothing. Then launch 5 × `./singularity check type-check` at once after touching a `.ts` file.
+3. **End to end, check:** in a worktree, `./equin check type-check --no-cache` warms nothing. Then launch 5 × `./equin check type-check` at once after touching a `.ts` file.
    - Expect exactly one `type-check` worker in `ps`, one `host-grant` acquisition in the op-log, and four `in-flight` waits.
    - All five exit 0, and four print "Joined in-flight check".
    - Repeat with an introduced type error: all five exit 1 and print the same failure.
-4. **End to end, overlap (phase 2):** `./singularity check` and `./singularity check type-check` launched together give one type-check body. `check --status` shows the joined record.
-5. **End to end, test:** 3 × `./singularity test plugins/packages/plugins/single-flight` at once give one bun/vitest run. `await test` on a joiner reports the adopted verdict.
-6. `./singularity check` passes, including boundary rules for the new plugin and the moved scripts.
+4. **End to end, overlap (phase 2):** `./equin check` and `./equin check type-check` launched together give one type-check body. `check --status` shows the joined record.
+5. **End to end, test:** 3 × `./equin test plugins/packages/plugins/single-flight` at once give one bun/vitest run. `await test` on a joiner reports the adopted verdict.
+6. `./equin check` passes, including boundary rules for the new plugin and the moved scripts.

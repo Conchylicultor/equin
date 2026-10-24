@@ -165,7 +165,7 @@ const runtimeEnvDeclaredCheck: Check = {
 // one forgetful exec site. So the gateway has one file that reads its own
 // environment and builds commands (gateway/env.go, which always sets Env from
 // the declared names), and every other file goes through it. Go tests do not
-// run in `./singularity check`, so the guard lives here.
+// run in `./equin check`, so the guard lives here.
 const GATEWAY_ENV_FILE = "gateway/env.go";
 
 // The calls that either read the gateway's own environment or start a process

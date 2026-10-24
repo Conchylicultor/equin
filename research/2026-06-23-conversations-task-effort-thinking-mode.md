@@ -180,7 +180,7 @@ into `createConversation(...)`.
 
 ## Verification
 
-1. `./singularity build` (regenerates the `tasks_ext_effort` migration, runs codegen so
+1. `./equin build` (regenerates the `tasks_ext_effort` migration, runs codegen so
    both new plugins auto-register, builds + restarts). Confirm migration applied and no
    `plugins-registry-in-sync` / boundary / type-check failures.
 2. UI: open a task at `http://<worktree>.localhost:9000`, find the new **Thinking mode**
@@ -195,11 +195,11 @@ into `createConversation(...)`.
 5. Set **Default** (clears the row), launch → command has **no** `--effort` flag.
 6. Resume a gone conversation whose task has an effort set → re-spawned command still
    carries `--effort <flag>`.
-7. `./singularity check` clean.
+7. `./equin check` clean.
 
 ## Notes
 
-- No polling, no manual registry/migration edits (all via `./singularity build`).
+- No polling, no manual registry/migration edits (all via `./equin build`).
 - `ultracode` deliberately maps to `--effort xhigh` (the real reasoning tier) plus the
   documented keyword opt-in — it is *not* passed as a literal `--effort` value, which the
   CLI would reject.

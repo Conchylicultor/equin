@@ -212,7 +212,7 @@ Reuse, don't reinvent: `Rank.between`/`nBetween`/`compare`/`from`
      not mutated.
    - `reconcileBlocks`: insert-only, update-only (rank/parent/data/expanded), delete
      with subtree, split (1 update + 1 insert), no-op (equal arrays).
-2. **Build**: `./singularity build` (typecheck union + endpoint wiring + removed refs).
+2. **Build**: `./equin build` (typecheck union + endpoint wiring + removed refs).
 3. **E2E** via `e2e/screenshot.mjs` against `http://att-1781168874-9vey.localhost:9000`:
    - Enter at end of a block with expanded children → new block is first child.
    - Enter mid-text → sibling carrying trailing text.

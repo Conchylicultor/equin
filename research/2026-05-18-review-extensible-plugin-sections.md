@@ -161,8 +161,8 @@ No server changes needed — the `/api/review/plugin-changes` endpoint and `Plug
 
 ## Verification
 
-1. `./singularity build` — should succeed, auto-discover the new `api-changes` sub-plugin
+1. `./equin build` — should succeed, auto-discover the new `api-changes` sub-plugin
 2. Open the review pane on a conversation with plugin changes
 3. Verify plugin cards show the API change count badge in the header
 4. Verify expanding a card shows the same API diff content as before
-5. `./singularity check` — all checks pass
+5. `./equin check` — all checks pass

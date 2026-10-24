@@ -204,13 +204,13 @@ Explicit non-goals: `ListItem<F>.id` stays required-in-type /
    New `plugins/config_v2/core/internal/collections.test.ts` for the walker
    itself (paths emitted, non-container fields skipped, input not mutated).
    ```bash
-   ./singularity test plugins/config_v2
+   ./equin test plugins/config_v2
    ```
-2. **Check** — `./singularity check config-stable-list-ids` passes on the repo as
+2. **Check** — `./equin check config-stable-list-ids` passes on the repo as
    it stands; then temporarily flip `conversation-category`'s nested `items` to
    `stableIdentity: true` and confirm it *fails* naming `categories[0].items`,
    and revert.
-3. **Build** — `./singularity build`; confirm `config-origins-in-sync` still
+3. **Build** — `./equin build`; confirm `config-origins-in-sync` still
    passes (no origin hash should move) and the deploy receipt at
    `~/.singularity/worktrees/<wt>/build-status.json` reads `status: ok`.
 4. **End to end**, at `http://<worktree>.localhost:9000/settings`, on the

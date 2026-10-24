@@ -139,7 +139,7 @@ The sub-plugin `plugins/conversations/plugins/conversation-view/plugins/new-chil
 
 ## Verification
 
-1. `./singularity build` succeeds
+1. `./equin build` succeeds
 2. Navigate to a conversation — click Improve — the form shows a 3-way relate selector (Independent / Follow-up / Prerequisite) with Independent pre-selected
 3. Select "Follow-up", type a task, submit — verify the created task has a dependency on the conversation's task (check via task detail pane → dependencies section)
 4. Select "Independent", submit — verify no dependency

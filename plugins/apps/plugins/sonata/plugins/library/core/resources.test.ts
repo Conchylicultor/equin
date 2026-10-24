@@ -5,7 +5,7 @@
  * binds, and the rows reach the songs entity (every exposure of it folds in —
  * playback-history's plays, the MIDI source's tracks and file flag).
  *
- * Run: `./singularity test plugins/apps/plugins/sonata/plugins/library`.
+ * Run: `./equin test plugins/apps/plugins/sonata/plugins/library`.
  */
 
 import { describe, expect, test } from "bun:test";

@@ -12,7 +12,7 @@
  * are in the DOM without simulating hover; the click at the end goes through
  * Playwright's own hover, which is what makes them pressable.
  *
- *   ./singularity run plugins/apps/plugins/deploy/plugins/deploy-history/plugins/investigate-failure/e2e/investigate-failure.ts \
+ *   ./equin run plugins/apps/plugins/deploy/plugins/deploy-history/plugins/investigate-failure/e2e/investigate-failure.ts \
  *     --server <serverId> --deployment <deploymentId>
  */
 import {

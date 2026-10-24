@@ -125,13 +125,13 @@ regenerated plugin docs.
 
 ## Verification
 
-1. `./singularity test plugins/primitives/plugins/data-view`. New cases:
+1. `./equin test plugins/primitives/plugins/data-view`. New cases:
    - Controller: hide then show returns a field to its index. Hiding keeps its place in the
      committed list. An unlisted field shows as hidden at the end of its band. A move keeps
      the hidden entries.
    - Migration: rewrite keeps key position, is idempotent, leaves other rows untouched.
    - `resolveBodyFields`: hidden entries and unlisted fields are left out of the body.
-2. `./singularity build` (checks include `config` origin/override sync and type-check).
+2. `./equin build` (checks include `config` origin/override sync and type-check).
 3. In the browser (`browser_*` tools on this worktree's build), open the Tasks list's view
    settings, then Properties. Hide a middle field: it stays in place, dimmed, with the eye
    crossed out. Show it: same position. Reload: order persisted. Check that the committed

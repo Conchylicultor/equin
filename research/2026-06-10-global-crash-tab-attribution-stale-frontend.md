@@ -107,7 +107,7 @@ Robust: compares the **executing bundle's baked id** vs the **server's current i
 
 ### (D) tab-id primitive
 
-**New plugin `plugins/primitives/plugins/tab-id/`** — shared by `crashes/web` (stamp) and `notifications/web` (display); a primitive is the clean shared home. Auto-discovered by codegen on `./singularity build` (no manual `plugins.ts` edit).
+**New plugin `plugins/primitives/plugins/tab-id/`** — shared by `crashes/web` (stamp) and `notifications/web` (display); a primitive is the clean shared home. Auto-discovered by codegen on `./equin build` (no manual `plugins.ts` edit).
 
 - `package.json` — `{ "name": "@singularity/plugin-primitives-tab-id", "private": true, "version": "0.0.1", "description": "..." }`
 - `web/internal/tab-id.ts`:
@@ -148,7 +148,7 @@ return await fetchEndpoint(reportCrash, {}, { body: stamped, keepalive: true, re
 lastClientId: text("last_client_id"),
 lastBuildId: text("last_build_id"),
 ```
-`./singularity build` auto-generates the `ALTER TABLE "crashes" ADD COLUMN ...` migration (precedent: noise column `20260607_170251_d0abe97f`). **Never** run drizzle-kit manually.
+`./equin build` auto-generates the `ALTER TABLE "crashes" ADD COLUMN ...` migration (precedent: noise column `20260607_170251_d0abe97f`). **Never** run drizzle-kit manually.
 
 **`plugins/crashes/core/resources.ts`** — add `lastClientId: z.string().nullable()`, `lastBuildId: z.string().nullable()` to `CrashSchema`. Server resource is `db.select().from(_crashes)` (no column filter) so values flow automatically.
 
@@ -207,10 +207,10 @@ lastBuildId: text("last_build_id"),
 
 ## Verification (end-to-end)
 
-1. **Build:** `./singularity build`. Confirm `web/dist/.build-id` exists; `web.generated.ts` gained a `primitives/plugins/tab-id` entry; a new `ALTER TABLE "crashes" ADD COLUMN last_client_id/last_build_id` migration appeared under `plugins/database/plugins/migrations/data/`.
+1. **Build:** `./equin build`. Confirm `web/dist/.build-id` exists; `web.generated.ts` gained a `primitives/plugins/tab-id` entry; a new `ALTER TABLE "crashes" ADD COLUMN last_client_id/last_build_id` migration appeared under `plugins/database/plugins/migrations/data/`.
 2. **Two tabs, current build:** open tab A + tab B (same namespace), trigger a crash in A. In **Debug → Crashes**: tab A shows **`this tab`** (info), tab B shows **`another tab`** (muted) on the same row. Bell: A shows "this tab" chip, B shows "another tab".
 3. **`query_db`:** `select fingerprint, count, task_id, noise, last_client_id, last_build_id from crashes order by last_seen_at desc limit 5;` — `last_client_id` = tab A's `sessionStorage["singularity.tabId"]`, `last_build_id` = current `.build-id`, `task_id` non-null, `noise=false`.
-4. **Simulate stale tab:** keep A open, make a trivial change, `./singularity build` again (new id, server restarts). Tab A's build button shows **"Server updated / Reload"** (via `useStaleFrontend`). Trigger a **new-fingerprint** crash from the still-loaded stale tab A.
+4. **Simulate stale tab:** keep A open, make a trivial change, `./equin build` again (new id, server restarts). Tab A's build button shows **"Server updated / Reload"** (via `useStaleFrontend`). Trigger a **new-fingerprint** crash from the still-loaded stale tab A.
    - `query_db`: row exists, `noise=true`, `last_build_id` = *old* id, **`task_id` non-null** (task still filed — "keep everything"). Bell: notification present but **muted/greyed** with **"another/outdated"** attribution; no toast, no badge bump. Debug pane: **`outdated tab`** + `noise` badges.
 5. **Up-to-date re-report:** reload tab A (now current), trigger the **same fingerprint**. `query_db`: `noise=false`, `last_build_id` updated to current, `count` incremented, normal (un-muted) notification — confirms a genuine recurrence from a current tab behaves normally.
 

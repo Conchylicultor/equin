@@ -12,7 +12,7 @@ import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 // what was never committed lives exclusively in the checkout.
 //
 // This used to carry an `unpushedCount` read from `# branch.ab`, with a missing
-// upstream read as "never pushed". `./singularity push` lands work by merging
+// upstream read as "never pushed". `./equin push` lands work by merging
 // into local main and many branches never get an upstream, so ~200 clean,
 // finished checkouts failed that term on every hourly sweep and none was ever
 // reaped — while the term protected nothing the branch ref does not already keep.

@@ -119,11 +119,11 @@ A new `applySchemaLayer(db, inputs, { commit })` in the migrations plugin replac
 
 ## Verification
 
-- **Unit tests** (`./singularity test plugins/database/plugins/migrations plugins/framework/plugins/cli/plugins/migrations`):
+- **Unit tests** (`./equin test plugins/database/plugins/migrations plugins/framework/plugins/cli/plugins/migrations`):
   - The classifier and splitter over **every statement of every schema migration on disk**. All classify, which pins drizzle 0.28's real output shapes, including the one-line `…;CREATE…` merges and `DO $$` foreign keys. Separate cases for auto-split, `CREATE VIEW` rejection, and unknown-statement failure.
   - `planSchemaSteps`: legacy-only history keeps its order; expand → claimed data → contract; data-only push; each validation error; partially applied groups.
 - **DB tests** (`createTestDb`):
   - A from-scratch replay of the entire `data/` directory plus the layer succeeds. This protects fresh installs and releases.
   - One group with a new NOT NULL column, a backfill, a dropped old column, and a live view reading the dropped column applies in one push.
   - A failure injected in the view rebuild leaves the ledger, the columns and the old views intact (atomicity).
-- **End to end:** run `./singularity build` in a scratch branch that reproduces the icons case (a `View` reading a column that the branch drops, plus a data migration that reads the column first). Confirm `migration-applies-clean` passes against main and the worktree boots. Then `./singularity check`.
+- **End to end:** run `./equin build` in a scratch branch that reproduces the icons case (a `View` reading a column that the branch drops, plus a data migration that reads the column first). Confirm `migration-applies-clean` passes against main and the worktree boots. Then `./equin check`.

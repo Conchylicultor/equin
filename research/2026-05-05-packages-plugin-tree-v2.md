@@ -301,7 +301,7 @@ for (const p of collectAllPlugins(root)) {
    - `cp docs/routes.md /tmp/routes-before.md`
    - `curl http://att-....localhost:9000/api/publish/tree > /tmp/publish-before.json`
 
-2. `./singularity build` — must succeed (docgen, registry-gen, server start, checks pass)
+2. `./equin build` — must succeed (docgen, registry-gen, server start, checks pass)
 
 3. Diff outputs against pre-migration:
    - `diff docs/plugins-compact.md /tmp/compact-before.md` — must be empty
@@ -309,4 +309,4 @@ for (const p of collectAllPlugins(root)) {
    - `diff docs/routes.md /tmp/routes-before.md` — must be empty
    - Compare publish tree JSON response
 
-4. `./singularity check` — all checks pass
+4. `./equin check` — all checks pass

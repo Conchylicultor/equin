@@ -197,7 +197,7 @@ No sidebar changes. No deploy changes. System group stays as-is.
 ## Verification
 
 ```bash
-./singularity build
+./equin build
 # Visit http://<worktree>.localhost:9000
 ```
 

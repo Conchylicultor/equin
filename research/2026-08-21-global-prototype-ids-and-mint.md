@@ -121,7 +121,7 @@ clicked, reading "Untitled prototype" (the template's own `<title>`) until the
 agent writes. That is honest — the prototype does exist — and it self-corrects on
 the agent's first save.
 
-### Surface 2 — `./singularity prototype`
+### Surface 2 — `./equin prototype`
 
 New **`files/cli/index.ts`**, picked up by the `cli` collected dir with no
 registry edit (`framework/plugins/cli/core/collected-dir.ts`). A group with two
@@ -147,7 +147,7 @@ with no backend running.
 `validatePrototypeFolder` (`files/core/validate.ts`) gains one problem: a
 directory name that is not a valid prototype id. It rides the existing
 `problems[]` onto the gallery card, next to the flat-folder and missing-`<title>`
-problems, with a detail naming `./singularity prototype new` as the fix.
+problems, with a detail naming `./equin prototype new` as the fix.
 
 It must skip `_`-prefixed directories — `check/index.ts:91` runs this same
 function over `_template` with `dirName: "_template"`, so an unguarded rule
@@ -238,7 +238,7 @@ is user content, so `git revert` does not undo it; the table above is the record
 
 - `prototypes/CLAUDE.md` — the authoring contract every prototype agent reads.
   The `cp -R ~/.singularity/apps/prototypes/_template <name>` gesture becomes
-  `./singularity prototype new`, and the folder-name section says the name is a
+  `./equin prototype new`, and the folder-name section says the name is a
   minted id, not a slug to choose.
 - `plugins/apps/plugins/prototypes/CLAUDE.md`, `…/files/CLAUDE.md`,
   `…/gallery/CLAUDE.md` — the mint, the endpoint, the CLI verb, the id.
@@ -247,9 +247,9 @@ is user content, so `git revert` does not undo it; the table above is the record
 
 ## Verification
 
-1. `./singularity test plugins/active-data/plugins/prototype` — the pattern pin.
-2. `./singularity build`, then:
-   - `./singularity prototype new "Smoke test"` prints an id; `prototype list`
+1. `./equin test plugins/active-data/plugins/prototype` — the pattern pin.
+2. `./equin build`, then:
+   - `./equin prototype new "Smoke test"` prints an id; `prototype list`
      shows it; the card appears in the gallery with no rebuild.
    - `mkdir ~/.singularity/apps/prototypes/not-minted` and confirm its card
      carries the "not a minted id" problem while still rendering.
@@ -261,7 +261,7 @@ is user content, so `git revert` does not undo it; the table above is the record
    `button[title*="<id>"]`, assert its label is the title and not the raw id,
    click it, assert the URL gained `/proto/<id>` and the conversation column
    stayed open.
-5. `./singularity check` — `prototypes:self-contained` (the `_template` skip),
+5. `./equin check` — `prototypes:self-contained` (the `_template` skip),
    `cli:command-declarations-light` (the new declaration), `plugins-doc-in-sync`,
    `plugins-registry-in-sync`.
 6. `query_db` is not involved: prototypes have no rows.

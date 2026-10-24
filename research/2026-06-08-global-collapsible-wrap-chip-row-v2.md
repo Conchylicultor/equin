@@ -179,7 +179,7 @@ its other 3 callers. Confirm before finalizing the diff:
 
 ## Verification
 
-1. `./singularity build` — typecheck, barrel-purity lint (accepts the vendor re-export and
+1. `./equin build` — typecheck, barrel-purity lint (accepts the vendor re-export and
    `strategy` prop), plugin-boundary checker (no cycle).
 2. **Regression (critical):** a DIFFERENT existing reorderable slot (e.g. a sidebar list)
    in edit mode still drags + persists identically — proves the null-context default path.

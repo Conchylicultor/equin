@@ -15,7 +15,7 @@ export interface SpawnClaimedArms {
  *
  * Between `claim` and a live child there is a window where the ledger row exists
  * and nothing will ever finish it. If the start fails before `Bun.spawn` — no
- * `./singularity` on PATH, a duplicate run id, `EAGAIN` — the row is left
+ * `./equin` on PATH, a duplicate run id, `EAGAIN` — the row is left
  * holding `process.pid`, which is THIS backend's own and very much alive. The
  * reconciler's close rule reads it as *running* on every pass, forever, because
  * no child exists to write a marker and no pid will die until the backend does.

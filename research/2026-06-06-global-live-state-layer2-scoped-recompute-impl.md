@@ -235,10 +235,10 @@ quantify it.
 2. `tasks-core/.../resources.ts`: scoped loader branches (B1, B2) + the three `affectedMap`s (B3); `queries/conversations.ts` optional `attemptIds`.
 3. `notify-conversations.ts` (C2) + `mutations/pushes.ts` (C3).
 4. `poller.ts` (C1).
-5. `./singularity build`; update live-state `CLAUDE.md` + autogen facets; run `plugins-doc-in-sync`.
+5. `./equin build`; update live-state `CLAUDE.md` + autogen facets; run `plugins-doc-in-sync`.
 
 ## Verification
-1. **Build:** `./singularity build` from the worktree; `./singularity check` green
+1. **Build:** `./equin build` from the worktree; `./equin check` green
    (eslint, plugin-boundaries, plugins-doc-in-sync).
 2. **One-row delta (the win):** 3+ tabs on the tasks list; flip one conversation's
    status; in the WS-frame inspector confirm the frame is a one-row upsert with

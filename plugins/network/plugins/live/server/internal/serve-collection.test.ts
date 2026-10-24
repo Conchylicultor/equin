@@ -7,8 +7,8 @@
  * `runtime-window-membership` suite; THIS suite pins that the decoded
  * where / order / limit reach the SQL each subscription tuple runs.
  *
- * Run: `./singularity test plugins/network/plugins/live`
- * (requires the running embedded cluster — `./singularity build` first).
+ * Run: `./equin test plugins/network/plugins/live`
+ * (requires the running embedded cluster — `./equin build` first).
  */
 
 import {

@@ -87,7 +87,7 @@ The repo is public, so the box clones it from GitHub with no credentials; a
    libraries and that command. A rootless install (libraries unpacked into the
    deps cache) is a follow-up.
 6. **Host admission on a one-unit host.** On an 8 GB box the fleet `B` is 1:
-   the build holds it, and the check's `./singularity deps install chromium`
+   the build holds it, and the check's `./equin deps install chromium`
    child queued host-wide behind its own parent until it timed out (alone: 20 s).
    `admitBackground` now spends an inherited grant (`inheritedGrant()`), and
    `ensureDepViaCli` requires the caller's grant (`Grant | null`), which a check
@@ -105,11 +105,11 @@ Linux; inotify watch limits with many worktrees (60132 on the box).
 - Unit: `systemd-unit.test.ts` (quoting, specifiers, `$$`, policy),
   `agent-session-env.test.ts` (the wrapper executed under each available login
   shell finds the toolchain PATH), existing launchd/secrets suites green on macOS.
-- On the box (done): `./singularity start` → unit loaded, enabled, gateway on
+- On the box (done): `./equin start` → unit loaded, enabled, gateway on
   127.0.0.1:9000 only, Postgres/PgBouncer up; the build passes every check but
   `type-check` (its worker needs 7–14 GB; killed at the 6 GB cap) and
   `layout-geometry` (1px off: the generic `monospace` font is DejaVu Sans Mono
   there, Menlo on macOS); the website on 9100 unaffected throughout.
 - Not yet (needs a ≥16 GB host): a deploy, an agent launched from a task, a
   reboot. Filed as the next Hosted task.
-- macOS: `./singularity build` green with all changes.
+- macOS: `./equin build` green with all changes.

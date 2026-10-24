@@ -329,7 +329,7 @@ for (const bt of barrelTypes) {
   const file = join(bt.ownerDir, "core", `${bt.dir}.generated.ts`);
   const expected = renderBarrelRegistry({ root, barrelType: bt });
   if (!existsSync(file) || readFileSync(file, "utf8") !== expected) {
-    return { ok: false, message: `${relative(root, file)} out of sync`, hint: "Run `./singularity build`" };
+    return { ok: false, message: `${relative(root, file)} out of sync`, hint: "Run `./equin build`" };
   }
 }
 ```
@@ -391,15 +391,15 @@ The current web/server/central-specific logic is replaced by this single generic
 
 1. Add `whatever/index.ts` to any plugin → tree walker detects it automatically
 2. In the owning framework plugin: `export const whateverBarrelType = defineBarrelType("whatever")`
-3. `./singularity build` → codegen generates `whatever.generated.ts`
+3. `./equin build` → codegen generates `whatever.generated.ts`
 4. Write a consumer that imports from the generated file
 
 No hardcoded lists. No custom discovery code. No codegen flags.
 
 ## Verification
 
-1. `./singularity build` generates all 5 `.generated.ts` files
-2. `./singularity check` passes — `plugins-registry-in-sync` covers all generated files
+1. `./equin build` generates all 5 `.generated.ts` files
+2. `./equin check` passes — `plugins-registry-in-sync` covers all generated files
 3. App loads correctly at `http://<worktree>.localhost:9000` — all web plugins render
 4. Server starts — all server plugins initialize in correct order (dependsOn resolved)
 5. ESLint discovers lint rules (same scoping behavior)
@@ -408,6 +408,6 @@ No hardcoded lists. No custom discovery code. No codegen flags.
 
 ## Tradeoffs
 
-- New barrel instances (e.g. adding `check/index.ts` to a plugin) require `./singularity build`. The `plugins-registry-in-sync` check catches drift.
+- New barrel instances (e.g. adding `check/index.ts` to a plugin) require `./equin build`. The `plugins-registry-in-sync` check catches drift.
 - Lazy imports add one microtask per plugin at startup. Negligible for local imports in Bun; meaningful error isolation for all runtimes.
 - `dependsOn` is computed for all barrel types even if unused. Build-time cost is incremental (scanning .ts files for import edges); no runtime cost if ignored.

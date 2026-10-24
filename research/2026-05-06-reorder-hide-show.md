@@ -163,7 +163,7 @@ Rendered after `{children}` when `editMode && hiddenItems.length > 0`. Dashed-bo
 
 ## Verification
 
-1. `./singularity build` — migration + rebuild
+1. `./equin build` — migration + rebuild
 2. Enter edit mode → "×" badges appear on reorderable items
 3. Click "×" → item hidden, "+ N hidden" button appears
 4. Click "+" → popover shows item label → click restores it

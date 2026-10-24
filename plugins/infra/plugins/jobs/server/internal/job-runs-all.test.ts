@@ -6,8 +6,8 @@
  * carrying the real schema, loads the whole set FULL, newest finished first,
  * with `waitMs` computed in SQL.
  *
- * Requires a running Postgres cluster (started by ./singularity build).
- * Run: `./singularity test plugins/infra/plugins/jobs`.
+ * Requires a running Postgres cluster (started by ./equin build).
+ * Run: `./equin test plugins/infra/plugins/jobs`.
  */
 
 import { afterAll, beforeAll, expect, setDefaultTimeout, test } from "bun:test";

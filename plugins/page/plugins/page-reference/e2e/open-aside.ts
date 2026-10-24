@@ -9,8 +9,8 @@
  * row and navigates in place, which is the OTHER intent), and "beside, not
  * instead" is a statement about the route growing rather than swapping.
  *
- *   ./singularity run plugins/page/plugins/page-reference/e2e/open-aside.ts --headed
- *   ./singularity run plugins/page/plugins/page-reference/e2e/open-aside.ts --page block-<uuid>
+ *   ./equin run plugins/page/plugins/page-reference/e2e/open-aside.ts --headed
+ *   ./equin run plugins/page/plugins/page-reference/e2e/open-aside.ts --page block-<uuid>
  */
 import {
   arg,

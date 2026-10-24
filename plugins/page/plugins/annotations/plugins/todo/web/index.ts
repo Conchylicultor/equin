@@ -29,7 +29,7 @@ export default {
     // derived from this slot's registered matches (`useIsFramedBlock()`), so
     // there is no second "I am a container" flag to drift from who actually
     // paints a box. `anchor` rides on the SAME registration
-    // (`./singularity check page-editor:anchor-has-decoration`).
+    // (`./equin check page-editor:anchor-has-decoration`).
     // `menu` rides on the SAME registration for the same reason `anchor` does:
     // the card's two surfaces (its glyph, and the rail popover on the line it
     // borrows) cannot drift from who paints the box. Both render the SAME

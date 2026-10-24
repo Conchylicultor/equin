@@ -125,7 +125,7 @@ Change `rankForTop`, `rankForBottom`, `rankAfterN`, `rankAdjacentTo` from filter
 
 ## Verification
 
-1. `./singularity build` — must compile and run
+1. `./equin build` — must compile and run
 2. Open `http://<worktree>.localhost:9000`, go to Queue view
 3. Create 2+ conversations for the same task → verify they collapse into one row with chip count
 4. Verify the selected conversation (top-ranked) is displayed as the representative

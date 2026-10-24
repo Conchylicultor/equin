@@ -181,7 +181,7 @@ Each step builds on its own.
   - `fileRefForPath` for each arm;
   - `resolveWorktreePath` rejects a non-toplevel path;
   - `/file` and `/image` reject absolute and `~` paths without a ref.
-- **E2E** `apps/file-explorer/plugins/git/e2e/git-verify.ts`, after `./singularity build`:
+- **E2E** `apps/file-explorer/plugins/git/e2e/git-verify.ts`, after `./equin build`:
   - open `/files` at this worktree and touch a file;
   - assert the M badge and that "Changed vs main" narrows the rows;
   - assert that `node_modules` is hidden until Show ignored is on;
@@ -193,4 +193,4 @@ Each step builds on its own.
   - a Read-tool image with an absolute path still shows;
   - a markdown image with a `~` path still shows;
   - the plugin-view Files section lists and opens files.
-- **Static:** `./singularity check` (boundary-rules, plugin-boundaries, plugins-registry-in-sync, plugins-doc-in-sync).
+- **Static:** `./equin check` (boundary-rules, plugin-boundaries, plugins-registry-in-sync, plugins-doc-in-sync).

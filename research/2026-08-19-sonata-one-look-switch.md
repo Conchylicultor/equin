@@ -120,7 +120,7 @@ surface.
 - **Delete `shared/config.ts`** (`keyboardStyleConfig`, `KeyStyle`).
 - **Delete `server/index.ts`** — its own comment says it "exists solely to register
   the keyboard's style config". With the descriptor gone the runtime has no reason
-  to exist; the plugin becomes web+core only. `./singularity build` regenerates
+  to exist; the plugin becomes web+core only. `./equin build` regenerates
   `server.generated.ts`.
 - `web/index.ts` — drop the `ConfigV2.WebRegister` contribution (leaving
   `contributions: []`), the `keyboardStyleConfig` re-export, and the `KeyStyle` type
@@ -172,7 +172,7 @@ unchanged** — see below.
 
 Delete `config/apps/sonata/primitives/keyboard/config.origin.jsonc`. The
 `config-origins-in-sync` check enforces the origin tree against the registered
-descriptor set, and `./singularity build` regenerates
+descriptor set, and `./equin build` regenerates
 `config/apps/sonata/look/config.origin.jsonc` with the new three-value comment and
 default.
 
@@ -219,7 +219,7 @@ than code.
 
 ## Verification
 
-1. `./singularity build` (background — see `CLAUDE.md`), then open
+1. `./equin build` (background — see `CLAUDE.md`), then open
    `http://att-1787158306-hraq.localhost:9000/sonata` and a song.
 2. Open the View popover (the `MdTune` chip). **There is exactly one appearance
    row, "Look", with three options** — Flat (Synthesia), Realistic, Sketch — and no
@@ -235,10 +235,10 @@ than code.
 6. Check the readout chips (chord/key) below the roll follow the same choice, and
    that the website's Sonata vignette (`apps/website/…/app-gallery`) still renders —
    it embeds the real keyboard, which now reads only the look.
-7. `./singularity test plugins/apps/plugins/sonata` — `sketch-paths.test.ts`,
+7. `./equin test plugins/apps/plugins/sonata` — `sketch-paths.test.ts`,
    `labels.test.ts`, `geometry.test.ts`, `css-color.test.ts` cover pure functions
    this change does not touch and must pass unmodified.
-8. `./singularity check` — in particular `config-v2:registrations-paired` (the
+8. `./equin check` — in particular `config-v2:registrations-paired` (the
    deleted descriptor must be gone from *both* runtimes), `config-origins-in-sync`
    (the deleted origin file), `plugins-registry-in-sync` (the keyboard primitive's
    server runtime disappearing) and `plugins-doc-in-sync`.

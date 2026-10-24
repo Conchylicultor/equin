@@ -410,7 +410,7 @@ End-to-end test plan for after implementation:
 
 1. **Build + migration generation.**
    ```
-   ./singularity build --migration-name add_crashes
+   ./equin build --migration-name add_crashes
    ```
    Confirm a new `..._add_crashes.sql` file appears under `server/src/db/migrations/` containing `CREATE TABLE "crashes"`, the unique index on `(fingerprint, worktree)`, and the FK to `tasks.id` with `ON DELETE SET NULL`.
 

@@ -360,14 +360,14 @@ Description string only (actual paths come from `plugin-registry-gen.ts`):
 5. Move config files (package.json, tsconfig*.json, components.json, vite.config.ts, vitest.config.ts, CLAUDE.md) → `plugins/framework/plugins/web-core/` (apply all content edits)
 6. Update external files (boundary.config.ts, root tsconfig.json, package.json, eslint.config.ts, cli/build.ts, tooling/...)
 7. Delete `web/` from repo root
-8. Run `./singularity build`
-9. Run `./singularity check`
+8. Run `./equin build`
+9. Run `./equin check`
 
 ---
 
 ## Done when
 
-- `./singularity build` succeeds and SPA loads in the browser at `http://<worktree>.localhost:9000`
-- `./singularity check` passes (plugin-boundaries, typescript, eslint, all checks)
+- `./equin build` succeeds and SPA loads in the browser at `http://<worktree>.localhost:9000`
+- `./equin check` passes (plugin-boundaries, typescript, eslint, all checks)
 - `web/` directory is deleted from repo root
 - Worktree spec JSON `web` field points to `plugins/framework/plugins/web-core/dist`

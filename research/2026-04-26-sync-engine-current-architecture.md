@@ -144,7 +144,7 @@ The descriptor is a **type-erased value** that carries only the string key at ru
 
 In practice today, plugins export a server-side `Resource<T>` value (e.g. `tasksResource` from `plugins/tasks-core/server`) and the web side imports it directly — the type comes through naturally because the web tsconfig can see the server file's exported types. The descriptor pattern was the original design; some plugins have migrated past it and just import the resource value for its type. (This works because the web side never *calls* the loader; only the `key` and types are needed.)
 
-There is a hard rule encoded in the `useResource` source itself (`plugin-core/use-resource.ts:58-62`) and enforced by `./singularity check --no-use-resource-cast`:
+There is a hard rule encoded in the `useResource` source itself (`plugin-core/use-resource.ts:58-62`) and enforced by `./equin check --no-use-resource-cast`:
 
 > Never cast the `data` returned by `useResource` (e.g. `data as Foo[]`). The generic `T` is inferred from the descriptor — casting silently hides type mismatches. STOP and report instead.
 
@@ -385,7 +385,7 @@ This is **the only branching primitive in the system**. Inside one worktree, the
 
 ```
 edit plugins/<n>/server/internal/tables.ts
-→ ./singularity build
+→ ./equin build
    ├── drizzle-kit generate (writes new SQL migration if any plugin schema changed)
    ├── server restarts → migrate.ts runs pending migrations
    └── frontend rebuilds, gateway notified
@@ -408,7 +408,7 @@ const plugin: ServerPluginDefinition = {
 };
 ```
 
-Raw `text/event-stream` SSE in TS is **forbidden**, enforced by `./singularity check --no-raw-sse`. Raw `new EventSource(...)` and raw `new WebSocket(...)` are also forbidden (`--no-raw-event-source`, `--no-raw-websocket`). The only escape hatches are `SharedWebSocket` (for a leader-elected per-origin socket) and `ReconnectingEventSource` (only for consuming the gateway's external log SSE endpoint — *not* for plugin data flow).
+Raw `text/event-stream` SSE in TS is **forbidden**, enforced by `./equin check --no-raw-sse`. Raw `new EventSource(...)` and raw `new WebSocket(...)` are also forbidden (`--no-raw-event-source`, `--no-raw-websocket`). The only escape hatches are `SharedWebSocket` (for a leader-elected per-origin socket) and `ReconnectingEventSource` (only for consuming the gateway's external log SSE endpoint — *not* for plugin data flow).
 
 This split is deliberate: the resources system models **observable state**, while WS streams model **events**. There is no current primitive that bridges the two (e.g. "give me the last 100 events plus subscribe to new ones as they arrive").
 
@@ -422,7 +422,7 @@ A plugin can have three runtimes, each a separate folder under `plugins/<name>/`
 - `server/` — backend code. Compiled by server tsconfig.
 - `shared/` — types and pure functions usable from both.
 
-The barrel rules (enforced by `./singularity check --plugin-boundaries`):
+The barrel rules (enforced by `./equin check --plugin-boundaries`):
 
 - `plugins/<name>/<runtime>/index.ts` is the only cross-plugin entry point.
 - Cross-plugin imports may only be `@plugins/<name>/{web,server,shared}` — no deep paths.
@@ -430,7 +430,7 @@ The barrel rules (enforced by `./singularity check --plugin-boundaries`):
 - Default-export imports (`import fooPlugin from "@plugins/foo/web"`) are only allowed in `web/src/plugins.ts` and `server/src/plugins.ts`.
 - The cross-plugin import graph must be a DAG. Type-only imports count as edges.
 
-Public exports of every plugin are listed in `docs/plugins.md`, kept in sync by `./singularity check --plugins-doc-in-sync`.
+Public exports of every plugin are listed in `docs/plugins.md`, kept in sync by `./equin check --plugins-doc-in-sync`.
 
 ---
 
@@ -456,7 +456,7 @@ Concrete things a sub-design proposal will have to either preserve, replace, or 
 
 7. **There is no middleware, no caller context, no transaction handle threaded through anything.** Adding any of these is a structural change to handler signatures and resource loaders both. Sub-design 5 calls this an `OpCtx` primitive; it's a new first arg everywhere.
 
-8. **The `./singularity check` set is the enforcement layer.** New rules (e.g. "every mutation must funnel through `runMutation`", "no raw `notify()` calls outside the framework") would be added there.
+8. **The `./equin check` set is the enforcement layer.** New rules (e.g. "every mutation must funnel through `runMutation`", "no raw `notify()` calls outside the framework") would be added there.
 
 9. **Worktree DB forking is the only branching primitive.** Inside one worktree there is no speculation, no undo. Any sub-design that proposes event-sourcing or a mutation log adds a new persistent table (`_mutation_log`, `_branches`) alongside `__singularity_migrations`.
 

@@ -5,7 +5,7 @@ import type { Check } from "@plugins/framework/plugins/tooling/core";
 import { REVIEW_MARKER, hasReviewMarker } from "../core";
 
 // A descriptor that sets `requiresAuthoredOverride` has its committed override
-// SEEDED by `./singularity build` — written from the origin (real hash, full
+// SEEDED by `./equin build` — written from the origin (real hash, full
 // body) when missing, and re-marked + re-stamped when the origin hash shifts
 // under it. Both events insert the one-line `// @review` marker, so presence of
 // the file is no longer the thing to test: REVIEW is. This check is therefore a
@@ -98,7 +98,7 @@ const check: Check = {
               `    ${path}\n` + block.map((l) => `        ${l}`).join("\n"),
           )
           .join("\n\n") +
-        "\n\nWhy this is required: `./singularity build` writes these values for " +
+        "\n\nWhy this is required: `./equin build` writes these values for " +
         "you — it seeds a missing mandatory override from its origin, and " +
         "re-marks one whose origin default moved underneath it. The marker means " +
         "the values below are machine-produced, NOT deliberate. Deleting it is a " +
@@ -107,7 +107,7 @@ const check: Check = {
         "For each path: open the file, follow its own guidance comments (echoed " +
         `above), arrange the values, then delete the \`${REVIEW_MARKER}\` line. ` +
         "Keep the leading `// @hash` line — it is already correct, and never " +
-        "needs retyping. Re-run `./singularity check config:overrides-authored` " +
+        "needs retyping. Re-run `./equin check config:overrides-authored` " +
         "to confirm.",
     };
   },

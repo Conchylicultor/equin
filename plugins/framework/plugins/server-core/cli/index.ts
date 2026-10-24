@@ -6,5 +6,5 @@
 //
 // A `cli/` barrel that declares no command, like the shared-machinery barrels
 // under `framework/cli/plugins`: it is the legal cross-plugin entry point for a
-// `./singularity` verb that needs a booted runtime.
+// `./equin` verb that needs a booted runtime.
 export { runExec } from "./run-exec";

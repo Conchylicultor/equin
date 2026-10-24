@@ -5,7 +5,7 @@
  * so the search box matches it; the sortable ones are `EVENT_LIST_SORTABLE`;
  * every search column is filterable text.
  *
- * Run: `./singularity test plugins/apps/plugins/events/plugins/event-list`.
+ * Run: `./equin test plugins/apps/plugins/events/plugins/event-list`.
  */
 
 import { describe, expect, test } from "bun:test";

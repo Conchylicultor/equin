@@ -60,7 +60,7 @@ Two deliberate paths, chosen per connection *kind*:
 - **Declaration**: each plugin owns `plugins/<name>/server/internal/tables.ts`
   (+ `schema.ts` for zod/views). drizzle-kit discovers them by glob — there is
   no central schema aggregator; adding a plugin's tables touches no shared file.
-- **Generation**: `./singularity build` runs `drizzle-kit generate`; output is
+- **Generation**: `./equin build` runs `drizzle-kit generate`; output is
   renamed `YYYYMMDD_HHMMSS_<sha8>__<slug>.sql` and committed. Data/backfill
   migrations are scaffolded empty (`--custom-migration`), have no snapshot
   (so they can't Y-fork the snapshot chain), and re-apply exactly once per DB

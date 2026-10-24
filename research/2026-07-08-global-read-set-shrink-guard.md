@@ -25,7 +25,7 @@ time. We cannot auto-decide — auto-refusing to shed would defeat the self-heal
 auto-shedding is the current (correct) behaviour. So the right move is a **cheap,
 non-fatal signal for a human to confirm**, not a behaviour change.
 
-## Why not a static `./singularity check`
+## Why not a static `./equin check`
 
 Detecting a data-dependent conditional table read requires static analysis of loader
 bodies to find branches that read a table only under a runtime condition — brittle,

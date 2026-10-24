@@ -5,7 +5,7 @@
 // and the `~/.singularity/cache/web-artifacts` store, both outside any repo — not the
 // tree. So neither is in the push payload,
 // and `push` (which asks for `--scope tree`) does not run them; `build`, a
-// standalone `./singularity check`, and main's post-push auto-build do. Each
+// standalone `./equin check`, and main's post-push auto-build do. Each
 // therefore owes a `cacheSignature()` covering that deploy state, since the
 // runner's tree hash does not reach it — see `Check.scope`.
 //
@@ -15,7 +15,7 @@
 //   real failure (nothing deployed, or a pre-artifacts dist), not the old
 //   "monolith ⇒ nothing to verify" pass, and a checkout registered to no
 //   namespace at all fails before that, with no path to name. A stale map fails
-//   with the `./singularity build` fix. Skips (uncached) inside a `./singularity build`
+//   with the `./equin build` fix. Skips (uncached) inside a `./equin build`
 //   process, where the dist under inspection is the one that very build is about
 //   to replace — standalone runs verify for real.
 //
@@ -78,7 +78,7 @@ import {
 
 const MARKER_NAME = ".web-artifacts.json";
 const BUILD_HINT =
-  "Run `./singularity build` to recompose the dist from the current tree.";
+  "Run `./equin build` to recompose the dist from the current tree.";
 
 /**
  * Which dist this checkout deploys, or the fact that it deploys none.
@@ -200,7 +200,7 @@ const mapInSync: Check = {
     return sha256(`${marker}\n${html}\n${storeMtime()}`);
   },
   async run(): Promise<CheckResult> {
-    // See run-context.ts: during `./singularity build` the checks race the
+    // See run-context.ts: during `./equin build` the checks race the
     // frontend build, so the deployed dist is by definition the one this build
     // replaces — comparing it against the current tree would fail every build
     // that changes source. Push/standalone runs verify for real.
@@ -217,7 +217,7 @@ const mapInSync: Check = {
         ok: false,
         message:
           `no deploy is registered to this checkout, so there is no dist to compare against — ` +
-          `\`./singularity build\` has never published one from here.` +
+          `\`./equin build\` has never published one from here.` +
           serves(dist.others),
         hint: BUILD_HINT,
       };

@@ -3,7 +3,7 @@
 // plays smoothly but starts late reads as lag; this puts a number on it.
 //
 // Usage:
-//   ./singularity run plugins/primitives/plugins/collapsible/e2e/fold-latency.ts \
+//   ./equin run plugins/primitives/plugins/collapsible/e2e/fold-latency.ts \
 //     --path /agents/c/<conv> --trigger Expand [--count 5] [--settle 3000]
 //
 // --trigger is the accessible-name prefix of the disclosure triggers; the

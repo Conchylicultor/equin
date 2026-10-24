@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { withOverrideLegend } from "./override-legend";
 
 const HEAD =
-  "// @legend — how to write this file (rewritten by ./singularity build; edits inside this block are lost):";
+  "// @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):";
 
 describe("withOverrideLegend", () => {
   test("inserts the block under the hash line", () => {

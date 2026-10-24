@@ -65,7 +65,7 @@ export const _eventSubscriptions = pgTable('_event_subscriptions', {
 
 **Match semantics.** Subscription matches an event iff `matchKeys ⊆ payload[declared_keys]`. Empty `matchKeys` matches every emit of that event. A subscription with `{taskId: 'X'}` matches events carrying `taskId === 'X'`. No wildcards, no operators — if you need richer predicates, add a dedicated trigger source plugin.
 
-**Key-index policy.** The set of indexed keys is the *union* of all `defineEvent({keys})` across all plugins. Each new key in a new event definition means a new expression index. This is a build-time concern: we statically know the set. The `./singularity build` migration pass regenerates `tables.ts` indexes from the declared events (how: a codegen step scans `plugins/*/server/api.ts` for `defineEvent` calls and emits the index list — or simpler, we maintain the list by hand in `tables.ts` and fail CI if a new `defineEvent` references an unindexed key).
+**Key-index policy.** The set of indexed keys is the *union* of all `defineEvent({keys})` across all plugins. Each new key in a new event definition means a new expression index. This is a build-time concern: we statically know the set. The `./equin build` migration pass regenerates `tables.ts` indexes from the declared events (how: a codegen step scans `plugins/*/server/api.ts` for `defineEvent` calls and emits the index list — or simpler, we maintain the list by hand in `tables.ts` and fail CI if a new `defineEvent` references an unindexed key).
 
 ### `cron_subscriptions` — time-based triggers
 
@@ -405,7 +405,7 @@ await createTrigger({
 3. **Frontend-side events** — in-browser `event.on` over the WS. Not needed for these use cases; resources cover most UI reactivity.
 4. **Cross-process dispatch** — current design is single-process. Multi-server would need LISTEN/NOTIFY or a message broker; not on the roadmap.
 5. **Catch-up semantics for cron** — default is "fire once on resume". Add `catchup_mode: 'single' | 'all'` column if anyone actually wants replay.
-6. **Codegen for per-key indexes** — v1 maintains the index list in `tables.ts` by hand + a `./singularity check` check that fails if an undeclared key appears in any `defineEvent`. Auto-gen later if the list grows.
+6. **Codegen for per-key indexes** — v1 maintains the index list in `tables.ts` by hand + a `./equin check` check that fails if an undeclared key appears in any `defineEvent`. Auto-gen later if the list grows.
 
 ## Verification
 

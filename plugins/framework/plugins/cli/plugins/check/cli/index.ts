@@ -66,8 +66,8 @@ export default defineCliCommand<
         "`deploy` = it verifies the local gitignored dist/artifact store `build` produces; " +
         "`host` = it is about this MACHINE — the shared data root and other host-global state " +
         "no single worktree owns, which another live checkout may have created. " +
-        "`--scope tree` reproduces the pass `./singularity push` runs, and " +
-        "`--scope tree,deploy` the pass `./singularity build` runs.",
+        "`--scope tree` reproduces the pass `./equin push` runs, and " +
+        "`--scope tree,deploy` the pass `./equin build` runs.",
     },
     {
       flags: "--always-run",

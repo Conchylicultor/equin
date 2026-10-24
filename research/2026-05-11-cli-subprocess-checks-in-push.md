@@ -1,8 +1,8 @@
-# Fix stale CLI checks in `./singularity push`
+# Fix stale CLI checks in `./equin push`
 
 ## Context
 
-When `./singularity push` runs, Bun loads `cli/src/checks/index.ts` at process start via static imports. The `CHECKS` array (18 built-in checks) is frozen at module evaluation time — before the rebase. After the rebase onto main (step 3 of push), the files on disk are updated with main's latest CLI code, but Bun's module cache still holds the pre-rebase check definitions.
+When `./equin push` runs, Bun loads `cli/src/checks/index.ts` at process start via static imports. The `CHECKS` array (18 built-in checks) is frozen at module evaluation time — before the rebase. After the rebase onto main (step 3 of push), the files on disk are updated with main's latest CLI code, but Bun's module cache still holds the pre-rebase check definitions.
 
 **Real incident:** The `detail-sections` worktree was forked before `ed1be7cc` added the `noReexportDefault` check. Push rebased successfully, but ran the old check list from memory — the new check never ran, and violating code landed on main.
 
@@ -46,6 +46,6 @@ That's it. No other files change.
 
 ## Verification
 
-1. `./singularity build` — confirm the build still works (no changes to build).
-2. `./singularity check` — confirm checks still run standalone.
+1. `./equin build` — confirm the build still works (no changes to build).
+2. `./equin check` — confirm checks still run standalone.
 3. Simulated push: the subprocess check output should stream to the terminal identically to today's in-process output, and a failing check should still block the push with the contextual error message.

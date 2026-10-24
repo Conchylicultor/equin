@@ -62,7 +62,7 @@ export function reorderDirectiveDescriptor(
     // second slot for the items meant for the other end of the row.
     overrideLegend: REORDER_NODE_LEGEND,
     // A slot's on-screen order must be a deliberate, committed layout — never
-    // the natural order contributions happen to load in. `./singularity build`
+    // the natural order contributions happen to load in. `./equin build`
     // seeds the override (and re-marks it when the catalog shifts underneath);
     // these lines ride along as the file's own comments, and are the whole of
     // what `config:overrides-authored` echoes back. They are read by a human at

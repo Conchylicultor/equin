@@ -211,7 +211,7 @@ sidebar is the only path that bypasses it.
 
 ## Verification
 
-1. `./singularity build`, open `http://att-1783849962-gu0d.localhost:9000/pages`.
+1. `./equin build`, open `http://att-1783849962-gu0d.localhost:9000/pages`.
 2. Scripted Playwright (`e2e/screenshot.mjs` as the base): create a page with a
    sub-page → delete it from the sidebar row → assert **no dialog**, the row is
    gone, the toast shows → press `Cmd+Z` → assert the page **and its sub-page**
@@ -228,4 +228,4 @@ sidebar is the only path that bypasses it.
    restore it (unscoped entry).
 6. `bun test plugins/primitives/plugins/undo-redo` (new `dropScope` cases) and
    `bun test plugins/infra/plugins/trash`.
-7. `./singularity check`.
+7. `./equin check`.

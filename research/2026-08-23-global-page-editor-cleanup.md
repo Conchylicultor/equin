@@ -92,18 +92,18 @@ note; do not leave it reading as though the bound exists.
 ### 5. Generated file
 
 `plugins/framework/plugins/server-core/core/server.generated.ts` is codegen. Don't hand-edit;
-`./singularity build` regenerates it.
+`./equin build` regenerates it.
 
 ---
 
 ## Verify
 
 ```bash
-./singularity test plugins/infra/plugins/attachments \
+./equin test plugins/infra/plugins/attachments \
                    plugins/page/plugins/editor \
                    plugins/page/plugins/editor-collab \
                    plugins/framework/plugins/resource-runtime
-./singularity build     # runs ./singularity check — type-check included
+./equin build     # runs ./equin check — type-check included
 ```
 
 Then the CRDT e2e, which is what caught the regression:
@@ -134,11 +134,11 @@ chasing them:
 
 ### Harness notes
 
-- `./singularity test` and `./singularity build` must run with `run_in_background: true` (a guard
+- `./equin test` and `./equin build` must run with `run_in_background: true` (a guard
   enforces it).
 - **The build's authority is the receipt**, `~/.singularity/worktrees/<wt>/build-status.json`
-  (`status: ok`). A piped `./singularity build … | tail` exits 0 even when the build failed.
-- `bun test` does not type-check. Only the build (or `./singularity check type-check`) runs both
+  (`status: ok`). A piped `./equin build … | tail` exits 0 even when the build failed.
+- `bun test` does not type-check. Only the build (or `./equin check type-check`) runs both
   gates.
 
 ---

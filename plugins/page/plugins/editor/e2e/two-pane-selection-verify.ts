@@ -17,7 +17,7 @@
 // one, which comes first in DOM order.
 //
 // Usage:
-//   ./singularity run plugins/page/plugins/editor/e2e/two-pane-selection-verify.ts \
+//   ./equin run plugins/page/plugins/editor/e2e/two-pane-selection-verify.ts \
 //     [--url <deploy>] [--headed]
 import {
   pathUrl,

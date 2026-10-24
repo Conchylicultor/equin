@@ -48,7 +48,7 @@ async function pMap<T>(
 // main runtime only (no perWorktree) — DBs are a global cluster resource, so a
 // single sweep covers all worktrees (mirrors database.fork-temp-sweep).
 //
-// The sweep runs in a detached child (`./singularity supervised-exec`), so a
+// The sweep runs in a detached child (`./equin supervised-exec`), so a
 // deploy or restart of the backend no longer kills it part-way, and no worker
 // slot is held for its length. The built-in ledger's job-wide lock keeps it to
 // one sweep at a time: an hourly tick or the boot enqueue that lands while a

@@ -148,9 +148,9 @@ This follows the precedent of `viewport-overlay` and `adaptive-bar`.
 
 ## Verification
 
-1. `./singularity build` (the type check catches every removed `size` use; the
+1. `./equin build` (the type check catches every removed `size` use; the
    `css:no-unanchored-has` and `plugins-doc-in-sync` checks run too).
-2. `./singularity test plugins/primitives/plugins/css/plugins/control-panel
+2. `./equin test plugins/primitives/plugins/css/plugins/control-panel
    plugins/primitives/plugins/data-view`. The jsdom tests assert the stamps:
    `RuleRow` and `Row description` carry `data-cp-needs`, only the showing
    level carries `data-cp-showing`, and the popup carries `data-cp-surface`.
@@ -167,5 +167,5 @@ This follows the precedent of `viewport-overlay` and `adaptive-bar`.
 4. Falsify the guard: temporarily drop `needs="builder"` from the empty filter
    state, or render a rule row in a menu-only panel, in a scratch exhibit, and
    confirm a `panel-overflow` report appears in Reports. Revert afterwards.
-5. `./singularity check layout-geometry`: the control-panel exhibits still
+5. `./equin check layout-geometry`: the control-panel exhibits still
    pass.

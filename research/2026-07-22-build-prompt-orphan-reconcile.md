@@ -2,7 +2,7 @@
 
 ## Context
 
-An auto-build restarts the very backend that spawned `./singularity build`. The
+An auto-build restarts the very backend that spawned `./equin build`. The
 detached CLI child survives the restart and runs to completion, but the backend
 that would have stamped `build_runs.finished_at` is dead. The row is left
 `finished_at IS NULL` and is only closed later by the next `reconcileOrphanBuilds`
@@ -22,7 +22,7 @@ not whenever the next unrelated reconcile happens to run.
 
 ### Root cause (precise)
 
-1. Backend A spawns the detached `./singularity build`; the row's `pid` is swapped
+1. Backend A spawns the detached `./equin build`; the row's `pid` is swapped
    to the child (`run-build.ts:208`).
 2. The build hot-restarts the backend → A dies mid-`await proc.exited`; new backend
    B boots.
@@ -133,7 +133,7 @@ the `isMain()` auto-build re-enqueue block). Runs in **every** worktree backend
 
 ## Verification
 
-1. `./singularity build` to deploy.
+1. `./equin build` to deploy.
 2. **Repro the orphan + prompt close:** trigger an auto-build (push to `main`, or the
    manual Build button) so the backend restarts mid-build. After the build finishes,
    watch the row close within ~1s of the CLI's terminal artifact write, not minutes

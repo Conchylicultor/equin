@@ -70,7 +70,7 @@ export interface Move {
 }
 
 export interface Updater {
-  /** Stable id: `./singularity deps upgrade <id>`, the receipt name, the task author. */
+  /** Stable id: `./equin deps upgrade <id>`, the receipt name, the task author. */
   readonly id: string;
   /** One line: what it keeps current. */
   readonly description: string;

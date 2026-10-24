@@ -82,7 +82,7 @@ and server (`ConfigV2.Register`) — registering on only one makes the value rea
 undefined/throw. The enum renderer + settings UI are automatic (no UI work).
 
 The `piano-keyboard` plugin is **web-only today**; we add a `server/` runtime solely to
-host the server registration. `./singularity build` regenerates the plugin registry, so
+host the server registration. `./equin build` regenerates the plugin registry, so
 no manual `plugins.ts` edits.
 
 New / changed files in `plugins/apps/plugins/sonata/plugins/piano-keyboard/`:
@@ -183,7 +183,7 @@ the shape differs (no throw — absence is normal).
 
 ## Verification
 
-1. `./singularity build` (from this worktree) — regenerates migrations/registry/docs and
+1. `./equin build` (from this worktree) — regenerates migrations/registry/docs and
    restarts. Confirm the build passes (`plugin-boundaries`, `eslint`,
    `plugins-doc-in-sync` checks included).
 2. Open `http://att-1780445858-i2yt.localhost:9000/` → Sonata. Load a MIDI file that

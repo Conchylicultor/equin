@@ -4,7 +4,7 @@
 // pane alone).
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/prototypes/plugins/shell/e2e/back-to-gallery.ts \
+//   ./equin run plugins/apps/plugins/prototypes/plugins/shell/e2e/back-to-gallery.ts \
 //     --name <proto-id> [--out /tmp/proto-back]
 
 import {

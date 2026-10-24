@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 
-// Both are desktop-only: a build spawns `./singularity build` in this checkout,
+// Both are desktop-only: a build spawns `./equin build` in this checkout,
 // so they are served by `build/machine` and answered "not available" by a host
 // without the computer (the in-browser demo).
 export const triggerBuildEndpoint = defineEndpoint({

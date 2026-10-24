@@ -22,7 +22,7 @@ import { defineApp, defineRoute } from "../core";
 // A pane declaring neither rejects both outright (the hole that let a dead
 // `input: { convId }` ride on `attemptPane`).
 //
-// The assertions below are validated by `./singularity check type-check`: every
+// The assertions below are validated by `./equin check type-check`: every
 // `@ts-expect-error` must correspond to a real error (tsc fails on an UNUSED
 // directive), and every positive case must compile. The function is NEVER
 // invoked at runtime, so the live store is never touched.

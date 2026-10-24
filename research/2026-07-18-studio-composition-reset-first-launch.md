@@ -161,7 +161,7 @@ compose-serve's main-authoritative model.
 ## Verification (end-to-end)
 
 1. Studio → Compositions → pick a test composition, toggle **Serve** on, run
-   `./singularity build`. Confirm `http://<id>.localhost:9000` boots and DB `<id>`
+   `./equin build`. Confirm `http://<id>.localhost:9000` boots and DB `<id>`
    + config `~/.singularity/config/<id>` + the `composition.json` marker exist.
 2. Mutate: `INSERT` a row into DB `<id>` (via `mcp__singularity__query_db` against
    `database: "<id>"`) and change a config value in the served app's Settings.
@@ -174,4 +174,4 @@ compose-serve's main-authoritative model.
    first-launch; **main unchanged** (row count + config identical to step 3).
 6. Negative guards (each throws, nothing touched): `id: "singularity"` (reserved);
    an `id` whose dir lacks `composition.json`; an `autoBuild:false` id.
-7. `./singularity build` and `./singularity check` (boundaries + type-check) clean.
+7. `./equin build` and `./equin check` (boundaries + type-check) clean.

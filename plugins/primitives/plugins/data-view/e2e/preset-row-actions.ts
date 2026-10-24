@@ -9,8 +9,8 @@
 // is, that the trash is hidden at rest and revealed on hover, and that pressing
 // it does not also fire the apply beside it.
 //
-//   ./singularity run plugins/primitives/plugins/data-view/e2e/preset-row-actions.ts --out /tmp/presets
-//   ./singularity run plugins/primitives/plugins/data-view/e2e/preset-row-actions.ts --headed
+//   ./equin run plugins/primitives/plugins/data-view/e2e/preset-row-actions.ts --out /tmp/presets
+//   ./equin run plugins/primitives/plugins/data-view/e2e/preset-row-actions.ts --headed
 import {
   arg,
   pathUrl,

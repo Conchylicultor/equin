@@ -272,8 +272,8 @@ Reused as-is:
 
 ## Verification
 
-- `./singularity test plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment`.
-- `./singularity run …/alignment/scripts/calibrate.ts --set`. Pass when:
+- `./equin test plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment`.
+- `./equin run …/alignment/scripts/calibrate.ts --set`. Pass when:
   - min right > max wrong with a margin no narrower than B's 0.35 (or the
     difference explained);
   - all 10 right recordings are ≥ threshold, with the unplugged-arrangement

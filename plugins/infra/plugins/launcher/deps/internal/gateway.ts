@@ -21,7 +21,7 @@ function goTarget(target: DepTarget): { GOOS: string; GOARCH: string } {
  * The gateway: `go build` of this checkout's `gateway/` module into the deps
  * cache. Its identity is every Go source plus `go.mod` / `go.sum`, the Go
  * version and the target, so editing a `.go` file (or a new Go) is a new build
- * beside the old one, and `./singularity start` picks it up with no flag.
+ * beside the old one, and `./equin start` picks it up with no flag.
  *
  * Cross-compiles to every release platform (`targets: "any"`), which is how a
  * release seals it for a Linux server from a Mac. It is pure Go on every

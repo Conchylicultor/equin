@@ -7,7 +7,7 @@
  * clicks Quote and checks the prompt editor now holds a `> ` quote. Never
  * clicks a ➤ — that would send a turn to the conversation.
  *
- *   ./singularity run plugins/conversations/plugins/conversation-view/plugins/selection-actions/e2e/selection-toolbar.ts \
+ *   ./equin run plugins/conversations/plugins/conversation-view/plugins/selection-actions/e2e/selection-toolbar.ts \
  *     --conv <id> [--out /tmp/sel] [--headed]
  */
 import {

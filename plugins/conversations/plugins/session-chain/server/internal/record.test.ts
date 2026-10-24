@@ -5,7 +5,7 @@
  * Postgres (db-test-fixture) seeded with the REAL migration chain.
  *
  * Run: `bun test plugins/conversations/plugins/session-chain/server/internal`
- * (requires the running embedded cluster — `./singularity build` first).
+ * (requires the running embedded cluster — `./equin build` first).
  */
 
 import {

@@ -173,7 +173,7 @@ migrations). The DB already has those effects. New wording, roughly:
   registered view's inlined `CREATE VIEW` SQL to `views.generated.sql`, guarded by
   a `derived-views-in-sync` check (mirrors `migrations-in-sync`), and the runner
   reads + executes that file. Same end state, no runtime drizzle internals.
-- **Glob leakage**: double-check (via `./singularity check migrations-in-sync`
+- **Glob leakage**: double-check (via `./equin check migrations-in-sync`
   after the move, expecting it to *not* want a view migration) that no
   glob-matched file re-exports the view objects.
 - **Already handled, no action**: the duplicate-`sha8` hazard (two distinct files
@@ -197,23 +197,23 @@ migrations). The DB already has those effects. New wording, roughly:
    `cli/bin/migrations.ts`.
 5. Wire `rebuildDerivedViews(db)` into `database/server/index.ts` `onReadyBlocking`.
 6. Reword the runner drift warning.
-7. `./singularity build` to generate the transition (drop) migration; confirm the
+7. `./equin build` to generate the transition (drop) migration; confirm the
    reorder produced reverse-topo drops and it applies cleanly.
 8. Update CLAUDE.md docs.
 
 ## Verification (end to end)
 
-- `./singularity build` → server boots; the transition drop migration applies and
+- `./equin build` → server boots; the transition drop migration applies and
   `rebuildDerivedViews` recreates all four views. Confirm via
   `query_db`: `SELECT viewname FROM pg_views WHERE schemaname='public'` shows
   `attempts_v, tasks_v, conversations_v, agents_v`; and `SELECT count(*) FROM
   tasks_v` / `attempts_v` succeed (queries still resolve).
-- Edit a view body in `views.ts` (e.g. tweak `attempts_v`), `./singularity build`
+- Edit a view body in `views.ts` (e.g. tweak `attempts_v`), `./equin build`
   → **no new migration file appears** (the whole point), and the rebuild reflects
-  the change after restart. `./singularity check migrations-in-sync` passes.
+  the change after restart. `./equin check migrations-in-sync` passes.
 - Make `tasks_v` and `attempts_v` interdependent-and-changed in one edit →
-  `./singularity build` succeeds with **zero** migrations (previously impossible).
+  `./equin build` succeeds with **zero** migrations (previously impossible).
 - App smoke test at `http://att-1781522343-4bfw.localhost:9000`: tasks list,
   attempt view, agents render (the live-state resources that read these views).
-- `./singularity check` is green (type-check, migrations-in-sync,
+- `./equin check` is green (type-check, migrations-in-sync,
   snapshot-chain-intact, migration-hashes-unique, plugin-boundaries).

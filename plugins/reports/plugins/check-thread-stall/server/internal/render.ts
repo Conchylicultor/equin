@@ -47,7 +47,7 @@ export function renderCheckThreadStallTask(
   const lines: string[] = [];
   if (d.trigger === "stall") {
     lines.push(
-      `A \`./singularity check\` run in \`${d.worktree}\` could not run a timer ` +
+      `A \`./equin check\` run in \`${d.worktree}\` could not run a timer ` +
         `for **${formatSeconds(d.lateMs)}**: something held the one JS thread every ` +
         "check shares. While it did, no other check ran, every check's duration " +
         "grew by the stall, and a check's own wall-clock timeout could fire " +
@@ -62,7 +62,7 @@ export function renderCheckThreadStallTask(
     );
   } else {
     lines.push(
-      `A \`./singularity check\` run in \`${d.worktree}\` spent ` +
+      `A \`./equin check\` run in \`${d.worktree}\` spent ` +
         `**${formatSeconds(d.stalledMs)}** stalled in total, over ${d.stallCount} ` +
         `stalls (the longest ${formatSeconds(d.longestLateMs)}). The track's target ` +
         "for a whole pass is under 20 s.",

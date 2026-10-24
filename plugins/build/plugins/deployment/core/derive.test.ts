@@ -14,7 +14,7 @@ import type { Carrier, CarrierId, Deployment } from "./model";
  * and for the same reason: the auto-build policy is the thing that must not be
  * able to loop, and must not be able to miss.
  *
- * Run: `./singularity test plugins/build/plugins/deployment`
+ * Run: `./equin test plugins/build/plugins/deployment`
  */
 
 const A = "aaaaaaa1111111111111111111111111111111a";

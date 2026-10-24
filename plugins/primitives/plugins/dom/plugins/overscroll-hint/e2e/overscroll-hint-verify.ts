@@ -20,7 +20,7 @@
 // wasted by construction.
 //
 // Usage:
-//   ./singularity run plugins/primitives/plugins/dom/plugins/overscroll-hint/e2e/overscroll-hint-verify.ts
+//   ./equin run plugins/primitives/plugins/dom/plugins/overscroll-hint/e2e/overscroll-hint-verify.ts
 //
 // Manual only — nothing runs this automatically.
 import {

@@ -250,10 +250,10 @@ The 150ms settles are a symptom of this bug and come out with it:
    pass/fail gate, unlike the probe it replaces. Note it only proves the fast
    path on an idle box; step 1 is what proves the slow one.
 4. **Under load** — rerun the gate with the box loaded (e.g. several concurrent
-   `./singularity build`s) to reproduce the original conditions.
-5. `./singularity build`, then type fast in a real page at
+   `./equin build`s) to reproduce the original conditions.
+5. `./equin build`, then type fast in a real page at
    `http://att-1785419906-llfn.localhost:9000/pages` and confirm the text is
-   intact; `./singularity check`.
+   intact; `./equin check`.
 
 ## Docs
 

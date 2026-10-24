@@ -8,7 +8,7 @@ the user it could not launch an agent.
 **Already fixed today (9eb63fbcb, `research/2026-09-25-global-setup-prerequisites-v2.md`):**
 `docs/setup.md` step 3 installs and signs in to Claude Code; the `mise.toml` header is
 corrected; `doctor.sh` (`framework/cli/plugins/doctor`) checks *installed* + *signed in*
-(`claude auth status --json`) at `mise install`, `./singularity start` and deploying `build`.
+(`claude auth status --json`) at `mise install`, `./equin start` and deploying `build`.
 
 **What is still missing — the running app.** Every remaining gap is at runtime:
 
@@ -133,7 +133,7 @@ launch UI (doctor.sh keeps its own sh copy; a test asserts they match).
 
 ## Verification
 
-- Unit (`./singularity test plugins/infra/plugins/claude-cli`): `probeClaudeCode` against
+- Unit (`./equin test plugins/infra/plugins/claude-cli`): `probeClaudeCode` against
   a stub `claude` on a temp PATH (via `SINGULARITY_CLAUDE_BIN`) — logged in, logged out,
   missing, garbage JSON, timeout → the four arms.
 - jsdom: health row renders each arm; LaunchControl disabled on signed-out.

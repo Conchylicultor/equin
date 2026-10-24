@@ -133,7 +133,7 @@ describe("poll-loop guard", () => {
       run(session, `cat ${TASK}`);
       run(session, `cat ${TASK}`);
       run(session, `cat ${TASK}`);
-      run(session, "./singularity build");
+      run(session, "./equin build");
       expect(run(session, `cat ${TASK}`).kind).toBe("allow");
     });
 

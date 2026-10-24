@@ -173,7 +173,7 @@ This is a small, intentional visual change (single-hue tint, matching the chart/
 ## Execution via subagents
 
 Phase A (single agent, careful — load-bearing infra): build the `categorical` token group,
-edit `app.css` + global presets, run `./singularity build`, confirm `bg-categorical-N` renders.
+edit `app.css` + global presets, run `./equin build`, confirm `bg-categorical-N` renders.
 Phases B/C run only after A lands (consumers depend on the tokens existing).
 
 Phase B (parallel subagents, each owns an independent file group; `model: "sonnet"`):
@@ -186,12 +186,12 @@ Phase B (parallel subagents, each owns an independent file group; `model: "sonne
 7. Semantic-only fixes (call-row, push-gantt, build-popover-content, build-info, file-tree)
 
 Phase C (single agent): delete `ALLOWED_PATHS`, update check + CLAUDE.md, run
-`./singularity build` (runs the check) and `./singularity check --no-hardcoded-colors`.
+`./equin build` (runs the check) and `./equin check --no-hardcoded-colors`.
 
 ## Verification
 
-1. `./singularity build` succeeds (regenerates `web.generated.ts` incl. categorical, runs checks).
-2. `./singularity check` is green — in particular `no-hardcoded-colors` passes with an empty/removed
+1. `./equin build` succeeds (regenerates `web.generated.ts` incl. categorical, runs checks).
+2. `./equin check` is green — in particular `no-hardcoded-colors` passes with an empty/removed
    allow-list, and the manual git-grep for the color pattern over `plugins/**/*.{ts,tsx}` returns
    ONLY token-definition files (oklch literals, which don't match) — i.e. effectively zero offenders.
 3. Visit `http://<worktree>.localhost:9000`:

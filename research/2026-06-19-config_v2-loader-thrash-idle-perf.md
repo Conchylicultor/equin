@@ -8,7 +8,7 @@
 
 Loading one config page (e.g. `/settings/config/cd/apps%2Fdeploy%2Fservers%2Fdeploy.servers.jsonc`) takes >4 s, and `config-v2.scopes` / `config-v2.conflicts` loaders dominate idle load on the main backend. Four structural causes, all in `plugins/config_v2`:
 
-1. **A 30 s blanket reconcile storm.** `createFileWatcher` defaults `reconcileMs = 30_000` (`plugins/infra/plugins/file-watcher/server/internal/create-file-watcher.ts:29,112`). `config-watcher.ts`'s `onReconcile` calls `notifyWatchers(abs)` for **every** watched path (2 per descriptor). Each `onFileChange` re-reads files from disk and fires `notifyValues` + `notifyConflicts` + `notifyTiers` + a scopes notify — so every 30 s, at idle, ~2N watcher callbacks each trigger a full conflicts rescan → O(N²) disk I/O with nothing changed. Config files change **only via this process** (`setConfig` writes, `./singularity build` propagation, fork) and the parcel watcher already catches every real disk write, so the reconcile is pure churn.
+1. **A 30 s blanket reconcile storm.** `createFileWatcher` defaults `reconcileMs = 30_000` (`plugins/infra/plugins/file-watcher/server/internal/create-file-watcher.ts:29,112`). `config-watcher.ts`'s `onReconcile` calls `notifyWatchers(abs)` for **every** watched path (2 per descriptor). Each `onFileChange` re-reads files from disk and fires `notifyValues` + `notifyConflicts` + `notifyTiers` + a scopes notify — so every 30 s, at idle, ~2N watcher callbacks each trigger a full conflicts rescan → O(N²) disk I/O with nothing changed. Config files change **only via this process** (`setConfig` writes, `./equin build` propagation, fork) and the parcel watcher already catches every real disk write, so the reconcile is pure churn.
 
 2. **`config-v2.conflicts` re-walks ALL ~180 descriptors from disk on every load.** `computeAllConflicts(scopeId)` (`resource.ts:112`) loops the whole registry, reading 2–3 JSONC files per descriptor, with no memoization. The resource is keyed only by `{ scopeId }` (returns the whole map), so a change to one descriptor re-notifies base + every known scope, each re-running the full scan. The config-detail page subscribes to this whole-map resource but only needs **one** descriptor's conflict.
 
@@ -90,10 +90,10 @@ Result: opening one config page recomputes exactly one descriptor's conflict; th
 
 ## Verification
 
-1. `./singularity build` from the worktree; confirm clean boot (`~/.singularity/worktrees/<wt>/logs/server.jsonl` shows no config-v2 errors).
+1. `./equin build` from the worktree; confirm clean boot (`~/.singularity/worktrees/<wt>/logs/server.jsonl` shows no config-v2 errors).
 2. **Idle storm gone:** with the app open and idle for >60 s, `mcp__singularity__get_runtime_profile kind:"loader"` shows **no** periodic `config-v2.conflicts` / `config-v2.scopes` / `config-v2.conflict-paths` loader runs (pre-fix: a burst every 30 s).
 3. **Fast page:** reload `http://<wt>.localhost:9000/settings/config/cd/apps%2Fdeploy%2Fservers%2Fdeploy.servers.jsonc` via `bun e2e/screenshot.mjs`; the profiler shows the conflicts loader scanning one descriptor, page interactive well under the prior >4 s.
 4. **Correctness — scopes:** in settings, fork an app scope for a descriptor (`+ App`), edit a field; the scope tab + conflict dot still appear, `useConfig({ scopeId })` resolves scoped values, and "Stop customizing" reverts — exercising `refreshScopeMembers` add/remove. Confirm via the UI and `mcp__singularity__query_db` against the config dir state.
 5. **Correctness — conflicts:** trigger a stale override (edit `~/.singularity/config/<wt>/.../config.jsonc` `@hash`); the detail page shows the conflict banner and the nav/sidebar dot lights, confirming per-descriptor notify + `refreshConflictPaths`. Resolve it; dot clears.
 6. **Fan-out:** with the theme injector mounted (any app), `mcp__singularity__get_runtime_profile` / the live-state health debug pane shows a single `config-v2.scopes` subscription, not one per token descriptor.
-7. `./singularity check` passes (boundaries, type-check, plugins-doc-in-sync).
+7. `./equin check` passes (boundaries, type-check, plugins-doc-in-sync).

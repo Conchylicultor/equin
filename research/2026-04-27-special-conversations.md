@@ -244,7 +244,7 @@ The sentinel attempt's `worktreePath` is the main worktree (system conversations
 
 ## Verification
 
-1. **`./singularity build`** lands the migration and restarts the server.
+1. **`./equin build`** lands the migration and restarts the server.
 2. **Existing conversations get `kind = 'user'`** — `select kind, count(*) from conversations group by kind` shows all rows under `'user'` (or 'user' + 'agent' if the data backfill is included).
 3. **Sidebar list** — open any namespace, fire a `POST /api/conversations` with `kind: "system"` (curl directly), confirm it does NOT appear in the sidebar but DOES appear in the conversations table.
 4. **Yak end-to-end** (after F lands): create a user conversation → within ~30s a yak node appears for it → the classifier conversation does NOT appear in the sidebar, recovery pane, or attempt-view → it DOES appear in `_conversations` with `kind = 'system'` and reuses the user conversation's `attemptId`.

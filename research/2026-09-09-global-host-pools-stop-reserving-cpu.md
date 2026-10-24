@@ -228,7 +228,7 @@ say:
 `host-admission/CLAUDE.md` — the "One ceiling, two dimensions" section, the reserved table, the
 `B` formula, and the whole "RAM dimension is a forward hook" block (which exists to warn against
 an unsound `Σ ramBytes` assertion that no longer has a field to sum). Also
-`host-read-pool/CLAUDE.md:32`. `./singularity build` regenerates `docs/plugins-*.md`;
+`host-read-pool/CLAUDE.md:32`. `./equin build` regenerates `docs/plugins-*.md`;
 `plugins-doc-in-sync` covers the drift.
 
 ## Files
@@ -263,7 +263,7 @@ dirs and is **deliberately untouched**: no pool id changes, so its list stays co
 2. `server/` (pool, grant, push) — `tsc` now names every consumer that must change.
 3. The five consumers + `layout-harness`.
 4. `host-budget` re-point.
-5. Docs, then `./singularity build`.
+5. Docs, then `./equin build`.
 
 Steps 1–3 are one `tsc`-guided sweep; there is no intermediate state where the tree compiles
 with a half-removed field.
@@ -299,15 +299,15 @@ all four existing `grant.test.ts` tests. None of them read `cost` or the pool ta
 change to any of them means the sweep went wider than intended.
 
 ```bash
-./singularity test plugins/packages/plugins/host-semaphore
-./singularity test plugins/infra/plugins/host/plugins/host-admission
-./singularity check host-budget
-./singularity check host-pools-declared
-./singularity check paths:no-undeclared-data-dirs   # lock dirs still declared
-./singularity check                                  # type-check + plugins-doc-in-sync
+./equin test plugins/packages/plugins/host-semaphore
+./equin test plugins/infra/plugins/host/plugins/host-admission
+./equin check host-budget
+./equin check host-pools-declared
+./equin check paths:no-undeclared-data-dirs   # lock dirs still declared
+./equin check                                  # type-check + plugins-doc-in-sync
 ```
 
-**Live.** `./singularity build` in this worktree, then:
+**Live.** `./equin build` in this worktree, then:
 
 - the fleet still runs at most 9 concurrent workers —
   `pgrep -fl 'type-check/shared/worker.ts' | wc -l` never exceeds 9 during the run;

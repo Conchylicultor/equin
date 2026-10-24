@@ -179,7 +179,7 @@ additive. Internally `byParent` is a `Map<string, ParentBreakdown>` keyed by
 11. Update `plugins/infra/plugins/runtime-profiler/CLAUDE.md` (document the injected ALS
     context runtime + new exports) and `plugins/database/CLAUDE.md` (note that `db` spans
     now carry the enclosing request/loader as parent). The autogen reference blocks refresh
-    via `./singularity build`.
+    via `./equin build`.
 
 ## Critical files
 
@@ -198,12 +198,12 @@ additive. Internally `byParent` is a `Map<string, ParentBreakdown>` keyed by
   web bundle stays Node-API-free (default no-op runtime).
 - New `runtime-profiler/server` imports `runtime-profiler/core` + `server-core/core`
   (type) + `node:async_hooks`; nothing imports it back → no cycle.
-- Verify with `./singularity check --plugin-boundaries`.
+- Verify with `./equin check --plugin-boundaries`.
 
 ## Verification
 
-1. `./singularity build` (no schema/migration changes — in-memory only).
-2. `./singularity check --plugin-boundaries` and `./singularity check` — confirm no cycle,
+1. `./equin build` (no schema/migration changes — in-memory only).
+2. `./equin check --plugin-boundaries` and `./equin check` — confirm no cycle,
    barrels clean, docs in sync, eslint (no floating promises in the new async paths).
 3. Exercise the app at `http://<worktree>.localhost:9000` — open a conversation, the tasks
    pane, etc. — to generate spans with real nesting (loaders issuing queries).

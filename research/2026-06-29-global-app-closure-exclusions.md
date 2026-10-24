@@ -12,7 +12,7 @@ release silently bloats or breaks it.
 Today nothing prevents an app plugin from *accidentally* importing such infra
 (directly or transitively through an innocent-looking shared plugin). The fix is
 a **build-time structural guard** so the whole class of accidental coupling is
-caught at `./singularity check` time, not per-instance.
+caught at `./equin check` time, not per-instance.
 
 **Finding (corrected after building the guard):** Sonata's *own* imports are
 clean, but its *composition* is NOT. Every app `extends` `served-baseline`, which
@@ -150,12 +150,12 @@ replace/redirect — the additive-only resolution invariant is intact).
 
 ## Verification (end-to-end)
 
-1. `./singularity build` — regenerates `compositions.origin.jsonc` from the new
+1. `./equin build` — regenerates `compositions.origin.jsonc` from the new
    defaults (and picks up the schema change). **Passes** (no app `excludes` the
    `agent-runtime` bundle yet, so the guard finds nothing to flag).
 2. **Guard works (demonstrated):** temporarily set
    `app("sonata", …, [], ["agent-runtime"])` and run
-   `./singularity check composition-closure` → it **fails**, naming `apps.sonata`,
+   `./equin check composition-closure` → it **fails**, naming `apps.sonata`,
    bundle `agent-runtime`, offenders `infra.git-watcher, infra.worktree,
    tasks.container-tasks, tasks.tasks-core`, with the inclusion path
    `infra.health → reports → build → infra.git-watcher`. Reverted.
@@ -169,5 +169,5 @@ replace/redirect — the additive-only resolution invariant is intact).
   a problem, a future enhancement could derive the taproot set structurally.
 - `excludes` is evaluated on each composition's own item (not unioned through
   `extends`). Folding `excludes` through `extends` is a trivial later addition.
-- Optional: have `./singularity release` surface this check's failure prominently
+- Optional: have `./equin release` surface this check's failure prominently
   for the target composition (it already runs all checks).

@@ -1,5 +1,5 @@
 // The changed-file set, computed ONCE and shared by every consumer: the build's
-// format pass, `./singularity format`, and the `format-clean` check. If the
+// format pass, `./equin format`, and the `format-clean` check. If the
 // writer and the checker computed different sets, the build would format one
 // set and the check would assert another.
 //

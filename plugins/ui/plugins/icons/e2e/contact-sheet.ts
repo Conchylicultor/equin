@@ -4,7 +4,7 @@
 // icon names or upgrading an @iconify-json set.
 //
 // Usage:
-//   ./singularity run plugins/ui/plugins/icons/e2e/contact-sheet.ts [--out /tmp/icons] [--color-scheme dark|light]
+//   ./equin run plugins/ui/plugins/icons/e2e/contact-sheet.ts [--out /tmp/icons] [--color-scheme dark|light]
 //
 // Reads the names from the sprite sheet in the page (the resident sprites carry
 // exactly the manifest), then replaces the page body with a grid that `<use>`s

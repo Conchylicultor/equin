@@ -166,7 +166,7 @@ All under `plugins/apps/plugins/forge/plugins/catalog/`:
 
 ## Verification
 
-1. `./singularity build`
+1. `./equin build`
 2. Open `http://<worktree>.localhost:9000/forge/catalog`
 3. Verify Catalog sidebar entry appears and opens the pane
 4. Click each category tab — verify tables show correct aggregated data with counts

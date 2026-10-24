@@ -109,8 +109,8 @@ only real instructions are `docs/setup.md`. So `steps.txt` starts as
    - Homebrew itself isn't installed, and the doc doesn't say to install it.
      That is the first expected finding.
 3. `git config core.hooksPath .githooks` (the doc's Git hooks section)
-4. `./singularity start`
-5. `./singularity build --allow-main`
+4. `./equin start`
+5. `./equin build --allow-main`
 
 When a step fails, or the doc runs out:
 
@@ -131,9 +131,9 @@ Each checkpoint records the time taken to reach it and the failures before it.
 1. **Tools installed.** Xcode command-line tools, Homebrew, Bun, Go, and the
    Postgres client tools are on the PATH. Homebrew's installer normally pulls
    in the command-line tools.
-2. **Gateway running.** `./singularity start` succeeds, and
+2. **Gateway running.** `./equin start` succeeds, and
    `curl http://singularity.localhost:9000` answers inside the guest.
-3. **App deployed.** `./singularity build --allow-main` finishes, the deploy
+3. **App deployed.** `./equin build --allow-main` finishes, the deploy
    receipt says `status: ok`, and the agent manager page renders. The last is
    checked with the repo's `screenshot.ts` run inside the guest (this also
    covers the Chromium provisioning).

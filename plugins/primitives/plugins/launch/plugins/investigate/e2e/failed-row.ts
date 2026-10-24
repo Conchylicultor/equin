@@ -4,8 +4,8 @@
  * opens the launch popover titled "Investigate this failed …". Launches
  * nothing — it only opens the popover.
  *
- * Manual only. Run after `./singularity build`:
- *   ./singularity run plugins/primitives/plugins/launch/plugins/investigate/e2e/failed-row.ts \
+ * Manual only. Run after `./equin build`:
+ *   ./equin run plugins/primitives/plugins/launch/plugins/investigate/e2e/failed-row.ts \
  *     [--path /debug/background/activity/job/backup.run.supervised] [--out /tmp/investigate] [--headed]
  */
 import {

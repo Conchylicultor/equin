@@ -22,7 +22,7 @@ Two problems the user raised (via the element-picker on the Serve toggle):
    fold live-serve into the target model so one picker reads **Serve live · Web ·
    Desktop** ("one composition ships N ways").
 2. **Toggling "Serve" on does nothing visible until the next main build.** The flag
-   is pure intent; nothing is served until someone runs `./singularity build` on
+   is pure intent; nothing is served until someone runs `./equin build` on
    main. Decision (confirmed): enabling Serve should **also trigger an immediate
    forced build** (`--serve-composition <id>`), with a toast.
 
@@ -88,7 +88,7 @@ endpoint) — the correct home for a hook that couples the two.
    ): void { /* pass opts through to doRunBuild */ }
 
    // inside doRunBuild, replacing the fixed argv:
-   const args = ["./singularity", "build", "--allow-main"];
+   const args = ["./equin", "build", "--allow-main"];
    if (opts?.serveComposition) args.push("--serve-composition", opts.serveComposition);
    const proc = Bun.spawn(args, { cwd: REPO_ROOT, /* …unchanged… */ });
    ```
@@ -203,11 +203,11 @@ endpoint) — the correct home for a hook that couples the two.
 
 ## Verification
 
-1. `./singularity build` to deploy.
+1. `./equin build` to deploy.
 2. Boundary + config checks:
    ```bash
-   ./singularity check plugin-boundaries
-   ./singularity check            # config-origins-in-sync, plugins-doc-in-sync, type-check
+   ./equin check plugin-boundaries
+   ./equin check            # config-origins-in-sync, plugins-doc-in-sync, type-check
    ```
 3. UI, at `http://<worktree>.localhost:9000/studio/compositions/comp/<id>`:
    - The detail pane shows **one** "Build & serve" section (auto-serve section gone),

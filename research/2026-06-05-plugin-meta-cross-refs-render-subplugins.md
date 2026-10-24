@@ -91,7 +91,7 @@ export { crossRefsToComparable } from "./to-comparable";
   (`"name": "@singularity/plugin-plugin-meta-facets-cross-refs-render-diff"`,
   `description`).
 - `CLAUDE.md` — prose only; the `## Plugin reference` AUTOGEN block is inserted by
-  `./singularity build` (do not hand-write it).
+  `./equin build` (do not hand-write it).
 - `web/index.ts`:
 
 ```ts
@@ -183,15 +183,15 @@ type CrossRefRow = { plugin: PluginNode; used: string; runtime: string };
 - **No cross-plugin import from facet `shared/`**; consumers read
   `node.facets["cross-refs"]` and import only the facet `core/` (type-only) +
   generic host barrels (`plugin-view/web`, `catalog/web`, `plugin-changes/web`).
-- **CLAUDE.md** — write prose only; `./singularity build` codegen inserts the
+- **CLAUDE.md** — write prose only; `./equin build` codegen inserts the
   `## Plugin reference` AUTOGEN block.
 - Tailwind: no arbitrary font sizes (`text-[10px]` → `text-3xs`).
 
 ## Verification
 
-1. `./singularity build` — succeeds; codegen populates the three new CLAUDE.md
+1. `./equin build` — succeeds; codegen populates the three new CLAUDE.md
    AUTOGEN blocks and updates `facets/CLAUDE.md` sub-plugin list + `docs/*.md`.
-2. `./singularity check` — passes (boundaries, eslint, plugins-doc-in-sync).
+2. `./equin check` — passes (boundaries, eslint, plugins-doc-in-sync).
 3. Confirm registration: the cross-refs `DiffRenderer`, `PluginView.Section`, and
    `Catalog.FacetTable` contributions appear (e.g. grep the autogen docs /
    `facets/CLAUDE.md` now lists `render-catalog`/`render-detail`/`render-diff`

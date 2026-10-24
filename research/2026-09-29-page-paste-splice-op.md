@@ -163,4 +163,4 @@ one shared `prepareForest` used by both `paste` and `splice`.
   `drop-verify.ts` (multi-line drop mid-text splices at the point);
   re-run `paste-optimistic-verify.ts`, `sub-page-clipboard-verify.ts`,
   `caret-clipboard-verify.ts` and the url-paste e2e scripts for regressions.
-- `./singularity build`, then paste by hand in a page on the worktree deploy.
+- `./equin build`, then paste by hand in a page on the worktree deploy.

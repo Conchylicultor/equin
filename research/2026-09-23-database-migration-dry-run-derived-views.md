@@ -12,7 +12,7 @@ main's boot.
 
 It tests nothing. `rebuildDerivedViews` reads its view set from
 `View.getContributions()`, a module-global table that only `collectContributions`
-fills — and only a booted backend calls that. The `./singularity check` process
+fills — and only a booted backend calls that. The `./equin check` process
 never boots, so the list is empty and the function returns at
 `ordered.length === 0`. The check is green on exactly the case it was built for.
 
@@ -88,14 +88,14 @@ check the same way. File as a task once this lands.
 
 ## Verification
 
-1. `./singularity test plugins/framework/plugins/server-core` — unit test for
+1. `./equin test plugins/framework/plugins/server-core` — unit test for
    `token.from()` (matches own kind, ignores others, carries payload fields) and
    for the throw-before-collect.
 2. Negative end-to-end, in this worktree (reverted afterwards): add a migration
    that `ALTER TABLE … DROP COLUMN … CASCADE` on a column `tasks_v` /
-   `attempts_v` reads, then `./singularity check migration-applies-clean` → must
+   `attempts_v` reads, then `./equin check migration-applies-clean` → must
    FAIL with the `CREATE VIEW` error. Before the fix it passes.
 3. Positive: remove the migration → check passes via the fast path; with a
    harmless migration (e.g. `ADD COLUMN`) → slow path runs, views rebuild, pass.
-4. `./singularity build` (boot still rebuilds views through the new argument) and
-   `./singularity check`.
+4. `./equin build` (boot still rebuilds views through the new argument) and
+   `./equin check`.

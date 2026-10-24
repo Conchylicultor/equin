@@ -233,7 +233,7 @@ offset placement:
      `type === "text"` → `merge`; indented formatted block → still `outdent` first;
      Enter on empty block with `breakOutOnEmptyEnter` → `convertTo`; Enter on non-empty
      → `split`.
-2. **Build:** `./singularity build`
+2. **Build:** `./equin build`
 3. **Manual / Playwright** at `http://<worktree>.localhost:9000` (Pages app, a page
    with the `xx / yy0 / yy1 / zz` structure), via `bun e2e/screenshot.mjs` or a
    scripted run:

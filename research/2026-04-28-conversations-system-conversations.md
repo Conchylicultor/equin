@@ -86,7 +86,7 @@ Functions reused:
 
 # Verification
 
-1. `./singularity build` and open `http://<worktree>.localhost:9000`.
+1. `./equin build` and open `http://<worktree>.localhost:9000`.
 2. Open any user conversation, click **Summarise**.
    - Toggle the eye icon on in the sidebar header → the new system conversation appears as a fork under the parent in the attempt group, with a status dot, a `sys` chip, and a tinted row.
    - The summary's terminal pane (`open-app` or terminal-pane plugin) should show the parent's worktree path. Verify by opening the terminal pane on the summary conversation and running `pwd`.

@@ -124,7 +124,7 @@ export default {
 
 ## Verification
 
-1. `./singularity build` succeeds and `web.generated.ts` includes `page/plugins/text`.
+1. `./equin build` succeeds and `web.generated.ts` includes `page/plugins/text`.
 2. Open a document in the app — text blocks render with editable Lexical editors.
 3. Type in a block → after 500ms debounce, `PATCH /api/blocks/:id` fires with `{ data: { text: "..." } }`.
 4. Press Enter mid-text → block splits into two, cursor focuses the new block.

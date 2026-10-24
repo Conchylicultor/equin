@@ -3,7 +3,7 @@
  * ("Tools and system prompt", then "Tools changed" …) rather than the
  * unknown-event raw-JSON card, and snaps the first and the last row opened.
  *
- *   ./singularity run plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/request-shape/e2e/request-shape-row.ts --conv <id> [--out /tmp/request-shape]
+ *   ./equin run plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/request-shape/e2e/request-shape-row.ts --conv <id> [--out /tmp/request-shape]
  */
 import {
   arg,

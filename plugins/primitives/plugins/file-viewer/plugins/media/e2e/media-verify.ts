@@ -4,7 +4,7 @@
 // Manual only.
 //
 // Usage:
-//   ./singularity run plugins/primitives/plugins/file-viewer/plugins/media/e2e/media-verify.ts \
+//   ./equin run plugins/primitives/plugins/file-viewer/plugins/media/e2e/media-verify.ts \
 //     --file ~/Downloads/clip.mp4 [--out /tmp/media]
 import {
   arg,

@@ -6,7 +6,7 @@
 
 ## Context
 
-`./singularity build` runs the `type-check` check, which fans out one worker
+`./equin build` runs the `type-check` check, which fans out one worker
 process per tsconfig target (8 targets today: `central-core`, `cli`, `server-core`,
 `tooling`, `web-core`, `web-core-node`, `tools`, `test`). Each worker builds a full
 TypeScript program — multi-GB, single-threaded.
@@ -62,7 +62,7 @@ different ways:
 
 Those are three encodings of one fact: **who is waiting on this work.** A `main`
 build and a `push` are human-blocking. An agent build or a direct agent
-`./singularity check` is background.
+`./equin check` is background.
 
 This matters concretely, and it is the trap in the obvious design. `push` runs its
 checks on the *rebased agent branch*, not on `main` — so a naive `branch === "main"`
@@ -184,7 +184,7 @@ CLI slot", a different fact that merely happens to correlate today).
   `process.env.SINGULARITY_LANE` from the branch it already resolved for `slotKind`,
   before calling `runChecks` in-process.
 - `plugins/framework/plugins/cli/bin/commands/check.ts` — same, for a direct
-  `./singularity check` (main worktree → interactive; otherwise background).
+  `./equin check` (main worktree → interactive; otherwise background).
 
 Unset defaults to `background`, which is the safe direction: a check invoked by any
 other path gets bounded, never exempted.
@@ -277,7 +277,7 @@ worker's duration. This needs a concurrent `build --allow-main`, so it is rare.
 Unchanged: `shared/worker.ts`, `checks/core/discover.ts`, the CLI build pool, and
 `scripts/broker.ts` (its env contract already carries slot dir + size).
 
-`./singularity build` regenerates `docs/plugins-*.md` from the barrels, so the
+`./equin build` regenerates `docs/plugins-*.md` from the barrels, so the
 `plugins-doc-in-sync` check covers the doc drift.
 
 ## Verification
@@ -292,11 +292,11 @@ Unchanged: `shared/worker.ts`, `checks/core/discover.ts`, the CLI build pool, an
    The 4 pre-existing `run` tests must pass **unmodified** — that is the regression
    gate on the `run`-on-`acquireShare` rewrite.
 
-2. **Single build unchanged** — `./singularity build` in this worktree on an
+2. **Single build unchanged** — `./equin build` in this worktree on an
    otherwise-idle host. Expect 8 concurrent workers (share = `min(8, 9)` = 8) and a
    wall time within noise of today's.
 
-3. **Concurrent builds bounded** — the real test. Run `./singularity check` in 3–4
+3. **Concurrent builds bounded** — the real test. Run `./equin check` in 3–4
    worktrees at once, and while they run:
    ```bash
    pgrep -fl 'type-check/shared/worker.ts' | wc -l          # must never exceed 9
@@ -306,11 +306,11 @@ Unchanged: `shared/worker.ts`, `checks/core/discover.ts`, the CLI build pool, an
    Before the fix this reads ~24–32; after, ≤ 9. Sample `uptime` across the run and
    compare against the 50–63 baseline in the incident doc.
 
-4. **Lanes are separate** — `./singularity build --allow-main` on the main worktree
+4. **Lanes are separate** — `./equin build --allow-main` on the main worktree
    while agent checks saturate the background lane. The main build must acquire from
    `type-check-worker-interactive-slots/` and must not wait on background workers.
 
-5. **Push does not queue behind builds** — `./singularity push` from a worktree while
+5. **Push does not queue behind builds** — `./equin push` from a worktree while
    agent checks saturate the background lane. Its nested check must land in the
    interactive lane (this is the case a `branch === "main"` gate would have broken).
 

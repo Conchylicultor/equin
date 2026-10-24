@@ -218,8 +218,8 @@ Recommended direction, to be written up in full with the evidence:
 
 ## Verification
 
-- `./singularity build` in the background; read `build-status.json` for `status: ok`.
-- `./singularity test plugins/debug/plugins/latency-ledger`: histogram merge and
+- `./equin build` in the background; read `build-status.json` for `status: ok`.
+- `./equin test plugins/debug/plugins/latency-ledger`: histogram merge and
   percentile against a raw-array reference; hidden, censored and slept exclusion.
 - Drive the deployed worktree with `e2e-harness/e2e/screenshot.ts` (cold load, then
   `--click` to another pane). Then `query_db`: a fresh row in

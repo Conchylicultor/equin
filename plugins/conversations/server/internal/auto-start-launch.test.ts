@@ -17,7 +17,7 @@
  * registry, worktree root, attachment and preprompt lookups against the real
  * pool). The suite hands `launchArmedTask` a prepared launch directly.
  *
- * Requires the running embedded cluster — `./singularity build` first.
+ * Requires the running embedded cluster — `./equin build` first.
  */
 
 import {

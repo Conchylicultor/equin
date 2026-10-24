@@ -17,7 +17,7 @@ const SCREENSHOT_SCRIPT =
   "plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts";
 
 /**
- * `./singularity prototype options <id>` — which variant of a prototype the
+ * `./equin prototype options <id>` — which variant of a prototype the
  * user is looking at: each option the live page declares, the value on screen
  * and whether the user picked it or it is the page's default, then the
  * document URL of exactly that variant and the command that screenshots it.
@@ -74,7 +74,7 @@ const run: CliAction<[string], object> = async (id) => {
   console.log(`  ${doc.url(id, picks)}`);
   console.log("Screenshot it:");
   console.log(
-    `  ./singularity run ${SCREENSHOT_SCRIPT} --path "${doc.path(id, picks)}"`,
+    `  ./equin run ${SCREENSHOT_SCRIPT} --path "${doc.path(id, picks)}"`,
   );
   if (meta.options.length > 0) {
     console.log(

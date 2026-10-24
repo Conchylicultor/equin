@@ -5,7 +5,7 @@
 A from-scratch install in a clean macOS VM on 2026-09-18
 ([`2026-09-18-global-clean-install-baseline-run-1.md`](./2026-09-18-global-clean-install-baseline-run-1.md))
 stopped at the database and never got past it. The gateway started, Postgres
-started, and then the first `./singularity build --allow-main` waited 60 seconds
+started, and then the first `./equin build --allow-main` waited 60 seconds
 and gave up:
 
 ```
@@ -14,7 +14,7 @@ ERROR: no database for "singularity" and no fork in flight after 60s.
 
 Every way forward the app offered was a dead end:
 
-- the error says to run `./singularity db fork` — but that command *copies* the
+- the error says to run `./equin db fork` — but that command *copies* the
   `singularity` database, so it can never be the thing that creates it, and it
   also needs a backend that is already running;
 - `mise run setup`, the only thing in the repo that creates the base database,
@@ -24,8 +24,8 @@ Every way forward the app offered was a dead end:
   `relation "build_runs" does not exist`, because it writes its own ledger row
   before anything has created the schema.
 
-The outcome of this plan is that a new user's first build works: `./singularity
-start`, then `./singularity build --allow-main`, and the app deploys. Other
+The outcome of this plan is that a new user's first build works: `./equin
+start`, then `./equin build --allow-main`, and the app deploys. Other
 blockers from the same run — the toolchain check, Claude Code never being
 installed — are separate tasks and still sit behind this one.
 
@@ -38,7 +38,7 @@ starts the postmaster, prints `pg: embedded PG ready`, and stops. The cluster it
 leaves behind has `postgres` and `template1` in it and nothing else.
 
 Every database in the app is minted from `singularity`: a worktree's is a
-`pg_dump | pg_restore` copy of it, `./singularity db fork` copies it by name,
+`pg_dump | pg_restore` copy of it, `./equin db fork` copies it by name,
 and the build waits for that copy to land. Nothing anywhere creates the original.
 On a developer's machine it has simply always been there — created years ago by
 hand, or by `mise run setup` back when Postgres was a system service on 5432.
@@ -78,7 +78,7 @@ Import `pg` and connect over the cluster's own socket (`PG_SOCKET_DIR`,
 `bun build --compile` bundles it, and both the compiled backend and the compiled
 launcher already depend on `pg` through the same bundler.
 
-**Why this script and not `./singularity start`, or the launcher, or the build.**
+**Why this script and not `./equin start`, or the launcher, or the build.**
 It is the lowest layer, so it cannot be bypassed by whatever brings the gateway
 up — the dev `start`, a release launcher, a restart. And a release gets it for
 free: the same file is compiled into the `pg-start` binary a bundle ships.
@@ -109,7 +109,7 @@ scope; `checkoutNamespace(root)` at `run.ts:516` is built from the same call.
 
 - **main checkout** — the base database should already exist, because starting
   the cluster creates it. If it does not, fail immediately (`databaseReady(name)`
-  is already there) and say to run `./singularity start`. No polling: there is
+  is already there) and say to run `./equin start`. No polling: there is
   nothing in flight to wait for.
 - **anything else** — `waitForWorktreeDatabase(name)`, untouched.
 
@@ -118,7 +118,7 @@ storage is not a build's job, and the base database must not depend on someone
 having run a build.
 
 This also retires the circular advice properly rather than by rewording it. The
-`./singularity db fork` message lives inside `waitForWorktreeDatabase`, which is
+`./equin db fork` message lives inside `waitForWorktreeDatabase`, which is
 now only reachable for a namespace whose database really is a fork — the case it
 was written for.
 
@@ -164,10 +164,10 @@ Its `createdb` / `apply-migrations` half probes a Postgres the app does not use
 and is now redundant. Delete it, keeping the `trusted_config_paths` registration
 — the part that works and is unrelated. Update the task `description` and the
 file's header comment with it: both currently promise the database bootstrap and
-claim to "unblock the very first `./singularity build --allow-main`", which would
+claim to "unblock the very first `./equin build --allow-main`", which would
 otherwise be a false statement sitting at the top of the file.
 
-Whether `./singularity apply-migrations` should survive at all is the separate
+Whether `./equin apply-migrations` should survive at all is the separate
 apply-migrations task's call; after this change nothing in a fresh install needs
 it.
 
@@ -180,8 +180,8 @@ it.
   embedded" section, where it is still true. (The instruction appears twice in
   the file today; the second occurrence, in that section's closing line, is easy
   to miss.)
-- Say plainly what a first run is: `./singularity start`, then
-  `./singularity build --allow-main` — and that with the bundled Postgres the
+- Say plainly what a first run is: `./equin start`, then
+  `./equin build --allow-main` — and that with the bundled Postgres the
   database is created for you.
 
 ## Files
@@ -204,22 +204,22 @@ launcher's "empty database, the backend migrates it on boot" contract
 
 - The fork path. `database.fork` jobs never target `singularity`, so creating it
   cannot race one or shadow a fork.
-- `./singularity db fork`'s need for a running backend. A fresh install never
+- `./equin db fork`'s need for a running backend. A fresh install never
   reaches for it now, and by the time a hand-made `git worktree add` does, main
   is built and answering. Its circularity is real but separate.
-- `./singularity apply-migrations`, still broken on its first log line — the
+- `./equin apply-migrations`, still broken on its first log line — the
   separate task.
-- `./singularity start`, `bootSelfContainedApp`, and the release launcher: all
+- `./equin start`, `bootSelfContainedApp`, and the release launcher: all
   unchanged, because they all go through the same start script.
 
 ## An option considered and rejected
 
-Having `./singularity build` create the base database, the way it already
+Having `./equin build` create the base database, the way it already
 creates an empty one for every composition it serves
 (`deploy-namespace.ts:482`). Rejected: a build compiles and deploys, and putting
 provisioning there makes the base database's existence depend on someone having
 run a build. It also would not have helped a packaged release, and it would have
-left `./singularity start` finishing successfully on a cluster with nothing in
+left `./equin start` finishing successfully on a cluster with nothing in
 it.
 
 ## Verification
@@ -233,15 +233,15 @@ live schema; and the two checks that do connect (`fork-schema-drift`,
 
 **On this machine, without disturbing it:**
 
-1. `./singularity build` from this worktree. The ordinary path must be
+1. `./equin build` from this worktree. The ordinary path must be
    unchanged — the base database already exists, so step 1 is a no-op and step 2
    takes the fork branch exactly as before.
-2. `./singularity test plugins/build/plugins/run-ledger` — a test beside
+2. `./equin test plugins/build/plugins/run-ledger` — a test beside
    `stale-holder.test.ts`. `createTestDb()` hands back an unmigrated database by
    construction (the fixture applies schema only when the caller calls
    `runMigrations`), so skipping that call and asserting `insertRun` answers
    `"unavailable"` and `closeRun` resolves pins step 3 exactly.
-3. `./singularity test plugins/database/plugins/embedded` — the
+3. `./equin test plugins/database/plugins/embedded` — the
    `PG_BASE_DATABASE` / `MAIN_WORKTREE_NAME` pin.
 4. The self-healing property, against a scratch cluster rather than the live one:
    point the start script at a throwaway `SINGULARITY_DIR`, run it twice, and

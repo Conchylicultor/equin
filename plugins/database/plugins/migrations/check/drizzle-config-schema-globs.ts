@@ -55,7 +55,7 @@ const check: Check = {
   description:
     "drizzle.config.ts's evaluated `schema:` globs equal SCHEMA_GLOBS — the single source of truth the schema-glob checks enumerate from",
   // Cheap structural invariant (one dynamic import, no I/O): guard even
-  // `./singularity build --skip-checks`.
+  // `./equin build --skip-checks`.
   alwaysRun: true,
   // Never cache: a stale PASS on a correctness gate is worse than re-running a
   // check this cheap.

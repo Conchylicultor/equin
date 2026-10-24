@@ -100,13 +100,13 @@ plugins/config_v2/plugins/fields/plugins/dynamic-enum/
 
 ## Verification
 
-1. `./singularity build` succeeds
+1. `./equin build` succeeds
 2. Settings → Config → progress bar variant shows radio with "Dots" / "Segmented" (not text input)
 3. Settings → Config → theme preset shows dropdown with "Default" / "Ocean" / "Warm"
 4. Token preset fields show dropdowns with their contributed presets
 5. Changing value via dropdown actually switches the variant/preset
 6. Reset button reverts to default
-7. `./singularity check` passes
+7. `./equin check` passes
 
 ## Key reference files
 

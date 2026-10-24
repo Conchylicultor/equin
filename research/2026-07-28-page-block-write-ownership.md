@@ -199,10 +199,10 @@ divider *should* destroy the editor.
 ## Verification
 
 ```bash
-./singularity build
+./equin build
 bun test plugins/page/plugins/editor/core          # block-diff, block-ops, define-block
 bun run test:dom plugins/page/plugins/editor
-./singularity check
+./equin check
 ```
 
 New `plugins/page/plugins/editor/e2e/convert-in-place-verify.ts` (reuse

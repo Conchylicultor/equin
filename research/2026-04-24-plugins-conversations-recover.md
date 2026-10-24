@@ -85,7 +85,7 @@ plugins/conversations-recover/
 - `web/src/plugins.ts` — add `import conversationsRecoverPlugin from "@plugins/conversations-recover/web"` and append to the plugins array.
 - `server/src/plugins.ts` — same for the server side.
 
-`docs/plugins.md` is **auto-generated** by `./singularity build` (via `cli/src/checks/plugins-doc-in-sync.ts`). Do not hand-edit; rebuild and commit the generated diff.
+`docs/plugins.md` is **auto-generated** by `./equin build` (via `cli/src/checks/plugins-doc-in-sync.ts`). Do not hand-edit; rebuild and commit the generated diff.
 
 ## Plugin boundary compliance
 
@@ -93,7 +93,7 @@ plugins/conversations-recover/
 - Cross-plugin imports use `@plugins/<name>/{web,server,shared}` only. Specifically:
   - `web/components/recovery-view.tsx` imports `Shell` from `@plugins/shell/web`, `Pane` from `@plugins/primitives/plugins/pane/web`, and types + `recentConversationsResource` from `@plugins/conversations/web` (or `@plugins/tasks-core/shared` for `Conversation`).
   - `server/internal/handle-restore-batch.ts` imports `resumeConversation` and `recentConversationsResource` from `@plugins/conversations/server` / `@plugins/tasks-core/server`.
-- No new edges from other plugins into `conversations-recover`. To verify after writing, run `./singularity check --plugin-boundaries`.
+- No new edges from other plugins into `conversations-recover`. To verify after writing, run `./equin check --plugin-boundaries`.
 
 ## Reused primitives — do not reimplement
 
@@ -107,11 +107,11 @@ plugins/conversations-recover/
 
 ## Verification
 
-After implementation, run `./singularity build` from the worktree directory, then:
+After implementation, run `./equin build` from the worktree directory, then:
 
 1. **Pane renders.** Open `http://<worktree>.localhost:9000/recovery` (or via the new Recovery sidebar entry). Confirm rows from `/api/conversations/gone` appear, ordered by `endedAt` desc, grouped within 1s buckets, with per-row and per-cluster `Restore` buttons. Single-row clusters show no cluster header.
 2. **Single-row restore works.** Click `Restore` on a single row of a known-recoverable gone conversation. Confirm via the conversations sidebar / tmux (`tmux list-sessions`) that the session is back. Should be functionally identical to clicking the existing per-conversation `resume` button.
 3. **Batch restore.** Stage a cluster: kill two tmux sessions quickly (`tmux kill-session -t <id1>; tmux kill-session -t <id2>`), wait for the 1s poller tick, then open the recovery pane. Click `Restore all` on the cluster header. Confirm both come back. Confirm the response surfaces per-row `{ ok: false, error }` entries if any one fails.
 4. **Live refresh on restore.** With the pane open, click `Restore` on a row — the row should disappear within ~1s (via the `recentConversationsResource` subscription) without a manual refresh.
-5. **Plugin boundaries.** Run `./singularity check --plugin-boundaries`. Must pass.
-6. **Docs in sync.** Run `./singularity check --plugins-doc-in-sync` after `./singularity build`. Must pass; commit the regenerated `docs/plugins.md`.
+5. **Plugin boundaries.** Run `./equin check --plugin-boundaries`. Must pass.
+6. **Docs in sync.** Run `./equin check --plugins-doc-in-sync` after `./equin build`. Must pass; commit the regenerated `docs/plugins.md`.

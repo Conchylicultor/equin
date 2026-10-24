@@ -193,7 +193,7 @@ Contributions that set `group: "namespace"` or `group: "actions"` can drop the f
 
 ## Verification
 
-1. `./singularity build` — deploys successfully
+1. `./equin build` — deploys successfully
 2. **Normal mode**: toolbar shows all items left-aligned (no spacer by default)
 3. **Edit mode**: pen button → add spacer → spacer appears as dashed placeholder, draggable, × button visible
 4. **Drag spacer**: drag between action buttons → persists on reload

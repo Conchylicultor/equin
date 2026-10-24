@@ -100,7 +100,7 @@ No schema change, no migration, no new query primitive.
 
 ## Verification
 
-1. `./singularity build` from the worktree.
+1. `./equin build` from the worktree.
 2. Reset and re-measure the profiler window:
    - `POST /api/debug/profiling/runtime/reset` (or the Debug → Profiling → Runtime "reset"), let it idle ~60s.
    - `get_runtime_profile` MCP tool, `kind: "db"`. The `from conversations_v order by created_at desc`

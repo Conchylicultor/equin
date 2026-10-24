@@ -209,16 +209,16 @@ Sites under `plugins/primitives/plugins/css/plugins/**` are permanently allowlis
 
 ## Verification
 
-- **Pure:** `./singularity test plugins/primitives/plugins/css/plugins/yield` and `…/grow` and `…/fill` — the
+- **Pure:** `./equin test plugins/primitives/plugins/css/plugins/yield` and `…/grow` and `…/fill` — the
   new class tests plus the composition assertion in `fill-classes.test.ts`.
-- **Geometry:** `./singularity check layout-geometry` — the yield fixture across the width sweep, and the
+- **Geometry:** `./equin check layout-geometry` — the yield fixture across the width sweep, and the
   `swapSlotRole` falsification asserting `truncatesTogether` actually bites. (The harness check keys its cache
   on the whole `css/plugins/**` tree, so it re-runs by itself and launches no browser when untouched.)
-- **The advertising gate:** `./singularity check css:message-names-primitives` — red between Stage 1 and Stage
+- **The advertising gate:** `./equin check css:message-names-primitives` — red between Stage 1 and Stage
   3 by construction, green after.
-- **Whole gate:** `./singularity check` — `eslint` (every drained directive must be **gone**; a leftover one is
+- **Whole gate:** `./equin check` — `eslint` (every drained directive must be **gone**; a leftover one is
   itself an error), `type-check`, `plugins-doc-in-sync`, `plugins-registry-in-sync`.
-- **Visual, after the drain:** `./singularity build` (background, then end the turn), then
+- **Visual, after the drain:** `./equin build` (background, then end the turn), then
   `plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts` against the surfaces whose
   space-sharing changed — a conversation with a tool card (collapsible-card + workflow summary at a narrow
   pane width, which is where the aside-vs-summary split is visible), Debug → Slow Events and Debug → Profiling

@@ -5,8 +5,8 @@
  * compiled with the served binding against a throwaway database carrying the
  * real schema, loads the whole set FULL.
  *
- * Requires a running Postgres cluster (started by ./singularity build).
- * Run: `./singularity test plugins/apps/plugins/pages/plugins/starred`.
+ * Requires a running Postgres cluster (started by ./equin build).
+ * Run: `./equin test plugins/apps/plugins/pages/plugins/starred`.
  */
 
 import { afterAll, beforeAll, expect, setDefaultTimeout, test } from "bun:test";

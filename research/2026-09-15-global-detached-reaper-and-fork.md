@@ -156,7 +156,7 @@ around the nightly tick, so accept the risk and don't keep a tombstone. The
 ## 3. New sub-plugin `plugins/infra/plugins/jobs/plugins/detached-job`
 
 A job whose body is ordinary async code, run in a detached
-`./singularity supervised-exec <name>` child. It is declared in one place:
+`./equin supervised-exec <name>` child. It is declared in one place:
 
 ```ts
 export const worktreeReapJob = defineDetachedJob({
@@ -290,7 +290,7 @@ fork gets a new `database-fork` sink.
 - Rewrite `database/plugins/fork/CLAUDE.md`: a restart no longer interrupts a
   fork, and the in-flight lock is the ledger, not the queue key.
 
-### `./singularity build`'s wait for the worktree DB (needs your approval: it's under `plugins/framework/`)
+### `./equin build`'s wait for the worktree DB (needs your approval: it's under `plugins/framework/`)
 
 Build waits for the fork by polling Postgres
 (`plugins/framework/plugins/cli/plugins/build/cli/run.ts:336-374`):
@@ -359,7 +359,7 @@ Reuse, don't rewrite: `defineSupervisedJob`, `defineSupervisedTask`,
 
 ## Verification
 
-- **Unit tests** (`./singularity test <plugin>`):
+- **Unit tests** (`./equin test <plugin>`):
   - jobs: `workflowRunIdFor` (keyed vs row), `singletonJobKey` shared by
     enqueue and cron, dead-GC and supersede discard the right log.
   - supervised-job `loop.test.ts`: close-before-reclaim, `not-claimed` on
@@ -371,7 +371,7 @@ Reuse, don't rewrite: `defineSupervisedJob`, `defineSupervisedTask`,
   `/superseded`, `/crash-recovery`, `/serial-queue` still pass.
 - **Survives a restart (manual, worktree deploy).** Add a harmless
   `events-test.detached-sleep` detached job (sleeps ~90 s, then logs), started
-  by an events-test endpoint. Start it, run `./singularity build` mid-run to
+  by an events-test endpoint. Start it, run `./equin build` mid-run to
   restart the backend, then confirm with `query_db`:
   - the child pid stayed alive;
   - its `detached_job_runs` row closes with exit 0;
@@ -386,4 +386,4 @@ Reuse, don't rewrite: `defineSupervisedJob`, `defineSupervisedTask`,
   worktrees. After push, check main's next hourly tick: a `detached_job_runs`
   row on `singularity` via `query_db`, the scan/tally lines in
   `logs/worktree-cleanup.jsonl`, and no queue-slot-hog report.
-- `./singularity check` (type-check, boundaries, migrations-in-sync, docs in sync).
+- `./equin check` (type-check, boundaries, migrations-in-sync, docs in sync).

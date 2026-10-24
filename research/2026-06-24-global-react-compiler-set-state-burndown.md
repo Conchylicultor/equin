@@ -12,7 +12,7 @@
 The React Compiler is enabled repo-wide (`compilationMode: "infer"`). Its Rules-of-React
 eslint rules ship at `"warn"` and are ratcheted to `"error"` one at a time as each rule's
 warning count is driven to zero — that ratchet is what locks in compiler coverage (a new
-violation then fails `./singularity check` instead of silently eroding it).
+violation then fails `./equin check` instead of silently eroding it).
 
 Phases 1 and 2 are **done**: a fresh scan (`bunx eslint "plugins/**/web/**/*.{ts,tsx}"`,
 2026-06-24) confirms **every react-hooks rule reports 0 except one**:
@@ -29,7 +29,7 @@ for last. **68 sites across 57 files.** This plan refactors the genuine anti-pat
 migrates the legitimate-but-flagged effects onto existing primitives where clean, documents
 the genuinely-stateful remainder with inline exemptions, then ratchets the rule to `"error"`.
 
-**Intended outcome:** scan reports `set-state-in-effect: 0`, `./singularity check` is green,
+**Intended outcome:** scan reports `set-state-in-effect: 0`, `./equin check` is green,
 the rule is pinned at `"error"` — making it the last react-hooks rule enforced, completing
 the React Compiler compliance program.
 
@@ -291,11 +291,11 @@ In `plugins/framework/plugins/tooling/plugins/lint/core/build-lint-config.ts`:
 ## Iterate-to-zero loop (do before the ratchet)
 
 1. Implement waves A–E.
-2. `./singularity build` (regenerates + rebuilds; runs `bun install`).
+2. `./equin build` (regenerates + rebuilds; runs `bun install`).
 3. Re-scan: `bunx eslint "plugins/**/web/**/*.{ts,tsx}" -f json` → aggregate by `ruleId`.
    Fixing a component can surface a previously-masked sibling — **fix any newly-surfaced
    `set-state-in-effect` site and repeat** until it reports **0**.
-4. Only then apply the ratchet and re-run `./singularity check` (it must pass — proving the
+4. Only then apply the ratchet and re-run `./equin check` (it must pass — proving the
    rule is truly at 0).
 
 ---
@@ -327,9 +327,9 @@ LB, all of E2 LB) should be Opus; the mechanical derive/key/disable edits are So
 ## Verification
 
 1. **Scan delta:** `bunx eslint "plugins/**/web/**/*.{ts,tsx}" -f json` → `set-state-in-effect: 0` (and every other react-hooks rule still 0).
-2. **Check green:** `./singularity check` passes *after* the ratchet (proves 0).
+2. **Check green:** `./equin check` passes *after* the ratchet (proves 0).
 3. **DOM tests:** `bun run test:dom` green.
-4. **Build + boot:** `./singularity build` succeeds; app boots at `http://<worktree>.localhost:9000`.
+4. **Build + boot:** `./equin build` succeeds; app boots at `http://<worktree>.localhost:9000`.
 5. **Compiler correctness (G3):** bundle still contains `react/compiler-runtime`; the
    render-profiler still names real components (not `Memo`/`Unknown`); `remounts === 0`
    **except** at the intended `key=` boundaries (Wave B). Migrated components should now
@@ -351,7 +351,7 @@ LB, all of E2 LB) should be Opus; the mechanical derive/key/disable edits are So
 3. **`key=` remount semantics** discard in-progress local state at the keyed boundary — that *is* the intended reset (matches each effect's current behavior), but verify no consumer relied on the old "preserve draft across external change" behavior (notably `folder-picker`, `color-input`, `diff-view`).
 4. **`useEndpoint` loading-on-input-change** differs from a manual `setState('loading')` reset (query-key change keeps prior data + `isFetching`). For `useFileContent`/`useFileDiff`/`useResolvedFile`, confirm the UI doesn't flash stale content; add an explicit reset if needed.
 5. **Generated `use-mobile.ts`** edit could be overwritten by a future `shadcn add`. Low frequency; acceptable, with the inline-disable fallback noted.
-6. **Ratcheting too early** turns `./singularity check` red — only pin after the scan reads 0.
+6. **Ratcheting too early** turns `./equin check` red — only pin after the scan reads 0.
 
 ---
 

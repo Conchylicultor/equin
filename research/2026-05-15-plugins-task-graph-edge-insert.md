@@ -73,7 +73,7 @@ No server changes — all three mutations use existing REST endpoints (`POST /ap
 
 ## Verification
 
-1. `./singularity build`
+1. `./equin build`
 2. Open a task that has dependencies (shows the graph band)
 3. Hover an edge → `+` button fades in at midpoint
 4. Click `+` → new "Untitled" task appears in the graph, wired between the two original tasks

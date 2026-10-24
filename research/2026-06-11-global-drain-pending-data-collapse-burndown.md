@@ -147,11 +147,11 @@ BURNDOWN comment removed).
 
 ## Verification
 
-1. **Lint green:** `./singularity check type-check` (runs the type-aware ESLint that
+1. **Lint green:** `./equin check type-check` (runs the type-aware ESLint that
    includes `no-pending-data-collapse`) must report **zero** `no-pending-data-collapse`
    violations with the allowlist empty. This is the primary gate — an empty allowlist
    only stays green if every site is genuinely migrated.
-2. **Build:** `./singularity build` from the worktree (regenerates docs/registries,
+2. **Build:** `./equin build` from the worktree (regenerates docs/registries,
    rebuilds, restarts). Must succeed.
 3. **Behavioral spot-checks** (Playwright, `http://att-1781208577-waea.localhost:9000`)
    on the highest-visibility surfaces, confirming a loading state (not a wrong empty

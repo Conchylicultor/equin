@@ -10,7 +10,7 @@
 // checklist block; 4 additionally needs a user message containing a <go>.
 //
 // Usage:
-//   ./singularity run plugins/active-data/plugins/go/e2e/go-verify.ts \
+//   ./equin run plugins/active-data/plugins/go/e2e/go-verify.ts \
 //     --conv <conversationId> [--out /tmp/go] [--headed]
 
 import {

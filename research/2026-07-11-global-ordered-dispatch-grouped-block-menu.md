@@ -176,9 +176,9 @@ New `config/page/editor/page.editor.block.jsonc` (hash stamped from the generate
 (`page.sub-page:page` is named to keep the tree exhaustive; its missing `label` keeps it out of menus.)
 
 **Build sequence (chicken-and-egg on the `@hash`):**
-1. Land Steps 1–5, run `./singularity build --skip-checks` → regenerates the manifest (adds `page.editor.block`) and `config/page/editor/page.editor.block.origin.jsonc` (materialized catalog + `@hash`).
+1. Land Steps 1–5, run `./equin build --skip-checks` → regenerates the manifest (adds `page.editor.block`) and `config/page/editor/page.editor.block.origin.jsonc` (materialized catalog + `@hash`).
 2. Author the override above, stamping the origin's `@hash`.
-3. `./singularity build` (full) → `reorder:configs-authored` (override exists — grandfathered list is empty, so this is mandatory), `config-origins-in-sync`, `reorderable-slots-in-sync` all green.
+3. `./equin build` (full) → `reorder:configs-authored` (override exists — grandfathered list is empty, so this is mandatory), `config-origins-in-sync`, `reorderable-slots-in-sync` all green.
 
 ## Sequencing
 
@@ -205,7 +205,7 @@ New `config/page/editor/page.editor.block.jsonc` (hash stamped from the generate
 
 ## Verification
 
-1. `./singularity check` — `type-check`, `reorderable-slots-in-sync`, `config-origins-in-sync`, `reorder:configs-authored` all pass.
+1. `./equin check` — `type-check`, `reorderable-slots-in-sync`, `config-origins-in-sync`, `reorder:configs-authored` all pass.
 2. **bun:test**: add a scanner case (ordered-dispatch call site scanned; the wrapper's own declaration not): `bun test plugins/framework/plugins/tooling/plugins/codegen`.
 3. **vitest**: unit-test the pure `entries → sections` transform (header/loose/allowlist/empty-section cases) + `BlockTypeList` flat-index math with headers interleaved: `bun run test:dom plugins/page/plugins/editor`.
 4. **e2e (scripted Playwright, `e2e/screenshot.mjs` pattern)** against `http://<worktree>.localhost:9000`:

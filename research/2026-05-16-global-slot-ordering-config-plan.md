@@ -55,7 +55,7 @@ await generateSlotOrderConfigs({ root });
 
 A plugin-contributed check (discovered by `loadPluginChecks()` at runtime). Two checks:
 
-1. **`reorder:configs-in-sync`** — re-renders expected JSONC for each slot, diffs against committed files. Fails if any file is missing or stale. Hint: "Run `./singularity build` and commit the regenerated files."
+1. **`reorder:configs-in-sync`** — re-renders expected JSONC for each slot, diffs against committed files. Fails if any file is missing or stale. Hint: "Run `./equin build` and commit the regenerated files."
 
 2. **`reorder:unsorted-empty`** — reads every committed `slot-order*.jsonc` file and fails if any has a non-empty `unsorted` array. Hint: "Move entries from `unsorted` into `order` at the correct position."
 
@@ -211,10 +211,10 @@ Steps 1-3 can be done independently from 4-6. Step 7 is a one-time manual step a
 
 ## Verification
 
-1. Run `./singularity build` — should generate `slot-order.jsonc` files with all contributions in `unsorted`
-2. Run `./singularity check` — should fail on `reorder:unsorted-empty`
+1. Run `./equin build` — should generate `slot-order.jsonc` files with all contributions in `unsorted`
+2. Run `./equin check` — should fail on `reorder:unsorted-empty`
 3. Manually sort entries into `order` in each config file
-4. Run `./singularity check` again — should pass
+4. Run `./equin check` again — should pass
 5. Restart server — should see user config files created at `~/.singularity/slots/`
 6. Open app, reorder items via DnD — should persist to user config files
 7. Delete user config, restart — should re-seed from code config

@@ -84,6 +84,6 @@ Toolbar: defineRenderSlot<AppShellToolbarItem>("….toolbar", {
 
 ## Verification
 
-1. `./singularity build` — type-check passes, no new errors
-2. `./singularity check type-check` — confirms no TS drift
+1. `./equin build` — type-check passes, no new errors
+2. `./equin check type-check` — confirms no TS drift
 3. No contributors to `Shell.Toolbar` exist today, so no call-site updates are needed

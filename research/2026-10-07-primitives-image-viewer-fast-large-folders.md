@@ -201,15 +201,15 @@ This replaces the `shown`-trails-`current` fade in `image-viewer.tsx`
 
 ## Verification
 
-- `./singularity test plugins/infra/plugins/host-fs/plugins/image` covers
+- `./equin test plugins/infra/plugins/host-fs/plugins/image` covers
   `snapEdge`, and resizing a fixture JPEG: the long edge, EXIF rotation, a cache
   hit on the second call, a new key after an mtime change, a 415 on garbage, and
   an archive member.
-- `./singularity test plugins/primitives/plugins/overlay/plugins/image-viewer`
+- `./equin test plugins/primitives/plugins/overlay/plugins/image-viewer`
   covers the existing tests, `pickSrc`, and the decoded-cache LRU and stale
   drop.
 - Extend `e2e/views-verify.ts`, and run it with `--file` on the 176-photo
-  folder after `./singularity build`. It checks that:
+  folder after `./equin build`. It checks that:
   - the grid's visible tiles all load within 2 s on a cold cache, and the grid
     screenshot succeeds;
   - every tile and strip request hits `/api/host-fs/image/resized`, never

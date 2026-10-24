@@ -488,8 +488,8 @@ Remove these 6 entries from the `ignores["no-adhoc-layout"]` array:
 
 After implementing, run:
 ```bash
-./singularity build         # runs migration checks, rebuilds frontend
-./singularity check type-check   # runs tsc + ESLint including no-adhoc-layout
+./equin build         # runs migration checks, rebuilds frontend
+./equin check type-check   # runs tsc + ESLint including no-adhoc-layout
 ```
 
 Visual checks (screenshot or Playwright):

@@ -15,8 +15,8 @@
  * once, and nothing else: a write to a table no view reads is the negative
  * control, and its own reader the positive one.
  *
- * Requires a running Postgres cluster (started by ./singularity build).
- * Run: `./singularity test plugins/tasks/plugins/tasks-core`.
+ * Requires a running Postgres cluster (started by ./equin build).
+ * Run: `./equin test plugins/tasks/plugins/tasks-core`.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";

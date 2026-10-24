@@ -10,8 +10,8 @@ An agent writing a research doc was refused. The command was a plain
 Verification section contained the lines
 
 ```
-- `./singularity build --composition sonata` from an agent worktree …
-- `./singularity build` with no flag is byte-equivalent …
+- `./equin build --composition sonata` from an agent worktree …
+- `./equin build` with no flag is byte-equivalent …
 ```
 
 and the background-ops guard denied the write, telling the agent to stop and ask
@@ -125,7 +125,7 @@ That stack is the load-bearing part, and the reason deserves a WHY-comment. The
 most common heredoc in this repo is
 
 ```
-./singularity push -m "$(cat <<'EOF'
+./equin push -m "$(cat <<'EOF'
 <commit message>
 EOF
 )"
@@ -141,8 +141,8 @@ One unpaired quote in the prose flips the mode back to `none` mid-body and the
 remaining lines split at depth 0 — verified against the real parser:
 
 ```
-./singularity push -m "$(cat <<'EOF'
-He said "hi and ran `./singularity build` then
+./equin push -m "$(cat <<'EOF'
+He said "hi and ran `./equin build` then
 next line with $(git push) here
 EOF
 )"
@@ -254,7 +254,7 @@ regression lives in 1–2; 3–4 are mechanical.
 
 ## Tests
 
-`bun:test`, run with `./singularity test plugins/framework/plugins/tooling/plugins/guards`.
+`bun:test`, run with `./equin test plugins/framework/plugins/tooling/plugins/guards`.
 The existing `names(cmd)` / `blocks(guard, cmd)` helpers in `parse-shell.test.ts`
 cover all of it.
 
@@ -270,7 +270,7 @@ Body is data:
 
 Nothing hidden by it:
 
-- `./singularity push -m "$(cat <<'EOF' … EOF)"` — the push is still denied in
+- `./equin push -m "$(cat <<'EOF' … EOF)"` — the push is still denied in
   the foreground, allowed with `run_in_background`. **And the same with an
   unpaired `"` in the message body** — the depth-0 case above.
 - `bash <<'EOF'` with `git push` in the body; `cat <<'EOF' … | bash` likewise.
@@ -279,21 +279,21 @@ Nothing hidden by it:
 - `rg foo <<< "$x"` followed by `git push`; `n=$((1 << shift)); git push`;
   `# see <<EOF here` followed by `git push`.
 - `cd sub && bash <<'EOF' / rm -rf .` — the `rm` call's cwd is `/base/sub`.
-- `./singularity build &` still denied; `./singularity build 2>&1` with
+- `./equin build &` still denied; `./equin build 2>&1` with
   `run_in_background` still allowed.
-- `python3 - <<'PY' … PY` followed by `./singularity check …` — still denied,
+- `python3 - <<'PY' … PY` followed by `./equin check …` — still denied,
   which proves the scanner resumes after a terminator.
 
 ## Verification
 
-1. `./singularity test plugins/framework/plugins/tooling/plugins/guards`
-2. `./singularity check`
+1. `./equin test plugins/framework/plugins/tooling/plugins/guards`
+2. `./equin check`
 3. `bun .../guards/e2e/replay-transcripts.ts --guards --assert` (below).
 4. End-to-end against the live hook, which is what actually failed: write a doc by
    heredoc whose body contains the build command in backticks and in a fence, and
    confirm the call is allowed and the file lands. Then confirm a foreground
    build is still denied.
-5. Guards are a hook, not app code — no `./singularity build` is needed for the
+5. Guards are a hook, not app code — no `./equin build` is needed for the
    fix to take effect; `bin/guard.ts` re-reads the source per tool call.
 
 ## The replay mode

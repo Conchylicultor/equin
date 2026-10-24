@@ -2,8 +2,8 @@
 
 ## Context
 
-`./singularity push` fails its check phase with `web-artifacts:map-in-sync`
-("Run `./singularity build`") on any push whose internal rebase moves the tree
+`./equin push` fails its check phase with `web-artifacts:map-in-sync`
+("Run `./equin build`") on any push whose internal rebase moves the tree
 past the deployed dist. The agent **cannot pre-empt it**: main can move again
 between a rebuild and push's own internal rebase, so rebuild+re-push is a race
 whose starting gun is inside push itself. Hit on the first real push after the
@@ -44,7 +44,7 @@ the code has already been forced to make.
 
 Push's contract collapses to one sentence: **push gates the merge on the push
 payload.** The deploy property keeps its three real homes — `build` (which
-deploys, then verifies), standalone `./singularity check`, and main's post-push
+deploys, then verifies), standalone `./equin check`, and main's post-push
 auto-build.
 
 ---
@@ -195,7 +195,7 @@ would read its own stale module cache, the exact thing the subprocess avoids).
 The filter is *expressed* by push, *resolved* in the child. `--scope tree`
 because it is discoverable (`--help`, `--list`), joins the existing
 `--no-cache`/`--list` surface, and is **hand-reproducible**:
-`./singularity check --scope tree` reproduces push's pass exactly.
+`./equin check --scope tree` reproduces push's pass exactly.
 (`SINGULARITY_BUILD_IN_PROGRESS` is env-based for the opposite reason — it must
 *not* be inherited.)
 
@@ -212,10 +212,10 @@ under build/standalone.
 ## Verification
 
 **Reproduce the failure first** (else the fix proves nothing):
-1. On a worktree branch: `./singularity build` → green; `./singularity check` passes.
+1. On a worktree branch: `./equin build` → green; `./equin check` passes.
 2. Land a commit on `origin/main` touching any file in a plugin's artifact closure (any `.tsx`).
-3. Without rebuilding: `./singularity push` → **must fail** `web-artifacts:map-in-sync`.
-4. **Prove the loop:** `./singularity build` (green) → land *another* main commit → `push` → fails again. Rebuilding cannot win the race.
+3. Without rebuilding: `./equin push` → **must fail** `web-artifacts:map-in-sync`.
+4. **Prove the loop:** `./equin build` (green) → land *another* main commit → `push` → fails again. Rebuilding cannot win the race.
 
 **Prove the fix:**
 5. Same setup, patched: `push` → check pass lists no `web-artifacts:*` line; merge lands.
@@ -223,17 +223,17 @@ under build/standalone.
 7. Main's auto-build fires post-push and *its* check pass runs `map-in-sync` for real.
 
 **Prove the axis (and no id-naming):**
-8. `./singularity check --list` → both web-artifacts checks show `deploy`; all others `tree`.
+8. `./equin check --list` → both web-artifacts checks show `deploy`; all others `tree`.
 9. `rg -n "map-in-sync" plugins/framework/plugins/cli/` → **no hits**.
 10. On a deliberately stale dist: `--scope tree` passes, `--scope deploy` **fails**. Same tree, two verdicts.
-11. `./singularity check --scope bogus` → non-zero, clear message (not a silent full run).
-12. `./singularity check web-artifacts:map-in-sync --scope tree` → loud "deploy-scoped, excluded", not a vacuous pass.
+11. `./equin check --scope bogus` → non-zero, clear message (not a silent full run).
+12. `./equin check web-artifacts:map-in-sync --scope tree` → loud "deploy-scoped, excluded", not a vacuous pass.
 
 **Prove no regression:**
-13. Plain `./singularity build` on a stale dist still fails `map-in-sync`; `isBuildInProgress()` still suppresses it during the build's own race.
+13. Plain `./equin build` on a stale dist still fails `map-in-sync`; `isBuildInProgress()` still suppresses it during the build's own race.
 14. A deploy check with `cacheSignature` deleted → load-time throw.
 15. `--from-main` path scopes identically (shared `runRebasedChecks`).
-16. `./singularity build` to regen the `checks` CLAUDE.md autogen block — the new `CheckScope` export changes `Exports:`, and `plugins-doc-in-sync` will fail the push otherwise.
+16. `./equin build` to regen the `checks` CLAUDE.md autogen block — the new `CheckScope` export changes `Exports:`, and `plugins-doc-in-sync` will fail the push otherwise.
 
 ## Follow-up (out of scope)
 

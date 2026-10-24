@@ -115,7 +115,7 @@ test("taking the budget removes it from the environment descendants inherit", ()
   expect(takeReexecBudget(env).prior).toBe(1);
   expect(REEXEC_ENV in env).toBe(false);
   expect(env.PATH).toBe("/usr/bin");
-  // A second read — what a nested `./singularity` would see — starts fresh.
+  // A second read — what a nested `./equin` would see — starts fresh.
   expect(takeReexecBudget(env).prior).toBe(0);
 });
 
@@ -211,7 +211,7 @@ test.each(["installed", "installed-by-other"] as const)(
     );
 
     // Cleared for a runner that is not the CLI (the bootstrap already takes the
-    // counter out of `./singularity test`'s own environment): an inherited
+    // counter out of `./equin test`'s own environment): an inherited
     // marker would make the fixture skip the very step under test.
     const env = { ...process.env };
     delete env[REEXEC_ENV];

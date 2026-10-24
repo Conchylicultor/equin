@@ -168,7 +168,7 @@ inherit the fix for free.
 
 ## Verification
 
-1. **Apply the patch end-to-end:** `./singularity build` (runs `bun install`, which
+1. **Apply the patch end-to-end:** `./equin build` (runs `bun install`, which
    applies the patch, then the checks). A clean install confirms the patch applies.
 2. **Rule actually changed (positive):** on a swept file, e.g.
    `bunx eslint plugins/primitives/plugins/editable-field/web/use-editable-field.ts`
@@ -176,12 +176,12 @@ inherit the fix for free.
 3. **Allowlist is what's doing it (negative control):** temporarily delete the
    `stableHooks` setting and re-run step 2 — the `missing dependency` error must
    reappear (proves the setting + patch, not luck). Restore it.
-4. **No repo-wide regressions:** `./singularity check type-check` (unified tsc +
+4. **No repo-wide regressions:** `./equin check type-check` (unified tsc +
    type-aware ESLint over every tsconfig target) must pass — this exercises the
    `programs`/production path and the whole sweep at once. Resolve any newly-unused
    `eslint-disable react-hooks/exhaustive-deps` directives it surfaces (but verify
    each is a missing-dep disable, not a cleanup-`.current` disable, before deleting).
-5. **Full gate:** `./singularity check` green.
+5. **Full gate:** `./equin check` green.
 
 ## Optional hardening (not in scope unless wanted)
 

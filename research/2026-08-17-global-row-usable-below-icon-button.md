@@ -10,7 +10,7 @@ css/row  →  row-actions  →  icon-button  →  action-presentation
 ```
 
 so anything `IconButton` itself renders is forbidden from using `Row` —
-`./singularity check plugin-boundaries` rejects the cycle. Moving the consumer to
+`./equin check plugin-boundaries` rejects the cycle. Moving the consumer to
 another plugin closes the same loop, because the component doing the rendering
 IS `IconButton`.
 
@@ -203,15 +203,15 @@ while that file is still mid-rewrite. Steps 1–2 and step 3 can be separate
 commits.
 
 After step 1, `plugins-doc-in-sync` fails until docs regenerate — expected;
-`./singularity build` regenerates before checking.
+`./equin build` regenerates before checking.
 
 ## Verification
 
 ```bash
-./singularity test plugins/primitives/plugins/action-presentation   # acceptance gate
-./singularity test plugins/primitives/plugins/adaptive-bar          # exercises the row form
-./singularity check
-./singularity build                                                 # run_in_background
+./equin test plugins/primitives/plugins/action-presentation   # acceptance gate
+./equin test plugins/primitives/plugins/adaptive-bar          # exercises the row form
+./equin check
+./equin build                                                 # run_in_background
 ```
 
 `action-presentation/web/__tests__/panel-action-row.test.tsx` is the real gate —
@@ -235,7 +235,7 @@ bun plugins/primitives/plugins/row-actions/e2e/click-does-not-pin.ts
 bun plugins/apps/plugins/pages/plugins/page-tree/e2e/row-actions-overflow.ts
 ```
 
-`./singularity build` regenerates `docs/plugins-{details,compact}.md` and the
+`./equin build` regenerates `docs/plugins-{details,compact}.md` and the
 autogen blocks in ~12 plugin `CLAUDE.md`s (`row-actions` loses the `IconButton`
 use and the export; `icon-button` gains ~7 `Imported by` entries;
 `action-presentation` swaps `css/line` + `css/ui-kit` for `css/row`). No

@@ -105,7 +105,7 @@ framework change):
   emit a registry with a bad home, even with `--skip-checks`.
 - `plugins-registry-in-sync` renders through the same function, so it picks up the new
   export automatically. The committed `{web,server,prewarm,deps}.generated.ts` files gain
-  the `composition` export through `./singularity build`. Fix the check's stale `CLAUDE.md`
+  the `composition` export through `./equin build`. Fix the check's stale `CLAUDE.md`
   while there.
 
 ### 5. Web runtime: `useComposition()` from web-sdk
@@ -176,16 +176,16 @@ and the import graph must stay acyclic.
 
 ## Verification
 
-1. Unit tests (`./singularity test plugins/plugin-meta/plugins/composition`): cover every
+1. Unit tests (`./equin test plugins/plugin-meta/plugins/composition`): cover every
    `resolveCompositionHome` arm, and check that `home` is opaque to the mapper.
-2. Run `./singularity check composition-closure`. It should pass on the seeds. Then make
+2. Run `./equin check composition-closure`. It should pass on the seeds. Then make
    each failure temporarily and confirm it fails with a precise message:
    - website `home: "debug"` (not in bundle)
    - `home: "nope"` (not an app)
    - `home: ""` on website (missing)
-3. Run `./singularity build`. Confirm that `plugins-registry-in-sync` passes, and that the
+3. Run `./equin build`. Confirm that `plugins-registry-in-sync` passes, and that the
    committed `web.generated.ts` exports `composition = { id: "singularity", home: "home" }`.
-4. Run the apps-core jsdom tests (`./singularity test plugins/apps-core`): `/` redirects to
+4. Run the apps-core jsdom tests (`./equin test plugins/apps-core`): `/` redirects to
    the home and never to `apps[0]`; closing the last tab reseeds the home; an unregistered
    home shows the error surface.
 5. Run e2e with `screenshot.ts --path /` on main, which should land on `/home`. Build and

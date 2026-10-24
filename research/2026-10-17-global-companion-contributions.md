@@ -155,12 +155,12 @@ Update the pins in `composition/core/config.test.ts`.
      `slot-render → reorder.slot-middleware`, and no edge `slot-render → element-picker`.
    - The static parse throws on `companion: someVar`.
    - slot-render tests: middleware from slot contributions applies in priority order.
-3. **Bundle diff:** a one-off `./singularity run` script resolves every committed
+3. **Bundle diff:** a one-off `./equin run` script resolves every committed
    composition with the old graph and config, then the new ones.
    - Expect `after ⊇ before`. The only additions should be `reorder.slot-middleware`
      and anything it legitimately reaches. The script prints the additions so they can
      be judged.
-4. `./singularity build`. All checks green, including `composition-closure`,
+4. `./equin build`. All checks green, including `composition-closure`,
    `plugins-registry-in-sync`, `eager-tier-in-sync`, `plugins-doc-in-sync` and the new
    `closure:companions-visible`.
 5. **Real served page:** serve the `website` composition and check with `screenshot.ts --composition website`:

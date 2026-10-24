@@ -139,7 +139,7 @@ const run: CliAction<[string, string], { dryRun?: boolean }> = async (
   if (root === (await getMainRepoRoot())) {
     refuse(
       "refusing to run in the main checkout. Main rebuilds itself the moment its ref moves; " +
-        "move the plugin in a worktree and land it with `./singularity push`.",
+        "move the plugin in a worktree and land it with `./equin push`.",
     );
   }
 
@@ -274,7 +274,7 @@ const run: CliAction<[string, string], { dryRun?: boolean }> = async (
   console.log(``);
   console.log(
     `${dryRun ? "Would record" : "Recorded"} ${from.id} → ${to.id} in ${PLUGIN_MOVES_FILE}. ` +
-      `Each namespace's next \`./singularity build\` moves its saved settings from ` +
+      `Each namespace's next \`./equin build\` moves its saved settings from ` +
       `${asPath(from.id)} to ${asPath(to.id)} and rewrites saved reorder keys` +
       (holding.length > 0
         ? ` — namespaces with settings there now: ${holding.join(", ")}.`
@@ -291,8 +291,8 @@ const run: CliAction<[string, string], { dryRun?: boolean }> = async (
     console.log(`Dry run — nothing was moved or written.`);
   } else {
     console.log(
-      `Moved. Next: \`./singularity build\` (regenerates registries, docs, CLAUDE.md blocks and bun.lock), ` +
-        `then \`./singularity check\`. \`git diff HEAD\` shows every rename and edit.`,
+      `Moved. Next: \`./equin build\` (regenerates registries, docs, CLAUDE.md blocks and bun.lock), ` +
+        `then \`./equin check\`. \`git diff HEAD\` shows every rename and edit.`,
     );
   }
 };

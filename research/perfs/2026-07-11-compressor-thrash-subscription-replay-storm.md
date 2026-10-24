@@ -10,7 +10,7 @@
 |---|---|
 | 23:57 (07-10) | main backend boots (auto build of main). Healthy through 00:40: loop p50 1 ms. |
 | ~00:30–00:43 | load 15→20; compressor 10 GB → 16–20 GB; free mem pinned ~150–280 MB. |
-| ~00:43–00:52 | build bursts in ≥4 agent worktrees (`ynxe`, `qghf`, `ti28`, `u1mn`); 6 concurrent `./singularity build` processes + ~12 live claude sessions; load 20→28→34→40. |
+| ~00:43–00:52 | build bursts in ≥4 agent worktrees (`ynxe`, `qghf`, `ti28`, `u1mn`); 6 concurrent `./equin build` processes + ~12 live claude sessions; load 20→28→34→40. |
 | **00:45:40** | main freezes: `flushNotifies` span of **355 s** begins; `deliver:*` spans 246–326 s; `page-load /sonata` **384 s** (00:47:38). |
 | 00:49–00:51 | main loop p50 300–1,100 ms, p99 1.5–4.6 s; heap sawtooths +60–70 MB/10 s (188→608 MB, GC reclaims, re-climbs). |
 | 01:00 | still degraded (p50 ~600 ms), load 37, compressor churn ongoing. |

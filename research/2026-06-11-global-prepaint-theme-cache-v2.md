@@ -193,11 +193,11 @@ signature change is contained. `use-color-mode.ts` is **unchanged**.
 2. `theme-injector.tsx` wiring (`useActiveApp`, configured mode, ctxRef, flush).
 3. `index.html` inline script.
 4. Docs (`web-core/web/theme/CLAUDE.md`, theme SKILL).
-5. `./singularity build` (type-check across the signature change; doc regen).
+5. `./equin build` (type-check across the signature change; doc regen).
 
 ## Verification
 
-1. `./singularity build` passes (type-check, plugin-boundaries — no new
+1. `./equin build` passes (type-check, plugin-boundaries — no new
    cross-plugin edge; web-core stays plugin-agnostic). Inspect
    `web-core/dist/index.html`: inline script verbatim, `v === 2` branch present.
 2. **Per-app**: fork a theme on app A (e.g. `/agents`), visit unforked app B

@@ -2,7 +2,7 @@
 
 ## Context
 
-When `./singularity build` fails early (before the parallel tsc/vite steps — e.g., during bun install, codegen, migrations, branch guard), the CLI calls `process.exit(1)` without ever calling `writeBuildLogs()`. The only trace is the `build_runs` DB row with `exitCode` set and the in-memory `Log.channel("build")` ring buffer, which is lost on the next server restart.
+When `./equin build` fails early (before the parallel tsc/vite steps — e.g., during bun install, codegen, migrations, branch guard), the CLI calls `process.exit(1)` without ever calling `writeBuildLogs()`. The only trace is the `build_runs` DB row with `exitCode` set and the in-memory `Log.channel("build")` ring buffer, which is lost on the next server restart.
 
 Observed: two builds failed with exit code 1 in ~300ms, but the actual error output was unrecoverable.
 

@@ -153,11 +153,11 @@ valid table. Per the `no-unhistoried-block-field` lint, use `BlockTextArea` (or
 
 ## Verification
 
-1. `./singularity test plugins/page/plugins/editor plugins/page/plugins/table
+1. `./equin test plugins/page/plugins/editor plugins/page/plugins/table
    plugins/page/plugins/markdown-apply` — fuzz round trip, new line-run suite, planner
    unchanged.
-2. `./singularity check` (escape check, block-data-registered, boundaries, docs).
-3. `./singularity build`, then on the worktree deploy: `write_agent_note` into a scratch
+2. `./equin check` (escape check, block-data-registered, boundaries, docs).
+3. `./equin build`, then on the worktree deploy: `write_agent_note` into a scratch
    page with the Chord comparison table (incl. `\~`, bold, a `|` in code) — screenshot
    via `e2e-harness/e2e/screenshot.ts --path <page>`; `read_page` returns the identical
    GFM; a second identical write is a no-op (planner converges).

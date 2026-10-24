@@ -237,7 +237,7 @@ decode per transposition.
      `sheetHash` and `alignedScore`;
    - `testing/synthFeatures`;
    - unit tests.
-2. A calibration script (`scripts/`, run with `./singularity run`): align a UG
+2. A calibration script (`scripts/`, run with `./equin run`): align a UG
    tab JSON against a cached features file and print the transpose, score and
    section-occurrence timeline. Tune the constants on the 4 reference songs plus
    the negative control. Record the numbers here.
@@ -250,7 +250,7 @@ decode per transposition.
    the endpoints, and the `Trigger`.
 5. Alignment `web`: the Recording section and the sync Effect.
 6. Write "contract 2 as built" back into the vision doc, then a backgrounded
-   `./singularity build`, `./singularity check`, and `./singularity test` on
+   `./equin build`, `./equin check`, and `./equin test` on
    both plugins.
 
 ## Tests (`alignment/core/*.test.ts`, synthetic features)
@@ -278,7 +278,7 @@ seeded noise, with downbeats every 4 beats and an optional tempo-double.
 
 ## Verification
 
-- `./singularity test plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar`.
+- `./equin test plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar`.
 - Calibration script on the reference songs: the transposes and scores are
   sensible, and the right video scores clearly above the negative control.
 - Deployed worktree:
@@ -307,7 +307,7 @@ seeded noise, with downbeats every 4 beats and an optional tempo-double.
 
 ## Calibration (as built)
 
-Run with `scripts/calibrate.ts` (`./singularity run <script> <features.json>… <ug-tab.json>…`)
+Run with `scripts/calibrate.ts` (`./equin run <script> <features.json>… <ug-tab.json>…`)
 on the cached `v2/final0-fastchroma` features and the most-voted UG "Chords" tab of each
 song: Let It Be 17427 (capo 0), Wonderwall 39144 (capo 2), Someone Like You 1006751
 (capo 2), Take On Me 390284 (capo 0, the original-key tab; the most-voted one, 1842621,

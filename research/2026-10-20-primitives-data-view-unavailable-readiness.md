@@ -80,6 +80,6 @@ title band now frames it where a title was given), so no prototype.
 
 - New jsdom test in `data-view/web/__tests__/`: `readiness={{status:"unavailable",message}}`
   renders the message, no search input, no rows; title still shown.
-- `./singularity test plugins/primitives/plugins/data-view plugins/primitives/plugins/live-state`
-- `./singularity build` (type-check + lint), then a screenshot of Automations
+- `./equin test plugins/primitives/plugins/data-view plugins/primitives/plugins/live-state`
+- `./equin build` (type-check + lint), then a screenshot of Automations
   on the worktree build (portable path renders normally).

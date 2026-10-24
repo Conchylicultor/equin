@@ -2,7 +2,7 @@
 
 ## Context
 
-A real incident: after a `./singularity build` hot-swap, an old worktree backend
+A real incident: after a `./equin build` hot-swap, an old worktree backend
 (~11 min uptime) was still alive and orphaned while the gateway served a
 freshly-built (~2 min) backend, and the worktree's sockets dir held only
 `<name>.next.sock` — no promoted `<name>.sock`.
@@ -25,7 +25,7 @@ kills a process and explicitly skips registered worktrees' sockets.
 Reconstruction of the incident (matches the observed state exactly):
 
 1. Gateway G1 cold-starts `B_old` on `<name>.sock`.
-2. G1 dies/restarts. The most common non-crash trigger: `./singularity start`
+2. G1 dies/restarts. The most common non-crash trigger: `./equin start`
    SIGTERMs the old gateway, sleeps a **fixed 2s**, then spawns the new gateway
    regardless of whether G1 finished `StopAll` (`cli/.../commands/start.ts:185`).
    `B_old`'s ppid-poll escape hatch fails to fire (wedged / timing). `B_old`
@@ -187,11 +187,11 @@ forensically visible. Kernel start-time cross-check is deliberately out of scope
 
 ## Verification
 
-Gateway is normally launched via `./singularity start` (a one-time op); backends
+Gateway is normally launched via `./equin start` (a one-time op); backends
 serve at `http://<wt>.localhost:9000`.
 
 **Reproduce the orphan:**
-1. `./singularity start`; hit `http://<wt>.localhost:9000/api/...` to cold-start.
+1. `./equin start`; hit `http://<wt>.localhost:9000/api/...` to cold-start.
    Record pid: `pgrep -f 'bun bin/index.ts'`; confirm `~/.singularity/sockets/<wt>.sock`.
 2. Wedge + kill gateway: `kill -STOP <backend_pid>` (freeze so ppid-poll can't
    fire), then `kill -9 <gateway_pid>`.
@@ -201,7 +201,7 @@ serve at `http://<wt>.localhost:9000`.
 **Confirm the fix reaps it:**
 4. With the fix built, repeat 1–2 (now `<wt>.sock.pid` exists — verify its
    `pid/pgid` match).
-5. `./singularity start`. In `gateway.log` expect a loud reconcile line: dialed
+5. `./equin start`. In `gateway.log` expect a loud reconcile line: dialed
    `<wt>.sock` → live → sidecar pid → SIGTERM → SIGKILL pgid → removed
    socket+sidecar. (A SIGSTOP'd process *does* die on SIGKILL, exercising the
    escalation branch.)
@@ -210,21 +210,21 @@ serve at `http://<wt>.localhost:9000`.
 
 **Confirm the `.next.sock`-only regression (incident step 5):** create just
 `~/.singularity/sockets/<wt>.next.sock` (plain file, no listener) for a
-*registered* worktree → `./singularity start` → reconcile dials → refused →
+*registered* worktree → `./equin start` → reconcile dials → refused →
 removes it (old sweep would have kept it).
 
 **Confirm kill-wait bounding (Leak 1):** unit test — a `bk.exitCh` that never
 closes makes `drainAndStop`/`Stop` return within `postKillTimeout` and emit
 `slog.Error`.
 
-**Confirm no self-kill regression:** `./singularity start`, cold-start two
+**Confirm no self-kill regression:** `./equin start`, cold-start two
 worktrees, hot-restart one via `POST /gateway/worktrees/<wt>/restart`; confirm
 `gateway.log` shows reconcile ran **only at boot** and never targets a live
 current-generation backend.
 
-**Confirm CLI no-overlap:** `./singularity start` while a gateway is already
+**Confirm CLI no-overlap:** `./equin start` while a gateway is already
 running; confirm the new gateway only spawns after the old pid exits (no
 overlapping-generation window in logs).
 
-Finally: `./singularity build` and `./singularity check` (gateway is Go — also
+Finally: `./equin build` and `./equin check` (gateway is Go — also
 `go build -o gateway . && go test ./...` inside `gateway/`).

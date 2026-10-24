@@ -187,7 +187,7 @@ pixel test would only re-check what the type system now makes unreachable.
 
 ## Verification
 
-1. `./singularity build`
+1. `./equin build`
 2. Measure the real edges (the numbers in the Context table are the "before"):
 
 ```bash
@@ -213,7 +213,7 @@ text's `.right`. Expect **412** for all (blocks unmoved, title −4, sections +6
    `C`; nested blocks indent 24px.
 5. Hover a block row and drag from the far-left whitespace — the `+` / drag / chevron
    controls must still reveal (the rail stays inside each row's box).
-6. `./singularity check` — `plugins-doc-in-sync` will need the regenerated docs from
+6. `./equin check` — `plugins-doc-in-sync` will need the regenerated docs from
    step 1 (the editor's public exports change).
 
 ## Addendum — one deviation from the plan, and why
@@ -253,7 +253,7 @@ element's own padding, i.e. true text edges):
 - Blog post: title and block text both at 368; the `border-b` separator at 356,
   bleeding 12px left to `C` as a decoration should.
 - Gutter `+` still reveals on row hover (`opacity: 0.6`, `pointer-events: auto`).
-- `./singularity check` passes, including `layout-geometry` and
+- `./equin check` passes, including `layout-geometry` and
   `tailwind-scan-covers-classes`.
 
 ## Explicitly out of scope

@@ -120,7 +120,7 @@ return lines;
 
 **New file**: `plugins/plugin-meta/plugins/facets/plugins/db-schema/CLAUDE.md`
 
-Minimal content (the autogen block is added by `./singularity build`):
+Minimal content (the autogen block is added by `./equin build`):
 ```markdown
 # db-schema facet
 
@@ -130,7 +130,7 @@ Extracts DB schema metadata per plugin: schema file paths, table definitions, en
 ### 3. Build
 
 ```bash
-./singularity build
+./equin build
 ```
 
 This:
@@ -165,8 +165,8 @@ This:
 
 ## Verification
 
-1. `./singularity build` succeeds with no TypeScript errors
+1. `./equin build` succeeds with no TypeScript errors
 2. `diff` on `docs/plugins-details.md` and `docs/plugins-compact.md` — **must be empty** (no doc changes)
 3. Spot-check 2–3 per-plugin `CLAUDE.md` autogen blocks for plugins with entity extensions (e.g. `toggle`, `agents`) — identical
-4. `./singularity check` passes all checks
+4. `./equin check` passes all checks
 5. Manually verify the facet data is populated: read `node.facets["db-schema"]` for a plugin that has a schema (e.g. `tasks-core`) via the plugin-view API or by adding a temporary debug log

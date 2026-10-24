@@ -5,7 +5,7 @@
 // unique per run and the script always deletes it, so it is safe to re-run.
 //
 // Usage:
-//   ./singularity run plugins/page/plugins/tags/e2e/tags-verify.ts \
+//   ./equin run plugins/page/plugins/tags/e2e/tags-verify.ts \
 //     --page <untagged pageId> [--settle 30000] [--out /tmp/tags] [--headed]
 //
 // Pick an untagged page:

@@ -227,7 +227,7 @@ These import `buildPluginTree` from `../docgen`. Update to import from `@package
 
 ## Verification
 
-1. `./singularity build` — confirms docgen renders identical docs, registry-gen produces identical registries, server starts
-2. `./singularity check` — all checks pass (plugin-boundaries, plugins-doc-in-sync, plugins-have-claudemd, eslint)
+1. `./equin build` — confirms docgen renders identical docs, registry-gen produces identical registries, server starts
+2. `./equin check` — all checks pass (plugin-boundaries, plugins-doc-in-sync, plugins-have-claudemd, eslint)
 3. Diff `docs/plugins-compact.md`, `docs/plugins-details.md`, `docs/routes.md` against pre-migration — must be identical
 4. `GET /api/publish/tree` — compare response against pre-migration snapshot

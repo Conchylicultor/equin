@@ -13,7 +13,7 @@
  * Hover-reveal is opacity + pointer-events, not mount/unmount, so the buttons
  * are in the DOM without simulating hover.
  *
- *   ./singularity run plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/investigate-event/e2e/investigate-event.ts --conv <id>
+ *   ./equin run plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/investigate-event/e2e/investigate-event.ts --conv <id>
  */
 import {
   arg,

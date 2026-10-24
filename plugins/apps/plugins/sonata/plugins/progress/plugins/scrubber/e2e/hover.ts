@@ -8,7 +8,7 @@
 // Read-only: nothing is clicked, so nothing is left behind.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/sonata/plugins/progress/plugins/scrubber/e2e/hover.ts \
+//   ./equin run plugins/apps/plugins/sonata/plugins/progress/plugins/scrubber/e2e/hover.ts \
 //     --song <songId> [--url http://<namespace>.localhost:9000] [--headed]
 
 import {

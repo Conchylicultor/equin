@@ -188,7 +188,7 @@ If `target ∉ bundle` → `null`. Else BFS over `hardReverse` from `target` bac
 
 A built-in `Check` (`{ id, description, run }` from `tooling/core/types.ts`) at
 `plugins/framework/plugins/tooling/plugins/checks/plugins/composition-closure/check/index.ts`
-(the standard `check/index.ts` default-export pattern, auto-discovered by `./singularity check`).
+(the standard `check/index.ts` default-export pattern, auto-discovered by `./equin check`).
 
 Closure cannot fail (the bundle is hard-closed by construction), so the check is **advisory hygiene** over declared manifests. For each `CompositionManifest`:
 1. `graph = classifyEdges(tree)` (built once, reused across manifests).
@@ -240,7 +240,7 @@ The **capability-port-ification worklist** the vision's future work depends on i
 - selecting a `required` node (`shell`) appears in `redundantSelections` and changes nothing;
 - `explainInclusion(shell)` is an all-hard path from the entry's runtime sub-plugin; `impactOfPruning(required) == []`.
 
-`./singularity build` succeeds and `./singularity check` passes (32 checks). The `composition-closure` check + manifest registry remain deferred (next increment).
+`./equin build` succeeds and `./equin check` passes (32 checks). The `composition-closure` check + manifest registry remain deferred (next increment).
 
 ---
 

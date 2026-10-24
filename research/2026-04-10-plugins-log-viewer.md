@@ -112,7 +112,7 @@ Add `logsPlugin` import and entry.
 
 ## Verification
 
-1. `./singularity build` to deploy
+1. `./equin build` to deploy
 2. `GET /api/logs/channels` returns `{ "channels": ["build"] }`
 3. Open app — sidebar shows "Logs" with "build" channel entry
 4. Click "build" — log viewer pane opens with channel dropdown

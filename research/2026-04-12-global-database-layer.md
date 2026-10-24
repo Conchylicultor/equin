@@ -32,13 +32,13 @@ Singularity needs persistent storage for conversation status, metadata, and todo
 - `main` worktree's dir is the source of truth ("prod" locally).
 - On worktree creation (CLI hook in `cli/`), run `cp -c -R ~/.singularity/data/main/pgdata ~/.singularity/data/<worktree>/pgdata` — APFS clonefile, near-instant, copy-on-write.
 - Server reads `SINGULARITY_WORKTREE` env to pick its data dir. Gateway/CLI already know the worktree name.
-- Changes in a worktree stay local. `./singularity push` only merges code + migration files; data stays in the fork.
+- Changes in a worktree stay local. `./equin push` only merges code + migration files; data stays in the fork.
 - When main's server restarts after a merge, Drizzle applies any new migrations to main's pgdata.
 
 ### Parallel-agent migrations
 
 - Agents never write migrations by hand. They edit `schema.ts`.
-- At `./singularity push` time, CLI runs `drizzle-kit generate` against the worktree's current DB. Output: a migration file under `server/src/db/migrations/`.
+- At `./equin push` time, CLI runs `drizzle-kit generate` against the worktree's current DB. Output: a migration file under `server/src/db/migrations/`.
 - **Filename: content-hash, not timestamp.** Two agents independently adding different columns produce different hashes → no filename collision on merge.
 - **Additive-only by convention.** `add table`, `add column` (nullable or with default) compose trivially. Drops/renames require an explicit opt-in flag on the CLI — they can't safely auto-merge and surface as code-review concerns.
 - Migration ordering on main: topological by schema dependency, not filename. Drizzle's journal (`_meta/_journal.json`) gets regenerated from the migration set at build time rather than merged — this is the conflict point, but it's a derived file.
@@ -76,9 +76,9 @@ Two plugins, minimal schema, to prove the end-to-end flow:
 ## Verification
 
 1. `bun install` at repo root — Drizzle + PGlite resolve.
-2. In main worktree: `./singularity build`. Server boots, creates `~/.singularity/data/main/pgdata`, runs initial migration, tables exist.
+2. In main worktree: `./equin build`. Server boots, creates `~/.singularity/data/main/pgdata`, runs initial migration, tables exist.
 3. Hit a test endpoint that inserts a todo; confirm via a read endpoint.
 4. Create a new worktree via the CLI. Confirm `~/.singularity/data/<new>/pgdata` appears as a clone of main's (APFS clonefile; `ls -l` shows same size, near-instant).
 5. In the new worktree: read the todo inserted in step 3 — should be visible (fork inherited data). Insert a new todo in the worktree; confirm it is **not** visible in main's server (check via `http://localhost:9000` vs `http://<worktree>.localhost:9000`).
-6. In the worktree, add a column to the todos schema, run `drizzle-kit generate`, commit, `./singularity push`. After main restarts, column exists in main's DB; old rows have the default.
+6. In the worktree, add a column to the todos schema, run `drizzle-kit generate`, commit, `./equin push`. After main restarts, column exists in main's DB; old rows have the default.
 7. Parallel-agent smoke test: two worktrees each add a different column to todos. Merge both. Main applies both migrations; both columns present.

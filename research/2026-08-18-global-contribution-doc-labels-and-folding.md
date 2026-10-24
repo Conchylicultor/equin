@@ -131,7 +131,7 @@ slots defined without a `docLabel`.
 
 ## Verification
 
-1. `./singularity build` (background — it regenerates the docs, then runs
+1. `./equin build` (background — it regenerates the docs, then runs
    `plugins-doc-in-sync`, which fails on any drift between the facet output and the
    committed files).
 2. Read the generated diff deliberately — it is the real deliverable:
@@ -145,7 +145,7 @@ slots defined without a `docLabel`.
    `plugins/reorder/shared/reorderable-slots.generated.ts`).
 5. Confirm zero information-free lines remain:
    `grep -c '`ConfigV2.WebRegister`$' docs/plugins-details.md` → **0**.
-6. `./singularity check` — `plugins-doc-in-sync`, `type-check`, and config_v2's
+6. `./equin check` — `plugins-doc-in-sync`, `type-check`, and config_v2's
    `registrations-paired` all clean.
 7. Sanity-check the app still reads config: open
    `http://att-1787004352-y9l7.localhost:9000`, enter reorder edit mode (pen button)

@@ -46,7 +46,7 @@ let cached: DatabaseConfig | null = null;
  *
  * ENOENT / malformed JSON are TOLERATED and fall back to `SYSTEM_PG_DEFAULTS`
  * ("no managed services, talk to a plain local Postgres"). That is deliberate:
- * the file is written by `./singularity start`, so its absence means "this host
+ * the file is written by `./equin start`, so its absence means "this host
  * has no embedded cluster", not "this call is broken". Callers that genuinely
  * need a live cluster must fail on the *connection*, where the error names the
  * real problem — not here, where it could only say "file missing".

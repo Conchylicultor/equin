@@ -64,13 +64,13 @@ Failures are marked ✗. "Fix found" says where a user could have found the fix.
 | 8 | `brew install go` | ok | 6s | — |
 | 9 | `brew install postgresql@18` | ok | 15s | — |
 | 10 | `git config core.hooksPath .githooks` | ok | 0s | — |
-| 11 | `./singularity start` | ok | 30s | — |
-| 12 | `./singularity build --allow-main` | ✗ exit 1 | 62s | the error names `./singularity db fork` |
-| 13 | `./singularity db fork` | ✗ exit 1 | 0s | dead end |
+| 11 | `./equin start` | ok | 30s | — |
+| 12 | `./equin build --allow-main` | ✗ exit 1 | 62s | the error names `./equin db fork` |
+| 13 | `./equin db fork` | ✗ exit 1 | 0s | dead end |
 | 14 | install mise, `mise install` (runs the repo's `setup`) | ok, but skipped its job | 16s | `mise.toml`, which no doc points to |
-| 15 | `createdb` + `./singularity apply-migrations` | ✗ exit 1 | 0s | dead end |
+| 15 | `createdb` + `./equin apply-migrations` | ✗ exit 1 | 0s | dead end |
 | 16 | build again | ✗ exit 1 | 2s | — |
-| 17 | `./singularity start --force` | ok, no effect | 22s | a guess |
+| 17 | `./equin start --force` | ok, no effect | 22s | a guess |
 | 18 | build again | ✗ exit 1 | 2s | **this is where a real install ends** |
 | 19 | apply 255 migrations by hand (harness only) | ok | 6s | not user-reachable |
 | 20 | build again | ✗ exit 1 | 289s | the check's own message names `tmux` |
@@ -81,7 +81,7 @@ Failures are marked ✗. "Fix found" says where a user could have found the fix.
 | 25 | `curl http://singularity.localhost:9000/` | ok, 200 | 0s | — |
 | 26 | screenshot the running app | ok, renders | 5s | — |
 | 27 | is Claude Code installed? | missing | 0s | nothing mentions it |
-| 28 | reboot the machine | app gone until `./singularity start` is re-run by hand | — | nothing mentions it |
+| 28 | reboot the machine | app gone until `./equin start` is re-run by hand | — | nothing mentions it |
 
 ## Blockers, ready to file
 
@@ -108,7 +108,7 @@ ERROR: no database for "singularity" and no fork in flight after 60s.
 ```
 
 **4. The build's own advice cannot be followed — it is circular.**
-The error says to run `./singularity db fork`. That command asks a *running
+The error says to run `./equin db fork`. That command asks a *running
 backend* which tables to leave out, and no backend can run until the app is
 built. On a fresh install there is nothing to ask.
 ```
@@ -126,7 +126,7 @@ setup: Postgres is not running — skipping (start it and re-run 'mise run setup
 ```
 It also exits 0, so nothing downstream notices.
 
-**6. `./singularity apply-migrations` is broken — it crashes on its first log line.**
+**6. `./equin apply-migrations` is broken — it crashes on its first log line.**
 This is the command that exists specifically for the fresh-clone case, and the
 one `mise run setup` calls. It crashes the same way with or without
 `--namespace`. With it broken, there is no way to seed the database at all.
@@ -192,7 +192,7 @@ confirmed here by screenshot.)
 **11. Nothing restarts the gateway after a reboot.**
 The machine was rebooted after the app was deployed and working. Nothing came
 back: no gateway, no Postgres, and `http://singularity.localhost:9000` simply
-does not answer until `./singularity start` is run again by hand. No doc
+does not answer until `./equin start` is run again by hand. No doc
 mentions this, and a new user's first reboot looks like the install broke.
 
 **12. Minor: the browser fails to post its logs on first load.**

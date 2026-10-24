@@ -64,7 +64,7 @@ depended on which symbols a barrel happened to re-export) and what makes it
 reorder config file lands. Two plugins declaring one slot is an error.
 
 You cannot forget it: every slot is recorded at construction (`defineSlot` is
-the single funnel), and `./singularity build` fails naming any slot no plugin
+the single funnel), and `./equin build` fails naming any slot no plugin
 declared, plus the directory whose source constructed it.
 
 `defineSlot` also stamps `slot.meta` — `{ kind, reorderable }` — so what a slot
@@ -117,17 +117,17 @@ export const MyPlugin = {
 build plus one edit — you never author the file, locate an origin, or type a hash:
 
 1. write the `defineRenderSlot`
-2. `./singularity build` → seeds `config/<defining-plugin>/<slotId>.jsonc` (real `// @hash`,
+2. `./equin build` → seeds `config/<defining-plugin>/<slotId>.jsonc` (real `// @hash`,
    full catalog, a `// @review` marker), then fails `config:overrides-authored` on the marker
 3. arrange `"items"` for how the slot renders, DELETE the `// @review` line
-4. `./singularity build`
+4. `./equin build`
 
 That file is also where a slot's items are **positioned**: a `{ "type": "spacer", "id": "…" }`
 node pushes every item after it to the far end of the row. Splitting one row across two
 slots to right-align some items is the wrong tool (`spacer/no-split-slot-row` flags it) —
 the node forms are listed in the `// @legend` block the build keeps at the top of the file.
 
-`./singularity check reorderable-slots-in-sync` names the exact override path a new slot
+`./equin check reorderable-slots-in-sync` names the exact override path a new slot
 will owe, before any build. If the order should never be user-curated the slot is headless —
 use `defineMountSlot`, which is not reorderable and owes nothing. Details:
 [`plugins/reorder/authoring-overrides.md`](../../../reorder/authoring-overrides.md).
@@ -189,7 +189,7 @@ carry a `// UNSAFE: <reason>` comment. Import from `@plugins/framework/plugins/w
 
 ### Registering a plugin
 
-Nothing to register by hand (root `CLAUDE.md` → "Registry exclusivity"). `./singularity
+Nothing to register by hand (root `CLAUDE.md` → "Registry exclusivity"). `./equin
 build` regenerates `core/web.generated.ts` — a `CollectedEntry[]` of `() => import(...)`
 loaders with `dependsOn` inferred from import statements. Same discovery substrate for every
 collected folder (`server`, `central`, `check`, `lint`, `facet`, …), each marked with
@@ -265,7 +265,7 @@ contributions: [Pane.Register({ pane: terminalPane })]
 - `useReconnectingWebSocket`, `ReconnectingEventSource`, `SharedWebSocket`, `fetchWithRetry`, `subscribeWsStatus` → `@plugins/primitives/plugins/networking/web`
 - `useEditableField` → `@plugins/primitives/plugins/editable-field/web`
 
-Raw `new EventSource(...)` is forbidden (`./singularity check no-raw-event-source`) — use `ReconnectingEventSource` when consuming the gateway's external log SSE endpoint.
+Raw `new EventSource(...)` is forbidden (`./equin check no-raw-event-source`) — use `ReconnectingEventSource` when consuming the gateway's external log SSE endpoint.
 
 For typed HTTP fetching, use the endpoints primitive (`@plugins/infra/plugins/endpoints/web`): `useEndpoint` (TanStack Query GET), `useEndpointMutation` (POST/PATCH/DELETE with auto-invalidation), or `fetchEndpoint` (imperative). Endpoint contracts are declared once in `core/endpoints.ts` with `defineEndpoint`; the server implements them with `implement()` from `@plugins/infra/plugins/endpoints/server`. See [`plugins/infra/plugins/endpoints/CLAUDE.md`](../../../infra/plugins/endpoints/CLAUDE.md).
 
@@ -294,12 +294,12 @@ plugins/{name}/
 ## Adding a New Plugin
 
 Create `plugins/{name}/web/index.ts`, default-export a `PluginDefinition` whose
-contributions target slots imported from the plugins you extend, run `./singularity build`.
+contributions target slots imported from the plugins you extend, run `./equin build`.
 Optionally define your own slots in `web/slots.ts`.
 
 Every plugin also has a `package.json` (its `"description"`, `"private": true`, and its
-own dependencies). Its `"name"` is **derived from the folder path** — `./singularity build`
-(and `./singularity regen-generated`) writes it, and the `plugin-boundaries` check (R1)
+own dependencies). Its `"name"` is **derived from the folder path** — `./equin build`
+(and `./equin regen-generated`) writes it, and the `plugin-boundaries` check (R1)
 fails while it is stale. You still have to put *some* name there, because `bun install`
 rejects a workspace member without one and runs before the build's codegen: any placeholder
 that no other plugin uses is fine (don't copy a sibling's unchanged — a duplicate name also
@@ -318,7 +318,7 @@ see [`ui-kit/CLAUDE.md`](../../../primitives/plugins/css/plugins/ui-kit/CLAUDE.m
 
 ## Umbrella Plugins
 
-An umbrella is a grouping shell that nests related sub-plugins under `plugins/`. It needs only a `package.json` with a `"description"`, the `plugins/` subdirectory, and its `CLAUDE.md` (auto-generated by `./singularity build`). No `web/index.ts` or `server/index.ts` unless the umbrella itself has contributions, exports, or routes.
+An umbrella is a grouping shell that nests related sub-plugins under `plugins/`. It needs only a `package.json` with a `"description"`, the `plugins/` subdirectory, and its `CLAUDE.md` (auto-generated by `./equin build`). No `web/index.ts` or `server/index.ts` unless the umbrella itself has contributions, exports, or routes.
 
 ## Key Design Decisions
 
@@ -327,7 +327,7 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
 - **No lifecycle hooks** — plugins use React's own lifecycle (useEffect, etc.)
 - **Slots are the only extension mechanism** — no special `root`, `background`, or other fields
 
-<!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
+<!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
 
 ## Plugin reference
 

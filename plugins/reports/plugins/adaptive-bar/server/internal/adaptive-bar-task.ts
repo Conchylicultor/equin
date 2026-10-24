@@ -207,7 +207,7 @@ function howToFix(data: AdaptiveBarPayload): string[] {
     case "row-overflow":
       return [
         findTheBar,
-        `First re-check the host against the one rule for consumers (see \`plugins/primitives/plugins/adaptive-bar/CLAUDE.md\`): the bar must be the growing cell of a single-line row, with no \`Fill\`/\`flex-1\` sibling and no shrink-to-content ancestor. If the host is right, the disagreement is in an occupant: look for one whose rendered width differs from what it measured — content that arrives after the measurement (an icon font, a lazily-loaded label, a number that grows), a CSS transition on a bar item (never animate one; animate the panel), or a \`position: sticky\` inside an item, which is unsupported. Reproduce it in the layout-geometry harness (\`./singularity check layout-geometry\`) rather than by eye — the guard only runs when a real layout engine answered.`,
+        `First re-check the host against the one rule for consumers (see \`plugins/primitives/plugins/adaptive-bar/CLAUDE.md\`): the bar must be the growing cell of a single-line row, with no \`Fill\`/\`flex-1\` sibling and no shrink-to-content ancestor. If the host is right, the disagreement is in an occupant: look for one whose rendered width differs from what it measured — content that arrives after the measurement (an icon font, a lazily-loaded label, a number that grows), a CSS transition on a bar item (never animate one; animate the panel), or a \`position: sticky\` inside an item, which is unsupported. Reproduce it in the layout-geometry harness (\`./equin check layout-geometry\`) rather than by eye — the guard only runs when a real layout engine answered.`,
       ];
     case "no-convergence":
       return [

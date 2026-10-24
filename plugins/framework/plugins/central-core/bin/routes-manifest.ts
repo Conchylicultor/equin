@@ -39,7 +39,7 @@ export function centralRoutePrefixes(
  * (`state/gateway/central-routes.json`).
  *
  * Central writes it itself, on every boot, from the routes it actually serves.
- * It used to be written by every checkout's `./singularity build` from that
+ * It used to be written by every checkout's `./equin build` from that
  * checkout's own tree — so a worktree on an older branch silently dropped a
  * route main's central was serving, and the gateway then sent those requests
  * to a worktree backend that answered "Not found".

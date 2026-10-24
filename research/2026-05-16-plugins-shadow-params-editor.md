@@ -115,7 +115,7 @@ Old per-token `overrides` continue working (ThemeInjector still applies them). W
 
 ## Verification
 
-1. `./singularity build`
+1. `./equin build`
 2. Open theme customizer, navigate to Shadow section
 3. Verify preset picker still works (switching presets updates the params display and all shadows)
 4. Edit opacity → verify all shadow tokens recompute (check via devtools CSS vars)

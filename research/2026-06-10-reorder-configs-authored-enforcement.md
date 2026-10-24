@@ -181,7 +181,7 @@ export default check;
 - READ-ONLY `plugins/reorder/shared/reorderable-slots.generated.ts` (slot source of truth)
 - REFERENCE `plugins/framework/plugins/tooling/plugins/checks/plugins/config-origins-in-sync/check/index.ts`
   and `.../reorderable-slots-in-sync/check/index.ts` (check style + git-spawn pattern)
-- AUTO-UPDATED by `./singularity build`: the check collected-dir registry (do not hand-edit)
+- AUTO-UPDATED by `./equin build`: the check collected-dir registry (do not hand-edit)
 
 ---
 
@@ -214,8 +214,8 @@ check. Best executed as a multi-agent **Workflow** (requires explicit user opt-i
    in `plugins/reorder/check/grandfathered-slots.ts`. Single-writer step — agents must not touch the
    shared allowlist (would conflict).
 
-4. **Validate:** `./singularity build` → `./singularity check reorder:configs-authored` →
-   `./singularity check config-origins-in-sync`. If the latter flags a stale `@hash` (origin shifted
+4. **Validate:** `./equin build` → `./equin check reorder:configs-authored` →
+   `./equin check config-origins-in-sync`. If the latter flags a stale `@hash` (origin shifted
    during a concurrent build), reconcile by re-copying the new origin hash into the override.
 
 ### Output-quality guards
@@ -231,8 +231,8 @@ check. Best executed as a multi-agent **Workflow** (requires explicit user opt-i
 ## Verification
 
 **Check fails for a new slot:** temporarily add `{ slotId: "test.fake", pluginId: "welcome" }` to the
-manifest (or add a real `defineRenderSlot` and `./singularity build`). Run
-`./singularity check reorder:configs-authored` → FAIL listing `config/welcome/test.fake.jsonc` with
+manifest (or add a real `defineRenderSlot` and `./equin build`). Run
+`./equin check reorder:configs-authored` → FAIL listing `config/welcome/test.fake.jsonc` with
 the author-or-`reorder:false` hint. Revert.
 
 **Check passes once authored:** create `config/welcome/test.fake.jsonc` (copy its `.origin.jsonc`,
@@ -241,8 +241,8 @@ keep `@hash`), `git add` it → check passes.
 **Redundancy path:** pick a path in `grandfatheredSlots`, create + `git add` its override → check
 FAILs demanding the allowlist prune; remove the path → passes.
 
-**Escape hatch:** set `reorder: false` on a slot → it leaves the manifest after `./singularity build`
+**Escape hatch:** set `reorder: false` on a slot → it leaves the manifest after `./equin build`
 → no override required.
 
 **Full burn-down (after Deliverable 2):** `grandfatheredSlots` is `[]`;
-`./singularity check reorder:configs-authored` and `config-origins-in-sync` both green.
+`./equin check reorder:configs-authored` and `config-origins-in-sync` both green.

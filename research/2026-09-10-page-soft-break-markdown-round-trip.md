@@ -532,11 +532,11 @@ E4 from running on a page it cannot fail on.
 
 ## Verification
 
-1. `./singularity test plugins/page` — the fuzzed round-trip property is the
+1. `./equin test plugins/page` — the fuzzed round-trip property is the
    executable statement of the contract (`editor/CLAUDE.md:3083` says to extend it
    rather than add one-off cases), so it must pass with soft breaks in the
    generator.
-2. `./singularity build`, then `./singularity check`.
+2. `./equin build`, then `./equin check`.
 3. **The real repro, end to end — against THIS worktree, not main.** The MCP tools an
    agent calls reach the shared instance, so using them here would exercise main's
    unfixed code. The tool *implementations* are instance-local, though, and a

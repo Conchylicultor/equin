@@ -82,7 +82,7 @@ The contract (from specimens' CLAUDE.md) applies to every exhibit: **standalone,
 - Files: `tasks/plugins/task-draft-form/web/components/{composer,form}-specimen.tsx`, `primitives/plugins/metrics/plugins/chart-kit/web/components/specimens.tsx`, `config_v2/plugins/settings/web/components/field-gallery-specimen.tsx`.
 
 ### Docs
-Root `CLAUDE.md` (leaf folder list, folder-structure block, Driving-the-app compare paragraph), `prototypes/CLAUDE.md` (four metadata tags: `exhibit:` + aliases), `plugin-meta/plugins/exhibits/CLAUDE.md` (new: contract, arms, folder, why co-built), `layout-harness/CLAUDE.md` ("How fixtures are contributed" → exhibits with geometry), `web-artifacts/CLAUDE.md` (exhibits co-built invariant), `task-draft-form/CLAUDE.md` ("the two specimens"), `boundaries`/`runtime-isolation` docs where `fixtures` is named. Autogen blocks via `./singularity build`.
+Root `CLAUDE.md` (leaf folder list, folder-structure block, Driving-the-app compare paragraph), `prototypes/CLAUDE.md` (four metadata tags: `exhibit:` + aliases), `plugin-meta/plugins/exhibits/CLAUDE.md` (new: contract, arms, folder, why co-built), `layout-harness/CLAUDE.md` ("How fixtures are contributed" → exhibits with geometry), `web-artifacts/CLAUDE.md` (exhibits co-built invariant), `task-draft-form/CLAUDE.md` ("the two specimens"), `boundaries`/`runtime-isolation` docs where `fixtures` is named. Autogen blocks via `./equin build`.
 
 ## Order of work
 1. geometry types leaf; catalog plugin rename + core types/factories/loader/lookup.
@@ -93,10 +93,10 @@ Root `CLAUDE.md` (leaf folder list, folder-structure block, Driving-the-app comp
 6. Docs; build.
 
 ## Verification
-- `./singularity check` (boundary-rules, plugin-boundaries, type-check incl. lint, plugins-registry-in-sync, plugins-doc-in-sync, web-artifacts:map-in-sync, layout-geometry).
-- `./singularity test plugins/plugin-meta/plugins/exhibits plugins/primitives/plugins/css/plugins/layout-harness plugins/framework/plugins/tooling/plugins/web-artifacts`.
+- `./equin check` (boundary-rules, plugin-boundaries, type-check incl. lint, plugins-registry-in-sync, plugins-doc-in-sync, web-artifacts:map-in-sync, layout-geometry).
+- `./equin test plugins/plugin-meta/plugins/exhibits plugins/primitives/plugins/css/plugins/layout-harness plugins/framework/plugins/tooling/plugins/web-artifacts`.
 - Type-error probe: a scratch `appExhibit({ …, geometry })` fails tsc (remove after).
-- `./singularity build`; then confirm `exhibits.js` is absent from the boot modulepreload list in the built `index.html`, and present in the import map.
+- `./equin build`; then confirm `exhibits.js` is absent from the boot modulepreload list in the built `index.html`, and present in the import map.
 - Screenshot `--path /debug/exhibits` (gallery shows both kinds); `compare-diff.ts --name proto-1789901373-oy29` (`component:` alias) and `--name proto-1788886679-mpxw` (`fixture:` alias) both resolve to a found frame.
 
 ## Risks

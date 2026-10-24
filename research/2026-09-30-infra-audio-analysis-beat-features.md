@@ -106,7 +106,7 @@ plugins/infra/plugins/audio-analysis/   NEW (single plugin; later extractors add
     audio-analysis.beat-features             defineSupervisedJob, run body, lock = videoId, runAttempts 2
     GET  /api/audio-analysis/beat-features/:videoId    → state (features included when ready)
     POST /api/audio-analysis/beat-features/:videoId    → request, returns state
-  cli/                     ./singularity audio features <videoId…> [--force] [--clicks <dir>] [--device cpu|mps]
+  cli/                     ./equin audio features <videoId…> [--force] [--clicks <dir>] [--device cpu|mps]
                            runExec + cliExecContext (the deps CLI pattern): runs ensureBeatFeatures in the
                            foreground, prints a summary per song, and optionally writes <videoId>-clicks.wav
 ```
@@ -114,7 +114,7 @@ plugins/infra/plugins/audio-analysis/   NEW (single plugin; later extractors add
 Deleted: `plugins/infra/plugins/deps/plugins/hello-python/`. Its mentions in
 `deps/CLAUDE.md`, the `uv-updater` test and comments move to `audio-analysis`
 or `youtube/audio-fetch`. Generated registries and docs are rewritten by
-`./singularity build`.
+`./equin build`.
 
 ## Contract 1 as built (written back into the vision doc)
 
@@ -157,11 +157,11 @@ The zod schema checks both bin counts are 12.
 
    MPS becomes the default only if it is more than 2× faster and within 10 ms of CPU.
 6. Write the "Contract 1 as built" note into the vision doc. Record the numbers and the by-ear verdicts in this doc.
-7. `./singularity build` (backgrounded), `./singularity check`, and `./singularity test` for both plugins.
+7. `./equin build` (backgrounded), `./equin check`, and `./equin test` for both plugins.
 
 ## Verification
 
-- **Reference songs.** Run `./singularity audio features <ids…> --clicks <scratch>` on four songs:
+- **Reference songs.** Run `./equin audio features <ids…> --clicks <scratch>` on four songs:
   - "Let It Be", steady piano, about 72 BPM;
   - "Wonderwall", strummed with a capo, about 87 BPM;
   - "Someone Like You", sparse and rubato-ish, about 67 BPM;
@@ -174,7 +174,7 @@ The zod schema checks both bin counts are 12.
   - `POST /api/audio-analysis/beat-features/<id>` for a fresh song, then `GET` shows `running` and then `ready`. The file sits under `~/.singularity/cache/beat-features/v1/`.
   - A second POST is a no-op.
   - A bogus or removed video ends `failed` with `permanent: true` and yt-dlp's message, and a re-POST does not retry it.
-- **First use.** With both deps removed (`./singularity deps remove …`), the first POST shows the deps installing in Settings → Dependencies, and then the features land.
+- **First use.** With both deps removed (`./equin deps remove …`), the first POST shows the deps installing in Settings → Dependencies, and then the features land.
 - **Concurrency.** Two concurrent `ensureBeatFeatures` calls for one video, from two worktrees, download and analyse once.
 
 ## Measurements (2026-09-30, Apple Silicon, standalone runs of the extractor)
@@ -363,7 +363,7 @@ beat, so the shared floor does not inflate the score).
 
 ### Deployed run and the default beat model (after the build)
 
-All four songs through `./singularity audio features` on the deployed worktree,
+All four songs through `./equin audio features` on the deployed worktree,
 with `small0` + fast chroma + MPS, at load 19–22 on 18 cores the whole time:
 23–44 s per song (the old defaults took 40–60 s under similar load). Under load
 the time is contention and Python start-up, not the models: the chroma process

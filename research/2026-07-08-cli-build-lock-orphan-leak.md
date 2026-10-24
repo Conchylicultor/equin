@@ -2,7 +2,7 @@
 
 ## Context
 
-A `./singularity build` can be left orphaned (reparented to PID 1) and keep
+A `./equin build` can be left orphaned (reparented to PID 1) and keep
 running for many minutes after the shell/agent that launched it dies, holding
 the cross-process build mutex (`plugins/framework/plugins/web-core/.build.lock`)
 the whole time. Every subsequent build then blocks on
@@ -58,7 +58,7 @@ Reuse the exact orphan-detection idiom already proven in
 the timer so it never keeps the process alive):
 
 ```ts
-// A foreground `./singularity build` dies with its invoker so an orphaned build
+// A foreground `./equin build` dies with its invoker so an orphaned build
 // never holds the build lock. The detached self-restart build (run-build.ts)
 // opts out — it *intends* to outlive (and kill) the backend it restarts.
 if (process.ppid !== 1 && !process.env.SINGULARITY_BUILD_DETACHED) {
@@ -75,7 +75,7 @@ if (process.ppid !== 1 && !process.env.SINGULARITY_BUILD_DETACHED) {
   released and the build-log closed as failure.
 - **Exempting the detached self-restart build (required):**
   `plugins/build/server/internal/run-build.ts:174-180` spawns
-  `./singularity build --allow-main` with `detached: true`; that build kills its
+  `./equin build --allow-main` with `detached: true`; that build kills its
   own parent backend during restart and *must* survive being reparented to init.
   Add `SINGULARITY_BUILD_DETACHED: "1"` to the spawn `env` (line 179, alongside
   the existing `SINGULARITY_BUILD_ID`). An explicit flag, decoupled from the
@@ -194,9 +194,9 @@ Cases:
   exists, call `release`, assert it's gone and the heartbeat interval is cleared.
 
 **End-to-end (real build):**
-- Baseline: `./singularity build` succeeds and leaves no `.build.lock` behind
+- Baseline: `./equin build` succeeds and leaves no `.build.lock` behind
   (`ls plugins/framework/plugins/web-core/.build.lock` → absent after completion).
-- Watchdog: start `./singularity build` from a subshell, kill the subshell (its
+- Watchdog: start `./equin build` from a subshell, kill the subshell (its
   invoker) mid-build; confirm the `bun … build` process exits within ~2s
   (`ps`/`pgrep`), the lock is gone, and the global build-log has a matching
   `completed`(`success:false`) record. Confirm a build launched from the UI
@@ -204,6 +204,6 @@ Cases:
   and is *not* killed by the watchdog.
 - Hangup: send `SIGHUP` to a running build; confirm graceful exit + lock removed.
 - Patience: hold the lock with a live process carrying a *fresh* heartbeat while a
-  second `./singularity build` waits — confirm the waiter keeps waiting past the
+  second `./equin build` waits — confirm the waiter keeps waiting past the
   old 5-min ceiling and proceeds the instant the holder releases (no spurious
   "Timed out" against a healthy holder).

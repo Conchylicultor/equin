@@ -13,8 +13,8 @@
  * server that can answer `SELECT`. That is also why `buildStatusExpr` takes its
  * two columns as arguments instead of closing over the table.
  *
- * Run: `./singularity test plugins/build/plugins/runs-arm`
- * (requires the running embedded cluster — `./singularity build` first).
+ * Run: `./equin test plugins/build/plugins/runs-arm`
+ * (requires the running embedded cluster — `./equin build` first).
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";

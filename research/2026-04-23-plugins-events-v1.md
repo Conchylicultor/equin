@@ -438,7 +438,7 @@ Ordered to keep each step independently buildable / testable.
 10. **Emit sites.** Add emits in `mutations/pushes.ts`, `mutations/tasks.ts`, and `poller.ts` per the emit-site-discipline section. Each emitter re-derives state post-write and only emits on the relevant transition.
 11. **Define `launchAgent`.** In `plugins/agents/server/index.ts`, `export const launchAgent = defineAction({ name: "agents.launch", config: z.object({ agentId: z.string(), prompt: z.string().optional() }), run: ... })` at module load.
 12. **Delete-target cleanup.** In the agents plugin's agent-delete handler, call `launchAgent.deleteTargeting({ agentId })` before deleting the agent row.
-13. **Build & migrate.** Run `./singularity build` — drizzle-kit picks up the two new tables and generates a migration. Server restart applies it.
+13. **Build & migrate.** Run `./equin build` — drizzle-kit picks up the two new tables and generates a migration. Server restart applies it.
 
 ## Acceptance tests
 

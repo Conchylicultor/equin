@@ -212,7 +212,7 @@ primitives `SearchInput` / `Row` / `Badge` / `SegmentedControl` / `Loading` /
 
 ## Verification
 
-1. `./singularity build` from the worktree; open
+1. `./equin build` from the worktree; open
    `http://<worktree>.localhost:9000/sonata`.
 2. **Search mode:** `+` → *Import from Ultimate Guitar* → type `wonderwall`.
    Expect a debounced list defaulting to Chords-type, each row showing

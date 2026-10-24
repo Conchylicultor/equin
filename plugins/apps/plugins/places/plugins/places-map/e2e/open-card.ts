@@ -2,7 +2,7 @@
 // to look at a place as the user sees it (its note, tags, details). Read-only.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/places/plugins/places-map/e2e/open-card.ts \
+//   ./equin run plugins/apps/plugins/places/plugins/places-map/e2e/open-card.ts \
 //     --place "German Historical Museum" [--wait 20000] [--out /tmp/places-card]
 //
 // Writes `<out>-card.png`; prints the card's note.

@@ -35,7 +35,7 @@ async function trackedGitlinks(root: string): Promise<string[]> {
  * `ls-files --others` descends into ordinary untracked directories and lists
  * their files; the only entry it prints as `dir/` is one it refuses to descend
  * into because it is a repository. That is exactly the set `git add -A` (the
- * staging step of `./singularity push -m`) would record as gitlinks.
+ * staging step of `./equin push -m`) would record as gitlinks.
  */
 async function nestedCheckouts(root: string): Promise<string[]> {
   const records = await gitRecords(root, [
@@ -95,7 +95,7 @@ const check: Check = {
       return {
         ok: false,
         message:
-          `${nested.length} untracked directory(ies) hold their own git repository, and \`./singularity push -m\` ` +
+          `${nested.length} untracked directory(ies) hold their own git repository, and \`./equin push -m\` ` +
           `(which stages with \`git add -A\`) would commit each as a gitlink:\n${bulleted(nested)}\n${WHY}`,
         hint:
           "Move the checkout outside the repo (agent worktrees belong under `.claude/worktrees/`, which is gitignored), " +

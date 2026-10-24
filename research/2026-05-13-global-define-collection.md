@@ -456,9 +456,9 @@ Tests `primaryKey` + `ranked: false` + upsert semantics. Deferred to a follow-up
 ## Verification
 
 1. **Type check**: `tsc --noEmit` — inferred types from `defineCollection` must match hand-written types they replace
-2. **Boundary check**: `./singularity check --plugin-boundaries` — no boundary violations in the new umbrella
+2. **Boundary check**: `./equin check --plugin-boundaries` — no boundary violations in the new umbrella
 3. **Migration check**: After migrating prompt-templates/quick-prompts, `drizzle-kit generate` produces an empty migration (schema unchanged)
-4. **Build**: `./singularity build` succeeds
+4. **Build**: `./equin build` succeeds
 5. **Functional**: Settings page renders prompt-templates and quick-prompts identically to before — add, edit, delete, inline image paste all work
 6. **Push resource**: Edit a template, verify other browser tabs receive the push update
 7. **Screenshots**: `bun e2e/screenshot.mjs` before/after comparison of the Settings page

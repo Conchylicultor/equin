@@ -251,19 +251,19 @@ extension's, not the app's.
 
 All of the following was run against this branch.
 
-1. **`./singularity test plugins/infra/plugins/jobs`** — the fork-shaped-schema
+1. **`./equin test plugins/infra/plugins/jobs`** — the fork-shaped-schema
    case: seed a throwaway database, truncate every graphile table except
    `migrations` (exactly what the new flags produce), re-run
    `installQueueSchema`, and land a transactional enqueue whose row is the only
    one in the queue. ✅
-2. **`./singularity test plugins/database/plugins/admin`** — `planForkExclusions`
+2. **`./equin test plugins/database/plugins/admin`** — `planForkExclusions`
    against main's real catalog: both fatal rules throw, the unclaimed schema and
    the unmatched declaration are reported without throwing, a partitioned table
    expands to its leaves, and the emitted arguments are exactly the quoted
    names. ✅
-3. **`./singularity check` + `./singularity build`** — boundaries (no new plugin
+3. **`./equin check` + `./equin build`** — boundaries (no new plugin
    edge out of `admin`), `type-check`, `plugins-doc-in-sync`; deployed. ✅
-4. **A real fork** — `./singularity db fork`, main's 2057 MB database, twice.
+4. **A real fork** — `./equin db fork`, main's 2057 MB database, twice.
 
    | | main | fork |
    |---|---|---|

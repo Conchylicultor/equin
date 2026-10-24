@@ -22,7 +22,7 @@ landed in `3ab510e74`), several deeper problems surfaced that mean the project h
    never passed.
 
 **Decision (from the user):** tests stay **manual and optional**. Agents run specific
-files/folders explicitly; there is **no global test run and no `./singularity check`**
+files/folders explicitly; there is **no global test run and no `./equin check`**
 that executes suites. This plan documents the convention, fixes the mis-filed tests,
 and rewrites the broken smoke test into a load-only smoke.
 
@@ -51,7 +51,7 @@ and rewrites the broken smoke test into a load-only smoke.
   `bun test` would also try to load the one vitest file and fail; if ever needed, pass
   `--path-ignore-patterns='**/web-core/web/__tests__/**'`.)
 - **Prerequisite:** the worktree's `node_modules` must be populated. Any
-  `./singularity` invocation runs `bun install --silent`, and `./singularity build`
+  `./equin` invocation runs `bun install --silent`, and `./equin build`
   installs as step 1 — so run tests after at least one build, or run `bun install`
   first.
 
@@ -129,7 +129,7 @@ it(
   stating: tests are optional and manual; `bun:test` is the default runner (run with an
   explicit file/folder path); `vitest` is only for the web-core DOM suite (run via
   `bun run test` in web-core); nothing runs suites automatically; `node_modules` must be
-  installed first (any `./singularity` call does this).
+  installed first (any `./equin` call does this).
 - **`plugins/framework/plugins/web-core/CLAUDE.md`** — note that this plugin hosts the
   project's only vitest suite (jsdom + React via the vite-merged `vitest.config.ts`),
   what it asserts (load-only smoke), and how to run it.
@@ -148,7 +148,7 @@ it(
 
 ## Verification
 
-1. `bun install` (or any `./singularity` call) to populate `node_modules`.
+1. `bun install` (or any `./equin` call) to populate `node_modules`.
 2. Converted unit tests pass under bun:
    ```bash
    bun test plugins/framework/plugins/web-core/web/lib/utils.test.ts
@@ -163,6 +163,6 @@ it(
    ```bash
    bun test plugins/page/plugins/editor/core/block-ops.test.ts
    ```
-5. `./singularity check type-check` still green (test files remain covered by
+5. `./equin check type-check` still green (test files remain covered by
    `tsconfig.test.json`; the bun:test conversions don't change types).
-6. `./singularity build` succeeds (no new check added; build unaffected).
+6. `./equin build` succeeds (no new check added; build unaffected).

@@ -61,7 +61,7 @@ function pathsBlock(conflict: ConfigConflictContext): string {
     `- my values: \`${base}/${stored}\``,
     `- the new upstream default: \`${base}/${stored.replace(/\.jsonc$/, ".origin.jsonc")}\``,
     "",
-    `That upstream file is propagated by \`./singularity build\` from the repo's \`config/${conflict.storePath}\`, which is the version-controlled default.`,
+    `That upstream file is propagated by \`./equin build\` from the repo's \`config/${conflict.storePath}\`, which is the version-controlled default.`,
     "My config layer is forked per worktree, so the copy in your own checkout is NOT the one I am looking at — editing it changes nothing for me.",
   ].join("\n");
 }
@@ -79,7 +79,7 @@ function pathsBlock(conflict: ConfigConflictContext): string {
  */
 const RESOLVE_BY_HAND =
   "**Resolve this by hand, and change no code.** Read the two files, decide field by field, and report. " +
-  "Do not edit plugin source, tests, schemas or descriptors, and do not `./singularity build` or push. " +
+  "Do not edit plugin source, tests, schemas or descriptors, and do not `./equin build` or push. " +
   "The only file you may edit is the repo config named above, and only when I ask you to promote my values into it.";
 
 /**

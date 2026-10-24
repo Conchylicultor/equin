@@ -11,7 +11,7 @@
 //
 // All I/O here is async (`node:fs/promises`) behind a small shared concurrency
 // gate. This module runs on the check runner's ONE shared thread (as well as
-// inside `./singularity build`), and a fleet-wide hash pass touches thousands
+// inside `./equin build`), and a fleet-wide hash pass touches thousands
 // of small source files — a blocking `readdirSync`/`statSync`/`readFileSync`
 // holds that thread for every OTHER check in the pass too (checks/CLAUDE.md's
 // stall watch). The gate bounds fan-out (never one `Promise.all` per file

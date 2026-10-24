@@ -233,7 +233,7 @@ paths and `blocks()` helper:
 
 ## Verification
 
-1. `./singularity test plugins/framework/plugins/tooling/plugins/guards` (background) — the whole
+1. `./equin test plugins/framework/plugins/tooling/plugins/guards` (background) — the whole
    plugin, not just the two files: `background-ops`, `poll-loop`, `rg-replace` and `main-edits` all
    read the same parse, and dropping `<`-args from the token stream is the blast radius. Baseline
    today is 162 pass / 0 fail across 7 files.
@@ -249,7 +249,7 @@ paths and `blocks()` helper:
    Exit 0 / no deny for that one; and still a deny for
    `echo x > "<main repo>/notes.txt"`, which today passes silently.
 3. The lived test: re-run the original `git worktree lock … 2>&1` from the main checkout.
-4. `./singularity build` (background) per the agent workflow.
+4. `./equin build` (background) per the agent workflow.
 
 ## Notes
 

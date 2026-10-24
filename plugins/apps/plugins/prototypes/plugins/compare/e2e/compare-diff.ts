@@ -3,7 +3,7 @@
 // number, a heatmap and a picture instead of an eyeball.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts \
+//   ./equin run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts \
 //     --name <proto-id> [--width <px>] [--options <name>=<value>,…] [--out <prefix>] [--threshold 0.1] \
 //     [--delta-e 5] [--fail-above <pct>] [--wait <ms>] [--color-scheme dark|light] [--headed]
 //
@@ -58,7 +58,7 @@
 // differing-pixel ratio above it a FAIL.
 //
 // Example:
-//   ./singularity run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts \
+//   ./equin run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts \
 //     --name proto-1786877040-3k6f --out /tmp/mist-panes
 
 import { writeFileSync } from "node:fs";
@@ -113,7 +113,7 @@ import {
 } from "@plugins/apps/plugins/prototypes/plugins/compare/core";
 
 const USAGE =
-  "--name <proto-id> is required — the prototype folder's minted id (`./singularity prototype list` prints them)";
+  "--name <proto-id> is required — the prototype folder's minted id (`./equin prototype list` prints them)";
 const name = requireArg("name", USAGE);
 if (!protoIdKind.is(name)) {
   usage(
@@ -145,7 +145,7 @@ async function readMeta(): Promise<PrototypeMeta> {
   const meta = rows.find((p) => p.name === name);
   if (!meta) {
     usage(
-      `no prototype "${name}" on this deploy (${rows.length} listed — \`./singularity prototype list\`)`,
+      `no prototype "${name}" on this deploy (${rows.length} listed — \`./equin prototype list\`)`,
     );
   }
   return meta;

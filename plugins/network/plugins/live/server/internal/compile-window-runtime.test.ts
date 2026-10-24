@@ -7,7 +7,7 @@
  * the codec-derived `idsOf`) wire those semantics correctly. The fake `db`
  * dispatches on the RENDERED SQL over a live in-memory table, so the loader,
  * the scoped refill, and `windowIdsOf` all read one consistent truth.
- * Run: `./singularity test plugins/network/plugins/live`.
+ * Run: `./equin test plugins/network/plugins/live`.
  */
 
 import { describe, expect, test } from "bun:test";

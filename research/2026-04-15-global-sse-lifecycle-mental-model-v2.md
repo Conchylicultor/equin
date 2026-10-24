@@ -224,7 +224,7 @@ during the transition because they don't share state.
 
 1. **Land the primitive** — `defineResource`, `useResource`,
    `NotificationsClient`, `/ws/notifications`,
-   `/api/resources/:key`. No plugin uses it yet. Ship and `./singularity build`.
+   `/api/resources/:key`. No plugin uses it yet. Ship and `./equin build`.
 2. **Migrate `conversations`** (the highest-pain feature). Verify the
    bugs in the v1 doc are gone. Delete `ConversationStreamClient` and
    `useConversationStream`.
@@ -237,7 +237,7 @@ during the transition because they don't share state.
    `defineResource` / `useResource` as the live-state primitives;
    remove the `SseHandler` documentation.
 
-Each step is independently shippable via `./singularity build`.
+Each step is independently shippable via `./equin build`.
 
 ## Verification
 
@@ -250,7 +250,7 @@ End-to-end checks the redesign must pass:
    first agent's status does *not* flicker, go grey, or lag. (This is
    the H1 regression test — adding a subscription must not disturb
    existing ones.)
-3. **Restart the server (`./singularity build`).** Within a few
+3. **Restart the server (`./equin build`).** Within a few
    seconds of the server coming back, every open pane shows
    server-truth state. No stale "working" rows. (H2/H7 regression.)
 4. **Force-kill an agent's tmux session externally.** Within a tick

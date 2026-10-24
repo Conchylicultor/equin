@@ -128,7 +128,7 @@ Two sessions instead of three: session 1 is mechanical after the framework part,
 
 ## Verification
 
-- `./singularity test` on resource-runtime, query-resource, network/live, change-feed, live-state-snapshot, debug/read-set and each migrated plugin. `./singularity check` clean.
+- `./equin test` on resource-runtime, query-resource, network/live, change-feed, live-state-snapshot, debug/read-set and each migrated plugin. `./equin check` clean.
 - After each build: the dumped `/api/resources/_debug` shows, per migrated key, `policy: "routed"`, routes equal to its former `readSetBases`, and an empty `routeDrifted`.
 - e2e: with a page open, edit a block. `page-blocks` still updates, and `notifications.unread` still updates on a new notification. Check Debug → Read-set: the Routed FULL list shows each value's reason, and the Legacy FULL section is gone after session 2.
 

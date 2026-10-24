@@ -225,9 +225,9 @@ The local caps sum to well under 7 MB.
 - Duplicate or overlapping owner throws
 - A refused write fires `onStorageWriteFailed`
 
-**Repo checks.** Run `./singularity check`, which covers `budget-fits` (with a fixture over budget to see it fail), the lint rule and exemptions.
+**Repo checks.** Run `./equin check`, which covers `budget-fits` (with a fixture over budget to see it fail), the lint rule and exemptions.
 
-**In the app.** Deploy with `./singularity build`. Then:
+**In the app.** Deploy with `./equin build`. Then:
 
 1. With `browser_*`, fill localStorage to the quota with unowned junk, type a prompt draft and reload.
 2. Expect a toast once, the health row critical with Unowned as the culprit, and a Reports entry.

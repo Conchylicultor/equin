@@ -1,3 +1,4 @@
+import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import { join } from "path";
 import {
   spawnCaptured,
@@ -21,15 +22,12 @@ function gateEnv(): Record<string, string | undefined> {
   return { ...process.env, PATH: runtimePath(process.env) };
 }
 
-async function singularity(root: string, args: string[]): Promise<number> {
-  console.log(`\n$ ./singularity ${args.join(" ")}`);
-  const { exitCode } = await spawnPassthrough(
-    [join(root, "singularity"), ...args],
-    {
-      cwd: root,
-      env: gateEnv(),
-    },
-  );
+async function cli(root: string, args: string[]): Promise<number> {
+  console.log(`\n$ ./equin ${args.join(" ")}`);
+  const { exitCode } = await spawnPassthrough([join(root, CLI_NAME), ...args], {
+    cwd: root,
+    env: gateEnv(),
+  });
   return exitCode;
 }
 
@@ -47,13 +45,13 @@ export async function runChecks(
   ids: readonly string[] = [],
 ): Promise<GateResult> {
   const startedAt = new Date().toISOString();
-  const exitCode = await singularity(root, ["check", "--no-cache", ...ids]);
+  const exitCode = await cli(root, ["check", "--no-cache", ...ids]);
   const run = readCheckProgress().find(
     (r) => r.worktree === slug && r.startedAt >= startedAt && r.done !== null,
   );
   if (run === undefined) {
     throw new Error(
-      `\`./singularity check\` exited ${exitCode} but left no finished run in the check-progress log — cannot tell which checks failed.`,
+      `\`./equin check\` exited ${exitCode} but left no finished run in the check-progress log — cannot tell which checks failed.`,
     );
   }
   const failures = run.completed.filter((c) => !c.ok).map((c) => c.checkId);
@@ -76,7 +74,7 @@ export async function runTests(
   paths: readonly string[] = [],
 ): Promise<GateResult> {
   const startedAt = new Date().toISOString();
-  const exitCode = await singularity(root, ["test", ...paths]);
+  const exitCode = await cli(root, ["test", ...paths]);
   const status = readLatestTestStatus(slug);
   if (
     status === null ||
@@ -84,7 +82,7 @@ export async function runTests(
     status.status === "running"
   ) {
     throw new Error(
-      `\`./singularity test\` exited ${exitCode} but did not record a finished run in test-status-<opId>.json — cannot tell which tests failed.`,
+      `\`./equin test\` exited ${exitCode} but did not record a finished run in test-status-<opId>.json — cannot tell which tests failed.`,
     );
   }
   // A file that stops reporting on the new toolchain most likely crashes while
@@ -167,7 +165,7 @@ export async function retryGates(
 
 /**
  * The gates an upgrade runs, as one seam: the real ones spawn
- * `./singularity check` / `test` and the smoke commands; the runner's tests
+ * `./equin check` / `test` and the smoke commands; the runner's tests
  * hand fakes.
  */
 export interface Gates {

@@ -35,7 +35,7 @@ The interesting open questions were:
    state while Claude works.
 3. Server injects a prompt into the conversation's tmux pane (see prompt text
    below) and records a pending push-exit attempt for this conversation.
-4. Claude runs `./singularity push -m "…"` and emits a final assistant turn
+4. Claude runs `./equin push -m "…"` and emits a final assistant turn
    starting with `PUSH_RESULT_OK` or `PUSH_RESULT_FAIL`.
 5. Server watcher detects the sentinel in the JSONL transcript and resolves
    the attempt with `{ ok, message }`.
@@ -55,7 +55,7 @@ pane alone.
 
 ```
 Please commit any outstanding work and push this branch to main by running
-`./singularity push -m "<concise commit message you choose>"`.
+`./equin push -m "<concise commit message you choose>"`.
 
 When you are finished, your FINAL assistant message MUST begin with exactly
 one of these tokens on the first line, with nothing before it:
@@ -247,7 +247,7 @@ existing conversation-view children).
 
 ## Verification
 
-1. `./singularity build` to deploy this worktree.
+1. `./equin build` to deploy this worktree.
 2. Open `http://<this-worktree>.localhost:9000/c/<some-conversation>` where
    the conversation has pending uncommitted edits.
 3. Click **Push & Exit**. Observe:

@@ -14,8 +14,8 @@
  * shapes it issues, as in `superseded-trigger.test.ts`, because no worker runs
  * in this process.
  *
- * Run: `./singularity test plugins/infra/plugins/jobs`
- * (requires the running embedded cluster — `./singularity build` first).
+ * Run: `./equin test plugins/infra/plugins/jobs`
+ * (requires the running embedded cluster — `./equin build` first).
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";

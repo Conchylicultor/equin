@@ -131,7 +131,7 @@ forever, a strict improvement). No caller needs `unbounded`.
 - `bun test plugins/infra/plugins/jobs/server/internal/constants.test.ts` — cover:
   omitted → 7 days; `unbounded:true` → null; number under cap → itself; number
   over cap → MAX; 0/negative → 1.
-- `./singularity build` then `./singularity check` (type-check, migrations-in-sync,
+- `./equin build` then `./equin check` (type-check, migrations-in-sync,
   boundaries all pass; expect no new migration).
 - End-to-end (reuses the earlier task's harness): a `user-input` workflow with a
   ~1-minute `expiresAfter` still expires correctly (unchanged path, since it passes

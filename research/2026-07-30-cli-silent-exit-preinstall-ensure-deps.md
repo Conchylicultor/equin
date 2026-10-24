@@ -2,7 +2,7 @@
 
 ## Context
 
-Every `./singularity <cmd>` can die with **exit 1 and zero bytes of output**, before the
+Every `./equin <cmd>` can die with **exit 1 and zero bytes of output**, before the
 CLI ever starts. The wrapper is four lines:
 
 ```sh
@@ -14,7 +14,7 @@ exec bun plugins/framework/plugins/cli/bin/index.ts "$@"
 
 When that `bun install` fails, `set -e` aborts the wrapper before `exec`, and `--silent`
 means nothing is printed. The invocation is indistinguishable from the *subcommand*
-failing: `./singularity check` → no output, exit 1 reads as "checks failed", and the
+failing: `./equin check` → no output, exit 1 reads as "checks failed", and the
 natural next move is to hunt for a check failure that does not exist. It already cost two
 agents a process-list diagnosis in one session, and it is a live hazard for `push`, where
 "did my push land?" has no answer in the output.
@@ -42,8 +42,8 @@ failure mode fires — only on the fact that the install can fail at all.
 
 1. **Unserialized.** The build's own install (`app-artifacts.ts:318`) runs *inside* the
    per-checkout `.build.lock`, so builds serialize among themselves. The wrapper's install
-   runs *before the CLI exists*, outside every lock — so `./singularity check` racing a
-   `./singularity build` is two unsynchronized installs in one `node_modules`. Install is
+   runs *before the CLI exists*, outside every lock — so `./equin check` racing a
+   `./equin build` is two unsynchronized installs in one `node_modules`. Install is
    guarded on one path and unguarded on the other.
 2. **Unattributed.** `--silent` + `set -e` turns a failed *precondition* into a bare exit 1
    attributed to the *subcommand*.
@@ -157,7 +157,7 @@ loads in the same pre-barrel state `index.ts` does today.
   Lock ordering is one-way and must be documented in the docblock: **`.build.lock` →
   `.install.lock`**, never the reverse (nothing takes the build lock while holding the
   install lock), so no deadlock. Do *not* reuse `.build.lock` as the install lock: a
-  `./singularity check` would then block for an entire build.
+  `./equin check` would then block for an entire build.
 - **`mise.toml`** setup task: `bun install --silent` → `bun plugins/framework/plugins/cli/bin/ensure-deps.ts`
   (its comment about avoiding a redundant second install stays true, and becomes structural).
 
@@ -216,24 +216,24 @@ bun test plugins/framework/plugins/cli/bin/ensure-deps.test.ts
    ```bash
    for p in debug ms picocolors chalk semver; do rm -rf node_modules/$p; done
    ( bun install >/dev/null 2>&1 & ) ; sleep 0.3
-   ./singularity check ; echo "EXIT=$?"
+   ./equin check ; echo "EXIT=$?"
    ```
    Before: exit 1 with no attribution. After: either the checks actually run (the wrapper
    waited on the install lock, printing "Another install is in progress; waiting...") or a
    message that names dependency install as the failing phase — never a bare silent exit.
-2. **Fresh-checkout path (the load-bearing one).** `rm -rf node_modules && ./singularity check`
+2. **Fresh-checkout path (the load-bearing one).** `rm -rf node_modules && ./equin check`
    must work end-to-end. This is the proof that `@plugins/*` alias resolution and the
    `spawn` import work with `node_modules` absent — the one assumption worth failing fast on.
    (If it does not, fall back to the walk-up-to-`workspaces` root helper and `Bun.spawnSync`,
    which `no-raw-bun-spawn` deliberately does not flag.)
-3. **Cost.** `time ./singularity check` twice in a row: the second is ~10 ms of install work
-   instead of 10–25 s. `./singularity build` no longer installs twice — confirm in the
+3. **Cost.** `time ./equin check` twice in a row: the second is ~10 ms of install work
+   instead of 10–25 s. `./equin build` no longer installs twice — confirm in the
    Debug → Profiling Gantt that the `bunInstall` span is now negligible.
-4. **Checks + build.** `./singularity check` (includes the new `cli:bootstrap-package-free`),
-   then `./singularity build` and confirm the app serves at
+4. **Checks + build.** `./equin check` (includes the new `cli:bootstrap-package-free`),
+   then `./equin build` and confirm the app serves at
    `http://att-1785370247-fw9l.localhost:9000`.
 5. **Guard bites.** Temporarily add `import { program } from "commander"` to `bin/index.ts`
-   → `./singularity check cli:bootstrap-package-free` must fail. Revert.
+   → `./equin check cli:bootstrap-package-free` must fail. Revert.
 
 ## As built (2026-07-30)
 
@@ -263,10 +263,10 @@ Implemented as designed, with four corrections found during implementation and r
   (which failed on it), and deriving from a non-`plugins` root additionally proves
   `workspaceWalkRoots` does not assume the repo's own convention.
 
-Verified: 16/16 unit tests; full `./singularity check` green (75 checks); `./singularity build`
+Verified: 16/16 unit tests; full `./equin check` green (75 checks); `./equin build`
 deployed; the original race now yields a phase-attributed error with bun's own output visible;
 a thrown `ensureDeps` exits **1** with one self-explanatory line; and `rm -rf node_modules &&
-./singularity check` works end-to-end in 8.4 s — the load-bearing proof that `@plugins/*`
+./equin check` works end-to-end in 8.4 s — the load-bearing proof that `@plugins/*`
 resolution and the `spawn` primitive work with `node_modules` absent. Warm invocations are
 ~2.4 s total and print nothing about dependencies.
 

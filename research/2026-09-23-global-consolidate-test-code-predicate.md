@@ -194,8 +194,8 @@ redundant with `non-app-globs.ts` for the test patterns.
 
 ## Verification
 
-1. `./singularity check type-check` — the new imports resolve and types are correct
-2. `./singularity check plugin-boundaries` — the new cross-plugin imports are legal
-3. `./singularity build` — full build succeeds (migrations, codegen, frontend, server)
+1. `./equin check type-check` — the new imports resolve and types are correct
+2. `./equin check plugin-boundaries` — the new cross-plugin imports are legal
+3. `./equin build` — full build succeeds (migrations, codegen, frontend, server)
 4. Spot-check: create a file at `plugins/<any>/web/testing/some-helper.ts` and
    verify that checks #1-#7 exclude it and contributed lint rules are off for it

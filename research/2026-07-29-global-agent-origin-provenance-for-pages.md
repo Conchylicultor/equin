@@ -246,7 +246,7 @@ teardown unnecessary.
 
 Copy `plugins/apps/plugins/pages/plugins/starred/` wholesale as the skeleton — same parent
 table, same slot, same barrels. Registration is automatic: create the barrels and run
-`./singularity build`.
+`./equin build`.
 
 ## Known trade-offs
 
@@ -266,8 +266,8 @@ table, same slot, same barrels. Registration is automatic: create the barrels an
 
 ## Verification
 
-1. `./singularity build` in the worktree. Confirm the generated migration for
-   `page_blocks_ext_origin` is committed (`./singularity check migrations-in-sync`).
+1. `./equin build` in the worktree. Confirm the generated migration for
+   `page_blocks_ext_origin` is committed (`./equin check migrations-in-sync`).
 2. **Marking:** `bun plugins/page/plugins/editor/e2e/copy-paste-verify.ts` (bare — hits this
    worktree). Then, via `query_db` on this worktree's DB:
    ```sql
@@ -289,7 +289,7 @@ table, same slot, same barrels. Registration is automatic: create the barrels an
 6. **Regression:** `bun plugins/page/plugins/editor/e2e/block-selection-verify.ts` and
    `bun plugins/apps/plugins/pages/plugins/history/e2e/crdt-restore-verify.ts` still pass —
    the create-hook dispatch must not perturb block creation.
-7. `./singularity check` (boundaries, type-check, plugins-doc-in-sync).
+7. `./equin check` (boundaries, type-check, plugins-doc-in-sync).
 
 ### Cleanup of the existing damage
 

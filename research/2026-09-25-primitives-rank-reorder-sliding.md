@@ -115,10 +115,10 @@ generic place instead of in each producer:
 
 ## Verification
 
-1. `./singularity test plugins/primitives/plugins/rank-reorder plugins/primitives/plugins/data-view`:
+1. `./equin test plugins/primitives/plugins/rank-reorder plugins/primitives/plugins/data-view`:
    new pure tests for `resolveSortableDrop` (down→after, up→before, same slot → no-op,
    group-limited) and the pending-move clear rules (rank changed, row gone, rejected).
-2. `./singularity build` (runs the type-check, eslint including `no-scaling-transform` /
+2. `./equin build` (runs the type-check, eslint including `no-scaling-transform` /
    `no-raw-dnd-kit`, and the docs-in-sync checks).
 3. New e2e `plugins/primitives/plugins/data-view/plugins/list/e2e/sortable-reorder.ts`, with
    a raw pointer drag in the style of `task-draft-form/e2e/card-actions-verify.ts` (steps

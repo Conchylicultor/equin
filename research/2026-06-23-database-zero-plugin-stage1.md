@@ -221,7 +221,7 @@ failures" rule).
 - New (consumer, temporary): `plugins/debug/plugins/zero-test/` — `core/schema.ts` + `web/`.
 - Modify: `plugins/infra/plugins/launcher/server/internal/boot.ts` — add `zeroCacheService()` +
   `zeroCacheEnabled()` and wire both `ensureDatabaseConfig` branches.
-- Modify: root `package.json` (`trustedDependencies`) and `./singularity` (the native-ABI pin) — see
+- Modify: root `package.json` (`trustedDependencies`) and `./equin` (the native-ABI pin) — see
   the Outcome section's supervised-boot fixes.
 - Reference (do not modify): `plugins/database/plugins/pgbouncer/scripts/start.ts` (start-script
   template), `plugins/database/core/internal/config.ts` (`DatabaseConfig.services[]` shape +
@@ -246,7 +246,7 @@ failures" rule).
 ## Verification (end-to-end)
 
 1. Add `@rocicorp/zero` to the `cache-service`, `client`, and `zero-test` `package.json`s;
-   `./singularity build` (confirms bun builds the native `zero-sqlite3` and vite bundles
+   `./equin build` (confirms bun builds the native `zero-sqlite3` and vite bundles
    `@rocicorp/zero/react`, both proven in Stage 0).
 2. With `SINGULARITY_ZERO_CACHE` **unset**: confirm `database.json` is byte-identical to before (no
    `zero-cache` service) and the existing live-state app is unaffected — proves default-off opt-in.
@@ -273,7 +273,7 @@ comparison viz (filed follow-ups); touching or deleting any live-state code (Sta
 sourced from zero-cache (no live-state behind it); a write to the main DB reflects in the pane within
 a frame (write → Postgres logical replication → zero-cache → WS poke → re-render). `@rocicorp/zero`
 **1.6.2**, Node **24.17.0** (installed via `brew install node@24`, kept off the global symlink),
-`./singularity build` + `./singularity check` green.
+`./equin build` + `./equin check` green.
 
 ### The Stage-0 "0 rows" mystery, solved (the headline finding)
 Zero 1.6.2 gates **builder/ZQL queries** (anything built via `createBuilder(schema)` — i.e. `zql.task…`)
@@ -290,7 +290,7 @@ the desired query is folded into the v51 `initConnection` message, not a standal
    `package.json`**. (b) `trustedDependencies` alone still built the **wrong ABI**: bun runs
    lifecycle scripts with the host `node` (Node 25, `NODE_MODULE_VERSION` 141), but zero-cache runs
    under Node 24 (137) → `ERR_DLOPEN_FAILED` crashing every worker. → **fix:** pin the prebuild ABI
-   at the single `bun install` call site (the `./singularity` entrypoint):
+   at the single `bun install` call site (the `./equin` entrypoint):
    `export npm_config_runtime=node; export npm_config_target=24.17.0` (prebuild-install reads these;
    bun ignores `.npmrc` `target`/`runtime`). Any 24.x target yields ABI 137.
    **⚠️ Footgun (Stage-2 refinement):** this env-pin is *global* to the whole repo's `bun install`,

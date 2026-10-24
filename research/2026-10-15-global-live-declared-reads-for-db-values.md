@@ -123,4 +123,4 @@ Once no entry is legacy-routed:
   - `network/live` `compile-value.test.ts`: type-level refusals.
 - Each migrated value's existing tests run under `strictRoutes`, so an undeclared table read fails (A8).
 - e2e: edit a page block with two pages open. Debug → Slow Events shows the `deliver:page-blocks` count, and the read-set pane shows page-blocks as routed, matched on `page_id`. The other page receives no frame.
-- The Read-set pane lists no legacy-full entry. `./singularity check` is clean, `no-db-backed-notify` has 0 debt, and `./singularity test` passes on the touched plugins.
+- The Read-set pane lists no legacy-full entry. `./equin check` is clean, `no-db-backed-notify` has 0 debt, and `./equin test` passes on the touched plugins.

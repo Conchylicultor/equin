@@ -35,7 +35,7 @@ the fallback when no spare exists.
   `git worktree list --porcelain` shows `locked singularity-spare`, so a half-written spare is never
   claimed. The lock also protects the clean spare from Claude Code's own `.claude/worktrees` sweep
   (`worktree.ts:166-189`).
-- No `./singularity` command ever runs inside a spare, so it never gets a registry or data dir.
+- No `./equin` command ever runs inside a spare, so it never gets a registry or data dir.
 
 ### Claim, inside `setupWorktree` (`plugins/infra/plugins/worktree/server/internal/worktree.ts:388`)
 
@@ -91,7 +91,7 @@ mutate slot.
 
 ### Out of scope (follow-up)
 
-- Pre-installing `node_modules` in the spare. It would save the agent's first `./singularity`
+- Pre-installing `node_modules` in the spare. It would save the agent's first `./equin`
   command 10–25 s, but that time is not launch latency, and a `bun install` result is likely
   path-dependent across `git worktree move`. That needs verifying first.
 
@@ -113,14 +113,14 @@ Reused pieces: `withWorktreeMutateSlot` (`mutate-gate.ts`), `ensureWorktreeLocke
 
 ## Verification
 
-- Unit tests (`./singularity test plugins/infra/plugins/worktree`) against a temporary git repo:
+- Unit tests (`./equin test plugins/infra/plugins/worktree`) against a temporary git repo:
   - A claim takes a ready spare: the result is on `claude-web/<id>`, at `main`'s tree, and locked.
   - An unlocked (half-written) spare is skipped.
   - With no spare, the claim falls back to the cold add.
   - Two concurrent claims of one spare: one wins and the other falls back.
   - Crash convergence: a dir moved but still on a detached HEAD gets switched.
   - A spare made at an older `main` ends at the current `main` after the claim.
-- `./singularity build`, then launch an agent from the sidebar and check:
+- `./equin build`, then launch an agent from the sidebar and check:
   - `job_recent_runs` shows `conversations.spawn` under ~1 s, followed by a `worktree.spare-refill` run.
   - `git worktree list --porcelain` shows a new `spare-*` locked `singularity-spare`.
   - Before and after the refill, the reaper's dry pass does not list the spare.

@@ -287,7 +287,7 @@ Add the re-export so Drizzle picks up the new table:
 export * from "@plugins/infra/plugins/attachments/server/internal/tables";
 ```
 
-Migration is generated automatically by `./singularity build` (per `server/CLAUDE.md` schema change workflow). First build after this change will need `--migration-name add-attachments`.
+Migration is generated automatically by `./equin build` (per `server/CLAUDE.md` schema change workflow). First build after this change will need `--migration-name add-attachments`.
 
 ---
 
@@ -302,7 +302,7 @@ Migration is generated automatically by `./singularity build` (per `server/CLAUD
 2. **Attachments plugin — web**
    1. `uploadAttachment()` helper in `web/index.ts`.
    2. Register in `web/src/plugins.ts`.
-3. **Build + migrate**: `./singularity build --migration-name add-attachments`. Verify migration file in `server/src/db/migrations/`.
+3. **Build + migrate**: `./equin build --migration-name add-attachments`. Verify migration file in `server/src/db/migrations/`.
 4. **Improve plugin — server**
    1. `meta-improvements.ts`.
    2. `config.ts` with `defineConfig` (prompt template, default string).
@@ -315,7 +315,7 @@ Migration is generated automatically by `./singularity build` (per `server/CLAUD
    3. `index.ts` contributes `Shell.Toolbar` + `Config.Section`.
    4. Register in `web/src/plugins.ts`.
 6. **Rename cleanup**: edit `plugins/tasks/web/index.ts`, delete `new-task-button.tsx`.
-7. **Build + deploy**: `./singularity build`.
+7. **Build + deploy**: `./equin build`.
 
 ---
 
@@ -331,7 +331,7 @@ Migration is generated automatically by `./singularity build` (per `server/CLAUD
 
 ## Verification (end-to-end)
 
-1. `./singularity build --migration-name add-attachments` — build succeeds, migration file present.
+1. `./equin build --migration-name add-attachments` — build succeeds, migration file present.
 2. Open `http://<worktree>.localhost:9000` — toolbar shows **+Improve** (replacing +New Task).
 3. Click Improve → popover shows URL row populated + screenshot toggle off.
 4. Type text, leave screenshot off → click **Create** → toast "Task created". Verify:

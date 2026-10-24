@@ -23,7 +23,7 @@ import buildRule from "./no-adhoc-typography";
 const rule = buildRule(lintToolkit);
 
 // Hand RuleTester bun's own describe/it, or it registers nothing under
-// `./singularity test`.
+// `./equin test`.
 RuleTester.describe = describe;
 RuleTester.it = it;
 RuleTester.itOnly = it.only;

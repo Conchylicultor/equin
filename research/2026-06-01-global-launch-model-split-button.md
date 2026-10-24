@@ -85,7 +85,7 @@ read back (legacy rows would otherwise fail `z.enum` parse or registry lookups):
 
 **DB column:** `plugins/tasks-core/server/internal/tables.ts:120` — change
 `.default("opus")` → `.default(DEFAULT_MODEL)`. (`$type<ConversationModel>` stays `text`;
-only the default literal changes → one generated migration via `./singularity build`.)
+only the default literal changes → one generated migration via `./equin build`.)
 
 ---
 
@@ -238,8 +238,8 @@ valid concrete ids):
 
 ## Verification
 
-1. `./singularity build` from this worktree (regenerates the column-default migration, builds
-   web + server). Confirm it starts clean and `./singularity check --migrations-in-sync` passes.
+1. `./equin build` from this worktree (regenerates the column-default migration, builds
+   web + server). Confirm it starts clean and `./equin check --migrations-in-sync` passes.
 2. App at `http://att-1780296369-j8ms.localhost:9000` — scripted Playwright run
    (`bun e2e/screenshot.mjs`):
    - Welcome / sidebar: split control shows the default model; open dropdown → Opus 4.8 +

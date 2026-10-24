@@ -106,7 +106,7 @@ This alone makes `Sonata.Toolbar.Start` land in
 
    > **Consequence:** documenting factory slots regenerates many `CLAUDE.md`
    > files and `docs/plugins-{compact,details}.md`. This is automatic on
-   > `./singularity build` and enforced by the `plugins-doc-in-sync` check —
+   > `./equin build` and enforced by the `plugins-doc-in-sync` check —
    > the diff will be larger than the code change but is correct (these are real
    > extension points). This is the intended outcome of unification, not churn to
    > avoid.
@@ -137,7 +137,7 @@ Reused, do not reinvent: `isSlotLike` / `safeEntries` (same file), `getFacet`
 
 ## Verification
 
-1. `./singularity build` — regenerates `reorderable-slots.generated.ts`, the
+1. `./equin build` — regenerates `reorderable-slots.generated.ts`, the
    config origins, and the plugin docs; runs checks (incl. `reorderable-slots-in-sync`,
    `plugins-doc-in-sync`, `type-check`).
 2. Confirm the previously-dropped slot now appears: temporarily nest a toolbar

@@ -24,8 +24,8 @@
  *
  * Window tuples are read as head windows (a paged read's first page is one).
  *
- * Requires a running Postgres cluster (started by ./singularity build).
- * Run: `./singularity test plugins/reports`.
+ * Requires a running Postgres cluster (started by ./equin build).
+ * Run: `./equin test plugins/reports`.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
@@ -82,7 +82,7 @@ const truth = new Map<
 >();
 
 // The suite's OWN runtime, never server-core's process-global one:
-// `./singularity test` runs every bun suite in one process, and any suite that
+// `./equin test` runs every bun suite in one process, and any suite that
 // loads `reports/server` registers the real `reports.list` on the global
 // registry at module eval — so registering it there too throws
 // `defineResource: duplicate key`, whichever suite loads second (the

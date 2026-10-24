@@ -102,12 +102,12 @@ need a separate scan of test files. It can be a follow-up.
 
 ## Verification
 
-- `./singularity test plugins/framework/plugins/tooling/plugins/codegen`: a unit test
+- `./equin test plugins/framework/plugins/tooling/plugins/codegen`: a unit test
   for `renderTestHelpers` on a small fixture tree. It covers a barrel with value and
   type exports, a JSDoc summary, a symbol with no JSDoc, and a plugin with no barrel
   (no lines, no compact marker).
-- `./singularity build`, then:
+- `./equin build`, then:
   - `plugins-details.md` has 14 *Test helpers* items. Every `/testing` specifier in
     it sits under that label, and none sits under a runtime's `Exports`.
   - The 14 plugins carry `[test helpers]` in `plugins-compact.md`.
-- `./singularity check plugins-doc-in-sync` passes.
+- `./equin check plugins-doc-in-sync` passes.

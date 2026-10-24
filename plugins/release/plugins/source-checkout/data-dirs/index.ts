@@ -2,7 +2,7 @@ import { defineDataDir } from "@plugins/infra/plugins/paths/core";
 
 /**
  * One detached git checkout per in-flight release, `<run-id>/`, plus the
- * `<run-id>.lock` flock file its owning `./singularity release` process holds
+ * `<run-id>.lock` flock file its owning `./equin release` process holds
  * for as long as the checkout is in use.
  *
  * Not `.claude/worktrees/`: that directory is Claude Code's own and is swept by

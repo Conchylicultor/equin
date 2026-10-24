@@ -86,7 +86,7 @@ via `className` (tailwind-merge resolves the conflict).
 - `surface/CLAUDE.md` — the `p-card` escape is now real; optionally note it
   density-scales (wording already references it as a token).
 
-### 6. Regen — `./singularity build`
+### 6. Regen — `./equin build`
 Codegen rewrites
 `plugins/framework/plugins/tooling/plugins/checks/core/token-group-vars.generated.ts`
 to add `--pad-card` to the `density` group list. (No DB migration; no registry
@@ -100,9 +100,9 @@ change — `padCard` is a schema key, not an export.)
 - `plugins/primitives/plugins/css/plugins/card/CLAUDE.md` + `…/surface/CLAUDE.md` — doc sync
 
 ## Verification
-1. `./singularity build` — regenerates `token-group-vars.generated.ts`, rebuilds
+1. `./equin build` — regenerates `token-group-vars.generated.ts`, rebuilds
    CSS/frontend/server. Confirm it includes `--pad-card` under `density`.
-2. `./singularity check` — must pass:
+2. `./equin check` — must pass:
    - `type-check` (incl. `no-adhoc-spacing` — `p-card` allowed; `no-adhoc-surface`
      test at `:41` still green now that the escape resolves),
    - `token-group-vars`-in-sync, `plugins-doc-in-sync`.

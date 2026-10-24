@@ -300,7 +300,7 @@ Tasks 2–8 each depend on the one before; only task 1 is unblocked initially.
    `readSecretConfig` central consumers change paths; the no-re-export rule forbids a *permanent* shim.
    *Mitigation:* the temporary re-export exception (user-approved) + gradual per-type moves + codemod;
    the `docs/plugins-details.md` reverse-index is the work list.
-3. **The temporary re-export must be tolerated by `./singularity check --plugin-boundaries`.** It violates
+3. **The temporary re-export must be tolerated by `./equin check --plugin-boundaries`.** It violates
    R-no-cross-plugin-re-export by design. *Mitigation:* a documented, scoped allowlist entry (or a known,
    tracked suppression) for the `config_v2/core → fields/core` token re-export only, removed in S4.
 4. **`secret` as a readable table cell is a security hole, not just sparseness.** *Mitigation:* `secret`
@@ -333,7 +333,7 @@ Tasks 2–8 each depend on the one before; only task 1 is unblocked initially.
 
 ## Verification (per stage)
 
-- **S0:** `./singularity build`; open Sonata → Library → Table; a per-type filter control appears for a
+- **S0:** `./equin build`; open Sonata → Library → Table; a per-type filter control appears for a
   numeric/enum field, narrows rows live, persists per view. Confirm filtering goes through a *slot*
   contribution (grep that no `switch(field.type)` exists in `use-data-view-rows.ts`).
 - **S1:** build + `query_db`-independent; `useConfig` still returns live values; settings pane renders
@@ -343,5 +343,5 @@ Tasks 2–8 each depend on the one before; only task 1 is unblocked initially.
 - **S3 (per type):** edit a relocated field type in the settings pane → value persists to JSONC, conflict
   detection still fires on a stale `// @hash`; `secret` set/clear still works (storage provider key
   intact); `object`/`list` nested editing still dispatches.
-- **All:** `./singularity check` passes (plugin boundaries — with the documented temporary exception in
+- **All:** `./equin check` passes (plugin boundaries — with the documented temporary exception in
   S1–S3, removed in S4 — migrations-in-sync, eslint, plugins-doc-in-sync).

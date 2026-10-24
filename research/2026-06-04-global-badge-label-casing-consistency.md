@@ -22,7 +22,7 @@ Intended outcome — **one house rule, enforced structurally**:
   model registry, user-typed category names, counts) → passed through as-is.
 - **Casing lives in the content, never in CSS.** A lint rule bans
   `capitalize`/`uppercase`/`lowercase` on `<Badge className>` so the whole class
-  of "fix casing in CSS at the call site" fails `./singularity check`. If
+  of "fix casing in CSS at the call site" fails `./equin check`. If
   something genuinely must be all-caps (e.g. the `"BYPASS ACTIVE"` alarm chip),
   it is authored as a literal caps string — auditable in the data.
 
@@ -164,7 +164,7 @@ Reuse: `collectTokens` (`badge/lint/no-adhoc-chip.ts`), `STATUS_META`/precedent
 
 ## Verification
 
-1. `./singularity build` — runs the `eslint` check; the new
+1. `./equin build` — runs the `eslint` check; the new
    `no-badge-text-transform` rule must pass (proves every Badge site migrated)
    and `migrations-in-sync`/`plugins-doc-in-sync` stay green (new plugin adds
    no tables; regenerate docs).

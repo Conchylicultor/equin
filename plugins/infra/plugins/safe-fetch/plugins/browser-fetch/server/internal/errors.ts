@@ -68,7 +68,7 @@ export class BrowserUnavailableError extends BrowserFetchError {
 }
 
 /** The command that installs (or reinstalls) the browser by hand. */
-export const INSTALL_BROWSER_COMMAND = "./singularity deps install chromium";
+export const INSTALL_BROWSER_COMMAND = "./equin deps install chromium";
 
 /**
  * Chromium is not installed yet and its install has been requested: the page

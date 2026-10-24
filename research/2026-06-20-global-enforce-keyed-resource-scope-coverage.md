@@ -16,7 +16,7 @@ But `identityTable` shipped as an **optional** field. A keyed, DB-backed resourc
 that simply forgets it falls all the way back to FULL recompute — and **that
 fallback is silent**: nothing at author-time, build-time, or runtime says "this
 resource degraded the cascade you just spent effort scoping." The source doc names
-the fix explicitly (§4): *"a per-resource recompute policy + a `./singularity
+the fix explicitly (§4): *"a per-resource recompute policy + a `./equin
 check` that fails when a DB-backed keyed resource lacks `identityTable`/edge
 coverage."* This is the missing **policy** half — co-designed against the same
 `identityTable` / `affectedMap` / `coveredOrigins` substrate so the two are one
@@ -166,7 +166,7 @@ type) is primary and this check is the backstop. The check does **not** test for
 `db.` at all; it tests the *declaration* (`mode: "keyed"` ⇒ a scope policy is
 present in the span), which the type already guarantees for non-bypassed sites.
 
-No registry edits: `./singularity build` regenerates
+No registry edits: `./equin build` regenerates
 `checks/core/check.generated.ts` from the filesystem (the
 `plugins-registry-in-sync` check enforces no drift). `cacheSignature` absent
 (pure function of tree content).
@@ -205,15 +205,15 @@ No registry edits: `./singularity build` regenerates
 ## 7. Verification
 
 - **Type (primary):** in a scratch edit, remove `identityTable` from
-  `attemptsResource` (`tasks-core/.../resources.ts:76`) → `./singularity build`
+  `attemptsResource` (`tasks-core/.../resources.ts:76`) → `./equin build`
   type-check fails at that call site. Add `recompute: { kind: "full", reason: "…" }`
   instead → type-checks (FULL declared). Revert.
 - **Check (backstop):** temporarily introduce a keyed `defineResource` with neither
-  field via an `as any` cast that bypasses the type → `./singularity check
+  field via an `as any` cast that bypasses the type → `./equin check
   keyed-resource-scope` fails and names the offender. Revert → passes.
-- **No regression:** `./singularity check` passes wholesale on the unchanged tree
+- **No regression:** `./equin check` passes wholesale on the unchanged tree
   (all three keyed resources already declare `identityTable`); the new check reports
   `ok` and `plugins-registry-in-sync` stays green after `build` regenerates the
   check registry.
-- `./singularity build` succeeds and the server boots (no behavioural change — the
+- `./equin build` succeeds and the server boots (no behavioural change — the
   cascade still scopes exactly as `986d21ec1` shipped).

@@ -163,7 +163,7 @@ a similar amount (about 300 KB).
 
 ## Verification
 
-1. `./singularity build` regenerates every doc. Then:
+1. `./equin build` regenerates every doc. Then:
    - `git diff --stat` shows about 150 new `REFERENCE.md` files and smaller `CLAUDE.md` files.
    - `plugins/primitives/plugins/css/plugins/ui-kit/CLAUDE.md` shows `Imported by: 378 plugins`
      plus umbrella counts, and its `REFERENCE.md` lists all 378.
@@ -171,7 +171,7 @@ a similar amount (about 300 KB).
      `ConfigV2.Register` label on its own line.
    - Re-run the measurement script (line lengths over 2 KB across `plugins/**/CLAUDE.md`): it
      finds none.
-2. `./singularity check plugins-doc-in-sync` passes. Hand-delete one `REFERENCE.md`, then
+2. `./equin check plugins-doc-in-sync` passes. Hand-delete one `REFERENCE.md`, then
    create one for a plugin with no long list: the check fails on both.
-3. `./singularity test plugins/framework/plugins/tooling/plugins/codegen plugins/plugin-meta/plugins/facets`.
-4. Run a second `./singularity build` and confirm a zero diff (determinism).
+3. `./equin test plugins/framework/plugins/tooling/plugins/codegen plugins/plugin-meta/plugins/facets`.
+4. Run a second `./equin build` and confirm a zero diff (determinism).

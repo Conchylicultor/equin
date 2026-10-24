@@ -234,8 +234,8 @@ run: async () => {
 
 ## Verification
 
-1. `./singularity build` (regenerates the registry for the new plugin + applies any
-   docs/checks). Then `./singularity check` (boundaries, plugins-registry-in-sync,
+1. `./equin build` (regenerates the registry for the new plugin + applies any
+   docs/checks). Then `./equin check` (boundaries, plugins-registry-in-sync,
    plugins-doc-in-sync, type-check).
 
 2. **Part A (caller attribution) — end to end:**

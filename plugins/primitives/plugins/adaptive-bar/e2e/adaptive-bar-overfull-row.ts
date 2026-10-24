@@ -31,7 +31,7 @@
  *   own measurement seam: the test supplies 0 as a width, which is the thing
  *   under test being asserted rather than observed. Only a real engine decides
  *   that a `flex: 1 1 0%` cell in an over-full row is 0 *and* still laid out.
- * - `./singularity check layout-geometry` mutates synchronously and never
+ * - `./equin check layout-geometry` mutates synchronously and never
  *   reverts: its style writes are one-shot with no restore phase, and the bar's
  *   resize callback is RAF-debounced — so an inject-then-remove inside one task
  *   coalesces into no observation at all, and the 0px pass this script exists to
@@ -43,8 +43,8 @@
  *
  * Manual only — nothing runs this automatically.
  *
- *   ./singularity build
- *   ./singularity run plugins/primitives/plugins/adaptive-bar/e2e/adaptive-bar-overfull-row.ts [--path /agents] [--headed]
+ *   ./equin build
+ *   ./equin run plugins/primitives/plugins/adaptive-bar/e2e/adaptive-bar-overfull-row.ts [--path /agents] [--headed]
  */
 import {
   numArg,

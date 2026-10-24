@@ -165,7 +165,7 @@ export default {
 3. Implement the 6 tool renderer components
 4. Implement `task-progress-overlay.tsx`
 5. Wire in `web/index.ts`
-6. `./singularity build` and test against a conversation with active task tools
+6. `./equin build` and test against a conversation with active task tools
 
 ### Verification
 

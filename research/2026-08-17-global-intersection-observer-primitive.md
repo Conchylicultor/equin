@@ -212,17 +212,17 @@ the `scroll-safety/lint/no-adhoc-scroll-write.test.ts` precedent —
 
 ## Verification
 
-1. `./singularity check` — `eslint` (the new rule runs repo-wide and must find
+1. `./equin check` — `eslint` (the new rule runs repo-wide and must find
    zero violations outside the allowlist), `type-check`, `plugins-registry-in-sync`,
    `plugins-doc-in-sync`, `plugin-boundaries`.
-2. `./singularity test plugins/primitives/plugins/cursor-pagination` — the
+2. `./equin test plugins/primitives/plugins/cursor-pagination` — the
    existing `use-infinite-scroll.test.tsx` drives a `FakeIntersectionObserver`
    through `vi.stubGlobal` and must pass **unchanged**; that is the regression
-   test for the `deps` hazard above. Then `./singularity test` for the rest, and
+   test for the `deps` hazard above. Then `./equin test` for the rest, and
    check whether `test/setup.ts` needs an inert global `IntersectionObserver`
    alongside its inert `ResizeObserver` now that jsdom-mounted surfaces reach the
    primitive.
-3. `./singularity build` (background), then in
+3. `./equin build` (background), then in
    `http://<worktree>.localhost:9000`:
    - **conversation** — open a long transcript, scroll up: the stats strip must
      walk its numbers back and show the history chip, and scrolling to the end

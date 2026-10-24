@@ -130,7 +130,7 @@ maintenance and bug surface goes away.
 - **Stage 3:** run the migrated domain and the legacy stack in the same app; compare
   correctness and behavior on the same mutations. Watch the existing churn/op-rate debug
   reports (`debug/live-state-churn`, `debug/op-rate`) for regressions.
-- **Stage 5:** `./singularity check` + `type-check` must pass with the legacy plugins
+- **Stage 5:** `./equin check` + `type-check` must pass with the legacy plugins
   removed; the boundary checker confirms nothing still imports them.
 
 ## Critical existing files (entry points for the subtasks)

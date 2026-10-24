@@ -213,7 +213,7 @@ Tests (`bun test`, co-located — the primitive already has 13):
 3. `corpus-index`: `defineCorpusIndex` with no `parse` type-checks and yields `CorpusIndex<null>`; `stats/cost`'s existing 13 tests still pass unchanged.
 4. `folders/reconcile`: with a stub index + stub DB, exactly one `listFolderImportedSongs()` call happens for N on-disk files (the N+1 kill), and enqueue fires for new / `sourceMissing` / fingerprint-changed paths only.
 
-End-to-end, on the deployed worktree (`./singularity build`, then `http://<worktree>.localhost:9000`):
+End-to-end, on the deployed worktree (`./equin build`, then `http://<worktree>.localhost:9000`):
 
 5. Point the `midi-folders` config at a temp dir with a few `.mid` files. Confirm via `query_db` that `sonata_songs_ext_midi` gains one row per file, and that the Sonata library renders them.
 6. **Drift hole closed:** stop the backend, edit one `.mid`'s bytes, rebuild. Confirm exactly that one file re-imports (it lands in `modifiedPaths`) and the others do not.
@@ -221,4 +221,4 @@ End-to-end, on the deployed worktree (`./singularity build`, then `http://<workt
 7. **Boot deferral:** open Debug → Profiling (Gantt) and confirm a `warmup:sonata.midi-folders.reconcile` span runs **after** `after-onAllReady`, and that no `readdir` cost remains inside the `onReady:apps/sonata/…/folders` hook span.
 8. **No budget trip:** confirm Debug → Reports files no `boot-budget` report for the folders plugin on a cold boot with a populated folder.
 9. Delete a `.mid` while running; confirm the "source deleted" badge appears (live watcher path, unchanged).
-10. `./singularity check` green (in particular `plugins-doc-in-sync` after the CLAUDE.md edits).
+10. `./equin check` green (in particular `plugins-doc-in-sync` after the CLAUDE.md edits).

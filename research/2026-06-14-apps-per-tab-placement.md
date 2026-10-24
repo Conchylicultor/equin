@@ -175,7 +175,7 @@ module-level setter; presentation behavior stays plugin-owned).
 - `config/ui/theme-engine/ui.theme-engine.variant-group.jsonc` (+ `.origin`):
   remove the `surface-arrangement` ordering entry (build regenerates `.origin`;
   hand-edit the user-override `.jsonc`).
-- `./singularity build` regenerates `web.generated.ts` / `server.generated.ts`
+- `./equin build` regenerates `web.generated.ts` / `server.generated.ts`
   and the reorder/doc manifests; `plugins-registry-in-sync` / `plugins-doc-in-sync`
   / `plugin-boundaries` checks confirm no drift or cycle.
 
@@ -197,7 +197,7 @@ module-level setter; presentation behavior stays plugin-owned).
 - The keep-alive + per-tab `PaneStore` machinery in `use-tabs.tsx` — untouched.
 
 ## Verification
-1. `./singularity build`, then `./singularity check` (boundaries, registry-in-sync,
+1. `./equin build`, then `./equin check` (boundaries, registry-in-sync,
    doc-in-sync, type-check must pass after the plugin deletion).
 2. Open `http://<worktree>.localhost:9000`. Confirm the theme customizer no longer
    shows "Surface arrangement".

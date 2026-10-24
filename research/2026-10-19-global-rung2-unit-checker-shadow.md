@@ -137,7 +137,7 @@ Then update the track page:
 
 ## Verification
 
-- Unit tests (`./singularity test plugins/framework/plugins/tooling/plugins/checks/plugins/type-check`):
+- Unit tests (`./equin test plugins/framework/plugins/tooling/plugins/checks/plugins/type-check`):
   - `unitOf` over the folder vocabulary;
   - the unit checker equals `keyedCheck` on `keyed-check.test.ts`'s fixtures (body edit, API
     change three contracts deep, cycle, augmentation, shadowing file, import that starts
@@ -145,5 +145,5 @@ Then update the track page:
   - a unit's result is independent of its batch;
   - the read-set key moves on each of those cases, and only those.
 - Phase A answers and Phase C table on the design page, the replay at 0 divergences.
-- `./singularity check` and `./singularity build` green, with shadow off (default) and with the
+- `./equin check` and `./equin build` green, with shadow off (default) and with the
   flag on.

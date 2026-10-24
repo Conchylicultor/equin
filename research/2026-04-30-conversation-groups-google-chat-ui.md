@@ -88,7 +88,7 @@ This eliminates the dashed-vs-solid inconsistency and the right-vs-left chevron 
 
 ## Verification
 
-After implementing, deploy with `./singularity build` and load `http://<worktree>.localhost:9000`. Then in the conversations sidebar:
+After implementing, deploy with `./equin build` and load `http://<worktree>.localhost:9000`. Then in the conversations sidebar:
 
 1. **Default look** — groups should have no border or background. Hovering a group reveals a subtle border + background. Auto-groups and user-groups look identical except for the merge icon.
 2. **Collapse-on-drag** — start dragging a conversation. All groups collapse to header rows immediately. Release without dropping (Esc or drop outside) — groups restore to their previous expanded/collapsed state without any server write (verify via DevTools Network panel: zero `PATCH /api/conversation-groups` calls during drag/cancel).
@@ -98,4 +98,4 @@ After implementing, deploy with `./singularity build` and load `http://<worktree
 6. **Auto-group → user-group promotion** — drag from an auto-group onto an existing user-group. Existing path still works.
 7. **No regressions** — close conversation button, delete-group button, rename existing group still work.
 
-Run `./singularity check --plugin-boundaries` to confirm no new cross-plugin violations.
+Run `./equin check --plugin-boundaries` to confirm no new cross-plugin violations.

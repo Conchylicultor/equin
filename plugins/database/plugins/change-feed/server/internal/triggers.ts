@@ -1033,7 +1033,7 @@ async function planRebuild(
 
 const TriggerNameRowSchema = z.object({ tgname: z.string() });
 
-// Boot-time coverage check (replaces a separate ./singularity check, which can't
+// Boot-time coverage check (replaces a separate ./equin check, which can't
 // reach a live DB). After installing triggers, query which public tables (minus
 // denylist) lack all three expected triggers and warn loudly on any gap. With
 // by-construction coverage this should always be empty; a non-empty result means

@@ -64,7 +64,7 @@ Two steps, because class C can only be settled by an audit that can tell late fr
    - Keep it minimal: it is temporary code. Put the late/missed/open decision in a small pure
      function, so the one rule step 2 relies on is unit tested.
 
-`./singularity build`. After the user's review, `./singularity push`. Main then runs the corrected
+`./equin build`. After the user's review, `./equin push`. Main then runs the corrected
 audit.
 
 ### Step 2 (follow-up task, about a day after step 1 is on main): delete the audit
@@ -86,14 +86,14 @@ seconds, delete:
 - `lastSignalReconcileAt` and its writer in `status-reconciler.ts` (lines 379–381, 446). The audit is
   its only reader.
 - Then update the "missed signal" row in the 2026-10-02 plan's Verification 4, the `conversations`
-  CLAUDE.md, and `./singularity build` for the docs regen.
+  CLAUDE.md, and `./equin build` for the docs regen.
 
 A new report means one more class to understand and cover first, as above. File step 2 with
 `add_task` at the end of step 1, depending on nothing, with this doc as its context.
 
 ## Verification
 
-- `./singularity test plugins/conversations/plugins/runtime-tmux plugins/conversations/plugins/transcript-watcher plugins/conversations`.
+- `./equin test plugins/conversations/plugins/runtime-tmux plugins/conversations/plugins/transcript-watcher plugins/conversations`.
 - B on this worktree's deploy:
   - `tmux new-session -d -s spike-check claude` (or any process), then confirm no
     `spike-check` row appears in this worktree's DB through `query_db`;

@@ -191,7 +191,7 @@ Delete `plugins/primitives/plugins/pane/web/components/pane-router.tsx`. Remove 
 
 ## Verification
 
-1. `./singularity build` — TypeScript compiles, app runs
+1. `./equin build` — TypeScript compiles, app runs
 2. Toggle reorder edit-mode on/off — terminal pane should NOT reopen
 3. Navigate multi-column pane chains — verify open/close/swap all work
 4. PaneChrome close/promote buttons: visible on non-root panes, hidden on root

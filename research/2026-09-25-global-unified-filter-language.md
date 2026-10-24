@@ -213,9 +213,9 @@ type Clause = { column: string; op: OpId; operand: … }   // correlated per op,
 - **Lowering (bun:test, per field type):** a table of `(operator, operand, row value)` → expected, carried over from the current `*-filter-logic.test.ts` cases.
   - Only the number/date `≠`-with-NULL rows change, and they are listed in the test as the decided change.
   - Date lowering runs under a pinned clock and timezone.
-- `./singularity test plugins/network/plugins/live plugins/primitives/plugins/data-view plugins/fields`
-- `./singularity check` (type-check, plugin-boundaries: the language plugin imports no `fields` / `data-view`, and `plugins-doc-in-sync`).
-- `./singularity build`, then E2E with `screenshot.ts`:
+- `./equin test plugins/network/plugins/live plugins/primitives/plugins/data-view plugins/fields`
+- `./equin check` (type-check, plugin-boundaries: the language plugin imports no `fields` / `data-view`, and `plugins-doc-in-sync`).
+- `./equin build`, then E2E with `screenshot.ts`:
   - on All conversations, filter `status is none of [done]` OR `created within past 1 week`, and check the rows against `query_db`;
   - on the notifications bell, the type chips still work (a live `in` filter);
   - on events, `tags` is no longer offered unless it is bound.

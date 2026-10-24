@@ -232,8 +232,8 @@ export function resolveOriginAnnotations(
  * the time `renderConfigOriginContent` runs) and returns the resolved sync
  * provider.
  *
- * Critical for build↔check symmetry: `./singularity build` and the standalone
- * `./singularity check` run in SEPARATE processes, so a `setDefaultOriginAnnotations`
+ * Critical for build↔check symmetry: `./equin build` and the standalone
+ * `./equin check` run in SEPARATE processes, so a `setDefaultOriginAnnotations`
  * call made inside the build command is invisible to the check. The preparer is
  * instead registered as a side effect of *importing* a shared module that BOTH
  * the build step and the `config-origins-in-sync` check import — so both

@@ -73,7 +73,7 @@ Kept from v3 unchanged: D28 (expand A6 through relation bases), the T15 rung-2 n
 
 ## 4. Build sequence
 
-Step 23 is one reviewable unit, but it is executed in four sub-steps. Each sub-step ends green on `check` and on `./singularity test` over the touched plugins, so a failure is attributable. One background `./singularity build` + e2e runs at the end of 23, and another at the end of ★24.
+Step 23 is one reviewable unit, but it is executed in four sub-steps. Each sub-step ends green on `check` and on `./equin test` over the touched plugins, so a failure is attributable. One background `./equin build` + e2e runs at the end of 23, and another at the end of ★24.
 
 | # | Sub-step | Behaviour change |
 |---|---|---|
@@ -283,9 +283,9 @@ Hand-edit the prose that names deleted things. `docs/plugins-details.md` and the
 
 ## 6. Verification
 
-**Tests:** `./singularity test` over resource-runtime, change-feed, live-state-snapshot, derived-views, derived-tables, query-resource, network/live, live-state, resource-vocabulary, codegen, facets/resources, keyed-resource-scope, read-set, runtime-profiler, tasks-core, automations and reports (`reports-list-oracle` must stay green).
+**Tests:** `./equin test` over resource-runtime, change-feed, live-state-snapshot, derived-views, derived-tables, query-resource, network/live, live-state, resource-vocabulary, codegen, facets/resources, keyed-resource-scope, read-set, runtime-profiler, tasks-core, automations and reports (`reports-list-oracle` must stay green).
 
-**Build:** a background `./singularity build`, then `./singularity await` until it reports success. It includes `check` (`type-check`, `plugins-doc-in-sync`, `resource-vocabulary`, `keyed-resource-scope`, `no-legacy-resource-spelling`).
+**Build:** a background `./equin build`, then `./equin await` until it reports success. It includes `check` (`type-check`, `plugins-doc-in-sync`, `resource-vocabulary`, `keyed-resource-scope`, `no-legacy-resource-spelling`).
 
 **E2E:** `tree-live-verify` passes all checks, at 45 or more.
 
@@ -374,7 +374,7 @@ Landed as planned, with these deviations:
 
 resource-runtime as a whole: 329 → 336 tests (24 files; 25 before) — 333 at implementation, +3 in the review fix pass.
 
-**Results.** `./singularity check type-check plugin-boundaries boundary-rules keyed-resource-scope resource-vocabulary:barrels-name-their-exports resource-runtime:compiled-routes no-db-backed-notify plugins-registry-in-sync format-clean`: pass. Tests, bun:test 1458 pass / 0 fail over 148 files plus vitest 16 files green: resource-runtime, server-core, change-feed, live-state-snapshot, network/live, query-resource, tasks-core, reports, runtime-profiler, release, events-core, all-conversations, agents, debug/read-set, primitives/live-state. A second batch — derived-views, derived-tables, codegen, facets/resources, automations, resource-vocabulary, keyed-resource-scope — 169 pass / 0 fail. Neither known out-of-scope failure is in these batches (page/editor was not run; reports did not share a process with it).
+**Results.** `./equin check type-check plugin-boundaries boundary-rules keyed-resource-scope resource-vocabulary:barrels-name-their-exports resource-runtime:compiled-routes no-db-backed-notify plugins-registry-in-sync format-clean`: pass. Tests, bun:test 1458 pass / 0 fail over 148 files plus vitest 16 files green: resource-runtime, server-core, change-feed, live-state-snapshot, network/live, query-resource, tasks-core, reports, runtime-profiler, release, events-core, all-conversations, agents, debug/read-set, primitives/live-state. A second batch — derived-views, derived-tables, codegen, facets/resources, automations, resource-vocabulary, keyed-resource-scope — 169 pass / 0 fail. Neither known out-of-scope failure is in these batches (page/editor was not run; reports did not share a process with it).
 
 **Review fix pass.** Four review findings were fixed:
 - the FULL `dependsOn` cascade's `sourceTx` forwarding lost its only test with the cascade-attribution suite. Two `-ack-channel` cases now cover it: the xid reaches the downstream frame, and an overflowed upstream forwards nothing;
@@ -405,14 +405,14 @@ Landed as planned, on top of what 23b already deleted (`rel.ts`, `compile.ts`, `
   - `identity.ts`' `wireFieldFor`: the view rationale is gone. The cross-relation by-name fallback stays, for a current reason now stated: it finds a key field that projects only a joined column of the pk's name, so arm-plan refuses it as "projects a joined column" rather than as an unprojected pk. Removing it failed exactly that test in `compile-window.test.ts`.
   - `compile-window.ts`'s `compileWindowQuery` doc is rewrapped, and `query-resource/core/testing` now says shipping code reaches the alias through `familyMember`.
   - The W6 audit pattern above gained `\bqueryResource\b`, `compileQuery`, `QuerySource` and `QUERY_RESOURCE_CORE`.
-  - Not fixed here: `docs/plugins-details.md` (`plugins-doc-in-sync`) lags the barrel changes. It is generated, and the parent's `./singularity build` regenerates it.
+  - Not fixed here: `docs/plugins-details.md` (`plugins-doc-in-sync`) lags the barrel changes. It is generated, and the parent's `./equin build` regenerates it.
 - **Left for 23d:** every doc and comment outside the 23c list that still names a deleted thing. These include `runtime.ts:560`, `server-core/CLAUDE.md:175`, the query-resource / live-state / network/live `CLAUDE.md` sections, `tasks-core/core/resources.ts`, `agents/shared/resources.ts` and the oracle-test narratives.
 
-**Results.** `./singularity test` over query-resource, network/live (its `lint/` included), primitives/live-state, resource-vocabulary, codegen, facets/resources, parse-utils, keyed-resource-scope and tasks-core: bun:test 980 pass / 0 fail (93 files), and vitest 156 pass (15 files). A re-run after the `familyMemberAlias` move over query-resource plus `serve-collection-scoped.test.ts`: 143 pass. `./singularity check type-check plugin-boundaries boundary-rules keyed-resource-scope resource-vocabulary:barrels-name-their-exports live:legacy-descriptors-pinned format-clean lint-directives-stable`: pass. The first run failed on format-clean, fixed with `./singularity format`, and on plugin-boundaries R13, fixed above. type-check includes the type-aware ESLint pass, which is the repo's lint-rule check.
+**Results.** `./equin test` over query-resource, network/live (its `lint/` included), primitives/live-state, resource-vocabulary, codegen, facets/resources, parse-utils, keyed-resource-scope and tasks-core: bun:test 980 pass / 0 fail (93 files), and vitest 156 pass (15 files). A re-run after the `familyMemberAlias` move over query-resource plus `serve-collection-scoped.test.ts`: 143 pass. `./equin check type-check plugin-boundaries boundary-rules keyed-resource-scope resource-vocabulary:barrels-name-their-exports live:legacy-descriptors-pinned format-clean lint-directives-stable`: pass. The first run failed on format-clean, fixed with `./equin format`, and on plugin-boundaries R13, fixed above. type-check includes the type-aware ESLint pass, which is the repo's lint-rule check.
 
 ### 23d
 
-Docs, comments and CLAUDE.md prose only; no code behaviour changed (`keyed-diff.ts` was also reflowed by `./singularity format`, whitespace only). Autogenerated sections (`## Plugin reference`, `docs/plugins-*.md`) were not hand-edited; `./singularity build` regenerates them. Rewritten to describe the code as it stands:
+Docs, comments and CLAUDE.md prose only; no code behaviour changed (`keyed-diff.ts` was also reflowed by `./equin format`, whitespace only). Autogenerated sections (`## Plugin reference`, `docs/plugins-*.md`) were not hand-edited; `./equin build` regenerates them. Rewritten to describe the code as it stands:
 
 - **resource-runtime.** `CLAUDE.md`: the `ScopePolicy` section (routes + a membership, keyed ⇒ membership ⇒ routed, D37's `refuseLegacyScopeKeys`, how a non-keyed entry is reached, T15 on `dependsOn`), *Bounded membership* (every keyed entry declares one; point routing is `routeTableChange`'s; the alias's `orderSignatureOf` required; a membership drain cascades nothing — A5 + the D32 rebuild assert), *Scoped change routing* (the legacy router as `applyLegacyFullChange` over relation bases and the version-keyed memo; `reach` exclusive with `dependsOn`; the empty-scoped skip is a reverse route resolving to no host; `ackTx` threads through the FULL `dependsOn` cascade), the two FULL drain sites under *Flight freshness*, *Profiling seams* (`cascade` origin = a routed entry's reverse-route resolve), and the harness list (cascade-attribution suite gone; the shared routed fixture). `runtime.ts`: the `ScopePolicy` / `KeyedResourceContract` / legacy-key / membership docs, `wrapOrigin`, `drainMembershipFull`'s header. `routing.ts`, `keyed-diff.ts`, `testing/routed-fixture.ts`, and the window-membership suite's narrative.
 - **`cascade` origin.** `runtime-profiler/core/recorder.ts` and `get_runtime_profile`'s description (`mcp-tools.ts`) now say what the code records: `cascade` wraps exactly one call site, `resolveReverseRoutes` (the id-translation read from changed lookup rows to host ids), labelled with the routed entry's key. **Deviation from the brief:** a routed recompute (`recomputeOn`) opens no `cascade` origin — `cascadeDownstream` only schedules the downstream, whose recompute is a `push` load — so the docs say that rather than "(and a routed recompute)".
@@ -432,7 +432,7 @@ Docs, comments and CLAUDE.md prose only; no code behaviour changed (`keyed-diff.
 | Unrelated homonym (`fanOut`) | `reports` (fan-out ceiling: `fan-out.ts`, `record-report.ts`, `report-kinds.ts`, `core/config.ts`, `CLAUDE.md`, e2e, `config/reports/reports.origin.jsonc`), `debug/report-storm`, `live-state-health`'s per-resource fan-out stat, the transcript / edited-files watchers, `host-semaphore`, `cli/build/run.ts`, `passthrough` lint, `tasks-core/e2e/trigger-time.ts` |
 | Real leftover | none — the two found in the pass (`compile-window.test.ts`' "mirrors the queryResource guard", the lint test's comment on what query-resource/core exports) were fixed |
 
-**Checks.** `./singularity format` (reflowed `keyed-diff.ts`), then `./singularity check format-clean lint-directives-stable type-check`: pass. No tests run (prose-only step).
+**Checks.** `./equin format` (reflowed `keyed-diff.ts`), then `./equin check format-clean lint-directives-stable type-check`: pass. No tests run (prose-only step).
 
 ### ★24
 
@@ -460,7 +460,7 @@ Landed as planned, with these deviations and details (the review fix pass is fol
   - Unbound keys.
 
   `ChipRow` gained `aside`, `tag` and `empty`. The caveat says that the ceiling is a lower bound until loaders have run. Deleted: the recompute arm, the `identityTable` / `coveredOrigins` branch, the old Section C (`DiffSection`, `computeDiff`, `OverBroadFlag`, their memo and render) and the `affectedMap` caveat. Lists stay hand-mapped `Stack` / `Cluster` children, as before. No `Row` is used, so no `data-view/no-adhoc-row-list` disable is needed.
-- **Description.** The plugin description (`web/index.ts`, `package.json`) no longer claims a diff against the `dependsOn` graph. The generated `## Plugin reference` / `docs/plugins-*.md` lag until `./singularity build` regenerates them.
+- **Description.** The plugin description (`web/index.ts`, `package.json`) no longer claims a diff against the `dependsOn` graph. The generated `## Plugin reference` / `docs/plugins-*.md` lag until `./equin build` regenerates them.
 - **Sibling contracts confirmed:** `live-state-health/shared/endpoints.ts` (default zod object, which strips unknown keys) and `live-state-churn/plugins/emit/shared/endpoints.ts` (`.passthrough()`) read none of the dropped fields.
 - **Docs.** `read-set/CLAUDE.md` is rewritten, including the policy-vs-`legacyReach` distinction. In `resource-runtime/CLAUDE.md`: the *read-set debug pane* bullet (policy order, `legacyReach` and `legacyRouted`, every new field, the central degradation, the A26 pin), the L2 `_debug` sentence and the harness list.
 - **A26.**
@@ -486,4 +486,4 @@ Landed as planned, with these deviations and details (the review fix pass is fol
 - **Process.** `plugins/framework/CLAUDE.md` requires the user's approval in the conversation for any change under `plugins/framework/`. ★24 edits `resource-runtime/core/runtime.ts`, its `CLAUDE.md` and a new test there, and the fix pass widened the `runtime.ts` edit with `legacyRouted` / `readSetBasesOf` / `legacyReach`. That approval has to be confirmed with the user before build or push. A workflow brief is not that approval.
 - **F3 (most live legacy-full entries have empty bases)** is an observation, not a defect. The caveat now says that the ceiling is a lower bound, and W7 has to be checked after the relevant loaders have run.
 
-**Results.** `./singularity test plugins/framework/plugins/resource-runtime plugins/framework/plugins/server-core plugins/debug/plugins/read-set plugins/debug/plugins/live-state-health plugins/debug/plugins/live-state-churn`: bun:test 388 pass / 0 fail; no vitest suites under these paths. `./singularity check type-check plugin-boundaries boundary-rules format-clean` passes. Not run here: a `./singularity build` and the §6 `get_runtime_profile` / W7 check on the deploy. §6 W7 holds as written: `agents`, `pages`, `automations.catalog` and `edited-files` all appear under Legacy FULL with their transitive bases, the latter two tagged `external`. The parent's final build owns both.
+**Results.** `./equin test plugins/framework/plugins/resource-runtime plugins/framework/plugins/server-core plugins/debug/plugins/read-set plugins/debug/plugins/live-state-health plugins/debug/plugins/live-state-churn`: bun:test 388 pass / 0 fail; no vitest suites under these paths. `./equin check type-check plugin-boundaries boundary-rules format-clean` passes. Not run here: a `./equin build` and the §6 `get_runtime_profile` / W7 check on the deploy. §6 W7 holds as written: `agents`, `pages`, `automations.catalog` and `edited-files` all appear under Legacy FULL with their transitive bases, the latter two tagged `external`. The parent's final build owns both.

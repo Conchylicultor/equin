@@ -1,8 +1,8 @@
 /**
  * End-to-end check of the three source ACTIONS, against a deployed worktree.
  *
- * Manual only. Run after `./singularity build`:
- *   ./singularity run plugins/apps/plugins/events/plugins/sources/e2e/source-actions-verify.ts [--headed]
+ * Manual only. Run after `./equin build`:
+ *   ./equin run plugins/apps/plugins/events/plugins/sources/e2e/source-actions-verify.ts [--headed]
  *
  * `sources-verify.ts` covers the surface (the registry-driven `+` menu, the
  * generated form, the contributed sections). This one covers what the row and

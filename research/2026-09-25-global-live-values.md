@@ -207,7 +207,7 @@ factories are deleted as phase 3 migrates their call sites (the no-wrapper decis
   - Spread `.declare` into `server/index.ts`'s contributions.
 - **Index.** Add a partial index `notifications_unread_badge_idx ON (variant) WHERE dismissed = false AND read = false AND muted = false`
   in `tables.ts`. The count is re-run on every write to the table, and today only `(dismissed)`
-  is indexed. `./singularity build` generates the migration.
+  is indexed. `./equin build` generates the migration.
 - **Read-set guard.** `reconcile-read-set.ts` keeps
   `[...notificationsServed.keys, ...notificationsUnreadServed.declare.map(d => d.key)]`, with a
   plain `keys` field added to `ServedValue` for symmetry with `ServedCollection`. Without it, boot
@@ -236,7 +236,7 @@ factories are deleted as phase 3 migrates their call sites (the no-wrapper decis
 
 ## Verification
 
-- **Tests:** `./singularity test plugins/network/plugins/live plugins/primitives/plugins/live-state plugins/framework/plugins/resource-runtime plugins/infra/plugins/boot-snapshot plugins/database/plugins/live-state-snapshot plugins/framework/plugins/tooling plugins/plugin-meta/plugins/facets/plugins/resources plugins/shell/plugins/notifications`
+- **Tests:** `./equin test plugins/network/plugins/live plugins/primitives/plugins/live-state plugins/framework/plugins/resource-runtime plugins/infra/plugins/boot-snapshot plugins/database/plugins/live-state-snapshot plugins/framework/plugins/tooling plugins/plugin-meta/plugins/facets/plugins/resources plugins/shell/plugins/notifications`
   - `liveValue`:
     - `defaultParams: {}` only when preloaded;
     - `@ts-expect-error` cases: `preload` together with `params`; `useLive(v)` without its
@@ -264,10 +264,10 @@ factories are deleted as phase 3 migrates their call sites (the no-wrapper decis
     - the exact counts come back;
     - dismissing one row or marking all read moves the counts.
   - The panel suite still passes with `isCountedUnread` on `matchesFilter`.
-- **`./singularity check`:** type-check, `eager-tier-in-sync` (tasks-core and the others keep
+- **`./equin check`:** type-check, `eager-tier-in-sync` (tasks-core and the others keep
   their pins; notifications is pinned by both keys), `resource-vocabulary`, `plugins-doc-in-sync`
   (`notifications.unread` is listed), `migrations-in-sync`.
-- **`./singularity build`**, then extend `shell/notifications/e2e/bell-filter.ts`:
+- **`./equin build`**, then extend `shell/notifications/e2e/bell-filter.ts`:
   - seed 250 unread warnings plus 3 unread errors, all older than 200 fresh info rows;
   - the boot snapshot contains `notifications.unread = { errors: 3, warnings: 250 }`;
   - with websockets blocked, the bell still paints a red badge whose label reads 253, with no
@@ -316,12 +316,12 @@ Shipped as designed: `liveValue` / `serveValue` / `useLive(value)`, `preload` re
     `{ errors: 0, warnings: 0 }`. "No pending frame" is asserted with an init-script
     `MutationObserver` that records every `aria-label` the bell ever had from the document's
     start: the list must be exactly `["Notifications, 253 unread"]`.
-  - `./singularity build` needed `--migration-name notifications_unread_badge_idx` for the new
+  - `./equin build` needed `--migration-name notifications_unread_badge_idx` for the new
     partial index (migration `20260925_190550_ba1ccdcd__notifications_unread_badge_idx.sql`).
 
 ### Verification results
 
-- `./singularity test plugins/shell/plugins/notifications plugins/network/plugins/live`: bun
+- `./equin test plugins/shell/plugins/notifications plugins/network/plugins/live`: bun
   123 pass / 0 fail across 9 files (including the new `count-unread.test.ts`: 260 undismissed rows
   with counted errors/warnings behind 200 info rows → `{3, 5}`; SQL agrees with
   `matchesFilter` row for row; dismissing one → `{2, 5}`; mark-all-read → `{0, 0}`). Vitest 25
@@ -329,7 +329,7 @@ Shipped as designed: `liveValue` / `serveValue` / `useLive(value)`, `preload` re
   → neutral bell; `{3, 250}` → label "Notifications, 253 unread", `9+`, red; warnings only →
   orange; zero → no badge). The bell suite logs Base UI's `nativeButton` warning, which is
   already present: `InlinePopover`'s trigger is a `<span>`.
-- `./singularity build`: checks passed (type-check included), deployed.
+- `./equin build`: checks passed (type-check included), deployed.
 - `e2e/bell-filter.ts`: ALL CHECKS PASSED (24). These include the boot snapshot's
   `notifications.unread` being baseline + `{3, 250}` while the preloaded window holds only the
   200 info rows. With websockets blocked, every bell frame read "Notifications, 253 unread", and

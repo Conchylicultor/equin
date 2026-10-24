@@ -116,7 +116,7 @@ the raw dump only if cheap to add.
 
 ## Verification (end-to-end)
 
-1. `./singularity build` from the worktree → main restarts and (being main) starts the recorder.
+1. `./equin build` from the worktree → main restarts and (being main) starts the recorder.
 2. **Overhead gate (must pass before declaring done):** compare `health.jsonl` `eventLoopP50Ms` /
    `eventLoopP99Ms` for ~30 min before vs after enabling. The sampler must add negligible steady-state
    lag; if P50 climbs materially, lower the sample rate (raise the start arg) and re-check.

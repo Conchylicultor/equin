@@ -21,7 +21,7 @@ plugins/collections/
 │       └── define-collection.ts          # defineCollection: composes table + schemas + resourceDescriptor
 ```
 
-No `CLAUDE.md` needed — `./singularity build` autogenerates it.
+No `CLAUDE.md` needed — `./equin build` autogenerates it.
 
 ## Implementation details
 
@@ -220,9 +220,9 @@ CollectionDefinition<F>.resourceDescriptor : ResourceDescriptor<InferRow<F>[]>
 ## Verification
 
 1. **`tsc --noEmit`** — the collection infers `CollectionDefinition<F>` with correct field types; `resourceDescriptor` carries `InferRow<F>[]`
-2. **`./singularity check --plugin-boundaries`** — no boundary violations; only imports from core barrels and external packages
+2. **`./equin check --plugin-boundaries`** — no boundary violations; only imports from core barrels and external packages
 3. **Scratch type test** (not committed): define a collection matching prompt-templates fields, assert `InferRow<F>` matches the hand-written `PromptTemplate` type
-4. **`./singularity build`** — the new plugin is discovered and the barrel compiles
+4. **`./equin build`** — the new plugin is discovered and the barrel compiles
 
 ## Critical files (read before implementing)
 

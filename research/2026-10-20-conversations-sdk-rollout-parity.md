@@ -67,7 +67,7 @@ After those comes the Phase 2 decision.
      - If a stale worktree still had one, the sdk resume would fail loudly with tmux's duplicate-session error, not run two agents on one session.
    - **Delete** `machine/internal/adopt-tmux-rows.ts`, `tmux-adoption.ts` and its test, and `listTmuxConversations` / `moveToSdkRuntime` from `rows.ts`.
    - **Delete the `@singularity-host` mark** (`agent-launch/core/host-option.ts` and its use in `sdk-runtime.ts:147`). Only a backend still running Phase-1 code reads it: a worktree based between `89cd4f125b` and `30c7830fd9` and never rebased. Before deleting, list the running worktree backends (`~/.singularity/sockets/*.sock`) and check each checkout's HEAD for `30c7830fd9`. If any predates it, keep the mark for now.
-   - **Migration mechanics.** The `retire_tmux_runtime` migration shows how the previous session wrote a data migration, and `./singularity build` generates the migration. Find out whether a hand-written data migration has a sanctioned spelling before writing one.
+   - **Migration mechanics.** The `retire_tmux_runtime` migration shows how the previous session wrote a data migration, and `./equin build` generates the migration. Find out whether a hand-written data migration has a sanctioned spelling before writing one.
 
 ### B. Parity (this session)
 
@@ -86,7 +86,7 @@ After those comes the Phase 2 decision.
 
 ### C. The 32 s stall (bounded, this session)
 
-- Try to reproduce it twice: launch a conversation right after `./singularity build` restarts the worktree backend, then queue a second turn.
+- Try to reproduce it twice: launch a conversation right after `./equin build` restarts the worktree backend, then queue a second turn.
 - Record when the `init` message arrives and each MCP server's status in it (the agent already logs every SDK message).
 - If it reproduces, the cause is the CLI waiting on an MCP server that is not up yet. Look for a fix we own, such as starting the agent's launch only once the backend serves `/mcp`, or the CLI's MCP connect timeout.
 - If it does not reproduce, record that and close the item.
@@ -109,10 +109,10 @@ The user wants to work out what Phase 2 should look like in the next session, no
 
 ## Verification
 
-1. `./singularity test` on runtime-sdk, turn-ledger, conversations and compaction-context. New tests:
+1. `./equin test` on runtime-sdk, turn-ledger, conversations and compaction-context. New tests:
    - the reducer keeps the reset time;
    - the ledger confirms a `/compact` turn.
-2. `./singularity check`, then `./singularity build` in the background.
+2. `./equin check`, then `./equin build` in the background.
 3. On the worktree, with Haiku conversations:
    - run `/compact`; the context attachment appears and the turn is `accepted`;
    - check the usage-limit renderer against a recorded `isApiErrorMessage` line (an exhibit, or a fixture in a jsonl-viewer test).

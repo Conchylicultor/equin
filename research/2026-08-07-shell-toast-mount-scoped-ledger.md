@@ -212,8 +212,8 @@ end to end).
 
 ## Verification
 
-1. `./singularity build` (regenerates the plugin doc block; `plugins-doc-in-sync` will fail otherwise).
-2. `./singularity test plugins/shell/plugins/toast` — both runners.
+1. `./equin build` (regenerates the plugin doc block; `plugins-doc-in-sync` will fail otherwise).
+2. `./equin test plugins/shell/plugins/toast` — both runners.
 3. `bun plugins/shell/plugins/toast/e2e/dismiss-all-verify.ts` against the worktree deploy.
 4. Confirm the two regression tests fail when reverted onto current `show-toast.tsx`.
 5. Re-run the drop probe that found this (burst notifications, compare posted vs ever-rendered via MutationObserver, then assert the button's number equals the stack) against the worktree deploy — the original repro was 3 dropped in 465.

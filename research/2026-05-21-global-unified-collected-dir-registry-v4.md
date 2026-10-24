@@ -305,7 +305,7 @@ Automatically covers any future collected dir — no check updates needed.
 | `plugins/framework/plugins/central-core/bin/plugins.generated.ts` | Replaced by `central-core/core/central.generated.ts` |
 | `plugins/framework/plugins/central-core/bin/plugins.ts` | Relay, no longer needed |
 
-### Generated (by `./singularity build`)
+### Generated (by `./equin build`)
 
 | File | Export |
 |------|--------|
@@ -318,7 +318,7 @@ Automatically covers any future collected dir — no check updates needed.
 ## 7. Adding a new collected dir
 
 1. In the owning plugin's `core/index.ts`: `export const guardCollectedDir = defineCollectedDir("guard")`
-2. `./singularity build` — generates `<ownerPlugin>/core/guard.generated.ts`
+2. `./equin build` — generates `<ownerPlugin>/core/guard.generated.ts`
 3. Write a consumer that imports `guardEntries` from the generated file
 4. Commit the generated file — `plugins-registry-in-sync` catches drift
 
@@ -326,10 +326,10 @@ No hardcoded lists. No custom discovery code. No codegen flags.
 
 ## 8. Verification
 
-1. `./singularity build` generates all 5 `.generated.ts` files
-2. `./singularity check` passes (including `plugins-registry-in-sync` covering all 5 files)
+1. `./equin build` generates all 5 `.generated.ts` files
+2. `./equin check` passes (including `plugins-registry-in-sync` covering all 5 files)
 3. App loads at `http://<worktree>.localhost:9000` — all web plugins render
 4. Server starts — topo-sort works, `dependsOn` resolved correctly
-5. `./singularity check --eslint` discovers lint rules from `lint.generated.ts`
+5. `./equin check --eslint` discovers lint rules from `lint.generated.ts`
 6. All checks run via `check.generated.ts`
 7. Smoke test: add `defineCollectedDir("guard")` temporarily, build, verify `guard.generated.ts` appears, remove

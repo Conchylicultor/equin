@@ -278,7 +278,7 @@ Also read `page/inline-date`'s reminder reconcile for the same unbatched shape b
 Feasible and backward-compatible: a new nullable filter column on `blocksChanged` stores `null` for every
 existing `.where()`-less subscriber, and the plain-column matcher `OR(col IS NULL, eq(col, payload[key]))`
 (`events/server/internal/event.ts:105`) keeps them match-any with zero code changes. Adding the column is a
-normal additive migration via `./singularity build` — no backfill.
+normal additive migration via `./equin build` — no backfill.
 
 But the win is bounded to **one** of five subscribers. Content-search, history, inline-date and links all
 genuinely depend on block text (a page-history snapshot is a content snapshot, so it must record typing);
@@ -314,20 +314,20 @@ bun plugins/page/plugins/editor-collab/e2e/crdt-newblock-verify.ts            # 
 bun plugins/page/plugins/editor-collab/e2e/crdt-offline-verify.ts             # queue + reconnect
 bun plugins/page/plugins/editor/e2e/crdt-reopen-verify.ts                     # cold hydration
 bun plugins/page/plugins/editor/e2e/crdt-split-merge-verify.ts                # the DELETE/exit path
-./singularity test plugins/framework/plugins/resource-runtime                 # point routing
+./equin test plugins/framework/plugins/resource-runtime                 # point routing
 ```
 
-**F3 + F4** — `./singularity test plugins/page/plugins/editor` (`collab-hydration-state.test.ts`,
+**F3 + F4** — `./equin test plugins/page/plugins/editor` (`collab-hydration-state.test.ts`,
 `collab-session.test.ts`, `live-state-yjs-provider.test.ts`). No e2e forces a rehydrate today; add
 `plugins/page/plugins/editor/e2e/hydration-recovery-verify.ts` asserting (i) rendered text never goes empty
 across a `refetch`, (ii) no skeleton ever paints over a block that already showed text.
 
-**F5** — `./singularity test plugins/infra/plugins/attachments`; add a `setMany` unit case covering the
+**F5** — `./equin test plugins/infra/plugins/attachments`; add a `setMany` unit case covering the
 empty-ids owner and the mixed batch.
 
-**F2** — `./singularity check keyed-resource-scope` (extended) and `./singularity check type-check`.
+**F2** — `./equin check keyed-resource-scope` (extended) and `./equin check type-check`.
 
-**Measuring the drop.** Baseline first, `./singularity build`, then re-read after a comparable typing
+**Measuring the drop.** Baseline first, `./equin build`, then re-read after a comparable typing
 session:
 
 ```sql
@@ -346,4 +346,4 @@ select operation, count, max_ms from slow_ops where operation like '%attachment-
 `sub:page-block-doc` is the number that proves the user-visible fix — it is what the starvation window was
 racing.
 
-> `./singularity build` is ~10 min median: run it with `run_in_background: true` and end the turn.
+> `./equin build` is ~10 min median: run it with `run_in_background: true` and end the turn.

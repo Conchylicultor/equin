@@ -141,7 +141,7 @@ Update the "Undo / redo (one unified stack)" section of
 
 ## Verification
 
-1. `./singularity build`; open `http://<worktree>.localhost:9000/pages`, open a page.
+1. `./equin build`; open `http://<worktree>.localhost:9000/pages`, open a page.
 2. **Reported bug class — checkbox:** add a to-do, toggle it checked → `Cmd+Z` →
    unchecks; `Cmd+Shift+Z` → re-checks. Script via `e2e/screenshot.mjs`
    (`--click` + keyboard) for before/after.
@@ -158,4 +158,4 @@ Update the "Undo / redo (one unified stack)" section of
    undo stack (Cmd+Z does not re-expand it).
 9. **Page-level paths intact:** edit a page title (page header) and toggle sidebar
    tree expand — still work (they keep using `updateBlock`).
-10. `./singularity check` (type-check + boundaries).
+10. `./equin check` (type-check + boundaries).

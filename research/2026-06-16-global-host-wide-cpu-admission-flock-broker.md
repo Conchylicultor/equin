@@ -227,12 +227,12 @@ path) is never serialized behind a 14s archive.
   `computeGraph` calls un-gated `computeDeltaCore`. Re-audit before finalizing.
 - **No central-core / migration / registry-root changes.** Two new pure-library plugins,
   covered by the existing `allow("plugin.** -> plugin.**")` boundary edge; web→server
-  isolation auto-enforced. Add both `CLAUDE.md`s; `./singularity build` regenerates
+  isolation auto-enforced. Add both `CLAUDE.md`s; `./equin build` regenerates
   `docs/plugins-*.md` (the `plugins-doc-in-sync` check requires it).
 
 ## Verification (self-contained — this worktree, no central/main-merge needed)
 
-1. `./singularity build` → both new plugins compile, barrels resolve, broker path valid,
+1. `./equin build` → both new plugins compile, barrels resolve, broker path valid,
    `plugins-registry-in-sync` / `plugins-doc-in-sync` pass. App at `http://<worktree>.localhost:9000`.
 2. **Functional smoke:** open a conversation → commits-graph chip, edited-files, review
    plugin-changes, code-explorer push view, and plugin-view tree all still render correctly

@@ -8,7 +8,7 @@
 
 | Process | Runtime | Cardinality | Spawned by | Listens on |
 |---|---|---|---|---|
-| Gateway | Go | 1 per machine | `./singularity start` (one-time), self-daemonizing | TCP `:9000` (the only public listener) |
+| Gateway | Go | 1 per machine | `./equin start` (one-time), self-daemonizing | TCP `:9000` (the only public listener) |
 | Worktree backend | Bun (TS) | 1 per worktree (incl. `main` → `singularity` namespace) | Gateway (lazy, on first request or on build notify) | Unix socket `~/.singularity/sockets/<name>.sock` |
 | Central backend | Bun (TS) | 1 per machine | Gateway | Unix socket (same scheme, name `central`) |
 | Postgres 18 | native | 1 cluster per machine | Gateway supervisor (via `database/embedded/scripts/start.ts`) | TCP `127.0.0.1:5433` + Unix socket dir |
@@ -31,7 +31,7 @@ order:
    `localhost` / IPs / multi-label hosts → no worktree.
 2. **`/gateway/*` API** — intercepted before any worktree resolution (works on
    every host): `GET /gateway/worktrees`, `POST /gateway/worktrees/<name>/restart`
-   (what `./singularity build` calls to deploy), `GET /gateway/worktrees/<name>/logs`
+   (what `./equin build` calls to deploy), `GET /gateway/worktrees/<name>/logs`
    (SSE stream of backend stdout/stderr: `history` frame with the ring buffer,
    then `entry` frames, `: ping` comment every 25s), `GET /gateway/services*`
    (supervisor state).
@@ -39,7 +39,7 @@ order:
    `~/.singularity/central-routes.json` (fsnotify-watched, atomically swapped).
    Wins on *any* host — this is how `/api/auth/callback/google` works on bare
    `http://localhost:9000` (Google requires bare-localhost redirect URIs).
-   The manifest is written by `./singularity build` from every plugin's
+   The manifest is written by `./equin build` from every plugin's
    `central/index.ts` route maps.
 4. **`/zero`, `/zero/*`** → the worktree's zero-cache sidecar over loopback
    TCP, prefix stripped (zero-cache mounts its sync route at `/`). 404 if the
@@ -64,7 +64,7 @@ base as "same origin".
 
 ## 3. Zero-downtime deploys (the build → restart handshake)
 
-`./singularity build` finishes by:
+`./equin build` finishes by:
 
 1. Writing the worktree spec (`~/.singularity/worktrees/<name>/spec.json`) —
    how to start the server, where the web dist lives, zero-cache options.

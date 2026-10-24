@@ -129,7 +129,7 @@ export function physFootprintBytes(pid: number = process.pid): number | null
   (phys_footprint); rss is intentionally not shown." Keep the heap-vs-footprint discriminator
   as the first move for any "backend memory ballooning" investigation.
 - Append a short "Shipped (R1)" note to `research/2026-06-18-global-backend-rss-reduction.md`.
-- Plugin `CLAUDE.md` autogen blocks + `docs/plugins-*.md` regenerate via `./singularity build`
+- Plugin `CLAUDE.md` autogen blocks + `docs/plugins-*.md` regenerate via `./equin build`
   (the new `physFootprintBytes` export and changed slots are picked up automatically).
 
 ## Critical files
@@ -155,7 +155,7 @@ export function physFootprintBytes(pid: number = process.pid): number | null
 1. **Spot-check the helper** before wiring UI: in a worktree shell, compare against the OS —
    `footprint <backend-pid>` (Activity Monitor's number) should match `physFootprintBytes`
    within rounding, and be ~5–6× **smaller** than `ps -o rss= -p <pid>`.
-2. `./singularity build`, then load `http://<worktree>.localhost:9000`.
+2. `./equin build`, then load `http://<worktree>.localhost:9000`.
 3. **Boot pane** — Debug → Profiling: checkpoint timeline shows a `Footprint` column with
    plausible sub-GB numbers (not the old ~5 GB rss); after-onReady is dramatically lower than
    the historical rss figure.
@@ -164,5 +164,5 @@ export function physFootprintBytes(pid: number = process.pid): number | null
 5. **Health pane** — Debug → Health: the Memory chart's primary line is labeled `Footprint`,
    trends < 1 GB, and the headline reads "… MB footprint". New `health.jsonl` lines carry
    `physFootprintMb` and no `rssMb` (`tail` the file).
-6. `./singularity check` passes (plugin-boundaries — confirm no server-core import cycle and no
+6. `./equin check` passes (plugin-boundaries — confirm no server-core import cycle and no
    web→bun:ffi leak; type-check; plugins-doc-in-sync after build).

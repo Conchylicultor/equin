@@ -1,7 +1,7 @@
 import { defineGuard } from "../define-guard";
 import { parseShell } from "../parse-shell";
 import type { BashInput } from "../types";
-import { CLI_NAME } from "@plugins/framework/plugins/cli/core";
+import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 
 /** The harness's ceiling for a background task's lifetime (ms). */
 export const MAX_BACKGROUND_TIMEOUT_MS = 7_200_000;

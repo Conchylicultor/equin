@@ -49,7 +49,7 @@ const PROGRESS_FILE = checkProgressLogDir.file("check-progress.jsonl");
 const progressSink = defineFileSink({
   id: "check-progress",
   description:
-    "Per-check-run progress log (`./singularity check`): one JSONL line per run " +
+    "Per-check-run progress log (`./equin check`): one JSONL line per run " +
     "open, bootstrap phase, check start/end, heartbeat, thread stall, and " +
     "completion — so a wedged run names the unit it is stuck in, and a stalled " +
     "one the code that stalled it. Host-global across worktrees.",

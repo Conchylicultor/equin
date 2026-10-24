@@ -12,7 +12,7 @@ const contentCopyIcon = symbol("content-copy");
  * "Copy prototype ID" header action contributed to `prototypeDetailPane.Actions`.
  *
  * The id is the prototype's minted folder name (`proto-…`) — the one the
- * `./singularity prototype` commands and an agent prompt address it by. The
+ * `./equin prototype` commands and an agent prompt address it by. The
  * button stays put after a click, so its own check-mark flash (and the tooltip
  * reading "Copied") is the feedback; no toast.
  */

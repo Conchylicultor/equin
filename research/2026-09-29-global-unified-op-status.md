@@ -225,7 +225,7 @@ SQL over `op_log_ops` (`jsonb_array_elements` for waits and steps).
 
 ## Verification
 
-- **Unit tests** (`./singularity test plugins/debug/plugins/profiling/plugins/op-log`):
+- **Unit tests** (`./equin test plugins/debug/plugins/profiling/plugins/op-log`):
   - reducer: legacy fixtures, seq idempotency, terminal wins, events after the terminal, headless
     op, requeue/fail-open, `liveTimes`;
   - profiler event sequence;
@@ -233,7 +233,7 @@ SQL over `op_log_ops` (`jsonb_array_elements` for waits and steps).
   - ingest on a temp-dir sink: rotation between drains, a partial last line, re-drain idempotency;
   - reconciler with injected liveness;
   - marker: flock held and released on process exit.
-- **Real run:** start a `./singularity check` while a build is queued, then `query_db` on
+- **Real run:** start a `./equin check` while a build is queued, then `query_db` on
   `op_log_ops` shows `open_wait` / `cycle` updating, and the row closes on completion.
 - **E2E** (`op-status/e2e/op-status-waits.ts`):
   1. Hold a flocked marker for a synthetic opId (branch `e2e-synthetic`).
@@ -242,4 +242,4 @@ SQL over `op_log_ops` (`jsonb_array_elements` for waits and steps).
   3. Append `wait-end` and `granted`; assert "Building".
   4. Append `completed`; assert the banner is gone and the row is in `opsHistory`.
   5. Kill variant: release the flock without a terminal; assert an interrupted close within 35 s.
-- `./singularity check` passes: boundaries, migrations-in-sync, plugins-doc-in-sync.
+- `./equin check` passes: boundaries, migrations-in-sync, plugins-doc-in-sync.

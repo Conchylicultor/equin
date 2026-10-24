@@ -14,5 +14,5 @@ import { DEPLOY_LOG_CHANNEL } from "../../core/runs";
 export const deployLog = defineLogSink({
   id: DEPLOY_LOG_CHANNEL,
   description:
-    "Deploy run log: stdout/stderr streamed from `./singularity deploy converge|ship`, surfaced live in the Deploy app's Deployments section.",
+    "Deploy run log: stdout/stderr streamed from `./equin deploy converge|ship`, surfaced live in the Deploy app's Deployments section.",
 });

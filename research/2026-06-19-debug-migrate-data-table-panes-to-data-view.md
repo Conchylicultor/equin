@@ -115,7 +115,7 @@ Collapse the three `KindTable`s into **one** DataView.
 
 ## Verification
 
-1. `./singularity build` — regenerates `data-views.generated.ts`; `configs-authored` +
+1. `./equin build` — regenerates `data-views.generated.ts`; `configs-authored` +
    `data-views-in-sync` checks pass once the four `.jsonc` files exist; `type-check` passes.
 2. Screenshot + interact via `bun e2e/screenshot.mjs`:
    - Slow Ops pane (`/debug` → Slow Ops): Local tab table renders, search box filters, filter-by

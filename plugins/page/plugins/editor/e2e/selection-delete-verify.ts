@@ -11,7 +11,7 @@
 // came back on reload, and Cmd+Z had nothing to restore. The off-row drag is an
 // editor-owned span (a different path), kept as the control.
 //
-// Usage: ./singularity run plugins/page/plugins/editor/e2e/selection-delete-verify.ts [--url <deploy>]
+// Usage: ./equin run plugins/page/plugins/editor/e2e/selection-delete-verify.ts [--url <deploy>]
 import {
   report,
   withBrowser,

@@ -61,7 +61,7 @@ The new docs button collapses the previous two-pane interaction (middle list →
 
 - `plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web/components/file-pane.tsx` — make the close button optional. Add an optional prop like `showHeader?: boolean` (default `true`) or split out a `<FilePaneRenderer>` body component so `docs-pane.tsx` can embed just the body + tabs without the duplicate close button.
 - `plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web/index.ts` — drop any exports that referenced `views.tsx` if present.
-- `package.json` of the parent `code` plugin (or wherever sub-plugins are loaded) — replace `edited-files-button` and `file-list` registrations with `docs-button`. Verify by running `./singularity build`; the plugin loader will surface missing references.
+- `package.json` of the parent `code` plugin (or wherever sub-plugins are loaded) — replace `edited-files-button` and `file-list` registrations with `docs-button`. Verify by running `./equin build`; the plugin loader will surface missing references.
 
 ### Plugin docs
 
@@ -78,7 +78,7 @@ The new docs button collapses the previous two-pane interaction (middle list →
 
 ## Verification
 
-1. `./singularity build` from the worktree root — must pass (catches missing imports from the deleted files and the registration changes).
+1. `./equin build` from the worktree root — must pass (catches missing imports from the deleted files and the registration changes).
 2. Open `http://claude-1776361358.localhost:9000` and pick a conversation whose worktree has at least one edited `.md` file.
 3. Toolbar shows a "Docs" button next to "Review" with the markdown-file count. Confirm:
    - Pressed state toggles when clicked.

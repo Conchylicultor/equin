@@ -154,7 +154,7 @@ No edits to `caret-geometry.ts`, `block-text-editor.tsx`, or any block renderer 
 
 ## Verification
 
-1. `./singularity build`, open `http://<worktree>.localhost:9000/pages/page/<id>`.
+1. `./equin build`, open `http://<worktree>.localhost:9000/pages/page/<id>`.
 2. Manual via `e2e/screenshot.mjs` (drive + assert in page context):
    - Click the **right** margin level with a single-line text block → assert
      `document.activeElement` is that block's contenteditable and

@@ -102,7 +102,7 @@ sibling sub-plugins, so we need a small shared-state primitive in the parent
 **`docs/plugins.md`**
 
 Regenerated automatically by the `plugins-doc-in-sync` check during
-`./singularity build` — a new `prompt-input` entry will appear under
+`./equin build` — a new `prompt-input` entry will appear under
 `conversation-view`'s sub-plugins, and the `Conversation.PromptInput` slot will be
 listed under `conversation-view`'s `Defines: Slots`.
 
@@ -128,7 +128,7 @@ listed under `conversation-view`'s `Defines: Slots`.
 
 ## Verification
 
-1. `./singularity build` → confirm the build succeeds and `plugins-doc-in-sync`
+1. `./equin build` → confirm the build succeeds and `plugins-doc-in-sync`
    passes (the new plugin and slot appear in `docs/plugins.md`).
 2. Open a conversation in the worktree app at `http://<worktree>.localhost:9000`.
 3. **Send turn** — type a message, press Enter; verify it lands in the tmux session

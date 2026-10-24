@@ -330,13 +330,13 @@ Deleted
 
 ## Verification
 
-1. `./singularity build` in the background, then read
+1. `./equin build` in the background, then read
    `~/.singularity/worktrees/att-1789936274-mgl9/build-status.json` for
    `status: ok`.
 2. The drift is gone by construction — check by eye that both popovers show the
    same preprompt glyph:
    ```bash
-   ./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
+   ./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
      --path /home --click "Improve" --viewport 1400x900 --out /tmp/improve
    ```
    and the same from a crash report's "Fix this crash".
@@ -353,11 +353,11 @@ Deleted
 6. Regression on the queue path: file a chain from Improve with auto-start on
    and a dependency, confirm it still arms and launches when the dependency
    settles (`start: "queued"` unchanged).
-7. `./singularity test plugins/conversations` — `auto-start-launch.test.ts`
+7. `./equin test plugins/conversations` — `auto-start-launch.test.ts`
    covers `launchArmedTask` and must still pass after the extraction; add a case
    for `launchTaskNow` returning `not-armed`.
-8. `./singularity test plugins/tasks/plugins/launch-options` and
-   `./singularity run plugins/tasks/plugins/launch-options/e2e/launch-options-verify.ts`.
-9. `./singularity check` — plugin boundaries (the moved `LaunchOptionPills` and
+8. `./equin test plugins/tasks/plugins/launch-options` and
+   `./equin run plugins/tasks/plugins/launch-options/e2e/launch-options-verify.ts`.
+9. `./equin check` — plugin boundaries (the moved `LaunchOptionPills` and
    the `improve/shared` → `improve/core` constant both touch R10),
    `plugins-doc-in-sync`, `type-check`.

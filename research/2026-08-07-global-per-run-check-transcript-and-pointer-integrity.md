@@ -34,7 +34,7 @@ neither of which a killed build reaches. The backend's recovery
 replays that captured text into the run detail pane at `/debug/build/r/<id>`, so
 the UI shows a pointer to a file that does not and cannot exist — but the UI is
 only where it is *visible*. The dangling pointer is minted by the CLI, and a
-`./singularity build` killed in a plain terminal (no backend capturing it) prints
+`./equin build` killed in a plain terminal (no backend capturing it) prints
 the same lie with no fallback at all.
 
 ### The existing decision this must stay coherent with
@@ -257,7 +257,7 @@ helper so a future artifact cannot be half-written again.
 
 ## Verification
 
-1. `./singularity build` in this worktree. Confirm `check-<buildId>.log` sits
+1. `./equin build` in this worktree. Confirm `check-<buildId>.log` sits
    beside `build-<buildId>.log` in `~/.singularity/worktrees/<wt>/`, opens with
    the run header, and that `check.log` is no longer written.
 2. Break a check deliberately (e.g. a stray `check.log` literal, which should now
@@ -268,7 +268,7 @@ helper so a future artifact cannot be half-written again.
    `build-<id>.log` exists (written by the abort guard) and its
    `Full output:` pointer resolves; `/debug/build/r/<id>` shows the recovered
    steps; the run's status badge reads **killed**, not failed.
-4. `./singularity check` standalone → `check-<opId>.log`; the printed
+4. `./equin check` standalone → `check-<opId>.log`; the printed
    `Full check output:` path resolves.
-5. `./singularity test plugins/infra/plugins/paths plugins/framework/plugins/cli plugins/build`
-   and `./singularity check`.
+5. `./equin test plugins/infra/plugins/paths plugins/framework/plugins/cli plugins/build`
+   and `./equin check`.

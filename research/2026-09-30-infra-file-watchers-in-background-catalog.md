@@ -213,15 +213,15 @@ Reuse:
 
 ## Verification
 
-1. `./singularity test plugins/infra/plugins/file-watcher` covers:
+1. `./equin test plugins/infra/plugins/file-watcher` covers:
    - the existing engine tests, moved with the engine;
    - new registry tests: instances are added on start and removed on stop; the ring is
      capped at 20; a handler that throws records `failed`; a duplicate name throws;
      `start()` on an unregistered declaration throws; a `mainOnly` declaration off main
      throws.
-2. `./singularity test` on the watcher-safety lint plugin covers the fs.watch,
+2. `./equin test` on the watcher-safety lint plugin covers the fs.watch,
    watchFile, promises and chokidar cases, and the ignore entry.
-3. `./singularity build` must pass with checks green: type-check (the required
+3. `./equin build` must pass with checks green: type-check (the required
    description and the exhaustive trigger switch), eslint, and plugins-doc-in-sync.
 4. E2E: extend `catalog/e2e/verify.ts`, or run `screenshot.ts --path` on the
    background pane.

@@ -19,8 +19,8 @@
  * - a statement whose NOTIFY passes the 7000-byte cap carries no keys, so it
  *   is FULL for every tuple — A and B both — and both still converge.
  *
- * Requires a running Postgres cluster (started by ./singularity build).
- * Run: `./singularity test plugins/network/plugins/live`.
+ * Requires a running Postgres cluster (started by ./equin build).
+ * Run: `./equin test plugins/network/plugins/live`.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";

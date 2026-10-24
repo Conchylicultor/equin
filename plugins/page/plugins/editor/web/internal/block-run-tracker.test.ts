@@ -64,7 +64,7 @@ import {
  * `BindingReplica` — the nested `editor.update` path), and marks and tokens
  * surviving capture → `spliceOpenBlockDoc` replay.
  *
- * Run with `./singularity test plugins/page/plugins/editor/web/internal`.
+ * Run with `./equin test plugins/page/plugins/editor/web/internal`.
  */
 
 const IDLE_MS = 30;

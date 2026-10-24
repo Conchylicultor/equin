@@ -1,6 +1,6 @@
 /**
  * Tests for the `no-unhistoried-block-field` lint rule. Run with
- * `./singularity test plugins/page/plugins/editor`.
+ * `./equin test plugins/page/plugins/editor`.
  *
  * Three axes matter, and the cases below cover all three: WHAT counts as an
  * editing surface (a raw textarea, a text-ish input, a `contenteditable` — but

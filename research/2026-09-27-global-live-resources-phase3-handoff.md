@@ -64,7 +64,7 @@ remains is review, integrating main, and landing it — plus a set of follow-ups
    to affect any check.
 1. **Wait for the user's review.** They review against the branch base:
    `git diff $(git merge-base HEAD main)`. Never push or commit on your own initiative (root CLAUDE.md). "push", "publish" and "ship"
-   all mean `./singularity push -m "…"` — and only when the user says so.
+   all mean `./equin push -m "…"` — and only when the user says so.
 2. **Integrate `main`.** `7931162c0` touches seven paths this branch also changes:
    - `docs/plugins-details.md` (generated — take either side, then let the build regenerate it);
    - `plugins/conversations/CLAUDE.md`, `plugins/conversations/plugins/conversation-view/CLAUDE.md` (keep both edits; the
@@ -75,7 +75,7 @@ remains is review, integrating main, and landing it — plus a set of follow-ups
    - `plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/event-counter/web/components/event-counter.tsx`
 
    For the four `.tsx` files, keep main's type-role classNames AND this branch's `useLive` / `useLiveRow` reads — they are
-   independent edits to the same components. `./singularity push` pulls main before merging; if it stops on a conflict, resolve these
+   independent edits to the same components. `./equin push` pulls main before merging; if it stops on a conflict, resolve these
    and re-run. Never `git merge origin/main` or `git reset` by hand (root CLAUDE.md: rebase only).
 
    **Done (second session), with the user's go-ahead**, onto `3e2a9a0db` — by then four commits ahead, touching ten shared paths.
@@ -85,7 +85,7 @@ remains is review, integrating main, and landing it — plus a set of follow-ups
      - `release-artifact.tsx`: main's `text-code` line, because the branch side was only prettier's reformat;
      - `web.generated.ts`: the union of both `dependsOn` lists, which the build regenerated identically.
    - Seven adversarial merge / interplay reviewers found nothing.
-   - If `main` moves again before the push, `./singularity push` pulls it itself.
+   - If `main` moves again before the push, `./equin push` pulls it itself.
 3. **Done (second session).** After integrating:
    - the build passed, every check included;
    - the full suite showed only the known failures (31 this run, since the host-admission flake did not fire);
@@ -95,12 +95,12 @@ remains is review, integrating main, and landing it — plus a set of follow-ups
 
    `scroll-restore`'s default `--conv` has no transcript file on this machine, so pass a live conversation. The original
    instructions for this step:
-   - `./singularity test` on the touched areas. Every failure in section 6 is already known; anything else is new.
+   - `./equin test` on the touched areas. Every failure in section 6 is already known; anything else is new.
    - The e2e smoke set: `sonata/e2e/song-switch.ts` (31 checks; it needs `--song-a <id> --song-b <id>` — two songs with MIDI,
      e.g. `a672c221…` "summertime" and `5491b818…` "summertime_performance"), `page/editor/e2e/structural-write-order-verify.ts`,
      `page/editor-collab/e2e/crdt-multitab-agent-verify.ts`, `shell/notifications/e2e/bell-filter.ts`,
      `apps/events/plugins/sources/e2e/live-sources.ts`, `build/e2e/popover-logs.ts`.
-4. **Land it** when the user says so: `./singularity push -m "<message>"`. Suggested message:
+4. **Land it** when the user says so: `./equin push -m "<message>"`. Suggested message:
    `feat(network/live): phase 3 — migrate every in-scope live resource to liveValue/liveCollection/useLive; legacy-spelling lint with a tree/tick/config burndown inventory; mode required (no invalidate default); window/point descriptor factories internal to network/live; usePointResource(s)/useWindowResource/legacy optimistic form/rowIdentity deleted; preload-declare boot assert. research/2026-09-27-global-live-resources-phase3-bulk-migration.md`
    Main then rebuilds itself — you never deploy main.
 5. **After it lands,** update the Resources page item 5 status line (currently "uncommitted, awaiting review") to say it is on main,
@@ -141,7 +141,7 @@ These limits come from this worktree, not from skipped work. Say so in the revie
 
 - **The `pushes.attempts-cascade` → `attempts` edge.** It is confirmed wired in the runtime registry (`/api/resources/_debug`:
   `downstream: ["attempts"]` / `dependsOn: [… "pushes.attempts-cascade"]`). It was never exercised end to end: a push row lands only
-  through a real `./singularity push` of a trailer commit, and no endpoint creates one. After this branch lands, check that an
+  through a real `./equin push` of a trailer commit, and no endpoint creates one. After this branch lands, check that an
   attempt's derived status and its task-events push list update when a push lands.
 - **`mail-thread-messages`** — the newest-100 window, reversed in the pane, with "Load older messages". It is covered by jsdom only
   (`mail/reading-pane/web/__tests__/message-list.test.tsx`). Mail tables are `ExcludeFromFork`, so this worktree has no mail data.
@@ -155,7 +155,7 @@ These limits come from this worktree, not from skipped work. Say so in the revie
 
 ## 6. Known failures — do not chase these
 
-**Full `./singularity test` (32 failing cases).** Every one fails identically on a clean checkout of `47e4dc8f4`:
+**Full `./equin test` (32 failing cases).** Every one fails identically on a clean checkout of `47e4dc8f4`:
 
 - **16 DB-backed cases** — `tasks-core/.../mutations/clusters.test.ts`, `status-closure.test.ts`,
   `conversation-view/code/.../edited-files-signature.test.ts`. They pass alone.
@@ -244,8 +244,8 @@ Pre-existing unless marked. Each names where the fix belongs.
   - Never add an entry for new code.
   - `lint/index.test.ts` fails when a listed file no longer imports an old spelling, so remove a file's entry when you migrate it.
   - The item section headers read `// Item N (…) — …`. A script that parses them must allow the parenthesis.
-- **Ops:** `./singularity test`, `check` and e2e runs are ops. Run them with `run_in_background: true` and end your turn; a subagent
-  calls `./singularity await <op>` in the foreground instead.
+- **Ops:** `./equin test`, `check` and e2e runs are ops. Run them with `run_in_background: true` and end your turn; a subagent
+  calls `./equin await <op>` in the foreground instead.
 - **Formatting trap:** the build prettier-formats every changed file and REFUSES when a positional `eslint-disable-next-line` would
   move. Keep such directives above a line already in prettier's shape, or use block form outside JSX.
 - **Data the e2e runs changed:**

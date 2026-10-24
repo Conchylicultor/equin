@@ -181,7 +181,7 @@ interface ArmPlan<Row, P> {
   - The test **only reads** `plugins/network/plugins/live/server/testing/compile-sql-golden.json`, and fails loudly when
     it is missing.
   - The golden comes from `plugins/network/plugins/live/scripts/gen-compile-golden.ts`, run with
-    `./singularity run` on the **pre-split** code in the same step.
+    `./equin run` on the **pre-split** code in the same step.
   - Groups are exercised through the `:groups` descriptor that `serveCollection` mints.
 - Step 9 lands alone.
 
@@ -913,7 +913,7 @@ Each step:
 - 22 needs 19–21.
 - 23 needs 5, 8, 12, 13 and 22.
 
-**Every step** ends with `./singularity build` green (`check` included) and `./singularity test` over the touched
+**Every step** ends with `./equin build` green (`check` included) and `./equin test` over the touched
 plugins.
 
 ## New assertions (in addition to v1's table)
@@ -945,8 +945,8 @@ plugins.
 
 ## Verification
 
-- **Per step:** a backgrounded `./singularity build` + `await`; `check` (type-check, boundaries,
-  `plugins-doc-in-sync`, `resource-runtime:compiled-routes`, A11 / A27 / A28 / A36); `./singularity test` over the
+- **Per step:** a backgrounded `./equin build` + `await`; `check` (type-check, boundaries,
+  `plugins-doc-in-sync`, `resource-runtime:compiled-routes`, A11 / A27 / A28 / A36); `./equin test` over the
   touched plugins.
 - **Oracles (real triggers; at quiescence every client view equals a fresh FULL):**
   - serve-union;
@@ -1015,7 +1015,7 @@ v1's list, plus:
 ## As landed: steps 7–14 (2026-10-03, uncommitted, awaiting the ★15 review)
 
 Every step was implemented by an Opus agent, reviewed adversarially and fixed. Each one ended with
-`./singularity build` green (checks included) and the touched plugins' tests passing. The last deploy is build
+`./equin build` green (checks included) and the touched plugins' tests passing. The last deploy is build
 `3f7fe72db4-1790981204107`.
 
 Deviations from the text above:

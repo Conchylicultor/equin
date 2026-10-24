@@ -78,7 +78,7 @@ Error mapping:
 
 ## Verification
 
-1. `./singularity build` — plugin auto-discovered, no manual registration
+1. `./equin build` — plugin auto-discovered, no manual registration
 2. Open `http://<worktree>.localhost:9000`, navigate to a conversation prompt
 3. Mic button should appear in the floating action toolbar row
 4. Click mic → browser requests microphone permission → button turns red with pulse

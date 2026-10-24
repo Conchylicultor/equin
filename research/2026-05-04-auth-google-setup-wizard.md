@@ -168,7 +168,7 @@ Steps should visually communicate progress:
 
 ## Verification
 
-1. `./singularity build` succeeds, no type errors
+1. `./equin build` succeeds, no type errors
 2. Open `http://att-1777921323-1v3r.localhost:9000` → Accounts sidebar → Google row shows "Setup required"
 3. Click "Configure credentials" → second Miller column opens with the wizard
 4. Type/paste a GCP project URL → project ID is extracted, all step buttons become active

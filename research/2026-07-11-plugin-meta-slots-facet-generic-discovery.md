@@ -15,7 +15,7 @@ each plugin's `defineRenderSlot` / `defineMountSlot` / `defineWrapperSlot` /
   (`plugins/.../slots/facet/index.ts:166`).
 
 The second mode is the one consumed by the closure engine, the
-`composition-closure` check, `./singularity build --composition`, docgen/codegen,
+`composition-closure` check, `./equin build --composition`, docgen/codegen,
 release, the boundary/config checks, and the **server hot-path plugin tree**
 (`plugin-tree/server/internal/structure-tree-cache.ts` → `GET
 /api/plugin-view/tree`, i.e. the Studio graph/detail panes). ~20 call sites pass
@@ -155,8 +155,8 @@ return slots;
 1. **Reproduce the original failure** on `main`'s parser shape, then confirm the
    fix. The `sonata` instruments/piano case is the live repro:
    ```bash
-   ./singularity build            # regenerates facets/registries, runs checks
-   ./singularity check composition-closure
+   ./equin build            # regenerates facets/registries, runs checks
+   ./equin check composition-closure
    ```
    With a composition that selects `apps.sonata.audio.piano` (contributor to the
    `apps.sonata.audio.instruments` slot declared outside `slots.ts`), this check
@@ -178,11 +178,11 @@ return slots;
    bun test plugins/plugin-meta/plugins/closure/core/closure.test.ts
    ```
 
-4. **Studio graph (server hot path)** — after `./singularity build`, open
+4. **Studio graph (server hot path)** — after `./equin build`, open
    `http://<worktree>.localhost:9000/studio`, focus a plugin whose slot lives
    outside `slots.ts`, and confirm its soft (contribution) edges now appear in the
    graph/detail panes — these read the same `skipBarrelImport` tree.
 
-5. **Full check sweep** — `./singularity check` (docgen/codegen, boundaries,
+5. **Full check sweep** — `./equin check` (docgen/codegen, boundaries,
    `facets:render-complete`, `plugins-doc-in-sync`) to confirm no regression in
    the barrel-free consumers.

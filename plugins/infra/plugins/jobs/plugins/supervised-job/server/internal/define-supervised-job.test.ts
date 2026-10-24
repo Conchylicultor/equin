@@ -1,7 +1,7 @@
 /**
  * The declaration's forbidden combinations, as type errors.
  *
- * Each `@ts-expect-error` fails `./singularity check type-check` the day its
+ * Each `@ts-expect-error` fails `./equin check type-check` the day its
  * combination becomes spellable. The declarations live in a function that is
  * never called, so nothing is defined at runtime.
  */

@@ -187,7 +187,7 @@ async function spawnWorker(opts: {
     // A type-check worker builds a whole TypeScript program; cold, that is
     // minutes of unavoidable CPU, and on a saturated box it is longer still by
     // an amount nothing here can predict. There is no shorter deadline to
-    // borrow: the human running `./singularity check` IS the deadline, and
+    // borrow: the human running `./equin check` IS the deadline, and
     // killing a worker that was making progress would just make the check
     // unusable.
     unbounded:

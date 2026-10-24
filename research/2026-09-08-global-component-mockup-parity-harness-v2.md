@@ -126,7 +126,7 @@ Document the tag in [`prototypes/CLAUDE.md`](../prototypes/CLAUDE.md) under "The
 metadata tags" — which becomes four. Note there that it is optional and that most
 prototypes will not have it.
 
-**Verify:** `./singularity prototype list` and the `prototypes.list` resource carry the
+**Verify:** `./equin prototype list` and the `prototypes.list` resource carry the
 field; a prototype with no tag reports `""`.
 
 Files: `files/core/prototypes.ts`, `files/shared/list-metas.ts`, `prototypes/CLAUDE.md`.
@@ -166,12 +166,12 @@ nothing otherwise says which box is the counterpart.
 
 ## Verification
 
-- `./singularity check` — the boundary and plugin-doc checks are the ones step 1 and 3
+- `./equin check` — the boundary and plugin-doc checks are the ones step 1 and 3
   can trip.
-- `./singularity build`, then the Prototypes app: the Focus and Compare stages must
+- `./equin build`, then the Prototypes app: the Focus and Compare stages must
   behave exactly as before step 1 changed nothing visible.
 - A minted prototype tagged with a real fixture id, opened in the new stage.
-- `./singularity test plugins/primitives/plugins/css/plugins/layout-harness` — untouched
+- `./equin test plugins/primitives/plugins/css/plugins/layout-harness` — untouched
   by this plan, but it is the gate that proves the fixture catalog still loads.
 
 ## Open

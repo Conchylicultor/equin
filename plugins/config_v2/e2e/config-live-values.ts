@@ -28,7 +28,7 @@
  * the run (and at the start of the next, if this one is killed).
  *
  * Usage:
- *   ./singularity run plugins/config_v2/e2e/config-live-values.ts [--headed]
+ *   ./equin run plugins/config_v2/e2e/config-live-values.ts [--headed]
  */
 
 import {

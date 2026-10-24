@@ -195,10 +195,10 @@ Two test fixtures still write the banned form and move to `parsedJson`:
    failures and **stripped keys** (a normalizer that silently changes a stored
    value is the failure mode a pass/fail parse would miss). Empty tables are
    recorded as unproven rather than proven.
-2. `./singularity build` — the claim under test is that **no migration is
+2. `./equin build` — the claim under test is that **no migration is
    generated**; `migrations-in-sync`, `type-check`, `eslint` and
    `plugin-boundaries` all green.
-3. `./singularity test` over the touched suites, plus a new
+3. `./equin test` over the touched suites, plus a new
    `parsed-json`-through-`pgTable` case for the branded `page_blocks.data`
    decoder.
 4. Both directions exercised on the deployed backend: create a page block, fire a

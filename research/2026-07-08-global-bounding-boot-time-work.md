@@ -4,7 +4,7 @@
 
 ## Implementation status (2026-07-09)
 
-Landed on branch `claude-web/att-1783532137-09fc` (built + all `./singularity check` green + deployed; **not** committed/pushed):
+Landed on branch `claude-web/att-1783532137-09fc` (built + all `./equin check` green + deployed; **not** committed/pushed):
 
 - **Phase 0** ✓ — log-channels rotation + bounded tail-read (`persist.ts`, 64MB cap / 3 rotated / 8MB tail-read; 6 tests); `debug/boot-budget` monitor (files a deduped report+task when a boot-hook/warmup span exceeds its per-phase budget; verified no false fire at boot).
 - **Phase 1** ✓ — `infra/warmup` (`defineWarmup`+`drainWarmups`, wired after `onAllReady`; macrotask `yieldServer`; 6 tests); `infra/corpus-index` (fingerprint-keyed incremental file index; 13 tests with cost) with **stats/cost migrated onto it** as the dogfood; `infra/retention` (`defineRetention`+`markFirehose`+`retention:firehose-bounded` check; 14 tests). Additive: `PhaseId` gained `warmup`/`drainWarmups`; `ReportSource` gained `server-boot-budget-monitor`; `search_documents.metadata` typed via `.$type<>()`.
@@ -14,7 +14,7 @@ Landed on branch `claude-web/att-1783532137-09fc` (built + all `./singularity ch
 
 **Deferred / follow-ups:**
 1. `entity_versions` retention (Phase 2 item 5) — **not done**: a destructive TTL deletes users' page-version history, a product policy decision (keep-N-per-entity vs generous TTL vs cascade-only). Needs an owner call.
-2. ~~Firehose check is runtime-registry-based; `./singularity check` is a static process that doesn't load server registrations, so the check can't yet catch a *future* unbounded table that forgets retention. Making it statically load-complete is follow-up (the primitive + the real `_reports` bound are done).~~ **Resolved — and this item was a category error.** Making the check load-complete could never achieve its own stated goal: a table nobody *declared* is invisible to any declaration-reading check, static or runtime. Worse, the check was non-deterministic (it shares a process with `plugins-doc-in-sync`, which barrel-imports every server barrel) and its only representable failure — a bare `markFirehose` with no bound — had zero call sites. The check is **deleted**; growth-bound declaration is now a closed union whose two constructors are true by construction, and the one unverifiable claim (an FK really cascades) throws at consumer module eval, which docgen's barrel-import turns into a build-time *and* push-time gate. Catching the *undeclared* firehose is an empirical question (`pg_stat_user_tables` growth monitor), tracked separately. See [`2026-07-09-global-firehose-retention-enforcement.md`](./2026-07-09-global-firehose-retention-enforcement.md).
+2. ~~Firehose check is runtime-registry-based; `./equin check` is a static process that doesn't load server registrations, so the check can't yet catch a *future* unbounded table that forgets retention. Making it statically load-complete is follow-up (the primitive + the real `_reports` bound are done).~~ **Resolved — and this item was a category error.** Making the check load-complete could never achieve its own stated goal: a table nobody *declared* is invisible to any declaration-reading check, static or runtime. Worse, the check was non-deterministic (it shares a process with `plugins-doc-in-sync`, which barrel-imports every server barrel) and its only representable failure — a bare `markFirehose` with no bound — had zero call sites. The check is **deleted**; growth-bound declaration is now a closed union whose two constructors are true by construction, and the one unverifiable claim (an FK really cascades) throws at consumer module eval, which docgen's barrel-import turns into a build-time *and* push-time gate. Catching the *undeclared* firehose is an empirical question (`pg_stat_user_tables` growth monitor), tracked separately. See [`2026-07-09-global-firehose-retention-enforcement.md`](./2026-07-09-global-firehose-retention-enforcement.md).
 3. Phase 3 lints (`no-heavy-onready`, `no-adhoc-corpus-scan`) — not built (sequenced last, once exemption anchors exist).
 4. Caveat: a worktree's first cost-pane request is cold (~seconds) until main has warmed the shared host index; self-heals; main is protected by its background warmup. Inherent to the host-scoped design.
 5. Pre-existing, unrelated bug noticed: trace `spans` server Zod enum rejects the `cascade` origin kind emitted by `resource-runtime` (`runtime.ts:609`) → a `server-caught` crash. Drift worth fixing separately.
@@ -26,7 +26,7 @@ Landed on branch `claude-web/att-1783532137-09fc` (built + all `./singularity ch
 
 Plugins launch arbitrarily heavy warm-up work from the server `onReady` hook, and
 **nothing structurally distinguishes cheap registration from a multi-GB scan.** Every
-backend boot re-pays all of it: main after each `./singularity build`, *plus* every
+backend boot re-pays all of it: main after each `./equin build`, *plus* every
 worktree agent backend on launch. The failure mode is invisible until a dataset crosses
 a size threshold — then it silently degrades every boot.
 
@@ -47,7 +47,7 @@ There is no repo-wide answer today for four questions. This plan gives one for e
   server yield, after the server is already serving.
 - **(d) How do unbounded-growth datasets get bounded?** — a log-channel substrate rotation
   fix (bounds all channels at once) + `defineRetention` for growing DB tables + a
-  declared-firehose `./singularity check`.
+  declared-firehose `./equin check`.
 
 Enforcement is **led by a runtime boot-budget monitor** (a heavy boot hook self-reports +
 files a task the moment it trips a wall-time/event-loop-block budget), with **narrow static
@@ -288,5 +288,5 @@ runtime budget alarm and a retention invariant — **even before any single inst
   and the tail read returns correct recent lines without materializing the whole file (measure
   RSS/time on a large channel).
 - **Retention:** run `defineRetention` job manually, confirm rows past TTL are deleted and the
-  firehose `./singularity check` fails when a registered firehose table drops its policy.
-- Run `./singularity build` and `./singularity check` after each phase.
+  firehose `./equin check` fails when a registered firehose table drops its policy.
+- Run `./equin build` and `./equin check` after each phase.

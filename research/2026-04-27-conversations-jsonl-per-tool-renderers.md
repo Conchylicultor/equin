@@ -103,7 +103,7 @@ Each phase is independently shippable.
 After phase 1:
 
 ```bash
-./singularity build
+./equin build
 ```
 
 - Open a conversation with recent tool activity at `http://<worktree>.localhost:9000/c/<id>`.
@@ -116,7 +116,7 @@ After phases 2/3:
 
 - Visit a conversation with each tool used and confirm its renderer matches the sketch (Bash → terminal block, Edit → diff, Read → path + preview, etc.).
 - Trigger an MCP tool from inside Claude (e.g. `mcp__singularity__add_task`) and confirm the umbrella renderer parses the name correctly.
-- Run `./singularity check --plugin-boundaries` — no new violations (per-tool plugins only import from `@core`, the `tool-call` shared barrel, and `@plugins/syntax-highlight/web`).
+- Run `./equin check --plugin-boundaries` — no new violations (per-tool plugins only import from `@core`, the `tool-call` shared barrel, and `@plugins/syntax-highlight/web`).
 
 ## Out of scope
 

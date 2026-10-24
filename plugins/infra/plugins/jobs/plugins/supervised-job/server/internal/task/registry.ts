@@ -1,3 +1,4 @@
+import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import type { z } from "zod";
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
@@ -80,7 +81,7 @@ const tasks = new Map<string, RegisteredSupervisedTask>();
  * Register a body that runs OUT OF PROCESS under an id.
  *
  * Internal: the only caller is `defineSupervisedJob`, which registers one task
- * per `run`-body job under the JOB NAME (`run-body.ts`). `./singularity
+ * per `run`-body job under the JOB NAME (`run-body.ts`). `./equin
  * supervised-exec <id> <payloadJson>` boots the plugin graph in `exec` mode —
  * load waves, `register`, `collectContributions`, `onReadyBlocking`, and nothing
  * else — resolves the id here, and calls `run`. So the body sees the same
@@ -114,7 +115,7 @@ export function defineSupervisedTask<P extends z.ZodType>(
       // words it was handed are the words the command gets — there is no shell
       // to re-split or expand them, whatever JSON puts in there.
       argv: [
-        "./singularity",
+        `./${CLI_NAME}`,
         SUPERVISED_EXEC_COMMAND,
         spec.id,
         JSON.stringify(payload),
@@ -125,7 +126,7 @@ export function defineSupervisedTask<P extends z.ZodType>(
         "--namespace",
         runtimeNamespace(),
       ],
-      // `./singularity` is a path relative to the checkout root, and the
+      // `./equin` is a path relative to the checkout root, and the
       // backend's own cwd is its `server-core` directory.
       cwd: REPO_ROOT,
     }),

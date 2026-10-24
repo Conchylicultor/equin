@@ -133,7 +133,7 @@ it renders as an editable card. The user can tweak the prompt and click **Create
    ```
    and include it in the plugin registry array. Mirror the existing `activeDataConvPlugin` line.
 
-6. **`plugins/active-data/CLAUDE.md`** — `./singularity build` regenerates the autogen "Plugin reference" block, but the hand-written prose section is hand-maintained. No change strictly required to the prose; the autogen block will pick up the new sub-plugin.
+6. **`plugins/active-data/CLAUDE.md`** — `./equin build` regenerates the autogen "Plugin reference" block, but the hand-written prose section is hand-maintained. No change strictly required to the prose; the autogen block will pick up the new sub-plugin.
 
 7. **`plugins/active-data/plugins/conv/web/index.ts`** *(only if going with reuse option (a))* — add a re-export:
    ```ts
@@ -161,8 +161,8 @@ it renders as an editable card. The user can tweak the prompt and click **Create
 
 ## Verification plan
 
-1. `./singularity build` — succeeds with no plugin-boundary, type, or migration errors.
-2. `./singularity check --plugin-boundaries` — passes.
+1. `./equin build` — succeeds with no plugin-boundary, type, or migration errors.
+2. `./equin check --plugin-boundaries` — passes.
 3. Open `http://att-1777513624-pb42.localhost:9000`, navigate to any conversation, then trigger an assistant message containing `<task>refactor X</task>` — easiest path: send a turn asking the model to write that literal, or use the JSONL viewer with a synthesized assistant text.
 4. **Card render**: card appears inline in the assistant text with the prompt pre-filled, editable. Editing updates the value.
 5. **Create**: click → card collapses to a task chip pointing to `/tasks?selected=<id>` (or whichever the task pane URL form is). Verify task exists in the task tree under the host conversation's task.

@@ -216,7 +216,7 @@ Applied while touching each surface above (no separate sweep):
 
 ## Verification
 
-1. `./singularity build` from the worktree; confirm it deploys clean (checks +
+1. `./equin build` from the worktree; confirm it deploys clean (checks +
    eslint must pass — the new code must not trip `no-adhoc-row`/`no-adhoc-chip`/
    `no-arbitrary-font-size`).
 2. Screenshots via `bun e2e/screenshot.mjs` at `http://<worktree>.localhost:9000`:
@@ -240,4 +240,4 @@ Applied while touching each surface above (no separate sweep):
 2. Sidebar row token cleanup (`text-3xs`).
 3. Task header D + E (reuse/extend `STATUS_META`).
 4. `CommitsChip` (F) + PromptBar (G).
-5. `./singularity build`, screenshot pass, iterate.
+5. `./equin build`, screenshot pass, iterate.

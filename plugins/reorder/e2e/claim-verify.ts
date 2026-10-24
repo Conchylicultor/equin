@@ -31,7 +31,7 @@
 // `plugins/reorder/web/__tests__/item-claim.test.tsx`.
 //
 // Usage:
-//   ./singularity run plugins/reorder/e2e/claim-verify.ts \
+//   ./equin run plugins/reorder/e2e/claim-verify.ts \
 //     --path /some/route --nested '[data-block-id]' \
 //     [--url http://<worktree>.localhost:9000] [--headed]
 //

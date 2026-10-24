@@ -2,7 +2,7 @@
  * Converge's refusals — the ones that read the composition's plugin closure, and
  * the one that reads a hostname about to be written into a Caddyfile.
  *
- * They live beside the command rather than inside `./singularity check` for the
+ * They live beside the command rather than inside `./equin check` for the
  * reason `assertClosureSafe` states: hostnames are runtime data a repo check
  * cannot see, and the guard should fire when the exposure is actually created.
  */
@@ -119,7 +119,7 @@ function containmentOf(
  * The two closure refusals, evaluated BEFORE anything on the host is touched.
  *
  * Both read the composition's resolved hard closure, which is why they live
- * here rather than in `./singularity check`: hostnames are runtime data a repo
+ * here rather than in `./equin check`: hostnames are runtime data a repo
  * check cannot see, and the guard should fire when the exposure is actually
  * created rather than when unrelated code is compiled.
  */

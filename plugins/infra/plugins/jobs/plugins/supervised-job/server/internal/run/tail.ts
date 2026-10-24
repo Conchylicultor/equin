@@ -11,7 +11,7 @@ import { closeSync, fstatSync, openSync, readSync } from "node:fs";
  * `.jsonl` sink, which every OTHER channel shares a rotation budget with.
  *
  * 16 MiB is far above any real build, release or deploy transcript (a full
- * `./singularity build` is low single-digit MB) and far below the point where
+ * `./equin build` is low single-digit MB) and far below the point where
  * publishing it costs anything. The transcript FILE's own bound is the artifact
  * prune: the newest 50 runs per kind per worktree, reaped when the next run
  * starts. A single pathological run's file is bounded only by that run.

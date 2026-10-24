@@ -43,7 +43,7 @@ export const plugins: ServerPluginDefinition[] = [...];
 - Only `@plugins/X/server` imports count — not `shared`, not `web`
 - No special cases needed — when the DB migrates to a plugin, all consumers will import from `@plugins/infra/plugins/database/server` and the graph captures it automatically
 - Type-only imports are conservatively counted (over-constraining is safe)
-- Cycles: already prevented by `./singularity check --plugin-boundaries`
+- Cycles: already prevented by `./equin check --plugin-boundaries`
 
 ### 2. Eager graph-driven `onReady` execution
 
@@ -154,5 +154,5 @@ Steps 1 is independently deployable with zero risk. Step 2 is the structural cha
 1. With no `dependsOn`, boot behavior is identical to today (all parallel)
 2. With `dependsOn` populated, boot log shows each plugin starting after its deps resolve
 3. End-to-end: conversation creation works (DB ready), job enqueueing works (worker started)
-4. `./singularity check` passes
+4. `./equin check` passes
 5. Boot time: critical path adds < 200ms; plugins off the critical path see no regression

@@ -106,7 +106,7 @@ on-demand operation (no polling). `heapStats()` is cheap and is the everyday too
 
 ## Phase B — Measure
 
-1. `./singularity build` to deploy Phase A.
+1. `./equin build` to deploy Phase A.
 2. Open Debug → Profiling (boot) and read per-phase RSS deltas; open Debug → Heap and
    read `heapStats()` + capture one full snapshot a few seconds after boot.
 3. Cross-check against `logs/health.jsonl` RSS trend.
@@ -250,8 +250,8 @@ Update the **debug skill** and plugin docs so the new surfaces are discoverable.
   Safari analysis), and state the heap-vs-RSS discriminator (A3) as the first move for
   any "backend RSS ballooning" investigation.
 - **`plugins/debug/plugins/heap-snapshot/CLAUDE.md`** — hand-written prose + autogen
-  block (created/refreshed by `./singularity build`).
-- The compact/details plugin docs regenerate via `./singularity build`.
+  block (created/refreshed by `./equin build`).
+- The compact/details plugin docs regenerate via `./equin build`.
 
 ## Critical files
 
@@ -270,7 +270,7 @@ Update the **debug skill** and plugin docs so the new surfaces are discoverable.
 
 ## Verification
 
-- `./singularity build`, then load `http://<worktree>.localhost:9000`.
+- `./equin build`, then load `http://<worktree>.localhost:9000`.
 - **Diagnostics work:** Debug → Profiling shows non-zero per-phase RSS deltas and the
   checkpoint timeline; Debug → Heap shows `heapStats()` type counts and successfully
   writes a `.heapsnapshot` file (verify it loads in Safari Web Inspector).
@@ -281,4 +281,4 @@ Update the **debug skill** and plugin docs so the new surfaces are discoverable.
 - **Watchers still function:** edit a file in a conversation worktree → "edited files"
   still updates; `git commit` on main → git.refAdvanced still fires (ref resource
   updates); config edit still hot-reloads.
-- `./singularity check` passes (boundaries, doc-in-sync, type-check).
+- `./equin check` passes (boundaries, doc-in-sync, type-check).

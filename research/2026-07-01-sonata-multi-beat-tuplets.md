@@ -142,5 +142,5 @@ and `…/convert.test.ts` (regression). New rhythm cases:
   stay **two 1-beat triplets**, not one 6/12-tuplet; clean 16ths stay binary; the
   existing suite passes unchanged.
 
-Then `./singularity build` and screenshot the `seed-rhythm-etude` starter (extend
+Then `./equin build` and screenshot the `seed-rhythm-etude` starter (extend
 it with a multi-beat triplet if none present) to confirm brackets render.

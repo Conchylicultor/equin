@@ -1,8 +1,8 @@
 // The inset, measured on a DEPLOYED panel: one content edge, and padding that
 // matches the tracks the panel actually reserves.
 //
-//   ./singularity run plugins/primitives/plugins/css/plugins/control-panel/e2e/panel-inset-verify.ts
-//   ./singularity run …/panel-inset-verify.ts --path /agents --steps 'until:Theme,click:Theme' --report
+//   ./equin run plugins/primitives/plugins/css/plugins/control-panel/e2e/panel-inset-verify.ts
+//   ./equin run …/panel-inset-verify.ts --path /agents --steps 'until:Theme,click:Theme' --report
 //
 // With no `--path` it sweeps the Tasks toolbar's own control panels (the
 // primitive's shipped consumers). With one, it drives to any other panel — a

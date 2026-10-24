@@ -202,8 +202,8 @@ compiled from the exported declarations — the existing harness):
 
 ## Verification
 
-1. `./singularity test plugins/tasks/plugins/tasks-core`
-2. `./singularity build` (background), then `./singularity check` — `type-check` for the
+1. `./equin test plugins/tasks/plugins/tasks-core`
+2. `./equin build` (background), then `./equin check` — `type-check` for the
    enum burndown, `plugins-doc-in-sync`.
 3. `query_db` on `singularity` after the deploy: `select status, count(*) from attempts_v
    group by 1` returns no `abandoned` row, ~1012 `closed`, ~2 `dormant`, and `completed` /
@@ -249,7 +249,7 @@ compiled from the exported declarations — the existing harness):
    `attempt-status/CLAUDE.md` — the prose on why no status editorialises.
 5. Docs: I6 in `tasks-core/CLAUDE.md` beside I5; the cross-link in `attempt-work/CLAUDE.md`
    § I3 (the view now holds the same discipline the button does).
-6. `./singularity build` (background) → `./singularity check` → the manual checks 3–5.
+6. `./equin build` (background) → `./equin check` → the manual checks 3–5.
 
 ## Critical files
 

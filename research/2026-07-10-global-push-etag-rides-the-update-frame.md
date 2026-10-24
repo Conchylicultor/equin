@@ -246,7 +246,7 @@ until a keyed resource actually declares `revalidate`.
 
 1. `bun test plugins/framework/plugins/resource-runtime/core/` — the three new cases plus the
    existing suites green (nothing there touches the push-path etag, so no churn is expected).
-2. `./singularity build`, then confirm the live win on `edited-files` at the seam, not the
+2. `./equin build`, then confirm the live win on `edited-files` at the seam, not the
    browser. Open a conversation with a worktree so `edited-files` is subscribed, then edit a
    file in that worktree to fire the watcher. Before the fix each notify runs a
    `getConversation` + 3 git spawns; after, none. Check with `get_runtime_profile` (MCP): the
@@ -258,7 +258,7 @@ until a keyed resource actually declares `revalidate`.
 4. Confirm the value-carrying frames are unchanged: with a conversation open, tail
    `~/.singularity/worktrees/<wt>/logs/` and check `jsonl-events` `update` frames still carry an
    `etag` (that resource is `push` mode, so this is the byte-identical path).
-5. `./singularity check` (type-check, plugin-boundaries, `plugins-doc-in-sync` after the
+5. `./equin check` (type-check, plugin-boundaries, `plugins-doc-in-sync` after the
    CLAUDE.md edit).
 
 ## Ordered implementation
@@ -271,7 +271,7 @@ until a keyed resource actually declares `revalidate`.
 4. `resource-runtime/CLAUDE.md`: add the "an etag rides the `update` frame" invariant, the
    sync-send constraint, and the FULL-vs-scoped delta asymmetry.
 5. `bun test plugins/framework/plugins/resource-runtime/core/` (all suites, H5a **unmodified**),
-   then `./singularity build && ./singularity check`.
+   then `./equin build && ./equin check`.
 
 ## Critical files
 

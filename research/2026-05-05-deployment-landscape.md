@@ -290,7 +290,7 @@ Default (2025): Kamal 2 + GHCR + GitHub Actions
 Our stack: Go gateway + Bun/TS server + Vite SPA + PostgreSQL → Hetzner VPS + Caddy.
 
 **What we already have that's Kamal-like:**
-- `./singularity build` — local build + restart
+- `./equin build` — local build + restart
 - Gateway doing subdomain routing to worktree backends via Unix sockets
 - Health probes in the CLI
 
@@ -301,4 +301,4 @@ Our stack: Go gateway + Bun/TS server + Vite SPA + PostgreSQL → Hetzner VPS + 
 4. **Postgres backup cron** — daily pg_dump to Hetzner Object Storage
 5. **UptimeRobot + Grafana Cloud free tier** — baseline monitoring
 6. **Zero-downtime gateway restart** — SO_REUSEPORT or SIGHUP reload
-7. **`./singularity deploy`** — extend CLI for remote deployment (Kamal-inspired, no Ruby dep)
+7. **`./equin deploy`** — extend CLI for remote deployment (Kamal-inspired, no Ruby dep)

@@ -220,7 +220,7 @@ No cycles. `chord-engine/core` and `audio-engine/web` are leaf nodes with zero f
 
 ## Verification
 
-1. `./singularity build` — confirms all plugins are discovered, compiled, and the app registers
+1. `./equin build` — confirms all plugins are discovered, compiled, and the app registers
 2. Open `http://<worktree>.localhost:9000/sonata` — the app should appear in the rail and render the card grid
 3. Type chords in the editor → they should parse and display as interactive badges
 4. Click Play → sequencer should step through chords, piano keyboard should highlight notes

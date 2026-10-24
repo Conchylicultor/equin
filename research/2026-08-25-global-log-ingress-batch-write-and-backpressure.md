@@ -26,7 +26,7 @@ Two honest qualifications, because they set the scope:
   stall-proof.
 - **Steady-state volume is low.** The chattiest browser channel (`live-state`) averages ~0.4
   lines/s, and its verbose tracing is behind a dev flag. The realistic 500-line batch is the
-  **reconnect drain**: the backend restarts during `./singularity build`, the browser buffers
+  **reconnect drain**: the backend restarts during `./equin build`, the browser buffers
   everything, and the WS-`open` flush (`web/client-log.ts:69-71`) dumps it in 500-line chunks
   exactly as the server is freshly booting.
 
@@ -41,7 +41,7 @@ Investigated and deliberately rejected. Four findings, all verified in code:
 
 1. **A direct gate is a dependency cycle.** `duress/server/internal/shed-buffer.ts:10` already
    imports `defineLogSink` from `log-channels/server`. Gating inside `log-channels` would close
-   a 2-cycle caught by `./singularity check plugin-boundaries`. Working around it means an
+   a 2-cycle caught by `./equin check plugin-boundaries`. Working around it means an
    inverted `defineReportSink` seam (the `jobs/server/internal/deadline-seam.ts` pattern), a new
    `duress/plugins/log-shed` sub-plugin, and an `UNSAFE_` replay entry point that bypasses the
    ring and the WS fan-out.
@@ -224,7 +224,7 @@ general. What it does reach:
   legitimate code and get allowlisted into meaninglessness.
 - **Internal coalescing on a `setImmediate` boundary.** The only design that would also fix a
   caller who does loop — rejected on merit: it converts a synchronous durable write into a
-  deferred one. `log-channels` promises the file survives the restart `./singularity build`
+  deferred one. `log-channels` promises the file survives the restart `./equin build`
   performs; the four CLI sinks live in processes that exit or are hard-killed between publish and
   flush; and `retention.getGrowthBounds()` merges `bound` as *behaviour*, which stops being true
   if rotation happens a tick after the write.
@@ -318,7 +318,7 @@ names the route in slow-ops instead of surfacing as an anonymous stall in a prof
 - `plugins/primitives/plugins/log-channels/web/client-log.ts` — buffer cap, retry timer
 - `plugins/primitives/plugins/log-channels/core/endpoints.ts` — `slowThresholdMs`
 
-**Docs** (`plugins-doc-in-sync` fails on drift; run `./singularity build` before pushing)
+**Docs** (`plugins-doc-in-sync` fails on drift; run `./equin build` before pushing)
 - `plugins/infra/plugins/file-sink/CLAUDE.md` — `appendAll`; the per-rotation-group gate; single-writer-only caveat; extend the `includeRotated` safety sentence to name the batch case
 - `plugins/primitives/plugins/log-channels/CLAUDE.md` — `publishAll`; one POST is one file write; the duress 429 and what the client does with it
 - `plugins/framework/plugins/tooling/plugins/checks/core/progress-log.ts:107` — amend the swallowed-errors clause
@@ -341,8 +341,8 @@ hot path with ~25 cross-plugin importers, so keep its diff reviewable.
 
 ## Tests
 
-Run with `./singularity test plugins/infra/plugins/file-sink` and
-`./singularity test plugins/primitives/plugins/log-channels`.
+Run with `./equin test plugins/infra/plugins/file-sink` and
+`./equin test plugins/primitives/plugins/log-channels`.
 
 **`file-sink/core/internal/file-sink.test.ts`** — same hermetic conventions already there
 (`mkdtempSync` per test, unique sink id since the registry is process-global). Do *not* assert
@@ -387,9 +387,9 @@ Not under duress: normal path.
 
 ## Verification end-to-end
 
-1. `./singularity build` (background — it is well over the foreground cap), then confirm
+1. `./equin build` (background — it is well over the foreground cap), then confirm
    `~/.singularity/worktrees/<wt>/build-status.json` reads `status: ok`.
-2. `./singularity check plugin-boundaries` — the `log-channels → latch/server` edge is the one new
+2. `./equin check plugin-boundaries` — the `log-channels → latch/server` edge is the one new
    cross-plugin import; this proves it stays acyclic.
 3. Open `http://<worktree>.localhost:9000`, then Debug → Logs and pick a browser channel. Confirm
    lines still stream live over the WS (per-line delivery preserved) and that

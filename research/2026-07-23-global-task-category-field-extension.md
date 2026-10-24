@@ -148,7 +148,7 @@ sibling; else `{ kind: "root" }`.
 
 ### Data migration (extra-careful; tasks data is critical)
 
-**(A) Schema (committed)**: adding `defineExtension` + `./singularity build`
+**(A) Schema (committed)**: adding `defineExtension` + `./equin build`
 auto-emits `CREATE TABLE tasks_ext_category (...)` (FK CASCADE to tasks). This is
 the only committed migration — DDL only, creates an empty table, harmless to
 auto-apply everywhere.
@@ -241,7 +241,7 @@ tree view blob (precedent: `groupBy` keys in `studio.compositions.jsonc`,
 
 ## Verification
 
-- `./singularity build` green (checks include `migrations-in-sync`, boundaries,
+- `./equin build` green (checks include `migrations-in-sync`, boundaries,
   type-check).
 - `query_db` (worktree DB): pre-migration `SELECT folder_id, count(*) FROM tasks
   WHERE folder_id IN (<5 metas>) GROUP BY 1` vs post-migration per-category counts

@@ -26,8 +26,8 @@
  * through live-state, so `loadMore` loads exactly the new page's `step` rows
  * and a merge loads nothing.
  *
- * Requires a running Postgres cluster (started by ./singularity build).
- * Run: `./singularity test plugins/network/plugins/live`.
+ * Requires a running Postgres cluster (started by ./equin build).
+ * Run: `./equin test plugins/network/plugins/live`.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";

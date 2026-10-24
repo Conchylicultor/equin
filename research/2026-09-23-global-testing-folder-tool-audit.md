@@ -48,7 +48,7 @@ inline audit.
   `@plugins/…/testing`). Name the facet, the plugin and the path in the error.
   A future facet that walks by hand then fails the build instead of quietly
   documenting test code.
-- Regenerate: `./singularity build` rewrites `docs/plugins-details.md` without
+- Regenerate: `./equin build` rewrites `docs/plugins-details.md` without
   the `install-derived-schema.ts` line.
 - The guard lives in `codegen/core/doc-facts-guard.ts` (tested on its own).
   `db-schema/facet/find-db-files.test.ts` checks that a `server/testing/`
@@ -83,12 +83,12 @@ inline audit.
 
 ## Verification
 
-1. `./singularity test plugins/framework/plugins/tooling/plugins/web-artifacts plugins/plugin-meta/plugins/facets plugins/framework/plugins/tooling/plugins/codegen`
-2. `./singularity build` (background; then `./singularity await`). Confirm
+1. `./equin test plugins/framework/plugins/tooling/plugins/web-artifacts plugins/plugin-meta/plugins/facets plugins/framework/plugins/tooling/plugins/codegen`
+2. `./equin build` (background; then `./equin await`). Confirm
    `build-status.json` is `ok` and that the whole artifact fleet rebuilt and passed the audit.
 3. `git diff` on `docs/plugins-details.md` shows the
    `install-derived-schema.ts` line removed and nothing else removed.
 4. Negative check by hand, then reverted: make a shipping `web/*.ts` in some plugin
    import `./testing`, and build with `--skip-checks`. The artifact build must fail
    with the inline-audit test-code error.
-5. `./singularity check plugins-doc-in-sync plugin-boundaries type-check`.
+5. `./equin check plugins-doc-in-sync plugin-boundaries type-check`.

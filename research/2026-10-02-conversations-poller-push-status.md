@@ -206,13 +206,13 @@ Reused: `defineFileWatcher`, `defineJob` (schedule plus the `Trigger` contributi
 ## Verification
 
 1. **Unit tests.**
-   - `./singularity test plugins/conversations`: the new `plan-update.test.ts` covers every arm,
+   - `./equin test plugins/conversations`: the new `plan-update.test.ts` covers every arm,
      with cases ported from the poller's comments: done never overwritten, closeRequested → closed,
      starting grace, failed runtime → untouched, hibernate vs gone, question override.
    - A session-stamp parser test.
    - A test that the `--settings` JSON merges the effort settings with the hooks and contains no
      single quotes.
-2. **Build:** `./singularity build`, then `./singularity check` (the timer lint passes without the entry).
+2. **Build:** `./equin build`, then `./equin check` (the timer lint passes without the entry).
 3. **Live checks** in the worktree deploy. Start an agent from its UI and watch the row via
    `query_db` and Debug → Background activity: no `conversations.poller` timer, three new file
    watchers and the sweep job.

@@ -114,7 +114,7 @@ export async function listUnfinished(): Promise<readonly UnfinishedRun[]> {
   return rows.map((row) => ({ runId: row.id, pid: row.pid }));
 }
 
-/** Record the pid of the detached `./singularity build` now serving this run. */
+/** Record the pid of the detached `./equin build` now serving this run. */
 export async function setPid(buildId: string, pid: number): Promise<void> {
   await db
     .update(_buildRuns)
@@ -134,7 +134,7 @@ export async function setPid(buildId: string, pid: number): Promise<void> {
  * and the convergence reconcile are the workflow's to run exactly once, and live
  * in {@link onBuildEnded}.
  *
- * `WHERE finished_at IS NULL` because `./singularity build` closes its own row
+ * `WHERE finished_at IS NULL` because `./equin build` closes its own row
  * right after the health probe, ~100s before its child exits: the CLI is the
  * authoritative first writer and this is usually a no-op.
  */
@@ -196,7 +196,7 @@ export async function notifyBuildStarted(
  * own outcome stamp.
  *
  * **The row is already closed by the time this runs, and that is the ordinary
- * case rather than an edge.** Two writers get there first: `./singularity build`
+ * case rather than an edge.** Two writers get there first: `./equin build`
  * stamps its own row right after the health probe (~100s before its child
  * exits), and failing that the supervised job's `closeRow` runs in the
  * reconciler *before* the announcement that resumes the workflow. So nothing
@@ -204,7 +204,7 @@ export async function notifyBuildStarted(
  * assumed — the bell describes the outcome the ledger carries, whoever wrote it.
  *
  * **This is the repair the migration to a supervised run bought, and it is worth
- * stating with the measurement.** `./singularity build` restarts the very
+ * stating with the measurement.** `./equin build` restarts the very
  * backend that spawned it, so the process that used to hold `await proc.exited`
  * was routinely killed before the build finished, and everything after that
  * await went with it. On `main`: 33 `Auto-build started` bells against **2**
@@ -261,7 +261,7 @@ export async function onBuildEnded(buildId: string): Promise<void> {
  * status instead is not the banned `exitCode > 128` inference — but only
  * because of a precondition that has to hold and is written down where the rule
  * lives (`BUILD_EXIT_SIGNAL_BASE`): **these codes are first-party.**
- * `./singularity build` installs `installFatalSignalExit` and CHOOSES
+ * `./equin build` installs `installFatalSignalExit` and CHOOSES
  * `128 + signo` for itself, having caught the signal, so the number is a record
  * the build wrote rather than a wait status somebody decoded. If
  * `build_runs.exit_code` ever carries a status this repo did not author, that

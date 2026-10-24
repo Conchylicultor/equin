@@ -87,7 +87,7 @@ any position" (root or non-root), which matches actual usage.
 
 ## Verification
 
-1. `./singularity build` — builds and deploys
+1. `./equin build` — builds and deploys
 2. Open a conversation → click the attempt-switch button → attemptPane
    should appear to the LEFT of the conversation
 3. Click again → attemptPane should unwrap (disappear)

@@ -155,9 +155,9 @@ Run: `bun test plugins/apps/plugins/sonata/plugins/score/core/active-note-index.
 
 ## Verification
 
-1. `./singularity build` (regenerates docs/registry, type-checks, restarts server).
+1. `./equin build` (regenerates docs/registry, type-checks, restarts server).
 2. `bun test plugins/apps/plugins/sonata/plugins/score/core/active-note-index.test.ts` — index unit tests pass.
-3. `./singularity check type-check` — types/lint clean.
+3. `./equin check type-check` — types/lint clean.
 4. Manual (Playwright): open Sonata at `http://att-1781863713-9wd7.localhost:9000`,
    load a song, press Space to play, and confirm the keyboard still lights the
    correct keys in their per-track colors, that lit keys clear when notes end,

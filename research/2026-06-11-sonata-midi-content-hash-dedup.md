@@ -70,7 +70,7 @@ All under `plugins/apps/plugins/sonata/plugins/sources/plugins/midi/`.
    ```
    Add an index on `content_hash` if `defineExtension` accepts an index option;
    otherwise leave un-indexed (the table is small) and note it. Comment the
-   column. `./singularity build` auto-generates the additive migration.
+   column. `./equin build` auto-generates the additive migration.
 
 2. **`server/internal/import.ts`**
    - Add `export function hashMidiBytes(bytes: Uint8Array): string` (Node
@@ -125,9 +125,9 @@ No web changes: dedup is entirely server-side. No barrel/API surface changes
 
 ## Verification
 
-1. `./singularity build` — confirm the additive migration is generated/applied
+1. `./equin build` — confirm the additive migration is generated/applied
    and the server boots (backfill runs without error).
-2. `./singularity check` — boundaries, migrations-in-sync, eslint, docs-in-sync.
+2. `./equin check` — boundaries, migrations-in-sync, eslint, docs-in-sync.
 3. **Manual re-upload dedup:** in the Sonata library Import the same `.mid`
    twice → exactly one song. Verify via MCP:
    `mcp__singularity__query_db` →

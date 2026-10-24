@@ -13,7 +13,7 @@ auto-build fires on the local `refs/heads/main` file moving
 `plugins/build/server/index.ts:26-31`), and the pushes ledger and attempt-work
 read local `main` only. No network anywhere.
 
-The one exception is `./singularity push`, which is also the only place in the
+The one exception is `./equin push`, which is also the only place in the
 repo that does network git at all. It does three remote calls
 (`plugins/framework/plugins/cli/plugins/push/cli/run.ts`):
 
@@ -154,7 +154,7 @@ every replayed commit — but it **rewrites the merged-in upstream commits**:
 `8a9d381 "upstream: one"` came back as `580dcd8`, and upstream's own sha was no
 longer an ancestor of HEAD. Upstream's commits would land in the user's history
 under identities upstream never had, so the next
-`./singularity upstream merge` would have a merge base *below* them, re-present
+`./equin upstream merge` would have a merge base *below* them, re-present
 changes already merged, and bring back every conflict resolved last time —
 which is the exact failure merging instead of rebasing was chosen to avoid.
 
@@ -175,7 +175,7 @@ in the worktree, never fall through to the flattening rebase.
 A branch that already contains main never needed a flattening rebase anyway: the
 rebase exists only to make step 6's ff-merge possible, which is already true.
 
-## 4. `./singularity upstream status | merge`
+## 4. `./equin upstream status | merge`
 
 New CLI plugin `plugins/framework/plugins/cli/plugins/upstream/`, declaration in
 `cli/index.ts` and body behind the lazy `import()` like every other command.
@@ -234,10 +234,10 @@ investigation task **on demand** (`plugins/tasks/plugins/reports-investigation`)
 so the user gets a report in the bell and an Investigate button that mints the
 task with this text when they want it:
 
-1. `./singularity upstream merge` in this worktree.
+1. `./equin upstream merge` in this worktree.
 2. Resolve conflicts. Generated files re-derive themselves; a conflicted
    migration means stop and report.
-3. `./singularity build` in the background; confirm `build-status.json` is `ok`.
+3. `./equin build` in the background; confirm `build-status.json` is `ok`.
 4. Open the worktree URL and check the app still works.
 5. Report what changed and wait — **do not push**; the user lands it.
 
@@ -267,7 +267,7 @@ open question on the plan page for step 1.
    as a GitHub permission denial does.
    - `resolvePublishTarget` returns `{kind:"local",reason:"read-only"}` and writes
      the git-config cache once; a second call does no network.
-   - `./singularity push -m "x"` in a worktree of `/tmp/clone` advances local
+   - `./equin push -m "x"` in a worktree of `/tmp/clone` advances local
      `main`, prints the local-only line, and leaves `/tmp/upstream.git` untouched.
    - Restore write permission, re-point the URL, and confirm the cache re-probes.
 2. **The author's path is unchanged.** In this checkout, `resolvePublishTarget`
@@ -275,7 +275,7 @@ open question on the plan page for step 1.
    fetches, pushes the branch, and pushes main.
 3. **Merge topology and upstream identity.** In `/tmp/clone`: commit locally on
    main, add a commit to `/tmp/upstream.git`, then in a worktree run
-   `./singularity upstream merge` followed by `./singularity push`. Assert the
+   `./equin upstream merge` followed by `./equin push`. Assert the
    merge commit survives with both parents, the tip carries a `Singularity-Push`
    trailer, and — the one that decided the design —
    `git merge-base --is-ancestor <upstream sha> main` still passes. Then move
@@ -294,7 +294,7 @@ open question on the plan page for step 1.
    and check: one row in Debug → Reports, the bell rings, a second run bumps the
    count instead of minting a row, and Investigate files a task carrying the
    merge instructions. `query_db` against the clone's DB confirms the single row.
-6. `./singularity check` and `./singularity test plugins/infra/plugins/git`.
+6. `./equin check` and `./equin test plugins/infra/plugins/git`.
 
 ## Risks
 

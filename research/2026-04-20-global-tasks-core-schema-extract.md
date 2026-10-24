@@ -160,8 +160,8 @@ Ordered for minimal breakage; each step should typecheck before moving on.
 7. **Migrate cross-plugin consumers.** Three files (see table above): `handle-launch.ts`, `auto-build-watcher.ts`, `stats/handle-cumulative.ts`. Some symbols now come from `tasks-core`, others stay in `tasks`/`conversations`.
 8. **Delete the moved files.** Remove `plugins/tasks/server/internal/tables.ts`, `plugins/tasks/server/internal/schema.ts`, `plugins/conversations/server/internal/tables.ts`, `plugins/conversations/server/internal/schema.ts`.
 9. **Clean up `api.ts` / `index.ts` re-exports.** `plugins/tasks/server/api.ts` and `plugins/conversations/server/api.ts` no longer need to re-export tables/views/types — those now live in `tasks-core`. Keep re-exports of plugin-local helpers (`createConversation`, `nextRankUnder`, `Runtime`, etc.).
-10. **Run `./singularity build`.** This regenerates migrations (none expected — table DDL is identical), restarts the server, and confirms the app comes up. Drizzle picks up `plugins/tasks-core/server/internal/{tables,schema}.ts` automatically via the glob in `server/drizzle.config.ts:18-23`.
-11. **Update docs.** `docs/plugins.md` regenerates on build via `cli/src/docgen.ts`. Run `./singularity check --plugins-doc-in-sync` to verify. Update `CLAUDE.md` and `server/CLAUDE.md` if they reference the old schema locations.
+10. **Run `./equin build`.** This regenerates migrations (none expected — table DDL is identical), restarts the server, and confirms the app comes up. Drizzle picks up `plugins/tasks-core/server/internal/{tables,schema}.ts` automatically via the glob in `server/drizzle.config.ts:18-23`.
+11. **Update docs.** `docs/plugins.md` regenerates on build via `cli/src/docgen.ts`. Run `./equin check --plugins-doc-in-sync` to verify. Update `CLAUDE.md` and `server/CLAUDE.md` if they reference the old schema locations.
 
 ## Non-scope (deliberately deferred)
 
@@ -203,14 +203,14 @@ Ordered for minimal breakage; each step should typecheck before moving on.
 
 ## Verification
 
-1. **Build succeeds.** `./singularity build` runs clean. No new drizzle migration (DDL is unchanged). Server starts; `__singularity_migrations` is unchanged.
+1. **Build succeeds.** `./equin build` runs clean. No new drizzle migration (DDL is unchanged). Server starts; `__singularity_migrations` is unchanged.
 2. **No cycle.** `grep -r "@plugins/tasks/server/internal" plugins/` and `grep -r "@plugins/conversations/server/internal" plugins/` both return zero matches. The two deep-path exceptions no longer exist.
 3. **Typecheck clean.** `bun run typecheck` (or whatever the project uses) passes in `server/`, `plugins/tasks/`, `plugins/conversations/`, `plugins/agents/`, `plugins/build/`, `plugins/stats/`.
-4. **Docgen reflects the move.** After `./singularity build`, `docs/plugins.md` lists `tasks-core` as a new plugin with its exports; `tasks` and `conversations` entries no longer list the moved table/view/type symbols. `./singularity check --plugins-doc-in-sync` passes.
+4. **Docgen reflects the move.** After `./equin build`, `docs/plugins.md` lists `tasks-core` as a new plugin with its exports; `tasks` and `conversations` entries no longer list the moved table/view/type symbols. `./equin check --plugins-doc-in-sync` passes.
 5. **End-to-end smoke.** Open the app at `http://<worktree>.localhost:9000`:
    - Task list renders, status badges compute correctly (view logic unchanged, just relocated).
    - Create a new task, launch an attempt, watch a conversation go `starting` → `waiting` → closed. Status transitions should be identical to pre-migration.
-   - Confirm the push watcher still records pushes (trigger `./singularity push` on a throwaway change in a test worktree, then check that `pushesResource` reflects it in the UI).
+   - Confirm the push watcher still records pushes (trigger `./equin push` on a throwaway change in a test worktree, then check that `pushesResource` reflects it in the UI).
 6. **Cross-plugin consumers still work.**
    - `agents` launch flow creates a task + attempt + conversation (exercises `handle-launch.ts` imports).
    - `build` auto-build watcher fires on push (exercises `auto-build-watcher.ts` imports).

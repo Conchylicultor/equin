@@ -122,9 +122,9 @@ Slot/host APIs already exist (no consumer edits): `PluginChangesSlots.DiffRender
 
 ## Verification
 
-1. `./singularity build` — succeeds; codegen fills each new `CLAUDE.md` autogen block and
+1. `./equin build` — succeeds; codegen fills each new `CLAUDE.md` autogen block and
    registers the three sub-plugins.
-2. `./singularity check` — passes (`plugins-doc-in-sync`, `eslint`, `--plugin-boundaries`).
+2. `./equin check` — passes (`plugins-doc-in-sync`, `eslint`, `--plugin-boundaries`).
 3. `rg -n "DiffRenderer|PluginViewSlots.Section|Catalog.FacetTable" plugins/plugin-meta/plugins/facets/plugins/slots`
    shows one contribution of each, all with `facetId`/`id` = `"slots"`.
 4. `docs/plugins-compact.md` / `docs/plugins-details.md` now list the three slots render

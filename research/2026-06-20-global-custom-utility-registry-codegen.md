@@ -79,7 +79,7 @@ with the **same shape `cn()` already consumes** — a typed
 derived `CustomGroupId` type:
 
 ```ts
-// AUTO-GENERATED from app.css @utility markers. Do not edit. Run ./singularity build.
+// AUTO-GENERATED from app.css @utility markers. Do not edit. Run ./equin build.
 import type { RegistryEntry } from "./custom-utilities-types";
 export const CUSTOM_UTILITY_REGISTRY = [
   { classes: ["p-chip","p-control","p-row","p-card"], group: "sg-pad", conflictsWith: ["p"] },
@@ -118,7 +118,7 @@ untouched. Same-plugin import; `.generated.ts` is git-committed and R9-exempt.
   `plugins/framework/plugins/tooling/plugins/checks/plugins/app-css-utilities-in-sync/check/index.ts`:
   drop the two-file text-parse; new impl = `readFileSync(generatedFile) !==
   renderCustomUtilities(root)` (wrapped in try/catch so a thrown marker-validation
-  error is reported as a check failure, not a crash), `hint: "Run ./singularity
+  error is reported as a check failure, not a crash), `hint: "Run ./equin
   build and commit the regenerated file."` — byte-for-byte the
   `token-group-vars-in-sync` shape. Keep the check id (still keeps app.css ⇄
   registry in sync). Update its `CLAUDE.md`.
@@ -162,7 +162,7 @@ current registry's data).
 
 ## Verification
 
-1. `./singularity build` — confirm `custom-utilities.generated.ts` is written and
+1. `./equin build` — confirm `custom-utilities.generated.ts` is written and
    the build's codegen step + `app-css-utilities-in-sync` check pass.
 2. **Semantic-parity check**: diff the generated `CUSTOM_UTILITY_REGISTRY` against
    the pre-change hand registry — the set of `{classes, group/extend/standalone,
@@ -171,11 +171,11 @@ current registry's data).
    (dedupe via the `sg-pad`↔`p` conflict), `cn("text-caption text-sm")` keeps the
    last (no silent strip), `cn("focus-ring shadow-md")` keeps both (standalone).
 4. **Footgun-is-gone proof**: add a throwaway `@utility p-test { … }` to `app.css`
-   *without* a `twmerge:` marker → `./singularity build` must fail **immediately**
+   *without* a `twmerge:` marker → `./equin build` must fail **immediately**
    at the codegen step with a located error naming `p-test` (not a silent
    post-build check miss). Then add the marker → build passes and the array never
    had to be touched. Remove the throwaway.
-5. `./singularity check app-css-utilities-in-sync` and `./singularity check
+5. `./equin check app-css-utilities-in-sync` and `./equin check
    type-check` green.
 
 ## Out of scope

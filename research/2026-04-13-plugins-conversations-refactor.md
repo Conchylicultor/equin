@@ -78,11 +78,11 @@ From grep (excluding `research/`):
 5. Update imports per table above (grep-driven; 6 files).
 6. Update `plugins/CLAUDE.md` outline: collapse `conversation` and `conversations` entries into one `conversations` section with the new nesting.
 7. `bun install` (workspace layout changed: one workspace removed).
-8. `./singularity build` — confirms typecheck + frontend build + server start.
+8. `./equin build` — confirms typecheck + frontend build + server start.
 
 ## Verification
 
-1. `./singularity build` completes cleanly.
+1. `./equin build` completes cleanly.
 2. `http://<worktree>.localhost:9000` loads; sidebar shows "Conversations".
 3. Click into a conversation → pane opens at `/c/:id`, toolbar shows "Open" and "VSCode" buttons (both sub-plugins still registered).
 4. "Open" button opens `http://<id>.localhost:9000/`; "VSCode" opens the session cwd.

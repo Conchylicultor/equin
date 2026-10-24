@@ -295,9 +295,9 @@ async onReady() {
 
 After each consumer migration:
 
-1. Run `./singularity build` — generates `config/<hierarchy>/<name>.origin.jsonc` from the new `defineConfig` defaults
+1. Run `./equin build` — generates `config/<hierarchy>/<name>.origin.jsonc` from the new `defineConfig` defaults
 2. Verify the `.origin.jsonc` file exists with correct defaults
-3. Verify `./singularity check --config-origins-in-sync` passes
+3. Verify `./equin check --config-origins-in-sync` passes
 4. Open the config_v2 Settings UI and verify the plugin's fields appear
 5. Change a value in Settings, verify it writes to `~/.singularity/config/<worktree>/<hierarchy>/<name>.jsonc`
 6. Verify server-side `getConfig(descriptor)` returns the changed value (use `query_db` MCP or add a debug log)
@@ -306,7 +306,7 @@ After each consumer migration:
 For the data migration:
 
 1. Before migrating, note current DB values: `SELECT * FROM config`
-2. Run `./singularity build` (triggers server restart → migration)
+2. Run `./equin build` (triggers server restart → migration)
 3. Verify JSONC override files were created at `~/.singularity/config/<worktree>/...`
 4. Verify DB rows for migrated plugins were deleted
 5. Verify DB rows for non-migrated plugins (auth, Section consumers) are untouched

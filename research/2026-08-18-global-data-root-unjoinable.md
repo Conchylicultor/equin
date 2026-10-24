@@ -190,20 +190,20 @@ doing both retires it, and `launch.ts`'s docblock can say so.
 
 ## Verification
 
-1. `./singularity check paths:data-root-not-joined` — green. Then confirm it goes
+1. `./equin check paths:data-root-not-joined` — green. Then confirm it goes
    **red**: add `join(dataRoot(), "x")` to a scratch file and re-run, then add a
    bare `const r = process.env.SINGULARITY_DIR` and re-run. Delete the scratch file.
-2. `./singularity check` (background) — the full suite, especially `type-check`
+2. `./equin check` (background) — the full suite, especially `type-check`
    (which is what proves no stale `SINGULARITY_DIR` import survives),
    `plugin-boundaries` (the new `e2e → data-dirs` grant), and the two existing
    `paths:` checks.
-3. `./singularity test plugins/infra/plugins/paths` — the check's own unit tests
+3. `./equin test plugins/infra/plugins/paths` — the check's own unit tests
    plus `data-dir.test.ts` / `legacy-layout.test.ts`.
-4. `./singularity build` (background, then end the turn) — proves the launcher,
+4. `./equin build` (background, then end the turn) — proves the launcher,
    gateway spawn and per-worktree artifact paths still resolve with
    `worktreesDir()` lazy. Confirm via the deploy receipt at
    `~/.singularity/worktrees/<wt>/build-status.json` (`status: ok`).
-5. `./singularity check paths:no-undeclared-data-dirs` — unchanged green; the real
+5. `./equin check paths:no-undeclared-data-dirs` — unchanged green; the real
    root must be untouched by this change (it moves no bytes).
 6. Manual, optional: the mail e2e is the only migrated consumer with runtime
    behaviour worth exercising —

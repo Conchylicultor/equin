@@ -23,7 +23,7 @@ const audioAnalysisLog = defineLogSink({
 });
 
 /**
- * Analyse one video, in a detached child (`./singularity supervised-exec
+ * Analyse one video, in a detached child (`./equin supervised-exec
  * audio-analysis.beat-features`). The settings and device ride in the input,
  * resolved when it was requested, so the job computes exactly the entry the
  * request looked at. `lock` is the settings key and the video id, so a second

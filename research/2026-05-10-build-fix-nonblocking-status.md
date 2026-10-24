@@ -48,7 +48,7 @@ Replace `waitForRestart` polling with the push-mode `buildHistoryResource`.
 
 ## Verification
 
-1. `./singularity build` from the worktree to deploy
+1. `./equin build` from the worktree to deploy
 2. Open the Build popover and click Build
 3. Confirm: button shows "Building..." immediately, POST returns fast
 4. Confirm: logs stream in the log view in real-time

@@ -122,7 +122,7 @@ The card previews the theme's *own* colors, not the page's current theme tokens.
 
 ## Verification
 
-1. `./singularity build` — plugin auto-discovered, no migration needed
+1. `./equin build` — plugin auto-discovered, no migration needed
 2. Navigate to Theme settings → verify "Community Themes" section appears (collapsed by default)
 3. Expand → grid of themed cards with actual colors rendered
 4. Tag filter → click a tag → grid narrows to matching themes

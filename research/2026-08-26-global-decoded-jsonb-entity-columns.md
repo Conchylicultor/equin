@@ -304,13 +304,13 @@ describe what is stored. Three tables are empty (`boot_traces`, `mail_drafts`,
 `mail_outbox`), so four columns are unproven rather than proven — worth a second
 look once they hold data.
 
-**`./singularity build` — BUILD OK, deployed, all checks green.** The claim under
+**`./equin build` — BUILD OK, deployed, all checks green.** The claim under
 test was fact 4, and it held: **no migration was generated.** 25 columns swapped
 from `jsonb` to a decoding `customType` with byte-identical DDL and snapshot.
 `plugin-boundaries` accepted the new `fields/{json,tags}/storage → sql-column`
 edges; `type-check` clean.
 
-**`./singularity test`** — 82 pass / 0 fail across the eight touched suites.
+**`./equin test`** — 82 pass / 0 fail across the eight touched suites.
 
 **Both directions exercised live on the deployed backend.** Every `traces` and
 `slow_ops` row in this worktree was written *after* the restart, so it went out

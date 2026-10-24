@@ -37,7 +37,7 @@ would force schema-per-kind plumbing and break the hand-written `ReportSchema`
 the debug pane reads).
 
 The registry is fully codegen'd (no hand-edited `plugins.ts`), so renaming the
-two plugin directories + fixing `@plugins/crashes/*` imports + `./singularity
+two plugin directories + fixing `@plugins/crashes/*` imports + `./equin
 build` regenerates `server.generated.ts`, `web.generated.ts`, all `CLAUDE.md`,
 and `docs/plugins-*.md` automatically.
 
@@ -104,7 +104,7 @@ and `docs/plugins-*.md` automatically.
 
 ### Migration
 
-The table rename + new column auto-generates via `./singularity build` (never
+The table rename + new column auto-generates via `./equin build` (never
 run `drizzle-kit` manually). Non-interactive drizzle-kit emits this as a
 DROP + CREATE of the `crashes`/`reports` table rather than a rename — **this is
 acceptable**: `reports` is a pure diagnostics table, no FK points into it
@@ -114,8 +114,8 @@ the generated SQL so `migrations-in-sync` passes. Stale buffered
 
 ## Verification
 
-1. `./singularity build` — generates migration, regenerates registry+docs, restarts server.
-2. `./singularity check` — `migrations-in-sync`, `plugins-doc-in-sync`, `plugin-boundaries`, `type-check` all green.
+1. `./equin build` — generates migration, regenerates registry+docs, restarts server.
+2. `./equin check` — `migrations-in-sync`, `plugins-doc-in-sync`, `plugin-boundaries`, `type-check` all green.
 3. App loads at `http://att-1781336193-cxj2.localhost:9000`. Open Debug → **Reports** pane (formerly Crashes); confirm it renders and shows a `kind` badge.
 4. Trigger a crash through the real client path (e.g. a ResizeObserver loop) and confirm: a `reports` row appears with `kind='crash'`, `count` increments on repeat, a task is filed under the **Reports** meta-task, and the noise rule still mutes ResizeObserver. Use `query_db` on `reports` to confirm columns.
 5. Confirm server-side reporters still work: `recordReport` calls from the conversations poller and tmux-runtime file rows (inspect via `query_db`).

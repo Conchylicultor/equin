@@ -17,7 +17,7 @@
  *     Asleep stat (2h 0m), Work far below the total, and one hatched overlay
  *     titled "Asleep 2h 0m" (exact: the wake fell inside the gap).
  *
- *   ./singularity run plugins/conversations/plugins/conversation-view/plugins/op-status/e2e/op-sleep.ts \
+ *   ./equin run plugins/conversations/plugins/conversation-view/plugins/op-status/e2e/op-sleep.ts \
  *     --conv <a conversation whose worktree is this checkout> [--out /tmp/op-sleep]
  */
 import { mkdtempSync, rmSync } from "node:fs";

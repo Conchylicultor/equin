@@ -67,7 +67,7 @@ runPython(ready, { entry: "beat_features", input });  // runPython takes the pro
   pushed as a live value, so B/C can render "Preparing audio tools (first use)…"
   instead of a spinner that lies. A failed install fails the job with the
   installer's own message.
-- **Opt-out of laziness.** An optional `./singularity deps install <id>`
+- **Opt-out of laziness.** An optional `./equin deps install <id>`
   prewarms a dep (for example on a demo machine). The same `install` runs.
 - **Future users.** Stems and transcription reuse `audio-python` or declare their
   own dep. Chromium could migrate later: it is optional for most users too. That
@@ -163,18 +163,18 @@ scoring. Implementation adds a "Contract 1 as built" note to the vision doc.
 
 ## Steps
 
-1. Add `uv = "latest"` to `mise.toml`, lock it through `./singularity toolchain upgrade` (the only thing that moves `mise.lock`), and confirm that `toolchain:resolved` and `mise run doctor` know about uv.
+1. Add `uv = "latest"` to `mise.toml`, lock it through `./equin toolchain upgrade` (the only thing that moves `mise.lock`), and confirm that `toolchain:resolved` and `mise run doctor` know about uv.
 1b. Build `infra/on-demand-deps` (`defineOnDemandDep`, `ensureDep` with its host flock and stamp, `depState` live value, the `deps install` CLI verb), and add `ExecContext` to the supervised-job `run` context.
 2. Add the `python/` leaf folder to the vocabulary and the boundary table. Add `__pycache__` to `.gitignore`.
 3. Build the sidecar plugin: the uv project (`uv lock` generates `uv.lock`), the `audio-python` on-demand dep, the env and model data dirs, and `runPython` over `spawnCaptured` (JSON on stdin, one JSON document on stdout, stderr streamed to `log`, a bounded timeout).
 4. Build the `audio-fetch` child of `integrations/youtube`: the `fetch` entry, the atomic cache write, and the LRU sweep job.
 5. Build `beat-features`: the core schema, the extractor entry, the supervised job, the read/ensure API, the endpoints, and `scripts/analyze.ts` with the sonify output (clicks at each beat, an accented click on downbeats, mixed over the audio into a wav).
 6. Measure CPU vs MPS and the install footprint, then write the numbers and the contract-as-built into this doc and the vision doc.
-7. Run `./singularity build` (codegen registers the plugins and the data dirs), then `./singularity check`.
+7. Run `./equin build` (codegen registers the plugins and the data dirs), then `./equin check`.
 
 ## Verification
 
-- **Unit tests** (`./singularity test plugins/infra/plugins/audio-analysis`):
+- **Unit tests** (`./equin test plugins/infra/plugins/audio-analysis`):
   - the BeatFeatures schema round-trips;
   - `readBeatFeatures` maps each (file, ledger row) state correctly, including a stale version;
   - the sweep's eviction order at the cap, on a temp dir.

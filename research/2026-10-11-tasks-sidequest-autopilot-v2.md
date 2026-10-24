@@ -84,7 +84,7 @@ Each row expands to triage's context (markdown), risk/size/value, Stale tag, Re-
 
 ## Verification
 
-- `./singularity test plugins/tasks/plugins/automations plugins/tasks/plugins/sidequest-autopilot plugins/infra/plugins/claude-cli`.
-- `./singularity build`; in the worktree: run one triage manually (Run now on the triage job for one task) → row in `tasks_ext_sidequest_triage`, call in `claude_cli_calls`, `git status` of main clean afterwards.
+- `./equin test plugins/tasks/plugins/automations plugins/tasks/plugins/sidequest-autopilot plugins/infra/plugins/claude-cli`.
+- `./equin build`; in the worktree: run one triage manually (Run now on the triage job for one task) → row in `tasks_ext_sidequest_triage`, call in `claude_cli_calls`, `git status` of main clean afterwards.
 - With enabled on and nothing approved: Run now → `query_db` shows no new origin row. Approve 2, cap 1, concurrency 2 → exactly one launch, then `enabled` flips false. Screenshot the Launch list (`screenshot.ts --path /agents/automation/sidequest-autopilot`).
 - Launching runs on main only: the end-to-end loop is checked after push with cap 1, push `never`.

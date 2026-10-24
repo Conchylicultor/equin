@@ -427,13 +427,13 @@ change.
 
 ## 9. Verification
 
-1. **Tests:** `./singularity test` over `plugins/network/plugins/live`,
+1. **Tests:** `./equin test` over `plugins/network/plugins/live`,
    `plugins/infra/plugins/query-resource`, `plugins/primitives/plugins/live-state`,
    `plugins/primitives/plugins/data-view`, `plugins/primitives/plugins/virtual-rows`,
    `plugins/framework/plugins/resource-runtime` and `plugins/runs`.
 2. **Byte-identity:** the golden fixtures are untouched (no SQL change before P5),
    and the boot payloads are unchanged through P4.
-3. **Build and check:** `./singularity build` and `./singularity check`.
+3. **Build and check:** `./equin build` and `./equin check`.
 4. **Screenshots:** all-conversations, runs, mail and events, 30+ pages deep.
    - Rows are continuous.
    - There is no segment cap.

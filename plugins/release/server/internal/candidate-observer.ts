@@ -120,7 +120,7 @@ export function createCandidateObserver(
         };
       }
       // The MANIFEST's provenance: it is the one that always exists — a
-      // hand-run `./singularity release` writes a manifest and no row at all.
+      // hand-run `./equin release` writes a manifest and no row at all.
       const staleness = await sources.compareToHead(resolution.manifest);
       return { resolution, staleness, observedAt };
     },

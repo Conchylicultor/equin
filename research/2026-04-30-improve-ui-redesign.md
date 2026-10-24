@@ -160,7 +160,7 @@ const appendChainCard = () => {
 
 ## Verification
 
-1. `./singularity build` — confirm no build errors
+1. `./equin build` — confirm no build errors
 2. Open `http://att-1777505065-adjs.localhost:9000`
 3. Click "Improve" toolbar button
 4. Verify: large single input, model chip at bottom-right of card

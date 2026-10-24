@@ -54,7 +54,7 @@ export interface PanelActionRowProps {
  *
  * This row once composed `Line` and hand-copied `Row`'s chrome, because
  * `Row → row-actions → IconButton → action-presentation` was a cycle
- * `./singularity check plugin-boundaries` rejects. That edge is gone:
+ * `./equin check plugin-boundaries` rejects. That edge is gone:
  * `row-actions` shipped an `IconButton` alias whose deletion dropped `Row`
  * below `icon-button`. See
  * `research/2026-08-17-global-row-usable-below-icon-button.md`.

@@ -85,7 +85,7 @@ automation):
 
 Move this worktree to them, all in this one task. You own proving it works.
 
-First, the holds to review (listed above, per updater): \`./singularity deps upgrade\` refuses to run (verdict
+First, the holds to review (listed above, per updater): \`./equin deps upgrade\` refuses to run (verdict
    \`holds-to-review\`) while any hold is past its \`reviewBy\`, and this task is not done until each one is
    resolved. A hold is never released by its date — only you lift it. For each:
    - Check whether its reason still stands: the upstream issue, the release notes of every release since, and —
@@ -96,7 +96,7 @@ First, the holds to review (listed above, per updater): \`./singularity deps upg
      checked and when.
    Also delete any hold whose release a newer one has already moved past — it holds nothing any more.
 
-1. Run \`./singularity deps upgrade\` (in the background — it runs the full check and test suites at least twice).
+1. Run \`./equin deps upgrade\` (in the background — it runs the full check and test suites at least twice).
    With no updater named it moves EVERY updater together, behind one baseline: it compares every check, test and
    the moved inputs' smoke tests on the current releases against the new ones. When something regresses it narrows
    the batch down on its own (a lockstep group is never split), keeps every release that passes, and names each
@@ -104,7 +104,7 @@ First, the holds to review (listed above, per updater): \`./singularity deps upg
    path): \`landed\`, \`culprits\` (each with what it broke), \`untested\`, and \`blind\` (what already fails without
    any upgrade — file it with \`add_task\`, it is not this task's to fix).
 
-2. Verdict \`upgraded\` or \`partial\`: the files now hold exactly the \`landed\` releases. Run \`./singularity build\`
+2. Verdict \`upgraded\` or \`partial\`: the files now hold exactly the \`landed\` releases. Run \`./equin build\`
    and confirm \`build-status.json\` says \`ok\`. Then:
    {{pushPolicy}}
    A push's message names the landed moves: \`chore(deps): <updater> <name> <from> → <to>, …\`. Any authorization to
@@ -116,7 +116,7 @@ First, the holds to review (listed above, per updater): \`./singularity deps upg
    - If it is upstream, find or file the upstream issue, then add a hold for that release in that updater's holds
      file (listed above) with the reason, the issue URL and a \`reviewBy\` date at most 90 days out.
    - If it breaks only without another release it depends on, declare the two as one lockstep group.
-   Then run \`./singularity deps upgrade\` again, and go back to step 2 on its verdict.
+   Then run \`./equin deps upgrade\` again, and go back to step 2 on its verdict.
 
 4. Verdict \`current\`: nothing to do. Everything is already on its latest release, and no hold is overdue.
 

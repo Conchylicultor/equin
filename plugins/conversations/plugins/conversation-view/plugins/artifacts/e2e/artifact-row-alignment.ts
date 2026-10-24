@@ -23,9 +23,9 @@
  * centres perfectly and still drops its siblings by half the extra height, so a
  * box-centre check is exactly the check that would have passed throughout.
  *
- * Manual only — nothing runs this. After `./singularity build`:
+ * Manual only — nothing runs this. After `./equin build`:
  *
- *   ./singularity run \
+ *   ./equin run \
  *     plugins/conversations/plugins/conversation-view/plugins/artifacts/e2e/artifact-row-alignment.ts \
  *     [--conv <conversationId>] [--out <prefix>] [--headed]
  */

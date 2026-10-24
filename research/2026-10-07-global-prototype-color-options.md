@@ -164,8 +164,8 @@ Root: `plugins/apps/plugins/prototypes/plugins/`.
 
 ## Verification
 
-- `./singularity test plugins/primitives/plugins/css/plugins/color-picker plugins/apps/plugins/prototypes`
-- `./singularity build` (background), then:
+- `./equin test plugins/primitives/plugins/css/plugins/color-picker plugins/apps/plugins/prototypes`
+- `./equin build` (background), then:
   - Theme customizer + a color config field + shadow tokens: picker opens, values still
     stored as `oklch(…)` / channels; Sonata track colors unchanged.
   - New e2e `canvas/e2e/color-option-verify.ts` on a fixture prototype declaring
@@ -175,5 +175,5 @@ Root: `plugins/apps/plugins/prototypes/plugins/`.
     → pick persisted; `prototype options <id>` prints the hex; its URL renders the color
     (stamped style). Picks restored by the agent-write ledger at the end.
   - Screenshot the expanded color row via `screenshot.ts --click`.
-- `./singularity check` (plugin docs in sync, boundaries — `prototypes/files/core` →
+- `./equin check` (plugin docs in sync, boundaries — `prototypes/files/core` →
   `color-picker/core` is core→core).

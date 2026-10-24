@@ -3,7 +3,7 @@
 // logs, it does not assert.
 //
 // Usage:
-//   ./singularity run plugins/apps-core/plugins/tabs/e2e/tabs-verify.ts [--url http://<worktree>.localhost:9000]
+//   ./equin run plugins/apps-core/plugins/tabs/e2e/tabs-verify.ts [--url http://<worktree>.localhost:9000]
 
 import {
   pathUrl,

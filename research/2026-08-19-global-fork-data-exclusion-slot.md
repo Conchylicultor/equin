@@ -116,7 +116,7 @@ export async function forkDatabase(
 This matters. `getContributions()` returns `[]` when `collectContributions()` has not run,
 and `collectContributions()` runs only during server boot (`server-core/bin/index.ts`, after
 the register phase). A CLI process never calls it. If `forkDatabase` read the registry
-internally, `./singularity db fork` would silently produce a full 970 MB fork — exactly the
+internally, `./equin db fork` would silently produce a full 970 MB fork — exactly the
 silent-empty-set footgun the change-feed comments warn about. A required parameter forces
 every caller to confront where the set comes from.
 
@@ -133,7 +133,7 @@ Call sites:
 
 - `plugins/database/plugins/fork/server/internal/fork-job.ts` — passes `forkExclusions()`.
   Runs inside a booted backend, so the registry is complete.
-- `plugins/framework/plugins/cli/bin/commands/db.ts` (`./singularity db fork`) — runs outside
+- `plugins/framework/plugins/cli/bin/commands/db.ts` (`./equin db fork`) — runs outside
   a backend. Inside the action only (never at module scope — `bin/index.ts` imports every
   command module eagerly), dynamically import `server-core/bin/plugins-active` and call
   `collectContributions(serverEntries)` before `forkExclusions()`. Loading the registry pulls
@@ -185,14 +185,14 @@ Verify the `zero*` pattern matches the four real schemas (`zero`, `zero_0`, `zer
 `bun plugins/database/plugins/admin/e2e/fork-bench.ts [--runs 3]`. Not `*.test.ts` — the test
 runner would pick that up.
 
-It drives `./singularity db fork <scratch>` as a subprocess and times it with
+It drives `./equin db fork <scratch>` as a subprocess and times it with
 `performance.now()`, rather than importing `forkDatabase` directly. That way it measures the
 real end-to-end path including the exclusion plumbing, and it needs no registry loading of
 its own. For each run it should:
 
 1. Mint a scratch name (`forkbench_<rand>`), guarded by the same `/^[a-zA-Z0-9_-]+$/` shape
    `assertSafeName` enforces.
-2. Time the `./singularity db fork <scratch>` subprocess.
+2. Time the `./equin db fork <scratch>` subprocess.
 3. Report `pg_database_size(scratch)`, and a per-schema and top-10-table size breakdown, via
    a short-lived client (`openShortLivedClient` from `database/admin/server`).
 4. `dropDatabase(scratch)` in a `finally`, so an aborted run leaves nothing behind.
@@ -206,7 +206,7 @@ current fork path; that number is the "before". Expect roughly 970 MB and severa
 ## Verification
 
 1. `bun …/fork-bench.ts --runs 3` on an unmodified tree — record baseline duration and size.
-2. Implement, then `./singularity build` (background, per the agent workflow).
+2. Implement, then `./equin build` (background, per the agent workflow).
 3. `bun …/fork-bench.ts --runs 3` again. Expect ~35 MB and a duration in seconds. The size
    check is the real assertion: duration varies with host load.
 4. `query_db` against a newly forked worktree DB and confirm `traces`, `notifications`,
@@ -215,9 +215,9 @@ current fork path; that number is the "before". Expect roughly 970 MB and severa
    exists, and that `tasks` / `conversations` / `page_blocks` still hold main's rows.
 5. Open the new worktree in the browser and confirm it boots, the notification bell is empty
    rather than showing main's history, and the Slow Ops pane shows only its own operations.
-6. `./singularity check` — in particular `migrations-in-sync`, `fork-schema-drift` and
+6. `./equin check` — in particular `migrations-in-sync`, `fork-schema-drift` and
    `plugins-doc-in-sync` (the new contributions change the generated plugin docs).
-7. Confirm `./singularity db fork <name>` still works for a manually-created worktree, since
+7. Confirm `./equin db fork <name>` still works for a manually-created worktree, since
    it is the one call site that has to load the registry itself.
 
 ## Results (measured 2026-08-19)
@@ -229,7 +229,7 @@ current fork path; that number is the "before". Expect roughly 970 MB and severa
 | `graphile_worker` | copied, then dropped | absent |
 | `zero*` | 125 MB in main, 64 MB per fork | 368 kB (DDL only) |
 
-The after-duration is measured end to end through `./singularity db fork`, so it
+The after-duration is measured end to end through `./equin db fork`, so it
 includes CLI startup, the exclusion fetch and process spawn; the before-figure is
 the `database.fork` job span alone. The comparison is therefore conservative.
 

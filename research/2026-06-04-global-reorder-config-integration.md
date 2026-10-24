@@ -182,7 +182,7 @@ Loops live in internal modules (barrel purity), spread into `contributions`.
   unused).
 - Verified no external consumers; `groups` sub-plugin untouched.
 - Migration: dropping `tables.ts` makes drizzle-kit emit `DROP TABLE reorder_prefs`
-  via `./singularity build` migration generation — standard path, no manual SQL.
+  via `./equin build` migration generation — standard path, no manual SQL.
 
 ### 10. Docs
 Update `plugins/reorder/CLAUDE.md` (storage/architecture + the subId and
@@ -208,15 +208,15 @@ spacers-deferred caveats). Autogen block refreshes on build.
 
 ## Verification
 
-1. `./singularity build` succeeds; generates `reorderable-slots.generated.ts`,
+1. `./equin build` succeeds; generates `reorderable-slots.generated.ts`,
    the `DROP TABLE reorder_prefs` migration, and `config/<plugin>/<slot>.origin.jsonc`
-   files. `./singularity check` passes (`config-origins-in-sync`,
+   files. `./equin check` passes (`config-origins-in-sync`,
    `reorderable-slots-in-sync`, `migrations-in-sync`, boundaries).
 2. Inspect a generated origin, e.g. `config/shell/shell.toolbar.origin.jsonc`:
    content is `{ order: [], hidden: [] }`; comments list the slot's contributions
    (`entryKey` + label).
 3. **Agent-edit path:** create the override `config/shell/shell.toolbar.jsonc`
-   (copy origin, keep `// @hash`, set `order`/`hidden`), `./singularity build`,
+   (copy origin, keep `// @hash`, set `order`/`hidden`), `./equin build`,
    load `http://<worktree>.localhost:9000` — toolbar reflects the new order/hidden.
 4. **In-app drag path:** `bun e2e/screenshot.mjs` — toggle edit-mode pen, drag a
    toolbar item, confirm the change persists (reload) and that

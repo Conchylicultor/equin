@@ -328,10 +328,10 @@ for every block of the same type.
 ## Verification
 
 ```bash
-./singularity build
+./equin build
 bun test plugins/page/plugins/editor/core
 bun run test:dom plugins/page/plugins/editor
-./singularity check
+./equin check
 ```
 
 The Stage-3 spec is `e2e/convert-in-place-verify.ts` (already written on the

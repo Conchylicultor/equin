@@ -114,8 +114,8 @@ matches on its hyphenated label), resolving the reported `/-` confusion.
 
 ## Verification
 
-1. `./singularity build` (from this worktree) — confirm it deploys clean.
-2. `./singularity check` — confirm boundary/lint/doc checks still pass (the doc-in-sync
+1. `./equin build` (from this worktree) — confirm it deploys clean.
+2. `./equin check` — confirm boundary/lint/doc checks still pass (the doc-in-sync
    check may want regeneration; `build` regenerates docs first).
 3. In the app at `http://<worktree>.localhost:9000` open a page (Pages app), create a text
    block, and exercise the slash menu with `e2e/screenshot.mjs` (or manual Playwright):

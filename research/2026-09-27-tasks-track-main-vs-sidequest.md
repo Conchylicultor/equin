@@ -59,7 +59,7 @@ so it is plain data in `core/`.
   **Absence = main**. That default is a real value, not a stand-in for "unknown":
   existing tasks and every `createTask` call site stay main with no backfill.
   Re-export `.table` for drizzle-kit, which generates the migration through
-  `./singularity build`.
+  `./equin build`.
 - `server/internal/mutations.ts`: `getTaskTrack(id)` and
   `setTaskTrack(id, track, exec = db)`. `main` deletes the row, `sidequest`
   upserts it. Both follow the `setTaskCategory` shape.
@@ -129,7 +129,7 @@ sidequest's detail still works (the human override).
 - New: `plugins/conversations/plugins/conversation-view/plugins/track/web/…`
 - Edit: `plugins/tasks/server/internal/mcp-tools.ts` (param, validation, wiring, docs)
 - Edit: `plugins/tasks/plugins/task-header/web/components/task-header.tsx` (Track row)
-- Generated: the migration for `tasks_ext_track`, registries, and plugin docs, all through `./singularity build`
+- Generated: the migration for `tasks_ext_track`, registries, and plugin docs, all through `./equin build`
 
 Reuse: `defineExtension` (infra/entity-extensions), `rewireDependencies`
 (`selectiveInsertBefore: []`), `HeaderChip`
@@ -138,13 +138,13 @@ Reuse: `defineExtension` (infra/entity-extensions), `rewireDependencies`
 
 ## Verification
 
-- Unit test (`./singularity test plugins/tasks`): the `add_task` handler with a
+- Unit test (`./equin test plugins/tasks`): the `add_task` handler with a
   mixed filing (2 sidequests + main1 → main2 off the current task T, where T
   already had a dependent D). Assert these edges: S1→T, S2→T, M1→T, M2→M1,
   D→M2 (not D→S*). Assert that only M1/M2 carry an auto-start marker and that
   S1/S2 have a `sidequest` row. Also assert that sidequest+autostart and
   sidequest+prerequisite throw.
-- `./singularity build`, then an e2e screenshot of the tasks list (Track column
+- `./equin build`, then an e2e screenshot of the tasks list (Track column
   / badges), a task detail (Track row, toggling it), and a conversation of a
   sidequest task (header chip).
 - Manual: file the example through `add_task` from a conversation, mark the task

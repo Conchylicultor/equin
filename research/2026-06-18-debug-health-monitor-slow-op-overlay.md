@@ -173,7 +173,7 @@ each envelope's `.line`, validates with `SlowOpMarkerSchema.safeParse`, filters 
 
 ## Verification
 
-1. `./singularity build` (regenerates the slow-ops marker channel; no migration —
+1. `./equin build` (regenerates the slow-ops marker channel; no migration —
    the JSONL channel is not a DB table). Confirm a clean build + checks pass
    (`plugin-boundaries`, `type-check`, `plugins-doc-in-sync`).
 2. Generate slow ops: load a few heavy panes / refresh the slow-ops cluster a

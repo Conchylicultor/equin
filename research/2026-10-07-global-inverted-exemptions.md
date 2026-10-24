@@ -111,7 +111,7 @@ Its `core` provides:
 - a duplicate (same rule, same path) declared twice;
 - an exemption of a rule declared `closed`.
 
-`cli/` provides `./singularity exempt list [--rule <id>] [--plugin <path>] [--debt]`. It
+`cli/` provides `./equin exempt list [--rule <id>] [--plugin <path>] [--debt]`. It
 prints rule → plugin → path → kind → reason/task, grouped by rule, with counts. This is
 the "who may violate X" answer. The CLI declaration copies
 `plugins/framework/plugins/cli/plugins/check/cli/{index,run}.ts`.
@@ -211,7 +211,7 @@ Fix at the root:
 
 ### 7. Discoverability for agents
 
-- **CLI:** `./singularity exempt list` (§2).
+- **CLI:** `./equin exempt list` (§2).
 - **Docs facet** `plugins/plugin-meta/plugins/facets/plugins/exemptions/facet/`. It
   copies the `cross-refs` facet pattern: `extract` reads the manifest, and `relate`
   builds the reverse index.
@@ -254,7 +254,7 @@ Fix at the root:
    the `debt` entries. The `network/live/lint/index.test.ts` "each listed file still
    imports an old spelling" test is deleted, because unused-exemption detection
    replaces it generically.
-4. **Prune.** Run `./singularity check`. The stale and unused errors find dead entries,
+4. **Prune.** Run `./equin check`. The stale and unused errors find dead entries,
    such as root `cli/` and any `web/__tests__/**` entry for a rule already off in
    tests. Delete them, and record what was pruned in the push message.
 
@@ -280,13 +280,13 @@ Fix at the root:
 
 ## Verification
 
-- `./singularity test plugins/framework/plugins/tooling/plugins/exempt`. Unit tests
+- `./equin test plugins/framework/plugins/tooling/plugins/exempt`. Unit tests
   cover:
   - path resolution, including rejection of an escaping path;
   - the matcher, for file and subtree entries;
   - zod validation of `sanctioned` vs `debt`;
   - the extraction script, against fixture barrels.
-- Mutation probes, each of which must fail `./singularity check` with a clear message:
+- Mutation probes, each of which must fail `./equin check` with a clear message:
   1. Remove a manifest entry. The rule fires on that file.
   2. Add an entry on a clean file. The run reports `unused-exemption`.
   3. Use a nonexistent path. The run reports stale.
@@ -299,8 +299,8 @@ Fix at the root:
 - `inputKeyed`: editing only an `exempt/index.ts` invalidates the cached PASS of a
   check that consults it. Verify with the check cache via `--list` timings or the
   runner's cache log.
-- Count parity: `./singularity exempt list` total equals the migrated entries minus
+- Count parity: `./equin exempt list` total equals the migrated entries minus
   those pruned in step 4. Each pruned entry is listed in the push message.
-- `./singularity build`. `plugins-doc-in-sync`, `plugins-registry-in-sync` and
+- `./equin build`. `plugins-doc-in-sync`, `plugins-registry-in-sync` and
   `exempt:rule-ids-in-sync` pass. `docs/plugins-details.md` shows the
   *Exempted by* / *Exempts itself from* entries.

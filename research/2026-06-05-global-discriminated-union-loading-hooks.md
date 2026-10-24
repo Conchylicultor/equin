@@ -112,7 +112,7 @@ All other sites stay user-visibly identical.
 
 ## Docs
 - `plugins/active-data/CLAUDE.md` — update the `if (binding.isLoading) return null;` snippet to `if (binding.enabled && binding.pending) return null;` + the `binding.value` example.
-- The `useConversations` / `ActiveDataBindingHandle` autogen reference blocks regenerate via `./singularity build`.
+- The `useConversations` / `ActiveDataBindingHandle` autogen reference blocks regenerate via `./equin build`.
 
 ## Critical files
 - `plugins/conversations/web/use-conversations.ts`
@@ -122,7 +122,7 @@ All other sites stay user-visibly identical.
 - `plugins/active-data/plugins/task/web/components/task-card.tsx`
 
 ## Verification
-1. **Typecheck is the load-bearing gate.** Run `./singularity build`. The discriminated union makes TypeScript flag any consumer that reads `.active`/`.value` or `isLoading` without narrowing — a clean build proves all 10 sites + 2 internal consumers were converted. (`isLoading` no longer exists on either hook, so any missed site is a compile error.)
+1. **Typecheck is the load-bearing gate.** Run `./equin build`. The discriminated union makes TypeScript flag any consumer that reads `.active`/`.value` or `isLoading` without narrowing — a clean build proves all 10 sites + 2 internal consumers were converted. (`isLoading` no longer exists on either hook, so any missed site is a compile error.)
 2. **Lint (rules-of-hooks):** ensure no early-return precedes a `useMemo`/`useCallback`. Risk files: `drop-and-exit-button.tsx`, `conv-count-label.tsx`, `task-card.tsx`.
 3. **Manual cold-load click-through** (hard-refresh `http://<worktree>.localhost:9000`, throttle network to widen the load window):
    - Sidebar **Queue / History / Grouped**: no "No conversations" / "No conversations waiting" / "All clear" flash before lists populate (incl. queue inner-label fix #3).

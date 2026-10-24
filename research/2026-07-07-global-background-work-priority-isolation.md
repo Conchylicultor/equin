@@ -4,7 +4,7 @@
 
 ## Context
 
-Heavy background work runs at the same CPU/IO priority as the interactive main backend and starves it. Even ONE agent launch degrades main: the launch pipeline (DB fork ~18.5s avg ×100 runs, worktree checkout, frontend/server build, server boot) and maintenance jobs (`worktree-cleanup.reap-stale` ~108s avg ×210 runs) saturate the host — a single `./singularity build` alone fans across all 18 cores (loadAvg1 hit 14–21 during single launches). During these windows main's interactive paths stall: `flushNotifies` 14.5s avg over 4,716 slow hits (max 990s), boot-snapshot 14s avg (max 137s), trivial SELECTs take seconds. The `slow_ops` data is victim-shaped: waits attributed to `read-admit` / `loader-acquire` / `db-acquire` gates with Postgres nearly idle (1–6 active backends) — **host starvation, not slow queries** (re-validated live 2026-07-07 via `query_db`; victim samples fresh as of 2026-07-06).
+Heavy background work runs at the same CPU/IO priority as the interactive main backend and starves it. Even ONE agent launch degrades main: the launch pipeline (DB fork ~18.5s avg ×100 runs, worktree checkout, frontend/server build, server boot) and maintenance jobs (`worktree-cleanup.reap-stale` ~108s avg ×210 runs) saturate the host — a single `./equin build` alone fans across all 18 cores (loadAvg1 hit 14–21 during single launches). During these windows main's interactive paths stall: `flushNotifies` 14.5s avg over 4,716 slow hits (max 990s), boot-snapshot 14s avg (max 137s), trivial SELECTs take seconds. The `slow_ops` data is victim-shaped: waits attributed to `read-admit` / `loader-acquire` / `db-acquire` gates with Postgres nearly idle (1–6 active backends) — **host starvation, not slow queries** (re-validated live 2026-07-07 via `query_db`; victim samples fresh as of 2026-07-06).
 
 **Why concurrency gates can't fix this:** every existing mitigation (`heavy-read`, `worktree-mutate`, CLI build slots) bounds *how many* heavy ops run at once. But one build legitimately uses all cores — the success criterion "ONE launch causes no degradation" is unreachable on the rate axis. The missing mechanism is **OS scheduling priority**: background work must yield to main. Zero `nice`/`taskpolicy`/QoS usage exists anywhere in the repo today.
 
@@ -39,7 +39,7 @@ Fixed-CPU foreground probe, elapsed:
 ### Decision points taken (revisit if wrong)
 
 1. **Whole-agent-session demotion** (not just known-heavy subprocesses): the tmux session command is the one choke point covering everything an agent ever runs (claude CLI, builds, tests, rg). Escape hatch: `SINGULARITY_NO_SPAWN_PRIORITY=1`.
-2. **Gateway demotes non-main backends during boot, then un-demotes on ready** (`-b` at spawn, `-B -p <pid>` after `/api/health/ready`): boot burst on E-cores, steady-state worktree-app browsing back on all cores. Sequenced last (needs gateway rebuild + user-run `./singularity start`).
+2. **Gateway demotes non-main backends during boot, then un-demotes on ready** (`-b` at spawn, `-B -p <pid>` after `/api/health/ready`): boot burst on E-cores, steady-state worktree-app browsing back on all cores. Sequenced last (needs gateway rebuild + user-run `./equin start`).
 
 ## Implementation tasks (ordered)
 
@@ -87,8 +87,8 @@ New edges: `database/admin → {packages/host-semaphore, infra/runtime-profiler}
 - **3a — agent tmux session** (`tmux-runtime.ts` ~L729): `const claudeCmd = backgroundPrefix() + cmdParts.join(" ")`. Must be in the command *string* (shared tmux server forks the pane). Fixed literal prefix, shell-safe. Everything the agent runs inherits darwinbg.
 - **3b — fork subprocesses** (`fork.ts`): `Bun.spawn(backgroundArgv(["pg_dump", …]))` and `Bun.spawn(backgroundArgv(["pg_restore", "-d", temp]))`. Optional hardening: `PGOPTIONS=-c max_parallel_maintenance_workers=0` in `subprocessEnv` to curb server-side parallel index builds.
 - **3c — worktree git ops** (`plugins/infra/plugins/worktree/server/internal/worktree.ts`): wrap the `git worktree add` (setupWorktree ~L71) and `git worktree remove` (removeWorktree ~L106) spawns with `backgroundArgv`. Both are always background (checkout runs in the deferred `conversations.spawn` job; removal is cleanup/reap). This also covers `worktree-cleanup.reap-stale`, whose reaps go through `removeWorktree`.
-- **3d — agent builds** (`plugins/framework/plugins/cli/bin/commands/build.ts`): when `slotKind === "build"` (branch ≠ main), wrap the tsc worker spawns (~L1049) and `bun run build` vite spawn (~L1070) with `backgroundArgv`. Belt-and-braces vs 3a (a user-run `./singularity build` in an agent worktree from their own terminal is covered too; nested taskpolicy is harmless). Main-branch builds (`exempt`) are NOT demoted — the user is waiting on them. `execBuffered(cmd, …)` (build.ts:249) takes argv arrays, and cli/bin already imports `@plugins/*` barrels (verified), so `execBuffered(backgroundArgv(cmd), …)` just works.
-- **3e — gateway backend boot** (`gateway/worktree.go` `startBackend` ~L836, **sequence last**): on darwin, for every worktree except `singularity` and `central`, prefix argv with `/usr/sbin/taskpolicy -b --` (taskpolicy execs in place, so `cmd.Process.Pid` is the bun pid). When the gateway confirms `/api/health/ready` (it already polls this before hot-swap), run `taskpolicy -B -p <pid>` (best-effort; the gateway daemon is unsandboxed so `-p` works). Boot burst on E-cores; steady-state serving on all cores. ⚠ Requires gateway rebuild + **user-run `./singularity start`** — deploy 1–4 + 3a–3d first via `./singularity build`, treat 3e as a fast-follow.
+- **3d — agent builds** (`plugins/framework/plugins/cli/bin/commands/build.ts`): when `slotKind === "build"` (branch ≠ main), wrap the tsc worker spawns (~L1049) and `bun run build` vite spawn (~L1070) with `backgroundArgv`. Belt-and-braces vs 3a (a user-run `./equin build` in an agent worktree from their own terminal is covered too; nested taskpolicy is harmless). Main-branch builds (`exempt`) are NOT demoted — the user is waiting on them. `execBuffered(cmd, …)` (build.ts:249) takes argv arrays, and cli/bin already imports `@plugins/*` barrels (verified), so `execBuffered(backgroundArgv(cmd), …)` just works.
+- **3e — gateway backend boot** (`gateway/worktree.go` `startBackend` ~L836, **sequence last**): on darwin, for every worktree except `singularity` and `central`, prefix argv with `/usr/sbin/taskpolicy -b --` (taskpolicy execs in place, so `cmd.Process.Pid` is the bun pid). When the gateway confirms `/api/health/ready` (it already polls this before hot-swap), run `taskpolicy -B -p <pid>` (best-effort; the gateway daemon is unsandboxed so `-p` works). Boot burst on E-cores; steady-state serving on all cores. ⚠ Requires gateway rebuild + **user-run `./equin start`** — deploy 1–4 + 3a–3d first via `./equin build`, treat 3e as a fast-follow.
 
 ### Task 4 — give `worktree-mutate` a gauge (minor consistency fix)
 
@@ -98,7 +98,7 @@ New edges: `database/admin → {packages/host-semaphore, infra/runtime-profiler}
 
 - **New:** `plugins/packages/plugins/spawn-priority/server/{index.ts, internal/spawn-priority.ts}`, `plugins/packages/plugins/spawn-priority/CLAUDE.md`, `plugins/database/plugins/admin/server/internal/fork-gate.ts`
 - **Edit:** `plugins/database/plugins/admin/server/internal/fork.ts`, `plugins/conversations/plugins/runtime-tmux/server/internal/tmux-runtime.ts`, `plugins/infra/plugins/worktree/server/internal/worktree.ts`, `plugins/infra/plugins/worktree/server/internal/mutate-gate.ts`, `plugins/framework/plugins/cli/bin/commands/build.ts`, `gateway/worktree.go` (3e, last)
-- Run `./singularity build` after Tasks 1–4 (registry + plugins-doc regeneration).
+- Run `./equin build` after Tasks 1–4 (registry + plugins-doc regeneration).
 
 ## Knobs (env vars — host-level, restart-fine; matches host-read-pool/build-slot precedent)
 
@@ -122,12 +122,12 @@ New edges: `database/admin → {packages/host-semaphore, infra/runtime-profiler}
 - Don't demote main-branch (`exempt`) builds or the `singularity`/`central` backends.
 - Don't put the cheap admin queries inside the db-fork slot.
 - Don't lower `JOB_CONCURRENCY` (bounds cheap jobs too — wrong axis).
-- Don't run `./singularity start` for 3e without the user.
+- Don't run `./equin start` for 3e without the user.
 - Don't infer QoS from `ps` PRI (everything reads 20).
 
 ## Verification
 
-Deploy Tasks 1–4 via `./singularity build`, then:
+Deploy Tasks 1–4 via `./equin build`, then:
 
 1. **Mechanism sanity** — repeat the probe experiment (fixed-CPU probe vs N `taskpolicy -b` spinners → probe stays ~idle-fast). Spawn-form taskpolicy works in sandboxed Bash; anything using `-p`/`-x` must run via tmux or `dangerouslyDisableSandbox`.
 2. **Before/after harness** — `benchmark_boot` (MCP, worktree `singularity`) baseline on an idle box; then launch a REAL throwaway agent (create conversation on a scratch task) and run `benchmark_boot` on main *during* the launch window; compare `bootSnapshotTotalMs`, `eventLoopMaxMs`, per-loader `waits`. Repeat with 3 concurrent launches. (`loadConcurrency` only saturates the heavy-read flock gate, not host CPU — the real launch alongside it is the true harness.)
@@ -135,7 +135,7 @@ Deploy Tasks 1–4 via `./singularity build`, then:
 4. **Victim slow-ops stop advancing** — via `query_db` on `singularity`: snapshot `MAX(last_seen_at)` for `operation LIKE 'deliver:%'`, `flushNotifies`, `[acquire]` before; confirm not advancing across the launch window after the fix.
 5. **Attribution** — `get_runtime_profile` during a 2-concurrent-launch window shows `db-fork-acquire` (and `worktree-mutate-acquire`) as named wait layers on the fork/spawn job spans — no anonymous queueing.
 6. **A/B control** — re-run (2) with `SINGULARITY_NO_SPAWN_PRIORITY=1` to isolate the demotion effect.
-7. After 3e lands (gateway rebuild + user-run `./singularity start`): re-run (2)-(4); also confirm a ready backend is back at default (browse the worktree app; `taskpolicy -B` already applied).
+7. After 3e lands (gateway rebuild + user-run `./equin start`): re-run (2)-(4); also confirm a ready backend is back at default (browse the worktree app; `taskpolicy -B` already applied).
 
 ## Prior work
 

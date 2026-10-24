@@ -1,10 +1,10 @@
 /**
- * The `./singularity` verb that runs one registered supervised task.
+ * The `./equin` verb that runs one registered supervised task.
  *
  * Spelled once because two files have to agree on it and they sit in different
  * runtimes: `cli/index.ts` declares the command under this name, and
  * `server/internal/task/registry.ts` builds the child argv that invokes it. A second
- * spelling would spawn a child that `./singularity` answers with "unknown
+ * spelling would spawn a child that `./equin` answers with "unknown
  * command" — a run that fails in the child for a reason nothing in the parent
  * could explain.
  */
@@ -26,8 +26,8 @@ export const SUPERVISED_EXEC_COMMAND = "supervised-exec";
 export interface SupervisedTaskInvocation {
   /** The registered task this invocation runs. Carried for diagnostics. */
   readonly taskId: string;
-  /** `./singularity supervised-exec <taskId> <payloadJson>`. */
+  /** `./equin supervised-exec <taskId> <payloadJson>`. */
   readonly argv: readonly string[];
-  /** The checkout root, so `./singularity` resolves. */
+  /** The checkout root, so `./equin` resolves. */
   readonly cwd: string;
 }

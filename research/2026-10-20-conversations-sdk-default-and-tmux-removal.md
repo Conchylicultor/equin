@@ -67,7 +67,7 @@ Measure first, then change one variable at a time.
 
 With one runtime, a picker and a default are meaningless options, so they go. The `ConversationRuntime` contract and registry stay: that is the seam a future runtime plugs into.
 
-- `tasks-core/server/internal/tables.ts:198`: column default `'sdk'`. Migration via `./singularity build`.
+- `tasks-core/server/internal/tables.ts:198`: column default `'sdk'`. Migration via `./equin build`.
 - Delete the `defaultRuntime` config key (`conversations/shared/config.ts:26-31`) and `resolveRuntimeId`'s config and task-option steps (`lifecycle.ts:81-93`). The explicit runtime and the fork source's runtime remain.
 - Delete the `runtime-launch-option` plugin and its side table.
 - `runtime-catalog/core/runtimes.ts`: drop the `tmux` entry. The `terminal` mode is always read-only, so drop the field, and drop the interactive branch in `terminal-pane-body.tsx`.
@@ -105,11 +105,11 @@ Kept: `agent-launch` (the env allowlist and the compaction `SessionStart` hook, 
 1. **Before the deletion lands** (A and B, on a build that still has tmux):
    - Run the A/B benchmark and record the before numbers.
    - Through the app, create one tmux conversation in this worktree and leave it idle. It is the migration test subject for C.
-2. `./singularity test` on the touched plugins. New tests:
+2. `./equin test` on the touched plugins. New tests:
    - adopt-tmux-rows: it kills only sessions it owns (the parent-host guard), it updates the row only after the kill, and a done row's runtime is rewritten. The tmux and DB edges go behind injected functions or the worktree-db harness.
    - `resolveRuntimeId` without the config step.
-3. `./singularity check`: plugin boundaries and docs/registries in sync after the deletions.
-4. `./singularity build` (in the background), then on `http://<worktree>.localhost:9000`:
+3. `./equin check`: plugin boundaries and docs/registries in sync after the deletions.
+4. `./equin build` (in the background), then on `http://<worktree>.localhost:9000`:
    - **Migration.** The tmux conversation from step 1 has no tmux session left, `runtime='sdk'` and hibernated. Sending to it resumes it on sdk with its history intact (`query_db` plus the transcript).
    - **Guard.** Main's tmux sessions are untouched by the worktree boot (`tmux ls` before and after).
    - **Default.** A new conversation from a task launches on sdk. Re-check the Phase-1 flow briefly: send, Stop, AskUserQuestion, fork, close/resume, the read-only terminal.

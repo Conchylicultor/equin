@@ -47,7 +47,7 @@ import { readDeclaredUtilities } from "./declared-utilities";
 // whole module graph before the barrel is usable). `type-check`'s
 // `import-graph.ts` does exactly that from the MAIN thread, well before any
 // check's `run()` — so a top-level `import` of these three packages here paid
-// their cost on every `./singularity check` pass, for every check, not just
+// their cost on every `./equin check` pass, for every check, not just
 // `type-check`'s own worker. Each is invariant for the process's lifetime —
 // not a tree-derived fact — so a per-process memo is safe (unlike caching a
 // tree fact across a whole process).
@@ -428,7 +428,7 @@ export interface BuildLintConfigOptions {
  *   - EVERY currently-known rule is then RE-PINNED to "error" below (the explicit
  *     keys come after the spread, so they win). The burndown program drove the
  *     whole web tree to zero, so all 17 rules are now enforced — a new violation
- *     fails `./singularity check` instead of silently eroding compiler coverage.
+ *     fails `./equin check` instead of silently eroding compiler coverage.
  *   - The "warn" spread therefore now only matters as the ON-RAMP for a rule a
  *     FUTURE eslint-plugin-react-hooks version adds: a newly-shipped rule lands at
  *     "warn" by default (green check + a triageable count) rather than instantly
@@ -496,7 +496,7 @@ function baseRuleEntries(
     // codebase was driven to zero (2026-06-23). These are the diagnostics
     // that make the compiler SILENTLY BAIL on (skip memoizing) a component;
     // enforcing them at error keeps compiler coverage complete — a new bail
-    // fails `./singularity check` instead of silently eroding coverage.
+    // fails `./equin check` instead of silently eroding coverage.
     // Genuine exemptions opt out at the site: a `"use no memo"` directive
     // and/or an inline `// eslint-disable-next-line react-hooks/<rule> -- …`
     // (e.g. the @tanstack/react-virtual incompatibility in primitives/

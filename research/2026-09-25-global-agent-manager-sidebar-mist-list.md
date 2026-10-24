@@ -141,14 +141,14 @@ find where it comes from before changing anything.
 
 ## Verification
 
-- `./singularity test` on `primitives/relative-time`, `primitives/css/row`,
+- `./equin test` on `primitives/relative-time`, `primitives/css/row`,
   `primitives/data-view` (including `toolbar-arrangement.test.tsx`) and
   `conversations/conversation-ui/item`. Add cases for:
   - `formatRelativeTime` in the short format
   - `SectionHeaderRow disclosure="trailing"` (chevron after the label, `aria-expanded` kept)
   - `GroupedSections` rendering today's node for `"standard"`
   - `CollapsedViewSwitcher appearance="row"` keeping the same menu
-- `./singularity build` (background), then run `compare-diff.ts --name
+- `./equin build` (background), then run `compare-diff.ts --name
   proto-1789643584-ldt6` and screenshot the agent-manager sidebar next to
   `/tmp/…/mock-before.png`.
 - No-regression screenshots: Home (capsule chip switcher), Tasks list (grouped

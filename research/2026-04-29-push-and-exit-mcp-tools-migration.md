@@ -117,7 +117,7 @@ Exact wording can be tuned during implementation; the contract is "first line st
 
 ## Migration order
 
-Do not split across deploys. One worktree, one `./singularity build`, one push:
+Do not split across deploys. One worktree, one `./equin build`, one push:
 
 1. Add `afterTurn` to `plugins/conversations/server`.
 2. Add `exitCleanFinalizeJob`.
@@ -125,13 +125,13 @@ Do not split across deploys. One worktree, one `./singularity build`, one push:
 4. Rewrite `PUSH_AND_EXIT_PROMPT` and update the race-guard needle in the same commit (the prompt-and-needle pair must move together).
 5. Replace `interpret`-based verdict with the status-read watchdog; delete `interpret` + token constants.
 6. Cleanup: delete `plugins/active-data/plugins/tokens/` and its two registration lines in `web/src/plugins.ts`.
-7. `./singularity build`.
+7. `./equin build`.
 
 Step 6 can be its own commit if we want a clean revert window for the chips, but it's safe to bundle — nothing depends on the regexes or the chip component (verified: zero non-self consumers of `EXIT_CLEAN_RE` / `FLAG_RAISE_RE`).
 
 ## Verification
 
-End-to-end happy paths to exercise manually after `./singularity build`:
+End-to-end happy paths to exercise manually after `./equin build`:
 
 1. **Clean exit.** From any conversation, click the push-and-exit toolbar button. Expect: model pushes, calls `exit_clean`, status flips to `clean`, then the conversation closes after the model's end_turn. The toolbar button's existing toast surfaces the clean state.
 2. **Flag raise.** Trigger push-and-exit on a conversation with intentional uncommitted changes (or otherwise blocked). Expect: model calls `flag_raise({ reason })`, status flips to `flag` with the reason as detail, conversation stays open.
@@ -143,7 +143,7 @@ UI sanity check (no `e2e/screenshot.mjs` script needed — pure backend change w
 - Confirm tool calls render as expected via the existing `assistant-tool-use` JSONL renderer (this is the replacement for the deleted chips).
 - Confirm `EXIT_CLEAN` / `FLAG_RAISE` strings no longer appear anywhere in assistant text in fresh conversations.
 
-Sanity check the deletion didn't break anything: `./singularity check --plugin-boundaries` should pass; `web/src/plugins.ts` should still typecheck after the two-line removal.
+Sanity check the deletion didn't break anything: `./equin check --plugin-boundaries` should pass; `web/src/plugins.ts` should still typecheck after the two-line removal.
 
 ## Out of scope
 

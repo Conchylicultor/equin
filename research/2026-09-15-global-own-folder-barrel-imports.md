@@ -4,8 +4,8 @@
 
 `theme-engine/web/components/theme-injector.tsx` imported `mergeGroupValues`
 from `../../core/merge-group-values` — a file inside the plugin's own `core/`,
-not re-exported by `core/index.ts`. `./singularity check` was green (type-check,
-eslint, plugin-boundaries). `./singularity build` then failed ~5 minutes in, at
+not re-exported by `core/index.ts`. `./equin check` was green (type-check,
+eslint, plugin-boundaries). `./equin build` then failed ~5 minutes in, at
 the web-artifacts compose step:
 
 ```
@@ -96,11 +96,11 @@ artifact. Update the invariant in `web-artifacts/CLAUDE.md` and the doc comment.
 
 ## Verification
 
-- `./singularity test` on the runtime-isolation plugin: RuleTester cases —
+- `./equin test` on the runtime-isolation plugin: RuleTester cases —
   deep relative / deep self-specifier from `web`/`shared` flagged with the barrel
   fix; barrel spellings, `shared/` targets, same-folder, server importers and
   cross-plugin imports pass.
 - Repro: a scratch deep import of a non-barrel core symbol in a web file fails
-  `./singularity check type-check` at lint; after the autofix it fails at tsc
+  `./equin check type-check` at lint; after the autofix it fails at tsc
   with "has no exported member". Revert.
-- `./singularity check` green; `./singularity build` OK.
+- `./equin check` green; `./equin build` OK.

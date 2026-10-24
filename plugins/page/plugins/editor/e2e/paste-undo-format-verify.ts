@@ -13,7 +13,7 @@
 // reaches `data.text`.
 //
 // Manual-only; nothing runs this automatically.
-// Usage: ./singularity run plugins/page/plugins/editor/e2e/paste-undo-format-verify.ts
+// Usage: ./equin run plugins/page/plugins/editor/e2e/paste-undo-format-verify.ts
 import {
   report,
   withBrowser,

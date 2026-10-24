@@ -261,7 +261,7 @@ function CompositionsDataView({
               disabled={!servable}
               tooltip={
                 !servable
-                  ? "The main app is built by ./singularity build — it is never served as a composition."
+                  ? "The main app is built by ./equin build — it is never served as a composition."
                   : served
                     ? `${serveModeLabel(it.serve)} — click to stop serving`
                     : `Click to build & serve this composition at ${namespaceUrl(asNamespace(it.id))}`
@@ -330,7 +330,7 @@ function CompositionsDataView({
  * it.
  *
  * Main is the one row deliberately NOT keyed on `serve`. Its namespace is
- * where `./singularity build` deploys the repo's own app, so the address is a
+ * where `./equin build` deploys the repo's own app, so the address is a
  * standing fact of the setup rather than a consequence of a mode on this row —
  * keying it on `serve` would tie a URL that is already live to a control that
  * can never move. Every other composition is only reachable once its serve mode

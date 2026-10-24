@@ -54,8 +54,8 @@ describe("upstreamMergeInstructions", () => {
   test("carries the five steps, ending on do-not-push", () => {
     const text = upstreamMergeInstructions(base);
     // The mechanical half is one command, not prose the agent re-derives.
-    expect(text).toContain("./singularity upstream merge");
-    expect(text).toContain("./singularity build");
+    expect(text).toContain("./equin upstream merge");
+    expect(text).toContain("./equin build");
     expect(text).toContain("build-status.json");
     for (const step of ["1.", "2.", "3.", "4.", "5."])
       expect(text).toContain(`\n${step} `);
@@ -66,7 +66,7 @@ describe("upstreamMergeInstructions", () => {
     const text = upstreamMergeInstructions(base);
     // The repo's rule is that an agent never commits. `merge --continue` exists
     // so this prompt never has to carve an exception into it.
-    expect(text).toContain("./singularity upstream merge --continue");
+    expect(text).toContain("./equin upstream merge --continue");
     expect(text).not.toContain("git commit");
   });
 

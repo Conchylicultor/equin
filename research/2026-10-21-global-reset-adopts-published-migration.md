@@ -11,7 +11,7 @@ Supersession covers a reset that regenerates a file: the new file names the bran
 3. Rebase + `--reset-migration` (or push's `regen-migrations`) deletes `X`. Drizzle diffs the schema against main's tip, finds nothing, and writes no file.
 4. The next build: `P` is pending in the worktree DB, runs `ADD COLUMN c` again, and the backend crashes.
 
-Today `generateMigration` only prints `warnUnsuperseded` and the runner points to `./singularity db fork --replace`, which loses the worktree's data.
+Today `generateMigration` only prints `warnUnsuperseded` and the runner points to `./equin db fork --replace`, which loses the worktree's data.
 
 The DB is in a known state: the fork base plus `X`. If that equals the fork base plus some run of main's published migrations, the DB already holds their effects. They can be recorded as applied without running their DDL. This is the same adoption supersession does, but the target is a published file. A published file is immutable, so the lineage needs a file of its own.
 
@@ -116,4 +116,4 @@ In `planSchemaSteps` (`server/internal/runner.ts`), the existing superseding-fil
   - an unrelated migration before the match → match;
   - an inherited lineage is copied.
 - `migration-phases-valid.test.ts`: the new rules.
-- `./singularity test plugins/database/plugins/migrations plugins/framework/plugins/cli/plugins/migrations`, then `./singularity build` (the checks run inside it).
+- `./equin test plugins/database/plugins/migrations plugins/framework/plugins/cli/plugins/migrations`, then `./equin build` (the checks run inside it).

@@ -35,7 +35,7 @@ Saves for any chain depth (including depth=1 bare conversation) so that manually
 
 Plugin definition with `contributions: []`. Side-effect import of the store module to register listeners. Exports `loadChainForConversation` for use by `conversation-list.tsx`.
 
-Plugin registration is automatic — `./singularity build` regenerates `plugins.generated.ts` from the filesystem.
+Plugin registration is automatic — `./equin build` regenerates `plugins.generated.ts` from the filesystem.
 
 ### 3. Wire restore into sidebar navigation
 
@@ -82,7 +82,7 @@ Only the sidebar gets restore behavior. Other entry points (welcome page, task e
 
 ## Verification
 
-1. `./singularity build` — deploys successfully
+1. `./equin build` — deploys successfully
 2. Open a conversation → open terminal pane and file viewer
 3. Click a different conversation in sidebar
 4. Click back to the first conversation → terminal + file viewer should be restored

@@ -1,4 +1,8 @@
 import { describe, expect, test } from "bun:test";
+import {
+  CLI_NAME,
+  CLI_NAMES,
+} from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import { createContext } from "./context";
 import { gitPushGuard } from "./guards/git-push";
 import { gitResetMainGuard } from "./guards/git-reset-main";
@@ -77,7 +81,13 @@ describe("parseShell reaches inside block structure", () => {
 
   describe("wrappers surface the command they wrap", () => {
     test("nohup", () => {
-      expect(names("nohup ./singularity build")).toEqual(["nohup", "equin"]);
+      expect(names("nohup ./equin build")).toEqual(["nohup", "equin"]);
+    });
+
+    test("the repo CLI is named canonically under every one of its names", () => {
+      for (const name of CLI_NAMES) {
+        expect(names(`./${name} build`)).toEqual([CLI_NAME]);
+      }
     });
 
     test("env with assignments", () => {
@@ -103,10 +113,7 @@ describe("parseShell reaches inside block structure", () => {
 
   describe("redirections are not commands", () => {
     test("2>&1 does not mint a call named 1", () => {
-      expect(names("./singularity build 2>&1 | tail -15")).toEqual([
-        "equin",
-        "tail",
-      ]);
+      expect(names("./equin build 2>&1 | tail -15")).toEqual(["equin", "tail"]);
     });
   });
 
@@ -233,7 +240,7 @@ describe("parseShell reaches inside block structure", () => {
 });
 
 describe("heredoc bodies are data, not commands", () => {
-  const S = "./singularity";
+  const S = "./equin";
 
   describe("a document being written is not a script", () => {
     test("markdown inline code in the body mints no call", () => {
@@ -594,7 +601,7 @@ describe("pipedIn marks the calls reading a pipe", () => {
 test("the repo CLI is named canonically under either of its names", () => {
   for (const cmd of [
     "./equin build",
-    "./singularity build",
+    "./equin build",
     "/r/repo/singularity build",
   ]) {
     expect(parseShell(cmd).calls.map((c) => c.name)).toEqual(["equin"]);

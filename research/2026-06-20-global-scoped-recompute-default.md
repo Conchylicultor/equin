@@ -167,7 +167,7 @@ killing the cascade amplification, so they ship separately:
   delta-syncs too. Consumer-facing (touches the sidebar list) → its own task.
 - **Scheduler "scope mandatory" enforcement.** This task lands the *source* +
   safe default. The work-admission scheduler (sibling worktree) owns the *policy*:
-  a per-resource recompute-policy and a `./singularity check` that fails when a
+  a per-resource recompute-policy and a `./equin check` that fails when a
   DB-backed keyed resource lacks `identityTable`/edge coverage (i.e. silently
   falls to FULL). Co-design against this `identityTable`/`affectedMap` substrate.
 - **Derive `identityTable` + `affectedMap` from FK metadata** (doc §5 "later
@@ -196,4 +196,4 @@ killing the cascade amplification, so they ship separately:
   statuses, no dropped/duplicated rows) — proving scoped ids land in the right key
   space and FULL fallbacks (INSERT/DELETE, `pushes`) still fire.
 - **Out-of-process:** `UPDATE` via `psql` → open tabs still update (feed path).
-- `./singularity build` and `./singularity check` pass.
+- `./equin build` and `./equin check` pass.

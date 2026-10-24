@@ -183,7 +183,7 @@ disable **and** makes it participate in menu presentation like its two siblings.
 Star stays inline (one-click, high frequency); the rest collapse.
 
 > Adding the `add-below` contribution **shifts the slot's origin `@hash`** (the
-> origin default is the materialized catalog). `./singularity build` regenerates
+> origin default is the materialized catalog). `./equin build` regenerates
 > `pages.tree.row-actions.origin.jsonc`; copy its new `@hash` into the override
 > above, or `config-origins-in-sync` blocks `push`.
 
@@ -204,7 +204,7 @@ Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key
 ```
 
 Verify `framework/tooling/codegen/core → fields/reorder-tree/core` passes
-`./singularity check plugin-boundaries`; if it does not, keep the constant inline
+`./equin check plugin-boundaries`; if it does not, keep the constant inline
 in the gen and still collapse the two copies to one.
 
 Full derivation from the live registry (each node type owning its own legend
@@ -234,13 +234,13 @@ codegen would need a barrel import per node-type plugin.
 - `config/apps/pages/page-tree/pages.tree.row-actions.jsonc` (+ regenerated `.origin.jsonc`)
 
 Registration is filesystem-derived — **never** hand-edit `web.generated.ts`;
-`./singularity build` discovers both new plugins.
+`./equin build` discovers both new plugins.
 
 ## Verification
 
-1. `./singularity build` — regenerates the plugin registry, the reorderable-slots
+1. `./equin build` — regenerates the plugin registry, the reorderable-slots
    manifest, and the slot origin; then re-stamp the override's `@hash` and rebuild.
-2. `./singularity check` — `plugin-boundaries`, `plugins-registry-in-sync`,
+2. `./equin check` — `plugin-boundaries`, `plugins-registry-in-sync`,
    `reorderable-slots-in-sync`, `config-origins-in-sync`, `config:overrides-authored`,
    `type-check`, `eslint`.
 3. Drive the real app at `http://<worktree>.localhost:9000/pages`:

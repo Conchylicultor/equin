@@ -130,12 +130,12 @@ unlock for a non-empty trace — filed as a follow-up.
 ## Build sequence
 
 1. Create `definitions` plugin files + its config jsonc.
-2. `./singularity build` — regenerates registry/origin/CLAUDE.md. Verify sidebar list, welcome pane,
+2. `./equin build` — regenerates registry/origin/CLAUDE.md. Verify sidebar list, welcome pane,
    detail pane; create/rename/delete a definition.
 3. Create `executions` plugin files + its config jsonc.
-4. `./singularity build`. Verify the Executions section in detail, Run → immediately-completed
+4. `./equin build`. Verify the Executions section in detail, Run → immediately-completed
    execution, execution-detail pane status/timing + step trace.
-5. `./singularity check` (esp. `data-view:configs-authored`, `data-views-in-sync`,
+5. `./equin check` (esp. `data-view:configs-authored`, `data-views-in-sync`,
    `plugins-registry-in-sync`, boundaries, `type-check`).
 
 ## Verification (end-to-end)

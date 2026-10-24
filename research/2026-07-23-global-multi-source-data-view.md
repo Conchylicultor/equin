@@ -176,7 +176,7 @@ plain instance switches exactly as today (only the view render gets the
 
 ### Verification
 
-- `./singularity build` (type-check, lint, checks — `data-views-in-sync` unchanged).
+- `./equin build` (type-check, lint, checks — `data-views-in-sync` unchanged).
 - `bun run test:dom plugins/primitives/plugins/data-view` + existing bun tests;
   add a unit test asserting the new query-key shape.
 - Screenshot smoke (`bun e2e/screenshot.mjs`): tasks pane (tree+hierarchy),
@@ -318,7 +318,7 @@ interface ViewSourceEntry<T extends ViewTypeMeta = ViewTypeMeta> {
 - view-core bun tests: `normalizeRows` round-trip preserves `source`; every mutator
   preserves it; `addView(type, source)` stamps it; `buildInstanceFromRow` fail-softs
   unknown source before the type lookup.
-- `./singularity build`; screenshot-diff 2–3 single-source surfaces (tasks pane,
+- `./equin build`; screenshot-diff 2–3 single-source surfaces (tasks pane,
   all-conversations, a gallery) — zero drift; single-source add-menu markup unchanged.
 - `MergedDataView` has no consumer yet — exercised in Task 3.
 
@@ -442,7 +442,7 @@ DataView; nesting is structurally wrong.
 
 ### Verification
 
-- `./singularity build` — `data-views-in-sync` regenerates the manifest (old ids gone,
+- `./equin build` — `data-views-in-sync` regenerates the manifest (old ids gone,
   new id added), `configs-authored` + `config-stable-list-ids` pass, boundary checks
   pass (no new cross-plugin edges).
 - Screenshots (`bun e2e/screenshot.mjs`): sidebar Queue (sections, `×N` aggregate,

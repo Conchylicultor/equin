@@ -12,7 +12,7 @@ import { backupGapSummary, type BackupGap } from "./report-kind";
 
 /**
  * The backup itself: the `run` body of `backupRunJob`, executed in its own
- * process (`./singularity supervised-exec backup.run.supervised`).
+ * process (`./equin supervised-exec backup.run.supervised`).
  *
  * A backup is ~11 contributed sources staged into a directory, one `tar`, and
  * ~2 contributed targets — there is no command line to type, so before it ran

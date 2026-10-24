@@ -27,7 +27,7 @@ export default {
     // derived from this slot's registered matches (`useIsFramedBlock()`), so
     // there is no second "I am a container" flag to drift from who actually
     // paints a box. `anchor` rides on the SAME registration
-    // (`./singularity check page-editor:anchor-has-decoration`).
+    // (`./equin check page-editor:anchor-has-decoration`).
     Editor.BlockFrame({
       match: privateNotesBlock.type,
       component: PrivateNotesFrame,

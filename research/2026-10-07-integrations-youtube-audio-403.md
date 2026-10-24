@@ -153,7 +153,7 @@ for any failure it has classified. A non-zero exit then means only a real crash
 
 ## Verification
 
-1. `./singularity test plugins/integrations/plugins/youtube/plugins/audio-fetch`.
+1. `./equin test plugins/integrations/plugins/youtube/plugins/audio-fetch`.
 2. Run the module by hand against the installed env with a scratch harness
    (`runPython` equivalent):
    - Real videos (`liTfD88dbCo`, `dQw4w9WgXcQ`) → `ok: true`.
@@ -162,9 +162,9 @@ for any failure it has classified. A non-zero exit then means only a real crash
    - A scratch wrapper that monkeypatches the HTTP downloader to raise
      `HTTPError(403)` on the first 1 or 2 calls → `ok: true` with
      `attempts: 2` or `3`. Raising on every call → `refused`, `attempts: 3`.
-3. `./singularity build`, then trigger an UG alignment / beat-features run on a
+3. `./equin build`, then trigger an UG alignment / beat-features run on a
    fresh video, and confirm the download and the logs show the per-attempt line.
-4. `./singularity check` (type-check, boundaries, docs in sync).
+4. `./equin check` (type-check, boundaries, docs in sync).
 
 ## Follow-ups (not in this change)
 
@@ -195,5 +195,5 @@ injected cases.
   on an info dict that was already processed fills `requested_downloads`
   without `ext`. The file's container is therefore read from the path that
   was written.
-- `./singularity test …/audio-fetch` passed 15 of 15.
-- `./singularity build` succeeded, checks included.
+- `./equin test …/audio-fetch` passed 15 of 15.
+- `./equin build` succeeded, checks included.

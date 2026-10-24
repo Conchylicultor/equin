@@ -24,7 +24,7 @@
 // keystroke cadence. The deterministic long-window case (a handle withheld
 // indefinitely, so the flight cannot land at all) is the jsdom test
 // `web/__tests__/caret-authority.test.tsx`. Rerunning this under host load (a few
-// concurrent `./singularity build`s) reproduces the original conditions.
+// concurrent `./equin build`s) reproduces the original conditions.
 //
 // Usage: bun plugins/page/plugins/editor/e2e/split-typing-verify.ts [--url <deploy>]
 import {

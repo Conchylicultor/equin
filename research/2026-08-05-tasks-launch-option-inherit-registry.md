@@ -155,7 +155,7 @@ non-changes above.
 
 **Docs** — `plugins/tasks/plugins/launch-options/CLAUDE.md`: document `inherit?`
 alongside `apply` in the "Adding an option" section, including that omission is
-the opt-out. Autogen reference blocks regenerate via `./singularity build`.
+the opt-out. Autogen reference blocks regenerate via `./equin build`.
 
 ### Boundary safety
 
@@ -170,7 +170,7 @@ leaf. `auto-start/launch-option → tasks` is a different node and forms no cycl
 No automated coverage exists for this surface (unchanged from the write-side
 doc); TypeScript plus manual checks are the net.
 
-1. `./singularity build` — runs `type-check` (catches every renamed call site)
+1. `./equin build` — runs `type-check` (catches every renamed call site)
    and `plugin-boundaries`, and regenerates the docs the `plugins-doc-in-sync`
    check compares against.
 2. From a conversation whose task has **both** a preprompt and a thinking mode

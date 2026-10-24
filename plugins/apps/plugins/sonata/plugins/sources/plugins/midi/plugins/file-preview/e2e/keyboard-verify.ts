@@ -7,7 +7,7 @@
 // what the scrubber's aria-valuenow reports).
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/sonata/plugins/sources/plugins/midi/plugins/file-preview/e2e/keyboard-verify.ts \
+//   ./equin run plugins/apps/plugins/sonata/plugins/sources/plugins/midi/plugins/file-preview/e2e/keyboard-verify.ts \
 //     [--file "~/Downloads/sunny-roberto-piano-notation-v2.mid"] [--out /tmp/midi-keys] [--headed]
 
 import type { Page } from "playwright";

@@ -4,7 +4,7 @@
  * denylist keeps the feed off it (and drops the triggers a previous boot left),
  * A1′ counts it as covered, and A2′ / A3p refuse the declarations that would
  * give it a second change source or a route it cannot serve. Run with
- * `./singularity test plugins/database/plugins/change-feed`.
+ * `./equin test plugins/database/plugins/change-feed`.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";

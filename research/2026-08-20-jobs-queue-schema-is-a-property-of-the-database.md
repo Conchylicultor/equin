@@ -38,7 +38,7 @@ row:
 Every task status-change emit passes `{ tx }` (`status-scope.ts:86`,
 `status-emit.ts:61`), so `createTask` always takes the second transport. In a
 worktree whose backend has never booted — a fresh worktree where
-`./singularity test` runs before `./singularity build` — that transport fails
+`./equin test` runs before `./equin build` — that transport fails
 with a bare `3F000` that names nothing in this repo. The first transport, in the
 same situation, would have silently healed itself.
 
@@ -119,7 +119,7 @@ Wrap the `client.query` in the `opts.tx` branch. On a `3F000` naming the queue
 schema, rethrow `QueueSchemaMissingError` — stating that the transaction is on a
 database with no queue schema, that the schema is excluded from the worktree
 fork by design, and that `installQueueSchema` is how to put it there (and
-`./singularity build` is what does so for a worktree).
+`./equin build` is what does so for a worktree).
 
 The message must NOT be derived by querying `current_database()` after the
 failure: `3F000` aborts the transaction, so every later statement on that client
@@ -182,7 +182,7 @@ with `maskStrings: false`, so the token may not appear in any *string* outside
 > discriminated union whose schema arm *requires* a `reinstall(connectionString)`
 > callback, run by `forkDatabase` against the temp database before the atomic
 > rename. It was deferred because `ForkExclusions` crosses HTTP for the
-> `./singularity db fork` path and a function cannot ride that wire.
+> `./equin db fork` path and a function cannot ride that wire.
 >
 > The answer turned out to be that nothing needs reinstalling. The declaration
 > now states what to KEEP rather than what to drop: DDL is always kept, rows are
@@ -207,14 +207,14 @@ with `maskStrings: false`, so the token may not appear in any *string* outside
 
 ## Verification
 
-1. `./singularity check` — boundaries (no new cycle), `jobs:no-raw-addjob`,
+1. `./equin check` — boundaries (no new cycle), `jobs:no-raw-addjob`,
    `plugins-registry-in-sync`, `plugins-doc-in-sync`, `type-check`.
-2. `./singularity test plugins/infra/plugins/jobs` — the new installer test:
+2. `./equin test plugins/infra/plugins/jobs` — the new installer test:
    proves the missing-schema arm fails as `QueueSchemaMissingError` and the
    installed arm enqueues, both against a throwaway DB.
-3. `./singularity test plugins/tasks/plugins/tasks-core` — 97 tests, 0 fail
+3. `./equin test plugins/tasks/plugins/tasks-core` — 97 tests, 0 fail
    (was 93 pass / 4 fail).
-4. `./singularity build` — deploys; confirms `onReadyBlocking` does not slow or
+4. `./equin build` — deploys; confirms `onReadyBlocking` does not slow or
    break boot.
 5. Never-booted-worktree behaviour is covered by (2) rather than by dropping the
    live schema out from under a running backend.

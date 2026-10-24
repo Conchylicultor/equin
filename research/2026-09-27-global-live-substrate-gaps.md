@@ -143,14 +143,14 @@ Framework files change here (`resource-runtime`, `server-core`): the task itself
 
 ## Verification
 
-- `./singularity test` on `plugins/framework/plugins/resource-runtime`, `plugins/framework/plugins/server-core`,
+- `./equin test` on `plugins/framework/plugins/resource-runtime`, `plugins/framework/plugins/server-core`,
   `plugins/network/plugins/live`, `plugins/primitives/plugins/live-state`, `plugins/primitives/plugins/optimistic-mutation`,
   `plugins/infra/plugins/query-resource`.
 - New tests pin: the four stale cases answer a full sub-ack after the fix (and the probe's shapes fail before it); a same-socket
   replay still short-circuits; a first-sub `sub-error` on a placeholder-less read ends in `pending` with an error (and heals when
   the HTTP read succeeds); descriptors carry no `initialData`; a projected token's call / `from` / `getContributions` /
   `getContributionsIfCollected` return the projected payload, `Resource.Declare.from(plugins)` included.
-- `./singularity build` (all checks), then an e2e run against the deploy: a tab holding a live window, its socket dropped while
+- `./equin build` (all checks), then an e2e run against the deploy: a tab holding a live window, its socket dropped while
   the backend stays up, a row changed during the gap, the socket back — the window shows the change.
 
 ## Report (2026-09-27)
@@ -210,14 +210,14 @@ replay), `network/live/CLAUDE.md` (no placeholder, `whileSubscribed`), `compile-
   pass). Two cases pinned a now-unreachable state (a short-circuited resub over an evicted keyed snapshot) and were rewritten
   to pin what happens instead (the resub is a full sub-ack that re-seeds, the next change is a scoped delta), with the
   still-reachable no-snapshot FULL self-heal kept, reached through a failed sub-ack load.
-- `./singularity test` on `resource-runtime`, `server-core`, `network/live`, `live-state`, `optimistic-mutation`,
+- `./equin test` on `resource-runtime`, `server-core`, `network/live`, `live-state`, `optimistic-mutation`,
   `query-resource`: 573 bun + 122 vitest, all pass; after the review round, the same minus `query-resource`: 535 bun +
   124 vitest (the two new client tests included), all pass. New client tests: a `sub-error` on a disabled (placeholder-less, valueless)
   query runs the HTTP read — a 500 becomes `q.error`, a 200 heals.
 - **Full suite**: 27 bun + 4 vitest failures (+1 vitest file that fails to load), none in a changed plugin. The same 14 files run
   on a clean checkout of the base `f14d715a4` fail the same cases (the DB ones are the known `define-extension.test.ts`
   `mock.module` leak: "Transactions are not supported by the Postgres Proxy driver").
-- **Build**: `./singularity build` with all checks — ok.
+- **Build**: `./equin build` with all checks — ok.
 - **E2E** `plugins/network/plugins/live/e2e/reconnect-after-gap.ts` (new; notifications bell window): proxies
   `/ws/notifications` with `page.routeWebSocket`, closes the server side (the backend releases the tab's subs), holds the
   client's reconnect, creates a notification over HTTP, releases. Passed on every run (twice by me, twice by its author,

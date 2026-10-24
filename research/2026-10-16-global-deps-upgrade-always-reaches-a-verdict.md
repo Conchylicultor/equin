@@ -6,11 +6,11 @@ if this shows up in practice". It showed up on the first run.
 
 ## Context
 
-First end-to-end `./singularity deps upgrade npm` (2026-10-16, worktree
+First end-to-end `./equin deps upgrade npm` (2026-10-16, worktree
 `att-1792107609-34qkm0`, receipt `~/.singularity/worktrees/att-1792107609-34qkm0/deps-upgrade-npm.json`):
 79 moves were planned (typescript 6→7, vite 6→8, eslint 9→10, vitest 4→5, zod 3→4,
 shiki 1→4, drizzle 0.36→0.45, …). The baseline ran. `apply` did both `bun install`s,
-then its `./singularity regen-generated` crashed under TypeScript 7
+then its `./equin regen-generated` crashed under TypeScript 7
 (`ts.ScriptTarget` is undefined, `plugin-meta/token-usage/core/token-groups.ts:65`).
 
 What `runUpgrade` (`plugins/infra/plugins/deps/plugins/updates/cli/internal/runner.ts`) did with it:
@@ -66,7 +66,7 @@ sync(root: string, log: (line: string) => void): Promise<void>;
 It is required rather than optional, so a new updater has to say what restoring
 means for it (rung 2). Each updater implements it as follows:
 
-- **npm**: `bun install`, then `./singularity regen-generated`. This brings back
+- **npm**: `bun install`, then `./equin regen-generated`. This brings back
   `node_modules` and the generated artifacts formatted through a moved package.
   Factor `bunInstall` + regen out of `apply` into helpers that `apply` and `sync`
   share.
@@ -177,17 +177,17 @@ Bisection reports both as culprits, and the agent declares a lockstep group in
 
 ## Verification
 
-- `./singularity test plugins/infra/plugins/deps`. New runner cases:
+- `./equin test plugins/infra/plugins/deps`. New runner cases:
   - `apply` throws → `regressed` (single unit) with an `apply` gate, receipt finished, `sync` called.
   - `plan` throws → `aborted`, receipt finished.
   - 8 units with 2 culprits → `partial`, with exactly those culprits, the rest landed, and the probe count at most the bound.
   - The budget runs out → `untested` filled.
   - A lockstep unit is never split.
   - The final proof finds a new failure → a second round.
-- `./singularity test plugins/infra/plugins/deps/plugins/npm`: `unit` assigned per component.
-- End to end: `./singularity deps upgrade npm` in this worktree (background). Expected: a
+- `./equin test plugins/infra/plugins/deps/plugins/npm`: `unit` assigned per component.
+- End to end: `./equin deps upgrade npm` in this worktree (background). Expected: a
   finished receipt, `partial` or `upgraded`, with typescript 7 (the `regen-generated`
   crash) among the `culprits`, most patch/minor moves in `landed`, `node_modules`
   matching `bun.lock` afterwards (`bun install --frozen-lockfile` is a no-op), and
   `git status` showing only the landed manifests, the lock and the regenerated files.
-  Then `./singularity build` is green on the landed set.
+  Then `./equin build` is green on the landed set.

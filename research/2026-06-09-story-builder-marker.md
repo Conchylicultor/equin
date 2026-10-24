@@ -75,7 +75,7 @@ plugins/apps/plugins/story/                         # NEW namespace (collapsed, 
 ```
 
 Only `marker/web` + `marker/server` have barrels, so only those auto-register on
-`./singularity build`. The `story` namespace + `marker` are otherwise pure
+`./equin build`. The `story` namespace + `marker` are otherwise pure
 directories.
 
 ## Implementation detail
@@ -211,7 +211,7 @@ type. **No `contributions`** (no UI yet) — a barrel with just exports + a
   - `plugins/infra/plugins/endpoints/core` (`defineEndpoint`) / `endpoints/server` (`implement`).
 - The editor plugin and `entity-extensions` are **not** modified — that's the point.
 
-## Boundary compliance (`./singularity check plugin-boundaries`)
+## Boundary compliance (`./equin check plugin-boundaries`)
 
 - `marker/server` imports only runtime barrels: `page/editor/server` (`_blocks`),
   `infra/entity-extensions/server`, `infra/endpoints/server`, `database/server`,
@@ -224,9 +224,9 @@ type. **No `contributions`** (no UI yet) — a barrel with just exports + a
 
 ## Verification (no UI)
 
-1. `./singularity build` — registers the two new barrels, generates + applies the
+1. `./equin build` — registers the two new barrels, generates + applies the
    `page_blocks_ext_story` migration, regenerates docs/CLAUDE autogen blocks.
-2. `./singularity check migrations-in-sync` + `./singularity check plugin-boundaries`
+2. `./equin check migrations-in-sync` + `./equin check plugin-boundaries`
    (the migration must be committed; boundaries must pass).
 3. Create a page to mark — find a real `page_blocks` row of `type:"page"`:
    ```sql

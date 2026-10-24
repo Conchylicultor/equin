@@ -186,7 +186,7 @@ name rather than importing `UNDO_OWNER_ATTR`. If that duplication matters, add a
 
 ## Verification
 
-1. **`./singularity check`** — the new lint rule must fail on a deliberately reintroduced raw
+1. **`./equin check`** — the new lint rule must fail on a deliberately reintroduced raw
    `<textarea>` in a block, and pass on the migrated tree. `type-check` covers the rest.
 2. **jsdom test**, `plugins/page/plugins/editor/web/__tests__/block-text-undo.test.tsx`, reusing
    `structural-undo.test.tsx`'s harness — `PluginProvider` + `UndoRedoProvider` +
@@ -196,7 +196,7 @@ name rather than importing `UNDO_OWNER_ATTR`. If that duplication matters, add a
    a paste is one entry; a pause past the coalesce window starts a second; undo restores the
    textarea's visible value *and* selection while focused; a burst records before any network write
    fires.
-3. **`./singularity build`** (background, end the turn), then an e2e script at
+3. **`./equin build`** (background, end the turn), then an e2e script at
    `plugins/page/plugins/code-block/e2e/undo-verify.ts` driving the deployed app with the shared
    harness: create a code block, type, paste a multi-line snippet, press Cmd+Z immediately (inside
    the old 500 ms window — this is the reported bug and must now revert the paste), press again to

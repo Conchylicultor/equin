@@ -162,7 +162,7 @@ The whole `LaunchAgentAction` component becomes a thin wrapper around `<LaunchBu
 
 ## Verification
 
-1. `./singularity build` — must succeed; frontend + server rebuild, gateway re-registers.
+1. `./equin build` — must succeed; frontend + server rebuild, gateway re-registers.
 2. Open `http://<worktree>.localhost:9000`:
    - **Homepage**: click Sonnet → new conversation pane opens, sidebar shows it at the top. Repeat for Opus.
    - **Sidebar**: click Sonnet / Opus at top of conversation list → same behavior; active highlight moves to the new row.
@@ -170,4 +170,4 @@ The whole `LaunchAgentAction` component becomes a thin wrapper around `<LaunchBu
    - Hover a task row → see the compact icon launch buttons; click one → a new conversation is created under that task (verify the conversation has a link to the task), no navigation away from `/tasks`.
    - Click a task to open its detail pane → Sonnet / Opus buttons appear in place of the old "Launch agent" button; clicking opens the new conversation pane and the task stays linked.
 4. Visual check: the buttons in the homepage and sidebar should look identical to today (same spacing / variant / size).
-5. No TypeScript errors: `bun run typecheck` if available, otherwise let `./singularity build` surface them.
+5. No TypeScript errors: `bun run typecheck` if available, otherwise let `./equin build` surface them.

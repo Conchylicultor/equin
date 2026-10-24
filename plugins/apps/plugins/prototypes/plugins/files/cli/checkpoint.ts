@@ -3,7 +3,7 @@ import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import { openHistoryStore } from "../shared/history/store";
 
 /**
- * `./singularity prototype checkpoint <id> [-m <message>]` — record the folder
+ * `./equin prototype checkpoint <id> [-m <message>]` — record the folder
  * as a `manual` version now.
  *
  * Agent turns record versions on their own; an edit made outside one (by hand,

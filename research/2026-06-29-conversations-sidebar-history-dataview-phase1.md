@@ -156,7 +156,7 @@ plugins/conversations/plugins/conversations-view/plugins/data-view/
 
 The check fails by default until each `defineDataView` id has a hand-authored
 `config/<asPath(pluginId)>/<id>.jsonc`. Create (exact path is derived by codegen;
-`./singularity build` + the check will confirm it, expected
+`./equin build` + the check will confirm it, expected
 `config/conversations/conversations-view/data-view/conversations-sidebar-history.jsonc`):
 
 ```jsonc
@@ -178,7 +178,7 @@ The check fails by default until each `defineDataView` id has a hand-authored
 
 (Preset row shape `{ label, group: FilterGroup }` per `presetsExtraFields` in
 `data-view/shared/sort-presets-field.ts`; FilterGroup shape per
-`config/tasks/task-list/tasks-list.jsonc`.) Run `./singularity build` to
+`config/tasks/task-list/tasks-list.jsonc`.) Run `./equin build` to
 regenerate `shared/data-views.generated.ts` and the config `@hash`.
 
 ## Files to create / modify
@@ -198,7 +198,7 @@ No edits to the mount point (`conversation-list.tsx`), `sidebar-region`, or
 
 ## Verification
 
-1. `./singularity build` — must pass `data-view:configs-authored`,
+1. `./equin build` — must pass `data-view:configs-authored`,
    `data-views-in-sync`, `plugins-registry-in-sync`, `plugin-boundaries`,
    `type-check`. Open `http://att-1782744698-20pt.localhost:9000`.
 2. Confirm the sidebar `<Picker>` now offers **Classic** and **DataView**.

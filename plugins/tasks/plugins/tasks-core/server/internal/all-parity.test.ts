@@ -24,8 +24,8 @@
  * timestamptz rendered on the server (the `jsonAgg`'s ISO text) or decoded on
  * the client cannot pass by happening to run in UTC.
  *
- * Run: `./singularity test plugins/tasks/plugins/tasks-core` (requires the
- * running embedded cluster — `./singularity build` first).
+ * Run: `./equin test plugins/tasks/plugins/tasks-core` (requires the
+ * running embedded cluster — `./equin build` first).
  */
 
 import {

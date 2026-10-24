@@ -55,7 +55,7 @@ export async function pickPrototype(): Promise<PrototypeMeta> {
   if (!meta) {
     usage(
       wanted
-        ? `no prototype "${wanted}" on this deploy (\`./singularity prototype list\`)`
+        ? `no prototype "${wanted}" on this deploy (\`./equin prototype list\`)`
         : "no prototype on this deploy declares both an option with 3+ values and a mocks counterpart — pass --name",
     );
   }

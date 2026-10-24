@@ -265,7 +265,7 @@ No server changes. No DB migrations. No new plugin.
 
 ## Verification
 
-End-to-end smoke after `./singularity build`:
+End-to-end smoke after `./equin build`:
 
 1. **Tasks list parity** — open `http://<worktree>.localhost:9000/tasks`. Verify:
    - Status icon renders, dropped/done text styling applied.
@@ -278,7 +278,7 @@ End-to-end smoke after `./singularity build`:
    - Root "Add" button works; subtree mode (`rootTaskId` set) hides it.
    - Newly created rows auto-focus their rename input and are selected.
 2. **Agents list parity** — open `http://<worktree>.localhost:9000/agents`. Same checklist minus toolbar (the agents list doesn't pass `toolbar`).
-3. **`./singularity check` passes** — including `plugins-doc-in-sync` against the updated `tree` exports.
+3. **`./equin check` passes** — including `plugins-doc-in-sync` against the updated `tree` exports.
 
 Yak-shaving rows are out of scope for this sub-task; their first render lands
 with sub-task B of the yak plan.

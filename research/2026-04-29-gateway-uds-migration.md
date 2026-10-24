@@ -10,7 +10,7 @@ The intended outcome: eliminate the port-conflict bug class entirely by removing
 
 ## Goal
 
-Replace TCP loopback with Unix domain sockets. One socket file per worktree at `~/.singularity/sockets/<name>.sock`. Gateway hands the path to the backend via `SOCKET_PATH` env var; both sides talk UDS. Delete `gateway/ports.go` and the `PortPool`. Single atomic cutover (no dual-transport phase) — gateway is started once via `./singularity start`, all backends respawn on gateway restart.
+Replace TCP loopback with Unix domain sockets. One socket file per worktree at `~/.singularity/sockets/<name>.sock`. Gateway hands the path to the backend via `SOCKET_PATH` env var; both sides talk UDS. Delete `gateway/ports.go` and the `PortPool`. Single atomic cutover (no dual-transport phase) — gateway is started once via `./equin start`, all backends respawn on gateway restart.
 
 ## Design
 
@@ -113,7 +113,7 @@ Switch from `net.DialTimeout` to `net.Dialer.DialContext` so client cancellation
 
 ### Cutover
 
-Single atomic change. Gateway is started once via `./singularity start`. After the migration commit lands, the next `./singularity start` (user-driven) restarts the gateway under UDS contract; all in-flight backends die with the gateway and respawn under UDS on first request. No dual-transport phase needed.
+Single atomic change. Gateway is started once via `./equin start`. After the migration commit lands, the next `./equin start` (user-driven) restarts the gateway under UDS contract; all in-flight backends die with the gateway and respawn under UDS on first request. No dual-transport phase needed.
 
 ## Critical files
 
@@ -168,11 +168,11 @@ End-to-end (real Bun + real gateway) is intentionally out of scope — the four 
 
 1. `cd gateway && go build ./...` — must compile clean after deletions.
 2. `cd gateway && go test ./...` — the four new tests must pass.
-3. `./singularity build` from this worktree — backend rebuild + restart through normal flow; assert `lsof -U | grep singularity` shows the worktree's socket and `lsof -i :9001-10000` shows nothing on this worktree's behalf.
+3. `./equin build` from this worktree — backend rebuild + restart through normal flow; assert `lsof -U | grep singularity` shows the worktree's socket and `lsof -i :9001-10000` shows nothing on this worktree's behalf.
 4. Hit `http://<worktree>.localhost:9000/api/conversations` — assert 200 (HTTP path).
 5. Open a conversation in the UI and confirm `/ws/notifications` connects (WS path).
 6. `curl http://localhost:9000/gateway/worktrees | jq '.[] | {name, socketPath, state}'` — confirm the new field shape.
 7. Manual stale-socket test: `touch ~/.singularity/sockets/zzz.sock` (a name not in the registry) → restart gateway → assert the file is gone after boot.
 8. Manual crash-recovery test: while a backend is running, `kill -9` the bun process; hit a backend path through the gateway; assert the gateway respawns and a fresh socket appears.
 
-User reviews the diff before any commit; do not run `./singularity push` without explicit instruction.
+User reviews the diff before any commit; do not run `./equin push` without explicit instruction.

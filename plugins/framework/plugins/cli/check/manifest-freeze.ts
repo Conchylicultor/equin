@@ -22,7 +22,7 @@ export interface ManifestFreezeInput {
 
 /** Which process a finding is about. */
 export type FreezeClosure =
-  /** What EVERY `./singularity` invocation loads, whatever the verb. */
+  /** What EVERY `./equin` invocation loads, whatever the verb. */
   | { kind: "startup"; entry: string }
   /** One command's body, in a process that also regenerates the manifests. */
   | {

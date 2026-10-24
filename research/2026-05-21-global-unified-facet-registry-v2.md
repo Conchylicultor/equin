@@ -245,7 +245,7 @@ for (const bt of barrelTypes) {
   const file = join(bt.ownerDir, "core", `${bt.dir}.generated.ts`);
   const expected = renderBarrelRegistry({ root, barrelType: bt });
   if (!existsSync(file) || readFileSync(file, "utf8") !== expected) {
-    return { ok: false, message: `${relative(root, file)} is out of sync`, hint: "Run `./singularity build`" };
+    return { ok: false, message: `${relative(root, file)} is out of sync`, hint: "Run `./equin build`" };
   }
 }
 ```
@@ -267,7 +267,7 @@ To add a new barrel type (e.g., `guard/`):
      type: { name: "Guard", from: "./types" },
    });
    ```
-3. Run `./singularity build` — codegen discovers the barrel type and generates `guard.generated.ts`
+3. Run `./equin build` — codegen discovers the barrel type and generates `guard.generated.ts`
 4. Write a consumer that imports from the generated file
 
 No hardcoded lists edited. No custom discovery code.
@@ -297,12 +297,12 @@ No hardcoded lists edited. No custom discovery code.
 
 ## Verification
 
-1. `./singularity build` generates the two new `.generated.ts` files
-2. `./singularity check` passes — existing checks work, `plugins-registry-in-sync` covers the new files
+1. `./equin build` generates the two new `.generated.ts` files
+2. `./equin check` passes — existing checks work, `plugins-registry-in-sync` covers the new files
 3. ESLint discovers the `debug/plugins/logs/lint` rule (same scoping behavior)
 4. Create a dummy `test-barrel/index.ts` in any plugin → `findAllPluginDirs` detects it automatically
 5. `git diff $(git merge-base HEAD main)` for review
 
 ## Tradeoff
 
-New check/lint barrels require `./singularity build` before they take effect (same as web/server/central). The `plugins-registry-in-sync` check catches drift.
+New check/lint barrels require `./equin build` before they take effect (same as web/server/central). The `plugins-registry-in-sync` check catches drift.

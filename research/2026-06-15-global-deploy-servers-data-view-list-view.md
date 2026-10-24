@@ -112,7 +112,7 @@ primary = label, others = subtitle, `align:"end"` floats to the trailing edge.
 
 ### Docs / registration
 
-Run `./singularity build` — the registry (`web.generated.ts`) is regenerated
+Run `./equin build` — the registry (`web.generated.ts`) is regenerated
 from the filesystem; no manual registration. Update `data-view/CLAUDE.md`'s
 sub-plugin list + the `DataViewSlots.View` contributor line (the
 `plugins-doc-in-sync` check enforces this; build regenerates the autogen block).
@@ -186,8 +186,8 @@ const fields: FieldDef<Server>[] = [
 
 ## Verification
 
-1. `./singularity build` (regenerates registry + migrations, runs checks). Then
-   `./singularity check` clean (esp. `plugins-doc-in-sync`, `type-check`,
+1. `./equin build` (regenerates registry + migrations, runs checks). Then
+   `./equin check` clean (esp. `plugins-doc-in-sync`, `type-check`,
    `plugin-boundaries`).
 2. Scripted Playwright run against `http://<worktree>.localhost:9000/deploy`:
    - List renders servers as dense rows (name / host:port / status badge).

@@ -4,7 +4,7 @@
  * encoded by the point codec the reader subscribes through, so a reader
  * holding that set in any order asks for exactly the preloaded tuple.
  *
- * Run: `./singularity test plugins/network/plugins/live`.
+ * Run: `./equin test plugins/network/plugins/live`.
  */
 
 import { describe, expect, test } from "bun:test";

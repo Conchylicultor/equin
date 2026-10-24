@@ -106,7 +106,7 @@ Create:
 
 ## Verification
 
-1. `./singularity build` — ensures types compile, server restarts, no migration drift.
+1. `./equin build` — ensures types compile, server restarts, no migration drift.
 2. `curl http://<worktree>.localhost:9000/api/conversations/<known-id>` returns a single conversation JSON, and the existing `GET /api/conversations` list still works (literal-route fast path intact). with a `status` field.
 3. Open `http://<worktree>.localhost:9000/c/<known-id>` in the browser — toolbar shows a colored badge matching the status. Verify the existing `Open` / `VSCode` buttons still render (slot backward-compat).
 4. Playwright screenshot to confirm visual:

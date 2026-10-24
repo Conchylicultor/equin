@@ -1,7 +1,7 @@
 # tauri — desktop release shell
 
 The generic Tauri (Rust) shell that turns a staged self-contained app bundle into
-a host-platform desktop app. Driven by `./singularity release --composition <name>
+a host-platform desktop app. Driven by `./equin release --composition <name>
 --target tauri` (see `plugins/framework/plugins/cli/plugins/release/cli/run.ts`).
 
 It is **app-agnostic**: it reads the composition name + port from the bundled
@@ -63,7 +63,7 @@ src-tauri/
 ## Status
 
 **Compiled and stack-verified on a Rust host (Tauri 2.11.3, Rust 1.96.0,
-macOS arm64).** `./singularity release --composition sonata --target tauri`
+macOS arm64).** `./equin release --composition sonata --target tauri`
 produces `Sonata.app` (identifier `ai.equin.sonata`, embedded bundle + RELEASE.json).
 The Tauri-v2 API names in `lib.rs` all check out on 2.11.x — notably
 `WebviewWindow::navigate(&self, Url)` compiles with an immutable binding,

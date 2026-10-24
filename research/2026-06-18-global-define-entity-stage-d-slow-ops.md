@@ -39,7 +39,7 @@ Now that `defineEntity(name, fields, meta)` exists, we can re-express `SlowOp` a
 derive from that one record, so the silent-column-drop footgun becomes structurally
 **unrepresentable** — and the interim `Equal` guard becomes vacuous and is deleted.
 
-**Hard requirement: zero schema drift.** `./singularity build` must generate **no new
+**Hard requirement: zero schema drift.** `./equin build` must generate **no new
 migration**. The Stage C unit test (`define-entity.test.ts`) already proves
 `defineEntity` reproduces the exact `slow_ops` DDL (snake_case names, `notNull`,
 defaults, `double precision`, `jsonb`, `timestamptz`, the unique index), so this is
@@ -223,13 +223,13 @@ type inference is unaffected.
 
 ## Verification
 
-1. **No schema drift (the headline check):** `./singularity build`, then
-   `./singularity check migrations-in-sync` — must be clean with **no new migration
+1. **No schema drift (the headline check):** `./equin build`, then
+   `./equin check migrations-in-sync` — must be clean with **no new migration
    file** generated. If a migration appears, diff its DDL and adjust `meta` until
    byte-identical (per the Stage C test this should not happen).
-2. `./singularity check type-check` — passes (the derived row type ≡ wire schema; the
+2. `./equin check type-check` — passes (the derived row type ≡ wire schema; the
    deleted guard is no longer needed).
-3. `./singularity check plugin-boundaries` and `table-defs-in-schema-glob` — green
+3. `./equin check plugin-boundaries` and `table-defs-in-schema-glob` — green
    (`defineEntity` call is in `tables.ts`).
 4. Add/confirm a unit covering `uuidField`/`dateField` shape if useful; the existing
    `define-entity.test.ts` already covers the entity DDL.

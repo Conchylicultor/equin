@@ -24,7 +24,7 @@
 // it would mark the song's video unplayable and re-pick) and fails the run.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/sonata/plugins/recording/e2e/video-sync.ts \
+//   ./equin run plugins/apps/plugins/sonata/plugins/recording/e2e/video-sync.ts \
 //     --song <songId> [--seconds 20] [--settle 2000] [--out /tmp/video-sync] [--headed]
 
 import type { Frame, Page } from "playwright";

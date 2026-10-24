@@ -168,7 +168,7 @@ A mention is a `LinkNode`, so it gets this card with nothing extra.
 - Add a short prose section to `url-paste/CLAUDE.md` stating the menu-lifetime
   rule ("closes on any text change"), since the Cmd+Z behaviour depends on it.
 - Update the plugin descriptions of `url-paste`, `formatting/link` and `bookmark`.
-  `./singularity build` regenerates the docs.
+  `./equin build` regenerates the docs.
 
 ## Files
 
@@ -206,7 +206,7 @@ What we reuse: `recordDocEdit` / `useBlockEditor`, `readTransferText`,
 
 ## Verification
 
-1. `./singularity build` (in the background), then `./singularity check`
+1. `./equin build` (in the background), then `./equin check`
    (type-check, eslint, plugin boundaries, docs in sync).
 2. Update `url-paste/e2e/url-paste-keyboard.ts` for the new row order.
 3. Add `url-paste/e2e/url-paste-link-verify.ts`. On a scratch page it deletes

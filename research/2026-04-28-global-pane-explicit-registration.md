@@ -209,7 +209,7 @@ No code change needed. Once `Pane.Register` is a real `defineSlot` in
 `parseDefineGroup(slotsSrc, "defineSlot", …)` picks it up at
 `cli/src/docgen.ts:485`, and contributing plugins' `Pane.Register({...})`
 calls render in their reference blocks via the existing
-`extractContributionsBlock` path. After running `./singularity build`
+`extractContributionsBlock` path. After running `./equin build`
 the `pane` plugin will list `Pane.Register` under its `Slots:` line and
 each consumer plugin will gain a `Pane.Register` entry in its
 `Contributes:` list.
@@ -227,9 +227,9 @@ used for `Shell.Sidebar`, `Code.ToolbarButton`, etc.).
    `Pane.Register` contributions; remove side-effect imports.
 3. file-pane: add `PluginDefinition`; add to `web/src/plugins.ts`.
 4. Update CLAUDE.md docs.
-5. Run `./singularity check` (catches plugin-boundary regressions and
+5. Run `./equin check` (catches plugin-boundary regressions and
    the docs-in-sync check, which will demand a docgen refresh).
-6. Run `./singularity build` to regenerate
+6. Run `./equin build` to regenerate
    `docs/plugins-compact.md` / `plugins-details.md` / per-plugin
    reference blocks.
 
@@ -275,9 +275,9 @@ used for `Shell.Sidebar`, `Code.ToolbarButton`, etc.).
 
 ## Verification
 
-1. `./singularity check` — all checks pass (plugin-boundaries,
+1. `./equin check` — all checks pass (plugin-boundaries,
    plugins-doc-in-sync, typescript).
-2. `./singularity build` — succeeds; regenerated
+2. `./equin build` — succeeds; regenerated
    `docs/plugins-compact.md` shows `Pane.Register` under the pane
    plugin and as a contribution under each pane-owning plugin.
 3. Open `http://<worktree>.localhost:9000/` — the welcome pane renders

@@ -102,7 +102,7 @@ the `old_string` field description to match.
 
 ## Verification
 
-1. `./singularity test plugins/page/plugins/annotations/plugins/agent-access`,
+1. `./equin test plugins/page/plugins/annotations/plugins/agent-access`,
    covering these cases in `indent-match.test.ts`:
    - an exact match wins, and no shift is reported
    - a nested line copied with extra indentation still matches (shifted left)
@@ -118,7 +118,7 @@ the `old_string` field description to match.
    - tabs mixed with spaces is not shifted
    - the case that started this: `"    * This is fishy…"` against a read of
      that block by its own id, where the line starts `"* This is fishy…"`
-2. `./singularity check type-check` and `./singularity build` (background).
+2. `./equin check type-check` and `./equin build` (background).
 3. End to end on the worktree's own build: add a **P12** case to
    `plugins/page/plugins/annotations/plugins/agent-access/e2e/agent-access-verify.ts`.
    That script calls this worktree's `/api/mcp/<conversation>`, not main's
@@ -135,4 +135,4 @@ the `old_string` field description to match.
      (compared against the five-column snapshot the script already uses)
 
    Run with
-   `./singularity run plugins/page/plugins/annotations/plugins/agent-access/e2e/agent-access-verify.ts`.
+   `./equin run plugins/page/plugins/annotations/plugins/agent-access/e2e/agent-access-verify.ts`.

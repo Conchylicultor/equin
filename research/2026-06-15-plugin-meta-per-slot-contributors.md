@@ -2,7 +2,7 @@
 
 ## Context
 
-When a plugin defines a contribution slot, there is no way to discover **every plugin that contributes to that specific slot id** at the place an agent looks before touching the slot. Migrating a slot's contract looks complete after updating the owning plugin and its in-tree contributors — but contributors living in *other* plugins are invisible until a full repo-wide `./singularity build` surfaces them as type errors.
+When a plugin defines a contribution slot, there is no way to discover **every plugin that contributes to that specific slot id** at the place an agent looks before touching the slot. Migrating a slot's contract looks complete after updating the owning plugin and its in-tree contributors — but contributors living in *other* plugins are invisible until a full repo-wide `./equin build` surfaces them as type errors.
 
 Concrete instance: migrating the `data-view` per-item action slot (`defineItemActions`), the contributors in `apps/story/pages-integration` and `tasks/auto-start` were missed until the build failed; they were only findable via a manual repo-wide `rg`.
 
@@ -85,7 +85,7 @@ The existing **plugin-level aggregate** (`slotContributors` on the contributions
 
 ## Verification
 
-1. `./singularity build` — must succeed and regenerate per-plugin CLAUDE.md autogen blocks + `docs/plugins-details.md`. The `plugins-doc-in-sync`, `facets:render-complete`, `type-check`, and `plugin-boundaries` checks must pass (run `./singularity check`).
+1. `./equin build` — must succeed and regenerate per-plugin CLAUDE.md autogen blocks + `docs/plugins-details.md`. The `plugins-doc-in-sync`, `facets:render-complete`, `type-check`, and `plugin-boundaries` checks must pass (run `./equin check`).
 2. Confirm the per-slot list landed: inspect `primitives/data-view`'s CLAUDE.md "Slots" fact (and `plugins-details.md`) — the item-action slot must now list `apps/story/pages-integration` and `tasks/auto-start`, the previously-invisible cross-plugin contributors. (`rg "pages-integration" docs/plugins-details.md`.)
 3. Studio UI — screenshot against `http://att-1781530663-rp5y.localhost:9000`:
    - Plugin-view detail for a slot-owning plugin (e.g. data-view) → Slots section shows contributor links per slot.

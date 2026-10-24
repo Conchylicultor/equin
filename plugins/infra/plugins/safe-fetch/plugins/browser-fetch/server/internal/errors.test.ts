@@ -55,7 +55,7 @@ describe("browser-unavailable reasons", () => {
     const err = browserInstallFailed("https://example.com/", "curl: 404.");
     expect(err.reason).toBe("install-failed");
     expect(err.message).toContain("curl: 404.");
-    expect(err.message).toContain("./singularity deps install chromium");
+    expect(err.message).toContain("./equin deps install chromium");
   });
 
   test("launch-failed keeps the launch error", () => {

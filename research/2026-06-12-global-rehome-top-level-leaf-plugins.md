@@ -87,8 +87,8 @@ Each agent audits its umbrella's moved plugins and fixes only **residual / non-t
 Each agent: (a) `rg "@plugins/<old-name>/"` returns **zero** hits anywhere; (b) the new folder's barrel + intra-plugin relative imports are intact; (c) `config/` dir moved where applicable; (d) report anything unexpected. Agents make small fixes only — no structural changes.
 
 ### Step 3 — Regenerate + validate (serial)
-1. `./singularity build` — regenerates all `*.generated.ts`, `reorderable-slots.generated.ts`, docs, and config origins; restarts server.
-2. `./singularity check` — must pass: `type-check` (catches every broken import), `migrations-in-sync`, `plugins-doc-in-sync`, `config-origins-in-sync`, reorder-slots sync, and `plugin-boundaries`.
+1. `./equin build` — regenerates all `*.generated.ts`, `reorderable-slots.generated.ts`, docs, and config origins; restarts server.
+2. `./equin check` — must pass: `type-check` (catches every broken import), `migrations-in-sync`, `plugins-doc-in-sync`, `config-origins-in-sync`, reorder-slots sync, and `plugin-boundaries`.
 3. Fix any check failures, rebuild, re-check until green.
 
 ## Critical files
@@ -102,8 +102,8 @@ Each agent: (a) `rg "@plugins/<old-name>/"` returns **zero** hits anywhere; (b) 
 ## Verification (end-to-end)
 
 1. `rg -n "@plugins/(agents|attempt-view|collections|conversations-recover|events-test|floating-bar|health|notifications|tasks-core|terminal|theme|welcome|worktree-switcher)/"` → **zero hits** (the bare old paths are gone).
-2. `./singularity check` → all checks green (type-check proves every import resolves; doc/config/reorder sync checks prove codegen + config moves are consistent).
-3. `./singularity build` succeeds and server boots.
+2. `./equin check` → all checks green (type-check proves every import resolves; doc/config/reorder sync checks prove codegen + config moves are consistent).
+3. `./equin build` succeeds and server boots.
 4. Smoke test via Playwright at `http://<worktree>.localhost:9000`: app loads, the agent-manager shell renders, and spot-check the moved surfaces — light/dark toggle (`theme-toggle`), worktree switcher dropdown, floating action bar, welcome/landing pane, notifications bell, a task detail pane (`tasks-core` consumers), an agents list. Capture a before/after screenshot.
 5. `git diff --stat $(git merge-base HEAD main)` — confirm the diff is only renames + import-string edits + regenerated artifacts, no logic changes.
 

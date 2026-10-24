@@ -107,9 +107,9 @@ New `components/spot-pins.tsx` beside `clustered-pins.tsx`, used when
 
 ## Verification
 
-- `./singularity test plugins/map` — new `spots.test.ts`: lead = highest rank,
+- `./equin test plugins/map` — new `spots.test.ts`: lead = highest rank,
   radius boundary, determinism under input order, active-free.
-- `./singularity build`, then `screenshot.ts --path /places` at street zoom
+- `./equin build`, then `screenshot.ts --path /places` at street zoom
   (all pins, small, no labels) and after the fit button (round badges, side
   counts); hover a member pin and confirm only its spot's count fades.
-- `./singularity check` (boundaries, docs in sync, lint).
+- `./equin check` (boundaries, docs in sync, lint).

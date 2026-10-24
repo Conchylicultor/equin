@@ -53,7 +53,7 @@ dangerous because it is the actual destructive **write**:
 
 ### Why the fact is recoverable without the ledger
 
-- Every commit that lands via `./singularity push` carries
+- Every commit that lands via `./equin push` carries
   `Singularity-Conversation: <convId>` (written by `.githooks/prepare-commit-msg` from
   `SINGULARITY_CONVERSATION_ID`) and `Singularity-Push: <uuid>` (stamped per push
   invocation by the rebase `--exec` in `cli/bin/commands/push.ts`). The pre-push
@@ -304,9 +304,9 @@ listed as follow-ups, not fixed here.
 
 ## Verification
 
-1. `./singularity test plugins/tasks/plugins/attempt-work plugins/conversations/plugins/conversation-view/plugins/push-and-exit plugins/conversations/plugins/conversation-view/plugins/commits-graph`
-2. `./singularity build` (regenerates registries + plugin docs), then
-   `./singularity check` — `type-check` enumerates the rename burndown,
+1. `./equin test plugins/tasks/plugins/attempt-work plugins/conversations/plugins/conversation-view/plugins/push-and-exit plugins/conversations/plugins/conversation-view/plugins/commits-graph`
+2. `./equin build` (regenerates registries + plugin docs), then
+   `./equin check` — `type-check` enumerates the rename burndown,
    `plugins-doc-in-sync` / `plugins-registry-in-sync` after the new plugin.
 3. **D1, the reproduction, without touching the queue.** Pick a conversation whose work
    is already in `main` (`conv-1786971113-c3yy` / `8362d52e1`), then delete its ledger
@@ -355,7 +355,7 @@ listed as follow-ups, not fixed here.
 8. Docs: `attempt-work/CLAUDE.md` (invariant I3 — a ledger row is positive evidence
    only; and I4), a note in `commits-graph/CLAUDE.md`, and a cross-link from
    `.claude/skills/api-design/SKILL.md`'s absorbable-failure section.
-9. `./singularity build` && `./singularity check`, targeted tests, then manual checks
+9. `./equin build` && `./equin check`, targeted tests, then manual checks
    3–8.
 
 ## Critical files
@@ -375,7 +375,7 @@ listed as follow-ups, not fixed here.
   from the primary button for every clean attempt, because nothing else distinguishes
   "did nothing" from "landed" (`ahead` is 0 in both after a fast-forward merge).
 - **Store `baseSha` on `attempts` and count `base..HEAD`.** Cheap and no grep, but a
-  rebase onto a newer `main` (`./singularity push`, sync-to-head) pulls `main`'s own
+  rebase onto a newer `main` (`./equin push`, sync-to-head) pulls `main`'s own
   commits into that range, so an attempt that only rebased would read as having authored
   work — silently removing the drop affordance. It also needs a migration and a backfill
   the trailer read does not.

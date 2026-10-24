@@ -16,8 +16,8 @@ const untouched = (command: string) => verdict(command).kind === "allow";
 describe("pipefail guard", () => {
   describe("a pipeline ending in a draining reader gets pipefail", () => {
     for (const command of [
-      "./singularity check 2>&1 | tail -20",
-      "./singularity check |& tail -20",
+      "./equin check 2>&1 | tail -20",
+      "./equin check |& tail -20",
       "bun x tsc | tee /tmp/out.log",
       "cd sub && make | tail -n 5",
       "cmd | timeout 5 tail -3",
@@ -34,7 +34,7 @@ describe("pipefail guard", () => {
 
   describe("no drained pipe → left alone", () => {
     for (const command of [
-      "./singularity check",
+      "./equin check",
       "tail -20 build.log",
       "ls | wc -l",
       "echo 'a | tail'",

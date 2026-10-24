@@ -227,15 +227,15 @@ Add both new plugins to `web/src/plugins.ts` (the only place default-import is a
 1. **Build & boundaries**
 
    ```bash
-   ./singularity build
-   ./singularity check --plugin-boundaries
+   ./equin build
+   ./equin check --plugin-boundaries
    ```
 
    Expect: clean build, no boundary violations. The `conv` sub-plugin imports only `@plugins/active-data/web` (the umbrella barrel) and `@plugins/conversations/...` (legal cross-plugin path).
 
 2. **Doc sync**
 
-   The `plugins-doc-in-sync` check should regenerate `docs/plugins-details.md` and `docs/plugins-compact.md` to include the new umbrella + child entries. `./singularity build` runs the regen.
+   The `plugins-doc-in-sync` check should regenerate `docs/plugins-details.md` and `docs/plugins-compact.md` to include the new umbrella + child entries. `./equin build` runs the regen.
 
 3. **End-to-end smoke**
 

@@ -81,7 +81,7 @@ function packageOf(path: string): string | null {
 
 /**
  * A check module's frame: a file under a `check/` directory that sits DIRECTLY
- * under a plugin directory. No registry is needed — `./singularity check`
+ * under a plugin directory. No registry is needed — `./equin check`
  * discovers checks from exactly this folder name, and the runner's own files
  * live under `checks/core/`, so they never match.
  *

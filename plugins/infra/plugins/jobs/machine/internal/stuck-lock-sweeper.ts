@@ -27,7 +27,7 @@ import { discardWorkflowLogs } from "../../server/internal/workflow-log";
 // WHAT CHANGED, and why it is not a tuning knob any more: this used to reclaim a
 // row because its `locked_at` was OLD (5 minutes). An age cannot distinguish a
 // dead worker from a busy one, so every handler that ran longer than the
-// threshold — a large upload, a `pg_dump`/`pg_restore`, a `./singularity push`,
+// threshold — a large upload, a `pg_dump`/`pg_restore`, a `./equin push`,
 // a long git checkout — had its still-live work reclaimed and re-dispatched
 // CONCURRENTLY with itself. It now reclaims a row because a worker is provably
 // NOT running it: no session holds its advisory lock (`jobLockHeldExpr`), a fact

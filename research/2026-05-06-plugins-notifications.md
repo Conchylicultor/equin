@@ -253,10 +253,10 @@ Remove the `ShellCommands.Toast(...)` call from the `announce` callback. The not
 
 ## Verification
 
-1. `./singularity build` succeeds (generates migration, registers plugin)
+1. `./equin build` succeeds (generates migration, registers plugin)
 2. App loads at `http://<worktree>.localhost:9000` — bell icon visible in toolbar
 3. Bell popover opens — shows "No notifications" on fresh DB
 4. Trigger a crash (e.g. throw in a plugin render) — bell badge shows 1, popover lists it, sonner toast fires once (not twice)
 5. Click dismiss on the notification — badge disappears, popover shows empty
 6. Trigger two crashes — "Clear all" dismisses both
-7. `./singularity check` passes (no plugin boundary violations, no cycles)
+7. `./equin check` passes (no plugin boundary violations, no cycles)

@@ -152,7 +152,7 @@ describe("classify", () => {
   });
 
   test("running a build is progress", () => {
-    expect(classify("./singularity build")).toBe("mutate");
+    expect(classify("./equin build")).toBe("mutate");
   });
 
   test("a write redirection is progress", () => {
@@ -223,7 +223,7 @@ describe("detectPoll", () => {
         `cat ${TASK}`,
         `cat ${TASK}`,
         `cat ${TASK}`,
-        "./singularity build",
+        "./equin build",
         `cat ${TASK}`,
         `cat ${TASK}`,
       ]),

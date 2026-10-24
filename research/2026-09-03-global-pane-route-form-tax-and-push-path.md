@@ -322,16 +322,16 @@ thing that makes a 71-file identity-touching diff verifiable.
 
 ## Verification
 
-1. `./singularity check` after each stage — `type-check`, `pane:segments-unique`,
+1. `./equin check` after each stage — `type-check`, `pane:segments-unique`,
    `pane:identity-manifest`, `plugins-doc-in-sync`, `plugin-boundaries`, `eslint`.
 2. **Identity invariant.** `pane:identity-manifest` must report no drift across Stage 3, and
    `git diff -G'parent:' $(git merge-base HEAD main)` must be empty for the pane files.
-3. `./singularity test plugins/primitives/plugins/pane` — `pane-write-path-types.test.ts`
+3. `./equin test plugins/primitives/plugins/pane` — `pane-write-path-types.test.ts`
    (every `@ts-expect-error` must still fire), `app-index.test.tsx`,
    `open-pane-global-chrome.test.tsx`, and the new Stage 4 suite.
-4. `./singularity test plugins/plugin-meta/plugins/facets` for the re-spelled parser tests.
-5. `./singularity build`, then
-   `./singularity run plugins/primitives/plugins/pane/e2e/app-index-sweep.ts` — must stay
+4. `./equin test plugins/plugin-meta/plugins/facets` for the re-spelled parser tests.
+5. `./equin build`, then
+   `./equin run plugins/primitives/plugins/pane/e2e/app-index-sweep.ts` — must stay
    green; it is the only runtime coverage of `appIndex`.
 6. **Stage 4 by hand**, at `http://<worktree>.localhost:9000`: open Debug → Builds, click a
    deploy row in the merged runs list, confirm the Deploy server column appears, the URL

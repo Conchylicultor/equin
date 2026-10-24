@@ -192,7 +192,7 @@ No server change (`watchedDirs()`/`watcher.ts` consume `f.path` strings).
 
 ### 5. Build & codegen
 
-Run `./singularity build` — autogenerates the plugin registry and the `fields.identity` /
+Run `./equin build` — autogenerates the plugin registry and the `fields.identity` /
 `config-v2.fields.renderer` slot wiring from the filesystem. The `midi-folders` config origin's schema
 fingerprint changes (field type `text`→`directory-path`); if any `midi-folders.jsonc` override exists in
 `config/` or `~/.singularity/config/`, update its `// @hash` per the conflict-reconciliation rules
@@ -225,7 +225,7 @@ Modify:
 
 ## Verification
 
-1. `./singularity build` — succeeds; registry regenerated. `./singularity check` passes
+1. `./equin build` — succeeds; registry regenerated. `./equin check` passes
    (`plugin-boundaries`, `plugins-doc-in-sync`, `migrations-in-sync`, `eslint`).
 2. Open `http://<worktree>.localhost:9000`, go to Sonata's settings → "Watched MIDI folders". Add a row:
    - the field shows a path input + Browse button;

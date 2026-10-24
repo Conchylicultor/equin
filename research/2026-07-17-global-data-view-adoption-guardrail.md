@@ -34,7 +34,7 @@ subagents.
 New folder `plugins/primitives/plugins/data-view/lint/` (first lint contribution
 from this plugin; sits beside the existing `check/`). No new `package.json` —
 `lint/` shares the plugin's existing one. Discovery is automatic: the next
-`./singularity build` regenerates `lint.generated.ts` and the rule is enforced
+`./equin build` regenerates `lint.generated.ts` and the rule is enforced
 as `error` repo-wide (both by root `eslint.config.ts` and the unified
 `type-check` check — same `buildLintConfig`, can never drift).
 
@@ -197,7 +197,7 @@ candidate for the data-view `tree` view, own design) if the rule flags it.
    `data-view:configs-authored` check fails without it. GroupBy/sort live in
    the view blob.
 4. Delete the replaced Row-map code. Do NOT add eslint-disables in migrated
-   surfaces. Do NOT run `./singularity build` (the main agent builds once at
+   surfaces. Do NOT run `./equin build` (the main agent builds once at
    the end). Do NOT commit.
 5. Report: files touched, config path authored, any contract friction hit.
 
@@ -208,7 +208,7 @@ CompositionPicker; that annotation belongs to M1's agent to avoid two writers).
 ## Execution order
 
 1. Main agent: lint rule + test + `lint/index.ts` (Part 1), doc edits (Part 2).
-2. `./singularity build` (regenerates `lint.generated.ts`; also
+2. `./equin build` (regenerates `lint.generated.ts`; also
    `data-views.generated.ts` later) — then run the repo lint to get the
    **ground-truth violation list** (grep was an approximation):
    `bunx eslint 'plugins/**/web/**/*.tsx' 2>&1 | grep no-adhoc-row-list`.
@@ -217,17 +217,17 @@ CompositionPicker; that annotation belongs to M1's agent to avoid two writers).
 4. Main agent: apply inline disables to all EXEMPT sites + any residue from
    step 2; file the `task-events` / `sub-plugins` follow-up tasks via
    `mcp add_task`.
-5. `./singularity build` once; fix fallout.
+5. `./equin build` once; fix fallout.
 
 ## Verification
 
 - `bun test plugins/primitives/plugins/data-view/lint/no-adhoc-row-list.test.ts` — rule unit tests green.
-- `./singularity check` — `type-check` (rule active repo-wide, zero violations),
+- `./equin check` — `type-check` (rule active repo-wide, zero violations),
   `data-view:configs-authored` (all six new configs authored),
   `data-views-in-sync`, `plugins-doc-in-sync` all pass.
 - Negative probe: temporarily add `items.map(i => <Row/>)` to any web file →
   `bunx eslint` flags it with the new rule id; revert.
-- `./singularity build` deploys; then scripted Playwright
+- `./equin build` deploys; then scripted Playwright
   (`bun e2e/screenshot.mjs`) against `http://<worktree>.localhost:9000` for
   each migrated surface: `/studio/compositions` (grouped list renders, clicking
   a composition loads the draft + opens Explorer), Studio → Release (history

@@ -21,7 +21,7 @@ They also form a second read path beside `useLive`. That path keeps attracting n
 - **One branch, staged pushes.** Batches land in order in this worktree. The user reviews and pushes after each batch, and each batch removes its own debt entries.
 
 **Done means:**
-- `./singularity exempt list --rule live/no-endpoint-read --debt` is empty.
+- `./equin exempt list --rule live/no-endpoint-read --debt` is empty.
 - The rule has no sanctioned entries outside `network/live` itself.
 - `useEndpoint`, `useEndpointResource`, `hydrateEndpoint` and `useCursorPagination` do not exist.
 - The lint is a flat ban on TanStack read hooks and on `fetchEndpoint` GET reads in render/effect code outside the substrate.
@@ -207,7 +207,7 @@ Each batch:
 
 ## Verification (per batch, then at the end)
 
-- **Unit tests** (`./singularity test plugins/network/plugins/live plugins/packages/plugins/resource-protocol plugins/framework/plugins/resource-runtime plugins/primitives/plugins/live-state` plus each touched plugin):
+- **Unit tests** (`./equin test plugins/network/plugins/live plugins/packages/plugins/resource-protocol plugins/framework/plugins/resource-runtime plugins/primitives/plugins/live-state` plus each touched plugin):
   - **`changes`:** `@ts-expect-error` for a missing `changes`, for `notify` on `immutable`/`fixed`/`snapshot`, and for `bytes` beside `push`/`preload`/`paged`/`db`.
   - **Snapshot:** a snapshot value's HTTP read always reruns the loader, and `refresh()` refetches.
   - **Bytes:** round-trip `ArrayBuffer`, 304 on unchanged `revalidate`, and a `too-large` refusal past `maxBytes`.
@@ -217,8 +217,8 @@ Each batch:
   - **`no-db-backed-notify`:** catches an imported loader that reads, and allows one that writes.
   - **Lint fixtures:** effect `fetchEndpoint`, `invalidateQueries`, an event-handler `fetchEndpoint` (allowed).
 - **Per batch:**
-  - `./singularity check` (type-check, eslint, exempt in-sync / unused, plugins-doc-in-sync, resource-vocabulary, no-db-backed-notify).
-  - `./singularity build` (backgrounded), then at `http://<worktree>.localhost:9000`, `screenshot.ts` on each migrated surface.
+  - `./equin check` (type-check, eslint, exempt in-sync / unused, plugins-doc-in-sync, resource-vocabulary, no-db-backed-notify).
+  - `./equin build` (backgrounded), then at `http://<worktree>.localhost:9000`, `screenshot.ts` on each migrated surface.
   - For freshness, change the source while the pane is open and capture after:
     - write a file in a watched dir (B5);
     - edit a config (B3);
@@ -227,7 +227,7 @@ Each batch:
     - add an attachment (B1).
   - The read-set debug pane lists every new key with its declared freshness.
 - **End gates:**
-  - `./singularity exempt list --rule live/no-endpoint-read --debt` returns nothing.
+  - `./equin exempt list --rule live/no-endpoint-read --debt` returns nothing.
   - `rg "useEndpoint\b|useEndpointResource|hydrateEndpoint|useCursorPagination|invalidates:" plugins --glob '!*.md'` returns nothing.
   - `rg "@tanstack/react-query" plugins/**/web` matches only `network/live`, `live-state` and `infra/endpoints` (mutations).
   - `rg "refetchInterval" plugins` loses the three debt polls.
@@ -399,14 +399,14 @@ Status: all P0 parts are in the working tree, and a review pass's findings are f
 
 ### Blockers / open
 1. ~~`no-db-backed-notify` fails on `review/plugin-changes`~~ — resolved by `checkout`-membership exempt manifests (see *Review fixes*).
-2. **The build-terminal signal misses hand-run builds.** An unsupervised `./singularity build` has no shim and no exit marker, so `onRunTerminal` never fires for it, and B4's "notified, then immutable" freshness does not hold for those runs. **Decided (2026-10-12):** B4 makes the step-logs file `build-logs-<id>.json` the terminal record for an unsupervised run (the CLI writes it last on every graceful ending, after the profile; run-ledger's settle already reads it that way). `onRunTerminal` fires on either the exit marker or that file.
+2. **The build-terminal signal misses hand-run builds.** An unsupervised `./equin build` has no shim and no exit marker, so `onRunTerminal` never fires for it, and B4's "notified, then immutable" freshness does not hold for those runs. **Decided (2026-10-12):** B4 makes the step-logs file `build-logs-<id>.json` the terminal record for an unsupervised run (the CLI writes it last on every graceful ending, after the profile; run-ledger's settle already reads it that way). `onRunTerminal` fires on either the exit marker or that file.
 3. **`network/live`'s own sanctioned `live/no-endpoint-read` entry (`web`) matches nothing.** It was not reported as unused; it was left alone.
 4. **Not exercised live:** no production value uses `snapshot`, `bytes` or the list form yet. The first are B3/B8, B5 and B5 respectively.
 5. **Lint blind spot:** a GET `fetchEndpoint` wrapper exported from one file and called from another file's effect is not flagged, and neither is a function stored in an object or class.
 
 ## Result (B1)
 
-Integration verdicts: `./singularity check` is green except for `web-artifacts:map-in-sync`, which needs a build. `./singularity build` succeeded (build-1791789239-7cmjxc). Tests on every touched plugin plus `network/live`: 2624 bun:test tests pass, 4 fail, and every vitest test passes. The failures are listed under Open below, and none is caused by B1. In `GET /api/resources/_debug`, every new external key reports its declared freshness, and no external resource has a null freshness.
+Integration verdicts: `./equin check` is green except for `web-artifacts:map-in-sync`, which needs a build. `./equin build` succeeded (build-1791789239-7cmjxc). Tests on every touched plugin plus `network/live`: 2624 bun:test tests pass, 4 fail, and every vitest test passes. The failures are listed under Open below, and none is caused by B1. In `GET /api/resources/_debug`, every new external key reports its declared freshness, and no external resource has a null freshness.
 
 | Site | Value / collection | Source · freshness | Endpoint | Live evidence |
 |---|---|---|---|---|
@@ -453,7 +453,7 @@ Integration verdicts: `./singularity check` is green except for `web-artifacts:m
 - `tasks.repo-info`: a `snapshot` (re-read per mount). The `notified` form opened a native recursive watch on the shared common git dir.
 - Version timeline: a DataView (`history.versions`, list view, authored config) over the now-`scroll: true` collection. Restore is an item action, and the newest version comes from a one-row read until the user picks one. `useVersionHistory` is deleted. A failed grow surfaces through the read's `error` arm (live has no separate grow error), which the DataView renders.
 - Stale names fixed: `releaseLogsEndpoint` → `releaseRunLogs` (release CLAUDE.md), `getVersion` → `historyVersion`, `listClaudeCliCallsFor` → `claudeCliCallsFor`.
-- Verification: `./singularity check` green; `./singularity build` green (build-1791794627-wirnrw). Tests on the touched plugins: 252 pass, 1 fail. The failure is `paths/legacy-layout` (`native → cache/signal-origin-native` has no declaration). No data-dir in the tree declares that row, and neither B1 nor the review touches it. Screenshots: Studio `entity_versions` Sample Rows renders 10 rows with Refresh. The pages Version history dialog lists the timeline as a DataView, with the newest selected and previewed.
+- Verification: `./equin check` green; `./equin build` green (build-1791794627-wirnrw). Tests on the touched plugins: 252 pass, 1 fail. The failure is `paths/legacy-layout` (`native → cache/signal-origin-native` has no declaration). No data-dir in the tree declares that row, and neither B1 nor the review touches it. Screenshots: Studio `entity_versions` Sample Rows renders 10 rows with Refresh. The pages Version history dialog lists the timeline as a DataView, with the newest selected and previewed.
 
 ### Open
 - Three GET endpoints are kept only for e2e scripts that call them over HTTP: `…/versions`, `/api/blocks/:id/page` and `/api/search`. Move those scripts onto the live reads, or to a test helper, then delete the endpoints.
@@ -489,8 +489,8 @@ Three external values, each `"notified"` by plugin-tree's `onPluginTreeChanged` 
 - The error copy is `ResourceErrorInline`'s standard text with a retry, in place of the old `String(error)`.
 
 ### Verification (B2)
-- `./singularity check` passed after the build. Its only failure before the build was `web-artifacts:map-in-sync` (stale dist).
-- `./singularity build` passed (build-1791805365-zq8ji0).
+- `./equin check` passed after the build. Its only failure before the build was `web-artifacts:map-in-sync` (stale dist).
+- `./equin build` passed (build-1791805365-zq8ji0).
 - Tests on plugin-view, composition, plugin-tree, facets/exports, plugin-link, config_v2/settings, apps/studio and network/live: 577 bun and 100 vitest, 0 fail.
 - Screenshots of the live deploy:
   - Studio Plugin explorer: the tree, 1376 plugins.
@@ -511,15 +511,15 @@ Three external values, each `"notified"` by plugin-tree's `onPluginTreeChanged` 
 - **Stale docs/comments naming deleted endpoints/files**: closure `CLAUDE.md` (the engine runs in the `plugin-view.tree` / `composition.data` loaders), plugin-tree `warmup.ts` (the cold `composition.data` / `plugin-view.facets-tree` read; the old slow-op name kept as historical), `manifest-map.ts` (`core/data.ts`'s schema), `hooks.ts` (the `compositionData` value), `use-plugin-claim.ts` ("a failed tree read").
 - **plugin-link pane folding**: plugin-view/web exports one reader, `PluginDetailForId({pluginId})` (loading / `ResourceErrorInline` / `PluginDetail`) and `usePluginDisplayName(pluginId)`. Both `pluginViewPane` and plugin-link's `pluginConvSidePane` host it. The duplicate `findNode` and body are deleted.
 - **`compositionDataSchema`** is no longer exported from composition's core barrel. It stays module-local in `core/data.ts`.
-- Verification: `./singularity build` passed (build-1791806718-irzmtd, checks included; the first standalone check failed only on prettier, a `no-ready-negation` hit in the new hooks code (fixed with a per-arm switch), and generated/dist drift the build regenerates). Tests on exemptions, composition, plugin-view, plugin-tree, plugin-link and apps/studio: 52 bun pass, 0 fail. Re-screenshotted the live deploy: Plugin Graph focused on `plugin-meta.composition` (canvas renders, +396 hidden); the Compositions list; `agent-manager` with Entry points expanded (`agent-manager.**` chip, Add); the explorer (1376 plugins, Not-in-the-app badges on `render-diff` rows); and the `plugin-meta.plugin-view` detail pane through `PluginDetailForId` (Depends on 104, Used by 53, Exports 17).
+- Verification: `./equin build` passed (build-1791806718-irzmtd, checks included; the first standalone check failed only on prettier, a `no-ready-negation` hit in the new hooks code (fixed with a per-arm switch), and generated/dist drift the build regenerates). Tests on exemptions, composition, plugin-view, plugin-tree, plugin-link and apps/studio: 52 bun pass, 0 fail. Re-screenshotted the live deploy: Plugin Graph focused on `plugin-meta.composition` (canvas renders, +396 hidden); the Compositions list; `agent-manager` with Entry points expanded (`agent-manager.**` chip, Add); the explorer (1376 plugins, Not-in-the-app badges on `render-diff` rows); and the `plugin-meta.plugin-view` detail pane through `PluginDetailForId` (Depends on 104, Used by 53, Exports 17).
 
 ### Open (B2)
 - The plugin-link chip and pane were not driven live, because no conversation with a plugin chip was at hand. They are covered only by type-check and tests (17 pass).
-- `./singularity exempt list --rule live/no-endpoint-read --debt`: **77** exemptions remain, all debt, and none of them is a B2 site.
+- `./equin exempt list --rule live/no-endpoint-read --debt`: **77** exemptions remain, all debt, and none of them is a B2 site.
 
 ## Result (B3)
 
-`./singularity check` passed apart from the two failures a build clears (`plugins-doc-in-sync`, `web-artifacts:map-in-sync`). `./singularity build` passed (build-1791816653-skqoqo). Tests on every touched plugin plus `network/live`, `database/change-feed`, studio sample-rows and launcher: 905 bun:test and 100 vitest pass, 0 fail. In `GET /api/resources/_debug` every new external key reports its declared freshness (below), and no external resource has a null freshness.
+`./equin check` passed apart from the two failures a build clears (`plugins-doc-in-sync`, `web-artifacts:map-in-sync`). `./equin build` passed (build-1791816653-skqoqo). Tests on every touched plugin plus `network/live`, `database/change-feed`, studio sample-rows and launcher: 905 bun:test and 100 vitest pass, 0 fail. In `GET /api/resources/_debug` every new external key reports its declared freshness (below), and no external resource has a null freshness.
 
 | Site | Value / collection | Source · freshness (`_debug`) | Endpoint | Live evidence |
 |---|---|---|---|---|
@@ -574,7 +574,7 @@ Eleven verified review findings were all applied. None was skipped.
 - ~~Boot gap~~: closed in review. config_v2 exposes `configWatcherArmed()`, and both `config-orphans.report` and `config-v2.raw-file` re-read once it resolves (see Review fixes).
 - Not driven live: the conflict / invalid diffs (none present), broadcasts freshness, an emit session, and runtime-profile Refresh.
 - Observed and not caused by B3: Read-set labels every hand-notified external value "read-set gap", including the B2 values. The raw view shows "Resolved origin (build pending)" for any config whose git origin carries comments, because the user origin is stored without them.
-- `./singularity exempt list --rule live/no-endpoint-read --debt`: **60** exemptions remain (77 after B2), all debt. No B3 site remains.
+- `./equin exempt list --rule live/no-endpoint-read --debt`: **60** exemptions remain (77 after B2), all debt. No B3 site remains.
 
 ### slow_ops follow-up (B3)
 - **Superseded (2026-10-13) by option (a):** `research/2026-10-13-debug-slow-ops-live-collection-v2.md`. The recorder folds each batch and writes ONE upsert per table with every merge in SQL, so `slow_ops` (and the new `slow_op_callers`, one row per op × caller) are change-producer tables read as live collections: the slim `slow-ops.ops` scroll window, the `slow-ops.op` lookup and the scoped `slow-ops.callers` window. `slow-ops.list` and its Refresh button are deleted. The bullets below record the interim option (b).
@@ -582,15 +582,15 @@ Eleven verified review findings were all applied. None was skipped.
 - **No `no-db-backed-notify` exemption.** The planned sanctioned exemption was added, and the check failed it as dead ("suppressed nothing"). The check already admits a read that names a table the serving plugin itself excludes (`ExcludeFromChangeFeed({ table: _slowOps })` in the same plugin). The exemption was removed. The change-feed `CLAUDE.md` remedy now names both precedents and says which one needs the exemption.
 - **Re-read on every mount** (review fix). The deleted endpoint read used `refetchOnMount: "always"`; a snapshot `useLive` read did not, so a remount within the 30 s subscription keep-alive showed the cached read (`staleTime: Infinity`) as `ready` without asking. network/live's `useSnapshotRead` now re-measures once on a mount that finds a cached read (the cached read stays on screen meanwhile), so every plain snapshot value reader — not only this pane — measures on mount. The list read (`useLive(value, [...])`) is unchanged.
 - **Pane:** `useLive(slowOpsValue)` through `matchResource`. Loading shows `<Loading />` and an error shows `ResourceErrorInline` (block, with retry). When ready, the existing DataView is unchanged and gets the Refresh button through its `actions` toolbar slot.
-- **Verdicts:** `./singularity check` failed only `no-db-backed-notify` (the dead exemption, fixed) and `web-artifacts:map-in-sync` (cleared by the build). `./singularity test plugins/debug/plugins/slow-ops plugins/network/plugins/live`: 534 bun:test and 100 vitest pass, 0 fail. `./singularity build` succeeded (build-1791868788-8ssbxp), with its checks included.
+- **Verdicts:** `./equin check` failed only `no-db-backed-notify` (the dead exemption, fixed) and `web-artifacts:map-in-sync` (cleared by the build). `./equin test plugins/debug/plugins/slow-ops plugins/network/plugins/live`: 534 bun:test and 100 vitest pass, 0 fail. `./equin build` succeeded (build-1791868788-8ssbxp), with its checks included.
 
 ## Result (B5)
 
 Batch B5 covers the host filesystem and the file viewer. Every B5 reader in scope now reads through `useLive`, except the git/workspace halves of two file-viewer hooks, which wait for B6. Verdicts:
 
-- **Check:** `./singularity check` before the first build failed three checks: `web-artifacts:map-in-sync`, `web-artifacts:no-vendored-state-inlined` (both threw because `.generated/composition-modules/config-layer.singularity.ts` did not exist yet) and `layout-geometry`. None of them was caused by B5. All three passed once this checkout had been built.
-- **Test:** `./singularity test` over file-explorer, host-fs, network/live, file-viewer and folder-picker gave 768 bun:test and 107 vitest passes, 0 fail. After the integration edits, file-explorer + host-fs gave 133 passes, 0 fail.
-- **Build:** `./singularity build` is green, checks included (build-1792511406-5yaqj3).
+- **Check:** `./equin check` before the first build failed three checks: `web-artifacts:map-in-sync`, `web-artifacts:no-vendored-state-inlined` (both threw because `.generated/composition-modules/config-layer.singularity.ts` did not exist yet) and `layout-geometry`. None of them was caused by B5. All three passed once this checkout had been built.
+- **Test:** `./equin test` over file-explorer, host-fs, network/live, file-viewer and folder-picker gave 768 bun:test and 107 vitest passes, 0 fail. After the integration edits, file-explorer + host-fs gave 133 passes, 0 fail.
+- **Build:** `./equin build` is green, checks included (build-1792511406-5yaqj3).
 
 ### Per site
 
@@ -640,7 +640,7 @@ Every check below ran on `http://att-1791598784-yegtlr.localhost:9000`, against 
   - **Expanded subfolder** (`B5-fresh-4-subfolder.png`): `b.txt` written into an expanded `sub` shows as a row in 1.3 s. The `sub` row's count was "1 item" before. It reads "2 items" in `B5-fresh-6-preview-after.png`. The script's 7 ms timing for the count is not meaningful: in shot 4 the hovered row's Size cell is covered by its hover actions.
   - **Text preview** (`B5-fresh-5-preview-before.png` → `B5-fresh-6-preview-after.png`): `notes.txt` was rewritten on disk. The preview shows the new line in 0.3 s, and the stat meta follows (27 B → 34 B).
   - **The open folder removed** (`B5-fresh-7-folder-removed.png`): with `rm -rf` on the open folder, the explorer shows "“/private/tmp/b5-fresh-…” does not exist." with Try again in 0.36 s, and no stale rows remain. The preview pane shows "File not found." and its meta reads "no longer exists". The 422 responses logged at that moment are the runtime's typed refusals from the re-reads of `host-fs.list`, `list:meta`, `stat` and `text` (not errors).
-  - `./singularity test` over file-watcher + host-fs: 125 pass, 0 fail. This includes the three suites that wait for a real FSEvents delivery.
+  - `./equin test` over file-watcher + host-fs: 125 pass, 0 fail. This includes the three suites that wait for a real FSEvents delivery.
 
 ### Deviations (from the implementers, accepted)
 - `useLive(v, [...])` does not take paged values. The explorer mounts one `<ListingReader>` per open folder, each reporting up through an effect. Peek is one `useLive` per visible Size cell, not the list form (only the cell knows it is on screen).
@@ -652,7 +652,7 @@ Every check below ran on `http://att-1791598784-yegtlr.localhost:9000`, against 
 
 ### Review fixes (B5)
 
-Nineteen review findings, all judged applicable; every one applied, two of them in their reviewer-offered alternative form (marked). Verdicts after the fixes: `./singularity build` green, checks included (build-1792514440-ntjevl); `./singularity test` over file-watcher, host-fs, file-explorer, tree, data-view, file-viewer, folder-picker and code-explorer: 611 bun:test + 300 vitest pass, 3 fail — the three that wait for a real FSEvents delivery, on a wedged `fseventsd`. After the file-watcher fix below and the `fseventsd` restart, file-watcher + host-fs give 125 pass, 0 fail (see *Freshness — verified*). Re-shot: `/tmp/live-migration-shots/B5-review-before.png` (the listing, the peeks "2 items" / "0 items", the storage meter "690 GB free of 995 GB") and `B5-review-preview-before.png` (notes.txt's text, its stat meta "/private/tmp/b5-fe · 12 B · Today", the Open with default app button enabled once the stat landed).
+Nineteen review findings, all judged applicable; every one applied, two of them in their reviewer-offered alternative form (marked). Verdicts after the fixes: `./equin build` green, checks included (build-1792514440-ntjevl); `./equin test` over file-watcher, host-fs, file-explorer, tree, data-view, file-viewer, folder-picker and code-explorer: 611 bun:test + 300 vitest pass, 3 fail — the three that wait for a real FSEvents delivery, on a wedged `fseventsd`. After the file-watcher fix below and the `fseventsd` restart, file-watcher + host-fs give 125 pass, 0 fail (see *Freshness — verified*). Re-shot: `/tmp/live-migration-shots/B5-review-before.png` (the listing, the peeks "2 items" / "0 items", the storage meter "690 GB free of 995 GB") and `B5-review-preview-before.png` (notes.txt's text, its stat meta "/private/tmp/b5-fe · 12 B · Today", the Open with default app button enabled once the stat landed).
 
 - **No recursive watch for a listing (high).** The dir hub never opens a NEW recursive root for a `children` request: with no root above it, it opens a single-directory watch of the folder (refcounted per dir), so `~` and `/` cost one handle. file-watcher's engine gains `depth: "children"` (one `fs.watch` without `recursive` per dir; a `rename` is classified by a stat as `create` / `delete`, the dir itself going — removed, moved, replaced, or the watch erroring — reported as a `delete` of the dir), declared as `file-watcher.dir-entries` (backend `fs-watch` in Background activity), and `createDirWatchHub` takes both starts (`{ subtree, children }`). A children request still rides a recursive root already open above it; a single-directory watch is never a root and never moves. `watcher-safety/no-raw-fs-watch` is exempted for `shared/engine.ts` (sanctioned).
 - **No arm-time re-read.** The runtime awaits `whileSubscribed` before a tuple's first read (pages and meta included), so the watch is live before anything is read: `watchHostDir` / `watchHostPath` no longer call `onChange` when armed, which re-listed every folder and re-fetched every text (2 MiB) and bytes (64 MiB) read right after its first load. A real change to a watched entry now notifies once, after the re-arm (not twice). The `revalidate` alternative was not needed.
@@ -686,15 +686,15 @@ Nineteen review findings, all judged applicable; every one applied, two of them 
 - **Observed and not caused by B5:**
   - The health dot shows attention while slow-op reports accumulate on the loaded host.
   - Settings shows "5 saved settings no longer apply".
-- `./singularity exempt list --rule live/no-endpoint-read --debt`: **49** exemptions remain (60 before B5), all debt. The two B5-adjacent ones left (`file-viewer/use-file-text.ts`, `file-viewer/image/use-folder-images.ts`) are their B6 workspace halves.
+- `./equin exempt list --rule live/no-endpoint-read --debt`: **49** exemptions remain (60 before B5), all debt. The two B5-adjacent ones left (`file-viewer/use-file-text.ts`, `file-viewer/image/use-folder-images.ts`) are their B6 workspace halves.
 
 ## Result (B6)
 
 Batch B6 covers checkout reads (code-api). Every B6 reader now reads through `useLive`. All five checkout GET endpoints are deleted: file, diff, list, push, and resolve. The review's plugin-changes endpoint is deleted too. `code.file-version` is also gone: it had no reader left once the file viewer moved to `code.file`. Verdicts:
 
-- **Check:** after `regen-generated` and `format`, `./singularity check` failed one check, `web-artifacts:map-in-sync`. The deployed dist predated the tree (the demo browser host artifact was missing), and a build fixes that, so this was not a code failure. Every other check passed, including type-check and the repo lint rules over the B6 files.
-- **Test:** `./singularity test` over code-explorer (code-api and file-resolve included), diff-view, file-viewer, review, the sonata MIDI file-preview, conversation-view/code/file-pane and network/live: 669 bun:test and 107 vitest passes, 0 fail.
-- **Build:** `./singularity build` is green, checks included (build-1792542048-dcg4j1).
+- **Check:** after `regen-generated` and `format`, `./equin check` failed one check, `web-artifacts:map-in-sync`. The deployed dist predated the tree (the demo browser host artifact was missing), and a build fixes that, so this was not a code failure. Every other check passed, including type-check and the repo lint rules over the B6 files.
+- **Test:** `./equin test` over code-explorer (code-api and file-resolve included), diff-view, file-viewer, review, the sonata MIDI file-preview, conversation-view/code/file-pane and network/live: 669 bun:test and 107 vitest passes, 0 fail.
+- **Build:** `./equin build` is green, checks included (build-1792542048-dcg4j1).
 
 ### Per site
 
@@ -784,15 +784,15 @@ Tests: `push-range.test.ts` is new. Its commits all share one committer second, 
 - **Plugin changes** cannot be verified live while `review.plugin-changes.**` is excluded from the composition.
 - **No tests cover the watches** behind `code.file` / `code.dir` / `code.resolve-file`, `code.dir`'s held root, or `watchWorkspaceRoot`'s parked watch. Freshness was verified live only.
 - **`resolvePushRange`'s DB read has no test** (only `pushRangeOf`, its git half).
-- `./singularity exempt list --rule live/no-endpoint-read --debt`: **41** exemptions remain (49 before B6), all debt.
+- `./equin exempt list --rule live/no-endpoint-read --debt`: **41** exemptions remain (49 before B6), all debt.
 
 ## Result (B7)
 
 Batch B7 covers themes, where a write has to show up in the list the same user is looking at. The saved-theme list and the tweakcn community catalog are now live values read through `useLive`. Every saved-theme write (create, edit, rename, delete, tweakcn import, catalog adopt) answers with its commit's ack token. The caller waits for `saved-themes.list` to confirm that commit before it selects, closes or reports anything; `invalidates:`, `refreshSavedThemes` and the manual `invalidateQueries` are gone. `hydrateEndpoint` and its only helper `hydrateQuery` are deleted from live-state. Verdicts:
 
-- **Check:** after `regen-generated` and `format`, `./singularity check` failed one check, `web-artifacts:map-in-sync`. The deployed dist predated the tree (7 artifacts missing), and a build fixes that. Every other check passed, including type-check, the boundary checks and the plugin docs.
-- **Test:** `./singularity test` over theme-engine (saved-themes and theme-gallery included), tweakcn, live-state, infra/endpoints and network/live gave 767 bun:test passes and 249 vitest passes (28 files), with 0 fail.
-- **Build:** `./singularity build` is green, checks included (build-1792599258-xjk914).
+- **Check:** after `regen-generated` and `format`, `./equin check` failed one check, `web-artifacts:map-in-sync`. The deployed dist predated the tree (7 artifacts missing), and a build fixes that. Every other check passed, including type-check, the boundary checks and the plugin docs.
+- **Test:** `./equin test` over theme-engine (saved-themes and theme-gallery included), tweakcn, live-state, infra/endpoints and network/live gave 767 bun:test passes and 249 vitest passes (28 files), with 0 fail.
+- **Build:** `./equin build` is green, checks included (build-1792599258-xjk914).
 - **Integrator fix:** `theme-gallery/web/components/rename-theme-dialog.tsx` was the one remaining type error, as both implementers noted. It no longer imports `listSavedThemes` or passes `invalidates:`. It now runs `const { watermark } = await rename.mutateAsync(…); await awaitSavedThemesWrite(watermark);` before `onClose()`. The integrator also fixed theme-engine `CLAUDE.md`, which still named `useEndpointResource` for a source's hook; it now says `useLive`.
 
 ### Per site
@@ -837,7 +837,7 @@ Everything below ran on `http://att-1791598784-yegtlr.localhost:9000` (build-179
 - **Delete-with-reassign ordering (comment fixed, structural fix filed).** The `remove-saved-theme.ts` doc comment now says the ordering is assumed, not guaranteed, and that a lagging config push shows one missing-theme frame. task-1792600740-e0u219 tracks it. A server-guaranteed cross-resource order, or a painter that knows about just-deleted ids, is a design change bigger than this batch.
 - **Stale docs (fixed):** the theme SKILL's resident-source line now points at `preload: "boot-and-keep"` + `useLive` (`savedThemesList`, `use-saved-themes.ts`), not the deleted `web/boot.ts` / `hydrateEndpoint`. The theme-engine `theme-options.ts` comment no longer says resident sources hydrate via `Core.Boot`. live-state `CLAUDE.md`'s legacy example uses a placeholder instead of the deleted `getCatalog`. optimistic-mutation `CLAUDE.md` gained an *Awaiting a write without an overlay* section.
 - **Open items now have task ids:** Settings-scope repaint task-1792600735-hafa9r, catalog payload task-1792600737-rstmby, delete ordering task-1792600740-e0u219. The lift and the test are done, so they need no task.
-- **Verdicts:** `./singularity check` before the build failed only the regen/dist checks (`plugins-doc-in-sync`, `plugins-registry-in-sync`, `web-artifacts:map-in-sync`); type-check, the boundaries and lint passed. `./singularity test` over optimistic-mutation, theme-engine and tweakcn gave 51 vitest passes, 0 fail. `./singularity build` is green with checks (build-1792601138-av8ora). Live on that build, a tweakcn `apply {doom-64}` for an already-saved theme returned watermark `37509452`, and `awaitSavedThemesWrite` (now through `awaitResourceWrite`) resolved 163 ms after the response. A screenshot of the customizer gallery (`/tmp/live-migration-shots/B7-review-gallery-before.png`) renders as before; no UI changed.
+- **Verdicts:** `./equin check` before the build failed only the regen/dist checks (`plugins-doc-in-sync`, `plugins-registry-in-sync`, `web-artifacts:map-in-sync`); type-check, the boundaries and lint passed. `./equin test` over optimistic-mutation, theme-engine and tweakcn gave 51 vitest passes, 0 fail. `./equin build` is green with checks (build-1792601138-av8ora). Live on that build, a tweakcn `apply {doom-64}` for an already-saved theme returned watermark `37509452`, and `awaitSavedThemesWrite` (now through `awaitResourceWrite`) resolved 163 ms after the response. A screenshot of the customizer gallery (`/tmp/live-migration-shots/B7-review-gallery-before.png`) renders as before; no UI changed.
 
 ### Open (B7)
 - **Shrink the catalog payload:** compute the palette preview on the server, or page the browse source, instead of shipping 2.1 MB of `cssVars` (task-1792600737-rstmby).
@@ -845,19 +845,19 @@ Everything below ran on `http://att-1791598784-yegtlr.localhost:9000` (build-179
 - **Base (desktop) selection does not repaint the Settings app when "Customize for Settings" is off.** Seen for a saved theme and for the code theme Ink, both live and in the server head. B7 did not cause it, since the code-theme path is untouched (task-1792600735-hafa9r).
 - **Delete-with-reassign ordering** between the config push and the list push is assumed, not guaranteed (task-1792600740-e0u219).
 - ~~No automated test covers `awaitSavedThemesWrite`~~ — done in review: `optimistic-mutation/web/__tests__/await-resource-write.test.ts`.
-- `./singularity exempt list --rule live/no-endpoint-read --debt`: **38** exemptions remain (41 before B7), all debt.
+- `./equin exempt list --rule live/no-endpoint-read --debt`: **38** exemptions remain (41 before B7), all debt.
 
 ## Result (B8)
 
 Batch B8 covers third-party lookups: the wallpaper search, the place search and resolve, the bookmark link preview, the deploy analytics report, and mail search and message body. Each now reads through `useLive`. The five GET endpoints (`GET /api/wallpaper/search`, `GET /api/place/search`, `GET /api/place/resolve`, `GET /api/link-preview`, `GET /api/mail/search`), the analytics POST and their handlers are deleted. Mail's hydrate POST stays, but only as the Retry write. Verdicts:
 
-- **Check:** after `regen-generated` and `format` (6 files reformatted), `./singularity check` failed three checks:
+- **Check:** after `regen-generated` and `format` (6 files reformatted), `./equin check` failed three checks:
   - `migrations-in-sync`: the new `mail_messages.body_fetch_error` column needed a migration.
   - `web-artifacts:map-in-sync`: the deployed dist was stale.
   - `no-db-backed-notify`: the deploy-analytics sanctioned exemption suppressed nothing (see Integration fixes).
 
   The build fixed the first two.
-- **Test:** `./singularity test` over wallpaper, place, bookmark, the deploy-analytics dashboard, mail and network/live gave 725 bun:test passes and 1 fail, plus 165 vitest passes (16 files).
+- **Test:** `./equin test` over wallpaper, place, bookmark, the deploy-analytics dashboard, mail and network/live gave 725 bun:test passes and 1 fail, plus 165 vitest passes (16 files).
   - The one failure is `mail-core/server/internal/account.test.ts`: "`database.migration-source` has no provider".
   - **B8 did not cause it.** The file is untouched, and it passes alone (4/4). It fails only inside the multi-file run: host-service state leaks between files in one bun process. `places-all.test.ts`, which uses the same `runMigrations` fixture, also passes alone.
 - **Build:** green with checks. The first green build (build-1792604494-rdq9ef) generated migration `20261021_174208_76c9b60e__mail_body_fetch_error.sql` (expand: `ADD COLUMN "body_fetch_error" text`). The final build after the Openverse fix is build-1792606114-ucks4l.
@@ -937,9 +937,9 @@ All 15 verified findings were applied. None was skipped. The two duplicates (the
   - Each Open item cites its task.
   - The `openverse-panel.tsx` comment names the `wallpaperSearch` live read.
 - **Verdicts:**
-  - **Build:** the first build failed `type-check`: `SearchResults` typed `accountId` as `string` instead of the branded id, and `switch-exhaustiveness-check` caught a `default`. After fixing both, the build is green with checks (build-1792607789-eik0rn). A standalone `./singularity check` run after the doc edits failed only `web-artifacts:map-in-sync` (stale dist). The final rebuild, build-1792608479-obyvop, is green with checks.
-  - **Check:** the standalone `./singularity check` is green after the first green build, and green again inside the final build.
-  - **Test:** `./singularity test` over mail, wallpaper, place and the deploy-analytics dashboard gave 108 bun:test passes and 1 fail, plus 58 vitest passes (6 files).
+  - **Build:** the first build failed `type-check`: `SearchResults` typed `accountId` as `string` instead of the branded id, and `switch-exhaustiveness-check` caught a `default`. After fixing both, the build is green with checks (build-1792607789-eik0rn). A standalone `./equin check` run after the doc edits failed only `web-artifacts:map-in-sync` (stale dist). The final rebuild, build-1792608479-obyvop, is green with checks.
+  - **Check:** the standalone `./equin check` is green after the first green build, and green again inside the final build.
+  - **Test:** `./equin test` over mail, wallpaper, place and the deploy-analytics dashboard gave 108 bun:test passes and 1 fail, plus 58 vitest passes (6 files).
     - The one failure is the known `mail-core/account.test.ts` multi-file isolation failure ("`database.migration-source` has no provider"). It passes alone (4/4) (task-1792607424-fx037r).
 - **Live:**
   - `/mail/search` with "invoice", on this worktree's unavailable Gmail token, now shows "Connect Gmail to search your mailbox." with Grant Gmail access and Search again (`B8-review-mail-search-not-connected.png`).
@@ -955,14 +955,14 @@ All 15 verified findings were applied. None was skipped. The two duplicates (the
 - **Deploy analytics:** the deployed site's collect predates `event_prop`, so the report is `unreadable-answer` until the site is redeployed.
 - **`useLive(c, { ids })` should keep the previous rows itself** while the id set changes. Mail search does it by hand for now (task-1792607420-9mxb97; the hold in `mail-search-body.tsx` points to it).
 - **The `mail-core/account.test.ts` isolation failure** in a multi-file bun run: host-service state leaks across files. B8 did not cause it (task-1792607424-fx037r).
-- `./singularity exempt list --rule live/no-endpoint-read --debt`: **31** exemptions remain (38 before B8), all debt.
+- `./equin exempt list --rule live/no-endpoint-read --debt`: **31** exemptions remain (38 before B8), all debt.
 
 ## Result (B9)
 
 Batch B9 covers the interim Stats values: Cost (8 sites), Commits (4), Pushes (3) and Tasks (2). All 17 sites now read through `useLive`; their 17 GET endpoints, handlers and `shared/endpoints.ts` files are deleted, and so are the `exempt/` manifests of commits, pushes and tasks (cost keeps its manifest for the unrelated `boundaries/no-platform-api` debt). Verdicts:
 
-- **Check:** after `regen-generated` and `format` (16 files reformatted), `./singularity check` failed only `web-artifacts:map-in-sync` (the deployed dist was stale). The build fixed it.
-- **Test:** `./singularity test plugins/stats plugins/conversations/plugins/conversation-category plugins/network/plugins/live` gave 701 bun:test passes, 1 fail and 107 vitest passes (10 files). A re-run of `plugins/stats` after the integration fixes gave 71 passes and the same 1 fail.
+- **Check:** after `regen-generated` and `format` (16 files reformatted), `./equin check` failed only `web-artifacts:map-in-sync` (the deployed dist was stale). The build fixed it.
+- **Test:** `./equin test plugins/stats plugins/conversations/plugins/conversation-category plugins/network/plugins/live` gave 701 bun:test passes, 1 fail and 107 vitest passes (10 files). A re-run of `plugins/stats` after the integration fixes gave 71 passes and the same 1 fail.
   - The failure is `stats/cost/server/internal/price-table.test.ts` › "every baseline model resolves by exact key": the vendored `litellm-fallback.json` has no exact key for one baseline model. **B9 did not cause it**: the test and the JSON are untouched since the merge-base, and nothing B9 changed is on its path.
 - **Build:** green with checks (build-1792631420-89m8i0). The builds after the integration fixes are also green with checks: build-1792634367-0amwn9, then build-1792635198-tdhtcv (final).
 
@@ -1049,14 +1049,14 @@ Everything below ran on `http://att-1791598784-yegtlr.localhost:9000/agents/stat
 - **Commits under host duress:** a cold `git log` parse took 91 s, and the gateway answered the first on-demand HTTP reads with 502 before the client's retry succeeded. The old endpoint paid the same parse, but behind a 30 s TTL. A memo warmed on ref advance would keep the first read from paying for it (task-1792636107-t4nqnp).
 - **Cost "Singularity only" freshness is daily:** classification comes from the archive capture. This predates B9.
 - **The `price-table.test.ts` baseline failure** predates B9 and is unrelated to it.
-- `./singularity exempt list --rule live/no-endpoint-read --debt`: **14** exemptions remain (31 before B9), all debt.
+- `./equin exempt list --rule live/no-endpoint-read --debt`: **14** exemptions remain (31 before B9), all debt.
 
 ### Review fixes (B9)
 
 The review's 15 findings were all applied. Verdicts after the fixes:
 
-- **Check:** `./singularity check` green.
-- **Test:** `./singularity test plugins/stats plugins/infra/plugins/corpus-index plugins/debug/plugins/health-monitor` gave 97 passes and 1 fail across 12 files. The fail is the same `price-table.test.ts` › "every baseline model resolves by exact key", which predates B9. A new corpus-index test covers `onChange` / `watching()`.
+- **Check:** `./equin check` green.
+- **Test:** `./equin test plugins/stats plugins/infra/plugins/corpus-index plugins/debug/plugins/health-monitor` gave 97 passes and 1 fail across 12 files. The fail is the same `price-table.test.ts` › "every baseline model resolves by exact key", which predates B9. A new corpus-index test covers `onChange` / `watching()`.
 - **Build:** green with checks (build-1792636798-sgqfv0). The first build failed on two things this review introduced: the seeded DataView config, and a `status === "ready"` collapse that `no-ready-negation` / `no-pending-data-collapse` rejected. Both were fixed.
 - **Screenshot:** `/tmp/live-migration-shots/B9-review-top-dataview.png` shows Top conversations as a DataView table. Its first rows are $951.67, $279.64 and $252.68, the same as before. With the page open for 45 s, every Stats chart rendered with no "Loading…" and no error. The KPIs read Total $27,202.98 and Last 7 days $2,439.40.
   - The headless `screenshot.ts` run failed on its network-idle wait: the four commits reads were still on the cold `git log` parse just after the restart (task-1792636107-t4nqnp). The page itself was then checked through the `browser_*` session.

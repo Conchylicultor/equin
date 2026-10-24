@@ -133,14 +133,14 @@ Named `*-<step>` classes (word-valued) never match — exactly the `z-base` vs
 
 ### 6. BURNDOWN seed — `lint/index.ts`
 `ignores: { "no-adhoc-spacing": [ …every current violator… ] }`. Bootstrap the
-list: wire the plugin, `./singularity build`, run `./singularity check eslint`,
+list: wire the plugin, `./equin build`, run `./equin check eslint`,
 capture failing file paths, paste them in, rebuild until green. ~378 files —
 large but precedented; header comment marks it BURNDOWN-to-drain, "do NOT add new
 entries." Single-site escapes use
 `// eslint-disable-next-line spacing/no-adhoc-spacing -- <reason>`.
 
 ### 7. Registration
-`./singularity build` regenerates `lint.generated.ts` (discovers `lint/index.ts`),
+`./equin build` regenerates `lint.generated.ts` (discovers `lint/index.ts`),
 the web plugin registry, and docs. No manual registry edits. The `spacing` plugin
 is **not** added to `web/src/plugins.ts` unless it must mount a provider — it has
 no contributions (pure exports), like `text`.
@@ -152,11 +152,11 @@ no contributions (pure exports), like `text`.
 - Negative-margin / `gap-px` exotic cases — rare, handled per-site via escape.
 
 ## Verification
-1. `./singularity build` — succeeds; `lint.generated.ts` lists `primitives.spacing`;
+1. `./equin build` — succeeds; `lint.generated.ts` lists `primitives.spacing`;
    `app-css-utilities-in-sync` + `css-vars-single-owner` pass.
-2. `./singularity check` — green (all current violators grandfathered).
+2. `./equin check` — green (all current violators grandfathered).
 3. **Enforcement proof:** add `<div className="gap-2" />` to a fresh file *not* in
-   the allowlist → `./singularity check eslint` fails on `no-adhoc-spacing`; remove it.
+   the allowlist → `./equin check eslint` fails on `no-adhoc-spacing`; remove it.
 4. **Density-responsiveness proof (the non-1:1 win):** convert one small component
    (e.g. a debug pane header) to `<Stack gap="sm">`, then screenshot Comfortable vs
    Compact via `e2e/screenshot.mjs` — gaps tighten under Compact (raw `gap-2` would not).

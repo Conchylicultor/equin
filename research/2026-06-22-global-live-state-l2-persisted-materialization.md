@@ -284,7 +284,7 @@ the FULL backstop (§3.5 step 5) — bounded and correct.
 
 ## 8. Verification (end-to-end)
 
-- **Instant first paint:** `./singularity build` + restart → first paint reads
+- **Instant first paint:** `./equin build` + restart → first paint reads
   `live_state_snapshot` (low-ms), not the ~4 s rebuild. Confirm via `get_runtime_profile`
   (zero `loader` runs for persisted keys on the hot request path).
 - **Bounded catch-up:** with the server **down**, insert an attempt via `psql`
@@ -301,4 +301,4 @@ the FULL backstop (§3.5 step 5) — bounded and correct.
 - **Prune:** the job never deletes a row at/above `min(position)`; force a stale floor
   and confirm the time-cap clause bounds the table and triggers the FULL backstop.
 - **No config drift:** `wal_level` stays `replica`, `shared_preload_libraries` empty,
-  `start.ts -o` unchanged; `./singularity check` passes.
+  `start.ts -o` unchanged; `./equin check` passes.

@@ -212,11 +212,11 @@ Inserts are fine.
   an `updated_at` write raises.
 - A check test: a fixture schema file with an undeclared `updated_at` table
   fails.
-- Run: `./singularity test plugins/database/plugins/derived-updated-at plugins/infra/plugins/entities plugins/page plugins/reports plugins/apps/plugins/deploy plugins/apps/plugins/chord plugins/conversations/plugins/agents plugins/ui/plugins/theme-engine plugins/active-data plugins/primitives/plugins/data-view`.
+- Run: `./equin test plugins/database/plugins/derived-updated-at plugins/infra/plugins/entities plugins/page plugins/reports plugins/apps/plugins/deploy plugins/apps/plugins/chord plugins/conversations/plugins/agents plugins/ui/plugins/theme-engine plugins/active-data plugins/primitives/plugins/data-view`.
 
 ## Verification
 
-1. `./singularity build` (background), then `./singularity check`, including
+1. `./equin build` (background), then `./equin check`, including
    `derived-updated-at:declared` and `migrations-in-sync`.
 2. `query_db`:
    - `pg_trigger` has `*_derive_updated_at` with a signature comment on all 14

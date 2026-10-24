@@ -124,7 +124,7 @@ The existing status polling (getBuildStatus / applyStatus) stays in BuildButton 
 | # | File | Action |
 |---|------|--------|
 | 1 | `plugins/build/server/internal/tables.ts` | Create |
-| 2 | Run `./singularity build --migration-name build-runs` | Generate migration |
+| 2 | Run `./equin build --migration-name build-runs` | Generate migration |
 | 3 | `plugins/build/server/internal/auto-build-tracker.ts` | Create |
 | 4 | `plugins/build/shared/resources.ts` | Modify — add BuildRunSchema + buildHistoryResource |
 | 5 | `plugins/build/server/internal/build-history-resource.ts` | Create |
@@ -147,7 +147,7 @@ The existing status polling (getBuildStatus / applyStatus) stays in BuildButton 
 
 ### Verification
 
-1. `./singularity build` — generates migration, deploys
+1. `./equin build` — generates migration, deploys
 2. Open app, click Build button → popover opens
 3. Click Build in popover → see live streaming logs, running status
 4. After build completes → history row appears with green dot, correct duration

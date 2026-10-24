@@ -315,7 +315,7 @@ The whole point of the split: this plugin is thin.
 
 ⚠️ That file is an override carrying a `// @hash` line. Adding a block regenerates the
 origin with a new hash, and `config-origins-in-sync` fails until the override's `@hash` is
-restamped. Run `./singularity build`, then copy the new hash from the regenerated
+restamped. Run `./equin build`, then copy the new hash from the regenerated
 `.origin.jsonc` into the override.
 
 ---
@@ -335,7 +335,7 @@ restamped. Run `./singularity build`, then copy the new hash from the regenerate
 
 ## Verification
 
-Deploy with `./singularity build` (background, per the workflow rules), then at
+Deploy with `./equin build` (background, per the workflow rules), then at
 `http://att-1787082815-a6eg.localhost:9000`:
 
 **The credential**
@@ -360,7 +360,7 @@ Deploy with `./singularity build` (background, per the workflow rules), then at
   round-trips it without dropping the block.
 
 **Automated**
-- `./singularity test plugins/page/plugins/place` — pure-function tests for the Google →
+- `./equin test plugins/page/plugins/place` — pure-function tests for the Google →
   `PlaceSnapshot` mapper and the 30-day staleness predicate.
 - `bun plugins/page/plugins/place/e2e/place-block.ts` — a manual e2e driving
   `/place` → search → select → reload, built on the `e2e-harness` helpers.

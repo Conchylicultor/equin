@@ -140,12 +140,12 @@ the override deliberately.
 This matters more than it looks, because the build deletes *before* it checks —
 `internal/app-artifacts.ts`: `regenerateManifestCodegen` → `seedAuthoredOverrides` →
 `propagateConfigToUser` → **then** `runChecks`. With a half-applied rename, one
-`./singularity build` deletes all 112 overrides, re-seeds them at the new names in *natural
+`./equin build` deletes all 112 overrides, re-seeds them at the new names in *natural
 catalog order* with a `@review` marker, propagates that into the user layer, and only then runs
 the checks that would have complained. The authored arrangement survives only in git's index.
 
 Worse, `regen-generated` (`cli/bin/commands/regen-generated.ts:22-23`) runs the same codegen
-from `./singularity push` **and from `.githooks/post-rewrite` after any rebase or amend**,
+from `./equin push` **and from `.githooks/post-rewrite` after any rebase or amend**,
 followed by `git add -A && git commit --amend` — so a prune there is silently amended into the
 landing commit. C1 is what makes that path safe.
 
@@ -203,7 +203,7 @@ purpose" comment. Zero behaviour change.
   render (wrong pane's actions), collapse to one manifest row, and — because only one descriptor
   registers — the other's authored override is deleted by the prune. This is the one failure mode
   that loses data silently; it must be a hard throw plus a `slots:derived-ids-unique` check so it
-  fails at `./singularity check`, not at first render.
+  fails at `./equin check`, not at first render.
 - Because both ids are simultaneously knowable in this commit, `reorderable-slots-gen.ts` emits
   the rename table as committed data:
   `plugins/reorder/shared/slot-id-rename.generated.json` — `[{ hier, from, to }]`, `from =`
@@ -278,7 +278,7 @@ moved too, even though they regenerate, so the diff reads as renames rather than
 
 **Verify after:** `sha256` identical for all 312 moved files; `git diff --find-renames --summary`
 shows **312 pure renames and zero content changes** under `config/`; then a full
-`./singularity build` produces an **empty** diff under `config/` — no re-render, no prune line,
+`./equin build` produces an **empty** diff under `config/` — no re-render, no prune line,
 no `@review` marker minted. That last one is the end-to-end proof that the derivation and the
 filenames agree.
 
@@ -320,16 +320,16 @@ by hand, at land time. Fallback if skipped is benign: orphans surface in Debug �
 
 ## Verification
 
-Per commit, and never `./singularity push`:
+Per commit, and never `./equin push`:
 
 - **C1** — delete a `defineConfig` temporarily; the build must stop and name the override
-  instead of deleting it. `./singularity check config-origins-in-sync`.
-- **C3** — `./singularity test plugins/framework/plugins/web-core` (the `_slotId` assertion at
-  `plugin-render.test.tsx:21` becomes `_slot`); `./singularity check`; `./singularity build`;
+  instead of deleting it. `./equin check config-origins-in-sync`.
+- **C3** — `./equin test plugins/framework/plugins/web-core` (the `_slotId` assertion at
+  `plugin-render.test.tsx:21` becomes `_slot`); `./equin check`; `./equin build`;
   **clean `git status` under `config/`**.
 - **C4** — as C3, plus the rename-table review.
 - **C5** — the real gate:
-  1. `./singularity check` clean, specifically `reorderable-slots-in-sync`,
+  1. `./equin check` clean, specifically `reorderable-slots-in-sync`,
      `config-origins-in-sync`, `config:overrides-authored` (**zero** new `@review` markers — a
      wave of 112 is the loudest possible symptom of a mis-keyed rename),
      `config-v2:registrations-paired` (the correct canary for web/server derivation skew),
@@ -338,18 +338,18 @@ Per commit, and never `./singularity push`:
      `reorderable-slots-in-sync` — which prints every path it thinks is owed — as the dry-run
      oracle instead of iterating it 112 times.
   2. `git status` under `config/`: renames only, **zero `D` on any non-`.origin.jsonc`**.
-  3. `./singularity test plugins/framework/plugins/slot-declaration` — new unit tests for
+  3. `./equin test plugins/framework/plugins/slot-declaration` — new unit tests for
      `seg()`, key→segment collision, a slot under two keys, a slot declared by two plugins, a
      same-plugin duplicate, one-level group nesting, a pane, `config` as a key, and the throwing
      getter on an undeclared slot.
-  4. `./singularity build` (background, per the root rules), then at
+  4. `./equin build` (background, per the root rules), then at
      `http://<worktree>.localhost:9000`: enter reorder edit mode on **a sidebar** (a direct slot)
      and **a pane's action bar** (a group member), drag, reload, confirm the order persists. That
      exercises slot object → descriptor reference identity → config name → file on disk, which no
      check sees end to end.
   5. Break it once on purpose: drop an entry from a `slots` record and confirm the build names
      the orphan; add a second key pointing at the same slot and confirm the duplicate throw.
-- **C6** — `./singularity check`, plus a `skipBarrelImport` docgen run whose barrel-free slot set
+- **C6** — `./equin check`, plus a `skipBarrelImport` docgen run whose barrel-free slot set
   must match the barrel-imported one exactly.
 
 ---

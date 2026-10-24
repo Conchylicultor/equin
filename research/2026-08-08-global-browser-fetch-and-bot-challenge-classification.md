@@ -135,7 +135,7 @@ The secondary arguments agree: there is no precedent for a supervised long-lived
 child process inside a Bun `server/` process — the one comparable case
 (`zero-cache`) deliberately pushed supervision out to the Go gateway — and a warm
 browser would need crash detection, restart backoff, zombie reaping across
-`./singularity build` restarts and an idle timer, in up to ~16 worktree backends
+`./equin build` restarts and an idle timer, in up to ~16 worktree backends
 at once (~4 GB of idle Chromium). Amortization is near zero anyway: refresh is a
 15-minute cron with a per-source dedup key, so consecutive calls are minutes
 apart.
@@ -546,11 +546,11 @@ plus `{launch-args,request-policy,errors,bot-mitigation}.test.ts`.
 
 ## Verification
 
-1. `./singularity build` — regenerates the plugin registry, provision registry and
+1. `./equin build` — regenerates the plugin registry, provision registry and
    docs; runs checks (`plugins-registry-in-sync`, `plugins-doc-in-sync`,
    `host-budget`, `type-check`, boundaries).
-2. `./singularity test plugins/infra/plugins/safe-fetch/plugins/browser-fetch` and
-   `./singularity test plugins/apps/plugins/events` — the pure suites. The
+2. `./equin test plugins/infra/plugins/safe-fetch/plugins/browser-fetch` and
+   `./equin test plugins/apps/plugins/events` — the pure suites. The
    security-critical ones: `request-policy` must block
    `http://169.254.169.254/`, `http://127.0.0.1:9000/`, `file:///etc/passwd`;
    `launch-args` must assert `MAP * ~NOTFOUND` is present and that

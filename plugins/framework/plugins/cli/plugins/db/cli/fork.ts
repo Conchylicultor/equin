@@ -98,7 +98,7 @@ const run: CliAction<[string | undefined], { replace?: boolean }> = async (
   console.log(
     outcome.kind === "already-present"
       ? `DB "${name}" already existed — nothing to do (--replace forks it afresh).`
-      : `DB "${name}" ready.${opts.replace === true ? " Run ./singularity build to apply this branch's migrations to it." : ""}`,
+      : `DB "${name}" ready.${opts.replace === true ? " Run ./equin build to apply this branch's migrations to it." : ""}`,
   );
 };
 

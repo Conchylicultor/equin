@@ -234,7 +234,7 @@ a broken test.
 
 ## Verification
 
-1. `./singularity test plugins/primitives/plugins/adaptive-bar`:
+1. `./equin test plugins/primitives/plugins/adaptive-bar`:
    - `core/fit.test.ts` — `passBudget` derives from the row and is clamped; an
      item that cannot be sized is kept in the row rather than evicted into
      permanent ignorance.
@@ -244,9 +244,9 @@ a broken test.
      the row.
    - `web/__tests__/termination.test.tsx` — a fault is still one report and a
      stop, never a render loop; the re-arm and `MAX_SURRENDERS` are unchanged.
-2. `./singularity check` — boundaries (adaptive-bar → ui-context is a new edge),
+2. `./equin check` — boundaries (adaptive-bar → ui-context is a new edge),
    type-check, doc/registry sync.
-3. `./singularity build`, then
+3. `./equin build`, then
    `bun plugins/primitives/plugins/adaptive-bar/e2e/adaptive-bar-churn.ts --url http://<worktree>.localhost:9000/agents/c/<id>`
    and a `query_db` on the worktree for `kind = 'adaptive-bar'`: a healthy sweep
    files nothing.

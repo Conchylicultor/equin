@@ -1,5 +1,5 @@
 // @hash b19d4d2cd4a1
 {
-  // Automatically run ./singularity build when a new push to main is detected.
+  // Automatically run ./equin build when a new push to main is detected.
   "autoBuild": true
 }

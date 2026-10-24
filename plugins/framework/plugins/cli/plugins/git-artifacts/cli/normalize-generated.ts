@@ -147,7 +147,7 @@ export async function normalizeGeneratedArtifacts(
           ...conflicted.map((f) => `  ${f}`),
           "",
           "These are hand-written and require manual resolution. Edit the files,",
-          "remove the conflict markers, then re-run ./singularity push.",
+          "remove the conflict markers, then re-run ./equin push.",
         ].join("\n"),
       );
       process.exit(1);

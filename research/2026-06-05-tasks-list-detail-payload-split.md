@@ -188,7 +188,7 @@ Verified on this worktree's backend (`/api/debug/profiling/runtime`, warm):
 
 ## Verification
 
-1. `./singularity build` (from this worktree).
+1. `./equin build` (from this worktree).
 2. **Payload shrank:** in `mcp__singularity__get_runtime_profile` (kind `db`),
    the `tasks_v` SELECT no longer lists `"description"` in its label, and its
    `avgMs` / transfer drops. Cross-check column count by hitting
@@ -202,7 +202,7 @@ Verified on this worktree's backend (`/api/debug/profiling/runtime`, warm):
    detail, immediately click away without typing — confirm the stored
    description is intact (`mcp__singularity__query_db`:
    `SELECT length(description) FROM tasks WHERE id = '<id>'`).
-5. **Typecheck/boundaries:** `./singularity check` passes (`eslint`,
+5. **Typecheck/boundaries:** `./equin check` passes (`eslint`,
    plugin-boundaries, `plugins-doc-in-sync`).
 6. Use `e2e/screenshot.mjs --click` to capture before/after of the detail pane
    description editor to confirm behavior.

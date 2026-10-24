@@ -4,7 +4,7 @@
 
 The events plugin today dispatches actions **inline inside `emit()`** via `Promise.all(rows.map(runAction))` (`plugins/events/server/internal/event.ts:151-217`). That design has two holes:
 
-1. **No durability across restarts.** A server crash or `./singularity build` mid-handler drops in-flight actions. The trigger row is preserved for `oneShot=true` (delete only happens on success), so the *intent* survives, but the *run* that was supposed to carry it out does not, and nothing re-fires it.
+1. **No durability across restarts.** A server crash or `./equin build` mid-handler drops in-flight actions. The trigger row is preserved for `oneShot=true` (delete only happens on success), so the *intent* survives, but the *run* that was supposed to carry it out does not, and nothing re-fires it.
 2. **No retries.** `v1` explicitly defers retries as out-of-scope (`docs/events.md:92-98`): the current preservation policy logs the error and walks away. Every production caller that wants at-least-once semantics would have to build its own retry.
 
 Both get solved by moving the **execution** step behind a Postgres-backed job queue. The **subscription** layer (per-event trigger tables with typed filter columns and FK cascades) is the valuable part of today's design and stays put. This doc describes the switch to [Graphile Worker](https://worker.graphile.org/) as the execution backend.
@@ -26,7 +26,7 @@ Graphile Worker runs **embedded** in the existing Bun server process via its `ru
 
 - One server = one worktree. No need for a second supervised process.
 - Precedent: `conversations` plugin's poller already starts a long-running loop in `onReady` (`plugins/conversations/server/internal/poller.ts:146`).
-- `./singularity build` already restarts the server — no worker-specific deploy flow.
+- `./equin build` already restarts the server — no worker-specific deploy flow.
 - Graphile opens its own `pg.Pool` (via `connectionString`); no conflict with the existing `postgres.js` client.
 
 If and when a worktree generates enough event volume to starve HTTP, we split — but that's not v1.
@@ -121,7 +121,7 @@ The existing `events-test.log` action is *not* idempotent (it appends to an in-m
 
 ### Schema changes
 
-**Graphile Worker's own schema.** Graphile installs a `graphile_worker` schema with its own tables and migrations. We let Graphile self-migrate on worker startup (`run({ ... })` with default `runMigrations: true`). Our `./singularity build` flow stays as-is: Drizzle runs our migrations first, then the server boots, then `events.onReady` starts the worker which runs Graphile's migrations.
+**Graphile Worker's own schema.** Graphile installs a `graphile_worker` schema with its own tables and migrations. We let Graphile self-migrate on worker startup (`run({ ... })` with default `runMigrations: true`). Our `./equin build` flow stays as-is: Drizzle runs our migrations first, then the server boots, then `events.onReady` starts the worker which runs Graphile's migrations.
 
 Per-worktree DB forks (via `pg_dump | pg_restore` in `plugins/conversations/server/internal/db-fork.ts:9-35`) will carry the `graphile_worker` schema along with everything else. We should `TRUNCATE graphile_worker.jobs` after forking — otherwise a fresh worktree inherits stale jobs from the template. Small change, same file.
 
@@ -198,7 +198,7 @@ For the v1 cut-over: operator inspects via `psql`.
    - Add `waitForIdle()` test helper that polls `graphile_worker.jobs`.
    - Update `handleEmit` routes or e2e scripts to `await waitForIdle()` between emit and log-read.
 8. **Doc updates.** `docs/events.md`: amend "Flow at wire level" diagram, add "Delivery semantics" section (idempotency + retries), note `emit()` now returns after enqueue, not after execution.
-9. **Bun compatibility check.** Run `./singularity build` and confirm `graphile-worker` starts in Bun. Graphile uses `pg` (node-postgres) internally; Bun's Node.js compat covers it, but worth a smoke test. Flag: if `pg`'s `LISTEN/NOTIFY` hook doesn't work under Bun, Graphile still polls (slower dispatch, ~1s latency), which is acceptable for v1.
+9. **Bun compatibility check.** Run `./equin build` and confirm `graphile-worker` starts in Bun. Graphile uses `pg` (node-postgres) internally; Bun's Node.js compat covers it, but worth a smoke test. Flag: if `pg`'s `LISTEN/NOTIFY` hook doesn't work under Bun, Graphile still polls (slower dispatch, ~1s latency), which is acceptable for v1.
 
 ### Critical files to touch
 
@@ -249,7 +249,7 @@ For the v1 cut-over: operator inspects via `psql`.
 1. Subscribe + emit as above.
 2. Immediately `kill -9` the server before the worker picks up the job.
 3. `SELECT count(*) FROM graphile_worker.jobs` → 1 (job durable).
-4. `./singularity build` — server restarts.
+4. `./equin build` — server restarts.
 5. Worker boots, claims the job, runs it.
 6. `GET /api/events-test/log` shows the entry. Trigger row deleted.
 
@@ -267,4 +267,4 @@ For the v1 cut-over: operator inspects via `psql`.
 3. Emit → job enqueued → worker parses → throws `NonRetryableError`.
 4. Job marked permanently failed; trigger row preserved; warning in logs.
 
-**End-to-end:** `./singularity build` succeeds; a follow-up plugin wiring `taskCompleted.emit` would be the real first production user. Out of scope here.
+**End-to-end:** `./equin build` succeeds; a follow-up plugin wiring `taskCompleted.emit` would be the real first production user. Out of scope here.

@@ -36,8 +36,8 @@
  * 150-row `tasks` UPDATE keeps its ids — no `column` on a pk reverse halves
  * nothing — and loads no FULL).
  *
- * Requires a running Postgres cluster (started by ./singularity build).
- * Run: `./singularity test plugins/conversations/plugins/all-conversations`.
+ * Requires a running Postgres cluster (started by ./equin build).
+ * Run: `./equin test plugins/conversations/plugins/all-conversations`.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
@@ -102,7 +102,7 @@ const truth = new Map<
 >();
 
 // The suite's OWN runtime, never server-core's process-global one:
-// `./singularity test` runs every bun suite in one process, and any suite that
+// `./equin test` runs every bun suite in one process, and any suite that
 // loads `all-conversations/server` registers the real collections on the
 // global registry at module eval — so registering them there too throws
 // `defineResource: duplicate key`, whichever suite loads second (the

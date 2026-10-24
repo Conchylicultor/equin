@@ -1,5 +1,5 @@
 /**
- * Tests for the `no-adhoc-pane-title` lint rule. Run with `./singularity test`.
+ * Tests for the `no-adhoc-pane-title` lint rule. Run with `./equin test`.
  *
  * The rule flags a `<Text variant>` in the JSX returned by a same-file component
  * referenced as `Pane.define({ title: { component: X } })` — the pane title

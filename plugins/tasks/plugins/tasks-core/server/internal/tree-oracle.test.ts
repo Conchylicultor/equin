@@ -55,8 +55,8 @@
  * its owner's suite: `task-category`'s `task-categories-oracle.test.ts` is
  * step 18's, `agents`' `agent-launches-oracle.test.ts` step 21's.
  *
- * Requires a running Postgres cluster (started by ./singularity build).
- * Run: `./singularity test plugins/tasks/plugins/tasks-core`.
+ * Requires a running Postgres cluster (started by ./equin build).
+ * Run: `./equin test plugins/tasks/plugins/tasks-core`.
  */
 
 import {

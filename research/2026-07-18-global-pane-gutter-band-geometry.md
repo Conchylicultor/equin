@@ -93,7 +93,7 @@ Model on `px-chrome` (line ~240):
 @utility py-control { padding-top: var(--pad-control-y); padding-bottom: var(--pad-control-y); } /* twmerge: extend py */
 ```
 
-`./singularity build` regenerates `custom-utilities.generated.ts`
+`./equin build` regenerates `custom-utilities.generated.ts`
 (`app-css-utilities-in-sync`). Named-suffix utilities auto-pass `no-adhoc-spacing`;
 no lint changes anywhere.
 
@@ -171,7 +171,7 @@ gutter falls back to 12px; skeleton↔content alignment now holds by constructio
 
 ## Verification
 
-1. `./singularity build` then `./singularity check` (app-css-utilities-in-sync,
+1. `./equin build` then `./equin check` (app-css-utilities-in-sync,
    type-check, plugin-boundaries, plugins-doc-in-sync).
 2. Screenshots (`bun e2e/screenshot.mjs` / playwright) at
    `http://<worktree>.localhost:9000`:

@@ -151,7 +151,7 @@ Reused (unchanged): `useResponsiveOverflow`
 (`primitives/tooltip/web`), `IconButton`, `TruncatingText`.
 
 ## Verification
-1. `./singularity build`, open `http://<worktree>.localhost:9000`.
+1. `./equin build`, open `http://<worktree>.localhost:9000`.
 2. **Overflow:** Open many tabs via `+` (mix of apps). Confirm inactive tabs
    collapse to icon-only when the row is full while the active tab keeps its
    label, and `+` stays visible. Narrow the window → more tabs collapse; widen →
@@ -164,7 +164,7 @@ Reused (unchanged): `useResponsiveOverflow`
 4. Browser document title (`DocumentTitleSync`) still reads correctly for the
    focused tab.
 5. Use `e2e/screenshot.mjs` to capture the crowded bar before/after for a visual
-   check. Run `./singularity check` (type-check + lint + boundaries).
+   check. Run `./equin check` (type-check + lint + boundaries).
 ```
 bun e2e/screenshot.mjs --url http://<worktree>.localhost:9000/home --out /tmp/tabs
 ```

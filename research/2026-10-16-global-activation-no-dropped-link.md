@@ -74,7 +74,7 @@ and no consumer is edited for the fix itself.
    `openPane.to(…)` / `linkTo(…)` values or calls returning void, such as
    `graph-view.tsx` `() => setFocusId(…)`. Tests that use `vi.fn()` return `any`
    and still pass. The authoritative list is
-   `./singularity check type-check`.
+   `./equin check type-check`.
 4. **Docs**
    - `link-gesture/CLAUDE.md`: one paragraph saying the function arm is
      `Action`, and that a function returning a `LinkTarget` is a type error.
@@ -92,11 +92,11 @@ and no consumer is edited for the fix itself.
 
 ## Verification
 
-- `./singularity check type-check`: clean after the sweep, including the
+- `./equin check type-check`: clean after the sweep, including the
   `@ts-expect-error` lines, which fail if the guarantee regresses.
-- `./singularity test plugins/primitives/plugins/link-gesture`
+- `./equin test plugins/primitives/plugins/link-gesture`
 - Re-introduce the Logs bug locally (`rowActivation={(e) => () => onOpen(e.id)}`
   in debug/logs) and confirm `tsc` rejects it, then revert.
-- `./singularity build`, then `./singularity run plugins/debug/plugins/logs/e2e/open-log.ts`,
+- `./equin build`, then `./equin run plugins/debug/plugins/logs/e2e/open-log.ts`,
   plus a click-through of one DataView row (`rowActivation`) and a file-explorer
   entry, to confirm activation still works at runtime.

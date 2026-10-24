@@ -160,8 +160,8 @@ and may emit an absolute `/assets/…` URL.
 
 ## Verification
 
-- `./singularity check` (type-check, eslint, boundaries, `plugins-doc-in-sync`).
-- `./singularity test plugins/primitives/plugins/networking plugins/primitives/plugins/live-state plugins/framework/plugins/tooling/plugins/web-artifacts`
+- `./equin check` (type-check, eslint, boundaries, `plugins-doc-in-sync`).
+- `./equin test plugins/primitives/plugins/networking plugins/primitives/plugins/live-state plugins/framework/plugins/tooling/plugins/web-artifacts`
   - **Socket ownership:**
     - one real socket across N tabs;
     - the socket closes when the last port leaves.
@@ -178,8 +178,8 @@ and may emit an absolute `/assets/…` URL.
     - a tab dying before attach is ignored.
   - **Protocol:** a `proto` mismatch is fatal.
   - **Worker build:** zero imports and a relative URL.
-- `./singularity build`. Check that the networking artifact directory contains `*.worker.js`.
-- E2E: `./singularity run plugins/primitives/plugins/networking/e2e/shared-websocket.ts`, extended
+- `./equin build`. Check that the networking artifact directory contains `*.worker.js`.
+- E2E: `./equin run plugins/primitives/plugins/networking/e2e/shared-websocket.ts`, extended
   to cover:
   - two tabs on one server connection per URL;
   - `page.close()` on the first tab, after which the second receives an update within 1 s (today up

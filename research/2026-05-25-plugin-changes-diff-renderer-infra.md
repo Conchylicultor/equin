@@ -144,8 +144,8 @@ available. No barrel edit needed.
 
 ## Verification
 
-1. `./singularity build` succeeds
-2. `./singularity check` passes
+1. `./equin build` succeeds
+2. `./equin check` passes
 3. The slot is dormant: `PluginChangesSlots.DiffRenderer.useContributions()` returns `[]`
 4. Existing plugin-changes UI is unchanged (no behavioral difference)
 5. Future contributors can use the slot:

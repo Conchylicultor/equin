@@ -334,7 +334,7 @@ never a base, and blocking must be decided before the replay that would measure 
 
 ## Verification
 
-1. `./singularity test plugins/primitives/plugins/optimistic-mutation` — new
+1. `./equin test plugins/primitives/plugins/optimistic-mutation` — new
    `overlay.test.ts` cases, each named for the shape it pins:
    - **The incident.** Older unreflected `create` op + newer vacuously-confirmed
      data-only patch on an intersecting target, against a stale snapshot ⇒ the create
@@ -357,22 +357,22 @@ never a base, and blocking must be decided before the replay that would measure 
      one `stalled`.
    - **Report classification.** A denial with a newer same-target op confirmed in the
      same pass files no `superseded` report; a denial without one still does.
-2. `./singularity test plugins/page/plugins/editor` — add the same-block tautology case
+2. `./equin test plugins/page/plugins/editor` — add the same-block tautology case
    to `optimistic-block-ops.test.ts` (its `:701` case covers only disjoint blocks).
-3. `./singularity test plugins/primitives/plugins/optimistic-mutation/web/__tests__` —
+3. `./equin test plugins/primitives/plugins/optimistic-mutation/web/__tests__` —
    the hook's jsdom suite still green (keep-rendered on both reject kinds, `online`
    auto-retry, superseded drop + sink kind).
-4. `./singularity check` then `./singularity build`.
+4. `./equin check` then `./equin build`.
 5. Real-app gate: extend
    `plugins/page/plugins/editor/e2e/split-typing-verify.ts`, which already documents
    reproducing under host load ("Rerunning this under host load (a few concurrent
-   `./singularity build`s) reproduces the original conditions"). Type through several
+   `./equin build`s) reproduces the original conditions"). Type through several
    Enters while the box is loaded; no block may disappear at any point. Watch
    Debug → Reports for `optimistic-divergence` rows — under the fix a `stalled` row is
    acceptable (the op stayed rendered), a `superseded` row on a plain typing flow is
    not.
 
-> All `./singularity test` / `build` invocations must run with `run_in_background: true`.
+> All `./equin test` / `build` invocations must run with `run_in_background: true`.
 
 ## Follow-ups (file as tasks, not part of this change)
 

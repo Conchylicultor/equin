@@ -3,7 +3,7 @@
  * checks the chip is selected as ONE unit: no per-character highlight on its
  * label, and a ring on the whole chip while the selection covers it.
  *
- *   ./singularity run plugins/primitives/plugins/dom/plugins/copy-source-text/e2e/selection-verify.ts \
+ *   ./equin run plugins/primitives/plugins/dom/plugins/copy-source-text/e2e/selection-verify.ts \
  *     --conv <id> [--out /tmp/chip-select]
  *
  * FIXTURE: a conversation whose transcript shows an active-data chip (`att-…`

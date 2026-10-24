@@ -128,7 +128,7 @@ new trigger events. No web changes.
 
 ## Verification
 
-1. `./singularity build` (regenerates docs/autogen for the two touched plugin
+1. `./equin build` (regenerates docs/autogen for the two touched plugin
    barrels; runs checks incl. boundary checker for the new cross-plugin import).
 2. End-to-end via DB + MCP:
    - Assign a preprompt to a task in the UI (or `setTaskPreprompt`), launch it so

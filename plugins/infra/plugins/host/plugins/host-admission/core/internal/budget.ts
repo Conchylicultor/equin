@@ -167,7 +167,7 @@ export function hostPoolsFor(host: HostFacts) {
     // holder, main — keeps the other). See
     // research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md.
     "type-check-worker": { size: 2 },
-    // One e2e script run (`./singularity run plugins/…/e2e/x.ts`): one bun
+    // One e2e script run (`./equin run plugins/…/e2e/x.ts`): one bun
     // process driving one Chromium against a deployed app, held p50 21 s / p90
     // 82 s. It used to take a 1-unit `cpu` grant, which put a 20 s screenshot in
     // the same 6-slot background window as builds holding theirs for 30–60 min:

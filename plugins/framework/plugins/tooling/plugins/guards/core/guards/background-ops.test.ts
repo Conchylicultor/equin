@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
+import { CLI_NAMES } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -51,7 +52,7 @@ const reason = (command: string, bg?: boolean) => {
 describe("background-ops guard", () => {
   describe("long ops in the foreground are blocked", () => {
     for (const op of ["build", "push", "check", "test", "release"]) {
-      for (const cli of ["./equin", "./singularity"]) {
+      for (const cli of CLI_NAMES.map((n) => `./${n}`)) {
         test(`${cli} ${op}`, () => {
           expect(blocks(`${cli} ${op}`)).toBe(true);
         });
@@ -60,9 +61,7 @@ describe("background-ops guard", () => {
 
     test("the exact shape from conv-1786116592-b70n", () => {
       expect(
-        blocks(
-          `./singularity push -m "feat(data-view): properties" 2>&1 | tail -50`,
-        ),
+        blocks(`./equin push -m "feat(data-view): properties" 2>&1 | tail -50`),
       ).toBe(true);
     });
 
@@ -70,81 +69,79 @@ describe("background-ops guard", () => {
       expect(
         blocks(
           // Fake root, deliberately not under /Users — see `paths:no-hardcoded-paths`.
-          `cd /r/repo/.claude/worktrees/att-1 && ./singularity build`,
+          `cd /r/repo/.claude/worktrees/att-1 && ./equin build`,
         ),
       ).toBe(true);
     });
 
     test("hidden inside a loop body — the parseShell blind spot", () => {
-      expect(blocks(`until false; do ./singularity build; done`)).toBe(true);
+      expect(blocks(`until false; do ./equin build; done`)).toBe(true);
     });
 
     test("the denial names run_in_background", () => {
-      expect(reason("./singularity build")).toContain("run_in_background");
+      expect(reason("./equin build")).toContain("run_in_background");
     });
   });
 
   describe("backgrounded long ops are allowed", () => {
     test("build with the flag", () => {
-      expect(blocks("./singularity build", true)).toBe(false);
+      expect(blocks("./equin build", true)).toBe(false);
     });
 
     test("push with the flag and a pipe", () => {
-      expect(blocks(`./singularity push -m "x" 2>&1 | tail -50`, true)).toBe(
-        false,
-      );
+      expect(blocks(`./equin push -m "x" 2>&1 | tail -50`, true)).toBe(false);
     });
   });
 
   describe("shell-level detach is not backgrounding", () => {
     test("trailing & in the foreground", () => {
-      expect(blocks("./singularity build &")).toBe(true);
+      expect(blocks("./equin build &")).toBe(true);
     });
 
     test("nohup", () => {
-      expect(blocks("nohup ./singularity build")).toBe(true);
+      expect(blocks("nohup ./equin build")).toBe(true);
     });
 
     test("trailing & even WITH run_in_background, because it fakes completion", () => {
-      expect(blocks("./singularity build &", true)).toBe(true);
+      expect(blocks("./equin build &", true)).toBe(true);
     });
 
     test("2>&1 is a redirection, not a detach", () => {
-      expect(blocks("./singularity build 2>&1", true)).toBe(false);
+      expect(blocks("./equin build 2>&1", true)).toBe(false);
     });
   });
 
   describe("a subagent is told to await, because nothing will wake it", () => {
     test("a backgrounded op is still allowed — the op itself is fine", () => {
-      const v = subagentVerdict("./singularity build", true);
+      const v = subagentVerdict("./equin build", true);
       expect(v.kind).not.toBe("deny");
     });
 
     test("… but it is told to await instead of ending its turn", () => {
-      const v = subagentVerdict("./singularity build", true);
+      const v = subagentVerdict("./equin build", true);
       expect(v.kind).toBe("inform");
       expect(v.kind === "inform" && v.context).toContain("./equin await build");
       expect(v.kind === "inform" && v.context).toContain("NOT reach you");
     });
 
     test("the main conversation is told nothing new — its notification works", () => {
-      expect(verdict("./singularity build", true).kind).toBe("allow");
+      expect(verdict("./equin build", true).kind).toBe("allow");
     });
 
     test("a foreground op still denies, but the hint names both steps", () => {
-      const v = subagentVerdict("./singularity test");
+      const v = subagentVerdict("./equin test");
       expect(v.kind).toBe("deny");
       expect(v.kind === "deny" && v.reason).toContain("run_in_background");
       expect(v.kind === "deny" && v.reason).toContain("./equin await test");
     });
 
     test("the main conversation's foreground hint still says to end its turn", () => {
-      const v = verdict("./singularity test");
+      const v = verdict("./equin test");
       expect(v.kind === "deny" && v.reason).toContain("END YOUR TURN");
     });
 
     test("a subagent detaching with & is denied like anyone else", () => {
-      expect(subagentVerdict("./singularity build &", true).kind).toBe("deny");
+      expect(subagentVerdict("./equin build &", true).kind).toBe("deny");
     });
 
     test("a command that is not a long op says nothing to a subagent either", () => {
@@ -153,7 +150,7 @@ describe("background-ops guard", () => {
   });
 
   describe("documents are written, not run", () => {
-    const S = "./singularity";
+    const S = "./equin";
 
     test("the repro: a research doc mentioning the build in inline code", () => {
       const cmd = [
@@ -222,11 +219,11 @@ describe("background-ops guard", () => {
 
   describe("short commands stay allowed", () => {
     test("check --list", () => {
-      expect(blocks("./singularity check --list")).toBe(false);
+      expect(blocks("./equin check --list")).toBe(false);
     });
 
     test("--help", () => {
-      expect(blocks("./singularity build --help")).toBe(false);
+      expect(blocks("./equin build --help")).toBe(false);
     });
 
     test("an unrelated command", () => {
@@ -234,7 +231,7 @@ describe("background-ops guard", () => {
     });
 
     test("a different binary named similarly", () => {
-      expect(blocks("echo ./singularity build")).toBe(false);
+      expect(blocks("echo ./equin build")).toBe(false);
     });
   });
 });

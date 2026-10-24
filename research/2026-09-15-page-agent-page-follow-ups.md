@@ -97,7 +97,7 @@ already taken by `apps/pages/agent-origin`.
     live `pagesResource` push lands.
 - `config/apps/pages/page-tree/header-actions.jsonc`: place
   `apps.pages.page-author:page-author` after history and before copy ID. Copy ID
-  stays last as the utility. `./singularity build` re-stamps the origin hash.
+  stays last as the utility. `./equin build` re-stamps the origin hash.
 - The plugin's `CLAUDE.md`: what the button shows, and why it is not in the
   `agent-page` plugin (the layering above).
 
@@ -190,7 +190,7 @@ this."
 
 ## Verification
 
-- **Unit tests** via `./singularity test <plugin>`:
+- **Unit tests** via `./equin test <plugin>`:
   - `editor/server/internal/parse-block-data.test.ts`: `reauthorPageData` flips both
     ways, carries every other key verbatim, and refuses a non-page row.
     `rewriteBlockData` still refuses a flip.
@@ -202,7 +202,7 @@ this."
   - Editor server DB tests, in the style of `handle-patch-blocks.test.ts`:
     `setPageAuthor` is a no-op on the same author, and one event per flip.
     `renamePage` with `requireAuthor` refuses a human page.
-- **`./singularity check`**: type-check, plugin boundaries, docs and config origins in
+- **`./equin check`**: type-check, plugin boundaries, docs and config origins in
   sync.
 - **E2E**: extend `agent-access/e2e/agent-access-verify.ts`:
   - mint an agent page, then rename it with `edit_page` on the `# Title` line. The
@@ -210,7 +210,7 @@ this."
   - the same edit on a human page is refused.
   - flip the page to human with `setPageAuthor`. A rename is now refused and so is a body write.
   - flip it back. Writes are accepted again.
-- **UI**: after `./singularity build`, run `screenshot.ts --path /pages/page/<agent-page-id>`
+- **UI**: after `./equin build`, run `screenshot.ts --path /pages/page/<agent-page-id>`
   with `--click` on the toggle. Check that the button is blue and pressed before the
   click, plain after it, and that the parent row's tint is gone after reload. Repeat
   in dark mode.

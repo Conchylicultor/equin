@@ -7,7 +7,7 @@
 // automatically.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/prototypes/plugins/present/e2e/present-verify.ts \
+//   ./equin run plugins/apps/plugins/prototypes/plugins/present/e2e/present-verify.ts \
 //     [--name <prototype>] [--out <prefix>] [--headed]
 
 import type { Locator } from "playwright";

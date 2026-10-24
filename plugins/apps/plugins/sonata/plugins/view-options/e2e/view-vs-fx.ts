@@ -14,7 +14,7 @@
  * height of every row (one row height), and which selection languages are drawn
  * (one language per meaning — no native checkbox and no native radio anywhere).
  *
- *   ./singularity build
+ *   ./equin build
  *   bun plugins/apps/plugins/sonata/plugins/view-options/e2e/view-vs-fx.ts --out /tmp/hud
  *
  * `--song` is a song id, not a library card to click: the cards' actions are

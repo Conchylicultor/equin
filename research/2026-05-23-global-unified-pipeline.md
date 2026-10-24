@@ -165,10 +165,10 @@ Each caller adds `await` and makes its containing function async if not already.
 
 ## Verification
 
-1. `./singularity build` succeeds
+1. `./equin build` succeeds
 2. `diff` on `docs/plugins-compact.md`, `docs/plugins-details.md`, `docs/routes.md` — must be empty (modulo the new facet plugin entries for any new code)
 3. Spot-check 2-3 per-plugin `CLAUDE.md` files for identical autogen blocks
-4. `./singularity check` passes all checks
+4. `./equin check` passes all checks
 5. Compare `GET /api/plugin-view/tree` JSON before/after (tree-handler uses all monolithic fields)
 
 ## Risks

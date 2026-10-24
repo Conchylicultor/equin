@@ -372,7 +372,7 @@ convention.
 ## Verification
 
 ```bash
-./singularity build && ./singularity check      # incl. the two new lint rules
+./equin build && ./equin check      # incl. the two new lint rules
 bun test plugins/page/plugins/editor/core       # new move/bulkMove/bulkDelete reducer arms
 bun test plugins/page/plugins/editor/server     # DB-fixture concurrency tests below
 bun run test:dom plugins/primitives/plugins/optimistic-mutation

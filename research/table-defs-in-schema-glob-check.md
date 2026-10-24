@@ -16,7 +16,7 @@ A `pgTable(...)` (or a table-factory call such as `Attachments.defineLink(...)`)
 in a server file whose name is **not** matched by this glob is invisible to
 migration generation. The failure is **silent and dangerous**: drizzle sees the
 previously-known table as dropped and emits a spurious `DROP TABLE` migration,
-with no error. `./singularity build` then auto-generates that DROP and the agent
+with no error. `./equin build` then auto-generates that DROP and the agent
 commits it — `migrations-in-sync` passes because the migrations *do* match
 drizzle's (now wrong) view of the schema. Nothing validates drizzle's view
 against the true set of tables.

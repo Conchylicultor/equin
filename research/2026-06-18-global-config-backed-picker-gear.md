@@ -159,12 +159,12 @@ genuinely isn't config-backed.
 
 ## Verification
 
-1. `./singularity build` (regenerates registry/docs, runs checks incl. `eslint`,
+1. `./equin build` (regenerates registry/docs, runs checks incl. `eslint`,
    `type-check`, `plugins-doc-in-sync`, `plugin-boundaries`). Confirm the new
    `config-link/no-unlinked-config-picker` rule is picked up and the boundary
    checker accepts `config-link → ui-kit`.
 2. Lint rule fires: temporarily revert `PrepromptSelect` to raw `SelectContent`
-   and confirm `./singularity check eslint` errors; then restore the wrapper and
+   and confirm `./equin check eslint` errors; then restore the wrapper and
    confirm it passes.
 3. Manual UI check at `http://<worktree>.localhost:9000` with
    `bun e2e/screenshot.mjs`:
@@ -178,6 +178,6 @@ genuinely isn't config-backed.
      to commits config.
    - Regression: existing `CategoryChipToolbar` / `PrepromptChip` /
      `FloatingTemplateChips` gears still work.
-4. Confirm no false positives: `./singularity check eslint` stays green across
+4. Confirm no false positives: `./equin check eslint` stays green across
    the repo (no unrelated `Select` usage in a `useConfig` file trips the rule;
    if one does, add a justified `eslint-disable-next-line`).

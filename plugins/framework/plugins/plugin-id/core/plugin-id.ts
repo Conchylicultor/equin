@@ -19,8 +19,8 @@ export const pluginIdSegments = (id: PluginId): string[] => id.split(".");
  *  joining every non-`plugins` segment with `-` — unique across the nested tree
  *  (`tasks` → `plugin-tasks`, `stats/plugins/tasks` → `plugin-stats-tasks`).
  *
- *  DERIVED, never authored: the repo-tree codegen (`./singularity build` /
- *  `./singularity regen-generated`) writes it into each plugin's `package.json`,
+ *  DERIVED, never authored: the repo-tree codegen (`./equin build` /
+ *  `./equin regen-generated`) writes it into each plugin's `package.json`,
  *  and the plugin-boundaries check (R1) holds the file to it. Bun needs the field
  *  (a nameless workspace member fails `bun install`), but nothing reads it. */
 export const packageNameFor = (fsPath: string): string =>
@@ -154,7 +154,7 @@ const RUNTIME_FOLDER_DOCUMENTED: Record<RuntimeFolder, boolean> = {
   // `cli` is the one non-web/server runtime that IS documented. Unlike `e2e` and
   // `provision`, whose barrels only other e2e scripts / provisioning steps can
   // reach, a `cli/` folder's headline fact is user-facing: this plugin owns
-  // `./singularity <verb>`. That is precisely what an agent needs to read out of
+  // `./equin <verb>`. That is precisely what an agent needs to read out of
   // the generated reference before adding a second verb for the same job, and it
   // is not answerable from anywhere else — a command name is not a filename.
   cli: true,

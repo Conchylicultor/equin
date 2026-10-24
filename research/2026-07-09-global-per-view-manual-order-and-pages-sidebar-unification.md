@@ -292,7 +292,7 @@ would render the unstarred *ancestors* of every starred page.
 
 ### B5. Migration
 
-`./singularity build` regenerates migrations from `tables.ts`: `CREATE TABLE
+`./equin build` regenerates migrations from `tables.ts`: `CREATE TABLE
 data_view_row_order` (Part A) and `ALTER TABLE page_blocks_ext_starred DROP COLUMN rank`
 (Part B). Never invoke `drizzle-kit` directly.
 
@@ -317,7 +317,7 @@ order on first render.
 **Part A**
 1. `bun test plugins/primitives/plugins/data-view/plugins/view-order` — seed/replace unit
    tests, incl. the A2 counterexample.
-2. `./singularity build`, then check the generated migration creates `data_view_row_order`.
+2. `./equin build`, then check the generated migration creates `data_view_row_order`.
 3. Open any `list` DataView (e.g. `http://<worktree>.localhost:9000/agents` queue
    sidebar), drag a row, reload → order persists. Pick a sort → drag disabled, sort wins.
    Clear the sort → the custom order returns.
@@ -326,7 +326,7 @@ order on first render.
 5. Confirm the conversations queue sidebar still orders by priority with no sort set.
 
 **Part B**
-1. `./singularity build`; open `http://<worktree>.localhost:9000/pages`.
+1. `./equin build`; open `http://<worktree>.localhost:9000/pages`.
 2. The sidebar shows one surface with a `Pages | Favorites | +` switcher and no section
    headers. The Search button (from `content-search`) is unchanged.
 3. Star a page from its row action → it appears in the Favorites view; unstar → it leaves.
@@ -337,7 +337,7 @@ order on first render.
    `config/apps/pages/page-tree/pages-sidebar.jsonc`.
 6. Scripted check with `bun e2e/screenshot.mjs --url http://<worktree>.localhost:9000/pages
    --click "Favorites" --out /tmp/fav` for a before/after of the switcher.
-7. `./singularity check` — `data-view:configs-authored`, `migrations-in-sync`,
+7. `./equin check` — `data-view:configs-authored`, `migrations-in-sync`,
    `plugins-doc-in-sync`, `plugin-boundaries`.
 
 ## Critical files

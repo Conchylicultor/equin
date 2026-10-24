@@ -190,7 +190,7 @@ exported `GeometryInvariant` kinds so future drift fails loudly.
    `⚠ ... inconclusive`, `runChecks` returns `true` (allOk), no `<sig>.pass`
    marker is written under `~/.singularity/layout-lab-cache/`, and a subsequent
    run re-invokes the suite (not cached).
-5. **type-check:** `./singularity check type-check` passes (additive `CheckResult`
+5. **type-check:** `./equin check type-check` passes (additive `CheckResult`
    field, no exhaustiveness breaks).
-6. **Full deploy:** `./singularity build` completes through deploy/gateway
+6. **Full deploy:** `./equin build` completes through deploy/gateway
    registration; app reachable at `http://<worktree>.localhost:9000`.

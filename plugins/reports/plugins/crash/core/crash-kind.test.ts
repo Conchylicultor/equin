@@ -9,7 +9,7 @@
  * and must not move, because a changed fingerprint means an existing report row
  * is orphaned and its history starts over.
  *
- * Run: `./singularity test plugins/reports`
+ * Run: `./equin test plugins/reports`
  */
 
 import { describe, test, expect } from "bun:test";

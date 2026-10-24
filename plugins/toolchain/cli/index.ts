@@ -7,7 +7,7 @@ export default defineCliCommand({
     defineCliCommand<[], { tool?: string }>({
       name: "upgrade",
       description:
-        "Alias of `./singularity deps upgrade mise`: move this worktree's mise.lock to the newest release of " +
+        "Alias of `./equin deps upgrade mise`: move this worktree's mise.lock to the newest release of " +
         "each tool (skipping holds), proving it first: the full check and test suites plus each moved tool's " +
         "smoke tests run on the current versions, then on the new ones, and a failure only the new versions " +
         "have — and that happens again on a retry — is a regression. On a regression mise.lock is put back. " +

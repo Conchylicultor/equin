@@ -176,7 +176,7 @@ Key reused APIs: `compileWhere`/`buildSortKeys`/`orderByClauses`/`seekPredicate`
   `navigate("/mail/mailbox")` mounts `inboxPane` as the Miller root exactly like
   `openPane(..., {mode:"root"})`.
 
-### Build-regenerated (via `./singularity build`, never hand-edited)
+### Build-regenerated (via `./equin build`, never hand-edited)
 
 - `data-view/shared/data-views.generated.ts` gains `{ id:"mail-inbox", pluginId:"apps.mail.inbox" }`
   (`data-views-in-sync` check fails until regenerated).
@@ -185,7 +185,7 @@ Key reused APIs: `compileWhere`/`buildSortKeys`/`orderByClauses`/`seekPredicate`
 
 ## Verification
 
-1. `./singularity build` — regenerates `data-views.generated.ts` (mail-inbox entry);
+1. `./equin build` — regenerates `data-views.generated.ts` (mail-inbox entry);
    passes `data-views-in-sync`, `data-view:configs-authored`, `plugins-registry-in-sync`,
    `plugin-boundaries` (no cycle), and `type-check` (confirms column-map `AnyColumn`
    typing + endpoint schemas).

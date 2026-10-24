@@ -226,9 +226,9 @@ beside `fork-session` and `resume`:
 
 ## Verification
 
-- `./singularity test plugins/conversations` for the cut primitive and the
+- `./equin test plugins/conversations` for the cut primitive and the
   Stop regression.
-- `./singularity build`, then in the deployed worktree app, on a throwaway
+- `./equin build`, then in the deployed worktree app, on a throwaway
   conversation (Haiku or Sonnet):
   1. Three plain turns → **Fork from here** on turn 2: new conversation shows
      only turn 1, draft holds turn 2's text, the original is unchanged. Ask

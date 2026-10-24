@@ -218,7 +218,7 @@ All enhancements auto-activate via slots. Active-data pre-split pipeline (`useAc
 
 ## Verification
 
-1. `./singularity build` — clean compile
+1. `./equin build` — clean compile
 2. Conversation transcript → rendering identical; code blocks highlighted; inline code chips (active-data, file paths) still work
 3. File-pane markdown preview → code blocks now syntax-highlighted (new); file-path links still clickable
 4. Debug memory panel → code blocks now syntax-highlighted (new); slightly larger headings (standardised)

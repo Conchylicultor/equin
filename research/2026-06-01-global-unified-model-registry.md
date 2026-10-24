@@ -22,7 +22,7 @@ tree. The breakage exposed three structural faults:
 
 **Intended outcome:** one registry that every model consumer resolves through; a
 persisted model field that tolerates legacy/unknown values *by construction* (so a
-future enum change can never blank the UI); and a `./singularity check` that prevents
+future enum change can never blank the UI); and a `./equin check` that prevents
 agents from reintroducing the drift. Changing the model set should touch exactly one
 file.
 
@@ -166,10 +166,10 @@ Reused precedents: `RankSchema` union-cast (`rank/core/internal/rank.ts:34`),
 
 ## Verification
 
-1. `./singularity build` — migrations regenerate cleanly, server restarts. (No enum
+1. `./equin build` — migrations regenerate cleanly, server restarts. (No enum
    *values* change here, so no new data migration is expected; confirm
-   `./singularity check --migrations-in-sync` is green.)
-2. `./singularity check` — the new `model-provider:no-raw-model-flags` check passes;
+   `./equin check --migrations-in-sync` is green.)
+2. `./equin check` — the new `model-provider:no-raw-model-flags` check passes;
    temporarily hardcode a `claude-opus-4-8` literal in a scratch file and confirm it
    **fails**, then revert.
 3. **Blanking regression** (the core bug): with the app running, use

@@ -183,7 +183,7 @@ Canvas gets `pointer-events: none`; drag-to-scrub (`useInertialDrag`) stays on t
 - **Phase 1 — pure groundwork**: `buildNoteVisuals` + `authoredSecondsOf` in geometry.ts; `css-color.ts`; `onset-tracker.ts`; bun:test each.
 - **Phase 2 — Pixi renderer core**: pixi.js dep; note-mesh; grid; labels; scene; `PianoRollCanvas`; rewrite `piano-roll.tsx` (keep `useElementSize`, projection/tempo memos, drag, HUD, now-line, placeholder, gutter; `ScrollLayer` keeps only OverlayHost).
 - **Phase 3 — FX framework**: slots.ts + barrel re-export; fx-context; fx-host; particles; fx-toggle popover.
-- **Phase 4 — FX sub-plugins**: fx-core (glow: pooled additive radial-gradient sprite at `(x, laneY)`, ~250ms ease-out, velocity-scaled; sparks: 3–8 particles upward w/ jitter+fade ~600ms; brighten: additive overlay quad on the sounding bar's screen rect, repositioned per tick); fx-ripples (expanding ring sprites, additive, ShockwaveFilter-style without full-screen displacement cost); fx-shatter (~width/3 debris particles, gravity+rotation+fade ~900ms, budget-capped); fx-comets (per-track last-onset memory → quadratic-arc comet + fading trail; memory cleared onReset). `./singularity build` codegens the registry.
+- **Phase 4 — FX sub-plugins**: fx-core (glow: pooled additive radial-gradient sprite at `(x, laneY)`, ~250ms ease-out, velocity-scaled; sparks: 3–8 particles upward w/ jitter+fade ~600ms; brighten: additive overlay quad on the sounding bar's screen rect, repositioned per tick); fx-ripples (expanding ring sprites, additive, ShockwaveFilter-style without full-screen displacement cost); fx-shatter (~width/3 debris particles, gravity+rotation+fade ~900ms, budget-capped); fx-comets (per-track last-onset memory → quadratic-arc comet + fading trail; memory cleared onReset). `./equin build` codegens the registry.
 - **Phase 5 — verify** (below).
 
 ## Risks
@@ -199,8 +199,8 @@ Canvas gets `pointer-events: none`; drag-to-scrub (`useInertialDrag`) stays on t
 
 ## Verification
 
-1. `./singularity check type-check`; `bun test plugins/apps/plugins/sonata/plugins/piano-roll` (onset-tracker, geometry, labels, css-color, particles).
-2. `./singularity build` → `http://<worktree>.localhost:9000/sonata`; `e2e/screenshot.mjs` flows:
+1. `./equin check type-check`; `bun test plugins/apps/plugins/sonata/plugins/piano-roll` (onset-tracker, geometry, labels, css-color, particles).
+2. `./equin build` → `http://<worktree>.localhost:9000/sonata`; `e2e/screenshot.mjs` flows:
    - Open a library song → roll renders (notes + realistic keyboard).
    - Click play → mid-playback shot: glow/sparks at now-line, keys pressed-lit.
    - Two viewports (1000×800, 1400×900) → canvas bars align pixel-exact with DOM chord overlay + keyboard columns.
@@ -211,7 +211,7 @@ Canvas gets `pointer-events: none`; drag-to-scrub (`useInertialDrag`) stays on t
 
 ## Outcome (verified 2026-06-12, post-implementation)
 
-All phases landed. 52 bun tests green; all 38 `./singularity check`s pass. Measured on the densest library song (Choral Fantasy, 17min, 22 tracks), frame-time percentiles from a rAF probe during a continuous viewport-resize loop:
+All phases landed. 52 bun tests green; all 38 `./equin check`s pass. Measured on the densest library song (Choral Fantasy, 17min, 22 tracks), frame-time percentiles from a rAF probe during a continuous viewport-resize loop:
 
 | Probe | Headless (SwiftShader) | Headed, real GPU (WebGPU) |
 |---|---|---|

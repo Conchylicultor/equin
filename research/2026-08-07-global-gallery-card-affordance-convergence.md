@@ -224,7 +224,7 @@ and a table column. All three contributors express cleanly.
   `["title","composer","duration","playCount","trackCount","sourceMissing"]`. Delete
   `sonata.library.card-meta.jsonc` + its `.origin.jsonc`; `sonata.library.fields.jsonc`
   gains the two new contributor keys, so its origin `@hash` shifts —
-  `./singularity build` regenerates it and `config-origins-in-sync` blocks `push` until
+  `./equin build` regenerates it and `config-origins-in-sync` blocks `push` until
   the new hash is copied over. Same for `sonata.library.song-actions.jsonc` (new
   `delete` key).
 
@@ -330,14 +330,14 @@ Registration is filesystem-derived — never hand-edit `web.generated.ts`.
 
 ## Verification
 
-1. `./singularity build`; confirm `status: ok` in
+1. `./equin build`; confirm `status: ok` in
    `~/.singularity/worktrees/<wt>/build-status.json` (never infer from a `build-*.log`).
    Re-stamp the shifted config `@hash`es and rebuild.
-2. `./singularity check` — `type-check`, `eslint`, `plugin-boundaries`,
+2. `./equin check` — `type-check`, `eslint`, `plugin-boundaries`,
    `plugins-doc-in-sync`, `reorderable-slots-in-sync` (deleting `Library.CardMeta` removes
    a slot), `config-origins-in-sync`, `config:overrides-authored`, `data-views-in-sync`,
    `tailwind-scan-covers-classes` (the new `size="sm"` classes), `layout-geometry`.
-3. `./singularity test plugins/primitives/plugins/data-view plugins/apps/plugins/sonata/plugins/library`
+3. `./equin test plugins/primitives/plugins/data-view plugins/apps/plugins/sonata/plugins/library`
    — both buckets.
 4. `gallery/web/__tests__/data-card-actions.test.tsx` — its cases still hold. **Add** the
    one this change exists for: rendering `GalleryView` with `itemActions` **and**

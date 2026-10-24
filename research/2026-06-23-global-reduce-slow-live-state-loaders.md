@@ -114,7 +114,7 @@ structural fix (separate plan) if Path A's residual always-FULL cost is still ma
 
 ## Verification
 
-1. `./singularity build` in the worktree.
+1. `./equin build` in the worktree.
 2. `mcp__singularity__get_runtime_profile { kind: "db", worktree: "<wt>" }` — confirm the
    `attempts_v` CTE scan is replaced by a flat rollup scan and per-fire DB cost drops; then
    `{ kind: "loader" }` — `attempts` `workMs` and `{ kind: "push" }` `deliver:attempts` /
@@ -122,7 +122,7 @@ structural fix (separate plan) if Path A's residual always-FULL cost is still ma
 3. Tasks app at `http://<wt>.localhost:9000/tasks` — confirm attempt statuses
    (pending/in_progress/pushed/completed/abandoned) and the nested conversation lists still
    render and update live (launch/exit/push a conversation).
-4. `./singularity check` — boundaries + type-check. `migrations-in-sync` must stay green: the
+4. `./equin check` — boundaries + type-check. `migrations-in-sync` must stay green: the
    rollup table uses a non-glob handle, so no migration is generated (same as agent-launches).
 
 ## Notes

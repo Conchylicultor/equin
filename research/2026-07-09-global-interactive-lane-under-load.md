@@ -24,7 +24,7 @@ Meanwhile the Mac itself stayed smooth (browser, editor fine).
 
 Full forensics below in §6; the chain:
 
-1. **Trigger (out of scope for this fix):** 4–5 agent `./singularity build` runs overlapped;
+1. **Trigger (out of scope for this fix):** 4–5 agent `./equin build` runs overlapped;
    each spawns up to 8 type-check workers (`min(cpus−1, 0.5·totalmem/2.7 GB)` — a per-process
    formula that assumes it is alone on the host). ~18–40 heavy processes → host load 50–63 on
    18 cores.

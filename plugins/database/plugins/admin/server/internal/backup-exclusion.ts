@@ -54,7 +54,7 @@ export interface BackupExclusions {
 // collected contributions already throws inside `getContributions()`; an empty
 // collected set would mean "leave nothing out", a full backup that looks like it
 // worked. `traces` guarantees a non-empty set in any process that collects — the
-// backup body runs in `./singularity supervised-exec`, which does.
+// backup body runs in `./equin supervised-exec`, which does.
 export function backupExclusions(): BackupExclusions {
   const tables = ExcludeFromBackup.getContributions();
   if (tables.length === 0) {

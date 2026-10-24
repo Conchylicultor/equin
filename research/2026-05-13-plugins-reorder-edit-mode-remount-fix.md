@@ -79,7 +79,7 @@ Each non-excluded contribution gets one extra `<div>` (from SortableItem) and on
 
 ## Verification
 
-1. `./singularity build`
+1. `./equin build`
 2. Open a conversation with the terminal pane auto-opened
 3. Toggle the reorder pen button on and off — terminal pane should NOT reopen
 4. In edit mode: verify drag reorder still works, hide button appears, ring visual shows, grouping zones work

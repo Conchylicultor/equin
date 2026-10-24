@@ -171,8 +171,8 @@ ClientFields.Resolve({ fields: appUsageFields, useValues: useAppUsageValues });
    - the app-cards / deployments / browser docs.
    - Re-grep `LiveColumns.Serve|defineFieldExtensions|row:` in `*.md` outside `research/`.
 9. **Finish:**
-   - run `./singularity build` (in the background);
-   - `./singularity check`, review against the merge-base;
+   - run `./equin build` (in the background);
+   - `./equin check`, review against the merge-base;
    - update the track page: tick the 2b boxes, record the upgrade path, set the status, mark Phase 2 done;
    - file the Phase 3 (Meta-DataView) task with the page id and `block-361815ed-…`.
 
@@ -192,7 +192,7 @@ ClientFields.Resolve({ fields: appUsageFields, useValues: useAppUsageValues });
   - arm order with `useOrder` (named, unnamed appended).
 - **Goldens:** regenerated with no SQL diff.
 - **Oracles:** tree-oracle, all-parity, conversations-oracle, serve-union-oracle, pages-tree-oracle.
-- **Checks:** `./singularity check` (type-check, `live:arms-registered`, plugins-doc-in-sync, plugins-registry-in-sync), then `./singularity build`.
+- **Checks:** `./equin check` (type-check, `live:arms-registered`, plugins-doc-in-sync, plugins-registry-in-sync), then `./equin build`.
 - **Screenshots** (`e2e-harness/e2e/screenshot.ts`):
   - the Home app grid table view (usage columns, sort by "Focused (7 days)");
   - the file explorer inside a checkout (git column, filter Changed vs main);

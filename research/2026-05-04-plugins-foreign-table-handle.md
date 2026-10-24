@@ -202,8 +202,8 @@ Call-site updates:
 
 ## Verification
 
-1. `./singularity build` — the auto-generated migrations should be unchanged (the underlying tables are the same; only the TS API changed). Drizzle-kit discovery still picks the tables up via the `tables*.ts` glob.
-2. `./singularity check` — runs the plugin-boundary checker; should still pass and now mechanically prevents the leak.
+1. `./equin build` — the auto-generated migrations should be unchanged (the underlying tables are the same; only the TS API changed). Drizzle-kit discovery still picks the tables up via the `tables*.ts` glob.
+2. `./equin check` — runs the plugin-boundary checker; should still pass and now mechanically prevents the leak.
 3. Smoke test the affected flows in the UI:
    - Paste an image into a task description → save → reopen → image still rendered (set path).
    - Send a turn in a conversation with a pasted image → next turn with another image → both link rows present (`add` path, race-free).

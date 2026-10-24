@@ -117,8 +117,8 @@ interface NestedMemoryPayload {
 
 ## Verification
 
-1. `./singularity build` — succeeds with no TypeScript errors
-2. `./singularity check --plugin-boundaries` — no violations
+1. `./equin build` — succeeds with no TypeScript errors
+2. `./equin check --plugin-boundaries` — no violations
 3. Open conversation `conv-1779695590-m6pd` at `http://att-1779706934-g3j1.localhost:9000`
 4. Verify nested_memory events show as collapsed rows with `displayPath` (not raw JSON dumps)
 5. Click to expand one — content should appear as scrollable monospace text

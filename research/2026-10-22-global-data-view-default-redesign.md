@@ -112,9 +112,9 @@ toolbar).
 
 ## Verification
 
-1. `./singularity check`; `./singularity test` on data-view, row-actions, sticky, row,
+1. `./equin check`; `./equin test` on data-view, row-actions, sticky, row,
    theme-gallery, prototypes, sonata library/covers/sources.
-2. `./singularity build`; `exhibit-shot.ts --id data-view/{gallery-card,list,toolbar,group-headers}`
+2. `./equin build`; `exhibit-shot.ts --id data-view/{gallery-card,list,toolbar,group-headers}`
    under `--theme prototypes|sonata|chrome`.
 3. `screenshot.ts --path /prototypes` and the Sonata library route at 1440×900 and 700×900; hover
    checks with `browser_*` (cover actions, primary button, list thumbnail); a new

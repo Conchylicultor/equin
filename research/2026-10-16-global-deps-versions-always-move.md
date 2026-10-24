@@ -205,13 +205,13 @@ moves it like anything else.
 
 ## Verification
 
-- `./singularity test plugins/infra/plugins/deps plugins/framework/plugins/tooling/plugins/format`:
+- `./equin test plugins/infra/plugins/deps plugins/framework/plugins/tooling/plugins/format`:
   unit tests for range rewrite, cooldown, group planning (incl. blocked),
   hold expiry, and hunk selection plus fixed point.
-- `./singularity check`: the new checks are green after conversion. Put an exact
+- `./equin check`: the new checks are green after conversion. Put an exact
   pin back in a scratch edit and confirm `deps:npm-no-exact` fails.
-- `./singularity deps upgrade npm` in this worktree: it should move tailwindcss
+- `./equin deps upgrade npm` in this worktree: it should move tailwindcss
   to 4.3.x and propose vite 7 (or whatever is current), with an `upgraded` or
   `regressed` verdict and a receipt.
 - Formatting: under a newer prettier, edit one line of a large file, then
-  `./singularity build`. Only that hunk changes; `format-clean` is green.
+  `./equin build`. Only that hunk changes; `format-clean` is green.

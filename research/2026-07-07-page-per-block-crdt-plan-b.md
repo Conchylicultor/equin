@@ -253,7 +253,7 @@ boundaries.
   assert merge, no loss.
 - **Offline/reconnect + multi-tab:** disconnect mid-edit, keep typing, reconnect →
   no loss; two tabs → one `/ws/notifications` socket, both converge.
-- Deploy each stage with `./singularity build`; verify on
+- Deploy each stage with `./equin build`; verify on
   `http://<worktree>.localhost:9000`.
 
 ## Risks & open questions

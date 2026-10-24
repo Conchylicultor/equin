@@ -14,7 +14,7 @@
 //     their destination on hover.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/website/plugins/shell/e2e/site-chrome-verify.ts \
+//   ./equin run plugins/apps/plugins/website/plugins/shell/e2e/site-chrome-verify.ts \
 //     [--out /tmp/site-chrome] [--headed]
 //
 // Manual only — nothing runs this automatically.

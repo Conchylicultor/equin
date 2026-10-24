@@ -78,11 +78,11 @@ barrel-free" note to point at the shared memo, but no wording change is required
 
 ## Verification
 
-1. `./singularity build` — must succeed with no generated-output drift.
+1. `./equin build` — must succeed with no generated-output drift.
 2. `git status` must be clean afterward (no changes to
    `plugins/primitives/plugins/data-view/shared/data-views.generated.ts`,
    `docs/plugins-*.md`, per-plugin `CLAUDE.md`, or the central-routes manifest).
-3. `./singularity check` — in particular `data-views-in-sync`, `type-check`, and the
+3. `./equin check` — in particular `data-views-in-sync`, `type-check`, and the
    registry/doc in-sync checks must pass (confirms byte-identical output).
 4. `bun test plugins/framework/plugins/tooling/plugins/codegen/core` — the codegen
    unit tests (`config-origin-gen.test.ts`, `plugin-registry-gen.test.ts`,

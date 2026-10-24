@@ -21,10 +21,10 @@
  * not preloaded is deferred. Defaults below; override with `--deferred` /
  * `--eager` (plugin paths, e.g. `apps/plugins/story/plugins/lenses`).
  *
- * Manual only; nothing runs this automatically. Run it after `./singularity
+ * Manual only; nothing runs this automatically. Run it after `./equin
  * build` with:
  *
- *   ./singularity run plugins/build/e2e/stale-tab-reload.ts [--color-scheme dark|light] [--out /tmp/stale-tab] [--deferred <plugin path>] [--eager <plugin path>] [--headed]
+ *   ./equin run plugins/build/e2e/stale-tab-reload.ts [--color-scheme dark|light] [--out /tmp/stale-tab] [--deferred <plugin path>] [--eager <plugin path>] [--headed]
  *
  * Screenshots land at `<out>-{deferred,eager}-<scheme>.png`; run once per
  * scheme to get both.
@@ -47,7 +47,7 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 
 const USAGE =
-  "usage: ./singularity run plugins/build/e2e/stale-tab-reload.ts [--color-scheme dark|light] [--out <prefix>] [--deferred <plugin path>] [--eager <plugin path>] [--headed]";
+  "usage: ./equin run plugins/build/e2e/stale-tab-reload.ts [--color-scheme dark|light] [--out <prefix>] [--deferred <plugin path>] [--eager <plugin path>] [--headed]";
 
 const schemeArg = arg("color-scheme");
 if (schemeArg !== undefined && schemeArg !== "dark" && schemeArg !== "light") {

@@ -23,7 +23,7 @@
  * `bun test` process it would both see what other suites registered and leave
  * PGlite answering for every suite after it.
  *
- * Run: `./singularity test plugins/tasks/plugins/task-category`.
+ * Run: `./equin test plugins/tasks/plugins/task-category`.
  */
 
 import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";

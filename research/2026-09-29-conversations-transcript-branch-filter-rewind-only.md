@@ -116,9 +116,9 @@ line objects.
 
 ## Verification
 
-1. `./singularity test plugins/conversations/plugins/transcript-watcher`,
-   `./singularity test plugins/conversations/server` (claude-transcript, transcript-cut).
-2. `./singularity build` (background, as a subagent `./singularity await`).
+1. `./equin test plugins/conversations/plugins/transcript-watcher`,
+   `./equin test plugins/conversations/server` (claude-transcript, transcript-cut).
+2. `./equin build` (background, as a subagent `./equin await`).
 3. Open the deployed worktree's conversation view for conv-1790510418-tup0. Its transcript
    file is global, so any namespace renders it. Screenshot with the e2e `screenshot.ts`
    (`--path /agents/c/conv-1790510418-tup0`). Every `add_task` card should show a task link

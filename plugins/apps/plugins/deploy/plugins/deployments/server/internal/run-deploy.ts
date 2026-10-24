@@ -88,7 +88,7 @@ const deployRunJobInput = z.object({ runId: z.string() });
  * **This is the migration's whole point.** `update` is converge → build a
  * candidate → ship, and it used to be one in-process async function that
  * `await`ed a release for tens of minutes in the middle. That await is exactly
- * the window the 2026-08-28 incident died in: an unrelated `./singularity build`
+ * the window the 2026-08-28 incident died in: an unrelated `./equin build`
  * hot-restarted the backend, the gateway signalled its process group, and
  * `drun-1787890652933-wr3v6d` lost its ship 0.9 s after spawning it.
  *
@@ -353,7 +353,7 @@ async function runLeg(
   const outcome = await step(leg, { argv, cwd: REPO_ROOT });
   if (outcome.state === "run-closed") return { ok: false };
   if (outcome.state === "not-started") {
-    // No process ever ran (no `./singularity`, EAGAIN), so there is no exit
+    // No process ever ran (no `./equin`, EAGAIN), so there is no exit
     // code and no transcript to quote: the run's verdict is this sentence. The
     // factory closes the leg's row only after this, and only if it is still open.
     deployLog.publish(

@@ -5,7 +5,7 @@
 // the stat never appears.
 //
 // Usage:
-//   ./singularity run plugins/conversations/plugins/conversation-view/plugins/running-agents/e2e/agents-stat-verify.ts \
+//   ./equin run plugins/conversations/plugins/conversation-view/plugins/running-agents/e2e/agents-stat-verify.ts \
 //     --conv <conversationId with sub-agents> [--out /tmp/agents-stat] [--headed]
 
 import {

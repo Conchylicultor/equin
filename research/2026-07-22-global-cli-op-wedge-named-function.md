@@ -13,7 +13,7 @@ remaining unknown; candidates are constrained hard below.
 
 ## The specimen
 
-`check --scope tree` (nested under `./singularity push`, worktree
+`check --scope tree` (nested under `./equin push`, worktree
 `att-1784630317-o0fi`), pid 81345, launched pre-armed
 (`--inspect=localhost:52657/2ce01c89`, marker + `ps` both carried the URL).
 Wedged from ~01:10 CEST 2026-07-22: `pending: ["orphaned-db-tables"]` for 34

@@ -40,7 +40,7 @@ Evidence:
    queue-wait + acquisition + execution. At boot that's dominated by the first
    two.
 
-Why every build/deploy is affected: `./singularity build` restarts the worktree
+Why every build/deploy is affected: `./equin build` restarts the worktree
 backend **process**. The node-postgres `Pool` (`max: 5`, no `min`, lazy connect)
 is recreated empty each time. Meanwhile the boot fires a thundering herd — many
 plugins' `onReady` hooks issue queries concurrently (the two flagged queries run
@@ -181,7 +181,7 @@ Notes / risks:
 
 ## Verification
 
-1. `./singularity build` from the worktree (regenerates nothing here — code only —
+1. `./equin build` from the worktree (regenerates nothing here — code only —
    restarts the backend).
 2. Immediately after restart, exercise first interaction: load
    `http://att-1780591131-b301.localhost:9000` and hit the tasks/build views.

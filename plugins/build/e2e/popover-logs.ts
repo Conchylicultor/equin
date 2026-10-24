@@ -19,11 +19,11 @@
  *     28px to 36px and slid the chevron and the label down with it. Only
  *     geometry read off the live layout can say the jump is gone.
  *
- * Manual only; nothing runs this automatically. Run it after `./singularity
+ * Manual only; nothing runs this automatically. Run it after `./equin
  * build` with:
  *
- *   ./singularity run plugins/build/e2e/popover-logs.ts
- *   ./singularity run plugins/build/e2e/popover-logs.ts --headed
+ *   ./equin run plugins/build/e2e/popover-logs.ts
+ *   ./equin run plugins/build/e2e/popover-logs.ts --headed
  */
 
 import type { Locator, Page } from "playwright";

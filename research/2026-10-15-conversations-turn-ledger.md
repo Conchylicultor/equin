@@ -49,7 +49,7 @@ dir, with `--settings` whose `UserPromptSubmit` hook appends its stdin to a log
 file. Drive it with the same `send-keys -l` chunking as `typeTurn`.
 
 The probe is a script at `plugins/conversations/plugins/turn-ledger/scripts/cli-probe.ts`
-(leaf `scripts/` folder), run with `./singularity run`. Record the results in a
+(leaf `scripts/` folder), run with `./equin run`. Record the results in a
 `## Findings` section appended to this doc.
 
 | # | Question | Design decision it gates |
@@ -70,7 +70,7 @@ the design with the user. The rest of this plan assumes E1 holds.
 
 The probe was run by hand with `tmux send-keys -l` / `Enter` / `Escape` / `C-c`
 against a `UserPromptSubmit` hook running `cat > <dir>/<ts>-<pid>.json`. It was
-not committed as a script: `./singularity run` refuses files outside the
+not committed as a script: `./equin run` refuses files outside the
 checkout, and the probe is a one-off.
 
 | # | Result |

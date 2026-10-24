@@ -5,7 +5,7 @@ import type {
 } from "./internal/options";
 
 /**
- * `./singularity places …` — the Places app's terminal verbs. The import boots
+ * `./equin places …` — the Places app's terminal verbs. The import boots
  * this checkout's backend in `exec` mode (it needs the DB, the Maps key and the
  * jobs queue), so the checkout must have been built once.
  */

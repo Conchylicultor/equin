@@ -104,8 +104,8 @@ So the badge and Reload read through their light text, not their shape. The badg
 - New: a slot-render test that `Render controlSize` overrides the declared size for every item. Optionally, a divider render test for each orientation.
 
 ## Verification
-1. `./singularity build` (runs checks: type-check, eslint including `no-adhoc-layout` / `no-button-shadow`, token-group sync, plugins-doc-in-sync).
-2. `./singularity test plugins/build plugins/shell/plugins/notifications plugins/primitives/plugins/slot-render plugins/reorder`.
-3. `./singularity run plugins/shell/plugins/global-action-bar/e2e/collapsed-mark.ts`, `solo-safe-area.ts` and `focus-restore.ts`. These cover behaviour, the stable `data-health` / aria-labels / ring svg, and the safe area.
+1. `./equin build` (runs checks: type-check, eslint including `no-adhoc-layout` / `no-button-shadow`, token-group sync, plugins-doc-in-sync).
+2. `./equin test plugins/build plugins/shell/plugins/notifications plugins/primitives/plugins/slot-render plugins/reorder`.
+3. `./equin run plugins/shell/plugins/global-action-bar/e2e/collapsed-mark.ts`, `solo-safe-area.ts` and `focus-restore.ts`. These cover behaviour, the stable `data-health` / aria-labels / ring svg, and the safe area.
 4. Screenshots in solo mode with `screenshot.ts --viewport 1280x900` (collapsed and hovered), in each state I can produce: idle, building, Server updated + stale Reload, and failed if available. Compare them against the prototype's state gallery, and specifically judge (a) the dark badge against the bar and (b) the broken ring's visibility.
 5. Spot-check the docked strip in desktop mode, and confirm no other chrome surface changed (notification panel, build popover and crash chip still use the bright tokens).

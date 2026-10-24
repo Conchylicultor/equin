@@ -14,8 +14,8 @@
  *  - pasting a copy of a page into that page terminates;
  *  - moving a page into its own content is refused.
  *
- * Run: `./singularity test plugins/page/plugins/editor`
- * (requires the running embedded cluster — `./singularity build` first).
+ * Run: `./equin test plugins/page/plugins/editor`
+ * (requires the running embedded cluster — `./equin build` first).
  */
 
 import {

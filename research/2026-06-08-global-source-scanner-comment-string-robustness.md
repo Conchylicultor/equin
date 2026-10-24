@@ -14,7 +14,7 @@ call written in a **code comment** and silently generated a phantom
 No warning — wrong output from text that was never code.
 
 This is a **whole class**, not one scanner. The repo has **no AST-based source
-analysis anywhere**; every codegen generator, several `./singularity check`
+analysis anywhere**; every codegen generator, several `./equin check`
 rules, and the boundary checker hand-roll regex/`includes`/`git grep` over raw
 bytes. Three of them already re-implement comment/string skipping independently
 (`matchBracket`, boundaries' private `stripComments`, plus every ad-hoc regex),
@@ -214,14 +214,14 @@ Reuse (unchanged, depended upon): `parse-utils/core/helpers.ts`
 
 ## Verification
 
-1. `./singularity build` — regenerates all `*.generated.ts`. The
+1. `./equin build` — regenerates all `*.generated.ts`. The
    `plugins-registry-in-sync`, `facets:render-complete`, and `plugins-doc-in-sync`
    checks must stay green (proves no phantom/dropped entries from the rewrite).
-2. `./singularity check` — full suite green; specifically `typescript`,
+2. `./equin check` — full suite green; specifically `typescript`,
    `plugin-boundaries`, `eslint`, and every migrated `no-raw-*` check.
 3. Run the new unit + regression tests (`bun test` in the affected plugins).
 4. **Negative proof of the trigger**: temporarily add `// defineCollectedDir("phantom")`
-   to a `core/*.ts` file, run `./singularity build`, confirm **no**
+   to a `core/*.ts` file, run `./equin build`, confirm **no**
    `phantom.generated.ts` appears and `typescript` stays green; remove it.
 5. **No false-negative regression**: confirm a real `new WebSocket(` / real
    hardcoded color / real `defineResource({…})` is still detected after the

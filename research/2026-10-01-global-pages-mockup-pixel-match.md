@@ -143,7 +143,7 @@ The precedent is the agent-manager Mist theme (`plugins/apps/plugins/agent-manag
 - **`treeRowHeight` and `treeIndent`**: these replace the hard-coded `min-h-7` and `indentStep = 16` / `+4` in `primitives/tree/web/internal/tree-row-chrome.tsx`. Pages sets 30px and 14px.
 - **`display` type role** (size, weight, tracking): `page-header.css` `.page-doc-title` reads it instead of the hard-coded 40px / 700.
 - **`measureReading`**: replaces `READING_MEASURE`'s `max-w-4xl` (`page-tree/web/panes.tsx:67`) and the page column gutter. Pages sets 760px with 56px padding.
-- Each token is added to its group's schema. Then `./singularity check` keeps the role/token lint happy: no component-named type tokens, so it is `display`, not `page-title`.
+- Each token is added to its group's schema. Then `./equin check` keeps the role/token lint happy: no component-named type tokens, so it is `display`, not `page-title`.
 
 ### 2.3 Framing
 
@@ -219,11 +219,11 @@ Shared primitives change only through theme tokens. Pages-specific layout change
 
 ## Verification
 
-- `./singularity build` (background), then the compare and the capture above.
+- `./equin build` (background), then the compare and the capture above.
 - Check light mode: the Pages theme must leave light mode as it is today.
 - Check a second app (e.g. agent-manager) with screenshot.ts, to confirm the new tokens' defaults changed nothing.
-- `./singularity test plugins/primitives/plugins/tree plugins/primitives/plugins/bar plugins/apps/plugins/pages`, adding cases for the token-driven indent and row height.
-- `./singularity check`, including the token lint, `plugins-doc-in-sync` and config checks.
+- `./equin test plugins/primitives/plugins/tree plugins/primitives/plugins/bar plugins/apps/plugins/pages`, adding cases for the token-driven indent and row height.
+- `./equin check`, including the token lint, `plugins-doc-in-sync` and config checks.
 
 ## Critical files
 

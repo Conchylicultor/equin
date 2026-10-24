@@ -244,13 +244,13 @@ for the exemption spans.
 4. **Panes appear.** After rebuild, `config/apps/story/shell/` gains
    `pane.story-detail.actions.jsonc` and `pane.story-gallery.actions.jsonc`, and
    the manifest gains one row per `Pane.define`.
-5. `./singularity check` — `reorderable-slots-in-sync`, `data-views-in-sync`,
+5. `./equin check` — `reorderable-slots-in-sync`, `data-views-in-sync`,
    `plugins-doc-in-sync`, `plugin-boundaries`, `type-check`. A renderer throw must
    surface as `{ ok: false, message }`, not an unhandled crash in the check runner.
-6. `./singularity test plugins/plugin-meta/plugins/facets` plus a focused test for
+6. `./equin test plugins/plugin-meta/plugins/facets` plus a focused test for
    the created-vs-declared difference: orphan, duplicate, one-level group,
    factory result, pane.
-7. End to end: `./singularity build`, then enter reorder edit mode on a pane's
+7. End to end: `./equin build`, then enter reorder edit mode on a pane's
    action bar at `http://<worktree>.localhost:9000` and confirm the actions
    reorder and persist across reload.
 

@@ -185,7 +185,7 @@ contributions.)*
 
 ## Verification
 
-1. `./singularity build` from the worktree; load `http://<worktree>.localhost:9000`.
+1. `./equin build` from the worktree; load `http://<worktree>.localhost:9000`.
 2. **Main app unchanged:** on `/` the top toolbar still shows worktree dropdown,
    the action buttons (now via the action-bar strip), and the health dot, in the
    same visual layout. The floating bar is *also* present top-right (expected for
@@ -199,13 +199,13 @@ contributions.)*
    conversation (same as in the main app).
 5. **Reorder pen:** click the pen in the floating bar → global edit mode toggles
    and the main toolbar's reorderable slots show drag handles.
-6. **Status dot:** trigger `./singularity build` in another tab → dot turns amber,
+6. **Status dot:** trigger `./equin build` in another tab → dot turns amber,
    tooltip says the tab is stale. Stop the server → dot red (disconnected).
    Generate an error/warning notification → amber with attention tooltip.
 7. **Toggle:** Settings → Floating Bar → turn `enabled` off; confirm the bar
    disappears in all apps; turn back on.
 8. Use `e2e/screenshot.mjs` to capture collapsed vs hovered states in a non-main app.
-9. `./singularity check` passes (plugin boundaries, migrations/doc sync, eslint).
+9. `./equin check` passes (plugin boundaries, migrations/doc sync, eslint).
 
 ## Notes / decisions
 

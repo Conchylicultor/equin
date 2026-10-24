@@ -22,7 +22,7 @@ import type { DatabaseDriverImpl } from "@plugins/database/server";
 // no imperative table. Each test drives a FRESH listener (isolated per-instance
 // closure state) with a recording `route` spy.
 //
-// Requires a running Postgres cluster (started by ./singularity build). If the
+// Requires a running Postgres cluster (started by ./equin build). If the
 // cluster is unreachable, createTestDb() throws loudly with an actionable message
 // rather than silently skipping.
 

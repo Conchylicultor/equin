@@ -218,12 +218,12 @@ export interface Check {
    *     .gitignore). Whatever that hash covers is exactly what a push carries,
    *     so the check is in the push payload and every caller can assert it.
    *   - "deploy" → the check verifies the local deployment that
-   *     `./singularity build` produces (`~/.singularity/worktrees/<name>/web`,
+   *     `./equin build` produces (`~/.singularity/worktrees/<name>/web`,
    *     the `~/.singularity/cache/web-artifacts` store). That artifact NEVER lands on
    *     main, and `push`'s own internal rebase invalidates it by construction
    *     (the tree moves past the deployed dist), so push cannot meaningfully
    *     assert it — no matter how it is scheduled. Its real homes are `build`
-   *     (which deploys, then verifies), a standalone `./singularity check`, and
+   *     (which deploys, then verifies), a standalone `./equin check`, and
    *     main's post-push auto-build.
    *   - "host" → the verdict is about this MACHINE: the shared data root
    *     (`~/.singularity/`), host-global services, state no checkout owns. It is
@@ -235,12 +235,12 @@ export interface Check {
    *     build is what made `paths:no-undeclared-data-dirs` fail a deploy on a
    *     directory another agent's unmerged branch had just declared (see
    *     research/2026-09-01-global-host-scoped-data-root-audit.md). Its home is a
-   *     standalone `./singularity check` and any host-singleton runner.
+   *     standalone `./equin check` and any host-singleton runner.
    *
    * TREE PURITY — the second half of what `"tree"` promises. The verdict must be
    * a function of the tree hash AND of NOTHING ELSE, including what else already
    * ran in this process. That is what makes a recorded PASS TRANSFERABLE: the
-   * runner writes a cache entry from one process and a later `./singularity push`
+   * runner writes a cache entry from one process and a later `./equin push`
    * reads it from another, so a verdict that also depended on process history is
    * one the reading process cannot reproduce — and has no way to detect that it
    * cannot. It just returns the green.
@@ -284,7 +284,7 @@ export interface Check {
    */
   scope?: CheckScope;
   /**
-   * Run even when `./singularity build --skip-checks` is passed (and, as always,
+   * Run even when `./equin build --skip-checks` is passed (and, as always,
    * during a normal build and `push`). For cheap, structural, codegen-coupled
    * invariants whose violation is painful to discover only at push — e.g. a
    * newly-reorderable slot that still owes an authored override. Default false:

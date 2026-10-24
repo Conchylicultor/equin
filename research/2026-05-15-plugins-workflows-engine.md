@@ -566,9 +566,9 @@ export default {
 
 ## 16. Verification
 
-1. `./singularity build` — generates 4 tables (3 data + 1 trigger), builds server + web
-2. `./singularity check --plugin-boundaries` — no illegal imports
-3. `./singularity check --migrations-in-sync` — migration matches schema
+1. `./equin build` — generates 4 tables (3 data + 1 trigger), builds server + web
+2. `./equin check --plugin-boundaries` — no illegal imports
+3. `./equin check --migrations-in-sync` — migration matches schema
 4. Server boots without errors, job and event register
 5. `curl http://<worktree>.localhost:9000/api/workflows/definitions` → `[]`
 6. Create a definition via POST, verify it shows in GET

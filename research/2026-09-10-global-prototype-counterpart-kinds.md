@@ -112,7 +112,7 @@ author just mistyped.
 - `files/core/validate.ts` (`validatePrototypeFolder`): a third `HTMLRewriter`
   pass reads the tag and pushes a `problems[]` entry with `mocksProblemDetail`
   when malformed. Absent stays not-a-problem. This surfaces on the gallery card
-  and the Focus banner, and also runs in `./singularity check
+  and the Focus banner, and also runs in `./equin check
   prototypes:self-contained` over the repo template.
 - `files/core/mocks.test.ts` (next to source, pure runner): empty/whitespace;
   `fixture:control-panel/setting-rail`; `route:/agents`; `route:/agents?tab=x`;
@@ -289,7 +289,7 @@ changes are CSS and do not remount it.
   `@singularity/plugin-apps-prototypes-compare`, `-compare-fixture`,
   `-compare-route`, `@singularity/plugin-primitives-embed`).
 - `compare/web/index.ts` declares `slots: Counterpart` or the build fails.
-- `./singularity build` regenerates registries, autogen doc blocks and
+- `./equin build` regenerates registries, autogen doc blocks and
   `docs/plugins-*.md` (seven primitives' reverse indexes mention
   `compare-component`; all regenerated).
 - `reorderable-slots.generated.ts`: no impact (dispatch slot is not reorderable;
@@ -314,19 +314,19 @@ changes are CSS and do not remount it.
 ## Verification
 
 ```bash
-./singularity build      # run_in_background: true, then end the turn
+./equin build      # run_in_background: true, then end the turn
 
 # Embed mode on its own: no rail, no tab bar, no floating action bar; then the control.
-./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --path '/agents?embed=1' --out /tmp/embed
-./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --path '/agents' --out /tmp/chrome
+./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --path '/agents?embed=1' --out /tmp/embed
+./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --path '/agents' --out /tmp/chrome
 
 # The Compare stage per kind (one prototype tagged fixture:…, one route:/agents).
-./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --path /prototypes/proto/<id> --click "Compare" --viewport 1600x1000 --out /tmp/compare
+./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --path /prototypes/proto/<id> --click "Compare" --viewport 1600x1000 --out /tmp/compare
 
-./singularity test plugins/apps/plugins/prototypes
-./singularity test plugins/primitives/plugins/embed
-./singularity check plugin-boundaries
-./singularity check           # doc + registry in sync, prototypes:self-contained
+./equin test plugins/apps/plugins/prototypes
+./equin test plugins/primitives/plugins/embed
+./equin check plugin-boundaries
+./equin check           # doc + registry in sync, prototypes:self-contained
 ```
 
 By hand, since no check covers it: note the host's open tabs, open a prototype

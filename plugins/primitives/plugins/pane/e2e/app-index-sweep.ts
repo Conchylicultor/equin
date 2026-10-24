@@ -20,7 +20,7 @@
 //
 // Manual, self-contained — NOT wired into any check (tests are manual here):
 //
-//   ./singularity run plugins/primitives/plugins/pane/e2e/app-index-sweep.ts \
+//   ./equin run plugins/primitives/plugins/pane/e2e/app-index-sweep.ts \
 //     [--url <deploy>] [--wait <ms>]
 //
 // Exit 0 = all pass; exit 1 = a failing assertion (with a printed reason).

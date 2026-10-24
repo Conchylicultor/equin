@@ -146,7 +146,7 @@ Independently valuable and independently verifiable. `type: "agent-notes"` →
 Also rename `private-notes` → `private-note` (0 rows) so the family is a rule, not an
 exception — or document why it isn't.
 
-**Migration** — author via `./singularity build --custom-migration`, hand-edit, rebuild:
+**Migration** — author via `./equin build --custom-migration`, hand-edit, rebuild:
 ```sql
 UPDATE page_blocks SET type='agent-note' WHERE type='agent-notes';
 -- entity_versions.snapshot embeds StoredBlock[] verbatim; a restore replays it
@@ -219,12 +219,12 @@ modes, and each was missed by at least one independent planner.
 ## Verification
 
 ```bash
-./singularity build          # authority: build-status.json status: ok
+./equin build          # authority: build-status.json status: ok
 bun test plugins/page/plugins/editor/core/markdown.test.ts
 bun test plugins/page/plugins/markdown-apply/core/plan.test.ts
 bun test plugins/page/plugins/annotations/plugins/agent-access/server/internal/policy.test.ts
 bun plugins/page/plugins/annotations/plugins/agent-access/e2e/agent-access-verify.ts
-./singularity check          # migration-applies-clean replays against live main
+./equin check          # migration-applies-clean replays against live main
 ```
 
 **Fuzz first** — `markdown.test.ts`'s `gens` has `context` but not `agent-notes`,

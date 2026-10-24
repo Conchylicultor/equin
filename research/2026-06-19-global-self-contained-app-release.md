@@ -12,7 +12,7 @@ The clean-design framing: do not special-case Sonata. Build a **reusable release
 ### Requirements (locked with the user)
 
 1. **Keep the Go gateway in every profile** (dev, server-deploy, Tauri-sidecar). No parallel stack; gateway hot-swap is wanted for server version upgrades.
-2. **Dev workflow unchanged.** An agent runs `./singularity build --composition sonata` and the gateway serves the filtered app at `http://<worktree>.localhost:9000/` exactly like today. The self-contained composition is testable in the normal loop.
+2. **Dev workflow unchanged.** An agent runs `./equin build --composition sonata` and the gateway serves the filtered app at `http://<worktree>.localhost:9000/` exactly like today. The self-contained composition is testable in the normal loop.
 3. **Two run profiles, same artifacts.** *Dev*: identity from git, multi-namespace. *Release*: identity from a static spec, single fixed namespace. The only difference is **where identity comes from**.
 4. **Drop the `central` runtime** (auth/secrets) from the v0 Sonata closure — single-user local app.
 5. **Keep Postgres** (Sonata persists songs). A no-DB mode is out of scope.
@@ -25,7 +25,7 @@ The clean-design framing: do not special-case Sonata. Build a **reusable release
 - **Migrations already run on boot**, unconditionally (database plugin `onReadyBlocking`, server bin). The build-time `drizzle-kit generate` only *authors* DDL — it is not an apply step. **F7 collapses** to a data-dir-location decision.
 - **Dropping `central` is clean.** `CentralRoutes.Match` returns `""` when the manifest is absent (`gateway/central_routes.go:66`), falling through to subdomain routing. A release that never writes `central-routes.json` has no dangling `/api/auth/*` forwards.
 - **Sonata's closure is clean.** Zero hard-deps on conversations/tasks/agent-manager/git/auth/central/secrets; tables are song-keyed (no `user_id`). Needs: `database`, `endpoints`, `attachments`, `entity-extensions`, `asset-mirror`, `config_v2`, `fields/*`, `live-state`, `pane`, `slot-render`, `data-view`, `apps`; plus `file-watcher`+`jobs` only for the `midi/folders` sub-plugin.
-- **`start.ts` is ~80% of the launcher** (F3): it builds the gateway, synthesizes `database.json` for embedded PG + PgBouncer, supervises and daemonizes. Its only gap is that it assumes a prior `./singularity build` produced the spec + dist.
+- **`start.ts` is ~80% of the launcher** (F3): it builds the gateway, synthesizes `database.json` for embedded PG + PgBouncer, supervises and daemonizes. Its only gap is that it assumes a prior `./equin build` produced the spec + dist.
 
 ## The run-profile model
 
@@ -45,7 +45,7 @@ Filtering the committed `*.generated.ts` files would dirty the dev tree and brea
   - **Web** (`App.tsx:11`): import a `@composition-web-registry` alias; `vite.config.ts` resolves it to the filtered file when `VITE_COMPOSITION` is set, else the full `web.generated`. **Must be a build-time `resolve.alias` branch, not a runtime `import.meta.env` ternary** — otherwise Rollup bundles both registries and ships all ~540 plugins anyway (silent failure mode).
   - **Server** (`server-core/bin/index.ts:12`): a `plugins-active` selector dynamically imports the filtered file when `SINGULARITY_COMPOSITION` is set, else `../core/server.generated`.
 
-The committed full registries are never touched → `plugins-registry-in-sync` stays green and a normal `./singularity build` is unchanged.
+The committed full registries are never touched → `plugins-registry-in-sync` stays green and a normal `./equin build` is unchanged.
 
 `bundle` comes from `resolveComposition(tree, flattenManifest(manifestItemToManifest(item), all)).bundle` (a `Set<PluginId>`), with the `sonata` manifest seeded in `plugins/plugin-meta/plugins/composition/core/config.ts`.
 
@@ -56,9 +56,9 @@ The committed full registries are never touched → `plugins-registry-in-sync` s
 Hard dependencies: F4/F5 need a self-contained boot (F3); F3 needs a filtered bundle (F1) **and** a static identity (F2). F1 and F2 are mutually independent — F1 goes first (highest uncertainty/reuse, fully testable in the dev loop), F2 second (small, only realized once F3 boots it). **F6 is absorbed into F1** (the filtered shell has no agent chrome because those plugins aren't bundled; only the root-route default remains). **F7 is absorbed into F3/F5** (migrate-on-boot already exists; only a data-dir decision remains).
 
 ### F1 — Composition build-gating (+ release-shell default)
-**Scope.** `./singularity build --composition <name>` resolves the composition `bundle`, emits gitignored `*.composition.generated.ts` filtered registries beside the full ones, and routes the two roots through env-selected selectors (web via a `vite.config.ts` alias branch on `VITE_COMPOSITION`; server via `SINGULARITY_COMPOSITION`). Add the Sonata-at-`/` release root default.
+**Scope.** `./equin build --composition <name>` resolves the composition `bundle`, emits gitignored `*.composition.generated.ts` filtered registries beside the full ones, and routes the two roots through env-selected selectors (web via a `vite.config.ts` alias branch on `VITE_COMPOSITION`; server via `SINGULARITY_COMPOSITION`). Add the Sonata-at-`/` release root default.
 **Seams.** `plugins/framework/plugins/cli/bin/commands/build.ts` (new `--composition` option; filter after `regenerateRegistryCodegen`), `plugins/framework/plugins/tooling/plugins/codegen/core/plugin-registry-gen.ts` (`renderCollectedDirRegistry` reused with a bundle intersection), `App.tsx:11` + `server-core/bin/index.ts:12` (repoint to selectors), `vite.config.ts` (alias branch), `.gitignore`, seed `sonata` manifest in composition `config.ts`.
-**Done when.** `./singularity build --composition sonata` then loading `<wt>.localhost:9000` shows only Sonata; the served `webEntries`/`serverEntries` equal `bundle`; a normal `./singularity build` is unchanged and `plugins-registry-in-sync` stays green with a clean git tree.
+**Done when.** `./equin build --composition sonata` then loading `<wt>.localhost:9000` shows only Sonata; the served `webEntries`/`serverEntries` equal `bundle`; a normal `./equin build` is unchanged and `plugins-registry-in-sync` stays green with a clean git tree.
 
 ### F2 — Static-spec identity (generalize `central`)
 **Scope.** Factor `writeWorktreeSpec({name,server,web})` out of `build.ts` into `infra/worktree/server`; prove a packaged-style spec (fixed `name`, no git) boots and serves through the unchanged gateway env path.
@@ -68,10 +68,10 @@ Hard dependencies: F4/F5 need a self-contained boot (F3); F3 needs a filtered bu
 ### F3 — Self-contained launcher/supervisor (+ data-dir, DB provisioning)
 **Scope.** A `release`-mode boot that does what `start.ts` does (locate/build gateway, synthesize `database.json` for embedded PG + PgBouncer, supervise, daemonize) **plus** writes the static Sonata spec (F2) and ensures the DB exists via **create-empty-then-migrate** (not the conversation fork). Pick a release-specific data root (`SINGULARITY_DIR`/`PG_DIR`) **and** distinct ports/socket dir so a packaged install never collides with a dev install.
 **Seams.** New launcher reusing `start.ts` helpers (`ensureDatabaseConfig`, service shapes), `plugins/infra/plugins/paths` (release data-dir override), `build.ts` DB-readiness logic adapted to create-if-absent.
-**Done when.** On a machine with no worktree and no `./singularity build`, the launcher brings up PG + gateway, registers the spec, migrations apply, and Sonata serves from an isolated data dir.
+**Done when.** On a machine with no worktree and no `./equin build`, the launcher brings up PG + gateway, registers the spec, migrations apply, and Sonata serves from an isolated data dir.
 
 ### F4 — Web release target
-**Scope.** `./singularity release --composition sonata --target web` → a deployable bundle (filtered dist + packaged `server-core` + the F3 launcher), gateway retained for hot-swap. Define the upgrade choreography: swap files → rewrite spec → `POST /gateway/worktrees/sonata/restart` → gateway gates on `/api/health/ready`.
+**Scope.** `./equin release --composition sonata --target web` → a deployable bundle (filtered dist + packaged `server-core` + the F3 launcher), gateway retained for hot-swap. Define the upgrade choreography: swap files → rewrite spec → `POST /gateway/worktrees/sonata/restart` → gateway gates on `/api/health/ready`.
 **Seams.** New `release.ts` CLI command composing F1's filtered build + F3's launcher into a portable layout; ensure embedded PG/PgBouncer binaries are vendored into the probed bundle paths.
 **Done when.** The emitted bundle, unpacked on a fresh host, serves Sonata via its bundled launcher; an in-place server upgrade hot-swaps without dropping the page.
 
@@ -93,7 +93,7 @@ Hard dependencies: F4/F5 need a self-contained boot (F3); F3 needs a filtered bu
 
 ## Verification (end to end)
 
-1. **F1, in the dev loop:** `./singularity build --composition sonata`; open `http://<wt>.localhost:9000` — only Sonata, no agent chrome; confirm the served registry equals `bundle`; confirm `./singularity check plugins-registry-in-sync` green and `git status` clean.
+1. **F1, in the dev loop:** `./equin build --composition sonata`; open `http://<wt>.localhost:9000` — only Sonata, no agent chrome; confirm the served registry equals `bundle`; confirm `./equin check plugins-registry-in-sync` green and `git status` clean.
 2. **F2:** hand-write a static `sonata` spec; confirm `http://sonata.localhost:9000` serves with DB `sonata`, no git.
 3. **F3:** on a clean dir (no worktree, no build), run the launcher; confirm PG+gateway up, migrations applied, Sonata served, isolated data dir/ports.
 4. **F4:** unpack the web bundle on a fresh host; confirm serve + in-place hot-swap upgrade.

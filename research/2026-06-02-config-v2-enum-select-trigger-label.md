@@ -48,7 +48,7 @@ Identical change — same `options` shape, same one-liner.
 
 ## Verification
 
-1. `./singularity build`
+1. `./equin build`
 2. Open Settings → any enum field rendered as a dropdown (e.g. "Default model" in Model Provider settings, or any `enumField` with ≥4 options).
 3. The collapsed trigger must show the human label, not the raw value string.
 4. Opening the dropdown still shows all options with their labels (no regression).

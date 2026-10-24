@@ -1,5 +1,8 @@
 import { resolve } from "node:path";
-import { CLI_NAME, isCliName } from "@plugins/framework/plugins/cli/core";
+import {
+  CLI_NAME,
+  isCliName,
+} from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 
 export interface ShellCall {
   /**

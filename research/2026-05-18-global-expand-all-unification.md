@@ -138,11 +138,11 @@ All expand-all buttons now come from `ExpandAllButton`. Compact surfaces get ico
 
 ## Verification
 
-1. `./singularity build` — compiles and deploys
+1. `./equin build` — compiles and deploys
 2. Visual check at `http://<worktree>.localhost:9000`:
    - Tasks sidebar: expand-all per-row buttons still work on parent tasks
    - Agents sidebar: same
    - TreeList toolbar expand-all still toggles all tree nodes
    - Review pane > Code Review: expand/collapse all now shows icon + text, disabled when empty
    - Review pane > Plugin Changes: same styling as code review
-3. `./singularity check` — plugin boundaries, lint
+3. `./equin check` — plugin boundaries, lint

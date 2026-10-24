@@ -6,7 +6,7 @@
 // there). Turns the option back off afterwards when this run turned it on.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/sonata/plugins/lyrics-hud/e2e/lyrics-hud-verify.ts \
+//   ./equin run plugins/apps/plugins/sonata/plugins/lyrics-hud/e2e/lyrics-hud-verify.ts \
 //     [--song <id>] [--color-scheme dark|light] [--out /tmp/lyrics-hud] [--headed]
 
 import {

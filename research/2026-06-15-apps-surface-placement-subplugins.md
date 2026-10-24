@@ -211,7 +211,7 @@ in frame 0; self-corrects immediately).
 ## Verification
 
 Build/static:
-1. `./singularity build` — discovers the 3 sub-plugins, regenerates registry + docs; must pass `plugins-registry-in-sync`, boundaries, `type-check`.
+1. `./equin build` — discovers the 3 sub-plugins, regenerates registry + docs; must pass `plugins-registry-in-sync`, boundaries, `type-check`.
 2. `grep -n 'docked\|floating\|solo' surface-body.tsx placement-control.tsx use-tabs.tsx app-tab-bar.tsx use-chrome-theme-scope.ts` → **zero** placement string literals in consumers.
 3. `grep -rn DEFAULT_PLACEMENT plugins/` → zero hits.
 
@@ -224,5 +224,5 @@ Behavior (Playwright, via `e2e/screenshot.mjs` against `http://att-1781532797-oj
 9. **Original bug**: float a tab, pick an app from Home in it → stays floating (not reset to docked, not opened in background). With two tabs, activating a card in the Home tab swaps the Home tab, not another focused tab.
 
 Removability (the payoff):
-10. Delete `.../surface/plugins/floating/`, `./singularity build`, reload: control shows only Docked + Solo; drag-out no-ops cleanly; a persisted floating tab renders docked + self-heals; `apps` untouched; no build/boundary errors. Restore after.
+10. Delete `.../surface/plugins/floating/`, `./equin build`, reload: control shows only Docked + Solo; drag-out no-ops cleanly; a persisted floating tab renders docked + self-heals; `apps` untouched; no build/boundary errors. Restore after.
 11. Delete `.../solo/`: Esc shortcut and third segment gone, zero edits elsewhere.

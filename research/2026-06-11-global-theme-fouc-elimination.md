@@ -84,9 +84,9 @@ Crucially `Canvas` is a **consumed system color, not a declared token** — the 
 
 ## Verification
 
-1. **Build:** `./singularity build` in the worktree; load `http://<wt>.localhost:9000` and confirm the app is themed normally (no regression).
+1. **Build:** `./equin build` in the worktree; load `http://<wt>.localhost:9000` and confirm the app is themed normally (no regression).
 2. **Warm (Playwright):** load once (let `ThemeInjector` write the cache), customize a token (e.g. switch color-palette preset), hard-reload; assert the first-paint `theme-engine-<group>` `<style>` textContent equals the customized value, and that no duplicate `<style>` ids exist after mount. Frame-by-frame (video/trace) confirm a themed background from frame 0.
 3. **Cold (Playwright):** clear localStorage, hard-reload; with an early-paint probe assert `getComputedStyle(document.documentElement).backgroundColor` is the neutral `Canvas` shade (not transparent), and that it tracks emulated `prefers-color-scheme: dark` vs `light`. Confirm no flash of *wrong-colored content* (content is blank during boot), then themed after mount.
 4. **Forked scope:** open a forked app, reload, confirm first frame shows the fork's theme (cache + existing `themeScopeBootTask`).
 5. **Stale cache:** seed an extra `theme-engine-zzz` style id into the cache, reload, confirm `ThemeInjector` prunes it on mount (no orphan `<style>`).
-6. **Checks:** `./singularity check` green (no new checks; confirms `css-vars-single-owner` is unaffected since no token var is declared in static CSS).
+6. **Checks:** `./equin check` green (no new checks; confirms `css-vars-single-owner` is unaffected since no token var is declared in static CSS).

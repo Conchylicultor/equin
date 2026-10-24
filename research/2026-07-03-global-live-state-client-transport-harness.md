@@ -281,25 +281,25 @@ Reuse (read-only precedents):
 
 1. `transport-types.ts` + seam refactor of the three production files
    (including `SharedWebSocket.OPEN` swaps, `destroy()` completion,
-   `onDemoted`). Gate: `./singularity check` green (type-check, boundaries,
+   `onDemoted`). Gate: `./equin check` green (type-check, boundaries,
    no-raw-websocket) — production behavior unchanged except the demote fix.
-2. `test-support.ts` fakes + barrel export. Gate: `./singularity build`
-   (regenerates plugin docs for the widened barrel) + `./singularity check`.
+2. `test-support.ts` fakes + barrel export. Gate: `./equin build`
+   (regenerates plugin docs for the widened barrel) + `./equin check`.
 3. Test files A, B. Gate: `bun run test:dom plugins/primitives/plugins/networking`.
 4. Test files C, D, E. Gate: `bun run test:dom plugins/primitives/plugins/live-state`.
 5. Docs (v3 §9 rows, both CLAUDE.mds). Final gates:
 
 ```bash
 bun run test:dom plugins/primitives/plugins/networking plugins/primitives/plugins/live-state
-./singularity build
-./singularity check
+./equin build
+./equin check
 ```
 
 Acceptance: every hazard maps to a named test (`H1`, `H1b`, `H2`, `H4`,
 `H4b`, `H6`, `H6b`, `H6c`, `H7`, no-sub gate, delta-no-base, delta-drift);
 build + check green; production call sites byte-identical apart from the
 seams and the demote fix; the app still deploys and live updates flow
-(smoke-check a task edit pushing to the UI after `./singularity build`).
+(smoke-check a task edit pushing to the UI after `./equin build`).
 
 ## Risks
 

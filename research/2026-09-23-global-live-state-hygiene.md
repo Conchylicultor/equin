@@ -181,8 +181,8 @@ when it cannot. The flat branch never uses that path.
 
 ## Verification
 
-- `./singularity test plugins/primitives/plugins/live-state plugins/infra/plugins/query-resource plugins/primitives/plugins/networking plugins/plugin-meta/plugins/facets/plugins/resources`
-- `./singularity build` (in the background, then await). Type-check, the new lint
+- `./equin test plugins/primitives/plugins/live-state plugins/infra/plugins/query-resource plugins/primitives/plugins/networking plugins/plugin-meta/plugins/facets/plugins/resources`
+- `./equin build` (in the background, then await). Type-check, the new lint
   rule, `plugins-doc-in-sync` and boundaries all pass. `rg` shows that all 14 keys now
   appear in `docs/plugins-details.md`, and that `windowResourceDescriptor` no longer
   appears in any barrel.

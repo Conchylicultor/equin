@@ -120,7 +120,7 @@ No changes. `push-and-exit-button.tsx` subscribes to `pushAndExitResource`, read
 
 ## Step-by-Step Migration
 
-Each step leaves `./singularity build` green.
+Each step leaves `./equin build` green.
 
 ### Step 1 — Add the table
 
@@ -130,9 +130,9 @@ Files created:
 Files modified:
 - `plugins/conversations/plugins/conversation-view/plugins/push-and-exit/server/index.ts` — add `tables: [_pushAndExitJobs]` to the plugin definition (or whatever the project convention is for surfacing schema to drizzle-kit; follow the pattern used by `events-test/server/index.ts`).
 
-Run `./singularity build` once — this regenerates the drizzle migration (`migrations-in-sync` check enforces it's committed). Commit the generated file as part of this step's work.
+Run `./equin build` once — this regenerates the drizzle migration (`migrations-in-sync` check enforces it's committed). Commit the generated file as part of this step's work.
 
-Checkpoint: `./singularity build` passes; `./singularity check --migrations-in-sync` passes; plugin still runs against the old in-memory Map.
+Checkpoint: `./equin build` passes; `./equin check --migrations-in-sync` passes; plugin still runs against the old in-memory Map.
 
 ### Step 2 — Define the job, keep the Map as a shim
 
@@ -142,7 +142,7 @@ Files created:
 Files modified:
 - `plugins/conversations/plugins/conversation-view/plugins/push-and-exit/server/index.ts` — replace `void runJob(id).catch(...)` with `await pushAndExitJob.enqueue({ conversationId: id }, { jobKey: id })`. Add a side-effect import of `./internal/push-and-exit-job` at the top of the barrel so module-load registration happens before any route fires (mirrors `plugins/events/server/index.ts`'s `import "./internal/dispatch-job"` pattern).
 
-Checkpoint: `./singularity build` passes. Pushing a branch via the UI now goes through Graphile. The Map is still the store — crashes still lose state — but the *execution path* has moved. This lets us validate enqueue + worker pickup + `notify()` timing in isolation before touching storage.
+Checkpoint: `./equin build` passes. Pushing a branch via the UI now goes through Graphile. The Map is still the store — crashes still lose state — but the *execution path* has moved. This lets us validate enqueue + worker pickup + `notify()` timing in isolation before touching storage.
 
 ### Step 3 — Swap the Map for the table
 
@@ -162,17 +162,17 @@ Files modified:
 Files deleted:
 - Nothing deleted outright; `job-runner.ts` shrinks to helpers only (or gets renamed/merged). If the file ends up empty, delete it.
 
-Checkpoint: `./singularity build` passes. Kill the server mid-push: re-start it, the `running` row is still there; Graphile re-runs the job (see "Risks" #2 for the re-prompt concern). UI shows the status correctly after restart — this is the observable improvement the migration delivers.
+Checkpoint: `./equin build` passes. Kill the server mid-push: re-start it, the `running` row is still there; Graphile re-runs the job (see "Risks" #2 for the re-prompt concern). UI shows the status correctly after restart — this is the observable improvement the migration delivers.
 
 ### Step 4 — Regenerate plugin docs
 
-`./singularity build` regenerates `docs/plugins.md` via the `plugins-doc-in-sync` check. The push-and-exit entry gains a `DB schema: ...` line. Commit.
+`./equin build` regenerates `docs/plugins.md` via the `plugins-doc-in-sync` check. The push-and-exit entry gains a `DB schema: ...` line. Commit.
 
 ## Verification
 
 ```bash
-./singularity build
-./singularity check
+./equin build
+./equin check
 ```
 
 End-to-end in the UI (any conversation at `http://<worktree>.localhost:9000/c/<id>`):
@@ -184,7 +184,7 @@ End-to-end in the UI (any conversation at `http://<worktree>.localhost:9000/c/<i
 3. **Error path:** click on a conversation whose worktree no longer exists (or stub `sendTurn` to throw). Row reaches `status=error, detail=<message>`; toast shown; UI auto-fires DELETE; row gone.
 4. **Duplicate click guard:** click twice in quick succession. Second POST returns 409 (existing guard works against the row, not the Map).
 5. **Server restart mid-push:** click Push & Exit; while `status=running`, `Ctrl-C` and re-start the server. Row is still `running`; Graphile picks the job back up (see Risks #2 for the re-prompt concern).
-6. **Plugin boundaries:** `./singularity check --plugin-boundaries` passes — the only new cross-plugin import is `defineJob` from `@plugins/infra/plugins/jobs/server`, which events-test already validates is legal.
+6. **Plugin boundaries:** `./equin check --plugin-boundaries` passes — the only new cross-plugin import is `defineJob` from `@plugins/infra/plugins/jobs/server`, which events-test already validates is legal.
 
 ## Critical Files
 

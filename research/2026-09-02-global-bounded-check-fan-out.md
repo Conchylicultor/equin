@@ -225,20 +225,20 @@ work — it is the first data that can say which checks are actually worth cachi
 
 ## Verification
 
-1. `./singularity check --jobs 4` — passes; `check-progress.jsonl` `end` records
+1. `./equin check --jobs 4` — passes; `check-progress.jsonl` `end` records
    carry non-zero `queuedMs` for later checks and ~0 for the first four.
-2. `./singularity check --jobs 1` — passes; every `queuedMs` is the sum of its
+2. `./equin check --jobs 1` — passes; every `queuedMs` is the sum of its
    predecessors' work; durations no longer cluster.
-3. During a bounded run, `./singularity check --status` from a second shell
+3. During a bounded run, `./equin check --status` from a second shell
    reports a running set of exactly `width` and a non-empty queued set.
-4. `./singularity check type-check --jobs 1` — the deadlock case. Must complete;
+4. `./equin check type-check --jobs 1` — the deadlock case. Must complete;
    `type-check`'s own `grant.run()` fan-out is unaffected by the gate.
-5. `./singularity check layout-geometry --jobs 1` on a cold marker — must launch
+5. `./equin check layout-geometry --jobs 1` on a cold marker — must launch
    Chromium and complete, confirming `grant.run(() => browserPool.run(…))` still
    nests cleanly outside the gate.
-6. `SINGULARITY_CHECK_JOBS=8 ./singularity build` — the spawned check subprocess
+6. `SINGULARITY_CHECK_JOBS=8 ./equin build` — the spawned check subprocess
    inherits the width; confirm from its progress records.
-7. Existing suites: `./singularity test plugins/framework/plugins/tooling/plugins/checks`.
+7. Existing suites: `./equin test plugins/framework/plugins/tooling/plugins/checks`.
 
 ## Out of scope
 

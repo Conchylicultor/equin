@@ -1,5 +1,5 @@
 /**
- * Tests for the `no-adhoc-panel-body` lint rule. Run with `./singularity test
+ * Tests for the `no-adhoc-panel-body` lint rule. Run with `./equin test
  * plugins/primitives/plugins/css/plugins/control-panel`.
  *
  * The rule watches three ways a panel body sections itself by hand: a

@@ -23,7 +23,7 @@ plugins/page/plugins/editor/
       block-row.tsx        # recursive block renderer
 ```
 
-No manual edit to `web.generated.ts` — `./singularity build` regenerates it.
+No manual edit to `web.generated.ts` — `./equin build` regenerates it.
 
 ## 1. `core/define-block.ts` — Block type handle factory
 
@@ -259,7 +259,7 @@ No contributions from the editor itself — it defines slots that others contrib
 
 ## Verification
 
-1. `./singularity build` — must succeed (regenerates `web.generated.ts`, compiles)
-2. `./singularity check` — plugin boundaries, barrel purity, no cycles
+1. `./equin build` — must succeed (regenerates `web.generated.ts`, compiles)
+2. `./equin check` — plugin boundaries, barrel purity, no cycles
 3. Navigate to the app — no runtime errors from the new plugin loading
 4. Without any block type plugins, `<BlockEditor>` renders an empty container (no blocks in DB yet) or "Unknown block" rows if blocks exist

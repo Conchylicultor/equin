@@ -68,7 +68,7 @@ Keep "find a tag by role" (pin paint must not key off a name), drop exclusivity.
 - `server/internal/places-repo.ts` `savePlace`: `tags: [...autoTags, wantId]`.
 - `server/internal/tags-repo.ts`: role tags stay undeletable.
 - Migration: none for columns (`role` text enum widens/changes values only —
-  check `enumTextField` emits a CHECK; if so `./singularity build` regenerates).
+  check `enumTextField` emits a CHECK; if so `./equin build` regenerates).
   Existing rows are wiped by the import (§5), so no data migration.
 - Tests: rewrite `tag-tree.test.ts` role/status cases, `tag-edits.test.ts`,
   `seed-tags.test.ts` (each role held by exactly one seed tag),
@@ -142,7 +142,7 @@ the parent colour by `rank`: child *i* of *n* =
 Adding a `20€` child between them re-spreads automatically; the same works for
 any future ordered group. Tag manager: a "Shade children" toggle on a parent row.
 
-## 6. Importer — `./singularity places import-mapstr <path>`
+## 6. Importer — `./equin places import-mapstr <path>`
 
 A `cli/` verb on places-core (`defineCliCommand` + `runExec`, the
 `infra/audio-analysis/cli` pattern), so it runs with the worktree's DB, config
@@ -186,12 +186,12 @@ user's call when the result is reviewed.
 
 ## Verification
 
-- `./singularity test plugins/apps/plugins/places` — rewritten tag-tree,
+- `./equin test plugins/apps/plugins/places` — rewritten tag-tree,
   tag-edits, seed-tags, sidebar-filter, pin-paint tests; new tests for
   `placeFlags`, the ramp in `tagColor`, the Mapstr tag mapping and the match
   scorer (pure functions, fed rows from the real CSV).
 - Prototype: flip `status: been-want` and confirm the four pin states.
-- `./singularity build`, then `./singularity places import-mapstr ~/Downloads/mapstr.zip`
+- `./equin build`, then `./equin places import-mapstr ~/Downloads/mapstr.zip`
   (phase A) → review counts + unmatched list with the user → `--apply`.
 - `query_db`: 968 − unmatched places; tag counts match the CSV profile
   (Been 565, Want to go 401, Food/Restaurant 206…, minus unmatched); `created_at` spans

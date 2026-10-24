@@ -365,7 +365,7 @@ The `mutation()` runtime:
 
 On the client side, the same `mutation()` definition is published via the API surface (sub-design #3) as `tasksCore.createTask({...})`. The optional `optimistic` callback runs synchronously and patches the live-query store; rollback is "remove all rows tagged with this in-flight mutation id" if the server returns `{ ok: false }` (issue #5).
 
-**Schema migrations:** unchanged Drizzle workflow, with a new check that every `mutation()`'s `input` schema is derivable from the current table — caught by `./singularity check`. No new migration framework yet (issue #10 only partially addressed).
+**Schema migrations:** unchanged Drizzle workflow, with a new check that every `mutation()`'s `input` schema is derivable from the current table — caught by `./equin check`. No new migration framework yet (issue #10 only partially addressed).
 
 **Tradeoffs.** Smallest blast radius — every `httpRoutes` entry becomes a `mutation()`. Optimism is opt-in per mutation rather than free. Migrations remain Drizzle-shaped, so issue #10 is only ~50% solved. Plugin authors keep their existing mental model (Drizzle table + handler) but gain validation + transactional notify + optional optimistic patch as a single primitive.
 

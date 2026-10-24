@@ -12,7 +12,7 @@ to hand-author the JSONC override and re-stamp its hash.
 We want to **capture the intent at edit time** (personal vs default-for-everyone),
 route "default-for-everyone" edits into a **reviewable holding area**, and let the
 user **manually apply** them — writing the committed `config/` override in the
-worktree so it rides the normal review → `./singularity push` flow.
+worktree so it rides the normal review → `./equin push` flow.
 
 Confirmed constraints / decisions:
 - **No auto-push, no async sync job** for v1. Apply is a manual, in-app action.
@@ -25,7 +25,7 @@ Confirmed constraints / decisions:
   staging/CLI code (collection-consumer separation).
 
 Why worktree-local (not central/app-wide): the artifact a structural edit produces
-— a written `config/<plugin>/<slot>.jsonc` that rides `./singularity push` — is
+— a written `config/<plugin>/<slot>.jsonc` that rides `./equin push` — is
 worktree-local. The central runtime has **no Postgres** (secrets/auth use an
 encrypted flat file + HTTP routes; new central plugins need `central-core`
 approval), and a table on the main `singularity` DB has a **bootstrap deadlock**
@@ -51,7 +51,7 @@ review "Reorder Defaults" section ◀──────────────�
         ▼                                ▼
 git-layer writer:                   delete row
   config/<plugin>/<slot>.jsonc
-  (restamped // @hash)  →  rides ./singularity push
+  (restamped // @hash)  →  rides ./equin push
 ```
 
 The tree handed to `commitTree` is **already materialized over the live catalog**
@@ -96,7 +96,7 @@ export const _reorderStagedDefault = pgTable("reorder_staged_default", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 ```
-Export `_reorderStagedDefault` from `staging/server/index.ts` so `./singularity build`
+Export `_reorderStagedDefault` from `staging/server/index.ts` so `./equin build`
 autogenerates the migration. Target DB = the worktree's own `db` from
 `@plugins/database/server`.
 
@@ -266,8 +266,8 @@ selector in the review section. None needed while Apply targets the local `confi
 
 ## Verification
 
-1. `./singularity build` — confirm a `reorder_staged_default` migration is generated;
-   `./singularity check` passes (`config-origins-in-sync`, `reorder:configs-authored`,
+1. `./equin build` — confirm a `reorder_staged_default` migration is generated;
+   `./equin check` passes (`config-origins-in-sync`, `reorder:configs-authored`,
    boundary checker).
 2. Drive the UI (run skill / `e2e/screenshot.mjs`): enter edit mode, flip scope to
    "Everyone", drag-reorder a slot.
@@ -283,4 +283,4 @@ selector in the review section. None needed while Apply targets the local `confi
 7. Negative tests: stage a non-promotable descriptor → 403; apply a malformed `items`
    (legacy `{order,hidden}`) → 422, no file written.
 8. `git status` shows the modified `config/<plugin>/<slot>.jsonc`; rides
-   `./singularity push`; `./singularity check` stays green.
+   `./equin push`; `./equin check` stays green.

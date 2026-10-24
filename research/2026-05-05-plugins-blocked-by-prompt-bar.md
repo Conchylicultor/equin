@@ -116,7 +116,7 @@ Before computing rank, call `getConversation(conversationId)` to get `taskId`, t
 
 ## Verification
 
-1. `./singularity build` — deploy the changes
+1. `./equin build` — deploy the changes
 2. Open two conversations belonging to different tasks, both in "waiting" state
 3. In conversation A's prompt bar, click the blocked-by button
 4. Select conversation B from the list — confirm A's task now shows "blocked" status

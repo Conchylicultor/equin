@@ -152,15 +152,15 @@ places-map `click-away`, `custom-pin`, `open-card`, `camera-stays`,
 
 ## Verification
 
-- `./singularity test plugins/map plugins/apps/plugins/places` — drawList
+- `./equin test plugins/map plugins/apps/plugins/places` — drawList
   (spot leads, z-order, promoted skipped, culling), hitTest (overlap → top),
   mark SVG snapshots (`pin-paint` / `placeDropSvg`).
-- `./singularity build`, then `zoom-perf.ts` (with `--trace`): target Layerize
+- `./equin build`, then `zoom-perf.ts` (with `--trace`): target Layerize
   ≈ the `--hide-pins` baseline and total main-thread time within ~1.3× of it.
 - Look: `compare-diff`-style screenshot of `/places` before/after at far and
   near zoom (light + dark tiles) — pins pixel-close; hover a pin → lift +
   name; click → card; spot counts beside leads.
-- Updated e2e scripts pass; `./singularity check`.
+- Updated e2e scripts pass; `./equin check`.
 
 ## Risks
 

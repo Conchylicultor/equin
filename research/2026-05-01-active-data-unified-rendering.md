@@ -235,7 +235,7 @@ ActiveData.Tag({ display: 'block', tag: 'task', component: TaskCard })
 cd web && bun run test src/__tests__/active-data-task-parsing.test.tsx
 
 # Full build (type-checks everything)
-./singularity build
+./equin build
 
 # Manual: open a conversation where the model emitted <task> tags
 # with blank lines in the description — verify two independent cards render

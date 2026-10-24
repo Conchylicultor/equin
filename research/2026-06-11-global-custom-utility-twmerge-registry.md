@@ -176,18 +176,18 @@ fix is entirely in twMerge configuration.
 ## Verification
 
 1. **Check passes / catches drift.**
-   `./singularity check app-css-utilities-in-sync` → green. Temporarily add a bogus
+   `./equin check app-css-utilities-in-sync` → green. Temporarily add a bogus
    `@utility foo-bar { … }` to `app.css` and re-run → it must **fail** (proves the
    reverse check is now total). Remove it.
 2. **twMerge resolution** (quick `bun` repl importing `cn`):
    - `cn("text-caption","text-muted-foreground")` → contains **both** (no strip).
    - `cn("text-body","text-sm")` → `"text-sm"` (role utilities dedupe as font-size).
    - `cn("z-base","z-max")` → `"z-max"`; `cn("h-chrome-bar","h-10")` → `"h-10"`.
-3. **Live app.** `./singularity build`, then a scripted Playwright run against
+3. **Live app.** `./equin build`, then a scripted Playwright run against
    `http://<worktree>.localhost:9000` rendering a Badge `md` with a variant that
    adds a text-color class; assert `getComputedStyle(badge).fontSize` ===
    `var(--font-size-caption)` resolved (12px), not 16px. Use `e2e/screenshot.mjs`
    as the harness base.
-4. `./singularity check` (full) → all green (eslint typography lint, type-check,
+4. `./equin check` (full) → all green (eslint typography lint, type-check,
    etc.).
 ```

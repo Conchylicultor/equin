@@ -500,12 +500,12 @@ function pluginForPath(relFile: string, pluginSet: Set<string>): string | null {
 // ============================================================================
 
 // The name is DERIVED (`packageNameFor`) and written by the repo-tree codegen
-// (`syncPluginPackageNames`, run by `./singularity build` and
-// `./singularity regen-generated`). R1 is its in-sync guard, the same role
+// (`syncPluginPackageNames`, run by `./equin build` and
+// `./equin regen-generated`). R1 is its in-sync guard, the same role
 // `plugins-registry-in-sync` plays for the registries.
 
 const REGEN_HINT =
-  "run `./singularity build` (or `./singularity regen-generated`), which writes the derived name";
+  "run `./equin build` (or `./equin regen-generated`), which writes the derived name";
 
 async function checkPackageNaming(
   p: PluginDir,

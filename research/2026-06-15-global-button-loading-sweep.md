@@ -145,8 +145,8 @@ button is icon-shaped, the spinner replaces the icon — confirm that reads well
 
 ## Verification
 
-1. `./singularity build` from the worktree.
-2. `./singularity check` — type-check + lint (`no-floating-promises` must still
+1. `./equin build` from the worktree.
+2. `./equin check` — type-check + lint (`no-floating-promises` must still
    pass after the `void`→return changes).
 3. Spot-check a representative few in the running app
    (`http://<worktree>.localhost:9000`) with the `e2e/screenshot.mjs` helper —

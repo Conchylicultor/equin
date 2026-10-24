@@ -29,7 +29,7 @@ A fresh scan (`bunx eslint "plugins/**/web/**/*.{ts,tsx}" -f json`, 2026-06-23) 
 **Intended outcome:** bring the codebase into compliance — fix real violations, exempt
 the genuinely-justified ones — so (a) compiler coverage is **complete** (every component
 compiles), and (b) each rule can be **ratcheted from `"warn"` to `"error"`** so new
-violations fail `./singularity check` instead of silently eroding coverage. The work is
+violations fail `./equin check` instead of silently eroding coverage. The work is
 phased so it can stop cleanly after any phase; **Phase 1 is the high-value core** (it is
 literally what "coverage is complete" means and is ~19 small edits).
 
@@ -47,7 +47,7 @@ characterized the long tail; this plan is grounded in those findings.
 - **Phase 3 — `set-state-in-effect` burndown (67).** Refactor props-to-state / default-
   selection anti-patterns, migrate/ exempt the rest, then ratchet to `error`.
 
-Each phase ends green on `./singularity check` and only ratchets a rule once its count is
+Each phase ends green on `./equin check` and only ratchets a rule once its count is
 truly 0.
 
 ---
@@ -138,7 +138,7 @@ improves the memoization (correct property-level deps).
 - `plugins/primitives/plugins/virtual-rows/web/internal/virtual-rows.tsx:147` — `@tanstack/react-virtual`'s `useVirtualizer` returns a mutable instance whose state mutates outside render; it cannot be compiled. Add `"use no memo";` as the first statement of **`useVirtualRows`** (the hook, not the `VirtualRows` component — the hook is consumed directly by data-table/data-view/tree too), with a comment citing `incompatible-library`. Runtime behavior is unchanged (the hook already manages its own memoization).
 
 ### 1g. Iterate to zero, then ratchet
-1. `./singularity build` (regenerates + rebuilds; runs `bun install`).
+1. `./equin build` (regenerates + rebuilds; runs `bun install`).
 2. Re-scan: `bunx eslint "plugins/**/web/**/*.{ts,tsx}" -f json`. Fixing a component can
    surface a previously-masked sibling bail (e.g. `field-search-list.tsx`) — **fix any newly
    surfaced blocking violations and repeat** until the 7 bail-causing rules report **0**.
@@ -155,7 +155,7 @@ improves the memoization (correct property-level deps).
    "react-hooks/incompatible-library": "error",
    ```
    (Mirror the existing two-pin precedent; optionally collect these into a `RATCHETED_TO_ERROR`
-   array for clarity.) `./singularity check`'s eslint now **fails** on any new bail of these
+   array for clarity.) `./equin check`'s eslint now **fails** on any new bail of these
    rules — coverage is locked in. Leave `refs` / `set-state-in-effect` at `"warn"` until Phases
    2–3.
 
@@ -221,10 +221,10 @@ then ratchet `react-hooks/set-state-in-effect` to `"error"`.
 
 1. **Scan delta:** `bunx eslint "plugins/**/web/**/*.{ts,tsx}" -f json` → confirm the phase's
    target rule(s) now report **0** (aggregate by `ruleId`).
-2. **Check green:** `./singularity check` (type-check + eslint) — must pass *after* the ratchet
+2. **Check green:** `./equin check` (type-check + eslint) — must pass *after* the ratchet
    (proves the ratcheted rules are truly at 0).
 3. **DOM tests:** `bun run test:dom` — green (85/85 baseline).
-4. **Build:** `./singularity build` — succeeds; app boots at `http://<worktree>.localhost:9000`.
+4. **Build:** `./equin build` — succeeds; app boots at `http://<worktree>.localhost:9000`.
 5. **Compiler correctness (G3):** bundle still contains `react/compiler-runtime`; the
    render-profiler still names real components (not `Memo`/`Unknown`); `remounts === 0`. Spot-
    check the load-bearing fixes (`useResource`, `useCombinedResources`, the pane router) by
@@ -253,7 +253,7 @@ then ratchet `react-hooks/set-state-in-effect` to `"error"`.
    iterate-to-zero re-scan loop before any ratchet.
 2. **Load-bearing primitives** (`use-resource`, `resource-utils`, `pane`). Fixes are local and
    identity-preserving, but a regression is broad — gated by the G3 protocol + manual spot-checks.
-3. **Ratcheting too early** turns `./singularity check` red. Only ratchet a rule when its scan
+3. **Ratcheting too early** turns `./equin check` red. Only ratchet a rule when its scan
    count is 0; ratchet bail-rules in Phase 1, `refs`/`set-state` only after their burndowns.
 4. **`useRenderSync` on the router** — if it doesn't fully clear the caller bails, fall back to
    the per-site ref-guard + inline disable (agent-verified for `apps-layout`/`pane-overlay-host`).

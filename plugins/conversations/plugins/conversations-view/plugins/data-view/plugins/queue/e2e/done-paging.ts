@@ -15,7 +15,7 @@
  * pages in rows past it. A conversation ending mid-run lands at Done's head
  * and reads as a new row there, which the order check tolerates.
  *
- *   ./singularity run plugins/conversations/plugins/conversations-view/plugins/data-view/plugins/queue/e2e/done-paging.ts [--deep-rows 150] [--headed]
+ *   ./equin run plugins/conversations/plugins/conversations-view/plugins/data-view/plugins/queue/e2e/done-paging.ts [--deep-rows 150] [--headed]
  */
 import type { Page } from "playwright";
 import {

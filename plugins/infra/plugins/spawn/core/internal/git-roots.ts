@@ -17,7 +17,7 @@ const mainRepoRootMemo = new Map<string, Promise<string>>();
  * bounded by the p99 of an idle box. `infra/worktree`'s `worktree.ts` carries
  * the measurement this is copied from, including the finding that a 10 s bound
  * on the same class of command still false-fired during a real
- * `./singularity check`, where every parallel type-check worker calls in at once.
+ * `./equin check`, where every parallel type-check worker calls in at once.
  *
  * The extra reason to be generous HERE: the memo caches rejections on purpose,
  * so a spurious timeout would not fail one caller, it would fail every caller

@@ -214,11 +214,11 @@ Reused, not rebuilt: `hoverRevealGroup`/`hoverRevealTarget`
 
 ## Verification
 
-1. `./singularity build` (background — median ~10 min), then confirm
+1. `./equin build` (background — median ~10 min), then confirm
    `~/.singularity/worktrees/<wt>/build-status.json` reads `status: ok`.
-2. `./singularity check` — `plugins-doc-in-sync` and the `data-view`/`hover-reveal`
+2. `./equin check` — `plugins-doc-in-sync` and the `data-view`/`hover-reveal`
    lint rules are the ones this touches.
-3. `./singularity test plugins/primitives/plugins/data-view` — the existing
+3. `./equin test plugins/primitives/plugins/data-view` — the existing
    `list/web/__tests__/inline-edit.test.tsx` covers the row body being reshaped.
 4. In the app at `http://<worktree>.localhost:9000`:
    - **Build popover** — click the toolbar **Build** button. History renders as the

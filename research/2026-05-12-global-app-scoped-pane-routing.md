@@ -233,7 +233,7 @@ Child panes (`logChannelPane` with `after: [logsPane]`, `segment: ":channel"`) d
 
 ## Verification
 
-1. `./singularity build`
+1. `./equin build`
 2. Open `http://att-1778585996-k28u.localhost:9000/debug`
 3. Click each debug sidebar item — URL should stay under `/debug/...`
 4. Click "Logs" — URL should be `/debug/logs` (was `/logs`)
@@ -243,4 +243,4 @@ Child panes (`logChannelPane` with `after: [logsPane]`, `segment: ":channel"`) d
 8. Browser back/forward across app boundaries works
 9. From debug app, clicking conversation/task links stays in debug app
 10. App rail switching works (absolute navigation)
-11. `./singularity check` passes
+11. `./equin check` passes

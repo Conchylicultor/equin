@@ -116,9 +116,9 @@ Edit `plugins/apps/web/slots.ts`: remove the `hostsToolbar?: boolean` field + do
 `Apps.App` (only consumer was the deleted floating bar; grep to confirm no other reader).
 
 ### 7. Build + checks + docs
-- `./singularity build` — regenerates `web.generated.ts` / `server.generated.ts` after the plugin
+- `./equin build` — regenerates `web.generated.ts` / `server.generated.ts` after the plugin
   delete + new `action-bar` server barrel (`plugins-registry-in-sync`).
-- `./singularity check plugin-boundaries` — confirm DAG stays acyclic (new legal edges:
+- `./equin check plugin-boundaries` — confirm DAG stays acyclic (new legal edges:
   `action-bar → apps`, `worktree-switcher → action-bar`; no back-edge), one-barrel-per-runtime,
   registry exclusivity, barrel purity.
 - `plugins-doc-in-sync`: update hand-written prose in `action-bar/CLAUDE.md` (now owns the global bar
@@ -143,7 +143,7 @@ Edit `plugins/apps/web/slots.ts`: remove the `hostsToolbar?: boolean` field + do
 
 ## Verification (Playwright + build)
 
-After `./singularity build` (app at `http://att-1781459332-dbtj.localhost:9000`):
+After `./equin build` (app at `http://att-1781459332-dbtj.localhost:9000`):
 
 1. **Non-agent-manager app** (e.g. `/home`): tab bar shows the collapsed status glyph at the trailing
    edge; hovering expands the action row **leftward as an overlay** (tabs don't shift); clicking the

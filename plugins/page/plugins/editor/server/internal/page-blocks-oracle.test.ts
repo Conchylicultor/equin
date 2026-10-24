@@ -30,8 +30,8 @@
  * throws "no keyOf registered" and the page freezes with no Reload prompt).
  * Renamed, the old key is refused `unknown-key`, a `skew` verdict.
  *
- * Requires a running Postgres cluster (started by ./singularity build).
- * Run: `./singularity test plugins/page/plugins/editor`.
+ * Requires a running Postgres cluster (started by ./equin build).
+ * Run: `./equin test plugins/page/plugins/editor`.
  */
 
 import {

@@ -217,7 +217,7 @@ Does NOT export `buildFieldsSchema` (internal implementation detail).
 
 ## Verification
 
-1. `./singularity build` — confirms TypeScript compilation and no import errors
+1. `./equin build` — confirms TypeScript compilation and no import errors
 2. Write a smoke test in a temporary file that exercises every field type:
    ```ts
    const config = defineConfig({

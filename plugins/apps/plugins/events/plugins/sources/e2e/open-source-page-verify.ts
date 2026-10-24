@@ -2,8 +2,8 @@
  * End-to-end check of the sources list's `open` row action, against a deployed
  * worktree.
  *
- * Manual only. Run after `./singularity build`:
- *   ./singularity run plugins/apps/plugins/events/plugins/sources/e2e/open-source-page-verify.ts [--headed]
+ * Manual only. Run after `./equin build`:
+ *   ./equin run plugins/apps/plugins/events/plugins/sources/e2e/open-source-page-verify.ts [--headed]
  *
  * Each step is written against a claim the action is built on, not a pixel:
  *

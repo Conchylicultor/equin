@@ -221,7 +221,7 @@ type and the annotation's type came from two copies and were not assignable to e
 `#private` member in scope-manager). The three packages are meant to move as one set; they are now
 pinned to one exact version (8.59.2), and the lock no longer carries a second copy.
 
-**Verified.** `./singularity build` green with the new worker (full suite). Every target's buildinfo
+**Verified.** `./equin build` green with the new worker (full suite). Every target's buildinfo
 now carries a real signature for every repo file (web-core 6,219 of 9,172 entries — the remainder are
 `node_modules` declarations, which get none). Then the paired experiment, this time on the SHIPPED
 worker, single worker, no queue, on the same hub file as Finding 5:
@@ -239,7 +239,7 @@ The body-only edit now costs the identical-tree floor; the API edit still costs 
 as it must. Unit tests of the type-check plugin: 21 pass.
 
 **A measurement trap, recorded so nobody repeats it.** A first attempt to show the same thing
-through `./singularity check` was contaminated: my tool wrapper was killed but the demo script it
+through `./equin check` was contaminated: my tool wrapper was killed but the demo script it
 had started was not, so two scripts edited the same hub file while each check waited 15–40 minutes
 for a host grant and read the tree only when it finally ran. The per-run lines in those logs
 describe each other's trees. Through-the-check numbers are also six demoted workers on a loaded

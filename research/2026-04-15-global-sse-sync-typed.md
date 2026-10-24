@@ -133,12 +133,12 @@ Client-side type inference (plumbing `T` into `ReconnectingEventSource`) is out 
 - `plugins/tasks/shared/protocol.ts` — new, exports `TasksEvent`.
 - `plugins/tasks/server/internal/sse.ts` — type parameter + import.
 
-No client-side changes. No doc regeneration beyond what `./singularity build` emits automatically.
+No client-side changes. No doc regeneration beyond what `./equin build` emits automatically.
 
 ## Verification
 
-1. `./singularity build` — deploys.
-2. `./singularity check` — all four checks pass (`migrations-in-sync`, `plugins-doc-in-sync`, `no-raw-event-source`, `no-raw-sse`).
+1. `./equin build` — deploys.
+2. `./equin check` — all four checks pass (`migrations-in-sync`, `plugins-doc-in-sync`, `no-raw-event-source`, `no-raw-sse`).
 3. Open `/c/<id>` in Chrome; DevTools → Network filtered on `/api/events`. Expect exactly two requests over the page lifetime (`urls=stream`, then `urls=stream,edited-files`), both staying open, `: ping` every ~20 s, zero `ERR_INCOMPLETE_CHUNKED_ENCODING`.
 4. Toggle between two conversations 10× rapidly — one reopen per switch, no retries.
 5. Edit a file in the conversation's worktree → counter updates within ~1 s. Open the conversation for the first time → first edited-files frame arrives within ~100 ms (snapshot-on-subscribe path).

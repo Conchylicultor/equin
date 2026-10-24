@@ -270,8 +270,8 @@ it still names the column-excluding deferral.
 
 ## Verification
 
-1. **DDL unchanged:** `./singularity build` generates **no new migration**
-   (`./singularity check migrations-in-sync` clean → byte-identical DDL for both
+1. **DDL unchanged:** `./equin build` generates **no new migration**
+   (`./equin check migrations-in-sync` clean → byte-identical DDL for both
    tables). Confirm column counts via `mcp__singularity__query_db`
    (`story_generated_units` = 12 cols, `sonata_track_view` = 8 cols).
 2. **Wire omits server-only:** the resource endpoints (`story-generated-units`,
@@ -281,7 +281,7 @@ it still names the column-excluding deferral.
    colors/instruments/mute/hide all work).
 3. **No leak:** confirm the served payloads contain no `prompt` field (network
    inspection or `query_db` against the resource output shape).
-4. **Type invariant:** `./singularity check type-check` clean; the new
+4. **Type invariant:** `./equin check type-check` clean; the new
    server-only test entity's `Equal<>`/`wireColumns` assertions pass; removing
    `serverOnly` from a field that a `.select(wireColumns)` still references is a tsc
    error.
@@ -290,7 +290,7 @@ it still names the column-excluding deferral.
    Confirm the two migrated loaders (now projection-free) do **not** error with their
    allowlist entries removed, and a known transform (e.g. `tasks-core` attempts) is
    still not flagged.
-6. **Full green:** `./singularity check` passes (boundaries,
+6. **Full green:** `./equin check` passes (boundaries,
    `plugins-registry-in-sync`, `plugins-doc-in-sync`, `type-check`,
    `table-defs-in-schema-glob`, `migrations-in-sync`).
 

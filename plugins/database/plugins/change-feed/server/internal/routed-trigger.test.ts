@@ -30,7 +30,7 @@ import {
 // The witness is the raw NOTIFY stream (a dedicated LISTEN client, parsed by the
 // production `parseLiveStatePayload`) and the changelog rows beside it.
 //
-// Requires a running Postgres cluster (started by ./singularity build).
+// Requires a running Postgres cluster (started by ./equin build).
 
 let testDb: TestDb;
 let listen: Client;

@@ -321,16 +321,16 @@ push-tick (copied from `deployRunsRevisionServerResource`), `defineTrashSource`'
 
 ## Verification
 
-1. `./singularity build` (background) — regenerates `data-views.generated.ts`, the plugin registries
+1. `./equin build` (background) — regenerates `data-views.generated.ts`, the plugin registries
    and docs; `plugins-registry-in-sync`, `data-views-in-sync`, `plugin-boundaries`,
    `config:overrides-authored` and `type-check` all gate it.
-2. `./singularity test plugins/primitives/plugins/data-view/plugins/union-query` — the compiler
+2. `./equin test plugins/primitives/plugins/data-view/plugins/union-query` — the compiler
    suite (pruning, null alignment, seek continuity, cursor invalidation).
 3. `query_db` on this worktree: confirm all four tables have rows, then compare the endpoint's first
    page against a hand-written `union all` over the four `order by started_at desc limit 25`.
 4. Drive the real surface:
    ```
-   ./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
+   ./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
      --url http://att-1787885228-uyko.localhost:9000/debug/build --out /tmp/runs
    ```
    Check by hand: all four kinds interleaved in one list; the `kind` chip filters; group-by `kind`

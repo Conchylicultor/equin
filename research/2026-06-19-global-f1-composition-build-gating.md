@@ -5,9 +5,9 @@
 
 ## Context
 
-Today every build emits **all ~540 plugins** into the committed `web.generated.ts` / `server.generated.ts` registries, so a single app (e.g. Sonata) can't be served self-contained — there is no way to build an app with only its own closure. We want `./singularity build --composition sonata` to serve a **Sonata-only** app at `http://<wt>.localhost:9000` with no agent-manager chrome, **testable in the normal dev loop**.
+Today every build emits **all ~540 plugins** into the committed `web.generated.ts` / `server.generated.ts` registries, so a single app (e.g. Sonata) can't be served self-contained — there is no way to build an app with only its own closure. We want `./equin build --composition sonata` to serve a **Sonata-only** app at `http://<wt>.localhost:9000` with no agent-manager chrome, **testable in the normal dev loop**.
 
-Hard constraint: the committed full registries and a plain `./singularity build` must stay **byte-identical** (`plugins-registry-in-sync` green, `git status` clean). So the filtered registry lives **outside the committed tree** (gitignored siblings) and is selected at the **import seam at build/boot time** — never a runtime filter that still bundles everything.
+Hard constraint: the committed full registries and a plain `./equin build` must stay **byte-identical** (`plugins-registry-in-sync` green, `git status` clean). So the filtered registry lives **outside the committed tree** (gitignored siblings) and is selected at the **import seam at build/boot time** — never a runtime filter that still bundles everything.
 
 This plan was validated against the actual seams (paths/lines below are confirmed).
 
@@ -106,8 +106,8 @@ Add `*.composition.generated.ts` to `.gitignore`.
 
 ## Verification (dev loop)
 
-1. `./singularity build --composition sonata` — succeeds.
+1. `./equin build --composition sonata` — succeeds.
 2. Open `http://<wt>.localhost:9000` (scripted Playwright, `e2e/screenshot.mjs`): only Sonata renders, no agent-manager rail/chrome; `/` (bare) lands on Sonata; check browser console (`~/.singularity/worktrees/<wt>/logs/*.jsonl`) for no plugin-load errors.
 3. Confirm filtering: served `webEntries`/`serverEntries` equal `bundle` — inspect the emitted `web.composition.generated.ts` / `server.composition.generated.ts` entry count vs `resolveComposition(...).bundle.size` (web/server-bearing subset).
-4. Regression: `./singularity build` (no flag) then `./singularity check plugins-registry-in-sync` → green; `git status` → clean (the `*.composition.generated.ts` are gitignored and cleaned); full agent-manager app loads normally with `/` → `/home`.
+4. Regression: `./equin build` (no flag) then `./equin check plugins-registry-in-sync` → green; `git status` → clean (the `*.composition.generated.ts` are gitignored and cleaned); full agent-manager app loads normally with `/` → `/home`.
 5. `bun run test:dom plugins/framework/plugins/web-core/web/__tests__/plugin-render.test.tsx` → still passes.

@@ -214,7 +214,7 @@ function noDeploy(
         `${checkout}\n` +
         `  registered : ${none}\n\n` +
         `Nothing under ${worktreesDir()} is registered to this\n` +
-        `checkout's backend, so \`./singularity build\` has never published a deploy from\n` +
+        `checkout's backend, so \`./equin build\` has never published a deploy from\n` +
         `here. Run it, then re-run this script.\n` +
         `To drive a deploy this checkout did not build, name it:\n` +
         `  --url http://<namespace>.localhost:9000`,
@@ -232,10 +232,10 @@ function noDeploy(
   const tail =
     composition === undefined
       ? `A \`--composition\` build publishes only that composition's namespace, never the\n` +
-        `checkout's own app. Run \`./singularity build\` here to deploy it, or target one\n` +
+        `checkout's own app. Run \`./equin build\` here to deploy it, or target one\n` +
         `of the deploys above with --composition ${suggest}.`
       : `This checkout has published the compositions above, but not "${composition}". Run\n` +
-        `\`./singularity build --composition ${composition}\` here to deploy it, or target one\n` +
+        `\`./equin build --composition ${composition}\` here to deploy it, or target one\n` +
         `of the deploys above with --composition ${suggest}.`;
   usage(`${head}\n\n${checkout}\n  registered : ${registered}\n\n${tail}`);
 }

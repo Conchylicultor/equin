@@ -33,7 +33,7 @@ Introduce a **self-contained plugin** that owns the whole app-icon concept — t
 ### 1. New plugin — `plugins/apps-core/plugins/app-icon/`
 
 A sub-plugin under the existing `apps-core` umbrella (sibling of `app-rail`, `tab-bar`, `surface`).
-Auto-discovered by `./singularity build`; no manual registration. It does not import `apps-core`,
+Auto-discovered by `./equin build`; no manual registration. It does not import `apps-core`,
 so no cycle (apps-core's slot and consumers depend on it, not vice-versa).
 
 ```
@@ -134,7 +134,7 @@ icon: AppIcon;   // was: ComponentType<{ className?: string }>
 `file-explorer` (MdFolder), `story` (MdAutoStories) — all at
 `plugins/apps/plugins/<app>/plugins/shell/web/index.ts`.
 
-> Verify `./singularity check plugin-boundaries` accepts the nested call `mdAppIcon(MdHome)` inside
+> Verify `./equin check plugin-boundaries` accepts the nested call `mdAppIcon(MdHome)` inside
 > the contribution arg (it is part of the single default-export expression, same shape as the
 > existing `Apps.App({…})` call — barrel-purity forbids top-level statements/side-effects, not
 > nested value-producing calls). This is the one thing to confirm early.
@@ -163,7 +163,7 @@ become `DEFAULT_APP_ICON`.
 
 - Update `.claude/skills/create-app/SKILL.md` so the app-shell example authors `icon: mdAppIcon(MdXxx)`.
 - Update the `Apps.App` slot JSDoc in `slots.ts` to describe `AppIcon`.
-- `./singularity build` regenerates `apps-core` / per-app `CLAUDE.md` autogen blocks and
+- `./equin build` regenerates `apps-core` / per-app `CLAUDE.md` autogen blocks and
   `docs/plugins-*.md`; commit the drift (kept honest by `plugins-doc-in-sync`).
 
 ## Files to modify
@@ -182,9 +182,9 @@ become `DEFAULT_APP_ICON`.
 
 ## Verification
 
-1. `./singularity build` — TypeScript fails loudly on any of the 13 barrels or 8 consumers not
+1. `./equin build` — TypeScript fails loudly on any of the 13 barrels or 8 consumers not
    migrated (the slot type change propagates through `ActiveApp`/`ResolvedApp`). Then
-   `./singularity check` (boundaries, `plugins-doc-in-sync`, type-check).
+   `./equin check` (boundaries, `plugins-doc-in-sync`, type-check).
 2. Visual at `http://att-1782684524-gvca.localhost:9000` via `e2e/screenshot.mjs` — confirm icons
    render in: **app rail** (far-left strip), **Home launcher grid** (`/home`), **docked tab bar**,
    and a **floating window** (titlebar menu/tabs + desktop dock) by switching a tab to floating

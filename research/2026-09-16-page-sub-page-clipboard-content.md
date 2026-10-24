@@ -136,7 +136,7 @@ These need no new mechanism, but must be verified.
 
 ## Verification
 
-- Unit (`./singularity test plugins/page/plugins/editor`):
+- Unit (`./equin test plugins/page/plugins/editor`):
   - `serializeForest` stamps `copy` origins.
   - `withPasteIds`: an unconsumed cut keeps its id; a consumed cut or a copy mints.
   - DB-backed handler tests (the `db-test-fixture`):
@@ -152,5 +152,5 @@ These need no new mechanism, but must be verified.
   page. Open the pasted page and see its content at the same URL. Paste again
   and get a copy with content. Undo each step. Extend `e2e/duplicate-verify.ts`
   with duplicating a sub-page.
-- `./singularity build`, then repeat the user's gesture by hand on the worktree
+- `./equin build`, then repeat the user's gesture by hand on the worktree
   deploy.

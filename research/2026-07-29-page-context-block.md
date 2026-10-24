@@ -256,9 +256,9 @@ pass `body.prompt` to both, as today).
 
 ## Verification
 
-1. `./singularity build` from the worktree, then open
+1. `./equin build` from the worktree, then open
    `http://att-1785350257-w9yd.localhost:9000/pages`.
-2. `./singularity check` — `page.editor:block-data-registered`,
+2. `./equin check` — `page.editor:block-data-registered`,
    `plugins-registry-in-sync`, `plugins-doc-in-sync`, `type-check`, and the
    layout/radius/surface lint rules are the ones that will bite.
 3. Manual pass on a page: `/context` on an empty block → card with chevron; type a

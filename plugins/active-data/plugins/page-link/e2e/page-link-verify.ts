@@ -11,7 +11,7 @@
 // seeded it with.
 //
 // Usage:
-//   ./singularity run plugins/active-data/plugins/page-link/e2e/page-link-verify.ts \
+//   ./equin run plugins/active-data/plugins/page-link/e2e/page-link-verify.ts \
 //     --conv <conversationId> --page <block-…> [--block <block-…>] \
 //     [--url http://<worktree>.localhost:9000] [--headed]
 

@@ -255,12 +255,12 @@ Reused:
 
 1. Phase 0 findings are written into this doc, and the user is consulted if the timeout clamp breaks
    "never".
-2. Unit tests: `./singularity test plugins/conversations`.
+2. Unit tests: `./equin test plugins/conversations`.
    - `plan-update` cases: a relay-open question → waiting/question with no flush; the menu opening →
      a flush only when auto-open is on.
    - Answer validation: an unknown question, an unknown label, free text, a multi-select array.
    - The relay script's output for `answered` and `released`, run against a stub server.
-3. `./singularity build`, then `./singularity check`.
+3. `./equin build`, then `./equin check`.
 4. Live, from the worktree app (driven by `e2e/` script `question-relay/e2e/relay-verify.ts`):
    - Start an agent prompted to ask a 2-question AskUserQuestion. The card appears in under 1 s with
      no Escape sent. The pane shows the `statusMessage` spinner. `query_db` shows the row as `open`
@@ -270,6 +270,6 @@ Reused:
    - *Answer in terminal*: the menu is drawn and is answerable in tmux. "Answer here" still works
      after it.
    - Escape in tmux while the question is held: the row becomes `abandoned` and the card disappears.
-   - Run `./singularity build` while a question is held: the relay reconnects, the question
+   - Run `./equin build` while a question is held: the relay reconnects, the question
      survives, and answering it after the restart works.
    - A hookless session (launched with the old settings): the legacy flush path is unchanged.

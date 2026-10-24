@@ -159,21 +159,21 @@ an open collection, so the direct import is allowed.
 
 ## Verification
 
-- `./singularity test plugins/page/plugins/annotations/plugins/instructions`:
+- `./equin test plugins/page/plugins/annotations/plugins/instructions`:
   - The block handle test.
   - `instructionsInScope` against `createTestDb` (`database/db-test-fixture`):
     card on an ancestor, page form covering its parent, a sibling subtree that isn't
     covered, a private card being redacted, and a stale hash after an edit.
-- `./singularity test plugins/page/plugins/annotations/plugins/agent-access`:
+- `./equin test plugins/page/plugins/annotations/plugins/agent-access`:
   - The policy and tool tests for the write refusal, then success after delivery.
-- `./singularity test plugins/infra/plugins/mcp`: `instructions` appears only on `initialize`.
+- `./equin test plugins/infra/plugins/mcp`: `instructions` appears only on `initialize`.
 - Extend `agent-access/e2e/agent-access-verify.ts`:
   - Build a Root → Tracks (with instructions page) → Track tree in the worktree.
   - `read_page` on Track returns the preamble. A second read doesn't.
   - Edit the instructions, and `edit_page` is refused until the next read.
 - Manual:
-  - `./singularity build` (in the background) generates the migration.
+  - `./equin build` (in the background) generates the migration.
   - Start a conversation against the worktree and confirm the MCP `initialize` result
     carries the global section (`curl` a JSON-RPC initialize at `/api/mcp/<id>`).
-- `./singularity check`: plugin boundaries (agent-access → instructions, mcp stays
+- `./equin check`: plugin boundaries (agent-access → instructions, mcp stays
   page-free), `annotations:parties-declared`, docs in sync.

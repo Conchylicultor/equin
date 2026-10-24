@@ -246,19 +246,19 @@ of any table.
 
 ## Verification
 
-1. `./singularity test plugins/tasks/plugins/tasks-core plugins/infra/plugins/git-watcher plugins/tasks/plugins/attempt-work`
-2. `./singularity build` (background), then `./singularity check` — `type-check` for the
+1. `./equin test plugins/tasks/plugins/tasks-core plugins/infra/plugins/git-watcher plugins/tasks/plugins/attempt-work`
+2. `./equin build` (background), then `./equin check` — `type-check` for the
    trailer move burndown, `plugins-doc-in-sync` / `plugins-registry-in-sync`.
 3. **The frozen-worktree reproduction.** Before: `query_db` on a worktree DB shows
    `max(pushes.created_at)` behind `singularity`'s. After deploying, restart that backend
    and re-query — the two must agree, and must keep agreeing across a fresh
-   `./singularity push` from another worktree while nothing is restarted.
+   `./equin push` from another worktree while nothing is restarted.
 4. **The blocking consequence.** In a scratch worktree DB, delete the push rows of a
    landed attempt, confirm `select status from attempts_v where id = '<att>'` is no longer
    `completed` and its dependent task reads blocked in `task_blocking_v`; then GET a
    surface that reads `listPushesForAttempt` (the review pane, `/agents/c/<id>`) and
    confirm the rows are restored and both flip back.
-5. **No queue involvement.** After a `./singularity push`, `get_queue_health` on
+5. **No queue involvement.** After a `./equin push`, `get_queue_health` on
    `singularity` shows no `tasks.push-ingest` job at all, and the new `pushes` row is
    present within seconds of the ref moving.
 6. **Loud failure.** Point `ensureMainWorktreeRoot` at an unreadable repo (e.g.
@@ -283,7 +283,7 @@ of any table.
   `bootCritical` resources, and putting a git read on the boot-critical path makes a
   transient git failure a failed task list. The push path (§4) already closes the window
   they care about within milliseconds of a ref advance, and `onReady` closes it at boot.
-- **Have `./singularity push` write the rows itself**, transactionally with the push it
+- **Have `./equin push` write the rows itself**, transactionally with the push it
   performs. Tempting — the pusher knows the pushId, the conversation and the shas — but
   it does not cover `--from-main`, hand-merges, or a push landing while the backend is
   down, so the git-derived path would still be needed underneath, and a CLI→server
@@ -312,7 +312,7 @@ of any table.
    (its "why not the pushes table" section now needs to say *why it still isn't the
    authority* — it answers a different question, not merely a laggier one), and update
    the stale gap comment at `tasks-core/server/internal/resources.ts:137-141`.
-8. `./singularity build` (background) && `./singularity check`, targeted tests, then the
+8. `./equin build` (background) && `./equin check`, targeted tests, then the
    manual checks 3–7.
 
 ## Critical files

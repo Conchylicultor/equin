@@ -125,7 +125,7 @@ This creates clear visual hierarchy: large global presets at top, then compact p
 
 ## Verification
 
-1. `./singularity build` and visit `http://<worktree>.localhost:9000/theme-customizer`
+1. `./equin build` and visit `http://<worktree>.localhost:9000/theme-customizer`
 2. All 7 sections should be collapsed by default, showing only their label and chevron in a bordered card
 3. Clicking a section header should expand it with chevron rotation
 4. Inside Color Palette / Sidebar Palette, inner sub-groups should also start collapsed

@@ -98,7 +98,7 @@ Move the inline contributions out of `number/web/index.ts` into capability sub-p
 
 ### 6. Build, verify, docs
 
-`./singularity build`; verify (below); CLAUDE.md prose for new sub-plugins (autogen block inserted by build).
+`./equin build`; verify (below); CLAUDE.md prose for new sub-plugins (autogen block inserted by build).
 
 ## Critical files
 
@@ -121,7 +121,7 @@ Move the inline contributions out of `number/web/index.ts` into capability sub-p
 
 ## Verification (end-to-end)
 
-1. `./singularity build` succeeds; `./singularity check` passes (boundaries — no new cross-plugin re-exports; migrations-in-sync; eslint; plugins-doc-in-sync).
+1. `./equin build` succeeds; `./equin check` passes (boundaries — no new cross-plugin re-exports; migrations-in-sync; eslint; plugins-doc-in-sync).
 2. **Filter + derivation (`int→number`, data-view):** open `http://<worktree>.localhost:9000` → Sonata → Library → **Table**. The new "Filter" toggle reveals a min/max control for **Length** (the `int` `duration` field, resolved via `int → number`). Setting bounds narrows rows live and persists per view (localStorage `sonata:library`). Confirm no `switch(field.type)` exists — filtering goes through the `data-view.filter` slot (`rg "switch" use-data-view-rows.ts` → none).
 3. **Cell precedence:** Length still renders `m:ss` (tier-1 override), proving the override beats the inherited `int→number` cell.
 4. **Config (`enum`, in-matrix):** Settings → Piano keyboard → **Key labels** renders the radio group via the matrix-hosted `EnumRenderer`; changing it persists to JSONC and `useConfig` reflects it. `rg "config-v2.fields.renderer" plugins/fields/plugins/enum` shows exactly one enum contributor; none remains in `config_v2/.../enum/web`.

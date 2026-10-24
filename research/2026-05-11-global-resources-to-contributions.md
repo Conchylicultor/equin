@@ -113,7 +113,7 @@ Each `server/index.ts` barrel: replace `resources: [...]` with `contributions: [
 
 ## Verification
 
-1. `./singularity build` — confirms server compiles and starts
+1. `./equin build` — confirms server compiles and starts
 2. `curl http://<worktree>.localhost:9000/api/resources/_debug` — verify all resources appear in the debug endpoint, now with `pluginId`/`pluginName` attached
-3. `./singularity check` — passes (including `plugins-doc-in-sync` since `parseResources` is unchanged)
+3. `./equin check` — passes (including `plugins-doc-in-sync` since `parseResources` is unchanged)
 4. Spot-check a push resource (e.g. tasks) and an invalidate resource (e.g. config) still sync correctly in the browser

@@ -130,11 +130,11 @@ Acceptable; a keyed per-block value is the follow-up if it shows in profiles.
 
 ## Verification
 
-- `./singularity test` on `runtime-sdk`, `packages/partial-json`, `jsonl-viewer`
+- `./equin test` on `runtime-sdk`, `packages/partial-json`, `jsonl-viewer`
   (fold: open/delta per kind, legacy kind-less delta & snapshot; partial JSON:
   every prefix of real tool inputs parses, never throws; stand-ins: landing per
   kind, order rule, empty text).
-- `./singularity build`, then live in this worktree: a turn that thinks, writes
+- `./equin build`, then live in this worktree: a turn that thinks, writes
   and calls `Write` — Thinking card appears first and stays above, text streams
   below it, the Write card appears while its content is generated and grows;
   each swaps for its real row with no jump. Stop mid-stream clears the

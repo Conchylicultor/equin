@@ -4,7 +4,7 @@
 // tween measured an empty body) shows up as numbers rather than a feeling.
 //
 // Usage:
-//   ./singularity run plugins/primitives/plugins/collapsible/e2e/fold-motion.ts \
+//   ./equin run plugins/primitives/plugins/collapsible/e2e/fold-motion.ts \
 //     --path /agents --header "Queue" [--settle 1500] [--headed]
 //
 // --header is the trigger's accessible name prefix (a group header's label).

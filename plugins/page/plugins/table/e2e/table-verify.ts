@@ -10,7 +10,7 @@
 //   4. a valid edit commits on mod+Enter and the table shows it;
 //   5. ⌘Z restores the previous cells, ⌘⇧Z re-applies the edit.
 //
-// Usage: ./singularity run plugins/page/plugins/table/e2e/table-verify.ts [--url <deploy>]
+// Usage: ./equin run plugins/page/plugins/table/e2e/table-verify.ts [--url <deploy>]
 import type { Page } from "playwright";
 import {
   ELEMENT_TIMEOUT_MS,

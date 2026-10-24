@@ -9,7 +9,7 @@ An agent running `att-1778540417-oz3y` wanted to verify whether a lint check
 already failed on main before its changes. It did this:
 
 ```bash
-cd /Users/epot/__A__/dev/singularity && git stash && ./singularity check ; git stash pop
+cd /Users/epot/__A__/dev/singularity && git stash && ./equin check ; git stash pop
 ```
 
 The intent was "stash, check clean main, restore." But main was already clean,

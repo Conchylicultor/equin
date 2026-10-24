@@ -84,7 +84,7 @@ depends on them.
 ### 3. Let the build handle the config, manifest, and docs
 
 Deleting the `defineDataView("tasks-subtree")` marker is the only manual step;
-`./singularity build` propagates it. **Do not hand-delete these** — the build's
+`./equin build` propagates it. **Do not hand-delete these** — the build's
 `pruneOrphanedConfigFiles` (`codegen/core/config-origin-gen.ts:373-403`, invoked from
 `generateConfigOrigins:405-434`) removes them, and hand-editing inconsistently is what
 trips `config-origins-in-sync`:
@@ -118,9 +118,9 @@ Debug → Config Orphans and has no runtime effect.
 
 ## Verification
 
-1. **`./singularity build`** — must complete clean. It regenerates the manifest, prunes
+1. **`./equin build`** — must complete clean. It regenerates the manifest, prunes
    the two config files, and rewrites the docs in one pass.
-2. **`./singularity check`** — the checks that can catch a botched retirement:
+2. **`./equin check`** — the checks that can catch a botched retirement:
    - `data-views-in-sync` — fails if `data-views.generated.ts` wasn't rebuilt/committed.
    - `config-origins-in-sync` — its orphan pass fails on an `.origin.jsonc` no longer
      backed by a live descriptor, and its paired-hash pass fails on a half-deleted pair.

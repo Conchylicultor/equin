@@ -187,7 +187,7 @@ authority already documents: timing-of-a-real-commit questions belong in the e2e
 ## Verification
 
 ```bash
-./singularity build
+./equin build
 bun plugins/page/plugins/editor/e2e/drag-reorder-verify.ts
 ```
 
@@ -204,7 +204,7 @@ bun plugins/page/plugins/callout/e2e/callout-container-verify.ts
 Then the repo gates:
 
 ```bash
-./singularity check
+./equin check
 bun run test:dom plugins/page/plugins/editor
 bun test plugins/page/plugins/editor/core
 ```

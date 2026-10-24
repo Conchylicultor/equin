@@ -60,7 +60,7 @@ User decisions (2026-10-09): **no composer line under the title and no view-menu
 
 ## Execution — phased fan-out
 
-All agents work in this worktree on **file-disjoint** packages; agents do not run `./singularity build`. Between phases the orchestrator runs `./singularity build` (background) + `./singularity check`, fixes integration fallout, then launches the next phase. Generated files (registries, plugin docs, order files, migrations) are settled only by build. The two migrations are generated in separate phases (no snapshot fork).
+All agents work in this worktree on **file-disjoint** packages; agents do not run `./equin build`. Between phases the orchestrator runs `./equin build` (background) + `./equin check`, fixes integration fallout, then launches the next phase. Generated files (registries, plugin docs, order files, migrations) are settled only by build. The two migrations are generated in separate phases (no snapshot fork).
 
 **Phase 0 (orchestrator)** — update the prototype: Current chord confidence inline (no beats); Current key relative key + source badge + scale names visible.
 
@@ -93,8 +93,8 @@ All agents work in this worktree on **file-disjoint** packages; agents do not ru
 Each WP prompt carries: its files, the exact prototype functions/CSS to match, the interfaces it consumes/exports (names above), and its acceptance check.
 
 ## Verification
-- After each phase: `./singularity build` then `./singularity check` (type-check, boundary-rules, plugin-boundaries, eslint, migrations-in-sync, plugins-doc-in-sync).
-- Tests: `./singularity test plugins/apps/plugins/sonata/plugins/theory plugins/apps/plugins/sonata/plugins/pitch-layout plugins/apps/plugins/sonata/plugins/sources plugins/apps/plugins/sonata/plugins/rich plugins/infra/plugins/jobs/plugins/supervised-job plugins/primitives/plugins/css/plugins/row`.
+- After each phase: `./equin build` then `./equin check` (type-check, boundary-rules, plugin-boundaries, eslint, migrations-in-sync, plugins-doc-in-sync).
+- Tests: `./equin test plugins/apps/plugins/sonata/plugins/theory plugins/apps/plugins/sonata/plugins/pitch-layout plugins/apps/plugins/sonata/plugins/sources plugins/apps/plugins/sonata/plugins/rich plugins/infra/plugins/jobs/plugins/supervised-job plugins/primitives/plugins/css/plugins/row`.
 - Visual: `compare-diff.ts --name proto-1791407620-ij8o --options keyboard=2-octaves,keys=same-ratio` and screenshots of a UG song (recording states), a chord-grid song, a MIDI song (chord mode) at 1440 and 900 px; other detail-section panes (task detail, deploy) unchanged.
 - Behaviour: Cancel during alignment ends `cancelled` with no report filed; Retry resumes; groove preset apply/save/update/delete persists across reload and songs; chord lane highlights during playback with no per-frame commits (render-loop detector quiet); updated e2e: `S/recording/e2e/video-sync.ts`, `plugins/apps/plugins/sonata/e2e/song-switch.ts`.
 

@@ -257,11 +257,11 @@ and it is what stops a fourth copy appearing.
 
 ## Verification
 
-1. `./singularity test plugins/page/plugins/inline-page-link` — the new mint-driven
+1. `./equin test plugins/page/plugins/inline-page-link` — the new mint-driven
    pin must be **red before** the `tokens.ts` change and green after. Run it against
    the unfixed pattern once, so it cannot pass vacuously.
-2. `./singularity test plugins/page` and `./singularity test plugins/active-data`.
-3. `./singularity build` (background — per the workflow rule) then, in order:
+2. `./equin test plugins/page` and `./equin test plugins/active-data`.
+3. `./equin build` (background — per the workflow rule) then, in order:
    - `bun plugins/page/plugins/editor/e2e/mark-boundary-verify.ts` — phase 11's
      `decoratorCount` goes 0 → 1 and 11c/11d/11e turn green; phases 1-10 unchanged.
    - `bun plugins/page/plugins/editor/e2e/crdt-split-merge-verify.ts` — 16/16.
@@ -273,7 +273,7 @@ and it is what stops a fourth copy appearing.
      pasted block** (this is the user-visible bug being fixed).
    - `query_db` the pasted block: `data.text` holds `[[page:<id>]]`, and
      `page_links` now carries the edge.
-5. `./singularity check`.
+5. `./equin check`.
 
 ## Out of scope, deliberately
 

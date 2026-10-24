@@ -9,7 +9,7 @@
 // re-created player is a new element without it.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/sonata/plugins/recording/e2e/video-persistence.ts \
+//   ./equin run plugins/apps/plugins/sonata/plugins/recording/e2e/video-persistence.ts \
 //     --song <songId> [--out /tmp/video-persistence] [--headed]
 
 import type { Frame, Page } from "playwright";

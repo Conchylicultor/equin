@@ -136,7 +136,7 @@ A new collapsed sub-plugin mirroring `plugins/fields/plugins/image/plugins/table
 - **Dependencies:** `primitives/data-view`, `primitives/avatar`,
   `fields/avatar` (root core). No cycle: `fields/avatar/plugins/config` already
   depends on `primitives/avatar`, and data-view never imports `fields/avatar`.
-  `./singularity check plugin-boundaries` confirms.
+  `./equin check plugin-boundaries` confirms.
 
 ### 5. Migrate the agents list
 
@@ -165,9 +165,9 @@ is unchanged; no view is added.
 - `plugins/fields/plugins/avatar/CLAUDE.md` — mention the new sub-plugin; the
   sub-plugin's own CLAUDE.md describes the cell, payload, helper and assert.
 - The data-view slot list in its CLAUDE.md gains `avatar` among the Cell types.
-- Autogen blocks and `docs/plugins-*.md` regenerate on `./singularity build`.
+- Autogen blocks and `docs/plugins-*.md` regenerate on `./equin build`.
 
-## Tests (`./singularity test <path>`)
+## Tests (`./equin test <path>`)
 
 Mirror `plugins/primitives/plugins/data-view/plugins/table/web/__tests__/inline-edit.test.tsx`:
 a local `LoadedPlugin` that registers a fixture Cell, `<PluginProvider>`, and a
@@ -198,13 +198,13 @@ Sequential in this worktree, so builds and edits don't collide:
    tests. Load-bearing primitive.
 2. **Agent (sonnet)** — avatar cell sub-plugin: §4, its docs and tests, against
    the types landed in step 1.
-3. **Me** — §5 migration, `./singularity build` (background), verification,
+3. **Me** — §5 migration, `./equin build` (background), verification,
    review of the whole diff.
 
 ## Verification
 
-1. `./singularity test plugins/primitives/plugins/data-view plugins/fields/plugins/avatar` — all green.
-2. `./singularity build` (background); deploy receipt `status: ok`; the build's
+1. `./equin test plugins/primitives/plugins/data-view plugins/fields/plugins/avatar` — all green.
+2. `./equin build` (background); deploy receipt `status: ok`; the build's
    checks pass (`type-check`, `plugin-boundaries`, `plugins-registry-in-sync`,
    `plugins-doc-in-sync`, `eslint`).
 3. **Pixel check on the agents list.** Screenshot the agents tree on main

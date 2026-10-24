@@ -351,21 +351,21 @@ dirs' listings into `cacheSignature()`.
 ## Verification
 
 The order matters — **the migration runs before anything is built on the new
-code**, because `./singularity` executes TypeScript from source, so the command
+code**, because `./equin` executes TypeScript from source, so the command
 works in the worktree with no build.
 
 > **The migration must run BEFORE any new-code process touches the root.**
-> Learned the hard way: running `./singularity check` first was enough to mint
+> Learned the hard way: running `./equin check` first was enough to mint
 > `cache/check`, `cache/closure`, `locks/cpu` and three `logs/*` files at their
 > new homes, which is exactly the non-empty-destination state step 2 above now
 > refuses on. Whatever a pre-migration run creates has to be deleted by hand
 > before `--apply` will proceed.
 
-1. `./singularity check` — expect green, including `type-check`,
+1. `./equin check` — expect green, including `type-check`,
    `plugins-registry-in-sync`, `collected-dir-tsconfig-coverage`, and the two
    existing `paths:` checks. This DOES contaminate the root as described above;
    the script will name what to remove.
-2. `./singularity test plugins/infra/plugins/paths plugins/packages/plugins/host-semaphore`
+2. `./equin test plugins/infra/plugins/paths plugins/packages/plugins/host-semaphore`
    — the host-semaphore suite has eight `join(SINGULARITY_DIR, \`${name}-slots\`)`
    assertions that all move; add coverage for `LEGACY_LAYOUT` (every `from` is
    unique, every `to` names a real declaration) and for the migration against a
@@ -376,7 +376,7 @@ works in the worktree with no build.
 3. `bun plugins/infra/plugins/paths/scripts/migrate-data-layout.ts` (dry run) —
    read the plan. This listing is the acceptance test for the mapping.
 4. **You:** `kill $(cat ~/.singularity/gateway.pid)`, then the same script with
-   `--apply`, then `./singularity start`.
+   `--apply`, then `./equin start`.
 5. `ls -l ~/.singularity/` — the seven kind dirs, the four services, and every
    legacy name present as a symlink into its kind dir.
 6. **Confirm a stale worktree still works** — this is the point of the shim.
@@ -384,9 +384,9 @@ works in the worktree with no build.
    `http://<that-worktree>.localhost:9000`, and check it still reads its config
    and lists tasks. Its backend is naming `~/.singularity/config` and reaching
    `state/config` through the shim.
-7. `./singularity check paths:no-undeclared-data-dirs` — green: every legacy name
+7. `./equin check paths:no-undeclared-data-dirs` — green: every legacy name
    verified as a symlink to its declared target.
-8. `./singularity build` (background), then confirm
+8. `./equin build` (background), then confirm
    `~/.singularity/worktrees/<wt>/build-status.json` reads `status: ok`.
 9. Exercise the moved dirs end-to-end: open the prototypes gallery (reads
    `apps/prototypes`), take a screenshot (writes `apps/attachments`), open
@@ -428,4 +428,4 @@ works in the worktree with no build.
 - **Step 6** — folding `defineFileSink` and `defineCorpusIndex` onto `DataDir`
   instead of a raw string path.
 - Deleting `LEGACY_LAYOUT` once no root anywhere still needs it.
-- An audit pane / `./singularity clean` driven by `reclaim`.
+- An audit pane / `./equin clean` driven by `reclaim`.

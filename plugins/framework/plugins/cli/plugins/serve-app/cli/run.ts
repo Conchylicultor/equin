@@ -60,7 +60,7 @@ const run: CliAction<
 
   // The `--repo-root` default, resolved HERE rather than by commander: it is
   // `REPO_ROOT`, which lives behind a server barrel, and this command's
-  // declaration — reached on every `./singularity` invocation — may import no
+  // declaration — reached on every `./equin` invocation — may import no
   // server barrel. The option's help text states the default so it stays
   // discoverable from `serve-app --help`.
   const repoRoot = opts.repoRoot ?? REPO_ROOT;

@@ -242,7 +242,7 @@ The lint rule mirrors `no-unparsed-sql-rows.ts` byte-for-byte in shape: a
 `@typescript-eslint/utils`-only import (rule files are dual-loaded under jiti,
 which cannot resolve `@plugins/*`), `ESLintUtils.RuleCreator`, a narrative
 `meta.messages` entry, an in-rule owner-directory skip, `schema: []`. Its barrel
-needs no registration — `./singularity build` regenerates `lint.generated.ts`
+needs no registration — `./equin build` regenerates `lint.generated.ts`
 from the filesystem.
 
 ### 2. Migrate the 23 sites
@@ -304,19 +304,19 @@ One task for `text().$type<Union>()` (the column twin, needing a `customType`
 
 ## Verification
 
-- `./singularity test plugins/database/plugins/sql-projection` — the decoder unit
+- `./equin test plugins/database/plugins/sql-projection` — the decoder unit
   tests (including a `name[]`-as-raw-literal reproduction through `parsed`, and
   the null short-circuit) and the lint `RuleTester` suite.
-- `./singularity test plugins/tasks/plugins/tasks-core` — `views.test.ts` gains a
+- `./equin test plugins/tasks/plugins/tasks-core` — `views.test.ts` gains a
   case that reads `finished_at` and `status` **through the view object**
   (`t.db.select().from(tasks)`, not `db.execute(sql\`SELECT …\`)`, which bypasses
   the decoder by construction) and asserts `instanceof Date` and enum membership.
   That is the end-to-end proof that a decoder attached in a view definition
   survives to every read.
-- `./singularity check` — `eslint` must report **zero** remaining `sql<T>`, which
+- `./equin check` — `eslint` must report **zero** remaining `sql<T>`, which
   is the proof the 23-site inventory was exhaustive; `type-check` catches any
   consumer that was relying on the old type.
-- `./singularity build`, then spot-check the surfaces that read these
+- `./equin build`, then spot-check the surfaces that read these
   projections: the task list and a task's detail (`tasks_v.status` /
   `finishedAt` / `dependencies`), an attempt pane (`attempts_v`), Debug → Slow
   Events (the two trace projections), a page's backlinks (`page/links`), Events →

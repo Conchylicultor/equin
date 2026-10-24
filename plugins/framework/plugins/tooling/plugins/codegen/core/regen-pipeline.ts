@@ -25,7 +25,7 @@ import { generateExemptRuleIds } from "./exempt-rule-ids-gen";
  * Single source of truth for the ordered, non-migration **repo-tree** codegen
  * pipeline.
  *
- * The full `./singularity build` and the push-time `regen-generated` normalize
+ * The full `./equin build` and the push-time `regen-generated` normalize
  * step MUST regenerate the identical set of repo-tree artifacts, in the identical
  * order — otherwise push can commit a tree the next full build doesn't reproduce
  * (dirtying main) and push-time in-sync checks miss drift. This module is that

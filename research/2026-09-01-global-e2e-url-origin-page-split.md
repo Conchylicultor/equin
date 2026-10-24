@@ -6,7 +6,7 @@ The command the repo's own `CLAUDE.md` tells every agent to run for ad-hoc UI
 verification cannot run at all:
 
 ```bash
-./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
+./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
   --url http://<worktree>.localhost:9000/deploy/server/<id>/dep/<id> --click "…"
 
 SyntaxError: Failed to parse JSON
@@ -215,15 +215,15 @@ Nothing outside `e2e/` is touched — the other `baseUrl` hits in the repo
   diagram, so the next reader learns the split rather than the workaround.
 - Root `CLAUDE.md` line 188 needs no change — making that exact command work is
   the point of the whole change.
-- `docs/plugins-details.md` regenerates on `./singularity build` (`baseUrl`
+- `docs/plugins-details.md` regenerates on `./equin build` (`baseUrl`
   leaves the harness's public exports).
 
 ## Verification
 
-1. `./singularity build` (background — it also regenerates the plugin docs).
+1. `./equin build` (background — it also regenerates the plugin docs).
 2. The reported failure, on a real deployment page:
    ```bash
-   ./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
+   ./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
      --url http://<worktree>.localhost:9000/deploy/server/<id>/dep/<id> --out /tmp/dep
    ```
    Expect `/tmp/dep-before.png` showing the deployment pane — not a JSON parse
@@ -236,12 +236,12 @@ Nothing outside `e2e/` is touched — the other `baseUrl` hits in the repo
    `--url http://<wt>:9000/pages --path /agents`. Each must print one line naming
    the flag and exit 2 before chromium launches.
 5. The unconsumed-`--url` guard:
-   `./singularity run plugins/apps-core/plugins/tabs/e2e/tabs-verify.ts --url http://<wt>:9000/pages`
+   `./equin run plugins/apps-core/plugins/tabs/e2e/tabs-verify.ts --url http://<wt>:9000/pages`
    → `FAILURES: 1/n`, exit 1.
 6. Three migrated per-plugin scripts run green unchanged, one from each shape —
    e.g. `plugins/apps-core/plugins/tabs/e2e/tabs-verify.ts`,
    `plugins/page/plugins/editor/e2e/copy-paste-verify.ts`,
    `plugins/primitives/plugins/adaptive-bar/e2e/adaptive-bar-overfull-row.ts`.
    (One at a time — concurrent runs fight over the config revert.)
-7. `./singularity check` — `type-check` is what proves the barrel removal caught
+7. `./equin check` — `type-check` is what proves the barrel removal caught
    every call site.

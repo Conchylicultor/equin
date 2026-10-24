@@ -122,7 +122,7 @@ jsonl-viewer/plugins/attachment/             ← NEW plugin
       generic-attachment-view.tsx            ← fallback
   plugins/                                   ← sub-plugins added separately
 
-framework/plugins/web-sdk/core/web.generated.ts  ← updated by ./singularity build
+framework/plugins/web-sdk/core/web.generated.ts  ← updated by ./equin build
 ```
 
 ---
@@ -304,13 +304,13 @@ Steps should be executed in this order — each depends on the previous:
 
 7. **`attachment/web/index.ts`** + **`attachment/package.json`** — Wire the plugin. After this step, the attachment plugin is self-contained and can be built; all attachment events will render via the generic fallback.
 
-8. **`./singularity build`** — Auto-discovers the new plugin, regenerates `web.generated.ts`, and deploys.
+8. **`./equin build`** — Auto-discovers the new plugin, regenerates `web.generated.ts`, and deploys.
 
 ---
 
 ## `web.generated.ts` Expected Entries
 
-The build system will add an entry of this form (manually verifiable after `./singularity build`):
+The build system will add an entry of this form (manually verifiable after `./equin build`):
 
 ```ts
 { pluginPath: "conversations/..../jsonl-viewer/plugins/attachment",
@@ -345,16 +345,16 @@ Note: sub-plugins must NOT import from `attachment/web/slots.ts` directly (deep 
 
 ## Verification
 
-1. `./singularity build` — should succeed with no TypeScript errors and no plugin-boundary violations.
+1. `./equin build` — should succeed with no TypeScript errors and no plugin-boundary violations.
 
 2. Open a conversation known to contain attachment events (e.g. `conv-1779695590-m6pd`). Verify:
    - No attachment events render as `"Unhandled attachment event."` (the inline fallback from `EventRow` when no renderer is registered). If this text appears, the `attachment` plugin failed to register.
    - No attachment events render as `"kind: unknown"` yellow text. If this appears, `parse-jsonl.ts` branch is not reached.
    - All attachment events render via the generic fallback: collapsed `"attachment:<subtype>"` label with JSON dump on expand.
 
-3. Run `./singularity check --plugin-boundaries` — should pass with no violations.
+3. Run `./equin check --plugin-boundaries` — should pass with no violations.
 
-4. Confirm `./singularity check --plugins-doc-in-sync` passes (or update CLAUDE.md files manually if the check is strict about them).
+4. Confirm `./equin check --plugins-doc-in-sync` passes (or update CLAUDE.md files manually if the check is strict about them).
 
 ---
 

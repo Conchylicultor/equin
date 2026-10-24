@@ -205,7 +205,7 @@ No DB table, so **no migration**.
 
 ## Verification
 
-Unit (`./singularity test plugins/apps/plugins/prototypes/plugins/thumbnails`) —
+Unit (`./equin test plugins/apps/plugins/prototypes/plugins/thumbnails`) —
 the pure logic, as `*.test.ts` beside its source:
 
 - fingerprint: stable across reads, changes on a byte change, independent of
@@ -214,7 +214,7 @@ the pure logic, as `*.test.ts` beside its source:
 - the render classifier: a failed script request → `subresource-failed`, an
   empty body → `blank-page`, a normal page → pass.
 
-End to end, after `./singularity build` (background, per the agent workflow):
+End to end, after `./equin build` (background, per the agent workflow):
 
 1. Open `http://<worktree>.localhost:9000/prototypes` — `helix` and
    `mist-panes` cards show real screenshots.
@@ -226,6 +226,6 @@ End to end, after `./singularity build` (background, per the agent workflow):
    marker, and that **no** PNG was written for that hash.
 5. Screenshot the result for the record:
    `bun run playwright screenshot --wait-for-timeout 3000 --viewport-size "1280,800" http://<worktree>.localhost:9000/prototypes /tmp/gallery.png`
-6. `./singularity check` — in particular `prototypes:self-contained` still
+6. `./equin check` — in particular `prototypes:self-contained` still
    passes (the cache lives outside `prototypes/`, so no folder gains a file or a
    subdirectory).

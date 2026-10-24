@@ -15,7 +15,7 @@ other way, and drops the Postgres client (it now ships in `database/client-tools
 | Gap | Symptom on a clean Mac |
 |---|---|
 | Xcode command-line tools not mentioned | `git clone` fails (`/usr/bin/git` is a stub). Rust also needs the `cc` linker from them. |
-| mise's install dir and shims never put on PATH | `curl mise.run \| sh` installs to `~/.local/bin/mise`, which a fresh zsh does not have on PATH. `./singularity` then dies with `bun: not found`. |
+| mise's install dir and shims never put on PATH | `curl mise.run \| sh` installs to `~/.local/bin/mise`, which a fresh zsh does not have on PATH. `./equin` then dies with `bun: not found`. |
 | Order is implicit | `mise install` must run inside the clone, after git works. The doc lists it before cloning is ever mentioned. |
 | Claude Code not mentioned | The app launches agents with it. `paths/server/internal/bins.ts` falls back to the bare name `claude`, so the failure shows up only when the first agent launches. |
 | `mise.toml` header | Still says "claude CLI (already installed at ~/.local/bin/claude)". |
@@ -60,12 +60,12 @@ with `toolchain:resolved`. This script only answers "is it there at all", which 
   This keeps the spirit of the wrapper's "nothing before the CLI" rule: the guard cannot
   fail silently, and it replaces an opaque `exec: bun: not found` with the full report.
   The comment gets updated to say why this one exception exists.
-- **`./singularity start` and `./singularity build`, as their first step**, through a
+- **`./equin start` and `./equin build`, as their first step**, through a
   `assertPrerequisites()` exported from `bootstrap/cli`. It spawns the script with
   `spawnCaptured`, prints the report and exits on failure. `start` calls it before
   `assertSupportedHost()`. `build` calls it before migration/doc generation and checks.
   Cost is roughly 100 ms (one `mise` call plus a few `command -v`).
-- **`./singularity prereqs`** as a standalone command, and it is what the doc tells a new
+- **`./equin prereqs`** as a standalone command, and it is what the doc tells a new
   user to run after `mise install`. It is also runnable directly as
   `sh plugins/…/prereqs.sh` before Bun exists.
 
@@ -85,8 +85,8 @@ One ordered, copy-pasteable sequence:
 5. `mise install`. This installs bun, go, tmux and rust from `mise.lock`, and the setup
    hook trusts worktrees.
 6. `git config core.hooksPath .githooks`.
-7. `./singularity prereqs`. It must print all green before continuing.
-8. `./singularity start` and `./singularity build --allow-main`.
+7. `./equin prereqs`. It must print all green before continuing.
+8. `./equin start` and `./equin build --allow-main`.
 
 Keep the existing "Don't install Bun or Go another way", non-root and "Postgres needs no
 install" paragraphs. Fold the separate "Git hooks" section into step 6. Keep the Postgres
@@ -95,7 +95,7 @@ and "cloned someone else's repo" sections as they are.
 ### 4. `mise.toml` header
 
 Replace the stale claude line. The new header lists what mise does *not* provide (Xcode
-CLT / git, Claude Code), points at `docs/setup.md` and `./singularity prereqs`, and keeps
+CLT / git, Claude Code), points at `docs/setup.md` and `./equin prereqs`, and keeps
 the Postgres note.
 
 ## Files
@@ -120,8 +120,8 @@ asserts they agree); root wording from `assertSupportedHost` (`infra/launcher/se
   `HOME` at a temp home. It must exit 1 and name git, mise, Bun/tools and claude in a
   **single** run. Then run it with stub executables for each probe on PATH, and it must
   exit 0. Also add a test that the claude candidate paths match `bins.ts`.
-- Manual: `env -i HOME=$HOME PATH=/usr/bin:/bin ./singularity` prints the full report
-  (not `bun: not found`). `./singularity prereqs` on this machine is all green.
-- `./singularity build` still succeeds, with the prereq step visible at the top of its
+- Manual: `env -i HOME=$HOME PATH=/usr/bin:/bin ./equin` prints the full report
+  (not `bun: not found`). `./equin prereqs` on this machine is all green.
+- `./equin build` still succeeds, with the prereq step visible at the top of its
   output.
 - Out of scope: re-running the clean-VM install. It is worth doing once after merge.

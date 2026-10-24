@@ -39,7 +39,7 @@ and re-applies it. But three things stayed local to that one plugin:
 - The regression gate is a sentence — "**Any new fixture must render something
   other than a `Row`**" — which is rung 5 of the fix ladder, in one plugin's docs.
 
-That last one is the real gap. `./singularity check layout-geometry` is a genuine
+That last one is the real gap. `./equin check layout-geometry` is a genuine
 automated gate: real headless Chromium, a pure oracle, sig-cached, wired into
 `check`. It went green through three of these bugs because **every fixture
 authors its own children**, so a container is only ever measured against the
@@ -162,7 +162,7 @@ larger one:
 
 Declare the synthetic group once in the section-header comment:
 `/* @twmerge group sg-rail conflicts: px p */` (multi-property, so it cannot use
-`extend`). `./singularity build` regenerates `custom-utilities.generated.ts`;
+`extend`). `./equin build` regenerates `custom-utilities.generated.ts`;
 `app-css-utilities-in-sync` guards it. Named-suffix utilities auto-pass
 `no-adhoc-spacing` — **no lint edits anywhere in this plan**.
 
@@ -281,13 +281,13 @@ existing `useDataViewDevGuards`.
 
 ## Verification
 
-1. `./singularity build` — regenerates `custom-utilities.generated.ts` and
+1. `./equin build` — regenerates `custom-utilities.generated.ts` and
    `fixtures.generated.ts` (the new `data-view/fixtures` contributor). Then
-   `./singularity check` (`app-css-utilities-in-sync`, `type-check`,
+   `./equin check` (`app-css-utilities-in-sync`, `type-check`,
    `plugin-boundaries`, `collected-dir-tsconfig-coverage`, `plugins-doc-in-sync`).
 2. `bun test plugins/primitives/plugins/css/plugins/layout-harness/core/oracle.test.ts`
    — the pure `checkRailAlignment` proof on synthetic boxes.
-3. `./singularity check layout-geometry` — green, **and its falsification must
+3. `./equin check layout-geometry` — green, **and its falsification must
    bite**: the `railOverride` case has to report `railAlignment` VIOLATED, or the
    suite throws `falsification did not bite`. Run twice; the second run must
    short-circuit on the sidecar marker with no Chromium launch.

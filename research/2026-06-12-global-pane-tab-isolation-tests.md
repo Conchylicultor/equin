@@ -148,14 +148,14 @@ Cases:
 
 ## Verification
 
-1. `bun install` (or run any `./singularity build` first so `node_modules` is present).
+1. `bun install` (or run any `./equin build` first so `node_modules` is present).
 2. `bun run test:dom` → the new `pane-isolation` suite plus web-core's two existing
    suites all pass (green confirms the isolation invariants; a red case pinpoints
    the exact production line to fix).
-3. `./singularity check` → `type-check`, `eslint`, `plugin-boundaries`, and
+3. `./equin check` → `type-check`, `eslint`, `plugin-boundaries`, and
    `plugins-doc-in-sync` stay green (the new test imports only public barrels;
    confirm no boundary violation from importing `conversationPane` /
    `loadRouteForConversation` in the pane suite — if the import direction is
    illegal, host the suite under a plugin that may legally import both, e.g. a new
    `web/__tests__/` under `conversations` or `apps`).
-4. `./singularity build` → app deploys clean at `http://<worktree>.localhost:9000`.
+4. `./equin build` → app deploys clean at `http://<worktree>.localhost:9000`.

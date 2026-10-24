@@ -359,10 +359,10 @@ Plus the `TreeRowChrome` refactor (§C) and `row-chrome.tsx`'s inline "Add" butt
 
 ## Verification
 
-1. `./singularity build` — codegen discovers `row/web/index.ts` + `row/lint/index.ts` →
+1. `./equin build` — codegen discovers `row/web/index.ts` + `row/lint/index.ts` →
    regenerates `lint.generated.ts` (`row/no-adhoc-row` registered `error` repo-wide) and
    `plugins/primitives/CLAUDE.md`. `plugins-registry-in-sync` / `plugins-doc-in-sync` confirm.
-2. `./singularity check --eslint` — must pass **green with empty `ignores`**; only passes once
+2. `./equin check --eslint` — must pass **green with empty `ignores`**; only passes once
    every in-scope site is migrated or marked. Run iteratively during migration. Confirm both
    `row/no-adhoc-row` and `badge/no-adhoc-chip` are `error`.
 3. **Negative tests** (scratch component, then revert):
@@ -370,7 +370,7 @@ Plus the `TreeRowChrome` refactor (§C) and `row-chrome.tsx`'s inline "Add" butt
    - replace with `<Row>` → not flagged (component host skipped).
    - ghost `<button className="rounded px-2 py-1 hover:bg-accent">` (no w-full/text-left) → flagged (→ Button).
    - `<Badge>` / `p-row` user / a `sticky` row → not flagged.
-4. `./singularity check` (full) — type-check `ref` forwarding on `Row` and that
+4. `./equin check` (full) — type-check `ref` forwarding on `Row` and that
    `TreeRowChrome.rowRef` still satisfies the DnD `childRef` type; all checks green.
 5. **Playwright** before/after (`e2e/screenshot.mjs`) on representative surfaces: file-tree
    (`code-explorer`, TreeRowChrome path), tasks-recent (cluster B), token section headers

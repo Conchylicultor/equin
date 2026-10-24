@@ -50,7 +50,7 @@ makes the call `settled` with its picks (`findAnswerTurn` + `parseMarkerAnswer`)
 
 ## Verification
 
-- `./singularity test` on the ask-user-question plugin.
-- `./singularity build`, then reproduce an orphan on the worktree: ask an agent
+- `./equin test` on the ask-user-question plugin.
+- `./equin build`, then reproduce an orphan on the worktree: ask an agent
   to call AskUserQuestion, kill its agent process, reopen → the card shows the
   form; answering sends the turn, the agent continues, the card turns answered.

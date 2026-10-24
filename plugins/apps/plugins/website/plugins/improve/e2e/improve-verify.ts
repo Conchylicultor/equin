@@ -22,7 +22,7 @@
 // GitHub itself is never contacted: the new tab's request is answered by a stub.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/website/plugins/improve/e2e/improve-verify.ts \
+//   ./equin run plugins/apps/plugins/website/plugins/improve/e2e/improve-verify.ts \
 //     [--out /tmp/improve] [--headed]
 //
 // Manual only — nothing runs this automatically.

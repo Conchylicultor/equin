@@ -154,7 +154,7 @@ Mirror the `text` sub-plugin's file set byte-for-byte:
 - `package.json`: `@singularity/plugin-page-bulleted-list` (no direct lexical dep
   — it only renders `BlockTextEditor`).
 
-Registration is automatic: `./singularity build` regenerates
+Registration is automatic: `./equin build` regenerates
 `web.generated.ts` from the filesystem (the new sub-plugin's `web/index.ts`
 barrel is discovered). The Pages app (`page-tree`) renders all registered block
 types through the dispatch slot — no app-side change needed.
@@ -191,8 +191,8 @@ types through the dispatch slot — no app-side change needed.
 
 ## Verification
 
-1. `./singularity build` (regenerates migrations — none expected here since no
-   schema change — plus the plugin registry and docs). Must pass `./singularity
+1. `./equin build` (regenerates migrations — none expected here since no
+   schema change — plus the plugin registry and docs). Must pass `./equin
    check` (boundaries, registry-in-sync, plugins-doc-in-sync, eslint).
 2. Open the Pages app at `http://att-1780564738-v7m5.localhost:9000` (Pages →
    open/create a page), or use the page debug document endpoint.

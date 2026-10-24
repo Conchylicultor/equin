@@ -269,9 +269,9 @@ materialized catalog → the generated origin's default and `@hash` shift.
 
 ## Verification
 
-1. `./singularity build` — generates `config/<plugin>/<slot>.origin.jsonc` whose
+1. `./equin build` — generates `config/<plugin>/<slot>.origin.jsonc` whose
    `items` default is the **materialized** entryKey list (bare strings), with a
-   slim `entryKey — label` legend comment. `./singularity check` passes.
+   slim `entryKey — label` legend comment. `./equin check` passes.
 2. Inspect e.g. `config/shell/shell.toolbar.origin.jsonc`: `"items": ["theme:theme-light-dark","build:build",…]`.
 3. **In-app drag** (`bun e2e/screenshot.mjs`, toggle pen, drag a toolbar item):
    change persists across reload; the **user-dir** `<slot>.jsonc` now holds the
@@ -279,7 +279,7 @@ materialized catalog → the generated origin's default and `@hash` shift.
    disappears. Add a spacer → `{spacer:"…"}` node renders a gap.
 4. **Materialized-default forcing function:** add a dummy contribution to a slot
    that has a *committed* `config/<plugin>/<slot>.jsonc` override, rebuild, run
-   `./singularity check` → `config-origins-in-sync` **fails** (hash mismatch).
+   `./equin check` → `config-origins-in-sync` **fails** (hash mismatch).
    Reconcile the committed file (add the new entryKey, re-hash) → check passes.
 5. **User-tier conflict:** with a user-dir override, add a contribution, rebuild →
    the slot reverts to natural order at runtime and the settings UI shows the

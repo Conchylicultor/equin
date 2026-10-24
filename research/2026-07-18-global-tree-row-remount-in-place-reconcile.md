@@ -141,7 +141,7 @@ No change to `tree-view.tsx` or any consumer. `TreeRowSlot` is primitive-interna
 
 ## Verification
 
-1. `./singularity build` (from the worktree), then reproduce and measure with the
+1. `./equin build` (from the worktree), then reproduce and measure with the
    Render Profiler's headless harness against the task-detail deps tree:
    ```bash
    bun e2e/render-profile.mjs \
@@ -165,7 +165,7 @@ No change to `tree-view.tsx` or any consumer. `TreeRowSlot` is primitive-interna
      multi-select checkboxes;
    - the windowed path (a tree with >100 visible rows, e.g. a large Tasks list) —
      scroll, select, and drag still work.
-4. `./singularity check` — `type-check` green; boundary/lint checks pass (no new
+4. `./equin check` — `type-check` green; boundary/lint checks pass (no new
    cross-plugin edges; `TreeRowSlot` stays internal).
 5. `bun run test:dom plugins/primitives/plugins/tree` and
    `bun test plugins/primitives/plugins/data-view/plugins/tree` — existing tree

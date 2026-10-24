@@ -201,7 +201,7 @@ Cross-plugin imports go through the bun workspace. Add
 new package takes) to
 `plugins/active-data/plugins/conv/package.json`. Also update
 `docs/plugins-details.md` and `docs/plugins-compact.md` via the existing
-`plugins-doc-in-sync` regen path (`./singularity check`).
+`plugins-doc-in-sync` regen path (`./equin check`).
 
 ## Files to create
 
@@ -252,7 +252,7 @@ After merging v1, **call `mcp__singularity__add_task`** to file:
 
 ## Verification
 
-1. Run `./singularity build` from this worktree.
+1. Run `./equin build` from this worktree.
 2. Open `http://<worktree>.localhost:9000/c/<some-conv-id>` for a
    conversation whose assistant text contains a `<conv>conv-xxx</conv>` tag
    (or send a prompt that produces one).
@@ -264,5 +264,5 @@ After merging v1, **call `mcp__singularity__add_task`** to file:
    rewrites to `/c/<host>/c/C` (replace, host unchanged).
 6. Click a `<conv>` chip whose id equals the host id → falls back to the
    full /c view (no nested-self pane).
-7. Run `./singularity check --plugin-boundaries` to confirm the new
+7. Run `./equin check --plugin-boundaries` to confirm the new
    import paths are legal and `plugins-doc-in-sync` is happy.

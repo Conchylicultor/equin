@@ -38,7 +38,7 @@ A read-only reviewer read the code before you and wrote this for the person, who
 - **Stay in scope.** Do what this task asks, nothing more. Anything else you notice: file it with the \`add_task\` MCP tool on the \`sidequest\` track, and move on.
 - **Stop early** when the task turns out much bigger than its description suggests, or needs a design choice that is not yours to make: write up what you found and what the options are, and stop there.
 - **Never touch database migrations, auth, or the gateway** without leaving the push to the person, whatever the push setting below says.
-- Build with \`./singularity build\` and make sure it is \`ok\`.
+- Build with \`./equin build\` and make sure it is \`ok\`.
 
 ## Pushing
 

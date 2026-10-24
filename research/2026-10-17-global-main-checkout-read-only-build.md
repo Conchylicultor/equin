@@ -2,7 +2,7 @@
 
 ## Context
 
-On 2026-10-17 `./singularity push` from `claude-1792232269` failed at the merge step:
+On 2026-10-17 `./equin push` from `claude-1792232269` failed at the merge step:
 `git merge --ff-only` in the main checkout aborted with *"Your local changes … would be
 overwritten by merge: docs/plugins-details.md …"*. By then the branch had already been pushed
 to origin, but main had not moved. The main checkout (HEAD `25df26786e`) carried edits that
@@ -27,7 +27,7 @@ The committed docs were correct. Main's build saw an input that no worktree has.
 4. Its JSON contains `"ui.tokens.shadow:shadow"`. The token-usage scanner (Tailwind oxide over
    `config_v2/web/**`, `facets/plugins/cross-refs/facet/index.ts`) reads the bare word `shadow`
    as a `--shadow` use. That is the same false positive 7f74 fixed.
-5. Main's auto-build (`build/server/internal/run-build.ts`: `./singularity build --allow-main`)
+5. Main's auto-build (`build/server/internal/run-build.ts`: `./equin build --allow-main`)
    runs `regenerateManifestCodegen` in write mode and rewrote the four doc files in the
    tracked tree.
 
@@ -131,14 +131,14 @@ to write to a tracked (or untracked-not-ignored) path. Only gitignored build out
 ## Verification
 
 - Unit: the helper's classification (clean / tracked-modified / untracked-only), tested with a
-  temp git repo (`./singularity test plugins/framework/plugins/cli/plugins/build`, `…/push`).
+  temp git repo (`./equin test plugins/framework/plugins/cli/plugins/build`, `…/push`).
 - Push preflight, simulated in a scratch clone with two worktrees: dirty a tracked file in the
   "main" worktree, run push, and confirm it refuses before any `git push`, with the file listed.
 - Build assertion: in a scratch clone, drop an untracked
   `plugins/config_v2/web/internal/git-layer.generated.ts` (containing `ui.tokens.shadow:shadow`)
   on the main checkout and run `build --allow-main` there. Expect: build fails, report filed,
   tracked docs restored (`git status` shows only the untracked suspect).
-- `./singularity build` in this worktree plus `./singularity check` stay green.
+- `./equin build` in this worktree plus `./equin check` stay green.
 
 ## As implemented (deviations from the above)
 

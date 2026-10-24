@@ -65,7 +65,7 @@ export function backupExclusions(): BackupExclusions
   `forkExclusions()`. `traces` guarantees at least one declaration in any process
   that collected contributions. An empty set means the caller never booted the
   plugins, and it would silently produce a full backup. The backup body runs in
-  `./singularity supervised-exec`, which does collect contributions (checked in
+  `./equin supervised-exec`, which does collect contributions (checked in
   `supervised-job`'s task registry), so it sees the declarations.
 - `tableLabel` moves to a small shared helper in `internal/` so both token
   files use it.
@@ -183,11 +183,11 @@ ExcludeFromBackup({
    into a second throwaway database. Check: `traces` exists and is empty; `tasks`
    has its row; `inspectBackup` marks `traces` as `rowsExcluded`.
 
-Run: `./singularity test plugins/database/plugins/admin plugins/backup/plugins/sources/plugins/databases`.
+Run: `./equin test plugins/database/plugins/admin plugins/backup/plugins/sources/plugins/databases`.
 
 ## Verification
 
-1. `./singularity build` (background), checks pass.
+1. `./equin build` (background), checks pass.
 2. Before/after on this machine, before pushing: `pg_dump -Fc singularity` with and
    without `--exclude-table-data='"public"."traces"'` into the scratchpad, and
    record both file sizes here. This is the per-database number the manifest

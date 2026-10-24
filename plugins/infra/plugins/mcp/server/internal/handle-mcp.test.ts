@@ -3,7 +3,7 @@
  * renders every contribution (nulls dropped, id order, blank-line joined), and
  * any other request renders nothing.
  *
- * Run: `./singularity test plugins/infra/plugins/mcp`
+ * Run: `./equin test plugins/infra/plugins/mcp`
  */
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";

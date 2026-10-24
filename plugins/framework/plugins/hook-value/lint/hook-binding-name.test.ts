@@ -1,6 +1,6 @@
 /**
  * Tests for `hook-value/hook-binding-name`. Run with
- * `./singularity test plugins/framework/plugins/hook-value`.
+ * `./equin test plugins/framework/plugins/hook-value`.
  *
  * Typed RuleTester harness copied from
  * `plugins/primitives/plugins/passthrough/lint/no-unanchored-passthrough.test.ts`

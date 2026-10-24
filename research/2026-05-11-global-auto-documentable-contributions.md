@@ -261,7 +261,7 @@ Every file that calls `defineSlot(id)` needs `defineSlot(id, { docLabel: ... })`
 
 ## Risks and Mitigations
 
-**Stub completeness.** Some transitive import (Radix, Tanstack Query, etc.) might fail with our React stubs. Mitigation: the stub surface grows incrementally — add a `build.module()` for any library that crashes, test with `./singularity build`. The `try/catch` in `importBarrel` logs warnings for individual failures without blocking the entire docgen.
+**Stub completeness.** Some transitive import (Radix, Tanstack Query, etc.) might fail with our React stubs. Mitigation: the stub surface grows incrementally — add a `build.module()` for any library that crashes, test with `./equin build`. The `try/catch` in `importBarrel` logs warnings for individual failures without blocking the entire docgen.
 
 **Path alias resolution.** Web barrels use `@core`, `@/*`, `@server/*` which aren't in `tooling/tsconfig.json`. Mitigation: the Bun plugin's `onResolve` handlers resolve these relative to the repo root.
 
@@ -269,9 +269,9 @@ Every file that calls `defineSlot(id)` needs `defineSlot(id, { docLabel: ... })`
 
 ## Verification
 
-1. Run `./singularity build` — should succeed and regenerate docs
+1. Run `./equin build` — should succeed and regenerate docs
 2. Check `docs/plugins-details.md` — contributions should render with labels from `_doc`
 3. Check that server `register` tokens now show semantic names instead of variable names (e.g. `mcp-tool "add_task"` instead of `addTaskTool`)
 4. Check per-plugin `CLAUDE.md` autogen blocks match
-5. Run `./singularity check --plugins-doc-in-sync` — should pass
+5. Run `./equin check --plugins-doc-in-sync` — should pass
 6. Intentionally break a barrel (add `document.body` at top level) → the `try/catch` should log a warning and the build should still succeed

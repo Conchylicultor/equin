@@ -21,7 +21,7 @@ export default {
       whereToDig: (run) => [
         `the whole transcript is in the \`${DEPLOY_LOG_CHANNEL}\` log channel; each run is prefixed by its own argv line, so find this run's spawn and read forward from it;`,
         `the ledger row: \`select * from deploy_runs where id = '${run.id}'\` via \`query_db\`;`,
-        "`./singularity deploy` is the engine — every refusal, host mutation and health gate is the CLI's, so a wrong verdict is a CLI or host-state bug, not a UI one. Do not touch a remote host without being asked.",
+        "`./equin deploy` is the engine — every refusal, host mutation and health gate is the CLI's, so a wrong verdict is a CLI or host-state bug, not a UI one. Do not touch a remote host without being asked.",
       ],
     }),
   ],

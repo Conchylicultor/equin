@@ -2,10 +2,10 @@
 
 ## Context
 
-`./singularity build` runs the check suite **in-process** (`cli/bin/commands/build.ts:1329`), in the
+`./equin build` runs the check suite **in-process** (`cli/bin/commands/build.ts:1329`), in the
 same process that already imported every plugin barrel, ran the slot-declaration pass, and warmed the
 per-root `buildBarrelFreeTree` / `buildEnrichedTree` / `declareSlotsFromBarrels` memos via
-`regenerateManifestCodegen`. `./singularity push` does the opposite: it spawns a fresh
+`regenerateManifestCodegen`. `./equin push` does the opposite: it spawns a fresh
 `bun … check --scope tree` child (`cli/bin/commands/push.ts:113`) precisely so checks cannot read a
 stale in-process module cache.
 
@@ -231,7 +231,7 @@ This is not folded into `assertScopeInvariant`: that validates the loaded check 
 time; this validates the *process* at call time. Different subject, different lifetime.
 
 Rung 1 — delete the export, give the `checks` plugin its own `bin/` entrypoint so even
-`./singularity check` spawns it — is reachable but blocked on re-expressing the per-check profiler
+`./equin check` spawns it — is reachable but blocked on re-expressing the per-check profiler
 clock across a process boundary (`check.ts:290-309`). File as a follow-up.
 
 ## Phase 3 — state the contract, version the cache
@@ -357,18 +357,18 @@ different value is dead code.
 
 ## Verification
 
-1. `SINGULARITY_CHECK_NO_CACHE=1 ./singularity check` — full pass, unchanged behaviour.
-2. `./singularity check --always-run` and `--scope tree --always-run` — correct subsets;
-   `./singularity check --run-id x` (no parent grant) exits 1 with the loud message;
-   `./singularity check --always-run type-check` exits 1 as an excluded named id.
-3. `./singularity build` (background, per CLAUDE.md) — must not throw, must spawn a child; verify
+1. `SINGULARITY_CHECK_NO_CACHE=1 ./equin check` — full pass, unchanged behaviour.
+2. `./equin check --always-run` and `--scope tree --always-run` — correct subsets;
+   `./equin check --run-id x` (no parent grant) exits 1 with the loud message;
+   `./equin check --always-run type-check` exits 1 as an excluded named id.
+3. `./equin build` (background, per CLAUDE.md) — must not throw, must spawn a child; verify
    `~/.singularity/worktrees/<wt>/build-status.json` is `status: ok`, that `check-<buildId>.log` exists
    and is this run's, and that the build Gantt's `build:checks` lane has one bar per check at plausible
    offsets (not stacked at the end).
-4. `./singularity build --skip-checks` — the always-run subset runs in a child; temporarily flipping the
+4. `./equin build --skip-checks` — the always-run subset runs in a child; temporarily flipping the
    last `alwaysRun: true` off makes it fail loudly rather than pass vacuously.
-5. `./singularity push` on an unchanged tree — after the version bump the first pass is a real run, not
-   a hit; a second `./singularity check` on the same tree then reports `(cached)`.
+5. `./equin push` on an unchanged tree — after the version bump the first pass is a real run, not
+   a hit; a second `./equin check` on the same tree then reports `(cached)`.
 6. Confirm the guard bites: temporarily reinstate an in-process `runChecks` in `build.ts` and check that
    both the lint rule and the `isBuildProcess()` throw fire.
-7. `./singularity check` (full) to confirm the new lint rule and the regenerated docs are in sync.
+7. `./equin check` (full) to confirm the new lint rule and the regenerated docs are in sync.

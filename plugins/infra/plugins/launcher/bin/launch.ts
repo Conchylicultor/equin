@@ -253,7 +253,7 @@ async function main(): Promise<void> {
   // used to leave a detached stack behind, which read as "started successfully"
   // locally (nothing was watching) and as a restart loop under systemd.
   //
-  // `./singularity start` is the deliberate exception: it is the one command
+  // `./equin start` is the deliberate exception: it is the one command
   // whose job is to leave a daemon running, and it does not `.ref()`.
   //
   // The gateway handle serves both jobs at once — it keeps the event loop alive

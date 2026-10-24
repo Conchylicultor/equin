@@ -226,10 +226,10 @@ foot). This touches only that prototype's folder.
   - the toolbar counters (stale)
   - inline code (never compared)
   - the Working-state header chip and the Stop button
-- `./singularity test` on `css/badge`, `ui-kit`, `text-editor`, `launch`,
+- `./equin test` on `css/badge`, `ui-kit`, `text-editor`, `launch`,
   `collapsible-card`, `user-text`. New case: CollapsibleCard renders no chevron,
   and the row still toggles.
-- `./singularity build` (in the background), then report the deploy.
+- `./equin build` (in the background), then report the deploy.
 - Run the computed-style dump again on a conversation in the deploy (a Working
   one and a Done one), and compare each validated item against the mockup
   numbers. Record the before and after values in the page card.

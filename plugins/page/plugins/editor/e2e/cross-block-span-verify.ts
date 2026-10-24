@@ -25,7 +25,7 @@
 //      at a time, and stepping back onto the anchor is a caret again;
 //  11. a NESTED partial copy pasted mid-line joins at both ends, nesting kept.
 //
-// Usage: ./singularity run plugins/page/plugins/editor/e2e/cross-block-span-verify.ts [--url <deploy>]
+// Usage: ./equin run plugins/page/plugins/editor/e2e/cross-block-span-verify.ts [--url <deploy>]
 import {
   report,
   withBrowser,

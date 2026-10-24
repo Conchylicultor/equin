@@ -315,7 +315,7 @@ export function SongLibrary() {
 
 ## Verification
 
-1. `./singularity build`, open `http://<worktree>.localhost:9000` → Sonata → Library.
+1. `./equin build`, open `http://<worktree>.localhost:9000` → Sonata → Library.
 2. **Gallery parity**: cards render as before (title, composer, duration, play affordance), clicking
    opens the player, hover-delete removes a song (live update via `songsResource`).
 3. **View switch**: toggle to **Table** → sortable columns (Title, Composer, Length, Added); click a
@@ -325,4 +325,4 @@ export function SongLibrary() {
 5. **Persistence**: reload → last active view + each view's sort/search restored.
 6. Scripted check: `bun e2e/screenshot.mjs --url http://<worktree>.localhost:9000/… --click "Table"
    --out /tmp/dataview` to capture before/after the switch.
-7. `./singularity check` passes (plugin boundaries, migrations-in-sync, eslint).
+7. `./equin check` passes (plugin boundaries, migrations-in-sync, eslint).

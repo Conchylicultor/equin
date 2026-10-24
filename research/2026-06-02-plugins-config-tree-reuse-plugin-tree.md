@@ -151,7 +151,7 @@ Reused, not rebuilt: `getPluginTree` + `PluginNode`/`PluginTreePayload`
 
 ## Verification
 
-1. `./singularity build` (from the worktree). Confirm it compiles and the
+1. `./equin build` (from the worktree). Confirm it compiles and the
    `eslint` / boundary checks pass (the new cross-plugin imports must be legal).
 2. Open `http://att-1780406317-z5hj.localhost:9000`, go to the **Config**
    sidebar entry.

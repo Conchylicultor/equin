@@ -61,7 +61,7 @@ function brief(run: DeployRunRecord, userText: string): string {
     `- the whole transcript is in the \`${DEPLOY_LOG_CHANNEL}\` log channel; each run is`,
     "  prefixed by its own argv line, so find this run's spawn and read forward from it;",
     `- the ledger row itself (\`select * from deploy_runs where id = '${run.id}'\`) via \`query_db\`;`,
-    "- `./singularity deploy` is the engine — every refusal, host mutation and health",
+    "- `./equin deploy` is the engine — every refusal, host mutation and health",
     "  gate is the CLI's, and the app only launches it. So a wrong verdict is a CLI or",
     "  host-state bug, not a UI one;",
     "- the deployment pane at Deploy → this server → this deployment shows the record,",

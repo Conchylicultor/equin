@@ -308,7 +308,7 @@ export type BlockFrameMeta = BlockFrameDecoration & {
    * second into the first would force a container to choose between having a
    * name and having a foot.
    *
-   * Keeping it off the union is also what keeps `./singularity check
+   * Keeping it off the union is also what keeps `./equin check
    * page-editor:anchor-has-decoration` meaning what it means today: a container
    * still owes exactly ONE decoration, and a foot is never one — a card with a
    * foot and no decoration is still an invisible card.
@@ -575,7 +575,7 @@ export function useFrameGeometry(): ReadonlyMap<string, FrameGeometry> {
  *
  * A `BlockHandle` declaring `anchor: true` whose plugin supplies no component
  * here is a real disagreement (the reducer would treat the type as a void
- * container while the surface paints nothing) — `./singularity check
+ * container while the surface paints nothing) — `./equin check
  * page-editor:anchor-has-decoration` fails on it.
  */
 export function useBlockDecorations(): ReadonlyMap<string, BlockDecoration> {

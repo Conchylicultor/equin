@@ -116,9 +116,9 @@ export { SubHeading } from "./components/sub-heading";
 
 ## Verification
 
-1. `./singularity build` succeeds (frontend + server + boundary/lint checks pass — the
+1. `./equin build` succeeds (frontend + server + boundary/lint checks pass — the
    `plugin-boundaries` check confirms the new barrel exports are legal and no deep imports).
-2. `./singularity check --plugin-boundaries` and `eslint` pass (no `text-[10px]`, barrel purity).
+2. `./equin check --plugin-boundaries` and `eslint` pass (no `text-[10px]`, barrel purity).
 3. Screenshot the plugin detail pane for a plugin with exports + consumers (e.g. open Forge,
    select a plugin) via `e2e/screenshot.mjs` — confirm the Exports section still renders runtime
    groups, category badges, and `← consumer` links identically.

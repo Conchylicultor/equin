@@ -55,8 +55,8 @@ Split `server/src/` into `core/` (framework API: types, resources, contributions
 
 ### Done when
 
-- `./singularity build` succeeds, server boots, `/api/health` returns 200
-- `./singularity check` passes
+- `./equin build` succeeds, server boots, `/api/health` returns 200
+- `./equin check` passes
 - `server/` deleted from repo root
 - All `@server/*` imports resolve to `plugins/framework/plugins/server/core/*`
 
@@ -74,8 +74,8 @@ Split `central/bin/` into `core/` (framework API: types, resources — 8 imports
 
 ### Done when
 
-- `./singularity build` succeeds, server + central boot, `/api/health` returns 200
-- `./singularity check` passes
+- `./equin build` succeeds, server + central boot, `/api/health` returns 200
+- `./equin check` passes
 - `central/` deleted from repo root
 - All 8 `@central/*` imports migrated to canonical `@plugins/...` paths
 
@@ -122,8 +122,8 @@ No external consumers. Internal `@/*` alias retargeted from `./src/*` to `./web/
 
 ### Done when
 
-- `./singularity build` succeeds, SPA loads in browser.
-- `./singularity check` passes.
+- `./equin build` succeeds, SPA loads in browser.
+- `./equin check` passes.
 - `web/` deleted from repo root.
 
 ---
@@ -162,13 +162,13 @@ Root config file updates:
 
 ### Key risks
 
-- **Self-referential bootstrap.** `boundary.config.ts` imports from `plugins/framework/plugins/tooling/...`. If this import fails, `./singularity check` can't run. The module has zero external deps so this is safe as long as the path is correct.
+- **Self-referential bootstrap.** `boundary.config.ts` imports from `plugins/framework/plugins/tooling/...`. If this import fails, `./equin check` can't run. The module has zero external deps so this is safe as long as the path is correct.
 - `checks/index.ts` imports `boundary.config.ts` via relative path — depth increases significantly. Verify.
 - **Deep nesting.** Path from `plugins/framework/plugins/tooling/src/checks/index.ts` back to root `boundary.config.ts` is `../../../../../../boundary.config`. Fragile — consider using an absolute path resolution pattern instead.
 
 ### Done when
 
-- `./singularity check` passes (including boundary checker scanning itself as a plugin).
+- `./equin check` passes (including boundary checker scanning itself as a plugin).
 - `tooling/` deleted from repo root.
 
 ---
@@ -185,7 +185,7 @@ Pure leaf — nothing imports from CLI. Move `cli/` → `plugins/framework/plugi
 
 ### Done when
 
-- `./singularity build`, `./singularity check`, and `./singularity push` (dry-run) all work.
+- `./equin build`, `./equin check`, and `./equin push` (dry-run) all work.
 - `cli/` deleted from repo root.
 - Root `package.json` workspaces is `["plugins/**"]` only.
 
@@ -242,7 +242,7 @@ The zone DAG (`core/internal/server/web/cli`) is enforced within each plugin by 
 ## Verification
 
 After each phase:
-1. `./singularity build` — full build succeeds
-2. `./singularity check` — all checks pass (boundary-rules, plugin-boundaries, typescript, eslint, etc.)
+1. `./equin build` — full build succeeds
+2. `./equin check` — all checks pass (boundary-rules, plugin-boundaries, typescript, eslint, etc.)
 3. Navigate to `http://<worktree>.localhost:9000` — app loads and functions
 4. The moved directory is fully deleted from repo root

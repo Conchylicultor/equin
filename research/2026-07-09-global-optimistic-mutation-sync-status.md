@@ -210,7 +210,7 @@ dirty block; the store aggregates (`error > syncing > saved > idle`).
 - `queryClient.getQueryState(key)?.dataUpdateCount` — bumped on **every** `setQueryData`, verified in `@tanstack/query-core@5.99.0`
 - Hook-test template — `plugins/primitives/plugins/data-view/web/__tests__/use-server-data-source.test.tsx`
 
-No registry edits: `./singularity build` regenerates from the filesystem.
+No registry edits: `./equin build` regenerates from the filesystem.
 
 ---
 
@@ -229,7 +229,7 @@ No registry edits: `./singularity build` regenerates from the filesystem.
    can't run cheaply, drop this file — the lifecycle now lives in the pure machine, which is
    where the coverage belongs.
 
-3. **`./singularity build`**, then re-run the two probes already written:
+3. **`./equin build`**, then re-run the two probes already written:
    - `scratchpad/spinner-probe.mjs` — expect `A: t=1500ms after edit = saved` (was `syncing`
      at every sample), and tab B likewise `saved` after its own edit.
    - `scratchpad/ordering-probe.mjs` — expect the push still lands ~1 ms before the resolve
@@ -242,7 +242,7 @@ No registry edits: `./singularity build` regenerates from the filesystem.
    Debug → Reports shows an `optimistic-divergence` row when one is filed
    (`query_db: select kind, count, fingerprint from _reports where kind = 'optimistic-divergence'`).
 
-6. **`./singularity check`** — `plugin-boundaries` (primitive must not import `reports`),
+6. **`./equin check`** — `plugin-boundaries` (primitive must not import `reports`),
    `plugins-registry-in-sync`, `plugins-doc-in-sync`, `type-check`.
 
 ---

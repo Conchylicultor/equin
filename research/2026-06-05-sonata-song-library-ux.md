@@ -37,7 +37,7 @@ Everything is a plugin. The work splits cleanly:
 
 Plugin registration is **fully automatic** via codegen (`plugin-registry-gen.ts` →
 `web.generated.ts` / `server.generated.ts`). Creating the new `library/web/index.ts` and
-`library/server/index.ts` with default exports and running `./singularity build` registers
+`library/server/index.ts` with default exports and running `./equin build` registers
 them — no manual registry edits.
 
 ### What a "song" is (v1 = MIDI)
@@ -309,7 +309,7 @@ Home: defineRenderSlot<{ component: ComponentType }>("sonata.home", { reorder: f
 
 ## Verification
 
-1. `./singularity build` (regenerates migrations for `sonata_songs` + the attachments link
+1. `./equin build` (regenerates migrations for `sonata_songs` + the attachments link
    table, regenerates the plugin registry, seeds starters on boot). Confirm no check fails.
 2. Open `http://<worktree>.localhost:9000/sonata` → lands on the **Library** with the 3
    bundled starter cards (title, composer, mm:ss). No bare piano roll.

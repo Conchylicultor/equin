@@ -116,8 +116,8 @@ In `plugins/primitives/plugins/pane/CLAUDE.md`, update the `after` documentation
 
 ## Verification
 
-1. `./singularity build` — build succeeds
+1. `./equin build` — build succeeds
 2. Navigate to `http://<worktree>.localhost:9000/c/<conv-id>/tasks` — click a task's conversation → should open as a third miller column (`conv0 > tasks > conv1`)
 3. Navigate to `http://<worktree>.localhost:9000/c/<conv-id>` — click side-conversation chip → should still open as second column (`conv0 > conv1`)
 4. Verify `filePeekPane` works from all its contexts: conversation, task-detail, task-side, conv-side, plugin-conv-side
-5. `./singularity check` — passes
+5. `./equin check` — passes

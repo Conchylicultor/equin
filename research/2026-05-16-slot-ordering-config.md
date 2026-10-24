@@ -38,10 +38,10 @@ Future: the format can grow to support groups, per-contribution config options, 
 
 ### Code Config Lifecycle
 
-1. **Codegen** (part of `./singularity build`) scans all registered contributions for each slot
+1. **Codegen** (part of `./equin build`) scans all registered contributions for each slot
 2. **New contribution detected** (present in code, absent from config) → appended to `"unsorted"`
 3. **Removed contribution** (in config, absent from code) → removed from config automatically
-4. **Check** (`./singularity check`) fails if any config has a non-empty `"unsorted"` array — forces agents to explicitly place every contribution
+4. **Check** (`./equin check`) fails if any config has a non-empty `"unsorted"` array — forces agents to explicitly place every contribution
 5. Agent moves the entry from `"unsorted"` into the correct position in `"order"`, commits
 
 This ensures order is always a conscious, explicit decision — never accidental.

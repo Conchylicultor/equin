@@ -71,7 +71,7 @@ Sibling to `key-readout` / `key-chip`. Template: the `playback-history` plugin
 | `web/actions.ts` | `setKeyAutoDetect(songId, enabled)` → `void fetchEndpoint(setKeyAutoDetectEndpoint, …)`. Mirror `track-mixer/web/actions.ts`. |
 | `web/components/key-mode-observer.tsx` | Headless `Sonata.Effect`: reads `useSonata().currentSongId` + `useKeyAutoDetectRow(currentSongId)`; in a `useEffect` keyed `[currentSongId, enabled]` writes the **shell store** `setKeyAutoDetectStore(currentSongId ? enabled : false)`. Writing `false` on null song id prevents the previous song's toggle leaking into the next. Mirror `record-play-observer.tsx`. |
 | `web/index.ts` | Export `useKeyAutoDetectRow`, `setKeyAutoDetect`; default plugin contributes `Sonata.Effect({ id: "key-mode", component: KeyModeObserver })`. |
-| `CLAUDE.md` | Short prose + autogen block (filled by `./singularity build`). |
+| `CLAUDE.md` | Short prose + autogen block (filled by `./equin build`). |
 
 ### Edits to existing files
 
@@ -147,9 +147,9 @@ Sibling to `key-readout` / `key-chip`. Template: the `playback-history` plugin
 
 ## Verification
 
-1. `./singularity build` (regenerates the migration for
+1. `./equin build` (regenerates the migration for
    `sonata_songs_ext_key_auto_detect`, builds, restarts). Then
-   `./singularity check migrations-in-sync` + `./singularity check plugin-boundaries`.
+   `./equin check migrations-in-sync` + `./equin check plugin-boundaries`.
 2. Open a **MIDI** song with a key header at
    `http://<worktree>.localhost:9000/sonata/song/<id>`:
    - Badge reads **From MIDI**; the "Auto-detect key" toggle is visible.

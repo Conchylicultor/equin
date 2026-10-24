@@ -2,7 +2,7 @@
 
 ## Context
 
-`./singularity build` writes `~/.singularity/worktrees/central.json` pointing at the *current worktree's* `central/` directory (`cli/src/commands/build.ts:452, 554`). Whichever worktree most recently built wins — the next time central cold-starts, it runs that worktree's plugin code, even after the worktree is deleted. Central is supposed to be a singleton serving every worktree from a single canonical source (main).
+`./equin build` writes `~/.singularity/worktrees/central.json` pointing at the *current worktree's* `central/` directory (`cli/src/commands/build.ts:452, 554`). Whichever worktree most recently built wins — the next time central cold-starts, it runs that worktree's plugin code, even after the worktree is deleted. Central is supposed to be a singleton serving every worktree from a single canonical source (main).
 
 The "obvious" fix — point `central.json` at main and restart central on every build — is blocked by the fact that central currently bundles two unrelated lifecycles in one process:
 
@@ -19,7 +19,7 @@ Three coordinated changes:
 
 1. **Lock `central.json` to main's `central/`**, computed via `git rev-parse --git-common-dir`. Idempotent across worktrees.
 2. **Detach embedded PG from central's process group** by switching from `Bun.spawn(postgres …)` to `pg_ctl start`. PG daemonizes, central no longer holds a process handle, central exit is a no-op for PG.
-3. **Restart central on every `./singularity build`** by POSTing `/gateway/worktrees/central/restart` after writing the spec, then probing `/api/database/status` for liveness.
+3. **Restart central on every `./equin build`** by POSTing `/gateway/worktrees/central/restart` after writing the spec, then probing `/api/database/status` for liveness.
 
 After this, central restarts cost ~a second of central API downtime (PG keeps serving; only worktree → central calls blip), and every build picks up freshly-merged main code.
 
@@ -133,17 +133,17 @@ The existing per-worktree restart at lines 564-582 stays as-is; running it after
 
 End-to-end smoke once implemented:
 
-1. `./singularity build` from this worktree. Inspect `~/.singularity/worktrees/central.json` — `server` field must point at main's `central/`, not the worktree's.
+1. `./equin build` from this worktree. Inspect `~/.singularity/worktrees/central.json` — `server` field must point at main's `central/`, not the worktree's.
 2. `cat ~/.singularity/postgres/data-pg18/postmaster.pid` — note the PID. `ps -p <pid>` confirms PG is running.
-3. `./singularity build` from a *different* worktree. `central.json` content must be byte-identical. PG's PID must be unchanged (PG was not killed). Central's gateway-spawned process *was* restarted — verify by tailing gateway logs (`tail -f ~/.singularity/logs/gateway.log`) for "backend ready" on `central` after the build.
+3. `./equin build` from a *different* worktree. `central.json` content must be byte-identical. PG's PID must be unchanged (PG was not killed). Central's gateway-spawned process *was* restarted — verify by tailing gateway logs (`tail -f ~/.singularity/logs/gateway.log`) for "backend ready" on `central` after the build.
 4. While the above runs, hit `curl http://singularity.localhost:9000/api/database/status` mid-build. Expect either a brief 502 during central restart or `{"pg":"running",…}`. Worktree pages (`http://singularity.localhost:9000`) must keep loading throughout.
 5. `kill -9 <pg-pid>` to simulate a PG crash. Within ~2s the watchdog should re-spawn PG (via `pg_ctl start`) and `/api/database/status` should report `pg: "running"` again.
-6. Restart the gateway (`./singularity start --force`). PG's PID *must not change* — gateway restart should not touch PG.
-7. Edit a file in main's `central/` (e.g. add a `console.log` to `database/central/index.ts`), commit on main, then `./singularity build` from a worktree. New log line must appear in central's stdout (gateway logs) — proves new central code is loaded.
+6. Restart the gateway (`./equin start --force`). PG's PID *must not change* — gateway restart should not touch PG.
+7. Edit a file in main's `central/` (e.g. add a `console.log` to `database/central/index.ts`), commit on main, then `./equin build` from a worktree. New log line must appear in central's stdout (gateway logs) — proves new central code is loaded.
 
 ## Out of scope (deferred)
 
-- **`./singularity stop-database`** to fully shut down the PG daemon. Not needed for this fix; `pkill postgres` works as a manual reset; can be added later as a thin wrapper around `pg_ctl stop -D <data_dir> -m fast`.
+- **`./equin stop-database`** to fully shut down the PG daemon. Not needed for this fix; `pkill postgres` works as a manual reset; can be added later as a thin wrapper around `pg_ctl stop -D <data_dir> -m fast`.
 - **`db-backup` plugin's env-var fallback to system PG** (`plugins/debug/plugins/db-backup/server/internal/handle-backup.ts`) — separate bug, file independently.
 - **Lifting PG into its own gateway-supervised entity** (the rejected option from design discussion). Not needed once PG is detached; central restartability is the real goal, achieved without the extra plumbing.
 

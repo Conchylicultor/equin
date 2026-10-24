@@ -321,7 +321,7 @@ or the gap is stated out loud in the commit.
     | { unbounded: string } );   // prose justification; greppable
   ```
 
-  The third arm is for the CLI, where a 10-minute `./singularity build` owns no deadline.
+  The third arm is for the CLI, where a 10-minute `./equin build` owns no deadline.
   `signal` needs real implementation: on abort, the SIGTERM → grace → SIGKILL escalation the
   `timeoutMs` path already runs.
 - **Host-pool acquire takes an optional `signal`** (`AcquireHooks`, through
@@ -441,7 +441,7 @@ the off-queue function into a job file.
    churn lands separately from the risky part.
 7. **Phase 5b — the lane runtime**, then lane-aware reporting, then the two checks.
 
-Every step ends with `./singularity build` — the registry and plugin docs regenerate, and
+Every step ends with `./equin build` — the registry and plugin docs regenerate, and
 `plugins-doc-in-sync` fails otherwise.
 
 ## Verification

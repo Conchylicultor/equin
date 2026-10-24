@@ -1,7 +1,7 @@
 /**
  * Which databases the backup takes, decided from what each one is.
  *
- * Run: `./singularity test plugins/backup/plugins/sources/plugins/databases`
+ * Run: `./equin test plugins/backup/plugins/sources/plugins/databases`
  */
 
 import { describe, test, expect } from "bun:test";

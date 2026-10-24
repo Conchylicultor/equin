@@ -2,7 +2,7 @@
 
 ## Context
 
-`./singularity build` and `./singularity push` each run a CPU/RAM-heavy work
+`./equin build` and `./equin push` each run a CPU/RAM-heavy work
 section — ESLint, several `tsc --noEmit` targets, and the Vite bundle — and
 there is **no host-wide cap** on how many run at once. With ~8 active worktrees
 each kicking these off, the machine thrashes: dozens of multi-GB `eslint`/`tsc`
@@ -154,7 +154,7 @@ helper already imported at `build.ts:20`).
 ### 3. `check.ts` command — gate direct checks and push checks
 
 The `check` command (`check.ts`) is the path used by **both** direct
-`./singularity check` and push (via `runChecksSubprocess`). Distinguish them
+`./equin check` and push (via `runChecksSubprocess`). Distinguish them
 with an env flag set by push:
 
 ```ts
@@ -203,21 +203,21 @@ No schema, no plugin barrels, no migrations.
 
 ## Verification
 
-1. **Build & self-check**: `./singularity build` in this worktree, confirm it
-   still deploys and `./singularity check` passes (including
+1. **Build & self-check**: `./equin build` in this worktree, confirm it
+   still deploys and `./equin check` passes (including
    `plugin-boundaries`, `eslint`).
-2. **Cap holds under load**: in several worktrees, fire `./singularity build`
-   simultaneously (e.g. `for d in <worktrees>; do (cd $d && ./singularity build &); done`).
+2. **Cap holds under load**: in several worktrees, fire `./equin build`
+   simultaneously (e.g. `for d in <worktrees>; do (cd $d && ./equin build &); done`).
    In another shell, `ps -A -o command | grep -E 'bin/(tsc|eslint)'` and confirm
    concurrent heavy jobs stay ≈ `N` (default 3 on a 12-core box), not 8×. Repeat
    with `SINGULARITY_BUILD_CONCURRENCY=1` and confirm strict serialization.
 3. **Slot files**: while builds queue, `ls ~/.singularity/build-slots/` shows
    `build-{0..N-1}.lock` (+ `push-0.lock` once a push runs).
-4. **Push priority**: with all build slots saturated, run `./singularity push`
+4. **Push priority**: with all build slots saturated, run `./equin push`
    from another worktree; its check phase should start immediately (reserved push
    slot), not wait for builds. Confirm via push timing / it not printing the wait
    line.
-5. **Main exempt**: `./singularity build --allow-main` on the main worktree while
+5. **Main exempt**: `./equin build --allow-main` on the main worktree while
    the build pool is saturated → starts immediately, no "waiting for a build
    slot" line.
 6. **Crash-safety**: SIGKILL a building agent mid-build; confirm a queued build

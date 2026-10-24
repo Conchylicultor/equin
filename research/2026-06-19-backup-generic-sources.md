@@ -125,7 +125,7 @@ for (const conv of await listActiveConversations()) {
 
 ## Part D — Move targets
 
-Move `plugins/backup/plugins/local` → `plugins/backup/plugins/targets/local` and `plugins/backup/plugins/google-drive` → `plugins/backup/plugins/targets/google-drive`. Pure path move — their imports use barrels, and nothing imports them cross-plugin (only self `ConfigV2` registrations). `./singularity build` regenerates the registries from the tree.
+Move `plugins/backup/plugins/local` → `plugins/backup/plugins/targets/local` and `plugins/backup/plugins/google-drive` → `plugins/backup/plugins/targets/google-drive`. Pure path move — their imports use barrels, and nothing imports them cross-plugin (only self `ConfigV2` registrations). `./equin build` regenerates the registries from the tree.
 
 ## Part E — Manifest Zod schema (`plugins/backup/shared/endpoints.ts`)
 
@@ -161,7 +161,7 @@ UI renders the Sources block only when `Array.isArray(manifest.sources)`.
 6. New sources: `config`, `transcripts`, `claude-settings`, `singularity-platform`, `project-memory` (C).
 7. Permissive manifest Zod (E).
 8. Gear + generic `sources[]` rendering in `backup-panel.tsx` (F).
-9. `./singularity build` — regenerates registries + docs + config origins. No SQL migration expected (`manifest` is untyped jsonb; the `$type<BackupManifest>` change is compile-time only).
+9. `./equin build` — regenerates registries + docs + config origins. No SQL migration expected (`manifest` is untyped jsonb; the `$type<BackupManifest>` change is compile-time only).
 
 ## Boundary / correctness checklist
 
@@ -172,7 +172,7 @@ UI renders the Sources block only when `Array.isArray(manifest.sources)`.
 
 ## Verification
 
-1. `./singularity build` (from the worktree) — confirm registries regenerate, no boundary/type-check failures (`./singularity check`).
+1. `./equin build` (from the worktree) — confirm registries regenerate, no boundary/type-check failures (`./equin check`).
 2. Open `http://att-1781886216-mesh.localhost:9000/debug/debug/backup`.
 3. Click **Run Backup Now**; wait for the run row to reach `ok`. Expand it — confirm the Sources block lists databases (with "N tables / M rows"), secrets, attachments, config, transcripts ("N conversations"), claude-settings, singularity-platform, project-memory; and the Targets block as before.
 4. Click the **gear** → confirm it lands on the Backup config page with the nav showing every source/target `enabled` toggle. Toggle a source off, run again, confirm that source shows `skipped` / is absent from the archive.

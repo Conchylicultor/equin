@@ -57,8 +57,8 @@ somewhere persistent.
 
 ## Verification
 
-- `./singularity test plugins/framework/plugins/browser-server` (port round trip asserts `boot` and
+- `./equin test plugins/framework/plugins/browser-server` (port round trip asserts `boot` and
   `readyAtMs` cross the port), the demo-scope jsdom tests.
-- `./singularity build`, open `/demo` with `browser_navigate`, then
+- `./equin build`, open `/demo` with `browser_navigate`, then
   `tail ~/.singularity/worktrees/<wt>/logs/demo-host-boot.jsonl` shows the line; report the
   measured 72-plugin boot time.

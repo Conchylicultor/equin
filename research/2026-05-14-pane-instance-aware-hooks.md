@@ -146,7 +146,7 @@ They keep using `usePaneMatch()` + `conversationPane.close(entry.instanceId)`. T
 
 ## Verification
 
-1. `./singularity build` — must compile cleanly
+1. `./equin build` — must compile cleanly
 2. Navigate to a two-pane URL like `/c/conv-A/c/conv-B`:
    - Click Expand on the second column → URL should become `/c/conv-B` (not `/c/conv-A`)
    - Navigate back, click Close on the second column → URL should become `/c/conv-A`

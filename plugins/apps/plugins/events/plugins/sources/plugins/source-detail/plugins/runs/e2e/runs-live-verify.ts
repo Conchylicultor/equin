@@ -25,7 +25,7 @@
  *
  * Manual only, like every script under `e2e/`:
  *
- *   ./singularity run plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs/e2e/runs-live-verify.ts [--source <sourceId>] [--headed]
+ *   ./equin run plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs/e2e/runs-live-verify.ts [--source <sourceId>] [--headed]
  */
 import { randomBytes } from "node:crypto";
 import type { Page } from "playwright";

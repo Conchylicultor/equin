@@ -9,7 +9,7 @@
  * The derived inputs are gathered exactly as `migration-applies-clean` gathers
  * them (this process never boots either), which is why the suite sits here.
  *
- * Requires the running embedded cluster (`./singularity build` first).
+ * Requires the running embedded cluster (`./equin build` first).
  */
 
 import { afterAll, beforeAll, expect, test } from "bun:test";

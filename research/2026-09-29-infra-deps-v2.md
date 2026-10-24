@@ -121,7 +121,7 @@ runPython(ready, { module: "singularity_audio.beat_features", input });
   declared dep: state, size, identity, last used, Install, Remove, and the
   install log. Features render their own first-use line ("Preparing audio
   tools…") from `depState`.
-- **`./singularity deps list | install <id> | remove <id>`** prewarms or cleans
+- **`./equin deps list | install <id> | remove <id>`** prewarms or cleans
   up from a terminal. It uses the same `ensureDep`.
 
 ### 4. Kept current: one generic upgrade loop
@@ -133,7 +133,7 @@ copy.
 daily deps.detect-outdated (main only)
    └─ for each updater with something newer, and no open task for it:
         file ONE auto-started task (Dependencies category)
-            └─ agent runs `./singularity deps upgrade <updater>`
+            └─ agent runs `./equin deps upgrade <updater>`
                  baseline gates → move the lock → gates again → verdict (current | upgraded | regressed)
             └─ on `upgraded` + an ok build: push.  on `regressed`: lock restored, hold recorded with a reason
 ```
@@ -145,7 +145,7 @@ daily deps.detect-outdated (main only)
   and `server/internal/detect-job.ts`.
 - **Contributors in this task:**
   - `mise`: the existing toolchain logic moves in as an updater.
-    `./singularity toolchain upgrade` stays as an alias, and `toolchain:resolved`
+    `./equin toolchain upgrade` stays as an alias, and `toolchain:resolved`
     stays.
   - `uv`: every `python/` project, via `uv lock --upgrade`. It uses uv's
     `exclude-newer` with a **3-day cooldown**: a release has to survive 3 days
@@ -206,7 +206,7 @@ plugins/infra/plugins/deps/
 Also touched:
 - `infra/jobs/supervised-job`: `ExecContext` on the `run` context.
 - `framework/plugin-id/core` and `tooling/boundaries/core`: the `python` leaf folder.
-- `mise.toml` and `mise.lock`: add `uv`, via `./singularity toolchain upgrade`.
+- `mise.toml` and `mise.lock`: add `uv`, via `./equin toolchain upgrade`.
 
 ## Steps
 
@@ -222,7 +222,7 @@ Also touched:
    plus the check working. Add the `uv` updater with its cooldown.
 6. Update the audio vision doc: the runtime is now on demand, and A's audio half
    is a follow-up on top of `infra/deps`.
-7. `./singularity build`, `./singularity check`, tests.
+7. `./equin build`, `./equin check`, tests.
 
 Follow-up tasks (filed with `add_task` at the end, grouped so each fits one session):
 1. **The audio pipeline on `infra/deps`**: yt-dlp fetch with a bounded cache,
@@ -236,7 +236,7 @@ Follow-up tasks (filed with `add_task` at the end, grouped so each fits one sess
 
 ## Verification
 
-- **Unit tests** (`./singularity test plugins/infra/plugins/deps`):
+- **Unit tests** (`./equin test plugins/infra/plugins/deps`):
   - identity changes with each input;
   - an interrupted install (killed before `ready.json`) reads as `absent` and reinstalls;
   - two concurrent `ensureDep` calls install once;
@@ -245,13 +245,13 @@ Follow-up tasks (filed with `add_task` at the end, grouped so each fits one sess
   - the updater runner reaches each verdict with fake updaters (current, upgraded, regressed, flaky baseline).
 - **Real first use, `hello-python`:**
   - with the dep's cache empty, `bun install` downloads no Python;
-  - `./singularity deps install hello-python` fetches CPython and numpy, and a second run returns instantly;
+  - `./equin deps install hello-python` fetches CPython and numpy, and a second run returns instantly;
   - `runPython` round-trips JSON;
   - the Dependencies view shows installing, then ready (screenshot via the e2e harness);
   - `deps remove` puts it back to absent.
 - **Type-level:** a request handler calling `ensureDep` fails `tsc`, kept as a
   `@ts-expect-error` test.
 - **Upgrade loop:**
-  - `./singularity deps upgrade uv` in the worktree moves `hello-python`'s `uv.lock` (with the cooldown respected) and returns `upgraded` or `current`;
-  - `./singularity toolchain upgrade` still gives the same verdicts as before;
+  - `./equin deps upgrade uv` in the worktree moves `hello-python`'s `uv.lock` (with the cooldown respected) and returns `upgraded` or `current`;
+  - `./equin toolchain upgrade` still gives the same verdicts as before;
   - running the detect job by hand files one task per outdated updater and none when a task is already open.

@@ -49,7 +49,7 @@ foot?: ComponentType<BlockFootProps>;
 It is **not** a third `BlockFrameDecoration` seat and must not join that union: a
 decoration answers *what is this box*, is appearance-only, and reserves no space.
 A foot is chrome the box makes room for. Keeping it off the union also keeps
-`./singularity check page-editor:anchor-has-decoration` meaning what it means
+`./equin check page-editor:anchor-has-decoration` meaning what it means
 today — a container still owes exactly one decoration, and a foot is never one.
 
 `BlockFootProps` (new, in `web/types.ts`) is shaped after `BlockAnchorProps` and
@@ -210,7 +210,7 @@ corner no longer carries the status), plus a `CLAUDE.md` for the new chip plugin
 
 ## Verification
 
-1. `./singularity build` (background), then open
+1. `./equin build` (background), then open
    `http://<worktree>.localhost:9000` on the plugin-system page and look at
    `block-ff1bb4b3-f0aa-4886-8468-d6d05c8a272c` — it is already dispatched
    (`task-1788970312471-y14afy`, `need_action`), so its chip must be there on
@@ -220,7 +220,7 @@ corner no longer carries the status), plus a `CLAUDE.md` for the new chip plugin
 2. The same page carries a `<todo>` nested inside a `<todo>`
    (`block-2159e336…` inside `block-ee4598f3…`) — dispatch the inner one and
    check both boxes still close correctly, one inside the other.
-3. `./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --path /pages/… --out /tmp/todo-foot`
+3. `./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --path /pages/… --out /tmp/todo-foot`
    for before/after, in both colour schemes.
 4. Unit: new `internal/frame-foot.test.ts` (bun:test, the `entry(id,type,depth)`
    fixture style `block-frames.test.ts` uses) covering the closing-slot rule —
@@ -228,11 +228,11 @@ corner no longer carries the status), plus a `CLAUDE.md` for the new chip plugin
    another card; two footed cards ending on the same row. Extend
    `rail-seat.test.ts`'s *pad counts* and `resolveFramePadInsets` blocks for the
    pad that moved off the last row. Run with
-   `./singularity test plugins/page/plugins/editor`.
+   `./equin test plugins/page/plugins/editor`.
 5. e2e: extend
    `plugins/page/plugins/annotations/plugins/todo/plugins/task-link/e2e/todo-dispatch-verify.ts`
    — after a dispatch the card grows a chip at its foot, and clicking it opens the
    conversation column. Re-run `plugins/page/plugins/annotations/e2e/annotations-verify.ts`
    and `plugins/page/plugins/container/e2e/container-*-verify.ts` unchanged: no
    other container declares a foot, so their geometry must not move.
-6. `./singularity check`.
+6. `./equin check`.

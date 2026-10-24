@@ -13,7 +13,7 @@
 //     run started from): folders first again.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/file-explorer/e2e/folders-on-top-verify.ts \
+//   ./equin run plugins/apps/plugins/file-explorer/e2e/folders-on-top-verify.ts \
 //     [--out /tmp/folders-on-top] [--headed]
 
 import {

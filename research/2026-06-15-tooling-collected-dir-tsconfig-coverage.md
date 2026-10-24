@@ -54,7 +54,7 @@ warn against.
 ## Implementation
 
 New check as a sub-plugin of `checks`, auto-discovered via the `check/`
-collected-dir (no manual registry edit — `./singularity build` regenerates
+collected-dir (no manual registry edit — `./equin build` regenerates
 `check.generated.ts`). Mirror the `tsconfig-alias-single-owner` layout exactly.
 
 ### Files to create
@@ -131,15 +131,15 @@ tree.
 
 ## Verification
 
-1. `./singularity build` — regenerates `check.generated.ts` (picks up the new
-   sub-plugin) and the plugin docs. Then `./singularity check` must pass
+1. `./equin build` — regenerates `check.generated.ts` (picks up the new
+   sub-plugin) and the plugin docs. Then `./equin check` must pass
    (including the new `plugins-doc-in-sync` / `plugins-have-claudemd` /
    `plugins-registry-in-sync` checks for the new plugin).
-2. `./singularity check collected-dir-tsconfig-coverage` — passes on the clean
+2. `./equin check collected-dir-tsconfig-coverage` — passes on the clean
    tree (all 8 dirs covered).
 3. **Prove it catches the bug:** temporarily delete the
    `"../../../../**/plugins/*/composition"` line from
    `plugins/framework/plugins/server-core/tsconfig.json`, re-run
-   `./singularity check collected-dir-tsconfig-coverage`, and confirm it fails
+   `./equin check collected-dir-tsconfig-coverage`, and confirm it fails
    naming `composition` + its declaring file + the suggested glob. Restore the
    line.

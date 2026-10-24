@@ -5,8 +5,8 @@
  * every row exactly as tall as a plain menu row (the action must not stretch
  * it).
  *
- * Manual only. Run after `./singularity build`:
- *   ./singularity run plugins/primitives/plugins/launch/e2e/model-menu.ts [--out /tmp/model-menu] [--headed]
+ * Manual only. Run after `./equin build`:
+ *   ./equin run plugins/primitives/plugins/launch/e2e/model-menu.ts [--out /tmp/model-menu] [--headed]
  */
 import {
   arg,

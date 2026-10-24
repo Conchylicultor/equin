@@ -7,7 +7,7 @@
  * Postgres (db-test-fixture) seeded with the REAL migration chain, rather than
  * restated in the test.
  *
- * Run: `./singularity test plugins/shell/plugins/notifications`
+ * Run: `./equin test plugins/shell/plugins/notifications`
  */
 
 import {

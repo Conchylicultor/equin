@@ -11,7 +11,7 @@
 //      returned, and the same find, re-run, no longer offers that video.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/chord/plugins/song-index/e2e/video-availability-verify.ts [--url http://<ns>.localhost:9000] [--timeout-min 15]
+//   ./equin run plugins/apps/plugins/chord/plugins/song-index/e2e/video-availability-verify.ts [--url http://<ns>.localhost:9000] [--timeout-min 15]
 //
 // Mutates server state: records the request row, may start a load, stores the
 // oEmbed answers for every video the finds touched, and records a (fake) player

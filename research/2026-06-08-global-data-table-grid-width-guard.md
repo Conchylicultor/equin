@@ -50,7 +50,7 @@ data-table primitive. Anywhere else would be a consumer naming the primitive's
 contract (a boundary leak). It is added as a new, purely-additive `lint/`
 subfolder; **no change to the data-table runtime/barrel**.
 
-### Why a lint rule (not a `./singularity check`)
+### Why a lint rule (not a `./equin check`)
 
 - The root `eslint.config.ts` runs **type-aware** linting (`projectService:
   true`), so a rule can use `ESLintUtils.getParserServices` to scope precisely
@@ -58,9 +58,9 @@ subfolder; **no change to the data-table runtime/barrel**.
   unrelated `width` props (`<svg width>`, `style={{ width }}`, etc.).
 - Plugin lint rules are auto-discovered and registered as `error` repo-wide
   (`eslint.config.ts` walks every `plugins/*/lint/index.ts`); no registry edit.
-- It runs inside the existing `eslint` built-in check (so `./singularity check`
+- It runs inside the existing `eslint` built-in check (so `./equin check`
   and `push` enforce it) **and** gives in-IDE feedback at author time.
-- A `./singularity check` would have to re-parse TS itself and could not as
+- A `./equin check` would have to re-parse TS itself and could not as
   cleanly use contextual types — strictly worse.
 
 ### Rule design — `data-table/no-class-as-grid-width`
@@ -144,21 +144,21 @@ sign-off.
 1. Apply the 7 width fixes in the 5 facet-table files.
 2. Add the `lint/` subtree (`grid-track.ts`, `no-class-as-grid-width.ts`,
    `index.ts`) to the data-table plugin.
-3. `./singularity build` — regenerates `lint.generated.ts` so the new
+3. `./equin build` — regenerates `lint.generated.ts` so the new
    `lint/index.ts` is discovered, rebuilds, redeploys.
 
 ## Verification
 
 - **Guard rejects bad values:** temporarily set one column's `width` back to
-  `"flex-1 min-w-0"`, run `./singularity check eslint` → expect a
+  `"flex-1 min-w-0"`, run `./equin check eslint` → expect a
   `data-table/no-class-as-grid-width` error pointing at that line. Revert.
-- **Guard passes on valid values:** `./singularity check eslint` is green with
+- **Guard passes on valid values:** `./equin check eslint` is green with
   the fixes in place (no false positives across the ~30 other valid widths).
-- **Visual:** after `./singularity build`, open
+- **Visual:** after `./equin build`, open
   `http://att-1780919588-vv8o.localhost:9000` → Forge → Catalog, and check the
   **Commands, Routes, Tables (db-schema), Registrations, Resources, Cross-refs**
   facet tabs render as horizontal tables (columns side-by-side, header row
   aligned), not stacked. Use `e2e/screenshot.mjs` to capture a couple of tabs
   for a before/after.
-- **Full check:** `./singularity check` is green.
+- **Full check:** `./equin check` is green.
 ```

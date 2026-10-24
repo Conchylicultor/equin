@@ -3,7 +3,7 @@
 ## Context
 
 Conversations that launch a long-running background shell (e.g. an agent that ran
-`./singularity build` as a background task) get **stuck and never settle**. The
+`./equin build` as a background task) get **stuck and never settle**. The
 conversation at `http://singularity.localhost:9000/c/conv-1780485630-h2vc/terminal`
 was reproduced live in this exact state.
 
@@ -20,7 +20,7 @@ if (session.status === "shell") {
 }
 ```
 
-That override exists for a real reason: while `./singularity build` runs, the CLI
+That override exists for a real reason: while `./equin build` runs, the CLI
 keeps the `✳` ready glyph in the pane title **and** writes `status:"shell"`, so
 without the override a running build read as `waiting` and wrongly landed in the
 needs-input queue.
@@ -51,7 +51,7 @@ Introduce one uniform, **per-worktree, crash-safe (PID-liveness) "operation in f
 marker** that both `build` and `push` write, and that `runtime-tmux` reads.
 
 Why a new marker instead of reusing existing signals:
-- Agent `./singularity build` runs in-process and does **not** populate the
+- Agent `./equin build` runs in-process and does **not** populate the
   `build_runs` table (that path is main-only/server-triggered). Its only record is
   `~/.singularity/build-log.jsonl`, whose entries carry **no pid** — not
   liveness-checkable.
@@ -217,8 +217,8 @@ session in `shell`.
 
 ## Verification
 
-1. `./singularity build` then `./singularity check` (boundaries + lint + docs-in-sync).
-2. **Build keeps `working`:** in an agent pane run `./singularity build` as a
+1. `./equin build` then `./equin check` (boundaries + lint + docs-in-sync).
+2. **Build keeps `working`:** in an agent pane run `./equin build` as a
    background task; while it runs, confirm `~/.singularity/worktrees/<slug>/ops/build.json`
    exists with a live pid, and `query_db` shows the conversation `status = 'working'`.
    When the build finishes, the file is gone and status leaves `working`.
@@ -228,7 +228,7 @@ session in `shell`.
 4. **Stuck-poller case:** reproduce the original — start a build-output poller after
    the build is gone; confirm the conversation now settles to `waiting` instead of
    pinning `working`.
-5. **Push:** run `./singularity push`; confirm `ops/push.json` appears at lock
+5. **Push:** run `./equin push`; confirm `ops/push.json` appears at lock
    acquisition and is removed on completion (success and a forced-failure path), and
    the conversation stays `working` for the push duration.
 6. **Crash-safety:** write a marker with a fake dead pid; confirm `isWorktreeOpActive`

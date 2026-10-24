@@ -24,7 +24,7 @@ const enrichedTreeCache = new Map<string, Promise<PluginTree>>();
  * answer rather than an error.
  *
  * That precondition used to live only in the regen pipeline's step ordering (the
- * guard step runs before docgen), which meant it held inside `./singularity build`
+ * guard step runs before docgen), which meant it held inside `./equin build`
  * and nowhere else: `plugins-doc-in-sync` called the renderer directly, read
  * reorder as contributing nothing, and reported the committed doc out of sync.
  * Same source, two outputs, decided by process history. Owning the precondition

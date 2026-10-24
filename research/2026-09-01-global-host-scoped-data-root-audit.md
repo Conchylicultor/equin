@@ -60,7 +60,7 @@ Two changes, one per half of the mismatch:
    live worktree owns is recognised and reported as such instead of failing.
 
 Deliberately **not** in scope (decided 2026-09-01): a scheduled job filing a
-report. The check keeps running on a standalone `./singularity check`, which
+report. The check keeps running on a standalone `./equin check`, which
 runs every scope when no filter is given.
 
 ---
@@ -79,7 +79,7 @@ root, host-global state — and is a function of neither the tree nor the artifa
 a build produces. No per-worktree caller can assert it: the subject is shared
 with every other checkout on the box and is *ahead of* any one branch, so a
 worktree observing it sees state it did not create and cannot repair. Its homes
-are a standalone `./singularity check` and any host-singleton runner.
+are a standalone `./equin check` and any host-singleton runner.
 
 ### `plugins/framework/plugins/tooling/plugins/checks/core/runner.ts`
 
@@ -224,7 +224,7 @@ Notes:
 - Skip when `isRelease()` — a release runs against its own data root.
 - Verify the new import edge (`paths/server` →
   `@plugins/framework/plugins/tooling/plugins/collected-dir/core`) with
-  `./singularity check plugin-boundaries`.
+  `./equin check plugin-boundaries`.
 
 ---
 
@@ -281,7 +281,7 @@ In `noUndeclaredDataDirsCheck.run()`:
   declared nor grandfathered") gains the host scope and the union, plus a line
   on the published manifest under "Adding a new data dir".
 - `docs/plugins-details.md`, `docs/plugins-compact.md` and the per-plugin
-  `CLAUDE.md` reference blocks regenerate from `./singularity build` — do not
+  `CLAUDE.md` reference blocks regenerate from `./equin build` — do not
   hand-edit; `plugins-doc-in-sync` fails on drift.
 
 ---
@@ -290,15 +290,15 @@ In `noUndeclaredDataDirsCheck.run()`:
 
 Run in order, from the worktree:
 
-1. `./singularity build` (background — regenerates docs/registries and deploys).
-2. `./singularity check --list` — `paths:no-undeclared-data-dirs` prints as
+1. `./equin build` (background — regenerates docs/registries and deploys).
+2. `./equin check --list` — `paths:no-undeclared-data-dirs` prints as
    `[host]`; the two `web-artifacts` checks still print as `[deploy]`.
-3. `./singularity check --scope tree` (push's pass, unchanged),
-   `./singularity check --scope tree,deploy` (build's new pass — the host check
-   must be absent), `./singularity check --scope host` (only the audit).
-4. `./singularity check --scope nonsense` — still exits 1 naming all three
+3. `./equin check --scope tree` (push's pass, unchanged),
+   `./equin check --scope tree,deploy` (build's new pass — the host check
+   must be absent), `./equin check --scope host` (only the audit).
+4. `./equin check --scope nonsense` — still exits 1 naming all three
    valid scopes.
-5. `./singularity check paths:no-undeclared-data-dirs` — passes, and prints the
+5. `./equin check paths:no-undeclared-data-dirs` — passes, and prints the
    attribution line. This machine has 73 registered namespaces, so several
    manifests should exist once their backends have booted.
 6. Confirm the build no longer runs it: after step 1, the build's
@@ -310,9 +310,9 @@ Run in order, from the worktree:
    `~/.singularity/worktrees/<other>/data-dirs.json` `keys`; the audit now
    passes and names that namespace in the log line. Remove both afterwards, and
    re-run to confirm the failure returns.
-8. `./singularity test plugins/infra/plugins/paths` — the new pure-function
+8. `./equin test plugins/infra/plugins/paths` — the new pure-function
    tests for attribution plus the existing co-located suites.
-9. `./singularity check plugin-boundaries` — the new `paths/server` →
+9. `./equin check plugin-boundaries` — the new `paths/server` →
    `collected-dir/core` edge is legal and forms no cycle.
 
 ## Risks

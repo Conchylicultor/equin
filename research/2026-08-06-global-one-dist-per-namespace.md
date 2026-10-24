@@ -2,7 +2,7 @@
 
 ## Context
 
-`./singularity release --composition website` on 2026-08-05 replaced the app served at
+`./equin release --composition website` on 2026-08-05 replaced the app served at
 `singularity.localhost:9000` with the public website, permanently, until main was rebuilt
 (`No registered app for id "agent-manager"`). This is not failure-specific — a fully
 successful release does the same.
@@ -25,7 +25,7 @@ Underneath sits a duplication nobody intended. Two paths produce a composition d
 
 | | compose-serve | build-composition (release) |
 |---|---|---|
-| trigger | last stage of **main's** `build`, per `autoBuild: true` (`build.ts:1298`) | `./singularity release`, from any checkout |
+| trigger | last stage of **main's** `build`, per `autoBuild: true` (`build.ts:1298`) | `./equin release`, from any checkout |
 | consumer | the dev gateway — *deployed* at `<id>.localhost:9000` | the packer — *copied* into a shippable bundle |
 | registry | per-name `*.composition.<id>.generated.ts` | singleton `*.composition.generated.ts` |
 | frontend | web-artifacts pipeline (content-addressed store) | monolithic rollup, zero cache sharing |
@@ -440,7 +440,7 @@ gateway's memory. Options, roughly in order of preference:
    worktreeArtifacts.webDist(name)` — the live reader's own answer. Correct without gateway
    changes, but leaves consequence 1 (a namespace serves the stale dist indefinitely) and
    makes a hermetic `build-composition` depend on a running gateway, which it must not.
-3. **Do not reap from a build at all.** Move it to an explicit one-shot `./singularity`
+3. **Do not reap from a build at all.** Move it to an explicit one-shot `./equin`
    maintenance command run after a gateway restart. Sidesteps the race; leaves the disk
    usage until someone runs it.
 
@@ -460,7 +460,7 @@ redundant. Option 1 alone would leave a window: a build whose restart POST never
 crash, gateway 503) leaves disk and gateway memory disagreeing until the next reconcile tick,
 and the *next* build's disk-gate would open against a gateway that has not yet adopted the path.
 Asking the live reader removes the time-based argument entirely, so the gate is correct
-independent of when — or whether — option 1 is deployed. That matters concretely: `./singularity
+independent of when — or whether — option 1 is deployed. That matters concretely: `./equin
 start` builds the gateway from MAIN's Go source, so a gateway fix in a worktree is not live
 until it is merged, while the reaper's gate is live the moment the CLI changes.
 
@@ -594,9 +594,9 @@ exposed, so the asymmetry becomes visible. Fix if cheap: `release.ts` acquires
 
 ## Verification
 
-Per stage, `./singularity build` green from this worktree, then:
+Per stage, `./equin build` green from this worktree, then:
 
-**S1** — `./singularity release --composition website --dev`, then confirm no
+**S1** — `./equin release --composition website --dev`, then confirm no
 `server.composition.generated.ts` exists and `web.composition.website.generated.ts` does:
 `ls plugins/framework/plugins/server-core/core/*.composition*`. Restart main's backend and
 confirm the agent-manager app still loads (this is the exact regression: today it boots
@@ -612,7 +612,7 @@ closure (e.g. `sonata`) — must be absent. Then boot it:
 
 **S3 — the reported bug.** From this worktree, with main deployed: note
 `curl -s singularity.localhost:9000 | head -c 200`, run
-`./singularity release --composition website --dev`, then re-fetch. Identical output, and
+`./equin release --composition website --dev`, then re-fetch. Identical output, and
 `singularity.localhost:9000` still renders the agent manager. Repeat concurrently for two
 compositions and confirm two distinct `worktrees/<wt>/release-web/<id>` trees.
 
@@ -648,7 +648,7 @@ confirms the relocated locator resolves).
   `build-composition` sweep invokes the same reaper, whose gate is now open for this
   namespace, so it would re-delete the manually restored serving path while the underlying
   defect is unfixed.
-- `./singularity test plugins/framework/plugins/tooling plugins/build plugins/infra plugins/release`
+- `./equin test plugins/framework/plugins/tooling plugins/build plugins/infra plugins/release`
   → bun:test 872 pass / 0 fail across 85 files; vitest: no jsdom tests under these paths.
 
 **S4 (original plan text)** — after a main build, `cat ~/.singularity/worktrees/singularity/spec.json` shows
@@ -657,5 +657,5 @@ confirms the relocated locator resolves).
 `WEB_DIST_DIR` change: on `website.localhost:9000`, the build-id reported by the backend must
 match `worktrees/website/web/.build-id`, not main's.
 
-Full-suite: `./singularity check` and
-`./singularity test plugins/framework/plugins/tooling plugins/framework/plugins/cli`.
+Full-suite: `./equin check` and
+`./equin test plugins/framework/plugins/tooling plugins/framework/plugins/cli`.

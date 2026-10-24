@@ -6,7 +6,7 @@ import type {
 } from "@plugins/debug/plugins/profiling/plugins/op-log/core";
 
 /**
- * The exit codes `./singularity await` answers with.
+ * The exit codes `./equin await` answers with.
  *
  * Four states, four codes, because the caller is usually an agent deciding what
  * to do next and three of them are NOT "the op failed":

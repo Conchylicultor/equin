@@ -4,7 +4,7 @@
 // the overlays drawn, and prints the heaviest functions by self time.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/places/plugins/places-map/e2e/load-perf.ts \
+//   ./equin run plugins/apps/plugins/places/plugins/places-map/e2e/load-perf.ts \
 //     [--out /tmp/places-perf] [--top 15] [--idle 30000]
 //
 // Four phases, each CPU-profiled: load (navigation → first pin), idle (--idle

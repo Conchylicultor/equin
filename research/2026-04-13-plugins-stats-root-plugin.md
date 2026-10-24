@@ -125,7 +125,7 @@ Add `recharts` to `web/package.json` (not root — it's web-only).
 
 ## Verification
 
-1. `./singularity build` — must succeed (migrations check, typecheck, build).
+1. `./equin build` — must succeed (migrations check, typecheck, build).
 2. Open `http://claude-1776112992.localhost:9000/stats` — sidebar entry
    "Stats" visible under System group; clicking navigates to the pane.
 3. Cumulative commits chart renders, tooltip works, axes labeled, theme-aware.

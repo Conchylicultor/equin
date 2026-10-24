@@ -1,5 +1,5 @@
 /**
- * How one `./singularity release` ended, and the single sentence that says so —
+ * How one `./equin release` ended, and the single sentence that says so —
  * the string stamped on `release_runs.error` AND returned as the `failed` arm's
  * `message`, which is why they are computed in one place: a caller that reports
  * the failure (the Deploy app's `update`) and a user who later opens the run

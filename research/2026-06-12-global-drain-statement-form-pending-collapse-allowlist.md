@@ -224,12 +224,12 @@ statement-form wave **COMPLETE** (mirroring the ternary wave), keeping the
 
 ## Verification
 
-1. `./singularity build` — green `type-check`, `eslint`, `plugins-doc-in-sync`,
+1. `./equin build` — green `type-check`, `eslint`, `plugins-doc-in-sync`,
    boundaries. The extended rule must flag **nothing** with the empty allowlist.
-2. `./singularity check eslint` — confirm `no-pending-data-collapse` passes with
+2. `./equin check eslint` — confirm `no-pending-data-collapse` passes with
    zero violations (the drain is complete).
 3. Sanity guard: temporarily re-add one collapse (e.g. `if (r.pending) return {}`)
-   in any migrated file → `./singularity check eslint` fails → revert.
+   in any migrated file → `./equin check eslint` fails → revert.
 4. App spot-checks at `http://<worktree>.localhost:9000`:
    - **Config detail** (Settings → Config → any entry): brief `<Loading/>` then
      fields with correct tier badges; conflict banner never flashes absent on a

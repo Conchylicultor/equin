@@ -7,7 +7,7 @@
  * database). The two answers must be the same id set. Then: every complement
  * pair is disjoint and covering, and seeded random and/or trees agree too.
  *
- * Run: `./singularity test plugins/network/plugins/live/plugins/filter`
+ * Run: `./equin test plugins/network/plugins/live/plugins/filter`
  * (requires the running embedded cluster).
  */
 

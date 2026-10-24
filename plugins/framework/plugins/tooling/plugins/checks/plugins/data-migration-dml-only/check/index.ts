@@ -59,7 +59,7 @@ const check: Check = {
         "Data/backfill migrations (created with --custom-migration) carry no drizzle " +
         "snapshot header and must run only DML (UPDATE/INSERT/DELETE/WITH/SELECT). To change " +
         "the schema, edit the plugin's schema.ts and run\n" +
-        "  ./singularity build --migration-name <slug>\n" +
+        "  ./equin build --migration-name <slug>\n" +
         "so drizzle generates a tracked schema migration instead.",
     };
   },

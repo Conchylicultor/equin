@@ -78,7 +78,7 @@ test("multiple values of one trailer key shift the fields — a known quirk", ()
   // right. The parse then reads the second conversation id as the push id. This is
   // the ported behaviour, kept deliberately: the writer half stamps exactly one of
   // each (the shell hook from SINGULARITY_CONVERSATION_ID, the push CLI per
-  // invocation), so no commit `./singularity push` produces can reach it. Pinned
+  // invocation), so no commit `./equin push` produces can reach it. Pinned
   // here so a future fix is a deliberate change with a failing test, not a
   // surprise.
   const raw = record(["sha1", ISO, "conv-a", "conv-b", "push-1", "subject"]);

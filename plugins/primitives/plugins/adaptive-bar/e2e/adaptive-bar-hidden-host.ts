@@ -20,7 +20,7 @@
  *   thing under test being asserted rather than observed. Only a real engine
  *   decides what a `display: none` subtree measures, and only a real engine
  *   fires the `ResizeObserver` that drives the pass.
- * - `./singularity check layout-geometry` mutates synchronously and never
+ * - `./equin check layout-geometry` mutates synchronously and never
  *   reverts: the harness's style writes are one-shot with no restore phase, and
  *   the bar's resize callback is RAF-debounced — so a hide-then-show inside one
  *   task coalesces into no size change at all, and the hidden pass this script
@@ -32,8 +32,8 @@
  *
  * Manual only — nothing runs this automatically.
  *
- *   ./singularity build
- *   ./singularity run plugins/primitives/plugins/adaptive-bar/e2e/adaptive-bar-hidden-host.ts [--path /agents] [--headed]
+ *   ./equin build
+ *   ./equin run plugins/primitives/plugins/adaptive-bar/e2e/adaptive-bar-hidden-host.ts [--path /agents] [--headed]
  */
 import {
   numArg,

@@ -8,8 +8,8 @@
  * `web/__tests__/radio-group.test.tsx` — this script exists to prove the wiring
  * survives on the real config surface, which the unit test cannot see.
  *
- *   ./singularity run plugins/primitives/plugins/css/plugins/radio-group/e2e/radio-names.ts
- *   ./singularity run …/radio-names.ts --config chord-l… --headed
+ *   ./equin run plugins/primitives/plugins/css/plugins/radio-group/e2e/radio-names.ts
+ *   ./equin run …/radio-names.ts --config chord-l… --headed
  */
 import {
   arg,

@@ -24,7 +24,7 @@ registration order and drops every authored `config/**/<slot>.jsonc` layout. Thi
 affects *every* released composition, not just the website.
 
 **Why the removal is a prerequisite.** Adding `reorder` to `served-baseline` was tried
-and `./singularity build` failed:
+and `./equin build` failed:
 
 ```
 • composition-closure ... FAIL
@@ -37,7 +37,7 @@ and `./singularity build` failed:
 `reorder/web` imports `config_v2/staging/web`. Closure membership is **per-plugin, not
 per-runtime**, so that also ships `staging/server`, whose `land.ts:8` imports
 `infra/worktree/server` — it lands staged defaults by spinning a throwaway git worktree
-and running `./singularity push`. `infra.worktree` is in the `agent-runtime` bundle,
+and running `./equin push`. `infra.worktree` is in the `agent-runtime` bundle,
 which `sonata` and `website` declare in `excludes`.
 
 Measured closure for the `website` manifest:
@@ -153,7 +153,7 @@ barrel and the two files being deleted.
 ### C. Committed config — THREE files, and a trap
 
 > **Trap.** All three carry `requiresAuthoredOverride`. Deleting one does **not** make it go
-> away — `./singularity build` re-seeds it and stamps a `// @review` marker, which fails
+> away — `./equin build` re-seeds it and stamps a `// @review` marker, which fails
 > `config:overrides-authored`. That check is `alwaysRun: true`
 > (`plugins/config_v2/check/overrides-authored.ts:70`), so `--skip-checks` will not dodge it.
 > **Edit these in place and restamp `// @hash` against the regenerated origin.**
@@ -207,10 +207,10 @@ One commit, but edit in this order so `tsc` stays a useful signal:
 2. Delete `plugins/config_v2/plugins/staging/`.
 3. `promotableToGit` + `ConfigDetail.Action` cleanup.
 4. `served-baseline` entry + guard test.
-5. `./singularity build` — regenerates the `DROP TABLE` migration + snapshot + `_journal.json`,
+5. `./equin build` — regenerates the `DROP TABLE` migration + snapshot + `_journal.json`,
    the registries, the docs, and prunes orphaned origins.
 6. `git rm` the two non-origin config overrides; `git add -A`; review the diff.
-7. `./singularity check`.
+7. `./equin check`.
 
 **Precedent to mirror:** `f62e4534d` ("replace DB-backed groups with a contributed node-type
 registry") deleted `plugins/reorder/plugins/groups/` — 2 tables, 4 endpoints, a resource —
@@ -239,12 +239,12 @@ so it keeps passing; rename if you want tidiness.
 
 ## Verification
 
-1. `./singularity build` and `./singularity check` both green.
+1. `./equin build` and `./equin check` both green.
 2. **Closure assertion** — a read-only script: `buildPluginTree(root + "/plugins", { skipBarrelImport: true, facets: true })`
    → `classifyEdges` → `flattenManifest` → `resolveComposition` on the `website` manifest.
    Assert the bundle **contains** `reorder` and **lacks** `config_v2.staging`, `infra.worktree`,
    `database`, `infra.jobs`; assert size ≈ 121 (from 115).
-   > **Hazard:** do *not* verify with `./singularity build-composition`. It writes
+   > **Hazard:** do *not* verify with `./equin build-composition`. It writes
    > `server.composition.generated.ts` into this worktree, which `plugins-active.ts`
    > then selects **over** `server.generated.ts` — changing which registry this worktree's
    > own backend boots. Use the read-only script.
@@ -282,7 +282,7 @@ No test or e2e script exercises the staging feature.
 ## Accepted capability loss
 
 - No runtime path to promote a config edit to a committed default. Changing a default means
-  editing `config/**/<name>.jsonc` in a worktree and `./singularity push` — the normal agent
+  editing `config/**/<name>.jsonc` in a worktree and `./equin push` — the normal agent
   workflow, and how `served-baseline` is changed in this very plan.
 - Studio composition manifests stay user-layer; the code defaults in
   `plugin-meta/composition/core/config.ts` are the sole source of truth.

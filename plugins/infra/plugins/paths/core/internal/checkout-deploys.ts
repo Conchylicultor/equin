@@ -52,7 +52,7 @@ export interface CheckoutDeploy {
  *
  * The `none` arm carries `others` because "nothing at all" and "everything
  * except the one you asked for" need different fixes, and only the caller
- * rendering the refusal can say so: an empty list means `./singularity build`
+ * rendering the refusal can say so: an empty list means `./equin build`
  * has never run here, while a populated one means this checkout published
  * somebody else's composition and never its own app.
  *

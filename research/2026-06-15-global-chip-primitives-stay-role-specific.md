@@ -109,9 +109,9 @@ stays green.
 
 ## Verification
 
-1. `./singularity build` from the worktree — must complete (regenerates docs,
-   typechecks, runs `./singularity check`).
-2. `./singularity check` — confirm `type-check`, `eslint` (incl.
+1. `./equin build` from the worktree — must complete (regenerates docs,
+   typechecks, runs `./equin check`).
+2. `./equin check` — confirm `type-check`, `eslint` (incl.
    `no-clip-without-nowrap`, `badge/no-adhoc-chip`), and `plugins-doc-in-sync`
    pass.
 3. Visual spot-check at `http://<worktree>.localhost:9000`:

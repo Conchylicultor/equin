@@ -140,12 +140,12 @@ Existing exact-cost assertions that change are updated, never loosened.
 ## Verification
 
 ```bash
-./singularity test plugins/framework/plugins/resource-runtime
-./singularity test plugins/network/plugins/live
-./singularity test plugins/infra/plugins/query-resource
-./singularity test plugins/page/plugins/editor
-./singularity check
-./singularity build   # backgrounded
+./equin test plugins/framework/plugins/resource-runtime
+./equin test plugins/network/plugins/live
+./equin test plugins/infra/plugins/query-resource
+./equin test plugins/page/plugins/editor
+./equin check
+./equin build   # backgrounded
 ```
 
 Then, on the deployed worktree: open a page, type in a paragraph, and confirm `pages.tree:rows`

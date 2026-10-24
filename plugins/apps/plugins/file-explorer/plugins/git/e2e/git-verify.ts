@@ -11,7 +11,7 @@
 //  6. Regressions: a file peek renders; Studio's plugin Files section lists files.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/file-explorer/plugins/git/e2e/git-verify.ts \
+//   ./equin run plugins/apps/plugins/file-explorer/plugins/git/e2e/git-verify.ts \
 //     [--out /tmp/git-verify] [--headed]
 
 import { readFileSync, rmSync, writeFileSync } from "node:fs";

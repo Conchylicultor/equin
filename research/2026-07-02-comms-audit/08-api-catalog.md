@@ -29,7 +29,7 @@
 
 | API | Plugin | Consumers (examples) |
 |---|---|---|
-| Gateway subdomain routing, UDS proxying, WS hijack, `/gateway/*` | `gateway/` (Go) | every request; `./singularity build` (restart POST) |
+| Gateway subdomain routing, UDS proxying, WS hijack, `/gateway/*` | `gateway/` (Go) | every request; `./equin build` (restart POST) |
 | `Bun.serve` route tables, `ServerPluginDefinition`, lifecycle hooks | `framework/server-core` | every server plugin |
 | Central runtime + central-routes manifest | `framework/central-core`, cli build | auth, secrets |
 
@@ -110,7 +110,7 @@
 |---|---|
 | No raw `fetch("/api/…")` from web | `no-raw-web-fetch` lint + `endpoints:typed-web-fetches` check |
 | No raw JSON `Response` handlers | `endpoints:no-raw-json-handlers` check |
-| No SSE / ad-hoc live-state WS in TS | `./singularity check` (raw `text/event-stream` ban + WS route allow-list) |
+| No SSE / ad-hoc live-state WS in TS | `./equin check` (raw `text/event-stream` ban + WS route allow-list) |
 | No `.notify()` on DB-backed resources | type shape (`defineResource` returns no notify) + `no-db-backed-notify` check |
 | Keyed resource without scope policy | `defineResource` overloads (won't compile) |
 | No `pending ? [] : data` collapse | `live-state/no-pending-data-collapse` lint |

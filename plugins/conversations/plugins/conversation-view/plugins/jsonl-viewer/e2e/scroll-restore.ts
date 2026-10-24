@@ -15,7 +15,7 @@
  *    forever, which reads as a pass on the assertion that matters most — so the
  *    scroller is located by the transcript rows it contains, never by position.
  *
- *   ./singularity run plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/e2e/scroll-restore.ts --conv <id>
+ *   ./equin run plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/e2e/scroll-restore.ts --conv <id>
  */
 import {
   arg,

@@ -277,11 +277,11 @@ collections in §10…) is mechanical against this contract and is not part of t
 
 ## Verification
 
-- `./singularity test plugins/network/plugins/live plugins/primitives/plugins/optimistic-mutation plugins/primitives/plugins/live-state plugins/framework/plugins/resource-runtime` plus each proof site's plugin:
+- `./equin test plugins/network/plugins/live plugins/primitives/plugins/optimistic-mutation plugins/primitives/plugins/live-state plugins/framework/plugins/resource-runtime` plus each proof site's plugin:
   - `serveValue`: `throttleMs` coalesces a burst into one load; bare `recomputeOn` reaches every subscribed tuple and no unsubscribed one; the mapped form reaches only the mapped tuple; `whileSubscribed` runs once per first sub, its stop runs once per last unsub, and a stop that arrives before an async start resolves runs after it; `@ts-expect-error` for `notify` on the db arm and for a central value passed to the worktree `serveValue`.
   - Collections: one without `default` mints only `:rows`; `useLive(c)` on it and `preload` on it are `@ts-expect-error`; a change to row R reaches only R's `useLiveRow`; a `bytea` column round-trips a >76-byte state as unfolded base64 byte-identical to `stateToBase64`, and a row schema typing it as bytes is `@ts-expect-error`.
   - Optimistic: pending until the first value (no `mutate` on that arm, tsc); ops after the settle confirm as today; an ack frame reaches only a subscription that asked.
-- `./singularity check` (type-check, resource-vocabulary, eager-tier-in-sync, keyed-resource-scope, plugins-doc-in-sync), then `./singularity build`.
+- `./equin check` (type-check, resource-vocabulary, eager-tier-in-sync, keyed-resource-scope, plugins-doc-in-sync), then `./equin build`.
 - E2E: deployment chip moves after a local commit (refHead → deployment); the edited-files pane updates on a save; a prototype option pick survives a reload; a queue reorder confirms (the sync cloud goes to saved); the auth accounts pane renders over the central socket; a collab block's edits sync across two tabs; linking a todo to a task shows the chip, and unlinking clears it.
 - `get_runtime_profile`: no new flush stall; the `edited-files` 304 rate is unchanged.
 
@@ -316,7 +316,7 @@ Built as designed: the options, the central `serveValue`, lookup-only collection
 - **Tests:** bun 1279 pass / 1 fail; vitest 146 pass, with 1 file failing to import. Neither failure is in a file this change touches:
   - `canvas/web/internal/layout.test.ts > roomPerFrame`;
   - `instructions-view.test.tsx` (`import.meta.dir` is undefined under vitest).
-- **`./singularity build`:** checks passed (type-check included), and the app deployed.
+- **`./equin build`:** checks passed (type-check included), and the app deployed.
 - **Collaborative editing** (the proof for the August point-membership revert):
   - `crdt-multitab-agent-verify` 9/9;
   - `crdt-fanout-verify` 13/13 (the second context converges in 253 ms and no other block churns);

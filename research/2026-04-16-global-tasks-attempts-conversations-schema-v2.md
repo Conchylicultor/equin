@@ -462,7 +462,7 @@ NULL`. The task view flips immediately.
 ## Migration plan
 
 Two generated DDL migrations, one hand-written data migration
-between them. Landed in one `./singularity build`.
+between them. Landed in one `./equin build`.
 
 ### Step 1 — DDL: introduce new structure
 
@@ -570,7 +570,7 @@ deltas:
 2. **Orphan collapse.** POST conversation with no taskId; observe
    placeholder task + attempt appear; rename the task; confirm
    hierarchy survives.
-3. **Push flow (simulated).** Do **not** run `./singularity push` —
+3. **Push flow (simulated).** Do **not** run `./equin push` —
    that promotes a branch to main and must never be invoked for
    testing. Instead, simulate the push by inserting a `pushes` row
    directly (SQL, or a dedicated test helper). Observe:

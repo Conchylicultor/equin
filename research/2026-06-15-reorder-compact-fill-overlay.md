@@ -135,7 +135,7 @@ const renderOverlay = useCallback(
 
 ## Verification
 
-1. `./singularity build` (from the worktree dir) — must succeed; `type-check`
+1. `./equin build` (from the worktree dir) — must succeed; `type-check`
    should pass (new `Badge` import, `_doc` access is typed).
 2. Manual, scripted Playwright run against
    `http://<worktree>.localhost:9000/c/<id>` (a conversation surface that shows

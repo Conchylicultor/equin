@@ -10,7 +10,7 @@ This plan adds a third sub-plugin under `plugins/stats/` that surfaces machine-w
 
 ## Approach
 
-New sub-plugin: `plugins/stats/plugins/cost/` — `id: "stats-cost"`, package name `@singularity/plugin-stats-cost`. Mirrors the existing `tasks` sub-plugin shape (server entry + web entry + a few chart components). Auto-discovered by `./singularity build` — no codegen edits.
+New sub-plugin: `plugins/stats/plugins/cost/` — `id: "stats-cost"`, package name `@singularity/plugin-stats-cost`. Mirrors the existing `tasks` sub-plugin shape (server entry + web entry + a few chart components). Auto-discovered by `./equin build` — no codegen edits.
 
 ### Data flow
 
@@ -51,7 +51,7 @@ A "Singularity only" toggle (top-right of the card, same UX as the `Filter rebas
 ### New
 
 - `plugins/stats/plugins/cost/package.json` — workspace member `@singularity/plugin-stats-cost`, dep `ccusage: ^18.0.11`.
-- `plugins/stats/plugins/cost/CLAUDE.md` — autogen reference block placeholder; `./singularity build` fills it.
+- `plugins/stats/plugins/cost/CLAUDE.md` — autogen reference block placeholder; `./equin build` fills it.
 - `plugins/stats/plugins/cost/server/index.ts` — `ServerPluginDefinition` with these routes:
   - `GET /api/stats/cost/daily` → `{ points: { date, byModel: { [model]: { cost, input, output, cacheRead, cacheCreation } } }[] }`
   - `GET /api/stats/cost/cumulative` → `{ points: { date, cost }[] }`
@@ -82,7 +82,7 @@ A "Singularity only" toggle (top-right of the card, same UX as the `Filter rebas
 
 ## Verification
 
-1. `./singularity build` from the worktree — confirm new sub-plugin gets picked up by codegen, server restarts cleanly, `plugin-boundaries` check passes.
+1. `./equin build` from the worktree — confirm new sub-plugin gets picked up by codegen, server restarts cleanly, `plugin-boundaries` check passes.
 2. Open `http://<worktree>.localhost:9000/stats` — confirm four new chart sections render below "Commits" and "Lines changed".
 3. Eyeball the totals — pick a known-cost session and cross-check against `bunx ccusage` CLI output (which reads the same files); numbers should match exactly since we use the same loader.
 4. Confirm the join: at least one row in the Top Conversations table should show a real Singularity conversation title (not a bare session UUID).

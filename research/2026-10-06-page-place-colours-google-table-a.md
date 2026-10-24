@@ -80,7 +80,7 @@ category, mapped onto the neutral families; absent = unknown → neutral circle"
   PlaceFamily>` maps them (tsc catches a missing heading).
 - `scripts/fetch-table-a.ts` — one-shot generator: fetches the docs page,
   parses the per-heading tables, writes `table-a.ts`. Run by hand
-  (`./singularity run …`) when refreshing; not on a schedule.
+  (`./equin run …`) when refreshing; not on a schedule.
 - `server/internal/type-to-family.ts` — `googleTypeToFamily(primaryType,
   types)`: `primaryType`'s heading if present in the table, else the first of
   `types` that is, else `undefined`. Returns `{ family, unknownPrimary }` so the
@@ -117,7 +117,7 @@ auto-colour for an unknown name (`plugins/primitives/plugins/avatar/web/internal
 
 ## Verification
 
-- `./singularity test plugins/page/plugins/place` — new tests:
+- `./equin test plugins/page/plugins/place` — new tests:
   - `table-a.test.ts`: every row's heading is a `GoogleHeading`; table size
     sanity (> 700); a few spot rows (`clothing_store → Shopping`,
     `museum → Culture`, `monument → Culture`, `hotel → Lodging`).
@@ -126,7 +126,7 @@ auto-colour for an unknown name (`plugins/primitives/plugins/avatar/web/internal
     only) → `undefined`.
   - `kinds` test: every family has a colour (tsc already) and the grouping
     table above.
-- `./singularity build`, then open the page from the screenshot, press Refresh
+- `./equin build`, then open the page from the screenshot, press Refresh
   on each card, and screenshot
   (`plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts
   --path /pages/page/<id>`): shops blue, a museum purple, a hotel pink.

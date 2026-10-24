@@ -289,7 +289,7 @@ export const registrationsFacetTable = defineFacetTable<RegistrationRow>({
 
 ### 5. CLAUDE.md prose (NEW, one per sub-plugin)
 
-Per [[reference_claudemd_autogen_block]], write **prose only** — `./singularity build`
+Per [[reference_claudemd_autogen_block]], write **prose only** — `./equin build`
 codegen inserts the `## Plugin reference` block. One short `CLAUDE.md` in each of the three
 `render-*/` folders, mirroring the wording of the commands equivalents.
 
@@ -316,10 +316,10 @@ sub-plugins are discovered by their barrels.
 
 ## Verification
 
-1. `./singularity build` — succeeds; codegen fills the three `CLAUDE.md` reference blocks and
+1. `./equin build` — succeeds; codegen fills the three `CLAUDE.md` reference blocks and
    the `facets/CLAUDE.md` autogen sub-plugin list now shows `registrations` with its three
    render children (mirroring the other 8 facets).
-2. `./singularity check` — passes (boundaries, eslint, plugins-doc-in-sync). Watch for: no
+2. `./equin check` — passes (boundaries, eslint, plugins-doc-in-sync). Watch for: no
    authored plugin `id:`, no arbitrary Tailwind sizes (`text-3xs` only), barrel purity.
 3. Forge catalog (`http://<worktree>.localhost:9000`, Forge → Catalog): a **Registrations**
    tab appears. (Rows may be empty until the Phase-4 `skipBarrelImport` flip — that's the

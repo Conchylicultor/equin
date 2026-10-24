@@ -2,7 +2,7 @@
 // implementation, for the two processes that need it.
 //
 // `shared/`, not `server/`, for the reason `read-folder.ts` and `mint.ts` are:
-// `./singularity prototype list` must answer with no backend running, and a CLI
+// `./equin prototype list` must answer with no backend running, and a CLI
 // process cannot import a server barrel's boot-time machinery to do it. Nothing
 // in here was ever server-specific — it reads the data dir and parses HTML — so
 // the move is a relocation, not a fork. `server/internal/list.ts` re-exports it,

@@ -720,7 +720,7 @@ The page editor must not import `reports`, hence the sink inversion — same as
 | `undo-redo/web` barrel gains `registerPendingFlush` | additive, own barrel |
 
 No plugin gains a dependency it did not already have; no cycle is created.
-`./singularity check plugin-boundaries` and `plugins-doc-in-sync` should pass with
+`./equin check plugin-boundaries` and `plugins-doc-in-sync` should pass with
 only the regenerated doc block changing.
 
 A new lint rule is worth adding while the funnel is fresh —
@@ -795,9 +795,9 @@ headless — no DOM needed; `editYDocState` runs under bun today on the server):
 - **New phase 8 — undo mid-run.** Type, and press Cmd+Z **before** the 500 ms
   idle window closes; the just-typed run must be what is undone (pins §4.3).
 
-Run: `./singularity test plugins/page/plugins/editor`,
-`./singularity test plugins/page/plugins/markdown-apply`,
-`./singularity run plugins/page/plugins/editor/e2e/crdt-undo-verify.ts`.
+Run: `./equin test plugins/page/plugins/editor`,
+`./equin test plugins/page/plugins/markdown-apply`,
+`./equin run plugins/page/plugins/editor/e2e/crdt-undo-verify.ts`.
 
 ---
 
@@ -822,7 +822,7 @@ Run: `./singularity test plugins/page/plugins/editor`,
   link here. Its "open question — verify cross-block merge-undo rebinding" is
   answered: the rebinding was the defect.
 - `docs/plugins-details.md` / `plugins-compact.md` regenerate via
-  `./singularity build`.
+  `./equin build`.
 
 ---
 

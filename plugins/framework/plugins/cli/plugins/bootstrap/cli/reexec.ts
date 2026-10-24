@@ -5,10 +5,10 @@
  *
  * THE BUG THIS EXISTS FOR (reproduced deterministically, bun 1.3.13):
  *
- *     $ ./singularity push          # in a worktree with no node_modules
+ *     $ ./equin push          # in a worktree with no node_modules
  *     … bun install … 2542 packages installed
  *     error: Cannot find package 'commander' from '…/cli/bin/cli.ts'
- *     $ ./singularity push          # retry, no changes → works
+ *     $ ./equin push          # retry, no changes → works
  *
  * Bun's module resolver CACHES DIRECTORY LISTINGS, and starts populating them as
  * it loads this process's first modules — well before `ensureDeps()` runs. Every
@@ -72,7 +72,7 @@ import { spawnPassthrough } from "@plugins/infra/plugins/spawn/core";
  * from a process to the re-exec of itself. The bootstrap TAKES it
  * ({@link takeReexecBudget}) — reads it and removes it from `process.env` —
  * before it spawns anything, so no descendant (`run` → an e2e script → a nested
- * `./singularity …`, `build` → its `check` subprocess) inherits a spent or
+ * `./equin …`, `build` → its `check` subprocess) inherits a spent or
  * partly spent budget for what is really a new invocation.
  */
 export const REEXEC_ENV = "SINGULARITY_DEPS_REEXEC";

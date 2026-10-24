@@ -1,9 +1,9 @@
-# Deleting a CLI command must not brick `./singularity`
+# Deleting a CLI command must not brick `./equin`
 
 ## Context
 
 Deleting a command plugin (`plugins/framework/plugins/cli/plugins/<name>/`) makes
-every `./singularity` invocation crash at startup, `build` and `push` included:
+every `./equin` invocation crash at startup, `build` and `push` included:
 
 ```
 error: 1 cli command contribution(s) failed to load:
@@ -45,7 +45,7 @@ Teach the collected-dir loader the difference between a *stale* entry and a
 - Entries for which `isPresent` returns false are **not loaded at all** and are
   never strict failures. They are collected into a stale list and reported once
   on stderr, e.g.
-  `[cli command] registry lists 1 removed contribution(s), skipped: framework/plugins/cli/plugins/apply-migrations — ./singularity build regenerates the registry.`
+  `[cli command] registry lists 1 removed contribution(s), skipped: framework/plugins/cli/plugins/apply-migrations — ./equin build regenerates the registry.`
 - Everything else keeps today's semantics: under `strict`, a present entry whose
   loader throws, or whose default export is missing/invalid, still fails the pass.
 - Extend the option docblock: strict answers "present but broken"; `isPresent`
@@ -62,7 +62,7 @@ Teach the collected-dir loader the difference between a *stale* entry and a
   `cli:command-declarations-light` check (`cli/check/index.ts:~421`, which
   already hand-joins the same path) share one spelling. The check and
   `cli:command-names-unique` should skip absent entries the same way, so
-  `./singularity check` on a tree with a stale registry reports only the
+  `./equin check` on a tree with a stale registry reports only the
   `plugins-registry-in-sync` drift, not a crash.
 
 Cost: one `existsSync` per command (~20) per invocation — negligible next to
@@ -104,15 +104,15 @@ the imports it guards.
    still throws; a present entry with no default export still throws.
 2. Reproduce the `build` half in this worktree: temporarily delete a small
    command folder (e.g. `serve-app`) without touching `cli.generated.ts`, then run
-   `./singularity check plugins-registry-in-sync` (should start, report drift) and
-   `./singularity regen-generated` (should start and drop the line). Restore the
+   `./equin check plugins-registry-in-sync` (should start, report drift) and
+   `./equin regen-generated` (should start and drop the line). Restore the
    folder with `git checkout`.
 3. Reproduce the `push` half: with the folder deleted and the registry
    regenerated, `git checkout main -- plugins/framework/plugins/cli/core/cli.generated.ts`
-   (what the merge driver does), then `./singularity normalize-generated`-equivalent
+   (what the merge driver does), then `./equin normalize-generated`-equivalent
    path: `bun plugins/framework/plugins/cli/bin/index.ts regen-generated` must
    succeed and rewrite the registry. Restore everything afterwards.
-4. `./singularity test plugins/framework/plugins/tooling/plugins/collected-dir`, then
-   `./singularity build`.
+4. `./equin test plugins/framework/plugins/tooling/plugins/collected-dir`, then
+   `./equin build`.
 5. After this lands on main, the stuck branch `att-1789936487-t8yi` rebases and
    pushes without the hand edit.

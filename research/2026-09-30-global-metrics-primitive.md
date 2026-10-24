@@ -188,7 +188,7 @@ type EntityLink = { route: string /* core RouteDef id */; params: Record<string,
 | `commits` | `code-explorer/plugins/commit-metrics` (moved from `stats/commits`) | commits (split category), lines added / removed, net lines, commit size (rate) · params `dedup`, `excludedPaths` · details: commits | `git log --numstat`, Singularity-Push dedup, `conversation_categories` |
 | `pushes` | `debug/profiling/plugins/push-metrics` | throughput (split outcome), wait time (rate), step time (split step) | `op_log_ops` (op-store) via `sqlFlow` |
 
-The moves go through `./singularity plugin move`, which rewrites references
+The moves go through `./equin plugin move`, which rewrites references
 and moves the config directories. The `cost-usage` data dir names its owner
 only as a string, so the archive stays where it is. Today's `commitsConfig`
 and `costConfig` values become the authored board `params`.
@@ -252,7 +252,7 @@ and `costConfig` values become the authored board `params`.
 | P2 | Move `stats/tasks` → `tasks/plugins/task-metrics`, `stats/cost` → `conversations/plugins/usage-cost`, `stats/commits` → `code-explorer/plugins/commit-metrics`, and rewrite them as metric sources. Add the agent-manager `dashboard` plugin and its four authored boards. Delete the interim live values the Stats charts read since B9 (see the next row): `stats.tasks.history`, `stats.commits.{counts,counts-by-category,lines,lines-by-ext}` and the five `stats.cost.*` keys (the old `/api/stats/{tasks,cost,commits}` endpoints are already gone) | No `stats.tasks.*`, `stats.commits.*` or `stats.cost.*` key remains. Numbers match the old charts over the same UTC days. A tab can be deleted and re-added from "+". Clicking a bucket opens the drawer with that bucket's tasks, conversations and commits. The prototype comparison (`compare-diff.ts --name proto-1790501215-euqp`) is close |
 | P2/P3 (interim values) | Since the endpoint-reads migration (B9, `research/2026-10-11-global-endpoint-reads-onto-live.md`) no Stats chart reads an `/api/stats/*` endpoint; each reads an interim live value from its sub-plugin's `shared/values.ts`. **Tasks:** `stats.tasks.history` (one row per UTC day). **Commits:** `stats.commits.counts`, `stats.commits.counts-by-category`, `stats.commits.lines`, `stats.commits.lines-by-ext` (served from `commits/machine/`). **Cost:** `stats.cost.daily`, `stats.cost.sessions-daily`, `stats.cost.distribution`, `stats.cost.top-sessions` and the lookup collection `stats.cost.session-conversations` (served in `server/internal/served.ts`); the cost metric source reuses their one memoized bundle and its change signal (`watchCostInputs`). **Pushes:** `stats.pushes.wait-time`, `stats.pushes.throughput`, `stats.pushes.step-breakdown` (served from `pushes/machine/`). P2 deletes the tasks, commits and cost values with their plugins' moves; P3 deletes the pushes values with `push-metrics` | After P2: no `stats.tasks.*`, `stats.commits.*` or `stats.cost.*` key remains. After P3: no `stats.pushes.*` key remains |
 | P3 | `push-metrics` + a pushes Profiling section; responsiveness → `latency-ledger` Profiling section; delete the interim `stats.pushes.{wait-time,throughput,step-breakdown}` live values; delete `plugins/stats` | Debug → Profiling shows both. No `@plugins/stats` imports and no `stats.pushes.*` key remain |
-| P4 | health-monitor and deploy `trend-chart` move to `chart-kit`; delete `chart-primitives`; turn on the `recharts` lint; drop `recharts` from three package.json files | `./singularity check` is green |
+| P4 | health-monitor and deploy `trend-chart` move to `chart-kit`; delete `chart-primitives`; turn on the `recharts` lint; drop `recharts` from three package.json files | `./equin check` is green |
 | P5 | DataView `dashboard` view type + the three DataView additions + the `fields` card source; prove it on the tasks list | Filtering tasks changes the charts. A bar click filters the table and switches to it |
 | P6 | Pages `/chart` block + `MetricPicker` | Insert via `/chart`, pick a metric, and it renders live. The block data survives a reload |
 
@@ -262,15 +262,15 @@ as a dependency chain.
 
 ## Verification
 
-- `./singularity test plugins/primitives/plugins/metrics` (bun + jsdom) after P1;
+- `./equin test plugins/primitives/plugins/metrics` (bun + jsdom) after P1;
   the provider tests after P2.
-- `./singularity build`, then compare the old and new numbers: query
+- `./equin build`, then compare the old and new numbers: query
   `/api/metrics/query` for `tasks.completed` / `cost.spend` / `code.commits`
   over 30D and diff against the old `/api/stats/*` responses, captured before
   the deletion, for the same UTC days.
 - Screenshots via `e2e-harness/e2e/screenshot.ts --path /agents/dashboard`
   (each tab, dark and light), and `compare-diff.ts` against the prototype.
-- `./singularity check` covers boundaries, `metrics:board-refs`,
+- `./equin check` covers boundaries, `metrics:board-refs`,
   `config-stable-list-ids` and the lints.
 
 ## Critical files

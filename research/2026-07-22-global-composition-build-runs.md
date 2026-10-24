@@ -2,7 +2,7 @@
 
 ## Context
 
-`./singularity build` on the main checkout ends with a compose-serve stage: after deploying main (restart backend + health probe), it rebuilds each activated composition (sonata, website, …) in-process and serves it at `http://<id>.localhost:9000`. Today those composition builds are invisible as builds: their profiler spans land inside main's single `build-profile-<id>.json`, their log lines go only to stdout, and they have **zero `build_runs` rows**.
+`./equin build` on the main checkout ends with a compose-serve stage: after deploying main (restart backend + health probe), it rebuilds each activated composition (sonata, website, …) in-process and serves it at `http://<id>.localhost:9000`. Today those composition builds are invisible as builds: their profiler spans land inside main's single `build-profile-<id>.json`, their log lines go only to stdout, and they have **zero `build_runs` rows**.
 
 This also causes a live bug: main's `build_runs` row is only ever closed by `reconcileOrphanBuilds` (pid-dead scan at backend `onReady` + before the next claim). The ~100s compose-serve tail keeps the CLI pid alive past the restarted backend's boot reconcile, so the row stays open forever and the toolbar build button spins "Building…" indefinitely (see the investigation earlier in this conversation: CLI finished 75.8s after backend-ready on `build-1784682655313-wkmym3`).
 
@@ -11,7 +11,7 @@ This also causes a live bug: main's `build_runs` row is only ever closed by `rec
 User decisions (locked):
 1. **Main's row closes at main deploy** (right after the health probe); the CLI stamps it directly in the DB, guarded `where(isNull(finishedAt))` (first-writer-wins vs the legacy backend/reconcile writers). Fixes the eternal spinner.
 2. **Flat rows + `target` field** ("main" | composition id) in the same history list; `parentId` kept as data, no nesting UI.
-3. **CLI ledger, main-checkout only**: when `SINGULARITY_BUILD_ID` is unset (direct terminal `./singularity build` on main), the CLI mints the main row itself. Worktree builds stay out of scope (still no rows).
+3. **CLI ledger, main-checkout only**: when `SINGULARITY_BUILD_ID` is unset (direct terminal `./equin build` on main), the CLI mints the main row itself. Worktree builds stay out of scope (still no rows).
 
 ## Verified constraints
 
@@ -35,7 +35,7 @@ User decisions (locked):
 - Add `parentId: text("parent_id")` — soft reference to the parent main run (no FK: parent may be pruned past the 50-row retention).
 - Widen the in-flight lock: `uniqueIndex("build_runs_inflight_uniq").on(t.namespace, t.target).where(finishedAt IS NULL)`. The backend's claim INSERT omits `target` → defaults `'main'` → claim semantics identical to today; open composition rows never collide with the main claim or each other.
 
-Run `./singularity build` to regenerate the drizzle migration (never drizzle-kit directly).
+Run `./equin build` to regenerate the drizzle migration (never drizzle-kit directly).
 
 ### 2. Wire schema + history resource
 
@@ -136,7 +136,7 @@ Extend `ComposeServeOptions` with injected deps: `recorder: BuildRunRecorder; pa
 
 ### 10. Rebuild + checks
 
-`./singularity build` (migration + docs regen + deploy), then `./singularity check` green (`migrations-in-sync`, `plugins-doc-in-sync`, `plugin-boundaries`, `type-check`).
+`./equin build` (migration + docs regen + deploy), then `./equin check` green (`migrations-in-sync`, `plugins-doc-in-sync`, `plugin-boundaries`, `type-check`).
 
 Ordering to keep the tree green: 1 → build → 2 → 3 → 4,5 (pure refactors behind unchanged exports) → 6 → 7 → 8 → 9 → 10.
 
@@ -152,5 +152,5 @@ Ordering to keep the tree green: 1 → build → 2 → 3 → 4,5 (pure refactors
 2. **Artifacts**: `ls ~/.singularity/worktrees/singularity/` shows `build-profile-<id>-c-<comp>.json`, `build-logs-<id>-c-<comp>.json`, `build-<id>-c-<comp>.log`.
 3. **Builds UI**: popover excerpt + Builds pane show composition rows with target chips; a composition run's detail pane shows Target in Info, its own Logs + Profiling Gantt, and the commits placeholder.
 4. **Spinner fix**: the toolbar button returns to idle once all compositions finish — no eternal "Building…" after reload.
-5. **Orphan path**: `kill -9` the `./singularity build` pid mid-composition; restart the main backend (or trigger a build) → reconcile closes the open composition row (exit from its artifact if written, else -1); main's row already 0; the next build's `insertCompositionRun` sweep tolerates any survivor.
-6. **Manual terminal build on main**: `./singularity build` in a shell → a `trigger=manual` main row minted by the CLI plus composition children (decision 3).
+5. **Orphan path**: `kill -9` the `./equin build` pid mid-composition; restart the main backend (or trigger a build) → reconcile closes the open composition row (exit from its artifact if written, else -1); main's row already 0; the next build's `insertCompositionRun` sweep tolerates any survivor.
+6. **Manual terminal build on main**: `./equin build` in a shell → a `trigger=manual` main row minted by the CLI plus composition children (decision 3).

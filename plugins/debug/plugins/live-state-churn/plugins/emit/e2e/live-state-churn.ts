@@ -9,10 +9,10 @@
 // be flowing.
 //
 // Usage:
-//   ./singularity run plugins/debug/plugins/live-state-churn/plugins/emit/e2e/live-state-churn.ts --key <resourceKey> [--url <url>] [--rate 10] [--seconds 8]
+//   ./equin run plugins/debug/plugins/live-state-churn/plugins/emit/e2e/live-state-churn.ts --key <resourceKey> [--url <url>] [--rate 10] [--seconds 8]
 //
 // Example:
-//   ./singularity run plugins/debug/plugins/live-state-churn/plugins/emit/e2e/live-state-churn.ts \
+//   ./equin run plugins/debug/plugins/live-state-churn/plugins/emit/e2e/live-state-churn.ts \
 //     --url http://<worktree>.localhost:9000/agents \
 //     --key tasks.list --rate 10 --seconds 8
 
@@ -101,7 +101,7 @@ const ok = await withBrowser(async (h) => {
     console.error(
       `window.${LIVE_STATE_EMIT_GLOBAL} and/or window.${RENDER_PROFILER_GLOBAL} are undefined —\n` +
         "the live-state-churn emit and render-profiler Debug plugins are not loaded.\n" +
-        "Run ./singularity build and retry.",
+        "Run ./equin build and retry.",
     );
     return false;
   }

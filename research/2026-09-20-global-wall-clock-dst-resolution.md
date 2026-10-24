@@ -146,7 +146,7 @@ the October ambiguous hour moves, by an hour, to the first occurrence.
 - `plugins/packages/plugins/wall-clock/package.json` description — it currently
   says *"iterated to a fixed point"*, which is the mechanism being removed. This
   string is what `docs/plugins-compact.md` and the umbrella `CLAUDE.md` carry,
-  so `./singularity build` regenerates them from it.
+  so `./equin build` regenerates them from it.
 - `plugins/apps/plugins/chord/plugins/progress/CLAUDE.md:62` describes the
   day-boundary derivation and the removed helper.
 
@@ -179,10 +179,10 @@ the October ambiguous hour moves, by an hour, to the first occurrence.
 ## Verification
 
 ```bash
-./singularity test plugins/packages/plugins/wall-clock
-./singularity test plugins/apps/plugins/chord/plugins/progress
-./singularity check                 # boundaries, type-check, plugins-doc-in-sync
-./singularity build                 # regenerates the plugin docs from the new description
+./equin test plugins/packages/plugins/wall-clock
+./equin test plugins/apps/plugins/chord/plugins/progress
+./equin check                 # boundaries, type-check, plugins-doc-in-sync
+./equin build                 # regenerates the plugin docs from the new description
 ```
 
 Then, in the deployed app, chord's progress panel still reports today's counts —
@@ -190,7 +190,7 @@ it reads `startOfLocalDay(now, browserTimeZone)`, so this confirms the ordinary
 (non-transition) path end to end:
 
 ```bash
-./singularity run plugins/apps/plugins/chord/plugins/curriculum/e2e/curriculum-verify.ts
+./equin run plugins/apps/plugins/chord/plugins/curriculum/e2e/curriculum-verify.ts
 ```
 
 A transition day cannot be driven from the UI without moving the clock, so the

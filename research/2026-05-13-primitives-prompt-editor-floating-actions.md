@@ -128,7 +128,7 @@ No changes needed — `AbovePromptInput` is still used by 3 other plugins (notes
 
 ## Verification
 
-1. `./singularity build` — builds cleanly
+1. `./equin build` — builds cleanly
 2. Open conversation view — template chips appear as a floating PenLine icon inside the editor bottom-right, expand on hover, click inserts text
 3. Open task-draft-form (Improve button) — same floating chips appear inside that editor too
 4. Disabled editor (conversation gone/done) — floating chips hidden

@@ -5,7 +5,7 @@
 // `tour.ts` first on an empty deploy).
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/places/plugins/places-map/e2e/click-away.ts \
+//   ./equin run plugins/apps/plugins/places/plugins/places-map/e2e/click-away.ts \
 //     [--out /tmp/places-click-away]
 //
 // Writes `<out>-<step>.png`; exits non-zero on the first broken expectation.

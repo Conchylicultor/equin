@@ -254,11 +254,11 @@ deps tree asks. Add one line to both `task-deps-tree/CLAUDE.md` and
 `task-graph/CLAUDE.md` recording that the two "clusters" are intentionally different
 relations — that divergence is what a future reader will "fix" wrongly.
 
-### 5. Migrations — two `./singularity build` runs, in this order
+### 5. Migrations — two `./equin build` runs, in this order
 
-1. **DDL**: `./singularity build --migration-name add_task_cluster_id` → drizzle-kit
+1. **DDL**: `./equin build --migration-name add_task_cluster_id` → drizzle-kit
    emits `ALTER TABLE "tasks" ADD COLUMN "cluster_id" text;` + the index.
-2. **DML**: `./singularity build --custom-migration --migration-name backfill_task_clusters`,
+2. **DML**: `./equin build --custom-migration --migration-name backfill_task_clusters`,
    then hand-edit the generated empty file:
 
 ```sql
@@ -334,7 +334,7 @@ for.
 
 ## Verification
 
-1. `./singularity build` twice per §5, then confirm no task lost its tree:
+1. `./equin build` twice per §5, then confirm no task lost its tree:
    ```sql
    -- every live connected component must sit inside exactly one label
    -- (labels may over-approximate; they must never split a component)

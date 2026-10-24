@@ -134,7 +134,7 @@ Timeout: `12_000ms` (matches conversation-category).
 
 ## Verification
 
-1. `./singularity build` — confirms migration generates cleanly and server restarts.
+1. `./equin build` — confirms migration generates cleanly and server restarts.
 2. Open `http://<worktree>.localhost:9000/`, start a conversation, send a turn, wait ~2s after the turn completes. The card should appear above the prompt input with the three sections.
 3. Send another turn — the card should update in place (push resource).
 4. Close + reopen the conversation tab — card should re-hydrate from the resource on first load (no flicker).
@@ -143,7 +143,7 @@ Timeout: `12_000ms` (matches conversation-category).
    - Conversation deleted — row gone (cascade FK).
    - Haiku timeout / failure — no row written, no card, no UI error toast.
    - Same `messageId` event re-fired (e.g. server restart re-emits last turn) — job is a no-op.
-6. `./singularity check` — passes (especially `migrations-in-sync` and `plugin-boundaries`).
+6. `./equin check` — passes (especially `migrations-in-sync` and `plugin-boundaries`).
 7. Use `e2e/screenshot.mjs` to capture the conversation view after a turn and visually confirm the card layout.
 
 ## Out of scope (deferred)

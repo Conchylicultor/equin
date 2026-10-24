@@ -321,13 +321,13 @@ review.
   back plans nothing.
 - **`markdown-apply/core/plan.test.ts`**: an incoming `\3. x` line pins to the stored
   `text` row rather than creating.
-- **`./singularity check page.editor:markdown-claims-are-escapable`** must fail if a bogus
+- **`./equin check page.editor:markdown-claims-are-escapable`** must fail if a bogus
   `claims: ["x"]` entry is added to any handle.
 
 ## Verification
 
-1. `./singularity test plugins/page`, then `./singularity build`, then
-   `./singularity check`.
+1. `./equin test plugins/page`, then `./equin build`, then
+   `./equin check`.
 2. **The real repro, against THIS worktree's deploy, not main** (the MCP tools reach the
    shared instance, which runs main's unfixed code; a worktree DB is a fork and holds the
    same pages). `read_page` on `block-cc11355f` (*[Planned] Installable by others*), then

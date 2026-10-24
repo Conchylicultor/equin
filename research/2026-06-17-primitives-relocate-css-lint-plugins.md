@@ -43,7 +43,7 @@ The `css/plugins/` directory already exists (it hosts `center`, `cluster`, `fram
 - **ESLint rule namespaces are unchanged** — the `name` field inside each plugin's `lint/index.ts` is an authored string (`"radius"`, `"z-layers"`, etc.), not path-derived. Rules stay named `radius/no-adhoc-radius`, `z-layers/no-adhoc-zindex`, etc.
 - **No web/server registry entries** — these plugins never appear in `web.generated.ts` or `server.generated.ts` (no barrels). Only `lint.generated.ts` is affected.
 - **No changes to `css/` umbrella** — the umbrella's `lint/index.ts` (which owns `no-adhoc-layout`) does not need updating; sub-plugins contribute lint rules independently via their own `lint/index.ts` files, discovered by filesystem glob.
-- **No manual registry edits** — `./singularity build` regenerates `lint.generated.ts` and all CLAUDE.md AUTOGEN blocks from the filesystem.
+- **No manual registry edits** — `./equin build` regenerates `lint.generated.ts` and all CLAUDE.md AUTOGEN blocks from the filesystem.
 
 ---
 
@@ -59,13 +59,13 @@ The `css/plugins/` directory already exists (it hosts `center`, `cluster`, `fram
 
 2. **Update `package.json` `name` field** in each of the 4 moved plugins (Edit tool on each file).
 
-3. **Run `./singularity build`** — this regenerates:
+3. **Run `./equin build`** — this regenerates:
    - `lint.generated.ts` (entries update from `primitives/plugins/{name}` → `primitives/plugins/css/plugins/{name}`)
    - `docs/plugins-compact.md`, `docs/plugins-details.md`
    - Each plugin's `CLAUDE.md` AUTOGEN block
    - (Note: `bun install` is also run as the first step, which picks up the package name changes.)
 
-4. **Run `./singularity check`** and verify these pass:
+4. **Run `./equin check`** and verify these pass:
    - `plugins-registry-in-sync`
    - `plugins-doc-in-sync`
    - `eslint` (lint rules still fire correctly at their new path)
@@ -85,13 +85,13 @@ The `css/plugins/` directory already exists (it hosts `center`, `cluster`, `fram
 
 ```bash
 # After move + package.json edits:
-./singularity build
+./equin build
 
 # Confirm checks pass:
-./singularity check plugins-registry-in-sync
-./singularity check plugins-doc-in-sync
-./singularity check eslint
-./singularity check type-check
+./equin check plugins-registry-in-sync
+./equin check plugins-doc-in-sync
+./equin check eslint
+./equin check type-check
 
 # Spot-check that rules still fire (a file with 'rounded' class should lint-error):
 # (manual or in a test file)

@@ -172,7 +172,7 @@ Reused (no change): `openPane` (`primitives/pane/web`), `useConfigRegistrations`
 
 ## Verification
 
-1. `./singularity build` (regenerates docs; `plugins-doc-in-sync` +
+1. `./equin build` (regenerates docs; `plugins-doc-in-sync` +
    `plugin-boundaries` checks must pass — watch for the new `config-link`
    plugin registration/CLAUDE.md, the preprompts barrel re-export, and the
    `configDetailPane` export from settings).

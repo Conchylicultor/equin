@@ -226,7 +226,7 @@ Set up **both** fork kinds, then scripted-reload each and screenshot frame 0.
 1. **Committed git @app scope** (the case broken *forever*): create
    `config/ui/tokens/color-palette/@app/<appId>/config.jsonc` (and/or theme-engine)
    with a visibly different `preset`, line 1 `// @hash <base-origin-hash>`, then
-   `./singularity build`; confirm `./singularity check config-origins-in-sync` passes.
+   `./equin build`; confirm `./equin check config-origins-in-sync` passes.
 2. **Runtime fork:** open the app → Theme Customizer → toggle "Customize for app" ON →
    change a token.
 3. **Reload test:** `bun e2e/screenshot.mjs --url http://<wt>.localhost:9000/<app>`,
@@ -236,5 +236,5 @@ Set up **both** fork kinds, then scripted-reload each and screenshot frame 0.
    window of a differently-themed app (`:root` = global + scoped block).
 4. Inspect `/api/config-v2/snapshot`: the forked app's scope must appear in `scopes`;
    confirm `config-v2.scope-forked` is gone from WS traffic.
-5. **Regression:** `./singularity check inherited-theme-defaults-scoped type-check` (+
-   `migrations`/all checks), `bun run test:dom`, then `./singularity build`.
+5. **Regression:** `./equin check inherited-theme-defaults-scoped type-check` (+
+   `migrations`/all checks), `bun run test:dom`, then `./equin build`.

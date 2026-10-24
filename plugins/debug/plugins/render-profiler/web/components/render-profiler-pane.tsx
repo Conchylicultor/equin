@@ -78,8 +78,8 @@ export function RenderProfilerPane() {
           <Inset pad="md">
             <Placeholder tone="error">
               The React commit bridge isn&apos;t installed (the frontend
-              predates this feature). Run ./singularity build to rebuild
-              index.html, then reload.
+              predates this feature). Run ./equin build to rebuild index.html,
+              then reload.
             </Placeholder>
           </Inset>
         ) : initiators.length === 0 ? (

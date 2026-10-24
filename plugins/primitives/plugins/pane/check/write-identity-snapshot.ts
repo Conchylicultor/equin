@@ -3,7 +3,7 @@
  * Regenerate the committed pane-identity manifest that `pane:identity-manifest`
  * compares against.
  *
- *   ./singularity run plugins/primitives/plugins/pane/check/write-identity-snapshot.ts
+ *   ./equin run plugins/primitives/plugins/pane/check/write-identity-snapshot.ts
  *
  * Then READ THE DIFF before committing. The manifest is not derived truth — it
  * is the reviewed RECORD of what every pane's id, segment, `appIndex` and parent

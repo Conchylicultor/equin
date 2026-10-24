@@ -64,9 +64,9 @@ Every script opens its browser through `withBrowser` / `harness.session()`
   bare bun — it cannot import the recordings core, which pulls zod).
 - New guard `e2e-tool-use-id`: a Bash command that calls `singularity run`
   is rewritten to `export SINGULARITY_TOOL_USE_ID=<id>; <command>` (export, so a
-  chain `a && ./singularity run …` still sees it). Applies to foreground and
+  chain `a && ./equin run …` still sees it). Applies to foreground and
   background calls; the transcript keeps the model's original command.
-- `./singularity run` passes env through to the script (already does). The
+- `./equin run` passes env through to the script (already does). The
   harness reads the env var; absent (a human run) → `manual/`.
 - The harness prints `recording: <dir> (N steps)` so the agent also sees it.
 
@@ -94,7 +94,7 @@ Every script opens its browser through `withBrowser` / `harness.session()`
 
 ## Verification
 
-- `./singularity test` on the recordings plugin (`parseTraceSteps`) and guards.
+- `./equin test` on the recordings plugin (`parseTraceSteps`) and guards.
 - Build, then run `screenshot.ts --click …` from this conversation: confirm
   `recording:` line, manifest on disk, and the filmstrip under that Bash call in
   the conversation view (screenshot of this conversation's pane).

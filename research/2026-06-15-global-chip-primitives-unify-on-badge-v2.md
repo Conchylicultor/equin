@@ -117,7 +117,7 @@ radius and drop the `shape` axis — say the word and the plan loses one prop.
 
 ## Verification
 
-1. `./singularity build` from the worktree, then `./singularity check`
+1. `./equin build` from the worktree, then `./equin check`
    (`type-check`, `eslint` incl. `no-clip-without-nowrap` + `badge/no-adhoc-chip`,
    `plugins-doc-in-sync`, `plugin-boundaries`) must pass.
 2. Visual regression pass (the truncation/baseline/region-line changes touch all

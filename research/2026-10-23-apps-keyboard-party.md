@@ -72,7 +72,7 @@ equivalent of a canvas.
 
 ## Verification
 
-- `./singularity test plugins/apps/plugins/keyboard-party` — classifyKey.
-- `./singularity build`, then drive `/keyboard-party` with the `browser_*` tools:
+- `./equin test plugins/apps/plugins/keyboard-party` — classifyKey.
+- `./equin build`, then drive `/keyboard-party` with the `browser_*` tools:
   press letters / digits / space / arrows, screenshot, check console clean.
 - Add `<meta name="mocks" content="app:/keyboard-party">` to the prototype.

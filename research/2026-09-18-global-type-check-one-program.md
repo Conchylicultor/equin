@@ -280,23 +280,23 @@ weight as §4 → `publishWarmBase`). `hasEntrypoint` has no remaining reader an
 1. **Coverage proof, before anything else.** Capture the union of the seven current programs'
    repo files from the pool (`~/.singularity/cache/tsbuildinfo/6.0.3/<target>/*.tsbuildinfo`,
    `fileNames` resolved as if at `.cache/tsbuildinfo/`, non-`node_modules` only; 8,252 today) into
-   the scratchpad. After the change, `./singularity check type-check --no-cache`, read
+   the scratchpad. After the change, `./equin check type-check --no-cache`, read
    `.cache/tsbuildinfo/repo.tsbuildinfo` the same way, and assert the new set ⊇ the union. Any
    file missing is a hole in `include`; extras are expected (the ~199 files no test reached).
-2. `./singularity test plugins/framework/plugins/tooling/plugins/checks plugins/packages/plugins/semaphore plugins/infra/plugins/host/plugins/host-admission`
+2. `./equin test plugins/framework/plugins/tooling/plugins/checks plugins/packages/plugins/semaphore plugins/infra/plugins/host/plugins/host-admission`
    — the rewritten prepare-thread fixture, the weighted-semaphore cases (weight acquired atomically,
    FIFO, `weight > max` throws), the grant clamp (a 1-unit grant runs a 2-unit request).
-3. Three consecutive `./singularity check type-check` runs on this worktree, read from
+3. Three consecutive `./equin check type-check` runs on this worktree, read from
    `~/.singularity/worktrees/att-1789665118-gl85/check-<runId>.log`:
    - cold (new partition): one `type-check worker repo: cpu …` line, ≈ 100–300 CPU-s, ≈ 7–10 GB;
      `warm base repo: cold, pool empty`; one `published 1 warm base labelled <sha>` line;
    - identical tree: `program unchanged since last pass, skipped`, zero worker lines;
    - one comment appended to a `web/` component: `running`, one worker ≈ 45 CPU-s / ≈ 2.7 GB.
-4. `./singularity build` (background) green, then `./singularity build --skip-checks` shows a
+4. `./equin build` (background) green, then `./equin build --skip-checks` shows a
    single `tsc repo` step and publishes a labelled base.
 5. Before/after table for the page note: sum of worker CPU and simultaneous peak RSS on a cold
    miss (today ≈ 740 CPU-s / ≈ 30 GB from the table above) against the single worker's line; the
-   admission check (`./singularity check host-budget`, if present) still green with B unchanged.
+   admission check (`./equin check host-budget`, if present) still green with B unchanged.
 6. One week later: `rg -h 'type-check worker repo' ~/.singularity/worktrees/*/check-*.log` —
    the distribution should sit between the ~2.7 GB warm floor and the ~7 GB API-edit peak, with the
    16 GB tail gone (it was `test` re-checking web-core's closure in parallel with web-core doing
@@ -323,12 +323,12 @@ integrated and verified here. Deviations from the plan, and why:
   plus `layout-harness/CLAUDE.md`'s "wiring footgun" section, which described the exact chore the
   single include removes. All rewritten. `plugin-registry-gen.ts`'s comment no longer names the
   deleted check.
-- The deleted check plugin's workspace entry left `bun.lock`, and `./singularity regen-generated`
+- The deleted check plugin's workspace entry left `bun.lock`, and `./equin regen-generated`
   rebuilt the check registry and the docs (same pipeline the build runs).
 
 ### Verified
 
-Tests: `./singularity test` over the checks, semaphore and host-admission plugins — 228 pass, 1
+Tests: `./equin test` over the checks, semaphore and host-admission plugins — 228 pass, 1
 fail. The failure is `withHostGrant grants at least one unit and runs fn`, a pre-existing case that
 acquires a REAL host CPU share and timed out at bun's 5 s default while other agents' builds held
 the pool (`all 6 fan-out children exited before granting a slot`); it runs before any code this
@@ -338,7 +338,7 @@ Coverage proof: the union of the seven old programs' repo files (from the pool's
 8,249 present in this tree) against the new `repo.tsbuildinfo`: **0 missing**, 8,250 repo files,
 11,165 files with declarations (the old `test` program was 10,939).
 
-Four consecutive `./singularity check type-check` runs on this worktree, transcript lines verbatim:
+Four consecutive `./equin check type-check` runs on this worktree, transcript lines verbatim:
 
 | run | tree | lines |
 | --- | --- | --- |
@@ -346,7 +346,7 @@ Four consecutive `./singularity check type-check` runs on this worktree, transcr
 | 2 | identical | `ok (cached)` — outer read-set hit, no worker |
 | 3 | one comment appended to a plugin's `web/index.ts` barrel | `program changed, running` · `warm base repo: kept local 8248/8250` · **`worker repo: cpu 77.1s, maxRSS 6.7 GB`** |
 | 4 | that comment reverted (one unrelated comment edit since run 1) | `program changed, running` · `kept local 8249/8250` · **`worker repo: cpu 28.2s, maxRSS 2.6 GB`** |
-| 5 | `./singularity build` (full check pass, after codegen regenerated three files) | `program changed, running` · `kept local 8247/8250` · **`worker repo: cpu 43.3s, maxRSS 3.5 GB`** · `published 1 warm base labelled 6ef203d0d666 (kept 4, 1 on main)` |
+| 5 | `./equin build` (full check pass, after codegen regenerated three files) | `program changed, running` · `kept local 8247/8250` · **`worker repo: cpu 43.3s, maxRSS 3.5 GB`** · `published 1 warm base labelled 6ef203d0d666 (kept 4, 1 on main)` |
 
 Run 1 is the one-time cold cost of the new partition: it also re-linted every file, because the
 tsconfig change flipped the global closure fingerprint. Run 4 is the whole-repo warm floor the plan

@@ -190,7 +190,7 @@ export interface ProfilerReport {
    - `<>{x}</>`→`<div>{x}</div>` ⇒ remount `Fragment→div`.
    - same type, changed `key` at a fixed index ⇒ cause `key-change`.
    Run: `bun test plugins/debug/plugins/render-profiler/web/internal`.
-2. **Build & deploy** — `./singularity build`, app at
+2. **Build & deploy** — `./equin build`, app at
    `http://<worktree>.localhost:9000`.
 3. **In-app** — open **Debug → Render Profiler**, Start, drive a deterministic
    remount (e.g. from the console, mount a throwaway component flipping

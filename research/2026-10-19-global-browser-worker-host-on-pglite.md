@@ -209,7 +209,7 @@ else, through a key-routed composition of the two servers. Nothing in the deskto
 5. **The demo host:** its `plugins`, the seed, the contributor split(s), `DemoScenario.host`, and the
    DemoScope wiring.
 6. **Close-out:**
-   - `./singularity check` and `./singularity build`, then the verification below.
+   - `./equin check` and `./equin build`, then the verification below.
    - Update the subtrack card (tick the row, status, measurements: bundle size, boot timings) and the
      track card.
    - File the next main task (pack and stubs to seed in the worker, then delete the page server and
@@ -231,10 +231,10 @@ else, through a key-routed composition of the two servers. Nothing in the deskto
 
 ## Verification
 
-- **Tests:** `./singularity test` on server-core (`entryClosure`, `browser` mode), browser-server
+- **Tests:** `./equin test` on server-core (`entryClosure`, `browser` mode), browser-server
   (port protocol round trip, composite routing and splitting), task-category (the PGlite boot test is
   still green) and migrations/bundled-source.
-- **Build:** `./singularity build` logs the worker bundle size and its address. It fails if a
+- **Build:** `./equin build` logs the worker bundle size and its address. It fails if a
   non-portable plugin is added to the host's `plugins`, which is worth checking once by hand.
 - **In the browser,** open `http://<worktree>.localhost:9000/demo` (with the `browser_*` tools and a
   screenshot):

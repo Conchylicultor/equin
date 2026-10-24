@@ -116,8 +116,8 @@ Edit `plugins/conversations/plugins/conversations-view/web/components/conversati
 
 ### 5. Docs + checks
 
-- `./singularity check --plugin-boundaries` — confirms no deep imports leaked.
-- `./singularity build` — regenerates `docs/plugins-compact.md` and `docs/plugins-details.md` autogen blocks (the `plugins-doc-in-sync` check picks up the new slot definition + the moved sub-plugin).
+- `./equin check --plugin-boundaries` — confirms no deep imports leaked.
+- `./equin build` — regenerates `docs/plugins-compact.md` and `docs/plugins-details.md` autogen blocks (the `plugins-doc-in-sync` check picks up the new slot definition + the moved sub-plugin).
 - Spot-edit the hand-written sections of `plugins/conversations/plugins/conversations-view/CLAUDE.md` and `plugins/conversations/plugins/conversations-view/plugins/grouped/CLAUDE.md` if they say anything that rotted.
 
 ## Critical files
@@ -139,8 +139,8 @@ Edit `plugins/conversations/plugins/conversations-view/web/components/conversati
 
 ## Verification
 
-1. `./singularity check` — boundaries + migrations-in-sync + plugins-doc-in-sync all pass.
-2. `./singularity build` — builds and restarts cleanly.
+1. `./equin check` — boundaries + migrations-in-sync + plugins-doc-in-sync all pass.
+2. `./equin build` — builds and restarts cleanly.
 3. Open `http://<worktree>.localhost:9000/` and confirm:
    - Conversations sidebar renders identically to today (only one view registered → no switcher tab visible).
    - Drag/drop grouping still works (DB rows untouched: same tables, same package, just at a new path).

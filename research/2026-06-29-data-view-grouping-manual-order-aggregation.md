@@ -290,7 +290,7 @@ with a rank field as the live test bed (e.g. an `apps/*` DataView), plus a co-lo
   identity; group-by enum → sections in `options` order with counts; aggregate → one
   representative + correct `aggregateCount`/`members`; `computeFlatReorder` before/after/
   exhaustion.
-- **`./singularity build`**, open `http://<worktree>.localhost:9000`, and drive an
+- **`./equin build`**, open `http://<worktree>.localhost:9000`, and drive an
   existing flat DataView via `e2e/screenshot.mjs`:
   - Sub-task 1: open the settings menu, pick a group-by field → rows partition into
     collapsible, counted sections; collapse persists across reload; non-groupable view
@@ -301,7 +301,7 @@ with a rank field as the live test bed (e.g. an `apps/*` DataView), plus a co-lo
     **tree view still drags/reorders correctly** after the refactor.
   - Sub-task 3: rows sharing a key collapse to one representative + count badge; acting
     on the representative hits the representative row; expanding/regrouping recomputes.
-- **`./singularity check`** (boundaries, registry-in-sync, type-check, doc-in-sync) — the
+- **`./equin check`** (boundaries, registry-in-sync, type-check, doc-in-sync) — the
   new `rank-reorder` primitive and slot must pass boundary + registry checks.
 
 ## Risks / notes

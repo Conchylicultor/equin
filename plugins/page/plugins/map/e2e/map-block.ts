@@ -11,7 +11,7 @@
 // action, not pins — the script asserts that instead and stops there.
 //
 // Usage:
-//   ./singularity run plugins/page/plugins/map/e2e/map-block.ts [--url http://<worktree>.localhost:9000] [--headed]
+//   ./equin run plugins/page/plugins/map/e2e/map-block.ts [--url http://<worktree>.localhost:9000] [--headed]
 
 import {
   report,

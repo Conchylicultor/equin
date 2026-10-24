@@ -53,7 +53,7 @@ already reads app.css through `collectUtilityDecls` / `appCssPath`
 
 Both are re-exported from `space-ramp/core/index.ts`. `space-ramp-in-sync`
 already fails on drift, so the set cannot go stale. Adding an `@utility` and
-running `./singularity build` updates it.
+running `./equin build` updates it.
 
 `parseSpacingClass(cls) → { family, value } | null` goes in
 `space-ramp/core/internal/ramp.ts`. It takes the longest family prefix followed
@@ -136,13 +136,13 @@ once this one lands, rather than widening this change.
 
 ## Verification
 
-1. `./singularity test plugins/primitives/plugins/css/plugins/spacing`. Update
+1. `./equin test plugins/primitives/plugins/css/plugins/spacing`. Update
    the tests: `mx-2xl`, `mt-lg`, `[&>svg]:mr-xs`, `-mb-sm`, `p-mdd` and
    `gap-card` become invalid (`deadSpacing`). `p-chip`, `gap-sidebar-icon`,
    `px-control-sm`, `ml-auto`, `mx-auto`, `space-x-reverse`, `p-px`, `gap-x-sm`
    and `hover:pt-2xs` stay valid. The existing numeric cases still raise
    `adhocSpacing`.
-2. Run `./singularity build` in the background, with checks. It must report no
+2. Run `./equin build` in the background, with checks. It must report no
    `no-adhoc-spacing` errors, and `space-ramp-in-sync` and
    `app-css-utilities-in-sync` must be green.
 3. Negative probe: add `mb-xs` to a scratch component, confirm `type-check`

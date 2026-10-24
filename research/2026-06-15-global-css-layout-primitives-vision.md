@@ -208,11 +208,11 @@ plugins (plugin IDs + registries auto-regenerate from path; boundary config uses
   across the state matrix `{short, long} content × {with, without} meta × {narrow,
   wide} width` — the same Playwright bounding-box technique that diagnosed the
   original 11.3px overlap. `bun run test:dom` for jsdom render tests.
-- **Lint:** `./singularity check` (the contributed rule auto-registers; new raw
+- **Lint:** `./equin check` (the contributed rule auto-registers; new raw
   layout fails, allowlisted files pass).
-- **Extraction:** `./singularity build` regenerates `*.generated.ts`, CLAUDE.md
+- **Extraction:** `./equin build` regenerates `*.generated.ts`, CLAUDE.md
   AUTOGEN blocks, and `docs/plugins-*.md`; `plugins-registry-in-sync` and
-  `plugins-doc-in-sync` must pass; `./singularity check plugin-boundaries` clean.
+  `plugins-doc-in-sync` must pass; `./equin check plugin-boundaries` clean.
 
 ## Critical files / references
 

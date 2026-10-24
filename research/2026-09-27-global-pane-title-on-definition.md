@@ -120,7 +120,7 @@ Hard cases to check during migration:
   Otherwise use `component`.
 
 Run the migration as batches by plugin area (Sonnet subagents with the pattern
-table above), then one `./singularity build` / `check`.
+table above), then one `./equin build` / `check`.
 
 ### 3. Conversation header → the pane's own slot
 - `conversationPane` (`plugins/conversations/plugins/conversation-view/web/panes.tsx`):
@@ -148,10 +148,10 @@ explicitly ("a pane header is ONE slot, `<pane>.Actions`; its title comes from
 right shape.
 
 ## Verification
-- `./singularity check` (type-check flags every missed call site; plugin docs and
-  config checks), then `./singularity test plugins/primitives/plugins/pane`
+- `./equin check` (type-check flags every missed call site; plugin docs and
+  config checks), then `./equin test plugins/primitives/plugins/pane`
   plus the live-state lint tests.
-- `./singularity run plugins/primitives/plugins/pane/e2e/header-reorder.ts`: title still
+- `./equin run plugins/primitives/plugins/pane/e2e/header-reorder.ts`: title still
   one sortable item, across ordinary, rich (Sonata) and shared (website) headers.
 - Screenshots (`e2e-harness/e2e/screenshot.ts`) of: a string-title pane (Reports), a
   loaded-title pane loading and ready (task detail), Pages (copy-id beside the

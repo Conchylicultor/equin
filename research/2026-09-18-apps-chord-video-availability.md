@@ -225,10 +225,10 @@ through `createInflight` (`@plugins/packages/inflight`).
 
 ## Verification
 
-1. `./singularity test plugins/apps/plugins/chord` — the mapping tests, and a
+1. `./equin test plugins/apps/plugins/chord` — the mapping tests, and a
    `worktree-db` test driving the view's truth table: each source alone, the two
    in conflict both ways, and an observation aged past the TTL.
-2. `./singularity build` (background): migrations, boundaries, type-check, docs.
+2. `./equin build` (background): migrations, boundaries, type-check, docs.
 3. `ensure` the index on this worktree (sample scope), then `POST
    /api/chord/loops/find`: the first call takes ~150 ms longer than the second,
    `query_db` shows `chord_videos` rows appearing only for the videos that call

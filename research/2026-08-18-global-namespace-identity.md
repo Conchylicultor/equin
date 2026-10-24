@@ -328,7 +328,7 @@ mint time. Out of scope here; worth an `add_task`.
 **Unit**
 
 ```bash
-./singularity test plugins/infra/plugins/namespace
+./equin test plugins/infra/plugins/namespace
 ```
 
 Covers: the four elision cases; that every `namespaceFor` output matches
@@ -370,10 +370,10 @@ own `namespaceFromHost` reads `sonata.<wt>` rather than `sonata`.
 **No regression**
 
 ```bash
-./singularity check      # in particular: plugin-boundaries, plugins-doc-in-sync,
+./equin check      # in particular: plugin-boundaries, plugins-doc-in-sync,
                          # plugins-registry-in-sync, composition-closure,
                          # no-hand-built-namespace-url, namespace-grammar-in-sync
-./singularity build      # run in background; verify via build-status.json
+./equin build      # run in background; verify via build-status.json
 ```
 
 The build must behave identically — no namespace gains a dot in this phase, so

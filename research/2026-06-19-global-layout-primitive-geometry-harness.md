@@ -20,7 +20,7 @@ all layout primitives, tagged with a state matrix (content-length ×
 metadata-presence × state × container-width), rendered with the **real React
 components and real Tailwind**, measured by a **generic geometry oracle** that
 asserts invariants (no track collision, no clip, strict-priority truncation
-onset), and **wired into `./singularity check`** (the only "CI" — there is no
+onset), and **wired into `./equin check`** (the only "CI" — there is no
 GitHub CI) so any reappearing overlap fails the gate. The same catalog doubles
 as a live in-app **Layout Lab** gallery so humans eyeball exactly what the gate
 measures.
@@ -272,7 +272,7 @@ that).
 
 Run flow:
 ```
-./singularity check layout-geometry
+./equin check layout-geometry
   → sig = hash(css-subtree + harness + app.css)
   → cache.has(sig) ? ok (no Chromium)                          [steady state]
   → else bun test layout-geometry.test.ts
@@ -346,7 +346,7 @@ changes. Add new invariant kinds only when a primitive needs one (e.g. a
 
 ## Verification (end-to-end)
 
-1. `./singularity build` — regenerates `fixtures.generated.ts` from the
+1. `./equin build` — regenerates `fixtures.generated.ts` from the
    `defineCollectedDir("fixtures")` marker + the seeded `fixtures/index.ts` files;
    build must stay green (boundary, tsconfig-coverage, doc-in-sync checks).
 2. `bun test plugins/primitives/plugins/css/plugins/layout-harness/test/layout-geometry.test.ts`
@@ -356,7 +356,7 @@ changes. Add new invariant kinds only when a primitive needs one (e.g. a
    suite goes red on `frame/header-badge-over-path`.
 3. `bun test plugins/primitives/plugins/css/plugins/layout-harness/core/oracle.test.ts`
    — pure oracle unit tests on synthetic boxes pass.
-4. `./singularity check layout-geometry` — green; run it twice and confirm the
+4. `./equin check layout-geometry` — green; run it twice and confirm the
    second run short-circuits via the sig cache (no Chromium launch); touch a css
    primitive and confirm it re-runs.
 5. Open `http://<worktree>.localhost:9000` → Debug → **Layout Lab**: every

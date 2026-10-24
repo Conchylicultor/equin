@@ -246,7 +246,7 @@ Update prose that the change invalidates:
 
 ## Verification
 
-1. `./singularity build` (regenerates nothing new — no schema/codegen change; runs
+1. `./equin build` (regenerates nothing new — no schema/codegen change; runs
    checks: typecheck/lint, `data-view:configs-authored` unaffected,
    `config-origins-in-sync` unaffected). Then `bun install`-backed tests if added.
 2. Add a `resolve-body-fields.test.ts` (bun:test) covering: null → identity;

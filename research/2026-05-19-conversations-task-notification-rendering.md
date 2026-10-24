@@ -59,11 +59,11 @@ Status coloring: `completed` → green, `failed` → red, default → muted.
 
 - `event-row.tsx` — dispatch is automatic via `c.kind === event.kind`
 - `jsonl-pane.tsx` — only `user-text` triggers section breaks; `task-notification` falls naturally inside existing sections
-- Plugin registry — `./singularity build` auto-discovers the new plugin
+- Plugin registry — `./equin build` auto-discovers the new plugin
 
 ## Verification
 
-1. `./singularity build`
+1. `./equin build`
 2. Open `http://singularity.localhost:9000/c/conv-1779220117-anca` (conversation with known task notifications)
 3. Verify notifications render as compact rows, not user-message cards
 4. Verify mixed messages (real text + notification) emit both events correctly

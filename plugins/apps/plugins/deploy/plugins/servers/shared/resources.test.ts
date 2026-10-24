@@ -3,7 +3,7 @@
  * unchanged, the address is the list's own, and the row carries the record the
  * detail pane and the pickers read — but never the derived key.
  *
- * Run: `./singularity test plugins/apps/plugins/deploy/plugins/servers`.
+ * Run: `./equin test plugins/apps/plugins/deploy/plugins/servers`.
  */
 
 import { describe, expect, test } from "bun:test";

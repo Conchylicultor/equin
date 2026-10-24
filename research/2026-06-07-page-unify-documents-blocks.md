@@ -63,9 +63,9 @@ denormalized ancestor pointer — this is a new (small) pattern.
 **`plugins/page/plugins/editor/server/internal/tables-events.ts`**
 - `blocksChanged` filter `document_id` → `page_id`; payload `{ documentId }` → `{ pageId }`.
 
-**Migration** (destructive): run `./singularity build` to auto-generate the DDL (drop table, drop/add column, re-FK, index swap), then hand-edit the generated `.sql` to prepend a `TRUNCATE page_blocks CASCADE;` so no rows survive with a now-meaningless `pageId = NULL`. Combined DDL+DML in one schema migration is allowed — the `snapshot-chain-intact` check compares the snapshot to `tables.ts` schema, not the SQL statements (precedent: `20260503_090000_..._migrate_category_to_extension.sql`). Re-run `./singularity build`; `migrations-in-sync` must pass.
+**Migration** (destructive): run `./equin build` to auto-generate the DDL (drop table, drop/add column, re-FK, index swap), then hand-edit the generated `.sql` to prepend a `TRUNCATE page_blocks CASCADE;` so no rows survive with a now-meaningless `pageId = NULL`. Combined DDL+DML in one schema migration is allowed — the `snapshot-chain-intact` check compares the snapshot to `tables.ts` schema, not the SQL statements (precedent: `20260503_090000_..._migrate_category_to_extension.sql`). Re-run `./equin build`; `migrations-in-sync` must pass.
 
-> NEVER run `drizzle-kit generate` or the runner directly — only `./singularity build`.
+> NEVER run `drizzle-kit generate` or the runner directly — only `./equin build`.
 
 ## Phase 2 — Server: helpers, endpoints, resources, jobs
 
@@ -145,7 +145,7 @@ Read `title`/`icon` from `data` via `pageData(block)`; swap document endpoints f
 
 ## Verification
 
-1. `./singularity build` — migration generates, truncate applied, `migrations-in-sync` + `eslint` + `--plugin-boundaries` pass.
+1. `./equin build` — migration generates, truncate applied, `migrations-in-sync` + `eslint` + `--plugin-boundaries` pass.
 2. App at `http://att-1780846008-4jjd.localhost:9000` (Pages app):
    - `bun e2e/screenshot.mjs` — create a page (sidebar), rename it, set/observe icon, add text/to-do/code blocks, reload → content + title/icon persist.
    - Create a nested page under another in the sidebar → appears in tree, does **not** appear inside the parent's content editor (substrate-only invariant).

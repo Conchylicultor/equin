@@ -8,7 +8,7 @@
 // prototype's shared record; the harness reverts what this run wrote to it.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/prototypes/plugins/canvas/e2e/canvas-frames.ts \
+//   ./equin run plugins/apps/plugins/prototypes/plugins/canvas/e2e/canvas-frames.ts \
 //     [--name <prototype id>] [--out <prefix>] [--headed]
 
 import {

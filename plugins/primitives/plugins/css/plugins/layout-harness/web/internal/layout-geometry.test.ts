@@ -50,7 +50,7 @@ let measurer: Measurer;
  * longer than that even on an idle machine, let alone a host running several
  * worktree servers. The `layout-geometry` check passes `--timeout 120000` for
  * exactly this reason, but a flag on one caller is not a property of the suite:
- * running it the ordinary way (`./singularity test <this plugin>`) blew the
+ * running it the ordinary way (`./equin test <this plugin>`) blew the
  * default budget and reported a hook timeout that had nothing to do with
  * geometry. A suite that only passes when invoked with the right flag is a
  * suite with a trap in it, so the budget lives with the code that needs it and

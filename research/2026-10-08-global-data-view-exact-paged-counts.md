@@ -153,11 +153,11 @@ In `useLiveSource` (`web/internal/live-source.ts`):
 
 ## Verification
 
-- Unit (`./singularity test plugins/primitives/plugins/data-view`):
+- Unit (`./equin test plugins/primitives/plugins/data-view`):
   `use-data-view-sections.test.ts` cases for a growable section with a total
   (ungrouped, grouped by a `uniform` field, grouped by a non-uniform field → `N+`,
   growable rows split across sections → `N+`, appearance + `byValue`).
-- Live (`./singularity test plugins/network/plugins/live`): codec round-trip for
+- Live (`./equin test plugins/network/plugins/live`): codec round-trip for
   `:count` params, a serve test that the count matches the window's rows under the
   base and a `where` (oracle-style beside `serve-collection-oracle.test.ts`), and
   the tsc-level `count` read on an undeclared collection (`@ts-expect-error`).
@@ -166,6 +166,6 @@ In `useLiveSource` (`web/internal/live-source.ts`):
 - E2E: extend `queue/e2e/done-paging.ts` to check that the Done header shows the
   exact count, equal to `query_db` `count(*)` of done conversations, before any
   page is loaded, and switches to `N+` while a search is active.
-- `./singularity build` (checks, which include `plugins-doc-in-sync` and
+- `./equin build` (checks, which include `plugins-doc-in-sync` and
   `type-check`), then eyeball `http://<worktree>.localhost:9000` for the queue's
   Done header and the History count.

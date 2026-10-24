@@ -2,7 +2,7 @@
 
 ## Context
 
-A hand-run `./singularity build` mints its own `build_runs` row
+A hand-run `./equin build` mints its own `build_runs` row
 (`recorder.insertRun`, `plugins/framework/plugins/cli/plugins/build/cli/run.ts:1065`).
 Only two paths close it: the success path (`closeRun(buildId, 0)`, ~line 1543)
 and the failure-verdict funnel (~line 1400). Every other ending leaves the row open:
@@ -147,7 +147,7 @@ safe against the schema-skew hazard `recorder.ts` documents.
 
 ## Verification
 
-1. **Unit / DB tests** (`./singularity test plugins/build/plugins/run-ledger`),
+1. **Unit / DB tests** (`./equin test plugins/build/plugins/run-ledger`),
    using the `database/db-test-fixture` throwaway DB and a temp worktree data dir:
    - open row + `build-logs-<id>.json` with `exitCode 1` → the row is closed with
      `exit_code 1` and `finished_at` = the file's mtime; the new insert is
@@ -160,8 +160,8 @@ safe against the schema-skew hazard `recorder.ts` documents.
    invalid `--migration-answers` value that exits after the mint, or a temporary
    throw in stage 2). Then:
    - check with `query_db` that the row is open;
-   - run `./singularity build` again (in the background) with the fault removed;
+   - run `./equin build` again (in the background) with the fault removed;
    - expect no "already has a build in flight" note;
    - expect the old row closed with exit 1 and its real end time, and the new row
      present and closed with 0.
-3. `./singularity check` (type-check, plugin-boundaries, plugins-doc-in-sync).
+3. `./equin check` (type-check, plugin-boundaries, plugins-doc-in-sync).

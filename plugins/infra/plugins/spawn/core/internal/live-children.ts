@@ -5,7 +5,7 @@
  * Why: an op CLI killed with SIGTERM (by a human, an agent, a caller timeout)
  * turns the signal into `process.exit` (`op-runtime`'s `installFatalSignalExit`)
  * and runs its exit hooks — but nothing used to stop the children it was
- * waiting on. A `./singularity check` killed that way left its type-check
+ * waiting on. A `./equin check` killed that way left its type-check
  * worker running reparented to pid 1 at ~16 GB, its result unread
  * (2026-10-09; research/2026-10-09-infra-spawn-children-die-with-parent.md).
  *

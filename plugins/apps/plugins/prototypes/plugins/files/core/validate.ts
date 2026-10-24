@@ -164,7 +164,7 @@ export async function validatePrototypeFolder(
     problems.push({
       path: "",
       detail:
-        "the folder name is not a minted prototype id (proto-<epoch>-<4 chars>), so this prototype cannot be referenced by id from a conversation — create prototypes with `./singularity prototype new` instead of copying _template by hand",
+        "the folder name is not a minted prototype id (proto-<epoch>-<4 chars>), so this prototype cannot be referenced by id from a conversation — create prototypes with `./equin prototype new` instead of copying _template by hand",
     });
   }
 

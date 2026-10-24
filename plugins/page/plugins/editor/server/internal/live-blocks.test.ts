@@ -14,8 +14,8 @@
  *     DB view. (The extractor is module-private to the database plugin, so the
  *     assertion is on the SQL text it would see.)
  *
- * Run: `./singularity test plugins/page/plugins/editor`
- * (requires the running embedded cluster — `./singularity build` first).
+ * Run: `./equin test plugins/page/plugins/editor`
+ * (requires the running embedded cluster — `./equin build` first).
  */
 
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";

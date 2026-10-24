@@ -40,7 +40,7 @@ const MIGRATION_RE = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;
 // The supported way back when this database's state cannot be reconciled with
 // the migrations on disk: re-fork it from main. Named by every failure below.
 const REFORK_HINT =
-  "Re-fork this worktree's database from main with `./singularity db fork --replace` (worktree-only data is lost).";
+  "Re-fork this worktree's database from main with `./equin db fork --replace` (worktree-only data is lost).";
 
 /** Whether `file` is named as a migration (`YYYYMMDD_HHMMSS_<sha8>__<slug>.sql`). */
 export function isMigrationFileName(file: string): boolean {

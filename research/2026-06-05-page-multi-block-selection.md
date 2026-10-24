@@ -235,7 +235,7 @@ async `navigator.clipboard.write([ClipboardItem])`).
 
 ## Verification
 
-1. `./singularity build`; open a Pages doc at `http://<worktree>.localhost:9000`.
+1. `./equin build`; open a Pages doc at `http://<worktree>.localhost:9000`.
 2. **Selection**: shift-click a range; marquee-drag on empty area; `Shift+ArrowDown`
    from a text caret at block end; `Esc` to enter selection mode; `Cmd+A`.
 3. **Delete**: select 3 nested blocks → Delete → exactly one refetch, no flicker,
@@ -249,4 +249,4 @@ async `navigator.clipboard.write([ClipboardItem])`).
 6. **Copy/paste**: copy blocks → paste in same doc and a second doc; paste external
    markdown (`- a\n- b`, fenced code, indented nesting) → correct block types; copy
    out → paste into a plain-text editor shows markdown.
-7. `./singularity check` (boundaries, migrations-in-sync, eslint).
+7. `./equin check` (boundaries, migrations-in-sync, eslint).

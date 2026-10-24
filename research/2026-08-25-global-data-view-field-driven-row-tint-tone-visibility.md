@@ -340,11 +340,11 @@ precedence, `resolveBodyFields`, `useDataViewSections`, `Badge`, `extractionStat
 
 ## Verification
 
-1. `./singularity build` in the background; confirm
+1. `./equin build` in the background; confirm
    `~/.singularity/worktrees/<wt>/build-status.json` reads `status: ok`.
-2. `./singularity check` — `plugin-boundaries` (the new `badge/core` barrel is the
+2. `./equin check` — `plugin-boundaries` (the new `badge/core` barrel is the
    thing it will judge), `plugins-doc-in-sync`, `type-check`.
-3. `./singularity test plugins/primitives/plugins/data-view plugins/fields`. New
+3. `./equin test plugins/primitives/plugins/data-view plugins/fields`. New
    suites, following `plugins/list/web/__tests__/row-lines.test.tsx` (hand-built
    `DataViewRenderProps` + `PluginProvider` stub, DOM containment assertions):
    - `list/web/__tests__/row-tone.test.tsx` — a muted row's title carries the muted

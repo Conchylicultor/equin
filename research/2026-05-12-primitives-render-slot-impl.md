@@ -342,11 +342,11 @@ export function ActionBarView() {
 
 ## Verification
 
-1. `./singularity build` succeeds
+1. `./equin build` succeeds
 2. App renders at `http://att-1778491794-dh7c.localhost:9000`
 3. Open a conversation → action bar buttons render correctly
 4. Crash an ActionBar contribution → error banner with Fix button appears, siblings still render
 5. Existing reorder (edit mode, drag handles) still works on non-migrated slots (Shell.Sidebar, etc.)
 6. ActionBar respects any previously persisted rank order (from prior reorder sessions)
-7. `./singularity check` passes
+7. `./equin check` passes
 8. Screenshot before/after comparison

@@ -267,7 +267,7 @@ successor).
 ```bash
 bun test plugins/infra/plugins/runtime-profiler/core/recorder.test.ts
 bun test plugins/debug/plugins/trace/plugins/spans
-./singularity build
+./equin build
 ```
 
 Then produce a real trace and read it end to end:

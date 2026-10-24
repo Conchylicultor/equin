@@ -2,7 +2,7 @@
 
 ## Context
 
-Today the embedded Postgres cluster is supervised by `plugins/infra/plugins/database/central/internal/supervisor.ts`, a load-bearing TS plugin that runs in the central runtime. Central spawns PG via `pg_ctl start` (which daemonizes it), arms a `setInterval` watchdog, and exposes `GET /api/database/status`. PG itself is detached so it survives central restarts on every `./singularity build`.
+Today the embedded Postgres cluster is supervised by `plugins/infra/plugins/database/central/internal/supervisor.ts`, a load-bearing TS plugin that runs in the central runtime. Central spawns PG via `pg_ctl start` (which daemonizes it), arms a `setInterval` watchdog, and exposes `GET /api/database/status`. PG itself is detached so it survives central restarts on every `./equin build`.
 
 This is a category mismatch. Central exists to host plugin TS code; PG is a host-level singleton, the same tier as the gateway itself. Having central supervise a process that intentionally outlives every central instance is awkward — bootstrap order is "central boots, also boots PG, also detaches it."
 
@@ -109,7 +109,7 @@ const gw = Bun.spawn([gatewayBin, "-log-level", opts.logLevel, "-repo-root", rep
 ```
 `repoRoot` is already computed via `getMainRepoRoot()`.
 
-**`plugins/infra/plugins/database/CLAUDE.md`**: drop the migration section, rewrite topology + lifecycle to describe gateway ownership. Autogen block regenerates on `./singularity build`.
+**`plugins/infra/plugins/database/CLAUDE.md`**: drop the migration section, rewrite topology + lifecycle to describe gateway ownership. Autogen block regenerates on `./equin build`.
 
 **`gateway/CLAUDE.md`**: add a section on PG supervision (mirror the structure of the existing worktree supervision section).
 
@@ -117,16 +117,16 @@ const gw = Bun.spawn([gatewayBin, "-log-level", opts.logLevel, "-repo-root", rep
 
 ## Implementation sequence
 
-The trick is the staged transition: the gateway must be rebuilt and restarted (via `./singularity start`, a manual step) before central's PG supervisor can be safely deleted. Each commit must leave the system buildable.
+The trick is the staged transition: the gateway must be rebuilt and restarted (via `./equin start`, a manual step) before central's PG supervisor can be safely deleted. Each commit must leave the system buildable.
 
 1. **Add `-repo-root` flag (Go, additive, no behavior change).** Field in `Config`, `flag.StringVar`. Flag accepted but unused.
 2. **Add `gateway/postgres.go` (Go, additive, not yet wired).** Full `PgSupervisor` implementation. Compiles but isn't called.
-3. **Wire `PgSupervisor` into `main.go` and `proxy.go`.** Gateway now owns `/api/database/status` and starts PG before central. Briefly there are two PG owners: gateway and central. Safe because (a) `pg_ctl` is idempotent — second start sees the running cluster and returns success; (b) the reattach check (pidfile + socket dial) means neither side double-spawns; (c) two parallel watchdogs on the same socket is harmless. **Manual step at end of this commit: user runs `./singularity start` to rebuild and restart the gateway.**
-4. **Delete `database/central/` runtime; prune `shared/`.** Run `./singularity build` to regenerate `central/src/plugins.generated.ts` and CLAUDE.md autogen blocks. After this commit, central no longer touches PG.
+3. **Wire `PgSupervisor` into `main.go` and `proxy.go`.** Gateway now owns `/api/database/status` and starts PG before central. Briefly there are two PG owners: gateway and central. Safe because (a) `pg_ctl` is idempotent — second start sees the running cluster and returns success; (b) the reattach check (pidfile + socket dial) means neither side double-spawns; (c) two parallel watchdogs on the same socket is harmless. **Manual step at end of this commit: user runs `./equin start` to rebuild and restart the gateway.**
+4. **Delete `database/central/` runtime; prune `shared/`.** Run `./equin build` to regenerate `central/src/plugins.generated.ts` and CLAUDE.md autogen blocks. After this commit, central no longer touches PG.
 5. **Update `cli/src/commands/build.ts` (waitForPg, simplify probeCentralReady) and `cli/src/paths.ts`.**
 6. **Update CLAUDE.md docs** (`database/CLAUDE.md`, `gateway/CLAUDE.md`).
 
-After commits 1-3 land but before the user runs `./singularity start`, central remains the sole PG owner — the new gateway code is on disk but not running. This window is fine. After the user runs `./singularity start`, gateway and central both supervise PG until commit 4 lands and central's supervisor is deleted.
+After commits 1-3 land but before the user runs `./equin start`, central remains the sole PG owner — the new gateway code is on disk but not running. This window is fine. After the user runs `./equin start`, gateway and central both supervise PG until commit 4 lands and central's supervisor is deleted.
 
 ## Critical files to reference during implementation
 
@@ -143,12 +143,12 @@ After commits 1-3 land but before the user runs `./singularity start`, central r
 
 End-to-end smoke test for each milestone:
 
-- **After commit 3 + `./singularity start`**: gateway logs should show "PG ready" before "central spawning". `curl http://localhost:9000/api/database/status` returns `{"pg":"running","useSystemPg":false}`. `./singularity build` in a worktree completes. The worktree app loads at `http://<worktree>.localhost:9000`.
-- **After commit 4**: `./singularity build` regenerates `central/src/plugins.generated.ts` cleanly. Central process logs no longer mention PG. `ps` shows gateway → PG (orphan, ppid=1), central as a separate process. `kill central; wait; ./singularity build` — central restarts without touching PG.
+- **After commit 3 + `./equin start`**: gateway logs should show "PG ready" before "central spawning". `curl http://localhost:9000/api/database/status` returns `{"pg":"running","useSystemPg":false}`. `./equin build` in a worktree completes. The worktree app loads at `http://<worktree>.localhost:9000`.
+- **After commit 4**: `./equin build` regenerates `central/src/plugins.generated.ts` cleanly. Central process logs no longer mention PG. `ps` shows gateway → PG (orphan, ppid=1), central as a separate process. `kill central; wait; ./equin build` — central restarts without touching PG.
 - **Crash recovery**: `pg_ctl stop -D ~/.singularity/postgres/data-pg18`. Within ~4s, gateway's watchdog should re-spawn PG. `/api/database/status` flips `running → stopped → running`. If the second start also fails, status flips to `crashed`.
-- **System PG fallback**: `SINGULARITY_USE_SYSTEM_PG=1 ./singularity start` (rebuilds gateway). Gateway skips PG supervision entirely; status returns `{"pg":"running","useSystemPg":true}`. Backends connect to `localhost:5432`.
-- **Cold start**: `rm -rf ~/.singularity/postgres/data-pg18 && ./singularity start`. Gateway runs `initdb` on first boot (~3-5s); status returns `{"pg":"stopped"}` during initdb, then `{"pg":"running"}`. Central spawn waits for PG ready before starting.
-- **Existing checks**: `./singularity check` passes (`migrations-in-sync`, `eslint`, `plugins-doc-in-sync`, `plugins-registry-in-sync`, `plugin-boundaries`).
+- **System PG fallback**: `SINGULARITY_USE_SYSTEM_PG=1 ./equin start` (rebuilds gateway). Gateway skips PG supervision entirely; status returns `{"pg":"running","useSystemPg":true}`. Backends connect to `localhost:5432`.
+- **Cold start**: `rm -rf ~/.singularity/postgres/data-pg18 && ./equin start`. Gateway runs `initdb` on first boot (~3-5s); status returns `{"pg":"stopped"}` during initdb, then `{"pg":"running"}`. Central spawn waits for PG ready before starting.
+- **Existing checks**: `./equin check` passes (`migrations-in-sync`, `eslint`, `plugins-doc-in-sync`, `plugins-registry-in-sync`, `plugin-boundaries`).
 
 ## Edge cases surfaced during planning
 

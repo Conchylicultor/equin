@@ -163,7 +163,7 @@ This is indistinguishable from a normal single-tab reconnecting-WebSocket consum
 
 ## Verification
 
-1. `./singularity build` and open `http://claude-1776294129.localhost:9000`.
+1. `./equin build` and open `http://claude-1776294129.localhost:9000`.
 2. **Manual multi-tab regression (the original bug)**:
    - Tab A: `http://singularity.localhost:9000/` (no `tasks` sub).
    - Tab B: `http://singularity.localhost:9000/tasks`.

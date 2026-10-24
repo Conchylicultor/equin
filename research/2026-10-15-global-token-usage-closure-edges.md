@@ -145,13 +145,13 @@ their incident comments.
    Static ownership equals `collectTokenGroupVars` for all 16 groups.
 2. **classifyEdges test:** `primitives.avatar` has hard edge → `ui.tokens.categorical`;
    `apps.website.*` → `ui.tokens.chart`.
-3. **Bundle diff:** a one-off `./singularity run` script resolves every committed
+3. **Bundle diff:** a one-off `./equin run` script resolves every committed
    composition with the old and the new graph and config.
    - Expect: for each composition, `after ⊇ before`. Everything that leaves the
      baseline is re-derived.
    - The script prints the additions so over-inclusion is visible and judged.
    - The additions should be token plugins only.
-4. `./singularity build`. All checks pass, including `composition-closure`,
+4. `./equin build`. All checks pass, including `composition-closure`,
    `token-group-vars-in-sync` and `plugins-doc-in-sync`.
 5. **Real served page:**
    - Serve the `website` composition and check that its HTML preloads

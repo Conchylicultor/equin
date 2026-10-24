@@ -110,7 +110,7 @@ hideTerminal: { isTerminal, value: hideTerminal, onValueChange: setHideTerminal 
 
 ## Verification
 
-1. `./singularity build`
+1. `./equin build`
 2. Open task list, toggle "Hide completed" on
 3. Shift-click two visible tasks with hidden completed tasks between them → only visible tasks selected
 4. Click "Select all" → count matches visible row count, not total

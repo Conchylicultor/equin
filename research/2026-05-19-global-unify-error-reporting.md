@@ -77,8 +77,8 @@ Info/success notifications still appear in the popover list and filter chips —
 
 ## Verification
 
-1. `./singularity build` — confirms the new sub-plugin is discovered and the registry regenerates
-2. `./singularity check` — passes (boundaries, lint, migrations)
+1. `./equin build` — confirms the new sub-plugin is discovered and the registry regenerates
+2. `./equin check` — passes (boundaries, lint, migrations)
 3. Open the app, trigger an unhandled rejection (e.g. `void Promise.reject(new Error("test"))` in console) → exactly one notification in the bell with type "crash"
 4. Trigger a mutation error (e.g. hit a 500 endpoint) → one notification with type "mutation-error", variant "warning"
 5. Trigger info/success toasts (launch a conversation, build) → toast appears but bell badge does NOT increment

@@ -90,10 +90,10 @@ appends the labels to the button's tooltip / `aria-label`
 
 ## Verification
 
-- `./singularity test plugins/build plugins/shell` — jsdom tests: activity
+- `./equin test plugins/build plugins/shell` — jsdom tests: activity
   merge; `useBuildActivity` (running / failed / superseded → null); ReloadChip
   null on `none`, renders on `stale`.
-- `./singularity build`, then screenshot in solo mode: idle (bare dot), during a
+- `./equin build`, then screenshot in solo mode: idle (bare dot), during a
   build (ring), after it (Reload chip), and hover-open (chip hidden, row shows
   Build + Reload).
-- `./singularity check` (boundaries, lint, docs in sync).
+- `./equin check` (boundaries, lint, docs in sync).

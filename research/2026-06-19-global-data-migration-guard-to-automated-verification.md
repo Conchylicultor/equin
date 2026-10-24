@@ -4,7 +4,7 @@
 
 Durable data mutations (e.g. "delete the malformed `attempts` rows") have exactly
 one sanctioned mechanism in this repo: a **data/backfill migration**
-(`./singularity build --custom-migration --migration-name <slug>`) — version
+(`./equin build --custom-migration --migration-name <slug>`) — version
 controlled, reviewable, idempotent, applied once to main and every fork on next
 boot. That part is correct and stays.
 
@@ -128,7 +128,7 @@ window so it can never disrupt live main.
    - `cacheSignature()`: hash of the `data/` dir content + `git rev-parse origin/main`
      so an unchanged input caches.
 
-This check runs uniformly in `./singularity build`, `./singularity check`, and the
+This check runs uniformly in `./equin build`, `./equin check`, and the
 push checks step (`runChecksUnderPushSlot`, push.ts step 8) — which already runs
 **after** rebase + `regen-migrations` normalize, i.e. exactly when the branch-local
 migration set is final and `origin/main` is fresh.
@@ -155,18 +155,18 @@ migration set is final and `origin/main` is fresh.
 
 ## Verification
 
-1. **Guard gone:** `./singularity build --custom-migration --migration-name probe_noop`
+1. **Guard gone:** `./equin build --custom-migration --migration-name probe_noop`
    succeeds with **no** `.allow-migrations` present (previously blocked). Hand-edit the
    generated SQL to a harmless `SELECT 1;`, rebuild — applies, dml-only check passes.
 2. **Check catches a bad migration:** hand-edit a pending data migration to reference a
    non-existent column (e.g. `UPDATE attempts SET nope = 1;`). Run
-   `./singularity check migration-applies-clean` → **FAILS**, message names the file +
+   `./equin check migration-applies-clean` → **FAILS**, message names the file +
    pg error. Confirm via `query_db "SELECT count(*) FROM attempts"` that the dry-run left
    **no** data change (rolled back). Fix the SQL → check passes.
 3. **Fast path:** on a branch with no `data/` changes vs `origin/main`,
-   `./singularity check migration-applies-clean` passes instantly (no DB connection —
+   `./equin check migration-applies-clean` passes instantly (no DB connection —
    confirm via timing / no slow-op).
-4. **Push integration:** `./singularity push -m "..."` on a branch with a valid data
+4. **Push integration:** `./equin push -m "..."` on a branch with a valid data
    migration passes the checks step; with a deliberately broken one, push aborts at the
    checks step before `push-branch`.
 5. **allow-monitor:** with `.allow-migrations` removed from `ALLOW_FILES`, creating that
@@ -174,7 +174,7 @@ migration set is final and `origin/main` is fresh.
 
 ## Out of scope / future
 
-- Renaming `--custom-migration` to a dedicated `./singularity migrate:data` verb
+- Renaming `--custom-migration` to a dedicated `./equin migrate:data` verb
   (user chose to keep the flag for now).
 - Catching *semantic* breakage (migration boots fine but corrupts data a feature needs)
   — that's a broader smoke/health-coverage lever, not this gate.

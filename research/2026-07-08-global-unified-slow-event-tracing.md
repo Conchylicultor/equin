@@ -392,7 +392,7 @@ Reports with `traceId` surface in the new pane implicitly: the trace exists in t
 
 ## 8. Phases
 
-Each phase lands independently and ends green on `./singularity build` (+ `./singularity check`).
+Each phase lands independently and ends green on `./equin build` (+ `./equin check`).
 
 ### Phase 1 — Gantt primitives (S, ~½ session)
 Promote `WaitWorkRow` into `debug/profiling` web barrel; add `MultiSpanLane`; boot-profile switches to the promoted import.
@@ -400,7 +400,7 @@ Promote `WaitWorkRow` into `debug/profiling` web barrel; add `MultiSpanLane`; bo
 **Verify:** build; Playwright screenshot of Debug → Boot Profile (unchanged rendering).
 
 ### Phase 2 — Trace engine + built-in classes + storage (L, ~1–1.5 sessions)
-Umbrella + `engine` (core types/zod/fields/routes/config; server: table, registry, `defineTraceEventClass`, `captureTrace` with admission [moved rate-limit + test], list/get endpoints, sweep job, test-trigger endpoint; web: `Trace.Lane`/`TriggerSummary` slots + generic fallbacks + config registration) + `spans`/`gates`/`contention` server classes. Migration via `./singularity build --migration-name traces`. Flight-recorder still alive (parallel writes for one phase — harmless).
+Umbrella + `engine` (core types/zod/fields/routes/config; server: table, registry, `defineTraceEventClass`, `captureTrace` with admission [moved rate-limit + test], list/get endpoints, sweep job, test-trigger endpoint; web: `Trace.Lane`/`TriggerSummary` slots + generic fallbacks + config registration) + `spans`/`gates`/`contention` server classes. Migration via `./equin build --migration-name traces`. Flight-recorder still alive (parallel writes for one phase — harmless).
 **Verify:** `bun test plugins/debug/plugins/trace` (rate-limit, snapshot assembly, schema round-trip); `POST /api/debug/trace/test-trigger` then `query_db` `SELECT trigger_kind, jsonb_object_keys(snapshot->'events') FROM traces` → expect `spans`,`gates`,`contention`; GET endpoints via curl.
 
 ### Phase 3 — Capture consolidation (M, ~½–1 session)
@@ -416,7 +416,7 @@ Monitor extension (`lastTotalMs`, rollup), `opRateConfig` fields, `op-time` Repo
 **Verify:** lower a budget in Settings → Config (e.g. `dbMsPerWindow 1`), generate load (`benchmark_boot`), run the monitor via the queue debug pane (or wait one cron tick); expect an `op-time` report with `msInWindow`/`callsInWindow` + linked trace; restore config. bun:test the delta/rollup math (extract into a pure helper next to the job).
 
 ### Phase 6 — Cleanup + docs (S, ~½ session)
-`ReportSource` → reports/core; delete slow-ops' local union; debug SKILL update; trace CLAUDE.md prose; optional push-gantt → MultiSpanLane refactor; full `./singularity check`.
+`ReportSource` → reports/core; delete slow-ops' local union; debug SKILL update; trace CLAUDE.md prose; optional push-gantt → MultiSpanLane refactor; full `./equin check`.
 **Verify:** check suite green (boundaries, plugins-doc-in-sync, type-check); `rg "ReportSource" plugins/` shows single definition.
 
 Dependency order: 1 → 2 → 3 → 4 → 5 → 6, but 5 only needs 2 (can run parallel to 4 after 3).

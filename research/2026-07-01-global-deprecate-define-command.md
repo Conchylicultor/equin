@@ -201,10 +201,10 @@ toasts **silently**. Net it with a test in
 
 ## Verification
 
-1. `./singularity build` — regenerates registries + docs + migrations (none), runs
+1. `./equin build` — regenerates registries + docs + migrations (none), runs
    checks (`plugins-registry-in-sync`, `plugins-doc-in-sync`, `plugin-boundaries`,
    `composition-closure`, `type-check`). Must pass with the deleted/added plugins.
-2. `./singularity check type-check` — no dangling `ShellCommands` / `ImproveCommands`
+2. `./equin check type-check` — no dangling `ShellCommands` / `ImproveCommands`
    / `CommandPaletteCommands` / `defineCommand` references.
 3. `bun test plugins/plugin-meta/plugins/composition/core/config.test.ts` — incl. the
    new served-baseline assertion.

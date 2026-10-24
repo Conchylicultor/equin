@@ -13,7 +13,7 @@
  * column is `doc-rank.test.ts`'s oracle.
  *
  * Run: `bun test plugins/page/plugins/editor/server/internal/page-doc-order.test.ts`
- * (requires the running embedded cluster — `./singularity build` first).
+ * (requires the running embedded cluster — `./equin build` first).
  */
 
 import {

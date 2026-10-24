@@ -112,7 +112,7 @@ propagateConfigToUser).
 `bin/`-only imports (`../profiler`, `../build-lock`, `../paths`) legal.
 
 **New command** `plugins/framework/plugins/cli/bin/commands/build-composition.ts` →
-`./singularity build-composition --composition <name>`. Named to mirror the `--composition`
+`./equin build-composition --composition <name>`. Named to mirror the `--composition`
 flag it replaces; deliberately **not** `build-artifacts`, which would collide with build's
 existing `--artifacts` (the per-plugin web-artifacts pipeline — an unrelated concept that
 the new command always forces *off*).
@@ -207,7 +207,7 @@ construction.
 ### The new command
 
 ```
-./singularity build-composition --composition <name>
+./equin build-composition --composition <name>
     [--migration-name <slug>] [--reset-migration] [--custom-migration]
     [--migration-answers <json>] [--no-minify]
 ```
@@ -257,7 +257,7 @@ to use, currently required on every release from main), stops entering `runCompo
 build-progress entries that pollute the build Gantt with runs that are not builds.
 
 No change to `plugins/release/server/internal/run-release.ts` — it spawns
-`./singularity release`, which is untouched.
+`./equin release`, which is untouched.
 
 ---
 
@@ -280,7 +280,7 @@ No change to `plugins/release/server/internal/run-release.ts` — it spawns
 throws ENOENT when `database.json` is absent; after unification it falls through to the
 existing `config.services.length === 0 → return` ("externally managed DB"), and
 `waitForWorktreeDatabase` produces the real, actionable error. On any dev host
-`database.json` always exists (`./singularity start` writes it), so no dev-loop invocation
+`database.json` always exists (`./equin start` writes it), so no dev-loop invocation
 changes.
 
 ### `drizzle.config.ts` is codegen config, not database config
@@ -322,7 +322,7 @@ byte-identical). Separate commit so it can be reverted independently.
 | `registerMergeDrivers` (695-697) | **NO** | same class — git config mutation serving the push/merge flow. |
 | branch guard (699-715) | **NO** | exists to stop agents *deploying to the dev cluster* from main. A release has no deploy. Keeping it would force every release from main to pass `--allow-main` — routinising a DANGER flag erodes it. Dropping it is a security improvement. |
 | `checkBroadcasts` (717-719) | **NO** | agent-facing inner-loop message channel; nobody watches a release host's stdout. |
-| build lock (879-890) | **YES** | non-obvious but load-bearing: release is serialized against concurrent builds today *only because* it shells `build`, which takes `webDir/.build.lock`. Dropping it lets a concurrent `./singularity build` race the release's codegen and dist publish. Plain filesystem symlink — bare-host safe. |
+| build lock (879-890) | **YES** | non-obvious but load-bearing: release is serialized against concurrent builds today *only because* it shells `build`, which takes `webDir/.build.lock`. Dropping it lets a concurrent `./equin build` race the release's codegen and dist publish. Plain filesystem symlink — bare-host safe. |
 | host CPU grant (1374-1401) | **YES** | `createHostSemaphore` mkdir-p's `~/.singularity/cpu-slots` (`host-semaphore.ts:302,377`), so it works bare, and a 4-core box is exactly where bounding vite/tsc fan-out matters. Shared module ⇒ identical admission semantics for both callers. |
 | duress valve | **YES, inert** | `isUnderDuress()` with no latch returns false, so `holdThroughValve` returns `"cleared"` immediately and never reaches `fs.watch` (`admission-valve.ts:96-99`). `build-composition` passes `gated: false` anyway. |
 | `propagateConfigToUser` (1091-1094) | **NO — stays in each caller** | build targets `~/.singularity/config/<worktree>`; release targets `<out>/config-seed`. Same function, different sink — that *is* the parameterization. Mirrors `regen-pipeline.ts`'s own out-of-scope note. |
@@ -362,7 +362,7 @@ byte-identical). Separate commit so it can be reverted independently.
 ## Verification
 
 **A. Dev-loop byte-identity (the load-bearing gate).** At the pre-change commit run
-`./singularity build` twice; keep `build-profile-<id>.json`, `build-logs-<id>.json`,
+`./equin build` twice; keep `build-profile-<id>.json`, `build-logs-<id>.json`,
 `build.log`, and `sha256sum` of the published dist. Apply the change, rebuild, and assert:
 identical `(id, phase, label)` span set; identical step-roster labels and order; identical
 `grep maxRSS build.log` label set; identical dist hashes (excluding `.build-id`/
@@ -375,7 +375,7 @@ identical `(id, phase, label)` span set; identical step-roster labels and order;
 ```bash
 SINGULARITY_DIR=$(mktemp -d) bun plugins/framework/plugins/cli/bin/index.ts \
   build-composition --composition website
-SINGULARITY_DIR=$(mktemp -d) ./singularity release --composition website --target web --dev
+SINGULARITY_DIR=$(mktemp -d) ./equin release --composition website --target web --dev
 ```
 
 Both must succeed. Assert the temp dir afterwards contains no `database.json` and no
@@ -384,25 +384,25 @@ Both must succeed. Assert the temp dir afterwards contains no `database.json` an
 **C. Negative assertion.** Run B with the gateway and Postgres stopped. Grep the new
 command's transitive imports for `waitForPg`, `waitForWorktreeDatabase`,
 `createBuildRunRecorder`, `markWorktreeOpStart`, `writeWorktreeSpec`,
-`runComposeServeStage`, `localhost:9000` — all absent. Encode as a `./singularity check` so
+`runComposeServeStage`, `localhost:9000` — all absent. Encode as a `./equin check` so
 the decoupling cannot silently regress.
 
 **D. Real bare host (the actual bug).** Fresh Ubuntu box with only `git`, `bun`, `go`:
-`git clone` → `./singularity release --composition website --target web` → run the emitted
+`git clone` → `./equin release --composition website --target web` → run the emitted
 self-extracting binary → the app answers on the RELEASE.json port. This is the acceptance
 test for the whole plan. (49.13.197.105 is already provisioned with bun 1.3.14 + go 1.23.4
 and the source at `/opt/singularity`.)
 
-**E. Concurrency.** Start `./singularity build` and `./singularity release` simultaneously
+**E. Concurrency.** Start `./equin build` and `./equin release` simultaneously
 in one checkout; the second must block on `webDir/.build.lock` rather than interleave.
 
-**F. Checks + unit tests.** Full `./singularity check` (`migrations-in-sync` must still
+**F. Checks + unit tests.** Full `./equin check` (`migrations-in-sync` must still
 pass after the `libpqEnv` unification; the new `drizzle-kit-generate-only` check must pass).
 Add `bun:test` for `libpqEnv()`/`readDatabaseConfig()` under an empty temp
 `SINGULARITY_DIR`, `resolveFrontendMode`, and the stage-ordering contract with mocked hooks.
 
 **G. Release plugin UI path.** Trigger a release from Studio (`triggerRelease` → detached
-`./singularity release`); confirm `release_runs` closes cleanly and the streamed log shows
+`./equin release`); confirm `release_runs` closes cleanly and the streamed log shows
 `build-composition`, not `build`.
 
 ---
@@ -425,7 +425,7 @@ Add `bun:test` for `libpqEnv()`/`readDatabaseConfig()` under an empty temp
    (`cli/CLAUDE.md`, `plugins/release/CLAUDE.md:27`, `web-core/CLAUDE.md:56`,
    `web-artifacts/CLAUDE.md:9`, and the `--composition` references in
    `plugin-registry-gen.ts:421,497`, `run-prewarm.ts:7`, `plugins-active.ts:12`) — the
-   `plugins-doc-in-sync` check fails otherwise. Run `./singularity check`.
+   `plugins-doc-in-sync` check fails otherwise. Run `./equin check`.
 
 ---
 

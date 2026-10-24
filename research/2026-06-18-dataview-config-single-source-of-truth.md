@@ -133,8 +133,8 @@ Update `data-view/CLAUDE.md` and `view-core/CLAUDE.md`: configs live under the c
 
 ## Verification
 
-1. `./singularity build` → regenerates `data-views.generated.ts` (now `{ id, pluginId }`), regenerates origins under `config/<plugin>/<id>.origin.jsonc`, and (if pre-deleted) the old `config/primitives/data-view/` origins are gone.
-2. `./singularity check` — focus:
+1. `./equin build` → regenerates `data-views.generated.ts` (now `{ id, pluginId }`), regenerates origins under `config/<plugin>/<id>.origin.jsonc`, and (if pre-deleted) the old `config/primitives/data-view/` origins are gone.
+2. `./equin check` — focus:
    - `data-views-in-sync` — manifest matches the marker scrape (incl. pluginId).
    - **`data-view:configs-authored` (new)** — passes only once all 12 `<id>.jsonc` exist; intentionally **fails** if one is missing (demonstrate by temporarily removing one).
    - `config-origins-in-sync` — every new origin in sync; no stale `config/primitives/data-view/*` overrides.

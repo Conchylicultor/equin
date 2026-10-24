@@ -284,9 +284,9 @@ Delete dead types, dead files, update CLAUDE.md docs in `plugin-core/` and `plug
 
 ## Verification
 
-For each phase, verify end-to-end in the running app (deployed via `./singularity build`):
+For each phase, verify end-to-end in the running app (deployed via `./equin build`):
 
-- **Phase 1.** `./singularity build`. App renders identically. Open devtools, confirm no console errors. Navigate between existing routes — unchanged.
+- **Phase 1.** `./equin build`. App renders identically. Open devtools, confirm no console errors. Navigate between existing routes — unchanged.
 - **Phase 2.** Navigate to `/tasks`, click a task → URL becomes `/tasks/:id`, detail pane appears. Click a conversation → URL becomes `/tasks/:id/c/:cid`, conversation column appears. Back button walks the chain. Click expand on the conversation → URL becomes `/c/:cid`, conversation fills the main area. Reload at each URL state — correct layout restores. Inside the conversation column, switch to a different conversation from the list → ‹ › on the conversation column lets you flip back.
 - **Phase 3.** In a conversation, click docs → URL becomes `/c/:cid/docs/…`. Click tasks-panel → URL becomes `/c/:cid/tasks`. Click review → URL becomes `/c/:cid/review`, takes over main. Back button works. Reloading each URL restores state. `conversationPane.useData()` returns the right `conversation` object in every nested pane (verify via a temporary `console.log` or component).
 - **Phase 4.** Every top-level route from before is reachable and behaves identically. Sidebar entries still open the right pane.

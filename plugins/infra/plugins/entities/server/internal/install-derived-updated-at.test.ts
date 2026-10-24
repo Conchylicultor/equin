@@ -11,7 +11,7 @@
  * [spec])`): the registry is process-wide and also holds every other suite's
  * entities, whose tables this database does not have.
  *
- * Requires the running embedded cluster (`./singularity build` first).
+ * Requires the running embedded cluster (`./equin build` first).
  */
 
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";

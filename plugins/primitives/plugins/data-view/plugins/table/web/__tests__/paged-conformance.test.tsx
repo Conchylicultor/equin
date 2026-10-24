@@ -6,7 +6,7 @@
  * anchored. Run against the real body on a laid-out page by data-view's shared
  * suite (`describePagedConformance`, `data-view/web/testing`).
  *
- * Run: `./singularity test plugins/primitives/plugins/data-view/plugins/table`.
+ * Run: `./equin test plugins/primitives/plugins/data-view/plugins/table`.
  */
 
 import { afterEach } from "vitest";

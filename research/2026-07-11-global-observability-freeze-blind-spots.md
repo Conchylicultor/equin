@@ -162,7 +162,7 @@ Recommend (i) as the end-state, (ii) as the landing path if the concurrent track
 
 ## Verification (end-to-end)
 
-1. `./singularity build` per stage; `./singularity check` (type-check picks up the schema changes).
+1. `./equin build` per stage; `./equin check` (type-check picks up the schema changes).
 2. Unit: `bun test plugins/debug/plugins/timeline`, `bun test plugins/debug/plugins/sentinel`, `bun test plugins/infra/plugins/duress` (latch seams intact), the new `Atomics.wait` latch-hold test.
 3. Live replays on Debug → Slow Events → Timeline: **2026-07-11 00:30–04:00** (host lane red on compressor during both freezes despite swapIn≈0; duress band 03:29→; slow-op/report events inside the freeze window post-Stage-4 episodes) and **2026-07-10 18:00–24:00** (sleep gaps dark + labeled, no fake incidents).
 4. Sentinel health: `sentinel.jsonl` free of tick failures; `backendP99` populated; after Stage 5, a synthetic main-loop block (test) can no longer lapse a tripped latch.

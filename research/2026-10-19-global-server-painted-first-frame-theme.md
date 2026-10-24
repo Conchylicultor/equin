@@ -122,10 +122,10 @@ declaration registry, and is a separate track item if wanted.
   same assumption the cache made.
 
 ## Verification
-- `./singularity test plugins/ui/plugins/theme-engine` (renderer parity fixture, materializer),
+- `./equin test plugins/ui/plugins/theme-engine` (renderer parity fixture, materializer),
   `go test ./gateway/...` (splice).
-- `./singularity check` (new in-sync check, boundaries, `plugins-doc-in-sync`).
-- `./singularity build`, then with the `browser_*` MCP tools on a fresh tab: `curl` the shell for
+- `./equin check` (new in-sync check, boundaries, `plugins-doc-in-sync`).
+- `./equin build`, then with the `browser_*` MCP tools on a fresh tab: `curl` the shell for
   `/home`, `/agents` and `/` and confirm each carries its own `<style id="theme-engine-color-palette">` and
   the right mode. Load `/home` with localStorage cleared and screenshot before hydration (JS
   disabled, or `screenshot.ts --wait 0`): it shows the home theme. Change the home app's theme in

@@ -197,7 +197,7 @@ the names aren't visible, but both are reachable on purpose.
 
 1. Confirm the `<script type="text/babel" src>` ordering assumption in a scratch
    file **before** migrating both prototypes.
-2. `./singularity build`, then open `http://<worktree>.localhost:9000/prototypes`.
+2. `./equin build`, then open `http://<worktree>.localhost:9000/prototypes`.
    The gallery lists `helix` and `mist-panes` with titles and blurbs read from
    their HTML.
 3. Open one → Focus renders it correctly at its declared viewport; Compare shows
@@ -208,7 +208,7 @@ the names aren't visible, but both are reachable on purpose.
    shows the new color (proves the watcher's extension list and `no-store`).
 6. Scaffold check: copy `_template/` to `prototypes/scratch/`, confirm it appears
    in the gallery with the default 1280x800 canvas, then delete it.
-7. `./singularity check` passes, including the new `prototypes:self-contained`.
+7. `./equin check` passes, including the new `prototypes:self-contained`.
    Verify it fails as intended by temporarily adding a `meta.json` back.
 8. Click "New prototype" and read the seeded prompt — confirm it points at
    `_template/` and forbids reading other prototypes.

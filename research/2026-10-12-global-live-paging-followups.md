@@ -85,7 +85,7 @@ These go in the `live-pages` `clientLog` channel (`use-pages.ts`):
 - **The track page header** (done with this plan).
 
 ### Session 1 verification
-- `./singularity test`:
+- `./equin test`:
   - `network/live`, `primitives/live-state`, `framework/resource-runtime`, `packages/resource-protocol`, `primitives/networking`;
   - the plugins of each converted reader.
 - New tests:
@@ -98,7 +98,7 @@ These go in the `live-pages` `clientLog` channel (`use-pages.ts`):
 - e2e:
   - `screenshot.ts` on the task list grouped by track and by origin, and on Pages Favorites;
   - `events/e2e` `live-sources.ts` / `sources-verify.ts`.
-- `./singularity build`, then `./singularity check`.
+- `./equin build`, then `./equin check`.
 
 ## Session 2: P5 (every window pages), hand-rolled lists, view verification
 
@@ -158,14 +158,14 @@ These go in the `live-pages` `clientLog` channel (`use-pages.ts`):
 
 ### Session 2 verification
 - The bytes gate (2.1), reported in the result section of this doc.
-- `./singularity test` on: `network/live`, `infra/query-resource`, `primitives/live-state`, `primitives/data-view` and its view plugins, `primitives/virtual-rows`, `framework/resource-runtime`, `runs`.
+- `./equin test` on: `network/live`, `infra/query-resource`, `primitives/live-state`, `primitives/data-view` and its view plugins, `primitives/virtual-rows`, `framework/resource-runtime`, `runs`.
   - These must pass unchanged: `page-plan.test.ts`, `serve-collection-pages-oracle.test.ts`, `scroll-key-roundtrip.test.ts`, `use-pages.test.tsx`.
 - New tests:
   - every window row carries `$key`;
   - `useLive(c)` on a formerly non-scroll collection splits on `loadMore`;
   - the gallery conformance case at a column count that does not divide the page.
-- `./singularity build`, then the e2e matrix above. `live-pages-scroll.ts` must still show 5033/5033.
-- `./singularity check`: `type-check`, `plugins-doc-in-sync`, the resource facets, `migrations-in-sync`.
+- `./equin build`, then the e2e matrix above. `live-pages-scroll.ts` must still show 5033/5033.
+- `./equin check`: `type-check`, `plugins-doc-in-sync`, the resource facets, `migrations-in-sync`.
 
 ## Decisions to confirm (recommended default in bold)
 1. **P5 gate:** **at most 2% gzipped and 25 KB raw, stop and report if over**, or land regardless and report.
@@ -250,7 +250,7 @@ One worktree, four lanes (0, A, B, C) and a review pass, then integration builds
 
 ### Lane 0 — test baseline
 - `pages-viewport.ts` mints its `measuring` range lazily, so `build-button.test.tsx` passes unchanged.
-- **Duplicate `events.source-runs` — root cause:** `source-runs-oracle.test.ts` registered the real key on server-core's global registry in `beforeAll`, and `./singularity test` runs every bun suite in one process. The oracle now uses its own `createResourceRuntime()` + `createChangeRouter(runtime)`, as the tasks-core tree oracle did. The review pass moved three more oracles the same way (`reports-list`, `latest-run` → the `release.history` duplicate behind `schema-layer-replay`, `conversations`). Nothing under `framework/` changed. A guard against a test file registering a real key globally is filed as a follow-up.
+- **Duplicate `events.source-runs` — root cause:** `source-runs-oracle.test.ts` registered the real key on server-core's global registry in `beforeAll`, and `./equin test` runs every bun suite in one process. The oracle now uses its own `createResourceRuntime()` + `createChangeRouter(runtime)`, as the tasks-core tree oracle did. The review pass moved three more oracles the same way (`reports-list`, `latest-run` → the `release.history` duplicate behind `schema-layer-replay`, `conversations`). Nothing under `framework/` changed. A guard against a test file registering a real key globally is filed as a follow-up.
 
 ### Lane A — conversions, then P5
 - **A.1, to `all` under renamed keys:** `job-runs.all` (`finishedAt desc`; `JOB_RUNS_MAX_LIMIT` and the unused `job-runs:groups` deleted), `op-store.in-flight.all` (`requestedAt asc`, preload `boot` kept), `places.places.all`, `places.tags.all` (`rank asc`). Each states its `unbounded.reason`. `pushes` and `prompt-block-tasks` stay windows: they are per-entity reads, not taken as a set.

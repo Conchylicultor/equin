@@ -7,7 +7,7 @@
   to a successful push (caveats, follow-ups, partial outcomes). Tokens:
   `PUSH_EXIT_CLEAN` / `PUSH_EXIT_FLAG`.
 - Token goes at the **end** of Claude's final message, not the start.
-- Prompt uses bullet points, doesn't hardcode `./singularity push -m "…"`,
+- Prompt uses bullet points, doesn't hardcode `./equin push -m "…"`,
   and doesn't talk about commits. "Push to main using the CLI" is enough.
 - "Close conversation" kills the tmux pane **only**. No DB row deletion. The
   existing poller will mark the conversation `gone`.
@@ -289,7 +289,7 @@ Add the plugin import to `web/src/plugins.ts`.
 
 ## Verification
 
-1. `./singularity build` to deploy.
+1. `./equin build` to deploy.
 2. Open `http://<worktree>.localhost:9000/c/<conversation>` where the
    conversation has pending uncommitted edits.
 3. Click **Push & Exit**. Observe the injected prompt pasted into the pane

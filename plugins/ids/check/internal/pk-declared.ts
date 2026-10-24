@@ -21,7 +21,7 @@ const ID = "ids:pk-declared";
  * lives in another module counts the same as an inline `idColumn`. A table not
  * yet migrated is declared as `debt` in its own plugin's `exempt/index.ts`
  * (the schema file's path), so the rule is on from day one and the debt is
- * listed by `./singularity exempt list --rule ids:pk-declared`.
+ * listed by `./equin exempt list --rule ids:pk-declared`.
  */
 export const pkDeclared: Check = {
   id: ID,

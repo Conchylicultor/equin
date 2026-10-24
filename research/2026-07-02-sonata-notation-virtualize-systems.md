@@ -125,7 +125,7 @@ system must be a standalone `<svg>` in its own row div. Confirmed constraint.
   `tieIn`, `new StaveTie({ first_note: null, last_note: firstNoteOfKey })`.
   (VexFlow 4.x supports partial ties by omitting one endpoint — **verify the
   exact option shape against installed `vexflow` types during implementation**;
-  `bun install` runs in `./singularity build`.)
+  `bun install` runs in `./equin build`.)
 - `anchors`/`notes` x-values are **within the system svg** (== the row's left
   edge), which is what the playhead needs. `anchors` no longer need a global
   `systemIndex`-keyed x; they're keyed by the registry (below).
@@ -213,7 +213,7 @@ constants/helpers (`staffOffsets`, `drawConnectors`, `buildVoice`, `tagVoice`,
 
 ## Verification
 
-1. `./singularity build` (from the worktree dir). App at
+1. `./equin build` (from the worktree dir). App at
    `http://att-1782945768-hlnu.localhost:9000`.
 2. Playwright (`e2e/screenshot.mjs`): open the seeded *Für Elise*, switch the
    Display picker to **Notation**.

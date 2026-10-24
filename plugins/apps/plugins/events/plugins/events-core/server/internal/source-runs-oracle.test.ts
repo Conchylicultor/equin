@@ -20,8 +20,8 @@
  * - every refill names only runs the statement changed, or a run the tuple
  *   now holds that one of them made room for (a window's tail entrant).
  *
- * Requires a running Postgres cluster (started by ./singularity build).
- * Run: `./singularity test plugins/apps/plugins/events/plugins/events-core`.
+ * Requires a running Postgres cluster (started by ./equin build).
+ * Run: `./equin test plugins/apps/plugins/events/plugins/events-core`.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
@@ -73,7 +73,7 @@ const truth = new Map<
 >();
 
 // The suite's OWN runtime, never server-core's process-global one:
-// `./singularity test` runs every bun suite in one process, and any suite that
+// `./equin test` runs every bun suite in one process, and any suite that
 // loads `events-core/server` (a source type's, the refresh engine's) registers
 // the real `events.source-runs` on the global registry at module eval — so
 // registering it there too throws `defineResource: duplicate key`, whichever

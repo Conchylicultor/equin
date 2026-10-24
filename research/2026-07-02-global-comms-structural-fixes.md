@@ -342,7 +342,7 @@ T6                   — gated on trigger metrics, design pre-agreed here
 
 ## Verification (end-to-end, per the repo's testing rules)
 
-- Every track lands with `./singularity build` + `./singularity check` green.
+- Every track lands with `./equin build` + `./equin check` green.
 - T1: after each milestone, the Debug → Read-set pane must show
   coveredOrigins == captured read-set for migrated resources; drive a real
   mutation end-to-end (edit a task/conversation in the UI) and confirm one

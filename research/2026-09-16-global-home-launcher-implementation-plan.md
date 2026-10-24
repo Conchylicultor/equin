@@ -185,10 +185,10 @@ unchanged until step 6 switches Home over.
 
 ## Verification
 
-- `./singularity test plugins/primitives/plugins/avatar` — soft-class pin test;
+- `./equin test plugins/primitives/plugins/avatar` — soft-class pin test;
   unit tests for `avatarColorPick` shade distribution and `Grid` `cellWidth`.
-- `./singularity check` (radius, layout, surface, boundaries, config-origins).
-- `./singularity build`, then
+- `./equin check` (radius, layout, surface, boundaries, config-origins).
+- `./equin build`, then
   `compare-diff.ts --name proto-1789509871-llga --options style=flat,palette=ocean,surface=black,header=capsule --width 1280`,
   and at 700 wide.
 - `screenshot.ts --path /home` in `--color-scheme dark` and `light`.

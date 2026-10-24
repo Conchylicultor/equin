@@ -227,7 +227,7 @@ Same pattern — wrap `QueueView` in `MultiSelectProvider`, add `SelectionCheckb
 ## Verification
 
 1. `bun install` from root (picks up new workspace)
-2. `./singularity build` (regenerates plugin registry, builds)
+2. `./equin build` (regenerates plugin registry, builds)
 3. Open task list at the app URL
 4. Verify: hover a task row → checkbox appears
 5. Click checkbox → row gets selected, `SelectionBar` appears with "1 selected"

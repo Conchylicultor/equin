@@ -21,7 +21,7 @@ Verified gap (code, this session):
   (`build.ts:1001–1119`). Ungated phases run outside any slot: `bun install` (build.ts:858),
   registry + manifest codegen, drizzle migration generation (build.ts:928), atomic publish,
   backend restart + health probe (build.ts:1296+). That is why 6+ concurrent
-  `./singularity build` processes co-exist with a 4-slot pool.
+  `./equin build` processes co-exist with a 4-slot pool.
 - Main-branch builds are fully exempt (`build.ts:978`); main's own 27-minute auto-build
   (03:21–03:48) spanned the whole second freeze.
 - The compressor pressure is now measured (`health-monitor` host sampler,
@@ -174,7 +174,7 @@ Per-process acquisition order, globally consistent:
 - flock auto-releases on process death, so every `process.exit(1)` path in `failBuild` and a
   SIGKILLed agent build release the token — same crash-safety as today.
 - `push` is unchanged (its own size-1 pool + interactive lane). Standalone
-  `./singularity check` remains outside the token in v1 (its tsc fleet is budgeted; its
+  `./equin check` remains outside the token in v1 (its tsc fleet is budgeted; its
   eslint/import-graph residual is modest) — follow-up if the maxRSS data says otherwise.
 
 ## Piece 2 — duress-aware admission valve

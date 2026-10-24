@@ -17,15 +17,15 @@ const patched = (input: BashInput) => {
 
 describe("background-timeout guard", () => {
   test("a backgrounded build with no timeout gets the ceiling", () => {
-    expect(
-      patched({ command: "./singularity build", run_in_background: true }),
-    ).toBe(MAX_BACKGROUND_TIMEOUT_MS);
+    expect(patched({ command: "./equin build", run_in_background: true })).toBe(
+      MAX_BACKGROUND_TIMEOUT_MS,
+    );
   });
 
   test("an explicit shorter timeout is raised", () => {
     expect(
       patched({
-        command: "./singularity push -m 'x'",
+        command: "./equin push -m 'x'",
         run_in_background: true,
         timeout: 1_800_000,
       }),
@@ -35,8 +35,7 @@ describe("background-timeout guard", () => {
   test("an e2e run is covered like any other subcommand", () => {
     expect(
       patched({
-        command:
-          "./singularity run plugins/upstream/e2e/clone-journey.ts --keep",
+        command: "./equin run plugins/upstream/e2e/clone-journey.ts --keep",
         run_in_background: true,
       }),
     ).toBe(MAX_BACKGROUND_TIMEOUT_MS);
@@ -51,7 +50,7 @@ describe("background-timeout guard", () => {
   test("already at the ceiling: untouched", () => {
     expect(
       verdict({
-        command: "./singularity build",
+        command: "./equin build",
         run_in_background: true,
         timeout: MAX_BACKGROUND_TIMEOUT_MS,
       }).kind,
@@ -59,9 +58,7 @@ describe("background-timeout guard", () => {
   });
 
   test("foreground and non-singularity commands are untouched", () => {
-    expect(verdict({ command: "./singularity check --list" }).kind).toBe(
-      "allow",
-    );
+    expect(verdict({ command: "./equin check --list" }).kind).toBe("allow");
     expect(
       verdict({ command: "sleep 5000", run_in_background: true }).kind,
     ).toBe("allow");

@@ -125,8 +125,8 @@ All 50 files that only import `db` from `@plugins/database/server` — zero chan
 
 ## Verification
 
-1. `./singularity build` — must succeed (auto-regenerates plugin registry, runs migration check)
-2. `./singularity check` — all checks pass (plugin boundaries, eslint, migrations-in-sync)
+1. `./equin build` — must succeed (auto-regenerates plugin registry, runs migration check)
+2. `./equin check` — all checks pass (plugin boundaries, eslint, migrations-in-sync)
 3. Trigger a backup from the UI → verify it dumps the embedded PG (check file size matches previous correct backup ~1MB, not the stale 723KB)
 4. Launch a conversation → verify DB fork succeeds (conversation starts, worktree DB created)
 5. Worktree cleanup → verify drop works

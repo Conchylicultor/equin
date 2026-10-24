@@ -227,7 +227,7 @@ User toggles "Auto-build on push" off
 
 ## Verification
 
-1. `./singularity build` succeeds
+1. `./equin build` succeeds
 2. Open app, click Config sidebar → nav pane shows "Build" with 0 modified
 3. Click "Build" → detail pane shows "Auto-build on push" toggle (checked)
 4. Toggle off → blue left-border appears on field; "1" badge on nav row

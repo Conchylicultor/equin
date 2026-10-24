@@ -180,4 +180,4 @@ Conversations inside auto-groups have no `enclosingGroupId`, so dragging one ont
 8. Conversation with `taskId == "task-meta-conversations"` — never appears in any auto-group.
 9. `tasksData` is `undefined` (loading) — no crash; all conversations fall through to `trulyUngrouped`.
 
-Deploy with `./singularity build` and verify at `http://att-1777498415-247z.localhost:9000`.
+Deploy with `./equin build` and verify at `http://att-1777498415-247z.localhost:9000`.

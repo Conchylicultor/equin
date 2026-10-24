@@ -47,7 +47,7 @@ export function useCustomColumnDefs(
     throw new Error(
       "custom-columns: useCustomColumnDefs requires a resolved config descriptor " +
         "threaded from the DataView host, but received undefined. The DataView's " +
-        "storageKey has no registered viewsDescriptor — run `./singularity build`.",
+        "storageKey has no registered viewsDescriptor — run `./equin build`.",
     );
   }
 

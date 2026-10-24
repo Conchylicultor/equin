@@ -152,7 +152,7 @@ Re-exports: schemas + types, resource descriptors, all endpoint definitions + bo
 ## Verification
 
 1. `bun install` from repo root (picks up new workspaces)
-2. `./singularity build --migration-name page-editor-init` — generates migration, builds, restarts
+2. `./equin build --migration-name page-editor-init` — generates migration, builds, restarts
 3. Verify tables exist: `mcp__singularity__query_db("SELECT * FROM page_documents")` and `SELECT * FROM page_blocks`
 4. Test CRUD via curl or MCP:
    - Create document, create blocks, verify list returns them

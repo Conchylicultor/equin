@@ -192,7 +192,7 @@ sort is set. Clear the sort to reorder." This is the last silent cause.
 
 ## Verification
 
-1. `./singularity build` — regenerates docs/registry; runs `./singularity check`
+1. `./equin build` — regenerates docs/registry; runs `./equin check`
    (`type-check` catches every unmigrated `dest.rank` consumer;
    `plugins-doc-in-sync` / `config:overrides-authored` catch doc + config drift).
 2. Unit tests:

@@ -305,14 +305,14 @@ These need **zero** primitive/schema change to add later — that's the point:
 - **Semantic-content discipline**: the prompt must forbid inline styling so axis C
   (theme) stays free. A styled artifact would couple content to presentation.
 - **Resource loads all rows** now (mirrors auto-start); scope by `pageId` later.
-- **Migration**: `story_generated_units` is the one new table; via `./singularity
+- **Migration**: `story_generated_units` is the one new table; via `./equin
   build`, committed.
 - **`match` === `id`** ("blog") in lockstep (slides convention).
 
 ## Build & verify
 
-1. `./singularity build` (registers new plugins; applies migration).
-2. `./singularity check` (`plugin-boundaries` + `migrations-in-sync`).
+1. `./equin build` (registers new plugins; applies migration).
+2. `./equin check` (`plugin-boundaries` + `migrations-in-sync`).
 3. Manual loop at `http://<worktree>.localhost:9000/story`:
    - New story → outline (top-level ideas, nested sub-bullets, a `---` divider).
    - **Blog** → *Generate blog* → flowing Markdown with `##` sections + `<hr>` at

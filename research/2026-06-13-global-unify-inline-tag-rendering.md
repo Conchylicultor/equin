@@ -129,7 +129,7 @@ editor automatically.
 Update the three plugin `CLAUDE.md` blocks (element-picker: now an active-data
 inline contribution + generic editor bridge, no bespoke node; active-data: inline
 contributions also render in the editor via the bridge; text-editor: new
-`NodeExtensions` slot), then run `./singularity build` so the autogen reference
+`NodeExtensions` slot), then run `./equin build` so the autogen reference
 blocks and `docs/plugins-*.md` regenerate (the `plugins-doc-in-sync` check gates
 this).
 
@@ -161,7 +161,7 @@ this).
 
 ## Verification
 
-1. `./singularity build` (also runs checks: `type-check`, `plugin-boundaries`,
+1. `./equin build` (also runs checks: `type-check`, `plugin-boundaries`,
    `plugins-doc-in-sync`).
 2. End-to-end with `e2e/screenshot.mjs` against `http://<worktree>.localhost:9000`:
    - Pick a UI element → confirm the chip still renders in the Improve popover
@@ -174,4 +174,4 @@ this).
      display (image pipeline unaffected).
    - Copy a chip from the editor and paste elsewhere → the full `<ui-context …>` tag
      round-trips (generic `getTextContent`).
-4. `./singularity check` clean.
+4. `./equin check` clean.

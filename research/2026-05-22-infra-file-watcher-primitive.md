@@ -118,8 +118,8 @@ watcher = await createFileWatcher({
 
 ## Verification
 
-1. `./singularity build` succeeds
-2. `./singularity check` passes (boundaries, lint, TypeScript)
+1. `./equin build` succeeds
+2. `./equin check` passes (boundaries, lint, TypeScript)
 3. Config: edit a `.jsonc` in `~/.singularity/config/` → settings pane updates within ~200ms
 4. Git: push to main → `git.refAdvanced` fires (debug > queue pane)
 5. Transcript: send a message → JSONL viewer updates in real-time

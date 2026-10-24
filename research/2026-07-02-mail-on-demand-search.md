@@ -99,7 +99,7 @@ new search entry renders. The `Mail.Banner` header + Miller body are unchanged.
 
 ## Verification
 
-1. `./singularity build` + `./singularity check` (lint gates pass — all layout via primitives, all
+1. `./equin build` + `./equin check` (lint gates pass — all layout via primitives, all
    fetch via `useEndpoint`/`useEndpointMutation`).
 2. Connect Gmail; let backfill create the account + watermark.
 3. `query_db` **before**: confirm a term known only in >30-day-old mail is absent from `mail_messages`.

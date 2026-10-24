@@ -175,7 +175,7 @@ import into a leaf (denied).
   file with no folder is a violation.
 - Rewrite the `provision` row comment in the config that describes the
   `checkRuntime`-returns-true hole, since that hole is gone.
-- `./singularity build` regenerates `plugins-details.md` and the plugin
+- `./equin build` regenerates `plugins-details.md` and the plugin
   `CLAUDE.md` reference blocks.
 
 ## Critical files
@@ -190,12 +190,12 @@ import into a leaf (denied).
 
 ## Verification
 
-1. `./singularity test plugins/framework/plugins/tooling/plugins/boundaries plugins/framework/plugins/tooling/plugins/codegen`: the new resolver cases, plus the collected-dir discovery tests (including a new one where an undeclared collected-dir name throws).
-2. `./singularity check boundary-rules plugin-boundaries type-check database-migrations:drizzle-config-schema-globs migrations-in-sync plugins-registry-in-sync plugins-doc-in-sync`: all green.
+1. `./equin test plugins/framework/plugins/tooling/plugins/boundaries plugins/framework/plugins/tooling/plugins/codegen`: the new resolver cases, plus the collected-dir discovery tests (including a new one where an undeclared collected-dir name throws).
+2. `./equin check boundary-rules plugin-boundaries type-check database-migrations:drizzle-config-schema-globs migrations-in-sync plugins-registry-in-sync plugins-doc-in-sync`: all green.
 3. Negative probes, by hand and then reverted: a `check/` file importing
    `@plugins/x/web`, a `fixtures/` file importing `server`, a new
    `plugins/x/foo.ts` loose file, and a `plugins/x/misc/a.ts` unknown folder. Each
    must fail `boundary-rules` with the new message.
-4. `./singularity build` (background): migration generation must still work
+4. `./equin build` (background): migration generation must still work
    through the moved drizzle config. Make a no-op check that `drizzle-kit
    generate` reports no changes.

@@ -68,7 +68,7 @@ No other plugin imports from it — verified by grep. `plugins.generated.ts` is 
 2. Create `plugins/conversations/plugins/conversation-view/plugins/branch/package.json`
 3. Create `plugins/conversations/plugins/conversation-view/plugins/branch/web/components/branch-buttons.tsx`
 4. Create `plugins/conversations/plugins/conversation-view/plugins/branch/web/index.ts`
-5. Run `./singularity build`
+5. Run `./equin build`
 6. Verify in browser
 
 ## Verification

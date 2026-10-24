@@ -145,8 +145,8 @@ Work through the check's own output, group by group, using the table above:
 - test-layout `core/index.ts`: drop the three fake-dom exports. Nothing imports
   them through the barrel; the check keeps its relative import.
 
-After this, `./singularity check plugin-boundaries` must report 0 R13
-violations. `./singularity build` regenerates `docs/plugins-*.md` and the
+After this, `./equin check plugin-boundaries` must report 0 R13
+violations. `./equin build` regenerates `docs/plugins-*.md` and the
 per-plugin CLAUDE.md autogen blocks, and the moved names now show up under
 *Test helpers*.
 
@@ -160,14 +160,14 @@ per-plugin CLAUDE.md autogen blocks, and the moved names now show up under
 
 ## Verification
 
-1. `./singularity test plugins/framework/plugins/tooling/plugins/checks/plugins/plugin-boundaries`
+1. `./equin test plugins/framework/plugins/tooling/plugins/checks/plugins/plugin-boundaries`
    runs the new unit tests.
-2. Before step 2, `./singularity check plugin-boundaries` reports 95 R13
+2. Before step 2, `./equin check plugin-boundaries` reports 95 R13
    violations, the same set as the scratch scan. After step 2 it reports 0.
 3. Re-introduce one leak by hand (export a helper from `jobs/server` and
    import it only from a test) and confirm R13 fails. Then revert it.
-4. `./singularity test` on every plugin touched by a moved test or changed
+4. `./equin test` on every plugin touched by a moved test or changed
    import. Moved tests must pass in their new plugin.
-5. `./singularity build` (in the background) runs the full check suite,
+5. `./equin build` (in the background) runs the full check suite,
    including `plugins-doc-in-sync`, `type-check` and `eslint`, and deploys
    cleanly.

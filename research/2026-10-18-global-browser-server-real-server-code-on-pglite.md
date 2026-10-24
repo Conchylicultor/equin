@@ -117,7 +117,7 @@ The split sits where the host differs (the platform and the substrate), so every
 ## Execution order (spike first; stop and report if a step blows up)
 
 1. **Spike: bundle and evaluate.** Bundle a worker root booting `task-category` with the shims, load it in a headless page, and list what throws at module evaluation and at boot. If more than about 10 in-place laziness fixes are needed, stop and re-plan.
-2. Seams: `installDbDriver`, migration text input, portable sha256, host `snapHash`, the `browser` boot mode. Bun behaviour stays unchanged; check this with `./singularity test` on the touched plugins.
+2. Seams: `installDbDriver`, migration text input, portable sha256, host `snapHash`, the `browser` boot mode. Bun behaviour stays unchanged; check this with `./equin test` on the touched plugins.
 3. Worker host plus `workerBrowserServer`; the page server's forward-to-worker option.
 4. Demo root and seed; DemoScope wiring; `task-categories` and the registry answered by real code.
 5. `needsMachine` on endpoints plus host short-circuit plus client result type; mark the demo's machine endpoints and fix call sites.
@@ -135,13 +135,13 @@ The split sits where the host differs (the platform and the substrate), so every
 
 ## Verification
 
-- `./singularity build`, then open `http://<worktree>.localhost:9000/demo`.
+- `./equin build`, then open `http://<worktree>.localhost:9000/demo`.
   - The agent-manager task list groups by category from real rows.
   - The network panel shows no `/api/resources/task-categories` request leaving the page.
   - The worker's console logs boot timings: migrations, schema layer, seed.
 - An e2e script, `agent-manager/demo/e2e/real-server.ts`, asserts the category sections render in `/demo` and that clicking a machine action shows the declared "isn't available in this version" message.
-- `./singularity test` on database/migrations, endpoints and browser-server, plus a unit test of the worker protocol and of `needsMachine` typing (a `@ts-expect-error` on an unhandled call).
-- `./singularity check` (boundaries, type-check) is green. The main app's behaviour is unchanged: the seams are no-ops on Bun.
+- `./equin test` on database/migrations, endpoints and browser-server, plus a unit test of the worker protocol and of `needsMachine` typing (a `@ts-expect-error` on an unhandled call).
+- `./equin check` (boundaries, type-check) is green. The main app's behaviour is unchanged: the seams are no-ops on Bun.
 
 ## Out of scope / follow-ups (next main task carries them)
 

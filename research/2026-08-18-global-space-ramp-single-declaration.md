@@ -172,7 +172,7 @@ New sub-plugin
 copied from its sibling `app-css-utilities-in-sync/check/index.ts`: re-render in
 memory, `formatGenerated`, byte-compare against the committed file; a thrown
 validation error becomes the failure message. Checks are discovered from
-`check/index.ts`, so `./singularity build` regenerates `check.generated.ts` — no
+`check/index.ts`, so `./equin build` regenerates `check.generated.ts` — no
 registry edit.
 
 ### Resulting chain
@@ -233,12 +233,12 @@ spacing · rail · column · cluster · inline · sticky · pin · detail-sectio
 7. **Update the prose.** `spacing/CLAUDE.md` (the scale table moves to the new
    plugin; spacing's doc points at it and keeps the Stack/Inset/enforcement
    sections), `rail/CLAUDE.md` (drop the "two unions, same ramp read twice" note),
-   new `space-ramp/CLAUDE.md`, and the app.css section comments. `./singularity build`
+   new `space-ramp/CLAUDE.md`, and the app.css section comments. `./equin build`
    regenerates the autogen blocks and `docs/plugins-*.md`.
 
 ## Verification
 
-- `./singularity check` — the whole suite. Specifically `space-ramp-in-sync`,
+- `./equin check` — the whole suite. Specifically `space-ramp-in-sync`,
   `app-css-utilities-in-sync` (must be unaffected by step 1),
   `plugin-boundaries`, `tailwind-scan-covers-classes`, `css-vars-supplied`,
   `pre-barrel-manifests-complete`, `plugins-registry-in-sync`, `type-check`.
@@ -248,7 +248,7 @@ spacing · rail · column · cluster · inline · sticky · pin · detail-sectio
   any `@utility` → must fail listing the 14 missing classes. Add `3xl` properly
   across all 14 families **and** the density group → build regenerates, and the
   union widens everywhere with no other edit.
-- `./singularity build`, then `./singularity test plugins/primitives/plugins/css`
+- `./equin build`, then `./equin test plugins/primitives/plugins/css`
   (picks up `sticky`'s existing pure `stickyClasses` test and ui-kit's
   `control-size.test.ts`).
 - Visual regression is the real risk — a silently-dropped utility looks like

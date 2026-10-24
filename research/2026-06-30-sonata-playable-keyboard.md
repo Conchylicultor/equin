@@ -203,6 +203,6 @@ depresses and glows exactly like a played note.
 
 ## Verification
 
-`./singularity build`, then a scripted Playwright run on a loaded song:
+`./equin build`, then a scripted Playwright run on a loaded song:
 pointer-down a key → assert audio path invoked + key shows lit/pressed; drag
 across keys (glissando); multi-touch; release. Screenshot before/after.

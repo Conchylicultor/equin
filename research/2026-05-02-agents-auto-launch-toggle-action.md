@@ -110,14 +110,14 @@ The `AgentSchema` in `plugins/agents/shared/schemas.ts` has no `autoLaunch` fiel
 
 ## Auto-Registration
 
-`./singularity build` auto-discovers `plugins/agents/plugins/auto-launch/web/index.ts` (via `cli/src/plugin-registry-gen.ts`) and adds an import + entry to `web/src/plugins.generated.ts`. No manual edit needed.
+`./equin build` auto-discovers `plugins/agents/plugins/auto-launch/web/index.ts` (via `cli/src/plugin-registry-gen.ts`) and adds an import + entry to `web/src/plugins.generated.ts`. No manual edit needed.
 
 ---
 
 ## Verification
 
-1. Run `./singularity build` — build should succeed, no migration generated.
+1. Run `./equin build` — build should succeed, no migration generated.
 2. Open `http://att-1777708907-0x08.localhost:9000` and navigate to the Agents sidebar.
 3. Hover over any agent row — the rocket icon button should appear on the right.
 4. Click it — it should toggle blue (on) / dim (off).
-5. `./singularity check` should pass (no boundary violations: `@plugins/agents/web` is a legal cross-plugin import from the sub-plugin).
+5. `./equin check` should pass (no boundary violations: `@plugins/agents/web` is a legal cross-plugin import from the sub-plugin).

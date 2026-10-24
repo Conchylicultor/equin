@@ -7,7 +7,7 @@ Companion to [`2026-05-04-plugins-foreign-table-handle.md`](./2026-05-04-plugins
 - The active leak (`_taskAttachments` / `_conversationAttachments` re-exported from `tasks-core` and imported by `tasks` + `conversations`) is closed. The pgTables are not in any barrel; R4 mechanically forbids cross-plugin imports of `internal/` paths.
 - The latent leak (`_agentAutoLaunchExt` barrel-exported from the toggle plugin) is closed.
 - `handle-post-turn.ts`'s read-merge-write race is gone. `conversationAttachments.add` is one atomic `INSERT … ON CONFLICT DO NOTHING`.
-- All 18 `./singularity check` rules pass. Migration diff is empty (the underlying SQL schema is unchanged).
+- All 18 `./equin check` rules pass. Migration diff is empty (the underlying SQL schema is unchanged).
 
 ## Caveats
 

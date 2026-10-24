@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 
 // The content identity of the frontend bundle this backend is serving, read
 // from `dist/.build-graph` FRESH on every call — same rule, and same reason, as
-// `getServerCommit` beside it: `./singularity build` swaps the `dist` symlink
+// `getServerCommit` beside it: `./equin build` swaps the `dist` symlink
 // (what the browser downloads) *before* it restarts this backend, so a value
 // memoized at process start would disagree with the served bundle for the whole
 // swap→restart window and leave the "Server updated" reload button stuck.

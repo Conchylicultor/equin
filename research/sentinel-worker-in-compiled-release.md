@@ -98,7 +98,7 @@ from the server binary's composition-alias-overridden closure.
 ## Verification
 
 - Existing worker tests unaffected (the test spawns its own source worker).
-- End-to-end: `./singularity release --composition <c> --dev` (staged; skips the
+- End-to-end: `./equin release --composition <c> --dev` (staged; skips the
   slow self-extracting pack but still compiles the backend + launch and vendors
   the worker), run the staged `launch`, confirm the sentinel worker spawns:
   `sentinel` channel logs, no "giving up" line, duress-episodes readable.

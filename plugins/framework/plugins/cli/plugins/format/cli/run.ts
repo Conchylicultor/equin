@@ -4,7 +4,7 @@ import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 /**
  * Contains ZERO new logic on purpose: a thin wrapper over the exact
- * `formatChangedSources` that `./singularity build` calls, or the repo's format
+ * `formatChangedSources` that `./equin build` calls, or the repo's format
  * policy would have two implementations that could disagree.
  */
 const run: CliAction<[], object> = async () => {

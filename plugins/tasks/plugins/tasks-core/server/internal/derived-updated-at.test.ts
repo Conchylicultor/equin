@@ -7,8 +7,8 @@
  * Every row is seeded with `updated_at` far in the past, so a bump (the trigger
  * sets `now()`) is detectable regardless of transaction timing.
  *
- * Requires the running embedded cluster (`./singularity build` first):
- *   ./singularity test plugins/tasks/plugins/tasks-core
+ * Requires the running embedded cluster (`./equin build` first):
+ *   ./equin test plugins/tasks/plugins/tasks-core
  */
 
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";

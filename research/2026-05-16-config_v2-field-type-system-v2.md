@@ -391,6 +391,6 @@ function ConfigSection({ config, values, onChange }) {
 
 ## Verification
 
-1. `./singularity build` — TypeScript compiles, no import errors
+1. `./equin build` — TypeScript compiles, no import errors
 2. Manually verify type inference in an editor: `defineConfig({ fields: { x: boolField() } }).defaults.x` should resolve to `boolean`
 3. Take a screenshot to verify the renderers appear (if settings pane integration exists), otherwise write a temporary test page that renders `<FieldRenderer field={boolField({ label: "Test" })} value={true} onChange={console.log} />`

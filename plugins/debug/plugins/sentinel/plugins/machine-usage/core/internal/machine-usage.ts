@@ -3,7 +3,7 @@ import { liveValue } from "@plugins/network/plugins/live/core";
 
 /**
  * Who a process on the machine works for. A closed list, in display order:
- * the user's own Chrome, the agents' ops (`./singularity build` / push /
+ * the user's own Chrome, the agents' ops (`./equin build` / push /
  * check / test / e2e and everything they started), the agent browser's host
  * and its Chromium, and everything else.
  */

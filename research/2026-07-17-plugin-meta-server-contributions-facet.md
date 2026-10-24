@@ -220,7 +220,7 @@ name is self-describing, so a bare `` `token` `` line is fine.
 
 ### 7. Docs regeneration
 
-`./singularity build` regenerates `docs/plugins-details.md`, the slim
+`./equin build` regenerates `docs/plugins-details.md`, the slim
 `docs/plugins-compact.md`, and every affected per-plugin `CLAUDE.md` autogen
 block; the `plugins-doc-in-sync` check fails until they are committed. This
 surfaces server `Contributes:` lines across many plugins (every plugin with a
@@ -241,10 +241,10 @@ surfaces server `Contributes:` lines across many plugins (every plugin with a
 
 ## Verification
 
-1. `./singularity build` — regenerates docs + migrations, restarts server.
+1. `./equin build` — regenerates docs + migrations, restarts server.
    Confirms the barrel-import facet path still runs and docs regenerate clean.
 2. Run the de-workaround-ed check:
-   `./singularity check page.editor:block-data-registered` → passes, now sourcing
+   `./equin check page.editor:block-data-registered` → passes, now sourcing
    server `BlockData` from the facet (canary `page` present ⇒ facet scan healthy).
 3. Inspect regenerated docs:
    - `rg -n 'page.block-data' docs/plugins-details.md` → `page/text` (and every
@@ -252,7 +252,7 @@ surfaces server `Contributes:` lines across many plugins (every plugin with a
    - `rg -n 'resource.declare|derived-view|derived-table' docs/plugins-details.md`
      → labeled server contribution lines (e.g. `` `resource.declare` "tasks" ``,
      `` `derived-view` "attempts_v" ``) appear under Server for `tasks-core` etc.
-4. `./singularity check plugins-doc-in-sync plugins-registry-in-sync type-check`
+4. `./equin check plugins-doc-in-sync plugins-registry-in-sync type-check`
    → all green (docs committed, types sound).
 5. Quick facet-shape sanity (optional): a `bun:test` under
    `contributions/facet/` that builds a tiny faceted tree over the editor

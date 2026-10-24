@@ -216,7 +216,7 @@ No change needed: `buffer.ts` (`BufferedCrash extends CrashReport` still holds),
 
 ## Verification
 
-1. `./singularity build` — must pass type-check (`migrations-in-sync` should be a
+1. `./equin build` — must pass type-check (`migrations-in-sync` should be a
    no-op: no schema change) and the `eslint` + `plugin-boundaries` checks.
 2. Confirm no migration was generated (the table is untouched).
 3. Trigger a client crash end-to-end and confirm `clientId` / `buildId` persist

@@ -49,7 +49,7 @@ function BuildControls({
   building: boolean;
   onBuild: () => void | Promise<void>;
 }) {
-  // A build spawns `./singularity build` in this checkout: under a host without
+  // A build spawns `./equin build` in this checkout: under a host without
   // the computer (the in-browser demo) the button is disabled, its tooltip
   // saying why.
   const availability = useMachineAvailability(triggerBuildEndpoint);
@@ -156,7 +156,7 @@ function BuildPopoverContentInner({
       toast({
         type: "build",
         title: "Build started",
-        description: "Running ./singularity build",
+        description: "Running ./equin build",
         variant: "info",
       });
     } catch (err) {

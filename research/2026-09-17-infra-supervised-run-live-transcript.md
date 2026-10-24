@@ -105,17 +105,17 @@ Also correct the comments that describe the old assumption:
   `syncWatcher` opts in; comments.
 - `plugins/infra/plugins/jobs/plugins/supervised-job/server/internal/run/tail.ts`: doc comment
   only.
-- Tests next to both files. Run `./singularity build` to regenerate the file-watcher CLAUDE.md
+- Tests next to both files. Run `./equin build` to regenerate the file-watcher CLAUDE.md
   reference block.
 
 ## Verification
 
-1. `./singularity test plugins/infra/plugins/file-watcher plugins/infra/plugins/jobs/plugins/supervised-job`
-2. `./singularity build` in the background, then check that `build-status.json` says `ok`.
+1. `./equin test plugins/infra/plugins/file-watcher plugins/infra/plugins/jobs/plugins/supervised-job`
+2. `./equin build` in the background, then check that `build-status.json` says `ok`.
 3. On the worktree deploy, `POST /api/events-test/detached-sleep` with `{"seconds":30}`. Tail
    `~/.singularity/worktrees/<wt>/logs/events-test-detached-sleep.jsonl`. A line should appear
    about every 5 s, each with its own `t`, rather than all 7 at the end.
-4. Optional: watch a real `./singularity build` triggered from the toolbar and check that its log
+4. Optional: watch a real `./equin build` triggered from the toolbar and check that its log
    scrolls live.
 
 ## Out of scope / follow-up to flag

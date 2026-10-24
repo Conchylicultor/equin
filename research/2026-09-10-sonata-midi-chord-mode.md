@@ -187,7 +187,7 @@ those; it relies on that contract.
 
 ### 6. Docs / registry
 
-- `./singularity build` regenerates the plugin registry, the migration for the
+- `./equin build` regenerates the plugin registry, the migration for the
   new side-table, and `docs/plugins-*.md`; never hand-edit those.
 
 ## Files
@@ -212,8 +212,8 @@ those; it relies on that contract.
 
 ## Verification
 
-1. `./singularity build` (background) — migration generated, registry regenerated, deploy receipt `status: ok`.
-2. `./singularity test plugins/apps/plugins/sonata/plugins/voicing` — the new
+1. `./equin build` (background) — migration generated, registry regenerated, deploy receipt `status: ok`.
+2. `./equin test plugins/apps/plugins/sonata/plugins/voicing` — the new
    `revoice.test.ts` passes alongside the existing voicing tests.
 3. Open a MIDI song. The right column shows a **Chords** card with an Off chip;
    Voicing and Rhythm cards are absent. Click **On**:
@@ -226,4 +226,4 @@ those; it relies on that contract.
    chord tracks vanish, Voicing/Rhythm cards hide.
 4. Open a chord-grid song: no Chords card (no derived chords); behaviour unchanged.
 5. `query_db` on `sonata_songs_ext_chord_mode` and `sonata_track_view` to confirm rows.
-6. Screenshot via `./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --path /sonata/song/<id> --click "Off"`.
+6. Screenshot via `./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --path /sonata/song/<id> --click "Off"`.

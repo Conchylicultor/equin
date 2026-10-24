@@ -44,7 +44,7 @@ A **bridge hook** composes both into `FieldDef[]` and the **host appends them** 
 
 `plugins/primitives/plugins/data-view/plugins/custom-columns/` — `core/`, `web/`,
 `server/` (no `shared/`: all shared code is framework-agnostic and lives in `core/`).
-Auto-discovered by the loader like `view-core`/`table` (run `./singularity build`).
+Auto-discovered by the loader like `view-core`/`table` (run `./equin build`).
 
 Cycle direction: **data-view (parent) → custom-columns (child)** is the legal
 direction (same as data-view already importing `view-core`). custom-columns must
@@ -213,7 +213,7 @@ Field on the already-exported `DataViewProps` — no barrel change.
 
 ## Verification
 
-1. `./singularity build` — generates the `data_view_custom_values` migration
+1. `./equin build` — generates the `data_view_custom_values` migration
    (table glob auto-discovers `server/internal/tables.ts`), registers the resource +
    route, runs checks (`table-defs-in-schema-glob`, `orphaned-tables`, typecheck/lint;
    `data-view:configs-authored` unaffected).

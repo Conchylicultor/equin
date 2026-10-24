@@ -136,7 +136,7 @@ that the build-time manifest is **deferred to ST6** with the opt-in rationale; m
 ST5's verification line satisfied.
 
 ### Step 5 — Checks green
-`./singularity build` then `./singularity check` — specifically
+`./equin build` then `./equin check` — specifically
 `config-origins-in-sync` (sonata origin/override hashes match), `type-check`,
 `plugins-doc-in-sync` (data-view barrel/CLAUDE.md autogen block if signatures
 changed), `migrations-in-sync`, `eslint`.
@@ -154,14 +154,14 @@ changed), `migrations-in-sync`, `eslint`.
 
 ## Verification
 
-1. `./singularity build` succeeds; `http://<worktree>.localhost:9000` boots.
+1. `./equin build` succeeds; `http://<worktree>.localhost:9000` boots.
 2. **sonata config-mode:** the enriched `views.jsonc` renders its named instances;
    gallery card is `SongCard` (proves Step 1); the `By composer` table applies its
    committed filter+sort; switching active view is device-local; an in-app
    sort/filter edit write-backs to the instance's config row and survives reload.
 3. **Default-fallback (all 8):** each renders unchanged, single view, no editable
    switcher, no console errors (scripted Playwright per Step 3).
-4. `./singularity check` green — `config-origins-in-sync`, `type-check`,
+4. `./equin check` green — `config-origins-in-sync`, `type-check`,
    `plugins-doc-in-sync`, `migrations-in-sync`, `eslint`.
 5. `git status` shows only intended files; `config/apps/sonata/library/views.jsonc`
    keeps `// @hash 1befa300d09b`.

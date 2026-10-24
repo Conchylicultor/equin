@@ -125,7 +125,7 @@ A single `_attachments` row may appear in multiple link tables (future case: sam
 - `server/src/db/schema.ts` — add `export * from "@plugins/tasks-core/server/internal/schema-attachments"`.
 
 **Plugins doc**:
-- `docs/plugins.md` — update the `attachments` and `tasks-core` entries to reflect the new exports and table; run the `plugins-doc-in-sync` check via `./singularity check` after building.
+- `docs/plugins.md` — update the `attachments` and `tasks-core` entries to reflect the new exports and table; run the `plugins-doc-in-sync` check via `./equin check` after building.
 
 ## Data migration
 
@@ -151,9 +151,9 @@ END $$;
 
 ## Verification
 
-1. `./singularity build` — regenerates migration, applies it, restarts server. Migration must succeed with zero warnings.
-2. `./singularity check` — `migrations-in-sync` and `plugins-doc-in-sync` must pass.
-3. `./singularity check --plugin-boundaries` — confirm the new `@plugins/infra/plugins/attachments/server` imports from tasks-core and the new file pass.
+1. `./equin build` — regenerates migration, applies it, restarts server. Migration must succeed with zero warnings.
+2. `./equin check` — `migrations-in-sync` and `plugins-doc-in-sync` must pass.
+3. `./equin check --plugin-boundaries` — confirm the new `@plugins/infra/plugins/attachments/server` imports from tasks-core and the new file pass.
 4. End-to-end via the app at `http://<worktree>.localhost:9000`:
    - Open the Improve button, paste text + attach a file, submit. Task is created; attachment row and `task_attachments` row both exist (check via `psql` or a debug query). File exists on disk under `~/.singularity/attachments/`.
    - Delete the task (from the Tasks pane, or via `DELETE /api/tasks/:id`). Verify: `task_attachments` row gone (FK cascade), `_attachments` row still present, file still on disk.

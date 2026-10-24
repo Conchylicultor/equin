@@ -1,6 +1,6 @@
 // ─── Regenerate server/internal/table-a.ts from Google's place-types page ────
 //
-//   ./singularity run plugins/page/plugins/place/plugins/google/scripts/fetch-table-a.ts
+//   ./equin run plugins/page/plugins/place/plugins/google/scripts/fetch-table-a.ts
 //
 // Google files every place type it can return as a `primaryType` under one of
 // the headings of "Table A" (Automotive, Food and Drink, Shopping, …), and lists

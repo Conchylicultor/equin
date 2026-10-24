@@ -80,7 +80,7 @@ No breaking change — omitting `since` preserves 24h behavior.
 
 ## Verification
 
-1. `./singularity build` compiles
+1. `./equin build` compiles
 2. Debug > Profiling push section renders identically
 3. Conversation toolbar shows new Activity button
 4. Button opens side pane with push Gantt filtered to last hour

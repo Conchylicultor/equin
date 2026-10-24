@@ -30,7 +30,7 @@ const STALE_DRIVERS = ["regen-docs"];
  * Idempotently install custom merge drivers used by .gitattributes to
  * auto-resolve conflicts in deterministically-generated files (codegen
  * registries, docs, config origins, drizzle migrations) during
- * `git rebase` in `./singularity push`.
+ * `git rebase` in `./equin push`.
  *
  * The fully-generated drivers are trivial — they accept the upstream side;
  * `regen-claudemd` merges the hand-written prose and reports a real prose

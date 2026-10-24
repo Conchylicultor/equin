@@ -10,7 +10,7 @@ The existing `no-raw-event-source` check covers the **client** side (forces cons
 
 ## Design
 
-Add a new check `no-raw-sse` in `cli/src/checks/no-raw-sse.ts`, registered in `cli/src/checks/index.ts`. It runs as part of `./singularity check` and (by extension) `./singularity push`.
+Add a new check `no-raw-sse` in `cli/src/checks/no-raw-sse.ts`, registered in `cli/src/checks/index.ts`. It runs as part of `./equin check` and (by extension) `./equin push`.
 
 ### What it flags
 
@@ -62,8 +62,8 @@ and emit via `send(...)` inside `subscribe()`. The core multiplex at
 
 ## Verification
 
-1. Run `./singularity check --list` → `no-raw-sse` appears.
-2. Run `./singularity check --no-raw-sse` against the branch **before** migrating tasks → fails, pointing at `plugins/tasks/server/internal/sse.ts`.
+1. Run `./equin check --list` → `no-raw-sse` appears.
+2. Run `./equin check --no-raw-sse` against the branch **before** migrating tasks → fails, pointing at `plugins/tasks/server/internal/sse.ts`.
 3. Migrate tasks to `sseRoutes` → check passes.
-4. `./singularity build` → tasks list still streams updates in the UI (single `/api/events` connection in DevTools → Network, with `event: /api/tasks/stream` frames).
-5. Re-add a raw `text/event-stream` response anywhere in a TS file → `./singularity check` fails. Remove it → passes.
+4. `./equin build` → tasks list still streams updates in the UI (single `/api/events` connection in DevTools → Network, with `event: /api/tasks/stream` frames).
+5. Re-add a raw `text/event-stream` response anywhere in a TS file → `./equin check` fails. Remove it → passes.

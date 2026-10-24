@@ -206,7 +206,7 @@ So `readRuns` is used whenever the handle exists. It legitimately does not for
 
 1. `bun test plugins/page/plugins/editor` — pure reducer + resolver suites,
    including the duality property.
-2. `./singularity build`, then at `http://att-1784374536-jx66.localhost:9000/pages`,
+2. `./equin build`, then at `http://att-1784374536-jx66.localhost:9000/pages`,
    drive a real page with `bun e2e/screenshot.mjs` (or a scripted Playwright run):
    - caret at end of a bullet with sub-bullets → Delete → first child's text joins,
      its own children take its slot in order;
@@ -215,5 +215,5 @@ So `readRuns` is used whenever the handle exists. It legitimately does not for
    - Cmd+Z restores rows *and* the target's content doc in one press (this is the
      combined-entry path, worth checking explicitly);
    - Delete on the last visible line does nothing and does not scroll or blur.
-3. `./singularity check` — `type-check` and the doc/boundary checks, since `core/index.ts`
+3. `./equin check` — `type-check` and the doc/boundary checks, since `core/index.ts`
    exports change.

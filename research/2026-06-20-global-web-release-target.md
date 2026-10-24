@@ -6,9 +6,9 @@
 
 ## Context
 
-Today an app composition can be **built** (F1: `./singularity build --composition sonata` emits a filtered dist + filtered registries) and **booted** on an isolated data root (F3: `bootSelfContainedApp` / `serve-app` brings up gateway + embedded PG + the app DB under a `SINGULARITY_DIR` override). What's missing is a command that **emits a portable, deployable artifact** — something an operator drops on a fresh server and runs, with no dev checkout, no toolchain, nothing pre-installed.
+Today an app composition can be **built** (F1: `./equin build --composition sonata` emits a filtered dist + filtered registries) and **booted** on an isolated data root (F3: `bootSelfContainedApp` / `serve-app` brings up gateway + embedded PG + the app DB under a `SINGULARITY_DIR` override). What's missing is a command that **emits a portable, deployable artifact** — something an operator drops on a fresh server and runs, with no dev checkout, no toolchain, nothing pre-installed.
 
-This is F4: `./singularity release --composition sonata --target web` → a single self-contained binary that serves Sonata on a fresh host. The gateway is retained inside the artifact (it remains the supervisor and the seam through which a future version can be hot-swapped — that upgrade UX is **deferred**, see below).
+This is F4: `./equin release --composition sonata --target web` → a single self-contained binary that serves Sonata on a fresh host. The gateway is retained inside the artifact (it remains the supervisor and the seam through which a future version can be hot-swapped — that upgrade UX is **deferred**, see below).
 
 ### Decisions locked with the user
 
@@ -33,7 +33,7 @@ Everything that was `bun X.ts` becomes a compiled binary; the gateway's spawn co
 
 ## The release pipeline (`release.ts`)
 
-`./singularity release --composition <name> --target web [--dev] [--out <path>]`
+`./equin release --composition <name> --target web [--dev] [--out <path>]`
 
 1. **Composition build (reuse F1).** Run the existing `build --composition <name>` path to produce the filtered web `dist` and the filtered `server.composition.generated.ts` registry. (Invoke the build command's internals directly; do not shell out.)
 2. **Compile entrypoints** with `bun build --compile` (target = host OS/arch, or `--target` later for cross-compile):
@@ -146,7 +146,7 @@ Not built in v0, but the gateway is retained to enable it. Future flow, reusing 
 1. **`release --dev sonata`** → staged dir. On a clean root: `SINGULARITY_DIR=$(mktemp -d) <staged>/launch` → `http://sonata.localhost:9100` serves Sonata; confirm gateway + PG + backend all came from the bundle (no dev `~/.singularity`, no `go build`, no `node_modules`).
 2. **`release sonata`** → single binary. Copy to a clean container/VM **with no bun, no Go, no node**; run it → serves. Proves full self-containment.
 3. **Minimized closure**: confirm the compiled `server` binary boots only the composition `bundle` (Sonata plugins) — e.g. agent-manager/conversations endpoints 404; binary size reflects the closure, not all ~540 plugins.
-4. **Dev unaffected**: a normal `./singularity build` and `serve-app` still work (spec `command` absent → `bun bin/index.ts`); `plugins-registry-in-sync` green; git tree clean.
+4. **Dev unaffected**: a normal `./equin build` and `serve-app` still work (spec `command` absent → `bun bin/index.ts`); `plugins-registry-in-sync` green; git tree clean.
 
 ## Risks
 

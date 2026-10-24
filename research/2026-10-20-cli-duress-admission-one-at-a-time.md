@@ -88,8 +88,8 @@ Known, accepted:
 
 ## Verification
 
-- `./singularity test plugins/packages/plugins/flock plugins/framework/plugins/cli/plugins/op-runtime plugins/debug/plugins/profiling/plugins/op-log`
-- `./singularity build` (checks: type-check, eslint, boundaries, data-dirs, docs in sync).
+- `./equin test plugins/packages/plugins/flock plugins/framework/plugins/cli/plugins/op-runtime plugins/debug/plugins/profiling/plugins/op-log`
+- `./equin build` (checks: type-check, eslint, boundaries, data-dirs, docs in sync).
 - Manual: `setDuress` via a script while two worktree builds run → the second build
   logs "held … waiting for the running build" and starts once the first finishes;
   clear the latch → a waiting build proceeds shared.

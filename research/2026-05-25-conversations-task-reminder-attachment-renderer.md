@@ -98,6 +98,6 @@ Mirrors `nested-memory/web/index.ts` byte-for-byte in structure.
 
 ## Verification
 
-1. `./singularity build` — succeeds, no TS errors, no boundary violations
+1. `./equin build` — succeeds, no TS errors, no boundary violations
 2. Open conversation `conv-1779695590-m6pd` — `task_reminder` events render as collapsible "Task Reminder (N tasks)" rows instead of JSON dumps
-3. `./singularity check --plugin-boundaries` — passes
+3. `./equin check --plugin-boundaries` — passes

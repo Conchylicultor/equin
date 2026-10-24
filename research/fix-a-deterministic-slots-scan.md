@@ -24,7 +24,7 @@ the **same** enriched tree, built once and cached:
   `collectReorderableSlots` calls the *same* `buildEnrichedTree`
   (`reorderable-slots-gen.ts:66`) and reads the **slots** facet.
 
-So in a single `./singularity build` process the doc count and the manifest are
+So in a single `./equin build` process the doc count and the manifest are
 consistent *within that run*. The non-determinism is **across processes/environments**,
 and it enters through how the tree gets populated.
 
@@ -241,7 +241,7 @@ to the new static collector. (If, after 3.1, the static collector provably cover
 every factory slot the runtime walk found, a follow-up can retire the runtime walk
 entirely — note it as future work, out of Fix A scope.)
 
-### 3.4 Why `./singularity check` then reliably catches drift
+### 3.4 Why `./equin check` then reliably catches drift
 
 After 3.1+3.2:
 - `renderReorderableSlotsManifest(root)` becomes a pure function of source text.
@@ -311,7 +311,7 @@ Files I expect to touch (overlap with Fix B flagged in §6):
 
 ## 5. Verification
 
-Read-only/manual (do NOT run `./singularity build` or `push`):
+Read-only/manual (do NOT run `./equin build` or `push`):
 
 1. **Static-equivalence check (the key proof):** after implementing, the new
    `collectReorderableSlots` must reproduce the current committed 71-row manifest
@@ -325,7 +325,7 @@ Read-only/manual (do NOT run `./singularity build` or `push`):
 3. **Doc identity:** confirm the reorder `ConfigV2.WebRegister` count equals the
    manifest length (71) in both `docs/plugins-details.md` and `plugins/reorder/CLAUDE.md`
    after regeneration; `plugins-doc-in-sync` should pass.
-4. **Check determinism:** `./singularity check reorderable-slots-in-sync` and
+4. **Check determinism:** `./equin check reorderable-slots-in-sync` and
    `plugins-doc-in-sync` must give the same verdict regardless of build artifacts.
 5. Unit test from §4.5 (`bun test <path>`).
 

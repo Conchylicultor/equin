@@ -169,11 +169,11 @@ Mirror the story/marker precedent byte-for-byte
 ## Phasing (each phase an independent agent-sized task)
 
 1. **Scaffold** — namespace + `shell` (app entry, slots, panes, bespoke layout, PaneOverlayHost).
-   `./singularity build` → app appears at `/website` with an empty landing.
+   `./equin build` → app appears at `/website` with an empty landing.
 2. **Landing** — hero / features / cta sections + copy arrays.
 3. **Downloads** — `core/downloads.ts` + pane + nav item.
 4. **Blog backend** — `blog/publish` (side-table, resource, endpoints, hooks) +
-   `blog/pages-integration` (publish panel). Includes the migration (via `./singularity build`).
+   `blog/pages-integration` (publish panel). Includes the migration (via `./equin build`).
 5. **Blog frontend** — lift `buildForest` into read-only-view (re-point pages/history), then
    `blog/site` list + post panes.
 6. **Demo v1** — `demos/theme-toy`.
@@ -186,7 +186,7 @@ Mirror the story/marker precedent byte-for-byte
 
 ## Verification
 
-- `./singularity build`, then `./singularity check` (registry sync, boundaries, lints).
+- `./equin build`, then `./equin check` (registry sync, boundaries, lints).
 - Open `http://<worktree>.localhost:9000/website`:
   - rail icon present; landing renders with fixed header/footer, no app sidebar; nav opens
     Downloads/Blog panes and browser back returns.

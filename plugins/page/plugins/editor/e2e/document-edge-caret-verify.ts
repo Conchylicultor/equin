@@ -12,7 +12,7 @@
 //     leaves the block list for the page title (the Pages app DOES pass
 //     `caretBefore`, so the terminal landing must not have stolen that hop).
 //
-// Usage: ./singularity run plugins/page/plugins/editor/e2e/document-edge-caret-verify.ts
+// Usage: ./equin run plugins/page/plugins/editor/e2e/document-edge-caret-verify.ts
 import {
   report,
   withBrowser,

@@ -196,7 +196,7 @@ directly measurable via A2's `physFootprintMb − residentMb` series.
 ## Verification
 
 - **Per-step verifies** listed inline above (schema tolerance, probe footprints, invariant suites, byte-identical jsonb).
-- **End-to-end:** `./singularity build`; `./singularity check`; run the A4 protocol — the exit test per the methodology: under the same induced pressure, main's lag quanta and `(physFootprint − resident)` squeeze must *shrink measurably* post-fixes vs the pre-fix baseline window, while the lean probe's floor is unchanged (proves we fixed the victim, not the pressure).
+- **End-to-end:** `./equin build`; `./equin check`; run the A4 protocol — the exit test per the methodology: under the same induced pressure, main's lag quanta and `(physFootprint − resident)` squeeze must *shrink measurably* post-fixes vs the pre-fix baseline window, while the lean probe's floor is unchanged (proves we fixed the victim, not the pressure).
 - **Living-doc duty:** update this doc + `research/perfs/CLAUDE.md` index paragraph with every verdict (✅/❌/🔬 per axis), same-turn.
 
 ## Altitude statement (methodology requirement)

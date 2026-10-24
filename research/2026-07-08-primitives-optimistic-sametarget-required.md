@@ -203,7 +203,7 @@ executes them harmlessly and `type-check` validates the `@ts-expect-error`s.)
   required with `isConfirmedBy` (not "opt-in"), and the "Without it the pass is
   conservative…" sentence is removed.
 - The autogen reference block in that CLAUDE.md and `docs/plugins-details.md`
-  regenerate on `./singularity build` (the `plugins-doc-in-sync` check).
+  regenerate on `./equin build` (the `plugins-doc-in-sync` check).
 
 ## Files to modify
 
@@ -219,7 +219,7 @@ No changes needed in any of the 4 consumers.
 
 1. `bun test plugins/primitives/plugins/optimistic-mutation/` — overlay logic +
    the adapted `confirmPass` calls stay green.
-2. `./singularity build` — runs `type-check`. Confirms:
+2. `./equin build` — runs `type-check`. Confirms:
    - the two paired consumers (page editor, config staging) still compile;
    - the two coarse consumers (queue) still compile;
    - the `@ts-expect-error` guards each consume a real error (no "unused

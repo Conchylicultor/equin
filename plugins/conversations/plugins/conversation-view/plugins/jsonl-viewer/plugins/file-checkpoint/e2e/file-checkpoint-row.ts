@@ -2,7 +2,7 @@
  * Verifies Claude Code's rewind checkpoints (file-history-delta) render as a
  * one-line "Checkpoint <path>" row rather than the unknown-event raw-JSON card.
  *
- *   ./singularity run plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-checkpoint/e2e/file-checkpoint-row.ts --conv <id> [--out /tmp/file-checkpoint]
+ *   ./equin run plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-checkpoint/e2e/file-checkpoint-row.ts --conv <id> [--out /tmp/file-checkpoint]
  */
 import {
   arg,

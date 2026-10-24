@@ -1,4 +1,4 @@
-# Input-keyed invalidation for the `./singularity check` pass-cache
+# Input-keyed invalidation for the `./equin check` pass-cache
 
 **Date:** 2026-07-17
 **Category:** global (checks infra + push/build flow + a repo-wide read-guard + an audit job)
@@ -16,7 +16,7 @@ checks cache-miss and re-run a full scan**, each re-doing O(repo) work regardles
 of whether the change could affect its verdict.
 
 The pain concentrates on `push`. The push flow rebases the branch onto a moved
-`main` before running `./singularity check --scope tree` on the post-rebase tree;
+`main` before running `./equin check --scope tree` on the post-rebase tree;
 any commit that landed on `main` since the last rebase — from *any* other agent,
 on *any* unrelated file — changes the tree object, so the rebased check run is a
 **guaranteed full cache miss**. Measured over 7 days of recorded profiles: median
@@ -279,8 +279,8 @@ soundness.
 
 ## Verification (end-to-end)
 
-1. **Force a HIT:** clean tree → `./singularity build` writes read-sets under
-   `~/.singularity/check-cache/`. Re-run `./singularity check` with no edits →
+1. **Force a HIT:** clean tree → `./equin build` writes read-sets under
+   `~/.singularity/check-cache/`. Re-run `./equin check` with no edits →
    migrated checks log `ok (cached)`; confirm **zero** `git grep -l` spawns for
    checks whose inputs didn't change (log the grep count).
 2. **Targeted invalidation:** add `new WebSocket(` in an allowed path, then a
@@ -302,7 +302,7 @@ soundness.
    drizzle-kit version in `bun.lock` → invalidation.
 8. **Push-flock win:** simulate a rebase that moves only unrelated files
    (touch files outside every migrated check's inputs) and run
-   `./singularity check --scope tree` → confirm the migrated checks HIT and the run
+   `./equin check --scope tree` → confirm the migrated checks HIT and the run
    is dominated only by genuinely-affected checks; compare wall-time to a
    `--no-cache` baseline.
 9. **Continuous audit:** the scheduled job re-runs sampled HIT checks with

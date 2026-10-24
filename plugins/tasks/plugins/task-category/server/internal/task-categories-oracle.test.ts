@@ -32,8 +32,8 @@
  * parses the compiled rows with its OLD row schema to the same values — the
  * wire row is byte-compatible, so the key keeps its name.
  *
- * Requires a running Postgres cluster (started by ./singularity build).
- * Run: `./singularity test plugins/tasks/plugins/task-category`.
+ * Requires a running Postgres cluster (started by ./equin build).
+ * Run: `./equin test plugins/tasks/plugins/task-category`.
  */
 
 import {

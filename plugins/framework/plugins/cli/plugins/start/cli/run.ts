@@ -106,7 +106,7 @@ async function startAsLoginService(
       // Registering is enough for the next login/boot; swapping the live
       // gateway restarts every backend, which only an explicit --force asks for.
       console.log(
-        `The running gateway (PID ${legacyPid}) was started before it was a ${manager} service. It keeps running now, and ${manager} starts it from the next ${loginService.startsAt} on. Run \`./singularity start --force\` to hand it to ${manager} now.`,
+        `The running gateway (PID ${legacyPid}) was started before it was a ${manager} service. It keeps running now, and ${manager} starts it from the next ${loginService.startsAt} on. Run \`./equin start --force\` to hand it to ${manager} now.`,
       );
       return;
     }
@@ -136,7 +136,7 @@ async function startAsLoginService(
 
 /**
  * Hosts without a service manager: the detached spawn. It does not survive a reboot —
- * run `./singularity start` again after one.
+ * run `./equin start` again after one.
  */
 async function startDetached(opts: Opts): Promise<void> {
   const existingPid = readPid();
@@ -168,7 +168,7 @@ async function startDetached(opts: Opts): Promise<void> {
   await awaitGatewayReady({ pid, port: DEFAULT_PORT });
   printRunning(`Gateway started (PID ${pid})`);
   console.log(
-    "  Not registered with a service manager on this OS: run `./singularity start` again after a reboot.",
+    "  Not registered with a service manager on this OS: run `./equin start` again after a reboot.",
   );
 }
 

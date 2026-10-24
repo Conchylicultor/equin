@@ -116,8 +116,8 @@ Changes in `plugins/infra/plugins/deps/plugins/updates`:
 
 ## Verification
 
-1. `./singularity build`. The migration for `tasks_ext_origin` is generated, and the checks pass (boundaries, `registrations-paired`, plugin docs).
-2. `./singularity test plugins/tasks/plugins/automations`: unit tests for:
+1. `./equin build`. The migration for `tasks_ext_origin` is generated, and the checks pass (boundaries, `registrations-paired`, plugin docs).
+2. `./equin test plugins/tasks/plugins/automations`: unit tests for:
    - settings resolution (config item over the defaults)
    - the dedupe query
    - `upgradeTaskDescription` with and without `autoPush`

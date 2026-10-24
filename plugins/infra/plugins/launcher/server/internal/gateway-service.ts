@@ -6,7 +6,7 @@ import type { gatewayLaunchSpec } from "./boot";
  *
  * One interface, one implementation per service manager: launchd on macOS
  * (`launchd-service.ts`), a systemd user unit on Linux (`systemd-service.ts`).
- * `./singularity start` / `stop` drive whichever this host has through it and
+ * `./equin start` / `stop` drive whichever this host has through it and
  * never name a manager, so a new one is a new implementation, not a new branch
  * in every command.
  *

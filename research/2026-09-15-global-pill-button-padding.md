@@ -119,10 +119,10 @@ paragraph), and a "done" line in `2026-09-15-global-button-density-padding.md`
 
 ## Verification
 
-1. `./singularity build` passes, including `css-vars-supplied`,
+1. `./equin build` passes, including `css-vars-supplied`,
    `app-css-utilities-in-sync`, `token-group-vars-in-sync`, type-check and eslint.
-2. `./singularity test plugins/primitives/plugins/css/plugins/ui-kit`.
-3. `./singularity run plugins/primitives/plugins/css/plugins/ui-kit/e2e/pill-padding-verify.ts`
+2. `./equin test plugins/primitives/plugins/css/plugins/ui-kit`.
+3. `./equin run plugins/primitives/plugins/css/plugins/ui-kit/e2e/pill-padding-verify.ts`
    — the padding relation in both theme scopes.
 4. **Website.** `apps/website/plugins/shell/e2e/site-chrome-verify.ts` checks the
    pill's padding is 18px, a quiet nav link's is 12px, and the nav words sit

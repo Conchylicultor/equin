@@ -127,11 +127,11 @@ Unified primitive: only `defineJob`. `ActionFactory`, `ActionRef`, `DefineAction
 
 - `plugins/jobs/server/index.ts` exports: `defineJob`, `getRegisteredJob`, types `JobFactory`, `JobCtx`, `RegisteredJob`. Default export: plugin definition with `onReady: startWorker`, `onShutdown: stopWorker`.
 - `plugins/events/server/index.ts` exports: `defineTriggerEvent`, `trigger`, `deleteTrigger`, `deleteTriggersFor`, related types. **Does not re-export `defineJob`** — users import jobs from `@plugins/infra/plugins/jobs/server` directly. One primitive, one source.
-- Creates DAG edge `events → jobs`. Acyclic (jobs has no events dependency). Passes `./singularity check --plugin-boundaries`.
+- Creates DAG edge `events → jobs`. Acyclic (jobs has no events dependency). Passes `./equin check --plugin-boundaries`.
 
 ## Step-by-Step Migration
 
-Each step leaves `./singularity build` green and runnable.
+Each step leaves `./equin build` green and runnable.
 
 ### Step 1 — Create `plugins/jobs/` skeleton (no worker yet)
 
@@ -144,7 +144,7 @@ Files modified:
 - `server/src/plugins.ts` — add `import jobsPlugin from "@plugins/infra/plugins/jobs/server"`, register **before** `eventsPlugin` in the array.
 - `web/src/plugins.ts` — no change (jobs has no web surface).
 
-Checkpoint: `./singularity build` passes. Jobs plugin exists but is dormant; no callers.
+Checkpoint: `./equin build` passes. Jobs plugin exists but is dormant; no callers.
 
 ### Step 2 — Move worker to jobs; re-point events at jobs's worker
 
@@ -164,7 +164,7 @@ Files modified:
 Files created:
 - `plugins/events/server/internal/dispatch-job.ts` — defines `eventsDispatchJob` via `defineJob` at module load. Imports `getRegisteredJob` from `@plugins/infra/plugins/jobs/server`. Contains the preservation-policy dispatcher. Imported by `events/server/index.ts` for its side effect (module-load registration).
 
-Checkpoint: `./singularity build` passes. `events-test` still works end-to-end; only the Graphile task identifier changed (`events.dispatch` → `jobs.run`).
+Checkpoint: `./equin build` passes. `events-test` still works end-to-end; only the Graphile task identifier changed (`events.dispatch` → `jobs.run`).
 
 Update in same step:
 - `plugins/events-test/server/internal/handle.ts` `handleWaitIdle`: SQL `task_identifier = 'events.dispatch'` → `task_identifier = 'jobs.run'`.
@@ -181,7 +181,7 @@ Files modified:
   - `logPing.deleteTargeting({ label })` → `deleteTriggersFor(logPing, { label })`.
 - `plugins/events-test/server/index.ts` — if the action file is imported for side effect, confirm import order.
 
-Checkpoint: `./singularity build` passes. All 8 existing `events-test` routes continue to function; trigger rows stored as `{ action_name: "events_test.log", action_config: { label } }` work because the dispatch job reads `jobName`/`jobWith` Drizzle properties that alias the same SQL columns.
+Checkpoint: `./equin build` passes. All 8 existing `events-test` routes continue to function; trigger rows stored as `{ action_name: "events_test.log", action_config: { label } }` work because the dispatch job reads `jobName`/`jobWith` Drizzle properties that alias the same SQL columns.
 
 ### Step 4 — Remove `defineAction` from events barrel
 
@@ -197,7 +197,7 @@ Files modified:
 Files deleted:
 - `plugins/events/server/internal/action.ts`.
 
-Checkpoint: `./singularity build` passes. `./singularity check --plugin-boundaries` passes.
+Checkpoint: `./equin build` passes. `./equin check --plugin-boundaries` passes.
 
 ### Step 5 — Add Layer 1 direct-enqueue test route
 
@@ -208,19 +208,19 @@ Files modified:
 - `plugins/events-test/server/internal/handle.ts` — handler reads `{ label }` from body, calls `logPing.enqueue({ label, userId: "direct", message: "enqueued" })`, returns 202. Caller waits for `/wait-idle` then reads `/log` to verify the entry landed.
 - `plugins/events-test/web/components/events-test-view.tsx` — add a "Direct enqueue" button alongside the existing Emit form (optional UI coverage).
 
-Checkpoint: `./singularity build` passes. The new route exercises jobs-layer enqueue → Graphile → `jobs.run` handler → `jobRegistry.get("events_test.log").run` → log write, with zero events-layer involvement.
+Checkpoint: `./equin build` passes. The new route exercises jobs-layer enqueue → Graphile → `jobs.run` handler → `jobRegistry.get("events_test.log").run` → log write, with zero events-layer involvement.
 
 ### Step 6 — Regenerate plugin docs
 
-`./singularity build` regenerates `docs/plugins.md` via the `plugins-doc-in-sync` check. Commit the regenerated doc as part of the final commit.
+`./equin build` regenerates `docs/plugins.md` via the `plugins-doc-in-sync` check. Commit the regenerated doc as part of the final commit.
 
 ## Verification
 
 Run in order after Step 5:
 
 ```bash
-./singularity build
-./singularity check
+./equin build
+./equin check
 ```
 
 Then exercise `events-test` from its UI pane (sidebar → Debug → Events Test):

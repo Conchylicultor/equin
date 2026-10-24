@@ -58,7 +58,7 @@ When the probe detects a waiting pattern:
 
 ## Verification
 
-1. `./singularity build`
+1. `./equin build`
 2. Find a conversation that's showing a question prompt in tmux but is marked as "working" in the UI
 3. Wait up to 5 seconds — the conversation should transition to "waiting"
 4. Answer the question in tmux — the conversation should transition back to "working"

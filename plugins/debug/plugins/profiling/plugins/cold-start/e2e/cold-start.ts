@@ -3,7 +3,7 @@
 // browser's boot trace. See this plugin's CLAUDE.md for what each number means.
 //
 // Usage:
-//   ./singularity run plugins/debug/plugins/profiling/plugins/cold-start/e2e/cold-start.ts \
+//   ./equin run plugins/debug/plugins/profiling/plugins/cold-start/e2e/cold-start.ts \
 //     [--iterations 5] [--path /agents] [--busy N] [--out /tmp/cold-start.json] \
 //     [--no-stop] [--timeout 120000] [--code-cache] [--cpu-profile] [--react-profile]
 //

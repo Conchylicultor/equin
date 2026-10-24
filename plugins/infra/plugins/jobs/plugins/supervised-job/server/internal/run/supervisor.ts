@@ -286,7 +286,7 @@ export async function reconcileSupervisedRuns(): Promise<void> {
       // other run, NOT through a bare `untrack`, and that distinction is the
       // whole point of this block.
       //
-      // **A stamped row is not a finished process.** `./singularity build`
+      // **A stamped row is not a finished process.** `./equin build`
       // closes its row after the health probe and then runs for another ~100s
       // of compose-serve tail (measured: 75.8s). Dropping it here on the
       // ledger's say-so stopped the tail mid-run — truncating the live log for
@@ -515,7 +515,7 @@ export interface StartedRun {
  * - **`detached: true`** puts the child in its own process group. The gateway
  *   hot-restarts a backend by signalling its whole process group, so a plain
  *   child shares that group and dies with its parent. That is the entire
- *   2026-08-28 deploy incident: an unrelated `./singularity build` of main
+ *   2026-08-28 deploy incident: an unrelated `./equin build` of main
  *   restarted the backend and took a running deploy with it, 0.9 s after spawn.
  * - **stdout and stderr both point at the SAME fd**, which is `2>&1` at the
  *   kernel level. Interleaving order is preserved; the per-line stdout/stderr

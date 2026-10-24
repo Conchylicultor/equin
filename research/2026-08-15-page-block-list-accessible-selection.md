@@ -168,9 +168,9 @@ Announcements (polite):
 
 ## Verification
 
-1. `./singularity build` (background) — must pass `eslint` (the new rule runs repo-wide)
+1. `./equin build` (background) — must pass `eslint` (the new rule runs repo-wide)
    and `type-check`.
-2. `./singularity test plugins/page/plugins/editor plugins/primitives/plugins/announce`.
+2. `./equin test plugins/page/plugins/editor plugins/primitives/plugins/announce`.
 3. Manual, at `http://att-1786829493-vjp5.localhost:9000/pages`: open a page, press
    Escape in a block, arrow up/down, Shift+arrow, Cmd+A, Escape. Inspect the live region
    in devtools (`[role="status"]`) and confirm the text updates on every step; confirm

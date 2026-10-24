@@ -89,7 +89,7 @@ const check: Check = {
           "invisible machine fact: mise resolves `latest` once, at install time, and nothing afterwards records " +
           "or rechecks which build that was. That is how this repo came to sit on 1.3.13 for four months. " +
           BACKGROUND,
-        hint: "Restore the committed mise.lock; move Bun only with `./singularity toolchain upgrade`.",
+        hint: "Restore the committed mise.lock; move Bun only with `./equin toolchain upgrade`.",
       };
     }
     if (Bun.version !== locked) {
@@ -98,7 +98,7 @@ const check: Check = {
         message: `mise.lock records bun ${locked}, but this process is running ${Bun.version}.`,
         hint:
           `Run \`mise install\` to get ${locked}. To move to another release, run ` +
-          "`./singularity toolchain upgrade`, so the committed lock keeps naming what runs.",
+          "`./equin toolchain upgrade`, so the committed lock keeps naming what runs.",
       };
     }
 
@@ -117,7 +117,7 @@ const check: Check = {
         ok: false,
         message: `${said}\n${BACKGROUND}`,
         hint:
-          "Move to a Bun that does not have it — 1.4.0 and later are clean — with `./singularity toolchain upgrade`. " +
+          "Move to a Bun that does not have it — 1.4.0 and later are clean — with `./equin toolchain upgrade`. " +
           "If the locked version is already 1.4.0 or later, this is a NEW regression upstream: stop, and report it.",
       };
     }
@@ -128,7 +128,7 @@ const check: Check = {
         message:
           `The fd double-close probe could not run (exit ${probe.exitCode}${probe.timedOut ? ", timed out" : ""}).` +
           (said ? `\n${said}` : ""),
-        hint: `Run it by hand to see why: \`./singularity run ${PROBE}\` from the check plugin's directory.`,
+        hint: `Run it by hand to see why: \`./equin run ${PROBE}\` from the check plugin's directory.`,
       };
     }
     return { ok: true };

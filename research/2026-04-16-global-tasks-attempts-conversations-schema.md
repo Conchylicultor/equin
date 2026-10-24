@@ -21,7 +21,7 @@ rely on manual propagation that does not actually happen:
   specific Claude session that happened to be alive when it
   happened." A future attempt with three collaborating conversations
   (implementer + reviewer + summarizer) would arbitrarily attribute
-  the push to whichever conversation ran `./singularity push`.
+  the push to whichever conversation ran `./equin push`.
 
 Responsibilities, clean split:
 
@@ -318,7 +318,7 @@ the conversation any more — those concepts moved.
 
 ### Attempt completion
 
-A successful `./singularity push` that merges into main sets
+A successful `./equin push` that merges into main sets
 `_attempts.completedAt` atomically with the `pushes` row insert:
 
 ```
@@ -436,7 +436,7 @@ UPDATE pushes p
 - Drop `pushes` FK on `conversationId` (it becomes a soft reference).
 - `_tasks`: drop `status`, add `cancelled`.
 
-All three steps land in one `./singularity build`. Drizzle-kit
+All three steps land in one `./equin build`. Drizzle-kit
 generates steps 1 and 3; step 2 is hand-edited into the generated
 migration file before commit (see `server/src/db/migrations/`
 existing style).
@@ -507,7 +507,7 @@ To create:
 
 ## Verification
 
-End-to-end smoke test after `./singularity build`:
+End-to-end smoke test after `./equin build`:
 
 1. **Fresh task with attempt and conversation.** POST a task, POST a
    conversation with `taskId`. Observe `tasks.status = 'in_progress'`
@@ -522,7 +522,7 @@ End-to-end smoke test after `./singularity build`:
    explicit write. Use `/api/resources/_debug` to confirm the
    cascade tree fired once per resource.
 4. **Push completion.** From inside an agent worktree, run
-   `./singularity push`. Confirm: `pushes` row with `attemptId`
+   `./equin push`. Confirm: `pushes` row with `attemptId`
    populated, `_attempts.completedAt` set, `tasks.status` becomes
    `completed`, no write ever touched `tasks.status` directly.
 5. **Cancel a task.** PATCH `cancelled = true`. Observe

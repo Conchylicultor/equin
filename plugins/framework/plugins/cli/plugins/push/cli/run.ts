@@ -127,7 +127,7 @@ async function execPublish(
   const reprobed = await recordPushRejection(root);
   if (reprobed.kind === "local") {
     console.error(describePublishTarget(reprobed));
-    console.error("Re-run ./singularity push to land the work on local main.");
+    console.error("Re-run ./equin push to land the work on local main.");
   } else {
     // The probe and reality disagree: the remote accepts a write probe but
     // refused this push. That is a fact about THIS push — a protected branch,
@@ -726,7 +726,7 @@ const pushAction: CliAction<
           const ok = await runRebasedChecks(fromMainRoot, grant, profiler);
           if (!ok) {
             console.error(
-              "Checks failed after rebase. Fix the issue and re-run ./singularity push " +
+              "Checks failed after rebase. Fix the issue and re-run ./equin push " +
                 "(your commit is still on HEAD; use `git reset --soft HEAD~1` to unstage it if needed).\n\n" +
                 "If the failure is unrelated to your commits (e.g. a pre-existing issue on main), " +
                 "try rebasing onto the latest main (`git fetch origin main && git rebase origin/main`) and re-running — the issue may already be fixed upstream.\n\n" +
@@ -825,7 +825,7 @@ const pushAction: CliAction<
         //     an update branch those include commits that belong to the
         //     upstream repository. Measured: after such a rebase, upstream's
         //     own sha was no longer an ancestor of main, so the next
-        //     `./singularity upstream merge` computed its merge base BELOW the
+        //     `./equin upstream merge` computed its merge base BELOW the
         //     commits already merged, re-presented them, and conflicted on a
         //     file nobody had touched twice. Landing by fast-forward keeps
         //     upstream's commits under the identities upstream gave them, and
@@ -874,7 +874,7 @@ const pushAction: CliAction<
               `To resolve, in this worktree:`,
               `  1. git merge main        (the one sanctioned merge — do NOT rebase here)`,
               `  2. Resolve conflicts, then 'git add <files>' and 'git commit'`,
-              `  3. Re-run ./singularity push`,
+              `  3. Re-run ./equin push`,
             ].join("\n"),
           );
           profiler.complete("failed_rebase");
@@ -912,7 +912,7 @@ const pushAction: CliAction<
                 `  2. git rebase origin/main     (NEVER 'git merge' — push re-rebases and a merge commit produces churn)`,
                 `  3. Resolve conflicts, then 'git add <files>' and 'git rebase --continue'`,
                 `     (or 'git rebase --abort' to bail out)`,
-                `  4. Re-run ./singularity push`,
+                `  4. Re-run ./equin push`,
                 ``,
                 `If main's shape has diverged so much your commit no longer applies, re-apply your`,
                 `changes by hand onto a fresh worktree branched from origin/main. Never 'git reset'`,
@@ -968,7 +968,7 @@ const pushAction: CliAction<
         if (!ok) {
           console.error(
             `Checks failed after rebasing ${branch} onto main. ` +
-              `Fix the issue and re-run ./singularity push ` +
+              `Fix the issue and re-run ./equin push ` +
               `(your commits are on ${branch}; use \`git reset --soft HEAD~1\` to unstage the last one if needed).\n\n` +
               `If the failure is unrelated to your commits (e.g. a pre-existing issue on main), ` +
               `try rebasing onto the latest main (\`git fetch origin main && git rebase origin/main\`) and re-running — the issue may already be fixed upstream.\n\n` +

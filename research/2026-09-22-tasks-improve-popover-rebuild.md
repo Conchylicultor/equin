@@ -158,7 +158,7 @@ Reused as-is: `ChainConnector`'s link state (`CardDraft.linkedToPrev`),
 
 ## Verification
 
-1. `./singularity build` (backgrounded), then confirm `build-status.json`
+1. `./equin build` (backgrounded), then confirm `build-status.json`
    reports `status: ok`.
 2. Screenshots of the real popover next to the mock: `screenshot.ts --path /tasks
    --click "Improve"`, plus a two-task chain.
@@ -178,4 +178,4 @@ Reused as-is: `ChainConnector`'s link state (`CardDraft.linkedToPrev`),
 4. File a real chain from the popover with one link toggled off. Confirm in the
    task list (or with `query_db` on `task_dependencies`) that the unlinked task
    has no edge to the task above it, and the linked one does.
-5. `./singularity check`.
+5. `./equin check`.

@@ -66,7 +66,7 @@ const check: Check = {
       return {
         ok: false,
         message: problems.join("\n"),
-        hint: "Move a tool only with `./singularity toolchain upgrade`; floors and holds live in plugins/toolchain/core.",
+        hint: "Move a tool only with `./equin toolchain upgrade`; floors and holds live in plugins/toolchain/core.",
       };
     }
 

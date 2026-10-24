@@ -172,7 +172,7 @@ reports get `taskId = null` until Investigate runs. No schema change, no backfil
 
 ## Verification (end-to-end)
 
-1. `./singularity build`, then trigger a synthetic report — easiest is the
+1. `./equin build`, then trigger a synthetic report — easiest is the
    **live-state-churn emit** debug tool
    (`plugins/debug/plugins/live-state-churn/plugins/emit/`), or force a `crash`.
 2. **No auto-task:** `query_db` the `reports` row (`task_id IS NULL`) and confirm no
@@ -184,7 +184,7 @@ reports get `taskId = null` until Investigate runs. No schema change, no backfil
    `spec.renderTask`), `report.taskId` persisted (pane flips to the task link via
    live-state), and a conversation launches/opens.
 6. Re-click Investigate on the same report → dedup: same taskId, no second task.
-7. `./singularity check` passes (`no-cycles`, `no-hand-built-link-to`,
+7. `./equin check` passes (`no-cycles`, `no-hand-built-link-to`,
    `plugins-doc-in-sync`).
 
 ## Critical files

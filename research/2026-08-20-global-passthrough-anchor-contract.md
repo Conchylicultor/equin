@@ -168,20 +168,20 @@ is meant to protect.
 
 ## Verification
 
-- `./singularity check passthrough:no-anonymous-passthrough` is not a thing —
-  the rules run inside `type-check`; `./singularity check type-check` is the
-  gate, and `./singularity check` runs everything including
+- `./equin check passthrough:no-anonymous-passthrough` is not a thing —
+  the rules run inside `type-check`; `./equin check type-check` is the
+  gate, and `./equin check` runs everything including
   `plugins-registry-in-sync`, `plugins-doc-in-sync`, `plugins-have-claudemd`.
-- `./singularity test plugins/primitives/plugins/passthrough` — RuleTester
+- `./equin test plugins/primitives/plugins/passthrough` — RuleTester
   cases, including the literal historical bug (`ref` on an outer wrapper,
   `{...rest}` on the inner element) as an `invalid` case, and `Row`'s
   `splitPassthrough` shape as a `valid` one.
-- `./singularity test plugins/primitives/plugins/css/plugins/row` — the
+- `./equin test plugins/primitives/plugins/css/plugins/row` — the
   existing `row.test.tsx` must still pass after the `splitPassthrough`
   migration; it already pins the routing behaviour.
 - A new jsdom test that `<Badge ref={r}>` and `<ToggleChip ref={r}>` land the
   node (they never forwarded a typed ref before).
-- `./singularity build`, then eyeball a chip-heavy surface
+- `./equin build`, then eyeball a chip-heavy surface
   (`http://<worktree>.localhost:9000/settings` appearance pane) for unchanged
   rendering.
 

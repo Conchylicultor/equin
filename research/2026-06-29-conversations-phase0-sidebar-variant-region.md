@@ -40,7 +40,7 @@ stays private and will be rebuilt, not shared.
 - Launch button + variant picker render as shared chrome in the mount point;
   the picker shows a single `Classic` option (proves the wiring is live).
 - `applyReorder` (+ `ReorderVars`) is exported from the queue web barrel.
-- `./singularity build` succeeds; the conversation list is pixel-identical.
+- `./equin build` succeeds; the conversation list is pixel-identical.
 
 ## Plugin layout (new)
 
@@ -239,7 +239,7 @@ export type { ReorderVars } from "./components/apply-reorder";
 
 ### 7. Build / registry / docs
 
-Run `./singularity build` — it regenerates the plugin registry roots
+Run `./equin build` — it regenerates the plugin registry roots
 (`web.generated.ts` / `server.generated.ts`) from the filesystem and the
 `plugins-*-doc-in-sync` docs. Do not hand-edit those.
 
@@ -259,9 +259,9 @@ Run `./singularity build` — it regenerates the plugin registry roots
 
 ## Verification
 
-1. `./singularity build` (from the worktree) — must succeed; regenerates registry
+1. `./equin build` (from the worktree) — must succeed; regenerates registry
    + docs.
-2. `./singularity check plugin-boundaries` and `./singularity check` — confirm no
+2. `./equin check plugin-boundaries` and `./equin check` — confirm no
    cycle (`sidebar-region` ↮ `conversations-view`), barrels in sync, no boundary
    violations.
 3. Open `http://<worktree>.localhost:9000` → agent-manager sidebar:

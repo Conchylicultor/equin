@@ -22,7 +22,7 @@ starter's environment to backends. Three loose ends remain.
    arrives in the environment.
 
    **Transition constraint.** The Go gateway is rebuilt only on a manual
-   `./singularity start`. The running gateway (PID 59982, started 14:10) is
+   `./equin start`. The running gateway (PID 59982, started 14:10) is
    still the binary from *before* the declared-environment change. And
    worktrees that are not rebased run backend code that reads `SOCKET_PATH`
    from the environment only.
@@ -74,7 +74,7 @@ spec field can state what that checkout's backend accepts.
     reads `--socket <path>` from `process.argv`. A flag with no value throws. If
     the flag is absent it falls back to `SOCKET_PATH` from the environment and
     logs one warning: *the gateway or this spec predates `--socket`; rebuild,
-    and restart the gateway with `./singularity start`*. If neither is set, it
+    and restart the gateway with `./equin start`*. If neither is set, it
     throws. The fallback is the only place in TypeScript allowed to read
     `SOCKET_PATH`. It records the path.
   - `servingSocketPath()` returns the recorded path, and throws if nothing
@@ -194,15 +194,15 @@ wrong side of the boundary:
    absent and unknown, and assert that `--socket` and `SOCKET_PATH` never both
    appear. Update the docs.
 5. **The `launcher:per-process-env-on-argv` check.**
-6. **`./singularity build`** (in the background).
+6. **`./equin build`** (in the background).
 7. **Gateway restart and verification.** Only the user runs this step, or
    asks the agent to run it.
 
 ## Verification
 
 - `go test ./...` in `gateway/`, and
-  `./singularity test plugins/infra/plugins/launcher plugins/infra/plugins/runtime-identity plugins/infra/plugins/claude-cli`.
-  Then `./singularity check` passes.
+  `./equin test plugins/infra/plugins/launcher plugins/infra/plugins/runtime-identity plugins/infra/plugins/claude-cli`.
+  Then `./equin check` passes.
 - **Negative probes:**
   - add a throwaway `process.env.SOCKET_PATH` read in some plugin and confirm
     `launcher:per-process-env-on-argv` names it;

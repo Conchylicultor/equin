@@ -112,10 +112,10 @@ delete `.../internal/use-active-view.ts`, `view-core/CLAUDE.md`.
 
 ## Verification
 
-1. `./singularity build` — regenerates the plugin registry + autogen doc blocks;
+1. `./equin build` — regenerates the plugin registry + autogen doc blocks;
    confirms the new `view-core → view-switcher` edge compiles and
    `plugins-doc-in-sync` / `plugins-registry-in-sync` stay green.
-2. `./singularity check` — `type-check`, `boundaries` (the new edge is legal, no
+2. `./equin check` — `type-check`, `boundaries` (the new edge is legal, no
    re-export rule tripped), `plugins-doc-in-sync`.
 3. Manual, via Playwright on `http://<worktree>.localhost:9000`:
    - **conversations sidebar** — the Queue/Grouped/History switcher renders the

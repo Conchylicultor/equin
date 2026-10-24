@@ -103,11 +103,11 @@ Consumers do not change: the global action bar keeps passing children as before.
 
 ## Verification
 
-1. `./singularity test plugins/primitives/plugins/css/plugins/toggle-chip plugins/primitives/plugins/overlay/plugins/floating-action`
-2. `./singularity build` (runs checks and type-check).
+1. `./equin test plugins/primitives/plugins/css/plugins/toggle-chip plugins/primitives/plugins/overlay/plugins/floating-action`
+2. `./equin build` (runs checks and type-check).
 3. Re-run the per-frame hit-test log above against my build: `?` must be inert/unrevealed for
    every frame where it isn't at rest.
-4. `./singularity run plugins/shell/plugins/global-action-bar/e2e/solo-safe-area.ts` and
-   `./singularity run plugins/hints/e2e/first-launch.ts`, with the first-launch one run several
+4. `./equin run plugins/shell/plugins/global-action-bar/e2e/solo-safe-area.ts` and
+   `./equin run plugins/hints/e2e/first-launch.ts`, with the first-launch one run several
    times in a row (the failure was intermittent).
 5. `browser_find "radio"` in the View options popover shows "Docked …" / "Fullscreen (solo)" names.

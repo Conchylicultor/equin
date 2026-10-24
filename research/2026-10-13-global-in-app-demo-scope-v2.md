@@ -313,9 +313,9 @@ plugins/
 
 ## Verification
 
-- `./singularity test plugins/framework/plugins/resource-runtime plugins/framework/plugins/server-core`:
+- `./equin test plugins/framework/plugins/resource-runtime plugins/framework/plugins/server-core`:
   the existing suites pass unchanged after the host-agnostic edits and the router extraction.
-- `./singularity test plugins/framework/plugins/browser-server plugins/demo plugins/primitives/plugins/live-state`:
+- `./equin test plugins/framework/plugins/browser-server plugins/demo plugins/primitives/plugins/live-state`:
   - a jsdom test mounts a `DemoScope` next to the page pipeline subscribing the same key and
     asserts no crosstalk;
   - a browser-server test drives the real `NotificationsClient` against `createBrowserServer`
@@ -323,7 +323,7 @@ plugins/
     reopen, `demo-missing` → `loader-failed` (and never a contract mismatch), a contributed
     `implement` route answering, an unmatched POST → 409, and pack parse failure naming the
     key.
-- `./singularity build`, then
+- `./equin build`, then
   `screenshot.ts --path /website --viewport 1440x2400` shows the band with the conversation and
   sidebar from the pack, and no `demo-missing` error.
   - The host page around it still renders real data.
@@ -333,4 +333,4 @@ plugins/
   socket.
 - Click a write affordance (Close conversation in the sidebar): toast, and no request to the
   real server (gateway access log).
-- `./singularity check`.
+- `./equin check`.

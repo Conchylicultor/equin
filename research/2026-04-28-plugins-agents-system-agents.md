@@ -115,12 +115,12 @@ The two detail panes are siblings under `agentsRootPane`, matching the existing 
 
 ## Verification
 
-1. `./singularity build` from this worktree; open `http://<worktree>.localhost:9000/agents`.
+1. `./equin build` from this worktree; open `http://<worktree>.localhost:9000/agents`.
 2. With no consumers wired up: System folder is **not** rendered. User-agent flow is unchanged (create/edit/launch still works at `/agents/:id`).
 3. Land a temporary throwaway contribution in the dev branch (or a tiny test plugin under `plugins/agents/plugins/_demo/`) that calls `Agents.SystemAgent(defineSystemAgent({...}))` with a fake descriptor:
    - With `component`: system folder appears above user tree, collapsible. Clicking the row navigates to `/agents/system/<id>` and renders the stub component.
    - Without `component`: same row renders the fallback `<SystemAgentDetail/>`. Remove before merging.
-4. `./singularity check` passes (plugin boundaries, migrations-in-sync — should be a no-op since no schema change).
+4. `./equin check` passes (plugin boundaries, migrations-in-sync — should be a no-op since no schema change).
 
 ## Critical files referenced
 

@@ -262,7 +262,7 @@ Extend `plugins/framework/plugins/tooling/plugins/checks/plugins/keyed-resource-
 (its `markerCallSpans` / `parseStringField` machinery already walks every `defineResource` call
 and skips test paths): a keyed `defineResource` declaring `identityTable` must also declare
 exactly one of the three. No new lint rule — the check plugin *is* this repo's mechanism for
-declaration shapes, and it already runs inside `./singularity build`.
+declaration shapes, and it already runs inside `./equin build`.
 
 **No docgen change.** `resource-vocabulary` classifies *client descriptor factories* by return
 type (`vocabulary.ts:125–164`); `rowIdentity` is a server-opts field on an existing
@@ -471,7 +471,7 @@ Plus a `// @ts-expect-error` fixture proving the third `ScopePolicy` arm rejects
 
 ### Step 3 — browser e2e on the real change
 
-`./singularity build` (background; the verdict is the receipt at
+`./equin build` (background; the verdict is the receipt at
 `~/.singularity/worktrees/<wt>/build-status.json`), then the same seven scripts one at a time
 against this worktree's own deploy, diffed against the Step-0 table. The discriminating property:
 *two clients on the same block both receive the push, while a different block's write reaches
@@ -545,7 +545,7 @@ merely observed passing:
   registration-guard fixtures, which fail if the rejection ever stops happening.
 - **The check catches what the type cannot see through** (the two `as … & ScopePolicy` compiler
   casts): proven by removing `rowIdentity` from `editor-collab` and watching
-  `./singularity check keyed-resource-scope` FAIL with the file and line, then restoring.
+  `./equin check keyed-resource-scope` FAIL with the file and line, then restoring.
 - **No behavioural regression in a real browser**: eight CRDT e2e scripts against the deployed
   build — fanout 13/13, offline 10/10, newblock 6/6, typing 4/4, reopen 7/7, split-merge 17/17,
   multitab 9/9. `crdt-adjacent-surfaces` fails 2/5, identically to main, from its own regex bug

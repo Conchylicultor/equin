@@ -11,8 +11,8 @@
  * quietest of three 1s windows of DOM mutations under the grid), and no page
  * error.
  *
- * Manual only. Run after `./singularity build`:
- *   ./singularity run plugins/primitives/plugins/data-view/plugins/table/e2e/tree-consumers.ts \
+ * Manual only. Run after `./equin build`:
+ *   ./equin run plugins/primitives/plugins/data-view/plugins/table/e2e/tree-consumers.ts \
  *     [--task <id>] [--conversation <id>] [--color-scheme light|dark] [--out /tmp/tree-consumers]
  */
 import type { Page } from "playwright";

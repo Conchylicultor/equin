@@ -4,7 +4,7 @@
 // (main, central, each worktree) and Postgres / PgBouncer.
 // It used to start from whatever its STARTER happened to carry. The launcher
 // spawned the gateway with `{ ...process.env }`, and the gateway handed every
-// child its own `os.Environ()` plus a few additions. So `./singularity start`
+// child its own `os.Environ()` plus a few additions. So `./equin start`
 // run from an agent shell gave every backend on the host that shell's
 // SINGULARITY_CONVERSATION_ID and its CLAUDE_* session
 // variables (observed 2026-09-15). Every op-log record and every commit a
@@ -241,7 +241,7 @@ export function miseShimsDir(
  * A shell with mise activated does not put mise's shims on PATH and leave it
  * there — it puts the RESOLVED directory of each tool version in front of them.
  * That is right for a shell, which is re-activated per directory, and wrong for
- * the runtime tree, which is one long-lived daemon: `./singularity start`
+ * the runtime tree, which is one long-lived daemon: `./equin start`
  * snapshots the starter's PATH into the gateway, and every backend it ever
  * spawns resolves `bun` against that snapshot. So the version baked into the
  * snapshot outlives any later change to `mise.lock`.

@@ -170,7 +170,7 @@ mistaken for having addressed the emission rate.
 **The concern (verified in code).** `workerDemotion()`
 (`plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/check/index.ts:57`)
 gates purely on `branch === "main"` → returns `backgroundArgv` (darwinbg, E-cores)
-for **every** non-main branch. A `./singularity push` runs its checks from an
+for **every** non-main branch. A `./equin push` runs its checks from an
 agent worktree on a non-main branch (`push.ts` → `runChecksUnderPushSlot` →
 `runChecks`), so **push-time type-check workers now run demoted on E-cores while
 the user is actively waiting on the push**. This conflates two different
@@ -179,8 +179,8 @@ demote); a *push* is user-waited even on a non-main branch.
 
 **Step 1 — Measure (do this first, decide from data).** On this quiet host
 (load ~10), quantify the E-core penalty on the type-check itself:
-- Warm the caches (run `./singularity build` once), then time the standalone check
-  cold-ish and warm: `time ./singularity check type-check` on this (non-main)
+- Warm the caches (run `./equin build` once), then time the standalone check
+  cold-ish and warm: `time ./equin check type-check` on this (non-main)
   branch → workers run **demoted**.
 - Compare against an **undemoted** run of the same target. Cleanest isolation
   without shipping code: temporarily measure the worker under both argv forms —
@@ -241,8 +241,8 @@ subprocess spawn — near `runChecksSubprocess`).
 
 ## Verification
 
-1. **Build & checks:** `./singularity build` (from this worktree), then
-   `./singularity check` — all checks green (type-check, plugin-boundaries,
+1. **Build & checks:** `./equin build` (from this worktree), then
+   `./equin check` — all checks green (type-check, plugin-boundaries,
    promise-safety, etc.). The rotation change is server code inside an existing
    primitive; no schema/migration.
 2. **WS idleTimeout:** confirm the app serves normally at

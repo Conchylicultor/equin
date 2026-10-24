@@ -90,7 +90,7 @@ queue) use them and ignore `rank`.
 
 - **`web/host.ts`** (new) — `export const SidebarDataView = defineTabbedView<ConversationSidebarProps>("conversations-sidebar-dataview")` (`ViewProps = ConversationSidebarProps`; `{ View, Host }`). Mirrors `ConversationsView` in `conversations-view/web/slots.ts`.
 - **`web/index.ts`** — register **one** `SidebarRegion.Variant({ id: "dataview", label: "DataView", match: "dataview", component: (p) => <SidebarDataView.Host {...p} className="h-full" /> })` (the `classic-body.tsx` pattern); export `SidebarDataView` for sub-plugins to contribute into.
-- **`plugins/history/web/**`** (moved) — relocate `sidebar-history.tsx` here; `web/index.ts` contributes `SidebarDataView.View({ id: "history", title: "History", order: 10, component: SidebarDataViewBody })` and keeps `HistoryItemActions({ id: "close", … })`. Moving the `defineDataView("conversations-sidebar-history")` marker changes the codegen `pluginId` → the config file path moves; `git mv` the committed `config/conversations/conversations-view/data-view/conversations-sidebar-history.jsonc` (+ `.origin.jsonc`) to the new derived path (`…/data-view/history/…`) and re-run `./singularity build`.
+- **`plugins/history/web/**`** (moved) — relocate `sidebar-history.tsx` here; `web/index.ts` contributes `SidebarDataView.View({ id: "history", title: "History", order: 10, component: SidebarDataViewBody })` and keeps `HistoryItemActions({ id: "close", … })`. Moving the `defineDataView("conversations-sidebar-history")` marker changes the codegen `pluginId` → the config file path moves; `git mv` the committed `config/conversations/conversations-view/data-view/conversations-sidebar-history.jsonc` (+ `.origin.jsonc`) to the new derived path (`…/data-view/history/…`) and re-run `./equin build`.
 - **`plugins/queue/web/**`** (new) — the Queue DataView (below). `web/index.ts` contributes `SidebarDataView.View({ id: "queue", title: "Queue", icon: MdLowPriority, order: 5, component: SidebarQueueBody })` + its item-action contributions.
 
 Sub-plugin → umbrella (`@plugins/…/data-view/web`) is the legal parent-ward edge
@@ -154,7 +154,7 @@ new generic flag — deferred, noted below).
 { "views": [ { "name": "Queue", "view": { "type": "list", "groupBy": "section" } } ] }
 ```
 
-(`./singularity build` writes the `// @hash` + `.origin.jsonc`; the
+(`./equin build` writes the `// @hash` + `.origin.jsonc`; the
 `data-view:configs-authored` check requires the file to exist.)
 
 ### `<DataView>` wiring (`SidebarQueueBody`)
@@ -213,7 +213,7 @@ get only `{ row, hasChildren }`):
 
 ## Verification
 
-1. `./singularity build` (regenerates registry, data-view codegen, migrations; runs the `data-view:configs-authored` + `plugins-*-in-sync` checks). Open `http://<worktree>.localhost:9000`.
+1. `./equin build` (regenerates registry, data-view codegen, migrations; runs the `data-view:configs-authored` + `plugins-*-in-sync` checks). Open `http://<worktree>.localhost:9000`.
 2. In the sidebar picker, flip **classic → dataview**. Confirm a **Queue** tab appears next to History, with sections in order (Current, Queue, Working, Unranked, Disconnected, Done), task-groups collapsed to one row + `×N`, and the pinned conversation in **Current**.
 3. Drive with `e2e/screenshot.mjs`: drag a Queue row before/after another (capture before/after), click promote / step-down / demote / add-to-queue, close a conversation. Confirm each mutates and the list reconciles.
 4. **Same-DB parity**: with both variants against the same worktree DB, toggle classic ↔ dataview and confirm identical data + that mutations from either write identical rows — `query_db` on `conversations_ext_queue` (ranks; whole task-group shares one rank after a drag) and `queue_state` (pin). A drag on a task-group member should reseat every sibling to the same rank in both variants.

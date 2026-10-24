@@ -101,7 +101,7 @@ No cross-worktree emission is needed.
 
 - Add `triggerResourcePush` to the destructure of `runtime` (line ~237) and export
   it, mirroring `loadResourceByKey`. Update the CLAUDE.md "Exports" block via the
-  doc-in-sync regen (`./singularity build`).
+  doc-in-sync regen (`./equin build`).
 
 > The central runtime (`framework/central-core`) consumes the same
 > `createResourceRuntime`; the new method appears there too at no cost and is
@@ -140,7 +140,7 @@ plugins/debug/plugins/live-state-churn/
   `plugins/history` / `plugins/search`).
 - Internal relative imports inside the moved files are unaffected (same relative
   layout). There are no cross-plugin importers to update.
-- `./singularity build` regenerates the plugin registry from the filesystem.
+- `./equin build` regenerates the plugin registry from the filesystem.
 
 ---
 
@@ -290,7 +290,7 @@ CLI: `bun e2e/live-state-churn.mjs --url http://<wt>.localhost:9000/<route> --ke
 
 ## Verification
 
-1. `./singularity build` (regenerates migrations/registry/docs; runs checks incl.
+1. `./equin build` (regenerates migrations/registry/docs; runs checks incl.
    `plugin-boundaries`, `type-check`, `plugins-doc-in-sync`).
 2. Open `http://<wt>.localhost:9000` → Debug → **Live-State Emit**. Pick a keyed
    resource that's on-screen (e.g. the tasks list), set rate 10/s, Start.

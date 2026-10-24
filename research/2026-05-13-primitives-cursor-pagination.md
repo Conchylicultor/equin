@@ -125,5 +125,5 @@ const { items: paginatedItems, hasNextPage, isFetchingNextPage, sentinelRef } =
 3. Scroll History tab with 30+ gone conversations — pages load as sentinel enters viewport
 4. Scroll Grouped tab — same behavior, items append below recentGone
 5. Mid-scroll, trigger a WS push (close a conversation) — paginated chain doesn't reset
-6. `./singularity check` passes
-7. `./singularity build` succeeds and both views render correctly
+6. `./equin check` passes
+7. `./equin build` succeeds and both views render correctly

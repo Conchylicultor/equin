@@ -1,3 +1,5 @@
+import { CLI_NAME_PATTERN } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
+
 /**
  * Which tool calls drive a browser and so may have a recording: THE one
  * classification, read by the conversation view (which calls get a footer and
@@ -14,7 +16,9 @@ export const RECORDED_BROWSER_TOOLS: ReadonlySet<string> = new Set([
 ]);
 
 /** A Bash command running a repo e2e script through the harness. */
-const E2E_RUN_RE = /\bsingularity\s+run\s+\S*\/e2e\/\S+\.ts\b/;
+const E2E_RUN_RE = new RegExp(
+  String.raw`\b${CLI_NAME_PATTERN}\s+run\s+\S*/e2e/\S+\.ts\b`,
+);
 
 /** `mcp__<server>__<tool>`, the name Claude Code gives an MCP tool call. */
 const MCP_TOOL_RE = /^mcp__.+?__([a-z_]+)$/;

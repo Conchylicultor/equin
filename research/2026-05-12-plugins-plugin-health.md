@@ -161,7 +161,7 @@ export default {
 } satisfies ServerPluginDefinition;
 ```
 
-Both registries (`server/src/plugins.generated.ts`, `web/src/plugins.generated.ts`) auto-regenerate on `./singularity build`.
+Both registries (`server/src/plugins.generated.ts`, `web/src/plugins.generated.ts`) auto-regenerate on `./equin build`.
 
 ## Phase 5: Shared Types
 
@@ -247,7 +247,7 @@ Uses `Section` wrapper from `@plugins/plugin-meta/plugins/plugin-view/web`.
 
 ## Verification
 
-1. `./singularity build` — generates migration, no crashes
+1. `./equin build` — generates migration, no crashes
 2. Call `propose_task` via MCP from a conversation: `{ pluginId: "tasks", axis: "test-review", commitHash: "<HEAD>", title: "Test finding" }`
 3. `SELECT * FROM plugin_health_reviews` — one row
 4. `SELECT * FROM tasks_ext_health_review` — one row linking to the new task

@@ -65,7 +65,7 @@ Keeps `_tasks` clean, matches user's choice, and lets the agents plugin own its 
 
 ### Migrations
 
-`./singularity build` regenerates them from `schema.ts`. Single new migration: create both tables + the `agents_v` view.
+`./equin build` regenerates them from `schema.ts`. Single new migration: create both tables + the `agents_v` view.
 
 ## Server
 
@@ -133,7 +133,7 @@ Cross-plugin imports via `api.ts` (conforms to the rule in `server/CLAUDE.md`): 
 - Web plugin registry (wherever `tasksPlugin` is imported) to also import `agentsPlugin`.
 - Server plugin registry similarly.
 - `docs/plugins.md` — add the `agents` entry.
-- A generated drizzle migration under `server/src/db/migrations/` (created by `./singularity build`, never by hand).
+- A generated drizzle migration under `server/src/db/migrations/` (created by `./equin build`, never by hand).
 
 **Reused (no changes needed):**
 - `plugins/conversations/server/internal/lifecycle.ts:33` — `createConversation`.
@@ -143,7 +143,7 @@ Cross-plugin imports via `api.ts` (conforms to the rule in `server/CLAUDE.md`): 
 
 ## Verification
 
-1. `./singularity build` — check a new migration file appears, server starts clean, `./singularity check --migrations-in-sync` passes.
+1. `./equin build` — check a new migration file appears, server starts clean, `./equin check --migrations-in-sync` passes.
 2. Open `http://<worktree>.localhost:9000/agents` — sidebar entry visible, page loads.
 3. Create a folder "Research", a child agent "Summarize PRs" with a prompt, save.
 4. Click Launch — a row appears in the launches list; the right pane opens the new conversation; the tmux session starts and picks up the prompt. Verify the task `Agent-Summarize PRs-…` is visible under Tasks → "Agents" meta root.

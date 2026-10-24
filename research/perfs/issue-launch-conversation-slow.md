@@ -116,7 +116,7 @@ this.
   of the ~3.8 s before deciding if it matters.
 - ❌ **DB fork on the critical path** — refuted: enqueued as a durable job, runs off-path
   (CLAUDE.md + `fork-job.ts` + code order confirm).
-- ❌ **`./singularity build` / `bun install` on the launch path** — refuted: not present anywhere
+- ❌ **`./equin build` / `bun install` on the launch path** — refuted: not present anywhere
   in the flow (no build step; `node_modules` not created per launch).
 - ❌ **Claude CLI boot blocking the response** — refuted: `tmux new-session -d` detaches; the
   request does not wait for `claude` to start.
@@ -202,7 +202,7 @@ fails loudly** on a genuine `git worktree add` nonzero exit (fixing a latent swa
 tmux `create` made idempotent via a new `Runtime.isRunning()` probe (`tmux has-session`); regression
 backstop = a declarative `defineEndpoint({ slowThresholdMs })` (HTTP twin of `defineJob({ slowThresholdMs })`)
 wired through slow-ops, with `POST /api/conversations` held to 1 s. No schema/migration change.
-`./singularity build` green (all checks) and **deployed**.
+`./equin build` green (all checks) and **deployed**.
 
 **Verification (on the worktree):**
 - **Functional ✅** — a real launch returns `status: "starting"` while the worktree dir does **not

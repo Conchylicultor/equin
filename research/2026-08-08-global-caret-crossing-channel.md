@@ -392,10 +392,10 @@ sentinel
   rightward and leftward offset walks must be exact reverses. This is what catches
   a stop skipped on exactly one approach, which is the shape the whole defect had.
 
-**4. Manual.** `./singularity build`, then in the **prompt editor** (the other
+**4. Manual.** `./equin build`, then in the **prompt editor** (the other
 Lexical host) arrow across a pasted image chip both ways — confirming `crossCaret`
 changes nothing where there are no observers, and confirming the `selectNext(0, 0)`
-fix there too. Then `./singularity check`.
+fix there too. Then `./equin check`.
 
 ---
 

@@ -83,11 +83,11 @@ Fix:
 
 ## Verification
 
-- `./singularity build`, then `screenshot.ts` (no target flag) on this worktree's deploy while the
+- `./equin build`, then `screenshot.ts` (no target flag) on this worktree's deploy while the
   host is not under duress: no `REQUESTFAILED` lines, and the page's lines appear in
   `~/.singularity/worktrees/<wt>/logs/{live-state,latency-ledger}.jsonl` (proof the emits landed).
 - Confirm genuine aborts are still caught: rerun the scratch repro (an aborted fetch plus a 204 fetch)
   through `requestFailure` and check the abort is reported and the 204 is not.
 - Run `row-actions-overflow.ts`, `click-does-not-pin.ts` and `release-boot-verify.ts`, and check that
   they pass with `failedRequests` folded back in.
-- If the retry-storm part is included: `./singularity test plugins/primitives/plugins/log-channels`.
+- If the retry-storm part is included: `./equin test plugins/primitives/plugins/log-channels`.

@@ -432,7 +432,7 @@ export type SpawnOptions = SpawnBaseOptions &
 one type rather than to every option list — its own comment says so. Scope: ~100
 `spawnCaptured` / `spawnExpectOk` call sites across 51 files, roughly 80 of which
 declare no bound today. The third arm is for the CLI, where a 10-minute
-`./singularity build` owns no deadline of its own.
+`./equin build` owns no deadline of its own.
 
 Then drain `spawn/lint/index.ts`'s `no-raw-bun-spawn` ignore list: the 20-entry
 **TEMPORARY** block is the Stage-2 backlog of mechanical `spawnCaptured`
@@ -461,7 +461,7 @@ an observed field wedge", and one has now been observed twice.
 
 ## Verification
 
-`./singularity build` after every commit — registries and plugin docs regenerate,
+`./equin build` after every commit — registries and plugin docs regenerate,
 and `plugins-doc-in-sync` fails otherwise.
 
 New `POST /api/events-test/job-deadline`, beside the four existing harnesses that

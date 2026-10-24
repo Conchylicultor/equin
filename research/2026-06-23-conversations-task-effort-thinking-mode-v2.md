@@ -172,7 +172,7 @@ into `createConversation(...)`.
 
 ## Verification
 
-1. `./singularity build` — regenerates the `tasks_ext_effort` migration, runs codegen
+1. `./equin build` — regenerates the `tasks_ext_effort` migration, runs codegen
    (both new plugins auto-register), rebuilds/restarts. Confirm no migration / registry /
    boundary / type-check failures.
 2. UI at `http://<worktree>.localhost:9000`: task detail pane shows a **Thinking mode**
@@ -185,10 +185,10 @@ into `createConversation(...)`.
    for effort.
 6. Resume a gone conversation whose task has a mode set → re-spawned command still carries
    the right flag/settings.
-7. `./singularity check` clean.
+7. `./equin check` clean.
 
 ## Notes
 
-- No polling; no manual registry/migration edits (all via `./singularity build`).
+- No polling; no manual registry/migration edits (all via `./equin build`).
 - `ultracode` uses the official `--settings '{"ultracode": true}'` key — not a literal
   `--effort` value (rejected) and not a prompt hack (v1).

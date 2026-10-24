@@ -2,7 +2,7 @@
 
 ## Context
 
-ESLint is the dominant bottleneck in `./singularity build`:
+ESLint is the dominant bottleneck in `./equin build`:
 - **Cold cache: 6m 19s** — every new worktree's first build
 - **Warm cache: ~10s** — subsequent builds (38x faster)
 
@@ -43,4 +43,4 @@ After merging to main, the first build on main rebuilds the cache with content s
 3. Seed from main with path rewrite: `sed "s|/Users/epot/__A__/dev/singularity|/Users/epot/__A__/dev/singularity/.claude/worktrees/att-1779225020-zyma|g" /Users/epot/__A__/dev/singularity/.cache/eslint > .cache/eslint`
 4. Run: `time bunx eslint . --quiet --cache --cache-location .cache/eslint --cache-strategy content`
    - Note: main's cache is still metadata-format, so ESLint will re-lint this time. The real savings come after main rebuilds with content strategy.
-5. Run `./singularity build` to confirm the full build works with the new flag
+5. Run `./equin build` to confirm the full build works with the new flag

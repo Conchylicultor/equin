@@ -21,7 +21,7 @@ The Playwright **npm package** and its **browser binary** are provisioned by two
 separate, drifting mechanisms:
 
 - **Package:** `package.json` pins `"playwright": "^1.60.0"`. The top-level
-  `./singularity` shell script runs `bun install --silent` on *every* invocation,
+  `./equin` shell script runs `bun install --silent` on *every* invocation,
   and `build.ts` step 1 runs `bun install` too — so the package tracks the caret
   range and can move to the latest 1.x.
 - **Binary:** each Playwright minor hard-pins one chromium revision
@@ -44,7 +44,7 @@ Playwright version `bun install` resolves, the matching chromium is fetched
 automatically and silently. We deliberately **keep the `^` caret** (always get the
 latest patches) — the auto-provisioning is what makes that drift safe. The fix
 must be a **true noop in the steady state** (no added latency on normal
-`./singularity` calls).
+`./equin` calls).
 
 ## Approach
 
@@ -97,7 +97,7 @@ Notes:
   completes — this is **not** gated by `trustedDependencies` (that gate only
   applies to third-party dependency scripts). At that point `playwright-core` is
   present in `node_modules`, so the import resolves.
-- Fires on every `./singularity` call (via `bun install --silent`) and on build
+- Fires on every `./equin` call (via `bun install --silent`) and on build
   step 1 — universal coverage, including bare `bun e2e/…` and
   `bunx playwright screenshot` runs done without a full build.
 
@@ -147,12 +147,12 @@ End-to-end, on this worktree:
    (`echo $?` → 0), confirming the steady-state guard is a pure stat.
 3. **postinstall wiring:** run `bun install` at the repo root and confirm the guard
    runs as part of it (cold: downloads; warm: silent).
-4. **Real consumer:** with the app built (`./singularity build`), capture a
+4. **Real consumer:** with the app built (`./equin build`), capture a
    screenshot through the helper and confirm it produces the PNG without any manual
    `executablePath` override:
    ```bash
    bun e2e/screenshot.mjs --url http://<worktree>.localhost:9000 --out /tmp/shot
    # → wrote /tmp/shot-before.png
    ```
-5. **Deploy:** `./singularity build` — confirm the build's `bun install` step
+5. **Deploy:** `./equin build` — confirm the build's `bun install` step
    triggers the postinstall guard and the build completes normally.

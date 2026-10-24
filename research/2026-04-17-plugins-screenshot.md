@@ -175,14 +175,14 @@ export default plugin;
 
 ## Caveats / known v1 limitations
 
-- **Ephemeral storage.** Server restarts (i.e. `./singularity build`) drop all stored screenshots. The new-tab flow only opens immediately after capture, so this is fine; revisiting an old `/screenshot/:id` URL will 404. Acceptable for v1; can swap to disk-backed in a follow-up.
+- **Ephemeral storage.** Server restarts (i.e. `./equin build`) drop all stored screenshots. The new-tab flow only opens immediately after capture, so this is fine; revisiting an old `/screenshot/:id` URL will 404. Acceptable for v1; can swap to disk-backed in a follow-up.
 - **The toolbar appears in the screenshot.** We're capturing the whole document. Users can crop it out. We could mask it later with a `data-screenshot-ignore` attribute + filter; not worth the complexity in v1.
 - **No iframe content.** `html-to-image` cannot reach into cross-origin iframes (the proxied worktree apps). Out of scope for v1; the user explicitly chose DOM capture over `getDisplayMedia`.
 - **No undo across applies.** Each Apply bakes into the image. Reset re-fetches the original. Per-tool undo (e.g. stroke history) lives only in the active draw session.
 
 ## Verification
 
-1. `./singularity build` — deploys both the web bundle and the server plugin.
+1. `./equin build` — deploys both the web bundle and the server plugin.
 2. Open `http://<worktree>.localhost:9000`.
 3. Confirm the Screenshot button appears in the top toolbar (in the `actions` group, next to Build).
 4. Click it. Expected:

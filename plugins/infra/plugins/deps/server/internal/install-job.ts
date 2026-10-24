@@ -13,7 +13,7 @@ const depsInstallLog = defineLogSink({
 
 /**
  * Install one declared dependency, in a detached child
- * (`./singularity supervised-exec deps.install`): a Python env is hundreds of
+ * (`./equin supervised-exec deps.install`): a Python env is hundreds of
  * MB of downloads that must neither block a backend's event loop nor die with a
  * restart.
  *
@@ -49,7 +49,7 @@ const settledListeners = new Map<string, Set<() => void>>();
  * `requestDep`) to resume on its own when the install lands. Returns the
  * unsubscribe.
  *
- * An install run from a terminal (`./singularity deps install`) is not seen
+ * An install run from a terminal (`./equin deps install`) is not seen
  * here — but a `requestDep` made while one runs is: its job waits on the same
  * host lock and ends right after.
  */

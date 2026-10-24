@@ -155,11 +155,11 @@ catalog imports only framework + `network/live`. No cycle.
 
 ## Verification
 
-- `./singularity build` (migration for `job_run_stats` / `job_recent_runs` generated).
-- `./singularity check` — type-check proves every `defineJob`/warmup has a description;
+- `./equin build` (migration for `job_run_stats` / `job_recent_runs` generated).
+- `./equin check` — type-check proves every `defineJob`/warmup has a description;
   eslint proves no raw server/central `setInterval`.
 - Unit tests: provider merge, cron → words/next from graphile's parse, ring UPSERT.
-  `./singularity test plugins/infra/plugins/background plugins/infra/plugins/jobs`.
+  `./equin test plugins/infra/plugins/background plugins/infra/plugins/jobs`.
 - E2E script `background/plugins/catalog/e2e/verify.ts`: open the pane, assert
   `ip-country.refresh` row shows "Mondays 03:40 UTC", click Run now on a cheap
   scheduled job, assert its last-run updates live.

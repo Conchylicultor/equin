@@ -180,7 +180,7 @@ the arm.
    - `DEMO_READS` plus the coverage assertion in `browser-host.test.ts`.
    - Extend the PGlite boot test to read the new keys.
 7. **Close-out:**
-   - Run `./singularity check`, then `./singularity build`, then the verification below.
+   - Run `./equin check`, then `./equin build`, then the verification below.
    - Update the subtrack page: tick the row, the status, the bundle size and module count, and the
      boot time.
    - File the next main task, "[Hubs] config_v2 split; delete the page server, the Demo.Resource
@@ -214,7 +214,7 @@ the arm.
     values keeps the table name)
   - `type-check`
 - **Tests:**
-  - `./singularity test` on the demo, live-state, browser-server/demo, and the plugins split here
+  - `./equin test` on the demo, live-state, browser-server/demo, and the plugins split here
     (turn-ledger, task-title, catalog, hibernation, custom-columns).
   - The coverage assertion passes.
 - **In the browser,** at `/debug/exhibits/x/agent-manager/demo` with `browser_*` and a screenshot:

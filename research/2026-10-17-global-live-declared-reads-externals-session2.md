@@ -148,7 +148,7 @@ This fits one session. Steps 1, 2 and 4 are parallelisable workflow fan-outs (fr
 
 ## Verification
 
-- **`./singularity test`** on:
+- **`./equin test`** on:
   - resource-runtime, query-resource, network/live, change-feed, live-state-snapshot, server-core;
   - debug/read-set, no-db-backed-notify;
   - each migrated plugin (code, allow-monitor, plugin-changes, jsonl-viewer, background, automations, queue-health).
@@ -160,7 +160,7 @@ This fits one session. Steps 1, 2 and 4 are parallelisable workflow fan-outs (fr
   - D6 boot refusal; D7 drift reseeded from `tables_read`;
   - a deferred external thunk binds.
 - **`review.plugin-changes`:** a unit test that a `conversations` write reaches it while `edited-files` is unsubscribed (unit only; it is excluded from every deployed composition).
-- **`./singularity check`** clean, including `plugins-doc-in-sync`, the boundaries, and `resource-runtime:compiled-routes`.
+- **`./equin check`** clean, including `plugins-doc-in-sync`, the boundaries, and `resource-runtime:compiled-routes`.
 - **Deployed:**
   - the gate (step 3) before deletion;
   - after deletion, `_debug` has no `legacy-full` / `legacyReach` fields;

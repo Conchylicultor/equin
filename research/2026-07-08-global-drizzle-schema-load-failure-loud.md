@@ -52,7 +52,7 @@ The check asserts the invariant drizzle-kit silently relies on: **every schema-g
 - Enumerate files via `schemaGlobFiles(root)` (§1).
 - Run **one** subprocess that replicates drizzle-kit's load: `bun --bun <probe.ts> <absFile...>`, cwd = `plugins/database/plugins/migrations` (matches drizzle-kit's module/tsconfig-path resolution), env includes `SINGULARITY_WORKTREE` (as `migrations-in-sync` does). Probe is a small committed helper (`check/internal/require-probe.ts`) that, per file, `try { require(f) } catch (e) { record(f, String(e)) }`, then writes JSON failures to stdout. A `.ts` file whose graph contains top-level await throws exactly the observed error, so this is faithful; if drizzle-kit's loader ever diverges, the check stays a conservative guard (sync-requireability is precisely the property drizzle needs).
 - Result: `{ ok: false, message }` listing each unloadable file + its error, with a `hint` explaining the cause (an async-only/top-level-await module in the schema file's import graph — e.g. a barrel pulling in `lexical`/`@lexical/yjs`) and the fix (keep `tables.ts` a leaf importing only sync modules; move the async import out of its graph). `{ ok: true }` otherwise.
-- `alwaysRun: true` — so it guards even `./singularity build --skip-checks` (this is the sanctioned use per the `Check.alwaysRun` doc: a cheap structural invariant painful to discover only at push). Leave `cacheSignature` default (pure function of tree content; the lockfile is in-tree, so dep changes reprovoke it).
+- `alwaysRun: true` — so it guards even `./equin build --skip-checks` (this is the sanctioned use per the `Check.alwaysRun` doc: a cheap structural invariant painful to discover only at push). Leave `cacheSignature` default (pure function of tree content; the lockfile is in-tree, so dep changes reprovoke it).
 
 ### 3. Harden `generateMigration`'s detector (defense-in-depth)
 
@@ -66,7 +66,7 @@ if (/require\(\) async module|async module.*unsupported|\bTypeError\b|Cannot fin
     "defines would be SILENTLY DROPPED from migration generation. A schema-glob file\n" +
     "(server/**/internal/{tables,schema}.ts) has an async-only module (top-level await,\n" +
     "e.g. lexical/@lexical/yjs) in its import graph. Fix the offending import; run\n" +
-    "`./singularity check schema-files-loadable` to see exactly which file.",
+    "`./equin check schema-files-loadable` to see exactly which file.",
   );
   process.exit(1);
 }
@@ -86,10 +86,10 @@ This catches the failure at the point of generation. The §2 check remains the r
 
 ## Verification
 
-1. **Clean tree passes:** `./singularity build` (regenerates docs + runs checks). Then `./singularity check schema-files-loadable` and `./singularity check table-defs-in-schema-glob` both pass (the refactor is behavior-preserving).
+1. **Clean tree passes:** `./equin build` (regenerates docs + runs checks). Then `./equin check schema-files-loadable` and `./equin check table-defs-in-schema-glob` both pass (the refactor is behavior-preserving).
 2. **Reproduce the footgun (temporary):** add an async-only import to a real schema file — e.g. in a throwaway `plugins/<x>/server/internal/tables.ts`, `import "@lexical/yjs"` alongside a `pgTable(...)` — then:
-   - `./singularity build` must now **exit non-zero** at migration generation (the §3 detector), naming the schema-load failure — instead of silently reporting "no schema change".
-   - `./singularity check schema-files-loadable` must **fail** and name that exact file.
+   - `./equin build` must now **exit non-zero** at migration generation (the §3 detector), naming the schema-load failure — instead of silently reporting "no schema change".
+   - `./equin check schema-files-loadable` must **fail** and name that exact file.
    - Revert the temporary import; both go green again.
 3. **Pure unit test** (optional, `bun:test`): co-locate `schema-glob.test.ts` next to `internal/schema-glob.ts` asserting `parseSchemaGlobs` extracts the four patterns from a sample config and returns `null` on a malformed one.
-4. Run full `./singularity check` to confirm no boundary/doc/registry check regressed (new `core` barrel covered, docs in sync).
+4. Run full `./equin check` to confirm no boundary/doc/registry check regressed (new `core` barrel covered, docs in sync).

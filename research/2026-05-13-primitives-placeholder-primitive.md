@@ -56,7 +56,7 @@ export default {
 } satisfies PluginDefinition;
 ```
 
-**`plugins/primitives/plugins/placeholder/CLAUDE.md`** — minimal seed with `# placeholder` heading; `./singularity build` auto-fills the reference block.
+**`plugins/primitives/plugins/placeholder/CLAUDE.md`** — minimal seed with `# placeholder` heading; `./equin build` auto-fills the reference block.
 
 ### Files to modify (4 identical local Placeholder replacements)
 
@@ -94,7 +94,7 @@ These have larger padding (`p-4`/`p-6`) than the canonical `px-3 py-2`. Migratin
 
 ```bash
 # Build to confirm auto-registration and no import errors
-./singularity build
+./equin build
 
 # Spot-check: open a file in the diff/raw/markdown/review panes
 # Confirm loading and error states still render correctly
@@ -102,5 +102,5 @@ bunx playwright screenshot --wait-for-timeout 3000 --viewport-size "1280,800" \
   http://att-1778658801-ixn6.localhost:9000 /tmp/placeholder-check.png
 
 # Lint — plugin-boundary check should pass
-./singularity check
+./equin check
 ```

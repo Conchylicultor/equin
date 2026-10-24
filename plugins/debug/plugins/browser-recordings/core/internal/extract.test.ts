@@ -21,7 +21,7 @@ describe("extractBrowserRecordings", () => {
     } as const;
     expect(
       extractBrowserRecordings(
-        call("Bash", { command: "./singularity run plugins/x/e2e/flow.ts" }),
+        call("Bash", { command: "./equin run plugins/x/e2e/flow.ts" }),
       ),
     ).toEqual([hit]);
     expect(
@@ -31,9 +31,7 @@ describe("extractBrowserRecordings", () => {
 
   test("other calls are not recordings", () => {
     expect(
-      extractBrowserRecordings(
-        call("Bash", { command: "./singularity build" }),
-      ),
+      extractBrowserRecordings(call("Bash", { command: "./equin build" })),
     ).toEqual([]);
     expect(
       extractBrowserRecordings(call("mcp__equin__browser_read_page", {})),

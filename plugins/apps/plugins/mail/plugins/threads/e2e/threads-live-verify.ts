@@ -17,7 +17,7 @@
  * what must carry it to the tab. The page is never reloaded between steps.
  *
  * Manual only — nothing runs this automatically.
- *   ./singularity run plugins/apps/plugins/mail/plugins/threads/e2e/threads-live-verify.ts [--headed]
+ *   ./equin run plugins/apps/plugins/mail/plugins/threads/e2e/threads-live-verify.ts [--headed]
  */
 import type { Page } from "playwright";
 import {

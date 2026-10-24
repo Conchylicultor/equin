@@ -6,7 +6,7 @@
 // ancestors come back.
 //
 // Usage:
-//   ./singularity run plugins/primitives/plugins/path-bar/e2e/fold-verify.ts \
+//   ./equin run plugins/primitives/plugins/path-bar/e2e/fold-verify.ts \
 //     [--out /tmp/path-bar-fold] [--headed]
 
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";

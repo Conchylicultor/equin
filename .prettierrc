@@ -1,4 +1,4 @@
-# NOT read by the build. `./singularity build` formats through
+# NOT read by the build. `./equin build` formats through
 # `@plugins/framework/plugins/tooling/plugins/format/core`, whose authority is
 # FORMATTABLE_EXTENSIONS + the hardcoded PRETTIER_OPTIONS object in
 # `core/internal/prettier.ts` — resolveConfig() is deliberately never called, so

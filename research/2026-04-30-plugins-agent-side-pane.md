@@ -173,10 +173,10 @@ Pane.Register({ pane: agentSidePane }),
 
 ## Verification
 
-1. `./singularity build` — no TS errors, no plugin-boundary violations
+1. `./equin build` — no TS errors, no plugin-boundary violations
 2. Open an agent conversation → "Agent" pill in the toolbar is now a button
 3. Click the pill → right side pane opens showing the agent's name/description/prompt (full `AgentDetail`)
 4. Pill background is darker (violet/30) when pane is open; reverts when closed
 5. Pane chrome shows an expand icon → clicking it navigates to `/agents/<agentId>` (full agent detail page)
 6. Open a user/system conversation (non-agent) → no pill visible (unchanged)
-7. `./singularity check` passes
+7. `./equin check` passes

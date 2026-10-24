@@ -176,7 +176,7 @@ Child plugins are registered flat in the root plugin lists — no changes to `co
 
 ## Verification
 
-1. `./singularity build` — confirm migration runs and `launch_prompts` table is created
+1. `./equin build` — confirm migration runs and `launch_prompts` table is created
 2. `curl POST /api/launch-prompts` → create a prompt; `GET` returns it; PATCH changes model; DELETE removes it
 3. Open Settings → "Launch Prompts" — add/edit/delete prompts live without page refresh
 4. Open any conversation — with no prompts the "Launch" button is absent; add a prompt and it appears

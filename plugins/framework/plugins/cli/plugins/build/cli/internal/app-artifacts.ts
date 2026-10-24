@@ -68,7 +68,7 @@ import {
 
 /**
  * Single source of truth for the ordered **app-artifact** pipeline: the part of
- * `./singularity build` that is a deterministic function of (source tree,
+ * `./equin build` that is a deterministic function of (source tree,
  * composition) — filesystem, CPU and network-for-deps only.
  *
  * `build`'s action conflates two jobs: *produce the artifact set* and *deploy it
@@ -114,7 +114,7 @@ import {
  *     all resolved out of `node_modules`, and a release additionally vendors the
  *     embedded-postgres / pgbouncer natives from there. Including it is what
  *     makes a fresh `git clone` work. Freshness-gated, so for a dev build —
- *     whose `./singularity` bootstrap just ran the same function — it collapses
+ *     whose `./equin` bootstrap just ran the same function — it collapses
  *     to a no-op instead of a second 10–25 s install.
  *   - registry codegen BEFORE the composition registry: the filtered
  *     per-composition registries are emitted beside the full committed ones the
@@ -162,7 +162,7 @@ import {
  * — and never the reverse: nothing anywhere acquires the build lock while
  * holding the install lock, so the two can never form a cycle. The install lock
  * is deliberately NOT `.build.lock` itself: sharing them would make a plain
- * `./singularity check` — which installs, but builds nothing — block for the
+ * `./equin check` — which installs, but builds nothing — block for the
  * entire duration of a concurrent build in the same checkout.
  *
  * FAILURE IS A TYPE, not a value: stage 3 returns a discriminated
@@ -364,7 +364,7 @@ export async function prepareCompositionSources(opts: {
   //
   // Through `ensureDeps` — the repo's ONE install chokepoint (freshness-gated,
   // serialized on `.install.lock`, loud on failure), the same function the
-  // `./singularity` bootstrap already ran moments ago. So for a dev build this
+  // `./equin` bootstrap already ran moments ago. So for a dev build this
   // is normally a ~140 ms no-op reporting `installed: false`, and the old
   // double 10–25 s install per build (wrapper, then here) is gone. The call
   // stays because `build --hermetic` on a bare host from a fresh `git clone`
@@ -440,7 +440,7 @@ export async function prepareCompositionSources(opts: {
   // The MAIN composition is filtered out of it, and that is not a carve-out: its
   // registry IS the committed one (`compositionRegistryFileName`), so
   // `generateCompositionRegistry` would return without writing anything anyway —
-  // dropping it is what keeps a plain `./singularity build` in a checkout that
+  // dropping it is what keeps a plain `./equin build` in a checkout that
   // composes NOTHING from paying for the faceted plugin-tree walk below to
   // produce nothing. A checkout that does compose something pays the walk on
   // every build, which is the price of the registries it hosts being true.
@@ -852,7 +852,7 @@ export interface BuildWebDistOptions {
   materialize: boolean;
   /**
    * Stamp the served `index.html` as an experimental (agent-worktree) deploy —
-   * the red frame. Only `./singularity build` from a non-main worktree says
+   * the red frame. Only `./equin build` from a non-main worktree says
    * true; every other producer of a dist is clean. See ./experimental-marker.ts.
    */
   experimental: boolean;

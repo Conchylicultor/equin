@@ -10,7 +10,7 @@
 //      search box keeps Cmd+A to itself;
 //   5. a code block (a `<textarea>`): its code first, every block second.
 //
-// Usage: ./singularity run plugins/page/plugins/editor/e2e/select-all-ladder-verify.ts [--out /tmp/select-all]
+// Usage: ./equin run plugins/page/plugins/editor/e2e/select-all-ladder-verify.ts [--out /tmp/select-all]
 import {
   arg,
   report,

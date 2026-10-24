@@ -126,9 +126,9 @@ All ~30 `useConfig` call sites are unchanged — they suspend transparently and 
 
 ## Verification
 
-1. `./singularity build` from the worktree; open `http://<worktree>.localhost:9000`.
-2. **Boot race repro:** restart the server (`./singularity build`) and immediately reload the page. Before: intermittent `opus-4-8` crash in the Conversations sidebar / blank slot. After: brief app-level loading spinner, then the sidebar + LaunchControl render with the model dropdown populated — no crash.
+1. `./equin build` from the worktree; open `http://<worktree>.localhost:9000`.
+2. **Boot race repro:** restart the server (`./equin build`) and immediately reload the page. Before: intermittent `opus-4-8` crash in the Conversations sidebar / blank slot. After: brief app-level loading spinner, then the sidebar + LaunchControl render with the model dropdown populated — no crash.
 3. Scripted check with `e2e/screenshot.mjs --url http://<worktree>.localhost:9000/ --click "Conversations"` to confirm the launch dropdown lists models and the slot renders.
 4. Confirm no regression for other config consumers: open Settings (config_v2 settings pane), theme toggle, stats/commits filters — all read their config and render.
-5. `./singularity check` (eslint: `no-floating-promises` on the new async loader; boundary checker for the new export).
+5. `./equin check` (eslint: `no-floating-promises` on the new async loader; boundary checker for the new export).
 6. Confirm `useResource`'s 88 existing callers are untouched (only additive `useSuspenseResource` added).

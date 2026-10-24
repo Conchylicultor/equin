@@ -13,7 +13,7 @@
 //
 // Manual, self-contained — NOT wired into any check (tests are manual here):
 //
-//   ./singularity run plugins/primitives/plugins/pane/e2e/deep-link-restore.ts \
+//   ./equin run plugins/primitives/plugins/pane/e2e/deep-link-restore.ts \
 //     --page-id block-1781024618461-ud10ib [--url <deploy>] [--wait <ms>]
 //
 // Exit 0 = all pass; exit 1 = a failing assertion (with a printed reason).

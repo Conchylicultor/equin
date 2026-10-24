@@ -123,13 +123,13 @@ openers gain a `.to` sibling only where a row needs it.
 
 ## Verification
 
-- Unit (`./singularity test plugins/primitives/plugins/link-gesture plugins/primitives/plugins/data-view plugins/primitives/plugins/data-table plugins/primitives/plugins/tree`):
+- Unit (`./equin test plugins/primitives/plugins/link-gesture plugins/primitives/plugins/data-view plugins/primitives/plugins/data-table plugins/primitives/plugins/tree`):
   `activationProps` arms; per view, a jsdom test that a link row's plain click calls `open`,
   ⌘-click and middle-click call `window.open` with `href()` and not `open`, Enter calls
   `open`, and a non-activating row is still a plain container (extend
   `list/web/__tests__/row-activation.test.tsx`).
-- Lint fixtures: `./singularity test plugins/primitives/plugins/pane`.
-- `./singularity check` (type-check + the extended lint rule repo-wide).
+- Lint fixtures: `./equin test plugins/primitives/plugins/pane`.
+- `./equin check` (type-check + the extended lint rule repo-wide).
 - E2E: extend `plugins/primitives/plugins/pane/e2e/expand-verify.ts` (or a data-view e2e):
   middle-click and ⌘-click a row in Debug → Traces (list), a table-view row, and a Pages
   sidebar tree row → `context.waitForEvent("page")` at the expected route URL, original tab

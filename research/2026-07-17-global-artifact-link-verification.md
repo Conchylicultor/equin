@@ -228,7 +228,7 @@ correctly by `esmHasDefaultExport` (`vendors.ts:153`).
 
 ## Verification
 
-1. **Green on the real fleet:** `./singularity build` — compose reports 0 link
+1. **Green on the real fleet:** `./equin build` — compose reports 0 link
    failures, 0 opaque warnings; build succeeds and the app boots with 0 console
    errors (`e2e/screenshot.mjs` over tasks / pages).
 2. **Break-glass (the actual gate):** rename an export in a low-fanout barrel
@@ -236,13 +236,13 @@ correctly by `esmHasDefaultExport` (`vendors.ts:153`).
    the specifier, the missing name, and the importing artifact — where today the
    build passes and the browser throws `SyntaxError`. Restore and confirm green.
 3. **`--skip-checks` still catches it:** repeat (2) with
-   `./singularity build --skip-checks` — this is the hole being closed, so it
+   `./equin build --skip-checks` — this is the hole being closed, so it
    must fail there too.
 4. **No false positives fleet-wide:** the run in (1) covers 8,041 links /
    14,080 names across every artifact.
 5. **Unit tests:** `bun test plugins/framework/plugins/tooling/plugins/web-artifacts`
    (54 existing pass + the new clause/link cases).
-6. `./singularity check` exit 0; `--monolith` build unaffected.
+6. `./equin check` exit 0; `--monolith` build unaffected.
 
 ## Outcome (2026-07-17)
 
@@ -251,7 +251,7 @@ Landed and verified. `core/internal/import-clause.ts` (pure parser) +
 web-barrel `default` assertion) + `pipeline.ts` throw. 82 tests pass (the
 existing baseline was **58**, not 54 as this doc originally claimed).
 
-**Clean on the real fleet:** `./singularity build` — 940 built / 0 reused (the
+**Clean on the real fleet:** `./equin build` — 940 built / 0 reused (the
 predicted `builderSourceDigest` fleet invalidation, 331s), **941 links composed,
 0 link failures, 0 opaque warnings**, all checks green, deployed.
 
@@ -278,7 +278,7 @@ concrete illustration of why byte-level truth beats source-level scanning.
 
 The break-glass test intended to prove the compose gate end-to-end through the
 real build **failed to reach compose**. Renaming a barrel export and running
-`./singularity build --skip-checks` aborts *earlier*, in the docgen step:
+`./equin build --skip-checks` aborts *earlier*, in the docgen step:
 
 ```
 error: [barrel-import] Failed to import …/sonata/plugins/library/web/index.ts:
@@ -316,7 +316,7 @@ imports are routine (`bookmarks/web/index.ts` re-exports from
 **Demonstrated end-to-end.** Adding `export const __probeSymbol = 1` to
 `bookmarks/core/resources.ts` (a file the core barrel does NOT re-export from
 wholesale) and deep-importing it from `bookmarks/web/index.ts` — a change whose
-source is entirely valid — then `./singularity build --skip-checks`:
+source is entirely valid — then `./equin build --skip-checks`:
 
 ```
 ── web artifacts ✗ (72.3s)

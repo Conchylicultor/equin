@@ -146,12 +146,12 @@ with no row, or a loose file at the plugin root.
 
 ## Verification
 
-1. `./singularity test plugins/framework/plugins/tooling/plugins/boundaries`
+1. `./equin test plugins/framework/plugins/tooling/plugins/boundaries`
 2. Negative probes (temporary, reverted afterwards). Each must fail `boundary-rules`:
    - a `core/` file doing `import "../server/x"`, which the lint rule caught before;
    - an `e2e/` file importing `../web`, which was unchecked before;
    - a `cli/` file importing its own `../web`;
    - a `core/` file importing its own `../shared`, which R12 caught before.
-3. `./singularity check boundary-rules plugin-boundaries type-check`: green.
-4. `./singularity build` (background), then check that `build-status.json` says `ok`.
+3. `./equin check boundary-rules plugin-boundaries type-check`: green.
+4. `./equin build` (background), then check that `build-status.json` says `ok`.
    Docs regenerate (`plugins-doc-in-sync`) because the lint plugin's description changed.

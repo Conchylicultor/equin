@@ -21,7 +21,7 @@ Turning Singularity into a self-running company is a multi-phase program. This d
 
 **Scope (handled by the user, per our discussion).**
 - Manager-agent plugin — decomposes stated goals into tasks, assigns them
-- Reviewer-agent plugin — independent critique as a quality gate before `./singularity push`
+- Reviewer-agent plugin — independent critique as a quality gate before `./equin push`
 - Objective layer — something above tasks (missions / OKRs) for the manager to optimize toward
 
 **Exit criteria.** A stated objective ("improve plugin test coverage" or "reduce build time") produces a stream of manager-planned, agent-executed, reviewer-gated PRs with minimal human intervention. Slop is controlled by the review loop, not by human task-curation.

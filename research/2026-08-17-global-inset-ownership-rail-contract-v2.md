@@ -276,13 +276,13 @@ the same non-participant rule `__measure` applies) and children whose own comput
 
 ## Verification
 
-1. `./singularity build`, then `./singularity check` — `app-css-utilities-in-sync`
+1. `./equin build`, then `./equin check` — `app-css-utilities-in-sync`
    (the new ramp + its `sg-rail` group header), `css-vars-supplied` (the four new
    vars, and no dangling `--scroll-pad`/`--cp-inset-*` references), `type-check`,
    `plugin-boundaries`, `collected-dir-tsconfig-coverage`, `plugins-doc-in-sync`.
 2. `bun test …/layout-harness/core/oracle.test.ts` — `checkRailAlignment` on
    synthetic boxes.
-3. `./singularity check layout-geometry` — green, **and the falsification must
+3. `./equin check layout-geometry` — green, **and the falsification must
    bite**: `railOverride` has to report `railAlignment` VIOLATED or the suite throws
    `falsification did not bite`. Run twice; the second must short-circuit on the
    sidecar marker with no Chromium launch.

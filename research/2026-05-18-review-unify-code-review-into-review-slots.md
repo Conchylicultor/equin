@@ -126,7 +126,7 @@ The old plugin ID was `"conversation-code-review"`, the new one is `"review-code
 
 ### 8. Plugin registry
 
-Auto-handled by `./singularity build` — it discovers plugin barrels by convention. No manual registry edits needed.
+Auto-handled by `./equin build` — it discovers plugin barrels by convention. No manual registry edits needed.
 
 ### 9. DB migration
 
@@ -146,7 +146,7 @@ The `review_sections` table name, columns, and all API routes (`/api/review-sect
 
 ## Verification
 
-1. `./singularity build` — no TypeScript errors, no new migration generated
+1. `./equin build` — no TypeScript errors, no new migration generated
 2. Single "Review" toolbar button in conversation view (no separate "Code Review" button)
 3. Review pane at 720px with two collapsible sections: "Plugin Changes" and "Code Review", both open by default
 4. Code Review section: source tabs work, file list grouped by sections, diffs expand inline, warning levels color rows

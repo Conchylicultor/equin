@@ -9,7 +9,7 @@
  * Chromium computes. A jsdom test can assert the class string; only a real
  * browser can say whether it matched.
  *
- *   ./singularity run plugins/primitives/plugins/row-actions/e2e/click-does-not-pin.ts --headed
+ *   ./equin run plugins/primitives/plugins/row-actions/e2e/click-does-not-pin.ts --headed
  *
  * Parameterized so one script covers several row families. `--url` is a base, as
  * everywhere in the harness, and `--path` is the app path under it:

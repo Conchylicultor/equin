@@ -111,7 +111,7 @@ import {
 
 ## Verification
 
-1. `./singularity build` from the worktree — confirms it compiles clean.
+1. `./equin build` from the worktree — confirms it compiles clean.
 2. Screenshot `http://<worktree>.localhost:9000` after starting 2+ conversations in the same attempt (via the "+" fork buttons).
 3. Verify: the grouped conversations appear clustered under the original, with indented sub-rows and a left border connecting them.
 4. Verify: conversations in different attempts appear as separate top-level items.

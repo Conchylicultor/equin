@@ -12,7 +12,7 @@
 //      are only indicative).
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/chord/plugins/song-index/e2e/song-index-verify.ts [--url http://<ns>.localhost:9000] [--timeout-min 15]
+//   ./equin run plugins/apps/plugins/chord/plugins/song-index/e2e/song-index-verify.ts [--url http://<ns>.localhost:9000] [--timeout-min 15]
 //
 // Mutates server state: records the request row and may start a load.
 

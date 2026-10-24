@@ -85,7 +85,7 @@ Clear `SIDEBAR_GROUPS` (remove `System` entry) since the group is replaced by th
 ## Verification
 
 ```bash
-./singularity build
+./equin build
 # Visit http://<worktree>.localhost:9000
 ```
 

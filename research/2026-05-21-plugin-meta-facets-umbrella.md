@@ -175,12 +175,12 @@ const hasBarrel = ... || hasFacet;
 3. Known dirs updates (additive)
 4. Create facets umbrella plugin (all new files)
 5. Wire `docgen.ts` (import + pass facets)
-6. `bun install` + `./singularity build`
+6. `bun install` + `./equin build`
 
 ## Verification
 
-1. `./singularity build` succeeds
+1. `./equin build` succeeds
 2. Doc output byte-identical (diff plugins-compact.md, plugins-details.md, routes.md)
-3. `./singularity check` passes (plugin-boundaries, plugins-registry-in-sync, plugins-have-claudemd)
+3. `./equin check` passes (plugin-boundaries, plugins-registry-in-sync, plugins-have-claudemd)
 4. `facet.generated.ts` exists with empty `facetEntries` array
 5. No circular dependency (facets/core → plugin-tree/core only, never reverse)

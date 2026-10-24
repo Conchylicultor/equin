@@ -8,7 +8,7 @@ describe("withRefusalBanner", () => {
       "cd plugins/ui && python3 - <<'EOF'",
       "open('a.tsx','w').write('x')",
       "EOF",
-      "./singularity check type-check",
+      "./equin check type-check",
     ].join("\n");
     const msg = withRefusalBanner("Bash", { command }, "run it in background");
     expect(

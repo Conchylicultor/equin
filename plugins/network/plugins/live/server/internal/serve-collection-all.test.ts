@@ -12,7 +12,7 @@
  * `serve-collection-all-oracle.test.ts`; a scoped set's (`all: { by }`, one
  * tuple per scope) is `serve-collection-all-scoped-oracle.test.ts`.
  *
- * Run: `./singularity test plugins/network/plugins/live`.
+ * Run: `./equin test plugins/network/plugins/live`.
  */
 
 import { describe, expect, test } from "bun:test";

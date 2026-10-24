@@ -46,7 +46,7 @@ Order: add a profiler span per sub-step of each blocking hook, measure, then fix
 
 ## Verification
 
-- `./singularity build`, then `cold-start.ts` calm and `--busy 3`, before and after each step; numbers on the track page.
+- `./equin build`, then `cold-start.ts` calm and `--busy 3`, before and after each step; numbers on the track page.
 - change-feed: existing `triggers` tests unchanged (same plan for the same schema).
 - gateway: `go test ./...` in `gateway/` for the stop route and the start-reason priority.
-- gateway changes go live through `./singularity start` (user-approved).
+- gateway changes go live through `./equin start` (user-approved).

@@ -2,7 +2,7 @@
 
 ## Context
 
-`./singularity test plugins/page` fails in agent sessions with no code change.
+`./equin test plugins/page` fails in agent sessions with no code change.
 The date-chip test in `plugins/page/plugins/read-only-view/web/__tests__/runs-renderer.test.tsx`
 expects `Jun 17` and gets `M06 17, Wed`. The formatter
 (`plugins/page/plugins/inline-date/web/internal/format-date.ts`) formats with
@@ -30,8 +30,8 @@ Vitest 4.1.4's default `forks` pool starts every test worker with
 `vitest.config.ts` becomes the **startup** environment of every worker. That is
 exactly the shape we need.
 
-Putting it in the config, rather than in `./singularity test`'s spawn env,
-covers every way vitest runs: `./singularity test`, `bun run test:dom`, and a
+Putting it in the config, rather than in `./equin test`'s spawn env,
+covers every way vitest runs: `./equin test`, `bun run test:dom`, and a
 bare `vitest`. The config is the one place every run goes through.
 
 ## Changes
@@ -83,16 +83,16 @@ production behavior. The test environment was the bug.
 
 ## Verification
 
-1. Before: `LANG=C.UTF-8 LC_ALL= ./singularity test plugins/page/plugins/read-only-view`
+1. Before: `LANG=C.UTF-8 LC_ALL= ./equin test plugins/page/plugins/read-only-view`
    is red (reproduces the report).
 2. After: the same command is green. It is also green with `LC_ALL=fr_FR.UTF-8`
    and `TZ=Pacific/Kiritimati` set in the calling shell. That proves the config
    pin wins over the caller's environment.
-3. `./singularity test` (the whole repo) under `LANG=C.UTF-8`. This surfaces any
+3. `./equin test` (the whole repo) under `LANG=C.UTF-8`. This surfaces any
    other latent locale or timezone dependents. Fix the ones that fail.
 4. Temporarily set `pool: "threads"` and confirm that `setup.ts` throws the named
    error. Then revert.
 5. Temporarily delete the `env` line and confirm that
-   `./singularity check test-layout:runner-split` fails with rule (g). Then
+   `./equin check test-layout:runner-split` fails with rule (g). Then
    revert.
-6. `./singularity check` is all green (plugin docs in sync).
+6. `./equin check` is all green (plugin docs in sync).

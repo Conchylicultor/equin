@@ -115,10 +115,10 @@ For each question:
 
 ## Verification
 
-1. `./singularity build`
+1. `./equin build`
 2. Open a conversation that has an AskUserQuestion tool call in the JSONL viewer
 3. Confirm: collapsed shows blue header badge + truncated question
 4. Confirm: expanded shows question text, options with indicators
 5. Confirm: selected answer is highlighted with left border + filled indicator
 6. Confirm: "Other" custom responses display correctly
-7. Run `./singularity check --plugin-boundaries` — no violations
+7. Run `./equin check --plugin-boundaries` — no violations

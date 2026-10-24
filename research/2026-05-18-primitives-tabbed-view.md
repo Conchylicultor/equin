@@ -188,8 +188,8 @@ The `Tasks.List.useContributions()` call and the extra lists rendering block are
 
 ## Verification
 
-1. `./singularity build` — must compile and generate correct plugin registry entries
-2. `./singularity check` — plugin boundaries, eslint, migrations-in-sync must pass
+1. `./equin build` — must compile and generate correct plugin registry entries
+2. `./equin check` — plugin boundaries, eslint, migrations-in-sync must pass
 3. Conversation sidebar: tabs (Queue / Grouped / History) render and switch identically to before
 4. Task list sidebar: Tree tab renders and behaves identically to the current tree view
 5. Task list sidebar: Recent tab shows tasks sorted by `updatedAt` desc, clicking selects and opens detail

@@ -155,12 +155,12 @@ already did on the single-element path.
 
 ## Verification
 
-- `./singularity test plugins/primitives/plugins/css/plugins/row` — the new
+- `./equin test plugins/primitives/plugins/css/plugins/row` — the new
   destination tests plus the existing nested-interactive / focus-ring / focusRef
   suites.
-- `./singularity check` — `type-check` is the real gate here: `type?: never` and
+- `./equin check` — `type-check` is the real gate here: `type?: never` and
   the derived `RowControlProps` must not break any of the 128 `<Row>` call sites.
-- `./singularity build`, then the outline rail end-to-end: open a long page at
+- `./equin build`, then the outline rail end-to-end: open a long page at
   `http://<worktree>.localhost:9000/pages/…`, confirm the right-edge dash
   indicator still tracks the section being read (that is the scroll-spy resolving
   `[data-outline-row]` and measuring it).

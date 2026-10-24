@@ -9,7 +9,7 @@ import tsParser from "@typescript-eslint/parser";
 import rule from "./no-path-pg-client";
 
 // Hand RuleTester bun's own describe/it, or it registers nothing under
-// `./singularity test`.
+// `./equin test`.
 RuleTester.describe = describe;
 RuleTester.it = it;
 RuleTester.itOnly = it.only;

@@ -89,7 +89,7 @@ import stays.
 
 ## Verification
 
-1. `./singularity build` from the worktree, then open
+1. `./equin build` from the worktree, then open
    `http://<wt>.localhost:9000/agents/c/conv-1782014757-gpnm`.
 2. **Mutation count (primary signal).** In the page console, attach a
    `document.body` MutationObserver (`childList` + `subtree`) attributing each
@@ -103,4 +103,4 @@ import stays.
    render pixel-identical to before (`display:contents` == old `<Fragment>`).
    Horizontal chrome rows (action bar, conversation header `CollapsibleWrap`) are
    unchanged — confirm chip truncation/wrapping still behaves.
-5. `./singularity check` (type-check + boundaries) passes.
+5. `./equin check` (type-check + boundaries) passes.

@@ -15,7 +15,7 @@ export const PROTOTYPE_KIND = "prototype";
 type ToolCall = Extract<JsonlEvent, { kind: "tool-call" }>;
 
 /**
- * The command that MINTS a prototype: `./singularity prototype new [title]`.
+ * The command that MINTS a prototype: `./equin prototype new [title]`.
  *
  * The id it makes is printed by the command — the caller never writes it — so
  * the `created` hit is read off the result, which is the only place it exists.

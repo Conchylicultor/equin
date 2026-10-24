@@ -207,9 +207,9 @@ Reuse: `defineBlock` (`page/editor/core/define-block.ts`), `useBlockEditor` / `b
 
 ## Verification
 
-1. `./singularity build` must pass. This covers checks: boundary-rules, plugin-boundaries (no cycle
+1. `./equin build` must pass. This covers checks: boundary-rules, plugin-boundaries (no cycle
    google-maps ⇄ wizard), plugins-registry-in-sync, and docs.
-2. Unit tests (`./singularity test plugins/page/plugins/place/plugins/map-layer plugins/map`):
+2. Unit tests (`./equin test plugins/page/plugins/place/plugins/map-layer plugins/map`):
    - the place layer maps blocks → pins, counts `unplaced`, and ignores other types and parse failures;
    - bounds and zoom selection for 0/1/N pins, if kept as a pure helper in `map/core`.
 3. E2E script `plugins/page/plugins/map/e2e/map-block.ts`:

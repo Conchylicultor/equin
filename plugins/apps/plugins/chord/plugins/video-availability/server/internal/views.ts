@@ -8,7 +8,7 @@ import { _chordVideos } from "./tables";
 // codegen glob never sees it: it is rebuilt from source on every boot via the
 // `View` server contribution (declared in this plugin's server barrel) +
 // rebuildDerivedViews, never tracked in the migration chain. To change it, edit
-// here and `./singularity build` — no migration is generated.
+// here and `./equin build` — no migration is generated.
 // See plugins/database/plugins/derived-views/CLAUDE.md.
 
 const v = _chordVideos;

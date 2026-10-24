@@ -118,7 +118,7 @@ contributions: [
 direction via a small per-direction component so each contribution still receives `node`.)
 
 Plus `package.json` (copy a sibling's) and a `CLAUDE.md` (autogen reference block filled by
-`./singularity build`).
+`./equin build`).
 
 ## Files
 
@@ -128,7 +128,7 @@ Plus `package.json` (copy a sibling's) and a `CLAUDE.md` (autogen reference bloc
 - **New** `plugins/plugin-meta/plugins/plugin-view/plugins/dependencies/web/index.ts`
 - **New** `plugins/plugin-meta/plugins/plugin-view/plugins/dependencies/package.json`
 - **New** `plugins/plugin-meta/plugins/plugin-view/plugins/dependencies/CLAUDE.md`
-- No edits to existing files (the section auto-registers via the slot; `./singularity build`
+- No edits to existing files (the section auto-registers via the slot; `./equin build`
   regenerates the registry).
 
 ### Reused (do not reinvent)
@@ -143,7 +143,7 @@ Plus `package.json` (copy a sibling's) and a `CLAUDE.md` (autogen reference bloc
 
 ## Verification
 
-1. `./singularity build` (regenerates the plugin registry + the new section's docs; runs checks).
+1. `./equin build` (regenerates the plugin registry + the new section's docs; runs checks).
 2. `bun test plugins/plugin-meta/plugins/plugin-view/plugins/dependencies/web/internal/build-dep-tree.test.ts`
    — assert against the real graph (build it like `closure/core/closure.test.ts` does, or pass a
    hand-built `EdgeGraph`): a diamond produces exactly one expandable occurrence + one `duplicate`

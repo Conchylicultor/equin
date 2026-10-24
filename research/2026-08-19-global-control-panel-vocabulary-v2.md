@@ -184,7 +184,7 @@ Order, each step independently shippable:
 
 **Step 1 — primitive.** §1–§4 above, plus the fixtures. `control-panel/fixtures/` contributes
 `rail-alignment`, `mixed-content`, `row-height`, `rule-grid`, `long-label` to the Layout Lab,
-swept at every width role and measured by `./singularity check layout-geometry`.
+swept at every width role and measured by `./equin check layout-geometry`.
 `rail-alignment`'s expected numbers change (labels move 58 → 32px) and a derived-tracks case
 needs adding. Note the plugin `CLAUDE.md` rule that a new fixture must render something other
 than a `Row`. Verify DataView's panels visually before touching anything else.
@@ -225,14 +225,14 @@ so it does not fire on work already queued.
 ## Verification
 
 ```bash
-./singularity check app-css-utilities-in-sync   # any @utility added or removed
-./singularity check css-vars-single-owner       # --cp-inset-start now has one declaring site
-./singularity check css-vars-supplied           # --cp-rail-text deleted; no dangling var()
-./singularity check inherited-theme-defaults-scoped
-./singularity check layout-geometry             # the fixtures, at every width role
-./singularity check                             # boundaries, type-check, eslint, docs
-./singularity test plugins/primitives/plugins/css/plugins/control-panel
-./singularity build
+./equin check app-css-utilities-in-sync   # any @utility added or removed
+./equin check css-vars-single-owner       # --cp-inset-start now has one declaring site
+./equin check css-vars-supplied           # --cp-rail-text deleted; no dangling var()
+./equin check inherited-theme-defaults-scoped
+./equin check layout-geometry             # the fixtures, at every width role
+./equin check                             # boundaries, type-check, eslint, docs
+./equin test plugins/primitives/plugins/css/plugins/control-panel
+./equin build
 ```
 
 `control-panel/web/__tests__/control-panel.test.tsx` asserts host inference and the

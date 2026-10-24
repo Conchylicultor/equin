@@ -38,9 +38,9 @@ export interface LoadCollectedDirOptions<T> {
    * contribution should not take the whole pass down.
    *
    * It is WRONG wherever a missing item is indistinguishable from an item that
-   * does not exist. `./singularity`'s command registry is the case that
+   * does not exist. `./equin`'s command registry is the case that
    * motivated the option: a `cli/index.ts` that throws at load would otherwise
-   * make its verb quietly absent, and `./singularity build` would report
+   * make its verb quietly absent, and `./equin build` would report
    * "unknown command" — a broken deploy pipeline reading as a typo. `lint/` and
    * `provision/` each hand-rolled a fail-loud loader to escape this default;
    * this option exists so the CLI does not become a third copy of that, and so
@@ -56,8 +56,8 @@ export interface LoadCollectedDirOptions<T> {
    *
    * `strict` answers "present but broken"; this answers "listed but deleted".
    * They must stay apart wherever the registry's own regenerator runs through
-   * this loader: `./singularity`'s command registry is regenerated only by the
-   * CLI, so failing strict on a deleted command meant no `./singularity`
+   * this loader: `./equin`'s command registry is regenerated only by the
+   * CLI, so failing strict on a deleted command meant no `./equin`
    * command could start to regenerate it — `build` and `push` included.
    *
    * Injected rather than checked here so this leaf keeps no `node:*` import.
@@ -101,7 +101,7 @@ export async function loadCollectedDir<T>(
   if (stale.length > 0) {
     console.warn(
       `[${label}] registry lists ${stale.length} removed contribution(s), skipped: ` +
-        `${stale.join(", ")} — \`./singularity build\` regenerates the registry.`,
+        `${stale.join(", ")} — \`./equin build\` regenerates the registry.`,
     );
   }
   const ordered = opts.ordered ? topoSort(present) : present;

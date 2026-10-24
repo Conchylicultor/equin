@@ -25,8 +25,8 @@
  * The seeded pages are agent-origin (they land in Scratch) and are trashed at
  * the end, also on failure.
  *
- * Manual only. Run after `./singularity build`:
- *   ./singularity run plugins/apps/plugins/pages/plugins/page-tree/e2e/page-tree-live-verify.ts [--headed] [--out /tmp/page-tree-live]
+ * Manual only. Run after `./equin build`:
+ *   ./equin run plugins/apps/plugins/pages/plugins/page-tree/e2e/page-tree-live-verify.ts [--headed] [--out /tmp/page-tree-live]
  */
 import { randomBytes } from "node:crypto";
 import type { Locator, Page } from "playwright";

@@ -110,13 +110,13 @@ The old `singularity:prompt-drafts-v2` key becomes orphaned after deploy. Any in
 6. Update `fork-session-buttons.tsx` — swap hook
 7. Update `fork-conversation-buttons.tsx` — swap hook
 8. Delete `prompt-draft-context.tsx`
-9. Run `./singularity build`
+9. Run `./equin build`
 
 ---
 
 ## Verification
 
-1. `./singularity build` — clean; `persistentDraftPlugin` appears in the generated registry
+1. `./equin build` — clean; `persistentDraftPlugin` appears in the generated registry
 2. Type a prompt in a conversation, reload → draft reappears
 3. Two panes on the same conversation: type in prompt input → fork buttons reflect the updated draft (same-tab sync)
 4. Send a prompt → input clears

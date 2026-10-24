@@ -178,7 +178,7 @@ recording that its accepted loss is closed and why.
 
 ## Verification
 
-1. `./singularity build`, then `./singularity test plugins/page`.
+1. `./equin build`, then `./equin test plugins/page`.
 2. The real repro, end to end: `read_page` on
    `block-f0d24b10-d743-409d-bbc1-844ed27db026` (the page that refused every edit),
    then `edit_page` appending a tagless `<agent-note>` card at page level. It must

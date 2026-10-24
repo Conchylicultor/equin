@@ -17,7 +17,7 @@
 // Leaves the track as it found it (level and mute).
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/sonata/plugins/track-mixer/e2e/track-fader.ts \
+//   ./equin run plugins/apps/plugins/sonata/plugins/track-mixer/e2e/track-fader.ts \
 //     --song <songId> [--url http://<namespace>.localhost:9000] [--headed]
 
 import {

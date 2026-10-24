@@ -27,8 +27,8 @@
  * Then the C39 old-bundle check against the real key, with a literal frozen
  * copy of the legacy row.
  *
- * Requires a running Postgres cluster (started by ./singularity build).
- * Run: `./singularity test plugins/conversations/plugins/agents`.
+ * Requires a running Postgres cluster (started by ./equin build).
+ * Run: `./equin test plugins/conversations/plugins/agents`.
  */
 
 import {

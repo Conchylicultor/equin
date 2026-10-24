@@ -123,7 +123,7 @@ No streaming / live updates for v1 — click refresh (or reopen) to reload. A si
 
 ## Verification
 
-1. `./singularity build` — must succeed (types, drizzle, frontend build, server restart).
+1. `./equin build` — must succeed (types, drizzle, frontend build, server restart).
 2. Open `http://<worktree>.localhost:9000` → open any conversation that has had a few Claude turns.
 3. Click the new icon-only button in the conversation toolbar.
 4. Verify the right pane opens and shows user messages, assistant messages, and at least one `tool_use` block with its input JSON collapsible.

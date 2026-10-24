@@ -142,7 +142,7 @@ Recursive `z.lazy` zod mirror of the `FilterGroup` interface, for body validatio
   Known v1 gap: a pure title/model edit won't pulse — acceptable; note it.
 - **Index:** add `(createdAt, id)` composite index to `_conversations`
   (`tables.ts`) so the default keyset is index-only. Generate via
-  `./singularity build` (never `drizzle-kit` by hand).
+  `./equin build` (never `drizzle-kit` by hand).
 
 ### 5. Client hook + DataView seam — `data-view/web` + `data-view/core`
 
@@ -174,8 +174,8 @@ instance — the `data-view` configs-authored build check fails otherwise.
 
 ### 7. Build
 
-`./singularity build` — codegen picks up the new `defineDataView` marker + new
-plugins + the migration. Then `./singularity check`.
+`./equin build` — codegen picks up the new `defineDataView` marker + new
+plugins + the migration. Then `./equin check`.
 
 ## Critical files
 
@@ -212,7 +212,7 @@ plugins + the migration. Then `./singularity check`.
 
 ## Verification
 
-1. `./singularity build` then `./singularity check` (boundaries, migrations,
+1. `./equin build` then `./equin check` (boundaries, migrations,
    data-view configs-authored, plugins-registry/doc-in-sync all green).
 2. Unit tests: `bun test plugins/primitives/plugins/data-view/plugins/server-query`
    (compiler + null-boundary seek) and the per-type `filter-sql` truth-table

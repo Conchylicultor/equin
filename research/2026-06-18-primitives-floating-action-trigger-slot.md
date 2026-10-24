@@ -113,7 +113,7 @@ current visual layout (`flex-col-reverse` flips the icon to the bottom as today)
   contract: it is the rigid, always-visible collapsed footprint; the primitive
   guarantees it never shrinks; expanding content goes in `children`
   (wrapped in `FloatingActionFadeIn`). The autogen reference block regenerates on
-  `./singularity build`.
+  `./equin build`.
 
 ## Critical files
 
@@ -137,7 +137,7 @@ current visual layout (`flex-col-reverse` flips the icon to the bottom as today)
 
 ## Verification
 
-1. `./singularity build` (runs `bun install`, type-check, eslint, boundary checks).
+1. `./equin build` (runs `bun install`, type-check, eslint, boundary checks).
    - Confirms the `no-adhoc-layout` rule passes with the removed disables and the
      primitive-internal `shrink-0` (allowlisted), and that `type-check` accepts the
      now-required `trigger` prop on all three consumers.
@@ -153,4 +153,4 @@ current visual layout (`flex-col-reverse` flips the icon to the bottom as today)
    - **global-action-bar**: confirm the top-right status glyph shows closed and the
      action row expands on hover (no visual regression).
 3. (Optional) re-run the lint check alone to prove zero new offenders:
-   `./singularity check eslint`.
+   `./equin check eslint`.

@@ -137,7 +137,7 @@ from the **global (unscoped) config** instead of the active app:
 - Append a short "landed" note to
   `research/2026-06-17-unified-prepaint-theme-cache.md`'s deferred-follow-ups (the
   duality item is now done; per-scope dark still pending).
-- Plugin `CLAUDE.md` autogen reference blocks regenerate on `./singularity build`.
+- Plugin `CLAUDE.md` autogen reference blocks regenerate on `./equin build`.
 
 ## What is explicitly NOT changed
 - Scoped dark selector stays `.dark [data-theme-scope=…]` (ancestor gate) —
@@ -164,7 +164,7 @@ from the **global (unscoped) config** instead of the active app:
 
 ## Verification
 
-1. `./singularity build` (regenerates docs/registry; runs checks incl.
+1. `./equin build` (regenerates docs/registry; runs checks incl.
    `plugin-boundaries`, `type-check`, `eslint`, `plugins-doc-in-sync`). Must pass —
    in particular confirms no `apps ↔ theme-engine` cycle and no dangling
    `CHROME_THEME_SCOPE` references.

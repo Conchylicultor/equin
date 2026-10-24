@@ -57,7 +57,7 @@ When user presses back to `/`, the popstate handler should resolve the welcome p
 
 ## Verification
 
-1. `./singularity build`
+1. `./equin build`
 2. Navigate to `http://claude-1775914029.localhost:9000` — welcome pane shows
 3. Click a session — navigates to `/c/<id>`, welcome disappears
 4. Press back — returns to `/`, welcome pane reappears

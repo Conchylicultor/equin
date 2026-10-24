@@ -48,7 +48,7 @@ import { blockedTrip, sampleOf, type JobSpanSample } from "./profile-delta";
 // plugin DAG forbids the other placement. `reports/plugins/engine/server/internal/record-report.ts`
 // imports `recordNotification` from `shell/notifications`, whose barrel imports
 // a `defineJob` from `jobs` — so `jobs → reports/engine → shell/notifications → jobs`
-// is a cycle, and `no cycles` is enforced by `./singularity check
+// is a cycle, and `no cycles` is enforced by `./equin check
 // plugin-boundaries`. This plugin already imports both `jobs` and `reports`, so
 // the placement adds zero new plugin edges, and it keeps queue INTERPRETATION
 // (thresholds, config, report kinds) out of the load-bearing mechanism-only

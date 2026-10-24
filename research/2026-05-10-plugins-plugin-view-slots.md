@@ -155,7 +155,7 @@ Register all three new sub-plugins in `web/src/plugins.ts`.
 ## Verification
 
 1. `bun install` from root (picks up new workspaces)
-2. `./singularity build` (builds + deploys)
+2. `./equin build` (builds + deploys)
 3. Open `http://att-1778446028-8cdm.localhost:9000`, navigate to plugin-view for any plugin
 4. Confirm all three sections still render correctly (runtimes, sub-plugins, source path)
-5. `./singularity check` passes
+5. `./equin check` passes

@@ -224,7 +224,7 @@ plugins/primitives/plugins/networking/web/
 | Check | Command |
 |---|---|
 | Types | `bunx tsc --noEmit --project web/tsconfig.json` |
-| Build | `./singularity build` |
+| Build | `./equin build` |
 | Single tab | Playwright: connect, subscribe tasks, create task, assert push arrives |
 | Leader close | Playwright: 2 tabs, close leader, follower takes over, push works |
 | Frozen leader | Playwright: 2 tabs, kill leader heartbeat, wait 12s, follower steals |

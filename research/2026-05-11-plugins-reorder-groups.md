@@ -251,7 +251,7 @@ Export new types: `ReorderGroup`, `GroupEntry`, `TopLevelEntry`.
 6. **`onDragEnd` dispatcher**: Handle child zone → group creation/join, ungroup on cross-boundary before/after
 7. **`group-box.tsx` + `group-rename.tsx`**: Group container component
 8. **RestoreButton**: Add "Add Group" button
-9. **`./singularity build`** to generate migration and verify
+9. **`./equin build`** to generate migration and verify
 10. **Test**: Enable groups on Shell.Sidebar, create/dissolve groups, verify reorder
 
 ## Edge cases
@@ -264,7 +264,7 @@ Export new types: `ReorderGroup`, `GroupEntry`, `TopLevelEntry`.
 
 ## Verification
 
-1. `./singularity build` — generates migration, builds successfully
+1. `./equin build` — generates migration, builds successfully
 2. Enable `enableGroups: true` on `Shell.Sidebar` in `plugins/shell/web/slots.ts`
 3. Enter edit mode (pen button)
 4. Drag a sidebar item onto another → group created with both items

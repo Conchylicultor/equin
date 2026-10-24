@@ -226,7 +226,7 @@ These are generic additions, written so that a future "proposal pins" consumer (
 
 ## Verification
 
-**Tests** (`./singularity test …`)
+**Tests** (`./equin test …`)
 - Usage ledger and ladder:
   - `skuFor` maps each mask to the right tier.
   - The Pacific-time month boundary.
@@ -236,7 +236,7 @@ These are generic additions, written so that a future "proposal pins" consumer (
 - data-view/map: an extra overlay's activation does not reach `onRowActivate`.
 - map: `frame:false` overlays are excluded from the fit bounds (the pure part of `FitCamera`).
 
-**`./singularity build`** with the checks green.
+**`./equin build`** with the checks green.
 
 **e2e** (`places-map/e2e/`)
 - Extend `camera-stays.ts`: type "ramen" after a user zoom, and the saved pins' screen positions are unchanged while ghost pins appear. Then clear it, and the ghosts are gone and the camera is still unmoved.

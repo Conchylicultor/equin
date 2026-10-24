@@ -263,8 +263,8 @@ ThemeEngine.TokenGroup({
 
 ### Phase 4: Build and verify
 
-1. `./singularity build` — generates `config/ui/tokens/<name>/config.origin.jsonc` for each plugin
-2. `./singularity check` — verify all checks pass
+1. `./equin build` — generates `config/ui/tokens/<name>/config.origin.jsonc` for each plugin
+2. `./equin check` — verify all checks pass
 
 ## JSONC file format (after migration)
 
@@ -344,7 +344,7 @@ ThemeEngine.TokenGroup({
 
 ## Verification
 
-1. `./singularity build` and `./singularity check` pass
+1. `./equin build` and `./equin check` pass
 2. Theme customizer opens without errors
 3. Per-group preset switching works
 4. Global preset switching cascades to all groups

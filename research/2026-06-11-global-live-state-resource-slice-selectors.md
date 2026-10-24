@@ -179,7 +179,7 @@ adopters, not part of this work.
 
 ## Verification
 
-1. `./singularity build` (deploys to `http://<worktree>.localhost:9000`).
+1. `./equin build` (deploys to `http://<worktree>.localhost:9000`).
 2. **Functional correctness** — scripted Playwright on a live conversation page,
    confirming the slice still updates the UI:
    ```bash
@@ -196,7 +196,7 @@ adopters, not part of this work.
    `conversations` sub still shows one shared sub with its refcount, and the
    observe/unobserve trace volume on a busy conversation page drops (fewer child
    mount/unmount cascades). Keep the trace always-on — do not silence it.
-4. `./singularity check` (eslint, boundaries, doc-in-sync).
+4. `./equin check` (eslint, boundaries, doc-in-sync).
 
 ## Follow-up (not in this change)
 

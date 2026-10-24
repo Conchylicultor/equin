@@ -131,7 +131,7 @@ and exact-date sub-pieces between them within this file.
 ## Verification
 
 1. `bun test plugins/fields/plugins/date/plugins/filter/web/internal/` — anchor + predicate logic (pinned `now`).
-2. `./singularity build`, then open a DataView with a date field
+2. `./equin build`, then open a DataView with a date field
    (e.g. a tasks/data surface) at `http://<worktree>.localhost:9000`.
 3. Add a date filter, pick operator `Is on or before`, choose **Today** → rows
    filter relative to today; reload and confirm the relative value persists and

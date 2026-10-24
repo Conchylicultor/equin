@@ -6,10 +6,10 @@
 // `render-profiler.jsonl` log channel by the engine on stop.
 //
 // Usage:
-//   ./singularity run plugins/debug/plugins/render-profiler/e2e/render-profile.ts [--url <url>] [--seconds 8] [--top 12]
+//   ./equin run plugins/debug/plugins/render-profiler/e2e/render-profile.ts [--url <url>] [--seconds 8] [--top 12]
 //
 // Example:
-//   ./singularity run plugins/debug/plugins/render-profiler/e2e/render-profile.ts \
+//   ./equin run plugins/debug/plugins/render-profiler/e2e/render-profile.ts \
 //     --url http://<worktree>.localhost:9000/agents/c/<id> \
 //     --seconds 8
 
@@ -49,7 +49,7 @@ const ok = await withBrowser(async (h) => {
   if (!hasApi) {
     console.error(
       `window.${RENDER_PROFILER_GLOBAL} is undefined — the commit bridge or the\n` +
-        "render-profiler plugin is not loaded. Run ./singularity build and retry.",
+        "render-profiler plugin is not loaded. Run ./equin build and retry.",
     );
     return false;
   }

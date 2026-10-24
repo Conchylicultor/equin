@@ -7,7 +7,7 @@
 // Needs a saved Google place named `--place` (default "Rue Sainte-Anne").
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/places/plugins/places-map/e2e/custom-pin.ts \
+//   ./equin run plugins/apps/plugins/places/plugins/places-map/e2e/custom-pin.ts \
 //     [--place "Rue Sainte-Anne"] [--wait 20000] [--out /tmp/places-custom-pin]
 //
 // Writes `<out>-<step>.png`; exits non-zero on the first broken expectation.

@@ -6,7 +6,7 @@ import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
  * check pass, the fast-forward merge — happens inside `run.ts`, serialized
  * host-wide by the `push` pool so two agents can never race on main.
  *
- * The declaration itself is data, so `./singularity --help` and every other
+ * The declaration itself is data, so `./equin --help` and every other
  * invocation pay for this file alone; the body (and the host-admission, worktree
  * and profiler barrels it reaches) loads only when a push actually runs.
  */

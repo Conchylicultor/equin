@@ -194,13 +194,13 @@ record. They stay as they are.
 
 ## Verification
 
-- `./singularity test` on task-subject: launch twice with the same subject gives
+- `./equin test` on task-subject: launch twice with the same subject gives
   one task; a `dropped` task gives a new one.
 - Check unit tests in the style of `check/index.test.ts`: a destructive option
   with no registration fails, and an exempted one passes.
-- `./singularity check investigate:failures-registered` on the repo is green
+- `./equin check investigate:failures-registered` on the repo is green
   after §5–§6 plus the exemptions.
-- `./singularity build`, then `screenshot.ts`:
+- `./equin build`, then `screenshot.ts`:
   - `--path /debug/background/activity/job/backup.run.supervised --click "Investigate"`:
     the popover opens; launch it, and the row shows View task.
   - Runs list: a failed build row shows the same action.

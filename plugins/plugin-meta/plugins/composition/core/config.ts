@@ -173,7 +173,7 @@ export const compositionsConfig = defineConfig({
         // any future negative, for no gain.
         //
         // Main is not servable as a composition: `singularity` is a reserved
-        // namespace that belongs to the checkout's own `./singularity build`, and
+        // namespace that belongs to the checkout's own `./equin build`, and
         // `activatedCompositionIds` filters on servability, so `serve` on THIS
         // row is inert by construction — a stored mode from any config layer can
         // never name a namespace to provision. `composition-closure` still pins it

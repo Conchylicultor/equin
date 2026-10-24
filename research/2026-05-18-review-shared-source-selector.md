@@ -117,9 +117,9 @@ No server changes needed.
 
 ## Verification
 
-1. `./singularity build` — clean compile
+1. `./equin build` — clean compile
 2. Open review pane for a conversation with pushes — source tabs appear above both sections
 3. Switch to a push tab — code-review updates files, plugin-changes shows placeholder
 4. Switch back to "Working tree" — both sections resume normal behavior
 5. Toolbar review button — summary badges still render (file count, plugin count)
-6. `./singularity check` — no boundary or lint violations
+6. `./equin check` — no boundary or lint violations

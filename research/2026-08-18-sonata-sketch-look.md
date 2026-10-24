@@ -263,7 +263,7 @@ useless for irregular outlines. The drawn skin adds a decorative SVG layer inste
 
 ## Verification
 
-- `./singularity build`, then open `http://<worktree>.localhost:9000/sonata`, open a
+- `./equin build`, then open `http://<worktree>.localhost:9000/sonata`, open a
   song, and switch Look in the View popover (the `MdTune` chip).
 - Watch a long held chord fall while scrolling. The ink must ride *with* each note —
   any crawl, shimmer or per-pixel static means the seed was hashed in the wrong stage.
@@ -273,10 +273,10 @@ useless for irregular outlines. The drawn skin adds a decorative SVG layer inste
   with `--click "Sketch"` does the before/after in one shot.
 - Play a glissando in sketch mode: the drawn skin must not break `data-pitch`
   hit-testing.
-- `./singularity test plugins/apps/plugins/sonata` — the existing `labels.test.ts`,
+- `./equin test plugins/apps/plugins/sonata` — the existing `labels.test.ts`,
   `geometry.test.ts` and `css-color.test.ts` cover pure functions this plan doesn't
   touch and should pass unmodified. Add a test for `sketch-paths.ts`.
-- `./singularity check` — `config-v2:registrations-paired` must pass for both
+- `./equin check` — `config-v2:registrations-paired` must pass for both
   descriptors independently, and `plugins-doc-in-sync` after the build regenerates
   the new plugin's `CLAUDE.md`.
 

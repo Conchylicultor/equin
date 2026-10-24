@@ -320,9 +320,9 @@ URL to section ids is unsolved. That stays on the track page as a later item.
 
 ## Verification
 
-1. `./singularity build` (background): migrations, boundaries, type-check, docs.
-2. `./singularity test plugins/integrations/plugins/hooktheory plugins/apps/plugins/chord`.
-3. **Converter golden run** (`./singularity run` script in `song-index/e2e/` or
+1. `./equin build` (background): migrations, boundaries, type-check, docs.
+2. `./equin test plugins/integrations/plugins/hooktheory plugins/apps/plugins/chord`.
+3. **Converter golden run** (`./equin run` script in `song-index/e2e/` or
    a scratch script): stream both dump files and compare `hookpadChordSound`
    with the processed harmony for all 424,859 chords. Expect 100% agreement, or
    a written list of the classes that differ and why.

@@ -168,7 +168,7 @@ Register in `web/src/plugins.ts`.
 1. After Step 1: Open a terminal pane, verify default shell still works. Manually test with a command array.
 2. After Step 3: `curl localhost:<port>/api/claude-sessions` — should return existing `claude-*` sessions. `curl -X POST` should create one.
 3. After Step 4: Open app, see "Claude Sessions" in sidebar. Click "New Session", verify terminal opens with Claude. Close tab, reopen, verify session still listed and can be reattached.
-4. Run `./singularity build` to deploy.
+4. Run `./equin build` to deploy.
 
 ## Files to Modify
 

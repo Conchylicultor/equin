@@ -165,17 +165,17 @@ The port keeps kit.js's semantics exactly. Each card becomes JSX in place of str
    - the kit API,
    - the copy rules in the prototype's CLAUDE.md, which means its labels are copied verbatim.
 
-   Agents don't build. They run `./singularity check type-check` on their own files and hand back.
+   Agents don't build. They run `./equin check type-check` on their own files and hand back.
    `cards/index.ts` is pre-created with every key stubbed, so no two agents edit the same file.
 3. **Integrate and verify (me).** I build, then run the full verification below, then send fixes
    back to the owning agent.
 
 ## Verification
 
-- **Unit tests.** `./singularity test plugins/apps/plugins/website/plugins/pages/plugins/foundations`
+- **Unit tests.** `./equin test plugins/apps/plugins/website/plugins/pages/plugins/foundations`
   covers the berg geometry, row widths, fit and the depth readout. Each is checked against values
   computed from the prototype's formulas.
-- **Build.** Run `./singularity build` in the background.
+- **Build.** Run `./equin build` in the background.
 - **Pixel comparison.** Add `<meta name="mocks" content="/website/foundations">` to the prototype,
   then run `compare-diff.ts --name proto-1790334655-cs0c`:
   - at 1280 and 1920, and at a phone preset;
@@ -196,7 +196,7 @@ The port keeps kit.js's semantics exactly. Each card becomes JSX in place of str
   at the same width, take screenshots, and compare them side by side.
 - **Modes.** Check dark and light (the scene is identical in both, and the header stays readable),
   `prefers-reduced-motion`, and a phone at 390px.
-- **Checks.** `./singularity check` must pass: type-check, eslint, boundaries, no-hardcoded-colors,
+- **Checks.** `./equin check` must pass: type-check, eslint, boundaries, no-hardcoded-colors,
   and plugins-doc-in-sync.
 - The app is reviewed at `http://<worktree>.localhost:9000/website/foundations`.
 

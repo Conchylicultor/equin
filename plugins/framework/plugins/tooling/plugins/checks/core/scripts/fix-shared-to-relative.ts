@@ -4,8 +4,8 @@
  * then remove `shared/index.ts` barrel files that are no longer imported.
  *
  * Usage:
- *   ./singularity run plugins/framework/plugins/tooling/plugins/checks/core/scripts/fix-shared-to-relative.ts           # apply fixes
- *   ./singularity run plugins/framework/plugins/tooling/plugins/checks/core/scripts/fix-shared-to-relative.ts --dry-run # preview only
+ *   ./equin run plugins/framework/plugins/tooling/plugins/checks/core/scripts/fix-shared-to-relative.ts           # apply fixes
+ *   ./equin run plugins/framework/plugins/tooling/plugins/checks/core/scripts/fix-shared-to-relative.ts --dry-run # preview only
  */
 
 import {

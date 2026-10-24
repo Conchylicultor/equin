@@ -98,7 +98,7 @@ Keep 2a **inside data-view** (generalize in place — avoids churning the doc/ch
 
 ## Gotchas
 
-- **Config origin codegen.** Descriptors must exist at build time for `./singularity build` to emit `views.origin.jsonc`. A `<DataView storageKey="x">` consumer is invisible to the server — surface consumers via a **build-time manifest** (mirror `reorderable-slots.generated.ts`). No lazy first-render registration.
+- **Config origin codegen.** Descriptors must exist at build time for `./equin build` to emit `views.origin.jsonc`. A `<DataView storageKey="x">` consumer is invisible to the server — surface consumers via a **build-time manifest** (mirror `reorderable-slots.generated.ts`). No lazy first-render registration.
 - **`// @hash` invariant.** `setConfig` throws if no origin was propagated. The resolver must fall back to default-instances when no descriptor/origin exists — never `setConfig` against an unregistered descriptor.
 - **Reference-stable descriptor singletons.** `useConfig` matches descriptors by `===`. Build each per-`storageKey` descriptor once in one module imported by both the `WebRegister` site and the resolver (reorder's `descriptors.ts` map is the template).
 - **Collection-consumer separation.** Consumers import only the generic registry + host — never `data-view/plugins/{gallery,table,tree}` by name. `views={[…]}` stays string ids only. New view-types remain zero-consumer-change child plugins. The type-dispatched config field belongs under `fields/`, respecting the type-dimension-owned-by-fields rule.
@@ -107,9 +107,9 @@ Keep 2a **inside data-view** (generalize in place — avoids churning the doc/ch
 
 ## Verification (per sub-task)
 
-- **ST1:** `./singularity build`; Playwright screenshot conversations sidebar + a `sonata/library` DataView before/after — both switchers render identical borderless ghost chrome; the bordered box is gone. `./singularity check` (eslint clean, no-adhoc-row not re-triggered).
+- **ST1:** `./equin build`; Playwright screenshot conversations sidebar + a `sonata/library` DataView before/after — both switchers render identical borderless ghost chrome; the bordered box is gone. `./equin check` (eslint clean, no-adhoc-row not re-triggered).
 - **ST2:** No visual/behavioral change; existing localStorage active-view + sort still work across gallery/table/tree; `type-check` + `plugins-doc-in-sync` pass.
-- **ST3:** Hand-author a `config/.../views.jsonc` with two instances; `./singularity build` regenerates origin; `query_db`/inspect confirms config load; the new type-dispatched field validates an `options` blob against the chosen type's schema; manifest sync check passes.
+- **ST3:** Hand-author a `config/.../views.jsonc` with two instances; `./equin build` regenerates origin; `query_db`/inspect confirms config load; the new type-dispatched field validates an `options` blob against the chosen type's schema; manifest sync check passes.
 - **ST4:** In-app: add/rename/duplicate/reorder/delete an instance via the switcher → changes persist to the config file (verify on disk) and survive reload; sort/filter change on a named instance write-backs to its `options`; active-id stays local (different per browser).
 - **ST5:** All 4 consumers load unchanged with no committed config (default fallback); `sonata/library`'s committed reference set renders its named instances; `config-origins-in-sync` green.
 - **ST7:** tasks Tree/Recent reproduce current behavior as named instances; `TaskActions`/`ListActions` still render; conversations (bespoke) untouched.

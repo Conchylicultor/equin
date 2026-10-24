@@ -153,7 +153,7 @@ export const plugins: PluginDefinition[] = [
 
 ## Verification
 
-1. `./singularity build` — must pass (drizzle migrations unchanged; bundler picks up the new plugin).
+1. `./equin build` — must pass (drizzle migrations unchanged; bundler picks up the new plugin).
 2. Open `http://claude-1776337403.localhost:9000`, pick a conversation with edited files, click one. New **Diff** tab appears alongside Raw (and Markdown if `.md`); tab order = Markdown → Diff → Raw.
 3. Manually exercise each file status by modifying/adding/deleting/creating-untracked files in a conversation's worktree:
    - **modified**: shows standard diff hunks.

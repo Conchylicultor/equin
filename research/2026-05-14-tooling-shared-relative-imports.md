@@ -143,6 +143,6 @@ Search for references to R12 / "relative-into-shared" in documentation and updat
 
 1. Run the cleanup script: `bun tooling/src/checks/scripts/fix-shared-to-relative.ts --dry-run` to preview changes
 2. Run without `--dry-run` to apply
-3. Run `./singularity check --plugin-boundaries` to verify zero violations
-4. Run `./singularity build` to verify TypeScript compilation and full build
+3. Run `./equin check --plugin-boundaries` to verify zero violations
+4. Run `./equin build` to verify TypeScript compilation and full build
 5. Spot-check a few rewritten imports to confirm paths are correct

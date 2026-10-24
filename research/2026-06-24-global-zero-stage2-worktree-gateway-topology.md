@@ -222,7 +222,7 @@ per-worktree path is proven, then deleted).
 1. **Pre-flight unknowns**: after `bun install`, confirm zero-cache listen transport
    (UDS vs TCP) and base-path/prefix-strip behavior (verify items above). Lock the two
    localized design choices accordingly.
-2. **Build + opt-in**: `SINGULARITY_ZERO_CACHE=1 ./singularity build` in a worktree.
+2. **Build + opt-in**: `SINGULARITY_ZERO_CACHE=1 ./equin build` in a worktree.
    Confirm the worktree `spec.json` carries the `zeroCache` block with the correct
    `upstreamDb` (= this worktree's fork DB), and `query_db` shows the fork DB exists.
 3. **Cold start + liveness**: open `http://<worktree>.localhost:9000`, mount the
@@ -243,7 +243,7 @@ per-worktree path is proven, then deleted).
 7. **Opt-out unchanged**: with `SINGULARITY_ZERO_CACHE` unset, specs carry no
    `zeroCache`, `/zero/*` 404s, no zero-cache process exists, and existing live-state
    surfaces are byte-for-byte unaffected.
-8. `./singularity check` + `type-check` pass.
+8. `./equin check` + `type-check` pass.
 
 ## Out of scope (later stages)
 

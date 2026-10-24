@@ -120,7 +120,7 @@ of selecting it."
   (one plugin's subtree). Harmless while expand was mount-local; once it
   persists, the two surfaces would share one map over overlapping paths. Have
   `file-tree-section.tsx` call `defineDataView("plugin-view.file-tree")` and pass
-  it; `./singularity build` seeds the new config, which must be authored
+  it; `./equin build` seeds the new config, which must be authored
   (`{ "views": [{ "id": "tree", "name": "Tree", "view": { "type": "tree",
   "visibleFields": ["name"] } }] }`) and its `// @review` marker deleted.
 - *Accepted:* the code-explorer pane is keyed per worktree but the map is not —
@@ -212,7 +212,7 @@ Delete the state, the effect, the suppression, and the `scoped` overlay map
 
 ## Verification
 
-1. `./singularity build`, then exercise each tree at
+1. `./equin build`, then exercise each tree at
    `http://<worktree>.localhost:9000`.
 2. **Pages** (`/pages`) — collapse/expand a page in the sidebar: its "Updated"
    time must not move, and opening its parent page must show the sub-page row
@@ -235,7 +235,7 @@ Delete the state, the effect, the suppression, and the `scoped` overlay map
    does not move.
 7. `bun run test:dom plugins/primitives/plugins/data-view`,
    `bun test plugins/primitives/plugins/data-view/plugins/tree`,
-   `bun test plugins/primitives/plugins/tree`, then `./singularity check`.
+   `bun test plugins/primitives/plugins/tree`, then `./equin check`.
 8. `rg "isExpanded|onToggleExpanded"` returns nothing outside `page/` (the
    editor's own document-content field).
 

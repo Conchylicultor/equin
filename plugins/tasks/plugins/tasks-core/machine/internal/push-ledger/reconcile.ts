@@ -1,7 +1,7 @@
 /**
  * The `pushes` ledger as a PROJECTION of `main`'s trailer-bearing history.
  *
- * Every row is derivable from git: `./singularity push` stamps each commit with
+ * Every row is derivable from git: `./equin push` stamps each commit with
  * `Singularity-Conversation` and `Singularity-Push`, and the pre-push
  * `conversation-trailer` check FAILS a push whose commits lack the conversation
  * trailer — so a trailer-bearing commit on `main` is an enforced invariant, not a

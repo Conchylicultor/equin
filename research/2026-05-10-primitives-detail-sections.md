@@ -171,7 +171,7 @@ This thin wrapper preserves the internal import contract for `panes.tsx` (line 7
 
 ## Verification
 
-1. `./singularity build` succeeds
+1. `./equin build` succeeds
 2. Open a plugin detail pane → sections render in expected order (runtimes → sub-plugins → source-path)
 3. Open a task detail pane → sections render in expected order (graph → header → description → dependencies → attachments → events)
 4. Click the pen button (edit mode) → sections in both views become draggable with wiggle animation

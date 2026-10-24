@@ -4,9 +4,9 @@
 
 Deploy run `drun-1789637806775-hkg0kq` (`update website`) failed its build leg.
 Its release, `release-1789637820602-toe2lm`, built from main's live checkout:
-`release-job.ts` spawns `./singularity release` with `cwd: REPO_ROOT`, and
+`release-job.ts` spawns `./equin release` with `cwd: REPO_ROOT`, and
 `release/cli/run.ts` builds from `root = REPO_ROOT`. While its type-check ran,
-`./singularity push` fast-forwarded that same checkout from `dba1997e3` to
+`./equin push` fast-forwarded that same checkout from `dba1997e3` to
 `3e02098cd`. So tsc read a mix of both commits and failed on errors neither
 commit has (`hasRuntimeNamespace` missing; deleted `query-deadline.ts` "not found").
 
@@ -40,7 +40,7 @@ The one exception is tauri's cargo `target/` dir; see step 3.
   looks dirty. A status read taken while a push is writing files can look dirty,
   and falling back to an in-place build there would reopen exactly this race.
   Main never holds work that is meant to ship.
-- **The CLI owns the checkout, not the job engine.** `./singularity release`
+- **The CLI owns the checkout, not the job engine.** `./equin release`
   becomes a thin outer process: it pins the commit, creates the checkout, re-runs
   the release inside it, and removes it. So a hand-run release is protected too,
   and `release-job.ts`, `enqueueRelease` and the deploy workflow stay unchanged.
@@ -155,14 +155,14 @@ inside a fresh `tauri/src-tauri/target`.
 
 ## Verification
 
-1. **Unit tests** (`./singularity test plugins/release/plugins/source-checkout`),
+1. **Unit tests** (`./equin test plugins/release/plugins/source-checkout`),
    using a temp git repo:
    - acquire creates a detached checkout at the sha;
    - dispose removes the checkout, its registration and its data dir;
    - dispose refuses paths outside `releaseCheckoutsDir`;
    - sweep removes an entry whose lock is free and keeps one whose lock is held.
 2. **Pinned release, by hand**, from a clean committed worktree:
-   `./singularity release --composition website --target web --platform linux-x64`.
+   `./equin release --composition website --target web --platform linux-x64`.
    Check:
    - the transcript shows the private checkout;
    - `RELEASE.json` has `commitSha == HEAD` and `commitDirty: false`;
@@ -176,7 +176,7 @@ inside a fresh `tauri/src-tauri/target`.
    removes the leftover checkout.
 5. **Dirty worktree:** make an uncommitted change, then release. It builds in
    place, prints the note, and marks the bundle dirty.
-6. `./singularity build`, then `./singularity check`
+6. `./equin build`, then `./equin check`
    (including `paths:no-undeclared-data-dirs`).
 7. **Deploy update:** re-run Deploy → website → update. This touches the remote
    server, so only after asking the user.

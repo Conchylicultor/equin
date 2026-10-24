@@ -189,7 +189,7 @@ No server-side registration (`server/src/plugins.ts` is untouched — plugin has
 
 ## Verification
 
-1. Run `./singularity build` — must compile cleanly (TypeScript, Vite, server).
+1. Run `./equin build` — must compile cleanly (TypeScript, Vite, server).
 2. Open `http://<worktree>.localhost:9000`:
    - Navigate to Tasks sidebar → list renders; click the expand chevron on a parent; add a task; drag a task before/after/onto another task — verify parent/rank updates persist.
    - Navigate to Agents sidebar → same checks (build, reorder, nest).

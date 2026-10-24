@@ -1,7 +1,7 @@
 /**
  * Pure unit tests for the hierarchical views' row projection (`projectRows`) — the
  * alias (reference) rank minting in particular.
- * Run with `./singularity test plugins/primitives/plugins/data-view`.
+ * Run with `./equin test plugins/primitives/plugins/data-view`.
  *
  * No DOM, no React render: the projection and the tree's drop resolution are
  * both pure, so these are bun:test (not the jsdom vitest suite).

@@ -216,7 +216,7 @@ Phases 1–2 can ship alone.
 
 ## Verification
 
-- **Unit (`./singularity test plugins/page/plugins/editor`):**
+- **Unit (`./equin test plugins/page/plugins/editor`):**
   - `normalizeSpan`: ordering, non-text endpoint widening, token snapping.
   - `applyDeleteSpan`:
     - A/B/C siblings.
@@ -241,7 +241,7 @@ Phases 1–2 can ship alone.
 - **Collab:** with two tabs on one page, delete a span in tab 1 and check that tab 2
   converges in one step. Run the `editor-collab` e2e `crdt-newblock-verify.ts` as a
   regression check.
-- `./singularity build`, then a manual check at `http://<worktree>.localhost:9000` in a
+- `./equin build`, then a manual check at `http://<worktree>.localhost:9000` in a
   page.
 
 ## Implementation notes (phases 3–4)

@@ -140,7 +140,7 @@ don't flash the spinner.
    redundant inline `{titleField.isSaving ? "Saving…" : "Saved"}` `<Text>` (the universal
    indicator replaces it). Other surfaces gain the indicator automatically with no change.
 
-5. **`./singularity build`** — regenerates the web plugin registry for the new plugin.
+5. **`./equin build`** — regenerates the web plugin registry for the new plugin.
 
 ## Enforcement ladder
 
@@ -153,7 +153,7 @@ don't flash the spinner.
 
 ## Verification
 
-1. `./singularity build`, open `http://<worktree>.localhost:9000/pages/...`.
+1. `./equin build`, open `http://<worktree>.localhost:9000/pages/...`.
 2. **Saving → saved:** with `bun e2e/screenshot.mjs`, type into a block; capture
    before/after — expect the spinner then `MdCloudDone`. Edit a page/story title and a task
    title/description (different apps) → same indicator appears, proving genericity.

@@ -13,8 +13,8 @@
  * fixture applies schema only when the caller calls `runMigrations` itself (as
  * `stale-holder.test.ts` does). Not calling it IS the scenario.
  *
- * Run: `./singularity test plugins/build/plugins/run-ledger`
- * (requires the running embedded cluster — `./singularity build` first).
+ * Run: `./equin test plugins/build/plugins/run-ledger`
+ * (requires the running embedded cluster — `./equin build` first).
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";

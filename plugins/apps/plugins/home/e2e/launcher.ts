@@ -6,7 +6,7 @@
 // compact fold on a very narrow one.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/home/e2e/launcher.ts [--headed] [--url http://<ns>.localhost:9000]
+//   ./equin run plugins/apps/plugins/home/e2e/launcher.ts [--headed] [--url http://<ns>.localhost:9000]
 
 import type { Page } from "playwright";
 import {

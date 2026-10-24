@@ -43,7 +43,7 @@ const GIT_TIMEOUT_MS = 30_000;
  * on any divergence a cold run rewrites the store, so the next run on any
  * worktree reads the right answer.
  *
- * In a supervised child (`./singularity supervised-exec`), so a restart does
+ * In a supervised child (`./equin supervised-exec`), so a restart does
  * not kill it part-way and no job slot is held for its minutes. Admitted like
  * any worker: a grant (inherited, or a background one of its own), then
  * `spawnTypeCheckWorker`'s host-wide slot. Not part of any build.

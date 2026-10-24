@@ -13,7 +13,7 @@
 // change scheme at all.
 //
 // Usage:
-//   ./singularity run plugins/ui/plugins/theme-toggle/e2e/theme-toggle-verify.ts [--url http://<worktree>.localhost:9000]
+//   ./equin run plugins/ui/plugins/theme-toggle/e2e/theme-toggle-verify.ts [--url http://<worktree>.localhost:9000]
 
 import {
   pathUrl,

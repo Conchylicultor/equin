@@ -168,7 +168,7 @@ Add an entry for `resume` in **`docs/plugins.md`** under `conversation-view`'s n
 
 ## Verification
 
-1. `./singularity build` from the worktree — build succeeds, server restarts.
+1. `./equin build` from the worktree — build succeeds, server restarts.
 2. Open `http://<worktree>.localhost:9000`.
 3. Start a conversation (any prompt) and let it produce one turn so `claudeSessionId` is persisted (poller picks it up after Claude writes `~/.claude/sessions/<pid>.json`).
 4. Open the conversation's tmux pane and exit Claude (Ctrl-C twice or `/exit`). Within ~1s the status badge flips to **gone**.

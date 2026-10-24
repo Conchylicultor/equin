@@ -249,7 +249,7 @@ descending by `playCount` / `lastPlayedAt` epoch (absent ⇒ 0, sorts last).
 
 ## Verification
 
-1. `./singularity build` — generates two migrations (the `sonata_songs.midi_track_count`
+1. `./equin build` — generates two migrations (the `sonata_songs.midi_track_count`
    column + the `sonata_songs_ext_playback` table), regenerates the plugin registry, seeds +
    backfills starter track counts. Confirm no check fails (`migrations-in-sync`,
    `plugin-boundaries`, `eslint`, `plugins-doc-in-sync`).

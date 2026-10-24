@@ -249,7 +249,7 @@ doc's §6 so they compose, not collide):
 1. **By construction.** The runtime exposes only `getResourceValue` (read) and the
    change-feed (invalidate); `entry.loader` is private; no caller runs a loader or
    touches the pool off-path.
-2. **Checks for the residual.** The existing `./singularity check` idiom
+2. **Checks for the residual.** The existing `./equin check` idiom
    (`no-raw-websocket`-style) extended: forbid a new parallel read system; forbid
    direct `pool.connect()` bypasses (already exists); assert the trigger set covers
    every written table (auto-derived, so this is a consistency check, not
@@ -357,10 +357,10 @@ the scheduler — treated as acceptance criteria, not independent work:
 - **L1 universal:** `get_runtime_profile kind:"loader"` shows the `conversations`
   aggregate recomputing *scoped* (one key) under a single-row change, not a full
   4-query rebuild.
-- **L2 cold load:** after `./singularity build` + restart, first paint of
+- **L2 cold load:** after `./equin build` + restart, first paint of
   `http://<worktree>.localhost:9000` reads the persisted snapshot (low-ms) instead of
   the ~4 s full rebuild; the rebuild cost, if any, is a bounded catch-up.
 - **Idle ≈ 0 (shared budget):** with no subscriber and no DB write, `get_runtime_
   profile` shows **zero** loader runs over a quiet interval; the CI budget gate
   asserts it.
-- `./singularity check` passes, including the new bypass + trigger-coverage checks.
+- `./equin check` passes, including the new bypass + trigger-coverage checks.

@@ -164,14 +164,14 @@ groupContextRuns(events, role, isHost) → Item[]
 
 ## Verification
 
-- `./singularity test plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer`
+- `./equin test plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer`
   covers `groupContextRuns`:
   - the two start runs split by the prompt;
   - an ambient-only run stays a row;
   - a single context member stays a row unless hosted;
   - an ambient run attaches to the compaction;
   - `file` and hook rows break a run.
-- `./singularity build`.
+- `./equin build`.
 - Extend `compaction/e2e/compaction-divider.ts` on conv-1791818418-k72458:
   - "Session context" folds are present and closed;
   - no `attachment:invoked_skills` row is visible at top level;

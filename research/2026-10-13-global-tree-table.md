@@ -146,14 +146,14 @@ Each phase builds, passes checks and leaves the app working.
 
 ## Verification
 
-- **Each phase:** `./singularity build` (checks include `type-check`, `plugin-boundaries`, `boundary-rules`, `plugins-doc-in-sync`) and `./singularity test plugins/primitives/plugins/{tree,data-table,data-view}`.
+- **Each phase:** `./equin build` (checks include `type-check`, `plugin-boundaries`, `boundary-rules`, `plugins-doc-in-sync`) and `./equin test plugins/primitives/plugins/{tree,data-table,data-view}`.
 - **Behavior e2e** (port, then run against the build):
   - `tree/e2e/subtree-fold.ts`
   - `data-view/plugins/tree/e2e/group-fold.ts` → table
   - `apps/plugins/pages/plugins/page-tree/e2e/grouped-reorder.ts` (drag-reparent in the sidebar)
   - a new table e2e covering expand/collapse, ←/→ keys, search-keeps-ancestors and sort-within-siblings
 - **Visual:** `screenshot.ts` on Studio explorer, tasks, the pages sidebar (outline must look unchanged) and the file explorer, in light and dark mode at 390 / 1440 widths. Use `compare-diff.ts` against the prototype for the grid look.
-- **Migration:** run `./singularity build` on a worktree whose config has `type: "tree"` rows, and check that the rows are rewritten once and that re-running is a no-op.
+- **Migration:** run `./equin build` on a worktree whose config has `type: "tree"` rows, and check that the rows are rewritten once and that re-running is a no-op.
 
 ## Follow-ups (not v1)
 

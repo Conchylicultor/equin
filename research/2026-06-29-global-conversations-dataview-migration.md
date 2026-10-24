@@ -171,7 +171,7 @@ each tab grows large; can start as one plugin.)
 
 ## Verification (high-level; each phase defines its own)
 
-- After Phase 0: `./singularity build`, open `http://<worktree>.localhost:9000`, confirm
+- After Phase 0: `./equin build`, open `http://<worktree>.localhost:9000`, confirm
   the sidebar is pixel-identical and the variant picker appears with one option.
 - After each `dataview`-tab phase: with the toggle, switch classic↔dataview live and
   confirm identical data + working mutations (drag-reorder, promote/demote, group
@@ -180,5 +180,5 @@ each tab grows large; can start as one plugin.)
 - Cross-check the DB with the `query_db` MCP tool (e.g. `conversations_ext_queue`,
   `conversation_group_members`) to confirm both views write identical rank/group rows.
 - Phase 4: confirm no remaining imports of the `classic` variant before deletion
-  (`./singularity check plugin-boundaries`, `plugins-registry-in-sync`).
+  (`./equin check plugin-boundaries`, `plugins-registry-in-sync`).
 ```

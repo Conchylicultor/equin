@@ -170,7 +170,7 @@ local `dependencies`/`peerDependencies`. No new deps needed beyond what `command
 
 Standard plugin CLAUDE.md — brief prose description, no autogen block yet (added by build).
 
-### 3. Run `./singularity build`
+### 3. Run `./equin build`
 
 `facet.generated.ts` auto-regenerates with the new `exports` entry. Doc output should be
 byte-identical because:
@@ -204,10 +204,10 @@ byte-identical because:
 
 ## Verification
 
-After `./singularity build`:
+After `./equin build`:
 
 1. `facet.generated.ts` must include the new `exports` entry (9 facets total).
-2. `./singularity check` must pass (especially `plugins-doc-in-sync`, `plugin-boundaries`, `eslint`).
+2. `./equin check` must pass (especially `plugins-doc-in-sync`, `plugin-boundaries`, `eslint`).
 3. Spot-check a plugin with exports in the generated `docs/plugins-details.md` — the `Exports (web):` /
    `Exports (core):` sections must be byte-identical to the previous build output.
 4. Verify the `exports` facet data is populated via `query_db` or by adding a temporary `console.log`

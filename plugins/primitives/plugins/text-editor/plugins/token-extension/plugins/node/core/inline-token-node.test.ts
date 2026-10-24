@@ -3,7 +3,7 @@
  * property of the `@lexical/yjs` binding, not a style preference — see the
  * module header of `inline-token-node.ts` for the citations.
  *
- * Run with `./singularity test plugins/primitives/plugins/text-editor/plugins/token-extension`.
+ * Run with `./equin test plugins/primitives/plugins/text-editor/plugins/token-extension`.
  */
 
 import { describe, expect, test } from "bun:test";

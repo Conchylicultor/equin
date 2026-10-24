@@ -236,12 +236,12 @@ divergence report follows.
 
 ## Verification
 
-1. `./singularity test plugins/page/plugins/editor` — the suites above; test 4 is the
+1. `./equin test plugins/page/plugins/editor` — the suites above; test 4 is the
    regression gate (red before, green after).
-2. `./singularity test plugins/primitives/plugins/optimistic-mutation` — the ordering-rule
+2. `./equin test plugins/primitives/plugins/optimistic-mutation` — the ordering-rule
    suite must stay green; this change only feeds it a wider relation.
-3. `./singularity check` (type-check, boundaries, `plugins-doc-in-sync`), then
-   `./singularity build` — both with `run_in_background: true`.
+3. `./equin check` (type-check, boundaries, `plugins-doc-in-sync`), then
+   `./equin build` — both with `run_in_background: true`.
 4. Real-app gate: `plugins/page/plugins/editor/e2e/split-typing-verify.ts` against
    `http://att-1788274995-733s.localhost:9000`. Type through several Enters, indent/outdent, and
    Backspace-merge under host load (a couple of concurrent builds). No block may disappear, and

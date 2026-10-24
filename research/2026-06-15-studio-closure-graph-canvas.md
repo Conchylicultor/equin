@@ -218,11 +218,11 @@ so the entry point is decoupled from where the button lives.)
 ## Boundaries / registration
 
 - New plugins are registered by creating their `web/index.ts` barrels and
-  running `./singularity build` (regenerates `web.generated.ts`; the
+  running `./equin build` (regenerates `web.generated.ts`; the
   `plugins-registry-in-sync` check enforces it). Never hand-edit the registry.
 - All cross-plugin imports are runtime barrels (`…/web`, `…/core`) — compliant
-  with the boundary grammar. `./singularity check plugin-boundaries` must pass.
-- The `plugins-doc-in-sync` check requires regenerated docs — `./singularity
+  with the boundary grammar. `./equin check plugin-boundaries` must pass.
+- The `plugins-doc-in-sync` check requires regenerated docs — `./equin
   build` handles it; commit the generated docs.
 
 ## Critical files
@@ -242,7 +242,7 @@ so the entry point is decoupled from where the button lives.)
 
 ## Verification
 
-1. `./singularity build` (regenerates registry + docs + migrations, runs checks).
+1. `./equin build` (regenerates registry + docs + migrations, runs checks).
 2. `bun test plugins/apps/plugins/studio/plugins/graph/web/internal/subgraph.test.ts` — subgraph BFS / cap / edge-kind correctness.
 3. Manual (Playwright) at `http://<worktree>.localhost:9000` → Studio:
    - Open **Plugin Graph** sidebar entry → empty state → search a plugin (e.g.
@@ -256,7 +256,7 @@ so the entry point is decoupled from where the button lives.)
    - From **Explorer**, hover a row → "Open in graph" → graph opens focused on
      that plugin.
    Use `e2e/screenshot.mjs --click` to capture before/after for the controls.
-4. `./singularity check` clean (boundaries, registry-in-sync, doc-in-sync, type-check).
+4. `./equin check` clean (boundaries, registry-in-sync, doc-in-sync, type-check).
 
 ## Follow-ups (not in this change)
 

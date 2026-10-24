@@ -376,10 +376,10 @@ active-data vitest files (all inline fixtures).
 
 ## Verification
 
-1. `./singularity build` → `http://att-1786055151-uzfs.localhost:9000` (regenerates the two
+1. `./equin build` → `http://att-1786055151-uzfs.localhost:9000` (regenerates the two
    plugin registries and the doc autogen blocks; `plugins-doc-in-sync` /
    `plugins-registry-in-sync` fail until it runs).
-2. `./singularity test plugins/active-data` — the arbitration vitest and the pattern
+2. `./equin test plugins/active-data` — the arbitration vitest and the pattern
    bun:test.
 3. Post a message containing, all backticked: a real 40-char sha, a real short sha
    (`862de5c72`), a plausible-but-nonexistent hex string, an all-digit 10-char id, and a

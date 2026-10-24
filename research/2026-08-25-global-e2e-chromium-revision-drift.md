@@ -105,11 +105,11 @@ so it holds today; it does not check the thing it guards.
 
 ## Approach
 
-### 1. `./singularity run <script.ts> [args…]` — the correct spelling
+### 1. `./equin run <script.ts> [args…]` — the correct spelling
 
 The rule:
 
-> Never `bun <file>`. Always `./singularity run <file>`.
+> Never `bun <file>`. Always `./equin run <file>`.
 
 `bin/index.ts` runs `ensureDeps()` before dispatch for every verb, from a static
 import closure that reaches no npm package. So `run` inherits the one thing
@@ -117,7 +117,7 @@ missing today: **this worktree's own `node_modules`, installed from this branch'
 lock**, plus postinstall provisioning of the matching chromium. Roughly 140 ms
 when the deps stamp is already fresh.
 
-Deliberately **one general verb, not `./singularity e2e`.** The problem is not
+Deliberately **one general verb, not `./equin e2e`.** The problem is not
 e2e-specific: of the 8 documented bare-`bun` invocations, two are not e2e
 (`stats/cost/scripts/verify-vs-ccusage.ts` → `ccusage/data-loader`;
 `browser-fetch/scripts/verify.ts`), and 14 more runnable scripts live under
@@ -138,11 +138,11 @@ New plugin `plugins/framework/plugins/cli/plugins/run/`, mirroring
 
 **Accepted extensions must equal the guard's** (§2): `/\.(?:[cm]?[jt]sx?)$/` — ts,
 tsx, mts, cts, js, jsx, mjs, cjs. Not `.ts` alone, as an earlier draft said. The
-guard denies `bun x.mjs` and hints at `./singularity run x.mjs`; if `run` refused
+guard denies `bun x.mjs` and hints at `./equin run x.mjs`; if `run` refused
 it, the hint would be a dead end. The resolution defect is identical for every
 one of those extensions.
 
-Then `./singularity build` regenerates `cli.generated.ts`.
+Then `./equin build` regenerates `cli.generated.ts`.
 
 **Docs to update** — every bare `bun <path>` an *agent* is told to type:
 
@@ -173,7 +173,7 @@ built. They work because they are npm-free by construction — verified in this
 uninstalled worktree, where `guard.ts` and `flock-wait.ts` both resolve their full
 import graph with no `node_modules`. So:
 
-- **agent-invoked scripts** → `./singularity run`; dependencies guaranteed
+- **agent-invoked scripts** → `./equin run`; dependencies guaranteed
 - **machine-invoked scripts** → stay npm-free, run bare
 
 ### 2. The `bun-script` guard — what makes the rule hold
@@ -207,7 +207,7 @@ export const bunScriptGuard = defineGuard<BashInput>({
     return {
       blocked: "`bun <file>.ts` resolves dependencies by walking UP the directory tree.",
       why: "A worktree without its own node_modules silently uses the MAIN checkout's installed tree — or, if that is mid-install, whatever npm's `latest` is today. Which version you get depends on timing, not on this branch's bun.lock.",
-      hint: "Use `./singularity run <file>.ts [args…]` — it installs this worktree's own dependencies from its own lock first, then runs the script.",
+      hint: "Use `./equin run <file>.ts [args…]` — it installs this worktree's own dependencies from its own lock first, then runs the script.",
     };
   },
 });
@@ -238,7 +238,7 @@ Add to `bunfig.toml`:
 # said 1.60.0, demanding a chromium revision nothing had provisioned.
 #
 # NARROW ON PURPOSE: this does not stop resolution walking UP to another
-# checkout's node_modules — that is what `./singularity run` and the `bun-script`
+# checkout's node_modules — that is what `./equin run` and the `bun-script`
 # guard are for. It only removes the registry-latest arm when nothing is found at
 # all, turning a silent wrong version into `Cannot find package 'x'`.
 [install]
@@ -257,7 +257,7 @@ Bump `playwright` `^1.60.0` → `^1.62.1` (chromium revision 1234) in:
 - `plugins/apps/plugins/prototypes/plugins/thumbnails/package.json`
 
 Keep the caret — `bun.lock` is the pin, and exact-pinning buys nothing against
-auto-install, which ignores it (Context (1)). `./singularity build` refreshes the
+auto-install, which ignores it (Context (1)). `./equin build` refreshes the
 lock; postinstall provisions 1234.
 
 ### 5. Make the launch failure legible
@@ -355,23 +355,23 @@ Expensive and still wrong.
 
 ## Verification
 
-1. `./singularity build` — regenerates `bun.lock` and `cli.generated.ts`, and
+1. `./equin build` — regenerates `bun.lock` and `cli.generated.ts`, and
    provisions revision 1234 via postinstall. Confirm the install appears in the log.
 2. `ls ~/Library/Caches/ms-playwright` — `chromium-1234` and
    `chromium_headless_shell-1234` present; 1217 and 1228 gone after §8.
 3. **The guard**: ask an agent session to run `bun plugins/apps-core/plugins/tabs/e2e/tabs-verify.ts`
-   — the call must be blocked with the hint naming `./singularity run`.
-   `bun run playwright screenshot …`, `bun install` and `./singularity test` must
+   — the call must be blocked with the hint naming `./equin run`.
+   `bun run playwright screenshot …`, `bun install` and `./equin test` must
    all still pass through untouched.
 4. **The defect itself**, in a worktree with no `node_modules`:
    `bun -e 'console.log(Bun.resolveSync("playwright", process.cwd()))'` currently
-   prints a path under the MAIN checkout. After `./singularity run` has been used
+   prints a path under the MAIN checkout. After `./equin run` has been used
    there once, it must print a path inside the worktree.
-5. `./singularity run plugins/apps-core/plugins/tabs/e2e/tabs-verify.ts` passes
+5. `./equin run plugins/apps-core/plugins/tabs/e2e/tabs-verify.ts` passes
    from a worktree that has never been built; `--headed` forwards through.
-6. `./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --url http://<worktree>.localhost:9000 --out /tmp/shot`
+6. `./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --url http://<worktree>.localhost:9000 --out /tmp/shot`
    writes the images.
-7. `./singularity run plugins/does/not/exist.ts` fails naming the path, not with a
+7. `./equin run plugins/does/not/exist.ts` fails naming the path, not with a
    Bun module error.
 8. Machine-invoked scripts still work bare, with no `node_modules`:
    `bun build --no-install --target=bun plugins/framework/plugins/tooling/plugins/guards/bin/guard.ts`
@@ -379,11 +379,11 @@ Expensive and still wrong.
 9. §5's message: point `PLAYWRIGHT_BROWSERS_PATH` at an empty dir and confirm the
    error names the version, the resolved-from path, the expected executable, and
    the fix.
-10. `./singularity check` — clean, including `e2e-harness:pinned-playwright-invocation`;
+10. `./equin check` — clean, including `e2e-harness:pinned-playwright-invocation`;
     confirm it fails when `bunx playwright` is reintroduced and does not flag `research/`.
-11. `./singularity test plugins/framework/plugins/tooling/plugins/guards` — the new
+11. `./equin test plugins/framework/plugins/tooling/plugins/guards` — the new
     `bun-script.test.ts` passes; and
-    `./singularity test plugins/infra/plugins/safe-fetch/plugins/browser-fetch` —
+    `./equin test plugins/infra/plugins/safe-fetch/plugins/browser-fetch` —
     `errors.test.ts:46` tracks the new string.
 12. Backend launch paths still work: open a prototype thumbnail and refresh a
     `browser-fetch`-backed events source.

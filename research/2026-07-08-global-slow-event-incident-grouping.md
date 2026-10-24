@@ -245,7 +245,7 @@ single incident, from inside the deep-dive view.
 | `pane/web/components/trace-detail.tsx` | "Also in this window" siblings section |
 | `pane/CLAUDE.md` (autogen block regenerates on build) | prose note if warranted |
 
-No docs/registry drift beyond the autogen blocks that `./singularity build`
+No docs/registry drift beyond the autogen blocks that `./equin build`
 refreshes.
 
 ---
@@ -254,8 +254,8 @@ refreshes.
 
 1. **Unit:** `bun test plugins/debug/plugins/trace/plugins/pane/web/internal/incidents.test.ts`
    — grouping/overlap/transitive/stability all green.
-2. **Build:** `./singularity build` (from this worktree) → green; then
-   `./singularity check` (boundaries, type-check, plugins-doc-in-sync).
+2. **Build:** `./equin build` (from this worktree) → green; then
+   `./equin check` (boundaries, type-check, plugins-doc-in-sync).
 3. **Generate co-occurring traces** (make several trip within one window so their
    intervals overlap). The `cooldownMs` is *per `kind:label`*, so distinct labels
    co-occur freely:

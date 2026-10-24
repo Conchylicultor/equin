@@ -5,7 +5,7 @@
 // waterfall, and web vitals after the page settles.
 //
 // Usage:
-//   ./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/perf.ts \
+//   ./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/perf.ts \
 //     [--url <url>] [--out <path>] [--wait-for-timeout <ms>] [--viewport-size "W,H"]
 //
 // --url takes a full page URL: its origin says which deploy, its path says which

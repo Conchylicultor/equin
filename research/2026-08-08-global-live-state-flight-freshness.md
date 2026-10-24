@@ -308,11 +308,11 @@ watermark ordering.
 
 ## Verification
 
-1. `./singularity test plugins/framework/plugins/resource-runtime plugins/packages/plugins/inflight`
+1. `./equin test plugins/framework/plugins/resource-runtime plugins/packages/plugins/inflight`
    — the new suite plus every re-pin.
 2. `bun run test:dom plugins/primitives/plugins/live-state plugins/primitives/plugins/optimistic-mutation`
    — unchanged by this plan; run them to prove the client is untouched.
-3. `./singularity check` then `./singularity build`.
+3. `./equin check` then `./equin build`.
 4. Live: open a page at `http://<worktree>.localhost:9000`, type several nested
    blocks, and confirm they persist. Then reproduce the incident's shape — hold a
    slow read open (the Debug → Live-State Emit pane drives synthetic pushes; a

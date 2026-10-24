@@ -222,12 +222,12 @@ function CustomColumnsFieldsSetting() {
 
 ## Verification
 
-1. `./singularity build` — regenerates registry + descriptors; confirms no
+1. `./equin build` — regenerates registry + descriptors; confirms no
    boundary/cycle violation and the plugin-doc/registry in-sync checks pass. The
    `plugins-registry-in-sync` and `data-views-in-sync` checks must stay green.
-2. `./singularity check plugin-boundaries` — confirms the `data-view ↔
+2. `./equin check plugin-boundaries` — confirms the `data-view ↔
    custom-columns` cycle is gone and `custom-columns → data-view` is the only edge.
-   `./singularity check` (all) — especially `config-origins-in-sync` (should be
+   `./equin check` (all) — especially `config-origins-in-sync` (should be
    clean: identical field set ⇒ no hash churn) and `type-check`.
 3. App smoke test at `http://<worktree>.localhost:9000` on a DataView surface
    (e.g. Sonata library `/sonata`, or Tasks): open the settings gear → the

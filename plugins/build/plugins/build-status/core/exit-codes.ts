@@ -1,6 +1,6 @@
 /**
  * A build of main reads the shared main worktree for minutes (codegen, checks,
- * vite) while `./singularity push` is free to merge into that same tree. When a
+ * vite) while `./equin push` is free to merge into that same tree. When a
  * merge lands mid-build, every source read after it answers for a different
  * commit than the reads before it — so the build's verdict is about no coherent
  * tree at all, and whichever `*-in-sync` check straddles the swap reports drift
@@ -45,7 +45,7 @@ export const BUILD_EXIT_HARD_KILLED = -1;
  *
  * **`buildStatusOf` is not an exception to that rule; it is outside its
  * premise.** The premise is a command whose codes we do not author. These codes
- * are FIRST-PARTY: `./singularity build` installs `installFatalSignalExit` and
+ * are FIRST-PARTY: `./equin build` installs `installFatalSignalExit` and
  * *chooses* `128 + signo` for itself, from `FATAL_SIGNAL_EXITS`, having caught
  * the signal. So the number here is a record the build wrote about a signal it
  * saw, not a wait status somebody decoded afterwards.

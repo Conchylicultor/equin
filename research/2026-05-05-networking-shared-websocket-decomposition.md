@@ -157,7 +157,7 @@ No type export needed — the class itself is the useful export; options are opt
 | Check | Command |
 |---|---|
 | Types | `bunx tsc --noEmit --project web/tsconfig.json` |
-| Build | `./singularity build` |
+| Build | `./equin build` |
 | Single tab | Playwright: connect, subscribe `tasks`, create a task, assert push arrives |
 | Leader close | Playwright: 2 tabs, close leader, assert follower takes over, push still works |
 | Frozen leader | Playwright: 2 tabs, kill leader heartbeats, wait 12s, assert follower steals lock |

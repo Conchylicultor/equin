@@ -4,7 +4,7 @@
 
 ## Context
 
-`debug/op-wedge-watchdog` was built 2026-07-20 to catch a `./singularity {build,check,push}`
+`debug/op-wedge-watchdog` was built 2026-07-20 to catch a `./equin {build,check,push}`
 that wedged for 8-17h holding host cpu-slots and the global push mutex. It sweeps the op
 markers every minute, and for any op past a 15-minute budget it runs capture-then-reap:
 `sample`, `lsof`, a recursive process tree, a 60s inspector-attached JSC profiler, then
@@ -82,7 +82,7 @@ reap of a real one.
 - `~/.singularity/build-progress.jsonl` and `~/.singularity/check-progress.jsonl` each carry an
   unref'd 30s heartbeat (`phase: "pending"`, gated on in-flight work), so `rg '"phase":"pending"'
   … | tail` shows whether an op's event loop is still running. A wedged loop cannot emit one.
-- `./singularity check --status` prints the outstanding check unit.
+- `./equin check --status` prints the outstanding check unit.
 - `~/.singularity/op-log.jsonl` records every op's in-flight state and wait list.
 - `~/.singularity/worktrees/<slug>/ops/*.json` names the live pid.
 
@@ -208,31 +208,31 @@ alone leaves a dangling union member). Sequence within it:
 2. Delete `inspect.ts`, move `isOpCommand`, rewire `index.ts`.
 3. Strip `inspect` from `worktree-op.ts` + its tests.
 4. Rewrite the Stage-2 gate and the spawn prose.
-5. `bun install`, then `./singularity build`.
+5. `bun install`, then `./equin build`.
 6. Delete the stale rows and the orphaned capture logs.
 
 **Immediate mitigation, before any of this deploys:** set `reap: false` and `capture: false` in
 Settings → Config → `op-wedge-watchdog`. The job reads config live each tick, so this stops the
 reaping and the ~90s captures within a minute, with no build.
 
-`./singularity build` regenerates (never hand-edit): `server.generated.ts`, `web.generated.ts`,
+`./equin build` regenerates (never hand-edit): `server.generated.ts`, `web.generated.ts`,
 `docs/plugins-{details,compact}.md`, and the `## Plugin reference` block in every affected
 `CLAUDE.md` (`plugins/debug/`, `plugins/reports/`, `infra/plugins/worktree/`, `infra/plugins/spawn/`, …).
 
 ## Verification
 
-1. **`./singularity check`** — the real gate. `type-check` catches the `sources.ts` union removal
+1. **`./equin check`** — the real gate. `type-check` catches the `sources.ts` union removal
    and every dangling `inspect` reference; `plugin-boundaries`, `plugins-registry-in-sync` and
    `plugins-doc-in-sync` catch an incomplete deletion or stale codegen.
 2. **`bun test plugins/infra/plugins/worktree/server/internal/worktree-op.test.ts`** — the marker
    suite still passes with the `inspect` assertions removed.
-3. **One process per op.** Run `./singularity build` in a scratch worktree and confirm the wrapper
+3. **One process per op.** Run `./equin build` in a scratch worktree and confirm the wrapper
    is gone:
    ```bash
    ps -axo pid=,ppid=,rss=,command= | grep 'cli/bin/index.ts' | grep -v grep
    ```
    Expect exactly one row per op (was two), with no `--inspect=` in the command line.
-4. **Ctrl-C still works, and orphaning still terminates.** `./singularity build`, then `^C` —
+4. **Ctrl-C still works, and orphaning still terminates.** `./equin build`, then `^C` —
    it must exit gracefully and release the build lock (`~/.singularity/worktrees/<slug>/ops/build.json`
    cleared). Then start a build from a subshell, kill the parent shell, and confirm the op exits
    via the surviving `installOrphanGuard` (`ORPHAN_EXIT_CODE`) rather than lingering.

@@ -6,7 +6,7 @@
 
 ## Context
 
-F1–F4 are **done**: `./singularity release --composition sonata --target web` already produces a self-contained, portable bundle — compiled `server` + `launch` binaries, vendored gateway / embedded-Postgres / PgBouncer natives, the filtered web `dist`, and migration SQL — that boots the whole stack on a fresh host and serves Sonata at `http://sonata.localhost:9100`. The `--target tauri` branch is the only thing stubbed out (it `process.exit(1)`s with "F5 not yet implemented" in `release.ts:192`).
+F1–F4 are **done**: `./equin release --composition sonata --target web` already produces a self-contained, portable bundle — compiled `server` + `launch` binaries, vendored gateway / embedded-Postgres / PgBouncer natives, the filtered web `dist`, and migration SQL — that boots the whole stack on a fresh host and serves Sonata at `http://sonata.localhost:9100`. The `--target tauri` branch is the only thing stubbed out (it `process.exit(1)`s with "F5 not yet implemented" in `release.ts:192`).
 
 F5 wraps that **same bundle** in a Tauri (Rust) desktop shell: the shell spawns the existing `launch` binary as a sidecar (gateway + embedded Postgres come up as detached daemons), points its webview at the local gateway, stores data in the OS app-data dir, and tears the stack down on quit.
 
@@ -43,7 +43,7 @@ The single load-bearing gateway change. When a request resolves to no namespace 
   }
   ```
   Lowest precedence: explicit subdomain and central routes still win. Empty default = today's behavior exactly, so **dev and the web target are unaffected** unless they opt in.
-- **Launcher passes it for every release.** `spawnGatewayDaemon` (`boot.ts:361`) gains a `defaultNamespace` opt appended as `-default-namespace <name>`; `bootSelfContainedApp` (`boot.ts:497`) forwards `name` into it. So **both** web and Tauri releases serve at bare `http://localhost:<port>/` — this also retro-fixes the web target and Windows (`*.localhost` doesn't resolve there). Dev `./singularity start` does not set it.
+- **Launcher passes it for every release.** `spawnGatewayDaemon` (`boot.ts:361`) gains a `defaultNamespace` opt appended as `-default-namespace <name>`; `bootSelfContainedApp` (`boot.ts:497`) forwards `name` into it. So **both** web and Tauri releases serve at bare `http://localhost:<port>/` — this also retro-fixes the web target and Windows (`*.localhost` doesn't resolve there). Dev `./equin start` does not set it.
 
 ### 2. PG socket dir decoupled from the data dir (`plugins/database/plugins/{embedded,pgbouncer}/`)
 
@@ -144,7 +144,7 @@ App quit (RunEvent::Exit)
 
 ## Verification (end to end)
 
-1. **Gateway routing (dev loop, isolated):** `./singularity build --composition sonata`, then start a gateway with `-default-namespace sonata` and confirm bare `http://localhost:9000/` serves Sonata (today it 404s); confirm a normal dev gateway (no flag) still 404s bare localhost and unaffected subdomains still route.
-2. **Bundle build:** `./singularity release --composition sonata --target tauri` → a `.app`/`.dmg` is produced for the host platform.
+1. **Gateway routing (dev loop, isolated):** `./equin build --composition sonata`, then start a gateway with `-default-namespace sonata` and confirm bare `http://localhost:9000/` serves Sonata (today it 404s); confirm a normal dev gateway (no flag) still 404s bare localhost and unaffected subdomains still route.
+2. **Bundle build:** `./equin release --composition sonata --target tauri` → a `.app`/`.dmg` is produced for the host platform.
 3. **Launch (online):** launch the app on a clean machine (no `~/.singularity`); confirm the window loads Sonata, a song saved persists across an app restart (data in app-data dir), and audio plays (online lazy-download).
 4. **Teardown:** quit the app; confirm no orphaned gateway / postgres / pgbouncer processes remain (`pgrep`), the app-data PG cluster + sockets are released, and relaunch still has the data.

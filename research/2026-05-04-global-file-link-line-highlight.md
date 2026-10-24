@@ -167,7 +167,7 @@ Update `buildMdComponents` signature to match: `onFileOpen: (path: string, line?
 
 ## Verification
 
-- [ ] `./singularity build` — no type errors
+- [ ] `./equin build` — no type errors
 - [ ] Plain `plugins/foo/bar.ts` links still open (no line, no scroll) 
 - [ ] `plugins/foo/bar.ts:148` renders as a clickable chip showing `bar.ts:148`
 - [ ] Clicking opens file-peek pane; URL includes `:148` suffix in filePath param

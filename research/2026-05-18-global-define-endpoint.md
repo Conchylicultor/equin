@@ -290,8 +290,8 @@ route, deferred to a follow-up.
 
 ## Verification
 
-1. `./singularity build` — compiles and deploys
-2. `./singularity check` — plugin boundaries pass (cross-plugin imports are legal via core/ barrel)
+1. `./equin build` — compiles and deploys
+2. `./equin check` — plugin boundaries pass (cross-plugin imports are legal via core/ barrel)
 3. `curl http://<worktree>.localhost:9000/api/agents` — response unchanged
 4. Send malformed body to PATCH → verify 400 with Zod issues
 5. IDE hover on `fetchEndpoint(getAgent, { id: "x" })` → return type is `Promise<Agent>`

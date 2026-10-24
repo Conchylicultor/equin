@@ -10,7 +10,7 @@
  * spawn one. So these tests spawn detached children and signal their process
  * groups exactly as `killSupervisedRun` does.
  *
- * Run: `./singularity test plugins/infra/plugins/jobs/plugins/supervised-job`
+ * Run: `./equin test plugins/infra/plugins/jobs/plugins/supervised-job`
  */
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { afterEach, describe, expect, test } from "bun:test";
@@ -179,7 +179,7 @@ describe("supervisedArgv — signals", () => {
   });
 
   test("a child that HANDLES TERM records its own exit code, and is gone first", async () => {
-    // The `./singularity build` shape (installFatalSignalExit): traps TERM,
+    // The `./equin build` shape (installFatalSignalExit): traps TERM,
     // shuts down, exits with its own status. A trapped signal makes `wait`
     // return 128+signo BEFORE the child has exited, so without the retry the
     // shim recorded `143 TERM` and exited while the child was still running —

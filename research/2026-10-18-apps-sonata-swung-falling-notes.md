@@ -44,7 +44,7 @@ The swing plugin owns everything about swing, so it owns the display choice too.
 | Pedal lane | `pedal/plugins/lane/web/components/pedal-lane.tsx` L49 | Read `usePerformedScore(score).pedalEvents`. It sits in the roll's scroll layer and its stated contract is "what you see is what you hear". `swingScore` retimes pedal for the audio, so the lane must follow. |
 | Notation, scrubber, bars/keys progress, loop, cursor | none | They keep `useSession().score`. |
 
-I'll check for a dependency cycle before landing: `swing/web` currently imports `document`, `shell`, `session` and `score`, and none of them import `piano-roll`, `piano-keyboard` or `pedal`. `./singularity check plugin-boundaries` confirms it.
+I'll check for a dependency cycle before landing: `swing/web` currently imports `document`, `shell`, `session` and `score`, and none of them import `piano-roll`, `piano-keyboard` or `pedal`. `./equin check plugin-boundaries` confirms it.
 
 ### 3. The toggle in the Feel pane
 
@@ -70,10 +70,10 @@ In `rich/plugins/swing/web/components/feel-section.tsx`, replace the closing cap
   - Toggle on with a swung score gives off-beat starts moved.
   - Toggle off gives the identical object.
   - An unswung score gives the identical object.
-- **Manual check** with `./singularity build`, then `browser_*` on a swung song (2:1, 8ths):
+- **Manual check** with `./equin build`, then `browser_*` on a swung song (2:1, 8ths):
   - Pause on an off-beat.
   - Seek so the cursor sits on a swung note's audible beat. Its bar should touch the now-line and its key should be lit.
   - Toggle off in Feel. The bar should jump back to the straight position.
   - Notation and the scrubber should be unchanged in both states.
   - With loop-ahead on, the repeated notes past B should also be swung.
-- Run `./singularity check` (boundaries, type-check).
+- Run `./equin check` (boundaries, type-check).

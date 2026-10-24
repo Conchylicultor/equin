@@ -2,7 +2,7 @@ import { recordAgentOpStart } from "../agent-ops";
 import { defineGuard } from "../define-guard";
 import { parseShell, type ShellParseResult } from "../parse-shell";
 import type { BashInput, GuardContext } from "../types";
-import { CLI_NAME } from "@plugins/framework/plugins/cli/core";
+import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 
 /**
  * Subcommands that take a host slot and run for minutes. From

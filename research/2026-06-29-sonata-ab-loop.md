@@ -150,7 +150,7 @@ section bands (bottom half) don't overlap.
 
 ## Verification
 
-1. `./singularity build`; open `http://<worktree>.localhost:9000` → Sonata, open
+1. `./equin build`; open `http://<worktree>.localhost:9000` → Sonata, open
    a song with sections.
 2. Click a section's loop button → playhead jumps to section start, loop region
    appears (top half), Loop toggle active. Press play → cursor cycles within the

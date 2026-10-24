@@ -97,7 +97,7 @@ seed `ignores["no-pending-data-collapse"]` in
 `plugins/primitives/plugins/live-state/lint/index.ts` with their file globs and
 revise the "BURNDOWN COMPLETE / do not add" comment to document a **new
 statement-form wave**, then file the follow-up task to drain it. (Exact glob list
-is determined by running `./singularity check eslint` after the rule lands —
+is determined by running `./equin check eslint` after the rule lands —
 component `return null`/JSX hits won't appear.)
 
 ## Gap 2 — make `useEditedFiles` gateable + fix all callers
@@ -190,12 +190,12 @@ path; the existing lint helpers.
 
 ## Verification
 
-1. `./singularity build` — green `type-check`, `eslint`, `plugins-doc-in-sync`,
+1. `./equin build` — green `type-check`, `eslint`, `plugins-doc-in-sync`,
    boundaries. The extended rule must not flag any migrated caller.
 2. `bun test plugins/primitives/plugins/live-state/lint/no-pending-data-collapse.test.ts`
    — new invalid cases fail, new valid cases pass.
 3. Lint guard: a throwaway `if (x.pending) return { files: [] }; return { files: x.data };`
-   in a non-allowlisted file → `./singularity check eslint` fails (then remove).
+   in a non-allowlisted file → `./equin check eslint` fails (then remove).
    Confirm `if (q.pending) return null; return <div>{q.data}</div>` does **not**.
 4. Push & Exit behavior — open a conversation that has edited files and reload;
    the button reads disabled **Exit** during load, then **Push & Exit**, never a

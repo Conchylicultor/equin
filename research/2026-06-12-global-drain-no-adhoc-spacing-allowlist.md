@@ -123,10 +123,10 @@ Mechanical-at-scale with per-site judgement → fan out across batches.
   a file is still in the allowlist the rule is `off` for it, so the entry must be
   removed to actually test.
 - **Whole repo, final:** with the array at `[]`,
-  `./singularity check type-check` must pass (unified TS + type-aware ESLint;
+  `./equin check type-check` must pass (unified TS + type-aware ESLint;
   the rule now enforces repo-wide with no exemptions). Also confirms no Stack/Inset
   type errors and no broken imports.
-- **Build + visual:** `./singularity build`, then Playwright screenshots of a few
+- **Build + visual:** `./equin build`, then Playwright screenshots of a few
   representative dense surfaces to confirm no layout regression from the
   round-down / restructures:
   - conversation view — `http://<wt>.localhost:9000` jsonl viewer
@@ -149,5 +149,5 @@ Mechanical-at-scale with per-site judgement → fan out across batches.
 - **Margins are the slowest part** — restructuring lifts spacing to the parent
   and can require reading sibling layout. When unclear, prefer the disable-comment
   (with a concrete reason) over a risky restructure.
-- Do **not** run `git commit` / `./singularity push`; stop at build + verify and
+- Do **not** run `git commit` / `./equin push`; stop at build + verify and
   hand back for review.

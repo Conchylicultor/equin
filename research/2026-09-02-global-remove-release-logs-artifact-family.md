@@ -200,17 +200,17 @@ change.
 
 ## Verification
 
-1. `./singularity check paths:no-inlined-worktree-artifacts` — passes with the
+1. `./equin check paths:no-inlined-worktree-artifacts` — passes with the
    pattern removed. Then confirm it still bites: temporarily add
    `const x = join(dir, ` + "`build-logs-${id}.json`" + `);` to a file outside
    `plugins/infra/plugins/paths/` and re-run; it must fail, naming that line.
    Revert.
-2. `./singularity test plugins/infra/plugins/paths` — the reworked check test
+2. `./equin test plugins/infra/plugins/paths` — the reworked check test
    and the trimmed prune tests pass.
-3. `./singularity check` — full sweep, for `plugins-doc-in-sync` (the autogen
+3. `./equin check` — full sweep, for `plugins-doc-in-sync` (the autogen
    blocks in `paths/CLAUDE.md` and `docs/plugins-details.md` list the two
    removed server exports and must regenerate) and `type-check`.
-4. `./singularity build` — run in background, per the workflow rule.
+4. `./equin build` — run in background, per the workflow rule.
 5. Open Studio → Compositions → a release run's detail pane, on the **succeeded**
    run `release-1787890677598-a5g505`: its Logs section must still render from
    the supervised-run transcript. This is the regression that matters — the

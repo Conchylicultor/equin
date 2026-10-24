@@ -271,7 +271,7 @@ the rescan picks it up.
 
 ## Verification
 
-1. `./singularity build` (background, end the turn), then open
+1. `./equin build` (background, end the turn), then open
    `http://<worktree>.localhost:9000`.
 2. Open a conversation that launched sub-agents. Confirm on a finished one: the card shows
    a total duration and the button opens a pane holding the sub-agent's transcript, drawn
@@ -281,7 +281,7 @@ the rescan picks it up.
    no reload. This is the real test: it proves the file watcher delivers appends.
 4. Open a sub-agent that itself spawned one, and confirm the nested card opens the nested
    transcript.
-5. `./singularity test` on the new plugin — unit tests for the `toolUseId` → file
+5. `./equin test` on the new plugin — unit tests for the `toolUseId` → file
    resolution, the bounded tail read (including a file that grows past the window), the
    three-armed run state (each arm, including "ended without reporting"), and the one that
    protects the anchor guarantee: **a session id the anchor dropped must never have its
@@ -292,4 +292,4 @@ the rescan picks it up.
 6. An e2e script at `.../plugins/subagents/e2e/subagent-pane.ts`
    following the harness pattern in `plugins/code-explorer/e2e/file-tree-expand.ts`: open a
    known conversation, click a sub-agent card, assert the pane renders its transcript rows.
-7. `./singularity check`.
+7. `./equin check`.

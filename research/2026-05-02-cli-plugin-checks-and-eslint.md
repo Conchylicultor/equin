@@ -2,7 +2,7 @@
 
 ## Context
 
-`./singularity check` runs a hand-edited flat array of `Check` objects (`cli/src/checks/index.ts`). All checks live in the CLI today; plugins can't contribute their own. We want plugins to define lint rules and custom checks locally, in `plugins/<name>/lint/` (real ESLint rules) and `plugins/<name>/check/` (our existing `Check` interface), and have them auto-discovered at runtime — no codegen, no hand-edited registry. ESLint isn't installed today; we add it.
+`./equin check` runs a hand-edited flat array of `Check` objects (`cli/src/checks/index.ts`). All checks live in the CLI today; plugins can't contribute their own. We want plugins to define lint rules and custom checks locally, in `plugins/<name>/lint/` (real ESLint rules) and `plugins/<name>/check/` (our existing `Check` interface), and have them auto-discovered at runtime — no codegen, no hand-edited registry. ESLint isn't installed today; we add it.
 
 ## Approach
 
@@ -119,12 +119,12 @@ export default hasReadme;
 
 ## Verification
 
-1. `./singularity build` — bun installs the new ESLint deps; build succeeds.
-2. `./singularity check` — output includes `• eslint ... ok` and `• welcome:has-readme ... ok`. Each plugin-contributed check appears in the run.
-3. `./singularity check --list` — built-in checks listed (plugin checks intentionally don't get `--<id>` flags).
-4. `./singularity check --plugin-boundaries` — still passes (no false-positives from `lint/` or `check/` folders).
-5. Add `console.log("test")` to any file under a plugin's `web/` — `./singularity check` fails with `welcome/no-console-log`. Remove it; passes again.
-6. Make `plugins/welcome/check/index.ts` return `{ ok: false, ... }` — `./singularity check` fails with the plugin's check id.
+1. `./equin build` — bun installs the new ESLint deps; build succeeds.
+2. `./equin check` — output includes `• eslint ... ok` and `• welcome:has-readme ... ok`. Each plugin-contributed check appears in the run.
+3. `./equin check --list` — built-in checks listed (plugin checks intentionally don't get `--<id>` flags).
+4. `./equin check --plugin-boundaries` — still passes (no false-positives from `lint/` or `check/` folders).
+5. Add `console.log("test")` to any file under a plugin's `web/` — `./equin check` fails with `welcome/no-console-log`. Remove it; passes again.
+6. Make `plugins/welcome/check/index.ts` return `{ ok: false, ... }` — `./equin check` fails with the plugin's check id.
 
 ## Open questions / risks
 

@@ -130,10 +130,10 @@ case: releases stop taking this lock at all.
   `lastAdvanceAt`.
 - **Observer test** over fixture progress and op records: an open `host-grant` gives
   `waiting`, no open wait gives `working`, no run gives `unknown`.
-- Run: `./singularity test plugins/framework/plugins/cli/plugins/bootstrap plugins/framework/plugins/cli/plugins/op-runtime plugins/framework/plugins/cli/plugins/build`
-- **Manual end to end:** in this worktree, start `./singularity build` and, while it sits in
+- Run: `./equin test plugins/framework/plugins/cli/plugins/bootstrap plugins/framework/plugins/cli/plugins/op-runtime plugins/framework/plugins/cli/plugins/build`
+- **Manual end to end:** in this worktree, start `./equin build` and, while it sits in
   "wait for host CPU grant" (or any step), run
-  `./singularity release --composition website --target web --platform linux-x64` from the
+  `./equin release --composition website --target web --platform linux-x64` from the
   same checkout. The release prints the holder's transitions and acquires after the build
   exits, however long that takes.
-- `./singularity check` (boundaries, including `cli:bootstrap-package-free`).
+- `./equin check` (boundaries, including `cli:bootstrap-package-free`).

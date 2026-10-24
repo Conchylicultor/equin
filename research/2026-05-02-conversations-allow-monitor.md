@@ -156,7 +156,7 @@ import allowMonitorServerPlugin from "@plugins/conversations/plugins/conversatio
 
 ### Verification
 
-1. `./singularity build` — confirm build succeeds with new plugin
+1. `./equin build` — confirm build succeeds with new plugin
 2. Open any active conversation at `http://<worktree>.localhost:9000/c/<id>`
 3. Toolbar header should show **no badge** in normal state
 4. In the worktree terminal: `touch .allow-main`

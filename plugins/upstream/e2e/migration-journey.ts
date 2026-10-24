@@ -21,14 +21,14 @@
  *                          the shape in which `origin/main` is the AUTHOR's main
  *                          (Problem 1). On `main`: push fast-forwards it here.
  *   e2e-cj-<id>-clone-wt/  linked worktree of the clone, where its branches
- *                          live and every clone-side `./singularity` runs.
+ *                          live and every clone-side `./equin` runs.
  *
  * Nothing here is special-cased for being a test. A repository other than the
  * one this machine's main app is served from names its main checkout by its
  * directory (`checkoutRef`), so the upstream's CLI calls run in its own main
  * checkout without touching main's namespace. The clone's origin is a local
  * path, which `resolvePublishTarget` answers `local` from the URL. Pushes are
- * the real `./singularity push`: its lock is the clone's own (`pushLockFor`),
+ * the real `./equin push`: its lock is the clone's own (`pushLockFor`),
  * its `migration-applies-clean` dry-runs against the clone's own main database
  * (a throwaway one, as that main was never deployed), and it refuses to land on
  * any repository but the clone's. On top of that, every push first asserts that
@@ -39,6 +39,7 @@
  * the database consequence of a renamed migration (the runner re-applies DDL
  * keyed by the new sha8) is mechanical and covered by the runner's own tests.
  */
+import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import {
   cpSync,
   mkdirSync,
@@ -71,7 +72,7 @@ const UPSTREAM_TABLE = "e2e_upstream_probe";
 
 const GIT_TIMEOUT_MS = 120_000;
 /**
- * Every `./singularity` call. The first one in each worktree installs that
+ * Every `./equin` call. The first one in each worktree installs that
  * worktree's dependencies (a cold `bun install` plus provisions), and each
  * regen loads every schema file through drizzle-kit — minutes, not seconds.
  */
@@ -137,7 +138,7 @@ async function git(cwd: string, ...args: string[]): Promise<string> {
   return r.stdout.trim();
 }
 
-/** `./singularity <args>` in `cwd`, captured, full output kept in the log dir. */
+/** `./equin <args>` in `cwd`, captured, full output kept in the log dir. */
 async function cli(
   ctx: Ctx,
   cwd: string,
@@ -145,7 +146,7 @@ async function cli(
   timeoutMs = CLI_TIMEOUT_MS,
 ): Promise<SpawnResult> {
   const started = Date.now();
-  const r = await spawnCaptured(["./singularity", ...args], {
+  const r = await spawnCaptured([`./${CLI_NAME}`, ...args], {
     cwd,
     env: env(),
     timeoutMs,
@@ -157,14 +158,13 @@ async function cli(
   );
   writeFileSync(
     log,
-    `$ (cd ${cwd} && ./singularity ${args.join(" ")})\nexit ${r.exitCode}${r.timedOut ? " (TIMED OUT)" : ""}\n\n--- stdout\n${r.stdout}\n--- stderr\n${r.stderr}`,
+    `$ (cd ${cwd} && ./equin ${args.join(" ")})\nexit ${r.exitCode}${r.timedOut ? " (TIMED OUT)" : ""}\n\n--- stdout\n${r.stdout}\n--- stderr\n${r.stderr}`,
   );
   const secs = ((Date.now() - started) / 1000).toFixed(0);
   console.log(
-    `    $ ./singularity ${args.join(" ")}  → exit ${r.exitCode} (${secs}s, ${log})`,
+    `    $ ./equin ${args.join(" ")}  → exit ${r.exitCode} (${secs}s, ${log})`,
   );
-  if (r.timedOut)
-    throw new HarnessError(`./singularity ${args.join(" ")} timed out`);
+  if (r.timedOut) throw new HarnessError(`./equin ${args.join(" ")} timed out`);
   return r;
 }
 
@@ -288,7 +288,7 @@ function probeSource(
 // --- landing: the real push -------------------------------------------------
 
 /**
- * `./singularity push` of `branch` from the clone's worktree — after asserting
+ * `./equin push` of `branch` from the clone's worktree — after asserting
  * that the repository it will land on is this fixture's, under the temp dir.
  * `push` makes the same check against its own checkout; this one also pins it
  * to the temp dir, so a fixture wired to the wrong repository fails here.

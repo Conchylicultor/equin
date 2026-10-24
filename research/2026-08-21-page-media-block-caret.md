@@ -252,9 +252,9 @@ no start or end to distinguish. Selecting it is one Escape away.
 
 ## Verification
 
-- `./singularity check` (`type-check` is the real gate — the required `caret`
+- `./equin check` (`type-check` is the real gate — the required `caret`
   field means every text-less registration must have been updated).
-- `./singularity build`, then
+- `./equin build`, then
   `bun plugins/page/plugins/editor/e2e/media-caret-verify.ts`: arrow down through
   an image lands ON it (not past it); the cue paints; Backspace deletes it and
   leaves the caret above; Enter on a filled image opens a paragraph below; Enter

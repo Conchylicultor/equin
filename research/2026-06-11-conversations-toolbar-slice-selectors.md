@@ -184,12 +184,12 @@ without touching the shared WS subscription (still one refcounted sub).
 - `plugins/conversations/plugins/conversation-view/plugins/op-status/web/components/op-status-banner.tsx`
 
 No new barrel exports beyond the three hooks (added to `@plugins/conversations/web`
-via `web/index.ts` re-export of `use-conversations`); `./singularity build`
+via `web/index.ts` re-export of `use-conversations`); `./equin build`
 regenerates the plugin docs so the `plugins-doc-in-sync` check passes.
 
 ## Verification
 
-1. `./singularity build` (deploys to `http://<worktree>.localhost:9000`).
+1. `./equin build` (deploys to `http://<worktree>.localhost:9000`).
 2. **Functional correctness** — on a live conversation page, confirm each
    migrated control still reflects live state:
    - Push & Exit button label flips correctly between Push & Exit / Exit /
@@ -207,6 +207,6 @@ regenerates the plugin docs so the `plugins-doc-in-sync` check passes.
    sharing + `notifyOnChangeProps`). Spot-check Debug → live-state health: the
    `conversations` sub still shows one shared sub; observe/unobserve trace volume
    on a busy conversation page drops. Keep the trace always-on.
-4. `./singularity check` (eslint, boundaries, plugins-doc-in-sync, type-check).
+4. `./equin check` (eslint, boundaries, plugins-doc-in-sync, type-check).
 ```
 

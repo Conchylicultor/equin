@@ -122,7 +122,7 @@ const check: Check = {
         // drops is live-but-undeclared by construction — not dead schema.
         //
         // This is not hypothetical, and getting it wrong DEADLOCKS the build:
-        // `./singularity build` runs checks BEFORE the server restart that applies
+        // `./equin build` runs checks BEFORE the server restart that applies
         // migrations, so a freshly-authored `DROP TABLE` migration fails this
         // check on every build, and the build never reaches the step that would
         // apply it and make the check pass. (It did: `staged_config_default`,
@@ -183,7 +183,7 @@ const check: Check = {
           hint:
             "These are likely dead schema left behind by an imperative DROP/rename. " +
             "If the drop was intended, author a proper schema migration that drops them " +
-            "(`./singularity build --migration-name drop_<table>`). " +
+            "(`./equin build --migration-name drop_<table>`). " +
             "If the drop was unintended, restore the table's declaration in its plugin's tables.ts.",
         };
       },

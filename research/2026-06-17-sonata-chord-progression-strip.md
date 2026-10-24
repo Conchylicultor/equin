@@ -107,7 +107,7 @@ New plugin `plugins/apps/plugins/sonata/plugins/rich/plugins/chord-progression/`
 - `package.json` — mirror `chord-readout/package.json`
   (`@singularity/plugin-apps-sonata-rich-chord-progression`).
 - `CLAUDE.md` — short prose (what/why, the bar-overlap rhythm model) + an empty
-  autogen reference block (`./singularity build` fills it).
+  autogen reference block (`./equin build` fills it).
 
 No edits to existing files: the plugin is discovered by the filesystem walk and
 auto-registered into the generated registry on build; `SectionPane` already
@@ -126,7 +126,7 @@ so the user can drag Progression above/below Current chord.
 
 ## Verification
 
-1. `./singularity build` (from this worktree). Fixes any type/boundary issues;
+1. `./equin build` (from this worktree). Fixes any type/boundary issues;
    `plugins-registry-in-sync` + `plugins-doc-in-sync` checks confirm the new
    plugin registered and its CLAUDE autogen block is filled.
 2. Open `http://att-1781708263-4dty.localhost:9000/sonata`, open a chord-grid song

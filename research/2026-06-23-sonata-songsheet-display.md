@@ -126,13 +126,13 @@ line-granular, not pixel-time).
 
 ## Verification
 
-- `./singularity build` (migrations/registry/docs + checks).
+- `./equin build` (migrations/registry/docs + checks).
 - `bun test .../ultimate-guitar/web/compile.test.ts` — chords/beats/charOffset in
   lyric annotations; instrumental lines emit a lyric annotation.
 - Scripted Playwright: import the example UG tab, open it, switch the display
   picker to Songsheet, screenshot, press play, confirm active-line highlight +
   auto-scroll; toggle back to Piano Roll.
-- `./singularity check`.
+- `./equin check`.
 
 ## Known limitations / follow-ups
 

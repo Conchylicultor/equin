@@ -14,7 +14,7 @@ eslint rules (shipped in `eslint-plugin-react-hooks`'s `recommended-latest`) are
 at `"warn"` by the `compilerDiagnosticRulesAsWarn()` spread in `build-lint-config.ts`, then
 **ratcheted to `"error"` one rule at a time** as each rule's warning count reaches zero. The
 ratchet is what locks in compiler coverage and bug-prevention: a *new* violation then fails
-`./singularity check` instead of silently eroding coverage or shipping a render-loop bug.
+`./equin check` instead of silently eroding coverage or shipping a render-loop bug.
 
 The prior phases ratcheted **11** of the 17 `recommended-latest` rules to `"error"`
 (`rules-of-hooks`, `exhaustive-deps`, `purity`, `immutability`, `use-memo`, `void-use-memo`,
@@ -27,7 +27,7 @@ react-hooks/error-boundaries   react-hooks/unsupported-syntax     react-hooks/ga
 ```
 
 Because they are warnings, a new violation of any of these does **not** fail
-`./singularity check` and would accumulate silently — the exact gap this task closes. Most
+`./equin check` and would accumulate silently — the exact gap this task closes. Most
 notably `set-state-in-render` flags an *unconditional setState during render* (an infinite
 re-render bug), and `unsupported-syntax` flags syntax that makes the compiler **silently
 bail** (lost coverage) — both are things we want to hard-fail on.
@@ -39,7 +39,7 @@ zero. So this task is **only the ratchet + a documentation correction** — ther
 "long-tail per-rule" cleanup needed; all six can be promoted in one edit.
 
 **Intended outcome:** all 17 React Compiler / Rules-of-React diagnostics enforced at
-`"error"`; `./singularity check` stays green (proving the count is truly 0); the comment that
+`"error"`; `./equin check` stays green (proving the count is truly 0); the comment that
 already claims *"ALL react-hooks compiler diagnostics are now enforced at error"* becomes
 true. This completes the React Compiler compliance program.
 
@@ -88,7 +88,7 @@ future-added rules at warn." Drop the stale clause in the docstring that still s
 The task anticipated *"a per-rule ratchet may be needed if some categories have a long
 tail."* There is **no long tail** — the verified scan shows all six at 0. A per-rule,
 promote-as-you-go sequence only matters when some rules still have violations; here a single
-combined pin is correct and simplest, and `./singularity check` will confirm 0 immediately.
+combined pin is correct and simplest, and `./equin check` will confirm 0 immediately.
 
 ---
 
@@ -107,9 +107,9 @@ prose about the ratchet), so nothing to update there.
 1. **Pre-change scan (already captured):** `bunx eslint "plugins/**/web/**/*.{ts,tsx}" -f json`
    → 0 errors; `globals` / `error-boundaries` / `set-state-in-render` / `unsupported-syntax` /
    `config` / `gating` each report **0**. (Re-run to confirm nothing drifted before editing.)
-2. **Build:** `./singularity build` — succeeds (runs `bun install`, regenerates, rebuilds);
+2. **Build:** `./equin build` — succeeds (runs `bun install`, regenerates, rebuilds);
    app boots at `http://<worktree>.localhost:9000`.
-3. **Check green (the real proof):** `./singularity check` — its `eslint` check must pass.
+3. **Check green (the real proof):** `./equin check` — its `eslint` check must pass.
    Because the rules are now at `"error"`, a green run *proves* all six are genuinely at 0
    (a single violation would now fail the check). This is the success criterion.
 4. **Negative test (optional, confirms enforcement actually bites):** temporarily introduce
@@ -125,7 +125,7 @@ prose about the ratchet), so nothing to update there.
 
 1. **A masked violation surfaces between scan and ratchet** (e.g. a concurrent branch merged
    a new render-loop). Mitigated by re-running the scan in step 1 immediately before editing,
-   and by step 3 — `./singularity check` fails loudly rather than silently, which is the
+   and by step 3 — `./equin check` fails loudly rather than silently, which is the
    desired behavior. If it fails, fix the one site (or, only for a genuinely-justified case,
    add an inline `// eslint-disable-next-line react-hooks/<rule> -- <reason>` mirroring the
    existing exemption convention) and re-run.

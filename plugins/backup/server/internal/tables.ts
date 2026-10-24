@@ -36,7 +36,7 @@ import { backupRunsEntityRef } from "../../core/entity";
 // not "fix" the arm to surface it.
 //
 // `pid`, the server field:
-// OS pid of the detached `./singularity supervised-exec backup.run` process
+// OS pid of the detached `./equin supervised-exec backup.run` process
 // that owns this run. Seeded with the claiming backend's own pid so the row
 // is not read as an orphan in the window before the child exists, then
 // repointed at the child. Its liveness — never a clock — is what says

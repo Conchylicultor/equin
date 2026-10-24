@@ -16,7 +16,7 @@ The architecture is already shaped for this: the profiler is a zero-dep isomorph
 
 ## Execution model — 3 parallel workstreams (one sub-agent each)
 
-The six deliverables touch **disjoint plugin subtrees** → three Opus implementation agents run concurrently with no file collisions. **Each agent edits files only — no `./singularity build`.** After all three land, run a **single** `./singularity build` + `./singularity check` (parallel builds would race on migration/registry/doc codegen). WS1 fixes the active incident, so prioritize it if serializing.
+The six deliverables touch **disjoint plugin subtrees** → three Opus implementation agents run concurrently with no file collisions. **Each agent edits files only — no `./equin build`.** After all three land, run a **single** `./equin build` + `./equin check` (parallel builds would race on migration/registry/doc codegen). WS1 fixes the active incident, so prioritize it if serializing.
 
 | WS | Deliverables | Owns (no other WS writes these) |
 |----|--------------|----------------------------------|
@@ -33,7 +33,7 @@ No cross-WS file overlap. Only logical coupling: D5 reads D6's `dead_jobs` table
 ### D6: archive-then-purge dead graphile jobs
 
 **`plugins/infra/plugins/jobs/server/internal/tables.ts`** (modify) — add a `dead_jobs` pgTable:
-`id` (text PK = original graphile job id), `jobName` (text), `input` (jsonb), `attempts` (int), `maxAttempts` (int), `lastError` (text), `diedAt` (timestamp), `archivedAt` (timestamp, default now). Migration regenerates on `./singularity build` — never run drizzle-kit manually.
+`id` (text PK = original graphile job id), `jobName` (text), `input` (jsonb), `attempts` (int), `maxAttempts` (int), `lastError` (text), `diedAt` (timestamp), `archivedAt` (timestamp, default now). Migration regenerates on `./equin build` — never run drizzle-kit manually.
 
 **`plugins/infra/plugins/jobs/server/internal/dead-job-gc.ts`** (create):
 - `reconcileDeadJobs()` — in one transaction: SELECT dead rows (`attempts >= max_attempts AND locked_at IS NULL` from `graphile_worker._private_jobs JOIN _private_tasks` where `identifier = JOB_TASK`, joining payload for `jobName`/`input`), INSERT into `dead_jobs` with `ON CONFLICT (id) DO NOTHING` (idempotent — safe on every boot/re-fork), DELETE the archived rows from `_private_jobs`. Then enforce the archive bound (delete `dead_jobs` older than a TTL, e.g. 30d, AND beyond a cap, e.g. newest 2000). Mirror the raw-SQL style of `sweepOnce` in `stuck-lock-sweeper.ts`. After archiving, call `deadJobsResource.notify()` and `jobsListResource.notify()`.
@@ -78,7 +78,7 @@ central-core omits both → identity/no-op.
 3. `debug/plugins/profiling/plugins/runtime/server/internal/mcp-tools.ts`: `KINDS`, kind enum param, result shape.
 4. `debug/plugins/profiling/plugins/runtime/web/components/runtime-section.tsx`: `RuntimeKind`, enum options, `tag(...)`.
 5. `debug/plugins/slow-ops/server/internal/install-slow-span.ts` (`thresholdFor`): route `flush` to `loaderMs` (no new config field).
-`./singularity check` (type-check) catches record-shape misses; the `z.enum`/UI `tag()` misses are runtime — verify by eye.
+`./equin check` (type-check) catches record-shape misses; the `z.enum`/UI `tag()` misses are runtime — verify by eye.
 
 ### D2: loader rate + fan-out + subscriber count
 
@@ -118,13 +118,13 @@ Enrich `/api/resources/_debug` (the server already iterates the full registry th
 
 ---
 
-## Verification (single build + check first: `./singularity build && ./singularity check`)
+## Verification (single build + check first: `./equin build && ./equin check`)
 
 - **D1/D3 — MCP `get_runtime_profile`:** trigger a notify on a busy resource. `kind:"flush"` shows a `flushNotifies` aggregate with cycle time + `byParent`/nested `push` rows naming the dominant loader (head-of-line). `kind:"push"` shows `deliver:<key>` leaves with enqueue→send latency; a debounced resource reflects its window (first-merge timing), not ~0.
 - **D2:** `curl /api/resources/_debug` (or open Debug→Live State) shows per-resource `subCounts`, `loaderStats.ratePerMin`, fan-out; Playwright the new server-resources section sorts by rate.
 - **D4:** under a 16-concurrent boot-snapshot storm, `heavyReadQueueDepth()` > 0; health-monitor Backends section lists live worktrees with non-zero depth; returns to 0 after.
 - **D5/D6 — MCP `query_db`:** `SELECT count(*) FROM graphile_worker._private_jobs j JOIN graphile_worker._private_tasks t ON t.id=j.task_id WHERE t.identifier='jobs.run' AND j.attempts>=j.max_attempts` → 0 after boot reconcile; `SELECT count(*) FROM dead_jobs` → ~688 then bounded by cap/TTL. Re-run reconcile → no change (idempotent). Playwright the Queue "Dead" tab shows archived rows with lastError; the Triggers tab shows a dangling badge for a trigger whose job was removed.
-- **Regression:** `./singularity check` (boundaries, migrations-in-sync, doc-in-sync, type-check) passes; central-core still loads resources via identity passthrough (no `flush`/`deliver` spans from the central process); stuck-lock-sweeper unchanged (still a `setInterval`, distinct from the new scheduled GC).
+- **Regression:** `./equin check` (boundaries, migrations-in-sync, doc-in-sync, type-check) passes; central-core still loads resources via identity passthrough (no `flush`/`deliver` spans from the central process); stuck-lock-sweeper unchanged (still a `setInterval`, distinct from the new scheduled GC).
 
 ## Critical files
 

@@ -239,7 +239,7 @@ same expansion. This lives in the DB-aware change-feed, not the framework runtim
 
 ## 11. Verification
 
-1. **Triggers exist:** after `./singularity build`, `mcp__singularity__query_db`
+1. **Triggers exist:** after `./equin build`, `mcp__singularity__query_db`
    `SELECT tgname FROM pg_trigger WHERE tgname LIKE 'live_state_%'` lists 3 per
    public table; the new check passes.
 2. **Out-of-process write is caught:** subscribe a tab to tasks, then `psql`/
@@ -254,5 +254,5 @@ same expansion. This lives in the DB-aware change-feed, not the framework runtim
 5. **Self-verification:** the read-set debug pane shows per-resource `hand` vs
    `feed` counts; exercise each mutation surface and confirm no persistent
    read-set-gap candidates (each gap = a real L3 capture miss to fix).
-6. `./singularity build` + `./singularity check` pass (incl. boundaries, type-check,
+6. `./equin build` + `./equin check` pass (incl. boundaries, type-check,
    the new trigger-coverage check).

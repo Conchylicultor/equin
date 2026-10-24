@@ -54,7 +54,7 @@ jq -rc 'select(.t>=<today_ms>) | .line | fromjson
 
 ## Full causal chain (rate × cost, top to bottom)
 
-1. **Trigger frequency (rate):** every `./singularity push` advances `refs/heads/main` → main's
+1. **Trigger frequency (rate):** every `./equin push` advances `refs/heads/main` → main's
    git-watcher fires `refAdvanced` → auto-build job → `POST /gateway/worktrees/singularity/restart`.
    Many agents pushing ⇒ main restarts **~20×/day** (boots every 10–25 min). Chain:
    `cli/.../push.ts:535` → `infra/git-watcher/.../watcher.ts:101` → `build/server/index.ts:20`

@@ -112,7 +112,7 @@ required `/* twmerge: extend font-size */` marker.
 @utility text-caption-compact    { font-size: var(--font-size-2xs);        line-height: var(--line-height-2xs);        font-weight: var(--font-weight-normal); }                            /* twmerge: extend font-size */
 ```
 
-`./singularity build` regenerates `custom-utilities.generated.ts` from these
+`./equin build` regenerates `custom-utilities.generated.ts` from these
 markers; the `app-css-utilities-in-sync` check guards it. (`eyebrow` needs no new
 utility — it composes `text-caption-compact` with its existing small-caps classes
 in `text.tsx`.)
@@ -181,7 +181,7 @@ Result: `md/lg/sm → text-sm`, `xs → text-xs`, threshold owned by `textStepFo
   the new `@utility` lines; no change beyond them existing.
 - `.claude/skills/theme/SKILL.md` (control-size section) — state the rule: type
   size steps only at `xs`; chrome (`sm`) stays at the comfortable size.
-- Autogen reference blocks regenerate via `./singularity build`.
+- Autogen reference blocks regenerate via `./equin build`.
 
 ## Enforcement
 
@@ -200,9 +200,9 @@ function so a future change is a single edit. `type-check` + `no-adhoc-typograph
 
 ## Verification
 
-1. `./singularity build` — regenerates `custom-utilities.generated.ts` + autogen
+1. `./equin build` — regenerates `custom-utilities.generated.ts` + autogen
    docs; runs `type-check`.
-2. `./singularity check type-check` and `./singularity check eslint` — clean
+2. `./equin check type-check` and `./equin check eslint` — clean
    (no-adhoc-typography must not flag the new utilities or helpers).
 3. Screenshots (`bun e2e/screenshot.mjs --url … --out /tmp/text-density`):
    - **Any app toolbar** (`http://<wt>.localhost:9000/agents`) — button labels

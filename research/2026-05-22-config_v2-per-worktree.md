@@ -120,8 +120,8 @@ Same addition in `handle-bulk-delete.ts`.
 
 ## Verification
 
-1. `./singularity build` — server starts, main config lands in `~/.singularity/config/singularity/`
+1. `./equin build` — server starts, main config lands in `~/.singularity/config/singularity/`
 2. Create a conversation — verify `~/.singularity/config/att-<id>/` appears with copied files
 3. Change a config_v2 value in main UI — confirm it doesn't appear in the agent worktree's config dir
 4. Delete a worktree via worktree-cleanup — confirm `~/.singularity/config/<id>/` is removed
-5. `./singularity check` — all checks pass
+5. `./equin check` — all checks pass

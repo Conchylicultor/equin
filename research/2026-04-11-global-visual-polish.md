@@ -101,7 +101,7 @@ No new plugins. No slot interface changes. No main content area changes.
 
 ## Verification
 
-1. `./singularity build`
+1. `./equin build`
 2. Screenshot at `http://claude-1775912835.localhost:9000`
 3. Verify both light and dark mode (toggle via toolbar)
 4. Check sidebar header, colored dots, toolbar buttons, status bar all render correctly

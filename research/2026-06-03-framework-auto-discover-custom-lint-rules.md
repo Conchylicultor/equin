@@ -35,7 +35,7 @@ form. No raw-flat-config-fragment contribution shape is introduced.
   fails otherwise), a `CLAUDE.md` (check `plugins-have-claudemd`), and the
   regenerated `lint.generated.ts` + `docs/plugins-*.md` committed (checks
   `plugins-registry-in-sync`, `plugins-doc-in-sync`). All three artifacts are
-  produced by `./singularity build`.
+  produced by `./equin build`.
 - **jiti constraint (do NOT regress).** `eslint.config.ts` loads each barrel by
   absolute path because jiti does not resolve the `@plugins/*` alias. Therefore a
   barrel may only import npm packages and its own sibling files (relative, same
@@ -124,7 +124,7 @@ severity. No new code path is added.
 
 ### 4. Regenerate + verify
 
-- Run `./singularity build`. This regenerates `lint.generated.ts` (adds the three
+- Run `./equin build`. This regenerates `lint.generated.ts` (adds the three
   new `lintEntries`), the three new `CLAUDE.md` files, and the `docs/plugins-*.md`.
 - Commit all generated artifacts (required by `plugins-registry-in-sync` and
   `plugins-doc-in-sync`).
@@ -139,16 +139,16 @@ severity. No new code path is added.
 
 ## Verification
 
-1. `./singularity build` succeeds; `lint.generated.ts` now lists all four lint
+1. `./equin build` succeeds; `lint.generated.ts` now lists all four lint
    entries (`debug-logs` + the three moved rules).
-2. `./singularity check --eslint` passes and still flags the moved rules. Sanity
+2. `./equin check --eslint` passes and still flags the moved rules. Sanity
    check enforcement end-to-end, e.g. temporarily add a `console`-free file with a
    bare `import { FaBeer } from "lucide-react"` and confirm `icon-safety/no-lucide-react`
    still errors; revert. (Or simpler: confirm the check output references the
    `promise-safety/`, `icon-safety/`, `reactive-server-io/` namespaces.)
-3. `./singularity check --plugin-boundaries` passes (new plugins have correct
+3. `./equin check --plugin-boundaries` passes (new plugins have correct
    `package.json` names).
-4. `./singularity check` (all) is green — confirms `plugins-have-claudemd`,
+4. `./equin check` (all) is green — confirms `plugins-have-claudemd`,
    `plugins-registry-in-sync`, `plugins-doc-in-sync` are satisfied after committing
    generated files.
 5. Confirm `eslint.config.ts` contains no reference to `promise-safety`,

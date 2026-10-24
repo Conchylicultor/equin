@@ -8,7 +8,7 @@ The push-and-exit plugin used to have a durable watcher job (`push-and-exit-job.
 
 ### 1. Delete `tables.ts`
 
-Remove `server/internal/tables.ts` entirely. This unregisters the Drizzle schema so `./singularity build` auto-generates a DROP TABLE migration.
+Remove `server/internal/tables.ts` entirely. This unregisters the Drizzle schema so `./equin build` auto-generates a DROP TABLE migration.
 
 ### 2. Rewrite `state.ts` — in-memory Map
 
@@ -28,7 +28,7 @@ Remove `onReady` boot recovery (empty Map on start = button resets naturally —
 
 ### 6. Migration
 
-`./singularity build` generates a `DROP TABLE "push_and_exit_jobs"` migration. Commit it alongside the code changes.
+`./equin build` generates a `DROP TABLE "push_and_exit_jobs"` migration. Commit it alongside the code changes.
 
 ## Files unchanged
 
@@ -43,7 +43,7 @@ Remove `onReady` boot recovery (empty Map on start = button resets naturally —
 
 ## Verification
 
-1. `./singularity build` passes, generates DROP TABLE migration
+1. `./equin build` passes, generates DROP TABLE migration
 2. Push & Exit → "Pushing..." → Claude pushes → toast / flag dialog works
 3. Push & Exit then Stop → button reverts to idle
 4. Server restart mid-push → button resets, no stuck state

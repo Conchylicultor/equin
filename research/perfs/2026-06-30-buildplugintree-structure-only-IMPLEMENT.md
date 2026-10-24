@@ -14,7 +14,7 @@ The facet-build algorithm was made fast + non-blocking via an async, parallel, r
 snapshot (`fs-snapshot.ts`) consulted by `parse-utils` `readIfExists`/`walkFiles` through an ambient set
 synchronously around each (sync) `extract`/`relate` call; `setImmediate` yields between node chunks and
 relate facets. **Output byte-identical** (proven: snapshot-path vs disk-path over all 842 plugins incl.
-relate reverse-indexes → same sha256). `./singularity build` green.
+relate reverse-indexes → same sha256). `./equin build` green.
 
 **The win is the production metric — max contiguous event-loop block:**
 
@@ -211,7 +211,7 @@ accessor — keep minimal; out of scope unless trivial.)
 **Precedent to mirror:** `review/plugins/plugin-changes/server/internal/plugin-tree-cache.ts`.
 
 ## Risks
-- **Boundaries:** new server barrel + endpoint must pass `./singularity check plugin-boundaries`
+- **Boundaries:** new server barrel + endpoint must pass `./equin check plugin-boundaries`
   (legal barrels, no re-export, DAG: `plugin-tree/server → infra/*/server + own core`).
 - **Type-check:** removing `PluginNode.disabled` is a compile-time fence — every reader surfaces. Audit
   shows only `disabled-badge.tsx` (runtime) reads it; build-time `codegen/disabled-ids.ts`/`docgen.ts`
@@ -228,7 +228,7 @@ accessor — keep minimal; out of scope unless trivial.)
   not a per-plugin map. Blast radius: `ExtractContext` + 2 parse-utils helpers; facet bodies unchanged.
 
 ## Verification (end-to-end, on `singularity`)
-1. `./singularity build`; confirm boot (new barrel + endpoint register; no boundary/cycle/type failure).
+1. `./equin build`; confirm boot (new barrel + endpoint register; no boundary/cycle/type failure).
 2. **Block vanishes:** hit `GET /api/plugin-view/tree` → `get_runtime_profile` shows it drop from
    ~15 s to **ms**, ~100 % within steps 1–3 (no `extract`/`relate`).
 3. **Recorder clean:** watch `logs/stall-profiles.jsonl` across a cold build — **no new
@@ -326,7 +326,7 @@ plugin-refs-resolve, plugin-boundaries, pre-barrel-manifests-complete}`, `bounda
 | 18 | 10 build-time callers above | add `{ facets: true }` (preserving `skipBarrelImport`) |
 | 19 | `plugin-tree`/`plugin-view` `CLAUDE.md` | note new server barrel + endpoint (autogen refresh on build) |
 
-### Verification (on `singularity`, after `./singularity build`)
+### Verification (on `singularity`, after `./equin build`)
 1. Boot green (new barrel + endpoint register; no boundary/cycle/type failure).
 2. `GET /api/plugin-view/tree` → `get_runtime_profile` drops ~15 s → **ms**, no `extract`/`relate`.
 3. `logs/stall-profiles.jsonl` across a cold build: **no new `… ← buildPluginTree` stack**.
@@ -343,7 +343,7 @@ plugin-refs-resolve, plugin-boundaries, pre-barrel-manifests-complete}`, `bounda
 - Watcher: module-singleton via `??=`; `reconcileMs:null` + `onChange` fires only on real events ⇒ never invalidates idly.
 
 ### Altitude 1 — IMPLEMENTED & VALIDATED on the worktree (2026-07-01, `att-1782924979-2mnf`)
-Landed via 3 Opus workstreams; `./singularity build` green — **all 60 checks pass** (incl. `type-check`,
+Landed via 3 Opus workstreams; `./equin build` green — **all 60 checks pass** (incl. `type-check`,
 `plugin-boundaries`, `composition-closure`, `apps-paths-from-app-ref`, `plugins-doc-in-sync`,
 `plugins-registry-in-sync`, `facets:render-complete`). Live-validated on the deployed worktree endpoint
 (`get_runtime_profile`, in-process handler spans — wall times were inflated by boot-recovery + gateway

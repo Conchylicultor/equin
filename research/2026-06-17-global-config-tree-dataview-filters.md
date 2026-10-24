@@ -147,9 +147,9 @@ plugin changes are needed.
 
 ## Verification
 
-1. `./singularity build` (regenerates nothing schema-wise here; just compiles +
+1. `./equin build` (regenerates nothing schema-wise here; just compiles +
    restarts). Confirm no type/lint errors and the server boots.
-2. `./singularity check` — exercise `config-origins-in-sync` etc.; adding a
+2. `./equin check` — exercise `config-origins-in-sync` etc.; adding a
    defaulted `source` to descriptors must not change any generated origin hash
    (the field lives on the descriptor object, not in the config document/schema —
    confirm the check stays green).

@@ -8,7 +8,7 @@ We want conversations to become first-class persisted entities so we can:
 
 - Keep completed/obsolete conversations visible after tmux dies.
 - Track a lifecycle status (starting → working → needs attention → completed / obsolete).
-- Record every successful `./singularity push` from a session.
+- Record every successful `./equin push` from a session.
 
 This schema is the foundation. Wiring status transitions and push recording are follow-up tasks.
 
@@ -79,9 +79,9 @@ Register the barrel: add `export * from "@plugins/conversations/server/schema";`
 
 ## Migration
 
-1. Edit schemas, run `./singularity build` — drizzle-kit generates `server/src/db/migrations/000X_*.sql`.
+1. Edit schemas, run `./equin build` — drizzle-kit generates `server/src/db/migrations/000X_*.sql`.
 2. Server applies it on restart (see `server/src/db/migrate.ts`).
-3. Commit the generated SQL alongside the schema change (enforced by `./singularity check --migrations-in-sync`).
+3. Commit the generated SQL alongside the schema change (enforced by `./equin check --migrations-in-sync`).
 
 ## Files touched
 
@@ -91,13 +91,13 @@ Register the barrel: add `export * from "@plugins/conversations/server/schema";`
 Out of scope for this plan (follow-ups):
 
 - Status transition triggers (who sets `working` / `needs_attention`).
-- Hooking `./singularity push` in `cli/src/commands/push.ts` to insert a `pushes` row.
+- Hooking `./equin push` in `cli/src/commands/push.ts` to insert a `pushes` row.
 - Title refresh loop.
 
 ## Verification
 
-1. `./singularity build` — confirm a new migration file is generated and applied without error.
-2. `./singularity check --migrations-in-sync` passes.
+1. `./equin build` — confirm a new migration file is generated and applied without error.
+2. `./equin check --migrations-in-sync` passes.
 3. Open `http://<worktree>.localhost:9000`, create a conversation from the UI — row appears in `conversations` with `status = "starting"`.
 4. `psql` the worktree DB, `SELECT * FROM conversations;` returns the created row; `DELETE FROM conversations` cascades to `pushes`.
 5. Delete the conversation from UI — tmux session killed; row remains (status updated by follow-up work, not this task).

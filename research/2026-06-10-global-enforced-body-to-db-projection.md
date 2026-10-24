@@ -258,19 +258,19 @@ accumulators.
 
 1. Scaffold `db-project` plugin: `server/internal/project.ts` (+ types), `server/index.ts` barrel.
 2. Add the compile-fail type-test asserting an incomplete spec errors (guards `-?`).
-3. Migrate `agents/handle-create` + `crashes/record-crash` (showcase) → `./singularity build`, confirm typecheck.
-4. Add the `no-manual-body-mapping` lint rule + `lint/index.ts`; run `./singularity check eslint` — it should now flag the *un-migrated* sites.
+3. Migrate `agents/handle-create` + `crashes/record-crash` (showcase) → `./equin build`, confirm typecheck.
+4. Add the `no-manual-body-mapping` lint rule + `lint/index.ts`; run `./equin check eslint` — it should now flag the *un-migrated* sites.
 5. Migrate the remaining Part-3 sites until `eslint` is green.
 6. Write `db-project/CLAUDE.md` (API, the three limits, when to use `project` vs `projectInsert`).
 
 ## Verification
 
-1. **Exhaustiveness is real:** in a scratch edit, add a field to `CreateAgentBodySchema` without touching the `projectInsert` spec → `./singularity build` must fail with `Property '<field>' is missing` pointing at the spec. Revert.
+1. **Exhaustiveness is real:** in a scratch edit, add a field to `CreateAgentBodySchema` without touching the `projectInsert` spec → `./equin build` must fail with `Property '<field>' is missing` pointing at the spec. Revert.
 2. **`-?` type-test:** the committed compile-fail test fails to compile if `-?` is removed.
-3. **Lint enforces use:** with the rule active, re-introduce a hand-mapped `db.insert(_agents).values({ name: body.name })` → `./singularity check eslint` flags `db-project/no-manual-body-mapping`.
+3. **Lint enforces use:** with the rule active, re-introduce a hand-mapped `db.insert(_agents).values({ name: body.name })` → `./equin check eslint` flags `db-project/no-manual-body-mapping`.
 4. **Behavior unchanged end-to-end:** `POST /api/agents` with all fields, then
    `query_db: SELECT * FROM agents ORDER BY ... LIMIT 1` — every field persists
    (re-runs the original defect check, now for agents). Repeat the crashes
    `clientId`/`buildId` DB check from the prior fix to confirm no regression.
-5. `./singularity check` fully green (`migrations-in-sync` no-op — no schema
+5. `./equin check` fully green (`migrations-in-sync` no-op — no schema
    change; `eslint`; `plugin-boundaries` — db-project is server-only, one barrel).

@@ -130,7 +130,7 @@ await checkBroadcasts();  // first thing in .action(), after opts.list early ret
 ## Verification
 
 1. Create a test broadcast entry in `cli/broadcasts.json` with no `since`/`until` (always matches)
-2. Run `./singularity check` from a worktree — should see the banner
+2. Run `./equin check` from a worktree — should see the banner
 3. Set `severity: "error"` — should block the command
 4. Add `since` pointing to a future commit — should not match (worktree is already past it)
 5. Remove the test entry, commit the empty `[]`

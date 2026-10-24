@@ -2,7 +2,7 @@
 
 ## Context
 
-`./singularity build` hot-restarts a worktree backend. The gateway is *supposed* to keep the old backend serving until the new one is ready, then swap atomically — zero downtime. In practice, on builds **with a new migration**, the app shows a "Server restarting…" window of a few seconds, inconsistent in length.
+`./equin build` hot-restarts a worktree backend. The gateway is *supposed* to keep the old backend serving until the new one is ready, then swap atomically — zero downtime. In practice, on builds **with a new migration**, the app shows a "Server restarting…" window of a few seconds, inconsistent in length.
 
 Root cause, in two layers:
 
@@ -115,7 +115,7 @@ Always drain + close `resp.Body`. Both callers — cold start (`Ensure`, `:260`)
 
 - `gateway/CLAUDE.md` — "Backend Contract" item 2 and the worktree-registry note: replace "gateway polls readiness with `net.Dial("unix", path)`" with "gateway polls `GET /api/health/ready` over the socket, falling back to socket-accept on 404".
 - `database/CLAUDE.md` "Bootstrap" + `server-core/CLAUDE.md` lifecycle prose — document the new `onReadyBlocking` phase and that it is the *enforced* barrier guaranteeing a migrated DB before any `onReady`.
-- Plugin-reference autogen blocks (health/database/config_v2/server-core) regenerate via `./singularity build`; the `plugins-doc-in-sync` check keeps them honest.
+- Plugin-reference autogen blocks (health/database/config_v2/server-core) regenerate via `./equin build`; the `plugins-doc-in-sync` check keeps them honest.
 
 ## Critical files
 
@@ -134,12 +134,12 @@ Always drain + close `resp.Body`. Both callers — cold start (`Ensure`, `:260`)
 
 ## Verification
 
-> **Gateway change requires a gateway rebuild + restart.** The gateway is a long-running Go binary started once via `./singularity start` (a system-level op). The `waitReady` change only takes effect after the gateway is recompiled and restarted — **the user must run `./singularity start`**; `./singularity build` alone will not pick it up. Flag this explicitly.
+> **Gateway change requires a gateway rebuild + restart.** The gateway is a long-running Go binary started once via `./equin start` (a system-level op). The `waitReady` change only takes effect after the gateway is recompiled and restarted — **the user must run `./equin start`**; `./equin build` alone will not pick it up. Flag this explicitly.
 
-1. **Build the backend changes:** `./singularity build` (regenerates docs, restarts the worktree backend). Confirm checks pass (`plugins-doc-in-sync`, `eslint`, boundaries).
+1. **Build the backend changes:** `./equin build` (regenerates docs, restarts the worktree backend). Confirm checks pass (`plugins-doc-in-sync`, `eslint`, boundaries).
 2. **Probe the endpoint:** `curl -i http://<worktree>.localhost:9000/api/health/ready` → `200 {"ready":true}` once up.
-3. **Rebuild + restart the gateway:** `./singularity start`, then confirm the gateway is healthy (`curl http://singularity.localhost:9000/gateway/worktrees`).
-4. **Force a slow boot to expose the old bug / confirm the fix:** make a trivial schema change (new nullable column in some plugin's `tables.ts`) so the next build generates a real migration. Run `./singularity build` and watch the build button via `bun e2e/screenshot.mjs --url http://<worktree>.localhost:9000 --click "Build" ...`:
+3. **Rebuild + restart the gateway:** `./equin start`, then confirm the gateway is healthy (`curl http://singularity.localhost:9000/gateway/worktrees`).
+4. **Force a slow boot to expose the old bug / confirm the fix:** make a trivial schema change (new nullable column in some plugin's `tables.ts`) so the next build generates a real migration. Run `./equin build` and watch the build button via `bun e2e/screenshot.mjs --url http://<worktree>.localhost:9000 --click "Build" ...`:
    - The "Server restarting…" / WS reconnect window should now begin **only after** the new backend is fully ready, and the reconnect should land on a migrated backend — no `sub-error: unknown-key` in the browser console, no stale-data flash.
    - Compare against `main` (pre-change) where the same migration build shows the multi-second reconnect.
 5. **Failure contract intact:** introduce a deliberately broken migration; confirm `Restart` fails, the old backend keeps serving (zero downtime), and the build is marked failed.

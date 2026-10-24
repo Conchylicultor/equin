@@ -182,14 +182,14 @@ Notes:
    - A parse with `match: someVar` on a keyed companion throws.
 2. **Unit (runtime):** an authored row of an unregistered type renders the loud
    placeholder, not "No views configured".
-3. **Bundle diff:** a one-off `./singularity run` script resolves every committed
+3. **Bundle diff:** a one-off `./equin run` script resolves every committed
    composition with the old and the new graph and config. It prints additions and
    removals per composition.
    - **Expect:** most apps *gain* the dimensions of the types they use, closing the
      pack's silent gaps.
    - **sonata** may *lose* dimensions of types it never references. Each removal is
      judged by hand.
-4. `./singularity build`. All checks are green, including `composition-closure`,
+4. `./equin build`. All checks are green, including `composition-closure`,
    `companions-visible`, `keys-defined`, `plugins-doc-in-sync`, `eager-tier-in-sync`
    and `plugins-registry-in-sync`.
 5. **Real served pages:**
@@ -218,11 +218,11 @@ Notes:
   - The only removals: sonata's `fields.color.table` and `fields.image.table`,
     which none of its DataViews use.
   - `singularity` (main, `**`) is unchanged.
-- **Verified**: `./singularity build` green (incl. `composition-closure`,
+- **Verified**: `./equin build` green (incl. `composition-closure`,
   `companions-visible`, `keys-defined`, `eager-tier-in-sync`,
   `plugins-registry-in-sync`); tests green (closure, facets, data-view,
   slot-render, fields, mail threads, studio graph, plugin-view deps);
-  `./singularity build --composition sonata` serves the library's gallery and
+  `./equin build --composition sonata` serves the library's gallery and
   table views with typed cells and no pack.
 - **Precision note**: a reference is plugin-level, not per DataView. A plugin
   spelling `type: "bool"` anywhere makes bool's dimensions ship wherever it and the

@@ -4,7 +4,7 @@
 
 A clean-VM run (2026-09-18) with a working, deployed app was rebooted: no
 gateway, no embedded Postgres, `http://singularity.localhost:9000` dead. Only a
-hand-run `./singularity start` brings it back, and only `docs/setup.md:49-51`
+hand-run `./equin start` brings it back, and only `docs/setup.md:49-51`
 mentions it ("does not survive a reboot, so run it again after one"). To a new
 user the first reboot looks exactly like a broken install.
 
@@ -25,7 +25,7 @@ The dev host gets the macOS equivalent.
 
 ## Design
 
-`./singularity start` stops being "spawn a detached process" and becomes
+`./equin start` stops being "spawn a detached process" and becomes
 **"register the gateway as a per-user launchd service, then (re)start it"**.
 launchd owns the process: it starts it at login, restarts it on crash, and runs
 at most one instance per label.
@@ -100,10 +100,10 @@ throws with stderr.
 launchd owning the process also structurally removes the overlapping-generation hazard that
 `--force`'s poll loop exists for: launchd never runs two instances of a label.
 
-### 5. `./singularity stop`
+### 5. `./equin stop`
 
 With `KeepAlive`, `kill <pid>` of a crashed-looking gateway is respawned, so a
-supported stop verb is now required: `./singularity stop` → `launchctl bootout`
+supported stop verb is now required: `./equin stop` → `launchctl bootout`
 (stops now; the plist stays, so the next login brings it back) and
 `--disable` → bootout + delete the plist (opt out of auto-start). New CLI plugin
 `plugins/framework/plugins/cli/plugins/stop/` next to `start`.
@@ -140,10 +140,10 @@ Reused: `pickRuntimeEnv` / `runtimeEnvNames` / `runtimePath` (`launcher/core/int
 
 1. Unit: plist render test (argv/env/KeepAlive/paths; round-trip through `plutil -lint`).
 2. `go build` + gateway test that `-pid-file` is written and removed on SIGTERM.
-3. On this Mac (user runs these — agents never run `start`): `./singularity start --force`
+3. On this Mac (user runs these — agents never run `start`): `./equin start --force`
    → `launchctl print gui/$UID/dev.singularity.gateway` shows running; app answers;
-   `kill -9 <pid>` → relaunched within ~10 s; `./singularity stop` → stays down;
-   `./singularity start` → back.
+   `kill -9 <pid>` → relaunched within ~10 s; `./equin stop` → stays down;
+   `./equin start` → back.
 4. Clean-install VM (`sidequests/clean-install`): install per `docs/setup.md`,
    reboot the Tart VM, log in, `curl http://singularity.localhost:9000` answers
    with no manual step. (Not yet a `steps.sh` step: a step's command runs over

@@ -104,7 +104,7 @@ func parseFlags() (Config, string) {
 	// backend. The launcher passes it as this flag; the flag is the contract.
 	flag.StringVar(&cfg.DefaultNamespace, "default-namespace", "", "fallback namespace for requests with no subdomain")
 	// Where the gateway records its own pid. The gateway writes it itself because
-	// under launchd (./singularity start on macOS) no launcher sees the spawn: a
+	// under launchd (./equin start on macOS) no launcher sees the spawn: a
 	// gateway launchd relaunches at login or after a crash would otherwise leave
 	// the file naming a dead generation. Empty ⇒ no pidfile (a hand-run gateway).
 	flag.StringVar(&cfg.PidFile, "pid-file", "", "file to write this process's pid to at boot")
@@ -113,7 +113,7 @@ func parseFlags() (Config, string) {
 	// plugins/infra/plugins/launcher/core (runtimeEnvNames), and a default here
 	// would be a second copy of it.
 	var childEnv string
-	flag.StringVar(&childEnv, "child-env", "", "REQUIRED: comma-separated environment variable names children receive (NAME_* matches a prefix); ./singularity start passes launcher/core runtimeEnvNames()")
+	flag.StringVar(&childEnv, "child-env", "", "REQUIRED: comma-separated environment variable names children receive (NAME_* matches a prefix); ./equin start passes launcher/core runtimeEnvNames()")
 
 	flag.Parse()
 	return cfg, childEnv
@@ -175,7 +175,7 @@ func main() {
 
 	// Resolve the declared child environment before anything can spawn. The
 	// names the gateway itself carries but will not forward are logged at warn:
-	// the normal ./singularity start path drops nothing (the launcher already
+	// the normal ./equin start path drops nothing (the launcher already
 	// filtered the gateway's own environment to the same list), so a non-empty
 	// list means a hand-run gateway, and its would-be leak is visible in
 	// gateway.log rather than silently absent. Names only — never values.

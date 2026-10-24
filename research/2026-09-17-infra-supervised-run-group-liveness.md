@@ -5,7 +5,7 @@
 Every supervised run is spawned as `/bin/sh -c <shim> …argv`, `detached: true`.
 The ledger row stores the shim's pid. Because the spawn is detached, that pid is
 also the **process-group id**, and the real worker (`bun … supervised-exec …`,
-`./singularity build`, …) lives inside that group.
+`./equin build`, …) lives inside that group.
 
 Two things read that pid, and they disagree about what it means:
 
@@ -99,7 +99,7 @@ not reachable from any path the system uses.
 Update `plugins/infra/plugins/jobs/plugins/supervised-job/CLAUDE.md`: the close
 rule snippets (`isPidAlive` → `isRunAlive`), a short "Liveness is the process
 GROUP" subsection beside "Kill signals the process GROUP", and the pid comment on
-`StartedRun` / `LiveRun`. Regenerate the autogen reference via `./singularity build`.
+`StartedRun` / `LiveRun`. Regenerate the autogen reference via `./equin build`.
 
 ## Tests
 
@@ -113,11 +113,11 @@ GROUP" subsection beside "Kill signals the process GROUP", and the pid comment o
 - `server/internal/observe.test.ts`: same shape for `observeRun` ⇒ `running` then `ended -1`.
 - `loop.test.ts`: attempt 2 is not claimed while attempt 1's group is alive.
 
-Run: `./singularity test plugins/infra/plugins/jobs/plugins/supervised-job plugins/backup`.
+Run: `./equin test plugins/infra/plugins/jobs/plugins/supervised-job plugins/backup`.
 
 ## Verification end-to-end
 
-1. `./singularity build` (background).
+1. `./equin build` (background).
 2. Enqueue `events-test.detached-sleep` with `seconds: 60`.
 3. `kill -9 <supervised_job_runs.pid>` (shim only), confirm the worker survives
    (`ps -o pid,pgid,command -g <pgid>`).

@@ -26,7 +26,7 @@
  * the viewport, or past the first page, are not rendered).
  *
  * Manual only — nothing runs this automatically.
- *   ./singularity run plugins/apps/plugins/sonata/plugins/library/e2e/library-live-sort.ts [--headed]
+ *   ./equin run plugins/apps/plugins/sonata/plugins/library/e2e/library-live-sort.ts [--headed]
  */
 import type { Page } from "playwright";
 import {

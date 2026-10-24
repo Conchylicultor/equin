@@ -29,7 +29,7 @@ Outcome:
 
 ## Step 0: Prototype the row (stop for review)
 
-`./singularity prototype new "Agents health row"`, which mocks the health-report popover, with
+`./equin prototype new "Agents health row"`, which mocks the health-report popover, with
 options for the states:
 - ok: `Claude Code v2.1.x · SDK 0.x · 3 agents running`
 - drift: attention, SDK built for another CLI version
@@ -153,8 +153,8 @@ process by a pid file. The agents then also appear in Debug → Background activ
 
 ## Verification
 
-- `./singularity test plugins/conversations/plugins/runtime-sdk plugins/conversations/plugins/agent-launch plugins/shell/plugins/health-report`
-  and `./singularity check`.
+- `./equin test plugins/conversations/plugins/runtime-sdk plugins/conversations/plugins/agent-launch plugins/shell/plugins/health-report`
+  and `./equin check`.
 - Build, then in the worktree app:
   - launch a conversation, send, Stop, AskUserQuestion, rewind, close and resume;
   - `ps -o pgid,sess` shows the agent outside the backend's process group;

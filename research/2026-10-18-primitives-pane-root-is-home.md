@@ -161,8 +161,8 @@ There is nothing to fix.
   - With no navigator, the open throws.
   - Outside a surface, the open stays in place.
 - A test for the parse-time redirect at the tabs layer.
-- `./singularity test plugins/primitives/plugins/pane plugins/apps-core`
-- `./singularity build`, then with the `browser_*` tools:
+- `./equin test plugins/primitives/plugins/pane plugins/apps-core`
+- `./equin build`, then with the `browser_*` tools:
   - Places → "Set up the live map" lands on `/settings/accounts/google-maps/live-map` with the
     Settings nav.
   - Opening `/places/accounts/google-maps/live-map` directly redirects to the same place.

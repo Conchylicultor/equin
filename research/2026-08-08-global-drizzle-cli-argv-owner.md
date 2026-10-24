@@ -116,10 +116,10 @@ exactly one file, and the rule cannot drift from the owner.
 
 Message: the argv is owned by `drizzleGenerateArgv()`; every sanctioned invocation is
 `generate` because `drizzle.config.ts`'s credentials are a non-resolving sentinel; to
-generate a migration run `./singularity build --migration-name <slug>`; to apply one
-use the runner or `./singularity apply-migrations`.
+generate a migration run `./equin build --migration-name <slug>`; to apply one
+use the runner or `./equin apply-migrations`.
 
-Adding `lint/index.ts` regenerates `lint.generated.ts` on the next `./singularity build`
+Adding `lint/index.ts` regenerates `lint.generated.ts` on the next `./equin build`
 (the `plugins-registry-in-sync` check fails on drift) — no registry edit by hand.
 
 ### 3. Delete the check
@@ -166,12 +166,12 @@ Stated rather than hidden, since each is a place the new rule stays silent:
 
 ## Verification
 
-1. `./singularity test plugins/database/plugins/migrations` — the argv builder test
+1. `./equin test plugins/database/plugins/migrations` — the argv builder test
    (subcommand is `generate` for every option combination; flags append only) and the
    `RuleTester` cases. The rule's fixtures must include both directions: a spawn argv
    containing the name **reports**, and a `new Set(["drizzle-kit", …])` data table
    **does not** — that second case is the regression this whole change exists for.
-2. `./singularity build` (background) — regenerates `lint.generated.ts` and the plugin
+2. `./equin build` (background) — regenerates `lint.generated.ts` and the plugin
    docs, then runs the full check pass. Confirms `plugins-registry-in-sync`,
    `plugins-doc-in-sync`, `plugin-boundaries` (the `lint/` → `../core/internal/` relative
    import), `type-check` (which reuses the same lint config, so the new rule is enforced

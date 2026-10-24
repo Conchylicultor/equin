@@ -68,7 +68,7 @@ The last three rows in the table are **blind spots of the portability guard**: `
   - The worker boot test does reach it, so today's silent freeze becomes a test failure.
   - This is rung 4, because only boot knows the graph's resources. No codegen rule names change-feed: that would be a consumer naming a contributor.
 - **D4: getting the feed into the worker graph.** Once it is portable, it joins if it is in `agent-manager-demo`'s bundle. The graph is that composition's portable server barrels.
-  - Verify with `./singularity build`, which regenerates `browser-host.generated.ts`.
+  - Verify with `./equin build`, which regenerates `browser-host.generated.ts`.
   - If it is absent, add `database.change-feed` to the `agent-manager` composition. A standalone desktop agent manager needs it just as much.
   - D3 fails the boot test if this is missed.
 
@@ -129,7 +129,7 @@ This is the non-browser proof that a write recomputes.
 
 **G7 — desktop parity and measurements.**
 - Desktop smoke on this worktree's build: edit a task title and add a dependency, and both render.
-- `./singularity test plugins/database/plugins/change-feed plugins/database/plugins/live-state-snapshot`.
+- `./equin test plugins/database/plugins/change-feed plugins/database/plugins/live-state-snapshot`.
 - Boot logs: the steady-state restart still takes zero table locks, because the trigger fingerprints are unchanged by the sha256 swap.
 - Measure:
   - worker boot to ready, before and after, warm, 3 loads;
@@ -158,9 +158,9 @@ This is the non-browser proof that a write recomputes.
 
 ## Verification
 
-1. `./singularity test plugins/database/plugins/pglite plugins/database/plugins/change-feed plugins/database/plugins/live-state-snapshot plugins/framework/plugins/server-core plugins/tasks/plugins/task-category plugins/framework/plugins/tooling/plugins/boundaries`. Covers the G0 spike, the listener (real Postgres) and the G5 end-to-end test on PGlite.
-2. `./singularity build`, green: checks including `boundaries:portable-closure`, `browser-host:contributions-covered`, `host-services:provider-placement`, `plugins-registry-in-sync`.
-3. `./singularity run plugins/apps/plugins/demo/e2e/no-leak.ts`, all assertions passing, including the new render assertions.
+1. `./equin test plugins/database/plugins/pglite plugins/database/plugins/change-feed plugins/database/plugins/live-state-snapshot plugins/framework/plugins/server-core plugins/tasks/plugins/task-category plugins/framework/plugins/tooling/plugins/boundaries`. Covers the G0 spike, the listener (real Postgres) and the G5 end-to-end test on PGlite.
+2. `./equin build`, green: checks including `boundaries:portable-closure`, `browser-host:contributions-covered`, `host-services:provider-placement`, `plugins-registry-in-sync`.
+3. `./equin run plugins/apps/plugins/demo/e2e/no-leak.ts`, all assertions passing, including the new render assertions.
 4. A desktop smoke through `browser_*`: edit a title and add a dependency on `http://<worktree>.localhost:9000/agents/…`, and both render.
 5. Measurements table in the Outcome; wiki subtrack page updated; next task filed.
 

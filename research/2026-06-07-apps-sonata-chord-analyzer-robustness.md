@@ -290,7 +290,7 @@ Cases:
 
 1. `bun test plugins/apps/plugins/sonata/plugins/theory/core/detect.test.ts` (from
    repo root) — all cases green. This is the primary correctness gate.
-2. `./singularity build` — theory/core + score/core recompile; checks (boundaries,
+2. `./equin build` — theory/core + score/core recompile; checks (boundaries,
    eslint, plugins-doc-in-sync) pass. `ChordData` change is additive (optional field),
    so no migration/codegen ripple.
 3. Open `http://att-1780853651-1ojw.localhost:9000/sonata`, load a seed song

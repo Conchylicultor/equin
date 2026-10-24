@@ -90,11 +90,11 @@ Belt-and-suspenders: the WS reconnect re-subscription already delivers the new h
 
 ### 9. Update CLAUDE.md and plugin docs
 
-Update `plugins/build/CLAUDE.md` exports list. The generated `docs/plugins-details.md` will be updated by `./singularity build`.
+Update `plugins/build/CLAUDE.md` exports list. The generated `docs/plugins-details.md` will be updated by `./equin build`.
 
 ## Verification
 
-1. `./singularity build` succeeds
+1. `./equin build` succeeds
 2. Open `http://<worktree>.localhost:9000`
 3. Trigger a build from another terminal — verify:
    - Blue stale-tab dot appears promptly on WS reconnect (no 30s delay)
@@ -104,4 +104,4 @@ Update `plugins/build/CLAUDE.md` exports list. The generated `docs/plugins-detai
    - Spinner shows during build
    - Blue dot appears on reconnect
 5. Reload the page with an in-flight build — verify no spurious toast on load
-6. `./singularity check` passes
+6. `./equin check` passes

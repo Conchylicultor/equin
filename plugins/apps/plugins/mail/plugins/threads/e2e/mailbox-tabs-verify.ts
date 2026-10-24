@@ -26,7 +26,7 @@
  * main it reads the real mailbox and seeds nothing.
  *
  * Manual only — nothing runs this automatically.
- *   ./singularity run plugins/apps/plugins/mail/plugins/threads/e2e/mailbox-tabs-verify.ts [--headed]
+ *   ./equin run plugins/apps/plugins/mail/plugins/threads/e2e/mailbox-tabs-verify.ts [--headed]
  */
 import { existsSync, rmSync } from "node:fs";
 import type { Page } from "playwright";

@@ -20,7 +20,7 @@
 //     rebuild the token from `text/plain` and drop the marks) still correct.
 //
 // Usage:
-//   ./singularity run plugins/page/plugins/editor/e2e/cross-block-chip-copy.ts
+//   ./equin run plugins/page/plugins/editor/e2e/cross-block-chip-copy.ts
 //        [--attempt att-…] [--out /tmp/cross-block-chip] [--headed]
 import {
   arg,

@@ -196,7 +196,7 @@ tables cover only two modes.
 
 ## The golden script
 
-`./singularity run plugins/integrations/plugins/hooktheory/scripts/hookpad-sound-golden.ts --raw <path> --processed <path> [--emit-fixtures]`
+`./equin run plugins/integrations/plugins/hooktheory/scripts/hookpad-sound-golden.ts --raw <path> --processed <path> [--emit-fixtures]`
 
 - Checks both files against the pinned sha256 first; a mismatch stops it.
 - The processed file (309 MB raw) is read with one `JSON.parse`. The raw file is
@@ -222,7 +222,7 @@ directory belongs to the app root (song-index step 2).
 
 ## Verification
 
-1. `./singularity test plugins/integrations/plugins/hooktheory`: the moved
+1. `./equin test plugins/integrations/plugins/hooktheory`: the moved
    decoder and YouTube tests still pass; the new theory tests and the fixture
    replay pass.
 2. The golden run: 421,298 paired chords agree 100%, or each class of
@@ -231,12 +231,12 @@ directory belongs to the app root (song-index step 2).
    unexplained sections are explained, or listed as such).
 3. `GET /api/hooktheory/sections/_NgbRXeYgQA` on this worktree's deploy still
    answers the Let It Be verse. Every chord in it reads as a sound.
-4. `./singularity build` (background): boundaries, type-check, docs in sync.
+4. `./equin build` (background): boundaries, type-check, docs in sync.
 
 ## Results
 
 Golden run of 2026-09-17, on the pinned files. It takes about 3½ minutes.
-Command: `./singularity run plugins/integrations/plugins/hooktheory/scripts/hookpad-sound-golden.ts --raw <Hooktheory_Raw.json.gz> --processed <Hooktheory.json.gz> [--emit-fixtures]`.
+Command: `./equin run plugins/integrations/plugins/hooktheory/scripts/hookpad-sound-golden.ts --raw <Hooktheory_Raw.json.gz> --processed <Hooktheory.json.gz> [--emit-fixtures]`.
 
 ### Chords: 100 % agreement
 

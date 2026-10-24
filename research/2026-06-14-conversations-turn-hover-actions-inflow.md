@@ -130,7 +130,7 @@ modest. The content column gets `min-w-0 flex-1` so it shrinks cleanly.
 
 ## Verification
 
-1. `./singularity build`, open `http://<worktree>.localhost:9000/agents/c/<id>`.
+1. `./equin build`, open `http://<worktree>.localhost:9000/agents/c/<id>`.
 2. Find a place where a short turn (a tool call / system / queue-operation row)
    is immediately followed by another turn. Hover the short turn.
    - Before: the toolbar covered the top of the row below.

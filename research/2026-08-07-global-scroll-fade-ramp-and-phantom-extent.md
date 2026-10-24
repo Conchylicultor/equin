@@ -170,7 +170,7 @@ and it is *not* what should be absorbing a 4px lie.
 ## Verification
 
 ```bash
-./singularity build
+./equin build
 bun plugins/primitives/plugins/css/plugins/ui-kit/e2e/scroll-fade-verify.ts --out /tmp/scroll-fade
 ```
 
@@ -179,4 +179,4 @@ bun plugins/primitives/plugins/css/plugins/ui-kit/e2e/scroll-fade-verify.ts --ou
 - The `/`-filtered state is the regression: `44 / 44`, both fades off.
 - Eyeball `/tmp/scroll-fade-turn-into-mid.png` — both edges dissolving, neither a
   wall. Compare against the current build's shot of the same state.
-- `./singularity check` for the repo checks.
+- `./equin check` for the repo checks.

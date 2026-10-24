@@ -15,7 +15,7 @@ const schemaFilesLoadableCheck: Check = {
   id: "schema-files-loadable",
   description:
     "every drizzle schema-glob file loads synchronously (drizzle-kit require())",
-  // Cheap structural invariant: guard even `./singularity build --skip-checks`.
+  // Cheap structural invariant: guard even `./equin build --skip-checks`.
   alwaysRun: true,
   async run() {
     // The probe is shared with `generateMigration`, which runs it before every

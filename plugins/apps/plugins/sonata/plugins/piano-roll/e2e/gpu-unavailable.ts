@@ -7,8 +7,8 @@
  * WebGPU) and `getContext("webgl"/"webgl2")` returns null (no WebGL) — exactly
  * what a browser with hardware acceleration switched off reports.
  *
- *   ./singularity build
- *   ./singularity run plugins/apps/plugins/sonata/plugins/piano-roll/e2e/gpu-unavailable.ts --out /tmp/no-gpu
+ *   ./equin build
+ *   ./equin run plugins/apps/plugins/sonata/plugins/piano-roll/e2e/gpu-unavailable.ts --out /tmp/no-gpu
  */
 import { errors } from "playwright";
 import {

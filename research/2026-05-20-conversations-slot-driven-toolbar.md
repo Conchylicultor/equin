@@ -24,10 +24,10 @@ Structure mirrors `message-toc/`:
 | `jsonl-viewer/plugins/event-counter/web/index.ts` | Create |
 | `jsonl-viewer/plugins/event-counter/web/components/event-counter.tsx` | Create |
 
-Plugin registry (`plugins.generated.ts`) regenerates on `./singularity build`.
+Plugin registry (`plugins.generated.ts`) regenerates on `./equin build`.
 
 ## Verification
 
-1. `./singularity build`
+1. `./equin build`
 2. Open a conversation — event counter visible in the ActionBar
 3. Counter updates live as events stream in

@@ -237,21 +237,21 @@ Per plugin, the same mechanical steps:
 
 ## Verification
 
-1. `./singularity build` (in the background). **The key signal is that no new
+1. `./equin build` (in the background). **The key signal is that no new
    migration gets generated.** A clean `migrations-in-sync` proves all 23 tables
    kept byte-identical DDL. If a migration appears, stop and diff the snapshot.
    Do not accept the migration.
-2. `./singularity check`:
+2. `./equin check`:
    - `type-check`: this covers web and server; every wire-shape change surfaces here.
    - `eslint`: the rule now runs with no allowlist.
    - `plugin-boundaries`: no import cycle from the new `entities` / `fields` edges.
    - `plugins-doc-in-sync` and `table-defs-in-schema-glob`.
-3. `./singularity test plugins/infra/plugins/entity-extensions plugins/infra/plugins/entities plugins/infra/plugins/query-resource plugins/conversations/plugins/conversations-view/plugins/queue`.
+3. `./equin test plugins/infra/plugins/entity-extensions plugins/infra/plugins/entities plugins/infra/plugins/query-resource plugins/conversations/plugins/conversations-view/plugins/queue`.
 4. `query_db` on the worktree DB: `information_schema.columns` for
    `sonata_songs_ext_midi`, `conversations_ext_queue` and `blocks_ext_todo_task`
    (or whatever name the todo-task table actually has) match `main`.
 5. Drive the app:
-   - `./singularity run plugins/tasks/plugins/auto-start/e2e/auto-start-verify.ts`.
+   - `./equin run plugins/tasks/plugins/auto-start/e2e/auto-start-verify.ts`.
    - the todo-dispatch e2e in `page/annotations/todo/task-link/e2e/`.
    - screenshots of the conversation sidebar queue, where order and pins must render.
    - screenshots of a Sonata song with transpose, chord mode and rhythm set.
@@ -284,7 +284,7 @@ Per plugin, the same mechanical steps:
   can no longer fire. They are left in place because the writer only ever
   stores a valid tag or null.
 - **Verified:**
-  - `./singularity build` generated no migration: all 23 tables are byte-identical.
+  - `./equin build` generated no migration: all 23 tables are byte-identical.
   - All checks pass.
   - 234 tests pass.
   - `auto-start-verify.ts` passes.

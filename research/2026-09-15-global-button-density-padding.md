@@ -139,7 +139,7 @@ it with a `px-*` class on one button.
 - `ui-kit/CLAUDE.md`, ControlSize paragraph: one sentence saying the same.
 - Reflection doc, gap #4: add one line saying it is fixed, with a link here.
 
-`./singularity build` regenerates the generated files:
+`./equin build` regenerates the generated files:
 `token-group-vars.generated.ts` and `custom-utilities.generated.ts`.
 
 ## Out of scope (follow-ups to file)
@@ -168,10 +168,10 @@ it with a `px-*` class on one button.
 
 ## Verification
 
-1. `./singularity build` passes, including `css-vars-supplied`,
+1. `./equin build` passes, including `css-vars-supplied`,
    `app-css-utilities-in-sync`, `token-group-vars-in-sync`, type-check and
    eslint.
-2. `./singularity test plugins/primitives/plugins/css/plugins/ui-kit` runs the
+2. `./equin test plugins/primitives/plugins/css/plugins/ui-kit` runs the
    new `cn()` cases.
 3. **Default theme does not move.** Take `screenshot.ts` captures of a toolbar
    with text buttons (the agent-manager conversation view) before and after.

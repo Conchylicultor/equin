@@ -87,8 +87,8 @@ appears on at once.
 
 - **Per file:** `bunx eslint <file>` after removing its entries — must be clean
   (this is exactly what the future ratchet check will automate).
-- **Per batch:** `./singularity check eslint` stays green.
-- **End-to-end:** `./singularity build`, then load the affected app at
+- **Per batch:** `./equin check eslint` stays green.
+- **End-to-end:** `./equin build`, then load the affected app at
   `http://<worktree>.localhost:9000` and confirm no visual regression (radius
   swaps and `<Text>` swaps are size-equivalent by design, so diffs should be
   imperceptible). Spot-check a Shape preset switch (Sharp/Pill) on a migrated
@@ -136,7 +136,7 @@ leaving only the documented permanent exceptions.
 
 Execution suggestion: one agent per umbrella batch (Phase 2/3), each running the
 per-file recipe + per-file `eslint` verification, then a single
-`./singularity build` + visual spot-check per batch. Sonnet is sufficient for
+`./equin build` + visual spot-check per batch. Sonnet is sufficient for
 the auto-fixable Phase 1; Phase 2 `<Text>` conversions involve judgment
 (variant choice, `as=`/`className=` splitting) and suit Opus.
 

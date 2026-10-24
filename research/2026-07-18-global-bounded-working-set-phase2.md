@@ -339,7 +339,7 @@ No schema migrations, no new tables, no client-API change.
 3. Part B queue split (B1 resources w/ `ackChannel: true` → B3 applyReorder rows→rows → B2
    rewire → B4 sweep). The design's open question "pin placement" is resolved: separate
    `queue-pin` scalar resource (B1).
-4. CLAUDE.md `Resources:` lines for all touched plugins; `./singularity build`; re-measure.
+4. CLAUDE.md `Resources:` lines for all touched plugins; `./equin build`; re-measure.
 
 ## Verification
 
@@ -353,7 +353,7 @@ No schema migrations, no new tables, no client-API change.
    note/preprompt hooks). New: `apply-reorder.test.ts` (rows→rows), a `use-queue-rows` jsdom test
    (pin + ranks tuple + retain-last-rows: no skeleton flash on re-sub), optimistic-mutation
    point-base + ack-confirmation tests (per Part C design).
-2. `./singularity build` → worktree: `_debug` shows the 4 keys as point membership (no
+2. `./equin build` → worktree: `_debug` shows the 4 keys as point membership (no
    `recompute:{full}`), `live_state_snapshot` rows for them swept at boot, `queue-pin` persists a
    1-row value.
 3. Re-measure `GET /api/resources/boot-snapshot` serialized per-key (script: curl + rank by

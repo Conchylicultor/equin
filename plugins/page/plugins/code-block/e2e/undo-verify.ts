@@ -21,7 +21,7 @@
 //   5. undo past the block's own text reaches the structural stack, so the
 //      document history stays one chronological stack rather than two.
 //
-// Usage: ./singularity run plugins/page/plugins/code-block/e2e/undo-verify.ts [--url <deploy>]
+// Usage: ./equin run plugins/page/plugins/code-block/e2e/undo-verify.ts [--url <deploy>]
 import {
   ELEMENT_TIMEOUT_MS,
   arg,

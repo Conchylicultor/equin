@@ -228,7 +228,7 @@ Update result merging to include `tooling`.
 ## Verification
 
 1. `bun install` — workspace resolution picks up `tooling/`
-2. `./singularity build` — full build succeeds (runs checks, type-checks, builds frontend)
-3. `./singularity check` — all checks pass including `typescript`, `eslint`, `boundary-rules`, `plugin-boundaries`
+2. `./equin build` — full build succeeds (runs checks, type-checks, builds frontend)
+3. `./equin check` — all checks pass including `typescript`, `eslint`, `boundary-rules`, `plugin-boundaries`
 4. Verify guard works: create a test file edit outside the worktree and confirm the guard blocks it
 5. `bunx tsc --noEmit` in `tooling/` — no type errors

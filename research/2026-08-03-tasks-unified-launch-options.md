@@ -233,7 +233,7 @@ There is **zero automated coverage** of this surface — no tests, no e2e script
 touch `task-draft-form`, the chain endpoint, or these options. TypeScript is the
 only net, so verify by hand.
 
-1. `./singularity build` — includes `check plugin-boundaries` (the new plugin's
+1. `./equin build` — includes `check plugin-boundaries` (the new plugin's
    barrels + no cycle) and `type-check` (which is what actually catches the
    `CardDraft`/`TaskChainCard` call sites).
 2. **Reorder config migration.** The slot id changes owner, so

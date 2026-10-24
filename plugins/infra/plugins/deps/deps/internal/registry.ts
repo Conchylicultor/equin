@@ -6,7 +6,7 @@ import type { Dep, DepSource } from "./dep";
  * The set of declared dependencies: every plugin's `deps/index.ts` default
  * export (an array of `defineDep` values), collected by codegen into
  * `core/deps.generated.ts`. The set is known statically, so a CLI op, a check
- * or `./singularity start` reads it without booting a backend.
+ * or `./equin start` reads it without booting a backend.
  *
  * The Dependencies view, the `deps` CLI, the install job and the sweep read
  * only this generic set — none of them names a dependency.

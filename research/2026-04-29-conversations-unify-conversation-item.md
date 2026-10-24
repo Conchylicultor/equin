@@ -85,7 +85,7 @@ Co-located in the same file:
 
 ## Verification
 
-1. `./singularity build` from the worktree — frontend type-checks and the bundle rebuilds.
+1. `./equin build` from the worktree — frontend type-checks and the bundle rebuilds.
 2. Open `http://att-1777459694-hrsy.localhost:9000`.
 3. **Sidebar list** — same visual as today (status dot, title, sys, time, spawnedBy line for system rows). Toggle "show system" — system rows still tinted and labeled "sys".
 4. **Attempts under a task** — open a task in the Tasks pane. Each conversation row now shows the status dot, title, sys badge, and relative time (instead of the status text).

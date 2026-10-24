@@ -94,9 +94,9 @@ The five `web/__tests__/*.test.tsx` fakes write `stateFor: () => state`, which n
   - They change after the matching write to `a`.
   - They keep it across an external config echo that changes only view `b`.
   - A legacy string `groupBy` stays identity-stable.
-- `./singularity test plugins/primitives/plugins/data-view`
-- `./singularity check type-check`: confirm that adding a dummy plain `fooFor: (id) => ({})` to `ReadyViewModel` fails (done locally, not committed).
-- `./singularity build`, then open the History sidebar and a grouped task list and confirm there are no #301 / render-loop reports (`reports/render-loop`), with a screenshot via `e2e-harness/e2e/screenshot.ts`.
+- `./equin test plugins/primitives/plugins/data-view`
+- `./equin check type-check`: confirm that adding a dummy plain `fooFor: (id) => ({})` to `ReadyViewModel` fails (done locally, not committed).
+- `./equin build`, then open the History sidebar and a grouped task list and confirm there are no #301 / render-loop reports (`reports/render-loop`), with a screenshot via `e2e-harness/e2e/screenshot.ts`.
 
 ## Follow-ups (out of scope)
 

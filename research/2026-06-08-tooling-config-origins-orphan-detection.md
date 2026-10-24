@@ -87,12 +87,12 @@ if (orphans.length > 0) {
 
 ## Verification
 
-1. Baseline: `./singularity check config-origins-in-sync` passes on the clean worktree.
+1. Baseline: `./equin check config-origins-in-sync` passes on the clean worktree.
 2. Create a fake orphan:
    `cp config/shell/shell.toolbar.origin.jsonc config/shell/zzz-orphan.origin.jsonc`
    (any path not backed by a descriptor).
-3. Run `./singularity check config-origins-in-sync` → expect a **failure** whose message
+3. Run `./equin check config-origins-in-sync` → expect a **failure** whose message
    lists `config/shell/zzz-orphan.origin.jsonc` and the delete hint.
 4. `rm config/shell/zzz-orphan.origin.jsonc` → check passes again.
-5. `./singularity build` (regenerate everything) → check still passes (no real orphans, no
+5. `./equin build` (regenerate everything) → check still passes (no real orphans, no
    regression in the existing "expected exists & matches" + `@hash` duties).

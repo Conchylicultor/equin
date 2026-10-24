@@ -1,4 +1,4 @@
-# Subagents wait for their own ops — `./singularity await`
+# Subagents wait for their own ops — `./equin await`
 
 ## Context
 
@@ -6,9 +6,9 @@ A subagent that starts a long op in the background is never woken when it
 finishes, so it sits idle forever and its parent waits on a report that can
 never come. Measured, in `conv-1789736383-4i30` (worktree `att-1789736383-7uwn`):
 
-- **01:28:59** teammate `curriculum-web` backgrounds `./singularity check
+- **01:28:59** teammate `curriculum-web` backgrounds `./equin check
   type-check`, says "I'll report once it lands", ends its turn.
-- **01:29:46** teammate `curriculum-core` backgrounds `./singularity test
+- **01:29:46** teammate `curriculum-core` backgrounds `./equin test
   plugins/apps/plugins/chord`, same.
 - **01:29:52** the main session writes "Rebuilding once they report" and ends
   its turn.
@@ -38,7 +38,7 @@ subagents are never re-invoked when their own run_in_background task
 completes*), **#87689**, **#85534**, **#92410**, **#86963**, **#91503** — all
 open.
 
-Our own guard walks agents into it. `background-ops` forces every `./singularity
+Our own guard walks agents into it. `background-ops` forces every `./equin
 build|push|check|test|release` to `run_in_background: true` and tells the caller
 to *"END YOUR TURN […] you will be re-invoked with the output when it
 finishes"* — true in a main session, false in a subagent. Both stalled teammates
@@ -57,8 +57,8 @@ is detached, untimed, and survives; only the notification is lost). The subagent
 then makes one more foreground call that blocks until the op ends:
 
 ```bash
-./singularity build          # run_in_background: true — unchanged
-./singularity await build    # foreground; returns when the build ends
+./equin build          # run_in_background: true — unchanged
+./equin await build    # foreground; returns when the build ends
 ```
 
 Two calls, not one fused command, for a concrete reason: `defineCliCommand`'s
@@ -120,7 +120,7 @@ through `markWorktreeOpStart` and `WorktreeOpInfo`; pass it at the two call
 sites (`op-runtime/cli/direct-op.ts`, `cli/plugins/build/cli/run.ts`, and the
 push equivalent). Existing readers ignore the extra field.
 
-### 2. `./singularity await [op…]` — a new CLI command
+### 2. `./equin await [op…]` — a new CLI command
 
 `plugins/framework/plugins/cli/plugins/await/` (declared with
 `defineCliCommand`, **not** `detachable`, so it dies with its shell — which is
@@ -148,7 +148,7 @@ Behaviour:
   lock's `observeBuildHolder` already does ("waiting on host-grant", "step:
   type-check"). A wait that prints nothing for eight minutes reads as a hang.
 - **Cap.** Return at **~8 minutes** (below the 600 s foreground limit) with
-  `still running after 8m — run './singularity await build' again`, and a
+  `still running after 8m — run './equin await build' again`, and a
   non-terminal exit code distinct from failure. A p90 build (36.8 min) is about
   five calls, each a genuine block on a filesystem event.
 - **Fail loudly.** Marker present but its `pid` is dead and no terminal record
@@ -173,7 +173,7 @@ Behaviour:
   options bag; `createContext("/tmp")` is called positionally in several tests.
 - `core/guards/background-ops.ts` — in a subagent, the `run_in_background: true`
   branch (today a silent allow) returns an **`inform`**: *your completion
-  notification will not be delivered — your next call must be `./singularity
+  notification will not be delivered — your next call must be `./equin
   await <op>`; do not end your turn.* The foreground branch keeps denying, with
   the subagent hint naming both steps. The guard's existing "END YOUR TURN"
   wording stays for main sessions only, where it is true.
@@ -184,7 +184,7 @@ Behaviour:
   block a subagent because its *parent* has a build in flight.
 
 Not needed, confirmed: **no poll-loop exemption.** `singularity` is in
-`MUTATORS` (`core/poll-detect.ts:124`), so every `./singularity …` call
+`MUTATORS` (`core/poll-detect.ts:124`), so every `./equin …` call
 classifies as `mutate` and *resets* the poll window — repeated `await` calls
 cannot trip it.
 
@@ -213,7 +213,7 @@ The hook: a second entry point beside `bin/guard.ts` (say `bin/stop-guard.ts`),
 registered in `.claude/settings.json` for both events. It blocks when the
 stopping agent owns an op that has not reached a terminal op-log record —
 ownership from step 3's state file, liveness from the op marker — with the
-reason *"`<op>` is still running. Run `./singularity await <op>` and report what
+reason *"`<op>` is still running. Run `./equin await <op>` and report what
 it says."* Nothing else blocks a stop: an agent with no op of its own is never
 delayed.
 
@@ -245,22 +245,22 @@ harness knows which agent made the call.
 
 ## Verification
 
-1. `./singularity test plugins/framework/plugins/tooling/plugins/guards` — the
+1. `./equin test plugins/framework/plugins/tooling/plugins/guards` — the
    new `background-ops` subagent branch (assert an `inform` with a subagent
    context, and that a main-session context is unchanged), plus marker tests.
-2. `./singularity run plugins/framework/plugins/tooling/plugins/guards/e2e/replay-transcripts.ts --guards`
+2. `./equin run plugins/framework/plugins/tooling/plugins/guards/e2e/replay-transcripts.ts --guards`
    — `backgroundOpsGuard` is in `PURE_GUARDS`; confirm its denial count over
    recorded transcripts does not move (the new branch only fires on a payload
    that recorded transcripts never carry).
-3. **The real thing, end to end.** In this worktree: `./singularity build`
-   backgrounded, then `./singularity await build` in the foreground — it must
+3. **The real thing, end to end.** In this worktree: `./equin build`
+   backgrounded, then `./equin await build` in the foreground — it must
    return within a second or two of the build ending, print the receipt's
    `buildId`, and exit 0. Then repeat with a deliberately broken build and
    confirm a non-zero exit and a named failure.
 4. **The cap.** Await a build and confirm the ~8-minute return prints the
    run-again line and that a second `await` re-attaches to the same op.
 5. **The stall itself, both shapes.** Spawn (a) a plain subagent and (b) a
-   *named teammate* whose prompt is "run `./singularity check type-check` and
+   *named teammate* whose prompt is "run `./equin check type-check` and
    report the result". Each must come back with the verdict instead of going
    idle. Confirm in its transcript
    (`~/.claude/projects/<project>/<session>/subagents/*.jsonl`) that the turn
@@ -269,4 +269,4 @@ harness knows which agent made the call.
    The live reproduction to compare against is in this plan's Context: three
    explorer agents in the session that wrote it went idle without delivering
    their reports, and each only responded once messaged.
-6. `./singularity check` for the repo-wide checks, then `./singularity build`.
+6. `./equin check` for the repo-wide checks, then `./equin build`.

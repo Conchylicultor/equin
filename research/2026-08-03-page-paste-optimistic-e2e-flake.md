@@ -199,7 +199,7 @@ r.eq("the optimistic rows are the doubled document", last, doubled);
 The worktree is not deployed yet (no socket in `~/.singularity/sockets/`), so:
 
 ```bash
-./singularity build
+./equin build
 bun plugins/page/plugins/editor/e2e/paste-optimistic-verify.ts
 ```
 
@@ -215,7 +215,7 @@ bun plugins/page/plugins/editor/e2e/paste-optimistic-verify.ts
    got/want diff rather than hanging or timing out silently.
 4. Run the two migrated scripts once each: `duplicate-verify.ts`,
    `drag-reorder-verify.ts`.
-5. `./singularity check` (the `no-unroute` lint rule and type-check cover the
+5. `./equin check` (the `no-unroute` lint rule and type-check cover the
    e2e barrel).
 
 If the full-document expectation turns out to disagree with a correct paste in
@@ -250,4 +250,4 @@ Negative control: a deliberately wrong expectation (`[...before, ...before,
 at the deadline rather than hanging — the spec can still go red.
 
 `duplicate-verify.ts` (27 checks) and `drag-reorder-verify.ts` (25 checks) both
-green after migration; `./singularity check` exits 0.
+green after migration; `./equin check` exits 0.

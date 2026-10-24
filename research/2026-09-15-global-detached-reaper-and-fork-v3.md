@@ -9,7 +9,7 @@ Decisions the user took on v2:
   and deploy moves onto it.
 - **Long in-process jobs:** declare it. `hold: "minutes"` requires an explicit
   `inProcess` reason.
-- **Framework:** yes, change `./singularity build`'s wait for a new worktree's
+- **Framework:** yes, change `./equin build`'s wait for a new worktree's
   database.
 
 ## Context
@@ -176,7 +176,7 @@ The type forbids these combinations:
 ### 3c. Bodies
 
 - **`argv`:** unchanged from today.
-- **`run`:** the child is `./singularity supervised-exec <name>` with payload
+- **`run`:** the child is `./equin supervised-exec <name>` with payload
   `{ runId, attempt, input }`, booted in exec mode.
   - `log` writes to stdout/stderr. That output becomes the transcript, which the
     parent tails into `channel`, so one process writes each log file.
@@ -295,7 +295,7 @@ The type forbids these combinations:
   - Notifications are written from the child.
   - `createConversation` is unchanged.
 
-## 5. `./singularity build`'s wait for a new worktree's DB (approved framework edit)
+## 5. `./equin build`'s wait for a new worktree's DB (approved framework edit)
 
 `plugins/framework/plugins/cli/plugins/build/cli/run.ts:336-374`:
 
@@ -337,7 +337,7 @@ Each step leaves the tree building and checks passing.
 
 ## Verification
 
-- **Unit tests** (`./singularity test <plugin>`):
+- **Unit tests** (`./equin test <plugin>`):
   - run-id derivation and the shared singleton key;
   - log discard on GC and supersede;
   - loop: close-before-reclaim, attempt-2 `not-claimed` throwing, backoff
@@ -350,14 +350,14 @@ Each step leaves the tree building and checks passing.
   - deploy's `verb-outcome.test.ts`.
 - **Type-level:** `hold: "minutes"` without `inProcess` fails; the forbidden
   combinations in §3b fail.
-- **`./singularity check`:** plugin-boundaries (no remaining import of the
+- **`./equin check`:** plugin-boundaries (no remaining import of the
   removed exports), type-check, migrations-in-sync, docs in sync.
 - **Existing harnesses** on the worktree deploy: `POST /api/events-test/{cron-dedup,
   superseded,crash-recovery,serial-queue}`.
 - **Survives a restart** (worktree deploy):
   1. Add an `events-test` job with a `run` body that sleeps about 90 s, and a
      two-step `steps` job, and start both.
-  2. Run `./singularity build` mid-run.
+  2. Run `./equin build` mid-run.
   3. With `query_db`, confirm: the children stayed alive, rows close with exit
      0, the second step spawned after the restart, no dead job, and a second
      start during the run loses its claim.

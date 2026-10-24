@@ -16,7 +16,7 @@ import {
  * One backup, as an ordinary durable job whose body runs in its own process.
  *
  * The handler claims this namespace's single in-flight slot, spawns
- * `./singularity supervised-exec backup.run.supervised` detached, and SUSPENDS — it holds a
+ * `./equin supervised-exec backup.run.supervised` detached, and SUSPENDS — it holds a
  * worker slot for milliseconds, not for the length of a `pg_dump` fan-out plus a
  * `tar` plus a Drive upload. Whichever backend is alive when the child's exit
  * marker lands is the one that wakes and records the outcome.
@@ -62,7 +62,7 @@ export const backupRunJob = defineSupervisedJob({
   },
 
   // The `run` body: a backup has no command line of its own, so the child is
-  // `./singularity supervised-exec` running this function. The child writes its
+  // `./equin supervised-exec` running this function. The child writes its
   // own row (manifest, sizes, per-target results, `finished_at`) as its last
   // act, which is why there is no `onEnded`: nothing outside the archive
   // changes when a backup finishes, and `closeRow` covers a child that never

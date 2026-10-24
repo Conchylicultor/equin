@@ -238,7 +238,7 @@ Each table migration is mechanical — replace Header/EmptyState/row-mapping/fil
 | `contributions-table.tsx` | slot, id, plugin.hierarchyId | `<code>` with `"—"` fallback, PluginChip | id may be undefined → `value` returns undefined, handled |
 
 ### Step 3: Build & verify
-- `./singularity build`
+- `./equin build`
 - Open `/forge/catalog` → each tab renders correctly, filter works, click headers to sort
 
 ## Not included (intentional)

@@ -105,7 +105,7 @@ export const AGENT_SESSION_PATH_SEED = "/usr/bin:/bin:/usr/sbin:/sbin";
  * re-orders the system entries first and keeps the rest).
  *
  * It used to be the seed alone, so an agent found `bun` — and could run
- * `./singularity` at all — only when the user's own shell profile put mise on
+ * `./equin` at all — only when the user's own shell profile put mise on
  * PATH for a NON-interactive login shell: a `~/.zshenv` line on the one Mac it
  * ran on, which `install.sh` (writing `~/.zshrc`) never creates. On Linux the
  * agent came up with no `bun` and no `claude`.

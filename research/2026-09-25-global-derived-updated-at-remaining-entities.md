@@ -208,12 +208,12 @@ widening this change.
 ## Verification
 
 1. **Tests:**
-   `./singularity test plugins/infra/plugins/entities plugins/infra/plugins/entity-extensions plugins/database/plugins/derived-updated-at plugins/apps/plugins/mail plugins/apps/plugins/events plugins/apps/plugins/sonata/plugins/track-mixer`.
+   `./equin test plugins/infra/plugins/entities plugins/infra/plugins/entity-extensions plugins/database/plugins/derived-updated-at plugins/apps/plugins/mail plugins/apps/plugins/events plugins/apps/plugins/sonata/plugins/track-mixer`.
    - Extend `define-extension.test.ts` so the compiled spec is all-true with
      key/createdAt `false`, and an override is honoured.
    - The upsert SQL no longer carries `updated_at`.
    - The empty patch compiles to a valid set.
-2. **Deploy:** `./singularity build` (background), then `./singularity check`
+2. **Deploy:** `./equin build` (background), then `./equin check`
    (type-check covers every `touchedBy` totality and the arm removal).
 3. **Triggers:** `query_db` on the worktree DB. `pg_trigger` should have
    `*_derive_updated_at`, each with a signature comment, on:

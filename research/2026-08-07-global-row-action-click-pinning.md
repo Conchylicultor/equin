@@ -200,7 +200,7 @@ today. The jsdom test above is what stands behind it, and it proves composition,
 
 ## Verification
 
-1. `./singularity build`; confirm `status: ok` in
+1. `./equin build`; confirm `status: ok` in
    `~/.singularity/worktrees/att-1786065015-wyap/build-status.json` (never infer from a
    `build-*.log`).
 2. **Confirm Tailwind actually emitted the new variant.** `has-[…]` appears nowhere in the repo
@@ -214,9 +214,9 @@ today. The jsdom test above is what stands behind it, and it proves composition,
    pair (Pages sidebar tree, Pages sidebar list, a transcript tool-call row).
 5. `bun plugins/apps/plugins/pages/plugins/page-tree/e2e/row-actions-overflow.ts` — unchanged, must
    stay green. It asserts the popup-open hold, which this change must not disturb.
-6. `./singularity test plugins/primitives/plugins/row-actions plugins/primitives/plugins/data-view/plugins/gallery plugins/primitives/plugins/css/plugins/row`
+6. `./equin test plugins/primitives/plugins/row-actions plugins/primitives/plugins/data-view/plugins/gallery plugins/primitives/plugins/css/plugins/row`
    (both buckets).
-7. `./singularity check` — `eslint`, `type-check`, `tailwind-scan-covers-classes`,
+7. `./equin check` — `eslint`, `type-check`, `tailwind-scan-covers-classes`,
    `plugins-doc-in-sync`.
 8. **Manual pass on the five `useHoverReveal` surfaces**, since they have no e2e: open a DataView's
    filter editor, click a rule's field dropdown, move the pointer away — the rule's remove button

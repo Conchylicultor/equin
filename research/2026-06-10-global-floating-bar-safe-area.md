@@ -123,10 +123,10 @@ geometry apps already target with header-only `pr-14`.
 
 ## Verification
 
-1. `./singularity build` (from the worktree).
+1. `./equin build` (from the worktree).
 2. Story gallery — `bun e2e/screenshot.mjs --url http://<wt>.localhost:9000/story --click "New story" --out /tmp/story` and confirm the "New story" button is clickable (not under the bar) and the grid below still reaches the right edge.
 3. Story editor — open a story; confirm the view switcher / split toggle in the header clear the bar and stay clickable.
 4. Sonata — open a song (`/sonata/song/:id`); confirm the transport widgets clear the bar.
 5. Hover the floating bar → it expands over the header strip (expected transient behavior); collapsed state no longer overlaps any control.
 6. Disable the bar (`floatingBarConfig.enabled = false`) and reload an `AppShellLayout` app → header right padding collapses to the chrome pad (var unset), no dead gutter.
-7. `./singularity check` (eslint / boundaries clean).
+7. `./equin check` (eslint / boundaries clean).

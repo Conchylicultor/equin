@@ -100,15 +100,15 @@ File: `plugins/.../queue/web/components/queue-view.tsx`
 2. Implement `useCollapsible` hook
 3. Implement compound components + CSS
 4. Create barrel `web/index.ts`
-5. `./singularity build` — validates plugin registration
+5. `./equin build` — validates plugin registration
 6. Migrate AssistantThinkingRow
 7. Migrate SidebarPaneSection
 8. Migrate QueueView/SectionHeader
-9. `./singularity build` + smoke-test in browser
+9. `./equin build` + smoke-test in browser
 
 ## Verification
 
-1. `./singularity build` succeeds
+1. `./equin build` succeeds
 2. Open `http://att-1778658514-wf02.localhost:9000`
 3. Verify thinking blocks collapse/expand in a conversation with thinking
 4. Verify sidebar sections collapse/expand

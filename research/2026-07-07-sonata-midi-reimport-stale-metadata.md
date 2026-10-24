@@ -121,7 +121,7 @@ import {
 
 End-to-end, driving the real re-import path:
 
-1. `./singularity build` from the worktree, confirm it comes up.
+1. `./equin build` from the worktree, confirm it comes up.
 2. Reproduce the stale-metadata drift and confirm the fix live:
    - Pick (or create) a folder-imported MIDI song and note its
      `duration_sec` / `end_beat` / `title` via the `query_db` MCP tool:

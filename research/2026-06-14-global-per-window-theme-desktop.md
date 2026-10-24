@@ -135,7 +135,7 @@ const appIds = useMemo(() => [...new Set(tabs.map((t) => t.appId))], [tabs]);
 This makes desktop the **only** consumer of scoped theming — `apps/.../desktop` already imports
 from `@plugins/apps/web`; it adds an import of `ScopedAppTheme` from
 `@plugins/ui/plugins/theme-engine/web`. (Verify this edge is DAG-legal; desktop is a leaf UI
-arrangement, theme-engine is upstream — fine. Run `./singularity check plugin-boundaries`.)
+arrangement, theme-engine is upstream — fine. Run `./equin check plugin-boundaries`.)
 
 ### 4. Tag each window subtree — `…/desktop/web/components/window-frame.tsx`
 
@@ -158,7 +158,7 @@ theme (the focused-window chrome theme).
 
 ## Verification
 
-1. `./singularity build`, then open `http://<worktree>.localhost:9000`.
+1. `./equin build`, then open `http://<worktree>.localhost:9000`.
 2. Switch the surface arrangement to **Desktop** (theme-engine variant group "Surface arrangement").
 3. Open two windows of **different** apps (e.g. Studio + Conversations). In the theme customizer,
    set distinct presets for each app (`app:<id>` scope, selected via the active app). Confirm each
@@ -172,7 +172,7 @@ theme (the focused-window chrome theme).
    limitation, not a bug).
 7. Switch back to **Tabs** arrangement → behavior pixel-identical to today (global path untouched;
    no `theme-scope-` styles present). Confirm the pre-paint warm-reload still has no flash.
-8. `./singularity check` (esp. `plugin-boundaries` and `type-check`).
+8. `./equin check` (esp. `plugin-boundaries` and `type-check`).
 
 ## Critical files
 

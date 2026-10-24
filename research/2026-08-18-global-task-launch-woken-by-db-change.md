@@ -292,10 +292,10 @@ first (task detail → Prompt card → auto-start "Off", i.e. `DELETE /api/tasks
 
 ## Verification
 
-1. `./singularity build` (background), then `./singularity check`.
+1. `./equin build` (background), then `./equin check`.
 2. **Unit, DB-backed**, in the shape `plugins/database/plugins/change-feed/.../listener.test.ts`
    already establishes (`createTestDb`, real Postgres), placed beside the source and run with
-   `./singularity test plugins/database/plugins/change-feed`: seed `Z → Y → X` with X
+   `./equin test plugins/database/plugins/change-feed`: seed `Z → Y → X` with X
    blocking and Z armed; delete the `Y → X` edge **over a raw connection, not through any
    TypeScript mutation**; assert the subscriber fired and `tasks.launch-sweep` was enqueued.
    The raw-connection part is the assertion that matters — it proves no call site

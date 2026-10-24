@@ -24,7 +24,7 @@ const songIndexLog = defineLogSink({
 });
 
 /**
- * Load the song index, in a detached child (`./singularity supervised-exec
+ * Load the song index, in a detached child (`./equin supervised-exec
  * chord.song-index.load`): the snapshot build streams 1.5 GB of JSON and a full
  * load inserts ~184k windows, work that must neither block a backend's event
  * loop nor die with a restart.

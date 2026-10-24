@@ -62,7 +62,7 @@ plugins/apps/plugins/story/plugins/pages-integration/
 ```
 
 No `core/`, `server/`, or `shared/` — this is a pure web contributor. Only `web/index.ts`
-auto-registers on `./singularity build`.
+auto-registers on `./equin build`.
 
 ### `package.json` (mirror `marker/package.json`)
 
@@ -183,12 +183,12 @@ import back.
 
 ## Build & verify
 
-1. `./singularity build` — codegen registers the new `web/index.ts`. **No new DB
+1. `./equin build` — codegen registers the new `web/index.ts`. **No new DB
    migration** (marker already owns the only side-table); `pages-integration` is
    web-only.
-2. `./singularity check plugin-boundaries` — confirm the new imports are all legal
+2. `./equin check plugin-boundaries` — confirm the new imports are all legal
    runtime barrels and introduce no cycle.
-3. `./singularity check type-check` — type/lint clean.
+3. `./equin check type-check` — type/lint clean.
 4. Manual loop at `http://<worktree>.localhost:9000/pages` (use `e2e/screenshot.mjs`):
    - Open a page → page-detail shows the **Story** section with a subtle "Make this
      a story" affordance.

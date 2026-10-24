@@ -234,7 +234,7 @@ descriptors + `RECENT_GONE_LIMIT`.
 - `keyed-resource-scope` check passes by construction (each keyed sub-resource
   declares `identityTable` or `recompute` in its `defineResource` body; the push
   stats resource is not keyed).
-- `./singularity build` regenerates plugin docs / resource manifests — no hand
+- `./equin build` regenerates plugin docs / resource manifests — no hand
   edits to `*.generated.ts`.
 
 ## Critical files
@@ -253,7 +253,7 @@ descriptors + `RECENT_GONE_LIMIT`.
 
 ## Verification
 
-1. **Build / typecheck:** `./singularity build`. The keyed two-arg overload
+1. **Build / typecheck:** `./equin build`. The keyed two-arg overload
    enforces ScopePolicy at compile time; `keyed-resource-scope` check must pass.
 2. **No dangling refs:** the `grep` above returns only deletions.
 3. **App + screenshot the conversation sidebar** (`run` / `verify` skill): active,

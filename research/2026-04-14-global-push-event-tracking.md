@@ -2,7 +2,7 @@
 
 ## Context
 
-When `./singularity push` succeeds, two things should happen:
+When `./equin push` succeeds, two things should happen:
 1. A `pushes` row is recorded for the source conversation.
 2. The conversation's `status` flips to `pushed`.
 
@@ -24,7 +24,7 @@ Forward-compat posture: the contract is three strings — trailer name, env var 
 
 - Add `"pushed"` to `ConversationStatusSchema` enum (line 6-12).
 - Add `sha` uniqueness constraint on `pushes.sha` (prevents double-recording during backfill + live watch races). Use `unique()` via drizzle.
-- Run `./singularity build` to regenerate migrations (never run drizzle-kit manually, per CLAUDE.md).
+- Run `./equin build` to regenerate migrations (never run drizzle-kit manually, per CLAUDE.md).
 
 ### 2. Tmux runtime — inject env var
 
@@ -94,10 +94,10 @@ Out of scope for this plan: a dedicated "pushes list" pane. The `pushes` table i
 
 ## Verification
 
-1. `./singularity build` (applies migration, restarts server with watcher + tmux env injection).
+1. `./equin build` (applies migration, restarts server with watcher + tmux env injection).
 2. Create a new conversation. Inside its tmux pane: `echo $SINGULARITY_CONVERSATION_ID` — should print the conversation id.
-3. Make a trivial edit, run `./singularity push -m "test trailer"`.
+3. Make a trivial edit, run `./equin push -m "test trailer"`.
 4. `git log main -1 --format=%B` on the main worktree — should show the `Singularity-Conversation:` trailer.
 5. In the UI, the conversation's status badge flips to `pushed` within ~1s; a `pushes` row exists in the DB for that conversation with the commit sha.
 6. Backfill test: stop server, push another commit from a second conversation, restart server — the second push should appear without a live-watch tick ever having fired.
-7. Negative test: run `./singularity push -m "no env"` from a shell without `SINGULARITY_CONVERSATION_ID` set — commit lands on main with no trailer, no `pushes` row recorded, no status change. No error.
+7. Negative test: run `./equin push -m "no env"` from a shell without `SINGULARITY_CONVERSATION_ID` set — commit lands on main with no trailer, no `pushes` row recorded, no status change. No error.

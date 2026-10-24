@@ -148,7 +148,7 @@ plugins/fields/plugins/secret/
 No code outside the moved trees imports `isListFieldDef`, `ListItem`, `listFieldType`,
 `isObjectFieldDef`, or `objectFieldType` (verified — only docs/research references), so those
 move with the trees with no extra call-site churn. `*.generated.ts` plugin registries are
-rebuilt by `./singularity build`, not hand-edited.
+rebuilt by `./equin build`, not hand-edited.
 
 ## Execution order
 
@@ -164,7 +164,7 @@ rebuilt by `./singularity build`, not hand-edited.
 6. Update doc prose: `plugins/config_v2/CLAUDE.md` "Declaring config" example (the `listField`
    import line) and `plugins/config_v2/plugins/fields/CLAUDE.md` sub-plugin prose. Add per-plugin
    `CLAUDE.md` for each new plugin (hand-written prose; autogen reference blocks fill on build).
-7. `./singularity build` (regenerates registries + docs), then `./singularity check`.
+7. `./equin build` (regenerates registries + docs), then `./equin check`.
 
 ## Critical files (moved, not rewritten)
 
@@ -179,7 +179,7 @@ rebuilt by `./singularity build`, not hand-edited.
 
 ## Verification
 
-- `./singularity build` succeeds; `./singularity check` passes (plugin-boundaries,
+- `./equin build` succeeds; `./equin check` passes (plugin-boundaries,
   migrations-in-sync, eslint, plugins-doc-in-sync).
 - Settings pane (`http://<wt>.localhost:9000`, Settings):
   - A **list** config (e.g. code-review patterns) renders, items add/remove/reorder, and a

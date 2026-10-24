@@ -49,7 +49,7 @@ export function useFilterPresets(storageKey: string): FilterPresetsController {
     throw new Error(
       `data-view: no registered descriptor for storageKey "${storageKey}". ` +
         `Declare it (e.g. defineDataView("${storageKey}")) under the plugin's ` +
-        `web/ and run \`./singularity build\` to regenerate the manifest.`,
+        `web/ and run \`./equin build\` to regenerate the manifest.`,
     );
   }
 

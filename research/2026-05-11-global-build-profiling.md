@@ -2,7 +2,7 @@
 
 ## Context
 
-`./singularity build` runs ~20 sequential steps (install, codegen, checks, tsc, vite, restart, health probe) with zero timing instrumentation. Meanwhile, the server has a profiler (`server/src/profiler.ts`) that records boot spans, and the debug/profiling plugin renders them in a Gantt chart. The two should be unified so a single view shows the full lifecycle: build → boot.
+`./equin build` runs ~20 sequential steps (install, codegen, checks, tsc, vite, restart, health probe) with zero timing instrumentation. Meanwhile, the server has a profiler (`server/src/profiler.ts`) that records boot spans, and the debug/profiling plugin renders them in a Gantt chart. The two should be unified so a single view shows the full lifecycle: build → boot.
 
 ## Approach
 
@@ -143,9 +143,9 @@ Update `plugins/debug/plugins/profiling/web/index.ts` if it contributes a Debug.
 
 ## Verification
 
-1. Run `./singularity build` — check `~/.singularity/worktrees/<name>-build-profile.json` is written with correct spans
+1. Run `./equin build` — check `~/.singularity/worktrees/<name>-build-profile.json` is written with correct spans
 2. Open `http://<worktree>.localhost:9000/debug/profiling` — should see both Build and Server Boot sections
 3. Verify each build step has a non-zero duration
 4. Verify Refresh button still works
-5. Run `./singularity build --no-restart` — profile should still be written (minus deploy spans)
-6. Run `./singularity build --skip-checks` — checks span should be absent
+5. Run `./equin build --no-restart` — profile should still be written (minus deploy spans)
+6. Run `./equin build --skip-checks` — checks span should be absent

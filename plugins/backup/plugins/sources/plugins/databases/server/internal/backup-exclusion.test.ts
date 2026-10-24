@@ -8,8 +8,8 @@
  * `admin`, so the test edge closes no cycle. The planner's rules are covered
  * without a database in admin's `backup-plan.test.ts`.
  *
- * Run: `./singularity test plugins/backup/plugins/sources/plugins/databases`
- * (requires the running embedded cluster — `./singularity build` first).
+ * Run: `./equin test plugins/backup/plugins/sources/plugins/databases`
+ * (requires the running embedded cluster — `./equin build` first).
  */
 
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";

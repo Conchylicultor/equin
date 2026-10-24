@@ -8,7 +8,7 @@ plugin entry-points + opted-in soft contributors that the Studio closure
 visualization resolves and tints. Today manifests are **TS barrels** at
 `<plugin>/composition/index.ts`, discovered by build-time collected-dir codegen
 (`composition.generated.ts`) and loaded via `loadCompositions()`. Creating or
-editing one therefore requires a `./singularity build` — the wrong shape for the
+editing one therefore requires a `./equin build` — the wrong shape for the
 Studio compositions pane, which can only hold **in-memory drafts** that are
 never persisted ("Draft — not saved to repo" banner).
 
@@ -209,7 +209,7 @@ In `apps/plugins/studio/plugins/compositions/web`:
   consistent — the check gates commits, and uncommitted drafts shouldn't block
   them — but it's a real tiering change from "every barrel is checked".
 - **One-time build prerequisite for writes.** config_v2 runtime writes require the
-  `.origin.jsonc` propagated by `./singularity build` (it runs once from the
+  `.origin.jsonc` propagated by `./equin build` (it runs once from the
   seeded `default`). After that, all runtime edits work with no further build.
 - **`string-list` renderer change is repo-wide**: reorder directive configs in
   Settings switch from textarea to drag-and-drop rows.
@@ -229,7 +229,7 @@ In `apps/plugins/studio/plugins/compositions/web`:
 
 ## Verification
 
-1. `bun install` (new workspace packages) → `./singularity build` → `./singularity check`
+1. `bun install` (new workspace packages) → `./equin build` → `./equin check`
    all pass (`plugin-boundaries`, `plugins-registry-in-sync` with the generated
    file gone, `composition-closure` reading git-layer config, `config-origins-in-sync`,
    `eslint`, `type-check`).

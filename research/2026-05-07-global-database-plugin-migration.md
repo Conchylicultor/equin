@@ -221,8 +221,8 @@ After all imports are updated:
 2. `rg "@plugins/infra/plugins/database" .` → zero results  
 3. `ls server/src/db/` → not found
 4. `ls plugins/database/plugins/migrations/data/*.sql | wc -l` → same count as before
-5. `./singularity build` → no new migrations generated, server starts, app loads
-6. `./singularity check` → all checks pass (migrations-in-sync, snapshot-chain-intact, plugin-boundaries, eslint)
+5. `./equin build` → no new migrations generated, server starts, app loads
+6. `./equin check` → all checks pass (migrations-in-sync, snapshot-chain-intact, plugin-boundaries, eslint)
 7. App loads at `http://<worktree>.localhost:9000`
 
 ## Risks

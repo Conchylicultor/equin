@@ -9,7 +9,7 @@
 
 ## What changed
 
-`./singularity push` previously ran `eslint .` over the whole repo (~2 343 lintable `.ts/.tsx` files). The new approach on push:
+`./equin push` previously ran `eslint .` over the whole repo (~2 343 lintable `.ts/.tsx` files). The new approach on push:
 
 1. Calls `computeAffectedFiles(root)` from the new `plugins/framework/plugins/cli/bin/eslint-affected.ts` module — builds a reverse import graph over all linted files, then BFS-expands the set of changed `.ts/.tsx` files to include every file that transitively imports them.
 2. Runs `bun x eslint <affected_files…> --quiet` **without** `--cache` (so type-aware cross-file violations in unchanged-but-dependent files are freshly re-evaluated).

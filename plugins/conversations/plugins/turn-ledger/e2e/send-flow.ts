@@ -26,7 +26,7 @@
  * `--attempt` names the attempt whose worktree the session runs in (it touches
  * no file). Spawns a real agent — run it deliberately.
  *
- *   ./singularity run plugins/conversations/plugins/turn-ledger/e2e/send-flow.ts --attempt <attempt-id>
+ *   ./equin run plugins/conversations/plugins/turn-ledger/e2e/send-flow.ts --attempt <attempt-id>
  */
 import {
   agentFetch,

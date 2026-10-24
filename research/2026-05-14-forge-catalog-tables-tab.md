@@ -171,20 +171,20 @@ export default {
 ### Step 6 — Build and verify
 
 ```bash
-./singularity build
+./equin build
 ```
 
 This regenerates `web/src/plugins.generated.ts` (auto-discovers the new plugin) and rebuilds everything.
 
 ## Verification
 
-1. `./singularity build` succeeds
+1. `./equin build` succeeds
 2. Open `http://att-1778745891-835u.localhost:9000/forge/catalog`
 3. A "Tables" tab appears with a count badge
 4. Table rows show: chevron, SQL table name (mono), TS var name (muted), plugin chip
 5. Clicking a row expands it — the detail area is empty (no sections contributed yet)
 6. Filter narrows by table name, var name, or plugin ID
-7. `./singularity check` passes
+7. `./equin check` passes
 
 ## Key files
 

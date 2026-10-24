@@ -21,7 +21,7 @@
  * importing db-test-fixture (→ admin → database → migrations → derived-tables)
  * would close an import cycle.
  *
- * Requires the running embedded cluster (`./singularity build` first).
+ * Requires the running embedded cluster (`./equin build` first).
  */
 
 import {

@@ -175,7 +175,7 @@ Each is a `plugins/plugin-graph/plugins/rail-<name>/` with web only.
 
 | # | Sub-task | Scope |
 |---|---|---|
-| 20 | **Extract parser into shared workspace package** | New `packages/plugin-parser/` (or wherever fits the current workspace layout). Both `cli/src/docgen.ts` and `plugins/infra/plugins/plugin-inspector/server/internal/parser.ts` import from it. Removes the `// DUPLICATED …` block. Verify by re-running `./singularity check` (covers `plugins-doc-in-sync`) and the new graph endpoint. |
+| 20 | **Extract parser into shared workspace package** | New `packages/plugin-parser/` (or wherever fits the current workspace layout). Both `cli/src/docgen.ts` and `plugins/infra/plugins/plugin-inspector/server/internal/parser.ts` import from it. Removes the `// DUPLICATED …` block. Verify by re-running `./equin check` (covers `plugins-doc-in-sync`) and the new graph endpoint. |
 
 ## Critical files / precedents to reuse
 
@@ -189,12 +189,12 @@ Each is a `plugins/plugin-graph/plugins/rail-<name>/` with web only.
 
 ## Verification
 
-- After v1: run `./singularity build` (regenerates migrations even though we don't add any; rebuilds frontend; restarts server) → open `http://<worktree>.localhost:9000` → click Plugin Graph in the sidebar → verify ~90 nodes laid out with import edges → click a load-bearing plugin (e.g. `tasks-core`) → child column shows correct importer/contributor counts → URL is `/plugin-graph/node/tasks-core` → reload preserves selection.
+- After v1: run `./equin build` (regenerates migrations even though we don't add any; rebuilds frontend; restarts server) → open `http://<worktree>.localhost:9000` → click Plugin Graph in the sidebar → verify ~90 nodes laid out with import edges → click a load-bearing plugin (e.g. `tasks-core`) → child column shows correct importer/contributor counts → URL is `/plugin-graph/node/tasks-core` → reload preserves selection.
 - After v2: cycle through edge-lens toggles → graph re-renders with the right edges; hierarchy lens shows umbrella clusters around `infra`/`active-data`/`stats`/etc.
 - After v3: every reverse-index entry is clickable and navigates focus.
 - After v4: filtering "server only" hides web-only plugins; search jumps to the matched node.
 - After v5: event-lens edges connect `git-watcher` ↔ subscribers, etc.
-- After v7: `bunx eslint .` (via `./singularity check`) and `plugins-doc-in-sync` both pass; both consumers (CLI docgen, plugin-inspector endpoint) emit identical reverse indexes for at least one spot-checked plugin.
+- After v7: `bunx eslint .` (via `./equin check`) and `plugins-doc-in-sync` both pass; both consumers (CLI docgen, plugin-inspector endpoint) emit identical reverse indexes for at least one spot-checked plugin.
 
 ## Out of scope
 

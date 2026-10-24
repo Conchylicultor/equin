@@ -227,11 +227,11 @@ In dependency order.
 
 ## Verification
 
-`./singularity build`, then:
+`./equin build`, then:
 
 ```bash
-./singularity check
-./singularity test plugins/page/plugins/editor
+./equin check
+./equin test plugins/page/plugins/editor
 bun plugins/page/plugins/editor/e2e/pending-marks-cue-verify.ts
 bun plugins/page/plugins/editor/e2e/mark-boundary-verify.ts   # must stay green
 ```

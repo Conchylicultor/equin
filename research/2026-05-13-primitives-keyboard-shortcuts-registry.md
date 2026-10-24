@@ -134,11 +134,11 @@ Update `plugins/primitives/plugins/icon-button/web/components/icon-button.tsx` t
 2. Register in `web/src/plugins.ts`
 3. Migrate edit-mode Escape (add `getEditMode`, replace EscHandler with `defineShortcut`)
 4. Update `<IconButton>` to format shortcut labels
-5. `./singularity build` and verify
+5. `./equin build` and verify
 
 ## Verification
 
-1. `./singularity build` succeeds
+1. `./equin build` succeeds
 2. Open the app — enter edit mode (pen button), press Escape → exits edit mode (shortcut fires through registry)
 3. Dev console: no conflict warnings with a clean set of shortcuts
 4. Hover an IconButton with a `shortcut` prop → tooltip shows platform-formatted label (⌘ on Mac)

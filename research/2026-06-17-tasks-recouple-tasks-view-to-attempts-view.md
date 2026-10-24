@@ -117,7 +117,7 @@ reverse order. (`conversations_v` stays independent.)
 
 ## Verification
 
-1. `./singularity build` — regenerates nothing in the migration chain (views are
+1. `./equin build` — regenerates nothing in the migration chain (views are
    derived code); server reboot runs `rebuildDerivedViews`, which must succeed
    (it throws loudly on a missing `dependsOn` name or cycle). A clean boot proves
    the dependency ordering works.
@@ -137,7 +137,7 @@ reverse order. (`conversations_v` stays independent.)
    DB, NOT the 36k of the old correlated form). Run the same EXPLAIN against the
    current `tasks_v` first to get the exact baseline on this DB to compare.
 
-4. `./singularity check` — `type-check` and boundary checks pass.
+4. `./equin check` — `type-check` and boundary checks pass.
 
 5. Sanity-check the app at `http://att-1781701923-56ck.localhost:9000` — the
    Tasks list renders with correct statuses (done/in_progress/blocked/etc.).

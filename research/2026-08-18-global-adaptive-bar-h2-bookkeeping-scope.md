@@ -200,8 +200,8 @@ production build, so the dev throw is compiled out).
 
 ## Verification
 
-1. `./singularity test plugins/primitives/plugins/adaptive-bar` — the new pure
+1. `./equin test plugins/primitives/plugins/adaptive-bar` — the new pure
    suite, the new jsdom suite, and the four existing ones unchanged.
-2. `./singularity check` — type-check, doc/registry sync, `layout-geometry`
+2. `./equin check` — type-check, doc/registry sync, `layout-geometry`
    (the new fixture).
-3. `./singularity build`.
+3. `./equin build`.

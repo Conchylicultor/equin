@@ -110,9 +110,9 @@ spelled in the theme, and only the dock keeps its own alpha.
 
 ## Verification
 
-1. `./singularity build`. This regenerates the docs and utilities and runs the checks: type-check, eslint with
+1. `./equin build`. This regenerates the docs and utilities and runs the checks: type-check, eslint with
    the updated `no-adhoc-surface`, and `plugins-doc-in-sync`.
-2. `./singularity test plugins/primitives/plugins/css/plugins/surface plugins/ui/plugins/theme-engine`.
+2. `./equin test plugins/primitives/plugins/css/plugins/surface plugins/ui/plugins/theme-engine`.
 3. Drive `/desktop` with the `browser_*` MCP tools:
    - right-click a window titlebar, a shelf app and the wallpaper, and open the launcher's app menu;
    - for each menu, `browser_javascript` should report `getComputedStyle(panel).backdropFilter` =

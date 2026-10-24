@@ -179,7 +179,7 @@ import { ReorderHoist } from "@plugins/reorder/web";
 
 ## Verification
 
-1. `./singularity build` (regenerates nothing reorder-related here; no schema/manifest
+1. `./equin build` (regenerates nothing reorder-related here; no schema/manifest
    change — the slot set is unchanged).
 2. Open a **long** live conversation at `http://<worktree>.localhost:9000` and watch
    the live-state trace:

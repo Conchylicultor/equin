@@ -95,7 +95,7 @@ async function ensureShim(): Promise<Shim> {
  * rather than printed. A banner on every op on a machine without a C toolchain
  * would be noise in exactly the transcript this feature exists to keep
  * readable; the sink is where the absence goes on the record (and a failed
- * install is also `failed` in `./singularity deps list` / Settings →
+ * install is also `failed` in `./equin deps list` / Settings →
  * Dependencies), so a later unattributed death is explainable rather than
  * mysterious. `origin: null` on a `signal` line means the same thing from the
  * other side: "we looked and could not see", never "nobody sent a signal".

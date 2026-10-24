@@ -287,13 +287,13 @@ helper is genuinely shared. Phases:
   both copy and duplicate.
 
 `docs/plugins-details.md` / `plugins-compact.md` regenerate via
-`./singularity build` (the deleted route disappears from the plugin reference).
+`./equin build` (the deleted route disappears from the plugin reference).
 
 ---
 
 ## Verification
 
-1. `./singularity build`
+1. `./equin build`
 2. `bun test plugins/page/plugins/editor/core/block-ops.test.ts`,
    `.../core/block-forest.test.ts`, `.../web/serialize-blocks.test.ts`
 3. `bun run test:dom plugins/page/plugins/editor` — the per-mutation quadruple,
@@ -309,7 +309,7 @@ helper is genuinely shared. Phases:
    → Cmd+Shift+Z restores them. Repeat with a parent+child selection, in memory
    mode (the website `editor-toy` demo), and inside an expanded nested page.
 8. Page version history still restores (the one surviving `insertForest` caller).
-9. `./singularity check`
+9. `./equin check`
 
 ---
 

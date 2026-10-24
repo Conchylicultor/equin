@@ -9,7 +9,7 @@ import {
  * host CPU to builds and interactive work.
  *
  * A process that INHERITED a grant (`SINGULARITY_HOST_GRANT`, set by a holder
- * for the subprocess it spawns — `./singularity deps install` run by a check
+ * for the subprocess it spawns — `./equin deps install` run by a check
  * inside a build) spends one of those units instead: the grant contract is that
  * nothing a holder spawns re-acquires host-wide. Acquiring anyway waited on the
  * parent's own slots — on a host whose whole fleet is one unit (an 8 GB box:

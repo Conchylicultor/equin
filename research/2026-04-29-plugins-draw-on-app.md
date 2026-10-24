@@ -26,7 +26,7 @@ Files:
 - `web/draw-canvas.tsx` — moved from `plugins/screenshot/web/components/draw-overlay.tsx`. Component is renamed `DrawOverlay` → `DrawCanvas` to drop the screenshot-editor framing; props unchanged.
 - `web/apply-strokes.ts` — extracted from `plugins/screenshot/web/components/screenshot-view.tsx` (the `applyStrokes` + `loadImageElement` + `canvasToPng` helpers). `applyCrop` stays in `screenshot/` since crop is screenshot-specific.
 - `package.json` — workspace package; depends on react.
-- `CLAUDE.md` — minimal stub; `./singularity build` regenerates the autogen reference block.
+- `CLAUDE.md` — minimal stub; `./equin build` regenerates the autogen reference block.
 
 Public surface (web):
 
@@ -225,7 +225,7 @@ export const plugins = [..., drawCanvasPlugin, drawOnAppPlugin];
 
 ## Verification
 
-Run `./singularity build`, then in the browser at `http://<worktree>.localhost:9000`:
+Run `./equin build`, then in the browser at `http://<worktree>.localhost:9000`:
 
 1. **Refactor smoke test (screenshot still works).** Click the camera icon → screenshot pane opens → switch to Draw tool → draw a few strokes → Apply → strokes are baked into the image, Copy/Download produce the expected PNG. Confirms the primitive extraction didn't regress anything.
 2. **Live-draw happy path.** Click the new gesture icon in the toolbar → cursor becomes crosshair, app behind dims slightly (or just transparent overlay) → draw a circle around the toolbar → click Done → toast/no toast (no toast is fine on success) → `+improve` popover opens with one attachment chip showing `drawing.png`.
@@ -233,5 +233,5 @@ Run `./singularity build`, then in the browser at `http://<worktree>.localhost:9
 4. **Cancel.** Click gesture icon → draw → Cancel → overlay disappears, no popover opens, no upload (`ls -la ~/.singularity/attachments/` shows no new file).
 5. **Empty-draw guard.** Click gesture icon → click Done without drawing → button is disabled (or no-op).
 6. **Chrome not in capture.** After step 2, view the resulting PNG: the floating draw toolbar (color swatches, Done/Cancel) must NOT be visible in the captured image. Drawing should be visible. App UI underneath should be visible.
-7. **Plugin boundaries.** Run `./singularity check` — passes. In particular `--plugin-boundaries` should be clean (only `@plugins/<name>/web` imports across plugins).
+7. **Plugin boundaries.** Run `./equin check` — passes. In particular `--plugin-boundaries` should be clean (only `@plugins/<name>/web` imports across plugins).
 8. **Playwright sanity (optional).** `bun e2e/screenshot.mjs --url http://<worktree>.localhost:9000 --click "Draw on app" --out /tmp/draw` — confirms the toolbar button is reachable and the overlay renders.

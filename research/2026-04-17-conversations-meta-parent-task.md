@@ -122,7 +122,7 @@ Imports `CONVERSATIONS_META_TASK_ID` and `tasksResource` come from `@plugins/tas
 5. **UI tree** — open the tasks pane at `/tasks`; "Conversations" is a single expandable root containing every auto-created task.
 6. **Delete protection** — `DELETE /api/tasks/task-meta-conversations` with children returns 409 (existing behaviour).
 7. **Manual un-parent stays** — PATCH an auto-task to `parent_id = null`; restart; it remains at root (backfill gated on first-time ensure).
-8. **Deploy** — `./singularity build`; app at `http://<worktree>.localhost:9000`.
+8. **Deploy** — `./equin build`; app at `http://<worktree>.localhost:9000`.
 
 ## Critical files
 

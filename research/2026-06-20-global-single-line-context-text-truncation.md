@@ -150,7 +150,7 @@ wrapping) — is owned by container choice: `Cluster` (wraps) vs `Inline`/`Row` 
     geometry fixture) → migrate into the `text`/layout-harness fixture catalog using `Text`.
   - `inline/web/__tests__/inline.test.tsx:29` — update the prose ("the truncation leaf owns
     min-w-0" → `Text`).
-- Regen docs: `./singularity build` (plugin docs, registries, `plugins-details.md`,
+- Regen docs: `./equin build` (plugin docs, registries, `plugins-details.md`,
   per-plugin CLAUDE.md). Update the **css skill** `.claude/skills/css/SKILL.md` — the
   "leaves truncate" / `TruncatingText` entry becomes "line vs flow containers; `Text`
   truncates inside line context" and document the two-layer model + group-wrap axis.
@@ -178,14 +178,14 @@ utility; `Cluster`/`Inline` are the existing group-wrap containers.
 
 ## Verification
 
-- **Type/lint:** `./singularity check type-check` and `eslint` clean after each phase.
+- **Type/lint:** `./equin check type-check` and `eslint` clean after each phase.
 - **Geometry oracle (the truncation gate):**
   `bun test plugins/primitives/plugins/css/plugins/layout-harness/web/internal/layout-geometry.test.ts`
   — must pass with the migrated `Text`/`Frame` fixtures (it measures real truncation onset in
   headless Chromium).
 - **Unit:** `bun test plugins/primitives/plugins/css/plugins/text` and the relocated
   single-line test.
-- **The two original surfaces (visual, after `./singularity build`):**
+- **The two original surfaces (visual, after `./equin build`):**
   - Element-picker chip: open Improve → pick an element with a long label → chip label
     ellipsizes on one line (no wrap), capped at `max-w-40`.
   - Conversation second row: a conversation with several chips (preprompt + progress +
@@ -193,4 +193,4 @@ utility; `Cluster`/`Inline` are the existing group-wrap containers.
     right (no wrap). Screenshot via `bun e2e/screenshot.mjs` at a narrow viewport.
 - **Regression sweep:** screenshot a few high-chip-density surfaces (task list rows, conversation
   toolbar header, Studio Explorer tree rows) before/after to confirm no new wrap/clip.
-- **Docs in sync:** `./singularity check` (plugins-doc-in-sync, plugins-registry-in-sync).
+- **Docs in sync:** `./equin check` (plugins-doc-in-sync, plugins-registry-in-sync).

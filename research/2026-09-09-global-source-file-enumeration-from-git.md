@@ -16,7 +16,7 @@
 
 ## Context
 
-`./singularity check type-check` has a correctness gate: every file it considers
+`./equin check type-check` has a correctness gate: every file it considers
 "lintable" must belong to exactly one tsconfig program, otherwise the check
 fails with `N lintable file(s) belong to no tsconfig program`.
 
@@ -282,20 +282,20 @@ glob-vs-predicate pair by a test, and the whole class by the new lint rule.
 
 ## Verification
 
-1. `./singularity check type-check` before and after — same verdict. The file
+1. `./equin check type-check` before and after — same verdict. The file
    sets are already byte-identical, so any difference is a regression.
 2. **The reported bug, as a test.** Drop a `.ts` under `.cache/` and confirm the
    check no longer flags it. Make this permanent as a unit test over
    `listRepoFiles` + `isLintable` rather than a one-off manual check.
 3. A tracked file deleted from the worktree but not staged, and the committed
    gitlink, both absent from the listing (the `isFile()` filter).
-4. `./singularity check plugin-boundaries` — catches the new `checks → codegen`
+4. `./equin check plugin-boundaries` — catches the new `checks → codegen`
    edge if the derived probe is taken.
 5. Open a `*.generated.ts` and something under `prototypes/` in the editor —
    ESLint still ignores both after the `ignores` split.
-6. `./singularity test plugins/framework/plugins/tooling/plugins/lint` and
-   `./singularity test plugins/framework/plugins/tooling/plugins/checks`.
-7. `./singularity build`, then confirm from the check log that the per-target
+6. `./equin test plugins/framework/plugins/tooling/plugins/lint` and
+   `./equin test plugins/framework/plugins/tooling/plugins/checks`.
+7. `./equin build`, then confirm from the check log that the per-target
    program skip still works (`type-check: skipped N of M targets…`) — the line
    that would expose a weakened program key.
 

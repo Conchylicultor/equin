@@ -203,7 +203,7 @@ None of the three conversation lists can filter or group by a task's track (main
   - a deferred `all` is declared for preload and bound before the L2 sweep (in the style of `serve-contributed-boot.test.ts`);
   - `tree-oracle.test.ts` and `all-parity.test.ts` still pass.
 - **Routing:** a `tasks_ext_track` write refills only that task's conversations.
-- `./singularity check`, then `./singularity build`.
+- `./equin check`, then `./equin build`.
 - **e2e** `conversations/plugins/conversations-view/plugins/data-view/e2e/sidequest-filter.ts`:
   - seed a sidequest task with a conversation;
   - in Queue, History and All-conversations, filter Track = Sidequest and group by Track;

@@ -153,8 +153,8 @@ observation-driven write while anchored), persistence and restore.
 
 ## Verification
 
-1. `./singularity test plugins/primitives/plugins/dom/plugins/auto-scroll`: the reducer and the invariant.
-2. `./singularity build`, then a new e2e `auto-scroll/e2e/sticky-follow-verify.ts`
+1. `./equin test plugins/primitives/plugins/dom/plugins/auto-scroll`: the reducer and the invariant.
+2. `./equin build`, then a new e2e `auto-scroll/e2e/sticky-follow-verify.ts`
    against the agent-thread or transcript surface on a streaming conversation,
    in the browser:
    - following through growth, a card collapsing (clamp), a programmatic

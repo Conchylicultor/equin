@@ -85,7 +85,7 @@ run:    if (needsWorktreeSetup) await setupWorktree(attemptId, worktreePath);
 Two independent jobs, each keyed by the same natural id (attempt/conversation), enqueued together:
 
 - **The spawn does NOT depend on the DB fork.** The tmux session only launches the `claude` CLI;
-  the CLI's first *worktree-DB* op happens later (an MCP `query_db`, or `./singularity build`),
+  the CLI's first *worktree-DB* op happens later (an MCP `query_db`, or `./equin build`),
   not at boot. So there is no ordering dependency and coupling them would only serialize two things
   that can run in parallel (`git worktree add` checkout ∥ `pg_dump|pg_restore` fork). Keep them
   parallel. This also leaves `databaseForkJob` completely untouched.
@@ -287,7 +287,7 @@ on a fork-complete signal (`ctx.waitFor` on a fork-done event, or a "canonical D
    blocking work on this endpoint is caught automatically.
 7. Verify `maybeLaunchTaskJob` (`auto-start-jobs.ts:76-81`) and the fork/resume paths still work
    (they call the same `createConversation`; no signature change).
-8. `./singularity build`; run the manual verification plan; then re-validate on `singularity`
+8. `./equin build`; run the manual verification plan; then re-validate on `singularity`
    before flipping the issue to `(Completed)`.
 
 ## Risks

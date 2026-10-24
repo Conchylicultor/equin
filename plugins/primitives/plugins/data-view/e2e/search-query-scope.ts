@@ -12,8 +12,8 @@
  *   4. a fresh browser context starts clean, so a query cannot outlive the
  *      session that typed it and silently present a subset as the whole list.
  *
- * Manual only. Run after `./singularity build`:
- *   ./singularity run plugins/primitives/plugins/data-view/e2e/search-query-scope.ts [--headed]
+ * Manual only. Run after `./equin build`:
+ *   ./equin run plugins/primitives/plugins/data-view/e2e/search-query-scope.ts [--headed]
  */
 import type { Page } from "playwright";
 import {

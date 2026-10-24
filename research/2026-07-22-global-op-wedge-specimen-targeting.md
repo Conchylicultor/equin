@@ -8,7 +8,7 @@ worked in the field on its first day — but the 01:51Z 2026-07-22 incident
 (worktree `att-1784628905-m0gj`) exposed that its whole pipeline is keyed on the
 **op-marker pid**, while the actual wedge can be a **marker-less descendant**:
 
-- `./singularity push` (marker pid, idle, holding the push mutex) spawned
+- `./equin push` (marker pid, idle, holding the push mutex) spawned
   `check --scope tree`, which re-exec'd pre-armed under `bun --inspect`. That
   inner check worker was the wedge — 99% CPU in the known native microtask
   storm (oven-sh/bun#27766) — and it had **no marker**: `check.ts` deliberately
@@ -230,7 +230,7 @@ installOrphanGuard(() => {
 
 ## Verification (end-to-end)
 
-1. Rebase onto main, `./singularity build`.
+1. Rebase onto main, `./equin build`.
 2. **Regression (specimen == marker):** the existing synthetic recipe (fake
    over-budget `check.json` marker → armed spinning dummy). Expect: verdict
    spinning, `specimen.pid == marker`, probe names the dummy's hot fn, reaped,
@@ -243,9 +243,9 @@ installOrphanGuard(() => {
    `specimen.pid == child` with `specimen.inspect == localhost:<C>/tok` (parsed
    from argv, not the marker URL); `jsProbe.topStacks` names the **child's**
    hot function; reap outcomes cover parent (marker) *and* child (descendant),
-   both exited, `all-reaped`; both pids gone; a `./singularity push` from
+   both exited, `all-reaped`; both pids gone; a `./equin push` from
    another worktree proceeds.
-4. **Fix D:** orphan a `./singularity check` whose worker traps/ignores
+4. **Fix D:** orphan a `./equin check` whose worker traps/ignores
    SIGTERM; wrapper must SIGKILL it within ~5s and exit 140.
 5. **Field:** next real wedge reports a named hot stack for the *burning* pid,
    a specimen callout when marker-less, per-pid reap table, fleet frees ~2 min

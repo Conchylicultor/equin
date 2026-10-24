@@ -183,7 +183,7 @@ live-registry resolver (no eager index) suffices.
     No `if (type === "enum")` anywhere.
 
 **I. Build**
-20. `./singularity build` (regenerates manifests / registries for the new sub-plugins).
+20. `./equin build` (regenerates manifests / registries for the new sub-plugins).
     **No migration** — `tables.ts`, endpoint body (`value: z.string()`), and handler
     are unchanged.
 
@@ -231,7 +231,7 @@ live-registry resolver (no eager index) suffices.
   `useMemo` deps or cells go stale.
 
 ## Verification
-1. `./singularity build`; open `http://<worktree>.localhost:9000` on a DataView surface.
+1. `./equin build`; open `http://<worktree>.localhost:9000` on a DataView surface.
 2. **Fields UI:** add Number, Date, Checkbox, and Select (with 2–3 options) columns.
    Confirm the picker shows icons/labels and the Select options editor appears only for
    Select.
@@ -248,4 +248,4 @@ live-registry resolver (no eager index) suffices.
    knowledge lives under `fields/plugins/<type>/`.
 7. `query_db`: `SELECT column_id, value FROM data_view_custom_values` — numbers decimal,
    bools `"true"/"false"`, dates ISO, enum as option values.
-8. `./singularity check` (boundaries, type-check, doc/registry in-sync).
+8. `./equin check` (boundaries, type-check, doc/registry in-sync).

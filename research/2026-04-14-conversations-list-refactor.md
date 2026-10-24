@@ -146,11 +146,11 @@ Each step keeps `conversation-list.tsx` compiling and the app working — they c
 
 ## Verification
 
-1. `./singularity build` and load `http://claude-1776140275.localhost:9000`.
+1. `./equin build` and load `http://claude-1776140275.localhost:9000`.
 2. Click "New conversation" → verify the new row appears in the sidebar **and is highlighted** (the original bug).
 3. Click another conversation → verify selection moves.
 4. Use browser back/forward → verify selection follows.
 5. Start a Claude session in a conversation → verify the live dot turns active (non-idle) and ordering puts non-idle on top.
-6. Restart the server (`./singularity build` again) → verify the list refetches and presence recovers after SSE reconnect.
+6. Restart the server (`./equin build` again) → verify the list refetches and presence recovers after SSE reconnect.
 7. Delete a conversation → verify it disappears.
 8. Open devtools → confirm exactly one `shell:navigate` dispatch per `OpenPane` call, no errors.

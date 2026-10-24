@@ -114,7 +114,7 @@ Each pane: delete `chrome: false`; for Category B, delete the dead `<PaneChrome>
 
 ## Verification
 
-Run `./singularity build` after each pane (Stage 1) and after each rich pane (Stage 2); `./singularity check` at the end of each stage.
+Run `./equin build` after each pane (Stage 1) and after each rich pane (Stage 2); `./equin check` at the end of each stage.
 
 **Scripted Playwright checks** (use `e2e/screenshot.mjs` pattern; app at `http://<worktree>.localhost:9000`):
 

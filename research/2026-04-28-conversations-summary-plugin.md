@@ -187,7 +187,7 @@ The context file (XML, like yak-shaving) contains:
 
 ## Verification
 
-End-to-end smoke test after `./singularity build`:
+End-to-end smoke test after `./equin build`:
 
 1. Open `http://<worktree>.localhost:9000`, navigate to any active conversation.
 2. Confirm the "Summarize" button appears in the conversation toolbar (right side, alongside `ModelBadge` / `StatusBadge`).
@@ -201,7 +201,7 @@ End-to-end smoke test after `./singularity build`:
    WHERE conversation_id = '<id>'
    ORDER BY generated_at DESC;
    ```
-7. Confirm `./singularity check` passes (plugin-boundaries + migrations-in-sync).
+7. Confirm `./equin check` passes (plugin-boundaries + migrations-in-sync).
 8. Confirm spawned system conversations are reaped after `CLEANUP_AFTER_MS` (or earlier on success).
 
 Error path:

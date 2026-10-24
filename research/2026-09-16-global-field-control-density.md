@@ -146,14 +146,14 @@ in the default theme, so the user chose to keep the fix and **revert the look**
 
 ## Verification
 
-1. `./singularity build` passes, including type-check, eslint with the extended
+1. `./equin build` passes, including type-check, eslint with the extended
    `no-adhoc-density`, and `css-vars-supplied`.
 2. Tests:
-   - `./singularity test plugins/primitives/plugins/css/plugins/control-size`
+   - `./equin test plugins/primitives/plugins/css/plugins/control-size`
      runs the lint tests.
    - Add a `control-size.test.ts` case for `fieldSizeClassFor`, covering each
      size and the `xs` text step. Run
-     `./singularity test plugins/primitives/plugins/css/plugins/ui-kit`.
+     `./equin test plugins/primitives/plugins/css/plugins/ui-kit`.
 3. **Default theme: heights do not move.** Use `screenshot.ts` before and after
    on four screens: the task launch options (model/effort/preprompt selects), a
    data-view filter popover, a table cell in edit mode, and a settings config

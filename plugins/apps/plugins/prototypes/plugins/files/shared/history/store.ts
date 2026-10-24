@@ -40,7 +40,7 @@ import {
 // tree skips it the way it skips `_template/` — `listPrototypeDirNames`.
 //
 // Node-only and in `shared/` for the reason `mint.ts` is: the server records
-// versions, and `./singularity prototype log|checkpoint|restore` reads and
+// versions, and `./equin prototype log|checkpoint|restore` reads and
 // writes the same repos with no backend running.
 //
 // Design: `research/2026-09-11-apps-prototype-version-history.md`.

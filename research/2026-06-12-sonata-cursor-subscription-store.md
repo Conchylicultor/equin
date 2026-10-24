@@ -207,18 +207,18 @@ ref-mirroring idiom in `piano-roll.tsx` (FX `projectionRef`/`laneSizeRef`).
   it sees the new cursor. Confirm by ear (seek while playing stays glued).
 - **Boundary rules** — the store lives in the shell barrel and is imported via
   `@plugins/apps/plugins/sonata/plugins/shell/web` like `useSonata`; no new
-  cross-plugin edges (`./singularity check plugin-boundaries`).
+  cross-plugin edges (`./equin check plugin-boundaries`).
 - **No-floating-promises / rAF** — unchanged; the subscription returns its
   unsubscribe from the effect.
 
 ## Verification
 
-1. `./singularity check type-check` + `plugin-boundaries` (Display dispatch
+1. `./equin check type-check` + `plugin-boundaries` (Display dispatch
    prop-type change must propagate to the one display + `NoDisplay` fallback).
 2. `bun test plugins/apps/plugins/sonata/plugins/piano-roll` (geometry/onset
    unaffected; add a `cursor-store.test.ts` covering `setCursorBeat` dedup,
    subscribe/unsubscribe, and `useCursorSelector` bailout via a fake store).
-3. `./singularity build` → `http://<worktree>.localhost:9000/sonata`. Open a
+3. `./equin build` → `http://<worktree>.localhost:9000/sonata`. Open a
    dense library song, **Play**, and via React DevTools Profiler (or a temporary
    `clientLog` render counter) confirm during playback: `SonataPlayerSurface`,
    `PianoRollInner`, `AudioEngine`, `KeyChip`, `KeyReadout`, `ChordReadout`, and

@@ -54,7 +54,7 @@ const check: Check = {
     return {
       ok: false,
       message: formatDirectiveDisplacementReport(displaced),
-      hint: "`./singularity build` and `./singularity format` REFUSE to write these files until the directives are position-independent, so formatting will not fix this for you.",
+      hint: "`./equin build` and `./equin format` REFUSE to write these files until the directives are position-independent, so formatting will not fix this for you.",
     };
   },
 };

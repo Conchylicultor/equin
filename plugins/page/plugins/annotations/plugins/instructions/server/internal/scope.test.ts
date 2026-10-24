@@ -14,8 +14,8 @@
  *  - `globalInstructions` finds global cards and pages anywhere;
  *  - a delivery counts only at its content hash: an edit makes it pending again.
  *
- * Run: `./singularity test plugins/page/plugins/annotations/plugins/instructions`
- * (requires the running embedded cluster, and a `./singularity build` that has
+ * Run: `./equin test plugins/page/plugins/annotations/plugins/instructions`
+ * (requires the running embedded cluster, and a `./equin build` that has
  * generated the `page_instructions_deliveries` migration).
  */
 

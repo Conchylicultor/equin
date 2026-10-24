@@ -175,10 +175,10 @@ extend it to cover the seeded case.
 
 ## Verification (end-to-end)
 
-1. `./singularity build` (background), then confirm deploy via
+1. `./equin build` (background), then confirm deploy via
    `~/.singularity/worktrees/<wt>/build-status.json` → `status: ok`.
-2. `./singularity test plugins/framework/plugins/resource-runtime` and
-   `./singularity test plugins/database/plugins/live-state-snapshot`.
+2. `./equin test plugins/framework/plugins/resource-runtime` and
+   `./equin test plugins/database/plugins/live-state-snapshot`.
 3. Live check with the runtime profiler: pick a heavy alias (`tasks`), restart the
    backend, make one small mutation (e.g. rename a task), and confirm via
    `get_runtime_profile` / the op log that the first post-boot recompute for

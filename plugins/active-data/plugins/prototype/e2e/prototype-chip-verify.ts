@@ -5,7 +5,7 @@
 //
 // The conversation must already contain the id in its transcript; pass the one
 // you seeded it with. Any of the real prototypes will do — run
-// `./singularity prototype list` (or `ls ~/.singularity/apps/prototypes/`) to
+// `./equin prototype list` (or `ls ~/.singularity/apps/prototypes/`) to
 // pick one.
 //
 // Usage:

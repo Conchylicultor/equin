@@ -127,7 +127,7 @@ Reused, nothing new invented: `StickyStack`/`StickyStackItem`
 
 ## Verification
 
-1. `./singularity build` (regenerates the plugin docs; `plugins-doc-in-sync` +
+1. `./equin build` (regenerates the plugin docs; `plugins-doc-in-sync` +
    `type-check` + `eslint` gate).
 2. `bun test plugins/primitives/plugins/css/plugins/sticky/plugins/stack` — the
    existing `stickyStackTop` unit test must stay green (untouched).

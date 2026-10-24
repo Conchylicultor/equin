@@ -12,7 +12,7 @@ import type { JsonValue } from "./types";
 
 /**
  * One descriptor's COMMITTED config, resolved — what a fresh user's origin
- * layer holds after `./singularity build` propagates the repo's `config/`:
+ * layer holds after `./equin build` propagates the repo's `config/`:
  *
  * - `base`: the git-effective document (`override ⊕ origin`, a stale override
  *   losing to its origin — `effective`);

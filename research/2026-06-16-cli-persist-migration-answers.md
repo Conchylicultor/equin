@@ -2,7 +2,7 @@
 
 ## Context
 
-`./singularity push` has a post-rebase **normalize** step. When a concurrent migration
+`./equin push` has a post-rebase **normalize** step. When a concurrent migration
 lands on `main`, the `regen-migrations` git merge-driver fires during rebase, drops a
 marker file, and `postRebaseNormalize` (`plugins/framework/plugins/cli/bin/commands/push.ts:153`)
 runs the `regen-migrations` command. That command
@@ -14,7 +14,7 @@ When a branch **replaces** a table (drop table A + create table B — e.g. renam
 plugin's table, or restructuring a plugin so its old table disappears and a new one
 appears), drizzle-kit emits an interactive *"Is B created or renamed from A?"* prompt: it
 can't disambiguate drop+create from a rename. At authoring time the agent resolves this
-with `./singularity build --migration-answers '[{"action":"create"}]'`. **But that answer
+with `./equin build --migration-answers '[{"action":"create"}]'`. **But that answer
 is thrown away** — it lives only in the `migrationAnswers` parameter, never persisted. So
 during push's regen, drizzle re-hits the same ambiguity; `generateMigration` detects
 prompts with no answers (`migrations.ts:400`), discards the generated files, prints
@@ -156,16 +156,16 @@ There are no existing tests for `migrations.ts`. Add a co-located `bun:test` fil
 - keyed sidecar round-trip: build a keyed map → resolve a `DetectedPrompt` → correct option index;
   missing key → reported unanswered; stale rename `from` → reported unanswered (not a throw).
 
-Run: `bun test plugins/framework/plugins/cli/bin/migrations.test.ts` (after a `./singularity build`
+Run: `bun test plugins/framework/plugins/cli/bin/migrations.test.ts` (after a `./equin build`
 or `bun install` so `node_modules` is populated).
 
 End-to-end (manual, the real bug):
 1. On a fresh worktree, replace a small table in a plugin's `tables.ts` (drop one, add another).
-2. `./singularity build --migration-name replace_tbl` → observe `MIGRATION_PROMPTS_DETECTED`, then
-   `./singularity build --migration-name replace_tbl --migration-answers '[{"action":"create"}]'`.
+2. `./equin build --migration-name replace_tbl` → observe `MIGRATION_PROMPTS_DETECTED`, then
+   `./equin build --migration-name replace_tbl --migration-answers '[{"action":"create"}]'`.
    Confirm `meta/<tag>_answers.json` is written next to the snapshot.
 3. Land any unrelated migration on `main` (second worktree) to force the rebase→regen path.
-4. `./singularity build` then `./singularity push` on the first worktree. Confirm
+4. `./equin build` then `./equin push` on the first worktree. Confirm
    `postRebaseNormalize` → `regen-migrations` regenerates the consolidated migration **without**
    re-prompting (replays the sidecar), rewrites a fresh `_answers.json`, and the push **succeeds**.
 5. Negative: introduce a genuinely new ambiguity not in the sidecar and confirm regen exits 2 with
@@ -173,7 +173,7 @@ End-to-end (manual, the real bug):
 
 ## Deferred follow-up (separate task)
 
-`./singularity db reset` — drop the current worktree DB and re-fork from `singularity` (main) so
+`./equin db reset` — drop the current worktree DB and re-fork from `singularity` (main) so
 the consolidated migration re-applies cleanly, fixing the post-regen drift. Primitives already
 exist: `dropDatabase` (`plugins/database/plugins/admin/server/internal/databases.ts:27`),
 `forkDatabase` (`…/fork.ts:20`, idempotent), the `database.fork` graphile job, and `waitForDatabase`

@@ -303,9 +303,9 @@ Delete dead types, dead files. Update `plugins/shell/web/CLAUDE.md` (if exists) 
 
 ## Verification
 
-For each phase, verify end-to-end in the running app (deployed via `./singularity build`):
+For each phase, verify end-to-end in the running app (deployed via `./equin build`):
 
-- **Phase 1.** `./singularity build`. App renders identically. No console errors. Existing routes unchanged.
+- **Phase 1.** `./equin build`. App renders identically. No console errors. Existing routes unchanged.
 - **Phase 2.** Navigate to `/tasks`, click a task → `/tasks/:id`. Click a conversation → `/tasks/:id/c/:cid`, conversation column appears. Back button walks the chain. Expand the conversation → `/c/:cid`, conversation fills main. Reload at each URL — correct layout restores. Switching conversations from the list lets ‹ › flip back.
 - **Phase 3.** Click docs → `/c/:cid/docs/…`. Click tasks-panel → `/c/:cid/tasks`. Click review → `/c/:cid/review`. Back button works. Reloads restore state. `conversationPane.useData()` returns the right object in every nested pane.
 - **Phase 4.** Every top-level route from before is reachable and identical.

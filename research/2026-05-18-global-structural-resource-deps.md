@@ -132,10 +132,10 @@ The check is domain-specific to the live-state resource system, owned by the `li
 
 ## Verification
 
-1. `./singularity build` — compiles successfully, server starts, gateway routes work
+1. `./equin build` — compiles successfully, server starts, gateway routes work
 2. Open `http://<worktree>.localhost:9000`, navigate to the queue view
 3. Send a message to the pinned conversation (or resume it) → verify the pin moves immediately to the next waiting conversation without a page refresh
-4. `./singularity check --live-state:resource-deps` — passes (all deps are correctly declared)
+4. `./equin check --live-state:resource-deps` — passes (all deps are correctly declared)
 5. Temporarily remove `deps: [conversationsLiveResource]` from the queue resource → check should warn about the missing dependency
 
 ## Scope

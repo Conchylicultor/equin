@@ -28,7 +28,7 @@
 // wrong string).
 //
 // This is the sibling of `warnOnCoverageGaps` (triggers.ts): both reconcile the
-// change-feed against its consumers at boot because a static `./singularity check`
+// change-feed against its consumers at boot because a static `./equin check`
 // can reach neither a live DB nor the server-only contribution/registry sets. This
 // one THROWS (blocks boot) rather than warning, because a routed resource on an
 // untriggered table is always a definite bug with a clear fix, never transient

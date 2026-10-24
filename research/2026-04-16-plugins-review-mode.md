@@ -150,7 +150,7 @@ Register the new plugin in the same place sibling plugins are registered (the pa
 
 ## Verification
 
-End-to-end manual test after `./singularity build`:
+End-to-end manual test after `./equin build`:
 
 1. Open a conversation whose worktree has a mix of changes — at minimum: one new file, one modified file, one deleted file. (Easy way: drop a file, edit a tracked file, `rm` another.)
 2. **Toolbar button**: confirm both `edited-files-button` and the new review button appear. Review button shows `N files +A −B`. Numbers match `git diff --numstat main...HEAD` plus the untracked file's line count.

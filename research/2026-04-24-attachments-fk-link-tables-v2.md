@@ -143,7 +143,7 @@ A `_attachments` row stays alive while any link table references it. When the la
 - `server/src/db/schema.ts` — add `export * from "@plugins/tasks-core/server/internal/schema-attachments"`.
 
 **Plugins doc**:
-- `docs/plugins.md` — update `attachments` and `tasks-core` entries; run `./singularity check` (includes `plugins-doc-in-sync`).
+- `docs/plugins.md` — update `attachments` and `tasks-core` entries; run `./equin check` (includes `plugins-doc-in-sync`).
 
 ## Data migration
 
@@ -170,8 +170,8 @@ END $$;
 
 ## Verification
 
-1. `./singularity build` — regenerate migration, apply, restart. Zero warnings.
-2. `./singularity check` — `migrations-in-sync`, `plugins-doc-in-sync`, `plugin-boundaries` all pass.
+1. `./equin build` — regenerate migration, apply, restart. Zero warnings.
+2. `./equin check` — `migrations-in-sync`, `plugins-doc-in-sync`, `plugin-boundaries` all pass.
 3. End-to-end at `http://<worktree>.localhost:9000`:
    - Submit via Improve with an attachment → task + `tasks_attachments` row + `_attachments` row + disk file all exist.
    - Delete the task → `tasks_attachments` row gone (CASCADE), `_attachments` row still present, file still on disk.

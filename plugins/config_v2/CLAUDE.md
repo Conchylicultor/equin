@@ -70,7 +70,7 @@ Code (defineConfig)  →  git config/  →  ~/.singularity/state/config/
 
 ### Layer 1: Code → git (build-time)
 
-`./singularity build` generates `config/<plugin-tree>/<name>.origin.jsonc` from `defineConfig` defaults. First line: `// @hash <12-hex>` (content hash).
+`./equin build` generates `config/<plugin-tree>/<name>.origin.jsonc` from `defineConfig` defaults. First line: `// @hash <12-hex>` (content hash).
 
 **Agent overrides:** Copy to `config/<plugin-tree>/<name>.jsonc`, edit values, keep the `// @hash` line from origin.
 
@@ -78,7 +78,7 @@ Code (defineConfig)  →  git config/  →  ~/.singularity/state/config/
 
 ### Layer 2: git → user (build-time)
 
-`./singularity build` propagates the resolved git config (override if present, else origin) to `~/.singularity/state/config/<plugin-tree>/<name>.origin.jsonc` with a hash of the source content. The server reads from this directory at startup without re-propagating.
+`./equin build` propagates the resolved git config (override if present, else origin) to `~/.singularity/state/config/<plugin-tree>/<name>.origin.jsonc` with a hash of the source content. The server reads from this directory at startup without re-propagating.
 
 **User overrides:** UI `setConfig` or manual edits create `~/.singularity/state/config/<plugin-tree>/<name>.jsonc` with the origin's content hash.
 
@@ -86,15 +86,15 @@ Code (defineConfig)  →  git config/  →  ~/.singularity/state/config/
 
 ### App scopes: per-app config in git
 
-A descriptor's config can be customized **per app** straight from version control — no code declares scopes; you commit a JSONC file at an `@app/<id>` path and `./singularity build` does the rest. The app whose id is `<id>` then resolves the scoped values; every other app keeps the base value.
+A descriptor's config can be customized **per app** straight from version control — no code declares scopes; you commit a JSONC file at an `@app/<id>` path and `./equin build` does the rest. The app whose id is `<id>` then resolves the scoped values; every other app keeps the base value.
 
 **To customize app `<id>` for the descriptor at `<plugin-tree>` (config name `<name>`, usually `config`):**
 
 1. Create `config/<plugin-tree>/@app/<id>/<name>.jsonc`.
 2. Put **only the fields that differ** for that app, e.g. `{ "captureUrlByDefault": false }` (a partial delta — schema default-backfill fills the rest).
 3. Line 1: `// @hash <hash>` copied from the **base** origin `config/<plugin-tree>/<name>.origin.jsonc`. A scoped override anchors to the base origin — **no scoped origin is ever committed**.
-4. `./singularity build`. Propagation resolves the scope as `baseEffective ⊕ scopedDelta` and writes it to `~/.singularity/state/config/<wt>/<plugin-tree>/@app/<id>/<name>.origin.jsonc`.
-5. `./singularity check config-origins-in-sync` validates the `@hash` against the base origin and the document against the schema.
+4. `./equin build`. Propagation resolves the scope as `baseEffective ⊕ scopedDelta` and writes it to `~/.singularity/state/config/<wt>/<plugin-tree>/@app/<id>/<name>.origin.jsonc`.
+5. `./equin check config-origins-in-sync` validates the `@hash` against the base origin and the document against the schema.
 
 This is the base-override workflow (Layer 1) one path segment deeper. Any registered descriptor can be git-scoped — it does **not** need `scope: "app"` (that marker only governs the theme "Customize for app" fork-all-descriptors UX).
 
@@ -103,7 +103,7 @@ This is the base-override workflow (Layer 1) one path segment deeper. Any regist
 **Scoped read/write are symmetric.** Both ends key off the **same** server predicate, `scopeHasOwnConfig(descriptor, scopeId)` (the scope's origin OR override exists), so they can never disagree:
 
 - **Read.** `useConfig` decides whether to read the scoped document purely from membership in the live `configScopes` map (`config-v2.scopes`, param-less: every server-registered storePath → its scope ids), recomputed from `scopeHasOwnConfig` on every scoped-file change — so a scope counts whether it became real via a committed git scope, a theme fork, **or a plain scoped `setConfig` write**. A non-member scope's read is skipped (`useLive(configValues, null)`) and the global document is used; a member's document not settled yet falls back to the global value, never `descriptor.defaults`. While the map itself is unknown a scoped read is `pending` (preloaded, so only after a failed boot). The same map lists every registered path, which is how `useConfigResult` throws on a web-only half-registration. `useScopeMembership` returns the membership as a `ResourceResult<boolean>` (the theme "Customize for app" toggle reads it) but does **not** gate `useConfig`.
-- **Write (fork-on-write).** A scoped `useSetConfig`/`setConfig` to a scope with **no own config yet** auto-snapshots the current base into that scope's origin (the same redacted snapshot `forkScope` writes) and then writes the override — no explicit fork ceremony. A write when no **base** origin exists at all still throws "run ./singularity build".
+- **Write (fork-on-write).** A scoped `useSetConfig`/`setConfig` to a scope with **no own config yet** auto-snapshots the current base into that scope's origin (the same redacted snapshot `forkScope` writes) and then writes the override — no explicit fork ceremony. A write when no **base** origin exists at all still throws "run ./equin build".
 
 **Semantics:** a committed scope is a frozen snapshot of `baseEffective ⊕ delta` recomputed each build, so its non-overridden fields track the git base as of the last build, not a runtime base edit. A runtime user fork layers on top; un-customizing drops the runtime override and falls back to the committed scope, not to global. The fork wins only while its hash matches: committing (or changing) the scope rewrites the scope's origin under a runtime fork, so the fork goes stale — the committed value takes effect and the user sees a conflict, exactly as for a base override.
 
@@ -146,7 +146,7 @@ defineConfig({
 });
 ```
 
-`./singularity build` (`propagateConfigToUser`, before it propagates) applies
+`./equin build` (`propagateConfigToUser`, before it propagates) applies
 every migration the namespace has not applied yet to that config's origin,
 override and ancestor documents, base and `@app/<id>` scopes, and records it in
 `.config-migrations-applied.json`; a namespace with no saved config records
@@ -159,7 +159,7 @@ shared with plugin moves.
 
 ### Plugin moves and stranded overrides
 
-A config's user-layer path is its plugin's id, so moving a plugin moves where its saved settings must live. `./singularity plugin move` records every move in a committed ledger, and each build replays it onto its own namespace's user dir before propagation — folder moved, saved reorder keys re-rooted, `// @hash` chain kept so overrides stay in force. See `plugins/plugin-meta/plugins/relocate/CLAUDE.md` ("Saved settings follow the move").
+A config's user-layer path is its plugin's id, so moving a plugin moves where its saved settings must live. `./equin plugin move` records every move in a committed ledger, and each build replays it onto its own namespace's user dir before propagation — folder moved, saved reorder keys re-rooted, `// @hash` chain kept so overrides stay in force. See `plugins/plugin-meta/plugins/relocate/CLAUDE.md` ("Saved settings follow the move").
 
 An override that still ends up where no live config reads it (plugin removed, or a move onto a destination that already had settings) is found by the orphan audit (`debug/config-orphans`' machine half, over the desktop's config dir) — never deleted, since the user layer is not versioned. `debug/config-orphans` shows it: a notice pinned above Settings → Config, the Debug → Config Orphans panel, and one rolling `config-orphans-stranded` report filed at boot.
 
@@ -223,7 +223,7 @@ defineConfig({
 })
 ```
 
-`./singularity build` then does the mechanical half: it **seeds** a missing
+`./equin build` then does the mechanical half: it **seeds** a missing
 `config/<tree>/<name>.jsonc` from its origin — same `// @hash`, same body, same legend
 comments — with a one-line `// @review` marker plus the descriptor's `guidance` lines
 after the hash header; and it **re-marks + re-stamps** an existing override whose origin
@@ -387,7 +387,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
 `config-v2:registrations-paired`, above). Design:
 [`research/2026-10-21-global-demo-config-from-worker.md`](../../research/2026-10-21-global-demo-config-from-worker.md).
 
-<!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
+<!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
 
 ## Plugin reference
 

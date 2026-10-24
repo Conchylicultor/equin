@@ -35,8 +35,8 @@ func TestParseChildEnvFlag(t *testing.T) {
 			t.Fatalf("parseChildEnvFlag(%q) err = %v, want errChildEnvRequired", raw, err)
 		}
 	}
-	if !strings.Contains(errChildEnvRequired.Error(), "./singularity start") {
-		t.Fatalf("required-flag error should name ./singularity start, got %q", errChildEnvRequired)
+	if !strings.Contains(errChildEnvRequired.Error(), "./equin start") {
+		t.Fatalf("required-flag error should name ./equin start, got %q", errChildEnvRequired)
 	}
 
 	// A malformed entry is an error, never skipped — and a bare `*` would be

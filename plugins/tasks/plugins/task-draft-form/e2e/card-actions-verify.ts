@@ -31,7 +31,7 @@
  * hover-disclosure animation. `--task` must name a task that already has at
  * least one dependency — the Standalone option is only offered then.
  *
- *   ./singularity run plugins/tasks/plugins/task-draft-form/e2e/card-actions-verify.ts \
+ *   ./equin run plugins/tasks/plugins/task-draft-form/e2e/card-actions-verify.ts \
  *     --task <taskId> [--headed]
  */
 import {

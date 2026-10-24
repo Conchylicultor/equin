@@ -189,7 +189,7 @@ covers residual cases (`keepMounted` surfaces, retry-without-closing). No extra 
 
 ### Codegen / boundaries
 
-No manual boundary-config edits. Cross-plugin deps are import-derived: `./singularity build`
+No manual boundary-config edits. Cross-plugin deps are import-derived: `./equin build`
 regenerates `web.generated.ts` with the `overlay-boundary` leaf (`dependsOn: []`) and appends
 it to ui-kit / error-boundary / floating-surface automatically. The new barrel is pure and its
 only imports are `react` + the framework `PluginDefinition` type, so no cycle is introduced.
@@ -197,12 +197,12 @@ only imports are `react` + the framework `PluginDefinition` type, so no cycle is
 ## Suggested ordering
 
 1. Create the `overlay-boundary` leaf (package.json, internal, barrel, CLAUDE.md).
-2. `./singularity build` (registers the plugin so `@plugins/...` imports resolve).
+2. `./equin build` (registers the plugin so `@plugins/...` imports resolve).
 3. Extract `CrashFallback` → `crash-fallback.tsx`; repoint `plugin-error-boundary.tsx`.
 4. Wire `registerOverlayFallback` in the error-boundary barrel (`index.tsx`).
 5. Wrap the five ui-kit `*Content` components.
 6. Wrap `floating-surface`.
-7. `./singularity build` + `./singularity check` (plugin-boundaries, eslint, in-sync).
+7. `./equin build` + `./equin check` (plugin-boundaries, eslint, in-sync).
 
 ## Critical files
 
@@ -215,7 +215,7 @@ only imports are `react` + the framework `PluginDefinition` type, so no cycle is
 
 ## Verification (end-to-end)
 
-1. `./singularity build` succeeds; `./singularity check` passes (plugin-boundaries confirms no
+1. `./equin build` succeeds; `./equin check` passes (plugin-boundaries confirms no
    cycle, eslint clean, registry in-sync).
 2. **Isolation, real app:** temporarily add a throwing child inside a popover's content (e.g. a
    component that `throw new Error("boom")` on render) reachable from the Improve popover, deploy,

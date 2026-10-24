@@ -50,7 +50,7 @@ This is a surface-level decision, not a sub-design 4 detail: it changes what an 
 - If they become `mutation()`s inside `definePluginApi`, they get a wire route, input schema, optimistic tooling — **and the right to be invoked from any browser tab**. Conceptual + security regression.
 - If they stay as plain functions, two surfaces coexist per plugin (`api` and the legacy direct-export utility layer). The "5 surfaces → 2" claim doesn't actually hold.
 
-Recommend an `internal: true` flag on `mutation`/`query` (or a separate `internalApi` namespace) so the producer side can express "callable via `call` but not over the wire". `./singularity check` enforces no wire route generated.
+Recommend an `internal: true` flag on `mutation`/`query` (or a separate `internalApi` namespace) so the producer side can express "callable via `call` but not over the wire". `./equin check` enforces no wire route generated.
 
 ### B4 — Wire boundary assumes JSON in/out
 
@@ -133,7 +133,7 @@ Cost of reserving `ctx.identity` now: zero. Cost of adding it later: every handl
 
 `call(conversationsApi.create, …)` works because the proxy carries `"conversations.create"` and the runtime registry resolves it. If `conversations` isn't loaded (test env, partial build), runtime error, no compile signal. Today's direct-import (`import { createConversation } from "@plugins/conversations/server"`) link-checks.
 
-`./singularity check` should enforce "every `call(target, …)` target's plugin is in the active plugin set". Cheap to add now; harder once `call` is used widely.
+`./equin check` should enforce "every `call(target, …)` target's plugin is in the active plugin set". Cheap to add now; harder once `call` is used widely.
 
 ### S3 — Naming pick (§8 Q3)
 

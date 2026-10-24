@@ -312,7 +312,7 @@ No cycles. No deep imports. Barrels stay pure (named re-exports + single default
 
 ## Verification
 
-End-to-end after `./singularity build`:
+End-to-end after `./equin build`:
 
 1. **Improve toolbar button**:
    - Click toolbar `+ Improve` → popover opens, single card.
@@ -330,7 +330,7 @@ End-to-end after `./singularity build`:
    - Add a chain card, set models per card, submit → multi-task chain created; relate (head only) plus chain (i>0) deps applied.
    - Paste an image into the textarea → uploads as attachment; on submit, attachment is linked to that card's task.
 
-3. **Boundary check**: `./singularity check` passes (`plugin-boundaries`, `plugins-have-claudemd`, `migrations-in-sync`).
+3. **Boundary check**: `./equin check` passes (`plugin-boundaries`, `plugins-have-claudemd`, `migrations-in-sync`).
 
 4. **Cleanup verification**: `rg "/api/improve/submit" plugins web` returns nothing; `rg "ImproveForm\|ImproveCard\|ChainConnector\|ModelChip" plugins/improve` returns nothing.
 

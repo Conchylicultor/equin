@@ -1,6 +1,6 @@
 // The signal tap's dependency: its compiled C shim, collected into infra/deps'
 // registry through the `default` array (Settings → Dependencies,
-// `./singularity deps install signal-origin-shim`). The op commands ensure it
+// `./equin deps install signal-origin-shim`). The op commands ensure it
 // before arming the tap.
 import { signalOriginShim } from "./internal/shim";
 

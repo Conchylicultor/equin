@@ -207,7 +207,7 @@ now also imports `inline-text`. No primitive gains a feature-plugin dependency.
 6. Migrate `description-view.tsx` text segments.
 7. Add the dev-only root guard in both walkers.
 8. Add the inline-text vitest; keep the element-picker `BrokenOrderView` test as documentation.
-9. `./singularity build`, run checks + dom tests, manual verify.
+9. `./equin build`, run checks + dom tests, manual verify.
 
 ## Verification
 
@@ -218,7 +218,7 @@ now also imports `inline-text`. No primitive gains a feature-plugin dependency.
   the chip text **and** `research/foo.md`, does **not** contain `"<ui-context"`, and has a
   `<button>` for both. The component only accepts `text: string`, documenting that a
   component-root seed is impossible.
-- `./singularity build` then `./singularity check plugin-boundaries` and `./singularity check type-check`
+- `./equin build` then `./equin check plugin-boundaries` and `./equin check type-check`
   — confirm no new cross-plugin edges/cycles (`inline-text` + `file-links` import no feature
   plugins) and barrels stay pure. Build regenerates `plugins-details.md` for the new plugin/edges
   (`plugins-doc-in-sync` would fail otherwise).

@@ -217,7 +217,7 @@ What it should become, and where it should live:
 
 - **Home:** the Prototypes app's Compare stage already owns "mock beside the
   real thing at one shared width". The measurement is the same pairing with
-  numbers instead of eyes. As a `./singularity` verb (`prototype diff <id>`)
+  numbers instead of eyes. As a `./equin` verb (`prototype diff <id>`)
   it resolves the mock and its declared `mocks:` counterpart itself, so an
   agent never hand-writes a URL. The e2e harness already has the pieces
   (target resolution, `withBrowser`, `samplePixels`).

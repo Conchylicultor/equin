@@ -2,7 +2,7 @@
 // `plugins/network/plugins/live/server/testing/compile-sql-golden.json`, which
 // `server/internal/compile-sql-golden.test.ts` reads and compares against:
 //
-//   ./singularity run plugins/network/plugins/live/server/testing/gen-compile-golden.ts
+//   ./equin run plugins/network/plugins/live/server/testing/gen-compile-golden.ts
 //
 // Run it from the code the golden is meant to pin (a refactor that must not
 // change the SQL generates BEFORE the refactor), then review the fixture's

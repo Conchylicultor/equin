@@ -2,7 +2,7 @@
  * Scoped change routing (`routeTableChange`, `./routing`) — the P0 runtime seam
  * of research/2026-09-29-global-scoped-change-routing.md, driven DB-free with
  * routes injected on the resource the way a compiler will emit them. Run with
- * `./singularity test plugins/framework/plugins/resource-runtime`.
+ * `./equin test plugins/framework/plugins/resource-runtime`.
  *
  * The fixture is one simulated database: `hosts` (the window's identity table),
  * `hosts_ext` (a 1:1 extension keyed by its host — an `alias` route), and

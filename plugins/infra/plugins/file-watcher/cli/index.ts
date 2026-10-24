@@ -1,4 +1,4 @@
-// The file-watcher engine for a foreground `./singularity` command. No
+// The file-watcher engine for a foreground `./equin` command. No
 // default export: this is shared CLI machinery, not a command declaration, so
 // it is not registered and not loaded on every invocation.
 export { watchForCommand } from "./internal/watch-for-command";

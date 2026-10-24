@@ -179,7 +179,7 @@ Both slot in without changes to the file-pane shell or Raw renderer.
 
 ## Verification
 
-1. `./singularity build` succeeds.
+1. `./equin build` succeeds.
 2. Open `http://claude-1776186725.localhost:9000`, pick a conversation with
    edited files, open the Code panel.
 3. Click a `.ts` file → pane shows tab strip with a single "Raw" tab, file

@@ -2,7 +2,7 @@
 
 ## Context
 
-`./singularity <cmd>` is the one contribution surface the repo never opened.
+`./equin <cmd>` is the one contribution surface the repo never opened.
 `bin/cli.ts` hand-registers 14 commands — one `import` + one `register*(program)`
 per file under `bin/commands/` — and all 14 live inside the framework CLI plugin.
 A plugin that needs a terminal verb has nowhere to put it, so the only way to
@@ -22,7 +22,7 @@ Two halves, and the second is what makes the first trustworthy:
    `push` and `check`, whose orphan guard, host locks and lane classification
    are the load-bearing cases a toy mechanism would not survive.
 
-The first outside consumer is `./singularity prototype new`, so the Prototypes
+The first outside consumer is `./equin prototype new`, so the Prototypes
 app mints a prototype folder itself instead of an agent typing
 `cp -R _template <name>`. **That command is out of scope for this plan** — it is
 a separate task, and it lands on the mechanism below with no changes to it.
@@ -39,7 +39,7 @@ Three constraints, all real, all currently enforced by checks:
 - **A process that installs must re-exec before resolving a package** — Bun's
   resolver caches directory listings from before the install (`bin/reexec.ts`).
 - **Commander wants a command's name, flags and help before it parses.** So a
-  contribution's *declaration* is reached on every single `./singularity`
+  contribution's *declaration* is reached on every single `./equin`
   invocation, including the hot `build` path, while its *implementation* must
   not be.
 
@@ -302,15 +302,15 @@ declaration types + `defineCliCommand`, `register-commands.ts`, the rewritten
 `bin/cli.ts`, `loadCollectedDir`'s `strict` option, the orphan-guard inversion,
 the two new checks, and the `boundary-config` / `plugin-id` / `tsconfig`
 registrations. Prove it end to end by migrating exactly one command — `format`,
-32 lines, no shared helpers — into `plugins/format/`. `./singularity build` and
-`./singularity format` must both work with 13 commands still hand-registered
+32 lines, no shared helpers — into `plugins/format/`. `./equin build` and
+`./equin format` must both work with 13 commands still hand-registered
 alongside the mechanism.
 
 **Phase 2 — the support sub-plugins (serial).** Create `bootstrap`,
 `op-runtime`, `migrations`, `git-artifacts` as pure file moves plus a barrel
 each, and re-point today's `bin/commands/*.ts` at them. No command changes yet,
-so this phase is verifiable on its own: `./singularity check` and a real
-`./singularity build` still pass with the commands untouched. This must land
+so this phase is verifiable on its own: `./equin check` and a real
+`./equin build` still pass with the commands untouched. This must land
 before Phase 3 or every command agent would be moving the same files.
 
 **Phase 3 — the 13 remaining commands (parallel agents).** One agent per
@@ -328,7 +328,7 @@ can be batched.
 `register*` exports, rewrite `plugins/framework/plugins/cli/CLAUDE.md` (its
 command table, its op-command section, and its "everything shared lives in
 `bin/`" opening paragraph are all now wrong), fix the two argv[2] comments in
-`release.ts` / `hermetic-build.ts`, and run a full `./singularity build`.
+`release.ts` / `hermetic-build.ts`, and run a full `./equin build`.
 
 ## Files that matter
 
@@ -350,40 +350,40 @@ as the precedent for fail-loud contribution loading.
 
 ## Verification
 
-Each phase ends green on `./singularity build` — the plan is not verifiable only
+Each phase ends green on `./equin build` — the plan is not verifiable only
 at the end.
 
-- `./singularity check` — `plugins-registry-in-sync` accepts `cli.generated.ts`;
+- `./equin check` — `plugins-registry-in-sync` accepts `cli.generated.ts`;
   `collected-dir-tsconfig-coverage`, `plugin-boundaries`, `type-check`,
   `cli:bootstrap-package-free` and `cli:codegen-manifests-not-frozen` all pass
   with the new closure; the two new checks pass.
-- `./singularity --help` lists all 14 verbs; `./singularity deploy --help` and
+- `./equin --help` lists all 14 verbs; `./equin deploy --help` and
   `db --help` show their subcommand trees; `build --help` shows all 11 flags with
   their defaults; `check --help` shows the `[checks...]` variadic.
-- Real runs of the load-bearing paths: `./singularity build` (the whole point),
-  `./singularity check --list`, `./singularity check --status`,
-  `./singularity format`, `./singularity push --help`.
+- Real runs of the load-bearing paths: `./equin build` (the whole point),
+  `./equin check --list`, `./equin check --status`,
+  `./equin format`, `./equin push --help`.
 - **Eager weight.** Measure the CLI process's module closure before and after
   with the same `Bun.build` technique the checks use. Today every invocation
   loads all 14 command modules — `pg`, `drizzle-orm`, `@resvg/resvg-js` and ~14
-  plugin server barrels — for `./singularity format`. After, it should load 18
+  plugin server barrels — for `./equin format`. After, it should load 18
   data-only declarations plus one implementation. This is expected to make the
   hot path *faster*; record the number either way rather than assuming.
-- **Orphan guard.** Start `./singularity check` from a shell, kill the shell,
+- **Orphan guard.** Start `./equin check` from a shell, kill the shell,
   confirm the CLI exits 140 within ~2 s and drops its grant. Confirm
   `SINGULARITY_BUILD_DETACHED=1` still exempts the detached self-restart build.
-  Confirm `nohup ./singularity serve-app …` survives its parent (the `detachable`
+  Confirm `nohup ./equin serve-app …` survives its parent (the `detachable`
   path). Confirm a fresh-checkout bootstrap still works:
-  `rm -rf node_modules && ./singularity check` must install and re-exec, which is
+  `rm -rf node_modules && ./equin check` must install and re-exec, which is
   the case `bootstrap/cli` being package-free protects.
-- `./singularity test plugins/framework/plugins/cli` — the moved `bin/*.test.ts`
+- `./equin test plugins/framework/plugins/cli` — the moved `bin/*.test.ts`
   suites (ensure-deps, reexec, build-lock, build-output, build-receipt,
   migrations, run-cli, adaptive-timeout, converge-script, dist-publish,
   hermetic-build, legacy-dist-reap) all still pass from their new homes.
 
 ## What this deliberately does not do
 
-`./singularity prototype new` is a separate task on top of this one. When it
+`./equin prototype new` is a separate task on top of this one. When it
 lands it is one folder — `plugins/apps/plugins/prototypes/plugins/files/cli/` —
 with a data declaration and an implementation that reads `prototypesDir` from
 the plugin's own `data-dirs/`. No edit to the framework CLI, which is the whole
@@ -411,7 +411,7 @@ the numbers cannot drift from what actually loads.
 | one declaration (`format/cli/index.ts`) | 2 | 0 |
 | one heavy body still eager (`bin/commands/release.ts`) | 111 | 4 |
 
-Today `./singularity format` — or the `build` hot path — loads all 347, pulling
+Today `./equin format` — or the `build` hot path — loads all 347, pulling
 `@resvg/resvg-js` (only `release` rasterizes an icon), `pg` + `drizzle-orm`
 (only `build`/`db`/`apply-migrations`), `esbuild`, `jsonc-parser` and
 `react-icons/md`. After Phase 3 the eager set is the bootstrap plus `cli.ts`,
@@ -422,7 +422,7 @@ with the caveat that the full before/after can only be re-measured at Phase 4.
 
 The bootstrap row is the one that must never move: 0 npm packages is
 `cli:bootstrap-package-free` holding, and it is what makes `rm -rf node_modules
-&& ./singularity build` recoverable from inside the repo.
+&& ./equin build` recoverable from inside the repo.
 
 ## Outcome (all four phases landed)
 
@@ -432,13 +432,13 @@ The bootstrap row is the one that must never move: 0 npm packages is
 
 | entrypoint | before | after |
 |---|---|---|
-| **every `./singularity` invocation** (`bin/cli.ts` static graph) | 347 modules, 12 npm | **41 modules, 1 npm (`commander`)** |
+| **every `./equin` invocation** (`bin/cli.ts` static graph) | 347 modules, 12 npm | **41 modules, 1 npm (`commander`)** |
 | pre-install bootstrap (`bin/index.ts`, dynamic cut) | 11 modules, 0 npm | **11 modules, 0 npm** |
 
 `pg`, `drizzle-orm`, `@resvg/resvg-js`, `esbuild`, `jsonc-parser` and
-`react-icons/md` are gone from the hot path — `./singularity format` no longer
+`react-icons/md` are gone from the hot path — `./equin format` no longer
 loads an SVG rasterizer. The bootstrap row is unchanged, which is the invariant
-that keeps `rm -rf node_modules && ./singularity build` recoverable.
+that keeps `rm -rf node_modules && ./equin build` recoverable.
 
 ### What the checks caught that review would not have
 
@@ -458,10 +458,10 @@ paths, not by any gate.
 
 ### The self-hosting deadlock
 
-`cli.generated.ts` is produced BY `./singularity build`. The moment `build`
+`cli.generated.ts` is produced BY `./equin build`. The moment `build`
 stopped being hand-registered, the committed registry — still listing only
 `format` — was the only thing telling the CLI that `build` existed, and
-`./singularity build` answered `unknown command 'build'`. Every route back was
+`./equin build` answered `unknown command 'build'`. Every route back was
 another CLI command that was equally invisible.
 
 Recovery is to call `generatePluginRegistry({ root })` directly from a script

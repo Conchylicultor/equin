@@ -139,7 +139,7 @@ carry the guarantee through `region-line` directly. This is cosmetic and can be 
 
 ## Verification
 
-1. `./singularity build` — type-check + ESLint pass (`no-clip-without-nowrap` already treats
+1. `./equin build` — type-check + ESLint pass (`no-clip-without-nowrap` already treats
    `region-line` as nowrap-safe, so both sites remain compliant; `no-adhoc-row` is unaffected
    since neither site adds rounded+padding chrome).
 2. Visual spot-check in the running app at `http://<worktree>.localhost:9000`:

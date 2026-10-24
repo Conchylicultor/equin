@@ -207,7 +207,7 @@ Update `PushAttemptRow`:
 
 ## Verification
 
-1. `./singularity build` — must succeed with no type errors
+1. `./equin build` — must succeed with no type errors
 2. Open `http://<worktree>.localhost:9000`, navigate to Debug > Profiling
 3. Verify all four sections (Build, Boot, Push, Stats) render correctly
 4. Verify drag-to-zoom works in all sections (drag across bar area, see zoom range appear)

@@ -118,7 +118,7 @@ Clean DAG — the new plugin exports only, never imports from its consumers.
 
 ## Verification
 
-1. `./singularity build` — ensures new plugin is discovered and registered
+1. `./equin build` — ensures new plugin is discovered and registered
 2. Open a task with a description containing a partial path like `task-detail/panes.tsx`
 3. Click the file link → should auto-resolve to the full path and show the file
 4. Test with a path that has multiple matches (e.g. `index.ts`) → disambiguation picker should appear

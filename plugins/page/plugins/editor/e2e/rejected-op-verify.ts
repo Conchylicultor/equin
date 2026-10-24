@@ -15,7 +15,7 @@
 //   C. one Cmd+Z undoes B's indent; a second undoes nothing the server never
 //      held (the rejected step was dropped from the stack)
 //
-// Usage: ./singularity run plugins/page/plugins/editor/e2e/rejected-op-verify.ts
+// Usage: ./equin run plugins/page/plugins/editor/e2e/rejected-op-verify.ts
 import {
   agentFetch,
   report,

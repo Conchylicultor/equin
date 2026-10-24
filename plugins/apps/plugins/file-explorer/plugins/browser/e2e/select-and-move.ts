@@ -28,7 +28,7 @@
 //  7. Screenshots of the selection and the drop highlight, light and dark.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/file-explorer/plugins/browser/e2e/select-and-move.ts \
+//   ./equin run plugins/apps/plugins/file-explorer/plugins/browser/e2e/select-and-move.ts \
 //     [--out /tmp/select-and-move] [--headed]
 
 import {

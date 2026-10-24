@@ -2,7 +2,7 @@
 
 ## Context
 
-`./singularity start --force`, run from an agent shell, produced a gateway whose
+`./equin start --force`, run from an agent shell, produced a gateway whose
 environment carried that shell's `SINGULARITY_CONVERSATION_ID`,
 `SINGULARITY_PARENT_HOST`, `SOCKET_PATH` and the retired `SINGULARITY_WORKTREE`
 (observed 2026-09-15, gateway PID 58276). Two spawns forward everything:
@@ -53,7 +53,7 @@ deciding whether it travels.
 New `core/` runtime on the existing launcher plugin
 (`plugins/infra/plugins/launcher/core/index.ts`, a leaf with no imports). The
 launcher owns the root of the process tree (it spawns the gateway for
-`./singularity start`, the release `launch` binary, the desktop app and systemd),
+`./equin start`, the release `launch` binary, the desktop app and systemd),
 so it owns what that tree carries.
 
 ```ts
@@ -155,7 +155,7 @@ func (c ChildEnv) Command(name string, args ...string) *exec.Cmd  // Env always 
 
 - `-child-env` (comma-separated names; `PREFIX*` matches a prefix) is
   **required**. Without it the gateway exits non-zero with "start the gateway
-  with ./singularity start, which declares -child-env". The launcher already
+  with ./equin start, which declares -child-env". The launcher already
   passes every path flag explicitly for the same reason: a Go-side default would
   be a second copy of the list. Go holds no list of its own.
 - At boot it logs the names it forwards and, at warn level, the names present
@@ -181,7 +181,7 @@ func (c ChildEnv) Command(name string, args ...string) *exec.Cmd  // Env always 
   `SINGULARITY_SOCKETS_DIR` keep their roles as hand-run flag defaults; both are
   on the list.
 
-**Compatibility.** `./singularity start` always rebuilds the gateway
+**Compatibility.** `./equin start` always rebuilds the gateway
 (`start/cli/run.ts`, `forceBuild: true`), so the new flag and the new binary
 ship together. A stale worktree's backend spawned by the new gateway gets the
 declared set plus `SOCKET_PATH`, which covers everything it reads. New backends
@@ -191,7 +191,7 @@ restarts it. No transition fallback is needed.
 ### D. Enforcement
 
 Both checks are contributed from `plugins/infra/plugins/launcher/check/index.ts`
-and run in `./singularity check` and `push`.
+and run in `./equin check` and `push`.
 
 - **`launcher:runtime-env-declared` (rung 3).** Every `SINGULARITY_[A-Z0-9_]+`
   name in plugin code must be forwarded, withheld, or match a forwarded prefix.
@@ -236,16 +236,16 @@ and run in `./singularity check` and `push`.
    removed. `go test ./...` in `gateway/`.
 4. **Check `launcher:gateway-env-explicit`.**
 5. **Starter.** `spawnGatewayDaemon` uses `pickRuntimeEnv` and passes
-   `-child-env`. Docs and comments per D. `./singularity build` (background).
+   `-child-env`. Docs and comments per D. `./equin build` (background).
 6. **Restart + verify (user-gated).** The new contract only takes effect when the
    gateway restarts. Per the project rule the agent never runs
-   `./singularity start` unprompted: the user runs
-   `./singularity start --force`, or explicitly asks the agent to.
+   `./equin start` unprompted: the user runs
+   `./equin start --force`, or explicitly asks the agent to.
 
 ## Verification
 
 - `go test ./...` in `gateway/`;
-  `./singularity test plugins/infra/plugins/launcher`; `./singularity check`
+  `./equin test plugins/infra/plugins/launcher`; `./equin check`
   green. Then a negative probe: add a throwaway `process.env.SINGULARITY_PROBE`
   read and confirm the new check names it, then remove it.
 - After the restart, **from an agent shell** (the original repro: this session
@@ -266,7 +266,7 @@ and run in `./singularity check` and `push`.
   - a terminal pane opens a shell with a working `PATH`;
   - a new agent conversation launches, its pane is claimed, and `query_db`
     answers from it;
-  - a `./singularity push` from an agent pane still reaches the remote. Git auth
+  - a `./equin push` from an agent pane still reaches the remote. Git auth
     here does not depend on `SSH_AUTH_SOCK` today, since agent panes already run
     without it; this confirms it after the restart;
   - a UI "Fetch page" that needs the headless browser (browser-fetch) still finds

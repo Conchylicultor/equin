@@ -118,7 +118,7 @@ The bar column bounds are computed from the container ref: `barLeft = rect.left 
 
 ## Verification
 
-1. `./singularity build` to deploy
+1. `./equin build` to deploy
 2. Open `http://<worktree>.localhost:9000` → Debug → Profiling
 3. Test: drag across a time range in any section → view should zoom to that range
 4. Test: × button in the time axis header resets zoom

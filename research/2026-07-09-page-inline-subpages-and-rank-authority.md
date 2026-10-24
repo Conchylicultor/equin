@@ -195,7 +195,7 @@ All other paths only ever mint keys strictly inside a gap containing no live sib
 
 **DB guard**
 - `plugins/page/plugins/editor/server/internal/tables.ts` — add the unique constraint.
-- Data-repair migration (`./singularity build --custom-migration --migration-name repair_duplicate_sibling_ranks`), DML-only, generic. For each duplicate `(parent_id, rank)` group keep the earliest `(created_at, id)` and push the rest to `rank || '1'`, `'2'`, … Valid canonical fractional keys (no trailing `0`) and provably order-preserving given the guard:
+- Data-repair migration (`./equin build --custom-migration --migration-name repair_duplicate_sibling_ranks`), DML-only, generic. For each duplicate `(parent_id, rank)` group keep the earliest `(created_at, id)` and push the rest to `rank || '1'`, `'2'`, … Valid canonical fractional keys (no trailing `0`) and provably order-preserving given the guard:
   ```sql
   -- only safe when no sibling already occupies the (R, R||'1') span
   NOT EXISTS (
@@ -207,7 +207,7 @@ All other paths only ever mint keys strictly inside a gap containing no live sib
   Timestamp it **before** the schema migration so it applies first. If a group cannot be
   repaired, the constraint migration fails loudly — which is correct, and is caught
   pre-push by the `migration-applies-clean` check dry-running against `origin/main`'s DB.
-- Then `./singularity build --migration-name page_blocks_parent_rank_unique`.
+- Then `./equin build --migration-name page_blocks_parent_rank_unique`.
 
 ---
 
@@ -244,7 +244,7 @@ version, and a sidebar reorder.
 - the repair migration on a seeded duplicate yields distinct valid keys, is a no-op on re-run,
   and preserves relative order.
 
-**Manual** (`./singularity build`, then `http://att-1783585438-8lmd.localhost:9000/pages`):
+**Manual** (`./equin build`, then `http://att-1783585438-8lmd.localhost:9000/pages`):
 split a text block on a page with an identically-ranked sub-page; drag a content block into
 a sub-page (leaves this editor, appears in the sub-page); turn a block into a page (becomes
 an inline sub-page, children follow, sidebar nests it); reorder a sub-page in the sidebar and

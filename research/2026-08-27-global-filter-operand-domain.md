@@ -184,13 +184,13 @@ A lint rule for that is a possible follow-on, not part of this.
 
 ## Verification
 
-- `./singularity test plugins/fields` — the six operator maps still render
+- `./equin test plugins/fields` — the six operator maps still render
   byte-identical SQL; new enum cases for an out-of-domain operand against a real
   `parsedText` column (renders, does not throw) and for a tolerant column (binds
   the literal, is not normalized).
-- `./singularity test plugins/primitives/plugins/data-view` — `compile.test.ts`
+- `./equin test plugins/primitives/plugins/data-view` — `compile.test.ts`
   updated for the target signature, plus a decoded-column case end to end.
-- `./singularity check` — boundaries, types, lint.
-- `./singularity build`, then a stale saved view: set a conversations view's
+- `./equin check` — boundaries, types, lint.
+- `./equin build`, then a stale saved view: set a conversations view's
   filter to `status is-any-of ["nope"]` and confirm the list renders empty
   instead of erroring, with the stale chip visible and removable in the picker.

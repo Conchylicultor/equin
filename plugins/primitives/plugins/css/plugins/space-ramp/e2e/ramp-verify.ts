@@ -12,7 +12,7 @@
 // resolves to a real length, `none` is zero, and the steps increase.
 //
 // Usage:
-//   ./singularity run plugins/primitives/plugins/css/plugins/space-ramp/e2e/ramp-verify.ts \
+//   ./equin run plugins/primitives/plugins/css/plugins/space-ramp/e2e/ramp-verify.ts \
 //     [--url http://<worktree>.localhost:9000] [--headed]
 
 import {

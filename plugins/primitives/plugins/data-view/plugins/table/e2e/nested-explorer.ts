@@ -15,8 +15,8 @@
  *
  * The harness reverts the sort the header clicks write to the view's config.
  *
- * Manual only. Run after `./singularity build`:
- *   ./singularity run plugins/primitives/plugins/data-view/plugins/table/e2e/nested-explorer.ts \
+ * Manual only. Run after `./equin build`:
+ *   ./equin run plugins/primitives/plugins/data-view/plugins/table/e2e/nested-explorer.ts \
  *     [--color-scheme light|dark] [--out /tmp/nested-explorer] [--headed]
  */
 import type { Page } from "playwright";

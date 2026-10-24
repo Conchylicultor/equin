@@ -213,11 +213,11 @@ no flowing DataView.
    the scroll-ownership fixes (explorer, home, file-tree, song/story) are the
    manual, non-type-driven core.
 5. Docs (§7).
-6. `./singularity build` then `./singularity check`.
+6. `./equin build` then `./equin check`.
 
 ## Verification
 
-- `./singularity build`; open `http://<worktree>.localhost:9000/studio/explorer`
+- `./equin build`; open `http://<worktree>.localhost:9000/studio/explorer`
   and confirm the tree **scrolls** (no bounce), stats header sticky above.
 - Scripted Playwright (`e2e/screenshot.mjs`) — assert the explorer scroll
   container has `scrollHeight > clientHeight` and a wheel delta changes `scrollTop`.

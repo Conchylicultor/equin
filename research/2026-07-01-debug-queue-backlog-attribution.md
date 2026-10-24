@@ -162,7 +162,7 @@ unique-index trick — mirrors `queue-dead-job`):
 
 ## Verification
 
-1. `./singularity build` from the worktree (regenerates the config `.origin.jsonc`, restarts the server, re-runs checks). Then `./singularity check` for boundary/lint/type.
+1. `./equin build` from the worktree (regenerates the config `.origin.jsonc`, restarts the server, re-runs checks). Then `./equin check` for boundary/lint/type.
 2. **MCP tool** — call `get_queue_health` (no args → own worktree; `worktree: "singularity"` → main). Confirm the JSON has `concurrency`, `backlog`, non-empty `byJobName` ranking + `running` with `lockedForMs` when the queue is active, and `dead`.
 3. **Backlog attribution** — with `singularity` backed up, confirm the recurring `queue-backlog` report in **Debug → Reports** now shows the top-N per-jobName breakdown in its summary + detail.
 4. **Slot-hog** — enqueue/observe a job locked longer than `runningJobMinutes` (temporarily lower the threshold in Settings → Config) with `lockedCount > 0`; confirm a `queue-slot-hog` report fires naming the job — the exact case that produced no report before. Cross-check the live rows via `query_db` against `graphile_worker._private_jobs`.

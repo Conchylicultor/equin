@@ -476,7 +476,7 @@ headline fix, made visible by the compiler.
 **Checks.**
 
 ```bash
-./singularity check          # type-check, pane:segments-unique, eslint, boundary-rules,
+./equin check          # type-check, pane:segments-unique, eslint, boundary-rules,
                              # plugin-boundaries, plugins-doc-in-sync, format-clean
 ```
 
@@ -487,8 +487,8 @@ imports change. `boundary-rules` (not `plugin-boundaries`) is the check that wou
 **Tests.**
 
 ```bash
-./singularity test plugins/primitives/plugins/pane
-./singularity test plugins/conversations/plugins/pane-restore
+./equin test plugins/primitives/plugins/pane
+./equin test plugins/conversations/plugins/pane-restore
 ```
 
 **URL invariance — the load-bearing proof.** The URL is a pure function of `(own segment of each
@@ -524,7 +524,7 @@ over the converted panes. Then the headline defect, three ways:
 Do not try to reproduce the defect by clicking: the only opener always runs with the source-detail
 pane in the route, so `openPaneImpl` takes the inherit-from-existing-slot branch (`:909-912`).
 
-**Deploy.** `./singularity build` in the background, then confirm
+**Deploy.** `./equin build` in the background, then confirm
 `~/.singularity/worktrees/<wt>/build-status.json` reads `status: ok` and spot-check the Studio
 Contributions table (`http://<worktree>.localhost:9000`) still shows pane ids — the one surface
 whose degradation no check would catch.

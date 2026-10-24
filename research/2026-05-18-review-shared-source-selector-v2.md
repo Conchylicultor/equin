@@ -97,9 +97,9 @@ No changes to `Source` type, `ReviewProps`, `panes.tsx`, `slots.ts`, or `review-
 
 ## Verification
 
-1. `./singularity build` — clean compile
+1. `./equin build` — clean compile
 2. Open review pane for a conversation with pushes
 3. Switch to a push tab — **both** code-review and plugin-changes update (no placeholder)
 4. Plugin-changes shows the structural diff (slots, exports, contributions) scoped to that push's commit range
 5. Switch back to "Working tree" — both sections show working-tree state
-6. `./singularity check` — no boundary or lint violations
+6. `./equin check` — no boundary or lint violations

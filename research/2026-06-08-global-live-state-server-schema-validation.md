@@ -90,7 +90,7 @@ parse now reports loudly on failure rather than swallowing.
 
 ## Verification
 
-1. `./singularity build` + `./singularity check` (incl. `plugin-boundaries` — no
+1. `./equin build` + `./equin check` (incl. `plugin-boundaries` — no
    new cross-plugin import).
 2. **Happy path:** open `http://<worktree>.localhost:9000`, confirm bell +
    tasks/attempts lists still render (no regression in the message loop).

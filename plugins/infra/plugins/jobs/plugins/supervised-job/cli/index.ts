@@ -27,7 +27,7 @@ export { cliExecContext } from "./internal/cli-exec-context";
  * command whose invoking shell went away, which for this command would kill the
  * very run the design exists to preserve.
  *
- * This file loads on EVERY `./singularity` invocation (commander needs names and
+ * This file loads on EVERY `./equin` invocation (commander needs names and
  * flags before it parses argv), so it imports the verb's own name and
  * `defineCliCommand` and nothing else; `runExec` and the task registry sit
  * behind the deferred `run: () => import(…)`. `cli:command-declarations-light`

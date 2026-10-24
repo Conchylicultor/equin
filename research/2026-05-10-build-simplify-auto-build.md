@@ -8,7 +8,7 @@ Root cause: the server is both the executor of the build AND the subject of the 
 
 ## Fix
 
-**Mental model:** spawn `./singularity build` (without `--no-restart`) and let go. The CLI handles restart natively. Success = server gets restarted. Failure = server stays alive.
+**Mental model:** spawn `./equin build` (without `--no-restart`) and let go. The CLI handles restart natively. Success = server gets restarted. Failure = server stays alive.
 
 ## Changes
 

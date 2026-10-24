@@ -3,7 +3,7 @@
  *
  * Manual only (nothing runs this automatically):
  *
- *   ./singularity run plugins/apps/plugins/deploy/plugins/remote-deploy/e2e/remote-deploy-verify.ts [--headed]
+ *   ./equin run plugins/apps/plugins/deploy/plugins/remote-deploy/e2e/remote-deploy-verify.ts [--headed]
  *
  * It reads the first deployment out of the running app rather than seeding one:
  * a deployment names a real remote host, so creating one here would leave a

@@ -16,7 +16,7 @@
 //
 // Manual, self-contained — NOT wired into any check (tests are manual here):
 //
-//   ./singularity run plugins/primitives/plugins/pane/e2e/slash-mangled-deep-link.ts \
+//   ./equin run plugins/primitives/plugins/pane/e2e/slash-mangled-deep-link.ts \
 //     --conv-id conv-1785314012-zlzw [--url <deploy>] [--wait <ms>]
 //
 // Exit 0 = all pass; exit 1 = a failing assertion (with a printed reason).

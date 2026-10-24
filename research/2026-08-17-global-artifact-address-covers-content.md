@@ -4,7 +4,7 @@ _2026-08-17 — web-artifacts content-addressing_
 
 ## The outage
 
-`./singularity build` failed at compose with
+`./equin build` failed at compose with
 
 ```
 compose: 1 staged import(s) do not link — "@plugins/reorder/web" does not export

@@ -131,7 +131,7 @@ set is filtered.
 
 ## Verification
 
-1. `./singularity build` (rebuilds server + derived views; required for the `pinned.ts` view read).
+1. `./equin build` (rebuilds server + derived views; required for the `pinned.ts` view read).
 2. `bun test plugins/tasks/plugins/tasks-core/core/task-graph.test.ts` — the `A→B→C(done)→D` cases.
 3. In the running app: build a chain where `A`'s only dependent path runs through a **done** middle
    task to an active task `D`. Confirm:

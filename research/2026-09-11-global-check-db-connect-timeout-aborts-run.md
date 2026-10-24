@@ -2,7 +2,7 @@
 
 ## Context
 
-On 2026-09-10/11, `./singularity build` / `check` failed on every branch that was
+On 2026-09-10/11, `./equin build` / `check` failed on every branch that was
 behind main's destructive migrations (e.g. "remove the Workflows and Story apps").
 The transcript only said `run aborted: Error: Connection terminated due to
 connection timeout`. It didn't say which check failed, or why, and it never
@@ -190,14 +190,14 @@ Reused: `buildConnectionString` / `readDatabaseConfig` (`plugins/database/core`)
      - `ok` for `SELECT 1` against `singularity`
      - an error thrown inside `fn` propagates rather than being classified
 
-   Run with `./singularity test plugins/framework/plugins/tooling/plugins/checks`
-   and `./singularity test plugins/database/plugins/migrations`.
+   Run with `./equin test plugins/framework/plugins/tooling/plugins/checks`
+   and `./equin test plugins/database/plugins/migrations`.
 2. **Reproduce the mechanism.** A throwaway script in the scratchpad, run with
-   `./singularity run`. In one process: start a direct connect, then block the
+   `./equin run`. In one process: start a direct connect, then block the
    thread for 8 s with sync work.
    - With the old pool options (5 s): "Connection terminated due to connection
      timeout", against a healthy Postgres.
    - Through `withDirectDb`: `ok`.
-3. **Full pass.** `./singularity check`, then `./singularity build` in the
+3. **Full pass.** `./equin check`, then `./equin build` in the
    background. `build-status.json` should show `status: ok`, and all three
    migration checks should be green.

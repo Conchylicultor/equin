@@ -204,8 +204,8 @@ must agree: `# ` ⇔ level 1).
 
 ## Verification
 
-1. `./singularity build` (background) — `eslint` + `type-check` must pass.
-2. `./singularity test plugins/page/plugins/editor`.
+1. `./equin build` (background) — `eslint` + `type-check` must pass.
+2. `./equin test plugins/page/plugins/editor`.
 3. `bun plugins/page/plugins/editor/e2e/block-semantics-verify.ts` and
    `bun plugins/page/plugins/editor/e2e/block-selection-a11y-verify.ts`
    (the second must still pass — the container's `role="group"` is untouched).

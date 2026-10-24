@@ -2,7 +2,7 @@
 //
 // A namespace's USER-layer config (`~/.singularity/state/config/<ns>/`) is not
 // in git, so no commit can carry a change to it — and a hand-run migration is a
-// step that gets skipped. Instead `./singularity build` replays committed,
+// step that gets skipped. Instead `./equin build` replays committed,
 // keyed entries onto the namespace dir right before it propagates the git
 // config there, and records each applied key in a per-ledger marker file, so an
 // entry runs exactly once per namespace. Two ledgers ride this engine:

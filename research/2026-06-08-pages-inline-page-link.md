@@ -196,7 +196,7 @@ mount → opens on insert, respects a later user-close, and the "page not found"
 - `createPageWithSeed` shape for `createLinkedPage`.
 
 ## Verification
-1. `./singularity build`; open `http://att-1780939137-v16m.localhost:9000` → Pages app.
+1. `./equin build`; open `http://att-1780939137-v16m.localhost:9000` → Pages app.
 2. **`[[` inline:** in a text block type `see [[`, confirm a caret-anchored menu opens with the
    page list; arrows/Enter select; an inline chip appears mid-sentence and is clickable
    (navigates to the page). Reload the page → the chip persists (token round-trips). Verify the
@@ -208,7 +208,7 @@ mount → opens on insert, respects a later user-close, and the "page not found"
    one edge per (source,target) even when both link kinds point to the same target.
 5. **Block picker one-step:** `/link` → the page picker opens immediately (no extra click).
    Select a page; reopen `/link`, press Esc → stays closed (no reopen loop).
-6. Run `./singularity check` (plugin-boundaries, eslint, plugins-doc-in-sync, migrations-in-sync).
+6. Run `./equin check` (plugin-boundaries, eslint, plugins-doc-in-sync, migrations-in-sync).
 7. Scripted check via `e2e/screenshot.mjs` for the `[[` menu open/insert if needed.
 
 ## Risks

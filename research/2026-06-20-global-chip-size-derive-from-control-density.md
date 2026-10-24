@@ -102,7 +102,7 @@ Mechanically delete the `size=` attribute from all `Badge` / `ToggleChip` /
 exploration — e.g. `debug/reports`, `debug/queue`, the `jsonl-viewer/tool-call/*`
 views, `review/*`, `fields/*`, `config_v2/settings`, `shell/notifications`,
 `sonata/*`). **The change is tsc-driven:** after the prop removal + `size?: never`,
-`./singularity check type-check` enumerates every remaining call site, so none
+`./equin check type-check` enumerates every remaining call site, so none
 can be missed. No `ControlSizeProvider` is added in this phase.
 
 ### 4. Docs — make the region-owns-size mental model explicit
@@ -128,7 +128,7 @@ but the user explicitly asked the **css** skill to carry it too. So:
 - **`plugins/primitives/plugins/css/plugins/badge/package.json`** description:
   drop "size ×" from "size × variant chip" (it feeds the autogen doc block).
 - `badge` / `toggle-chip` CLAUDE.md autogen blocks regenerate via
-  `./singularity build` (do not hand-edit).
+  `./equin build` (do not hand-edit).
 
 ### 5. Enforcement
 
@@ -155,8 +155,8 @@ unaffected.
 
 ## Verification
 
-1. `./singularity build` (regenerates autogen docs + runs checks).
-2. `./singularity check type-check` — must be clean; this is also the proof every
+1. `./equin build` (regenerates autogen docs + runs checks).
+2. `./equin check type-check` — must be clean; this is also the proof every
    `size=` call site was migrated (any leftover is a compile error).
 3. Screenshot dense panes to confirm normalization reads fine:
    - `http://<wt>.localhost:9000/agents` → Debug → **Reports** and **Queue**

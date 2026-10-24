@@ -1,12 +1,12 @@
 /**
  * The CLI command declaration — what a plugin's `cli/index.ts` default-exports,
- * and the whole of what `./singularity` knows about a command before it runs it.
+ * and the whole of what `./equin` knows about a command before it runs it.
  *
  * TWO PROPERTIES SHAPE EVERY TYPE HERE.
  *
  * 1. THE DECLARATION IS REACHED ON EVERY INVOCATION; THE IMPLEMENTATION IS NOT.
  *    Commander needs a command's name, flags and help text before it can parse
- *    argv, so every plugin's declaration loads on every single `./singularity`
+ *    argv, so every plugin's declaration loads on every single `./equin`
  *    call — including the hot `build` path. Its implementation must not: that is
  *    why {@link CliCommandSpec.run} hands back the *module* rather than the
  *    function, so the body is behind a dynamic `import()` that only executes
@@ -90,7 +90,7 @@ interface CliLeafSpec<A extends readonly unknown[], O> {
    * `bin/index.ts` arms the guard for EVERY invocation, so a CLI process dies
    * with the shell that started it and can never sit on a host lock after its
    * invoker is gone. A handful of commands are legitimately run detached
-   * (`nohup ./singularity serve-app …` boots a runtime that is *supposed* to
+   * (`nohup ./equin serve-app …` boots a runtime that is *supposed* to
    * outlive the shell); those declare this, and the mapper disarms the guard as
    * the command begins.
    *
@@ -100,11 +100,11 @@ interface CliLeafSpec<A extends readonly unknown[], O> {
   readonly detachable?: boolean;
   /**
    * Everything after the last declared positional argument belongs to the
-   * COMMAND'S OWN payload, not to `./singularity`.
+   * COMMAND'S OWN payload, not to `./equin`.
    *
    * Commander's default is to claim any flag it recognizes and reject any it
    * does not, which is right for every command whose arguments are its own and
-   * wrong for the one command that forwards them: `./singularity run
+   * wrong for the one command that forwards them: `./equin run
    * script.ts --headed` would fail with `unknown option '--headed'`, and even
    * `--help` would print the CLI's help instead of the script's.
    *

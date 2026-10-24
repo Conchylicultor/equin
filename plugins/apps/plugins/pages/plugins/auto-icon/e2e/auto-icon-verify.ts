@@ -11,7 +11,7 @@
 // The page is trashed at the end, whatever happened.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/pages/plugins/auto-icon/e2e/auto-icon-verify.ts \
+//   ./equin run plugins/apps/plugins/pages/plugins/auto-icon/e2e/auto-icon-verify.ts \
 //     [--settle 60000] [--headed]
 
 import type { Page } from "playwright";

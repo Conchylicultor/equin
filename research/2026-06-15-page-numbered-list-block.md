@@ -156,7 +156,7 @@ cross-cutting primitive):
 
 **No changes** to keyboard/intent, block-ops, schema/tables, or the
 markdown-shortcut plugin (all already generic). Registration is filesystem-driven
-— `./singularity build` regenerates the registry; no manual list edit.
+— `./equin build` regenerates the registry; no manual list edit.
 
 ## Numbering semantics (decision)
 

@@ -26,7 +26,7 @@ preloaded, so neither needs eager registration.)
   `RELEASE_TARGETS` is the single source of truth (web picker + server validator
   build from it). Not a slot: adding `tauri` (F5) is one line here. The icon stays
   web-only (the server never imports a UI component).
-- **Run model** (`server/internal/release-job.ts`) wraps `./singularity release
+- **Run model** (`server/internal/release-job.ts`) wraps `./equin release
   --composition <c> --target <t> --dev --out <short-dir>` as a **supervised
   job**: one `defineSupervisedJob` that claims, spawns detached and suspends, so
   a twenty-minute release holds a worker slot for milliseconds. The primitive
@@ -41,7 +41,7 @@ preloaded, so neither needs eager registration.)
   pre-flight liveness probe and no per-plugin orphan sweep left — both were
   second copies of a question the primitive's one reconciler answers.
 - **The spawning backend is never restarted.** Phase 1 of the release CLI shells
-  into `./singularity build --hermetic --composition <c>`, the *hermetic*
+  into `./equin build --hermetic --composition <c>`, the *hermetic*
   posture of `build`: it
   produces the artifact set (filtered registries, migration SQL, web dist) and
   structurally cannot deploy — no gateway spec, no restart, no health probe, no
@@ -74,7 +74,7 @@ preloaded, so neither needs eager registration.)
 
 ## How a release gets its source tree
 
-`./singularity release` (`cli/plugins/release/cli/run.ts`) picks one of three
+`./equin release` (`cli/plugins/release/cli/run.ts`) picks one of three
 modes after reading provenance:
 
 | Invoking checkout | Mode |
@@ -89,7 +89,7 @@ with the same flags plus `--out <out>`, then removes the checkout. Why: a
 release runs for minutes in a tree a `push` can fast-forward in seconds, and tsc
 reading two commits at once broke a deploy. Everything else stays unchanged —
 `release-job.ts`, `enqueueRelease` and the deploy workflow still spawn a plain
-`./singularity release`; the CLI owns the checkout, so hand-run releases are
+`./equin release`; the CLI owns the checkout, so hand-run releases are
 protected too.
 
 Rules that look wrong and are not:
@@ -127,7 +127,7 @@ does not come back from the call that started it — it arrives at the kind's
 back to the promise the starting process was holding. It worked only while that
 process lived, which is precisely what the Deploy app's `update` could not rely
 on: it `await`ed a release in-process for tens of minutes between its converge
-and ship legs, and an unrelated `./singularity build` ended both. `ctx.waitFor`
+and ship legs, and an unrelated `./equin build` ended both. `ctx.waitFor`
 is that mechanism now and it is durable, so the map is deleted rather than
 generalised.
 
@@ -221,7 +221,7 @@ D14) — both live, with no tick and no refetch:
 - **What would `ship` pick?** — `releaseCandidate` (`release.candidate`, params
   `{ composition, platform }`) → `{ resolution, staleness, observedAt }`.
   `resolution` is the EXACT `BundleResolution` `resolveBundle` returns — the
-  same value `./singularity deploy ship` acts on — so a consumer renders
+  same value `./equin deploy ship` acts on — so a consumer renders
   `bundleRefusalMessage(resolution.refusal)` verbatim and **never re-derives
   shippability**. `staleness` compares the **manifest's** provenance (a hand-run
   CLI release writes a manifest and no row). There is no `run`: a filesystem
@@ -260,7 +260,7 @@ compute already running when the run closed (a HEAD-advance recompute in its
 observation can never be the post-close push. The epoch carries the process's
 boot instant, so an ETag from a previous process never matches.
 
-**Known limit:** a hand-run `./singularity release` writes no row, so it
+**Known limit:** a hand-run `./equin release` writes no row, so it
 notifies nothing — it shows on the next HEAD advance, candidate close or
 remount.
 
@@ -331,7 +331,7 @@ mount-then-crash), **zero** console/page errors, and no gateway↔backend 502/40
 request storm on `/api` `/ws` `/zero`. Exit 0 = PASS.
 
 ```bash
-./singularity run plugins/release/e2e/release-boot-verify.ts --url http://localhost:<port>/ --settle 15000
+./equin run plugins/release/e2e/release-boot-verify.ts --url http://localhost:<port>/ --settle 15000
 ```
 
 Always point it at the **bare default-namespace URL** (`http://localhost:<port>/`,
@@ -344,18 +344,18 @@ fine, so pick one that genuinely marks the surface.
 **Web target** — stage with `--dev`, run the launcher, verify against it:
 
 ```bash
-./singularity release --composition <c> --target web --dev   # stages <out>/
+./equin release --composition <c> --target web --dev   # stages <out>/
 <out>/launch &                                                # self-roots data under <out>/data
-./singularity run plugins/release/e2e/release-boot-verify.ts --url http://localhost:9100/ --settle 15000
+./equin run plugins/release/e2e/release-boot-verify.ts --url http://localhost:9100/ --settle 15000
 ```
 
 **Tauri target** — build the `.app`, launch it, verify the served content **and**
 the real window:
 
 ```bash
-./singularity release --composition <c> --target tauri        # builds <out>/bundle/<Name>.app
+./equin release --composition <c> --target tauri        # builds <out>/bundle/<Name>.app
 open "<out>/bundle/<Name>.app"                                 # brings up the embedded stack on RELEASE.json port
-./singularity run plugins/release/e2e/release-boot-verify.ts --url http://localhost:9100/ --settle 15000
+./equin run plugins/release/e2e/release-boot-verify.ts --url http://localhost:9100/ --settle 15000
 ```
 
 The harness covers the *served bytes* (identical to what the WKWebView loads,
@@ -411,7 +411,7 @@ a suspended workflow, not an in-process promise, which is what makes an `update`
 survive the backend restart it used to die of. The lifecycle stays here; nothing
 remote is built here.
 
-<!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
+<!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
 
 ## Plugin reference
 

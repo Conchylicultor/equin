@@ -250,9 +250,9 @@ Run: `bun test plugins/infra/plugins/entities` (after a build/`bun install` so `
 ## Verification
 
 1. `bun test plugins/infra/plugins/entities` — all units green (DDL introspection + schema + snake).
-2. `./singularity build` — compiles; regenerates docs (`plugins-compact.md`, `plugins-details.md`,
+2. `./equin build` — compiles; regenerates docs (`plugins-compact.md`, `plugins-details.md`,
    `infra/CLAUDE.md`, registries) for the new plugin.
-3. `./singularity check` green — specifically:
+3. `./equin check` green — specifically:
    - `type-check` (the cast + mapped types compile; boundary imports legal: entities → fields/core,
      fields/server, drizzle).
    - `plugin-boundaries` (only runtime barrels imported; table stays in `internal/`).
@@ -265,7 +265,7 @@ Run: `bun test plugins/infra/plugins/entities` (after a build/`bun install` so `
 ## Out of scope (follow-ups)
 
 - **Stage D** — re-express the live `slow_ops` table as a `defineEntity` field record, delete the
-  loader projection + `Equal` guard, verify `./singularity build` emits no new migration (DDL
+  loader projection + `Equal` guard, verify `./equin build` emits no new migration (DDL
   byte-identical). This plan's tests prove the shape is reproducible; the migration itself is Stage D.
 - **Stage E/F** — opt-in list semantics (`rank`/`createdAt` presets, create/update schema variants,
   bundled live-state resource) and broader adoption, added only when a real consumer earns them.

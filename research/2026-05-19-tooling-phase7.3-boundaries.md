@@ -8,7 +8,7 @@ Phase 7.0–7.2 created the tooling umbrella at `plugins/framework/plugins/tooli
 - `check.ts` imports `Check`/`CheckResult` from sibling `../checks/types` — after migration that sibling is gone; must import from the umbrella `core/`.
 - `SOURCE_ROOTS` includes `"tooling/src"` — wrong once boundaries lives under `"plugins"`.
 - The `zone("tooling", ...)` entry and two `allow("tooling -> ...")` edges become meaningless once tooling is a plugin.
-- `tooling/src/checks/index.ts` imports `createBoundaryCheck` + root config — must be updated atomically or `./singularity check` breaks.
+- `tooling/src/checks/index.ts` imports `createBoundaryCheck` + root config — must be updated atomically or `./equin check` breaks.
 
 ---
 
@@ -129,7 +129,7 @@ After all moves and consumer updates:
 
 ## Verification
 
-1. **`./singularity check --boundary-rules`** — boundary checker passes; tooling files classified as `plugin.framework.tooling.*`
-2. **`./singularity check`** — all checks pass (confirms `checks/index.ts` import works)
-3. **`./singularity build`** — full build succeeds
+1. **`./equin check --boundary-rules`** — boundary checker passes; tooling files classified as `plugin.framework.tooling.*`
+2. **`./equin check`** — all checks pass (confirms `checks/index.ts` import works)
+3. **`./equin build`** — full build succeeds
 4. **Stale references**: `rg 'tooling/src/boundaries' .` and `rg '"boundary\.config"' .` return nothing

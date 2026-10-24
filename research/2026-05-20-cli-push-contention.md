@@ -2,7 +2,7 @@
 
 ## Context
 
-Multiple agents work in isolated git worktrees. When they push (`./singularity push`), a system-wide `flock(2)` lock at `~/.singularity/push.lock` serializes all pushes. Currently there is zero observability into this — just two `console.log` lines. We need to instrument the push flow, record timing data, and surface it in:
+Multiple agents work in isolated git worktrees. When they push (`./equin push`), a system-wide `flock(2)` lock at `~/.singularity/push.lock` serializes all pushes. Currently there is zero observability into this — just two `console.log` lines. We need to instrument the push flow, record timing data, and surface it in:
 
 1. **Debug > Profiling** — Gantt timeline showing recent pushes with wait/step breakdown
 2. **Stats** — Aggregate charts (wait time distribution, throughput, step breakdown)
@@ -184,11 +184,11 @@ Option A is cleanest — the reader is trivial and keeping it duplicated avoids 
 
 ### 5. Plugin Registration
 
-No manual registry edits needed. The `generatePluginRegistry` codegen auto-discovers plugins by scanning for `<runtime>/index.ts` files with `export default`. Running `./singularity build` handles it.
+No manual registry edits needed. The `generatePluginRegistry` codegen auto-discovers plugins by scanning for `<runtime>/index.ts` files with `export default`. Running `./equin build` handles it.
 
 ## Verification
 
-1. `./singularity build` — deploys with the new plugins
+1. `./equin build` — deploys with the new plugins
 2. Run 2-3 pushes from different worktrees to populate the JSONL file
 3. Verify `~/.singularity/push-contention.jsonl` has correct records
 4. Open Debug > Profiling — verify "Push" Gantt section appears with push rows and step breakdown

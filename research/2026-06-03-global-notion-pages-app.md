@@ -265,7 +265,7 @@ in the target's backlinks.
 - `pageDetailPane` segment must have a static prefix (`page/:pageId`), not bare `:id`.
 
 ## Verification
-1. `./singularity build` (first build after schema change needs
+1. `./equin build` (first build after schema change needs
    `--migration-name pages_tree`).
 2. Open `http://att-1780504206-2hsa.localhost:9000/pages`.
 3. Phase 1: create a page, rename, create a sub-page (nesting), drag to reparent,

@@ -103,8 +103,8 @@ Per the user's "use subagents to save context" and the repo model rules:
 
 ## Verification
 
-- `./singularity build`, load `http://<worktree>.localhost:9000`, open **Debug → Health**: the Memory chart shows a **GPU dirty** series and the caption shows `MB GPU`; cross-check the value against `vmmap -summary <pid> | grep '^IOAccelerator '` for the same backend (should match within rounding) and against `cat logs/health.jsonl` (records now carry `gpuDirtyMb`).
+- `./equin build`, load `http://<worktree>.localhost:9000`, open **Debug → Health**: the Memory chart shows a **GPU dirty** series and the caption shows `MB GPU`; cross-check the value against `vmmap -summary <pid> | grep '^IOAccelerator '` for the same backend (should match within rounding) and against `cat logs/health.jsonl` (records now carry `gpuDirtyMb`).
 - Confirm the sampler does **not** regress latency: event-loop p99 in Debug → Health stays flat (60 s cadence, async spawn).
 - **Root cause:** Phase 2 A/B yields a clear statement — either "`JSC_useFTLJIT=false` holds GPU dirty at ~13 MB" (cause + lever found) or a named alternative trigger from the lldb backtrace.
 - **Decision recorded:** append a short "Findings + decision" section here (lever benchmarked & applied/declined, or upstream repro filed), mirroring the prior track's Findings section.
-- `./singularity check` passes (boundaries, doc-in-sync, type-check).
+- `./equin check` passes (boundaries, doc-in-sync, type-check).

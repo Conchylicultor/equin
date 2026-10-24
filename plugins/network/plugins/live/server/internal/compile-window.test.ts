@@ -6,7 +6,7 @@
  * Lives beside `serveCollection` because the window / point descriptors it
  * compiles are minted only by `network/live`'s own factories
  * (`core/internal/window-descriptor.ts`, internal to `liveCollection`).
- * Run: `./singularity test plugins/network/plugins/live`.
+ * Run: `./equin test plugins/network/plugins/live`.
  */
 
 import { describe, expect, test } from "bun:test";

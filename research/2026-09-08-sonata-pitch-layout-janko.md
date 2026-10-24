@@ -396,7 +396,7 @@ current fractions).
 
 1. `score/core`: add `pitch-plane.ts` + `isAccidental`; export. Nothing consumes yet.
 2. Add the whole `pitch-layout/` plugin with its tests.
-3. `./singularity build` (background) so the registry codegen picks the plugin up.
+3. `./equin build` (background) so the registry codegen picks the plugin up.
 4. `Projection` change (delete `KeyLane`, add `pitchPlane`, nullable accessors);
    fix `geometry.ts`, `piano-keyboard.tsx`, `fx-core.tsx` in the same step.
 5. `geometry.ts` + `piano-roll.tsx` rewrite; `PitchLine` → `PitchGuide`;
@@ -407,7 +407,7 @@ current fractions).
 7. Jankó geometry entry is already in the record (step 2); add `chrome/janko.tsx`.
    The View popover row exists from step 3; Jankó becomes reachable here.
 8. Delete `key-layout.ts`, trim the barrel, update both plugins' `CLAUDE.md`,
-   `./singularity build` for the doc-in-sync check.
+   `./equin build` for the doc-in-sync check.
 
 ## Tests (all `*.test.ts` beside source → bun runner)
 
@@ -433,10 +433,10 @@ current fractions).
 ## Verification
 
 ```
-./singularity check plugin-boundaries
-./singularity check type-check
-./singularity test plugins/apps/plugins/sonata/plugins
-./singularity build          # run_in_background: true
+./equin check plugin-boundaries
+./equin check type-check
+./equin test plugins/apps/plugins/sonata/plugins
+./equin build          # run_in_background: true
 ```
 
 Then at `http://att-1788817374-fqt2.localhost:9000`, open a song, flip

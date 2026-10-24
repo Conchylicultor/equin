@@ -70,7 +70,7 @@ No new files. No migration.
 
 ## Verification
 
-1. `./singularity build` — server restarts, no migration drift.
+1. `./equin build` — server restarts, no migration drift.
 2. SQL: `SELECT id, status FROM conversations;` — existing live rows transition from `starting` to `working` or `needs_attention` within ~1s of server restart.
 3. In a tmux session, type `printf '\033]2;doing stuff\007'` → within 1s: `status = working`, badge turns blue. Clear the title (`printf '\033]2;\007'`) → `status = needs_attention`, badge turns amber.
 4. `curl -N http://<worktree>.localhost:9000/api/conversations/stream` — observe `data: {"type":"status","id":"claude-...","status":"working"}` frames on the transitions above.

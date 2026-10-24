@@ -209,7 +209,7 @@ import line into two — leaf symbols stay, moved symbols repoint.)
   internal files, type aliases, one `default` export. Move JSX into
   `web/components/` per the components-folder convention.
 - **No hand registry edits:** `web.generated.ts` / docs / `dependsOn` regenerate
-  from the filesystem on `./singularity build`. The `Core.Root` moving to
+  from the filesystem on `./equin build`. The `Core.Root` moving to
   `layout` is picked up automatically.
 - **Slot ids unchanged** (`apps.app`, `apps.surface`, etc.) — only plugin ids for
   the new sub-plugins are added; no persisted `config_v2` reorder churn.
@@ -225,16 +225,16 @@ import line into two — leaf symbols stay, moved symbols repoint.)
 5. Create `layout` (move apps-layout.tsx; takes the `Core.Root`).
 6. Slim `apps-core/web/index.ts` to the leaf barrel; drop `Core.Root`.
 7. Repoint `surface` + `app-rail-framing/rail` and the 7 cross-plugin consumers.
-8. `./singularity build` (regenerates registry/docs/migrations + runs checks).
+8. `./equin build` (regenerates registry/docs/migrations + runs checks).
 
 ## Verification
 
-- `./singularity build` — must succeed (regenerates registry + docs; runs
+- `./equin build` — must succeed (regenerates registry + docs; runs
   `type-check`, `plugins-registry-in-sync`, `plugins-doc-in-sync`).
-- `./singularity check plugin-boundaries` — must pass (proves the DAG is acyclic
+- `./equin check plugin-boundaries` — must pass (proves the DAG is acyclic
   and no illegal cross-plugin re-exports / deep imports were introduced). This is
   the single most important gate for this refactor.
-- `./singularity check` — full suite green.
+- `./equin check` — full suite green.
 - Behavioral smoke test (no behavior should change) via the e2e helper, e.g.:
   ```bash
   bun e2e/screenshot.mjs --url http://<worktree>.localhost:9000/agents --out /tmp/apps-core

@@ -8,9 +8,9 @@ introduce a violation in `B.ts` (which imports `A`) even though `B`'s bytes neve
 changed. The repo works around this today with a **build-weak / push-strong**
 split that is confusing and wasteful:
 
-- `./singularity build` lints only the git **diff** (changed files), `--cache`d →
+- `./equin build` lints only the git **diff** (changed files), `--cache`d →
   fast but **unsound** (never checks importers of the changed files).
-- `./singularity push` lints the **affected set** (changed + transitive importers)
+- `./equin push` lints the **affected set** (changed + transitive importers)
   **FRESH** (no eslint cache, `SINGULARITY_ESLINT_NO_CACHE=1`) → sound but
   re-lints the whole affected set from scratch every push.
 - The outer check-cache (`checks/core/cache.ts` + `runner.ts`) keys eslint's
@@ -244,8 +244,8 @@ decision matches too.)
 ## Verification
 
 1. **Build→push shares the outer cache.** On a branch, make a typed change →
-   `./singularity build` (eslint shows `ok`, `~/.singularity/eslint-closure-cache/`
-   gains entries). Without touching the tree → `./singularity push`; the spawned
+   `./equin build` (eslint shows `ok`, `~/.singularity/eslint-closure-cache/`
+   gains entries). Without touching the tree → `./equin push`; the spawned
    `check` subprocess logs `eslint ... ok (cached)`. Temporarily log
    `cacheSignature()` in both and assert byte-identical.
 2. **Cross-file violation still caught (core test).** `A.ts` exports a type used
@@ -253,7 +253,7 @@ decision matches too.)
    in `B.ts` (B's bytes unchanged) → check FAILS, with `B` present in a debug log
    of `toLint`. (Today's content-`--cache` build would falsely pass B.)
 3. **Cold sibling inheritance.** Build W1 (populates global cache); create sibling
-   W2 at the same commit; `./singularity build` in W2 → `toLint` empty/near-empty.
+   W2 at the same commit; `./equin build` in W2 → `toLint` empty/near-empty.
 4. **Config invalidation.** With a warm cache, touch `eslint.config.ts` → whole
    cache invalid (every `fp` changes) → non-trivial `toLint`, replacing
    `bustCacheIfStale`.

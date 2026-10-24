@@ -73,7 +73,7 @@ All other `spawnedBy` values (`"agents-plugin"`, `"conversation-summary"`, `"pol
 
 ## Verification
 
-1. `./singularity build` — confirm clean build
+1. `./equin build` — confirm clean build
 2. Submit a single-card Sonnet task via Improve → should see ONE toast ("Launched with Sonnet"), NOT the "Auto-started" toast
 3. Submit a chained task where card 2 depends on card 1 → complete card 1's task → card 2 should auto-start and show "Auto-started queued task" toast
 4. Toggle auto-start on a task from the task header → no duplicate toast

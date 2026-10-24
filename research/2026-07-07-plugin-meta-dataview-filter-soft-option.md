@@ -158,9 +158,9 @@ Run: `bun test plugins/plugin-meta/plugins/facets/plugins/contributions/facet/in
 
 ## Verification
 
-1. `./singularity build` — regenerates facets/docs; must succeed. Confirms the
+1. `./equin build` — regenerates facets/docs; must succeed. Confirms the
    parser change doesn't perturb `plugins-doc-in-sync` / `plugins-registry-in-sync`.
-2. `./singularity check composition-closure` — must pass with the 10 new
+2. `./equin check composition-closure` — must pass with the 10 new
    contributors in the `data-views` pack (this is the check that previously
    rejected them).
 3. `bun test plugins/plugin-meta/plugins/facets/plugins/contributions/facet/internal/static-parse.test.ts`

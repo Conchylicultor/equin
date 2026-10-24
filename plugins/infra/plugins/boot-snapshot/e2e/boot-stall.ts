@@ -15,7 +15,7 @@
  *   C. normal (warm) reload → the waiting state fades in only if the boot
  *      outlives its grace; a boot inside the grace never shows it.
  *
- *   ./singularity run plugins/infra/plugins/boot-snapshot/e2e/boot-stall.ts [--out /tmp/boot-stall]
+ *   ./equin run plugins/infra/plugins/boot-snapshot/e2e/boot-stall.ts [--out /tmp/boot-stall]
  */
 import {
   arg,

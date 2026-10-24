@@ -105,7 +105,7 @@ remains. Keep the tab mounted (`display:none` preserves keep-alive). Non-minimiz
 
 ## Verification
 
-1. `./singularity build`.
+1. `./equin build`.
 2. Playwright on `http://<worktree>.localhost:9000`:
    - Float a tab (placement control → "Float as window"); open a 2nd window via `+`.
    - Confirm the dock appears bottom-center listing both windows; the focused one is highlighted.

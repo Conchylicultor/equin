@@ -19,8 +19,8 @@
  * detail section) never goes wide: it squeezes into the card at every
  * width, nothing pinned, nothing scrolling sideways.
  *
- * Manual only. Run after `./singularity build`:
- *   ./singularity run plugins/primitives/plugins/data-view/plugins/table/e2e/sticky-scroll.ts \
+ * Manual only. Run after `./equin build`:
+ *   ./equin run plugins/primitives/plugins/data-view/plugins/table/e2e/sticky-scroll.ts \
  *     [--out /tmp/sticky-scroll] [--headed]
  */
 import type { Page } from "playwright";

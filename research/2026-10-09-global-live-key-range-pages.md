@@ -218,7 +218,7 @@ So the head never flashes to `loading`, and the result never drops back from
 
 ## 4. Phases
 
-Each phase builds, passes `./singularity check`, and leaves the app working.
+Each phase builds, passes `./equin check`, and leaves the app working.
 **Only P4 touches `plugins/framework/`, and it needs your approval before it
 starts.**
 
@@ -355,20 +355,20 @@ starts.**
 
 1. **Tests:**
    ```
-   ./singularity test plugins/network/plugins/live
-   ./singularity test plugins/infra/plugins/query-resource
-   ./singularity test plugins/primitives/plugins/live-state
-   ./singularity test plugins/primitives/plugins/data-view
-   ./singularity test plugins/primitives/plugins/virtual-rows
-   ./singularity test plugins/runs
-   ./singularity test plugins/framework/plugins/resource-runtime   # P4
+   ./equin test plugins/network/plugins/live
+   ./equin test plugins/infra/plugins/query-resource
+   ./equin test plugins/primitives/plugins/live-state
+   ./equin test plugins/primitives/plugins/data-view
+   ./equin test plugins/primitives/plugins/virtual-rows
+   ./equin test plugins/runs
+   ./equin test plugins/framework/plugins/resource-runtime   # P4
    ```
    These include the DB oracles: range, union and the page oracle.
 2. **Byte-identity:** the existing golden fixtures are unchanged. The default
    tuples and boot payloads of non-pageable collections are unchanged through
    P1–P4, which `benchmark_boot` compares.
-3. **Build:** `./singularity build` (in the background, then await) and
-   `./singularity check`.
+3. **Build:** `./equin build` (in the background, then await) and
+   `./equin check`.
 4. **Screenshots**
    (`plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts`):
    all-conversations, runs, mail threads and the events list, scrolled 30+ pages

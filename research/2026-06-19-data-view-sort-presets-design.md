@@ -288,7 +288,7 @@ label is unchanged (still counts live rules).
 Adding the `sortPresets` field changes each data-view descriptor's **defaults**,
 so every `<id>.origin.jsonc` regenerates with a **new `// @hash`**, and the
 `config-origins-in-sync` check then fails on the 16 committed `<id>.jsonc`
-overrides whose `@hash` is now stale. After `./singularity build`:
+overrides whose `@hash` is now stale. After `./equin build`:
 
 1. The build regenerates `config/<plugin>/<id>.origin.jsonc` (new hash) for all
    16 data-view ids (see `shared/data-views.generated.ts`).
@@ -296,7 +296,7 @@ overrides whose `@hash` is now stale. After `./singularity build`:
    to match its sibling `.origin.jsonc` first line. Do all 16 mechanically (read
    each origin's first line, patch the override's first line). The 16 ids/plugin
    paths are enumerated in `data-views.generated.ts`.
-3. Run `./singularity check config-origins-in-sync` and `./singularity check
+3. Run `./equin check config-origins-in-sync` and `./equin check
    data-view:configs-authored` — both must pass. Run `type-check`.
 4. Optionally seed one or two example presets in a worked-example config (e.g.
    `config/apps/sonata/library/sonata.library.jsonc`) so the feature is visible.

@@ -121,7 +121,7 @@ agent-manager's index pane and stops being the global fallback. Mirrors the
 
 ## Verification
 
-1. `./singularity build` from the worktree.
+1. `./equin build` from the worktree.
 2. Sonata fixed:
    `bun e2e/screenshot.mjs --url http://att-1780563880-ypfg.localhost:9000/sonata --out /tmp/sonata`
    → piano roll visible, **no** welcome overlay.
@@ -137,4 +137,4 @@ agent-manager's index pane and stops being the global fallback. Mirrors the
 7. Deep-link + back/forward sanity: open a task pane in agent-manager, navigate
    to a leaf, use browser back to the bare root → welcome index re-renders
    (index pane resolves with a stable identity, no remount loop).
-8. `./singularity check` passes (eslint, boundaries, doc-in-sync).
+8. `./equin check` passes (eslint, boundaries, doc-in-sync).

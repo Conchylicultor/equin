@@ -238,5 +238,5 @@ rg "TODO.task-1781184772731" \
 # Expected: empty
 
 # Full type-check + ESLint (includes no-void-fetch-endpoint rule):
-./singularity check type-check
+./equin check type-check
 ```

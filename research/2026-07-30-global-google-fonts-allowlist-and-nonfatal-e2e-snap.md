@@ -229,10 +229,10 @@ knows the escape hatch exists.
 
 ## Verification
 
-1. `./singularity build`
+1. `./equin build`
 2. `bun test plugins/ui/plugins/tokens/plugins/font-family/plugins/google-fonts/web/internal/`
    — the new regression tests.
-3. `./singularity check` — `plugins-doc-in-sync` (files added/removed) and
+3. `./equin check` — `plugins-doc-in-sync` (files added/removed) and
    `plugin-boundaries` (a `scripts/` folder is precedented by tweakcn).
 4. **Re-run the run that died:**
    `bun plugins/page/plugins/editor/e2e/inline-format-verify.ts` — expect all assertions

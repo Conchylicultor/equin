@@ -70,7 +70,7 @@ Add one nullable column: **`endedAt: timestamp`** on `conversations`.
 - Add `endedAt: timestamp("ended_at", { withTimezone: true })` (nullable).
 - Extend `ConversationSchema` with the `.transform()` that adds the `active` sibling field (see above).
 - Export `TERMINAL_STATUSES` and `isActiveStatus` from `plugins/conversations/shared/types.ts`.
-- Migration regenerated via `./singularity build`. Backfill any existing rows with `status = 'obsolete'` to `'abandoned'` in the generated migration (there likely are none today).
+- Migration regenerated via `./equin build`. Backfill any existing rows with `status = 'obsolete'` to `'abandoned'` in the generated migration (there likely are none today).
 
 ### 2. Poller rework
 `plugins/conversations/server/internal/poller.ts`:
@@ -88,13 +88,13 @@ Add one nullable column: **`endedAt: timestamp`** on `conversations`.
 - Remove the `live[id].working`-based count. Per-row "working" indicator elsewhere can still consult `live` independently.
 
 ### 4. Out of scope (done by other agents)
-- **Writing `pushes` rows**: another agent will wire `./singularity push` (or a server-side watcher) to insert into the `pushes` table. This plan only *reads* from it.
+- **Writing `pushes` rows**: another agent will wire `./equin push` (or a server-side watcher) to insert into the `pushes` table. This plan only *reads* from it.
 - Historical active chart in `stats` plugin (schema will be ready).
 - UI to explicitly `abandon` a conversation.
 
 ## Verification
 
-- `./singularity build` → homepage active count matches `status IN (starting, working, needs_attention)`.
+- `./equin build` → homepage active count matches `status IN (starting, working, needs_attention)`.
 - Kill a tmux pane for a conversation with no pushes → SSE emits `status: gone`; DB row: `status = gone`, `ended_at` set; homepage count decrements.
 - Insert a fake `pushes` row for a live conversation, then kill its pane → status lands on `completed` (not `gone`), `ended_at` set.
 - DB sanity: `select status, ended_at, created_at from conversations order by created_at desc;` — every non-active row has `ended_at`.

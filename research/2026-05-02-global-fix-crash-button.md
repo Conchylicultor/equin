@@ -82,7 +82,7 @@ Create:
 - `plugins/crashes/plugins/launch-fix/web/components/launch-fix-button.tsx`
 
 Build step (regenerates `web/src/plugins.generated.ts`):
-- `./singularity build`
+- `./equin build`
 
 ## Critical existing files to reuse
 
@@ -95,7 +95,7 @@ Build step (regenerates `web/src/plugins.generated.ts`):
 
 ## Verification
 
-1. **Build:** `./singularity build` from this worktree.
+1. **Build:** `./equin build` from this worktree.
 2. **Open the app:** `http://att-1777710984-0uwb.localhost:9000`.
 3. **Trigger a synthetic crash.** Easiest path: temporarily edit any plugin contribution component to `throw new Error("boom")` on render (e.g. add a `throw` inside the `improve` toolbar button). Reload the page.
 4. **Verify the banner:** The crashed plugin's region shows the red banner with `Retry` AND a new `Fix` button.

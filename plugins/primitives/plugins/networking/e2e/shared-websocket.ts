@@ -11,8 +11,8 @@
 // live) and dismissed at the end, whatever the outcome.
 //
 // Usage:
-//   1. `./singularity build` (to deploy the current worktree)
-//   2. `./singularity run plugins/primitives/plugins/networking/e2e/shared-websocket.ts [--headed]`
+//   1. `./equin build` (to deploy the current worktree)
+//   2. `./equin run plugins/primitives/plugins/networking/e2e/shared-websocket.ts [--headed]`
 //
 // Exits non-zero on any failure.
 import {

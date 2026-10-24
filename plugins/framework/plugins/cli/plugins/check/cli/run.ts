@@ -138,7 +138,7 @@ function printProgress(): void {
 const ADOPTED_TRANSCRIPT_LINES = 200;
 
 /**
- * The run-level single-flight for a check: an identical `./singularity check`
+ * The run-level single-flight for a check: an identical `./equin check`
  * already in flight in this worktree — same selection, same scope, same
  * `--always-run`, same TREE — is joined instead of run again. Its key carries
  * the tree hash, so a verdict is only ever adopted from a run that started on
@@ -187,7 +187,7 @@ function checkFlight(
       } else {
         console.error(`(the leader's transcript is gone: ${transcript})`);
       }
-      // Last line, so it survives `./singularity check | tail`.
+      // Last line, so it survives `./equin check | tail`.
       if (outcome !== "success")
         console.error(`\nFull check output: ${transcript}`);
       return outcome;
@@ -377,7 +377,7 @@ const run: CliAction<
         checks.length > 0 ? checks : undefined,
         runOpts,
       );
-      // Last line, so it survives `./singularity check | tail`.
+      // Last line, so it survives `./equin check | tail`.
       if (!ok) console.error(`\nFull check output: ${checkLogPath}`);
       return ok ? "success" : "failed";
     },

@@ -342,7 +342,7 @@ Not touched: `data-pane-id` and all five of its readers; `resolve-target.ts`;
 
 ## Migration order
 
-Each step compiles, passes `./singularity check`, and leaves the repo green.
+Each step compiles, passes `./equin check`, and leaves the repo green.
 
 1. **`primitives/pane`** — add the `paneOwnerByInternal` WeakMap + `paneOwnerFor()`
    accessor + the registry-sync population. Additive, no consumers yet. ✅ landed
@@ -360,15 +360,15 @@ Each step compiles, passes `./singularity check`, and leaves the repo green.
    `collectLineage`.
 6. **Docs** — new `ui-context/CLAUDE.md`; update element-picker's "DOM → plugin
    mapping" / "Surviving portals" / "Token format" sections (they name
-   `data-pane-id` and the field list explicitly). `./singularity build` regenerates
+   `data-pane-id` and the field list explicitly). `./equin build` regenerates
    the autogen blocks and `docs/plugins-*.md`.
 
 ## Verification
 
-1. `./singularity build`, then `./singularity check` (`plugin-boundaries`,
+1. `./equin build`, then `./equin check` (`plugin-boundaries`,
    `type-check`, `plugins-doc-in-sync`, `plugins-registry-in-sync`).
-2. `./singularity test plugins/improve/plugins/element-picker` and
-   `./singularity test plugins/primitives/plugins/ui-context`. Test deltas:
+2. `./equin test plugins/improve/plugins/element-picker` and
+   `./equin test plugins/primitives/plugins/ui-context`. Test deltas:
    - `portal-lineage.test.tsx` — imports move; `appendLineage` fixtures gain
      `kind: "contribution"`; **add** a case wrapping `<UiRegion>` around
      `<PluginMarkerMiddleware>` around a portal, asserting the mixed `path`.

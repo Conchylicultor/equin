@@ -171,5 +171,5 @@ Rendered in the viewport when no URL is loaded:
 - All spacing/typography/radius/color via css primitives — no ad-hoc Tailwind
   (`gap-*`, `p-*`, `text-*`, `rounded-*`, raw z-index) — lint will fail.
 - Components live in `web/components/`, not inline in `index.ts`.
-- Never run `drizzle-kit`/migrations manually; `./singularity build` regenerates.
+- Never run `drizzle-kit`/migrations manually; `./equin build` regenerates.
 - Do NOT edit `*.generated.ts` registries — build regenerates them.

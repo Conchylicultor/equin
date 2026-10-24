@@ -178,7 +178,7 @@ Per user decision: defer the conversion to a proper child pane. Miller still wor
 
 **Step 3 — Delete `markMainPane` + the `isMain` branch in `conversation-view.tsx`** (folded into Step 2 since they're entangled). Clean up the four files in §markMainPane removal.
 
-**Step 4 — Per-pane width tuning.** Set `chrome.width` on every pane registration that benefits from a non-default value. Suggested first pass: `agentsRootPane: 280`, `tasksRootPane: 320`, `commitsGraphPane: 520`, all toggle-side panes (tasks, docs, summary, terminal): 400. Tune by eye after `./singularity build`.
+**Step 4 — Per-pane width tuning.** Set `chrome.width` on every pane registration that benefits from a non-default value. Suggested first pass: `agentsRootPane: 280`, `tasksRootPane: 320`, `commitsGraphPane: 520`, all toggle-side panes (tasks, docs, summary, terminal): 400. Tune by eye after `./equin build`.
 
 **Step 5 — File follow-up tasks** via `mcp__singularity__add_task`:
 - "Refactor task-file-peek into a proper child pane of taskDetailPane" (see §Deferred work).
@@ -188,7 +188,7 @@ Per user decision: defer the conversion to a proper child pane. Miller still wor
 ## Verification
 
 ```bash
-./singularity build
+./equin build
 ```
 
 Open `http://<worktree>.localhost:9000`:

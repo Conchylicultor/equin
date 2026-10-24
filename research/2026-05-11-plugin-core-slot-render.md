@@ -498,10 +498,10 @@ Test the middleware pipeline in isolation:
 
 ## Verification
 
-1. `./singularity build` succeeds (TypeScript catches type mismatches)
+1. `./equin build` succeeds (TypeScript catches type mismatches)
 2. App renders at `http://<worktree>.localhost:9000`
 3. Crash a Core.Root contribution → error banner with Fix button appears (middleware active)
 4. Edit mode → drag handles appear on multi-item render slots, not on singletons
 5. Reorder, hide, restore all work on migrated slots
-7. `./singularity check` passes
+7. `./equin check` passes
 8. Screenshot comparison before/after for each migrated slot

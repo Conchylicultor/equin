@@ -424,7 +424,7 @@ plugins/framework/plugins/tooling/plugins/lint/plugins/hover-reveal-safety/lint/
 ## Verification
 
 ```bash
-./singularity check type-check
+./equin check type-check
 ```
 
 Confirm zero `hover-reveal-safety/no-uncoupled-hover-reveal` violations.

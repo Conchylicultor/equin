@@ -93,7 +93,7 @@ filters: {
 
 | Thing                   | Behavior                                                                              |
 | ----------------------- | ------------------------------------------------------------------------------------- |
-| **Durability**          | Jobs survive server restart. Clean shutdowns (SIGTERM, `./singularity build`) drain in-flight handlers before exit. Unclean crashes (SIGKILL, OOM, `process.exit()` mid-handler) are recovered by the stuck-lock sweeper within ~5 min — at-least-once, so handlers must be idempotent. |
+| **Durability**          | Jobs survive server restart. Clean shutdowns (SIGTERM, `./equin build`) drain in-flight handlers before exit. Unclean crashes (SIGKILL, OOM, `process.exit()` mid-handler) are recovered by the stuck-lock sweeper within ~5 min — at-least-once, so handlers must be idempotent. |
 | **Retries**             | Graphile retries failed handlers with exponential backoff up to `maxAttempts` (default 5). |
 | **Dispatch latency**    | Sub-second via Postgres `LISTEN/NOTIFY`; falls back to ~1s polling if `LISTEN` is unavailable. |
 | **oneShot delete**      | Fires after a handler succeeds (post-retry), inside the worker. Preserved on permanent failure. |

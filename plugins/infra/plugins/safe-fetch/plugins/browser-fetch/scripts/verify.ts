@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 // ─── Drive the primitive against a real URL ───────────────────────────────────
 //
-//   ./singularity run plugins/infra/plugins/safe-fetch/plugins/browser-fetch/scripts/verify.ts <url> [--selector <css>]
+//   ./equin run plugins/infra/plugins/safe-fetch/plugins/browser-fetch/scripts/verify.ts <url> [--selector <css>]
 //
 // This exists because the orchestrator CANNOT be unit-tested against a local
 // fixture server: it correctly refuses `localhost`, and adding a test-only SSRF

@@ -163,17 +163,17 @@ website build free of tasks, conversations and auth.
 
 ## Verification
 
-1. `./singularity test plugins/apps/plugins/website/plugins/improve`: tests for
+1. `./equin test plugins/apps/plugins/website/plugins/improve`: tests for
    `buildIssueUrl`:
    - title from the first line and its truncation;
    - the body contains the page URL and the auto-deploy choice;
    - the URL length stays within the cap for very long text;
    - special characters are encoded.
-2. `./singularity check composition-closure` and `./singularity check
+2. `./equin check composition-closure` and `./equin check
    plugin-boundaries`: the website build still leaves out tasks,
    conversations, auth and the page editor.
-3. `./singularity build`, then
-   `./singularity run plugins/apps/plugins/website/plugins/improve/e2e/improve-verify.ts`
+3. `./equin build`, then
+   `./equin run plugins/apps/plugins/website/plugins/improve/e2e/improve-verify.ts`
    on `/website`. The script checks:
    - The header shows Improve and no "Get in touch". The footer shows the email
      and the GitHub link. The contact band still has two cards and no link row.
@@ -186,7 +186,7 @@ website build free of tasks, conversations and auth.
      off and "Merged & deployed" with it on.
    - ⌘↵ in the field starts the replay.
    - It takes screenshots at 1280 px and 420 px.
-4. `./singularity run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts
+4. `./equin run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts
    --name proto-1788797350-gqju --options theme=launch,improve=replay`. This
    compares the page at rest against the mock. The header and footer are
    expected to differ where the decisions above changed the mock (no Contact

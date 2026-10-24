@@ -13,7 +13,7 @@
 //     gallery.
 //
 // Usage:
-//   ./singularity run plugins/apps-core/plugins/app-launcher/e2e/launcher.ts [--headed]
+//   ./equin run plugins/apps-core/plugins/app-launcher/e2e/launcher.ts [--headed]
 
 import {
   pathUrl,

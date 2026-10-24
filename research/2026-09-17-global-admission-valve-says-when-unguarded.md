@@ -124,13 +124,13 @@ watcher, the guard is off, and saying so is the point of this task.
      the code.
    - Valve: `checkValveGuard` returns `null` when not gated or guard on, and the
      note (plus one printed line) when gated and off.
-   - `./singularity test plugins/debug/plugins/sentinel plugins/framework/plugins/cli/plugins/op-runtime`.
-2. **Real file.** A scratch script under `./singularity run` calls the production
+   - `./equin test plugins/debug/plugins/sentinel plugins/framework/plugins/cli/plugins/op-runtime`.
+2. **Real file.** A scratch script under `./equin run` calls the production
    deps' `duressGuard()` against the live `locks/sentinel/status.json` and prints
    the result (main runs the fixed watcher since `9c4686dba`, so expect `on`).
 3. **Lean import.** Measure the leaf's server barrel with `importClosure`
    (`tooling/import-closure`) and confirm no `config_v2`, `live-state`, `jobs`
-   or `database` module. `./singularity build` passing (it runs the CLI's own
+   or `database` module. `./equin build` passing (it runs the CLI's own
    lightness checks and `plugin-boundaries`) confirms the CLI edge is legal.
-4. **Deploy.** `./singularity build` for this worktree: with the watcher running,
+4. **Deploy.** `./equin build` for this worktree: with the watcher running,
    the headline has no guard note.

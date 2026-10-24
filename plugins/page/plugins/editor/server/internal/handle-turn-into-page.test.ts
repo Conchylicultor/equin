@@ -9,8 +9,8 @@
  * take its slot at the head of the page in order, every remaining row is
  * re-scoped into the new page, and an empty block is seeded.
  *
- * Run: `./singularity test plugins/page/plugins/editor`
- * (requires the running embedded cluster — `./singularity build` first).
+ * Run: `./equin test plugins/page/plugins/editor`
+ * (requires the running embedded cluster — `./equin build` first).
  */
 
 import {

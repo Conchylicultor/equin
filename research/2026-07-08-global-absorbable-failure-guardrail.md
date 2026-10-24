@@ -134,7 +134,7 @@ Detection (all pieces proven in shipping rules):
   loudly"); jiti means the enforcing lint rule couldn't import it anyway;
   the local `{kind:"ok"}|{kind:"error"}` union idiom (≥4 files) is blessed
   and documented instead.
-- **New `./singularity check`**: the only lint-invisible shape (destructured
+- **New `./equin check`**: the only lint-invisible shape (destructured
   spawn discarding `exitCode`) is cured by making `run` throw, not by a
   scanner.
 - **Persist-layer guard for #13**: a hard block risks false-positive boot
@@ -203,9 +203,9 @@ Detection (all pieces proven in shipping rules):
 2. Lint rule: `RuleTester` suite (positive: `catch{return []}`,
    `.catch(()=>null)`, `catch{return 0}`, identifier-init cases; negative:
    rethrow branch, `{kind:"error"}` return, disable-with-reason), then
-   `./singularity check type-check` green repo-wide; removing an allowlist
+   `./equin check type-check` green repo-wide; removing an allowlist
    entry re-flags.
-3. `./singularity build`, then behavior checks against
+3. `./equin build`, then behavior checks against
    `http://<worktree>.localhost:9000`:
    - Induce a git failure in a conversation worktree (e.g. transient
      `index.lock`) ⇒ exit button must NOT settle on "Drop & Close"; the
@@ -215,6 +215,6 @@ Detection (all pieces proven in shipping rules):
    - Recovery pane with the endpoint 500-injected ⇒ error+retry state, not
      "No recently closed conversations".
 4. CLI: in a scratch worktree, make `git status` fail (chmod the index) ⇒
-   `./singularity push` must abort loudly, not proceed as clean; normal
+   `./equin push` must abort loudly, not proceed as clean; normal
    dirty tree still prints the uncommitted-changes error; `-m` flow still
    commits.

@@ -448,7 +448,7 @@ These produce no error and no test failure today.
 
 ## Verification
 
-`./singularity build` first, then per stage:
+`./equin build` first, then per stage:
 
 - **Stage 0** — `bun test plugins/page/plugins/editor/core/runs-yjs.test.ts`; the
   new property test must show the two length walks agree over the fuzz corpus for

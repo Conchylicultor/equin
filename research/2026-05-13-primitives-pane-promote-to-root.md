@@ -97,7 +97,7 @@ Add `promote: false` documentation alongside existing `close: false` docs.
 
 ## Verification
 
-1. `./singularity build`
+1. `./equin build`
 2. Open a conversation via tasks view (nested, depth > 0) — promote button should appear
 3. Click promote — conversation becomes root of chain at `/c/:convId`
 4. Open a conversation directly (`/c/:convId`) — no promote button (depth 0)

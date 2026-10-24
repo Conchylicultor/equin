@@ -41,7 +41,7 @@ const check: Check = {
       return {
         ok: false,
         message: "docs/plugins-compact.md is missing",
-        hint: "Run `./singularity build` to generate it.",
+        hint: "Run `./equin build` to generate it.",
       };
     }
     const detailsFile = pluginDetailsDocPath(root);
@@ -49,7 +49,7 @@ const check: Check = {
       return {
         ok: false,
         message: "docs/plugins-details.md is missing",
-        hint: "Run `./singularity build` to generate it.",
+        hint: "Run `./equin build` to generate it.",
       };
     }
 
@@ -63,7 +63,7 @@ const check: Check = {
       return {
         ok: false,
         message: "docs/plugins-compact.md is out of sync with plugin source",
-        hint: "Run `./singularity build` and commit the regenerated file.",
+        hint: "Run `./equin build` and commit the regenerated file.",
       };
     }
     if (
@@ -76,7 +76,7 @@ const check: Check = {
       return {
         ok: false,
         message: "docs/plugins-details.md is out of sync with plugin source",
-        hint: "Run `./singularity build` and commit the regenerated file.",
+        hint: "Run `./equin build` and commit the regenerated file.",
       };
     }
 
@@ -103,7 +103,7 @@ const check: Check = {
         return {
           ok: false,
           message: `${file.replace(`${root}/`, "")} AUTOGEN block is out of sync with plugin source`,
-          hint: "Run `./singularity build` and commit the regenerated file.",
+          hint: "Run `./equin build` and commit the regenerated file.",
         };
       }
 
@@ -124,7 +124,7 @@ const check: Check = {
               : refExisting === null
                 ? `${rel} is missing`
                 : `${rel} is out of sync with plugin source`,
-          hint: "Run `./singularity build` and commit the regenerated file.",
+          hint: "Run `./equin build` and commit the regenerated file.",
         };
       }
     }

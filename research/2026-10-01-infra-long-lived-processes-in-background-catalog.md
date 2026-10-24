@@ -177,7 +177,7 @@ this is the only shape that needs no watcher on a process we did not parent.
 - **Gateway**:
   - The launcher's server barrel declares `hostGatewayDaemon` (`startedBy: "boot"`, `where: "every-worktree"`).
   - `onReady` attaches it to `gatewayPidFile(<this process's data root>)`.
-  - Description: the Go gateway that routes `*.localhost:9000`, supervises this backend, Postgres and PgBouncer, and is started by `./singularity start`, launchd or the release launcher.
+  - Description: the Go gateway that routes `*.localhost:9000`, supervises this backend, Postgres and PgBouncer, and is started by `./equin start`, launchd or the release launcher.
   - `spawnGatewayDaemon` stays a raw spawn in `boot.ts`. It runs in the CLI and launcher, not in the backend, so there is no catalog to register into. Its `ignores` reason is rewritten to say that.
 
 ### Lint
@@ -216,15 +216,15 @@ this is the only shape that needs no watcher on a process we did not parent.
 
 ## Verification
 
-1. Run `./singularity test plugins/infra/plugins/spawn/plugins/daemon`. The supervision unit tests use a fake spawn and cover:
+1. Run `./equin test plugins/infra/plugins/spawn/plugins/daemon`. The supervision unit tests use a fake spawn and cover:
    - backoff doubling
    - a rapid-exit give-up
    - `ready` and survival healthy resets
    - stop with no respawn
    - the `detached` pid-file states (missing → starting, dead → failed)
    - the lint rule tests
-2. Run `./singularity check` (type-check, eslint, boundary rules, plugins-doc-in-sync).
-3. Run `./singularity build`, then `screenshot.ts --path /debug/background` and a screenshot of the Sentinel entry's detail pane. Expect the "Long-lived processes" group to show:
+2. Run `./equin check` (type-check, eslint, boundary rules, plugins-doc-in-sync).
+3. Run `./equin build`, then `screenshot.ts --path /debug/background` and a screenshot of the Sentinel entry's detail pane. Expect the "Long-lived processes" group to show:
    - the sentinel (on main; elsewhere as "not in this worktree")
    - the gateway with its pid and uptime
    - paging probe with 0 instances

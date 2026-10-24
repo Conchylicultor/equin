@@ -383,7 +383,7 @@ In dependency order:
 
 ## Verification
 
-`./singularity build`, then drive the deployed app.
+`./equin build`, then drive the deployed app.
 
 **Automated** — new `e2e/mark-boundary-verify.ts`, modelled on
 `e2e/inline-format-verify.ts` and reusing `e2e/support/blank-page.ts`
@@ -433,9 +433,9 @@ a mark that never left the browser.
   from `selection.format` — typing at depth 1 into an empty marked node may rewrite
   that node's marks instead of creating a sibling. Confirm.
 
-Also run `./singularity check` (`type-check` covers the widened `CaretContext`
+Also run `./equin check` (`type-check` covers the widened `CaretContext`
 across both construction sites) and
-`./singularity test plugins/page/plugins/editor`.
+`./equin test plugins/page/plugins/editor`.
 
 ## Follow-ups (file as separate tasks)
 

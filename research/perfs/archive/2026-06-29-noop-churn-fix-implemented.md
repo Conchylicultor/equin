@@ -88,7 +88,7 @@ count (usually 0) and hits the PK — it does not reintroduce the all-history sc
 
 ## Verification status
 
-- `./singularity build` clean; `./singularity check` (all checks incl. type-check,
+- `./equin build` clean; `./equin check` (all checks incl. type-check,
   plugin-boundaries, no-db-backed-notify) green.
 - Boundary invariant confirmed live in the worktree DB (function body).
 - **Behavioral rate-drop confirmation deferred to `singularity`**: the poller's orphan adoption is

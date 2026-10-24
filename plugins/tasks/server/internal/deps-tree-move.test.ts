@@ -18,7 +18,7 @@ import { applyDepsTreeMove } from "./deps-tree-move";
 // ever fires during a move.
 //
 // Requires the running embedded cluster with this worktree's DB built
-// (`./singularity build` first):
+// (`./equin build` first):
 //   bun test plugins/tasks/server/internal/deps-tree-move.test.ts
 
 const P = "dmt-"; // id prefix — isolates our reads from real tasks in the DB

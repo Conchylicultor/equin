@@ -336,7 +336,7 @@ literal whole build.
   injected valve deps (`ValveDeps` already exists for exactly this): duress trips *while parked* ⇒
   the grant is released and the build re-holds; a `fail-open` hold ⇒ the loop proceeds and does
   **not** spin. Existing `admission-valve` and `host-admission/grant` tests must pass unmodified.
-- **Instrumentation lands (live):** run `./singularity build` (full checks, so the worker fleet
+- **Instrumentation lands (live):** run `./equin build` (full checks, so the worker fleet
   spawns) and confirm the build profile + build.log now carry `maxRSS` for: each type-check worker,
   drizzle gen, `bun install`, the orchestrator, vite. Before this change the worker + drizzle +
   orchestrator lines do not exist at all.
@@ -346,7 +346,7 @@ literal whole build.
   ```
 - **Units are honest:** a child whose true peak is `3.54e9 B` prints `3.5 GB` (decimal), not
   `3.3 GB`.
-- **No behaviour drift:** `./singularity check host-budget` passes unchanged; `B` is still 11
+- **No behaviour drift:** `./equin check host-budget` passes unchanged; `B` is still 11
   (`bun -e` printing `cpuBudget()`); a solo build's worker fan-out is unchanged.
 - **Valve drill (live):** set the latch from the main worktree, start an agent build → it holds at
   the valve. Then: start a build while the host is **calm**, let it park in the grant queue, trip the

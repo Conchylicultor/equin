@@ -256,8 +256,8 @@ interface Throttle {                                // shared by both kinds
   - Template rendering, including rejection of an unknown variable.
   - Throttle and per-key dedupe in `runAutomation`.
   - The updated `upgrade-prompt.test.ts`.
-  - Run them with `./singularity test plugins/tasks/plugins/automations`.
-- **Deploy:** run `./singularity build`, then:
+  - Run them with `./equin test plugins/tasks/plugins/automations`.
+- **Deploy:** run `./equin build`, then:
   - Change the deps cadence in the pane.
   - Check that Background activity shows the new next run with no restart.
   - Edit the prompt, use Run now, and check that the filed task's description

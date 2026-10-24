@@ -1,6 +1,6 @@
 # Bound host-wide `git worktree` mutations (add/remove) — throughput gate (DESIGN)
 
-**Status:** Implemented + `./singularity build` green (all 60 checks) — **NOT yet validated on
+**Status:** Implemented + `./equin build` green (all 60 checks) — **NOT yet validated on
 data.** The required Phase-2 launch-during-reap trace has **not** run: the box was saturated
 (load 40–42 / 18 cores) at implementation time, so the worktree backend could not finish cold
 boot (15 s readiness) to deploy, and a heavy 6-way git-churn trace on an already-saturated box
@@ -202,7 +202,7 @@ Reproduce the issue doc's controlled methodology, gate **off** vs **on**:
      reap; the new `worktree-mutate-acquire` wait span makes the gate queue observable and
      attributable.
    - Confirm `worktree-cleanup.reap-stale` no longer holds 6 concurrent removes.
-3. `./singularity build` green (all checks) before and after.
+3. `./equin build` green (all checks) before and after.
 
 **Counterfactual exit test (Phase 4):** under the same load, does the fix make the pile-up
 **not hurt** (bounded, fair sharing) rather than **not happen**? Yes — and that is the intended
@@ -215,7 +215,7 @@ the checkout.
 - **[cost-axis origin — the real root] Prove or refute checkout irreducibility. → DONE 2026-07-02,
   assumption REFUTED — see [`2026-07-02-worktree-checkout-clonefile-DESIGN.md`](./2026-07-02-worktree-checkout-clonefile-DESIGN.md).**
   Measured: agents modify **< 1 %** of the 8475-file tree (median ~5–8 files, max 72). But
-  *sparse-checkout is dead* — the mandatory `./singularity build` type-checks/reads the **whole
+  *sparse-checkout is dead* — the mandatory `./equin build` type-checks/reads the **whole
   tree** (fraction *read* ≈ 100 %; `setupWorktree` even seeds `.tsbuildinfo` for exactly this
   reason), so a partial tree is a *broken* worktree, not a cheaper one. The cost is still reducible,
   just via a lever this doc didn't consider: the tree must be **present** but on APFS need not be

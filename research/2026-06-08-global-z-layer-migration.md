@@ -172,11 +172,11 @@ does not match negatives, it is not in the allowlist, and the scale has no
 
 ## Verification
 
-1. `./singularity check eslint` — must pass with the allowlist emptied (this is
+1. `./equin check eslint` — must pass with the allowlist emptied (this is
    the definitive proof: every raw z-index is gone, since the rule now applies to
-   all 33 formerly-exempt files). Also run full `./singularity check` so the
+   all 33 formerly-exempt files). Also run full `./equin check` so the
    `plugins-doc-in-sync` check validates the CLAUDE.md edit.
-2. `./singularity build` — deploys; confirm the app boots at
+2. `./equin build` — deploys; confirm the app boots at
    `http://att-1780939377-5n5s.localhost:9000` and watch for Tailwind warnings
    about the `**:data-[slot=kbd]:z-popover` variant (confirm the custom
    `@utility` is generated in variant form; the tooltip kbd badge should still

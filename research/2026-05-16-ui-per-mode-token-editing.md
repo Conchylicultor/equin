@@ -109,7 +109,7 @@ Add: `export { TokenModeContext, type TokenMode } from "./internal/token-mode-co
 
 ## Verification
 
-1. `./singularity build` — builds and deploys
+1. `./equin build` — builds and deploys
 2. Open `http://<worktree>.localhost:9000`, navigate to theme customizer pane
 3. Test "Both" mode — editing a color token applies to both (existing behavior preserved)
 4. Switch to "Dark" — page goes dark, color swatches show dark-mode values

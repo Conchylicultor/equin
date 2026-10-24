@@ -112,7 +112,7 @@ Create a sibling under
 
 - `web/src/plugins.ts`: import `conversationForkSessionPlugin` and append
   to the registry array.
-- Run `./singularity build` from this worktree — the build runs the
+- Run `./equin build` from this worktree — the build runs the
   `plugins-doc-in-sync` check and regenerates `docs/plugins.md`
   automatically; commit whatever diff it produces.
 
@@ -138,7 +138,7 @@ plugins/conversations/plugins/conversation-view/plugins/fork-session/web/compone
 
 ## Verification
 
-1. `./singularity build` — must succeed (plugin-boundaries +
+1. `./equin build` — must succeed (plugin-boundaries +
    plugins-doc-in-sync checks pass).
 2. Open `http://att-1777201710-9x8m.localhost:9000`, create a
    conversation, wait for Claude to land.

@@ -53,7 +53,7 @@
  *
  * Manual only — nothing runs this automatically. Refuses main (the DB check
  * reads this deploy's database).
- *   ./singularity run plugins/apps/plugins/demo/e2e/no-leak.ts [--out /tmp/demo-no-leak] [--headed]
+ *   ./equin run plugins/apps/plugins/demo/e2e/no-leak.ts [--out /tmp/demo-no-leak] [--headed]
  */
 import type { Locator, Page, Request, WebSocket } from "playwright";
 import { tapSharedSocket } from "@plugins/primitives/plugins/networking/e2e";

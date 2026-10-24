@@ -169,7 +169,7 @@ gets scope transitively), `midi-card-meta.tsx` (a slot contribution, no chrome).
 
 - Add `card` to the web plugin registry the same way `row`/`badge` are registered
   (`web/src/plugins.ts` per the registry-exclusivity rule — confirm exact file during impl).
-- `bun install` (new workspace package), then `./singularity build`.
+- `bun install` (new workspace package), then `./equin build`.
 
 ## Critical files
 
@@ -184,8 +184,8 @@ gets scope transitively), `midi-card-meta.tsx` (a slot contribution, no chrome).
 
 ## Verification
 
-1. `./singularity build` — must succeed (migrations/docgen no-op; this is web-only).
-2. `./singularity check` — `eslint` (new `card/no-adhoc-card` must pass: every flagged
+1. `./equin build` — must succeed (migrations/docgen no-op; this is web-only).
+2. `./equin check` — `eslint` (new `card/no-adhoc-card` must pass: every flagged
    site is either migrated or has a justified disable) and `plugin-boundaries` (confirm the
    `web-core → select-scope` import is accepted; no new cycle).
 3. Scripted Playwright at `http://att-1781017709-8iuw.localhost:9000`:

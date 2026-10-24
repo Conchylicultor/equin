@@ -95,7 +95,7 @@ Each row is one delegatable sub-task. Implementation details (exact files beyond
 | 1 | **Foundation** | `plugin-inspector` + `plugin-graph` umbrella + both panes + `default-lenses` (only `imports` enabled) + `default-rails` (only `overview` enabled) | — | Open Plugin Graph from sidebar → ~90 nodes laid out via dagre with import edges → click any node → child column shows overview → URL `/plugin-graph/node/<id>` is shareable. |
 | 2 | **Full defaults** | Extend `default-lenses` with `slots` + `endpoints` + `hierarchy` (compound mode) → extend `default-rails` with the five remaining sections → ship `default-filters` → ship `search` | Task 1 | Lens toggles work; hierarchy renders as nested clusters; runtime/load-bearing filters apply pre-layout; reverse-index entries in the rail are clickable and re-focus the graph; search highlights the matched node. |
 | 3 | **Event lens** | Extend `plugin-inspector` parser to derive event subscriber→producer edges from `defineTriggerEvent` and `register` token lists; add `eventEdges` to `GraphPayload`; ship `event-lens` plugin | Task 1 | Toggling the Events lens connects `git-watcher` ↔ subscribers; sample-check three known event consumers. |
-| 4 | **CLI unification** (later) | Extract parser into a shared workspace package; both `cli/src/docgen.ts` and `plugin-inspector/server/internal/parser.ts` import from it; remove the duplication tag | Task 1 (and ideally Task 3 to avoid re-doing the schema split) | `./singularity check` (incl. `plugins-doc-in-sync`) passes; both consumers emit identical reverse indexes for one spot-checked plugin. |
+| 4 | **CLI unification** (later) | Extract parser into a shared workspace package; both `cli/src/docgen.ts` and `plugin-inspector/server/internal/parser.ts` import from it; remove the duplication tag | Task 1 (and ideally Task 3 to avoid re-doing the schema split) | `./equin check` (incl. `plugins-doc-in-sync`) passes; both consumers emit identical reverse indexes for one spot-checked plugin. |
 
 ## Critical files / precedents to reuse
 
@@ -113,7 +113,7 @@ Each row is one delegatable sub-task. Implementation details (exact files beyond
 - After Task 1: open `http://<worktree>.localhost:9000` → Plugin Graph in sidebar → ~90 nodes laid out, import edges drawn → click `tasks-core` → child pane shows correct overview → reload preserves selection via URL.
 - After Task 2: cycle each lens toggle (imports/slots/endpoints/hierarchy) → graph re-renders correctly; hierarchy clusters group `infra/*`, `active-data/*`, `stats/*`; runtime filter "server only" hides web-only plugins; search jumps to a node by name; reverse-index entries in the rail are all clickable.
 - After Task 3: events lens shows `git-watcher` ↔ its subscribers; spot-check `tasks-core.taskStatusChanged` consumers.
-- After Task 4: `./singularity check` passes; CLI docgen and the inspector endpoint emit identical reverse indexes for one spot-checked plugin.
+- After Task 4: `./equin check` passes; CLI docgen and the inspector endpoint emit identical reverse indexes for one spot-checked plugin.
 
 ## Out of scope
 

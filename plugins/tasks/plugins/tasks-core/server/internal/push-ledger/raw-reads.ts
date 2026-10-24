@@ -57,7 +57,7 @@ export async function existingAttemptIds(
  * The newest commit date the ledger holds, or null when it holds nothing.
  *
  * This is the ledger's own high-water mark, and it is what bounds the git walk.
- * `pushes.created_at` is the commit's COMMITTER date, which `./singularity push`
+ * `pushes.created_at` is the commit's COMMITTER date, which `./equin push`
  * rewrites to the push time when it rebases — so it tracks `main`'s history
  * order, not the author's clock.
  */

@@ -159,7 +159,7 @@ row as the parent of workflow agents).
 
 ## Verification
 
-- Unit tests (`./singularity test <plugin>`):
+- Unit tests (`./equin test <plugin>`):
   - `discovery.test.ts`: a temp root containing flat agents, `workflows/wf_a/agent-*` and a
     journal. Entries are tagged, watch dirs include `workflows` and `wf_a`, and
     signature paths include the journal.
@@ -169,7 +169,7 @@ row as the parent of workflow agents).
     ended-without-reporting; `turnEnded` still wins over a live run.
   - `agent-rows.test.ts`: run row + children, ancestor kept while a child
     lingers, summary counts agents only.
-- `./singularity build`, then in the deployed worktree app, launch a small workflow
+- `./equin build`, then in the deployed worktree app, launch a small workflow
   (2 phases, 2–3 agents) from a conversation. Screenshot with
   `e2e-harness/e2e/screenshot.ts --path /agents/c/<id>`. Check that the band shows
   the run row with agents under it, agents flip to done as their `result` lands,

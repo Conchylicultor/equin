@@ -176,7 +176,7 @@ liveCollection("conversations.history", {
    - deploy servers: an `all` collection with `sshKey` moved to a per-id lookup; health `ok` as `status`; delete `Servers.Fields`.
    - events: the `sourceId` options hook; delete `EventList.Fields`.
    - The other ~15 DataView collections move to `fields:` / `from`+`pick`.
-6. Docs: `CLAUDE.md` for live, data-view, entity-extensions and entities, and the per-plugin docs that name deleted slots. Run `./singularity build`, review, then push when told.
+6. Docs: `CLAUDE.md` for live, data-view, entity-extensions and entities, and the per-plugin docs that name deleted slots. Run `./equin build`, review, then push when told.
 
 ### Push 2b
 
@@ -209,7 +209,7 @@ After 2a: update the track page and file the 2b task, in case 2b runs in a fresh
   - a `tasks_ext_track` write refills only that task's rows in `taskRows` and its conversations;
   - a starred write refills one page.
 - **Saved-view ids are unchanged.** A test asserts the derived ids of each migrated list equal today's.
-- `./singularity check` (type-check, live check, plugins-doc-in-sync), then `./singularity build`.
+- `./equin check` (type-check, live check, plugins-doc-in-sync), then `./equin build`.
 - **e2e:**
   - `sidequest-filter.ts` (Phase 1), re-run;
   - extend it to the task list: Track = Sidequest, plus group by Category;

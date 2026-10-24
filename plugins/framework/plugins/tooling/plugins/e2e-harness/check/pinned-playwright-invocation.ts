@@ -139,7 +139,7 @@ const check: Check = {
         `A package runner resolves ${TOOL} outside the workspace and falls back to registry \`latest\`, ` +
         `so it can provision (and pin against Playwright's GC) a chromium revision no launch site here ever loads. ` +
         `\`bun run\` resolves the root package.json's \`${TOOL}\` script, i.e. this checkout's own installed binary. ` +
-        `To RUN a repo script rather than the tool, use \`./singularity run <script.ts>\`. ` +
+        `To RUN a repo script rather than the tool, use \`./equin run <script.ts>\`. ` +
         `A TypeScript COMMENT explaining the rule is exempt (comments are masked); a string, or any line in a doc, is not.`,
     };
   },

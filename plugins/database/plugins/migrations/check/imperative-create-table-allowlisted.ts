@@ -234,7 +234,7 @@ const check: Check = {
         `will flag it as dead schema on a later build. Add a name constant there, add it to the ` +
         `IMPERATIVE_PUBLIC_TABLES record BY SHORTHAND, and interpolate that constant by its canonical name on the ` +
         `CREATE TABLE line (e.g. \`CREATE TABLE IF NOT EXISTS \${MY_TABLE} (…)\`). To create a tracked, ` +
-        `drizzle-managed table instead, define it in the plugin's tables.ts and run ./singularity build. ` +
+        `drizzle-managed table instead, define it in the plugin's tables.ts and run ./equin build. ` +
         `In a TEST that only needs a scratch table, provision a throwaway database with createTestDb ` +
         `(@plugins/database/plugins/db-test-fixture/server/testing) and create the table on it — that never ` +
         `touches the worktree DB, so it is exempt and must NOT be added to the allowlist.`,

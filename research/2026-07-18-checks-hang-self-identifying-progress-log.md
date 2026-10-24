@@ -124,7 +124,7 @@ losing the diagnostic we are building.
 ### Reading it
 
 `readCheckProgress()` in the same module: parse the file, group by `runId`, and
-for each run return `started − ended`. Surface as `./singularity check --status`,
+for each run return `started − ended`. Surface as `./equin check --status`,
 printing the newest run's outstanding set and how long each has been running —
 so the answer during an incident is one command, not a Python one-liner over
 4,000 cache files (what today's investigation required).
@@ -149,13 +149,13 @@ Reuse, do not reinvent: `SINGULARITY_DIR` import and `join` pattern from
 
 ## Verification
 
-1. **Happy path** — `./singularity check --scope tree` in this worktree, then
+1. **Happy path** — `./equin check --scope tree` in this worktree, then
    confirm `check-progress.jsonl` holds one `run`, 71 `start`, 71 `end`, and a
    `done`, and that `started − ended` is empty.
 2. **Synthetic hang** — temporarily patch one check body to
    `await new Promise(() => {})` (local edit, reverted after). Run again, and from
    a *second shell* while it hangs:
-   - `./singularity check --status` names that check and nothing else;
+   - `./equin check --status` names that check and nothing else;
    - `pending` heartbeat lines are appended every ~30s naming it — this is the
      direct test of the event-loop-alive deduction;
    - the file is readable and correct while the process is still wedged.

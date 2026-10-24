@@ -326,7 +326,7 @@ describe("resolveCheckoutDeploy", () => {
   test("two namespaces for one composition warn, naming the chosen and the ignored", () => {
     const fx = fixture();
     const root = fx.checkout("att-9");
-    // What `./singularity build` published, and what a `serve-app --name` (or a
+    // What `./equin build` published, and what a `serve-app --name` (or a
     // spec left behind by a rename) published beside it. Both claim to be this
     // checkout's own app; only one can be.
     fx.register("att-9", { server: serverOf(root) });

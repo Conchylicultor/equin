@@ -91,7 +91,7 @@ This plan adds a new task-detail section with two switchable tree views — one 
 ```jsonc
 { "views": [{ "name": "Tree", "view": { "type": "tree", "visibleFields": ["title"] } }] }
 ```
-`./singularity build` regenerates `data-views.generated.ts`, scaffolds `.origin.jsonc`, fills `@hash`. Creation tab reuses the existing `tasks-subtree` config — nothing new.
+`./equin build` regenerates `data-views.generated.ts`, scaffolds `.origin.jsonc`, fills `@hash`. Creation tab reuses the existing `tasks-subtree` config — nothing new.
 
 ## Files
 
@@ -103,7 +103,7 @@ This plan adds a new task-detail section with two switchable tree views — one 
 
 ## Verification
 
-1. `./singularity build` (registry + data-view manifest + checks).
+1. `./equin build` (registry + data-view manifest + checks).
 2. `bun test plugins/tasks/plugins/task-deps-tree/core` and `bun test plugins/tasks/server/internal/deps-tree-move.test.ts`.
 3. Scripted Playwright (`bun e2e/screenshot.mjs --url http://att-1783675998-rkth.localhost:9000/agents/... `): open a task with a dependency chain; capture both switcher tabs; exercise detach and chip-remove; verify a splice-move via `query_db` on `task_dependencies` before/after.
 

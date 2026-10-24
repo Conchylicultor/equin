@@ -103,7 +103,7 @@ export default createFacet<ResourceFacetData>({
 
 ### 3. Auto-registration (no manual edit needed)
 
-Running `./singularity build` will regenerate `plugins/plugin-meta/plugins/facets/core/facet.generated.ts` to include:
+Running `./equin build` will regenerate `plugins/plugin-meta/plugins/facets/core/facet.generated.ts` to include:
 ```ts
 { pluginPath: "plugin-meta/plugins/facets/plugins/resources", hierarchyPath: "plugin-meta/facets/resources", loader: () => import("@plugins/plugin-meta/plugins/facets/plugins/resources/facet"), dependsOn: [] }
 ```
@@ -118,6 +118,6 @@ Running `./singularity build` will regenerate `plugins/plugin-meta/plugins/facet
 
 ## Verification
 
-1. `./singularity build` — succeeds; confirms `facet.generated.ts` updated with the new entry
-2. `./singularity check` — all checks pass (especially `plugins-registry-in-sync`, `plugins-doc-in-sync`, `plugin-boundaries`)
+1. `./equin build` — succeeds; confirms `facet.generated.ts` updated with the new entry
+2. `./equin check` — all checks pass (especially `plugins-registry-in-sync`, `plugins-doc-in-sync`, `plugin-boundaries`)
 3. Inspect `node.facets["resources"]` via the Debug app or `query_db` — confirm resource data appears for a plugin known to call `defineResource` (e.g. `plugins/tasks-core/server/internal/resources.ts`)

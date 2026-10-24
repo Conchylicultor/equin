@@ -159,7 +159,7 @@ This is strictly *simpler* than the current code (no client scan).
   `plugins/apps/plugins/studio/plugins/compositions/plugins/release/CLAUDE.md`
   ("The history is windowed, and says so") — rewrite to describe the
   composition-scoped paginated query + run-by-id resource. The autogen blocks
-  regenerate via `./singularity build`.
+  regenerate via `./equin build`.
 
 ## Critical files
 
@@ -190,7 +190,7 @@ This is strictly *simpler* than the current code (no client scan).
 
 ## Verification
 
-1. `./singularity build` (regenerates migrations for the new index, facets/docs,
+1. `./equin build` (regenerates migrations for the new index, facets/docs,
    registry). Confirm the new migration for `release_runs_ns_comp_started_idx` is
    generated and committed.
 2. **Endpoint / pagination:** with existing `release_runs` rows (query via
@@ -207,5 +207,5 @@ This is strictly *simpler* than the current code (no client scan).
    the revision tick pulses (new row appears, status flips), and (b) the open
    run-detail pane's status badge / logs / artifact update live via
    `releaseRunResource` — without a manual refresh.
-5. `./singularity check` (boundaries, migrations-in-sync, type-check,
+5. `./equin check` (boundaries, migrations-in-sync, type-check,
    plugins-doc-in-sync, data-views-in-sync).

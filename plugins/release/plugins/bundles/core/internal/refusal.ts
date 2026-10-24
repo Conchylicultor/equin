@@ -105,7 +105,7 @@ export function bundleRefusalMessage(refusal: BundleRefusal): string {
       return (
         `no release of "${refusal.composition}" found. Looked in:\n  ${refusal.compDir}\n` +
         `${namespaceHint(refusal.namespace)}\n` +
-        `Build one: ./singularity release --composition ${refusal.composition} --target web --platform ${refusal.platform}`
+        `Build one: ./equin release --composition ${refusal.composition} --target web --platform ${refusal.platform}`
       );
     case "no-such-run":
       return (

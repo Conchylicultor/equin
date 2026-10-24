@@ -145,7 +145,7 @@ Both map to "the context task from which new tasks are spawned."
 
 ## Verification
 
-1. `./singularity build` — migrations unchanged, just runtime logic
+1. `./equin build` — migrations unchanged, just runtime logic
 2. TaskDraftPopover followup: create a followup chain, verify groupId set and dependents rewired
 3. TaskDraftPopover prerequisite: create a prerequisite, verify target's deps transferred and groupId set
 4. `query_db` to verify `group_id` values on newly created tasks

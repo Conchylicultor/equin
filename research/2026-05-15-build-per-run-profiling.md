@@ -96,7 +96,7 @@ Imports from `@plugins/debug/plugins/profiling/web`: `GanttSection`, `SpanDetail
 
 ## Verification
 
-1. `./singularity build` — triggers a build, should create `~/.singularity/worktrees/<name>-build-profile-<buildId>.json`
+1. `./equin build` — triggers a build, should create `~/.singularity/worktrees/<name>-build-profile-<buildId>.json`
 2. Open build detail pane for the completed run — profiling section should render the Gantt chart
 3. Open build detail for an older run (pre-feature) — section should not render (returns null)
 4. Verify the debug profiling pane still works (singleton file untouched)

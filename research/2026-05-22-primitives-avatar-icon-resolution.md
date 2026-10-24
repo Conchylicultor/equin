@@ -51,7 +51,7 @@ A `Record<string, SvgNode[]>` covering all ~2160 icons + curated aliases. ~650KB
 
 Run manually: `bun run plugins/primitives/plugins/avatar/server/internal/gen-icon-svg-map.ts`
 
-Regenerate only when `react-icons` version changes or `icon-metadata.json` is updated. NOT part of `./singularity build`.
+Regenerate only when `react-icons` version changes or `icon-metadata.json` is updated. NOT part of `./equin build`.
 
 ### 2. Field resolver registry in config_v2/core
 
@@ -193,8 +193,8 @@ export default {
 
 ## Verification
 
-1. `./singularity build` — TypeScript compiles, no check failures
+1. `./equin build` — TypeScript compiles, no check failures
 2. Open Settings → Conversation categories: avatars render correctly
 3. Pick a new avatar, save → verify JSONC file has no `svgNodes` path data
 4. Restart server → avatars still render (resolved from map on read)
-5. `./singularity check --icon-svg-map-in-sync` passes
+5. `./equin check --icon-svg-map-in-sync` passes

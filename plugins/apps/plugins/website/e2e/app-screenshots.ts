@@ -8,7 +8,7 @@
 // since an error toast is still a bug worth reading.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/website/e2e/app-screenshots.ts \
+//   ./equin run plugins/apps/plugins/website/e2e/app-screenshots.ts \
 //     --out <dir> [--url http://singularity.localhost:9000] [--only pages,sonata] \
 //     [--viewport 1440x900] [--color-scheme dark|light] [--wait 4000]
 //

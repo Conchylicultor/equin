@@ -22,7 +22,7 @@ import { withHistoryLock } from "./history/lock";
 // `_template/` and `_history/` (`listPrototypeDirNames`).
 //
 // Node-only and in `shared/` for the reason `history/store.ts` is: the server
-// serves and writes the records, and `./singularity prototype …` reads the same
+// serves and writes the records, and `./equin prototype …` reads the same
 // files with no backend running.
 
 /** A record file's extension — the one the watcher's extension filter passes. */

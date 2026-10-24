@@ -111,7 +111,7 @@ Add `collapsed: true` to barrel files of:
 
 ## Verification
 
-1. Run `./singularity build` — regenerates `plugins-compact.md`, `plugins-details.md`, per-plugin `CLAUDE.md` files
+1. Run `./equin build` — regenerates `plugins-compact.md`, `plugins-details.md`, per-plugin `CLAUDE.md` files
 2. Check `docs/plugins-compact.md`:
    - Collapsed plugins show `[N sub-plugins]` with correct count
    - Their children are NOT listed
@@ -121,5 +121,5 @@ Add `collapsed: true` to barrel files of:
    - Full nested sub-plugin tree is present
    - Indentation is correct (2-space aligned with `- Sub-plugins:` header)
 5. Check the Forge UI (`/forge`): plugin detail pane still loads, `collapsed` field is visible on the wire payload
-6. Run `./singularity check` — all checks pass
+6. Run `./equin check` — all checks pass
 7. Verify line count reduction: `wc -l docs/plugins-compact.md` should drop significantly

@@ -134,13 +134,13 @@ which is `null` for a custom place.
 
 ## Verification
 
-- `./singularity test plugins/integrations/plugins/google-maps/plugins/places-api` covers:
+- `./equin test plugins/integrations/plugins/google-maps/plugins/places-api` covers:
   - `openState`: open, closing soon, closed, ranges past midnight, 24/7, no hours, the place's timezone ≠ the browser's.
   - The rich-details mapping from a recorded Google response fixture.
   - The photo-name validation.
 - A test for the details cache: TTL hit and miss, concurrent calls collapsed into one, `ok` / `unavailable` cached, a thrown error not cached.
-- `./singularity build` (checks pass), then
-  `./singularity run plugins/apps/plugins/places/plugins/places-map/e2e/open-card.ts --place "<name>"`
+- `./equin build` (checks pass), then
+  `./equin run plugins/apps/plugins/places/plugins/places-map/e2e/open-card.ts --place "<name>"`
   on a famous place (photos, hours) and on a custom pin (the wash, no rich facts). Compare the screenshots against the prototype at `card=poster`.
 - Check `~/.singularity/worktrees/<wt>/logs/` for Places API errors, and that reopening the card makes no second Google call. Log one line per fetch on the `places-details` channel.
 - **Cost note**: each first open of a place's card in a 24 h window is one Enterprise Place Details call, plus one Place Photo call per photo viewed (photos are then cached by the browser for 24 h). Every worktree has its own in-memory cache.

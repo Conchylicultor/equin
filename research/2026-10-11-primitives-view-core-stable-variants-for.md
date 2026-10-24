@@ -84,13 +84,13 @@ say it is stable per view.
 - `view-core/web/internal/use-view-model.ts`, `view-core/web/internal/view-getter.ts` (moved), `view-core/web/index.ts`, `view-core/web/testing/index.ts` (new)
 - `view-core/web/components/view-settings-popover.tsx`
 - `data-view/web/internal/use-data-view-model.ts`, `data-view/web/testing/fake-view-getter.ts` (removed), data-view `__tests__` imports
-- Regenerated docs (`CLAUDE.md`/`REFERENCE.md`, `docs/plugins-details.md`) via `./singularity build`
+- Regenerated docs (`CLAUDE.md`/`REFERENCE.md`, `docs/plugins-details.md`) via `./equin build`
 
 ## Verification
 
 - New jsdom test `view-core/web/__tests__/variants-for-identity.test.tsx`: two
   views; `variantsFor(a)` keeps identity after renaming `b`, after editing `a`'s
   options/name; changes after switching `a`'s type; unknown id is stable.
-- `./singularity test plugins/primitives/plugins/data-view` (covers view-core + data-view suites).
-- `./singularity check type-check plugin-boundaries boundary-rules` (barrel/R12–R13: `fakeViewGetter` only via `web/testing`).
-- `./singularity build`, then open a DataView's view settings popover, switch type and type in Name — no regression.
+- `./equin test plugins/primitives/plugins/data-view` (covers view-core + data-view suites).
+- `./equin check type-check plugin-boundaries boundary-rules` (barrel/R12–R13: `fakeViewGetter` only via `web/testing`).
+- `./equin build`, then open a DataView's view settings popover, switch type and type in Name — no regression.

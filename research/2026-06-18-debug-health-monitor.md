@@ -61,13 +61,13 @@ All under `plugins/debug/plugins/health-monitor/`. Respect boundary rules (one b
 - Structural precedent for `setInterval`-in-`onReady`: `plugins/infra/plugins/jobs/server/internal/stuck-lock-sweeper.ts`.
 
 ## Verification (end-to-end)
-1. `./singularity build` (run from this worktree). Confirm boot logs show the sampler starting.
+1. `./equin build` (run from this worktree). Confirm boot logs show the sampler starting.
 2. After ~20s: `tail -f ~/.singularity/worktrees/singularity/logs/health.jsonl` — one JSON line / 10s with `rssMb`, `eventLoopP99Ms`, etc. And `health-host.jsonl` with `swapInPagesPerSec`, `freeMemMb`, `loadAvg1`.
 3. Open **Debug → Health**. Confirm per-backend charts render and the host strip shows load/mem/swap.
 4. **Balloon test:** hit a heavy endpoint in another worktree repeatedly; watch its RSS line climb in the pane.
 5. **Event-loop test:** trigger a sync-heavy op; confirm `eventLoopP99Ms` spikes on the next sample.
 6. **Wedged-backend robustness:** `kill -9 <worktree backend pid>`. Confirm the pane (served by main) still shows that worktree's historical series from disk, the endpoint does **not** 404, and new samples simply stop (stale last-timestamp = its own signal).
-7. `./singularity check` clean (boundaries, types).
+7. `./equin check` clean (boundaries, types).
 
 ## Risks / notes
 - Bun GC observer unavailable → GC pressure is approximated by JSC heap-growth, not precise pause timing; label the chart "heap growth / interval", not "GC pause ms".

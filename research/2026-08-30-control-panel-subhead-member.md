@@ -125,7 +125,7 @@ geometry the member does not own.
 - `web/index.ts` — export `ControlPanelSubheadProps`, and add `Subhead` to the
   plugin `description`'s closed-set list. That string is what `docs/plugins-*.md`
   and the AUTOGEN block in `control-panel/CLAUDE.md` are generated from, so
-  `plugins-doc-in-sync` fails until `./singularity build` runs.
+  `plugins-doc-in-sync` fails until `./equin build` runs.
 
 ### 3. Rewire data-view — `data-view/web/internal/field-sections.tsx`
 
@@ -188,10 +188,10 @@ rule. Delete the wording that describes the heading's own typography.
 ## Verification
 
 ```bash
-./singularity test plugins/primitives/plugins/css/plugins/control-panel
-./singularity test plugins/primitives/plugins/data-view
-./singularity build                  # regenerates AUTOGEN blocks + docs/*
-./singularity check layout-geometry  # sweeps subhead-rail at 262/320/500/524
+./equin test plugins/primitives/plugins/css/plugins/control-panel
+./equin test plugins/primitives/plugins/data-view
+./equin build                  # regenerates AUTOGEN blocks + docs/*
+./equin check layout-geometry  # sweeps subhead-rail at 262/320/500/524
 ```
 
 **Falsify the fixture before trusting it** — the house standard (`long-label` and

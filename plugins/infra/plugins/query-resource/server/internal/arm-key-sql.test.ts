@@ -4,7 +4,7 @@
  * the change feed sends as `ids` and a reverse probe answers — for text ids
  * (`:` and non-ASCII included), bigints and uuids.
  *
- * Run: `./singularity test plugins/infra/plugins/query-resource`
+ * Run: `./equin test plugins/infra/plugins/query-resource`
  * (requires the running embedded cluster).
  */
 

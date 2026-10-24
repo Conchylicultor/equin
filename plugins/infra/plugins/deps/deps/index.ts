@@ -7,7 +7,7 @@
 // loop (`ensureDep`, needing an ExecContext), take an installed one from a
 // request path (`readyNow`, paired with the server barrel's `requestDep`), and
 // read the state (`depState`). A host process with no ExecContext of its own
-// (a check, an e2e script) installs through a `./singularity deps install`
+// (a check, an e2e script) installs through a `./equin deps install`
 // child (`ensureDepViaCli`). Installer kinds implement `DepSource`; runners
 // take a `Ready`. A release seals its `bundle` dependencies for its platform
 // (`sealDep`, writing `deps.sealed.json`), and every read above resolves them

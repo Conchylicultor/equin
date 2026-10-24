@@ -116,8 +116,8 @@ this is what reclaims them.
 
 ## Verification
 
-1. `./singularity build`; `browser_navigate /agents` + `browser_read_page`.
-2. Restart this worktree's backend (`./singularity build` again); `browser_tabs` still lists
+1. `./equin build`; `browser_navigate /agents` + `browser_read_page`.
+2. Restart this worktree's backend (`./equin build` again); `browser_tabs` still lists
    t1 with its URL, and `browser_console` still holds the earlier messages.
 3. Health report shows the Agent browser row with the session and its deadline.
 4. Scoped revert: unit test in the ledger (two sources, revert one).

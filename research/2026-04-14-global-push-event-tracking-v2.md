@@ -2,13 +2,13 @@
 
 Supersedes `2026-04-14-global-push-event-tracking.md`. Changes from v1:
 
-- Any git commit with the env var gets stamped automatically via a `prepare-commit-msg` hook, not just commits made by `./singularity push`.
+- Any git commit with the env var gets stamped automatically via a `prepare-commit-msg` hook, not just commits made by `./equin push`.
 - Commits made in one push are grouped by a `Singularity-Push: <ulid>` trailer, stamped during the rebase step. UI can render them as a single block.
 - The main-ref watcher runs in **every** namespace, not only main. Every server derives push state from git into its own DB.
 
 ## Context
 
-When `./singularity push` succeeds:
+When `./equin push` succeeds:
 
 1. Every commit landing on `main` as part of that push gets a `pushes` row attributed to its source conversation.
 2. All commits from the same push share a `pushId` so the UI can surface them as one block.
@@ -18,12 +18,12 @@ Constraints that shaped the design:
 
 - CLI runs in a worktree shell, outside any server process. Direct DB writes from the CLI would risk schema drift ("state divergence") across versions.
 - A worktree may host multiple conversations in the future (e.g. a review agent). Branch name cannot identify the source conversation.
-- Agents might commit outside `./singularity push` (CLAUDE.md forbids this, but the system should be robust, not rely on convention).
+- Agents might commit outside `./equin push` (CLAUDE.md forbids this, but the system should be robust, not rely on convention).
 
 **Approach: git carries identity, every server derives state from git.**
 
 - Every commit made inside a Claude pane is auto-stamped with `Singularity-Conversation: <id>` via a repo-level `prepare-commit-msg` hook that reads `$SINGULARITY_CONVERSATION_ID`.
-- `./singularity push` generates a `Singularity-Push: <ulid>` during its rebase step and stamps every commit in the push with it via `git rebase --exec`.
+- `./equin push` generates a `Singularity-Push: <ulid>` during its rebase step and stamps every commit in the push with it via `git rebase --exec`.
 - Every server (every namespace) runs a main-ref watcher that tails `refs/heads/main`, reads trailers on new commits, and upserts `pushes` rows + `status=pushed` into its own DB. Backfill on startup.
 
 Forward-compat: contract is two trailer names, one env var, one ref. Unknown trailers are ignored. Commits without trailers are no-ops. Servers never write to each other; they independently derive from the shared git object store (git worktrees share `.git`).
@@ -73,7 +73,7 @@ Intent: inherited by the Claude process, any child shells, and any `git commit` 
 - `pushes.sha` gets a unique index (prevents double-inserts between backfill + live watch).
 - Add `pushes.pushId text not null` — the per-push ULID. Indexed, not a FK (the id only lives in git).
 
-Run `./singularity build` to regenerate migrations.
+Run `./equin build` to regenerate migrations.
 
 ### 4. CLI — stamp `Singularity-Push` during rebase
 
@@ -137,14 +137,14 @@ Only the push-watcher sets `pushed`. Re-push is a no-op on status.
 - `plugins/conversations/server/protocol.ts:3-10` — SSE event
 - `cli/src/commands/push.ts:97, 112-131, 139` — push-id, rebase --exec, --from-main trailer
 - `plugins/conversations/plugins/conversation-view/plugins/status/web/StatusBadge.tsx` — badge color
-- Bootstrap step (in `./singularity build` or a `postinstall` script): `git config core.hooksPath .githooks`
+- Bootstrap step (in `./equin build` or a `postinstall` script): `git config core.hooksPath .githooks`
 
 ## Verification
 
-1. `./singularity build` applies migration, restarts all servers with watcher + tmux env injection + hooks path set.
+1. `./equin build` applies migration, restarts all servers with watcher + tmux env injection + hooks path set.
 2. Create a new conversation. `echo $SINGULARITY_CONVERSATION_ID` inside its pane prints the id.
 3. `git commit -m "test"` directly in the pane (bypassing CLI): `git log -1 --format=%B` shows `Singularity-Conversation:` trailer from the hook.
-4. `./singularity push -m "feature"`: `git log main -<N> --format=%B` shows every commit from this push carries both `Singularity-Conversation` (from hook) and `Singularity-Push` (from rebase --exec) with the same push id.
+4. `./equin push -m "feature"`: `git log main -<N> --format=%B` shows every commit from this push carries both `Singularity-Conversation` (from hook) and `Singularity-Push` (from rebase --exec) with the same push id.
 5. UI: source conversation flips to `pushed` within ~1s; rows in `pushes` table carry matching `pushId`.
 6. **Cross-namespace**: open the app at `http://<worktree>.localhost:9000`. Its server's DB contains the same `pushes` rows (attributed to its own conversations where present), confirming non-main servers derive independently.
 7. Backfill: stop a server, push from another conversation, restart — the push appears in the restarted server without a live tick.

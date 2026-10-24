@@ -132,7 +132,7 @@ Some future resource may be large enough that Zod-parsing every push hurts. Note
 
 ## Verification
 
-1. `./singularity build` — TS compile across all touched plugins. The `T = z.infer<typeof schema>` derivation makes shape drift between schema and loader return a static error; this is the safety net the system was missing.
+1. `./equin build` — TS compile across all touched plugins. The `T = z.infer<typeof schema>` derivation makes shape drift between schema and loader return a static error; this is the safety net the system was missing.
 2. Revert the `formatRelativeTime`/`ConversationItemConv` `Date | string` tolerance, then visit `http://<worktree>.localhost:9000/c/<id>/tasks` and confirm no crash. (If the structural fix is correct, the point fix is no longer needed.)
 3. Spot-check one consumer per resource group with the dev tools open:
    - Tasks list (`tasksResource`) — sidebar + tree
@@ -140,5 +140,5 @@ Some future resource may be large enough that Zod-parsing every push hurts. Note
    - Task events (`attemptsResource`, `pushesResource`) — push timestamps render
    - Agent launches (`agentLaunchesResource`)
    - Settings (`configResource`)
-4. Cause a WS reconnect (`./singularity build` restarts the server) — exercises the queryFn-fallback path; confirm it parses too.
+4. Cause a WS reconnect (`./equin build` restarts the server) — exercises the queryFn-fallback path; confirm it parses too.
 5. Add one focused unit test in `plugins/primitives/plugins/live-state/web/notifications-client.test.ts`: instantiate `NotificationsClient`, simulate an `update` message with `createdAt` as an ISO string, assert `queryClient.getQueryData(...)` returns a value where the field is a real `Date`.

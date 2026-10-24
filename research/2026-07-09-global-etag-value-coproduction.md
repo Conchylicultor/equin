@@ -301,7 +301,7 @@ Drive the resource seam, not the browser — faster and deterministic.
 
 **Reproduce first (must fail before the fix):**
 
-1. `./singularity build`.
+1. `./equin build`.
 2. `query_db`: pick a conversation with a worktree.
 3. `curl -s -D- 'http://<wt>.localhost:9000/api/resources/edited-files?id=<convId>'` → record `ETag` + `value`.
 4. In that worktree, `echo x >> some-file`, then **within the 200 ms–2 s watcher window** re-curl.
@@ -318,7 +318,7 @@ Drive the resource seam, not the browser — faster and deterministic.
    **Push & Close** without a reload. Use `e2e/screenshot.mjs` to capture before/after.
 4. Kill the worktree's git dir (or point the conversation at a missing worktree) → the button shows
    **Close (state unknown)**, enabled, non-destructive — never Drop & Close.
-5. `./singularity build && ./singularity check` (type-check, plugin-boundaries, `plugins-doc-in-sync`
+5. `./equin build && ./equin check` (type-check, plugin-boundaries, `plugins-doc-in-sync`
    after the barrel export rename).
 
 ## Ordered implementation
@@ -334,7 +334,7 @@ Drive the resource seam, not the browser — faster and deterministic.
    `handleResourceHttp`; destructure `.value` at the six other callers. Extend
    `runtime-revalidate.test.ts`.
 7. UI: `exit-error` mode in `push-and-exit-button.tsx`; error-hide in `drop-and-exit-button.tsx`.
-8. `./singularity build` (regenerates registries + docs), `./singularity check`, targeted `bun test`.
+8. `./equin build` (regenerates registries + docs), `./equin check`, targeted `bun test`.
 
 ## Critical files
 

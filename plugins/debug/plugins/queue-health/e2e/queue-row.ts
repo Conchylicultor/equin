@@ -12,8 +12,8 @@
 // sleepers to start before capturing.
 //
 // Usage:
-//   ./singularity run plugins/debug/plugins/queue-health/e2e/queue-row.ts --out /tmp/qh
-//   ./singularity run plugins/debug/plugins/queue-health/e2e/queue-row.ts \
+//   ./equin run plugins/debug/plugins/queue-health/e2e/queue-row.ts --out /tmp/qh
+//   ./equin run plugins/debug/plugins/queue-health/e2e/queue-row.ts \
 //     --saturate --backdate-ms 660000 --out /tmp/qh-amber
 
 import {

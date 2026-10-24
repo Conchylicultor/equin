@@ -337,11 +337,11 @@ Add `"color-adjust": "default"` to all three GlobalPreset entries.
 1. **Shadow token group** — all new files, app.css updates, GlobalPreset updates
 2. **ThemeEngine slot + transform** — add `ColorTransform` slot, create `transform.ts`, modify ThemeInjector
 3. **Color-adjust plugin** — all new files, GlobalPreset updates
-4. `./singularity build`
+4. `./equin build`
 
 ## Verification
 
-1. `./singularity build` succeeds
+1. `./equin build` succeeds
 2. Open `http://<worktree>.localhost:9000`, go to Settings
 3. **Shadow**: "Shadow" picker in UI Themes. Switching presets changes shadow appearance on components using `shadow-*` utilities. Inspect `:root` confirms `--shadow-sm`, `--shadow-md`, etc. contain composed box-shadow strings.
 4. **Color Adjust**: Picker with preset chips and sliders. "Grayscale" removes all color. "Vibrant" intensifies. Hue Shift slider rotates colors in real-time. Inspect `:root` oklch values change with slider movement.

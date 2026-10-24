@@ -165,7 +165,7 @@ options={instances.map((r) => ({
   `DataViewContribution`" / "select views by id" → clarify *type* id vs
   *instance* id (the public `views={[…]}` whitelist is still **type** ids).
 - The autogen reference blocks (data-view + 4 children + view-switcher) and
-  `docs/plugins-{compact,details}.md` regenerate via `./singularity build`;
+  `docs/plugins-{compact,details}.md` regenerate via `./equin build`;
   `plugins-doc-in-sync` enforces it.
 
 ## Critical files
@@ -187,8 +187,8 @@ options={instances.map((r) => ({
 
 ## Verification
 
-1. `./singularity build` (regenerates registry + docs).
-2. `./singularity check` — `type-check`, `plugins-doc-in-sync`, `eslint`,
+1. `./equin build` (regenerates registry + docs).
+2. `./equin check` — `type-check`, `plugins-doc-in-sync`, `eslint`,
    `plugins-registry-in-sync` all green. (No new manifest/check this sub-task.)
 3. Behavior parity via a multi-view consumer — `sonata/library` (gallery +
    others) or `conversations/agents`:

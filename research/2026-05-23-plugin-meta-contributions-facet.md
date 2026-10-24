@@ -135,7 +135,7 @@ export default createFacet<DocMetaContribution[]>({
 
 **`renderDoc` indentation**: `- Contributes:` at `bodyIndent + "  "` (same level as other facets' single-line bullets), per-slot items at `bodyIndent + "    "`. When docgen.ts is migrated at Step 5, `ctx.bodyIndent` will match the current `bodyIndent` variable in `renderPluginBody()`, so `bodyIndent + "  " = subIndent` from the current docgen output.
 
-**No manual registry edit**: `./singularity build` auto-populates `facet.generated.ts`.
+**No manual registry edit**: `./equin build` auto-populates `facet.generated.ts`.
 
 ## Critical Files
 
@@ -149,7 +149,7 @@ export default createFacet<DocMetaContribution[]>({
 
 ## Verification
 
-1. `./singularity build` succeeds — `facet.generated.ts` gains a `contributions` entry; TypeScript compiles cleanly.
+1. `./equin build` succeeds — `facet.generated.ts` gains a `contributions` entry; TypeScript compiles cleanly.
 2. `diff docs/plugins-compact.md` and `docs/plugins-details.md` vs pre-change snapshots — byte-identical (docgen still reads `node.runtimeContributions`).
-3. `./singularity check` passes all checks.
+3. `./equin check` passes all checks.
 4. Spot-check: a plugin with contributions (e.g. `shell.toaster` → `Shell.Toast`) should have `facets.contributions` populated with correct `slotId`, `slotDisplayName`, and `doc` fields.

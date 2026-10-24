@@ -15,7 +15,7 @@
 // Cause: `resolveBlockRow` was `document.querySelector('[data-block-id="…"]')`.
 //
 // Usage:
-//   ./singularity run \
+//   ./equin run \
 //     plugins/apps/plugins/pages/plugins/page-outline/e2e/two-pane-outline-verify.ts \
 //     [--url <deploy>] [--headed]
 import {

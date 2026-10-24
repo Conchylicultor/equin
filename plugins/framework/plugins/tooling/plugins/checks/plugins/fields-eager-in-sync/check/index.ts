@@ -22,7 +22,7 @@ const check: Check = {
       return {
         ok: false,
         message: `${rel} is missing`,
-        hint: "Run `./singularity build` to generate it.",
+        hint: "Run `./equin build` to generate it.",
       };
     }
     const expected = await formatGenerated({
@@ -33,7 +33,7 @@ const check: Check = {
       return {
         ok: false,
         message: `${rel} is out of sync with the fields storage server barrels`,
-        hint: "Run `./singularity build` and commit the regenerated file.",
+        hint: "Run `./equin build` and commit the regenerated file.",
       };
     }
     return { ok: true };

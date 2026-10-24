@@ -187,9 +187,9 @@ Files Task 1 already touched and this one touches again: `server-core/core/resou
   `null` → params subscribes; `{ path, scopeId: undefined }` ≡ `{ path }`; `useLiveRow(c, null)` makes no
   sub); `hydrateResource` of a `"boot-and-keep"` descriptor survives past the default `gcTime` with no
   observer (fake timers); boot-snapshot assembly with an enumerated key; L2 excludes it.
-- `./singularity test` on network/live, live-state, optimistic-mutation, resource-runtime, server-core,
+- `./equin test` on network/live, live-state, optimistic-mutation, resource-runtime, server-core,
   boot-snapshot, live-state-snapshot, config_v2 (+ settings), active-data, the subagents / workflow
-  plugins; `./singularity check` via the build.
+  plugins; `./equin check` via the build.
 - Deploy, then e2e on the deploy: boot paints config values on the first frame (theme / sidebar
   framing — no default→value flash, screenshot), the boot-snapshot response carries the config tuples
   and no `/api/config-v2/snapshot` request is made; Settings → Config: edit a field, it persists (reload)
@@ -361,8 +361,8 @@ All under `plugins/framework/`. Task 1 changed the same two files (`server-core/
 
 ### Verification
 
-- `./singularity check type-check`: ok. `./singularity build` (every check): ok — see the receipt below.
-- `./singularity test` on network/live, live-state, resource-runtime, server-core, optimistic-mutation, config_v2,
+- `./equin check type-check`: ok. `./equin build` (every check): ok — see the receipt below.
+- `./equin test` on network/live, live-state, resource-runtime, server-core, optimistic-mutation, config_v2,
   boot-snapshot, live-state-snapshot, active-data, theme-engine, fields/secret, conversation-view/code: all pass
   (last full run: bun 75 files, vitest 13 files; after the review fixes: bun 50 + vitest 12 files on the touched
   subset). New tests: `canonicalParams`; `liveValue` optional names / bad names / param'd preload brand / central
@@ -379,7 +379,7 @@ All under `plugins/framework/`. Task 1 changed the same two files (`server-core/
   The harness reverted the write. Re-run on the final build (`f14d715a4-1790539331067`): 18/18.
 - **Regression e2e** (Task 1's `network/live/e2e/reconnect-after-gap.ts`, which drives `useResource` through a
   dropped socket) on the final build: 7/7.
-- Framework increment: `./singularity test` on resource-runtime, network/live, live-state, optimistic-mutation,
+- Framework increment: `./equin test` on resource-runtime, network/live, live-state, optimistic-mutation,
   packages/canonical-params, server-core — all pass (bun 50 files, vitest 10). No "non-canonical params" report,
   no config / boot-snapshot report on the deploy after the e2e runs.
 - Deploy inspection: config documents' boot work 5.5 ms, scopes 1.9 ms; config's share of the boot snapshot 124 KB

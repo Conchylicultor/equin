@@ -133,16 +133,16 @@ improvement, not required for parity.
 
 ## Verification
 
-1. `./singularity build` — regenerates migrations (must produce **no** new
+1. `./equin build` — regenerates migrations (must produce **no** new
    migration, since `schema.ts` is unchanged) and runs checks.
-2. `./singularity check` — confirm green, in particular:
+2. `./equin check` — confirm green, in particular:
    - `migration-hashes-unique` (now passes; no collision left)
    - `snapshot-chain-intact` (linear after relink)
    - `migrations-in-sync`
    - `migration-applies-clean`
 3. Regression proof for the new rule — temporarily copy an existing migration to a
    new timestamped filename keeping the same `sha8` (byte-identical), run
-   `./singularity check migration-hashes-unique`, confirm it now **fails** even
+   `./equin check migration-hashes-unique`, confirm it now **fails** even
    though both files are tracked, then delete the temp file. (Or run the optional
    unit test.)
 4. Confirm a from-scratch boot is clean: `query_db` against a fresh worktree DB

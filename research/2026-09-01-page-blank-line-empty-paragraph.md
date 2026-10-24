@@ -223,12 +223,12 @@ block, produces a `parentId` update on a no-op apply.
 
 ## Verification
 
-1. `./singularity test plugins/page/plugins/editor` and
-   `./singularity test plugins/page/plugins/markdown-apply`.
-2. `./singularity check` — no check asserts this contract today
+1. `./equin test plugins/page/plugins/editor` and
+   `./equin test plugins/page/plugins/markdown-apply`.
+2. `./equin check` — no check asserts this contract today
    (`page.editor:markdown-tag-names-unique` is unaffected: `text` still claims the
    name), so this is a regression guard, not a gate to satisfy.
-3. `./singularity build` in the background, then:
+3. `./equin build` in the background, then:
    - **The paste out.** Open a page with spacers between sections, select the
      blocks, copy, paste into a plain-text editor. Blank lines, no `<text/>`.
    - **The paste in.** Copy a README chunk with blank lines between paragraphs and

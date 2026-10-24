@@ -79,7 +79,7 @@ Implementation:
 2. Add the indexes as Drizzle `index(...)` entries in `tables.ts` on the base-table builders
    (`_conversations`, `_attempts`) — indexes live on tables, not views; the views benefit
    because their subqueries hit those base tables.
-3. `./singularity build` (generates + applies the migration; first build after a schema
+3. `./equin build` (generates + applies the migration; first build after a schema
    change needs `--migration-name`, e.g. `view-correlation-indexes`). **Never** run
    `drizzle-kit generate` or the migration runner manually.
 4. Re-run `EXPLAIN ANALYZE` and **keep only the indexes the planner actually uses.** At
@@ -92,7 +92,7 @@ Implementation:
 - **Correctness:** none at stake — an index cannot change what the views return, only plan
   speed. No functional surface to regress.
 - **Migration:** small tables → plain `CREATE INDEX` completes in ms; no `CONCURRENTLY`
-  needed. Standard hash-tracked migration via `./singularity build`.
+  needed. Standard hash-tracked migration via `./equin build`.
 - **Reversible:** drop the index; no data transformation.
 - **Cost:** two narrow indexes add negligible write overhead on non-write-hot tables.
 
@@ -122,7 +122,7 @@ Implementation:
 - **Edit** `plugins/tasks-core/server/internal/tables.ts` — add
   `index("conversations_attempt_id_status_idx").on(t.attemptId, t.status)` on the
   conversations table and `index("attempts_task_id_idx").on(t.taskId)` on the attempts table
-  (EXPLAIN-guided; keep only what the planner uses), then `./singularity build`.
+  (EXPLAIN-guided; keep only what the planner uses), then `./equin build`.
 
 No code/protocol changes; no client edits.
 
@@ -131,7 +131,7 @@ No code/protocol changes; no client edits.
 1. **Baseline:** `EXPLAIN ANALYZE SELECT * FROM tasks_v;` and `... attempts_v;` via
    `query_db` — record total time and confirm seq scans / per-row subplans on `conversations`
    / `attempts`.
-2. `./singularity build` with `--migration-name view-correlation-indexes`. Confirm the
+2. `./equin build` with `--migration-name view-correlation-indexes`. Confirm the
    migration applied (server restart, no errors).
 3. **Post-index plan:** re-run both `EXPLAIN ANALYZE` — confirm the targeted subqueries now
    use index scans and total time dropped. Drop any index left unused.

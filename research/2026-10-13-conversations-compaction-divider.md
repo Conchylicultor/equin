@@ -56,7 +56,7 @@ Follow-up: harness context re-injected after the compaction folds into this divi
 
 ## Verification
 
-- `./singularity test plugins/conversations/plugins/transcript-watcher` (parser cases: boundary +
+- `./equin test plugins/conversations/plugins/transcript-watcher` (parser cases: boundary +
   summary + files fold into one event; context attachments pass through; summary without boundary).
-- `./singularity build`, then screenshot a compacted conversation (e.g. the one from
+- `./equin build`, then screenshot a compacted conversation (e.g. the one from
   conv-1791818418-k72458) folded and unfolded with `screenshot.ts --click "Context compacted"`.

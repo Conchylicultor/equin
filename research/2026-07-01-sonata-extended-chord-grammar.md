@@ -232,7 +232,7 @@ Run: `bun test plugins/apps/plugins/sonata/plugins/theory/core`.
 
 ## End-to-end verification
 
-1. `./singularity build` (from the worktree). Regenerates nothing schema-wise (no DB
+1. `./equin build` (from the worktree). Regenerates nothing schema-wise (no DB
    change), rebuilds web + server.
 2. Open a Sonata song with a chord-grid source at
    `http://att-1782924335-livs.localhost:9000/sonata`, and type

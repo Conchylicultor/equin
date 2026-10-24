@@ -33,7 +33,7 @@ The current split is clean by luck, not by construction — a full scan found
 
 Intended outcome: one sanctioned command that always runs the right runners and
 reports both, a `bun test` that can no longer cross-load, and a
-`./singularity check` entry that fails when any part of that drifts.
+`./equin check` entry that fails when any part of that drifts.
 
 ## The lever
 
@@ -83,7 +83,7 @@ One plugin, so the constants and their enforcement cannot separate.
   rule by living next to source.
 - **`check/index.ts`** — default-exports a `Check` (id `test-layout:runner-split`,
   per the contributed-check `<plugin>:<id>` convention). Discovery is automatic:
-  `./singularity build` regenerates `checks/core/check.generated.ts` from the
+  `./equin build` regenerates `checks/core/check.generated.ts` from the
   filesystem — **no registry edit, and the regenerated file must be committed.**
 
 The check asserts four things, reporting every offender as `file:line` in the
@@ -113,7 +113,7 @@ they are exported there (they back the existing pattern checks); otherwise
 `Bun.Glob().scan()`. Do **not** hand-roll `git grep` — the `no-adhoc-git-grep`
 lint rule forbids it.
 
-## Piece 3 — `./singularity test [path...]`
+## Piece 3 — `./equin test [path...]`
 
 New `plugins/framework/plugins/cli/bin/commands/test.ts`, registered as
 `registerTest(program)` in `bin/cli.ts` alongside `registerCheck`. This is the
@@ -147,7 +147,7 @@ Keep the command surface minimal for v1: paths only. Forwarding extra flags
 
 ## Piece 4 — make the docs describe the mechanism
 
-- **Root `CLAUDE.md` → Testing**: rewrite around `./singularity test <path>` as
+- **Root `CLAUDE.md` → Testing**: rewrite around `./equin test <path>` as
   the default. Keep the two direct commands documented as the narrow-targeting
   escape hatches. Delete the two now-false claims: *"the two never cross-load"*
   (state instead that the bunfig ignore is the exact complement of the vitest
@@ -160,7 +160,7 @@ Keep the command surface minimal for v1: paths only. Forwarding extra flags
 - New plugin `CLAUDE.md` for `test-layout`.
 - Per-plugin `CLAUDE.md` files documenting a `bun test …` + `bun run test:dom …`
   pair (optimistic-mutation and ~17 others) stay valid — leave them; converting
-  them to `./singularity test` is an optional follow-up.
+  them to `./equin test` is an optional follow-up.
 
 ## Files
 
@@ -186,19 +186,19 @@ Run from the worktree root.
 2. **The vitest side is untouched.**
    `bun run test:dom plugins/primitives/plugins/optimistic-mutation` → 20 pass.
 3. **The sanctioned command runs both.**
-   `./singularity test plugins/primitives/plugins/optimistic-mutation` → both
+   `./equin test plugins/primitives/plugins/optimistic-mutation` → both
    buckets green, summary lists `bun:test` and `vitest` with counts.
 4. **The empty bucket is stated, not implied.**
-   `./singularity test plugins/framework/plugins/tooling/plugins/test-layout` →
+   `./equin test plugins/framework/plugins/tooling/plugins/test-layout` →
    bun bucket runs, summary says *no jsdom tests under this path*.
-5. **No-arg run works.** `./singularity test` → whole tree, both runners.
+5. **No-arg run works.** `./equin test` → whole tree, both runners.
 6. **The check passes, then fails on each drift** (revert each after):
-   - `./singularity check test-layout:runner-split` → ok
+   - `./equin check test-layout:runner-split` → ok
    - add `import { describe } from "vitest";` to a co-located `*.test.ts` → fails naming that `file:line` (rule a)
    - add `import { test } from "bun:test";` to a `web/__tests__` file → fails (rule b)
    - create `plugins/<x>/core/__tests__/foo.test.ts` → fails (rule c)
    - delete the `pathIgnorePatterns` line → fails naming `vitest.config.ts` (rule d)
 7. **Own tests + full gate.**
    `bun test plugins/framework/plugins/tooling/plugins/test-layout` → classifier tests pass.
-   `./singularity build` → regenerates `check.generated.ts` (commit it), runs all
+   `./equin build` → regenerates `check.generated.ts` (commit it), runs all
    checks green, and redeploys.

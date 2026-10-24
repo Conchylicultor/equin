@@ -139,7 +139,7 @@ and every existing query site importing from `./internal/views` is unchanged.
 - Update `plugins/database/plugins/derived-views/CLAUDE.md` "How it works" / "To change a
   view" sections: views are declared via `View({ view })` in the owning plugin's server
   `contributions`, not a `defineView` side-effect; the AUTOGEN block + `docs/plugins-*.md`
-  regenerate via `./singularity build`.
+  regenerate via `./equin build`.
 
 ## Files touched
 
@@ -158,8 +158,8 @@ No new dir, codegen, generated file, check, boundary-config, or tsconfig changes
 
 ## Verification
 
-1. `./singularity build` — regenerates migrations (should be **none** for views), rebuilds
-   server, regenerates docs. Build must pass `./singularity check` (type-check,
+1. `./equin build` — regenerates migrations (should be **none** for views), rebuilds
+   server, regenerates docs. Build must pass `./equin check` (type-check,
    plugins-doc-in-sync after the CLAUDE.md edit).
 2. Confirm views exist after boot:
    `query_db("SELECT viewname FROM pg_views WHERE schemaname='public' ORDER BY viewname")`

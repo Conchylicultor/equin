@@ -206,6 +206,6 @@ Central has only 4 plugins and no contribution use case today. Add the same prim
 
 ## Verification
 
-1. `./singularity build` — confirms the server compiles and starts
+1. `./equin build` — confirms the server compiles and starts
 2. Existing behavior unchanged — no consumers use contributions yet (trigger migration is separate)
 3. Check that `collectContributions` runs at the right phase by adding a temporary log and confirming it appears between register and onReady spans in the profiler output

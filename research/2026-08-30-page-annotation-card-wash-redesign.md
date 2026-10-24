@@ -107,7 +107,7 @@ Editor.BlockFrame({ match, component, cornerAnchor: Comp })  // corner label —
 ```
 
 A union type (`{ anchor: C; cornerAnchor?: never } | { cornerAnchor: C; anchor?: never }`)
-makes "both" and "neither" unspellable. `./singularity check
+makes "both" and "neither" unspellable. `./equin check
 page-editor:anchor-has-decoration` (`plugins/page/plugins/editor/check/index.ts:215`)
 accepts either arm — it asserts a handle's `anchor: true` is backed by *a*
 decoration, and that stays exactly as true.
@@ -194,7 +194,7 @@ stay as they are. Only the trigger moves, from the glyph to the label:
 
 ## Verification
 
-1. `./singularity build` (background), then open a page carrying all five card
+1. `./equin build` (background), then open a page carrying all five card
    types — `http://<worktree>.localhost:9000/pages/page/block-6ba6822e-3abf-4cd9-87f9-494360a2b1cb`
    has a callout, agent-notes and a quote; `block-b4f38ca7-…` has context + todo.
 2. Measure, don't eyeball, the thing that was wrong: every decorated box's left
@@ -204,9 +204,9 @@ stay as they are. Only the trigger moves, from the glyph to the label:
 3. Hover each card: label fades in, nothing moves. Hover a TODO's label: it
    becomes `▷ LAUNCH`. Click: the dispatch popover opens. Launch: the label
    sticks at rest showing the status.
-4. `./singularity run plugins/page/plugins/annotations/e2e/annotations-verify.ts`,
+4. `./equin run plugins/page/plugins/annotations/e2e/annotations-verify.ts`,
    then the callout, context, quote and container-rail suites.
 5. Open a page in version history (`read-only-view`) and confirm the same cards
    render with the tint and a hover label, and that the callout's glyph is inert.
-6. `./singularity check` — `page-editor:anchor-has-decoration`,
+6. `./equin check` — `page-editor:anchor-has-decoration`,
    `annotations:audience-declared`, boundaries, type-check.

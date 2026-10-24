@@ -127,7 +127,7 @@ qualified "extracting import specifiers/symbols". Faithful reading:
 15. Update `parse-utils/CLAUDE.md` (and `checks/CLAUDE.md` as needed): import
     scanning → `findImports`; reserve `{strings:false}` for marker/value scanning
     via `markerCallSpans`/`findMarkerCalls`. Refresh the autogen doc blocks via
-    `./singularity build`.
+    `./equin build`.
 
 ### Group 7 — Additional import scanners surfaced by the lint rule
 The `no-adhoc-import-scan` sweep found genuine import scanners the task list did

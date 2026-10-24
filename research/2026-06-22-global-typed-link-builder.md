@@ -117,7 +117,7 @@ Web (`toast`):
 - `conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/investigate-event/web/components/investigate-event-button.tsx`
   → all `conversationRoute.link(agentManagerApp, { convId: conv.id })`.
 
-### Regression guard — new `./singularity check`
+### Regression guard — new `./equin check`
 
 `plugins/framework/plugins/tooling/plugins/checks/plugins/no-hand-built-link-to/check/index.ts`
 (default-export a `Check`). Uses `grepCode` to flag any hand-built app-rooted link
@@ -135,9 +135,9 @@ Modified: `pane/web/pane.ts`; 6 pane files; 2 web shell barrels; 10 link call si
 
 ## Verification
 
-1. `./singularity build` — regenerates registries/migrations, type-checks. The
+1. `./equin build` — regenerates registries/migrations, type-checks. The
    `route.link(app, params)` signatures make every migrated site type-checked.
-2. `./singularity check` — runs `type-check`, `plugin-boundaries` (asserts no cycle
+2. `./equin check` — runs `type-check`, `plugin-boundaries` (asserts no cycle
    from the new edges), and the new `no-hand-built-link-to` (should pass post-migration;
    verify it fails if a literal `linkTo: "/x"` is reintroduced).
 3. Manual: trigger an auto-build (push to main from another worktree) or click a

@@ -189,12 +189,12 @@ pipeline is keyed by Transport identity):
 
 ## Verification
 
-1. `./singularity test plugins/framework/plugins/resource-runtime plugins/framework/plugins/server-core plugins/packages/plugins/resource-protocol plugins/primitives/plugins/live-state`:
+1. `./equin test plugins/framework/plugins/resource-runtime plugins/framework/plugins/server-core plugins/packages/plugins/resource-protocol plugins/primitives/plugins/live-state`:
    unchanged suites pass.
-2. `./singularity test plugins/framework/plugins/http-router`: literal and param match, method
+2. `./equin test plugins/framework/plugins/http-router`: literal and param match, method
    filter, `decodeURIComponent`, default `no-store`, 500 plus `onError` on a throw, duplicate-key
    throw, `onUnmatched`.
-3. `./singularity test plugins/framework/plugins/browser-server`: the jsdom test runs the real
+3. `./equin test plugins/framework/plugins/browser-server`: the jsdom test runs the real
    `NotificationsClient` (via `TransportProvider` + `NotificationsProvider`, or directly with
    `makeSocket` / `socketUrl` / `fetchImpl` from the transport) against `createBrowserServer`:
    - **subscribe:** a `liveValue` and a `liveCollection` window resolve to the loader's data,
@@ -209,8 +209,8 @@ pipeline is keyed by Transport identity):
      non-`/api` path gives a 404 naming it;
    - **notify:** after `server.notify` on the window, a keyed delta lands (Phase 1 does not need
      it, but it proves the arm).
-4. `./singularity build` (the Bun server runs the extracted router) and smoke the app at
-   `http://<worktree>.localhost:9000`. `./singularity check` is green, including
+4. `./equin build` (the Bun server runs the extracted router) and smoke the app at
+   `http://<worktree>.localhost:9000`. `./equin check` is green, including
    `resource-runtime:compiled-routes`, boundaries and plugin docs.
 
 ## Wrap-up

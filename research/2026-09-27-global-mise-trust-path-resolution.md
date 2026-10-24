@@ -119,7 +119,7 @@ Confirmed no existing import edge in either direction between `toolchain` and
 `plugins/toolchain/shared/mise.ts` already has the correct PATH-then-fallback
 resolution logic in its private `miseBin()`, but `shared/` is plugin-private
 (cross-plugin imports from `shared/` are forbidden — R10, enforced by
-`./singularity check plugin-boundaries`), so neither `infra/worktree` nor
+`./equin check plugin-boundaries`), so neither `infra/worktree` nor
 `release/source-checkout` can reach it as-is.
 
 Promote it into `toolchain/core` (the plugin's public, cross-plugin-importable
@@ -222,16 +222,16 @@ an inconsistent outcome to leave behind.
 
 ## Verification
 
-1. `./singularity check plugin-boundaries` and `./singularity check
+1. `./equin check plugin-boundaries` and `./equin check
    boundary-rules` — confirms the new `toolchain/core` export and the
    `source-checkout.ts` → `toolchain/core` import are legal.
-2. `./singularity check type-check` — confirms no dangling imports after
+2. `./equin check type-check` — confirms no dangling imports after
    deleting `worktree.ts`'s block and `shared/mise.ts`'s duplicate `miseBin`.
-3. `./singularity check plugins-doc-in-sync` will fail until `./singularity
+3. `./equin check plugins-doc-in-sync` will fail until `./equin
    build` regenerates `docs/plugins-details.md`, `docs/plugins-compact.md`, and
    `plugins/toolchain/CLAUDE.md`'s autogen reference block (the `core` export
    list changes) — run the build, don't hand-edit those three files.
-4. `./singularity build` — deploys the worktree; confirms the whole app still
+4. `./equin build` — deploys the worktree; confirms the whole app still
    boots (this touches boot-path-adjacent worktree/release code, so a broken
    import would surface immediately).
 5. Manually exercise the fixed path: from a fresh test directory, confirm

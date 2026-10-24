@@ -126,9 +126,9 @@ plugins/.../review/
 
 ## Verification
 
-1. `./singularity build`
+1. `./equin build`
 2. Settings → "Review Sections" → verify default "Auto-generated" section exists with patterns
 3. Add a new section (e.g. "Documentation" with pattern `research/`)
 4. Open a conversation with past pushes → review pane → push tab → verify sections appear with collapsible headers
 5. Delete a section → verify files move back to "Changes"
-6. `./singularity check`
+6. `./equin check`

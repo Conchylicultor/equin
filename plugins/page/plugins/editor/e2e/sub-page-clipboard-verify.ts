@@ -8,7 +8,7 @@
 //      links still work), content intact, gone from the source page;
 //   B. pasting the same clipboard again makes a COPY: a new id, content cloned.
 //
-// Usage: ./singularity run plugins/page/plugins/editor/e2e/sub-page-clipboard-verify.ts
+// Usage: ./equin run plugins/page/plugins/editor/e2e/sub-page-clipboard-verify.ts
 import {
   agentFetch,
   report,

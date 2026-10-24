@@ -101,8 +101,8 @@ that is the home key for this song; in a genuinely modulating song it correctly 
 
 ## Verification
 
-1. `./singularity test plugins/apps/plugins/sonata/plugins/theory plugins/apps/plugins/sonata/plugins/score`
-2. `./singularity build`, open *Là-bas* in this worktree's deploy: Current key = D major;
+1. `./equin test plugins/apps/plugins/sonata/plugins/theory plugins/apps/plugins/sonata/plugins/score`
+2. `./equin build`, open *Là-bas* in this worktree's deploy: Current key = D major;
    chord list reads D = I, Bm7 = vi⁷, G = IV, A = V with matching colours; the progress
    bar shows no key flags past the start.
 3. Screenshot both sections with `e2e-harness/e2e/screenshot.ts --path <song route>`.

@@ -157,9 +157,9 @@ live **only** in `key-layout.ts`.
 
 ## Verification
 
-1. `./singularity build` (regenerates plugin docs; updates the three CLAUDE.md
+1. `./equin build` (regenerates plugin docs; updates the three CLAUDE.md
    autogen blocks for the new imports/exports — commit them).
-2. `./singularity check` — expect green: `plugin-boundaries`, `type-check`,
+2. `./equin check` — expect green: `plugin-boundaries`, `type-check`,
    `eslint`, and `plugins-doc-in-sync`.
 3. Open `http://att-1781259116-v8b8.localhost:9000`, enter Sonata, open a song:
    - **Full keyboard**: 88 keys laid out identically to before; play and confirm

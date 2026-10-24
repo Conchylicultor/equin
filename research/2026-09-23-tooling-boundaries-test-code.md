@@ -144,8 +144,8 @@ appears.
     `../core/testing` (ok), `e2e/` → `core/testing` (denied), `core/x.test.ts`
     → `../server/testing` (denied by the row), and `web/x.test.tsx` →
     `@plugins/y/core/testing` (ok).
-  - `./singularity test plugins/framework/plugins/tooling/plugins/boundaries plugins/framework/plugins/tooling/plugins/checks/plugins/plugin-boundaries plugins/plugin-meta/plugins/parse-utils`
-- `./singularity check boundary-rules plugin-boundaries plugins-doc-in-sync type-check`
+  - `./equin test plugins/framework/plugins/tooling/plugins/boundaries plugins/framework/plugins/tooling/plugins/checks/plugins/plugin-boundaries plugins/plugin-meta/plugins/parse-utils`
+- `./equin check boundary-rules plugin-boundaries plugins-doc-in-sync type-check`
   passes on the unchanged tree, which confirms the baseline has zero
   violations.
 - A throwaway trial, reverted before the build:
@@ -154,4 +154,4 @@ appears.
      `markdown-apply/core/*.ts` production file (should fail with the test-code
      message), and from an e2e script (should fail).
   3. Add `core/internal/testing/x.ts` (should fail as misplaced).
-- `./singularity build` (in the background).
+- `./equin build` (in the background).

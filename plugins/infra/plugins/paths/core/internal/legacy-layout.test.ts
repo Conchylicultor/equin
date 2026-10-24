@@ -35,7 +35,7 @@ test("every `to` names a <kind>/<name> that a declaration produces, or records a
   //
   // Discovered by globbing the tree rather than read off
   // `core/data-dirs.generated.ts`, deliberately: that file only regenerates on
-  // `./singularity build`, so a test keyed on it would go red for a declaration
+  // `./equin build`, so a test keyed on it would go red for a declaration
   // that IS written and correct, purely because codegen hasn't run. The claim
   // here is about the declarations, so it reads the declarations.
   const glob = new Bun.Glob("plugins/**/data-dirs/index.ts");

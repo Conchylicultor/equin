@@ -6,7 +6,7 @@
  * the real body on a laid-out page by data-view's shared suite
  * (`describePagedConformance`, `data-view/web/testing`).
  *
- * Run: `./singularity test plugins/primitives/plugins/data-view/plugins/gallery`.
+ * Run: `./equin test plugins/primitives/plugins/data-view/plugins/gallery`.
  */
 
 import { afterEach } from "vitest";

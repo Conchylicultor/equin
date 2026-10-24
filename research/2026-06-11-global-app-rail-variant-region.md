@@ -72,7 +72,7 @@ plugins/apps/core/
 
 plugins/apps/plugins/app-rail-framing/
   package.json                  @singularity/plugin-apps-app-rail-framing
-  CLAUDE.md                     (autogen block; filled by ./singularity build)
+  CLAUDE.md                     (autogen block; filled by ./equin build)
   core/
     index.ts                    export { appRailFraming }
     region.ts                   defineVariantRegion<RailFramingProps>({ id:"app-rail-framing",
@@ -236,7 +236,7 @@ read the same (base) scope.
 
 No manual edits — `web/src/plugins.ts` / `server-core/bin/plugins.ts` do **not**
 exist; `web.generated.ts` and `server.generated.ts` are regenerated from the
-filesystem by `./singularity build`. Creating the `web/index.ts` / `server/index.ts`
+filesystem by `./equin build`. Creating the `web/index.ts` / `server/index.ts`
 files above and rebuilding registers everything. `dependsOn` is import-derived.
 The `plugins-registry-in-sync` and `plugins-doc-in-sync` checks gate drift.
 
@@ -254,10 +254,10 @@ The `plugins-registry-in-sync` and `plugins-doc-in-sync` checks gate drift.
 
 ## Verification
 
-1. `./singularity build` (repo root) — regenerates both registries (expect 3 web +
+1. `./equin build` (repo root) — regenerates both registries (expect 3 web +
    1 server new entries), the new `CLAUDE.md` autogen blocks, and
    `docs/plugins-details.md`.
-2. `./singularity check` — boundary checker (cross-plugin imports go through
+2. `./equin check` — boundary checker (cross-plugin imports go through
    `@plugins/apps/web` + `@plugins/apps/core`, not deep paths), barrel-purity,
    lint, `plugins-registry-in-sync`, `plugins-doc-in-sync`.
 3. Playwright e2e (`bun e2e/screenshot.mjs`) at `http://<worktree>.localhost:9000`:

@@ -182,7 +182,7 @@ called during render.
 
 ## Verification
 
-1. `./singularity build` — must compile and deploy cleanly
+1. `./equin build` — must compile and deploy cleanly
 2. Open the app, navigate to a conversation with nested panes (e.g.
    conversation → task detail → file pane)
 3. Click the X close button on the rightmost pane — should close in one

@@ -1,6 +1,6 @@
 // ─── The regression gate for our own pricing ──────────────────────────────────
 //
-//   ./singularity run plugins/stats/plugins/cost/scripts/verify-vs-ccusage.ts [--fetch] [--top N]
+//   ./equin run plugins/stats/plugins/cost/scripts/verify-vs-ccusage.ts [--fetch] [--top N]
 //
 // This script is the ONLY reason `ccusage` is still a dependency of this plugin
 // (a dev one). Nothing on the serving path imports it: `price-table.ts` owns the

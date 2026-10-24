@@ -51,7 +51,7 @@ unchanged.
 
 ## Verification
 
-- Unit tests for the parser (`./singularity test …/mermaid`).
-- `./singularity build`, then look at the two prototype diagrams, plus a block, a
+- Unit tests for the parser (`./equin test …/mermaid`).
+- `./equin build`, then look at the two prototype diagrams, plus a block, a
   subgraph and an unsupported type (gantt), in a page split view and the file
   viewer. Check both light and dark.

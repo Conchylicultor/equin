@@ -71,7 +71,7 @@ Location: `~/.singularity/worktrees/<name>/spec.json`. Directory name = worktree
 
 `server` is required and absolute; `web` is absolute when present (central has none). The gateway hardcodes the launch convention (`bun bin/index.ts --namespace <name> --socket <path>`, escalating readiness timeout — see "Backend Contract"). No per-worktree overrides in v1. Other per-worktree files (build logs, profiling data) also live in the same subdirectory.
 
-Composition namespaces (`http://<composition>.<checkout>.localhost:9000`, or `http://<composition>.localhost:9000` when the checkout is main — `./singularity build --composition <name>`) are ordinary spec dirs written by the build: `server` points at the checkout that built it, `web` at a composed dist, plus a `composition.json` provenance marker the gateway ignores. No gateway changes; namespace identity flows the same way (dir name → the backend's `--namespace`). The `composition` field on the spec is carried through the gateway's round-trip but never interpreted or forwarded — the backend reads it back off the same file.
+Composition namespaces (`http://<composition>.<checkout>.localhost:9000`, or `http://<composition>.localhost:9000` when the checkout is main — `./equin build --composition <name>`) are ordinary spec dirs written by the build: `server` points at the checkout that built it, `web` at a composed dist, plus a `composition.json` provenance marker the gateway ignores. No gateway changes; namespace identity flows the same way (dir name → the backend's `--namespace`). The `composition` field on the spec is carried through the gateway's round-trip but never interpreted or forwarded — the backend reads it back off the same file.
 
 ### Discovery: dir-level watch + lazy resolve + periodic reconcile
 
@@ -160,7 +160,7 @@ The gateway includes a generic service supervisor (`supervisor.go`) that manages
 
 ### Config file: `-db-config` (default `~/.singularity/state/db-config/database.json`)
 
-Auto-generated on first `./singularity start`. Contains two sections:
+Auto-generated on first `./equin start`. Contains two sections:
 - `connection` — database host/port/user, read by the server and CLI (not by the gateway)
 - `services` — array of processes the gateway should supervise
 
@@ -198,7 +198,7 @@ Each channel gets its own size-rotated file under `-log-dir` (default `~/.singul
 
 - `gateway.log` — the gateway's own `slog` output (lifecycle, routing, supervisor). Written directly by the Go process via a rotating writer.
 - `<name>.log` — one file per worktree, holding that backend's stdout/stderr (`central.log`, `<worktree>.log`, …). Each line is `<RFC3339> [stdout|stderr] <line>`. Backend output never lands in `gateway.log`. This is the durable counterpart to the in-memory `logRing` that feeds the live UI.
-- `gateway-stdio.log` — the daemon's raw stdout/stderr (Go panics, any crash before `slog` is wired up). Owned by the launcher (`./singularity start`), truncated on each start.
+- `gateway-stdio.log` — the daemon's raw stdout/stderr (Go panics, any crash before `slog` is wired up). Owned by the launcher (`./equin start`), truncated on each start.
 
 Rotation (`logwriter.go`, `rotatingWriter`) is size-based: at `maxLogBytes` (50 MB) the active file becomes `<file>.1`, older backups shift up, and the oldest past `maxLogBackups` (5) is dropped — so each channel is capped at ~300 MB with no external dependency. The per-worktree writer opens lazily and is closed when the worktree is unregistered.
 
@@ -207,7 +207,7 @@ Rotation (`logwriter.go`, `rotatingWriter`) is size-based: at `maxLogBytes` (50 
 The machine's gateway binary is the `gateway-binary` dependency
 (`plugins/infra/plugins/launcher/deps`, an `infra/deps` `build` kind): built from
 this directory's Go source into `~/.singularity/cache/deps/gateway-binary/<identity>/env/gateway`
-by `./singularity start` (or `./singularity deps install gateway-binary`), rebuilt
+by `./equin start` (or `./equin deps install gateway-binary`), rebuilt
 whenever a `.go` file, `go.mod`/`go.sum` or Go itself changes, and sealed into
 every release bundle (`deps/gateway-binary/gateway`, cross-compiled for its
 platform). By hand, for a debugger:
@@ -218,14 +218,14 @@ go build -o /tmp/gateway .
 /tmp/gateway -child-env HOME,USER,PATH -listen :8080 -idle-timeout 5m -log-level debug
 ```
 
-`-child-env` is **required**: a comma-separated list of the environment variable names children may receive (an entry ending in `*`, like `SINGULARITY_AUTH_*`, matches a prefix). Without it the gateway exits non-zero before doing anything. It has no Go-side default on purpose — the declaration lives in one place, `runtimeEnvNames()` in `plugins/infra/plugins/launcher/core`, and `./singularity start` passes exactly that. The minimal form above is enough to poke at routing under a debugger; a backend that needs more (the `SINGULARITY_*` installation settings, OAuth credentials) needs the full list. At boot `gateway.log` records the forwarded names at info and, at warn, every name in the gateway's own environment it is NOT forwarding — the normal path drops nothing, so a warn line means a hand-run gateway. Names only, never values.
+`-child-env` is **required**: a comma-separated list of the environment variable names children may receive (an entry ending in `*`, like `SINGULARITY_AUTH_*`, matches a prefix). Without it the gateway exits non-zero before doing anything. It has no Go-side default on purpose — the declaration lives in one place, `runtimeEnvNames()` in `plugins/infra/plugins/launcher/core`, and `./equin start` passes exactly that. The minimal form above is enough to poke at routing under a debugger; a backend that needs more (the `SINGULARITY_*` installation settings, OAuth credentials) needs the full list. At boot `gateway.log` records the forwarded names at info and, at warn, every name in the gateway's own environment it is NOT forwarding — the normal path drops nothing, so a warn line means a hand-run gateway. Names only, never values.
 
 ## Backend Contract
 
 The gateway expects backends to:
 
 1. Read their socket path from `--socket <path>` on argv (required; backends should error out if missing). A socket is per process, so it must not ride in the environment, where every process the backend starts would inherit it. The server-side reader is `readServingSocket()` in `plugins/infra/plugins/runtime-identity/core`. (A spec written while the transition ran may still carry a `socketTransport` key; the gateway ignores it.)
-2. **Expect a declared environment, nothing ambient.** A backend receives exactly the declared runtime environment — the names the launcher passes via `-child-env` (`runtimeEnvNames()` in `plugins/infra/plugins/launcher/core`), with the values the gateway itself was started with — and nothing else. Nothing is inherited from whoever started the gateway: an undeclared variable in the starting shell never reaches a backend. A per-child value overrides a same-named base entry. Supervised-service start commands (Postgres, PgBouncer) and the gateway's own helper execs (`taskpolicy`, `ps`) get the base alone. A new variable a backend must read goes on the launcher's list — declaring it there (and restarting the gateway with `./singularity start`) is the whole change.
+2. **Expect a declared environment, nothing ambient.** A backend receives exactly the declared runtime environment — the names the launcher passes via `-child-env` (`runtimeEnvNames()` in `plugins/infra/plugins/launcher/core`), with the values the gateway itself was started with — and nothing else. Nothing is inherited from whoever started the gateway: an undeclared variable in the starting shell never reaches a backend. A per-child value overrides a same-named base entry. Supervised-service start commands (Postgres, PgBouncer) and the gateway's own helper execs (`taskpolicy`, `ps`) get the base alone. A new variable a backend must read goes on the launcher's list — declaring it there (and restarting the gateway with `./equin start`) is the whole change.
 3. Bind that Unix socket and accept HTTP/1.1 + WebSocket connections on it. The gateway polls readiness via `GET /api/health/ready` over the socket — it hot-swaps only once that returns `200` (backend fully ready: migrations applied, DB warm, registry built), not on a bare socket accept. A `404` (backend predates the readiness endpoint) falls back to "HTTP-reachable = ready"; `503` means still booting.
 
    **Wedge detection is progress-aware and escalates before it kills.** The base deadline (`-ready-timeout`, load-adaptive up to `-ready-timeout-max`) is only the wedge *threshold*: when it expires but the backend has answered HTTP at all (even `503`), or was spawned darwinbg-demoted (an E-core boot legitimately exceeds base under host load — even to first socket bind), the gateway lifts the demotion (`taskpolicy -B`) and extends the wait by `-ready-timeout-max` instead of SIGKILLing near-complete boot work. Only a silent, never-demoted backend is declared wedged at base; a crashed backend is always caught instantly via its exit channel. This closes the 2026-07-07 spawn-kill loop, where healthy demoted boots were killed at 15s four times in a row under load, turning a slow cold start into a ~2-minute outage.
@@ -236,7 +236,7 @@ In Bun: `Bun.serve({ unix: readServingSocket(), fetch, websocket })`. There is n
 
 ## Orphan-backend reaping & stale-socket cleanup
 
-The gateway owns backend lifecycles, but tracks live backends only in memory — so a gateway crash/restart (or `./singularity start` re-launch) could leave the previous generation's backends orphaned. Cleanup has three layers:
+The gateway owns backend lifecycles, but tracks live backends only in memory — so a gateway crash/restart (or `./equin start` re-launch) could leave the previous generation's backends orphaned. Cleanup has three layers:
 
 1. **Durable pid sidecar** — at spawn, `startBackend` writes `<socket>.pid` (JSON: `pid`, `pgid`, `wallStart`, `worktree`) next to the socket, atomically (temp + rename). It is removed with the socket everywhere via `removeBackendArtifacts(socketPath)` (socket-first, then sidecar). This makes the gateway's ownership of a backend survive its own restart.
 2. **Per-spawn unlink-before-bind** — `removeBackendArtifacts(socketPath)` immediately before each spawn, clearing any socket + sidecar a crashed predecessor left on that path.

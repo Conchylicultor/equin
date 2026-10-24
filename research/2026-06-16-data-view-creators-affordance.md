@@ -185,7 +185,7 @@ is the contract; both sources move in lockstep.
 
 ## Verification
 
-1. `./singularity build` (regenerates registry/docs, runs checks incl. `type-check`,
+1. `./equin build` (regenerates registry/docs, runs checks incl. `type-check`,
    `plugin-boundaries`, `plugins-doc-in-sync`).
 2. App at `http://att-1781557754-9i4r.localhost:9000`. Use `bun e2e/screenshot.mjs` to drive:
    - **Story** (`/story`): single "New story" toolbar button **and** a trailing dashed "+"

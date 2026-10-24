@@ -10,7 +10,7 @@
  *     template first.
  *
  * Run against the current worktree's own deploy:
- *   ./singularity run plugins/conversations/plugins/conversation-view/plugins/prompt-templates/e2e/usage-order.ts --conv <id>
+ *   ./equin run plugins/conversations/plugins/conversation-view/plugins/prompt-templates/e2e/usage-order.ts --conv <id>
  *
  * `--clicks` must exceed the current leader's decayed score for assertion 2 to
  * mean anything; the default is deliberately generous.

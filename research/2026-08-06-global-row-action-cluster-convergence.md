@@ -234,19 +234,19 @@ is — it is the tree's regression guard and is already verified discriminating.
 
 ## Verification
 
-1. `./singularity build`; confirm `status: ok` in
+1. `./equin build`; confirm `status: ok` in
    `~/.singularity/worktrees/att-1786028049-9vzb/build-status.json` (never infer from a `build-*.log`).
 2. **Prove the lint rule red first.** Temporarily restore the `w-0` `Clip` render in
-   `tree-row-chrome.tsx` and confirm `./singularity check eslint` reports it. A rule never observed
+   `tree-row-chrome.tsx` and confirm `./equin check eslint` reports it. A rule never observed
    failing is not evidence — this is the exact check `no-uncoupled-hover-reveal` never survived.
 3. `bun plugins/primitives/plugins/row-actions/e2e/cluster-parity.ts` for each
    `--url`/`--view` pair (Pages sidebar tree + list, Events sources table). Prove each red by
    temporarily reverting that host to its old reveal.
 4. `bun plugins/apps/plugins/pages/plugins/page-tree/e2e/row-actions-overflow.ts` — unchanged,
    still green.
-5. `./singularity test plugins/primitives/plugins/row-actions plugins/primitives/plugins/data-view/plugins/gallery plugins/primitives/plugins/css/plugins/row`
+5. `./equin test plugins/primitives/plugins/row-actions plugins/primitives/plugins/data-view/plugins/gallery plugins/primitives/plugins/css/plugins/row`
    (both buckets).
-6. `./singularity check` — `eslint`, `plugin-boundaries`, `plugins-doc-in-sync`,
+6. `./equin check` — `eslint`, `plugin-boundaries`, `plugins-doc-in-sync`,
    `tailwind-scan-covers-classes`, `layout-geometry`.
 7. **Manual pass on the drag-reorder surfaces**, where the new `pointerdown` guard bites: the
    data-view table with manual order (`useRowDecoration` + `useRankReorderItem`), the Pages sidebar

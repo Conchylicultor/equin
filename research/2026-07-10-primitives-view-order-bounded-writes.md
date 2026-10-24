@@ -184,7 +184,7 @@ Collapses to one statement — no transaction, no `DELETE`, no `nBetween`:
 `(data_view_id, view_id, rank)`. Client-minted ranks make a lost-update collision
 between two concurrent tabs *possible* where the dense re-rank made it impossible; the
 index turns that into a loud 409 instead of a silently arbitrary tie. Requires a
-migration (`./singularity build` regenerates it). Drop this step if the migration
+migration (`./equin build` regenerates it). Drop this step if the migration
 proves noisy — it is a safety net, not a correctness requirement.
 
 ### `web/components/row-order-contribution.tsx`
@@ -244,9 +244,9 @@ gate, `orderSectionsByRank`, drag-while-windowed.
      stability gate — it asserts the next render shows what was dropped.
    - the DB suite: upsert-only (a key absent from `writes` survives), duplicate-key 400,
      non-ascending-rank 400, per-`viewId` scoping.
-2. `./singularity build` — clean; a migration appears **only** if the optional unique
+2. `./equin build` — clean; a migration appears **only** if the optional unique
    index is taken.
-3. `./singularity check` — `migrations-in-sync`, `plugins-doc-in-sync`, `plugin-boundaries`,
+3. `./equin check` — `migrations-in-sync`, `plugins-doc-in-sync`, `plugin-boundaries`,
    `type-check`.
 4. Open `http://att-1783644652-py3f.localhost:9000/agents` (tasks list, "Recent", sort
    cleared). Drag the 2nd row above the 1st. Then:

@@ -19,7 +19,7 @@ export default createRule({
         "Raw Bun.spawn can permanently wedge the event loop: bun 1.3.13 (unfixed " +
         "through 1.4-canary) has a race where a child with piped stdio exiting during " +
         "a pending stream pull spins the native microtask queue at 100% CPU forever — " +
-        "every field `./singularity build/check/push` wedge is this bug (see " +
+        "every field `./equin build/check/push` wedge is this bug (see " +
         "research/2026-07-22-global-spawn-plugin-wedge-mitigation.md). Even an " +
         'option-less Bun.spawn(argv) is exposed: stdout DEFAULTS to "pipe". Route ' +
         "through @plugins/infra/plugins/spawn/core instead — spawnCaptured / " +

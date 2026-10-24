@@ -8,7 +8,7 @@
  * lookup, absent "main"), and a window filter on the absent value.
  *
  * createTestDb() throws loudly when the database is unreachable.
- * Run: `./singularity test plugins/network/plugins/live`.
+ * Run: `./equin test plugins/network/plugins/live`.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";

@@ -156,8 +156,8 @@ Zero consumer files change (the `@core` alias is preserved).
 ## Verification
 
 1. `bun install` — workspace resolution succeeds
-2. `./singularity build` — full build passes (frontend + server + migration gen + doc gen)
-3. `./singularity check` — all checks pass (boundary-rules, plugin-boundaries, eslint, etc.)
+2. `./equin build` — full build passes (frontend + server + migration gen + doc gen)
+3. `./equin check` — all checks pass (boundary-rules, plugin-boundaries, eslint, etc.)
 4. Navigate to `http://<worktree>.localhost:9000` — app loads and functions
 5. `plugin-core/` is fully deleted
 6. `grep -r 'plugin-core' --include='*.ts' --include='*.json' --include='*.tsx'` — no stale references (except comments)

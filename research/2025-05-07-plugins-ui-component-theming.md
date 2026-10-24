@@ -250,12 +250,12 @@ Minimal server barrel — just registers the config field so the PATCH endpoint 
 
 ## Verification
 
-1. `./singularity build` succeeds (no import errors, config registered)
+1. `./equin build` succeeds (no import errors, config registered)
 2. Visit `http://<worktree>.localhost:9000` — progress bars render with dots variant (default)
 3. Open Settings → UI Component Variants → change Segmented Progress Bar to "Segmented"
 4. Verify the toolbar and sidebar row both switch to the segmented bar
 5. Reload the page — selection persists
-6. `./singularity check` passes (plugin boundaries, eslint)
+6. `./equin check` passes (plugin boundaries, eslint)
 7. Type-check: passing an invalid `activeStep` string produces a compile error
 
 ---
@@ -638,6 +638,6 @@ plugins/ui/
 | **Dark mode per preset** | (a) Each preset ships `{ light, dark }` — two value sets / (b) dark mode is a separate overlay layer that the user can also theme | (a) for v1 — simplest; each preset author knows their intended dark values. Dark overlay adds complexity for marginal gain. |
 | **Config scope** | Per-worktree (existing config plugin) vs user-level (same user, all worktrees) | Per-worktree for v1 — consistent with all other config. A future user-level config primitive can upgrade this. |
 | **Flash of default theme** | The static `app.css` defaults show until `ThemeInjector` hydrates | Mitigate: `ThemeInjector` reads config synchronously if config is already cached (live-state TanStack Query). Acceptable for v1; CSS `@starting-style` or SSR would be the full fix. |
-| **`app.css` baseline drift** | If defaults in `app.css` diverge from preset `default` values, the FODT flash is visible | Keep `app.css` in sync with the `default` preset's light values. Add a CI check (`./singularity check --tokens-in-sync`) that compares them. |
+| **`app.css` baseline drift** | If defaults in `app.css` diverge from preset `default` values, the FODT flash is visible | Keep `app.css` in sync with the `default` preset's light values. Add a CI check (`./equin check --tokens-in-sync`) that compares them. |
 | **App scope declaration** | (a) Wrap in `<ThemeScope>` in the shell component (code) / (b) Contribute to `ThemeEngine.AppScope` slot (data) | (a) for v1 — simpler, no extra slot, more explicit. (b) useful only if we need the theme-engine to enumerate all app scopes, e.g., for a preview thumbnail. |
 | **Token group boundary** | Some tokens like `--card` overlap color and surface concerns | Accept fuzzy boundaries for v1 — group tokens by how they're *overridden together* (a palette swap changes all colors), not by their semantic role. |

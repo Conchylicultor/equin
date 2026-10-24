@@ -3,8 +3,8 @@
 ## Context
 
 Hand-edited **data/backfill migrations** (DML-only, no schema change — created via
-`./singularity build --custom-migration`) cannot reliably land through
-`./singularity push` when `main` concurrently adds a schema migration. The push
+`./equin build --custom-migration`) cannot reliably land through
+`./equin push` when `main` concurrently adds a schema migration. The push
 enters an unrecoverable loop:
 
 1. The post-rebase normalize (`push.ts → postRebaseNormalize → regen-migrations`)
@@ -214,30 +214,30 @@ going forward; the avatar snapshot is just a harmless tip.)
 
 End-to-end reproduction of the original failure, proving it now succeeds:
 
-1. **Unit: snapshot is dropped.** In a worktree, `./singularity build --custom-migration
+1. **Unit: snapshot is dropped.** In a worktree, `./equin build --custom-migration
    --migration-name test_backfill` (with `.allow-migrations`). Confirm a `.sql` is
    created with **no** matching `meta/*_snapshot.json`, and `_journal.json` lists it.
-2. **DML-only check (Class 1).** Hand-edit the SQL with an `UPDATE` → `./singularity check
+2. **DML-only check (Class 1).** Hand-edit the SQL with an `UPDATE` → `./equin check
    --data-migration-dml-only` passes. Then exercise the default-deny boundary: `ALTER
    TABLE … ADD COLUMN`, `CREATE EXTENSION pgcrypto`, and `DO $$ BEGIN … END $$;` must
    EACH fail the check (proving exotic DDL can't slip a blocklist). Revert.
 2b. **Re-hash invariant (Class 2).** Build with empty SQL → note filename hash H0. Edit
-   SQL → `./singularity build` → confirm the file was renamed to a new hash H1 matching
+   SQL → `./equin build` → confirm the file was renamed to a new hash H1 matching
    the content, `_journal.json` updated, and the server log shows the backfill applied
    under H1 plus a loud drift warning for H0. Re-build unchanged → no rename (idempotent).
 3. **The Y-fork scenario (the bug):**
-   - Branch A: add a column in some `schema.ts`, `./singularity build --migration-name
-     add_col_a`, `./singularity push -m a`.
+   - Branch A: add a column in some `schema.ts`, `./equin build --migration-name
+     add_col_a`, `./equin push -m a`.
    - Branch B (forked pre-A): `--custom-migration --migration-name backfill_b`, hand-edit
-     SQL with an `UPDATE`, `./singularity build`.
-   - `./singularity push -m b` on B. Expected: rebase succeeds; `regen-migrations` does
+     SQL with an `UPDATE`, `./equin build`.
+   - `./equin push -m b` on B. Expected: rebase succeeds; `regen-migrations` does
      NOT abort (snapshot-less → exempt); `snapshot-chain-intact` passes (backfill has no
      snapshot, A's schema snapshot is the lone tip); backfill `.sql` lands unchanged with
      both migrations in timestamp order. **No quiet window required, no manual rechain.**
 4. **Recovery preserves data.** On B, after rebasing onto a moved main, run
-   `./singularity build --reset-migration --migration-name x` and confirm the backfill
+   `./equin build --reset-migration --migration-name x` and confirm the backfill
    `.sql` is **not** deleted (snapshot-less skip).
-5. **Existing migrations still pass.** `./singularity check` green on main (all 4 legacy
+5. **Existing migrations still pass.** `./equin check` green on main (all 4 legacy
    backfills are DML-only; chain intact).
 6. **Runtime applies it.** Confirm via `mcp__singularity__query_db` that
    `__singularity_migrations` contains the backfill's hash and the UPDATE took effect.

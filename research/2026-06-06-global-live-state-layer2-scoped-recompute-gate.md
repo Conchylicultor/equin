@@ -55,7 +55,7 @@ persist now that Layer 1 removed the per-socket serialization?**
 ## Measurement procedure
 
 ### 0. Build & sanity
-1. `./singularity build` from this worktree.
+1. `./equin build` from this worktree.
 2. Confirm the worktree DB fork carries realistic row counts (the cost only
    reproduces at scale):
    `mcp__singularity__query_db` →

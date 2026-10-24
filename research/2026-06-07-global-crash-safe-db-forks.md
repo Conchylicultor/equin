@@ -25,7 +25,7 @@ SIGTERM mid-fork; the `pg_dump` COPY was torn down (`could not send data to
 client: Broken pipe` → `connection to client lost`); the backend process exited
 before step 3 ran, so cleanup never fired. Result: an orphaned empty DB shell
 (`CREATE DATABASE` committed, 0 tables, no `__singularity_migrations`). Every
-subsequent `./singularity build` in that worktree polled for 30s and aborted.
+subsequent `./equin build` in that worktree polled for 30s and aborted.
 No `db fork failed` log line and no fork-error notification were ever produced —
 confirming the cleanup path never executed.
 
@@ -218,7 +218,7 @@ holds a connection). Register alongside `databaseForkJob`.
 
 ## Verification
 
-1. `./singularity build` in this worktree — confirm it still passes with the
+1. `./equin build` in this worktree — confirm it still passes with the
    existence-only readiness check (DB already exists).
 2. **Happy path:** create a new conversation; `query_db database:singularity`
    → `SELECT * FROM graphile_worker._private_jobs WHERE task_identifier='database.fork'`
@@ -234,6 +234,6 @@ holds a connection). Register alongside `databaseForkJob`.
 5. **Reaper:** manually `CREATE DATABASE "att-test__forking"` with no connections,
    run the sweep (enqueue `database.fork-temp-sweep`) → temp dropped; repeat while
    holding a connection open → temp preserved.
-6. `./singularity check` clean (no-bare-catch on the job's rethrow path,
+6. `./equin check` clean (no-bare-catch on the job's rethrow path,
    plugin-boundaries on the new cross-plugin import).
 ```

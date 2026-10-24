@@ -47,7 +47,7 @@ agent authoring workflow — where the id is *never persisted* and re-derives fr
 
 1. **A check requires explicit ids; build never mutates config files.** Build
    keeps only ever generating origins — hand-authored overrides stay
-   hand-authored. The forcing function is a `./singularity check` that fails when
+   hand-authored. The forcing function is a `./equin check` that fails when
    an identity-bearing list row lacks an explicit `id`.
 2. **Bare slug ids**, unique within the surface (`"favorites"`, `"online"`). The
    surface is already implied by the file and by the DB key's `dataViewId`, so the
@@ -103,7 +103,7 @@ New sibling of the existing config check, mirroring its structure byte-for-byte:
   sibling's package.json)
 - `.../config-stable-list-ids/CLAUDE.md`
 
-`./singularity build` auto-discovers `check/index.ts` and regenerates
+`./equin build` auto-discovers `check/index.ts` and regenerates
 `check.generated.ts` (like every other check sub-plugin — no manual registry
 edit; `dependsOn: ["config_v2"]` falls out of the import).
 
@@ -218,17 +218,17 @@ No automated data backfill.
 ## Verification
 
 1. **Check fails before migration.** After adding the flag + check and running
-   `./singularity build`: `./singularity check config-stable-list-ids` fails,
+   `./equin build`: `./equin check config-stable-list-ids` fails,
    listing the terse configs. Confirms the flag propagates through
    `discoverConfigs` → `descriptor.fields.views.stableIdentity` and the file→
    descriptor resolution works.
 2. **Check passes after migration.** Add the slug ids →
-   `./singularity check config-stable-list-ids` passes; `./singularity check`
+   `./equin check config-stable-list-ids` passes; `./equin check`
    (all, incl. `config-origins-in-sync`, `type-check`) stays green.
 3. **Negative test.** Delete an `id` from one config → check fails with the
    pointed message; restore → passes. (Optionally pin as a `bun:test` beside the
    check with a temp fixture dir.)
-4. **End-to-end identity stability.** In the running app (`./singularity build`,
+4. **End-to-end identity stability.** In the running app (`./equin build`,
    `http://<worktree>.localhost:9000`): open a DataView with an explicit-id view,
    drag rows into a manual order, then **edit that view's filter/name directly in
    its `.jsonc`** and rebuild. The saved order **survives** (viewId unchanged) —

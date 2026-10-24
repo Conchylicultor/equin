@@ -5,7 +5,7 @@ Phase 8 of [`2026-08-17-global-composition-build-serve-model.md`](./2026-08-17-g
 ## Context
 
 A build run used to be able to have a parent. Building the `sonata` composition
-was not a build of its own — it was a tail stage of a main `./singularity build`,
+was not a build of its own — it was a tail stage of a main `./equin build`,
 so it borrowed the main run's identity: a `build_runs` row pointing back at the
 main run through `parent_id`, and artifacts named after the main run's id with a
 `-c-sonata` suffix.
@@ -48,7 +48,7 @@ factories.
 
 `plugins/build/plugins/run-ledger/server/internal/tables.ts` — delete the
 `parentId: text("parent_id")` field and its comment block. Then run
-`./singularity build`, which generates the `ALTER TABLE "build_runs" DROP COLUMN
+`./equin build`, which generates the `ALTER TABLE "build_runs" DROP COLUMN
 IF EXISTS "parent_id"` migration.
 
 **One push, no expand/contract split.** The two-push rule in
@@ -123,11 +123,11 @@ spawns the detached build, not run rows. Leave them.
 
 ## Verification
 
-1. `./singularity build` (background, per the workflow rule). Confirm
+1. `./equin build` (background, per the workflow rule). Confirm
    `~/.singularity/worktrees/<wt>/build-status.json` reads `status: ok`.
 2. The generated migration contains exactly the one `DROP COLUMN IF EXISTS
    "parent_id"` statement against `build_runs`, and no unrelated DDL.
-3. `./singularity check` green — `migrations-in-sync` and `type-check` are the
+3. `./equin check` green — `migrations-in-sync` and `type-check` are the
    two that would catch a miss here. `plugins-doc-in-sync` covers the autogen
    block in the run-ledger CLAUDE.md.
 4. `query_db` on the worktree DB: `select * from build_runs limit 1` returns no
@@ -136,6 +136,6 @@ spawns the detached build, not run rows. Leave them.
 5. Open the Build popover, then a run's detail pane: history renders, the Target
    badge and status/commit/duration rows are unchanged, and the profiling and
    logs sections still resolve their artifacts.
-6. A composition build still records itself: `./singularity build --composition
+6. A composition build still records itself: `./equin build --composition
    sonata` mints one row whose `targets = {sonata}` and whose profile/log
    artifacts are named after that row's own id.

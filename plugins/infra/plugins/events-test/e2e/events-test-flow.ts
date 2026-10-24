@@ -6,7 +6,7 @@
 // before it starts.
 //
 // Usage:
-//   ./singularity run plugins/infra/plugins/events-test/e2e/events-test-flow.ts [--url http://<worktree>.localhost:9000]
+//   ./equin run plugins/infra/plugins/events-test/e2e/events-test-flow.ts [--url http://<worktree>.localhost:9000]
 
 import {
   pathUrl,

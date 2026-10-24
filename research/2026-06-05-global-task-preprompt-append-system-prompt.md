@@ -87,8 +87,8 @@ Sibling to `model-provider`: a launch-time attribute registry. Mirrors `prompt-t
 
 ## Verification (end-to-end)
 
-1. `./singularity build` (regenerates the `tasks_ext_preprompt` migration, builds, restarts, registers gateway).
-2. `./singularity check` — confirm `migrations-in-sync`, `eslint`, plugin-boundaries, and `plugins-doc-in-sync` pass.
+1. `./equin build` (regenerates the `tasks_ext_preprompt` migration, builds, restarts, registers gateway).
+2. `./equin check` — confirm `migrations-in-sync`, `eslint`, plugin-boundaries, and `plugins-doc-in-sync` pass.
 3. In the app (`http://<worktree>.localhost:9000`): Settings → `conversations/preprompts` config → add a preprompt e.g. `{ title: "Terse", prompt: "Always answer in one sentence." }`.
 4. Draft a task, pick "Terse" in the new dropdown, launch it. Or open an existing task's detail pane → Preprompt section → pick "Terse" → Launch.
 5. Confirm the flag actually reaches Claude — inspect the live tmux command:

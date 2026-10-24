@@ -107,5 +107,5 @@ Each file: replace `recentConversationsResource` import with `notifyConversation
 
 1. `rg "recentConversationsResource" plugins/ -g '*.ts' -g '*.tsx'` → zero hits
 2. `rg "ConversationListPayloadSchema" plugins/tasks-core/ -g '*.ts'` → zero hits
-3. `./singularity build` succeeds
+3. `./equin build` succeeds
 4. App loads at `http://<worktree>.localhost:9000`, conversation list populates correctly

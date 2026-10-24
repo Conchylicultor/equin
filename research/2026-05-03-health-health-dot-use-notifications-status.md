@@ -111,7 +111,7 @@ connection recovers. That behaviour is intentional and unaffected by this change
 
 ## Verification
 
-1. `./singularity build` — must pass all checks including `plugin-boundaries`.
+1. `./equin build` — must pass all checks including `plugin-boundaries`.
 2. Open the app at `http://att-1777822854-4hbk.localhost:9000`.
 3. Health dot should be **green** immediately on load (no "connecting" flash).
 4. Open a terminal pane, then close it — dot stays **green** (was: turns red).

@@ -6,22 +6,22 @@ Making a render slot reorderable (`defineRenderSlot` without `reorder: false`) s
 incurs a second obligation: an authored override `config/<pluginId>/<slotId>.jsonc` must
 exist (curated from the build-generated `<slotId>.origin.jsonc`), or the
 `reorder:configs-authored` check fails. The reported symptom: this obligation is only
-discovered at `./singularity push`, after everything else is done and verified (hit when
+discovered at `./equin push`, after everything else is done and verified (hit when
 adding `sonata.toolbar.start/end` — two missing overrides push complained about).
 
 **Root cause (empirically verified, not the original hypothesis).** The check is *not*
 push-only and there is *no* stale-module bug: `plugins/reorder/check/index.ts` statically
 imports the freshly-regenerated `reorderable-slots.generated.ts`, and nothing imports that
-manifest earlier in the build process, so during a *normal* `./singularity build` the check
+manifest earlier in the build process, so during a *normal* `./equin build` the check
 runs in `runChecks` (build.ts step 5) and **does** fail. Proof: a recent build's check log
 (`~/.singularity/worktrees/<wt>/check.log`) lists `reorder:configs-authored ... ok`
 alongside the other checks — it is in the generated registry (`check.generated.ts:53`) and
 executes on every plain build. The single escape hatch is **`--skip-checks`** — the
 fast-iteration flag (`build.ts:564`, documented in root `CLAUDE.md`) — which skips the
 entire checks phase (`build.ts:828`), running only runtime `tsc`. No automated path passes
-it (the auto-build job and the build button both run plain `./singularity build`), so the
-gap only opens when an agent explicitly types `./singularity build --skip-checks` and then
-discovers the obligation at `push` (which always re-runs `./singularity check` in a fresh
+it (the auto-build job and the build button both run plain `./equin build`), so the
+gap only opens when an agent explicitly types `./equin build --skip-checks` and then
+discovers the obligation at `push` (which always re-runs `./equin check` in a fresh
 subprocess).
 
 **Decision (per user).** Do **not** auto-scaffold the override — the manual curation is
@@ -49,7 +49,7 @@ export interface Check {
   description: string;
   run(): Promise<CheckResult>;
   /**
-   * Run even when `./singularity build --skip-checks` is passed (and, as always,
+   * Run even when `./equin build --skip-checks` is passed (and, as always,
    * during a normal build and `push`). For cheap, structural, codegen-coupled
    * invariants whose violation is painful to discover only at push — e.g. a
    * newly-reorderable slot that still owes an authored override. Default false:
@@ -145,14 +145,14 @@ leads with intent, not just mechanics. Optional but cheap.
 
 ## Verification
 
-1. `./singularity build` — baseline green (all overrides already exist; grandfathered list empty → check passes).
+1. `./equin build` — baseline green (all overrides already exist; grandfathered list empty → check passes).
 2. **Reproduce the footgun fix:** temporarily make a slot reorderable without an override —
    e.g. delete one committed override `config/.../<slot>.jsonc`, then:
-   - `./singularity build --skip-checks` → **build now FAILS** on `reorder:configs-authored`
+   - `./equin build --skip-checks` → **build now FAILS** on `reorder:configs-authored`
      with the new "why" message (previously it would have passed and only failed at push).
-   - `./singularity build` (no flag) → also fails (unchanged behavior, now with the better message).
+   - `./equin build` (no flag) → also fails (unchanged behavior, now with the better message).
    - Restore the override → both builds pass again.
 3. Confirm `--skip-checks` still skips the *rest* of the checks (only `reorder:configs-authored`
    appears in the build's checks step; lint/type/etc. do not run).
-4. Sanity: `./singularity check reorder:configs-authored` runs standalone and reflects the new message.
-5. `./singularity check` (full) stays green.
+4. Sanity: `./equin check reorder:configs-authored` runs standalone and reflects the new message.
+5. `./equin check` (full) stays green.

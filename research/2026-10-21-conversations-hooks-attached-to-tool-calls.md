@@ -65,7 +65,7 @@ All tool renderers draw through `ToolCallCard` → `ToolCallFrame` → `Collapsi
 - **Summary line:** a guard denial is `withRefusalBanner`'s format (`framework/tooling/guards/core/refusal.ts`).
   - The guards plugin exports the inverse, `refusalReason(text): string | undefined` (the part after `Why it was blocked:`), from a module that does not pull `parseShell`. The format is then parsed by its owner and nowhere else. A `refusal.test.ts` round-trip pins it.
   - Any other hook's summary is the first paragraph of `text` (or of `stderr`), clamped to 3 lines.
-  - If `./singularity check boundary-rules` forbids `web` from reaching `guards/core`, move the format into its own small `core` plugin that both import.
+  - If `./equin check boundary-rules` forbids `web` from reaching `guards/core`, move the format into its own small `core` plugin that both import.
 
 ### 3. Grouping repeated blocks — DROPPED after review
 
@@ -98,7 +98,7 @@ These stay as today's standalone cards:
 
 ## Verification
 
-- **Tests** (`./singularity test <path>`):
+- **Tests** (`./equin test <path>`):
   - `transcript-source/server/internal/parse-jsonl.test.ts`:
     - Each subtype maps to its outcome.
     - A pre-hook between the call and its result, and a block after the result, both land on the call.
@@ -109,7 +109,7 @@ These stay as today's standalone cards:
     - A run needs 2 or more members.
     - It breaks on a different key, on another contributor, and on a hosted item.
   - `guards/core/refusal.test.ts`: `refusalReason(withRefusalBanner(…)) === reason`.
-- **Build:** `./singularity build`, then `screenshot.ts --path /agents/c/conv-1792552565-pmoec1`.
+- **Build:** `./equin build`, then `screenshot.ts --path /agents/c/conv-1792552565-pmoec1`.
   - The 13 blocked `echo` calls should appear as one "Bash ×13 · none ran" card with the wait-loop reason.
   - The Edit call with `hook_additional_context` should show a blue band.
   - Passing hooks should show as a shield and count.

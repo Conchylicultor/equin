@@ -53,7 +53,7 @@ const MANIFEST_REL_PATH =
 
 const MANIFEST_HEADER = [
   "// AUTO-GENERATED from app.css `/* @ramp … */` declarations. Do not edit.",
-  "// Run `./singularity build` to regenerate.",
+  "// Run `./equin build` to regenerate.",
   "// (see plugins/framework/plugins/tooling/plugins/codegen/core/space-ramp-gen.ts).",
   "//",
   "// The spacing ramp: its closed step set, and the literal class name each",

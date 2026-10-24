@@ -294,7 +294,7 @@ async finish(): Promise<never> {
 **The rider is 154 call sites.** Changing `finish(): never` to `finish(): Promise<never>` makes
 every one of the 154 bare `r.finish();` statements (verified; none is awaited today) a floating
 promise, which the repo's already-enabled `no-floating-promises` rule errors on. So
-`./singularity check type-check` fails until each becomes `await r.finish()` — a mechanical
+`./equin check type-check` fails until each becomes `await r.finish()` — a mechanical
 one-line change per file, **verified by the type checker rather than by review**. `await` on
 `Promise<never>` still narrows to `never`, so no control-flow reasoning changes.
 
@@ -422,11 +422,11 @@ the revert is structural.
 
 ## Verification
 
-1. `./singularity build` (background), then confirm `status: ok` in
+1. `./equin build` (background), then confirm `status: ok` in
    `~/.singularity/worktrees/<wt>/build-status.json`.
 2. **The original bug.** Confirm no override exists: `ls ~/.singularity/state/config/<wt>/runs/`
    shows `runs.origin.jsonc` and no `runs.jsonc`. Run
-   `./singularity run plugins/build/e2e/runs-surface.ts`. It passes, and `runs.jsonc` is still
+   `./equin run plugins/build/e2e/runs-surface.ts`. It passes, and `runs.jsonc` is still
    absent afterwards.
 3. **Determinism.** Run it again immediately. The `aria-expanded ${before} → ${after}` line must
    report the *same* `before` — that number drifting was the original failure.
@@ -439,5 +439,5 @@ the revert is structural.
    confirm it is reported as `diverged` and the hand edit survives.
 7. **The write really happens.** With `--headed`, watch the surface actually group before the
    revert — proving this isolates rather than suppresses the write.
-8. `./singularity check` — `type-check` proves both the `writer` threading and the `await
+8. `./equin check` — `type-check` proves both the `writer` threading and the `await
    finish()` migration have no missed call site; the two new guards run clean.

@@ -196,13 +196,13 @@ can drive it.
 
 ## Verification
 
-1. `./singularity test plugins/primitives/plugins/adaptive-bar` — the new
+1. `./equin test plugins/primitives/plugins/adaptive-bar` — the new
    no-slack cases plus the existing 37.
-2. `./singularity check layout-geometry` — must pass with the new fixture; then
+2. `./equin check layout-geometry` — must pass with the new fixture; then
    temporarily neuter the re-probe (restore the one-shot flag) and confirm the
    falsification reports **did not bite**, then restore.
-3. `./singularity check` — boundaries, type-check, doc/registry sync.
-4. `./singularity build`, then open `http://<worktree>.localhost:9000/debug/layout-lab`
+3. `./equin check` — boundaries, type-check, doc/registry sync.
+4. `./equin build`, then open `http://<worktree>.localhost:9000/debug/layout-lab`
    and confirm the new fixture renders as an ordinary healthy bar (no crash card,
    no clipping) — the Lab must not see the falsification.
 5. `query_db` on the worktree: no `kind = 'adaptive-bar'` rows produced by

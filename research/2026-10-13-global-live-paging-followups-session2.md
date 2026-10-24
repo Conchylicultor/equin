@@ -275,7 +275,7 @@ These land **before** A.2, for two reasons:
 
 ## Verification
 - **Gate (0.2):** before and after numbers in the result section.
-- **`./singularity test`:**
+- **`./equin test`:**
   - `network/live`, `infra/query-resource`, `primitives/live-state`;
   - `primitives/data-view` and its views, `primitives/virtual-rows`;
   - `framework/resource-runtime`, `runs`, `infra/jobs`;
@@ -283,7 +283,7 @@ These land **before** A.2, for two reasons:
   - `shell/notifications`, `apps/pages/trash`, `mail`, `build`;
   - `debug/profiling`, `apps/events`;
   - then the whole suite once (the lane-0 noise must be gone).
-- **`./singularity build`, then the e2e matrix:**
+- **`./equin build`, then the e2e matrix:**
 
 | View | Route | Checks |
 |---|---|---|
@@ -296,7 +296,7 @@ These land **before** A.2, for two reasons:
 
 - **Session-1 carry-overs:** `screenshot.ts` on the task list grouped by track and by origin, and on Pages Favorites; `events/e2e` `live-sources.ts` and `sources-verify.ts`.
 - **Screenshots:** the notifications pane, the trash dialog, the gallery at 1280.
-- **`./singularity check`:** in full (`type-check`, `plugins-doc-in-sync`, the resource facets, `config:overrides-authored`, the boundaries).
+- **`./equin check`:** in full (`type-check`, `plugins-doc-in-sync`, the resource facets, `config:overrides-authored`, the boundaries).
 
 ## Wrap-up
 - **The parent doc:** append "As landed (session 2)", mark the oracle bullet resolved, and close the exit criteria.

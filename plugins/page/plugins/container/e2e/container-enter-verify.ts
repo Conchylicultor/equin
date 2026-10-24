@@ -16,7 +16,7 @@
 //  3. LAST: callout [aaa], Enter at the end of aaa → [aaa, ∅] inside; Enter
 //     again → ∅ leaves the box as the callout's next sibling, aaa stays inside.
 //
-// Usage: ./singularity run plugins/page/plugins/container/e2e/container-enter-verify.ts [--out /tmp/container-enter]
+// Usage: ./equin run plugins/page/plugins/container/e2e/container-enter-verify.ts [--out /tmp/container-enter]
 import {
   arg,
   report,

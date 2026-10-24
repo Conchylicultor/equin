@@ -132,7 +132,7 @@ Create:
 - **Agent 1 — server**: epoch in HTTP body + no-store (handleResourceHttp); params on 4 sub-error sends; Fix E in both bins (probe Bun header mutability first); server test updates + new sub-error tests + `test-support.ts` mirror. `bun test plugins/framework/plugins/resource-runtime`.
 - **Agent 2 — client**: fetchImpl seam + no-store; ActiveSub.epoch + guard matrix + stamps; hasAppliedValue + 304 predicate + ResourceStaleReadError + prime swallow; sub-error handling + ServerMsg; stale-drop sink + counter + markApplied reset; new test file + subs-test additions + barrel exports. `bun run test:dom plugins/primitives/plugins/networking plugins/primitives/plugins/live-state`.
 - **Agent 3 — reports consumer + docs**: `reports/plugins/live-state-stale-drop` (copy optimistic-divergence, adapt); CLAUDE.md updates. Depends only on the frozen sink interface above.
-- **Final sequential pass**: `./singularity build` (registry regen + boundary checks), both test suites, fix integration drift.
+- **Final sequential pass**: `./equin build` (registry regen + boundary checks), both test suites, fix integration drift.
 
 ## Verification (end-to-end)
 

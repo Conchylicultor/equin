@@ -93,17 +93,17 @@ Rule groups = `base` + one per lint contribution (`lintEntries[].pluginPath` fro
 
 ## Verification
 
-- Unit tests (`./singularity test …/type-check`): lock digest ignores workspace-only diffs
+- Unit tests (`./equin test …/type-check`): lock digest ignores workspace-only diffs
   (fixture from a real commit pair) and sees a version bump; stale-group computation; entry
   merge keeps ≤3 versions; read-time exemption + unused-exemption assembly.
-- Benchmark on this worktree, `./singularity check type-check --jobs 1`, reading the
+- Benchmark on this worktree, `./equin check type-check --jobs 1`, reading the
   transcript's worker line (cpu, maxRSS) and a new `type-check: lint N files (… stale groups)`
   line. Before (current code): warm no-op, and one contribution-rule edit (full re-lint).
   After: warm no-op; workspace-only `bun.lock` edit; exempt manifest edit; contribution
   rule edit; rule `*.test.ts`-only edit; a `lint/core` edit (still full, expected).
 - Historical replay: the share of the last 7 days' main commits that still force a full
   re-lint (61 → expected ~3: the tsconfig / `.d.ts` / lint-core ones).
-- `./singularity build` green (all checks).
+- `./equin build` green (all checks).
 
 ## Out of scope (next task)
 
@@ -116,7 +116,7 @@ declared `@utility` set (`lintDataKey`); the engine is the config builder's impo
 registries not followed) plus `shared/worker.ts` alone; `eslint.config.ts` is not an input (the worker
 never reads it); only the ROOT tsconfigs count (every other one is a rule test's fixture).
 
-`./singularity check type-check --jobs 1`, worker `cpu` / `maxRSS`, this host:
+`./equin check type-check --jobs 1`, worker `cpu` / `maxRSS`, this host:
 
 | Change | Before | After |
 | --- | --- | --- |

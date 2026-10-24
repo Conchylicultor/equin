@@ -968,7 +968,7 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
   }
 
   // ── 1. Composition artifact phase (hermetic) ─────────────────────────
-  // `build --hermetic` is the ARTIFACT posture of `./singularity build`:
+  // `build --hermetic` is the ARTIFACT posture of `./equin build`:
   // filtered composition registries, generated migration SQL and the web
   // dist — exactly the three outputs staged below — with the dev-cluster
   // DEPLOY half structurally absent (no Postgres readiness, no worktree DB

@@ -61,7 +61,7 @@ export const DEPLOY_LOG_CHANNEL = "deploy";
  * the child outlives the backend, and the boot reconciler rebuilds this map's
  * entry from the ledger row while re-publishing the transcript into the log
  * channel. The run reappears as running, with output still scrolling, which is
- * the whole point: a `./singularity build` restarting the backend used to kill
+ * the whole point: a `./equin build` restarting the backend used to kill
  * the deploy outright (`drun-1787890652933-wr3v6d`).
  *
  * Rebuilt at boot and never persisted, so it cannot go stale — the `op-status` /

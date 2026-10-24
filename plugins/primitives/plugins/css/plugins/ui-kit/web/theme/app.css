@@ -242,7 +242,7 @@
 }
 
 /* Agent-worktree deploy frame. The class is stamped into the served index.html
-   by `./singularity build` (CLI: experimental-marker.ts) — the same JS-sets /
+   by `./equin build` (CLI: experimental-marker.ts) — the same JS-sets /
    CSS-styles split as `.dark`. Compositions and releases never carry it, and
    neither does a chromeless `?embed=1` document (its host already does). */
 .experimental::after {

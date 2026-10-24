@@ -6,7 +6,7 @@ A plugin's saved settings live on disk under a folder named after the plugin id.
 The user's own copy sits at `~/.singularity/state/config/<namespace>/<plugin/slash/path>/`.
 Moving a plugin changes its id, so the settings folder no longer matches.
 
-What happens today on `./singularity plugin move`:
+What happens today on `./equin plugin move`:
 
 - The committed defaults under `config/` move with `git mv`. Fine.
 - Saved reorder layouts inside committed files get their `"<pluginId>:<id>"` keys rewritten. Fine.
@@ -38,7 +38,7 @@ what changed, in the repo. Every build then brings its own namespace's saved set
 A committed, append-only list of plugin-id moves: `plugins/config_v2/core/plugin-moves.json`,
 `[{ "from": "primitives.data-view", "to": "primitives.collections.data-view" }, …]`.
 
-- `./singularity plugin move` appends one entry, in the same commit as the code move.
+- `./equin plugin move` appends one entry, in the same commit as the code move.
   No human step: the entry is written by the tool that makes the move.
 - Entries are ordered; chains (`A→B`, then `B→C`) apply in order.
 - A check (`config_v2:plugin-moves-valid`) rejects an entry whose `to` is not a live plugin id at HEAD
@@ -128,5 +128,5 @@ Once shipped, `slot-config-rename.ts` + `plugins/reorder/shared/slot-id-rename.j
   override stays non-stale (`effective()` returns the override), destination conflict leaves source in place,
   chain `A→B→C`, re-run is a no-op.
 - End to end in this worktree: `plugin move` a small plugin that has a saved override and a reorder entry,
-  `./singularity build`, confirm the override still applies in the UI (screenshot) and Debug → Config Orphans is empty.
-- `./singularity check` passes; a hand-edited earlier ledger entry fails the check.
+  `./equin build`, confirm the override still applies in the UI (screenshot) and Debug → Config Orphans is empty.
+- `./equin check` passes; a hand-edited earlier ledger entry fails the check.

@@ -21,7 +21,7 @@ export { onRunTerminal } from "./internal/run-terminal";
 
 export default {
   description:
-    "Build, desktop-only half: runs `./singularity build` as a supervised job — the Build and Serve routes, the auto-build convergence loop (the refs/heads/main trigger, the debounce, the composition tick, the config watch and the boot reconcile) and the run-terminal watcher.",
+    "Build, desktop-only half: runs `./equin build` as a supervised job — the Build and Serve routes, the auto-build convergence loop (the refs/heads/main trigger, the debounce, the composition tick, the config watch and the boot reconcile) and the run-terminal watcher.",
   contributions: [
     Trigger({
       on: refAdvanced.where({ refName: "refs/heads/main" }),

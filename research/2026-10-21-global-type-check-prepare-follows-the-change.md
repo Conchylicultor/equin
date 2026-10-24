@@ -13,7 +13,7 @@ small piece of work the edit needs.
 
 ### Measured (2026-10-21, this host, 12,602 source files / 19,331 repo files, warm stores)
 
-Instrumented `openPreparation` (per-phase wall + process CPU), `./singularity check type-check
+Instrumented `openPreparation` (per-phase wall + process CPU), `./equin check type-check
 --jobs 1 --no-cache`, plus a standalone run of `openPreparation` in a fresh process. Host load
 7–22, so the numbers are rough. CPU-s:
 
@@ -33,7 +33,7 @@ Total ≈ 19 CPU-s, of which ~2 are the CLI and ~0 are actual work for the chang
 
 **A bug found on the way.** `shared/name-resolve.ts` keys a probed directory on its full
 `readdir` listing. The repo ROOT holds transient gitignored entries (`.install.lock`,
-`.merge_file_*`, `.check-*`), and lookups reach the root, so after unrelated `./singularity`
+`.merge_file_*`, `.check-*`), and lookups reach the root, so after unrelated `./equin`
 commands **~6,000 files' resolution keys move** ("5981 re-keyed"): 3 s of listings, 1.6 s of
 rewrites, and the worker goes from 3.4 to 11–15 CPU-s. It is also an impurity: the check is
 `inputKeyed`, so its verdict must be a function of the tree its key hashes.
@@ -165,10 +165,10 @@ Expected: the walk's 12.6k reads and the walk become O(|D| + frontier).
   checked set, and the lint verdict. The target is 0 divergences.
 - **Benchmark**, as in "Step 3 result": before = main (d65359c3b3), after = this branch, a
   separate `SINGULARITY_DIR` per side, each scenario on a store restored from that side's cold
-  run, `./singularity check type-check --jobs 1` with the check cache deleted. Measured after
+  run, `./equin check type-check --jobs 1` with the check cache deleted. Measured after
   each stage: the unchanged tree, a root-touching command, a hub body edit, hub and leaf
   type edits, the reverts (a976, 9424, 5d08, b77b, 497c, 3967), a syntactic and a type-aware
   rule edit, the augmentation, and cold. Reported: end-to-end CPU-s, peak, wall, and the
   prepare / worker / finalize split.
-- `./singularity check` (all) and `./singularity build` green; the result goes on the design
+- `./equin check` (all) and `./equin build` green; the result goes on the design
   page and the track page.

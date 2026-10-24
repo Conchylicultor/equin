@@ -329,7 +329,7 @@ The "Connect Google" CTA calls `startConnectFlow({ providerId: "google", scopes:
 4. Create `plugins/auth/server/internal/get-token.ts` — HTTP client following secrets `postJson` pattern
 5. Export `getTokenFromCentral` from `plugins/auth/server/index.ts`
 
-**Verify**: `./singularity build`, then `curl -s -X POST http://localhost:9000/api/auth/token -H 'Content-Type: application/json' -d '{"providerId":"google"}'` returns a `TokenResponse` JSON.
+**Verify**: `./equin build`, then `curl -s -X POST http://localhost:9000/api/auth/token -H 'Content-Type: application/json' -d '{"providerId":"google"}'` returns a `TokenResponse` JSON.
 
 ### Phase 2: Core + Orchestrator + Local Target
 
@@ -345,7 +345,7 @@ The "Connect Google" CTA calls `startConnectFlow({ providerId: "google", scopes:
 10. Create `plugins/backup/plugins/local/` — target + config
 11. Register all server plugins
 
-**Verify**: `./singularity build`, `curl -X POST http://localhost:9000/api/backup/run`, check `~/.backups/singularity/` for archive.
+**Verify**: `./equin build`, `curl -X POST http://localhost:9000/api/backup/run`, check `~/.backups/singularity/` for archive.
 
 ### Phase 3: Google Drive Target
 
@@ -364,7 +364,7 @@ The "Connect Google" CTA calls `startConnectFlow({ providerId: "google", scopes:
 2. Create sub-plugin web files — Config.Spec contributions
 3. Delete `plugins/debug/plugins/db-backup/`
 4. Update all `plugins.generated.ts` files
-5. `./singularity build`
+5. `./equin build`
 
 **Verify**: Open debug app, see Backup entry, run a backup from UI, check results render.
 

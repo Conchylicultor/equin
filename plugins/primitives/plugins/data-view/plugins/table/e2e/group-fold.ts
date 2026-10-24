@@ -23,8 +23,8 @@
  * header → `hover()` → button. Playwright calls an `opacity-0` element
  * "visible", so the reveal is asserted from computed opacity + pointer-events.
  *
- * Manual only. Run after `./singularity build`:
- *   ./singularity run plugins/primitives/plugins/data-view/plugins/table/e2e/group-fold.ts \
+ * Manual only. Run after `./equin build`:
+ *   ./equin run plugins/primitives/plugins/data-view/plugins/table/e2e/group-fold.ts \
  *     [--at /agents/tasks] [--headed]
  */
 import type { Locator, Page } from "playwright";

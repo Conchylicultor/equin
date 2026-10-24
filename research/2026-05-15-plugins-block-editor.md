@@ -273,7 +273,7 @@ Follows the Forge pattern exactly.
 
 ## Implementation Order
 
-1. **Tables + migration** — Create `tables.ts`, run `./singularity build --migration-name add-block-editor`
+1. **Tables + migration** — Create `tables.ts`, run `./equin build --migration-name add-block-editor`
 2. **Core types** — `types.ts`, `schemas.ts`, `resources.ts`, barrel `index.ts`
 3. **Server mutations + queries** — CRUD, split, merge, indent, outdent
 4. **Server routes + resources** — REST handlers, `defineResource`, wire `ServerPluginDefinition`
@@ -285,7 +285,7 @@ Follows the Forge pattern exactly.
 
 ## Verification
 
-1. `./singularity build` compiles and deploys
+1. `./equin build` compiles and deploys
 2. Navigate to `/editor` app in the app switcher
 3. Create a document → appears in sidebar
 4. Click document → empty editor with one placeholder block

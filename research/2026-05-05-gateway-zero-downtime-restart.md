@@ -2,7 +2,7 @@
 
 ## Context
 
-When `./singularity build` restarts a backend, there's a downtime window: the gateway calls `wt.Stop()` (SIGTERM + socket removal), returns immediately, then the CLI's `probeHealth` triggers a lazy re-spawn via `wt.Ensure()`. During that gap, any request gets a 502. The goal is to eliminate this window by spawning the new backend **before** killing the old one, then atomically swapping the proxy pointer.
+When `./equin build` restarts a backend, there's a downtime window: the gateway calls `wt.Stop()` (SIGTERM + socket removal), returns immediately, then the CLI's `probeHealth` triggers a lazy re-spawn via `wt.Ensure()`. During that gap, any request gets a 502. The goal is to eliminate this window by spawning the new backend **before** killing the old one, then atomically swapping the proxy pointer.
 
 A secondary benefit: if the new backend fails to start (bad code, broken migration), the old backend stays up — failed deploys no longer cause downtime.
 
@@ -135,10 +135,10 @@ The endpoint now returns only after the new backend is confirmed serving. The CL
 ## Verification
 
 1. `cd gateway && go test ./...` — all existing + new tests pass
-2. `./singularity build` from a worktree — verify zero-downtime:
+2. `./equin build` from a worktree — verify zero-downtime:
    - Open browser to `http://<name>.localhost:9000`
    - Run build in another terminal
    - Confirm the page stays responsive throughout (no 502s)
-3. Deliberately break server code → `./singularity build` → verify old backend stays up and error is reported
+3. Deliberately break server code → `./equin build` → verify old backend stays up and error is reported
 4. Check `GET /gateway/worktrees` shows `"restarting"` state briefly during a hot restart
 5. Verify WebSocket connections (notifications channel) survive a hot restart — open the app, trigger build, confirm no reconnection toast

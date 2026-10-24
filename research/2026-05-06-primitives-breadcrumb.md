@@ -78,7 +78,7 @@ All three current `FilePathLabel` usage sites switch to `<Breadcrumb>`:
 
 ## Verification
 
-1. `./singularity build` — must succeed (frontend + server).
-2. `./singularity check` — must pass (plugin boundaries, barrel purity, eslint).
+1. `./equin build` — must succeed (frontend + server).
+2. `./equin check` — must pass (plugin boundaries, barrel purity, eslint).
 3. Visual: open a conversation with file changes, click a file link → the file-peek pane header should show the path with each folder segment as a distinct element. Hover over a segment — no click behavior yet (no `onNavigate` wired), but segments should be visually distinct.
 4. Copy button still works — click it, paste, verify the full path was copied.

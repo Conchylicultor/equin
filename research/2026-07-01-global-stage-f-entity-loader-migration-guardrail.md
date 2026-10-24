@@ -98,7 +98,7 @@ For each of the 8:
    (replaces the hand-written `z.object`). Keep the exported type via `EntityRow<typeof …>`.
 4. **Delete the projection**: loader returns `db.select().from(_table).orderBy(...)` verbatim (keep any
    post-map grouping/`orderBy`). Remove the `rowTo…` helper and any `as` casts.
-5. **Verify zero drift**: `./singularity build` must generate **no new migration** (`migrations-in-sync`
+5. **Verify zero drift**: `./equin build` must generate **no new migration** (`migrations-in-sync`
    clean). If it does, adjust `meta`/field nullability until the DDL is byte-identical.
 
 ### Migration hazards to watch
@@ -122,7 +122,7 @@ plugins/framework/plugins/tooling/plugins/lint/plugins/entity-projection-safety/
 ```
 
 Auto-registration is automatic: `build-lint-config.ts` walks every `lint/index.ts`, enables each rule
-at `"error"` repo-wide, and the `type-check` check runs it. `./singularity build` regenerates
+at `"error"` repo-wide, and the `type-check` check runs it. `./equin build` regenerates
 `lint.generated.ts` (drift caught by `plugins-registry-in-sync`).
 
 ### Detection (deliberately conservative — favor false negatives, like `no-reactive-server-io`)
@@ -174,15 +174,15 @@ export default {
 
 ## Verification
 
-- **Each migration**: `./singularity build` → **no new migration file**; `./singularity check migrations-in-sync` and `type-check` clean; `mcp__singularity__query_db` confirms the table DDL is unchanged; open the relevant surface at `http://<worktree>.localhost:9000` and confirm every field (esp. the date/enum ones) still renders — e.g. conversation summaries in the conversation view, Debug → Claude CLI Calls, Debug → Reports (plugin-health), the Sonata library, bookmarks bar.
-- **The rule fires correctly**: temporarily reintroduce a `rows.map(r => ({...}))` pure projection in a `defineResource` loader → `./singularity check type-check` (or `bunx eslint`) errors; revert. Confirm the 7–8 migrated loaders (now projection-free) do **not** error, and that a known transform (`tasks-core` `attemptsResource`, which builds `conversations: [...]`) is **not** flagged.
+- **Each migration**: `./equin build` → **no new migration file**; `./equin check migrations-in-sync` and `type-check` clean; `mcp__singularity__query_db` confirms the table DDL is unchanged; open the relevant surface at `http://<worktree>.localhost:9000` and confirm every field (esp. the date/enum ones) still renders — e.g. conversation summaries in the conversation view, Debug → Claude CLI Calls, Debug → Reports (plugin-health), the Sonata library, bookmarks bar.
+- **The rule fires correctly**: temporarily reintroduce a `rows.map(r => ({...}))` pure projection in a `defineResource` loader → `./equin check type-check` (or `bunx eslint`) errors; revert. Confirm the 7–8 migrated loaders (now projection-free) do **not** error, and that a known transform (`tasks-core` `attemptsResource`, which builds `conversations: [...]`) is **not** flagged.
 - **Allowlist works**: `tasks/auto-start` (still projecting) does not error.
-- **Full green**: `./singularity check` passes (boundaries, `plugins-registry-in-sync`, `plugins-doc-in-sync`, `type-check`, `table-defs-in-schema-glob`).
+- **Full green**: `./equin check` passes (boundaries, `plugins-registry-in-sync`, `plugins-doc-in-sync`, `type-check`, `table-defs-in-schema-glob`).
 
 ## Implementation outcome (landed)
 
 - **7 loaders migrated** onto `defineEntity`: conversations/summary, sonata/library, claude-cli,
-  config_v2/staging, plugin-health, events (emissions), bookmarks. `./singularity build` generated
+  config_v2/staging, plugin-health, events (emissions), bookmarks. `./equin build` generated
   **no new migration** (`migrations-in-sync` clean → DDL byte-identical); DB column counts and the
   live resource endpoints (`claude-cli-calls`, `conversation-summaries`, `sonata-songs`,
   `event-emissions`) all serve HTTP 200 with correctly-shaped data (enum via `enumTextField`, nullable

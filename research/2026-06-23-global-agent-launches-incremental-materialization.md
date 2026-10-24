@@ -130,7 +130,7 @@ The concrete SQL (table, function, triggers, reconcile) lives in `agents/server/
 - `plugins/conversations/plugins/agents/server/index.ts` — add `DerivedTable(taskLatestConversationSpec)` to `contributions` (`:45`, alongside the existing `View({ view: agents })`).
 - `plugins/conversations/plugins/agents/server/internal/resources.ts` — rewrite the loader body (`:61-91`); keep `identityTable` + `dependsOn`/`signature`/`affectedMap` (`:30-60`).
 - **read-set `_debug` endpoint** — filter `readSetBases` by `feedExemptTables()` before emission, so `agent-launches` does not show as a false "silent FULL recompute" in the Debug → Read-set pane (the ceiling at `read-set/web/components/read-set-view.tsx:107-121` flags base tables outside `coveredOrigins`; the rollup is one but is feed-exempt). If the emission site in `server-core`/`runtime.ts` can't reach `feedExemptTables()` without a feature-plugin import, use the existing boot-injection pattern (like `setRelationResolver`): change-feed injects the feed-exempt set into server-core at boot. Keeps server-core free of feature imports.
-- Docs: `plugins/database/CLAUDE.md` (+`derived-tables`); `docs/plugins-compact.md` / `plugins-details.md` regenerate via `./singularity build`.
+- Docs: `plugins/database/CLAUDE.md` (+`derived-tables`); `docs/plugins-compact.md` / `plugins-details.md` regenerate via `./equin build`.
 
 ## Verification
 
@@ -139,7 +139,7 @@ The concrete SQL (table, function, triggers, reconcile) lives in `agents/server/
 3. **Out-of-process correctness** — `psql UPDATE conversations SET status='done' WHERE id='<latest-for-task>'`: the STATEMENT trigger updates the rollup transactionally; the change-feed's `conversations` trigger separately drives the recompute. Then `DELETE` the only non-system conversation for a task and confirm its rollup row is **removed** (last-conversation case).
 4. **Boot reconcile heals drift** — with the server down, `psql` corrupt the rollup (`UPDATE task_latest_conversation SET title='STALE'`) and change a conversation; restart; the reconcile overwrites `STALE` with truth. Confirm via `query_db`.
 5. **No double-routing / no false warning** — Debug → Read-set: `agent-launches` not under "silent FULL recomputes"; the rollup table emits no NOTIFY on conversation writes.
-6. **Checks green** — `./singularity check imperative-create-table-allowlisted` and `orphaned-db-tables`, plus `type-check` / `plugin-boundaries`.
+6. **Checks green** — `./equin check imperative-create-table-allowlisted` and `orphaned-db-tables`, plus `type-check` / `plugin-boundaries`.
 
 ## Risks & notes
 

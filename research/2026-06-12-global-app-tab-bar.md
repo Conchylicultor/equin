@@ -65,7 +65,7 @@ Files: `plugins/apps/web/components/apps-layout.tsx`, `plugins/apps/web/componen
 
 ## Verification
 
-- `./singularity build`, then load `http://<worktree>.localhost:9000`.
+- `./equin build`, then load `http://<worktree>.localhost:9000`.
 - Scripted Playwright (`e2e/screenshot.mjs`): open app → click `+` → confirm a Home tab appears and focuses → navigate into an app in tab A (open a pane), switch to tab B, switch back → **tab A's pane + scroll state preserved** (the keep-alive + per-tab route proof). Capture before/after.
 - Reload the page → confirm the same tabs + routes restore (sessionStorage).
 - Back/forward within the focused tab still drives only that tab's route; URL reflects the focused tab.

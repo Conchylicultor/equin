@@ -66,7 +66,7 @@ The existing dependency logic (`newTask → relateTask`) remains unchanged.
 
 ## Verification
 
-1. `./singularity build`
+1. `./equin build`
 2. Open the app, create a parent task with 2-3 children
 3. Open the Improve popover (or conversation +), select "Follow-up" pointing at the parent
 4. Verify the "Insert before" section appears with all children checked

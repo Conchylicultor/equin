@@ -119,7 +119,7 @@ plugins/apps/plugins/sonata/plugins/audio/         # umbrella (2+ children)
 
 Only one instrument today, so `piano` is a direct child of `audio` (no
 `instruments/` umbrella yet — add it when a 2nd instrument lands). New web
-plugins are auto-discovered by `./singularity build` codegen; `dependsOn` the
+plugins are auto-discovered by `./equin build` codegen; `dependsOn` the
 shell. Both depend only on legal barrels (shell `web`, score `core`).
 
 ## The audio engine (`audio/engine`)
@@ -227,12 +227,12 @@ follow-up.
   the import graph a DAG and the music IR audio-free.
 - Engine reads instruments only via `useContributions()` generic fields — never
   names the piano (collection-consumer clean).
-- Run `./singularity check --plugin-boundaries`.
+- Run `./equin check --plugin-boundaries`.
 
 ## Verification (end-to-end)
 
-1. `./singularity build` — new `audio/engine` + `audio/piano` plugins discovered
-   and compiled; `./singularity check --plugin-boundaries` passes.
+1. `./equin build` — new `audio/engine` + `audio/piano` plugins discovered
+   and compiled; `./equin check --plugin-boundaries` passes.
 2. Open `http://<worktree>.localhost:9000/sonata`. The right "Audio" panel shows
    the instrument picker (Acoustic Piano) + volume + "Ready" once samples load.
 3. Drop a `.mid` file → piano roll renders notes.

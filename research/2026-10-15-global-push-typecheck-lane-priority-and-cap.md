@@ -78,8 +78,8 @@ One idea for both halves: **the lane is the priority.** A grant already carries 
 
 ## Verification
 
-1. `./singularity test plugins/infra/plugins/host/plugins/host-admission plugins/packages/plugins/host-semaphore plugins/packages/plugins/spawn-priority` — new tests: an inherited grant carries its lane (and throws without one); a laned size-2 pool admits at most one background holder while the interactive lane still gets a slot.
-2. Fleet replay: on an agent branch start two `./singularity check` runs and one `./singularity push` together. Expect: transcripts show the push worker `lane=interactive priority=foreground`, the second background worker `waited=` > 0 with its `type-check-slot` wait in the op log, and never more than 2 workers alive (`ps`).
+1. `./equin test plugins/infra/plugins/host/plugins/host-admission plugins/packages/plugins/host-semaphore plugins/packages/plugins/spawn-priority` — new tests: an inherited grant carries its lane (and throws without one); a laned size-2 pool admits at most one background holder while the interactive lane still gets a slot.
+2. Fleet replay: on an agent branch start two `./equin check` runs and one `./equin push` together. Expect: transcripts show the push worker `lane=interactive priority=foreground`, the second background worker `waited=` > 0 with its `type-check-slot` wait in the op log, and never more than 2 workers alive (`ps`).
 3. One day of normal fleet use, then `python3 -I push_queue_sim.py fit --from … --to …` on the window and compare to the 2026-10-14 baseline. Exit criteria: push lock hold median < 8 min and push wait p90 < 20 min at ≥ 3 pushes/h; type-check worker CPU on a warm program < 300 CPU-s (vs 718–2211 s); no hour with > 2 type-check workers alive.
 
 ## Not in scope / remaining floor

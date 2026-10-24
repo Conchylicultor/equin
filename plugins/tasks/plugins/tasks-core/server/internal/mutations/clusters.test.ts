@@ -21,12 +21,12 @@
  *    the whole scenario joins that transaction and nothing lands in the
  *    worktree DB.
  *
- * Run: `./singularity test plugins/tasks/plugins/tasks-core`.
+ * Run: `./equin test plugins/tasks/plugins/tasks-core`.
  *
  * Both halves need the running embedded cluster. The `union points` half
  * additionally needs THIS worktree's database as a real boot leaves it, because
  * the derived VIEW layer it reads is rebuilt from source on every boot and is
- * not part of the migration chain — so `./singularity build` first. What is no
+ * not part of the migration chain — so `./equin build` first. What is no
  * longer part of that requirement is the queue schema: `worktreeDbScenario`
  * installs `graphile_worker` itself before the first scenario opens, so the
  * status-change emits these mutations enqueue no longer depend on a prior boot.

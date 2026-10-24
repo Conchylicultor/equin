@@ -109,9 +109,9 @@ Result for an enum field `logLevel` with options `["debug", "info", "warn", "err
 
 ## Verification
 
-1. `./singularity build` — builds and deploys
+1. `./equin build` — builds and deploys
 2. Add a test `enumField` to an existing config (e.g. build plugin) temporarily, verify:
    - Settings UI shows dropdown/radio correctly
    - Origin JSONC contains the allowed-values comment
    - Selecting a value persists and round-trips
-3. `./singularity check` — all checks pass
+3. `./equin check` — all checks pass

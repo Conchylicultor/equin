@@ -107,13 +107,13 @@ key-layout geometry both the notes and the keyboard consume from one source.
 - No new cross-plugin re-exports; `KeyLane` lives in `score/core` so both roll and keyboard import it from the source barrel (not via each other). ✓
 
 ## Verification
-1. `./singularity build` (regenerates docs/migrations, rebuilds, restarts; runs checks incl. `--plugin-boundaries`).
+1. `./equin build` (regenerates docs/migrations, rebuilds, restarts; runs checks incl. `--plugin-boundaries`).
 2. Open `http://<worktree>.localhost:9000/sonata`.
 3. Drive with Playwright (`e2e/screenshot.mjs` or a small script): the MIDI source is a dropzone, so upload a small `.mid` (use an existing fixture if present under the repo, else a tiny generated one) via the hidden `input[type=file]`, then **Play**, and capture before/after screenshots. Confirm:
    - notes fall **downward** toward the keyboard and land on the correct keys (column X aligns with the key below);
    - the **88-key keyboard** renders across the full width below the lane (white + black keys, letter/octave labels);
    - bar lines are horizontal and scroll up with time; the chord overlay labels track the correct beats down the side.
-4. `./singularity check` clean (boundaries, eslint, migrations, plugins-doc-in-sync).
+4. `./equin check` clean (boundaries, eslint, migrations, plugins-doc-in-sync).
 
 ## Out of scope (note for later)
 - Key-aware enharmonic spelling on keys (the screenshot's "Eb Major" labels) — would read `score.meta.key`; easy follow-up.

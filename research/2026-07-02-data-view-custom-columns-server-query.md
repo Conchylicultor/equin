@@ -255,7 +255,7 @@ change — they just pass their own `storageKey` as `dataViewId`.
 
 ## Verification
 
-1. `./singularity build` (regenerates registries; runs `plugin-boundaries` +
+1. `./equin build` (regenerates registries; runs `plugin-boundaries` +
    `type-check` + `data-view:*` checks — confirm no boundary/cycle violations from
    the new `custom-columns/server → data-view/server` and `data-view/server →
    server-query/server` edges).

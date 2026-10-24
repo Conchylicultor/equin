@@ -175,7 +175,7 @@ all scopes (server already redacts in `resolveRedactedConfig`).
 
 Update `config_v2/CLAUDE.md` — remove the "Not yet wired" caveat at line 85,
 and add a short "Per-app scopes in settings" paragraph describing the scope tab
-bar, add-app, edit, reconcile, and stop-customizing flows. `./singularity build`
+bar, add-app, edit, reconcile, and stop-customizing flows. `./equin build`
 regenerates the autogen reference block + `docs/plugins-*.md`.
 
 ---
@@ -215,7 +215,7 @@ mutation handlers, `Apps.App.useContributions`, `scopeAppId`.
 
 ## Verification (end-to-end)
 
-1. `./singularity build`; app at `http://<worktree>.localhost:9000`.
+1. `./equin build`; app at `http://<worktree>.localhost:9000`.
 2. **Inspect existing committed scope.** Open Settings → Config → the
    `tasks/task-draft-form` descriptor. Confirm a `Base` tab + an `Agent Manager`
    tab (the committed `@app/agent-manager` scope from `510724328`). Switch to it
@@ -233,7 +233,7 @@ mutation handlers, `Apps.App.useContributions`, `scopeAppId`.
    origin then rebuild) so the scoped override goes stale, rebuild, reopen the
    app tab → the warning banner appears with View diff / Merge / Accept / Keep,
    and the tab shows a conflict dot. Reconcile and confirm it clears.
-7. `./singularity check` — `type-check`, `plugin-boundaries`,
+7. `./equin check` — `type-check`, `plugin-boundaries`,
    `config-origins-in-sync`, `plugins-doc-in-sync` all green.
 8. (Optional) Scoped unit coverage near `tier-logic`/`scope-paths` tests if
    present: `bun test plugins/config_v2/...`.

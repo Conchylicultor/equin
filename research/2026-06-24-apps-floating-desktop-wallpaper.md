@@ -216,7 +216,7 @@ sets `kind: "default"`.
 
 ## Verification
 
-1. `./singularity build` from the worktree (regenerates migrations/registry/docs;
+1. `./equin build` from the worktree (regenerates migrations/registry/docs;
    runs checks incl. `plugin-boundaries`, `plugins-registry-in-sync`,
    `plugins-doc-in-sync`, `type-check`).
 2. Open `http://att-1782307207-vtot.localhost:9000`, put a tab into **Float as

@@ -127,7 +127,7 @@ No external consumers — only the barrel imported it.
 ## Verification
 
 ```bash
-./singularity build        # must pass all checks including plugin-boundaries, boundary-rules, no cycles
+./equin build        # must pass all checks including plugin-boundaries, boundary-rules, no cycles
 ```
 
 Then verify in the browser at `http://<worktree>.localhost:9000`:

@@ -150,7 +150,7 @@ for a kernel-served route it does not implement). Files:
   Also surface a "only loaders that have run since boot/reset appear" note —
   boot-critical resources warm at boot; others populate on first subscribe.
 
-After creating the files, `./singularity build` regenerates the web/server
+After creating the files, `./equin build` regenerates the web/server
 registries from the filesystem — no manual registration.
 
 ## 5. Critical files
@@ -167,7 +167,7 @@ registries from the filesystem — no manual registration.
 
 ## 6. Verification
 
-1. `./singularity build`; open `http://<worktree>.localhost:9000`, then the Debug →
+1. `./equin build`; open `http://<worktree>.localhost:9000`, then the Debug →
    Read-set pane. Browse a bit so loaders run (subscriptions trigger loads).
 2. **Capture correct:** Section A lists `table → [resources]`. Spot-check a known
    case — the `attempts` loader reads both `attempts` and `conversations`, so
@@ -182,7 +182,7 @@ registries from the filesystem — no manual registration.
 4. **Diff direction (b):** confirm any flagged over-broad edge truly shares no
    read table and lacks an `affectedMap`.
 5. **No behavior change:** live-state still updates as before (cascade/notify
-   untouched); `./singularity check` passes; type-check clean. The only new code
+   untouched); `./equin check` passes; type-check clean. The only new code
    paths are observation-only.
 
 ## 7. Findings from the L3 implementation (input to L4)

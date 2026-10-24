@@ -111,8 +111,8 @@ sub-tasks; follow-up task with the page id and the instructions block id.
 
 ## Verification
 
-- `./singularity test plugins/framework/plugins/web-sdk plugins/primitives/plugins/data-view plugins/conversations` (new tests for slot-scoped notify and row identity).
-- `./singularity build` (all checks) then the benchmark runs above; target: the five big
+- `./equin test plugins/framework/plugins/web-sdk plugins/primitives/plugins/data-view plugins/conversations` (new tests for slot-scoped notify and row identity).
+- `./equin build` (all checks) then the benchmark runs above; target: the five big
   commits gone (one ~12 k mount, everything else in the hundreds), main screen well under 1 s
   after first data.
 - Manual: drag-reorder in the sidebar still works (sortable activation), plugin hot paths

@@ -2,7 +2,7 @@
  * `ensureDeps()` — the ONE chokepoint for "this checkout's `node_modules` is
  * correct for its declared inputs".
  *
- * It replaces the `bun install --silent` that used to run in the `./singularity`
+ * It replaces the `bun install --silent` that used to run in the `./equin`
  * shell wrapper, which had three defects in one line: it was **unserialized**
  * (a `check`'s install could race a `build`'s and lose — bun 1.3.13 has no
  * install mutex of its own, and concurrent installs in one checkout race on
@@ -70,7 +70,7 @@ const STAMP_VERSION = 1;
 
 /**
  * The install lock, a sibling of the build's `.build.lock` and deliberately NOT
- * the same file: sharing them would make a `./singularity check` block for an
+ * the same file: sharing them would make a `./equin check` block for an
  * entire concurrent build. Its span is equally load-bearing — see `ensureDeps`.
  */
 const INSTALL_LOCK_REL = ".install.lock";
@@ -112,8 +112,8 @@ const SKIP_DIRS = new Set(["node_modules", ".git"]);
  * stamp was fresh on the first look" and "the stamp was stale, so I waited on
  * `.install.lock` while ANOTHER command installed, and the re-check under the
  * lock found it fresh". The second is exactly as stale-cached as installing
- * yourself, but read as "nothing changed": `./singularity build` launched beside
- * a `./singularity test` in a fresh worktree skipped its re-exec and died on
+ * yourself, but read as "nothing changed": `./equin build` launched beside
+ * a `./equin test` in a fresh worktree skipped its re-exec and died on
  * `commander`. With the concurrent case its own kind, no caller can read it as
  * the untouched one.
  */
@@ -449,7 +449,7 @@ export async function ensureDeps(
   // closure and holds `.build.lock` for its whole process. Holding this one that
   // long would reintroduce the very pathology `.install.lock` exists to avoid,
   // by another route: agent A edits a `package.json` and runs a 3-minute
-  // `./singularity build`; agent B's `./singularity check` sees the same stale
+  // `./equin build`; agent B's `./equin check` sees the same stale
   // inputs and would block on A's ENTIRE BUILD rather than on A's install — and
   // since `acquireCheckoutLock`'s cap is 10–30 min, a long enough holder converts a
   // waiter's wait into a thrown timeout.

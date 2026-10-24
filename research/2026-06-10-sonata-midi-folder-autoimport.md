@@ -105,7 +105,7 @@ export const songMidi = defineExtension(_songs, "midi", {
 - `sourceMissing` drives the library badge.
 - Surface both on `SongMidiRow` + `songMidiLiveResource` (already a push
   resource consumed by the cards) so the badge needs no new endpoint.
-- Generate the migration via `./singularity build` (never `drizzle-kit` by hand).
+- Generate the migration via `./equin build` (never `drizzle-kit` by hand).
 
 ## Refactors (make the import path reusable server-side)
 
@@ -229,7 +229,7 @@ visibly flagged but still playable from its copied attachment.
 
 ## Verification
 
-1. `./singularity build` (generates the migration, applies on restart) and
+1. `./equin build` (generates the migration, applies on restart) and
    confirm the `sonata_songs_ext_midi` migration was created + committed.
 2. In the config settings pane, add a watched folder (e.g. `/tmp/sonata-midi`).
    Drop a `.mid` file in it; confirm the song appears in the Sonata library
@@ -243,7 +243,7 @@ visibly flagged but still playable from its copied attachment.
    imports/marks correctly.
 7. Confirm a manually-imported song (null sourcePath) is never modified by any
    of the above.
-8. `./singularity check` passes (plugin boundaries, migrations-in-sync, docs).
+8. `./equin check` passes (plugin boundaries, migrations-in-sync, docs).
 
 ## Out of scope
 

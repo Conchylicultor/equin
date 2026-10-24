@@ -146,7 +146,7 @@ touched in that folder.
 - New `plugins/tasks/plugins/task-draft-form/web/components/{task-draft-composer.tsx,composer-specimen.tsx}`
 - Edit `plugins/tasks/plugins/task-draft-form/web/index.ts` (the contribution) and its `CLAUDE.md`
 - Edit `plugins/apps/plugins/prototypes/plugins/compare/CLAUDE.md` (kinds list: add `component`) and `prototypes/CLAUDE.md` (the `mocks` kinds list: add `component:`)
-- Registries and plugin docs regenerate through `./singularity build`
+- Registries and plugin docs regenerate through `./equin build`
 
 ## Out of scope / follow-ups
 
@@ -161,13 +161,13 @@ touched in that folder.
 
 ## Verification
 
-1. `./singularity build` (in the background). Checks pass: plugin boundaries,
+1. `./equin build` (in the background). Checks pass: plugin boundaries,
    registry in sync, plugin docs in sync, type-check.
 2. Open the Improve popover in the deployed worktree and confirm it looks and
    behaves the same (typing, pills, URL toggle, pick element, drag and remove
    with 2+ cards).
 3. Compare stage for proto-1789901373-oy29:
-   `./singularity run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts --name proto-1789901373-oy29 --width 900 --out <scratchpad>/compare`
+   `./equin run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts --name proto-1789901373-oy29 --width 900 --out <scratchpad>/compare`
    The counterpart half should reach `found`, and its capture should show the
    real composer with model/thinking/preprompt pills and the URL and
    element-picker buttons.
@@ -175,4 +175,4 @@ touched in that folder.
    check that the half is `unresolved` with the "no component" sentence.
 5. Unit test for `ComponentCounterpart`'s mapping from lookup to resolution
    (missing, ambiguous, found, and widths merging), as a jsdom test under
-   `component/web/__tests__/`, run with `./singularity test`.
+   `component/web/__tests__/`, run with `./equin test`.

@@ -1,6 +1,6 @@
 /**
  * The release plugin's first tests, and they cover the decision the migration
- * made testable: what a finished `./singularity release` MEANS.
+ * made testable: what a finished `./equin release` MEANS.
  *
  * Everything else the old `run-release.ts` did on the way to that verdict —
  * probing pids, reading a parent-written recovery artifact, closing orphan rows

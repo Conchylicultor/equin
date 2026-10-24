@@ -134,7 +134,7 @@ The browser never paints between steps 1-3. Same pattern as `useLayoutEffect` me
 
 ## Verification
 
-1. `./singularity build`
+1. `./equin build`
 2. Open a conversation with pinned prompt templates
 3. Resize the browser window narrower — chips should hide progressively
 4. Resize wider — chips should reappear as space opens up

@@ -71,8 +71,8 @@ Remove `"lucide-react": "^1.7.0"` from root `package.json`. Run `bun install` to
 
 ## Verification
 
-1. `./singularity check --eslint` — zero errors; the rule blocks any future `lucide-react` import
-2. `./singularity build` — confirms the bundle resolves all icons and the dependency removal doesn't break anything
+1. `./equin check --eslint` — zero errors; the rule blocks any future `lucide-react` import
+2. `./equin build` — confirms the bundle resolves all icons and the dependency removal doesn't break anything
 3. Visual spot-check key surfaces: sidebar toggle, sheet close, dropdown sub-menu arrows, select component, collapsible chevron rotation, conversation toolbar buttons (push-and-exit, fork, branch, notes, etc.)
 
 ## Key files

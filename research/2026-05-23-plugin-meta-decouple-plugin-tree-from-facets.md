@@ -221,8 +221,8 @@ Currently computed in `populateCompatFields()` (lines 783–806). Move into cont
 
 ## Verification (after each phase)
 
-1. `./singularity build` succeeds
-2. `./singularity check` passes (especially `plugin-boundaries`, `plugins-registry-in-sync`, `eslint`)
+1. `./equin build` succeeds
+2. `./equin check` passes (especially `plugin-boundaries`, `plugins-registry-in-sync`, `eslint`)
 3. Docgen output files identical before/after:
    - `docs/plugins-details.md`, `docs/plugins-compact.md`, `docs/routes.md`
    - Spot-check per-plugin `CLAUDE.md` for plugins with known contributions

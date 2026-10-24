@@ -26,7 +26,7 @@ import {
 } from "../shared";
 
 const REGEN_NAMES =
-  "Run `./singularity run plugins/ui/plugins/icons/scripts/gen-symbol-names.ts` and commit the result.";
+  "Run `./equin run plugins/ui/plugins/icons/scripts/gen-symbol-names.ts` and commit the result.";
 
 const symbolNamesInSync: Check = {
   id: "icons:symbol-names-in-sync",
@@ -79,7 +79,7 @@ const manifestInSync: Check = {
       return {
         ok: false,
         message: `${rel} is missing`,
-        hint: "Run `./singularity build` to generate it.",
+        hint: "Run `./equin build` to generate it.",
       };
     }
     if (
@@ -89,7 +89,7 @@ const manifestInSync: Check = {
       return {
         ok: false,
         message: `${rel} is out of sync with the symbol()/brand() literals in the repo`,
-        hint: "Run `./singularity build` and commit the regenerated file.",
+        hint: "Run `./equin build` and commit the regenerated file.",
       };
     }
     return { ok: true };
@@ -97,7 +97,7 @@ const manifestInSync: Check = {
 };
 
 const REVENDOR_SETI =
-  "Run `./singularity run plugins/ui/plugins/icons/scripts/vendor-seti.ts` and commit the result.";
+  "Run `./equin run plugins/ui/plugins/icons/scripts/vendor-seti.ts` and commit the result.";
 
 const setiInSync: Check = {
   id: "icons:seti-in-sync",

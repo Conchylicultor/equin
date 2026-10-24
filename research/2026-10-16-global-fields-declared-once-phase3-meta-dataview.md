@@ -128,7 +128,7 @@ liveArm(activity, "task", {
 3. **Entity arms** (§3): factor out the entity derivation, extend `liveArm` and `serveArm`. Fixture: a new two-entity union in `server/testing/` (two `defineEntity` tables with different fields, one with an exposed extension) added to the union golden (a new pinned case, generator updated) and the oracle (filter on a shared field, on an arm field, on the source field, an arm prune).
 4. **Row activation** (§4): the new slot, the fold in the DataView host, and runs' arms moved to it, `Runs.Kind` deleted. Extend the test for the existing `CollectionItemAction` owner resolution.
 5. **Rename** (§5), plus the docs: data-view CLAUDE.md, live CLAUDE.md (union section: `serveArm`, `derive`, the derived discriminator, entity arms), runs CLAUDE.md.
-6. **`./singularity build`**, then verify (below).
+6. **`./equin build`**, then verify (below).
 7. **Track page:**
    - status, Phase 3 checkbox with sub-items;
    - exit criteria (Meta-DataView covered);
@@ -147,9 +147,9 @@ liveArm(activity, "task", {
 
 ## Verification
 
-- `./singularity test plugins/network/plugins/live plugins/primitives/plugins/data-view plugins/runs`: the union golden is unchanged for runs; there is a new golden case and oracle cases for the entity union.
-- `./singularity check`: type-check, `live:arms-registered`, `investigate:failures-registered` (it reads `liveArm` options), plugin-doc sync.
-- `./singularity build`, then screenshot `/debug/build` and the build popover's run list (`e2e-harness/e2e/screenshot.ts`):
+- `./equin test plugins/network/plugins/live plugins/primitives/plugins/data-view plugins/runs`: the union golden is unchanged for runs; there is a new golden case and oracle cases for the entity union.
+- `./equin check`: type-check, `live:arms-registered`, `investigate:failures-registered` (it reads `liveArm` options), plugin-doc sync.
+- `./equin build`, then screenshot `/debug/build` and the build popover's run list (`e2e-harness/e2e/screenshot.ts`):
   - Kind filter options are Build, Release, Deploy, Backup, in that order;
   - Group by Kind works;
   - clicking a build row opens its pane;

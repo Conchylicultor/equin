@@ -7,7 +7,7 @@
  * back through `xmlTextToRuns` to assert content.
  *
  * Run: `bun test plugins/page/plugins/editor-collab/server/internal`
- * (requires the running embedded cluster — `./singularity build` first).
+ * (requires the running embedded cluster — `./equin build` first).
  */
 
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";

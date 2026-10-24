@@ -156,8 +156,8 @@ This goes between the existing `itemFields` branch and the final `return`.
 
 ## Verification
 
-1. `./singularity build` — auto-discovers the new plugin, regenerates docs and registry
-2. `./singularity check` — confirm `config-origins-in-sync`, `plugin-boundaries`, `eslint`, `typescript` all pass
+1. `./equin build` — auto-discovers the new plugin, regenerates docs and registry
+2. `./equin check` — confirm `config-origins-in-sync`, `plugin-boundaries`, `eslint`, `typescript` all pass
 3. Visual: open Settings pane for a plugin using `objectField` — verify collapsible section, sub-field editing, modified indicator, and reset
 4. Origin file: inspect generated `.origin.jsonc` for nested comments and correct JSON structure
 5. Nesting: test `objectField` containing another `objectField` — recursive dispatch should work automatically

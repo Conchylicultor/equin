@@ -1,12 +1,12 @@
 import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
 
 /**
- * `./singularity plugin move <from> <to>` — relocating or renaming a plugin as
+ * `./equin plugin move <from> <to>` — relocating or renaming a plugin as
  * ONE tested step instead of a bespoke sed session per move.
  *
- * `plugin` is a GROUP: it routes and never runs, so bare `./singularity plugin`
+ * `plugin` is a GROUP: it routes and never runs, so bare `./equin plugin`
  * prints its subcommand help by construction. The declaration is data; the
- * body sits behind its own lazy `import()`, so every other `./singularity`
+ * body sits behind its own lazy `import()`, so every other `./equin`
  * invocation pays for this file alone (`cli:command-declarations-light`).
  */
 export default defineCliCommand({
@@ -25,7 +25,7 @@ export default defineCliCommand({
         "when <to> exists, sits inside <from>, or has a parent that is not a plugin. Records the " +
         "move in the plugin-move ledger, from which each namespace's next build moves its saved " +
         "settings. Registries and docs are left to " +
-        "`./singularity build`; run `./singularity check` after it.",
+        "`./equin build`; run `./equin check` after it.",
       arguments: [
         { name: "<from>", description: "the plugin to move: path or dot id" },
         { name: "<to>", description: "where it goes: path or dot id" },

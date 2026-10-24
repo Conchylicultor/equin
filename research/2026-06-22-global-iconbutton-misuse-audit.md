@@ -112,7 +112,7 @@ the source rather than per-site. Surface via `add_task`.
 
 ## Verification
 
-1. `./singularity build` (type-check confirms IconButton props; `no-adhoc-control` + `type-check` run).
+1. `./equin build` (type-check confirms IconButton props; `no-adhoc-control` + `type-check` run).
 2. Screenshot each migrated region against current to confirm box + glyph size unchanged
    (glyph normalizes to the density default — expect a 14px→16px change only where a `size-3`/`size-3.5`
    override was dropped; confirm acceptable):

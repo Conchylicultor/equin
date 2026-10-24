@@ -18,7 +18,7 @@
 // must never type into a page a human owns.
 //
 // Usage:
-//   ./singularity run plugins/page/plugins/url-paste/e2e/url-paste-keyboard.ts [--url <deploy>]
+//   ./equin run plugins/page/plugins/url-paste/e2e/url-paste-keyboard.ts [--url <deploy>]
 //
 // Exits non-zero on the first failed assertion, after dumping a screenshot.
 import type { Locator } from "playwright";

@@ -12,7 +12,7 @@ import { openPicksStore, type PicksStore } from "../shared/picks";
 import { prototypeUrlFormatter } from "./prototype-url";
 
 /**
- * `./singularity prototype list` — every prototype on disk, with the URL that
+ * `./equin prototype list` — every prototype on disk, with the URL that
  * opens it and, when the user has picked a variant other than the defaults,
  * which one.
  *
@@ -31,7 +31,7 @@ const run: CliAction<[], object> = async () => {
   const metas = await listPrototypeMetas();
   if (metas.length === 0) {
     console.log(`No prototypes yet in ${PROTOTYPES_DIR_DISPLAY}.`);
-    console.log(`Create one with: ./singularity prototype new "My mock"`);
+    console.log(`Create one with: ./equin prototype new "My mock"`);
     return;
   }
 

@@ -22,7 +22,7 @@
 
 /** Written by `.githooks/prepare-commit-msg` from `SINGULARITY_CONVERSATION_ID`. */
 export const CONVERSATION_TRAILER_KEY = "Singularity-Conversation";
-/** Stamped per `./singularity push` invocation by the rebase `--exec`. */
+/** Stamped per `./equin push` invocation by the rebase `--exec`. */
 export const PUSH_TRAILER_KEY = "Singularity-Push";
 
 /**

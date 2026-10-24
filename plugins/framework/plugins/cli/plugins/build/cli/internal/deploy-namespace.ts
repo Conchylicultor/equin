@@ -40,7 +40,7 @@ import type { BuildTarget } from "./build-targets";
 
 /**
  * Deploy ONE namespace into the live dev cluster: the per-target half of
- * `./singularity build`, run once per `--composition` (and once, unnamed, for a
+ * `./equin build`, run once per `--composition` (and once, unnamed, for a
  * plain build).
  *
  *   marker → dist → database → config → (marker again) + spec → restart → health
@@ -313,7 +313,7 @@ async function probeHealth(
  * shape that reads as "definitely null" to a human skimming.
  *
  * `gatewayUp: false` is not a failure — no gateway means the backend spawns on
- * the next request, which is the normal state on a box where `singularity start`
+ * the next request, which is the normal state on a box where `./equin start`
  * has not run.
  */
 type RestartOutcome =

@@ -144,15 +144,15 @@ For every plugin in the table above, make two changes:
 ### Step 3 — Build and verify
 
 ```bash
-./singularity build
+./equin build
 ```
 
 Checks the plugin is auto-discovered, migrations are in sync, and ESLint passes.
 
 ## Verification
 
-1. `./singularity build` completes with no errors.
-2. `./singularity check` passes (plugin-boundaries, eslint).
+1. `./equin build` completes with no errors.
+2. `./equin check` passes (plugin-boundaries, eslint).
 3. In the browser, click each of the 9 popover trigger buttons and confirm the panel opens/closes correctly:
    - Reorder restore button
    - Task draft form launch button

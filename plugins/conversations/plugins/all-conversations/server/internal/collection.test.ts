@@ -12,7 +12,7 @@
  *   alone — a rename is a VALUE change for the tuple — unless the tuple
  *   searches or filters `taskTitle`.
  *
- * Run: `./singularity test plugins/conversations/plugins/all-conversations`.
+ * Run: `./equin test plugins/conversations/plugins/all-conversations`.
  */
 
 import { describe, expect, test } from "bun:test";

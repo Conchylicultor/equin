@@ -183,7 +183,7 @@ export function registerBarrelStubs(_repoRoot: string): void {
 
       // ── Auto-generated stubs for npm packages ─────────────────────
       // Reads .d.ts entry points to discover named exports at build time.
-      // To add a package: edit auto-stub-packages.ts and run ./singularity build.
+      // To add a package: edit auto-stub-packages.ts and run ./equin build.
       registerAutoStubs(build);
 
       // ── CSS imports → empty ───────────────────────────────────────
@@ -228,7 +228,7 @@ export function setPreBarrelImportGuard(fn: () => void | Promise<void>): void {
  * (`tooling/plugins/checks/core/runner.ts`), and ~7 call sites run a barrel
  * import loop of their own — the two scoped declaration passes, the docs tree,
  * `token-group-vars`, `config-origin`, `registrations-paired`, the page checks.
- * Any two of them selected together is the hazard; `./singularity check
+ * Any two of them selected together is the hazard; `./equin check
  * reorderable-slots-in-sync facets:render-complete` is one live pair.
  *
  * DO NOT REMOVE AS REDUNDANT. Before the declaration pass was scoped per

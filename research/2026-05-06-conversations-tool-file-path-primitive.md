@@ -103,7 +103,7 @@ Full path prefix: `plugins/conversations/plugins/conversation-view/plugins/jsonl
 
 ## Verification
 
-1. `./singularity build` — must succeed with no type errors or plugin-boundary violations.
+1. `./equin build` — must succeed with no type errors or plugin-boundary violations.
 2. Open a conversation containing Edit, MultiEdit, and Write tool calls — all three show a clickable relative file path chip with RTL overflow.
 3. Clicking the chip opens the file-peek pane; clicking the card header still toggles the detail (no double-toggle regression).
-4. `./singularity check --plugin-boundaries` — no new violations.
+4. `./equin check --plugin-boundaries` — no new violations.

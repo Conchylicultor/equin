@@ -179,7 +179,7 @@ separately rather than smuggling a restyle into this change.
 
 ## Verification
 
-1. `./singularity build` (background) — the new lint rule must report **zero**
+1. `./equin build` (background) — the new lint rule must report **zero**
    violations, which is the machine-checkable statement of "all hardcoded usages
    replaced". Temporarily reintroducing a raw `data-theme-scope` must fail the
    `eslint` check.
@@ -191,13 +191,13 @@ separately rather than smuggling a restyle into this change.
    correctly not flagged — its line is an `export … from`, and the barrel must
    keep exporting the symbol for `<Theme>` itself to import.
 
-   `./singularity test plugins/primitives/plugins/css/plugins/theme-boundary`
+   `./equin test plugins/primitives/plugins/css/plugins/theme-boundary`
    covers the rule itself (12 cases): the attribute on an intrinsic, a
    capitalized component and a member tag; the aliased import; and — the two
    that matter for false positives — NOT firing on a `[data-theme-scope=…]` CSS
    selector string or a `getAttribute` read, which `theme-engine` and the pane
    e2e script are full of.
-2. `./singularity run plugins/primitives/plugins/pane/e2e/pane-theme-scope.ts --page <blockId>`
+2. `./equin run plugins/primitives/plugins/pane/e2e/pane-theme-scope.ts --page <blockId>`
    — the existing 10 assertions must still pass, especially
    *"the pane PAINTS it"* / *"the host's own canvas stays put"*.
 3. Extend that script (or add a sibling `theme-boundary/e2e/boundaries.ts`) with

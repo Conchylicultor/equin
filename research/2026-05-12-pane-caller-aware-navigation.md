@@ -270,7 +270,7 @@ function MyComponent() {
 
 ## Verification
 
-1. `./singularity build`
+1. `./equin build`
 2. **Bug 1** (right-side overwrite): Open `conv > task-side > file-peek`. Click a file link in conv's JSONL → verify chain becomes `conv > file-peek`
 3. **Bug 2** (left-insert preserves children): Open `conv > task-side`. Click attempt-switch → verify chain becomes `attempt > conv > task-side`
 4. **Sidebar**: Click items in sidebar → verify fresh-stack behavior unchanged

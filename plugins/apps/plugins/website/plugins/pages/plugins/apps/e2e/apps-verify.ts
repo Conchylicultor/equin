@@ -10,7 +10,7 @@
 //     paddings, corners and distances.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/website/plugins/pages/plugins/apps/e2e/apps-verify.ts \
+//   ./equin run plugins/apps/plugins/website/plugins/pages/plugins/apps/e2e/apps-verify.ts \
 //     [--out /tmp/apps-verify] [--headed]
 //
 // Manual only — nothing runs this automatically.

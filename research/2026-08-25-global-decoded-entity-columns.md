@@ -348,7 +348,7 @@ to the `decode` arm with the discrimination above. This plugin gains a dependenc
 on `@plugins/database/plugins/sql-column/server` — a lean, `tables.ts`-safe barrel
 (`sql-column/CLAUDE.md`), which is what this needs since storage barrels are
 evaluated by the drizzle-kit codegen subprocess. **Verify no import cycle**
-(`./singularity check plugin-boundaries`).
+(`./equin check plugin-boundaries`).
 
 ### 3. `plugins/infra/plugins/entities/server/internal/define-entity.ts`
 
@@ -411,13 +411,13 @@ may now be redundant.
 
 ## Verification
 
-- **`./singularity check`** — `migrations-in-sync` must generate **no** migration.
+- **`./equin check`** — `migrations-in-sync` must generate **no** migration.
   This is the load-bearing claim: `parsedText`'s `getSQLType()` is `"text"` and
   drizzle-kit reads it with no branch on the column class, so 17 columns swapping
   from `text` to a customType must be byte-identical in the snapshot. Also
   `plugin-boundaries` (the new `fields/text/storage → sql-column` edge) and
   `type-check`.
-- **`./singularity test`** on `plugins/infra/plugins/entities`,
+- **`./equin test`** on `plugins/infra/plugins/entities`,
   `plugins/fields/plugins/*/plugins/storage`, and
   `plugins/database/plugins/sql-column`. New cases: a narrowed field builds a
   column that really throws on an out-of-set read; a plain `textField` builds a
@@ -427,7 +427,7 @@ may now be redundant.
 - **`query_db`** re-run of the live-value survey after deploy, plus a deliberate
   out-of-set write through an insert to confirm the encoder throws naming
   `table.column`.
-- **`./singularity build`**, then exercise the surfaces the 17 columns feed:
+- **`./equin build`**, then exercise the surfaces the 17 columns feed:
   the task tree and a conversation (`conversations.status/model/kind` — including
   the attempt whose `"opus"` row must now normalize rather than crash), Debug →
   Claude CLI calls, the Events sources pane and a refresh run, and the Mail

@@ -4,7 +4,7 @@
 // block, presses Cmd+Z with NO settle (the user's gesture) and reads the DOM.
 //
 // Manual-only; nothing runs this automatically.
-// Usage: ./singularity run plugins/page/plugins/editor/e2e/paste-undo-verify.ts
+// Usage: ./equin run plugins/page/plugins/editor/e2e/paste-undo-verify.ts
 import {
   report,
   withBrowser,

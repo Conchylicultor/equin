@@ -67,7 +67,7 @@ Called inside `setupWorktree` wrapped in try/catch (best-effort — failure just
 
 ## Verification
 
-1. Run `./singularity check --eslint` from this worktree — should create `.cache/eslint` in the worktree root
+1. Run `./equin check --eslint` from this worktree — should create `.cache/eslint` in the worktree root
 2. Run it again — should be fast (~1 min) from cache hit
 3. Create a new conversation (worktree) — verify `.cache/eslint` exists in the new worktree with rewritten paths
-4. Run `./singularity check --eslint` in the new worktree — should be fast on first run (~1 min)
+4. Run `./equin check --eslint` in the new worktree — should be fast on first run (~1 min)

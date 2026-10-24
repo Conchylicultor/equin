@@ -14,8 +14,8 @@
  *   SELECT id, expanded, updated_at FROM page_blocks WHERE type = 'page'
  *   ORDER BY updated_at DESC LIMIT 10;
  *
- * Manual only. Run after `./singularity build`:
- *   ./singularity run plugins/apps/plugins/pages/plugins/page-tree/e2e/sidebar-expand-decoupled.ts [--headed]
+ * Manual only. Run after `./equin build`:
+ *   ./equin run plugins/apps/plugins/pages/plugins/page-tree/e2e/sidebar-expand-decoupled.ts [--headed]
  */
 import {
   boot,

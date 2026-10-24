@@ -164,15 +164,15 @@ function collectAllIds<T>(
 6. Refactor plugin-tree.tsx (search consumer)
 7. Refactor blocked-by-button.tsx (search consumer)
 8. Refactor blocking-button.tsx (search consumer)
-9. `./singularity build` and verify all surfaces work
+9. `./equin build` and verify all surfaces work
 
 ## Verification
 
-1. `./singularity build` — must compile cleanly
+1. `./equin build` — must compile cleanly
 2. Open Debug > Jobs Queue — filter chips toggle between states, counts display correctly
 3. Open Debug > Claude CLI Calls — model + source chips filter independently, AND-logic works
 4. Open Forge > Catalog — category tab-chips switch views, text filter narrows tables
 5. Open Forge > Publish — text filter prunes tree, auto-expand shows matches, clear restores original
 6. Open a conversation > Blocked By popover — search filters conversations by title
 7. Open a conversation > Blocking popover — same search behavior
-8. `./singularity check` — plugin boundaries pass (imports use correct barrel paths)
+8. `./equin check` — plugin boundaries pass (imports use correct barrel paths)

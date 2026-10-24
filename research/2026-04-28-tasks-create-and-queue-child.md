@@ -327,7 +327,7 @@ implementation time.
 
 **Plugin docs**
 
-- `./singularity build` regenerates `docs/plugins-details.md` and
+- `./equin build` regenerates `docs/plugins-details.md` and
   per-plugin autogen blocks. Run last.
 
 ## Reused primitives
@@ -345,12 +345,12 @@ implementation time.
 
 ## Verification
 
-Manual end-to-end after `./singularity build`:
+Manual end-to-end after `./equin build`:
 
 1. Open a conversation that has an active task with NO push yet.
 2. Click `+`, enter a title, click `+ Sonnet`. Toast confirms creation.
    Open the parent in `tasks-panel`; the new child shows `Queued · Sonnet`.
-3. In the parent conversation, push (`./singularity push -m "..."`). Watch
+3. In the parent conversation, push (`./equin push -m "..."`). Watch
    the events panel (`/queue` debug pane) — `tasks.statusChanged` emits
    with `status: "done"`, the launch job fires, child gains an attempt and
    a Sonnet conversation appears. The chip disappears from the child row.
@@ -362,7 +362,7 @@ Manual end-to-end after `./singularity build`:
    child is created AND immediately spawns a Sonnet conversation (no
    trigger row written).
 7. **Restart resilience.** Queue a child, restart the server with
-   `./singularity build`, then push the parent. Verify the queued child
+   `./equin build`, then push the parent. Verify the queued child
    still launches.
 8. **Multiple queued.** Queue 3 children under one parent, push parent,
    verify all 3 launch in parallel.

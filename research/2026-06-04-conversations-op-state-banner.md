@@ -177,10 +177,10 @@ Create (new `op-status` sub-plugin):
 
 ## Verification
 
-1. `./singularity build` (regenerates docs/registry, restarts server).
-2. `./singularity check` — boundaries, migrations-in-sync, plugins-doc-in-sync.
+1. `./equin build` (regenerates docs/registry, restarts server).
+2. `./equin check` — boundaries, migrations-in-sync, plugins-doc-in-sync.
 3. Open a conversation at `http://<worktree>.localhost:9000/c/<id>`.
-4. **Build banner**: trigger `./singularity build` for that worktree; confirm
+4. **Build banner**: trigger `./equin build` for that worktree; confirm
    "Build in progress · m:ss" appears above the prompt input with a ticking timer,
    and disappears when the build finishes.
 5. **Push running banner**: run a push for that worktree; confirm "Push in

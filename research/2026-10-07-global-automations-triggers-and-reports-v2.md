@@ -215,7 +215,7 @@ so the defaults never reach the JSON. To put the prompt in git, change this:
   - Report scope selection and batching.
   - Debounce: N events produce 1 job.
   - The migration.
-- **Deploy:** run `./singularity build`, then:
+- **Deploy:** run `./equin build`, then:
   - Change the deps cadence and check that the next run moves with no restart.
   - Override the reports prompt and check that `~/.singularity/state/config/…`
     holds the override and the origin `.jsonc` is unchanged.

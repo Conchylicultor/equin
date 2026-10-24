@@ -267,7 +267,7 @@ array order, so rank order and display order finally agree there too.
   `plugins/database/server/internal/client.test.ts`.)
 - `bun run test:dom plugins/primitives/plugins/data-view/plugins/tree` — two aliases
   under one parent get distinct ranks, both after the last real sibling.
-- `./singularity build`, then drive the real app at
+- `./equin build`, then drive the real app at
   `http://att-1784198088-f3zp.localhost:9000/pages` via `bun e2e/screenshot.mjs`:
   sub-pages nested under a toggle order correctly against a direct sibling, and a drag
   beside an aliased (linked-page) row completes.

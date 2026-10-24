@@ -5,7 +5,7 @@
 // places with a location (run the places-map `tour.ts` first on an empty deploy).
 //
 // Usage:
-//   ./singularity run plugins/map/plugins/google/e2e/wheel-over-pin.ts \
+//   ./equin run plugins/map/plugins/google/e2e/wheel-over-pin.ts \
 //     [--out /tmp/map-wheel-over-pin]
 //
 // Writes `<out>-<step>.png`; exits non-zero when the map did not zoom.

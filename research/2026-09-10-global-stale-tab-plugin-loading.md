@@ -55,7 +55,7 @@ for every stale tab today and is what the Reload chip is for.
 ## Part 1 — Keep serving old addresses (build side, no gateway change)
 
 Chosen over a gateway fallback because: it needs no gateway rebuild (a
-gateway change only takes effect after the user runs `./singularity start`);
+gateway change only takes effect after the user runs `./equin start`);
 the gateway stays ignorant of the cache layout; and it also covers fonts, which
 are copied into each build folder rather than linked.
 
@@ -197,11 +197,11 @@ under `plugins/framework/`. This plan touches:
 2. Part 3.1 (sink buffering) + tests.
 3. Part 3.2 (retry) + tests.
 4. Part 2 (hook, Build button, status dot, App.tsx split) + tests.
-5. e2e, `./singularity build`, verification below.
+5. e2e, `./equin build`, verification below.
 
 ## Verification
 
-Unit (`./singularity test <path>`):
+Unit (`./equin test <path>`):
 
 - `web-artifacts/core/internal/carry-forward.test.ts` (tmpdir fixtures, like
   `dist-publish` tests): carries a link whose target exists; drops a link whose
@@ -218,9 +218,9 @@ Unit (`./singularity test <path>`):
 
 Real deploy (worktree namespace):
 
-1. `./singularity build`; note an artifact address for one plugin from the
+1. `./equin build`; note an artifact address for one plugin from the
    served `index.html`.
-2. Edit that plugin trivially, `./singularity build` again.
+2. Edit that plugin trivially, `./equin build` again.
 3. `curl` the old address → 200 (was 404 before). The build log shows the
    carry-forward line. `readlink` shows it points into the shared cache.
 
@@ -236,5 +236,5 @@ e2e `plugins/build/e2e/stale-tab-reload.ts` (harness
   it, and a report row appears (proves Part 3.1).
 - Screenshot both states (`--color-scheme light` and `dark`).
 
-`./singularity check` passes (boundaries: `build/web` → `web-sdk/core` value
+`./equin check` passes (boundaries: `build/web` → `web-sdk/core` value
 import is legal; `no-adhoc-chip` no longer applies to the chip).

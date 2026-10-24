@@ -267,7 +267,7 @@ task; do not widen this change.
 ## Tests
 
 - **The check fails on a bogus declaration.** Add `claims: ["x"]` to any handle
-  and `./singularity check page.editor:markdown-claims-are-escapable` must fail
+  and `./equin check page.editor:markdown-claims-are-escapable` must fail
   naming it; remove it and the check passes.
 - **Non-vacuity of the loader.** The suite asserts the real handle set is
   non-empty and contains a known type, so a loader that silently returns nothing
@@ -286,12 +286,12 @@ task; do not widen this change.
 
 1. Measure the loader first (§2 contingency): time `loadBlockHandles()` once
    before wiring the suite to it.
-2. `./singularity test plugins/page`, then `./singularity build`, then
-   `./singularity check`.
+2. `./equin test plugins/page`, then `./equin build`, then
+   `./equin check`.
 3. **The fixed-form evidence.** Revert §2's escape in a scratch edit and confirm
    the fuzz property now FAILS — that is the proof the widened alphabet reaches
    the bug the old word list dodged. Restore it.
-4. `./singularity check page.editor:markdown-claims-are-escapable` on its own,
+4. `./equin check page.editor:markdown-claims-are-escapable` on its own,
    and with the bogus `claims` entry above.
 5. **The real pages stay editable.** `read_page` on *[Planned] Installable by
    others* (`block-cc11355f`) against this worktree's deploy, then `edit_page`

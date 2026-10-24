@@ -1,5 +1,5 @@
 // The committed record of every plugin move. `plugin move` appends to it in the
-// same commit as the code it moves, and every `./singularity build` replays the
+// same commit as the code it moves, and every `./equin build` replays the
 // entries its namespace has not seen onto that namespace's user-layer config
 // (`applyPluginMoves`). So saved settings follow the code that reads them, per
 // checkout, with no step for anyone to remember.

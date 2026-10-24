@@ -1,7 +1,7 @@
 /**
  * Headless Lexical tests for the clipboard-node flattener that keeps a block to
  * ONE paragraph. Run with
- * `./singularity test plugins/page/plugins/editor/web/internal/inline-clipboard-nodes.test.ts`.
+ * `./equin test plugins/page/plugins/editor/web/internal/inline-clipboard-nodes.test.ts`.
  */
 import { test, expect, describe } from "bun:test";
 import {

@@ -140,7 +140,7 @@ Sidebar nav items previously got the "insert at position 0, let `validateChain` 
 
 ```bash
 # TypeScript must have zero errors after migration
-./singularity build
+./equin build
 
 # Spot check: clicking sidebar nav items in the UI still navigates correctly
 # Spot check: clicking a task row still opens task detail to the right

@@ -203,7 +203,7 @@ bordered `Stack` + `Text` readout and `VolumeControl`'s `IconButton` usage):
 
 ## Verification
 
-1. `./singularity build`, open `http://att-1782850139-ypgu.localhost:9000/sonata`.
+1. `./equin build`, open `http://att-1782850139-ypgu.localhost:9000/sonata`.
 2. **MIDI song** (piano-roll): open a starter, note the key-chip key. Press `+`
    a few times — falling notes shift right/up, the key-chip key follows, and
    playback **sounds** higher. `−` lowers it. Reset readout → original.

@@ -40,7 +40,7 @@ Idle deadlines are per-session `setTimeout`s reset on use — a deadline, not a 
 
 **Targeting.** `conversationId → getConversation → worktreePath → resolveCheckoutDeploy(worktreePath)
 → namespaceUrl(ns)`. A route (`/agents/…`) resolves against that deploy; no deploy → loud error
-("run ./singularity build"). An absolute `http(s)://` URL is accepted as the escape hatch and echoed in
+("run ./equin build"). An absolute `http(s)://` URL is accepted as the escape hatch and echoed in
 every result, so the target is never implicit.
 
 **Tools** (shaped like Claude-in-Chrome so agents' habits carry over):
@@ -88,7 +88,7 @@ dep (`safe-fetch/browser-fetch/deps`), `readyNow` / `requestDep` (`infra/deps`),
 
 ## Verification
 
-1. `./singularity build` (checks incl. type-check / lint / boundaries).
+1. `./equin build` (checks incl. type-check / lint / boundaries).
 2. Drive this worktree's own MCP endpoint (`POST http://<wt>.localhost:9000/api/mcp/<conv>`, JSON-RPC
    `tools/call`) — the tools resolve the conversation to this worktree's deploy: navigate `/`,
    read_page, act on a ref, console, screenshot (image block), batch, a second call reusing the same

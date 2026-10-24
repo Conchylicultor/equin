@@ -177,7 +177,7 @@ Rewrite the file's header comment: the `" @ "`-scan rationale is now wrong, and 
 ## Verification
 
 1. `bun test plugins/debug/plugins/stall-monitor plugins/debug/plugins/health-monitor`
-2. `./singularity build` (regenerates the autogen doc blocks; `plugins-doc-in-sync`
+2. `./equin build` (regenerates the autogen doc blocks; `plugins-doc-in-sync`
    and `type-check` gate the schema change)
 3. **End-to-end** — a genuine 3s freeze isn't reproducible on demand, so drive the
    real path with the real payload: a scratch script calling the exported

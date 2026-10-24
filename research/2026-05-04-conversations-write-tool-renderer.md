@@ -192,7 +192,7 @@ Add `writePlugin` (imported from `./plugins/write/web`) to the `plugins` array o
 
 ## Verification
 
-1. `./singularity build` — build must pass with no type errors
+1. `./equin build` — build must pass with no type errors
 2. Open any conversation where the agent used the Write tool
 3. **Collapsed card:** should show `Write  <filename>  <time>` — filename visible without expanding
 4. **Expanded card:** should show full path + syntax-highlighted content + line count badge

@@ -33,7 +33,7 @@ export function compositionReleaseDir(
 }
 
 /**
- * The `--out` directory passed to `./singularity release`. VERSIONED per run-id
+ * The `--out` directory passed to `./equin release`. VERSIONED per run-id
  * (NOT overwrite-in-place): each release lands at its own
  * `<SINGULARITY_DIR>/releases/<worktree>/<comp>-<target>/<run-id>/` dir, so
  * builds are kept and a `latest-<platform>` symlink (written by the CLI, only

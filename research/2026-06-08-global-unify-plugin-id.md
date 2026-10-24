@@ -174,8 +174,8 @@ plugin-health `plugin_id` column already stores dot.
 
 ## Verification
 
-1. `./singularity build` — regenerates `web.generated.ts`, `server.generated.ts`, central registry, `reorderable-slots.generated.ts`, and `config/**.origin.jsonc`. A green build proves the `id`-field rename + dot emission are internally consistent across all three runtimes.
-2. `./singularity check` — must pass: `plugins-registry-in-sync`, `config-origins-in-sync` (proves on-disk slash layout unchanged), `plugin-boundaries` (proves the new primitive's imports are legal and web-sdk no longer re-exports `PluginId`), `eslint`, `migrations-in-sync`.
+1. `./equin build` — regenerates `web.generated.ts`, `server.generated.ts`, central registry, `reorderable-slots.generated.ts`, and `config/**.origin.jsonc`. A green build proves the `id`-field rename + dot emission are internally consistent across all three runtimes.
+2. `./equin check` — must pass: `plugins-registry-in-sync`, `config-origins-in-sync` (proves on-disk slash layout unchanged), `plugin-boundaries` (proves the new primitive's imports are legal and web-sdk no longer re-exports `PluginId`), `eslint`, `migrations-in-sync`.
 3. Spot-grep: `rg -n "hierarchyId|hierarchyPath" plugins -g '*.ts' -g '*.tsx' | grep -v generated` should return only config_v2's intentional internal `hierarchyPath` (slash path) variables — no identity uses.
 4. Confirm dot emission: `rg '\bid: "' plugins/framework/plugins/web-sdk/core/web.generated.ts | head` shows dotted ids (`active-data.attempt`), and `~/.singularity/config/` dirs are still slash (`config/active-data/conv/...`) — no config migration.
 5. Browser E2E via `bun e2e/screenshot.mjs` against `http://<worktree>.localhost:9000`:

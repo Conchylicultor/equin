@@ -7,7 +7,7 @@
 // Manual only — nothing runs this automatically.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/prototypes/plugins/canvas/e2e/canvas-narrow-header.ts \
+//   ./equin run plugins/apps/plugins/prototypes/plugins/canvas/e2e/canvas-narrow-header.ts \
 //     [--name <prototype id>] [--out <prefix>] [--headed]
 
 import {

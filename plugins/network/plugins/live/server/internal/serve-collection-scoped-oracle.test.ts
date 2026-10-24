@@ -22,8 +22,8 @@
  * Then the surface's definitions change (`recomputeOn`): every subscribed tuple
  * recomputes FULL exactly once, and converges.
  *
- * Requires a running Postgres cluster (started by ./singularity build).
- * Run: `./singularity test plugins/network/plugins/live`.
+ * Requires a running Postgres cluster (started by ./equin build).
+ * Run: `./equin test plugins/network/plugins/live`.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";

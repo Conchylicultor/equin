@@ -229,13 +229,13 @@ type does.
     `inserts`/`onRemoveNode`).
 11. **Delete groups** — remove `plugins/reorder/plugins/groups/` wholesale +
     `reorder/web/internal/group-box.tsx` + `group-rename.tsx`.
-12. **Build** — `./singularity build`: drizzle DROP TABLE migration for
+12. **Build** — `./equin build`: drizzle DROP TABLE migration for
     `reorder_groups`/`reorder_group_members`; regenerates `server.generated.ts`,
     `web.generated.ts`, `docs/plugins-*.md`, CLAUDE.md autogen blocks, re-materialized
     origin `.jsonc`. Update hand-written prose in `reorder/CLAUDE.md` (replace the
     "groups stay DB-backed" caveat with the node-type model + in-app scope limits) and
     `editor/CLAUDE.md`.
-13. **Check** — `./singularity check`: boundaries (confirm no cycle from
+13. **Check** — `./equin check`: boundaries (confirm no cycle from
     `reorder/web` / `config/web` → `node-types/web`), `migrations-in-sync`,
     `config-origins-in-sync` (re-stamp any drifted committed override),
     `plugins-doc-in-sync`.
@@ -270,10 +270,10 @@ type does.
 
 ## Verification
 
-1. **Build:** `./singularity build` — confirm the groups `DROP TABLE` migration is
+1. **Build:** `./equin build` — confirm the groups `DROP TABLE` migration is
    generated, the two node-type plugins appear in `web.generated.ts`, and origin
    `.jsonc` re-materializes spacers as `{type:"spacer"}`.
-2. **Check:** `./singularity check` — boundaries (no cycle to `node-types/web`),
+2. **Check:** `./equin check` — boundaries (no cycle to `node-types/web`),
    `migrations-in-sync`, `config-origins-in-sync`, `plugins-doc-in-sync`; both
    runtimes type-check.
 3. **Hand-authored round-trip:** add to a committed slot override an `items` array

@@ -187,7 +187,7 @@ For `taskDetailPane`, `agentDetailPane`, `serverDetailPane`: remove `provides:` 
 
 ## Verification
 
-1. `./singularity build` — all TypeScript / ESLint checks pass
+1. `./equin build` — all TypeScript / ESLint checks pass
 2. Test conversation view: open a conversation, verify JSONL renders, toolbar buttons work
 3. Test sibling panes: open terminal, tasks panel, review, docs, commits, summary — verify they load data
 4. Test closing the conversation pane column (promote a sibling) — verify sibling panes still work with their own data

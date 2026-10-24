@@ -116,8 +116,8 @@ Reuse: `windowQueryResource` / `pointQueryResourceDescriptor` (`infra/query-reso
 
 ## Verification
 
-1. `./singularity test plugins/infra/plugins/query-resource plugins/database/plugins/change-feed plugins/primitives/plugins/live-state`.
-2. `./singularity build` (background) → green; `plugins-registry` / docs checks pass.
+1. `./equin test plugins/infra/plugins/query-resource plugins/database/plugins/change-feed plugins/primitives/plugins/live-state`.
+2. `./equin build` (background) → green; `plugins-registry` / docs checks pass.
 3. On the worktree: `GET /api/resources/_debug` shows `turn-summaries` / `task-efforts` /
    `task-preprompts` as point membership, `conversation-summaries` as a param-keyed tuple,
    no `reports` key; `live_state_snapshot` has no `turn-summaries` row; boot snapshot lacks it.

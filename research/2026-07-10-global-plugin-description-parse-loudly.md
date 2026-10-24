@@ -160,8 +160,8 @@ untouched — a boolean field's only valid literal forms are the bare `true`/`fa
 ## Why this needs no new check
 
 `plugins-doc-in-sync` cannot detect the loss because it compares the committed doc against the
-same buggy generator. Making the generator **throw** is the guardrail: `./singularity build`
-(which runs docgen → `buildPluginTree`) and `./singularity check` both go red before a lossy
+same buggy generator. Making the generator **throw** is the guardrail: `./equin build`
+(which runs docgen → `buildPluginTree`) and `./equin check` both go red before a lossy
 doc can be written, let alone committed. Adding a check that re-implements the parse would just
 add a second thing to keep in sync.
 
@@ -201,14 +201,14 @@ from the original by offset" idiom is the one its own `CLAUDE.md` already mandat
 
 ## Verification
 
-1. **Output-neutrality (the load-bearing check).** `./singularity build`, then `git diff --stat docs/` and `git diff --stat -- '**/CLAUDE.md'`. Both **must be empty**. Any diff is a regression in the new parser, since no plugin currently exercises the broken paths.
-2. **`./singularity check`** — green, in particular `plugins-doc-in-sync`, `type-check`, `eslint`, `keyed-resource-scope`.
+1. **Output-neutrality (the load-bearing check).** `./equin build`, then `git diff --stat docs/` and `git diff --stat -- '**/CLAUDE.md'`. Both **must be empty**. Any diff is a regression in the new parser, since no plugin currently exercises the broken paths.
+2. **`./equin check`** — green, in particular `plugins-doc-in-sync`, `type-check`, `eslint`, `keyed-resource-scope`.
 3. **The bug is actually fixed.** Temporarily set a real plugin's description to
-   `"... verifies an FK onDelete:\"cascade\" bound ..."`, run `./singularity build`, and confirm
+   `"... verifies an FK onDelete:\"cascade\" bound ..."`, run `./equin build`, and confirm
    the description — quotes intact — appears in that plugin's `CLAUDE.md` `## Plugin reference`
    block, in `docs/plugins-compact.md`, and in its umbrella's sub-plugin list. Revert.
 4. **Loudness.** Temporarily set a description to `MY_CONST` (and separately to an interpolated
-   template). `./singularity build` must fail with the file path and the offending expression,
+   template). `./equin build` must fail with the file path and the offending expression,
    not silently drop the line. Revert.
 5. **Unit tests.** `bun test plugins/plugin-meta/plugins/parse-utils` and
    `bun test plugins/plugin-meta/plugins/plugin-tree`. Cases: all three quote forms; escaped

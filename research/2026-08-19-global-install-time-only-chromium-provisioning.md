@@ -42,7 +42,7 @@ The precedent is already in the same plugin: `browserFetch` does **not**
 self-install. A missing binary throws `browser-unavailable` with the remedy in
 the message, and `browser-fetch/CLAUDE.md` states the reasoning — *"an operator
 problem"*. Provisioning runs on every `bun install`, which is step 1 of
-`./singularity build`, so a backend that is serving has already been through it.
+`./equin build`, so a backend that is serving has already been through it.
 
 ## Approach
 
@@ -82,7 +82,7 @@ const INSTALL_TIMEOUT_MS = 15 * 60_000;
 
 Fail loud on non-zero exit or on the timeout — the provision runner aggregates
 failures and aborts the install, which is the behaviour `execFileSync`'s throw
-already had. The bound matters even at install time: `./singularity` runs
+already had. The bound matters even at install time: `./equin` runs
 `bun install` on every invocation, so a hung download hangs a **build**, with no
 human at the terminal watching a stalled progress bar.
 
@@ -157,7 +157,7 @@ path is bounded again — which is what that file already claims about itself.
 - `thumbnails/CLAUDE.md:59` — currently says *"`ensureChromium()` comes from
   `browser-fetch/core`"*. Replace with: chromium is provisioned at install time;
   a render never installs, it fails `browser-unavailable`.
-- `docs/plugins-*.md` regenerate from `./singularity build` (the
+- `docs/plugins-*.md` regenerate from `./equin build` (the
   `ensureChromium` entry under browser-fetch's core exports disappears).
 
 ## Files
@@ -184,13 +184,13 @@ path is bounded again — which is what that file already claims about itself.
 3. **The failure the runtime path now shows.**
    `PLAYWRIGHT_BROWSERS_PATH=/tmp/pw-empty bun -e 'const {chromium} = await import("playwright"); await chromium.launch()'`
    — confirm the thrown text is legible as the cause `render.ts` wraps.
-4. **Boundaries.** `./singularity check` (runs `boundary-rules`,
+4. **Boundaries.** `./equin check` (runs `boundary-rules`,
    `plugin-boundaries`, `type-check`, `plugins-doc-in-sync`). Then confirm the
    new rule bites: temporarily add
    `import { provisionChromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/provision"`
    to a `server/` file and check that `boundary-rules` fails on
    `server -> provision`; revert.
-5. **End to end.** `./singularity build` (background, per the workflow), then
+5. **End to end.** `./equin build` (background, per the workflow), then
    open `http://<worktree>.localhost:9000` → Prototypes and confirm a card still
    renders its thumbnail — the render path is unchanged apart from the deleted
    first line.

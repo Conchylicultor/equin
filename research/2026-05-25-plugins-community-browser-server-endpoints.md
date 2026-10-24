@@ -179,7 +179,7 @@ export default {
 
 ## Verification
 
-After `./singularity build`:
+After `./equin build`:
 
 ```bash
 # GET catalog — should return { themes: [...] } with ~521 entries

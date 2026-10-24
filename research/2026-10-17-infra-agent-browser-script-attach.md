@@ -12,7 +12,7 @@ the agent cannot look at that page with `browser_*`; it must replay everything i
 Exit criterion of the track: a script runs **inside the conversation's session** and leaves its tab
 there, so the agent picks up at the failure point.
 
-The hard part: the browser lives in the backend process, the script in its own `./singularity run`
+The hard part: the browser lives in the backend process, the script in its own `./equin run`
 process, and Playwright contexts are normally owned by the connection that made them.
 
 ## Key finding: Playwright 1.62 `browser.bind()`
@@ -41,7 +41,7 @@ context dies with it).
    The backend ensures the session, binds the browser (once per launch), opens/marks the tab by
    navigating a fresh tab to `about:blank#attach-<nonce>`, and returns a **ticket** plus the
    exact flag to pass: `--attach <ticket>`.
-2. Agent runs `./singularity run <script>.ts --attach <ticket>`.
+2. Agent runs `./equin run <script>.ts --attach <ticket>`.
 3. The script drives that tab; on exit (pass **or** fail) it disconnects and prints
    `kept tab t3 in this conversation's browser session — continue with browser_read_page({ tab: "t3" })`.
 4. Agent continues with `browser_*` on `t3`, exactly at the step that failed.
@@ -125,7 +125,7 @@ Every existing script gets `--attach` for free (incl. `screenshot.ts`), no per-s
 ## Verification
 
 1. Spike (step 0) as a throwaway script under the scratchpad.
-2. `./singularity build` (type-check, lint, boundaries, plugins-doc-in-sync).
+2. `./equin build` (type-check, lint, boundaries, plugins-doc-in-sync).
 3. Through this worktree's own MCP endpoint (`POST http://<wt>.localhost:9000/api/mcp/<conv>`,
    JSON-RPC `tools/call`, as in v1 verification): `browser_attach` → ticket.
 4. Run a script that fails mid-flow (e.g. `screenshot.ts --path /agents --click "<missing>"`) with

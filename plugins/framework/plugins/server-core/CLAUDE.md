@@ -8,7 +8,7 @@ See the top-level [`CLAUDE.md`](../../../../CLAUDE.md) for overall architecture 
 
 1. `bin/index.ts` starts `Bun.serve({ unix })` on the per-worktree Unix socket the gateway hands it as `--socket <path>` (e.g. `~/.singularity/sockets/<name>.sock`), read by `readServingSocket()` (`infra/runtime-identity`). The backend errors out if it was given no socket — there is no standalone dev mode.
 2. Each plugin declares its routes via a `ServerPluginDefinition` (`core/types.ts`). At startup the entry point flattens them into two lookup tables: `httpRoutes` (`"METHOD /path"` → handler) and `wsRoutes` (`"/path"` → `WsHandler`).
-3. Plugins also serve live state (see "Live state" below). Append-only firehoses (terminal, log tails) use a dedicated WS route. There is no SSE path — raw `text/event-stream` in TS is forbidden (`./singularity check no-raw-sse`).
+3. Plugins also serve live state (see "Live state" below). Append-only firehoses (terminal, log tails) use a dedicated WS route. There is no SSE path — raw `text/event-stream` in TS is forbidden (`./equin check no-raw-sse`).
 
 ## Boot modes: `serve`, `exec` and `browser`
 
@@ -275,7 +275,7 @@ Each served resource gets `GET /api/resources/<key>/...` (HTTP fallback for WS-d
 ## Adding a Plugin's Server Component
 
 Create `plugins/{name}/server/index.ts` default-exporting the `ServerPluginDefinition`, put
-the implementations in `server/internal/`, and run `./singularity build` — the registry is
+the implementations in `server/internal/`, and run `./equin build` — the registry is
 generated, never hand-edited (root `CLAUDE.md` → "Registry exclusivity").
 
 `server/` may import its own `core/`, `shared/` and `data-dirs/` (relative) and other
@@ -307,7 +307,7 @@ Drizzle ORM + Postgres, one DB per namespace — the process's own runtime names
 
 ### Schema change workflow
 
-Edit `plugins/{name}/server/internal/tables.ts` (or `schema.ts` for views) → run `./singularity build`. The build runs `drizzle-kit generate` (writes a new SQL migration if any plugin schema changed, renamed to `YYYYMMDD_HHMMSS_<hash>__<slug>.sql`) and restarts the server, which applies pending migrations on startup. There is no separate `db:generate` step — always go through `./singularity build`. First build after a schema change requires `--migration-name <slug>`; subsequent builds with no schema change don't.
+Edit `plugins/{name}/server/internal/tables.ts` (or `schema.ts` for views) → run `./equin build`. The build runs `drizzle-kit generate` (writes a new SQL migration if any plugin schema changed, renamed to `YYYYMMDD_HHMMSS_<hash>__<slug>.sql`) and restarts the server, which applies pending migrations on startup. There is no separate `db:generate` step — always go through `./equin build`. First build after a schema change requires `--migration-name <slug>`; subsequent builds with no schema change don't.
 
 ### Migration runner
 
@@ -317,7 +317,7 @@ A worktree's DB is a `pg_dump | pg_restore` fork of main (`plugins/database/plug
 
 ### Gotchas
 
-- **Forks copy data, not just schema.** A migration running _after_ a fork sees whatever rows the source DB had at fork time. Drizzle-generated DDL is idempotent, but hand-written DML (seed inserts, backfills) can double-apply — write it idempotent (`INSERT … ON CONFLICT DO NOTHING`, `UPDATE … WHERE` guarded on current state). Data migrations are DML-only, enforced by `./singularity check data-migration-dml-only`.
+- **Forks copy data, not just schema.** A migration running _after_ a fork sees whatever rows the source DB had at fork time. Drizzle-generated DDL is idempotent, but hand-written DML (seed inserts, backfills) can double-apply — write it idempotent (`INSERT … ON CONFLICT DO NOTHING`, `UPDATE … WHERE` guarded on current state). Data migrations are DML-only, enforced by `./equin check data-migration-dml-only`.
 - **Rebased-away migrations drift silently.** Apply locally, then rebase onto a main that never merged it, and the DB keeps whatever it did. The runner warns (`applied hash X has no matching file on disk`) but does not roll back. Reinstate the file, or drop + refork.
 - **Keep migrations additive** — new tables, new columns. Two agents reshaping the same object in order-dependent ways can land in reverse order in one worktree.
 - **Don't hand-edit the `YYYYMMDD_HHMMSS_<hash>` prefix** — it determines sort order and the hash is content-addressed.
@@ -328,7 +328,7 @@ Do **not** hand-edit `__singularity_migrations` to "fix" drift — drop and re-f
 
 ```bash
 psql -d postgres -c 'DROP DATABASE IF EXISTS "claude-<timestamp>" WITH (FORCE)'
-./singularity build    # recreates the worktree DB via fork + migrations
+./equin build    # recreates the worktree DB via fork + migrations
 ```
 
 The server itself is spawned and supervised by the gateway; never start it manually.
@@ -341,7 +341,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
 - **Shared web/server code defaults to `core/`**, not a slot — see [`web-sdk/CLAUDE.md`](../web-sdk/CLAUDE.md) → "Sharing code between web and server"
 - **Bun runs TypeScript directly** — no build step needed
 
-<!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
+<!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
 
 ## Plugin reference
 

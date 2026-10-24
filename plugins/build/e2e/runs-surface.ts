@@ -20,11 +20,11 @@
  *     still painted one would let a click there write the shared selection it
  *     ignores.
  *
- * Manual only; nothing runs this automatically. Run it after `./singularity
+ * Manual only; nothing runs this automatically. Run it after `./equin
  * build` with:
  *
- *   ./singularity run plugins/build/e2e/runs-surface.ts
- *   ./singularity run plugins/build/e2e/runs-surface.ts --headed
+ *   ./equin run plugins/build/e2e/runs-surface.ts
+ *   ./equin run plugins/build/e2e/runs-surface.ts --headed
  *
  * Assertions are written against MARKERS that belong to exactly one run kind,
  * not against row counts off a hand-picked selector: the DataView list exposes

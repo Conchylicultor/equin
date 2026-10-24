@@ -202,7 +202,7 @@ useLive(notifications, { groupBy: "variant", where: { type: "build" } })
 
 ## Verification
 
-- **Tests:** `./singularity test plugins/network/plugins/live plugins/infra/plugins/query-resource plugins/shell/plugins/notifications plugins/framework/plugins/tooling plugins/plugin-meta/plugins/facets/plugins/resources`
+- **Tests:** `./equin test plugins/network/plugins/live plugins/infra/plugins/query-resource plugins/shell/plugins/notifications plugins/framework/plugins/tooling plugins/plugin-meta/plugins/facets/plugins/resources`
   - codec: group params canonicalise, strict decode throws on an undeclared column
     or a limit above max;
   - group loader against `createTestDb`: counts, ordering, the NULL bucket,
@@ -212,9 +212,9 @@ useLive(notifications, { groupBy: "variant", where: { type: "build" } })
   - the projection excludes a non-row column;
   - jsdom: `useLive({ groupBy })` pending → settled, grow keeps it settled, and the bell popover shows a chip
     loading state (never an empty chip row).
-- `./singularity check`, including `eager-tier-in-sync`, `plugins-doc-in-sync` (four
+- `./equin check`, including `eager-tier-in-sync`, `plugins-doc-in-sync` (four
   keys listed for each collection) and `resource-vocabulary`.
-- `./singularity build`, then:
+- `./equin build`, then:
   - a new `shell/notifications/e2e/bell-filter.ts`:
     - seed 250 notifications through `POST /api/notifications`, with one old type
       that appears only outside the newest 200;
@@ -253,11 +253,11 @@ Deviations:
 
 Verification:
 
-- **Tests.** `./singularity test plugins/shell/plugins/notifications` passes. This
+- **Tests.** `./equin test plugins/shell/plugins/notifications` passes. This
   includes the new jsdom suite `web/__tests__/notifications-panel.test.tsx`: while the
   groupings are pending, the chip row shows a loading status and no chips; once settled,
   it shows one chip per server group, plus Errors when an `error` group exists.
-- **Build and check.** `./singularity build` succeeded, with every check passing, and a final `./singularity check` passed.
+- **Build and check.** `./equin build` succeeded, with every check passing, and a final `./equin check` passed.
 - **`shell/notifications/e2e/bell-filter.ts`: 17/17 passed.**
   - The boot snapshot has `notifications` with exactly 200 rows, none of them of the old
     type. `:rows` and `:groups` are not preloaded.

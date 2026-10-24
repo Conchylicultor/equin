@@ -143,7 +143,7 @@ instrumentation site is try/catch-wrapped — profiling must never brick boot.
 
 ## 7. Staying fresh after boot: the reload loop
 
-`./singularity build` swaps `dist` (new `.build-id`) then restarts the
+`./equin build` swaps `dist` (new `.build-id`) then restarts the
 backend. Detection is push-based end to end:
 
 1. Backend restarts → `frontendHashResource` (push mode) recomputes; its

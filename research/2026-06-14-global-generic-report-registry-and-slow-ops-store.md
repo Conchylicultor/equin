@@ -168,8 +168,8 @@ server/internal/{tables.ts,record-report.ts}, web/report.ts, web/components/repo
 
 ## Verification
 
-1. `./singularity build` — regenerates the destructive reports migration + the new `slow_ops` table; restarts.
-2. `./singularity check type-check plugin-boundaries migrations-in-sync` — registry must type-check;
+1. `./equin build` — regenerates the destructive reports migration + the new `slow_ops` table; restarts.
+2. `./equin check type-check plugin-boundaries migrations-in-sync` — registry must type-check;
    confirm no cross-plugin barrel violations on the new `slow-ops → reports` edge; migrations committed.
 3. **Slow-op path:** lower `slowOpConfig` thresholds (Settings → Config), load a page hitting a DB query,
    then open Debug → Slow Ops — confirm the operation appears ranked by total time with a caller row

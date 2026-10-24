@@ -110,7 +110,7 @@ There is exactly one pathway by which `draft` is set from outside user keystroke
 
 End-to-end (manual, in the worktree app — required because the bug is a UI/timing artifact, not catchable by unit tests against React's reconciler):
 
-1. `./singularity build`, open `http://att-1777251022-by1g.localhost:9000/c/<conv>/tasks`.
+1. `./equin build`, open `http://att-1777251022-by1g.localhost:9000/c/<conv>/tasks`.
 2. **Cursor-jump regression test (the original bug):** open a task detail, focus the description, place caret in the middle of existing text, and type continuously while *also* triggering conversation activity in another tab (e.g. start/finish a conversation in any worktree — anything that fires `recentConversationsResource.notify()`, which cascades to `tasksResource`). The caret must not move. Pause >500 ms while still focused, keep an eye on it during the save round-trip — caret stays put.
 3. **Server-edit acceptance:** with the description **unfocused**, mutate the task from another tab (or via the MCP `update_task` tool against the same task id). The local view must adopt the new description. Then focus the textarea and edit; the new text persists. This validates the sync gate releases correctly.
 4. **Agent detail parity:** repeat (2) and (3) on `agentDetailPane` for `name`, `description`, `prompt`. Then click **Launch**: the latest prompt must reach the server (`flush()` runs before POST). Confirm by inspecting the conversation that opens.
@@ -118,6 +118,6 @@ End-to-end (manual, in the worktree app — required because the bug is a UI/tim
 6. **Concurrent-flush sequencing:** type into description, wait until "Saving…" appears (i.e. a save is mid-flight), and immediately click Launch. The launch must wait for the in-flight save *and* the post-flush save (if draft drifted) before POSTing. The launched prompt must contain the latest typed text — proves `savePromiseRef` serialization works.
 7. **Self-echo no-op:** focus description, type "abc", pause >500 ms (let the save complete), keep focus, do nothing. The `tasksResource` push that confirms the save must not cause a re-render that mutates `draft` (compare React DevTools: `lastSavedRef === value` after the push, gate-clear branch must early-return). Caret stays put.
 8. **Saving indicator:** during fast typing the "Saving…" pill must show, then flip to "Saved" within ~500 ms of stopping. Both fields' `isSaving` should OR together correctly.
-9. `./singularity check` — repo validation must pass (no boundary violations from the new `@core` export).
+9. `./equin check` — repo validation must pass (no boundary violations from the new `@core` export).
 
 Done when all 9 pass and the diff at `task-detail.tsx` / `agent-detail.tsx` is a net reduction in lines.

@@ -234,7 +234,7 @@ async function databaseReady(name: string): Promise<boolean> {
  * `services.length === 0` branch above ("externally managed DB") and the real,
  * actionable error comes from `waitForWorktreeDatabase` further down — which
  * knows *which* database it wanted and why. On any dev host `database.json`
- * always exists (`./singularity start` writes it), so no dev-loop invocation
+ * always exists (`./equin start` writes it), so no dev-loop invocation
  * changes; the delta only shows up on a bare host, where the old error named
  * the wrong problem.
  */
@@ -356,9 +356,9 @@ async function waitForWorktreeDatabase(name: string): Promise<void> {
       "If this worktree was created outside Singularity (git worktree add),",
       "create its database with:",
       "",
-      "    ./singularity db fork",
+      "    ./equin db fork",
       "",
-      "Then re-run ./singularity build.",
+      "Then re-run ./equin build.",
     ].join("\n"),
   );
   process.exit(1);
@@ -397,10 +397,10 @@ async function requireBaseDatabase(name: string): Promise<void> {
         : [
             "The bundled Postgres creates it when the cluster starts. Start it with:",
             "",
-            "    ./singularity start",
+            "    ./equin start",
           ]),
       "",
-      "Then re-run ./singularity build.",
+      "Then re-run ./equin build.",
     ].join("\n"),
   );
   process.exit(1);
@@ -548,7 +548,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
         "If you are inside a worktree conversation, make sure you are running",
         "this command from the worktree directory, not the main repo.",
         "",
-        "To override (only with explicit user permission): ./singularity build --allow-main",
+        "To override (only with explicit user permission): ./equin build --allow-main",
       ].join("\n"),
     );
     process.exit(1);
@@ -609,13 +609,13 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
   // build-profile-<id>.json, its build-logs, and the bundle's .build-id —
   // so the profiling Gantt can open ANY build's detail by id, not just
   // UI-triggered ones. UI builds already set SINGULARITY_BUILD_ID
-  // (run-build.ts); manual CLI builds (`./singularity build`) get a
+  // (run-build.ts); manual CLI builds (`./equin build`) get a
   // generated one here. Write it back into the env so the profiler and
   // build-logs writers (which read the env var at write time) agree by
   // construction instead of falling back to id-less default filenames and
   // a null build-log buildId (which left manual builds un-clickable).
   // A UI/auto build's backend minted the build_runs row before spawning this
-  // CLI (SINGULARITY_BUILD_ID is that row's id); a manual `./singularity
+  // CLI (SINGULARITY_BUILD_ID is that row's id); a manual `./equin
   // build` has no such id yet. Captured BEFORE the env is overwritten below,
   // so the CLI knows whether it must mint main's row itself (decision 3).
   const uiTriggered = process.env.SINGULARITY_BUILD_ID != null;

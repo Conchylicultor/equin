@@ -157,8 +157,8 @@ The display is labelled "Chord grid". The plugin name avoids `sources/chord-grid
 
 ## Verification
 
-1. **Tests:** `./singularity test` on `score` (chord-bars), `music/chord-box` (`majorDegree`), and the existing Chord `vocabulary` tests.
-2. **Build:** `./singularity build`, which runs boundary-rules, plugin-boundaries and docs-in-sync.
+1. **Tests:** `./equin test` on `score` (chord-bars), `music/chord-box` (`majorDegree`), and the existing Chord `vocabulary` tests.
+2. **Build:** `./equin build`, which runs boundary-rules, plugin-boundaries and docs-in-sync.
 3. **Chord unchanged:** `screenshot.ts --path /chord` before and after. The answer strip (empty, filled, given, checked right/wrong, now), the chord buttons and the logo must match pixel for pixel.
 4. **Sonata:**
    - On a chord-grid song and a UG song, pick "Chord grid".

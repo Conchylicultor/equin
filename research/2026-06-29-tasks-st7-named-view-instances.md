@@ -234,7 +234,7 @@ is constant → hash `edfdc62ed108`, matching every existing `*.origin.jsonc`):
 ```
 
 Both land under `tasks.task-list` (the consuming plugin) per config_v2 path
-derivation. `./singularity build` regenerates `data-views.generated.ts`
+derivation. `./equin build` regenerates `data-views.generated.ts`
 (drops `tasks-recent`, repoints `tasks-list` to `tasks.task-list`, adds
 `tasks-subtree`) and the `.origin.jsonc` files.
 
@@ -255,8 +255,8 @@ derivation. `./singularity build` regenerates `data-views.generated.ts`
 
 ## Verification
 
-1. `./singularity build` — green; regenerates manifest + origins + both CLAUDE.md
-   docs. Then `./singularity check` — specifically `data-view:configs-authored`
+1. `./equin build` — green; regenerates manifest + origins + both CLAUDE.md
+   docs. Then `./equin check` — specifically `data-view:configs-authored`
    (both new ids have configs, `tasks-recent` gone), `data-views-in-sync`,
    `plugins-registry-in-sync`, `plugins-doc-in-sync`, `type-check`,
    `plugin-boundaries`.

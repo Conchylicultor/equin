@@ -1,3 +1,4 @@
+import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import { join, normalize } from "node:path";
 import { chromium, type Browser, type Page } from "playwright";
 import { z } from "zod";
@@ -97,16 +98,16 @@ function serveDir(outDir: string): { origin: string; stop: () => void } {
  * Chromium is an on-demand dependency (`chromium`, declared by
  * safe-fetch/browser-fetch). This file sits under `web/`, whose row cannot
  * reach the `deps/` engine barrel, so it asks the engine's process boundary
- * instead — `./singularity deps install chromium --json`, a no-op printing
+ * instead — `./equin deps install chromium --json`, a no-op printing
  * where the install lives once it is there (the `layout-geometry` check has
  * already installed it before this suite runs) — and reads the executables
  * the install recorded, as Playwright reported them, through the kind's
  * `core` reader. So the suite runs the same way under the check and under a
- * plain `./singularity test`.
+ * plain `./equin test`.
  */
 async function installedHeadlessChromium(): Promise<string> {
   const root = await getWorktreeRoot();
-  const argv = [`${root}/singularity`, "deps", "install", "chromium", "--json"];
+  const argv = [`${root}/${CLI_NAME}`, "deps", "install", "chromium", "--json"];
   const res = await spawnCaptured(argv, { cwd: root, timeoutMs: 30 * 60_000 });
   if (res.exitCode !== 0 || res.timedOut) {
     throw new Error(

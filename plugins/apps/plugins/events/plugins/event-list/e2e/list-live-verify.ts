@@ -20,7 +20,7 @@
  * failure). Refuses main (it seeds rows into the deploy's database).
  *
  * Manual only — nothing runs this automatically.
- *   ./singularity run plugins/apps/plugins/events/plugins/event-list/e2e/list-live-verify.ts [--headed]
+ *   ./equin run plugins/apps/plugins/events/plugins/event-list/e2e/list-live-verify.ts [--headed]
  */
 import { randomBytes } from "node:crypto";
 import type { Page } from "playwright";

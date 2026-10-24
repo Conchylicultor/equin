@@ -63,7 +63,7 @@ Steps. Each one checks before it acts, so running the script again resumes where
    - it adds one `mise activate` line to your shell rc;
    - it clones to `<dir>`, then starts and builds the app (~10–15 min);
    - agents need a Claude account (sign-in at the end);
-   - macOS: the app comes back by itself at every login; Linux: re-run `./singularity start` after a reboot.
+   - macOS: the app comes back by itself at every login; Linux: re-run `./equin start` after a reboot.
    - It refuses to run as root, with the same message as the doctor.
 1. **Xcode CLT** (macOS, when `xcode-select -p` fails): the headless `softwareupdate` route Homebrew uses (the
    `.installondemand.in-progress` marker, pick the latest "Command Line Tools" label, `sudo softwareupdate -i`). If no
@@ -79,8 +79,8 @@ Steps. Each one checks before it acts, so running the script again resumes where
    exits 1 only for a missing required item, which fails the script loudly (`set -euo pipefail`).
 5. **Claude Code**: if it is absent, `curl -fsSL https://claude.ai/install.sh | bash`. Installing needs no person;
    sign-in is step 8.
-6. **`./singularity start`**
-7. **`./singularity build --allow-main`**: then read `~/.singularity/worktrees/<main ns>/build-status.json`. It must
+6. **`./equin start`**
+7. **`./equin build --allow-main`**: then read `~/.singularity/worktrees/<main ns>/build-status.json`. It must
    say `status: ok`; do not trust the exit code alone (root CLAUDE.md, step 3).
 8. **Finish**:
    - print `http://singularity.localhost:9000`;
@@ -89,7 +89,7 @@ Steps. Each one checks before it acts, so running the script again resumes where
      `claude auth login` < /dev/tty; otherwise print it as the one remaining step.
 
 What the script does **not** do: install Homebrew (not needed any more), touch the system Postgres, or ever run
-`./singularity push`.
+`./equin push`.
 
 Docs:
 - `README.md`: one paragraph on what Singularity is, the one-liner, the in-clone form, and a link to `docs/setup.md`.
@@ -113,7 +113,7 @@ stays small enough to review by eye. I am not adding a stub-harness test for it.
   2. **the one command**. It pipes the host's `install.sh` to `bash` in the guest. The file is not on `main` yet, so a
      `curl` of the raw URL would fetch nothing; the script body is byte-identical. The `_DOC` line says so. After the
      push, rerun with the real `curl … | bash` as the final confirmation.
-  3. a fresh `zsh -i -c 'command -v bun mise; cd ~/singularity && ./singularity --help >/dev/null'`: a new terminal
+  3. a fresh `zsh -i -c 'command -v bun mise; cd ~/singularity && ./equin --help >/dev/null'`: a new terminal
      works without hand edits.
   4. `curl` `singularity.localhost:9000` → 200, and `build-status.json` → `ok`.
   5. `screenshot.ts`: the app renders.
@@ -124,8 +124,8 @@ stays small enough to review by eye. I am not adding a stub-harness test for it.
 
 ## Verification
 
-- `./singularity test plugins/framework/plugins/cli/plugins/doctor`
-- `./singularity build` (background) and `./singularity check`.
+- `./equin test plugins/framework/plugins/cli/plugins/doctor`
+- `./equin build` (background) and `./equin check`.
 - `sidequests/clean-install/run.sh --steps steps-install.sh` from a fresh VM clone, headless and unattended:
   - every step passes;
   - no step is tagged `undocumented-knowledge`, `documented-elsewhere` or `harness-only`, and none is `_EXPECT_FAIL`;
@@ -150,7 +150,7 @@ install this tree.
 | --- | --- | --- | --- | --- |
 | 1 | guest state (no CLT, brew, mise, bun, claude) | from-docs | ok | 1s |
 | 2 | **the one command** | from-docs | ok: deploy receipt `ok` | 440s |
-| 3 | new terminal: mise, bun, go, tmux on PATH; `./singularity` runs | from-docs | ok | 1s |
+| 3 | new terminal: mise, bun, go, tmux on PATH; `./equin` runs | from-docs | ok | 1s |
 | 4 | `curl :9000` → 200, `build-status.json` → ok | from-docs | ok | 0s |
 | 5 | screenshot renders | from-docs | ok | 6s |
 | 6 | reboot | from-docs | ok | 12s |

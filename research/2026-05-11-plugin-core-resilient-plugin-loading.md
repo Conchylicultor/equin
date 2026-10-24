@@ -265,8 +265,8 @@ To:
 
 ## Verification
 
-1. `./singularity build` → `web/src/plugins.generated.ts` has `pluginEntries` array format
-2. `./singularity check --plugins-registry-in-sync` → passes
+1. `./equin build` → `web/src/plugins.generated.ts` has `pluginEntries` array format
+2. `./equin check --plugins-registry-in-sync` → passes
 3. `bun run build` in `web/` → TypeScript + Vite compile cleanly
 4. Load app → works identically, no banner, no console errors
 5. Add `throw new Error("boom")` to a non-critical plugin (e.g. `plugins/theme/web/index.ts`) → app loads without it, banner shows the failure

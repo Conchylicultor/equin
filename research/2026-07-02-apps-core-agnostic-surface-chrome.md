@@ -198,7 +198,7 @@ pack("app-chrome", "aQ", [
 instead select individual contributors (e.g. just `apps-core.tab-bar`).
 
 The `compositions.origin.jsonc` committed artifact regenerates via
-`./singularity build` (never hand-edited).
+`./equin build` (never hand-edited).
 
 ### Critical files (composition)
 
@@ -211,8 +211,8 @@ The `compositions.origin.jsonc` committed artifact regenerates via
 
 1. **Build + checks (main app unaffected):**
    ```bash
-   ./singularity build
-   ./singularity check composition-closure   # pack ids resolve, selections are load-bearing
+   ./equin build
+   ./equin check composition-closure   # pack ids resolve, selections are load-bearing
    ```
    Open `http://att-1783004663-87ce.localhost:9000` — tab bar + rail + placements
    still present (unfiltered build), confirming zero regression.
@@ -224,7 +224,7 @@ The `compositions.origin.jsonc` committed artifact regenerates via
 
 3. **Lean proof — sonata chrome-less:** build the filtered composition and screenshot.
    ```bash
-   ./singularity build --composition sonata
+   ./equin build --composition sonata
    ```
    Then a scripted Playwright run (via `e2e/screenshot.mjs`) against the served
    sonata surface: assert the piano app renders and **no** tab strip / app rail is
@@ -248,4 +248,4 @@ The `compositions.origin.jsonc` committed artifact regenerates via
   `apps-core.surface.floating`, a soft sub-plugin) — this task only needs to keep
   it out of any default bundle, which the opt-in `app-chrome` pack does.
 - Docs (`apps-core`/`layout`/`tab-bar` CLAUDE.md, `plugins-*.md`) regenerate via
-  `./singularity build`; the `plugins-doc-in-sync` check enforces it.
+  `./equin build`; the `plugins-doc-in-sync` check enforces it.

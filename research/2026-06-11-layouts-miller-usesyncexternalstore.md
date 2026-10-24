@@ -150,8 +150,8 @@ with unchanged signatures and exports.
 
 ## Verification
 
-1. `./singularity build` — frontend + server build clean.
-2. `./singularity check type-check` — TypeScript + lint pass; confirm the
+1. `./equin build` — frontend + server build clean.
+2. `./equin check type-check` — TypeScript + lint pass; confirm the
    "React state not used as view data" audit finding no longer fires for these
    three files.
 3. Manual e2e against a multi-column Miller app (e.g. the agent manager at

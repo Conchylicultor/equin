@@ -17,14 +17,14 @@ import { bootPluginGraph, runShutdownHooks } from "../core/boot-stages";
 // of release's recovery path
 // (research/2026-09-01-global-supervised-run-survives-restart.md).
 //
-// WHY THIS LIVES IN `cli/`: an exec process IS a `./singularity` command process
+// WHY THIS LIVES IN `cli/`: an exec process IS a `./equin` command process
 // — the future `supervised-exec` verb — and `cli/` is a runtime barrel, so
 // `@plugins/framework/plugins/server-core/cli` is a legal cross-plugin import
 // while `bin/` is not (R4 admits only runtime barrels, which is why nothing may
 // import into a `bin/` path). This barrel declares no command of its own, the
 // same shape the four shared-CLI-machinery barrels under `framework/cli/plugins`
 // already have, so it is not in `cli.generated.ts` and is not loaded on every
-// `./singularity` invocation.
+// `./equin` invocation.
 //
 // WHAT `exec` SKIPS, AND WHY EACH WOULD BE WRONG HERE:
 //
@@ -116,7 +116,7 @@ export async function runExec(
     // `cli:command-declarations-light`, which stops at dynamic-import edges — so
     // the future `supervised-exec` declaration that imports this barrel keeps a
     // trivial static closure, and neither the registry nor `spec.json` is read
-    // by a `./singularity` invocation that is not this one.
+    // by a `./equin` invocation that is not this one.
     const { serverEntries, machineEntries, hasCoreBarrel } =
       await import("../bin/active-runtime");
     ordered = await bootPluginGraph({

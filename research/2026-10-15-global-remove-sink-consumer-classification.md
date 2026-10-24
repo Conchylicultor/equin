@@ -74,7 +74,7 @@ uses), plus any other test that passes `consumer` (tsc flags them all).
   - **Unresolvable / computed ids** existed only to feed the classification.
 - `plugins/primitives/plugins/log-channels/exempt/index.ts`: its only entry is
   the `durable-signals-accounted` exemption, so delete the file.
-- Generated files are refreshed by `./singularity build`:
+- Generated files are refreshed by `./equin build`:
   `checks/core/check.generated.ts`, `exempt/core/rule-ids.generated.ts`,
   `bun.lock` (the workspace package is gone), and `docs/plugins-*.md`.
 
@@ -106,12 +106,12 @@ Research docs stay as history, apart from the *Supersedes* link above.
 
 ## Verification
 
-- `./singularity check type-check`: zero errors means no call site or test
+- `./equin check type-check`: zero errors means no call site or test
   still passes `consumer`.
 - `rg -n "SinkConsumer|durable-signals-accounted|consumer: \{ kind"
   -g '!research/**'` returns nothing.
-- `./singularity test plugins/infra/plugins/file-sink plugins/infra/plugins/retention plugins/primitives/plugins/log-channels`
-- `./singularity build`: regenerates the registries and docs, and runs the
+- `./equin test plugins/infra/plugins/file-sink plugins/infra/plugins/retention plugins/primitives/plugins/log-channels`
+- `./equin build`: regenerates the registries and docs, and runs the
   full check suite, including `plugins-registry-in-sync`, the exemptions'
   unused-exemption verdict, and `plugins-doc-in-sync`.
 - Smoke test: after the build, `~/.singularity/worktrees/<wt>/logs/boot.jsonl`

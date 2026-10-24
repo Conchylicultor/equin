@@ -185,11 +185,11 @@ endpoint loses nothing meaningful (it never had owner enrichment).
   rule. The bound value exports (`defineResource`, etc.) are *defined* in
   server-core/central-core's own `resources.ts` (destructured from the factory),
   so they are own-file exports, not proxied symbols.
-- Run `./singularity check plugin-boundaries` after — if it flags the type
+- Run `./equin check plugin-boundaries` after — if it flags the type
   aliases, fall back to declaring server-core/central-core-local wrapper types
   that `extends`/reference the runtime types. (Expected: passes.)
 - `migrations-in-sync` / `plugins-doc-in-sync` checks: no schema changes; docgen
-  regenerates the new plugin's reference block (run `./singularity build`).
+  regenerates the new plugin's reference block (run `./equin build`).
 
 ## Files
 
@@ -219,9 +219,9 @@ endpoint loses nothing meaningful (it never had owner enrichment).
 
 ## Verification
 
-1. `./singularity build` — TypeScript compiles across all plugins (the type
+1. `./equin build` — TypeScript compiles across all plugins (the type
    aliases + structural WsHandler must resolve). Docgen regenerates cleanly.
-2. `./singularity check` — `plugin-boundaries`, `eslint` (promise-safety:
+2. `./equin check` — `plugin-boundaries`, `eslint` (promise-safety:
    `sendJson`'s bare-catch must keep its existing eslint-disable), and
    `plugins-doc-in-sync` all pass.
 3. **Server happy path:** open `http://<worktree>.localhost:9000`, exercise live

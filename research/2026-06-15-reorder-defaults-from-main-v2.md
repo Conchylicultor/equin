@@ -12,12 +12,12 @@ flow is bound to the worktree you sit in:
 2. **Review** — the "Reorder Defaults" pane reads that *same local DB*.
 3. **Apply** — `writeGitLayerOverride` writes `config/<plugin>/<slot>.jsonc` straight
    into `REPO_ROOT` = **the current checkout's working tree**.
-4. **Land** — you then run `./singularity push` *from that worktree*; the file rides
+4. **Land** — you then run `./equin push` *from that worktree*; the file rides
    the normal branch → merge → push flow.
 
 **What's broken:** in the **main** namespace (`singularity.localhost:9000`) steps 1–3
 work, but **step 4 has no safe path** — main has no worktree branch to push, and the
-only way to push from main is `./singularity push --from-main` (the explicitly
+only way to push from main is `./equin push --from-main` (the explicitly
 dangerous, approval-gated path). So a main-app user can stage and even write the file,
 but cannot land it.
 
@@ -48,7 +48,7 @@ doc sketched under *Future: app-wide*:
 - **Landing = throwaway worktree off `main`** (replaces the v1 write-into-current-checkout
   + manual-push path entirely).
 - **Single landing trigger — manual "Commit to main"** (explicit user action in the
-  review pane) → lands **directly on `main`** by reusing `./singularity push` inside the
+  review pane) → lands **directly on `main`** by reusing `./equin push` inside the
   throwaway worktree. Explicit click = sanctioned per-action approval.
 - **No async sync** — no scheduled job, no draft branch. (Deferred.)
 - **Non-blocking:** the landing runs inside a **`defineJob`** (heavy git/push work must not
@@ -65,7 +65,7 @@ stage (main app, "Everyone" toggle)        ── unchanged ──▶ reorder_st
                                                               1. repoRoot = ensureMainWorktreeRoot()
                                                               2. git worktree add -b <branch> <tmp> main
                                                               3. writeGitLayerOverride(<tmp>, row) ×N  (v1 hash logic, baseDir param)
-                                                              4. ./singularity push -m  (cwd=<tmp>) → merges to main
+                                                              4. ./equin push -m  (cwd=<tmp>) → merges to main
                                                               5. git worktree remove <tmp> --force
                                                               6. delete landed rows → stagedReorderDefaultsResource.notify()
 ```
@@ -107,7 +107,7 @@ Steps (all via `Bun.spawn([GIT, "-C", dir, …])`, the established server-side g
    (fail-loud, skip + log on invalid — never write a malformed tree); then
    `writeGitLayerOverride(wtPath, row)`.
 5. `git -C <wtPath> add -A`.
-6. `Bun.spawn(["./singularity", "push", "-m", msg], { cwd: wtPath })` — reuses the CLI's
+6. `Bun.spawn(["./equin", "push", "-m", msg], { cwd: wtPath })` — reuses the CLI's
    push lock, checks, rebase, merge-to-main, push (no reinvention; no `--from-main`).
 7. `git -C <repoRoot> worktree remove <wtPath> --force` (in a `finally`, best-effort).
 
@@ -173,7 +173,7 @@ new `applyAllReorderDefaults` (`POST /api/reorder/staged-defaults/apply-all`).
 - `@plugins/infra/plugins/jobs/server` — `defineJob` (cron main-only; `enqueue` on demand).
 - `@plugins/config_v2/core` — `computeHash`, `stringifyConfigValue`, `parseJsonc` (already
   used by the v1 writer).
-- `./singularity push` (CLI subprocess) — reuses the entire lock + checks + merge flow;
+- `./equin push` (CLI subprocess) — reuses the entire lock + checks + merge flow;
   invoking the CLI as a subprocess from server code is already the established pattern
   (the push flow itself shells out to `… check`).
 
@@ -193,7 +193,7 @@ Boundary note: `staging/server` importing the `worktree/server` and `jobs/server
 
 ## Verification
 
-1. `./singularity build` — no new migration expected (table unchanged); `./singularity check`
+1. `./equin build` — no new migration expected (table unchanged); `./equin check`
    green (boundaries, `config-origins-in-sync`).
 2. **From the *main* app** (`http://singularity.localhost:9000`): enter edit mode, flip
    scope to "Everyone", drag a slot → confirm one row in `reorder_staged_default`

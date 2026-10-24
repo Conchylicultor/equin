@@ -102,7 +102,7 @@ Shared contract: op field `tailData` (`z.unknown().optional()`), intent field `t
 ## Verification
 
 1. `bun test plugins/page/plugins/editor` (both pure suites; after build/`bun install`).
-2. `./singularity build` → app at `http://<worktree>.localhost:9000`.
+2. `./equin build` → app at `http://<worktree>.localhost:9000`.
 3. New `e2e/visible-line-verify.mjs` modeled on `e2e/crdt-split-merge-verify.mjs`: (a) AAA + expanded child BBB, Enter mid-AAA → DOM order/depth = head / tail / BBB-under-tail; (b) nested bullet, repeated Backspace at start → marker gone → outdented → merged; (c) empty nested bullet + Enter → still a bullet, one level up. Screenshots each step.
 4. Manual smoke: split a checked to-do → tail unchecked; Cmd+Z after adoption split → children return under head in one undo.
 

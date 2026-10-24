@@ -22,8 +22,8 @@
  * Then C39: a tab still running a bundle that subscribed the old value key
  * `agents` is refused `unknown-key`, a `skew` verdict (the Reload prompt).
  *
- * Requires a running Postgres cluster (started by ./singularity build).
- * Run: `./singularity test plugins/conversations/plugins/agents`.
+ * Requires a running Postgres cluster (started by ./equin build).
+ * Run: `./equin test plugins/conversations/plugins/agents`.
  */
 
 import {

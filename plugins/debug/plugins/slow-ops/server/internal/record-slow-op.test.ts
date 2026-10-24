@@ -7,7 +7,7 @@
  * accumulation, per-caller rows — and checks the SQL merges against an oracle:
  * the pre-batching per-item merge, applied one item at a time in JS.
  *
- * Run: `./singularity test plugins/debug/plugins/slow-ops`
+ * Run: `./equin test plugins/debug/plugins/slow-ops`
  */
 
 import {

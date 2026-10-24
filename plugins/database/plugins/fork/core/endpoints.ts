@@ -3,7 +3,7 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 
 // The exclusion set a fork must be told about, served by a BOOTED backend.
 //
-// Exists for one caller: `./singularity db fork`, the escape hatch for a
+// Exists for one caller: `./equin db fork`, the escape hatch for a
 // worktree created outside the app (`git worktree add`). That runs in a CLI
 // process, where server contributions have never been collected — and it cannot
 // simply load the plugin registry to collect them, because doing so imports

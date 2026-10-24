@@ -217,7 +217,7 @@ Update the MCP Tools section and the follow-up task guidance to reference the ne
 
 ## Verification
 
-1. `./singularity build` after schema change → migration generated and applied
+1. `./equin build` after schema change → migration generated and applied
 2. Use `query_db` MCP tool to verify `group_id` column exists on tasks table
 3. Create tasks via the new MCP API (test each relation mode):
    - `{ "title": "Test followup" }` → verify deps rewired, group_id set

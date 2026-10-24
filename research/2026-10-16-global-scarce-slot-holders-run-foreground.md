@@ -92,7 +92,7 @@ measured in step 0 and filed if confirmed.
    - spawn-priority: a spawned child reports `readDarwinBackground()` = foreground, and the
      parent is darwinbg again right after;
    - host-admission: a foreground pool's slot spawn is not prefixed with taskpolicy.
-2. `./singularity build`, then the benchmark below.
+2. `./equin build`, then the benchmark below.
 3. Track page: before/after table, overview item.
 
 ## Benchmark (before/after on the page)
@@ -114,7 +114,7 @@ nothing.
 
 ## Verification
 
-- `./singularity test plugins/packages/plugins/spawn-priority plugins/infra/plugins/host/plugins/host-admission`
-- `./singularity check` (pool table changes go through `host-pools-declared` / `host-budget`)
+- `./equin test plugins/packages/plugins/spawn-priority plugins/infra/plugins/host/plugins/host-admission`
+- `./equin check` (pool table changes go through `host-pools-declared` / `host-budget`)
 - In a background build: the worker line shows the foreground tier, and `ps -o pid,pri` /
   a self-read in the worker confirms it is out of darwinbg.

@@ -8,7 +8,7 @@
  * two pieces, a multi-byte character split across a read, a final line with no
  * newline, and the ceiling.
  *
- * Run: `./singularity test plugins/infra/plugins/jobs/plugins/supervised-job`
+ * Run: `./equin test plugins/infra/plugins/jobs/plugins/supervised-job`
  */
 import { afterEach, describe, expect, test } from "bun:test";
 import { appendFileSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";

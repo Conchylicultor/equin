@@ -2,7 +2,7 @@
  * A6 (`./produced-guard`): no L2-persisted reader of a produced table. The boot
  * assertion and the runtime refusal are pure; the stale-row sweep runs its SQL
  * against a throwaway database. Run with
- * `./singularity test plugins/database/plugins/live-state-snapshot`.
+ * `./equin test plugins/database/plugins/live-state-snapshot`.
  */
 
 import {

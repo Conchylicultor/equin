@@ -177,8 +177,8 @@ Observable = **block-id stability** (`data-block-id`): type `"hello world"`, cap
 
 ## Verification
 
-1. `bun test plugins/page/plugins/editor/core/block-ops.test.ts` and `bun run test:dom plugins/page/plugins/editor` (after `./singularity build` / `bun install`).
-2. `./singularity build` → app at `http://<worktree>.localhost:9000`.
+1. `bun test plugins/page/plugins/editor/core/block-ops.test.ts` and `bun run test:dom plugins/page/plugins/editor` (after `./equin build` / `bun install`).
+2. `./equin build` → app at `http://<worktree>.localhost:9000`.
 3. `bun e2e/enter-at-start-verify.mjs` (new script above) — screenshots each step.
 4. Manual smoke: type a paragraph, caret to start, Enter → empty line above, text (and any children) stay in the SAME block below with caret in it; Enter at start of a checked to-do → empty unchecked to-do above, original stays checked; Cmd+Z removes the empty line in one undo.
 

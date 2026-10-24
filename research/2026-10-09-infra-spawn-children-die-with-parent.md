@@ -2,7 +2,7 @@
 
 ## Context
 
-On 2026-10-09 the host was memory-thrashing: about 11 concurrent `./singularity check type-check` runs in one worktree, each type-check worker at 15–20 GB. During cleanup, the qcx5 session SIGTERMed CLI pids 78331 and 78533. Their type-check workers (84034, 84035) **survived, reparented to pid 1**, still at about 16 GB each. Nothing would ever read their result, and they kept running until a human found and killed them by hand.
+On 2026-10-09 the host was memory-thrashing: about 11 concurrent `./equin check type-check` runs in one worktree, each type-check worker at 15–20 GB. During cleanup, the qcx5 session SIGTERMed CLI pids 78331 and 78533. Their type-check workers (84034, 84035) **survived, reparented to pid 1**, still at about 16 GB each. Nothing would ever read their result, and they kept running until a human found and killed them by hand.
 
 Why this happens:
 
@@ -24,7 +24,7 @@ In `plugins/infra/plugins/spawn/core/internal/`, add a module-level **live-child
 - The first registration installs one `process.on("exit", reapLiveChildren)`. It sends `SIGTERM` to every still-registered child, synchronously; `process.kill` is a syscall, so it is legal inside an exit handler. It cannot wait for a SIGKILL escalation: the process is ending, and Layer 2 covers children that won't die from TERM.
 - Because `installFatalSignalExit` turns TERM, INT, HUP and QUIT into `process.exit`, the CLI's graceful-death path reaches this hook with **no change to op-runtime**. The same holds for an uncaught exception and for a normal `process.exit(1)` after a failed verdict.
 - Daemons are unaffected. `defineDaemon`'s `supervise.ts` calls `Bun.spawn` directly and does not go through `spawnCaptured` or `spawnPassthrough`, so supervised and detached children never enter the registry. That is correct: they are meant to outlive any one call. Implementation must confirm no other long-lived child goes through the two functions; the exempt list in `spawn/exempt` names the candidates.
-- Use SIGTERM, not SIGKILL. A nested `./singularity check` child has its own exit hooks (op marker, op-log `completed`), and TERM lets them run, which then cascades through that child's own Layer 1.
+- Use SIGTERM, not SIGKILL. A nested `./equin check` child has its own exit hooks (op marker, op-log `completed`), and TERM lets them run, which then cascades through that child's own Layer 1.
 
 This is rung 1 of the fix ladder: there is no option to forget. Every child spawned through the chokepoint is covered, and the chokepoint is already lint-enforced (`spawn-safety/no-raw-bun-spawn`).
 
@@ -44,7 +44,7 @@ No polling anywhere: the parent learns of a child's death from `await child.exit
 
 ### Before building
 
-Confirm two assumptions, each with a tiny throwaway script under `./singularity run`:
+Confirm two assumptions, each with a tiny throwaway script under `./equin run`:
 
 1. Bun lets a `worker_threads` Worker call `process.kill(process.pid, …)` while the main thread is stuck in a synchronous loop.
 2. A `LOCK_SH` waiter is granted when an `LOCK_EX` holder is SIGKILLed on darwin.
@@ -62,15 +62,15 @@ If (1) fails, fall back to an `EVFILT_PROC`/`NOTE_EXIT` kqueue on `getppid()` fr
 
 ## Verification
 
-- **Unit tests**, run with `./singularity test plugins/infra/plugins/spawn plugins/packages/plugins/flock`. Each test uses a small harness process, run via `process.execPath`, that calls `spawnCaptured` on a long-sleeping bun child, prints the child's pid, then blocks:
+- **Unit tests**, run with `./equin test plugins/infra/plugins/spawn plugins/packages/plugins/flock`. Each test uses a small harness process, run via `process.execPath`, that calls `spawnCaptured` on a long-sleeping bun child, prints the child's pid, then blocks:
   - SIGTERM the harness: the child is dead within about 1 s (Layer 1).
   - SIGKILL a harness whose child calls `exitWithParent()` while spinning synchronously: the child is dead within about 1 s (Layer 2).
   - The harness exits normally: the child is dead.
   - A child that exits first: nothing is left registered, and no error.
   - Without the env var, `exitWithParent()` is a no-op.
 - **Live check:**
-  1. Run `./singularity build`.
-  2. In this worktree, start `./singularity check type-check` in the background and wait for `type-check/shared/worker.ts` to appear in `ps`.
+  1. Run `./equin build`.
+  2. In this worktree, start `./equin check type-check` in the background and wait for `type-check/shared/worker.ts` to appear in `ps`.
   3. `kill -TERM <cli pid>`, and confirm with `ps -axo pid,ppid,command | grep type-check/shared/worker` that the worker is gone.
   4. Repeat with `kill -KILL <cli pid>`.
-- **Run `./singularity check`** (boundaries: `packages/flock` core stays npm-free; `infra/spawn` still imports only `spawn-priority` and `flock`).
+- **Run `./equin check`** (boundaries: `packages/flock` core stays npm-free; `infra/spawn` still imports only `spawn-priority` and `flock`).

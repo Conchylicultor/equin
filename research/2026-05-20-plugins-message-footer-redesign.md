@@ -79,7 +79,7 @@ The same slot renders in two ways depending on event kind:
 
 ## Verification
 
-1. `./singularity build`
+1. `./equin build`
 2. Open a conversation with user and assistant messages — verify:
    - No "User"/"Assistant" labels
    - Hover below a message reveals timestamp + action buttons as a footer

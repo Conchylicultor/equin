@@ -68,10 +68,10 @@ Simplify emit's maxAttempts logic.
 
 ## Verification
 
-1. `./singularity build` — builds and restarts; all event-triggered jobs should still fire
+1. `./equin build` — builds and restarts; all event-triggered jobs should still fire
 2. Trigger an event that matches a trigger (e.g. create a conversation → fires `conversationCreated` → should trigger `task-title.on-conversation-created`, `queue.seed-rank`, `improve.apply-group`):
    - Verify the target jobs appear in the graphile queue as their own rows (not inside the dispatch job)
    - Verify the event payload reaches the handler
 3. Use the debug queue pane to inspect that dispatch jobs now complete quickly (they just enqueue and return)
 4. Test oneShot triggers (via the events-test plugin) — the trigger row should be deleted after the dispatch job enqueues the target
-5. `./singularity check` — passes
+5. `./equin check` — passes

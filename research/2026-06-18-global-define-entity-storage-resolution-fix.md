@@ -166,12 +166,12 @@ own descendants — the most defensible cross-plugin load. No lint rule targets
    tree where one `tables.ts` calls `defineEntity` — confirm it resolves storage
    and emits no error. (Stage D will supply the real adopter; this fix can be
    smoke-tested before then with a throwaway `defineEntity` table.)
-3. **Server boots:** `./singularity build` restarts the server; boot completes
+3. **Server boots:** `./equin build` restarts the server; boot completes
    past the loader pass (`bin/index.ts:15`) with no `no fields.storage
    contribution` throw.
-4. **`./singularity build` emits no spurious migration** for this change alone
+4. **`./equin build` emits no spurious migration** for this change alone
    (it adds no table; only edits `storage.ts`). `migrations-in-sync` stays clean.
-5. **`./singularity check` green** — `plugin-boundaries` (computed `require`
+5. **`./equin check` green** — `plugin-boundaries` (computed `require`
    introduces no flagged edge), `type-check`, `plugins-doc-in-sync` (docgen still
    reads the declarative contribution).
 
@@ -192,5 +192,5 @@ own descendants — the most defensible cross-plugin load. No lint rule targets
 
 - **Stage D** — re-express the live `slow_ops` table as a `defineEntity` field
   record, delete the loader projection + `Equal` guard, and verify
-  `./singularity build` emits no new migration (DDL byte-identical). Unblocked by
+  `./equin build` emits no new migration (DDL byte-identical). Unblocked by
   this fix; tracked separately (its research doc is not yet written).

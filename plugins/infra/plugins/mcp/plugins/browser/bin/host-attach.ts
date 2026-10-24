@@ -28,7 +28,7 @@ export async function issueAttachTicket(
   if (session.target.kind !== "deploy") {
     throw new Error(
       `No deploy is registered for this conversation's checkout (${session.target.checkout}), and an e2e script drives one. ` +
-        "Run `./singularity build` there first.",
+        "Run `./equin build` there first.",
     );
   }
   const { origin } = session.target;

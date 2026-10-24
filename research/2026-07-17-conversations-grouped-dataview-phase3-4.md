@@ -410,7 +410,7 @@ without a cycle back into `conversations-view`. Preserve that property:
 - Resulting edge: `conversations-view` → `conversations-view/plugins/data-view`
   (parent → descendant, a legal plain import). `data-view` and its tabs import
   **nothing** from `conversations-view` afterwards, so the graph stays a DAG.
-  ✔ Verify with `./singularity check plugin-boundaries`.
+  ✔ Verify with `./equin check plugin-boundaries`.
 - Delete `data-view/web/components/dataview-body.tsx` and the `SidebarRegion.Variant`
   contribution in `data-view/web/index.ts` (the umbrella keeps only the host export).
 
@@ -430,7 +430,7 @@ is committed — no user `.jsonc` exists in the repo, but a user's machine may h
 **Do it in two steps, in this order:**
 
 1. **Cutover (soak).** Flip `defaultVariant: "dataview"` in `sidebar-region/core/region.ts`
-   **and** set `.origin.jsonc` to `{"variant": "dataview"}` (`./singularity build`
+   **and** set `.origin.jsonc` to `{"variant": "dataview"}` (`./equin build`
    rewrites the `// @hash`). A user with a local `.jsonc` pinning `classic` keeps it;
    the staged origin change surfaces in the review pane's **config-defaults** section
    (`review/plugins/config-defaults`) with a before→after diff and Apply/Discard —
@@ -450,7 +450,7 @@ separate commit so a bisect can park on "dataview default, classic still availab
 
 ## 7. Verification
 
-1. `./singularity build` (regenerates the registry, data-view codegen, migrations for
+1. `./equin build` (regenerates the registry, data-view codegen, migrations for
    §0b; runs `data-view:configs-authored`, `plugins-*-in-sync`, `plugin-boundaries`,
    `type-check`). Open `http://att-1784289044-hh04.localhost:9000`.
 2. **Parity soak (before deleting anything).** With both variants live, toggle
@@ -482,7 +482,7 @@ separate commit so a bisect can park on "dataview default, classic still availab
    remains; History still covers full history.
 6. Toggle the `kind != system` filter and confirm system conversations appear/hide
    (the replacement for the eye button).
-7. **Post-deletion:** `./singularity check` clean — especially `plugin-boundaries`
+7. **Post-deletion:** `./equin check` clean — especially `plugin-boundaries`
    (no importer of `classic`/`history`, no cycle from the new parent→child mount edge)
    and `plugins-registry-in-sync` / `plugins-doc-in-sync`. Confirm the sidebar renders
    with no variant picker, and that the theme customizer no longer lists a

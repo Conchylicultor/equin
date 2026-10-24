@@ -140,8 +140,8 @@ must **merge** same-module imports (avoid duplicate-import lint errors).
     fix the two stale `web-core/web/theme/app.css` path mentions in
     `primitives/z-layers/lint/no-adhoc-zindex.ts` (cosmetic). The autogen doc
     blocks + `web.generated.ts` + `plugins-*.md` regenerate via build.
-11. **Build + regenerate.** `./singularity build` (regenerates the web registry
-    to include ui-kit, plugin docs, token-group vars). Then `./singularity check`.
+11. **Build + regenerate.** `./equin build` (regenerates the web registry
+    to include ui-kit, plugin docs, token-group vars). Then `./equin check`.
 
 ## Reuse / precedent
 
@@ -156,9 +156,9 @@ must **merge** same-module imports (avoid duplicate-import lint errors).
 
 ## Verification
 
-1. `./singularity build` succeeds (frontend + server) — proves the Vite `@/`
+1. `./equin build` succeeds (frontend + server) — proves the Vite `@/`
    removal, the moved `app.css`/`@source`, and the barrel all resolve.
-2. `./singularity check` passes — especially `plugin-boundaries` (the new ui-kit
+2. `./equin check` passes — especially `plugin-boundaries` (the new ui-kit
    edges are now tracked and must form a DAG; the tooltip re-export must be
    gone), `app-css-utilities-in-sync`, `css-vars-single-owner`,
    `eslint` (no duplicate imports, no stray `@/`), and `plugins-doc-in-sync`.

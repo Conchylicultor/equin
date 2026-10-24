@@ -231,9 +231,9 @@ No contributions — only exports the slot namespace.
 
 ## Verification
 
-1. `./singularity build` — generates 4 new tables in migration: `workflow_definitions`, `workflow_executions`, `workflow_execution_steps`, `workflows_user_input_submitted_triggers`
-2. `./singularity check --plugin-boundaries` — passes
-3. `./singularity check --migrations-in-sync` — passes
+1. `./equin build` — generates 4 new tables in migration: `workflow_definitions`, `workflow_executions`, `workflow_execution_steps`, `workflows_user_input_submitted_triggers`
+2. `./equin check --plugin-boundaries` — passes
+3. `./equin check --migrations-in-sync` — passes
 4. Server boots: `workflows.run` job registered, `workflows.userInputSubmitted` event registered
 5. `curl http://<worktree>.localhost:9000/api/workflows/definitions` → `[]`
 6. POST a definition with `{ name: "Test", steps: [] }` → 201 with id

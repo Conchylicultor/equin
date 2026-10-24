@@ -33,18 +33,18 @@ The transition code lives in four places:
     central's spec keeps losing the field. Right now central only has
     `--socket` because it happened to start while its spec still had it.
 - **Gateway binary.** The running gateway (started 03:57) still contains the
-  legacy branch, and only `./singularity start` replaces it.
+  legacy branch, and only `./equin start` replaces it.
 
 ## Decision: one change, then restart the gateway
 
-All four pieces come out in one push, and you run `./singularity start` right
+All four pieces come out in one push, and you run `./equin start` right
 after the merge.
 
 **The expected outage.** Main rebuilds on push, and that rebuild restarts main's
 backend under the gateway that is still running. That old gateway sees a spec
 without `socketTransport`, so it passes `SOCKET_PATH` instead of `--socket`.
 Main's new backend has no fallback, so it throws at boot. Central does the same
-the next time it restarts. Both come back once `./singularity start` puts the
+the next time it restarts. Both come back once `./equin start` puts the
 new gateway in place. (You chose this over a two-stage rollout.)
 
 **After the restart:** every backend gets `--socket`. An un-rebased namespace
@@ -112,9 +112,9 @@ tests are exempt from the check.
 ## Verification
 
 - `cd gateway && go test ./...`
-- `./singularity test plugins/infra/plugins/runtime-identity`
-- `./singularity check launcher:per-process-env-on-argv type-check`
-- `./singularity build`, then confirm `status: ok` in
+- `./equin test plugins/infra/plugins/runtime-identity`
+- `./equin check launcher:per-process-env-on-argv type-check`
+- `./equin build`, then confirm `status: ok` in
   `~/.singularity/worktrees/<wt>/build-status.json`.
 
 A worktree build runs under the old gateway, so its backend fails to boot there
@@ -126,5 +126,5 @@ verified only by the tests and checks above.
 - Confirm that
   `rg -n SOCKET_PATH --glob '!**/*test*' --glob '!research/**' --glob '!docs/**'`
   finds only the check's own table and prose.
-- After push and `./singularity start`: `ps` shows `--socket` on the
+- After push and `./equin start`: `ps` shows `--socket` on the
   `singularity` and `central` backends, and both are serving.

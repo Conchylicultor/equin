@@ -297,7 +297,7 @@ read_page / edit_page / write_agent_note (block_id = the agent page id)
 
 ## Verification
 
-- **Unit tests**, via `./singularity test <plugin>`:
+- **Unit tests**, via `./equin test <plugin>`:
   - `editor/core/markdown.test.ts`
     - spelling selection in both directions
     - the mint form parses to a `page` node with `author` and children
@@ -332,14 +332,14 @@ read_page / edit_page / write_agent_note (block_id = the agent page id)
     - the closed-world 400
     - one `blocksChanged` per created page
     - flipping the author is refused through PATCH, patch, op and restore
-- **`./singularity check`** (type-check, plugin boundaries, docs in sync).
+- **`./equin check`** (type-check, plugin boundaries, docs in sync).
 - **E2E.** Extend `agent-access/e2e/agent-access-verify.ts`:
   - mint with `edit_page`; `read_page` on the parent shows the pointer
   - `read_page` and `edit_page` on the new page
   - the creator stamp
   - no `page_blocks_ext_origin` row
   - a refused edit leaves the row snapshot unchanged
-- **UI.** After `./singularity build`, use `screenshot.ts` on a page holding an
+- **UI.** After `./equin build`, use `screenshot.ts` on a page holding an
   agent page:
   - the row is blue while collapsed and while expanded
   - the chip is on the right and opens the conversation

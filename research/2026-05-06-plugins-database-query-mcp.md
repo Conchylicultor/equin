@@ -153,7 +153,7 @@ Agents have access to MCP tools provided by the Singularity server. Key tools:
 ### 6. Build & verify
 
 ```bash
-./singularity build
+./equin build
 # Then from a conversation, call the MCP tool:
 # query_db({ sql: "SELECT tablename FROM pg_tables WHERE schemaname = 'public'" })
 ```

@@ -4,9 +4,9 @@
 // slides the wrong rows shows up as numbers rather than a feeling.
 //
 // Usage:
-//   ./singularity run plugins/primitives/plugins/virtual-rows/plugins/row-fold/e2e/row-fold.ts \
+//   ./equin run plugins/primitives/plugins/virtual-rows/plugins/row-fold/e2e/row-fold.ts \
 //     --path /agents/tasks --row "Design" [--settle 2000] [--window 2500] [--out /tmp/fold] [--headed]
-//   ./singularity run …/row-fold.ts --path /agents/all-conversations --group-by Model --group "<model>"
+//   ./equin run …/row-fold.ts --path /agents/all-conversations --group-by Model --group "<model>"
 //
 // --row is a tree row's label, matched exactly (a text node of the row reads
 // it whole). --group toggles the group header whose text starts with it;

@@ -389,11 +389,11 @@ Contributions carry rich config; the host selects `rowComponent ?? DefaultProvid
 
 ## Verification
 
-1. `./singularity build` — TypeScript catches type mismatches
+1. `./equin build` — TypeScript catches type mismatches
 2. App renders at `http://<worktree>.localhost:9000`
 3. **Stats pane:** all 8 charts render with headings; force-throw in one chart → only that chart shows error fallback
 4. **Conversation view:** above-prompt area renders; enter edit mode → items are draggable
 5. **Agent manager sidebar:** all 7 buttons + conversations section render; buttons open their panes; conversations list scrolls
 6. **Debug sidebar:** all 8 buttons render and open their panes
 7. **Edit mode:** pen button → sidebar items are draggable, reorder persists
-8. `./singularity check` passes
+8. `./equin check` passes

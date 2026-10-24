@@ -306,7 +306,7 @@ every check run.
 | File | Change |
 |---|---|
 | `plugin-meta/composition/web/internal/manifests.ts` | `setAutoBuild` and `remove` refuse `MAIN_COMPOSITION_ID`. `save` may keep working (editing main's entry points is legitimate) — the equivalence check fails loudly on the next build if the edit narrows the closure, which is the point. |
-| `studio/.../compositions/web/components/compositions-list.tsx` (`autoBuild` column) | render the `ToggleChip` `disabled` when `!isServableCompositionId(it.id)`, with `title="The main app is built by ./singularity build — it is not compose-served."` Mirrors the inert-`canServe` pattern already in `serve-target-panel.tsx`. |
+| `studio/.../compositions/web/components/compositions-list.tsx` (`autoBuild` column) | render the `ToggleChip` `disabled` when `!isServableCompositionId(it.id)`, with `title="The main app is built by ./equin build — it is not compose-served."` Mirrors the inert-`canServe` pattern already in `serve-target-panel.tsx`. |
 | same file (`serveUrl` column) | main's row links `singularity.localhost:9000` as already-live, or renders nothing — either way not keyed on `autoBuild`. |
 | `build/plugins/serve-composition/web/components/serve-target-panel.tsx` | same inert treatment; suppress the reset button for main (`resetCompositionData` would refuse anyway). |
 | `build/server/internal/handle-serve-composition.ts` | the 400 guard from Step 4. |
@@ -347,7 +347,7 @@ Four commits, each independently green:
 
 ## Verification
 
-**Checks** (`./singularity check <id>`):
+**Checks** (`./equin check <id>`):
 
 - `composition-closure` — the manifest is valid, `singularity` is a legal id, no
   dead/contradictory negatives, and sonata's/website's `excludes` disjointness
@@ -376,9 +376,9 @@ Four commits, each independently green:
 - `config-origins-in-sync` — the re-rendered `compositions.origin.jsonc` is
   committed with its new hash.
 - `config-stable-list-ids`, `type-check`, `format-clean`, `plugins-doc-in-sync`.
-- Full `./singularity check` green.
+- Full `./equin check` green.
 
-**Tests** (`./singularity test <path>`):
+**Tests** (`./equin test <path>`):
 
 - `plugins/plugin-meta/plugins/closure/core/closure.test.ts` — add:
   `parseEntryPattern("**")` / `("!**")` shapes; `matchEntryPattern` over root covers
@@ -400,7 +400,7 @@ Four commits, each independently green:
 - `plugins/framework/plugins/cli/bin/commands/internal/compose-serve.test.ts` —
   `activatedCompositionIds` drops `singularity` even at `autoBuild: true`.
 
-**After `./singularity build`:**
+**After `./equin build`:**
 
 - `git status` clean — no committed registry moved. That is the whole point.
 - `~/.singularity/worktrees/singularity/` still has **no** `composition.json`, and

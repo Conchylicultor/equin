@@ -52,7 +52,7 @@ export function readServingSocket(argv: readonly string[]): string {
         `passes it (gateway/worktree.go); a hand-run backend has to pass it ` +
         `itself. It names the Unix socket this backend serves on. A gateway ` +
         `started before the argv contract passes it in the environment ` +
-        `instead — restart it with ./singularity start.`,
+        `instead — restart it with ./equin start.`,
     );
   }
   if (declared !== undefined && declared !== path) {

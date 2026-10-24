@@ -7,7 +7,7 @@ export const ORPHAN_EXIT_CODE = 140; // 128 + 12
 // to thread through the bootstrap.
 let orphanPoll: ReturnType<typeof setInterval> | null = null;
 
-// A foreground `./singularity <anything>` dies with its invoker, so a CLI
+// A foreground `./equin <anything>` dies with its invoker, so a CLI
 // process can never hold or queue on a host lock after the shell that started it
 // is gone. macOS has no PDEATHSIG, so a child cannot ask the kernel to signal it
 // when its parent dies — poll ppid instead (reparented orphans get ppid 1). The

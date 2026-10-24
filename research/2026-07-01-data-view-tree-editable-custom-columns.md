@@ -131,7 +131,7 @@ shared editable cell.
 
 ## Verification
 
-1. `./singularity build` (from this worktree).
+1. `./equin build` (from this worktree).
 2. **Tree-only surface (the sharp case):** open the pages sidebar
    `http://<worktree>.localhost:9000/pages` (or the agents list at `/agents`), use the
    toolbar **Fields** (gear) button to add a custom column (e.g. "Priority"). Confirm each

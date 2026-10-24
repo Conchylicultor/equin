@@ -326,7 +326,7 @@ instruments/audio polish, pitch-spelling inference, multi-source layering.
 
 ## Verification
 
-1. `./singularity build` — all plugins discovered/compiled; `/sonata` registers.
+1. `./equin build` — all plugins discovered/compiled; `/sonata` registers.
 2. Open `http://<worktree>.localhost:9000/sonata`.
 3. Drop a `.mid` → piano roll renders notes; chord overlay labels the timeline; current-chord panel populates.
 4. Press play → cursor advances correctly through a file **with a tempo change** (validates `tempoMap`/`beatToSeconds`).

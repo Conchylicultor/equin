@@ -7,7 +7,7 @@
 // deploy needs a Google Maps browser key.
 //
 // Usage:
-//   ./singularity run plugins/page/plugins/place/plugins/map-layer/e2e/place-pin-verify.ts \
+//   ./equin run plugins/page/plugins/place/plugins/map-layer/e2e/place-pin-verify.ts \
 //     --path /pages/page/<page-id> [--out /tmp/place-pin] [--headed]
 
 import {

@@ -226,10 +226,10 @@ Also delete story's dead `input` (`apps/story/shell/web/panes.tsx`, `story-galle
 
 ## Verification
 
-1. `./singularity check type-check` — the `@ts-expect-error` harness in `pane-write-path-types.test.ts`
+1. `./equin check type-check` — the `@ts-expect-error` harness in `pane-write-path-types.test.ts`
    fails the build if any assertion stops being an error.
 2. `bun test plugins/primitives/plugins/pane` — lint-rule fire/no-fire matrix + type harness.
-3. `./singularity build`, then drive the real app:
+3. `./equin build`, then drive the real app:
    - **The original bug, end-to-end.** Deep-link `http://<wt>.localhost:9000/sonata/song/<id>` for a
      chord-grid song, type in the grid, wait past the 500 ms autosave, then
      `query_db: select title from sonata_songs where id = …` → unchanged. (Also assert the tab title
@@ -240,4 +240,4 @@ Also delete story's dead `input` (`apps/story/shell/web/panes.tsx`, `story-galle
      focused detail body renders; deep-link the same URL → the inline-tree body renders (the default).
    - **Hint.** Open a mail search result → header pre-paints from the envelope before hydrate returns;
      reload → header fills in from hydrate with no crash and no string/Date confusion.
-4. `./singularity check` (full) — `plugins-doc-in-sync`, boundaries, eslint.
+4. `./equin check` (full) — `plugins-doc-in-sync`, boundaries, eslint.

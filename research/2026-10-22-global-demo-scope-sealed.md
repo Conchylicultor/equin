@@ -135,8 +135,8 @@ Track: wiki *Subtrack: portable server code (server/ vs machine/)* (`block-323b7
 - **Split precedents:** hibernation (server + machine), duress/shed (engine child), config_v2/machine.
 
 ## Verification
-- `./singularity check`: type-check (the `MachineResult` and `AssetPath` sweeps), eslint (`no-page-transport`, binding name), the guard through `plugins-registry-in-sync`, `exempt:manifests-valid`, and `boundaries:portable-closure` for the new portable barrels.
-- `./singularity test` on `plugins/apps/plugins/agent-manager/plugins/demo`, `plugins/infra/plugins/endpoints`, `plugins/primitives/plugins/networking`, `plugins/primitives/plugins/live-state`, and pending-turn.
+- `./equin check`: type-check (the `MachineResult` and `AssetPath` sweeps), eslint (`no-page-transport`, binding name), the guard through `plugins-registry-in-sync`, `exempt:manifests-valid`, and `boundaries:portable-closure` for the new portable barrels.
+- `./equin test` on `plugins/apps/plugins/agent-manager/plugins/demo`, `plugins/infra/plugins/endpoints`, `plugins/primitives/plugins/networking`, `plugins/primitives/plugins/live-state`, and pending-turn.
 - **New e2e `apps/demo/e2e/no-leak.ts`.** In `/demo` it runs New task, edit title, add dependency, set effort/preprompt/workspace, paste an image, and try to send a message. It asserts:
   - every request went to the worker (a page `request` listener sees no `/api` except the sanctioned telemetry routes);
   - the composer shows "not available";

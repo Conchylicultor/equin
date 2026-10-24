@@ -153,7 +153,7 @@ rows would need the original messages, which the row does not keep (only the las
 
 ## Verification
 
-1. `./singularity test plugins/reports` — new `crash-kind.test.ts` (pure, next to the source):
+1. `./equin test plugins/reports` — new `crash-kind.test.ts` (pure, next to the source):
    - two different stackless, typeless messages → different fingerprints (the regression);
    - the same message with different job ids / conversation ids / numbers → one fingerprint;
    - a stack with frames, and a stackless report with an `errorType`, still produce the exact
@@ -162,7 +162,7 @@ rows would need the original messages, which the row does not keep (only the las
    - a Safari-form stack yields frames.
    Extend the DB-backed `record-report.test.ts` (it already drives `upsertReport` against a
    throwaway Postgres via `createTestDb`) with: two stackless messages → two rows, not one.
-2. `./singularity build` (background, end the turn), then check the deploy receipt at
+2. `./equin build` (background, end the turn), then check the deploy receipt at
    `~/.singularity/worktrees/<worktree>/build-status.json`.
 3. Re-alerting, end to end on this worktree: use `query_db` to confirm the crash bell row for a
    fingerprint, dismiss it in the app, trigger the same crash again (a `ResizeObserver` loop or any

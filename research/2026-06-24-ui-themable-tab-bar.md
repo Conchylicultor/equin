@@ -208,8 +208,8 @@ and close when `collapsed`. Reuse `icon-auto` sizing; obey
 
 No manual registry edits. Create each `web/index.ts` + `server/index.ts` +
 `package.json` (`@singularity/plugin-ui-tab-bar[...]`, `private`, `version`,
-`description`) and run `./singularity build`; codegen discovers the plugins,
-regenerates registries + the `ui/tab-bar` `CLAUDE.md`. `./singularity check`
+`description`) and run `./equin build`; codegen discovers the plugins,
+regenerates registries + the `ui/tab-bar` `CLAUDE.md`. `./equin check`
 must pass (`plugins-registry-in-sync`, `plugins-doc-in-sync`, `type-check`,
 `eslint`, boundary checker).
 
@@ -225,7 +225,7 @@ must pass (`plugins-registry-in-sync`, `plugins-doc-in-sync`, `type-check`,
 
 ## Verification
 
-1. `./singularity build` then `./singularity check` — all green.
+1. `./equin build` then `./equin check` — all green.
 2. `http://<worktree>.localhost:9000` — open ≥3 app tabs. Default looks like
    today (chip). Settings → Appearance (theme customizer) shows a **Tab bar**
    row with `chip` / `underline` / `connected`.

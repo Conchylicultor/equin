@@ -96,7 +96,7 @@ export const renderThumbnailJob = defineJob({
         kind: "browser-unavailable",
         message:
           `Chromium could not be installed: ${browser.message} ` +
-          `Retry from Settings → Dependencies, or run \`./singularity deps install chromium\`.`,
+          `Retry from Settings → Dependencies, or run \`./equin deps install chromium\`.`,
       });
       return;
     }

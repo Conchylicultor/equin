@@ -27,7 +27,7 @@
  * stopping; the end of the list stops it sooner). The page plan's own shape
  * is logged to `logs/live-pages.jsonl` of the deploy.
  *
- *   ./singularity run plugins/primitives/plugins/data-view/e2e/live-pages-scroll.ts \
+ *   ./equin run plugins/primitives/plugins/data-view/e2e/live-pages-scroll.ts \
  *     --path /agents/all-conversations [--rows 3200] [--step 0.4] [--expect <n>] [--out /tmp/live-pages] [--headed]
  *
  * `--view <type>` switches the surface to its first view of that type

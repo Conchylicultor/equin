@@ -7,7 +7,7 @@ import {
 } from "../server/internal/task/registry";
 
 /**
- * `./singularity supervised-exec <taskId> <payloadJson> --namespace <ns>`.
+ * `./equin supervised-exec <taskId> <payloadJson> --namespace <ns>`.
  *
  * The whole body sits inside `runExec`, which boots the plugin graph and never
  * returns: it exits 0 when the body resolves and 1 when anything in it throws,

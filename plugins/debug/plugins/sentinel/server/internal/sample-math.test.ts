@@ -66,7 +66,8 @@ describe("counterDelta", () => {
 describe("countBuildProcesses", () => {
   test("counts CLI build/check/push invocations, ignores noise", () => {
     const ps = [
-      "/bin/zsh ./singularity build",
+      "/bin/zsh ./equin build",
+      "/bin/zsh ./singularity build", // the legacy name, still a shim
       "bun /repo/singularity check type-check",
       "singularity push -m msg",
       "vim singularity-notes.md", // not a CLI invocation
@@ -76,7 +77,7 @@ describe("countBuildProcesses", () => {
     // The grep line legitimately matches the loose shape — the count is a
     // pressure gauge, not an exact census; one-off false positives are noise
     // the detector's dwell absorbs.
-    expect(countBuildProcesses(ps)).toBe(4);
+    expect(countBuildProcesses(ps)).toBe(5);
   });
   test("empty output → 0", () => {
     expect(countBuildProcesses("")).toBe(0);

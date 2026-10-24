@@ -152,8 +152,8 @@ No migration needed.
 
 ## Verification
 
-1. `./singularity build` — confirms no type errors, generates any needed migrations (none expected).
-2. `./singularity check` — passes all checks including plugin-boundaries and eslint.
+1. `./equin build` — confirms no type errors, generates any needed migrations (none expected).
+2. `./equin check` — passes all checks including plugin-boundaries and eslint.
 3. Manual test flow:
    - Create task A, create task B with dependency on A and `autoStart: true`.
    - Verify no trigger rows in `tasks_statusChanged_triggers` for `maybeLaunchTaskJob` (query via `query_db`).

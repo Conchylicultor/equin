@@ -16,7 +16,7 @@
 //      clicked — the very call the piano plays, doubled bass included.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/chord/plugins/trainer/e2e/trainer-verify.ts [--timeout-min 15] [--headed]
+//   ./equin run plugins/apps/plugins/chord/plugins/trainer/e2e/trainer-verify.ts [--timeout-min 15] [--headed]
 //
 // Mutates server state: records the index request (may start a load), one
 // checked round with its answers, and the player's report on one or two videos.

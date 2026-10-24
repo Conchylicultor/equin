@@ -213,9 +213,9 @@ FrameResolution = { status: "loading" }
 
 ## Verification
 
-1. Run `./singularity test plugins/apps/plugins/prototypes` for the reducer, layout,
+1. Run `./equin test plugins/apps/plugins/prototypes` for the reducer, layout,
    frameName and version-steps tests.
-2. Run `./singularity build` in the background, then `./singularity await`.
+2. Run `./equin build` in the background, then `./equin await`.
 3. Run `compare-diff.ts` on a prototype that has a real-app counterpart, to screenshot
    the new pane at 1440×900 against the mock's scenes (vs-version, vs-app, spread,
    single).

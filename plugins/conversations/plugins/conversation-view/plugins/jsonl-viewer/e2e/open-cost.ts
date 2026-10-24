@@ -7,7 +7,7 @@
  * (`--url http://singularity.localhost:9000`) for a before/after on the same
  * conversation.
  *
- *   ./singularity run plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/e2e/open-cost.ts --conv <id> [--settle-ms 4000] [--runs 3]
+ *   ./equin run plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/e2e/open-cost.ts --conv <id> [--settle-ms 4000] [--runs 3]
  */
 import {
   arg,

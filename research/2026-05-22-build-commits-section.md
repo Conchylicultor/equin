@@ -81,7 +81,7 @@ Uses `_buildRuns` via relative import from parent build plugin (intra-plugin, no
 
 ## Verification
 
-1. `./singularity build` — auto-discovers new plugins, registers them
+1. `./equin build` — auto-discovers new plugins, registers them
 2. Navigate to a build detail view at `http://<worktree>.localhost:9000/build/r/<runId>` — verify "Commits" section appears with commit rows
 3. Verify the conversation commits-graph still works: open any conversation, click the commits chip, confirm the pane renders correctly with clickable rows
 4. Try a build that has no previous build (first in list) — should show capped commit list or empty state

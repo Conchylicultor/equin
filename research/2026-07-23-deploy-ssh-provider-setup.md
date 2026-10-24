@@ -145,14 +145,14 @@ shape (`defineRenderSlot`, children-callback render).
 
 ## Migration
 
-Additive nullable column → `./singularity build --migration-name deploy-ssh-public-key`
+Additive nullable column → `./equin build --migration-name deploy-ssh-public-key`
 (build regenerates + applies; never run drizzle-kit manually). Commit the
 generated migration.
 
 ## Verification
 
-1. `./singularity build --migration-name deploy-ssh-public-key`; then
-   `./singularity check` (boundaries, migrations-in-sync, type-check).
+1. `./equin build --migration-name deploy-ssh-public-key`; then
+   `./equin check` (boundaries, migrations-in-sync, type-check).
 2. Open `http://att-1784801579-t4af.localhost:9000/deploy/server/srv-1784718612584-q17b8x`
    (this server already has the Hetzner console URL set).
 3. Scripted Playwright (`e2e/screenshot.mjs`): `--click "Generate"` on the

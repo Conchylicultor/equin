@@ -23,5 +23,5 @@ The build plugin is the last production plugin using the imperative `trigger()` 
 
 ## Verification
 
-- `./singularity build` — confirms the server compiles and starts.
+- `./equin build` — confirms the server compiles and starts.
 - Query the trigger table to confirm the declarative row exists: `mcp query_db` with `SELECT * FROM git_ref_advanced_triggers WHERE job_name = 'build.run'`.

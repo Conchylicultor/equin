@@ -4,7 +4,7 @@
 
 ## Context
 
-Every `./singularity build` on this host fails its checks step — main's own post-push
+Every `./equin build` on this host fails its checks step — main's own post-push
 auto-build included — so nothing deploys. The failing check is
 `paths:no-undeclared-data-dirs`:
 
@@ -189,16 +189,16 @@ as un-drained until it leaves the root, so the to-do stays honest and self-liqui
 
 ## Verification
 
-1. `./singularity test plugins/infra/plugins/paths` — the planner is pure, so the arms,
+1. `./equin test plugins/infra/plugins/paths` — the planner is pure, so the arms,
    the rescue, and idempotency are all covered by unit tests.
 2. `bun plugins/infra/plugins/paths/scripts/migrate-data-layout.ts` — dry run, read-only.
    Expect **no** `blocked` step for `central-routes.json`, and the rest of the table
    planned again (it is currently wedged behind that one row).
-3. `./singularity check paths:no-undeclared-data-dirs` — green against the host's current
+3. `./equin check paths:no-undeclared-data-dirs` — green against the host's current
    disk state, with **no manual repair**: the root real file + `state/gateway/…` is
    exactly what the reclassified row expects. (If single-id invocation filters by scope,
    step 4 exercises it.)
-4. `./singularity build` (background, per CLAUDE.md) — expect `BUILD OK` and
+4. `./equin build` (background, per CLAUDE.md) — expect `BUILD OK` and
    `~/.singularity/worktrees/att-1787088003-13gq/build-status.json` at `status: ok`.
 5. Confirm it holds under the thing that broke it: after any stale worktree builds again
    (`~/.singularity/central-routes.json` mtime advances), re-run step 3 — still green.

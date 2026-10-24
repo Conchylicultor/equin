@@ -417,13 +417,13 @@ did. Splitting them is what makes a byte diff a usable verdict.
 ## Verification
 
 **Byte-identity (the acceptance test).** After commit 3 and again after commit 4:
-`./singularity build`, then `git diff --stat` on `web.generated.ts`,
+`./equin build`, then `git diff --stat` on `web.generated.ts`,
 `server.generated.ts`, `central.generated.ts`, `check.generated.ts`,
 `data-dirs.generated.ts`, `docs/plugins-*.md` and every `CLAUDE.md`. Empty is the
 pass. After commit 4 specifically, confirm the same twelve ids are still absent from
 the registries and still annotated in the docs.
 
-**Tests** (`./singularity test <path>`):
+**Tests** (`./equin test <path>`):
 
 - `plugins/plugin-meta/plugins/closure/core/closure.test.ts` —
   - a negative pulls out its transitive importers; a plugin the negated branch
@@ -444,7 +444,7 @@ the registries and still annotated in the docs.
   — a synthetic tree where `render(bundle: allIds)` equals the pre-change unfiltered
   render, and differs by exactly one entry for a bundle missing one id.
 
-**Checks** (`./singularity check`): full run green, in particular
+**Checks** (`./equin check`): full run green, in particular
 `plugins-registry-in-sync`, `plugins-doc-in-sync`, `composition-closure`,
 `config-origins-in-sync`, `config_v2:registrations-paired`, `type-check`.
 
@@ -459,7 +459,7 @@ work:
 - Edit main's or the base row's entry points in Studio → the control is inert, and
   the underlying `save` throws if reached.
 
-**In the app.** `./singularity build`, open
+**In the app.** `./equin build`, open
 `http://<worktree>.localhost:9000/studio/explorer`: the twelve plugins are still
 listed and now badged *Not in the app* / *Not in the app (cascade)*. Open the
 `singularity` composition detail: its closure tints those twelve `excluded`, and the

@@ -232,8 +232,8 @@ per test. Cases:
 ## Verification
 
 1. `bun test plugins/infra/plugins/runtime-profiler/core/recorder.test.ts`.
-2. `./singularity build` (restarts backend → ALS runtime reinstalled), then
-   `./singularity check` (type-check catches wire/zod drift).
+2. `./equin build` (restarts backend → ALS runtime reinstalled), then
+   `./equin check` (type-check catches wire/zod drift).
 3. **Deterministic gate contention**: `benchmark_boot` MCP tool with `loadConcurrency > 0` —
    saturates the heavy-read flock gate and DB loader gate. Assert in the output:
    loaders report non-zero `waits["heavy-read-acquire"]`/`loader-acquire`/`db-acquire`,

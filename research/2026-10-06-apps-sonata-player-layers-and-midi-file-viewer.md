@@ -133,12 +133,12 @@ FileViewer.Renderer({ id: "sonata-midi", label: "MIDI",
 
 ## Verification
 
-- `./singularity test plugins/apps/plugins/sonata`: the moved song-settings tests pass. Add tests for:
+- `./equin test plugins/apps/plugins/sonata`: the moved song-settings tests pass. Add tests for:
   - session reset and seek-on-load;
   - a file document settling to defaults with no observers;
   - `useLibrarySong` returning `none` for a file document.
-- `./singularity check`: boundary rules hold with no cycles (session must not import shell); the registry and docs are in sync.
-- `./singularity build`, then a Sonata regression pass in the app:
+- `./equin check`: boundary rules hold with no cycles (session must not import shell); the registry and docs are in sync.
+- `./equin build`, then a Sonata regression pass in the app:
   - open a library song, play/pause, seek, scrub, loop, count-in, transpose, track mute/colour;
   - background play from the library's now-playing bar;
   - two Sonata windows stay independent.

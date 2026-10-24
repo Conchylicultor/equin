@@ -129,7 +129,7 @@ if (typeof body.hold === "boolean") {
 
 ### 5. Migration
 
-Run `./singularity build` — it calls `drizzle-kit generate` to emit the migration for the new `held_at` column and the regenerated `tasks_v` view. Do **not** run drizzle-kit manually (per `CLAUDE.md`). Commit the generated migration file with the rest of the change.
+Run `./equin build` — it calls `drizzle-kit generate` to emit the migration for the new `held_at` column and the regenerated `tasks_v` view. Do **not** run drizzle-kit manually (per `CLAUDE.md`). Commit the generated migration file with the rest of the change.
 
 ## What stays the same
 
@@ -139,8 +139,8 @@ Run `./singularity build` — it calls `drizzle-kit generate` to emit the migrat
 
 ## Verification
 
-1. `./singularity build` — must succeed, generating a new migration and restarting the server.
-2. `./singularity check` — `migrations-in-sync` should pass (the new migration file lands in the repo).
+1. `./equin build` — must succeed, generating a new migration and restarting the server.
+2. `./equin check` — `migrations-in-sync` should pass (the new migration file lands in the repo).
 3. In the app at `http://<worktree>.localhost:9000`:
    - Open a task → click "Hold" → badge turns amber "Held", button now reads "Resume". Reload: state persists.
    - Click "Resume" → badge returns to prior derived status (`new` / `attempted` / etc.).

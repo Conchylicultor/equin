@@ -64,7 +64,7 @@ Measured cost of going generic (`tsc --diagnostics`, 1,000 synthetic sites):
 baseline is 3,414,676 instantiations / 238 s. Converting the five is **+1.6%**;
 converting the rest is **+10%** for a `ref` fix nobody has asked for.
 
-Current gate state: `./singularity check type-check` passes clean (verified).
+Current gate state: `./equin check type-check` passes clean (verified).
 
 ---
 
@@ -516,12 +516,12 @@ union over its own props, touching `CONTROL_KEYS` / `RowControlProps` /
 ## Verification
 
 - **Per primitive:** pure `*-classes.test.ts` co-located with the source,
-  `./singularity test plugins/primitives/plugins/css/plugins/<name>`.
+  `./equin test plugins/primitives/plugins/css/plugins/<name>`.
 - **Geometry:** the `coords` fixture plus the new `unpositionHost` falsification.
   The harness check keys its cache on the whole `css/plugins/**` tree plus every
   fixture contributor's subtree, so it re-runs automatically and launches no
   browser when untouched.
-- **Types:** `./singularity check type-check` after each `as` conversion, plus
+- **Types:** `./equin check type-check` after each `as` conversion, plus
   `--diagnostics` before and after — the prediction is +126/site with `as=`,
   +92/site without, and a wild miss means the shape is wrong, not the budget
   optimistic. One `@ts-expect-error` fixture per converted primitive, co-located
@@ -532,12 +532,12 @@ union over its own props, touching `CONTROL_KEYS` / `RowControlProps` /
 - **Lint, positively at least once:** after converting `Line`, temporarily move
   `{...rest}` off the `ref` element and confirm `restOffRef` still reports. If it
   does not, the apparent-type behaviour has changed and the workstream stops.
-- **Visual, per coords phase:** `./singularity build` (background), then the e2e
+- **Visual, per coords phase:** `./equin build` (background), then the e2e
   screenshot script — Debug → Profiling for the Gantt, Debug → Slow Events for the
   timeline, a data-view list for windowed rows. **Sonata must be checked with
   playback running**; a static screenshot cannot show that the per-frame writers
   still move.
-- **Whole gate:** `./singularity check` — `eslint` (the migrated disables must be
+- **Whole gate:** `./equin check` — `eslint` (the migrated disables must be
   *gone*, and a leftover directive is itself an error), `type-check`,
   `layout-geometry`, `css:message-names-primitives`.
 - No visual check is needed for workstreams 1 and 4: `selfClass` emits

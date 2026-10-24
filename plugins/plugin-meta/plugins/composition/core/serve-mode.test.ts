@@ -2,7 +2,7 @@
  * Pure-logic tests for the serve modes: the rate-limit record is total over the
  * mode set, "immediately" and "never" stay distinguishable, and an unknown mode
  * is a loud failure rather than a silent default. Run with:
- *   ./singularity test plugins/plugin-meta/plugins/composition
+ *   ./equin test plugins/plugin-meta/plugins/composition
  */
 import { test, expect } from "bun:test";
 import {

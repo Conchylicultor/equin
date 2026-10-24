@@ -1,5 +1,5 @@
 /**
- * Tests for the `no-adhoc-row` lint rule. Run with `./singularity test
+ * Tests for the `no-adhoc-row` lint rule. Run with `./equin test
  * plugins/primitives/plugins/css/plugins/row`.
  *
  * The first invalid case under "fingerprint B" is the acceptance test the second

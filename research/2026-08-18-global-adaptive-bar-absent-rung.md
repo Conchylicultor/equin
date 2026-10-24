@@ -205,7 +205,7 @@ row would hide two behind the first one's count.
 
 ## Verification
 
-1. `./singularity test plugins/primitives/plugins/adaptive-bar`
+1. `./equin test plugins/primitives/plugins/adaptive-bar`
    - `core/absent-rungs.test.ts` — a blank rung truncates the offered ladder;
      blank at rung 0 ⇒ no rungs; clearing is per item.
    - `core/fit.test.ts` — an item with no rungs costs no width, no gap, never
@@ -224,7 +224,7 @@ row would hide two behind the first one's count.
 
    Result: 101 bun tests across 6 core files and 35 jsdom tests across 7 web
    files, all passing.
-2. `./singularity check` — type-check, boundaries, doc/registry sync.
-3. `./singularity build`, then the Layout Lab (Debug → Layout Lab) and
+2. `./equin check` — type-check, boundaries, doc/registry sync.
+3. `./equin build`, then the Layout Lab (Debug → Layout Lab) and
    `bun plugins/primitives/plugins/adaptive-bar/e2e/adaptive-bar-churn.ts --url http://<worktree>.localhost:9000/agents/c/<id>`:
    a healthy sweep still files nothing.

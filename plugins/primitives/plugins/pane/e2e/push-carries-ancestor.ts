@@ -25,7 +25,7 @@
 //
 // Manual, self-contained — NOT wired into any check (tests are manual here):
 //
-//   ./singularity run plugins/primitives/plugins/pane/e2e/push-carries-ancestor.ts \
+//   ./equin run plugins/primitives/plugins/pane/e2e/push-carries-ancestor.ts \
 //     [--url <deploy>] [--wait <ms>]
 //
 // Exit 0 = pass; exit 1 = a failing assertion (with a printed reason).

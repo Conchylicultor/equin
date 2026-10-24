@@ -164,7 +164,7 @@ No schema, server, core type, or barrel changes — purely internal web helpers.
      ending in a formatted run (the old `$atEnd` bug).
    Run: `bun test plugins/page/plugins/editor/web/internal/block-text-extensions.test.ts`
    (after a build / `bun install` so `node_modules` is populated).
-2. **Build**: `./singularity build`, app at `http://att-1781566786-4c1n.localhost:9000`.
+2. **Build**: `./equin build`, app at `http://att-1781566786-4c1n.localhost:9000`.
 3. **Manual e2e (Playwright `e2e/screenshot.mjs`)** on a page:
    - Type `Hello `, bold-select `world`, then a plain block `foo` below; put the
      caret at the start of `foo` and press **Backspace** → caret must land between

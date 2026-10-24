@@ -281,7 +281,7 @@ export interface BlockHandle<T> {
    * `anchorTypes`: the empty-anchor prune and the split/merge refusals) and the
    * server has no slots. The *decoration component* rides on the web
    * `Editor.BlockFrame` contribution instead — so a type cannot claim anchorhood
-   * without actually registering as a container — and a `./singularity check`
+   * without actually registering as a container — and a `./equin check`
    * pins the two together (a handle declaring `anchor: true` whose plugin
    * contributes no anchor component fails the check).
    */

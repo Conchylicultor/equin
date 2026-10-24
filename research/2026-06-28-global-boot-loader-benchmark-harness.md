@@ -193,7 +193,7 @@ its path) back as the baseline for the "after" run to get the diff table.
 
 ## Verification
 
-1. `./singularity build` in the worktree; confirm it boots.
+1. `./equin build` in the worktree; confirm it boots.
 2. Run the tool against this worktree:
    `benchmark_boot({ iterations: 10, warmup: 2, mode: "both" })`. Confirm it
    returns resolved fixtures, non-zero `bootSnapshot.totalMs`, both

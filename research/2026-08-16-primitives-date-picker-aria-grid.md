@@ -228,8 +228,8 @@ grid *is* `<Grid cols={7}>` is corrected to seven of them.
 ```bash
 bun test plugins/primitives/plugins/date-picker/core          # pure day math + nav
 bun run test:dom plugins/primitives/plugins/date-picker       # the DOM grid test
-./singularity check type-check eslint                         # lint rules incl. aria-safety
-./singularity build                                           # deploy
+./equin check type-check eslint                         # lint rules incl. aria-safety
+./equin build                                           # deploy
 ```
 
 Then, in the deployed app at `http://<worktree>.localhost:9000`:

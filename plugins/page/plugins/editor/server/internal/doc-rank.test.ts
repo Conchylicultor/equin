@@ -16,8 +16,8 @@
  * by a write that never names its row), a data-only patch issuing NO reconcile
  * query, and the boot reconcile's backfill / drift classification.
  *
- * Run: `./singularity test plugins/page/plugins/editor`
- * (requires the running embedded cluster — `./singularity build` first).
+ * Run: `./equin test plugins/page/plugins/editor`
+ * (requires the running embedded cluster — `./equin build` first).
  */
 
 import {

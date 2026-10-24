@@ -2,7 +2,7 @@ import { TOOL_USE_ID_ENV, TOOL_USE_ID_RE } from "../tool-use-id";
 import { defineGuard } from "../define-guard";
 import { parseShell } from "../parse-shell";
 import type { BashInput } from "../types";
-import { CLI_NAME } from "@plugins/framework/plugins/cli/core";
+import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 
 /**
  * A Bash call that runs an e2e script tells the script which tool call it is.

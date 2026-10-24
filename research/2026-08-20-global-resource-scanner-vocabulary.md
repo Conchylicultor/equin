@@ -149,7 +149,7 @@ message shape is uniform (where / what / what to do):
     calls `defineResource(descriptor, …)` where `descriptor` is a parameter. Keep that
     exemption narrow and comment it at the site.
 
-The throw runs inside `./singularity build`'s docgen and inside `./singularity check
+The throw runs inside `./equin build`'s docgen and inside `./equin check
 plugins-doc-in-sync`, so it is a hard stop at the offending file:line, not a report.
 
 ### 4. Membership reaches the docs
@@ -187,8 +187,8 @@ Extend the two existing suites rather than adding new files:
 - `codegen/core/eager-tier-gen.test.ts` — a `bootCritical: true` declared through
   `windowQueryResourceDescriptor` pins its app-content plugin eager.
 
-Run with `./singularity test plugins/plugin-meta/plugins/facets/plugins/resources` and
-`./singularity test plugins/framework/plugins/tooling/plugins/codegen`.
+Run with `./equin test plugins/plugin-meta/plugins/facets/plugins/resources` and
+`./equin test plugins/framework/plugins/tooling/plugins/codegen`.
 
 ## Files
 
@@ -209,12 +209,12 @@ Reuse, don't rewrite: `parseStaticCallId`, `unresolvableCallIdMessage`, `markerC
 
 ## Verification
 
-1. `./singularity check type-check` — the derived `Record` compiles, and deliberately deleting
+1. `./equin check type-check` — the derived `Record` compiles, and deliberately deleting
    one vocabulary entry must fail here with that key named. Do this deletion once, on purpose,
    to prove the enforcement is real; a `satisfies` that silently passes is the whole bug again.
-2. `./singularity check plugin-boundaries` — confirms the new `tooling → live-state/core`,
+2. `./equin check plugin-boundaries` — confirms the new `tooling → live-state/core`,
    `tooling → query-resource/core` type-only edges introduce no cycle.
-3. `./singularity build` (background) — regenerates docs. Then confirm the previously-blank
+3. `./equin build` (background) — regenerates docs. Then confirm the previously-blank
    plugins now carry a `Resources:` line with membership, e.g.
    `` `notifications` (keyed, window) ``, `` `starred-pages` (keyed, window) ``,
    `` `conversation-categories` (keyed, point) ``:
@@ -223,10 +223,10 @@ Reuse, don't rewrite: `parseStaticCallId`, `unresolvableCallIdMessage`, `markerC
    rg -n "Resources" plugins/shell/plugins/notifications/CLAUDE.md \
                      plugins/apps/plugins/pages/plugins/starred/CLAUDE.md
    ```
-4. `./singularity check plugins-doc-in-sync` — passes against the regenerated files.
-5. `./singularity test` for the two suites above.
+4. `./equin check plugins-doc-in-sync` — passes against the regenerated files.
+5. `./equin test` for the two suites above.
 6. Loud-failure smoke test, reverted immediately: temporarily rename a descriptor factory in
-   the vocabulary so a real call site becomes unresolvable, run `./singularity check
+   the vocabulary so a real call site becomes unresolvable, run `./equin check
    plugins-doc-in-sync`, and confirm the error names the offending file, line and identifier
    rather than dropping the resource. Revert.
 7. Studio → Contributions → Resources table and a plugin detail pane at

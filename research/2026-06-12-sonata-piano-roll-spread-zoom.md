@@ -214,7 +214,7 @@ All handler inputs (`spread`, `setSpread`, `seekTo`, `tempo`, `endSeconds`,
 
 ## Verification
 
-1. `./singularity build`; open
+1. `./equin build`; open
    `http://<worktree>.localhost:9000/sonata/song/<id>`.
 2. **Default look**: notes are taller / more Synthesia-like out of the box
    (default spread 1.5).

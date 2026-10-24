@@ -3,7 +3,7 @@
 ## Context
 
 The op-wedge watchdog (`debug/op-wedge-watchdog`) files a `cli-op-wedge` report **and reaps
-the process** for any `./singularity {build,check,push}` whose op marker is `phase: "running"`
+the process** for any `./equin {build,check,push}` whose op marker is `phase: "running"`
 and older than the budget (default 15 min). It measures "wedge time" as `now − startedAt` off
 the **ephemeral op marker** (`infra/worktree`, `worktree-op.ts`).
 
@@ -159,7 +159,7 @@ false-trips.
 - Update the plugin `CLAUDE.md` "Detection" section: wedge-time is now genuine non-blocked work
   time from the **unified op-log**, not `now − startedAt`; the marker supplies process identity
   (pid/inspect/liveness) only. State the `blockedMs = 0` uniform fallback and why it does not
-  miss wedges. `./singularity build` regenerates the autogen reference block.
+  miss wedges. `./equin build` regenerates the autogen reference block.
 
 ## Out of scope (deliberately)
 
@@ -170,7 +170,7 @@ false-trips.
 
 ## Verification (end-to-end)
 
-1. `./singularity build` (regenerates docs/registry, restarts server, runs checks).
+1. `./equin build` (regenerates docs/registry, restarts server, runs checks).
 2. `bun test plugins/debug/plugins/op-wedge-watchdog` — new + existing suites pass.
 3. Reproduce the false positive is gone without waiting 15 min: temporarily set the config
    `budgetMs` low (Settings → Config → `op-wedge-watchdog`) on a box under load, or drive it via

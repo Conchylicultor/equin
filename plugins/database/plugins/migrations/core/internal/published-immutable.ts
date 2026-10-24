@@ -266,4 +266,4 @@ export const PUBLISHED_MIGRATION_HINT =
   "meta/legacy-snapshots.json entry) is a link of the chain. Never edit, delete or rename one.\n" +
   "Restore the listed files from the named ref, e.g.\n" +
   `  git checkout main -- ${MIGRATIONS_DATA_DIR}/<file>\n` +
-  "and change the schema with a NEW migration instead (edit schema.ts, then ./singularity build).";
+  "and change the schema with a NEW migration instead (edit schema.ts, then ./equin build).";

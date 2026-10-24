@@ -3,7 +3,7 @@
  * are unchanged, and the columns it filters / sorts are the ones it declared
  * before its fields were derived.
  *
- * Run: `./singularity test plugins/infra/plugins/jobs`.
+ * Run: `./equin test plugins/infra/plugins/jobs`.
  */
 
 import { describe, expect, test } from "bun:test";

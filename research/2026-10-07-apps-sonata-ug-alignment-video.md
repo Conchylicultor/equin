@@ -269,7 +269,7 @@ this song?" without naming who answers.
   - A slug lookup on `chord_sections`, grouped by `videoId`, skipping videos
     chord already knows as gone or not embeddable.
   - It needs a new `(artist_slug, song_slug)` index (a migration through
-    `./singularity build`).
+    `./equin build`).
   - It answers `unavailable` when the index is not loaded. It does not force a
     26k-section load on Sonata's behalf.
   - Chord → integrations is an allowed edge, and Sonata never imports chord.
@@ -353,7 +353,7 @@ this song?" without naming who answers.
 
 ## Verification
 
-- `./singularity test` on sonata session, audio engine, score,
+- `./equin test` on sonata session, audio engine, score,
   integrations/youtube (+ song-videos) and ultimate-guitar alignment.
 - **Sync, deployed worktree.** Open an aligned song (Let It Be), then
   `screenshot.ts --path <song> --click Play`. By ear:

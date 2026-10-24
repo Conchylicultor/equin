@@ -6,7 +6,7 @@ import type { ParentLifeline } from "@plugins/packages/plugins/flock/core";
 // refresh the index's cached file stats and write them back, briefly holding
 // `.git/index.lock` to do it. In a checkout shared by several processes that
 // turns a read into a collision with a real write: main's auto-build runs
-// `git status` in main's checkout while a queued `./singularity push` runs
+// `git status` in main's checkout while a queued `./equin push` runs
 // `git merge --ff-only` there, and the merge fails outright on
 // "index.lock: File exists" (seven failed pushes, Sep 16–22 2026).
 //

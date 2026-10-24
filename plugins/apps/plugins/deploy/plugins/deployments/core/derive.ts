@@ -174,7 +174,7 @@ export function currentAppPath(compositionId: string): string {
  * `https://` and nothing else: converge writes a Caddy site block per hostname
  * and Caddy terminates TLS in front of the loopback gateway, so a deployed
  * hostname is an HTTPS origin by construction — there is no plaintext port to
- * offer as an alternative. This mirrors what `./singularity deploy ship` prints
+ * offer as an alternative. This mirrors what `./equin deploy ship` prints
  * at the end of a successful run, and belongs here for the same reason every
  * other remote-host fact does: a URL spelled in two places eventually disagrees
  * with itself.

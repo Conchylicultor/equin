@@ -93,9 +93,9 @@ targets).
 
 ## Verification
 
-- `./singularity test plugins/packages/plugins/ticket-line plugins/packages/plugins/host-semaphore plugins/framework/plugins/cli/plugins/op-runtime`
+- `./equin test plugins/packages/plugins/ticket-line plugins/packages/plugins/host-semaphore plugins/framework/plugins/cli/plugins/op-runtime`
   — ticket-line: order of N children, a SIGKILLed middle waiter, abort, reap of a
   dead ticket; host-semaphore: a fresh caller does not barge past a queued one of
   its class, waiters granted in arrival order, existing 31 tests green; gate:
   duress → exclusive waits for a shared holder, clear mid-wait → shared.
-- `./singularity build`.
+- `./equin build`.

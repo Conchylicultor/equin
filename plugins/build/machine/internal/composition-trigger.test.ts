@@ -11,7 +11,7 @@ import type { CompositionRebuildInputs } from "./composition-trigger";
  * nobody asked for, and rebuild a target it already attempted — are exactly
  * what belongs in a test with no checkout.
  *
- * Run: `./singularity test plugins/build`
+ * Run: `./equin test plugins/build`
  */
 
 const A = "aaaaaaa1111111111111111111111111111111a";

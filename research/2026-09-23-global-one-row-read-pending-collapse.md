@@ -96,7 +96,7 @@ Then run the rule over the repo and fix every new hit. The hits expected are the
 
 ## Verification
 
-1. `./singularity test plugins/primitives/plugins/live-state`: the lint rule tests (new valid and invalid cases) and the existing `window-hooks.test.tsx`.
-2. `./singularity test` on the touched task and conversation plugins, if they have suites.
-3. `./singularity check type-check`: runs `tsc` plus the lint over the whole repo. The rule must not report any unfixed hits.
-4. `./singularity build` (background), then E2E. Open an armed task with `screenshot.ts --path <task route>` and a slow network or a cold cache. While loading, the Auto-start row shows a skeleton, never "Off", and the model appears once the data lands. Also confirm the progress bar and preprompt chip show no wrong state.
+1. `./equin test plugins/primitives/plugins/live-state`: the lint rule tests (new valid and invalid cases) and the existing `window-hooks.test.tsx`.
+2. `./equin test` on the touched task and conversation plugins, if they have suites.
+3. `./equin check type-check`: runs `tsc` plus the lint over the whole repo. The rule must not report any unfixed hits.
+4. `./equin build` (background), then E2E. Open an armed task with `screenshot.ts --path <task route>` and a slow network or a cold cache. While loading, the Auto-start row shows a skeleton, never "Off", and the model appears once the data lands. Also confirm the progress bar and preprompt chip show no wrong state.

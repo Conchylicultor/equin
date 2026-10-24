@@ -83,7 +83,7 @@ contributions: [
 
 ## Verification
 
-1. `./singularity build`
+1. `./equin build`
 2. Open http://claude-1775913419.localhost:9000 — default view, URL is `/`
 3. Click a session in sidebar — URL updates to `/c/<session-id>`
 4. Refresh the page — same conversation reopens

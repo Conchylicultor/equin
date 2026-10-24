@@ -95,7 +95,7 @@ The lint's first run is the source of truth for anything this inventory missed. 
 
 ## Verification
 
-1. `./singularity test plugins/framework/plugins/hook-value` runs the RuleTester suites, both rules, valid and invalid.
-2. **Negative control:** temporarily revert the guard to `resolve(params)` (prop named `resolve: ResolveHook`). `./singularity check type-check` must fail on `hook-value/hook-binding-name`. Restore it afterwards.
-3. `./singularity build` must pass, with all checks green, including `type-check`, `plugins-doc-in-sync` and `plugins-registry-in-sync`.
+1. `./equin test plugins/framework/plugins/hook-value` runs the RuleTester suites, both rules, valid and invalid.
+2. **Negative control:** temporarily revert the guard to `resolve(params)` (prop named `resolve: ResolveHook`). `./equin check type-check` must fail on `hook-value/hook-binding-name`. Restore it afterwards.
+3. `./equin build` must pass, with all checks green, including `type-check`, `plugins-doc-in-sync` and `plugins-registry-in-sync`.
 4. Screenshot a resolve-guarded pane, for example a conversation (`/agents/c/<id>`) and a task detail, to confirm there are no runtime regressions from the rename.

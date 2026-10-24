@@ -166,7 +166,7 @@ Reuse: `defineReportSink` (primitives/report-sink), `ReportKind` / `recordReport
 
 ## Verification
 
-- **DB-backed tests** (`./singularity test plugins/database`), through a black-hole
+- **DB-backed tests** (`./equin test plugins/database`), through a black-hole
   socket proxy in front of the cluster (forwarding can be switched off to swallow
   bytes). An injected short deadline asserts:
   - `pool.query` rejects with `QueryDeadlineExceededError` and the next query succeeds
@@ -183,8 +183,8 @@ Reuse: `defineReportSink` (primitives/report-sink), `ReportKind` / `recordReport
 - **jsdom tests**: the Connection row turns critical on a stalled `flushOpenMs`; the
   Database row goes attention and then back to ok after 10 min (pinned clock).
 - **Stuck-spans test**: a fake open entry past its threshold files once, not every tick.
-- **Deployed**: `./singularity build`. Then the read-only WS probe used in the incident:
+- **Deployed**: `./equin build`. Then the read-only WS probe used in the incident:
   pings carry `flushOpenMs: 0`, and a write still produces a `delta`. Screenshot the
-  health dot with `screenshot.ts`. `./singularity check` passes, including
+  health dot with `screenshot.ts`. `./equin check` passes, including
   `plugin-boundaries`: the new sub-plugins import `reports` and `database`, and
   `database` imports neither.

@@ -66,7 +66,7 @@ export default {
     // Who puts it back: the queue's `install()` (`graphileQueue`), which the
     // jobs plugin's `onReadyBlocking` runs against this backend's own database
     // before any plugin's `onReady`. A database whose backend had never booted
-    // (a fresh worktree where `./singularity test` runs before `./singularity
+    // (a fresh worktree where `./equin test` runs before `./equin
     // build`) used to have no queue schema and no way to acquire one, and a
     // transactional enqueue on it failed with a bare `3F000`. Dropping the
     // schema costs nothing only because something owns reinstalling it; see

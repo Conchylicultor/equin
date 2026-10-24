@@ -233,7 +233,7 @@ stays `db.select().from(tasksWithStatus)` across all three tiers.
    computed from others, it is a column in a view, not a column in a
    table. No writer ever issues `UPDATE tasks SET status = …`.
 
-Both rules are enforced by `./singularity check` (see §Enforcement).
+Both rules are enforced by `./equin check` (see §Enforcement).
 
 ## Parameter mapping
 
@@ -324,7 +324,7 @@ different audiences.
 
 ## Enforcement
 
-Five `./singularity check` additions:
+Five `./equin check` additions:
 
 1. **`derived-not-stored`** — AST check: for each `defineResource`,
    columns in the loader's typed return that are not in any imported
@@ -337,7 +337,7 @@ Five `./singularity check` additions:
 3. **`no-writes-to-public-name`** — AST check: `db.insert(tasks)`,
    `db.update(tasks)`, `db.delete(tasks)` are forbidden when `tasks`
    resolves to a `pgView`. Writes go through the underscored table.
-   Catches the mistake at `./singularity check` instead of runtime.
+   Catches the mistake at `./equin check` instead of runtime.
 4. **`no-manual-notify-on-derived`** — grep for
    `<derivedResource>.notify(` outside the resource's own file.
    Derived resources are invalidated by the framework only.

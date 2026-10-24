@@ -54,7 +54,7 @@ Two rules, enforced by the framework:
    caches at the resource layer.
 
 The rules are worthless without enforcement. Both are checked by
-`./singularity check` (see §Enforcement).
+`./equin check` (see §Enforcement).
 
 ## Design
 
@@ -185,7 +185,7 @@ isolation. `resources.ts` wires them to the loader. This mirrors the
 
 ## Enforcement
 
-Three `./singularity check` additions, each cheap:
+Three `./equin check` additions, each cheap:
 
 1. **`derived-not-stored`** — AST scan: for each resource, diff the
    loader's inferred return type against the plugin's Drizzle schema

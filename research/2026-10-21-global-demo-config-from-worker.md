@@ -212,41 +212,41 @@ Track: subtrack "portable server code (server/ vs machine/)" (`block-323b766d-7d
 
 **G0 — Measure the scope (before any UI change).** First run `git fetch origin main && git rebase origin/main`.
 - Extend `deriveBrowserHostGraph` with `webPlugins`, `home` and `available`, and make the generator print `available`.
-- Run `./singularity build` (backgrounded, then `./singularity await`).
+- Run `./equin build` (backgrounded, then `./equin await`).
 - **Stop if** `available` contains essential demo UI whose server is not trivially portable. That is a membership decision for the user, not an improvisation.
 - Otherwise add the register-only essentials to `selectedContributors` (Decision 4) and rebuild.
 
 **G1 — `PluginScope` + `pageWide`.**
-- Gate: `./singularity test plugins/framework/plugins/web-sdk plugins/primitives/plugins/pane`, then `./singularity check type-check plugin-boundaries`.
+- Gate: `./equin test plugins/framework/plugins/web-sdk plugins/primitives/plugins/pane`, then `./equin check type-check plugin-boundaries`.
 
 **G2 — Generated host scope; DemoScope wraps `PluginScope`; `host` required.**
 - The page server is still present at this gate.
-- Gate: `./singularity build`, then `./singularity test plugins/framework/plugins/tooling/plugins/codegen plugins/framework/plugins/browser-server`.
+- Gate: `./equin build`, then `./equin test plugins/framework/plugins/tooling/plugins/codegen plugins/framework/plugins/browser-server`.
 - Browser check on `/demo`: the conversation renders, the prompt box is present, Home and Tasks open, no error boundary.
 
 **G3 — Portability flags and moves (C) + the twin check (Decision 10).**
-- Gate: `./singularity check config-v2:host-registrations-paired config-v2:registrations-paired host-services:provider-placement plugin-boundaries boundary-rules plugins-registry-in-sync`.
+- Gate: `./equin check config-v2:host-registrations-paired config-v2:registrations-paired host-services:provider-placement plugin-boundaries boundary-rules plugins-registry-in-sync`.
 - **Stop** on any barrel that is not trivially portable: exempt it as debt plus a follow-up, never a hand list.
 
 **G4 — Committed layer (D) + `globRoots`; config_v2's page backend deleted.**
 - In the same step, delete the config_v2 part of G: the `Demo.Resource` contribution, `demo-resource.ts`, the web/testing helpers, `config-v2.test.tsx`, and the whole `config-git-layer-gen` / `@composition-config-layer` pipeline.
 - The page server is left with no backends. Compose then routes every key to the worker, and only the policies remain page-side.
-- Gate: `./singularity test plugins/config_v2 plugins/apps/plugins/agent-manager/plugins/demo plugins/framework/plugins/tooling/plugins/web-artifacts`, then `./singularity build`.
+- Gate: `./equin test plugins/config_v2 plugins/apps/plugins/agent-manager/plugins/demo plugins/framework/plugins/tooling/plugins/web-artifacts`, then `./equin build`.
 - Browser check on `/demo`: reorder slots show their committed order, a config write round-trips, and there is no use-config guard error.
 - **Natural stop point** (see the header). Update the wiki and file the next task if stopping here.
 
 **G5 — Unserved policy (E) + `isUnsupportedEndpointResponse`.**
-- Gate: `./singularity test plugins/framework/plugins/resource-runtime plugins/packages/plugins/resource-protocol plugins/infra/plugins/endpoints` plus the live-state tests.
+- Gate: `./equin test plugins/framework/plugins/resource-runtime plugins/packages/plugins/resource-protocol plugins/infra/plugins/endpoints` plus the live-state tests.
 
 **G6 — DemoScope rewrite + all deletions (F, G).**
 - Every step type-checks.
-- Gate: `./singularity build`, `./singularity check`, `./singularity test plugins/framework plugins/config_v2 plugins/network plugins/primitives/plugins/live-state`.
+- Gate: `./equin build`, `./equin check`, `./equin test plugins/framework plugins/config_v2 plugins/network plugins/primitives/plugins/live-state`.
 
 **G7 — Docs, measurements, wiki, next task.**
 - Wiki: `read_page` the subtrack page (an agent page). Add a dated Status entry and Measurements, update the "[Hubs] config_v2 split" checkboxes, and add "[Framework] PluginScope: the demo subtree is its host composition".
 - File ONE next main task, with both page ids. No push.
 - Docs: browser-server, scope and demo `CLAUDE.md`s; `config_v2/CLAUDE.md` (:346-361, 395, 594); `network/live/CLAUDE.md:1640-1645`; `web-artifacts/CLAUDE.md`; live-state; the `demo-reads.ts:63-65` comment; package.json descriptions.
-- Final `./singularity build`.
+- Final `./equin build`.
 
 ## Verification
 - **Unit tests:**
@@ -270,13 +270,13 @@ Track: subtrack "portable server code (server/ vs machine/)" (`block-323b766d-7d
 - **jsdom tests:**
   - scope: an out-of-scope contribution does not render; an outer pane resolves after the embed mounts; `useComposition` returns the host.
   - `demo-scope.test.tsx` through the new `browser-server/core/testing` helpers `inRealmServer` + `channelHost` (`MessageChannel`; call `.start()` on both ports): value/collection render and notify; an unserved key gives `loader-failed` and an empty mismatch store; two unsupported POSTs give one toast; **a worker-served POST gives no toast**; a failing boot reaches the error boundary.
-- **Browser** (`browser_*` tools after `./singularity build`):
+- **Browser** (`browser_*` tools after `./equin build`):
   - `/demo`: conversation, prompt box, sidebar queue and done list, Tasks, task detail, Home;
   - reorder-driven slots show their committed order;
   - no "Not available" toast while browsing;
   - console has no `registered on web but the server has no matching ConfigV2.Register`;
   - a settings write in the demo persists for the session.
-  - The exhibit: `./singularity run plugins/plugin-meta/plugins/exhibits/e2e/exhibit-shot.ts --id <demo exhibit id>`.
+  - The exhibit: `./equin run plugins/plugin-meta/plugins/exhibits/e2e/exhibit-shot.ts --id <demo exhibit id>`.
   - **Desktop unchanged:** screenshot `/agents` before and after; a reorder edit and a config write still work on the desktop.
 - **Measurements**, reported before and after: worker bundle bytes (19.0 MB → expect ~+0.6 MB of config), modules (1,114), plugin count (74 → 75 + the newly portable barrels), and boot-to-ready from the `BOOT_LOG_CHANNEL` line in `~/.singularity/worktrees/<wt>/logs/`.
 

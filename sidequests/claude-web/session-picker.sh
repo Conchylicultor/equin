@@ -21,7 +21,7 @@ create_new() {
   # Create a new worktree with a fresh branch off main
   $GIT -C "$WORKDIR" worktree add -b "$branch" "$wt_path" main 2>/dev/null
 
-  # Fork the DB from singularity so ./singularity build works without the server.
+  # Fork the DB from singularity so ./equin build works without the server.
   # Only drop if the DB already exists but the fork is incomplete (interrupted
   # mid pg_restore); a fresh name won't exist at all so createdb runs clean.
   if ! psql -d "$name" -tAc "SELECT 1 FROM __singularity_migrations LIMIT 1" 2>/dev/null | grep -q 1; then

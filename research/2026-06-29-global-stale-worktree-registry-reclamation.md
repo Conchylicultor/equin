@@ -117,7 +117,7 @@ regardless of DB.)
 ### 5. Drain the backlog promptly (don't wait up to an hour)
 
 Enqueue the reap job once on **main** server `onReady` so the ~2300-entry backlog drains
-shortly after `./singularity build` rather than on the next hourly tick. `dedup: "singleton"`
+shortly after `./equin build` rather than on the next hourly tick. `dedup: "singleton"`
 prevents pile-up; steady-state runs find nothing. Gate to the main runtime (the reap-job is
 already main-only). Add an `onReady` in the worktree-cleanup server plugin that calls
 `worktreeReapJob.enqueue({})` only when running as main.
@@ -144,7 +144,7 @@ already main-only). Add an `onReady` in the worktree-cleanup server plugin that 
   `spec.Server` repo root no longer exists — defense-in-depth so a stale spec can never anchor
   a watch even if the TS reaper is down. Also consider replacing per-subdir watches with a
   single recursive/top-level watch to remove the per-worktree-watch scaling cliff. Requires
-  recompiling + restarting the gateway (`./singularity start`), a system-level op outside the
+  recompiling + restarting the gateway (`./equin start`), a system-level op outside the
   normal agent workflow — must be done by the user.
 - **Other per-worktree artifact stores.** `~/.singularity/logs/<name>.log` (gateway backend
   log, 910 files) and any sidecar pid files are not reclaimed here. Confirm whether they
@@ -152,7 +152,7 @@ already main-only). Add an `onReady` in the worktree-cleanup server plugin that 
 
 ## Verification
 
-1. `./singularity build` (deploys; runs checks).
+1. `./equin build` (deploys; runs checks).
 2. Confirm the backlog drains: `curl -s http://localhost:9000/gateway/worktrees | python3 -c "import sys,json;print(len(json.load(sys.stdin)))"`
    should fall from ~2363 toward ~132 within a minute or two of boot. Re-run to watch it shrink.
 3. `ls -1 ~/.singularity/worktrees | wc -l` should drop correspondingly; legacy `*.json`

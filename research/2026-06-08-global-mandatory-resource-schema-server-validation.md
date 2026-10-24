@@ -142,7 +142,7 @@ client-side change (`ResourceDescriptor.schema` is already required).
 
 ## Verification
 
-1. `./singularity build` — TS compiles across all plugins. Making `schema`
+1. `./equin build` — TS compiles across all plugins. Making `schema`
    required is the static safety net; if any call site lacked one it would now
    be a compile error (verified: none do).
 2. **Happy path:** open `http://<worktree>.localhost:9000`, exercise live

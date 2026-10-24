@@ -10,7 +10,7 @@ const TSCONFIG_BASE = "tsconfig.base.json";
 // `typescript`'s module object is invariant for the process's lifetime — not a
 // tree-derived fact — so a per-process memo is safe. Loaded lazily so this
 // module's own top-level import doesn't pay `typescript`'s eval cost on every
-// `./singularity check` pass (this check module loads during the "load all
+// `./equin check` pass (this check module loads during the "load all
 // checks" burst, well before any check's `run()` starts). Exported so
 // `manifest-freeze.ts` shares this SAME cached promise instead of duplicating
 // the import.

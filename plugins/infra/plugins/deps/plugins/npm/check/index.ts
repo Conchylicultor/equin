@@ -63,7 +63,7 @@ const groupsCoherent: Check = {
     const ws = await readWorkspace(await getWorktreeRoot());
     return verdict(
       groupProblems(ws.policies, ws.lock),
-      "Move a group's members together: `./singularity deps upgrade npm --only <member>` moves the whole group.",
+      "Move a group's members together: `./equin deps upgrade npm --only <member>` moves the whole group.",
     );
   },
 };

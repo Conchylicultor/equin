@@ -12,7 +12,7 @@
  * - D6: `unroutedResourceKeys()`;
  * - D7: `seedRouteDrift()` and the persisted read-set fallback.
  *
- * Run with `./singularity test plugins/framework/plugins/resource-runtime`.
+ * Run with `./equin test plugins/framework/plugins/resource-runtime`.
  */
 
 import { describe, expect, spyOn, test } from "bun:test";

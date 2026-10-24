@@ -25,8 +25,8 @@
 // CHILD resolves against the registry. There is deliberately no `ids` field: an
 // id list computed here would be a registry read performed in the very module
 // cache the child exists to escape — the same mistake, one level up. Every
-// selection is therefore hand-reproducible (`./singularity check --scope tree`,
-// `./singularity check --always-run`) and its emptiness is noticed where it
+// selection is therefore hand-reproducible (`./equin check --scope tree`,
+// `./equin check --always-run`) and its emptiness is noticed where it
 // matters, inside `runChecks`.
 //
 // The three callers and what each asserts:
@@ -45,7 +45,7 @@
 //   • `build --skip-checks` — `alwaysRun: true`, the cheap structural subset.
 //
 // Nobody asserts `host` from an op. Its subject is the machine, shared with
-// every checkout on the box; its home is a standalone `./singularity check`.
+// every checkout on the box; its home is a standalone `./equin check`.
 //
 // **`SINGULARITY_BUILD_IN_PROGRESS` must pass through untouched.** That marker
 // is how a dist-comparing check (`web-artifacts:map-in-sync`) learns to skip a
@@ -179,14 +179,14 @@ export async function runCheckSubprocess(
       cwd: root,
       env,
       mergeStderr: true,
-      // This child IS `./singularity check` — the full type-check/lint/codegen
+      // This child IS `./equin check` — the full type-check/lint/codegen
       // sweep. Its duration is the duration of the work, and nothing above it
       // owns a shorter deadline: the human at the terminal is the deadline, and
       // killing a check that was still making progress would only make the
       // command unusable. Bounding the pieces (each check's own git/worker
       // spawns) is where a real wedge is actually caught.
       unbounded:
-        "this child is the whole `./singularity check` run; its duration is the work's, and the CLI invocation above it owns no shorter deadline",
+        "this child is the whole `./equin check` run; its duration is the work's, and the CLI invocation above it owns no shorter deadline",
     });
     exitCode = result.exitCode;
     maxRssBytes = result.resourceUsage.maxRssBytes;

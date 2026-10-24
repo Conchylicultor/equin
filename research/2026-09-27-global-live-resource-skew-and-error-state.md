@@ -199,7 +199,7 @@ type ResourceError = { kind: "loader-failed" | "not-found" | "client-outdated" |
 - New: `plugins/packages/plugins/resource-protocol/core`
 
 ## Verification
-- **Unit and jsdom suites** (`./singularity test <plugin>`):
+- **Unit and jsdom suites** (`./equin test <plugin>`):
   - `query-codec` / `window-descriptor`: typed throw vs. declaration throw.
   - `live-value`: `validateParams`.
   - New `runtime-contract-mismatch.test.ts`: a bad sub is not registered, a later notify runs no loader and files no
@@ -212,7 +212,7 @@ type ResourceError = { kind: "loader-failed" | "not-found" | "client-outdated" |
   - Lint rule tests.
   - `reload-advice`: outdated arm and precedence.
   - `build-button`.
-- **End to end, reproducing the incident:** `./singularity build`, open the worktree app, then change
+- **End to end, reproducing the incident:** `./equin build`, open the worktree app, then change
   `build.history`'s codec (e.g. add a required param) and rebuild without reloading the tab. Expected:
   - the Builds pill shows the red "out of date" Reload;
   - the history read shows an error, not a spinner;

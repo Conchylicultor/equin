@@ -66,7 +66,7 @@ read-sets on this logic change; legacy slots are keyed on the tree hash, which t
 
 ### Sweep for currently-vacuous checks
 
-After the change, run the full `./singularity check` (not cached-hit: sourceHash change forces
+After the change, run the full `./equin check` (not cached-hit: sourceHash change forces
 re-runs). Any check with a broken `grepArg` now fails with the git stderr. Fix each such pattern in
 place (escape / correct the ERE). If none fail, the repo had no other vacuous check — report that.
 
@@ -86,8 +86,8 @@ dropping the redundant knob); that is a larger API change across every grepCode 
 
 ## Verification
 
-1. `./singularity test plugins/framework/plugins/tooling/plugins/checks`
-2. `./singularity check` (full) — all green, or broken patterns found and fixed.
+1. `./equin test plugins/framework/plugins/tooling/plugins/checks`
+2. `./equin check` (full) — all green, or broken patterns found and fixed.
 3. Manual negative: temporarily break the type-scale `grepArg` locally, run
-   `./singularity check type-scale:closed-role-ladder`, see it fail with git's error; revert.
-4. `./singularity build` (background) → deploy receipt `status: ok`.
+   `./equin check type-scale:closed-role-ladder`, see it fail with git's error; revert.
+4. `./equin build` (background) → deploy receipt `status: ok`.

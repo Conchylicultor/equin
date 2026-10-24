@@ -2,7 +2,7 @@
 
 ## Context
 
-A `./singularity push` whose invoking shell / agent pane dies keeps running
+A `./equin push` whose invoking shell / agent pane dies keeps running
 forever (reparented to pid 1). During the 2026-07-21/22 op-wedge incident, one
 orphaned push sat **queued on the global push mutex for 11 hours**, and stale
 orphaned pushes repeatedly grabbed the mutex ahead of live agents' retries. The
@@ -18,7 +18,7 @@ indefinitely.
 
 ### The exposure is wider than "push has no guard"
 
-**Check shares the exposure.** A direct `./singularity check` that is orphaned
+**Check shares the exposure.** A direct `./equin check` that is orphaned
 holds its host-CPU admission grant (`withHostGrant`, another `flock`-based host
 pool) until killed — same failure mode, different lock.
 
@@ -155,19 +155,19 @@ per-spawn wiring.
 
 ## Verification
 
-1. `./singularity build` — confirm the CLI still builds/deploys and the removed
+1. `./equin build` — confirm the CLI still builds/deploys and the removed
    inline poll causes no type/lint errors. Run
    `bun test plugins/framework/plugins/cli/bin` (covers `admission-valve.test.ts`,
    `build-lock.test.ts`, etc.) plus any new unit test for `installOrphanGuard`.
-2. **Orphan repro (push):** start a `./singularity push` (e.g. with a trivial
+2. **Orphan repro (push):** start a `./equin push` (e.g. with a trivial
    `-m`) from a shell, then kill the invoking shell/pane (not the push) so the
    push reparents to pid 1. Within ~2 s the wrapper should detect `ppid===1`,
    SIGTERM the worker, and exit 140. Verify with `ps` that no
    `bun … index.ts push` / `--inspect … push` processes remain, and that
    `~/.singularity/push-slots/slot-0.lock` is free (a fresh push acquires
    immediately). Confirm `push-holder.json` is cleared (graceful teardown).
-3. **Orphan repro (check / build):** same procedure for `./singularity check`
-   (host-CPU grant released) and `./singularity build` (build lock released) —
+3. **Orphan repro (check / build):** same procedure for `./equin check`
+   (host-CPU grant released) and `./equin build` (build lock released) —
    verifying the previously-defeated build case now self-terminates under the
    inspector.
 4. **Kill-switch path:** rerun repro with `SINGULARITY_CLI_INSPECT=0` (no

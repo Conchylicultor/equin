@@ -196,7 +196,7 @@ at the pool.
   exactly `ca4d2cd92`, applied to the resources it currently excludes — the same machinery, not a
   new one. Makes a no-data-change restart a near-no-op for conversation load.
 - **Rate axis — quantify and cut the ~20×/day main restart rate.** Each restart is the herd
-  trigger; halving restarts halves the herds. Need attribution: agent `./singularity build`
+  trigger; halving restarts halves the herds. Need attribution: agent `./equin build`
   hot-swaps vs health-monitor restarts vs crashes. (Out of scope to fix here, but it multiplies
   every other cost.)
 - **Containment (only after the above) —** widen the loader gate for the boot window; parallelize

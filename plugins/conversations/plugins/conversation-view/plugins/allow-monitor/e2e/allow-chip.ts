@@ -3,7 +3,7 @@
 // the old polled endpoint.
 //
 // Usage:
-//   ./singularity run plugins/conversations/plugins/conversation-view/plugins/allow-monitor/e2e/allow-chip.ts \
+//   ./equin run plugins/conversations/plugins/conversation-view/plugins/allow-monitor/e2e/allow-chip.ts \
 //     --conversation <conv-id> --worktree <that conversation's worktree path> [--token .allow-postgres]
 //
 // The token file is created at the worktree root for a few seconds, so the

@@ -8,7 +8,7 @@ import path from "path";
 // Convention: jsdom/React tests live co-located in each plugin's
 // `web/__tests__/` folder and are auto-discovered here — no per-plugin config.
 // Pure-logic tests stay as `bun:test` files next to their source (never under a
-// `__tests__/` folder). Run with `./singularity test <path>`, which drives both
+// `__tests__/` folder). Run with `./equin test <path>`, which drives both
 // runners, or `bun run test:dom` for this suite alone.
 //
 // The file layout alone does NOT keep the runners apart — for a long time this

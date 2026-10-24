@@ -22,7 +22,7 @@ const check: Check = {
       return {
         ok: false,
         message: `${rel} is missing`,
-        hint: "Run `./singularity build` to generate it.",
+        hint: "Run `./equin build` to generate it.",
       };
     }
     // The renderer THROWS on a `defineDataView` id it cannot resolve from source.
@@ -39,14 +39,14 @@ const check: Check = {
       return {
         ok: false,
         message: `${rel} could not be regenerated: ${err instanceof Error ? err.message : String(err)}`,
-        hint: "Fix the marker call named above, then run `./singularity build`.",
+        hint: "Fix the marker call named above, then run `./equin build`.",
       };
     }
     if (readFileSync(file, "utf8") !== expected) {
       return {
         ok: false,
         message: `${rel} is out of sync with the defineDataView ids`,
-        hint: "Run `./singularity build` and commit the regenerated file.",
+        hint: "Run `./equin build` and commit the regenerated file.",
       };
     }
     return { ok: true };

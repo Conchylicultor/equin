@@ -2,7 +2,7 @@
 
 ## Context
 
-The standalone staged `launch` binary produced by `./singularity release` (the
+The standalone staged `launch` binary produced by `./equin release` (the
 `--dev` output, and by extension the packed self-extracting web release and the
 Tauri `.app`) starts its bundled embedded Postgres on the fixed default port
 5433 with `-c listen_addresses=127.0.0.1`. That loopback TCP listener collides
@@ -159,7 +159,7 @@ Zero-*enabled* instances). A later pure-deletion pass would remove:
    string is well-formed in both branches.
 2. **Build + launch a release with the dev stack up** — with the dev stack
    running (PG on `~/.singularity/postgres/socket`, `.s.PGSQL.5433`), run
-   `./singularity release --dev`, then launch the staged `<out>/launch` binary.
+   `./equin release --dev`, then launch the staged `<out>/launch` binary.
    Confirm:
    - It boots — no `pg_ctl start failed` / address-in-use in the release's
      `postgres.log` (this is exactly where the 5433 TCP bind used to collide).
@@ -181,7 +181,7 @@ Zero-*enabled* instances). A later pure-deletion pass would remove:
    (`lsof -iTCP:<port> -sTCP:LISTEN`) and zero-cache's replication-slot creation
    (needs `wal_level=logical`) succeeds — proving the gate correctly restores
    both GUCs for the one consumer that needs them.
-6. `./singularity build` to deploy, then `./singularity check`.
+6. `./equin build` to deploy, then `./equin check`.
 
 ## Critical files
 

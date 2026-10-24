@@ -1,3 +1,4 @@
+import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import { join } from "node:path";
 import {
   spawnCaptured,
@@ -15,7 +16,7 @@ const INSTALL_TIMEOUT_MS = 30 * 60_000;
  * `dep` installed, for a host process that holds no `ExecContext` and must
  * not mint one: a check (running inside an op that already holds its host
  * grant, where an in-process `exec.admit` could wait on itself) and an e2e
- * script. The install runs in a CHILD, `./singularity deps install <id>` —
+ * script. The install runs in a CHILD, `./equin deps install <id>` —
  * a CLI process of its own with its own `cliExecContext`, admitted to the host
  * like any other install, under the same host flock — and the proof is then
  * read back with `readyNow`.
@@ -41,7 +42,7 @@ export async function ensureDepViaCli<S extends DepSource>(
   const before = await readyNow(dep, { root });
   if (before.kind === "ready") return before.ready;
 
-  const argv = [join(root, "singularity"), "deps", "install", dep.id];
+  const argv = [join(root, CLI_NAME), "deps", "install", dep.id];
   const env = opts.grant ? { ...process.env, ...opts.grant.env() } : undefined;
   let failure: string | null = null;
   if (opts.stdio === "inherit") {

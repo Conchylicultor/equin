@@ -112,7 +112,7 @@ export default {
 ```
 
 > `z-layers` becomes the first "standard" plugin (alongside `radius`) to carry a
-> web runtime. `./singularity build` regenerates `web.generated.ts` from the
+> web runtime. `./equin build` regenerates `web.generated.ts` from the
 > filesystem — no hand-registration. `Z_LAYER_CLASS` stays internal; consumers
 > use only the `zLayerClass()` resolver and the tier types.
 
@@ -188,9 +188,9 @@ All four import from `@plugins/primitives/plugins/css/plugins/z-layers/web`.
 
 ## Verification
 
-1. `./singularity build` — regenerates the plugin registry + docs; fails loudly
+1. `./equin build` — regenerates the plugin registry + docs; fails loudly
    if the new web barrel is malformed or boundary/registry checks drift.
-2. `./singularity check` — must stay green. Specifically exercises:
+2. `./equin check` — must stay green. Specifically exercises:
    `type-check` (tier types + partition guard compile; the four consumers
    typecheck against the new prop types), `plugin-boundaries` (no cross-plugin
    `OverlayLayer` import remains; all four import the z-layers barrel),

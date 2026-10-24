@@ -36,9 +36,9 @@
  * recomputes the reading windows FULL (bounded), one under it refills exactly
  * the source's hosts.
  *
- * Requires a running Postgres cluster (started by ./singularity build);
+ * Requires a running Postgres cluster (started by ./equin build);
  * createTestDb() throws loudly when it is unreachable.
- * Run: `./singularity test plugins/network/plugins/live`.
+ * Run: `./equin test plugins/network/plugins/live`.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";

@@ -90,7 +90,7 @@ No routing behavior change.
   `{ kind: "crash", source: "plugin-load", message, url, data: { errorType:
   "PluginLoadError <pluginPath>", stack: null } }`. Server fingerprint dedupes
   to one report+task per failing plugin path.
-- Run `./singularity build` to regenerate the plugin registry.
+- Run `./equin build` to regenerate the plugin registry.
 
 ### 3. Tri-state route store (`pane.ts`) — inert refactor
 
@@ -308,7 +308,7 @@ chunk) ⇒ assert error surface + a `plugin-load` report row, not the homepage.
 
 1. `bun run test:dom plugins/primitives/plugins/pane` (extended suite) +
    `bun run test:dom plugins/apps-core` if tab tests land there.
-2. `./singularity build` (registers the new reports sub-plugin; runs checks).
+2. `./equin build` (registers the new reports sub-plugin; runs checks).
 3. Scripted Playwright against `http://<worktree>.localhost:9000`:
    - reload `/pages/page/<id>` (with and without sessionStorage) ⇒ page
      restores; with persisted `rawPath` the restore is instant (no spinner).

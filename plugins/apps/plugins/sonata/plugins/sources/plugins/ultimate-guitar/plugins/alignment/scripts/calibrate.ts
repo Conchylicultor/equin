@@ -1,8 +1,8 @@
 // ─── Align UG tabs against cached beat features ──────────────────────────────
 //
-//   ./singularity run plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/scripts/calibrate.ts \
+//   ./equin run plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/plugins/alignment/scripts/calibrate.ts \
 //     <features.json>... <ug-tab.json>... [--chords | --bars]
-//   ./singularity run …/calibrate.ts --set [--fetch http://<namespace>.localhost:9000]
+//   ./equin run …/calibrate.ts --set [--fetch http://<namespace>.localhost:9000]
 //
 // <features.json>: a cached BeatFeatures file
 //   (~/.singularity/cache/beat-features/v<N>/<settingsKey>/<videoId>.json).

@@ -9,5 +9,5 @@ import { RELEASE_LOG_CHANNEL } from "../../core/targets";
 export const releaseLog = defineLogSink({
   id: RELEASE_LOG_CHANNEL,
   description:
-    "Release engine run log: stdout/stderr streamed from `./singularity release`, read back by the per-run logs endpoint.",
+    "Release engine run log: stdout/stderr streamed from `./equin release`, read back by the per-run logs endpoint.",
 });

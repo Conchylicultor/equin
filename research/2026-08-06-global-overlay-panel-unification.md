@@ -216,7 +216,7 @@ migrated surfaces plus tooltip).
 `POPOVER_MAX_HEIGHT` comment block around the new contract. Widen
 `no-provider-trigger-render` (`trigger-render-safety/lint/`) from `*Trigger`-only to
 any root `render` prop (~3 lines) so the invariant step 2 depends on is actually
-enforced. Then `./singularity build` to regenerate the autogen reference blocks and
+enforced. Then `./equin build` to regenerate the autogen reference blocks and
 `docs/plugins-*.md`.
 
 ## Risks
@@ -261,7 +261,7 @@ only harvests string literals inside a `className` JSX attribute, so
 
 ## Verification
 
-1. `./singularity build`, then `./singularity check` (type-check + eslint + the
+1. `./equin build`, then `./equin check` (type-check + eslint + the
    `plugins-doc-in-sync` / registry checks).
 2. **The reported bug**, driven for real rather than snapshotted blind:
    ```bash
@@ -280,4 +280,4 @@ only harvests string literals inside a `className` JSX attribute, so
 5. `/` block menu with a query typed then backspaced (the flip-hysteresis case), near
    the bottom edge of the window: confirm it flips upward instead of staying pinned.
 6. `bun run test:dom plugins/primitives/plugins/css/plugins/ui-kit` and
-   `./singularity test plugins/primitives` for the existing suites.
+   `./equin test plugins/primitives` for the existing suites.

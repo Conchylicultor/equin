@@ -165,12 +165,12 @@ barrel-free slot set to diff it against the committed manifest. Extend its failu
 list, for each slot in the rendered set but absent from the committed one, the override path
 it owes (`config/${asPath(pluginId)}/${slotId}.jsonc`).
 
-Zero added cost, and a bare `./singularity check` (no build) now names exactly what is coming.
+Zero added cost, and a bare `./equin check` (no build) now names exactly what is coming.
 
 > Deliberately **not** done: retargeting `reorder:configs-authored` to scan live source. That
 > would pull the codegen barrel — and its load-time `setDefaultOriginDefaultsPreparer` side
 > effect — into an `alwaysRun` check, adding an uncached ~5,800-file facet tree walk to every
-> `./singularity check`. The in-sync check already computes that set and is cacheable.
+> `./equin check`. The in-sync check already computes that set and is cacheable.
 
 ### 5. `regen-generated` asserts marker-free
 
@@ -185,13 +185,13 @@ check-ordering accident.
 
 ```
 1. write detail-action-slot.ts  →  defineRenderSlot("config-detail.action")
-2. ./singularity build
+2. ./equin build
      • manifest regenerated pre-barrel  → reorderable-slots-in-sync passes
      • config-detail.action.origin.jsonc written
      • config-detail.action.jsonc SEEDED (real hash, full catalog, @review marker)
      • checks → config:overrides-authored FAILS, naming that exact path + guidance
 3. edit the file: arrange items, add rationale, delete the @review line
-4. ./singularity check config:overrides-authored   → green (seconds)
+4. ./equin check config:overrides-authored   → green (seconds)
 ```
 
 **Still two build cycles** — build #1 aborts on the marker, exactly as it aborts today on the
@@ -235,7 +235,7 @@ hand-authorable placeholder hash, which was designed and rejected — it is the 
 
 Every codegen-coupled artifact in this repo has the same property — migrations, the plugin
 registry, docs, config origins all require a build. A slot is not special, and the repo
-workflow mandates `./singularity build` after changes regardless.
+workflow mandates `./equin build` after changes regardless.
 
 ## Files to change
 
@@ -259,22 +259,22 @@ Existing 135 committed overrides carry no marker → they pass unchanged; no mig
 ## Verification
 
 1. **Repro the original pain, then confirm it is gone.** On a scratch branch, delete
-   `config/config_v2/settings/config-detail.action.jsonc` and run `./singularity build`.
+   `config/config_v2/settings/config-detail.action.jsonc` and run `./equin build`.
    Expect: the file is re-seeded with the correct `// @hash 6e2dcb8b8125`, a body identical to
    its origin, and an `@review` marker; `config:overrides-authored` fails naming that path.
-   Delete the marker line, run `./singularity check config:overrides-authored` → green.
+   Delete the marker line, run `./equin check config:overrides-authored` → green.
    Restore the original file with `git checkout`.
 2. **A genuinely new slot, end to end.** Add a throwaway `defineRenderSlot` in a scratch
-   plugin, run `./singularity build` once, remove the marker, run `./singularity check`.
+   plugin, run `./equin build` once, remove the marker, run `./equin check`.
    Confirm one build cycle total and that `reorderable-slots-in-sync` named the owed path.
 3. **Zero-build discovery.** With the new slot written but before any build, run
-   `./singularity check reorderable-slots-in-sync` and confirm it prints the owed
+   `./equin check reorderable-slots-in-sync` and confirm it prints the owed
    `config/<tree>/<slot>.jsonc` path.
-4. **No regression on the existing tree.** `./singularity check` on a clean tree — all 135
+4. **No regression on the existing tree.** `./equin check` on a clean tree — all 135
    overrides pass, `config-origins-in-sync` unaffected.
-5. **Seeding is idempotent and never clobbers.** Run `./singularity build` twice; confirm the
+5. **Seeding is idempotent and never clobbers.** Run `./equin build` twice; confirm the
    second run leaves every override byte-identical (`git status` clean).
-6. **Marker cannot land.** With a marker present, confirm `./singularity check` fails, and
+6. **Marker cannot land.** With a marker present, confirm `./equin check` fails, and
    unit-test the `regen-generated` assertion.
 7. **Unit tests.** Extend
    `plugins/framework/plugins/tooling/plugins/codegen/core/config-origin-gen.test.ts`:

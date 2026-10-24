@@ -1,7 +1,7 @@
 import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
 
 /**
- * `./singularity deps …` — prewarm, inspect, clean up and upgrade optional
+ * `./equin deps …` — prewarm, inspect, clean up and upgrade optional
  * dependencies from a terminal. `list`, `install` and `remove` read the
  * generated declaration registry and run the host-only engine directly — no
  * backend is booted; install uses the same `ensureDep` a supervised job does.

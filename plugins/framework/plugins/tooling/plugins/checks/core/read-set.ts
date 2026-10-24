@@ -1,4 +1,4 @@
-// Input-keyed invalidation primitive for the `./singularity check` pass-cache.
+// Input-keyed invalidation primitive for the `./equin check` pass-cache.
 //
 // The whole-tree cache (`cache.ts` `has()/record()`) keys every check's PASS on
 // the entire working-tree hash, so ONE changed byte anywhere re-runs all ~62

@@ -8,12 +8,12 @@ Parallel-agent worktrees can each fork from the same main snapshot, add a migrat
 Error: [...] are pointing to a parent snapshot: ... which is a collision
 ```
 
-and `./singularity build` silently says *"no schema change detected; ignoring"* because `cli/src/migrations.ts` spawns drizzle-kit with `stderr: "inherit"` and only checks `exitCode`. We just spent a rescue-commit reconstructing a stale snapshot manually (PR `414a4c2` shipped with `prevId` frozen to the pre-`add_spawned_by` state).
+and `./equin build` silently says *"no schema change detected; ignoring"* because `cli/src/migrations.ts` spawns drizzle-kit with `stderr: "inherit"` and only checks `exitCode`. We just spent a rescue-commit reconstructing a stale snapshot manually (PR `414a4c2` shipped with `prevId` frozen to the pre-`add_spawned_by` state).
 
 Three improvements that together close this hole structurally:
 
 1. A new `snapshot-chain-intact` check that validates `server/src/db/migrations/meta/*.json` forms a linear chain — independent of drizzle-kit.
-2. Register that check so it runs from both `./singularity check` and `./singularity push`. Because `push` runs `runChecks()` **after** rebasing onto main, any Y-fork caused by parallel merges is caught at push time, before it lands.
+2. Register that check so it runs from both `./equin check` and `./equin push`. Because `push` runs `runChecks()` **after** rebasing onto main, any Y-fork caused by parallel merges is caught at push time, before it lands.
 3. Capture drizzle-kit's stderr in `cli/src/migrations.ts` so collision errors are surfaced instead of being masked by the "no schema change detected" branch.
 
 ## Design
@@ -37,7 +37,7 @@ FAIL
   snapshot chain has a Y-fork: two snapshots share prevId <uuid>:
     20260418_134114_d8da9e66__add_config_table_snapshot.json
     20260418_103000_abcdef12__add_spawned_by_snapshot.json
-  hint: re-run `./singularity build` to regenerate the branch's snapshot
+  hint: re-run `./equin build` to regenerate the branch's snapshot
         against the current main tip.
 ```
 
@@ -103,7 +103,7 @@ if (exitCode !== 0) process.exit(1);
 if (/error|collision|conflict/i.test(stderr)) {
   console.error(
     "\nError: drizzle-kit printed a diagnostic but exited 0. Treating as failure.\n" +
-      "If this is a snapshot-chain collision, rebase onto origin/main and re-run ./singularity build.",
+      "If this is a snapshot-chain collision, rebase onto origin/main and re-run ./equin build.",
   );
   process.exit(1);
 }
@@ -113,9 +113,9 @@ if (/error|collision|conflict/i.test(stderr)) {
 
 - **1** makes the detection not depend on drizzle-kit at all. Pure structural validation catches Y-forks even if drizzle-kit silently tolerates them.
 - **2** is the placement decision: because `push` runs the check *after* rebasing onto main, any collision caused by a parallel merge materializes and fails before the branch merges. The stale `prevId` can never land.
-- **3** makes the remaining code path (`./singularity build` during day-to-day dev) stop masking drizzle-kit's own collision errors behind "no schema change detected".
+- **3** makes the remaining code path (`./equin build` during day-to-day dev) stop masking drizzle-kit's own collision errors behind "no schema change detected".
 
-Auto-*rewriting* the snapshot at push time was considered and rejected — silently mutating committed files during a push is too surprising. The check fails loudly; user re-runs `./singularity build` to regenerate. That keeps the fix explicit and reviewable.
+Auto-*rewriting* the snapshot at push time was considered and rejected — silently mutating committed files during a push is too surprising. The check fails loudly; user re-runs `./equin build` to regenerate. That keeps the fix explicit and reviewable.
 
 ## Critical files
 
@@ -134,20 +134,20 @@ Auto-*rewriting* the snapshot at push time was considered and rejected — silen
 
 ## Verification
 
-1. **Unit-level sanity** — after implementation, run `./singularity check --snapshot-chain-intact` on a clean tree. Expect pass.
-2. **Synthesize a Y-fork**: temporarily edit any non-root snapshot's `prevId` to match another snapshot's `prevId`. Re-run `./singularity check --snapshot-chain-intact`. Expect fail with both filenames in the message. Revert the edit.
+1. **Unit-level sanity** — after implementation, run `./equin check --snapshot-chain-intact` on a clean tree. Expect pass.
+2. **Synthesize a Y-fork**: temporarily edit any non-root snapshot's `prevId` to match another snapshot's `prevId`. Re-run `./equin check --snapshot-chain-intact`. Expect fail with both filenames in the message. Revert the edit.
 3. **Missing parent**: temporarily change a `prevId` to a random UUID. Re-run; expect fail pointing at that snapshot. Revert.
-4. **Push-time gate**: on a throwaway branch, introduce a synthetic Y-fork as in (2), commit, and run `./singularity push -m "test"`. Expect the rebase to succeed and the check to fail before any push to main. Branch stays local; main untouched.
-5. **drizzle-kit stderr surfacing**: temporarily force drizzle-kit to a chain-collision state (as in the real incident) and run `./singularity build --migration-name test`. Expect the collision error to be visible and the process to exit non-zero, **not** the "no schema change detected; ignoring" warning.
-6. **Regression**: `./singularity check` on main passes (all other checks still green).
+4. **Push-time gate**: on a throwaway branch, introduce a synthetic Y-fork as in (2), commit, and run `./equin push -m "test"`. Expect the rebase to succeed and the check to fail before any push to main. Branch stays local; main untouched.
+5. **drizzle-kit stderr surfacing**: temporarily force drizzle-kit to a chain-collision state (as in the real incident) and run `./equin build --migration-name test`. Expect the collision error to be visible and the process to exit non-zero, **not** the "no schema change detected; ignoring" warning.
+6. **Regression**: `./equin check` on main passes (all other checks still green).
 
 ## Scope notes
 
 - Implementation should start by entering a fresh worktree (current worktree was just pushed and is done).
-- No change to the `./singularity push` flow itself — adding the check to `CHECKS[]` is sufficient because `runChecks()` already runs post-rebase.
+- No change to the `./equin push` flow itself — adding the check to `CHECKS[]` is sufficient because `runChecks()` already runs post-rebase.
 - Auto-regeneration at push time (silent snapshot rewrite) is explicitly **out of scope** — detection + user-driven fix keeps the change reviewable.
 
 ## Follow-ups (out of scope)
 
 - Content-addressed snapshot IDs (derive `id` from normalized snapshot content, which would make Y-forks impossible by construction). Worth exploring if collisions recur even with this gate.
-- `./singularity push` could optionally auto-rebase-and-regenerate snapshots when it detects a stale `prevId`, but that crosses a "mutate committed state silently" line that's best left off the hot path.
+- `./equin push` could optionally auto-rebase-and-regenerate snapshots when it detects a stale `prevId`, but that crosses a "mutate committed state silently" line that's best left off the hot path.

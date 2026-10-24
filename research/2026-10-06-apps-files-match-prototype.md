@@ -99,8 +99,8 @@ These are needed because tokens alone can't express them:
 
 ## 5. Verification
 
-1. Run `./singularity build` (backgrounded), then `./singularity check`.
+1. Run `./equin build` (backgrounded), then `./equin check`.
 2. Run `compare-diff.ts --name proto-1790864772-0r54` at the default width, at each canvas preset that brackets 1100 / 900 / 640, and in light and dark (`--color-scheme`). Iterate on token values until the differing-pixel ratio is near zero; content differences (real filesystem vs mock data) are the only residue. Use the colour report to tune palette tokens.
 3. Run `explorer-verify.ts`, extended with assertions for: the app name "Files" in the brand, sidebar width 224, toolbar 48, row height 30, Modified left-aligned, the selected row's colour = accent text, guides present under an expanded folder, the status bar having no "available", and the breadcrumb showing every ancestor at 1440. Also run `git-verify.ts`.
 4. Screenshot other apps that use the touched primitives (Pages tree, agent-manager sidebar, a transcript markdown, a file pane with Seti icons) to confirm nothing changed except, if chosen, the global Seti crop.
-5. Run `./singularity test` on `ui/icons`, `primitives/breadcrumb` and `primitives/tree`.
+5. Run `./equin test` on `ui/icons`, `primitives/breadcrumb` and `primitives/tree`.

@@ -11,7 +11,7 @@ import {
 export type WatchForCommandOptions = FileWatcherOptions;
 
 /**
- * Watch files for the life of a foreground `./singularity` command (`await`
+ * Watch files for the life of a foreground `./equin` command (`await`
  * waiting on an op). The same engine as `defineFileWatcher` — debounce,
  * ceiling, reconcile — with no registry: a CLI process has no Background
  * activity catalog, and a wait is not background activity. Stop it before the

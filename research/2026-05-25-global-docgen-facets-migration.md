@@ -211,8 +211,8 @@ All 9 facets: return `DocFact[]` with folder + key + values.
 
 ## Verification
 
-1. `./singularity build` — must succeed
-2. `./singularity check` — all checks pass
+1. `./equin build` — must succeed
+2. `./equin check` — all checks pass
 3. Spot-check `plugins-details.md` and per-plugin `CLAUDE.md` — new folder-grouped structure
 4. `routes.md` unchanged (still uses compat shim)
 

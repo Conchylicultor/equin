@@ -150,11 +150,11 @@ base surface, which the Mist design keeps at `bg-2`.
 
 ## Verification
 
-1. `./singularity build` (runs checks: type-check catches every removed `menu-min` /
+1. `./equin build` (runs checks: type-check catches every removed `menu-min` /
    `popoverWidthMenu` use; the new check passes after the app.css fix).
-2. Temporarily revert the app.css fix and confirm `./singularity check theme-bridge-reads`
+2. Temporarily revert the app.css fix and confirm `./equin check theme-bridge-reads`
    fails with the right message.
-3. `./singularity run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts --name proto-1791412353-x9vk --width 1440`.
+3. `./equin run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts --name proto-1791412353-x9vk --width 1440`.
    The diff ratio should drop, and the colour report should show the panel ≈ 0.265 and the
    hover ≈ 0.305.
 4. Screenshot the sidebar launch dropdown with
@@ -167,4 +167,4 @@ base surface, which the Mist design keeps at `bg-2`.
    - clicking play launches without changing the default.
 5. Spot-check a Select, a control-panel popover (Filter/Sort) and the Pages section menu (still
    15.5rem fixed).
-6. `./singularity test plugins/primitives/plugins/css/plugins/ui-kit` (row/menu tests).
+6. `./equin test plugins/primitives/plugins/css/plugins/ui-kit` (row/menu tests).

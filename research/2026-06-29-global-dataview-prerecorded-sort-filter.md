@@ -239,7 +239,7 @@ number field's `FilterOperatorSet`; adjust `operatorId`/`value` to match.)
 
 ## Verification
 
-1. `./singularity build` (regenerates migrations/docs, runs checks incl.
+1. `./equin build` (regenerates migrations/docs, runs checks incl.
    `plugins-doc-in-sync`, `data-views-in-sync`, `type-check`, `eslint`,
    boundaries). Must pass.
 2. App at `http://att-1782731194-5h3n.localhost:9000/sonata`:

@@ -9,7 +9,7 @@ derivation (`building && wsStatus !== "open"`, `plugins/build/web/components/bui
 — so the only way to know *why* it never renders is to observe the browser's
 sequence of `(building, wsStatus, staleTab)` values. We want a `console.log`-style
 primitive whose output an agent can read **without a browser**, and that survives the
-worktree backend restart that `./singularity build` performs mid-build.
+worktree backend restart that `./equin build` performs mid-build.
 
 ### The load-bearing constraint (why this is file-based, not MCP-based)
 
@@ -157,7 +157,7 @@ the unified `inspect` MCP tool and folding `get_runtime_profile` into it (see
 
 ## Verification
 
-1. `./singularity build` — must pass plugin-boundary / barrel-purity / DAG / eslint checks.
+1. `./equin build` — must pass plugin-boundary / barrel-purity / DAG / eslint checks.
    New edges: build→debug/logs/web (web), debug/logs ingress route.
 2. **Direct ingress** (no browser): from any client, `POST /api/logs/emit` with
    `{ channel: "smoke", lines: [{ line: "hi", t: <ms> }] }`, then

@@ -212,7 +212,7 @@ state rather than intercept `setEditMode`.
 
 ## Verification
 
-1. `./singularity build` (from the worktree dir).
+1. `./equin build` (from the worktree dir).
 2. Scripted Playwright run (`bun e2e/screenshot.mjs`) against
    `http://<worktree>.localhost:9000`:
    - Enter edit mode, switch scope to **everyone**, drag an item in a
@@ -231,4 +231,4 @@ state rather than intercept `setEditMode`.
    (upsert on drag → delete on commit/cancel).
 4. Confirm personal scope is unaffected (drag in personal scope still writes
    config_v2 and shows no dot/popover).
-5. `./singularity check` (boundaries, type-check, plugins-doc-in-sync).
+5. `./equin check` (boundaries, type-check, plugins-doc-in-sync).

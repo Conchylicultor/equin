@@ -397,7 +397,7 @@ function report(
   }
   if (unmatched.length > 0) {
     console.log(
-      `\nUnmatched (decide each with --overrides <file.json> — a Google id, a custom place or a discard; find ids with ./singularity places search-place):`,
+      `\nUnmatched (decide each with --overrides <file.json> — a Google id, a custom place or a discard; find ids with ./equin places search-place):`,
     );
     for (const { row, resolution } of unmatched) {
       if (resolution.kind !== "unmatched") continue;
@@ -406,9 +406,7 @@ function report(
       );
     }
   }
-  console.log(
-    `\nReview, then: ./singularity places import-mapstr <path> --apply`,
-  );
+  console.log(`\nReview, then: ./equin places import-mapstr <path> --apply`);
 }
 
 // ── Phase B: apply ──────────────────────────────────────────────────────────

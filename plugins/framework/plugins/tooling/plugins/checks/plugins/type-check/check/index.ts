@@ -217,7 +217,7 @@ const check: Check = {
   // `*.composition.*.generated.ts` registries the tsconfig includes. The read-set
   // cannot record them (it replays against git snapshots, which do not hold
   // them), so an outer HIT trusts that they are what the tree generates — which
-  // `./singularity build` regenerates before any check runs. The inner stores
+  // `./equin build` regenerates before any check runs. The inner stores
   // key them by content like every file, so no stored result is ever stale for
   // one; only an overlay-only change with an unchanged tree can replay a PASS.
   inputKeyed: true,
@@ -389,7 +389,7 @@ const check: Check = {
     const hints: string[] = [];
     if (hasMissingModule) {
       hints.push(
-        'A "Cannot find module" error for a dep you didn\'t touch is usually a missing workspace link — run ./singularity build first (it re-runs bun install) and re-push.',
+        'A "Cannot find module" error for a dep you didn\'t touch is usually a missing workspace link — run ./equin build first (it re-runs bun install) and re-push.',
       );
     }
     if (tscErrors) {

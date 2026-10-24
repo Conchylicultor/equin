@@ -183,7 +183,7 @@ Nothing else needs to change for the web resource: the existing
 
 ## Migration
 
-Run `./singularity build --migration-name add-task-dependencies`. Drizzle will
+Run `./equin build --migration-name add-task-dependencies`. Drizzle will
 emit:
 1. `CREATE TABLE task_dependencies (…)` with composite PK + FK cascades.
 2. `DROP VIEW tasks_v; DROP VIEW attempts_v;` (attempts_v isn't changing but
@@ -194,7 +194,7 @@ emit:
 
 ## Verification
 
-1. `./singularity build` — migration applies, server restarts, frontend
+1. `./equin build` — migration applies, server restarts, frontend
    rebuilds.
 2. MCP: from any conversation, call `add_task` with `dependencies: ["<some
    existing task id>"]`. New task appears with the dep shown in the view and
@@ -210,4 +210,4 @@ emit:
    `completed` (via a push). Parent task's status should update from `blocked`
    to its natural state (via the existing `tasksResource` notify cascade when
    the push/attempt changes; the view recomputes automatically).
-7. `./singularity check` — `migrations-in-sync` passes.
+7. `./equin check` — `migrations-in-sync` passes.

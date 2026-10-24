@@ -1,5 +1,5 @@
 /**
- * `./singularity deploy converge|ship` — the two verbs over a deployment.
+ * `./equin deploy converge|ship` — the two verbs over a deployment.
  *
  * **converge** makes a host serve a composition: run user, dir layout, the
  * `env` EnvironmentFile, Caddy, the systemd unit, the firewall.

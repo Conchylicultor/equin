@@ -7,7 +7,7 @@ import { DepRowSchema } from "./dep-state";
  * Every dependency this backend declares, with its state on this machine.
  *
  * Pushed: the server watches the deps cache directory, which the installing
- * process (a supervised child, or a `./singularity deps` command) writes, and
+ * process (a supervised child, or a `./equin deps` command) writes, and
  * re-reads on every change. Reading it never starts an install.
  */
 export const depsStates = liveValue("deps.states", {

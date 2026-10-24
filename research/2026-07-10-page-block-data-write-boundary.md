@@ -237,7 +237,7 @@ migration is fine — a migration is a snapshot of history, not live code.
 
 ## Verification
 
-1. `./singularity build` (regenerates the server registry from the 20 new barrels;
+1. `./equin build` (regenerates the server registry from the 20 new barrels;
    runs `check`, incl. the new `block-data-registered`).
 2. **The reported bug, directly** — the write is now rejected:
    ```bash

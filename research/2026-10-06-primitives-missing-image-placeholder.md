@@ -87,5 +87,5 @@ It takes `name`, `reason`, `onRetry?` and `size: "inline" | "chip"`.
   - `fireEvent.error` on a thumbnail's `<img>` with `fetch` mocked to 404 shows "No longer available", and there is no "View image x" button.
   - In a gallery of a, b, c with b failed, ← / → from a goes to c.
   - With `fetch` mocked to 500, "Couldn't load" appears, and Retry brings the `<img>` back.
-- `./singularity test plugins/primitives/plugins/overlay/plugins/image-viewer`
-- `./singularity build`, then screenshot the conversation from the user's report (`/agents/c/conv-1790333977-xoi5`) to see the placeholder on the deleted scratchpad screenshots.
+- `./equin test plugins/primitives/plugins/overlay/plugins/image-viewer`
+- `./equin build`, then screenshot the conversation from the user's report (`/agents/c/conv-1790333977-xoi5`) to see the placeholder on the deleted scratchpad screenshots.

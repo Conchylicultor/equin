@@ -270,7 +270,7 @@ Currently the Forge UI also shows empty routes for any plugin using `defineEndpo
 
 ```bash
 # Build (runs facets + codegen)
-./singularity build
+./equin build
 
 # Inspect docs/routes.md — should now list HTTP routes for tasks, conversations, etc.
 head -60 docs/routes.md
@@ -279,10 +279,10 @@ head -60 docs/routes.md
 grep -A10 "Server:" plugins/tasks/CLAUDE.md
 
 # Run the doc-in-sync check
-./singularity check --plugins-doc-in-sync
+./equin check --plugins-doc-in-sync
 
 # Run all checks
-./singularity check
+./equin check
 ```
 
 Spot-check: `plugins/tasks/CLAUDE.md` autogen block should now show `GET /api/tasks`, `POST /api/tasks`, etc. under `Server:`. `docs/routes.md` should list ~30+ routes instead of just 2 WS routes.

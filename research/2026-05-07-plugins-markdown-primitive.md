@@ -226,11 +226,11 @@ Lift providers outside the `segments.map` loop. Delete `buildMdComponents`, `nod
 
 ### Step 9: Build and verify
 
-Run `./singularity build`, check all three surfaces in the browser.
+Run `./equin build`, check all three surfaces in the browser.
 
 ## Verification
 
 1. **Memory panel** (`/debug/memory`): Markdown renders with syntax highlighting for code blocks (new!), but no file links or active data (no context providers).
 2. **File preview pane**: Open a `.md` file from a conversation's file list. File paths are clickable. Code blocks have syntax highlighting (new!).
 3. **Assistant text**: Full feature set — syntax highlighting, file links, active data chips, image proxy. Toggle markdown off/on. Verify inline code patterns (conv-ids become chips, file paths become buttons, URLs become links).
-4. Run `./singularity check` — no plugin-boundary violations.
+4. Run `./equin check` — no plugin-boundary violations.

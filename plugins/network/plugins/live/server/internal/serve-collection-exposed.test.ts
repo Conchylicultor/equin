@@ -14,7 +14,7 @@
  * - boot: both forms are deferred and bound with the contributions;
  * - the bind's refusals.
  *
- * Run: `./singularity test plugins/network/plugins/live`.
+ * Run: `./equin test plugins/network/plugins/live`.
  */
 
 import { describe, expect, test } from "bun:test";

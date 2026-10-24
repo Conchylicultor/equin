@@ -90,7 +90,7 @@ I will document this convention in both factories' JSDoc and the two CLAUDE.md f
 
 ### 1e. Verification at end of Phase 1
 
-Phase 1 is mechanically incomplete on its own — every existing consumer will fail to compile because the factories' return type changed. That is the point: the type error becomes the to-do list for Phase 2. I do **not** run `./singularity build` after Phase 1; I run it once after each Phase 2 batch lands so each batch is independently verified.
+Phase 1 is mechanically incomplete on its own — every existing consumer will fail to compile because the factories' return type changed. That is the point: the type error becomes the to-do list for Phase 2. I do **not** run `./equin build` after Phase 1; I run it once after each Phase 2 batch lands so each batch is independently verified.
 
 ## Phase 2 — Per-consumer migrations (Sonnet sub-agents)
 
@@ -171,7 +171,7 @@ Files:
 - `mutations.ts:8`, `:23`, `:28-41` — `.get()`, `.upsert()`, `.delete()` (two delete paths today).
 - `resource.ts` — `.table` for raw select if needed.
 
-**Caveat for the agent**: the table name shape is enforced by `defineExtension` as `${parent}_ext_${name}`. The hand-rolled name today is `tasks_ext_auto_start` — verify before running the build, and STOP and report if there's a name mismatch (would cause an unintended `DROP TABLE` + `CREATE TABLE` migration). Do not run `./singularity build` until the names are confirmed identical.
+**Caveat for the agent**: the table name shape is enforced by `defineExtension` as `${parent}_ext_${name}`. The hand-rolled name today is `tasks_ext_auto_start` — verify before running the build, and STOP and report if there's a name mismatch (would cause an unintended `DROP TABLE` + `CREATE TABLE` migration). Do not run `./equin build` until the names are confirmed identical.
 
 ## Phase 2 sub-agent brief template
 
@@ -187,20 +187,20 @@ Each batch above ships to a Sonnet agent with this prompt structure (filled in w
 > 1. In each `tables*.ts` / `schema*.ts`, replace `_xxxAttachments`/`_xxxExt` with the handle name (camelCase, no leading `_`). Add a sibling `export const _xxxTable = handle.table` so drizzle-kit still discovers the pgTable.
 > 2. Update each call site to use handle methods. For raw queries that don't fit a handle method (live-state resource loaders, complex SQL), use `handle.table`.
 > 3. Update each consumer's `server/index.ts` barrel: re-export the handle, drop the old `_xxx` re-export.
-> 4. Run `./singularity build` from the worktree directory. The build must succeed and the auto-generated migration diff must be empty (the underlying SQL schema is unchanged). If a migration is generated, STOP and report — do not commit it.
+> 4. Run `./equin build` from the worktree directory. The build must succeed and the auto-generated migration diff must be empty (the underlying SQL schema is unchanged). If a migration is generated, STOP and report — do not commit it.
 > 5. Report back with: files changed, build outcome, migration diff (must be empty), and any surprises.
 >
 > **Hard rules:**
 > - Do not modify other consumers (out of scope for this batch).
-> - Do not push, commit, or run `./singularity push`.
+> - Do not push, commit, or run `./equin push`.
 > - If the build fails or a migration is generated, STOP and report; do not improvise.
 
 I run each batch sequentially, building between batches and resolving any surprises before dispatching the next.
 
 ## Verification (end-to-end)
 
-1. `./singularity build` — final run, after all batches. Migration diff must be empty (the underlying tables are unchanged; only the TS API moved).
-2. `./singularity check` — plugin-boundary checker passes. After this refactor, R4 mechanically prevents cross-plugin pgTable imports because no pgTable lives in a barrel.
+1. `./equin build` — final run, after all batches. Migration diff must be empty (the underlying tables are unchanged; only the TS API moved).
+2. `./equin check` — plugin-boundary checker passes. After this refactor, R4 mechanically prevents cross-plugin pgTable imports because no pgTable lives in a barrel.
 3. `rg -n '_taskAttachments|_conversationAttachments|_agentAttachments|_launchPromptAttachments|_quickPromptAttachments|_agentAutoLaunchExt|_conversationCategoryExt|_conversationProgress|_turnSummaries|_conversationsExtQueue|_tasksAutoStartExt|syncOwnerAttachments|getExtension|upsertExtension'` — empty result outside `internal/` of the owning plugin (and the historical migration files in `server/src/db/migrations/`).
 4. UI smoke tests:
    - Paste image into task description → save → reopen → image still rendered (`set` path on `taskAttachments`).

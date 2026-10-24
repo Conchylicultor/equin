@@ -345,7 +345,7 @@ together** — Stage 2 alone makes `edit_page` refuse chip-bearing blocks.
 
 ## Verification
 
-`./singularity test <path>` is the only runner. `*.test.ts` beside source =
+`./equin test <path>` is the only runner. `*.test.ts` beside source =
 bun:test; `web/__tests__/` = jsdom.
 
 | path | pins |
@@ -359,7 +359,7 @@ bun:test; `web/__tests__/` = jsdom.
 | existing `collab-roundtrip` ×3, `active-data-inline-copy.test.tsx` | must stay green |
 
 By hand at `http://att-1787654245-y41m.localhost:9000/pages` after
-`./singularity build` (`run_in_background: true`):
+`./equin build` (`run_in_background: true`):
 
 1. Paste an attempt id inline → chip; click → attempt pane opens (cross-app push).
 2. Reload → chip persists (proves it is a node, not a re-scan).
@@ -373,7 +373,7 @@ By hand at `http://att-1787654245-y41m.localhost:9000/pages` after
 9. Type an id into a page block → stays plain text (declared paste-only behaviour).
 10. Write `` `att-…` `` as inline code → stays code, no chip.
 
-`./singularity check` expected to fire: `plugins-registry-in-sync` and
+`./equin check` expected to fire: `plugins-registry-in-sync` and
 `plugins-doc-in-sync` (new plugin + 4 server barrels; plus hand-written prose in
 `active-data`, `page/editor`, `markdown-apply`, `read-only-view`, `text-editor`
 CLAUDE.mds), `plugin-boundaries` (new `active-data → page/editor` edges — verified

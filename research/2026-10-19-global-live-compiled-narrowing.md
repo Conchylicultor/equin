@@ -338,7 +338,7 @@ Candidates for a later `follows` pass, listed in the session 3 notes: `task-sour
   - `routed-trigger.test.ts`: composite pairing.
 - optimistic-mutation `overlay.test.ts`: scoped deltas without a watermark confirm by ack.
 - C39 harness case for each converted key.
-- Run with `./singularity test <paths>`, plus `./singularity check`.
+- Run with `./equin test <paths>`, plus `./equin check`.
 
 **Docs to update:**
 - the CLAUDE.md of network/live, query-resource, resource-runtime, change-feed, optimistic-mutation and page/editor;
@@ -408,6 +408,6 @@ one count per drained tuple-cycle whose ack the 64-xid cap suppressed.
 reports, nothing reads a count); a skip state for a scoped read whose scope is
 not known yet (`useLive(c, null)` is the count kind's skip today); `withWire`
 fields on a scoped set; the commit-latency bench for the marker. Found, not
-ours: in a full `./singularity test plugins/page/plugins/editor` run, 15 tests
+ours: in a full `./equin test plugins/page/plugins/editor` run, 15 tests
 in 7 files fail order-dependently because `collectContributions` replaces the
 test preload's host-service providers (server-core, likely since `717f488f45`).

@@ -2,5 +2,5 @@
   "name": "@singularity/plugin-infra-deps",
   "version": "0.0.1",
   "private": true,
-  "description": "Optional dependencies, installed on demand and kept current: declare once (defineDep), install off the event loop into a content-addressed host-wide cache (ensureDep / requestDep), see the state (depState, deps.states, Settings → Dependencies), and upgrade through gated updaters (./singularity deps upgrade)."
+  "description": "Optional dependencies, installed on demand and kept current: declare once (defineDep), install off the event loop into a content-addressed host-wide cache (ensureDep / requestDep), see the state (depState, deps.states, Settings → Dependencies), and upgrade through gated updaters (./equin deps upgrade)."
 }

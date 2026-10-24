@@ -215,8 +215,8 @@ them down. (The `text-xs` eyebrow styling disappears because it lived in the now
 
 ## Verification
 
-1. `./singularity build` from the worktree; confirm it deploys clean (build runs
-   `./singularity check` — eslint + boundaries must pass).
+1. `./equin build` from the worktree; confirm it deploys clean (build runs
+   `./equin check` — eslint + boundaries must pass).
 2. Open `http://att-1780527965-8fvu.localhost:9000/config` and visually confirm **every**
    config row is the same height (groups, leaves, combined, multi-config children, and
    flat search results). Scripted check with the e2e helper:

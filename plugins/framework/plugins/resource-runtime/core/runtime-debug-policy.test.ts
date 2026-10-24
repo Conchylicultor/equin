@@ -5,7 +5,7 @@
  * (`readSetBases`, `derivedReads`, `routeDrifted`, `tuples`, `persisted`,
  * `positionAgeMs`) are emitted for every entry — degrading to `[]` / `null`
  * on a central-shaped runtime that wires no read-set. Run with
- * `./singularity test plugins/framework/plugins/resource-runtime`.
+ * `./equin test plugins/framework/plugins/resource-runtime`.
  */
 
 import { describe, expect, test } from "bun:test";

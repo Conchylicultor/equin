@@ -159,9 +159,9 @@ function launchFailure(
       `  launch error    ${detail}\n` +
       `\n` +
       `If the resolved path above is NOT inside this checkout, the script ran against\n` +
-      `another checkout's dependencies. Run it as \`./singularity run <script.ts> [args…]\`,\n` +
+      `another checkout's dependencies. Run it as \`./equin run <script.ts> [args…]\`,\n` +
       `which installs this worktree's own node_modules from its own lock first. If the\n` +
-      `install itself is damaged: \`./singularity deps remove chromium\`, then run again.`,
+      `install itself is damaged: \`./equin deps remove chromium\`, then run again.`,
     { cause },
   );
 }
@@ -250,7 +250,7 @@ export async function withBrowser<T>(
   await repairAgentWrites("start");
 
   // Chromium is an on-demand dependency: the first run on a machine installs
-  // it (~280 MB, progress on this terminal) in a `./singularity deps install`
+  // it (~280 MB, progress on this terminal) in a `./equin deps install`
   // child — this script holds no ExecContext of its own — and every run after
   // finds it with one read.
   const installed = await ensureDepViaCli(chromium, {

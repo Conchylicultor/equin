@@ -24,7 +24,7 @@
  * (also on failure). Refuses main.
  *
  * Manual only — nothing runs this automatically.
- *   ./singularity run plugins/conversations/plugins/conversations-view/plugins/data-view/plugins/history/e2e/history-live-verify.ts [--headed]
+ *   ./equin run plugins/conversations/plugins/conversations-view/plugins/data-view/plugins/history/e2e/history-live-verify.ts [--headed]
  */
 import type { Page } from "playwright";
 import {

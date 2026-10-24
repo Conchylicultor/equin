@@ -13,7 +13,7 @@
  * To upgrade: change `SETI_SOURCE.commit` and rerun. The `icons:seti-in-sync`
  * check fails until you do.
  *
- * Usage: ./singularity run plugins/ui/plugins/icons/scripts/vendor-seti.ts
+ * Usage: ./equin run plugins/ui/plugins/icons/scripts/vendor-seti.ts
  */
 import { mkdtemp, readdir, readFile, rm, writeFile, mkdir } from "fs/promises";
 import { tmpdir } from "os";

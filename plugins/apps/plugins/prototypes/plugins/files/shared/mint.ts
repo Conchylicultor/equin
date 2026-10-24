@@ -12,7 +12,7 @@ import { copyFolderOnce, templateDir } from "./template";
 // `cp -R _template <name>`: the naming, the flat-folder rule and the copy were
 // all the agent's to get right, and there was no write path on the server at
 // all. Three surfaces now call this instead — the gallery's New prototype
-// button (before it launches the agent), `./singularity prototype new`, and any
+// button (before it launches the agent), `./equin prototype new`, and any
 // future one — so the id, the template it starts from and the atomic copy are
 // decided once here rather than re-derived per caller.
 //

@@ -96,7 +96,7 @@ story/                                 # EMPTY namespace plugin (package.json on
 `renderers` + `content` umbrellas get `"singularity": { "collapsed": true }`.
 `story-core` mirrors `score`'s package.json (no `collapsed`). Only plugins with
 a `web/index.ts` (shell, slides, blog, text-content) auto-register via codegen on
-`./singularity build`; the namespace + umbrellas + `story-core` have no
+`./equin build`; the namespace + umbrellas + `story-core` have no
 `index.ts` and are consumed by import path.
 
 ## `story-core` (pure core, no React)
@@ -249,7 +249,7 @@ export function TextContent({ node }: { node: StoryNode }) {
   v1, should later be scoped per-document.
 
 ## Build & verify
-1. `./singularity build` (from the worktree) — codegen auto-registers the four
+1. `./equin build` (from the worktree) — codegen auto-registers the four
    `web/index.ts` plugins; applies no migrations (we reuse `page` tables).
 2. Screenshot `http://<worktree>.localhost:9000/story` (Playwright helper
    `e2e/screenshot.mjs`).
@@ -257,7 +257,7 @@ export function TextContent({ node }: { node: StoryNode }) {
    in the left editor; toggle **Slides** ↔ **Blog** on the right; confirm the
    preview updates **live** as you type; `Tab` to nest a block and confirm Slides
    treats depth-1 as a bullet and Blog as a sub-heading/paragraph.
-4. `./singularity check --plugin-boundaries` to confirm clean boundaries.
+4. `./equin check --plugin-boundaries` to confirm clean boundaries.
 
 ## Process / case-study track
 Keep a running **build log** at

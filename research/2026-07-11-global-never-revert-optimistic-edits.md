@@ -172,8 +172,8 @@ No cross-plugin re-exports; resource-runtime gains no imports (injected hook).
 2. `bun test plugins/database/plugins/live-state-snapshot` + the new `current-tx-id` test
    (needs the running cluster) — Rule A↔B comparability on real Postgres.
 3. `bun run test:dom plugins/primitives/plugins/networking plugins/primitives/plugins/live-state plugins/primitives/plugins/optimistic-mutation`.
-4. `./singularity check` (type-check sweeps every consumer of the widened types), then
-   `./singularity build`.
+4. `./equin check` (type-check sweeps every consumer of the widened types), then
+   `./equin build`.
 5. Manual e2e (the motivating bug) at `http://<worktree>.localhost:9000` in the Pages app:
    (a) rapid type+Enter under push churn (Debug → Live-State Emit): the split block must
    never vanish; (b) kill the backend mid-typing: cloud `syncing`, edits stay rendered; on

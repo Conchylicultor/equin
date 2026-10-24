@@ -7,7 +7,7 @@
 //  1. last block has text → a fresh empty block is appended and holds the caret;
 //  2. last block is already empty → no second blank block, the caret goes there.
 //
-// Usage: ./singularity run plugins/page/plugins/editor/e2e/trailing-click-verify.ts \
+// Usage: ./equin run plugins/page/plugins/editor/e2e/trailing-click-verify.ts \
 //          [--out /tmp/trailing-click]
 import {
   arg,

@@ -262,7 +262,7 @@ Files: `pane/web/pane.ts`, `pane/web/components/pane-chrome.tsx`,
     - hand-author the merged committed files (leading items, `{"type":"spacer"}`,
       then the End order verbatim) and delete the old `start`/`end` ones;
     - the four borrowed website panes' own `.actions` slots stop existing;
-    - `./singularity build` regenerates `reorderable-slots.generated.ts` and every
+    - `./equin build` regenerates `reorderable-slots.generated.ts` and every
       `.origin.jsonc`. `reorderable-slots-in-sync` and `config-origins-in-sync`
       are the gates.
     - user-layer leftovers (`~/.singularity/config/<worktree>/…`) are not carried
@@ -275,11 +275,11 @@ Files: `pane/web/pane.ts`, `pane/web/components/pane-chrome.tsx`,
 
 ## Verification
 
-- `./singularity build` — the gate. `reorderable-slots-in-sync`,
+- `./equin build` — the gate. `reorderable-slots-in-sync`,
   `config-origins-in-sync`, `plugins-registry-in-sync`, `plugins-doc-in-sync`,
   `plugin-boundaries`, `type-check` all have to pass, and the first two are
   precisely what a missed config rename trips.
-- `./singularity test plugins/primitives/plugins/adaptive-bar` and
+- `./equin test plugins/primitives/plugins/adaptive-bar` and
   `plugins/primitives/plugins/slot-render` — the docking and box changes.
 - `bun plugins/primitives/plugins/adaptive-bar/e2e/adaptive-bar-relocate.ts`
   and `adaptive-bar-churn.ts` against the deployed worktree — relocation still

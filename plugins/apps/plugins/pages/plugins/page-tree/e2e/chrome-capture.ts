@@ -18,7 +18,7 @@
 // the heatmap and the colour report.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/pages/plugins/page-tree/e2e/chrome-capture.ts \
+//   ./equin run plugins/apps/plugins/pages/plugins/page-tree/e2e/chrome-capture.ts \
 //     [--proto proto-1790691924-p8nh] [--page block-acef974d-…] [--only kind,cover] \
 //     [--out /tmp/pages-chrome] [--color-scheme dark|light] [--threshold 0.1] [--delta-e 5]
 

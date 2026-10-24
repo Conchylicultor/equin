@@ -258,7 +258,7 @@ writes nothing, and it *gates* `agentFetch`, so routing it through `agentFetch` 
 the memo.
 
 **Known limit, to be stated in the docblock and CLAUDE.md:** the assert covers the served *dist*,
-not the backend. `./singularity build --no-restart` returns `ok` with a new dist and the previous
+not the backend. `./equin build --no-restart` returns `ok` with a new dist and the previous
 backend, so a run can still be green against a new frontend talking to old server code.
 
 ### 5. The class cannot come back
@@ -295,7 +295,7 @@ No deploy for this checkout — there is nothing to run against.
   registered : (none)
 
 Nothing under /Users/epot/.singularity/worktrees is registered to this
-checkout's backend, so `./singularity build` has never published a deploy from
+checkout's backend, so `./equin build` has never published a deploy from
 here. Run it, then re-run this script.
 To drive a deploy this checkout did not build, name it:
   --url http://<namespace>.localhost:9000
@@ -310,7 +310,7 @@ No deploy for this checkout's own app (composition "singularity").
   registered : sonata.att-1788856801-y7ze (composition "sonata")
 
 A `--composition` build publishes only that composition's namespace, never the
-checkout's own app. Run `./singularity build` here to deploy it, or target one
+checkout's own app. Run `./equin build` here to deploy it, or target one
 of the deploys above with --composition sonata.
 ```
 
@@ -328,7 +328,7 @@ The deploy answering this target is not the build this checkout published.
 
 Every assertion below would be made against code this checkout did not
 produce, and every write would land on it.
-Run `./singularity build` here, then re-run this script.
+Run `./equin build` here, then re-run this script.
 ```
 
 When the probe falls through to the SPA, `serving` reads
@@ -366,7 +366,7 @@ per-namespace directory to read, and to point at a gateway deploy or drop the fl
    `checkoutNamespace` alongside it rather than trying to collapse that binding away.
    *The e2e fix does not need this step* (the registry scan is sync and git-free); it is here
    because five copies of one derivation is the structural defect underneath this bug, and the
-   `./singularity test` follow-up needs the helper.
+   `./equin test` follow-up needs the helper.
 5. **Give the build receipt a core barrel** — `op-runtime/core/{index.ts,internal/build-receipt.ts}`,
    with `cli/build-receipt.ts` reduced to a re-export. Move the co-located test.
 6. **Rewrite the e2e target against the registry** — `e2e/target.ts`: the `derived | stated`
@@ -377,7 +377,7 @@ per-namespace directory to read, and to point at a gateway deploy or drop the fl
 8. **Wire it into both entry points** — `browser.ts` (first statement of `withBrowser`, above the
    config repair, with the comment), `app-fetch.ts` (inside `agentFetch`), `e2e/index.ts` exports.
 9. **Exempt the probe from `no-unmarked-app-fetch`** — `agent-origin-safety/lint/index.ts`, with
-   the reason. Without this, `./singularity check` fails on the new file.
+   the reason. Without this, `./equin check` fails on the new file.
 10. **Add the rung-3 backstops** — the `e2e-harness:target-not-env-derived` check (update that
     barrel's docblock from two checks to three) and the `namespace-identity` lint plugin with a
     co-located `RuleTester` suite.
@@ -396,10 +396,10 @@ per-namespace directory to read, and to point at a gateway deploy or drop the fl
     `webDistDir`'s at :492, which currently instructs the reader to build a namespace out of a
     checkout basename and would be the only surviving instruction to do so; root `CLAUDE.md` —
     replace the raw `bun run playwright screenshot … http://<worktree>.localhost:9000` snippet
-    under "Driving the app" with `./singularity run …/e2e/screenshot.ts [--path /agents]`, since
+    under "Driving the app" with `./equin run …/e2e/screenshot.ts [--path /agents]`, since
     that `<worktree>` placeholder is hand-substituted by the same agent whose shell says
     `singularity` — the identical wrong answer, arrived at by hand, and the one path none of the
-    new rungs reach. Then `./singularity build` to regenerate `check.generated.ts`,
+    new rungs reach. Then `./equin build` to regenerate `check.generated.ts`,
     `lint.generated.ts` and the plugin docs.
 
 ## Fix ladder
@@ -425,12 +425,12 @@ per-namespace directory to read, and to point at a gateway deploy or drop the fl
 Ranked by severity. Each is "a process that is not a gateway-spawned backend read
 `SINGULARITY_WORKTREE`", verified during this investigation.
 
-1. **`./singularity deploy` from a worktree acts on MAIN.** `deploy/cli/internal/target.ts` uses
+1. **`./equin deploy` from a worktree acts on MAIN.** `deploy/cli/internal/target.ts` uses
    `currentWorktreeName()` for both the server pool and the backend base, so it reads main's
    `deploy_servers` rows and TOFU-pinned SSH private key, POSTs `createDeployment` to main's
    backend, and SSHes a **real remote host**. Its own docblock claims it "acts on exactly the
    namespace whose Deploy app you are looking at" — false in a worktree.
-2. **`./singularity test` from a worktree runs DB suites against MAIN's Postgres.**
+2. **`./equin test` from a worktree runs DB suites against MAIN's Postgres.**
    `test/cli/run.ts` spawns bun via `spawnPassthrough(argv, {cwd: root})` with no `env`;
    `test/bun-preload.ts` fills the var only when *unset* (in a pane it is set-and-wrong);
    `database/server/internal/client.ts`'s `requireWorktree()` uses it directly as the database
@@ -442,7 +442,7 @@ Ranked by severity. Each is "a process that is not a gateway-spawned backend rea
    and `isMain()` at once and creates a flag day for in-flight sessions. It needs its own
    verification pass, and it needs `checkoutNamespace(root)` from step 4, so this lands first.
    `SOCKET_PATH` leaks by the identical tmux-global mechanism and should ride with it.
-3. **`./singularity apply-migrations` by hand from a worktree** applies pending migrations to
+3. **`./equin apply-migrations` by hand from a worktree** applies pending migrations to
    main's database and prints success naming `singularity`.
 4. **`config_v2`'s `CONFIG_DIR`, `log-channels`' durable sink, and `reports`' row tag / buffer
    path** all resolve from the env at module eval, so any CLI or test process in a worktree reads
@@ -469,14 +469,14 @@ here is a *green* run.
 ```
 env | grep '^SINGULARITY_WORKTREE'          # SINGULARITY_WORKTREE=singularity
 git rev-parse --show-toplevel               # .../worktrees/att-1788856801-y7ze
-./singularity run plugins/primitives/plugins/dom/plugins/overscroll-hint/e2e/overscroll-hint-verify.ts
+./equin run plugins/primitives/plugins/dom/plugins/overscroll-hint/e2e/overscroll-hint-verify.ts
 ```
 Today: `ALL CHECKS PASSED`, having driven — and config-reverted — `http://singularity.localhost:9000`.
 
 **1. Unit level, no deploy needed.**
 ```
-./singularity test plugins/infra/plugins/paths/core/internal/checkout-deploys.test.ts
-./singularity test plugins/framework/plugins/cli/plugins/op-runtime/core/internal/build-receipt.test.ts
+./equin test plugins/infra/plugins/paths/core/internal/checkout-deploys.test.ts
+./equin test plugins/framework/plugins/cli/plugins/op-runtime/core/internal/build-receipt.test.ts
 ```
 The first must cover: main's checkout → `singularity` first, then `sonata`; a never-built worktree
 → `{kind:"none", others:[]}`; a composition-only worktree → `{kind:"none", others:[sonata.att-x]}`;
@@ -487,7 +487,7 @@ with no match → throws naming the path; a symlinked root → still matches.
 
 **2. The headline case — the unbuilt worktree must refuse.**
 ```
-./singularity run plugins/.../overscroll-hint-verify.ts; echo "exit=$?"
+./equin run plugins/.../overscroll-hint-verify.ts; echo "exit=$?"
 ```
 Expect `exit=2` and the "No deploy for this checkout" block — **not** `ALL CHECKS PASSED`, and
 main's config untouched.
@@ -495,15 +495,15 @@ main's config untouched.
 **3. The env is provably inert.**
 ```
 SINGULARITY_WORKTREE=singularity SINGULARITY_E2E_BASE=http://singularity.localhost:9000 \
-  ./singularity run plugins/.../overscroll-hint-verify.ts; echo "exit=$?"
+  ./equin run plugins/.../overscroll-hint-verify.ts; echo "exit=$?"
 rg -n 'process\.env' plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/
 ```
 Byte-identical output to step 2; the `rg` prints nothing outside `args.ts`.
 
 **4. Positive path.**
 ```
-./singularity build
-./singularity run plugins/.../overscroll-hint-verify.ts
+./equin build
+./equin run plugins/.../overscroll-hint-verify.ts
 ```
 Expect the `target:` line naming `http://att-1788856801-y7ze.localhost:9000` and the build id, then
 `ALL CHECKS PASSED`. Cross-check the two independent records agree:
@@ -516,9 +516,9 @@ curl -s http://att-1788856801-y7ze.localhost:9000/.build-id
 ```
 cp ~/.singularity/worktrees/att-1788856801-y7ze/web/.build-id /tmp/bid.bak
 printf 'build-not-mine\n' > ~/.singularity/worktrees/att-1788856801-y7ze/web/.build-id
-./singularity run plugins/.../overscroll-hint-verify.ts; echo "exit=$?"     # WRONG DEPLOY, non-zero
+./equin run plugins/.../overscroll-hint-verify.ts; echo "exit=$?"     # WRONG DEPLOY, non-zero
 mv ~/.singularity/worktrees/att-1788856801-y7ze/web/.build-id /tmp/bid2
-./singularity run plugins/.../overscroll-hint-verify.ts; echo "exit=$?"     # "fell through to index.html"
+./equin run plugins/.../overscroll-hint-verify.ts; echo "exit=$?"     # "fell through to index.html"
 mv /tmp/bid2 ~/.singularity/worktrees/att-1788856801-y7ze/web/.build-id
 ```
 The second is the SPA-fallback trap (`200 text/html 265869B`) and must not be mistaken for a build
@@ -527,11 +527,11 @@ rather than refusing.
 
 **6. Explicit targets and the composition case.**
 ```
-./singularity run plugins/.../overscroll-hint-verify.ts --url http://singularity.localhost:9000  # passes, identity skipped
-./singularity run plugins/.../overscroll-hint-verify.ts --url http://x:9000 --composition sonata # usage error
-./singularity build --composition sonata
-./singularity run plugins/.../overscroll-hint-verify.ts; echo "exit=$?"      # refuses, lists sonata.att-…
-./singularity run plugins/.../overscroll-hint-verify.ts --composition sonata # targets sonata.att-…
+./equin run plugins/.../overscroll-hint-verify.ts --url http://singularity.localhost:9000  # passes, identity skipped
+./equin run plugins/.../overscroll-hint-verify.ts --url http://x:9000 --composition sonata # usage error
+./equin build --composition sonata
+./equin run plugins/.../overscroll-hint-verify.ts; echo "exit=$?"      # refuses, lists sonata.att-…
+./equin run plugins/.../overscroll-hint-verify.ts --composition sonata # targets sonata.att-…
 ```
 
 **7. The backstops earn their keep.** Before step 11's fixes, the new check must FAIL naming
@@ -545,7 +545,7 @@ load) and that the last laundering is gone.
 binder), `reports/e2e/fan-out-ceiling.ts` (proves the `agentFetch` wiring point),
 `reorder/e2e/claim-verify.ts` (the only `requirePage` caller).
 
-**9. The whole gate.** `./singularity check` — must include a green **`plugin-boundaries`**
+**9. The whole gate.** `./equin check` — must include a green **`plugin-boundaries`**
 (proving `e2e → paths/core`, `e2e → op-runtime/core` and the new `paths/core → spawn/core` edge
 are legal and acyclic, and that nothing reached `paths/server`), plus `type-check`, `eslint`,
 `namespace:no-hand-built-url`, `paths:no-inlined-worktree-artifacts`, `web-artifacts:map-in-sync`

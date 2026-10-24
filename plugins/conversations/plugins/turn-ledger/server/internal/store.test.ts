@@ -11,7 +11,7 @@
  * the worktree's own database). The rules behind those are pure and pinned in
  * transition.test.ts.
  *
- * Requires the running embedded cluster — `./singularity build` first.
+ * Requires the running embedded cluster — `./equin build` first.
  */
 
 import {

@@ -108,8 +108,8 @@ bite — that is the hook that knows a value is server-owned:
 ## Verification
 
 ```bash
-./singularity build      # → http://att-1784385832-yjj7.localhost:9000
-./singularity check
+./equin build      # → http://att-1784385832-yjj7.localhost:9000
+./equin check
 bun run test:dom plugins/primitives/plugins/text-editor    # confirms nothing else referenced the deleted test
 ```
 

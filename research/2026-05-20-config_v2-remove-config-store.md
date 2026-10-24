@@ -92,7 +92,7 @@ async onShutdown() {
 
 Remove entire `plugins/config_v2/plugins/store/` directory (7 files). After this, `plugins/config_v2/plugins/` contains only `fields/`.
 
-`plugins.generated.ts` regenerates automatically on `./singularity build` — no manual edits needed.
+`plugins.generated.ts` regenerates automatically on `./equin build` — no manual edits needed.
 
 ### 6. Update `plugins/config_v2/CLAUDE.md`
 
@@ -117,6 +117,6 @@ Update the "Internal architecture" section to describe `ConfigWatcher` instead o
 
 ## Verification
 
-1. `./singularity build` — compiles, regenerates `plugins.generated.ts`, no store references remain
-2. `./singularity check` — `config-origins-in-sync` passes (tooling imports rewired)
+1. `./equin build` — compiles, regenerates `plugins.generated.ts`, no store references remain
+2. `./equin check` — `config-origins-in-sync` passes (tooling imports rewired)
 3. Runtime: start server, verify `getConfig()` returns values, `setConfig()` triggers watchers, external JSONC edits propagate to `useConfig` in browser

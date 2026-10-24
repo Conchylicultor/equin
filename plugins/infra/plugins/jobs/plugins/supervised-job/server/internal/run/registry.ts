@@ -47,7 +47,7 @@ export interface SupervisedRunKindSpec {
    *
    * **It is called for a run whose ledger row is already closed, and that is the
    * ordinary case, not an edge.** A kind whose own CLI stamps its row does so
-   * while its process is still running — `./singularity build` closes its row
+   * while its process is still running — `./equin build` closes its row
    * after the health probe and then runs for another ~100s — so by the time the
    * exit marker lands, `listUnfinished` stopped naming this run minutes ago. The
    * primitive still calls this, because the row being written is not the run

@@ -165,7 +165,7 @@ reloads.
 
 ## Verification
 
-- `./singularity test plugins/config_v2 plugins/framework/plugins/tooling/plugins/codegen plugins/framework/plugins/browser-server`:
+- `./equin test plugins/config_v2 plugins/framework/plugins/tooling/plugins/codegen plugins/framework/plugins/browser-server`:
   - `resolveGitLayer`:
     - an honored override wins;
     - a stale-hash override loses to its origin;
@@ -179,7 +179,7 @@ reloads.
     - a scoped read → the merged document;
     - an unregistered path throws.
   - Existing `propagateConfigToUser` behaviour is unchanged (existing tests).
-- `./singularity build`, then a screenshot of `/demo`: the Agent Manager sidebar shows its committed
+- `./equin build`, then a screenshot of `/demo`: the Agent Manager sidebar shows its committed
   views (Queue, Models, …) instead of "No views configured", in the agent-manager app theme.
 - Writes:
   - jsdom: `useSetConfig` inside a `DemoScope` flips the value live.

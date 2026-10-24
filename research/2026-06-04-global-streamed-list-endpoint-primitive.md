@@ -175,7 +175,7 @@ encoder. Proves the helper has two consumers, not one.
 
 ## Verification
 
-1. `./singularity build` — passes tsc + checks.
+1. `./equin build` — passes tsc + checks.
 2. Stream completes with a terminal sentinel (no 502):
    ```
    bun -e 'const r=await fetch("http://att-1780583941-hrog.localhost:9000/api/debug/worktrees");

@@ -2,7 +2,7 @@
 
 ## Context
 
-`./singularity build` prunes orphaned config files in the **git `config/` layer**
+`./equin build` prunes orphaned config files in the **git `config/` layer**
 (`pruneOrphanedConfigFiles` in
 `plugins/framework/plugins/tooling/plugins/codegen/core/config-origin-gen.ts:399`,
 guarded by the `config-origins-in-sync` check). But the **user layer**
@@ -44,7 +44,7 @@ later plan (see Follow-ups).
   per-user ADR); it audits its own `CONFIG_DIR` against its own live registry — always
   correct. Auditing another worktree's dir against this server's descriptor set would
   false-positive across branches.
-- **Read-only.** No delete action. A `./singularity check` was rejected: checks are
+- **Read-only.** No delete action. A `./equin check` was rejected: checks are
   binary pass/fail with no "warn" level, and since we intentionally don't prune it
   would stay permanently red with no auto-fix.
 
@@ -124,7 +124,7 @@ The orphan list is a homogeneous set of domain records → render as a **DataVie
 
 ## Verification
 
-1. `./singularity build`, then open **Debug → Config Orphans** at
+1. `./equin build`, then open **Debug → Config Orphans** at
    `http://singularity.localhost:9000` (main, where the reported leftovers live).
    Expect: `config_v2.settings.nav` + `prototypes.gallery` classified
    **stranded-data / relocated** (they have base `.jsonc` overrides); `view-state`,
@@ -135,7 +135,7 @@ The orphan list is a homogeneous set of domain records → render as a **DataVie
    temp `CONFIG_DIR` fixture: seed an origin-only file, a base override, an `@app`
    scoped override, and a file matching a live descriptor; assert the live file is
    excluded and each orphan gets the right `riskClass`/`reason`.
-3. `./singularity check config-origins-in-sync` still passes (we didn't touch git-layer
+3. `./equin check config-origins-in-sync` still passes (we didn't touch git-layer
    files or origin rendering — only relocated `configFileOwner`'s definition).
 
 ## Follow-ups (out of scope, separate plans)

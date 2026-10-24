@@ -4,7 +4,7 @@
  * against a throwaway Postgres (db-test-fixture) with fake registered sources.
  *
  * Run: `bun test plugins/infra/plugins/trash`
- * (requires the running embedded cluster — `./singularity build` first).
+ * (requires the running embedded cluster — `./equin build` first).
  */
 
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";

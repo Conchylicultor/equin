@@ -22,7 +22,7 @@
  * end (also on failure). Refuses main.
  *
  * Manual only — nothing runs this automatically.
- *   ./singularity run plugins/conversations/plugins/conversations-view/plugins/data-view/e2e/sidequest-filter.ts [--out /tmp/sidequest-filter] [--headed]
+ *   ./equin run plugins/conversations/plugins/conversations-view/plugins/data-view/e2e/sidequest-filter.ts [--out /tmp/sidequest-filter] [--headed]
  */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";

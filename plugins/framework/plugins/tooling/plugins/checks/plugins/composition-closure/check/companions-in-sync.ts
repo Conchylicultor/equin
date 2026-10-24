@@ -27,7 +27,7 @@ export const companionsInSync: Check = {
       return {
         ok: false,
         message: `${rel} is missing`,
-        hint: "Run `./singularity build` to generate it.",
+        hint: "Run `./equin build` to generate it.",
       };
     const expected = await formatGenerated({
       file,
@@ -37,7 +37,7 @@ export const companionsInSync: Check = {
       return {
         ok: false,
         message: `${rel} is out of sync with the companion slots and contributions`,
-        hint: "Run `./singularity build` and commit the regenerated file.",
+        hint: "Run `./equin build` and commit the regenerated file.",
       };
     return { ok: true };
   },

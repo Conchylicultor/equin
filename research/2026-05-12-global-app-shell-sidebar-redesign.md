@@ -276,9 +276,9 @@ logs, queue, memory, profiling, broadcasts, conversations-recover, events-test, 
 
 ## Verification
 
-1. `./singularity build` — TypeScript catches type mismatches
+1. `./equin build` — TypeScript catches type mismatches
 2. App renders at `http://<worktree>.localhost:9000`
 3. **Agent manager sidebar:** all 7 buttons + conversations section render; buttons open their panes; conversations list scrolls and collapses
 4. **Debug sidebar:** all buttons render and open their panes
 5. **Edit mode:** pen button → sidebar items are draggable, reorder persists
-6. `./singularity check` passes
+6. `./equin check` passes

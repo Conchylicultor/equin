@@ -300,9 +300,9 @@ DataView, and the trainer's CLAUDE.md says why.
 
 ## Verification
 
-1. `./singularity test plugins/apps/plugins/chord` (vocabulary, round model,
+1. `./equin test plugins/apps/plugins/chord` (vocabulary, round model,
    mastery, progress loader).
-2. `./singularity build` (background): migrations, boundaries, type-check, docs.
+2. `./equin build` (background): migrations, boundaries, type-check, docs.
 3. Screenshot `/chord` on this worktree (`screenshot.ts --path /chord`). On a
    fresh worktree DB it shows the loading phases, then the trainer.
 4. `e2e/trainer-verify.ts` against the deploy:

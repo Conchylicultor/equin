@@ -3,7 +3,7 @@
  * mount checks (`checkFieldColumns`): which fields the Filter and Sort controls
  * offer, what column each lowers to, and which declarations throw.
  *
- * Run: `./singularity test plugins/primitives/plugins/data-view`.
+ * Run: `./equin test plugins/primitives/plugins/data-view`.
  */
 
 import { describe, expect, test } from "bun:test";

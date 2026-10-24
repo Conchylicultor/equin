@@ -220,11 +220,11 @@ Each report sets state and schedules a `queueMicrotask` persist (one-shot coales
 3. tweakcn `boot.ts` + barrel registration.
 4. `paint-cache.ts` + ThemeInjector wiring.
 5. `index.html` inline script + `class="dark"` removal.
-6. Regenerate docs via `./singularity build`; add a pre-paint-cache bullet to the theme SKILL (`.claude/skills/theme/SKILL.md`) and a prose note in `plugins/ui/plugins/theme-engine/CLAUDE.md`.
+6. Regenerate docs via `./equin build`; add a pre-paint-cache bullet to the theme SKILL (`.claude/skills/theme/SKILL.md`) and a prose note in `plugins/ui/plugins/theme-engine/CLAUDE.md`.
 
 ## Verification
 
-1. `./singularity build` — type-check (contract change fan-out), plugin-boundaries (new endpoints→live-state edge), doc regen. Inspect `plugins/framework/plugins/web-core/dist/index.html`: inline script verbatim, no `class="dark"`.
+1. `./equin build` — type-check (contract change fan-out), plugin-boundaries (new endpoints→live-state edge), doc regen. Inspect `plugins/framework/plugins/web-core/dist/index.html`: inline script verbatim, no `class="dark"`.
 2. **Cold cache**: in the deployed app run `localStorage.clear()`, hard refresh on an app with a tweakcn preset configured → no default-preset flash anymore (Leg B); pre-paint frame is system-scheme-colored, not forced dark.
 3. **Warm cache**: refresh again → pre-paint frame already shows the configured theme background (no black, no flash). Confirm `#theme-paint-cache` is removed from `<head>` after mount and `theme-engine:paint-cache:v1` is populated with the app path + `""` entries.
 4. **Scripted check**: `bun e2e/screenshot.mjs --url http://<wt>.localhost:9000/agents --out /tmp/theme-warm` plus a short-wait variant (`playwright screenshot --wait-for-timeout 50`) to catch the first frames; compare against the steady-state screenshot.

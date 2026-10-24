@@ -250,9 +250,9 @@ export default {
 
 ## Verification
 
-1. `./singularity build` — generates the new trigger table migration, rebuilds everything
+1. `./equin build` — generates the new trigger table migration, rebuilds everything
 2. Create a conversation **with** a prompt → task title should start as "Untitled", then upgrade to Haiku-generated within ~5s
 3. Create a conversation **without** a prompt (bare Launch button) → task title stays "Untitled". Send a turn via the prompt input → title upgrades within ~5s
 4. Create a system conversation (via summary plugin) → title stays "Untitled", no Haiku call
 5. Create a task directly via POST /api/tasks with description → fallback title appears instantly, Haiku upgrades (unchanged behavior)
-6. `./singularity check` passes
+6. `./equin check` passes

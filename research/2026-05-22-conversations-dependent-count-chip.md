@@ -46,11 +46,11 @@ Location: `plugins/conversations/plugins/conversation-view/plugins/dependent-cou
 
 ### Registration
 
-`./singularity build` auto-discovers the new plugin directory and generates the registry entry.
+`./equin build` auto-discovers the new plugin directory and generates the registry entry.
 
 ## Verification
 
-1. `./singularity build` — builds clean, no TS errors
+1. `./equin build` — builds clean, no TS errors
 2. Open a conversation whose task has dependents → chip shows "{n} blocked"
 3. Open a conversation whose task has no dependents → no chip rendered
 4. Verify `drop-dependents` still works (it now imports from `@plugins/tasks/core`)

@@ -73,5 +73,5 @@ Use `console.error` rather than `throw` — throwing inside `useEffect` would cr
 ## Verification
 
 1. `bun build` from `web/` — type-check passes
-2. `./singularity build` — app loads, all sidebar items / toolbar buttons / status bar render as before
+2. `./equin build` — app loads, all sidebar items / toolbar buttons / status bar render as before
 3. To test the command guard: temporarily mount a second component calling `Shell.OpenPane.useHandler(...)` and confirm the console error appears

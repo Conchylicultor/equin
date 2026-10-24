@@ -290,11 +290,11 @@ No migration: the storm payload rides the existing `reports.data` jsonb.
 
 ## Verification
 
-1. `./singularity build` in the background; confirm `status: ok` in
+1. `./equin build` in the background; confirm `status: ok` in
    `~/.singularity/worktrees/<wt>/build-status.json`.
-2. `./singularity check` — `plugin-boundaries`, `plugins-doc-in-sync`,
+2. `./equin check` — `plugin-boundaries`, `plugins-doc-in-sync`,
    `type-check`, `migrations-in-sync`.
-3. `./singularity test plugins/reports plugins/debug/plugins/slow-ops` — the new
+3. `./equin test plugins/reports plugins/debug/plugins/slow-ops` — the new
    pure-core suite plus the existing `record-slow-op.test.ts`.
 4. **Force a storm.** In Settings → Config set `slow-op.elementMs` to `1` and
    `reports.fanOutPerWindow` to `5`, then load a conversation with many blocks.

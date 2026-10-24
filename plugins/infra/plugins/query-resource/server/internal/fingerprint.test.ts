@@ -3,7 +3,7 @@
  * whose output depends on a function body is marked opaque and listed, so a
  * persisted compile's definition never treats a body it cannot see as data.
  *
- * Run: `./singularity test plugins/infra/plugins/query-resource`.
+ * Run: `./equin test plugins/infra/plugins/query-resource`.
  */
 
 import { describe, expect, test } from "bun:test";

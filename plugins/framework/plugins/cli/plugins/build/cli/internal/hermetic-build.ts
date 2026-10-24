@@ -28,7 +28,7 @@ import { sweepDistLeftovers } from "./dist-publish";
 import { reapLegacyCheckoutDist } from "./legacy-dist-reap";
 
 /**
- * The HERMETIC posture of `./singularity build` (`--hermetic --composition …`):
+ * The HERMETIC posture of `./equin build` (`--hermetic --composition …`):
  * produce the app-artifact set for one or more compositions — filtered
  * registries, generated migration SQL, one web dist each — as a deterministic
  * function of (source tree, composition). Nothing here reads or mutates the
@@ -199,7 +199,7 @@ export async function runHermeticBuild(opts: {
 
   // The per-checkout artifact lock. REQUIRED, and the one non-obvious
   // hermetic step: it is the only thing serializing this run against a
-  // concurrent `./singularity build` in the same checkout — both rewrite
+  // concurrent `./equin build` in the same checkout — both rewrite
   // the committed registries in it. `webDir` is used for the lock and for
   // NOTHING else: the lock is per-checkout because it guards codegen
   // written INTO the checkout, which is a separate question from where the

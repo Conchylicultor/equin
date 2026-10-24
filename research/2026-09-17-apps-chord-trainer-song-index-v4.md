@@ -173,8 +173,8 @@ with its reason. `chord_index_request` is kept by both.
 
 ## Verification
 
-1. `./singularity test plugins/integrations/plugins/hooktheory plugins/apps/plugins/chord`.
-2. `./singularity build` (background): migrations, boundaries, type-check, docs.
+1. `./equin test plugins/integrations/plugins/hooktheory plugins/apps/plugins/chord`.
+2. `./equin build` (background): migrations, boundaries, type-check, docs.
 3. On this worktree (scope `auto` → sample): a fresh boot does nothing (no
    request row). `ensure` → status goes `downloading → building-snapshot →
    loading → ready`; a second `ensure` mid-load does not start a second run.

@@ -13,7 +13,7 @@ import {
 import { gateSlot, runCheckFlight } from "./check-flight";
 import type { CheckObservation, CheckOutcome } from "./thrown-outcome";
 
-// Each "run" here is what `runChecks` is to one `./singularity check`: its own
+// Each "run" here is what `runChecks` is to one `./equin check`: its own
 // fan-out gate (`--jobs`), its own run id, and the host-global cache and flight
 // directory it shares with every other run. They share one process in this
 // test, which is still the real thing for the flight: a kernel flock is held

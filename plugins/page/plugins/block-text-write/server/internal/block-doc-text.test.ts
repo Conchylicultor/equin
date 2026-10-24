@@ -9,7 +9,7 @@
  * the SAME `defineInlineTokenNode` the real ones do, so what is exercised is the
  * shipped node synthesis, not an imitation of it.
  *
- * Run: `./singularity test plugins/page/plugins/block-text-write`.
+ * Run: `./equin test plugins/page/plugins/block-text-write`.
  */
 
 import { describe, expect, test } from "bun:test";

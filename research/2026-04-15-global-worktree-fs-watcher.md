@@ -212,7 +212,7 @@ The phase indicator now updates reactively: a `research/plan.md` save → parcel
 
 ## Verification
 
-1. `./singularity build` — installs `@parcel/watcher`, rebuilds server.
+1. `./equin build` — installs `@parcel/watcher`, rebuilds server.
 2. **Freshness**: open the app, open a conversation, edit a file in its worktree from the CLI (`echo x >> file.ts`). The edited-files panel should update within ~300 ms (previously up to 1 s).
 3. **Phase flip**: create a conversation, write `research/foo.md` — sidebar icon flips to **design** within ~300 ms. Edit a non-research file — flips to **review**.
 4. **Idle CPU**: leave 10 conversations open with no activity; `top` should show the server process near 0 % CPU (previously ≥ N × 1 Hz of git invocations).

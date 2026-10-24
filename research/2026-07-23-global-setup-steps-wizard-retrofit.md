@@ -195,9 +195,9 @@ already gives the deploy flow:
 
 ## Verification
 
-1. `./singularity build` from the worktree. This regenerates the three
+1. `./equin build` from the worktree. This regenerates the three
    `CLAUDE.md` reference blocks + `docs/plugins-*.md` (the "Uses" lists change on
-   all four plugins) and runs `./singularity check`, which covers `type-check`,
+   all four plugins) and runs `./equin check`, which covers `type-check`,
    `eslint` (incl. `spacing/no-adhoc-spacing`, `no-adhoc-surface`,
    `no-adhoc-radius`), `plugin-boundaries`, and `plugins-doc-in-sync`.
 2. Google wizard — `http://<worktree>.localhost:9000/settings` → Accounts →

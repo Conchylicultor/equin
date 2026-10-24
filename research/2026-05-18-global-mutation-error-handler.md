@@ -146,7 +146,7 @@ useEndpointMutation(endpoint, {
 
 ## Verification
 
-1. `./singularity build` — TypeScript must compile with no errors; plugin boundary check must pass.
+1. `./equin build` — TypeScript must compile with no errors; plugin boundary check must pass.
 2. Browser: trigger a mutation with no `onError` → toast appears with server's `body.message`.
 3. Browser: trigger a mutation with `onError` set → only the local handler fires, no toast.
 4. Browser: trigger a mutation with `onError` + `meta: { suppressError: false }` → both the handler AND the toast fire.

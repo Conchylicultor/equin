@@ -151,7 +151,7 @@ The revert of the module-level `sessionStateByConversation` map added in the pre
 
 ## Verification
 
-1. `./singularity build` — no TypeScript errors
+1. `./equin build` — no TypeScript errors
 2. Open a conversation → click Push & Exit → navigate to `/tasks` immediately
 3. Check that "Pushing…" state shows on the button when you navigate back (resource update)
 4. Verify the push completes and conversation closes even though you were on `/tasks`

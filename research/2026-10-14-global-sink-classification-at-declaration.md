@@ -89,9 +89,9 @@ declaration; regenerated `docs/plugins-details.md` via build.
 
 ## Verification
 
-- `./singularity check type-check` — every call compiles with a `consumer`.
-- `./singularity check durable-signals-accounted` — passes; then manually
+- `./equin check type-check` — every call compiles with a `consumer`.
+- `./equin check durable-signals-accounted` — passes; then manually
   break one (`reportKind: "nope"`, `consumer: X`) to confirm the loud failures.
-- `./singularity test plugins/framework/plugins/tooling/plugins/checks/plugins/durable-signals-accounted plugins/infra/plugins/file-sink plugins/infra/plugins/retention`
+- `./equin test plugins/framework/plugins/tooling/plugins/checks/plugins/durable-signals-accounted plugins/infra/plugins/file-sink plugins/infra/plugins/retention`
   (scan.test.ts extended for consumer parsing).
-- `./singularity build`.
+- `./equin build`.

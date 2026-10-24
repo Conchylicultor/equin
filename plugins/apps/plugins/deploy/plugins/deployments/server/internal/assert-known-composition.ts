@@ -5,7 +5,7 @@ import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 /**
  * Refuse a `compositionId` that is not a live composition.
  *
- * This is a write-time check rather than a `./singularity check`: a deployment
+ * This is a write-time check rather than a `./equin check`: a deployment
  * is runtime data, so the moment to fail is when someone saves the name — a repo
  * check would only notice at the next build, by which point the row is already
  * being converged from. It reads the `compositions` config through its own

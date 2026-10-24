@@ -17,7 +17,7 @@ export interface AcquireCheckoutLockOptions {
    *
    * REQUIRED because this one function guards two different locks in a checkout
    * (`.build.lock` and `.install.lock`). The wait line used to be a hardcoded
-   * "Another build is in progress", so a `./singularity test` queued behind
+   * "Another build is in progress", so a `./equin test` queued behind
    * another command's `bun install` told the reader a build was running — and the
    * `Cannot find package` crash that followed pointed nowhere near the install.
    */

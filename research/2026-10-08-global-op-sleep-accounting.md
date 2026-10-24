@@ -133,7 +133,7 @@ The browser cannot use FFI, and a sleeping op's last event can be hours old, so 
   - `sleep_stamp jsonb` (nullable).
 - Update `tables.ts` (and its `touchedBy` map), `core/internal/schemas.ts` (`OpRowSchema` and `opRowToFoldState`, with defaults for old rows) and `store.ts` (`stateToRow`).
 - The wall fields of a wait live inside the existing `waits` jsonb.
-- `./singularity build` generates the migration.
+- `./equin build` generates the migration.
 - `stats/plugins/pushes` reads `closed_wait_ms` and `steps`; it does not read `total − wait`. Leave it unchanged, but verify.
 
 ### 6. UI
@@ -169,11 +169,11 @@ The browser cannot use FFI, and a sleeping op's last event can be hours old, so 
 | **B: model** | types, fold (`advanceSleeps`, totals helper, tail), profiler (stamps, summary, step clock), op-store columns/schemas/store; fold-v2 / profiler / ingest tests | interfaces only (`readSleep` injected) |
 | **C: UI** | hatch promotion, op-detail, op-gantt, op-groups, banner/chip/column, e2e | B's types + A's `useSleepNow` |
 
-A and B run in parallel. C starts once both have landed their exported signatures, because C would otherwise duplicate type work. Then one `./singularity build` and verification.
+A and B run in parallel. C starts once both have landed their exported signatures, because C would otherwise duplicate type work. Then one `./equin build` and verification.
 
 ## Verification
 
-1. **Unit tests**, with `./singularity test` on `plugins/packages/plugins/sleep-clock`, `plugins/debug/plugins/profiling/plugins/op-log` and `plugins/debug/plugins/profiling/plugins/ops`.
+1. **Unit tests**, with `./equin test` on `plugins/packages/plugins/sleep-clock`, `plugins/debug/plugins/profiling/plugins/op-log` and `plugins/debug/plugins/profiling/plugins/ops`.
    - `fold-v2.test.ts`: `ev()` gains `{ at, t, sleep }` overrides so the clocks can diverge. It must cover these cases:
      - exact and approximate placement
      - boot change
@@ -185,7 +185,7 @@ A and B run in parallel. C starts once both have landed their exported signature
      - the property that Wait + Work + Asleep == Total over random interleavings
    - `profiler.test.ts`: a fake `readSleep` produces stamps on every event, `sleeps` in the summary, and one step clock.
    - `ingest.test.ts`: the new columns round-trip, and old rows get defaults.
-2. **`./singularity build`** (migration plus checks).
+2. **`./equin build`** (migration plus checks).
 3. **E2E:** extend `op-status/scripts/synthetic-op.ts` to write events whose stamps carry a synthetic sleep gap (+N ms asleep, `wakeAtMs` inside the gap). Add `op-status/e2e/op-sleep.ts`. It asserts three things:
    - The op detail shows the Asleep stat with the right value and a hatched overlay.
    - The banner tooltip's "worked" excludes the sleep.

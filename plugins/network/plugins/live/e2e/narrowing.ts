@@ -16,7 +16,7 @@
  * another checkout passes `--page-key` (`page-blocks` before [12],
  * `page-blocks.v2` after). A key the deploy does not serve fails the run:
  *
- *   ./singularity run plugins/network/plugins/live/e2e/narrowing.ts \
+ *   ./equin run plugins/network/plugins/live/e2e/narrowing.ts \
  *     --page <held page id> --pages <2 more held page ids> --other-page <page id> \
  *     --attempt <att id> --conv <conv id> --others <conv ids> --other-task <task id>
  *

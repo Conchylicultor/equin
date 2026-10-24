@@ -182,7 +182,7 @@ Net: three slots + a hardcoded block → one slot, four contributions.
 New `plugins/primitives/plugins/detail-sections/lint/` following the `pane-toolbar` /
 `data-view` layout (`index.ts` default-exporting `{ name, rules, ignores? }`; rule module via
 `ESLintUtils.RuleCreator`; `RuleTester` test at module top level; registered repo-wide at `error`
-by `build-lint-config.ts` after `./singularity build` regenerates `lint.generated.ts`).
+by `build-lint-config.ts` after `./equin build` regenerates `lint.generated.ts`).
 
 `no-adhoc-detail-sections` fires when **(a)** a JSX element's name is a member expression whose
 immediate parent member is literally `Section` and which ends in `.Render`, **(b)** it has a
@@ -220,10 +220,10 @@ Host (plugin-view, Studio) can migrate opportunistically later; nothing forces t
 
 ## Verification
 
-1. `./singularity build` — expect `reorderable-slots-in-sync`, `plugins-doc-in-sync` (every touched
+1. `./equin build` — expect `reorderable-slots-in-sync`, `plugins-doc-in-sync` (every touched
    plugin), `plugins-registry-in-sync` (the new `lint/` dir), and `config:overrides-authored` (each
    new slot seeds a `// @review` override) to fail until regenerated files are committed. Then
-   `./singularity check` clean.
+   `./equin check` clean.
 2. `bun test plugins/primitives/plugins/detail-sections/lint/` — rule fixtures.
 3. `bun run test:dom plugins/primitives/plugins/detail-sections` — host behaviour: gate hook
    suppresses the whole card; collapsed body is unmounted; persisted open state round-trips.

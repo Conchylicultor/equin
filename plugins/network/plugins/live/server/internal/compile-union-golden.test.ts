@@ -8,10 +8,10 @@
  * committed fixture byte for byte.
  *
  * The test only READS the fixture; a missing one fails. It is written by
- * `./singularity run plugins/network/plugins/live/server/testing/gen-compile-union-golden.ts`,
+ * `./equin run plugins/network/plugins/live/server/testing/gen-compile-union-golden.ts`,
  * from the code a refactor must not change.
  *
- * Run: `./singularity test plugins/network/plugins/live`.
+ * Run: `./equin test plugins/network/plugins/live`.
  */
 
 import { describe, expect, test } from "bun:test";
@@ -26,7 +26,7 @@ type Record = { [half: string]: unknown };
 function readGolden(): Record {
   if (!existsSync(COMPILE_UNION_GOLDEN_FILE)) {
     throw new Error(
-      `the union snapshot is missing (${COMPILE_UNION_GOLDEN_FILE}) — generate it from the code it pins: ./singularity run plugins/network/plugins/live/server/testing/gen-compile-union-golden.ts`,
+      `the union snapshot is missing (${COMPILE_UNION_GOLDEN_FILE}) — generate it from the code it pins: ./equin run plugins/network/plugins/live/server/testing/gen-compile-union-golden.ts`,
     );
   }
   return JSON.parse(readFileSync(COMPILE_UNION_GOLDEN_FILE, "utf8")) as Record;

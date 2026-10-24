@@ -87,7 +87,7 @@ Files:
   ```
 
 - `package.json` — workspace package; deps: react.
-- `CLAUDE.md` — minimal stub; `./singularity build` regenerates the autogen reference block.
+- `CLAUDE.md` — minimal stub; `./equin build` regenerates the autogen reference block.
 
 Cross-plugin import path: `@plugins/screenshot/plugins/draw-canvas/web` (this is exactly the form used elsewhere — e.g. `@plugins/infra/plugins/attachments/web`).
 
@@ -276,7 +276,7 @@ The parent `screenshotPlugin` registration stays as-is.
 
 ## Verification
 
-`./singularity build`, then in the browser at `http://<worktree>.localhost:9000`:
+`./equin build`, then in the browser at `http://<worktree>.localhost:9000`:
 
 1. **Refactor smoke test (existing screenshot still works).** Click camera icon → screenshot pane opens → switch to Draw tool → draw strokes → Apply → strokes baked into the image; Copy/Download produce expected PNG. Confirms the sub-plugin extraction didn't regress anything.
 2. **Live-draw happy path.** Click new gesture icon → cursor becomes crosshair → draw a circle around the toolbar → click Done → `+improve` popover opens with one attachment chip showing `drawing.png`.
@@ -284,5 +284,5 @@ The parent `screenshotPlugin` registration stays as-is.
 4. **Cancel.** Open overlay → draw → Cancel → overlay disappears, no popover, no new file in `~/.singularity/attachments/`.
 5. **Empty-draw guard.** Open overlay → click Done immediately → no-op (button is disabled or returns early).
 6. **Chrome not in capture.** Inspect the resulting PNG: floating draw chrome (color swatches, Done/Cancel) must not be present; strokes and underlying app UI must be.
-7. **Plugin boundaries.** `./singularity check` passes — in particular `--plugin-boundaries`. All cross-plugin imports use `@plugins/<name>/{web,server,shared}` (incl. nested `@plugins/screenshot/plugins/draw-canvas/web`).
+7. **Plugin boundaries.** `./equin check` passes — in particular `--plugin-boundaries`. All cross-plugin imports use `@plugins/<name>/{web,server,shared}` (incl. nested `@plugins/screenshot/plugins/draw-canvas/web`).
 8. **Playwright optional sanity.** `bun e2e/screenshot.mjs --url http://<worktree>.localhost:9000 --click "Draw on app" --out /tmp/draw` confirms button reachability and overlay render.

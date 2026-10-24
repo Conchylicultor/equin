@@ -110,7 +110,7 @@ Files:
   cross-plugin re-exports"); consumers import the type from `closure/core`
   directly.
 
-- **`core/composition.generated.ts`** — emitted by `./singularity build` codegen
+- **`core/composition.generated.ts`** — emitted by `./equin build` codegen
   (`renderCollectedDirRegistry`), exporting `compositionEntries: CollectedEntry[]`.
   Committed; the `plugins-registry-in-sync` check enforces it stays current.
 
@@ -172,7 +172,7 @@ loudly with the offending id/name on first violation:
    closure.
 
 Returns `{ ok: false, message, hint }` naming the composition + id on failure,
-`{ ok: true }` otherwise. Runs automatically under `./singularity check` and
+`{ ok: true }` otherwise. Runs automatically under `./equin check` and
 `build` (discovered via the existing `defineCollectedDir("check")` sweep — no
 registry edit).
 
@@ -200,7 +200,7 @@ registry edit).
 
 ## Verification
 
-1. **Build & codegen:** `./singularity build`. Confirm
+1. **Build & codegen:** `./equin build`. Confirm
    `plugins/plugin-meta/plugins/composition/core/composition.generated.ts` is
    emitted with a `compositionEntries` entry for
    `apps/plugins/agent-manager/composition`, and `plugins-registry-in-sync`
@@ -210,7 +210,7 @@ registry edit).
    - Each resolves via `resolveComposition` with empty `redundantSelections`.
    - The full bundle ⊋ the lean bundle, and the set difference equals exactly the
      self-improvement plugin ids (the anchor-demo assertion).
-3. **Check (happy path):** `./singularity check composition-closure` passes.
+3. **Check (happy path):** `./equin check composition-closure` passes.
 4. **Check (loud failure):** temporarily add a manifest with a bogus
    `selectedContributors: [asPluginId("does.not.exist")]` and a duplicate `name`;
    confirm the check fails with a message naming the offending id and the

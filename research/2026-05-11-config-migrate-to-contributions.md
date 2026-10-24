@@ -157,7 +157,7 @@ export default {
 
 ## Verification
 
-1. `./singularity build` — compiles and starts
+1. `./equin build` — compiles and starts
 2. Open Settings pane — all 13 plugin groups render with correct names, descriptions, and fields
 3. Toggle a boolean config (e.g. auto-build) — verify PATCH works and value persists
 4. Set/clear a secret field — verify routing through secrets store

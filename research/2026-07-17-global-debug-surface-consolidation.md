@@ -173,7 +173,7 @@ Cross-cutting: add `"server-boot-watchdog"`, `"server-duress-monitor"` to
 
 ## Verification (end-to-end)
 
-- `./singularity build` + full `./singularity check` after each workstream (registry, doc-sync,
+- `./equin build` + full `./equin check` after each workstream (registry, doc-sync,
   type-check, and — after WS3 — `durable-signals-accounted` itself).
 - **WS1**: `bun test plugins/debug/plugins/timeline` (drop accounting, severity-then-wall-clock,
   duress-first, chunk-error surfacing, local-time); from an agent conversation call

@@ -182,7 +182,7 @@ pre-deploy entries in live sessions still lack `tabId`/`appId`.
 | `plugins/apps-core/plugins/layout/web/components/apps-layout.tsx` | `redirectTo` preserves `history.state` (`:32`) | S |
 | `plugins/apps-core/plugins/tabs/web/internal/use-tabs.tsx` | prefer the entry's `tabId` for focus on `back_forward`; accept a seed `tabId` (`:259-278`) | S–M |
 | `plugins/apps-core/plugins/tabs/CLAUDE.md`, `plugins/primitives/plugins/pane/CLAUDE.md` | document instances vs. tabs; an entry names its instance | S |
-| registry + autogen doc blocks | via `./singularity build` — `plugins-registry-in-sync` fails otherwise | S |
+| registry + autogen doc blocks | via `./equin build` — `plugins-registry-in-sync` fails otherwise | S |
 | `plugins/apps-core/lint/index.ts` | **no change** — the primitive writes no history; `apps-layout.tsx` already exempt (`:21-23`) | — |
 
 One new leaf primitive plus roughly a dozen changed lines across four existing files.
@@ -226,7 +226,7 @@ fallback. Then add scenario **E**, the acceptance test, mapping 1:1 onto the fou
 All assertions via `r.ok(...)` / `r.finish()` so it stays a real gate.
 
 ```bash
-./singularity build
+./equin build
 bun plugins/apps-core/plugins/tabs/e2e/history-nav.ts
 ```
 

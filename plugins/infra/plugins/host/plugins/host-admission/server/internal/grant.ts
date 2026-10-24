@@ -136,7 +136,7 @@ export const e2ePool = defineHostPool({
  * `fn`, release. Same signature, so a direct op picks the pool without
  * changing shape. The grant it hands `fn` carries one unit for the holder's own
  * fan-out but **no env**: it holds no `cpu` units, so a child must not inherit
- * a `SINGULARITY_HOST_GRANT` claiming some — a `./singularity check` an e2e
+ * a `SINGULARITY_HOST_GRANT` claiming some — a `./equin check` an e2e
  * script spawns acquires its own `cpu` grant like any top-level op.
  */
 export async function withE2eGrant<T>(

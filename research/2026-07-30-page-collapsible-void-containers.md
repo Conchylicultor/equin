@@ -281,7 +281,7 @@ the fold. Pair with the existing `callout/e2e/callout-container-verify.ts` and
 `context/e2e/context-container-verify.ts`.
 
 ```bash
-./singularity build
+./equin build
 bun plugins/page/plugins/container/e2e/container-collapse-verify.ts --headed
 ```
 
@@ -292,7 +292,7 @@ popover), a nested `/context` inside a callout, and a one-child container (no
 chevron claimed).
 
 ```bash
-./singularity check
+./equin check
 ```
 
 ## Docs to update

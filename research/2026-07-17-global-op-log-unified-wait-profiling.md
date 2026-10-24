@@ -8,8 +8,8 @@ push (split `wait | hold`) and one bar per build (a single flat `totalMs` bar).
 
 Two problems, one root cause.
 
-**1. Standalone `./singularity check` is an invisible contender.** A direct
-`./singularity check` acquires its own host CPU grant (`check.ts:113` —
+**1. Standalone `./equin check` is an invisible contender.** A direct
+`./equin check` acquires its own host CPU grant (`check.ts:113` —
 `withHostGrant({ lane, max: cpuBudget().B })`, interactive lane on main /
 background elsewhere) and marks a worktree op `waiting-for-lock` → `running`.
 But it writes **nothing** durable: there is no `check` record in
@@ -218,18 +218,18 @@ clicking a build bar still opens its span breakdown.
 
 ## Verification
 
-1. `./singularity build` to deploy.
-2. **Check appears:** run `./singularity check` in this worktree. Open
+1. `./equin build` to deploy.
+2. **Check appears:** run `./equin check` in this worktree. Open
    `http://att-1784284782-oc25.localhost:9000/agents/c/<conv>/pp` → a `check` bar
    on the worktree's row. Click it → per-check steps (`type-check`, `eslint`, …).
 3. **Check contends:** saturate the host grant (start a build in another worktree),
-   then run `./singularity check`. The check bar shows a leading `host-grant` wait
+   then run `./equin check`. The check bar shows a leading `host-grant` wait
    segment; refresh mid-wait → the bar **grows** (live `requested`-only synth).
 4. **Build wait split:** run two builds in the same worktree concurrently. The
    second shows a `build-lock` wait segment before its hold. Under host contention
    it shows a distinct `host-grant` segment — verifying the two are separable.
 5. **Push's hidden wait:** with the interactive lane saturated (build on `main`),
-   run `./singularity push`. The `checks` step now shows a nested `host-grant`
+   run `./equin push`. The `checks` step now shows a nested `host-grant`
    wait rather than one opaque duration.
 6. **Legacy renders:** confirm pre-existing rows (from the 15,766 legacy lines)
    still render, with no wait segments and no crash.
@@ -238,7 +238,7 @@ clicking a build bar still opens its span breakdown.
 8. **Stats unbroken:** open the Stats push panes (throughput / wait-time /
    step-breakdown) — still populated from the shared reader.
 9. `bun test plugins/debug/plugins/profiling/plugins/op-log` (fold unit tests) and
-   `./singularity check`.
+   `./equin check`.
 
 ## Risks
 

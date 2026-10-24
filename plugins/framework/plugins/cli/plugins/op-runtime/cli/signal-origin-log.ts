@@ -17,7 +17,7 @@ import {
 const sink = defineFileSink({
   id: "signal-origin",
   description:
-    "Who killed an op (`./singularity build|check|push`): one JSONL line per " +
+    "Who killed an op (`./equin build|check|push`): one JSONL line per " +
     "catchable fatal signal, carrying the sender's pid/uid, executable path and " +
     "the ancestry captured inside the signal handler before the sender was " +
     "reaped — plus one line when the native tap could not be armed, so an " +

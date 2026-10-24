@@ -72,13 +72,13 @@ Usage example showing `colorField({ label, default, swatches, showAlpha })`.
 
 ### No manual registration needed
 
-Plugin discovery is automatic via codegen during `./singularity build`. No
+Plugin discovery is automatic via codegen during `./equin build`. No
 registry file edits required.
 
 ## Verification
 
-1. `./singularity build` — should discover the new plugin and build cleanly
+1. `./equin build` — should discover the new plugin and build cleanly
 2. Add a test config using `colorField` to an existing plugin (or temporarily to a debug plugin)
 3. Open Settings in the UI — the color field should render with the popover picker
 4. Pick a color, verify it persists across page reloads
-5. `./singularity check` — all checks pass
+5. `./equin check` — all checks pass

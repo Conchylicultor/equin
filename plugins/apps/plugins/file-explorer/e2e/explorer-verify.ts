@@ -25,7 +25,7 @@
 // ancestor of a short path (no "…" fold) when it has the room.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/file-explorer/e2e/explorer-verify.ts \
+//   ./equin run plugins/apps/plugins/file-explorer/e2e/explorer-verify.ts \
 //     [--out /tmp/explorer] [--headed]
 
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";

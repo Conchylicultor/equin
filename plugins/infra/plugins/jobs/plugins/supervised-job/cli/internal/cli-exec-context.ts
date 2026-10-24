@@ -4,11 +4,11 @@ import {
 } from "../../core/internal/exec-context";
 
 /**
- * Minted by a `./singularity` CLI command — a process of its own.
+ * Minted by a `./equin` CLI command — a process of its own.
  *
  * Its host admission is loaded on first use, through a deferred relative
  * import: this file is re-exported by the `cli` barrel, which loads on EVERY
- * `./singularity` invocation and so may reach no `server` barrel statically
+ * `./equin` invocation and so may reach no `server` barrel statically
  * (`cli:command-declarations-light`).
  */
 export function cliExecContext(): ExecContext {

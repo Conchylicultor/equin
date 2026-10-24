@@ -180,7 +180,7 @@ boot path.
 - Add a short note to `plugins/primitives/plugins/live-state/CLAUDE.md` about the descriptor registry /
   `resourceDescriptorByKey`. (Distinct from the observe-time key→schema registry, which is populated
   too late for boot.)
-- `./singularity build` regenerates the autogen `## Plugin reference` blocks (boot-snapshot's `Slots`/
+- `./equin build` regenerates the autogen `## Plugin reference` blocks (boot-snapshot's `Slots`/
   `Exports`/`Imported by`, the 13 barrels' `Contributes`/`Uses` lines) and `web.generated.ts`. The
   `plugins-doc-in-sync` / `plugins-registry-in-sync` checks will fail until this runs — expected.
 
@@ -202,9 +202,9 @@ boot path.
 
 ## Verification
 
-1. `./singularity build` from the worktree (regenerates migrations/docs/registry; runs checks). Fix any
+1. `./equin build` from the worktree (regenerates migrations/docs/registry; runs checks). Fix any
    `type-check` / `plugin-boundaries` / `plugins-doc-in-sync` fallout.
-2. `./singularity check` clean.
+2. `./equin check` clean.
 3. **Cold-load happy path** — confirm pre-paint hydration still works (no default-value flash) for a
    boot-critical resource:
    ```bash

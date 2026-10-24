@@ -4,7 +4,7 @@ A reorderable slot's on-screen order must be a deliberate, committed layout — 
 non-deterministic natural order contributions happen to load in. So every reorderable slot
 owes a **reviewed** override at `config/<defining-plugin>/<slotId>.jsonc`.
 
-**The build produces the file; you decide the values.** `./singularity build` seeds a
+**The build produces the file; you decide the values.** `./equin build` seeds a
 missing override from its generated `<slotId>.origin.jsonc` — real `// @hash`, the full
 materialized catalog, the legend comments — and stamps a one-line `// @review` marker into
 it. `config:overrides-authored` fails while that marker is present. Your job is the
@@ -12,9 +12,9 @@ judgment half only:
 
 ```
 1. add the defineRenderSlot
-2. ./singularity build            → seeds config/<plugin>/<slotId>.jsonc, then fails on the marker
+2. ./equin build            → seeds config/<plugin>/<slotId>.jsonc, then fails on the marker
 3. open the file: arrange "items", add rationale comments, DELETE the // @review line
-4. ./singularity check config:overrides-authored   → green (seconds)
+4. ./equin check config:overrides-authored   → green (seconds)
 ```
 
 You never copy an origin, never guess a path, and never transcribe a hash. A mistyped path

@@ -527,7 +527,7 @@ the slot owes **no** `config/…jsonc` override. `view-core/CLAUDE.md` and
 
 # Build order
 
-Each step compiles and deploys green. Run `./singularity build` with
+Each step compiles and deploys green. Run `./equin build` with
 `run_in_background: true` and end the turn (median ~10 min, over the foreground cap).
 
 **Primitive**
@@ -536,7 +536,7 @@ Each step compiles and deploys green. Run `./singularity build` with
 2. Geometry + width roles: the `--cp-*` block and `cp-*` `@utility` block in `app.css`
    (each with its twmerge marker), plus `menu`/`builder` in `popover-width.ts`. **Gate:**
    must land before any TSX consumes a `cp-*` class, or `cn()` won't know the conflict
-   groups. Then `./singularity check app-css-utilities-in-sync`.
+   groups. Then `./equin check app-css-utilities-in-sync`.
 3. The panel body (`ControlPanel`, Section, Row, RuleList, RuleRow, Field, Footer, Empty).
 4. The surface (`ControlPanelPopover`) and `ControlPanel.Stack`.
 5. Tests (`web/__tests__/control-panel.test.tsx`): element inference; `select="radio"`
@@ -550,7 +550,7 @@ Each step compiles and deploys green. Run `./singularity build` with
    `rule-grid` (`noOverlap` + `neverTruncatesWhenRoomy` + `pinnedRight` on remove +
    `rigidIntegrity` on the prefix column), `long-label` (`truncationOnsetOrder`, with a
    `falsification` case mutating to the flex + `pr-2xl` + `absolute right-2` construct and
-   asserting `noOverlap` is VIOLATED — proof the gate has teeth). `./singularity check layout-geometry`.
+   asserting `noOverlap` is VIOLATED — proof the gate has teeth). `./equin check layout-geometry`.
 7. The lint rule — **empty allowlist first**, read the real failures, then write the
    burndown tier.
 8. `CLAUDE.md` for both plugins.
@@ -572,9 +572,9 @@ Each step compiles and deploys green. Run `./singularity build` with
 # Verification
 
 ```bash
-./singularity check                       # boundaries, type-check, eslint, docs, geometry
-./singularity test plugins/primitives/plugins/css/plugins/control-panel
-./singularity test plugins/primitives/plugins/data-view
+./equin check                       # boundaries, type-check, eslint, docs, geometry
+./equin test plugins/primitives/plugins/css/plugins/control-panel
+./equin test plugins/primitives/plugins/data-view
 ```
 
 Visual, against the deployed worktree:

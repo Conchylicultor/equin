@@ -170,16 +170,16 @@ so a stringified `pgTable(` can never misclassify a file.
 11. **`find-marker-calls.ts`** doc comment on `markerCallSpans` — add a one-line
     caution that a **full** mask is required to be string-embedding-safe.
 12. New plugin `CLAUDE.md` + the auto-generated docs kept in sync by
-    `./singularity build` (`plugins-doc-in-sync`, `plugins-have-claudemd`).
+    `./equin build` (`plugins-doc-in-sync`, `plugins-have-claudemd`).
 
 ## Verification
 
-- `./singularity build` — regenerates `data-views` and `reorderable-slots`
+- `./equin build` — regenerates `data-views` and `reorderable-slots`
   scans, runs all checks. The `data-views-in-sync`, `reorderable-slots-in-sync`,
   `plugins-registry-in-sync`, `plugins-doc-in-sync`, and `type-check` checks must
   pass (real-call output must be byte-identical — only string-embedded phantoms
   change, of which there are currently none).
-- `./singularity check` — full pass, including the new `eslint`-hosted
+- `./equin check` — full pass, including the new `eslint`-hosted
   `no-adhoc-marker-scan` rule (green on the refactored files, and its `ignores`
   allowlist covers the two sanctioned scanners + two tests).
 - Targeted unit tests (run after build so `node_modules` is present):

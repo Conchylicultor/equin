@@ -60,7 +60,7 @@ fixes the **3 reference sites only**; the remaining ~90 sites drain via follow-u
 ### 1. `Loading` primitive — `plugins/primitives/plugins/loading/` (new)
 
 Mirrors `placeholder`'s plugin structure exactly (`web/index.ts` barrel +
-`web/internal/loading.tsx`; no registry edit — `./singularity build` regenerates
+`web/internal/loading.tsx`; no registry edit — `./equin build` regenerates
 `web.generated.ts`). **The single entry point for the LOADING state.** An orchestrator
 composing existing leaves — nothing re-implemented:
 
@@ -231,7 +231,7 @@ allowlist precedent; `PaneResolveGuard` stays the pane-level gate (no new mechan
 
 ## Verification
 
-1. `./singularity build` — regenerates `web.generated.ts` + `lint.generated.ts`; all
+1. `./equin build` — regenerates `web.generated.ts` + `lint.generated.ts`; all
    checks green (`type-check`, `eslint`, `plugins-doc-in-sync`, boundaries). The 3 fixed
    sites need NO allowlist entries.
 2. **Unit tests** (colocated, like `overlay.test.ts`): `combineResources` all-or-nothing
@@ -247,6 +247,6 @@ allowlist precedent; `PaneResolveGuard` stays the pane-level gate (no new mechan
    For the <100ms race window, temporarily add a dev-only delay before the first WS
    push to observe, then remove.
 6. **Lint guard**: throwaway `x.pending ? [] : x.data` + `<Text>Loading…</Text>` in a
-   non-allowlisted file → `./singularity check eslint` fails (remove before commit).
+   non-allowlisted file → `./equin check eslint` fails (remove before commit).
 7. **Perf**: no changes to the select-slice hot path — per-conversation toolbar reads
    byte-for-byte unchanged.

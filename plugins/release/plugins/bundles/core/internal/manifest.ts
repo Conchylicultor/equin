@@ -2,7 +2,7 @@ import { z } from "zod";
 
 /**
  * `RELEASE.json` — the bundle's own self-description, written by
- * `./singularity release` into the run dir and read back by everything that
+ * `./equin release` into the run dir and read back by everything that
  * wants to know what a bundle IS without re-deriving it from the path.
  *
  * `commitSha` / `commitDirty` are optional because bundles cut before

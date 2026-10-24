@@ -107,7 +107,7 @@ Export `LaunchAgentPopover` and `LaunchAgentPopoverProps` from `web/index.ts`.
 
 ## Verification
 
-1. `./singularity build` — confirms compilation, migration gen, doc gen
+1. `./equin build` — confirms compilation, migration gen, doc gen
 2. Trigger a build failure → open build detail pane → confirm "Launch agent to investigate" popover works (textarea, launch buttons)
 3. Force a plugin crash (e.g. throw in a component) → confirm "Fix" button in error boundary works
-4. `./singularity check` — boundary checks, eslint, plugin-doc sync
+4. `./equin check` — boundary checks, eslint, plugin-doc sync

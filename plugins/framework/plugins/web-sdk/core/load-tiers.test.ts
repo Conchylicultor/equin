@@ -4,7 +4,7 @@ import { isDeferredPluginPath, partitionWebEntries } from "./load-tiers";
 // These guardrails assert against the REAL committed `web-tiers.generated.ts`
 // (via `isDeferredPluginPath`), so they lock in the derivation's headline
 // outcomes end-to-end: the structural rule, the watched-slot pins, and the
-// dependsOn closure. Regenerating the manifest (via `./singularity build`) is
+// dependsOn closure. Regenerating the manifest (via `./equin build`) is
 // what keeps them true; the `eager-tier-in-sync` check guards drift.
 describe("isDeferredPluginPath (against the generated tier set)", () => {
   test("top-level / non-app-content plugins are eager", () => {

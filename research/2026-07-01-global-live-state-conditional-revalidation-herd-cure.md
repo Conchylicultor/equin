@@ -9,8 +9,8 @@ Update both (and the perfs index) when this lands.
 
 ## Context
 
-**The problem.** Every `./singularity push` advances `refs/heads/main` → the git-watcher fires
-`refAdvanced` → the `build.run` job → `./singularity build` → the **main backend restarts**. Real
+**The problem.** Every `./equin push` advances `refs/heads/main` → the git-watcher fires
+`refAdvanced` → the `build.run` job → `./equin build` → the **main backend restarts**. Real
 merges happen ~20×/day, so main reboots ~20×/day. Each restart kills every open WebSocket; on
 reconnect the client's `replaySubs` ([`notifications-client.ts:494`](../plugins/primitives/plugins/live-state/web/notifications-client.ts))
 re-subscribes **every** live-state resource for **every** open tab at once, with no jitter and no
@@ -184,12 +184,12 @@ opt-ins fan out. Sequenced (dependencies force order):
    frame; `handleResourceHttp` `If-None-Match`/`304` + `ETag` header; `createSemaphore` read-admission
    gate on the sub+HTTP loader runs (with `onWait` profiler span); client `ActiveSub.etag` +
    `sendSub` + `up-to-date` handling + `replaySubs` etag-preserve + `use-resource` `If-None-Match`/304;
-   `BACKOFF_MS` jitter. Runs `./singularity check type-check` to validate; no build/push.
+   `BACKOFF_MS` jitter. Runs `./equin check type-check` to validate; no build/push.
 2. **Agent 2 (Opus) — opt the four resources in + `bun:test` each** (after Agent 1's API exists):
    `commits-graph.delta/.graph` (reuse `probeHeadMain`), `edited-files` (git-status hash),
    `jsonl-events` (`fs.stat`). One agent, sequential resources (shared pattern).
 
-Between agents I review the diff for contract consistency. After Agent 2 I run `./singularity build`
+Between agents I review the diff for contract consistency. After Agent 2 I run `./equin build`
 once and verify. No `push` (user reviews first).
 
 ## Verification (end-to-end)
@@ -197,7 +197,7 @@ once and verify. No `push` (user reviews first).
 - **Reproduce the herd before:** `get_runtime_profile` on `singularity` right after a build/restart —
   confirm the simultaneous `sub` fan-out with `edited-files`/`commits-graph.delta` multi-second
   `sub` spans and `[acquire]` tail.
-- **Cure:** with several conversation tabs open, trigger a main restart (`./singularity build`).
+- **Cure:** with several conversation tabs open, trigger a main restart (`./equin build`).
   Tail `logs/live-state.jsonl` — resubscribes for unchanged conversations should show the new
   `up-to-date` path (no loader span), not a full `sub` load. `get_runtime_profile` `sub` count for
   `edited-files`/`commits-graph` should collapse to the genuinely-dirty set; event-loop max block in

@@ -283,7 +283,7 @@ single-flight) are already pinned by
    every append means the watcher's signature and the resource's probe are not producing the
    same string — the exact silent-degradation this design exists to prevent.
 
-4. **The resource still streams.** `./singularity build`, open a live conversation at
+4. **The resource still streams.** `./equin build`, open a live conversation at
    `http://<worktree>.localhost:9000`, and confirm new events appear without a reload. Capture
    with `bun e2e/screenshot.mjs`.
 
@@ -291,7 +291,7 @@ single-flight) are already pinned by
    path must re-read the chain (no `cachedEvents` to fall back on), and the client must
    re-render the full transcript.
 
-6. `./singularity check` (`type-check`, `plugin-boundaries` for the new
+6. `./equin check` (`type-check`, `plugin-boundaries` for the new
    jsonl-viewer → `git-read-cache` edge, `plugins-doc-in-sync` after the barrel export changes).
 
 ## Ordered implementation
@@ -302,8 +302,8 @@ single-flight) are already pinned by
    late-subscriber pair. Add `watcher.test.ts`.
 3. `turn-emitter.ts`: destructure `{ events }`.
 4. `jsonl-events-cache.ts` + `jsonl-events-resource.ts` rewrite. Add the cache test.
-5. Docs (four files above), then `./singularity build` (regenerates registries + docs) and
-   `./singularity check`.
+5. Docs (four files above), then `./equin build` (regenerates registries + docs) and
+   `./equin check`.
 
 ## Follow-ups (not in this change)
 

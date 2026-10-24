@@ -133,7 +133,7 @@ Same `ExcludedPathToggles` component can be rendered both inside `LinesChartsSec
 
 ## Verification
 
-1. `./singularity build` — regenerates migration for `stats_commits_excluded_path_state`, rebuilds frontend + server, notifies gateway.
+1. `./equin build` — regenerates migration for `stats_commits_excluded_path_state`, rebuilds frontend + server, notifies gateway.
 2. Open `http://<worktree>.localhost:9000/stats`:
    - "Lines changed" section shows one pill per `excludedPaths` entry, all on by default.
    - Clicking a pill flips it off; charts refetch and show a new diff.
@@ -143,7 +143,7 @@ Same `ExcludedPathToggles` component can be rendered both inside `LinesChartsSec
    - Toggling a pill in either place updates the other within ~1s (push resource).
 4. Add a new path to `excludedPaths` in Settings — it appears as a new pill (default on) in both places without a reload.
 5. Remove a path from `excludedPaths` — its override row is no longer referenced (safe to leave; table rows are scoped by membership at query time).
-6. `./singularity check --migrations-in-sync` — passes.
+6. `./equin check --migrations-in-sync` — passes.
 7. Grep the repo: no remaining references to `excludedShas` or `excludeShas`.
 
 ## Follow-ups (explicitly out of scope)

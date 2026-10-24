@@ -140,7 +140,7 @@ No server registry change (web-only plugin).
 
 ### 3. Update `docs/plugins.md`
 
-The `plugins-doc-in-sync` check (per CLAUDE.md) keeps `docs/plugins.md` aligned with each plugin's public exports. Add a new entry for `attempt-view` covering its exports (`attemptPane`, `attemptConversationPane`) and contributions (`Conversation.Toolbar`). The exact format is enforced by the check — running `./singularity check` will flag any drift.
+The `plugins-doc-in-sync` check (per CLAUDE.md) keeps `docs/plugins.md` aligned with each plugin's public exports. Add a new entry for `attempt-view` covering its exports (`attemptPane`, `attemptConversationPane`) and contributions (`Conversation.Toolbar`). The exact format is enforced by the check — running `./equin check` will flag any drift.
 
 ## Files modified / created
 
@@ -160,7 +160,7 @@ The `plugins-doc-in-sync` check (per CLAUDE.md) keeps `docs/plugins.md` aligned 
 
 ## Verification
 
-1. `./singularity build` from this worktree — must succeed (build + plugin-boundaries check + plugins-doc-in-sync check).
+1. `./equin build` from this worktree — must succeed (build + plugin-boundaries check + plugins-doc-in-sync check).
 2. Navigate to `http://<worktree>.localhost:9000`. Open a conversation that's part of an attempt with ≥2 conversations.
 3. Confirm the new toolbar button appears with a count badge matching the number of conversations in that attempt. Click it → URL becomes `/a/<attemptId>/c/<convId>`, left pane shows the conversation list with the current one highlighted, right pane shows the conversation.
 4. Click another conversation in the left list → URL updates to `/a/<attemptId>/c/<otherConvId>`, right pane swaps to that conversation.

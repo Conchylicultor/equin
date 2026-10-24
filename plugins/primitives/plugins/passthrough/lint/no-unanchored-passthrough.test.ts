@@ -1,6 +1,6 @@
 /**
  * Tests for the `no-unanchored-passthrough` lint rule. Run with
- * `./singularity test plugins/primitives/plugins/passthrough`.
+ * `./equin test plugins/primitives/plugins/passthrough`.
  *
  * ## The harness — the repo's first type-aware rule test
  *
@@ -35,7 +35,7 @@
  * The first attempt was a small fixture project checked in beside this file
  * (`lint/fixtures/tsconfig.json` plus an empty `file.tsx` whose bytes the
  * RuleTester substituted). It worked, and it failed
- * `./singularity check type-check`: a `.tsx` in the repo that no tsconfig
+ * `./equin check type-check`: a `.tsx` in the repo that no tsconfig
  * program covers is invisible to type-checking and linting, and the check says
  * so out loud. The fix was to stop needing a file on disk, not to exempt one.
  *

@@ -135,13 +135,13 @@ Parent: **Add Ultimate Guitar song source to sonata**. Children (foundational
    chords above each syllable, grouped by section, auto-scrolling to the cursor
    beat (reads Lyric/Chord/Section annotations; uses `useCursorBeat`). Slots into
    the display picker beside the piano-roll.
-8. **Integrate + verify.** `./singularity build`; import the example URL
+8. **Integrate + verify.** `./equin build`; import the example URL
    (`fr.ultimate-guitar.com/tab/3250376`); confirm chord panels, piano-roll,
    audio, and synced songsheet via scripted Playwright; regenerate plugin docs.
 
 ## Verification
 
-- `./singularity build` (regenerates migrations + registry + docs; runs checks).
+- `./equin build` (regenerates migrations + registry + docs; runs checks).
 - `bun test plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/core`
   for the parser (Task 2) and `bun test` for the compile/timing helpers.
 - `mcp__singularity__query_db` to confirm `sonata_songs` + `sonata_songs_ext_ultimate_guitar`
@@ -149,7 +149,7 @@ Parent: **Add Ultimate Guitar song source to sonata**. Children (foundational
 - Scripted Playwright (`e2e/screenshot.mjs`): open `/sonata`, run "Import from
   Ultimate Guitar" with the example URL, open the song, screenshot the songsheet
   display, toggle to piano-roll, press play, confirm cursor + auto-scroll + audio.
-- `./singularity check` (boundaries, plugins-registry/doc in sync, type-check).
+- `./equin check` (boundaries, plugins-registry/doc in sync, type-check).
 
 ## Open questions / risks
 

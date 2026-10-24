@@ -88,7 +88,7 @@ target (`singularity` or an active worktree).
   Confirm Increment 1 is behaving as designed before extending the pattern. If it is NOT
   helping, stop and revisit before adopting 2B.
 
-**Step 1 — apply the change**, then `./singularity build` (regenerates nothing schema-wise;
+**Step 1 — apply the change**, then `./equin build` (regenerates nothing schema-wise;
 just rebuilds + restarts the server).
 
 **Step 2 — after 2B:**

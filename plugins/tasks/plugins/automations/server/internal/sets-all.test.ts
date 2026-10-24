@@ -7,8 +7,8 @@
  * The real declaration, compiled with the served bindings against a
  * throwaway database carrying the real schema, loads the set FULL.
  *
- * Requires a running Postgres cluster (started by ./singularity build).
- * Run: `./singularity test plugins/tasks/plugins/automations`.
+ * Requires a running Postgres cluster (started by ./equin build).
+ * Run: `./equin test plugins/tasks/plugins/automations`.
  */
 
 import { afterAll, beforeAll, expect, setDefaultTimeout, test } from "bun:test";

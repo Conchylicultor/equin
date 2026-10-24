@@ -111,7 +111,7 @@ Different pattern entirely — "try once, on network error retry once, then thro
 
 5. **Migrate transcript-watcher** — replace local `pollUntil` + `POLL_MS` with import from `@plugins/infra/plugins/retry/server`.
 
-6. **Update plugin docs** — `./singularity build` regenerates `plugins-compact.md` and `plugins-details.md`.
+6. **Update plugin docs** — `./equin build` regenerates `plugins-compact.md` and `plugins-details.md`.
 
 ## Files to create/modify
 
@@ -124,7 +124,7 @@ Different pattern entirely — "try once, on network error retry once, then thro
 
 ## Verification
 
-1. `./singularity build` — compiles, no type errors
-2. `./singularity check` — all checks pass (plugin-boundaries, eslint, etc.)
+1. `./equin build` — compiles, no type errors
+2. `./equin check` — all checks pass (plugin-boundaries, eslint, etc.)
 3. Open conversation in JSONL viewer — events stream (transcript-watcher still works)
 4. Create new conversation — events appear after session ID resolves (the retry path works)

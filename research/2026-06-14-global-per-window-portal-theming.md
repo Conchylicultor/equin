@@ -192,7 +192,7 @@ theme via `PortalThemeScopeProvider`.
 
 ## Verification
 
-1. `./singularity build` from the worktree; app at
+1. `./equin build` from the worktree; app at
    `http://att-1781449312-wcl5.localhost:9000`.
 2. Switch the surface arrangement to **Desktop** (Settings → Appearance / theme
    customizer, or the Surface-arrangement picker).

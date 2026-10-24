@@ -258,7 +258,7 @@ import conversationQuickPromptsPlugin from "@plugins/conversations/plugins/conve
 
 After all files are in place, run:
 ```bash
-./singularity build --migration-name add-quick-prompts-table
+./equin build --migration-name add-quick-prompts-table
 ```
 
 This generates the SQL migration (hash-named), restarts the server, and applies it.

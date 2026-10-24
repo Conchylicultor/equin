@@ -93,8 +93,8 @@ fine.
 
 ## Verification
 
-- `./singularity build` (installs mermaid, regenerates registries/docs, runs checks).
+- `./equin build` (installs mermaid, regenerates registries/docs, runs checks).
 - Browser MCP: a conversation/markdown containing a mermaid fence renders an SVG.
   A page code block with language mermaid shows Code/Preview/Split, and
   `/mermaid` inserts one. Check dark mode, and an invalid source shows the error.
-- Push with `./singularity push` (user-authorized).
+- Push with `./equin push` (user-authorized).

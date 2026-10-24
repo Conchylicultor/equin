@@ -5,7 +5,7 @@
 `plugins/plugin-meta/plugins/barrel-import/core/internal/stubs.ts` replaces `react`,
 `react/jsx-runtime`, `react/jsx-dev-runtime`, `react-dom` and `react-dom/client` with
 hand-written export objects. A static named import is resolved at link time, so any web
-module importing a React export missing from that object crashes `./singularity build` at
+module importing a React export missing from that object crashes `./equin build` at
 codegen — with an error naming whichever barrel happened to reach the module. It just
 happened with `useInsertionEffect` (70da9a639), fixed by adding one name.
 
@@ -39,7 +39,7 @@ This is the third instance of the same drift class in this file (`web-sdk/core` 
 ## Plan
 
 1. **Probe first.** In a scratch `e2e`-free script inside the worktree (removed afterwards),
-   run via `./singularity run`: set up the existing fake globals and import real `react`,
+   run via `./equin run`: set up the existing fake globals and import real `react`,
    `react/jsx-runtime`, `react-dom` and `react-dom/client`. Time it and confirm there are
    no eval errors or console noise. Stop and report if either fails.
 2. **Delete the React family from `stubs.ts`**: remove `reactExports`, `jsxExports`,
@@ -82,10 +82,10 @@ This is the third instance of the same drift class in this file (`web-sdk/core` 
 
 ## Verification
 
-- `./singularity test plugins/plugin-meta/plugins/barrel-import plugins/page/plugins/editor`
+- `./equin test plugins/plugin-meta/plugins/barrel-import plugins/page/plugins/editor`
   (the new test, plus `markdown.test.ts`, which loads ~28 web barrels through this path).
-- `./singularity build` (codegen imports every barrel; the build that broke in 70da9a639
-  must pass), then `./singularity check` (facets:render-complete,
+- `./equin build` (codegen imports every barrel; the build that broke in 70da9a639
+  must pass), then `./equin check` (facets:render-complete,
   token-group-vars-in-sync, plugins-doc-in-sync, boundary checks).
 - Compare the codegen phase's wall time in the build log before and after, as a sanity
   check on cost.

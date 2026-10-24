@@ -63,7 +63,7 @@ of the manifest is an incidental `owners.get(slotId) === undefined` on the next 
 
 This is not a taste call. `tooling/core/types.ts:71-78` states the rule verbatim: a `"tree"` check's
 verdict *"must be a function of the tree hash AND of NOTHING ELSE, including what else already ran
-in this process"* — because the runner **caches a pass and a later `./singularity push` trusts it
+in this process"* — because the runner **caches a pass and a later `./equin push` trusts it
 from a different process**. The doc's own worked example of that going wrong is this same
 declaration-pass bug class, which shipped a bad `docs/plugins-details.md` across four commits.
 
@@ -311,29 +311,29 @@ This is why the interface ships both forms rather than picking one.
 ## Verification
 
 ```
-./singularity check page.editor:split-targets-are-text-bearing   # commit 0 — expect a real failure first
-./singularity check page.editor:block-prefixes-unique
-./singularity test plugins/framework/plugins/slot-declaration    # commit 1 — scope isolation is the point
-./singularity check facets:render-complete                       # commit 2
-./singularity test plugins/plugin-meta/plugins/facets            # commit 3
-./singularity check reorderable-slots-in-sync
-./singularity check token-group-vars-in-sync
-./singularity check css-vars-supplied
-./singularity check css-vars-single-owner
-./singularity check inherited-theme-defaults-scoped
-./singularity check config-v2:registrations-paired
-./singularity check plugins-doc-in-sync
-./singularity check plugin-boundaries
-./singularity check type-check
-./singularity check                                              # full, every commit
+./equin check page.editor:split-targets-are-text-bearing   # commit 0 — expect a real failure first
+./equin check page.editor:block-prefixes-unique
+./equin test plugins/framework/plugins/slot-declaration    # commit 1 — scope isolation is the point
+./equin check facets:render-complete                       # commit 2
+./equin test plugins/plugin-meta/plugins/facets            # commit 3
+./equin check reorderable-slots-in-sync
+./equin check token-group-vars-in-sync
+./equin check css-vars-supplied
+./equin check css-vars-single-owner
+./equin check inherited-theme-defaults-scoped
+./equin check config-v2:registrations-paired
+./equin check plugins-doc-in-sync
+./equin check plugin-boundaries
+./equin check type-check
+./equin check                                              # full, every commit
 ```
 
 **The purity probe — the regression test for the hazard, and the only thing that proves the fix.**
-Run `./singularity check reorderable-slots-in-sync` **alone**, then inside a full run. Both must
+Run `./equin check reorderable-slots-in-sync` **alone**, then inside a full run. Both must
 pass. Today that agreement is accidental and interleaving-dependent, and a wrong verdict would be
 *cached* and trusted by a later `push` from another process.
 
-Finally `./singularity build` in the background, end the turn, then confirm
+Finally `./equin build` in the background, end the turn, then confirm
 `~/.singularity/worktrees/<wt>/build-status.json` says `status: ok` and `git status` shows **zero**
 diff under `config/`, `docs/`, and the two `.generated.ts` manifests. Any `config/` churn means a
 slot id moved — stop and investigate.
@@ -385,7 +385,7 @@ ReferenceError: Cannot access 'default' before initialization
   at declaredSlotSources → runDeclarationPass → facets/check/index.ts
 ```
 
-Reproducer: `./singularity check --no-cache reorderable-slots-in-sync facets:render-complete`
+Reproducer: `./equin check --no-cache reorderable-slots-in-sync facets:render-complete`
 crashes; either check alone passes.
 
 The fix is a `createSemaphore(1)` lane inside **`importBarrel`**, not in the callers — the race
@@ -395,7 +395,7 @@ overlap; scoping only made one pair reproducible. The old serialization was an a
 memoization that nothing stated, which is why the lane carries a DO-NOT-REMOVE note.
 
 **The check reported `ok (cached)` while crashing uncached.** A cached verdict is what
-`./singularity push` trusts from another process, and this one was green over a hard failure.
+`./equin push` trusts from another process, and this one was green over a hard failure.
 It happened twice in one session, both times on a check whose own source had just changed.
 Whether a check's own code is part of what invalidates its cache entry is worth a look on its
 own — see the tree-purity rule at `tooling/core/types.ts:71-78`. **Use `--no-cache` when

@@ -119,12 +119,12 @@ Files:
 
 ## Verification
 
-1. `./singularity build` from this worktree; open `http://<worktree>.localhost:9000` on a conversation that is **idle** (`waiting`) and contains fenced code blocks.
+1. `./equin build` from this worktree; open `http://<worktree>.localhost:9000` on a conversation that is **idle** (`waiting`) and contains fenced code blocks.
 2. **DOM thrash gone** — confirm code blocks no longer remount while idle. The existing render-loop detector is the oracle: after the fix, the `render-loop` clientLog channel (`~/.singularity/worktrees/<wt>/logs/render-loop.jsonl`) should stop emitting `fire`/`near-miss` lines for the `AssistantTextRow … highlighted-code.tsx:111`, `MarkdownView … highlighted-code.tsx:111`, and `VoiceInputButton … prompt-editor.tsx:99` signatures. Cross-check the `reports` table (`SELECT … FROM reports WHERE kind='render-loop'`) shows no new rows for these signatures.
 3. **Re-render rate dropped** — verify the conversation-view subtree no longer re-renders ~5×/s while idle (React DevTools Profiler "record while idle", or a temporary `useEffect(() => console.count("ConversationView render"))`). Expect near-zero renders/s when idle. Remove any temporary instrumentation before finishing.
 4. **No regressions** — code blocks still highlight; text selection inside a code block survives an idle period (the original symptom); markdown links/images, active-data chips, file-links, and voice-input button all still work; switching `markdownMode` and conversations still works.
 5. **Class-wide check** — confirm the `data-view.tree @ 3/s` task-detail loop is also gone (same `Date`-aware structural-sharing fix), via the same render-loop log/report check on the task-detail pane.
-6. `./singularity check` passes (type-check, boundaries, lint).
+6. `./equin check` passes (type-check, boundaries, lint).
 
 ## Critical files
 

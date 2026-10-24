@@ -1,5 +1,5 @@
 // The two drivers over the changed set: one that WRITES (build,
-// `./singularity format`) and one that never does (the `format-clean` check).
+// `./equin format`) and one that never does (the `format-clean` check).
 // Both read the same set from `changed-files.ts` and decide the bytes through
 // the same `formatInScope` over the same `formatSource`, so they cannot
 // disagree about what "formatted" means.

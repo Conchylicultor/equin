@@ -113,7 +113,7 @@ plugins/debug/plugins/queue-health/
   slow-op adding `server-slow-op`; the source enum is the reports plugin's
   documented per-kind extension point. (Fallback if disallowed: reuse
   `server-caught`, but the dedicated source makes the Reports pane self-documenting.)
-- Autogen: `./singularity build` regenerates registries + docs (`plugins-*.md`,
+- Autogen: `./equin build` regenerates registries + docs (`plugins-*.md`,
   per-plugin autogen blocks). No hand edits to generated files.
 
 ### Key reused primitives / references
@@ -132,8 +132,8 @@ plugins/debug/plugins/queue-health/
 
 ## Verification
 
-1. `./singularity build` (regenerates migrations/registries/docs, runs checks).
-2. `./singularity check` — boundaries, plugins-registry-in-sync, plugins-doc-in-sync,
+1. `./equin build` (regenerates migrations/registries/docs, runs checks).
+2. `./equin check` — boundaries, plugins-registry-in-sync, plugins-doc-in-sync,
    type-check all green.
 3. Manually trip the monitor (worktree DB, via `query_db` for inspection):
    - **Backlog:** enqueue many far-future-then-due dummy jobs, or temporarily lower

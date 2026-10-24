@@ -140,7 +140,7 @@ export default {
 
 ## Verification
 
-1. Run `./singularity build` — should complete without errors.
+1. Run `./equin build` — should complete without errors.
 2. Open `http://att-1778799370-vo95.localhost:9000` — a new icon should appear in the left app-switcher rail.
 3. Click the icon — navigates to `/workflows`, renders an empty `AppShellLayout` (no sidebar items yet — that's expected).
-4. Run `./singularity check --plugin-boundaries` — no boundary violations.
+4. Run `./equin check --plugin-boundaries` — no boundary violations.

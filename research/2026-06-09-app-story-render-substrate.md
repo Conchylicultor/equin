@@ -26,7 +26,7 @@ contributors yet**, so it builds green but is inert:
 
 Nothing contributes to the slots yet (renderers/content arrive in T5–T7), and no
 app mounts `<StoryRender>` yet (shell is T4). So this PR compiles, passes
-`./singularity check`, and leaves `main` working — but renders nothing on its own.
+`./equin check`, and leaves `main` working — but renders nothing on its own.
 
 ## Verified building blocks (reuse, don't rebuild)
 
@@ -54,7 +54,7 @@ app mounts `<StoryRender>` yet (shell is T4). So this PR compiles, passes
 plugins/apps/plugins/story/plugins/
   story-core/                          # pure core, no web/server → does NOT auto-register
     package.json                       # mirror marker/package.json name pattern
-    CLAUDE.md                          # stub header; ./singularity build fills the reference block
+    CLAUDE.md                          # stub header; ./equin build fills the reference block
     core/
       index.ts                         # barrel
       types.ts                         # StoryRole, StoryNode
@@ -257,10 +257,10 @@ No cycles: `render → story-core` (leaf). Nobody imports Pages/editor *internal
 This task has no UI of its own; verification is that it compiles, registers, and
 passes checks — it is intentionally inert.
 
-1. `./singularity build` — codegen registers `render` (web index) and regenerates
+1. `./equin build` — codegen registers `render` (web index) and regenerates
    the autogen `CLAUDE.md` reference blocks for both new plugins. `story-core` does
    **not** appear in any registry (pure core), as intended.
-2. `./singularity check` — must stay green. Specifically:
+2. `./equin check` — must stay green. Specifically:
    - `plugin-boundaries` — confirms the import grammar above (no cycle,
      `render → story-core` only, no internals).
    - `plugins-doc-in-sync` — confirms the generated `CLAUDE.md` / compact docs

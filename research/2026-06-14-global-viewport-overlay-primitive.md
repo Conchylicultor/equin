@@ -221,9 +221,9 @@ but is deferred so this change touches no load-bearing surface code.
 
 ## Verification
 
-1. `./singularity build` — regenerates the lint/web registries and docs; runs
+1. `./equin build` — regenerates the lint/web registries and docs; runs
    `type-check`. Confirms the new rule is registered and the barrel compiles.
-2. `./singularity check` — the new rule runs repo-wide. Expect **only** the two
+2. `./equin check` — the new rule runs repo-wide. Expect **only** the two
    queue-drawer findings (then fixed); the primitive, solo helper, and migrated
    sites must be clean. `plugins-registry-in-sync` / `plugins-doc-in-sync` /
    `class-token-walk-in-sync` must all pass.

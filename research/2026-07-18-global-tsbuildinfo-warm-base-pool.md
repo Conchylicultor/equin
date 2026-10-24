@@ -5,7 +5,7 @@ Date: 2026-07-18
 
 ## Context
 
-`./singularity push` spends ~7 CPU-minutes in `type-check` even for diffs containing zero
+`./equin push` spends ~7 CPU-minutes in `type-check` even for diffs containing zero
 TypeScript. The suspicion was "the build cache is broken." It is not — the cache is
 **correct, and being starved**. This plan fixes the starvation at its origin.
 
@@ -157,7 +157,7 @@ is *why* the caps drifted apart and why an orphaned directory survived a rename.
 
 New primitive at **`plugins/infra/plugins/artifact-store/core/`** — it must be a `core/`
 barrel: `checks` and `web-artifacts` have no `server/` folder and import only other `core`
-barrels, and `./singularity check` runs in a standalone process that must never load
+barrels, and `./equin check` runs in a standalone process that must never load
 `db`/`jobs`. Precedent: `infra/plugins/paths/core` uses raw `node:fs` in `core/`, and
 `file-sink` is explicitly "Node-only (no db/jobs) so a CLI process can import it".
 
@@ -246,7 +246,7 @@ green check.
    `.cache/tsbuildinfo/*.tsbuildinfo`, and the per-target revalidation counts using the
    `fileInfos`-diff method used in this doc (compare `fileNames`→`version` maps between two
    buildinfos; count entries that differ or are new).
-2. **Pool is written.** Run `./singularity build` in this worktree; assert
+2. **Pool is written.** Run `./equin build` in this worktree; assert
    `~/.singularity/tsbuildinfo/5.8.3/<target>/` gains an entry per target.
 3. **Pool is read.** Create a second worktree, run its first check, and assert its
    buildinfo's revalidation count against the pool entry is **~0**, versus the ~368
@@ -257,7 +257,7 @@ green check.
    full check and still reports correct diagnostics (the "never wrong" property). Then bump
    a type in a widely-imported `core/` file and confirm the error is still caught with a warm
    base — the base must not mask a real regression.
-6. `./singularity check` clean; `bun test plugins/framework/plugins/tooling/plugins/checks`
+6. `./equin check` clean; `bun test plugins/framework/plugins/tooling/plugins/checks`
    for the read-set round-trip suite.
 
 **Note on measuring wall-clock:** two pushes contending for the host semaphore will confound

@@ -297,9 +297,9 @@ Dependencies stay one-way: `trainer → curriculum → vocabulary → song-index
 
 ## Verification
 
-1. `./singularity test plugins/apps/plugins/chord` — the units above.
-2. `./singularity build` (background): migrations, boundaries, type-check, docs.
-3. `./singularity run plugins/apps/plugins/chord/plugins/curriculum/e2e/ladder-preview.ts`
+1. `./equin test plugins/apps/plugins/chord` — the units above.
+2. `./equin build` (background): migrations, boundaries, type-check, docs.
+3. `./equin run plugins/apps/plugins/chord/plugins/curriculum/e2e/ladder-preview.ts`
    — a new script that walks the ladder against the deployed index and prints
    the first ~20 levels with their window counts. This is how the order gets
    reviewed by eye ("does minor really come before 7ths?"), and it is the check

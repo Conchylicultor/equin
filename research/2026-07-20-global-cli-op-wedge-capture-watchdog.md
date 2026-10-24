@@ -83,7 +83,7 @@ Additions to the prior doc's list:
 
 ## What reproduced, and what did not
 
-**Not reproduced:** a real `./singularity {check,build}` wedge. The harness used
+**Not reproduced:** a real `./equin {check,build}` wedge. The harness used
 (6 concurrent checks in one worktree) was invalid — they collide on the shared
 per-worktree op marker and exit 1 with no output. Genuine contention on this box
 is *cross-worktree*. A valid repro needs several scratch worktrees; running load
@@ -218,7 +218,7 @@ runner*. The two ways to reach it are both worse than going without:
 **What is actually lost is small.** The decisive datum is the descendant process
 tree — *is a `git` child still alive?* — not check-progress. And
 `check-progress.jsonl` remains fully readable on its own via
-`./singularity check --status`; every dump records the pid and both timestamps,
+`./equin check --status`; every dump records the pid and both timestamps,
 so the two are correlated by hand in seconds.
 
 **If that correlation ever proves load-bearing**, the principled fix is to extract
@@ -229,7 +229,7 @@ inside this plugin.
 
 ## Verification
 
-1. `./singularity build`, then confirm a normal run trips nothing.
+1. `./equin build`, then confirm a normal run trips nothing.
 2. Synthetic wedge: write a fake marker with a live pid and a `startedAt` past the
    budget (e.g. point it at a `sleep 600`), run the job, confirm exactly one
    report with a complete capture attached.

@@ -1,8 +1,8 @@
 /**
  * End-to-end check that activating an event row opens its page.
  *
- * Manual only. Run after `./singularity build`:
- *   ./singularity run plugins/apps/plugins/events/plugins/event-list/e2e/open-event-verify.ts [--headed]
+ * Manual only. Run after `./equin build`:
+ *   ./equin run plugins/apps/plugins/events/plugins/event-list/e2e/open-event-verify.ts [--headed]
  *
  * The interesting arm is the FALLBACK: an extraction commonly yields no
  * per-event link, so the row must open the page the event was extracted from —

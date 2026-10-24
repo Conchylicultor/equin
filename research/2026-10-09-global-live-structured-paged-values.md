@@ -173,7 +173,7 @@ The follow-up migration needs the same mechanism for the endpoint reads that ans
 
 ## Verification
 
-- **Tests:** `./singularity test plugins/packages/plugins/canonical-params plugins/network/plugins/live plugins/primitives/plugins/live-state plugins/primitives/plugins/metrics`
+- **Tests:** `./equin test plugins/packages/plugins/canonical-params plugins/network/plugins/live plugins/primitives/plugins/live-state plugins/primitives/plugins/metrics`
   - **`canonicalJson`**: key order is folded at every depth, arrays keep order, and non-JSON input throws.
   - **Query value:**
     - encoding then decoding round-trips;
@@ -200,8 +200,8 @@ The follow-up migration needs the same mechanism for the endpoint reads that ans
     - pages: `loadMore` grows the list, a failed page gives the error arm with `stale`, and `useLive(v, null)` reads nothing.
   - **Metrics, server:** the handler tests move onto the served loaders through `registerValue` on a test runtime. One test covers the hub: two subscribed queries on one source share one `changes` subscription, a change invalidates both, and the last release stops it.
   - **Metrics, web:** `board.test.tsx` still mocks `use-metric`. Its fakes are updated to the new signatures.
-- **`./singularity check`:** `type-check` (lint included), `resource-vocabulary`, `plugins-doc-in-sync`, `plugins-registry-in-sync`, and the exempt in-sync / unused-exemption reporting. The lint fires on a fixture `useEndpoint` read in a web file and stays quiet on an exempted one.
-- **`./singularity build`,** then deploy at `http://<worktree>.localhost:9000`. Metrics has no real source on main (P2 adds them), so the end-to-end proof is the runtime-level test above plus one look at the read-set debug pane: `metrics.catalog` / `.query` / `.details` are listed as external, and `metrics.revision` is gone.
+- **`./equin check`:** `type-check` (lint included), `resource-vocabulary`, `plugins-doc-in-sync`, `plugins-registry-in-sync`, and the exempt in-sync / unused-exemption reporting. The lint fires on a fixture `useEndpoint` read in a web file and stays quiet on an exempted one.
+- **`./equin build`,** then deploy at `http://<worktree>.localhost:9000`. Metrics has no real source on main (P2 adds them), so the end-to-end proof is the runtime-level test above plus one look at the read-set debug pane: `metrics.catalog` / `.query` / `.details` are listed as external, and `metrics.revision` is gone.
 - **Grep gates:**
   - `rg "metricRevision|metrics.revision|useInfiniteQueryResource" plugins` returns nothing outside history notes.
   - `rg "useQueryResource\(" plugins` finds only `exhibits` and the definition.

@@ -118,7 +118,7 @@ live likewise has none.
   lines ⇒ true; streamed `null` piece ⇒ false; trailing user/tool_result ⇒ false;
   woken teammate ⇒ false); `subagentRunState` with a nested background teammate
   (no tool-use id, no notification, conversation live, `turnEnded: true`) ⇒ finished.
-- `./singularity test plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents plugins/conversations/plugins/conversation-view/plugins/running-agents`
-- `./singularity build`, then open conv-1790156090-2opp on this worktree's deploy with the
+- `./equin test plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents plugins/conversations/plugins/conversation-view/plugins/running-agents`
+- `./equin build`, then open conv-1790156090-2opp on this worktree's deploy with the
   screenshot script: the band no longer counts the six teammates as working, and their
   report panes read "Finished".

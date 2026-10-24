@@ -104,7 +104,7 @@ Change to (additive):
 - `wal_level` and `listen_addresses` are postmaster params → **require a restart** to apply.
   The supervisor only re-runs `start` on watchdog failure, so apply once manually:
   ```bash
-  # one-time, system-level — like ./singularity start, treat with care
+  # one-time, system-level — like ./equin start, treat with care
   pg_ctl -D ~/.singularity/postgres/data-pg18 \
     -o "-k ~/.singularity/postgres/socket -p 5433 -c max_connections=500 \
         -c listen_addresses=127.0.0.1 -c wal_level=logical \
@@ -201,7 +201,7 @@ an existing debug pane, e.g. `plugins/debug/plugins/logs/`):
 - `web/schema.ts` — duplicate of the sidecar schema (throwaway; Stage 1 unifies this).
 - `package.json` — add `@rocicorp/zero` as a dependency.
 
-**Install-behavior surprise to capture:** `bun install` (run by `./singularity build`) will try
+**Install-behavior surprise to capture:** `bun install` (run by `./equin build`) will try
 to build `@rocicorp/zero`'s native `zero-sqlite3` postinstall. The browser bundle only needs the
 client + react subpaths, but the package is one unit. If the Bun install of the native binary
 fails, document it — that friction is a Stage 1 input (likely: pin to client-only import path,
@@ -211,7 +211,7 @@ schema + `@rocicorp/zero/react` hooks to bundle.
 ### Step 4 — Build, run, and prove liveness
 
 ```bash
-./singularity build
+./equin build
 ```
 Open the new Debug → Zero Spike pane at `http://<worktree>.localhost:9000`. Then write to
 `tasks` **directly via psql** (deterministic — bypasses all app code and the live-state path):
@@ -285,7 +285,7 @@ disposable fork). zero-cache run manually as a Node sidecar; permissions = `ANYO
 | **Initial COPY of the whole DB** | `Started 5 workers to copy 80 tables`; replica `zero.db` grew to ~52 MB; **no missing-PK failures** |
 | Live streaming after COPY | replication status `stage:"Replicating"`, `status:"OK"`; column map `timestamptz→number, text→string, jsonb→json, int4→number` |
 | **bun builds native `zero-sqlite3`** | `bun install` succeeded (the package declares `bun: >=1.1.0`) |
-| **vite bundles `@rocicorp/zero/react`** for the browser | `./singularity build` frontend build succeeded; pane mounted |
+| **vite bundles `@rocicorp/zero/react`** for the browser | `./equin build` frontend build succeeded; pane mounted |
 | **Browser client connects cross-origin** to `ws://localhost:4848` | WS frames: `["connected",…]`, `pokeStart`/`pokeEnd`, `ping`/`pong` |
 | Permission deploy | `zero-deploy-permissions` → `Deployed new permissions (hash=…)` |
 
@@ -329,7 +329,7 @@ runnable" outside React).
 4. **Replication can't traverse PgBouncer** (transaction-mode pooling breaks the persistent
    walsender); zero-cache must dial PG **directly**. Use `127.0.0.1`, not `localhost`; no
    `?schema=public`.
-5. **A breaking-change DDL on the upstream triggers a Zero resync.** `./singularity build`'s
+5. **A breaking-change DDL on the upstream triggers a Zero resync.** `./equin build`'s
    graphile-worker migration (`--! breaking-change … rename to _private_jobs`) fired a
    `zero/0/ddl/ddlStart` event mid-spike. Zero's event-trigger DDL detection handled it (superuser
    cluster), but *Stage 2/3 must account for build-time migrations churning the replica.*

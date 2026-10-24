@@ -123,8 +123,8 @@ const [open, setOpen] = useState(false);
 
 ## Verification
 
-1. Run `./singularity build` to register the new primitive and build.
+1. Run `./equin build` to register the new primitive and build.
 2. Open `http://<worktree>.localhost:9000`, navigate to a conversation with messages.
 3. **message-toc**: verify the pill at top-right morphs smoothly on hover — same animation as before.
 4. **prompt-templates**: verify the icon at bottom-right of the prompt editor grows smoothly into chips on hover — new animation replaces the old instant swap.
-5. Run `./singularity check` to confirm plugin boundaries and eslint pass.
+5. Run `./equin check` to confirm plugin boundaries and eslint pass.

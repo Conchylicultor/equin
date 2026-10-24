@@ -1,5 +1,5 @@
 /**
- * `./singularity deploy converge <composition> --server <server>` — make a host
+ * `./equin deploy converge <composition> --server <server>` — make a host
  * serve a composition: run user, dir layout, the `env` EnvironmentFile, Caddy,
  * the systemd unit, the firewall.
  *
@@ -72,7 +72,7 @@ const run: CliAction<[string], { server: string }> = async (
 
   console.log(`\n[done] ${server.name} is converged for "${composition}".`);
   console.log(
-    `  Ship a bundle: ./singularity deploy ship ${composition} --server ${opts.server}`,
+    `  Ship a bundle: ./equin deploy ship ${composition} --server ${opts.server}`,
   );
 };
 

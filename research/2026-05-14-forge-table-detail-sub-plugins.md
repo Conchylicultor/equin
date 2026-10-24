@@ -203,12 +203,12 @@ export function MySection({ tableName }: { tableName: string; pluginId: string }
 | 4 | `row-count` | 5 files (stat card UI, not DataTable) |
 | 5 | `sample-rows` | 5 files (dynamic ColumnDef[], identifier quoting) |
 
-After all agents finish: run `./singularity build` once to register all plugins.
+After all agents finish: run `./equin build` once to register all plugins.
 
 ## Verification
 
-1. `./singularity build` — auto-registers all 10 barrels (5 web + 5 server)
-2. `./singularity check` — boundary rules pass
+1. `./equin build` — auto-registers all 10 barrels (5 web + 5 server)
+2. `./equin check` — boundary rules pass
 3. Open `http://<worktree>.localhost:9000`, navigate to Forge > Catalog > Tables
 4. Expand any table row — all 5 sections should render with live data
 5. Verify columns show correct types, FKs link to real tables, row count is plausible

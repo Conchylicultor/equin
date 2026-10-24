@@ -48,7 +48,7 @@ export const investigateReleaseHistory =
         "",
         `- the transcript: the \`${RELEASE_LOG_CHANNEL}\` log channel, and the release run-detail pane (Studio → this composition → Release history → this run);`,
         `- the ledger row: \`select * from release_runs where id = '${run.id}'\` via \`query_db\`;`,
-        "- `./singularity release` is the engine — a failed bundle is the CLI's verdict, so a wrong one is a CLI or code bug, not a UI one.",
+        "- `./equin release` is the engine — a failed bundle is the CLI's verdict, so a wrong one is a CLI or code bug, not a UI one.",
         "",
         "Find the root cause and say what it is. Fix it if the fix is clearly in this repo.",
         ...(extra ? ["", "## What the user asked for", "", extra] : []),

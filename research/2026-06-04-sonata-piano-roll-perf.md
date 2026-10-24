@@ -91,9 +91,9 @@ Build `const idx = buildTempoIndex(score)` once and replace the four `beatToSeco
 
 ## Verification
 
-1. `./singularity build` from the worktree; load `http://<worktree>.localhost:9000` → Sonata, load the MIDI source.
+1. `./equin build` from the worktree; load `http://<worktree>.localhost:9000` → Sonata, load the MIDI source.
 2. **Smoothness over time:** play a multi-minute song; the cursor should stay smooth at minute 3+ exactly as at second 0 (root cause #2). Before the fix it degrades; after, it shouldn't.
 3. **Per-frame cost:** with `e2e/screenshot.mjs` (or Chrome DevTools Performance via Playwright), record during playback — confirm note divs are NOT re-created each frame (only the scroll-layer `transform` mutates) and there are no long scripting frames.
 4. **Correctness:** notes still land exactly on their keys at the now-line; bar lines + numbers scroll correctly; chord overlay labels track the right beats; seek (arrows / scrubber), tempo nudge (↑/↓), play/pause (Space), and end-of-song stop all behave as before.
 5. **Tempo map:** test a source with tempo changes (if available) to confirm `secondsToBeat` inversion and note spacing match the old behavior.
-6. `./singularity check` passes (migrations/docs/eslint, plugin boundaries).
+6. `./equin check` passes (migrations/docs/eslint, plugin boundaries).

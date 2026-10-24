@@ -12,7 +12,7 @@ import { showToast } from "@plugins/shell/plugins/toast/web";
  * builds that make it true.
  *
  * Both actions POST the same endpoint, which runs
- * `./singularity build --composition <id>` in the checkout this backend belongs
+ * `./equin build --composition <id>` in the checkout this backend belongs
  * to — so the live URL is `<id>.<checkout>.localhost:9000` and it is ready when
  * that build ends. `useEndpointMutation` auto-toasts endpoint errors (e.g. the
  * server's 400 for a composition that can never be served), so there is no
@@ -29,7 +29,7 @@ export function useServeComposition(): {
   /**
    * Start a serve build of `id`; `false` when this host cannot build at all.
    *
-   * The endpoint is desktop-only (a build spawns `./singularity build` in this
+   * The endpoint is desktop-only (a build spawns `./equin build` in this
    * checkout), so under a transport with no computer behind it the mutation is
    * unavailable — said in a toast, never a silent no-op behind a "Building…"
    * one.

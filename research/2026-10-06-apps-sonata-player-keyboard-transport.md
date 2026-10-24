@@ -112,8 +112,8 @@ intended outcome there (the undo shortcut already yields to text fields by
   `PlayerDisplay`s, and not at all with none (unmount → unmounts).
 - Unit (`shortcuts/web/__tests__/`): a keydown whose target handler called
   `preventDefault` does not fire a matching shortcut; an unhandled one does.
-- `./singularity test plugins/apps/plugins/sonata plugins/primitives/plugins/shortcuts`
-- `./singularity build`, then a new e2e
+- `./equin test plugins/apps/plugins/sonata plugins/primitives/plugins/shortcuts`
+- `./equin build`, then a new e2e
   `file-preview/e2e/keyboard-verify.ts` (same `--file` convention as
   `open-in-sonata-verify.ts`): open the preview → it auto-plays; Space → paused
   (play toggle label flips); Space → playing; pause, ArrowRight → scrubber

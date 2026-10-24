@@ -134,7 +134,7 @@ export const RunDeploymentBodySchema = z.discriminatedUnion("verb", [
 export type RunDeploymentBody = z.infer<typeof RunDeploymentBodySchema>;
 
 /**
- * Launch `./singularity deploy <verb> <composition> --server <serverId>` for
+ * Launch `./equin deploy <verb> <composition> --server <serverId>` for
  * this deployment, streaming its stdout/stderr into the `deploy` log channel.
  *
  * Returns as soon as the command is spawned — a converge on a cold box installs

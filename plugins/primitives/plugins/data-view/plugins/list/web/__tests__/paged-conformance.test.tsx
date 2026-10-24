@@ -5,7 +5,7 @@
  * laid-out page by data-view's shared suite (`describePagedConformance`, `data-
  * view/web/testing`).
  *
- * Run: `./singularity test plugins/primitives/plugins/data-view/plugins/list`.
+ * Run: `./equin test plugins/primitives/plugins/data-view/plugins/list`.
  */
 
 import { afterEach } from "vitest";

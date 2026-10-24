@@ -98,7 +98,7 @@ file-changes/
 
 ## Verification
 
-1. `./singularity build` — ensures TypeScript compiles and plugin is discovered
+1. `./equin build` — ensures TypeScript compiles and plugin is discovered
 2. Open the app at `http://<worktree>.localhost:9000`
 3. Open a conversation with file changes → Review pane → Plugin Changes section
 4. Verify: card headers show the stats badge (from summary contribution, not hardcoded)

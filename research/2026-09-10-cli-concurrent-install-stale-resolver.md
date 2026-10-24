@@ -2,7 +2,7 @@
 
 ## Context
 
-Running `./singularity test <path>` and `./singularity build` at the same time in one
+Running `./equin test <path>` and `./equin build` at the same time in one
 worktree can kill the build before it starts:
 
 ```
@@ -131,10 +131,10 @@ run, or a bare `bun install` that takes no lock) and is not what was reported.
 
 1. **Reproduce first, before any edit.** This worktree has no `node_modules` today, so it
    is exactly the failing state. Launch two cheap CLI commands together, e.g.
-   `./singularity check --list` twice in parallel (backgrounded). Expect one to die with
+   `./equin check --list` twice in parallel (backgrounded). Expect one to die with
    `Cannot find package 'commander'` after "Another build is in progress". If it does not
    reproduce, stop and re-diagnose before changing anything.
-2. Unit tests — `./singularity test plugins/framework/plugins/cli/plugins/bootstrap`:
+2. Unit tests — `./equin test plugins/framework/plugins/cli/plugins/bootstrap`:
    - the existing "under-lock re-check skips an install the lock holder already did"
      test now asserts `kind: "installed-by-other"` and the pid in the log line;
    - fast path asserts `kind: "fresh"`, install path asserts `kind: "installed"`;
@@ -142,7 +142,7 @@ run, or a bare `bun install` that takes no lock) and is not what was reported.
 3. After the fix, wipe this worktree's `node_modules` again (the root one and every
    workspace one) and repeat step 1: both commands succeed; the waiting one prints the
    dependency-install wait line, the "installed by another command" line, then runs.
-4. Repeat the reported pairing: `./singularity test plugins/framework/plugins/cli/plugins/bootstrap`
-   and `./singularity build` backgrounded together from a stale stamp; both finish,
+4. Repeat the reported pairing: `./equin test plugins/framework/plugins/cli/plugins/bootstrap`
+   and `./equin build` backgrounded together from a stale stamp; both finish,
    `build-status.json` reads `status: ok`.
-5. `./singularity check` (includes `cli:bootstrap-package-free`, type-check, plugin docs).
+5. `./equin check` (includes `cli:bootstrap-package-free`, type-check, plugin docs).

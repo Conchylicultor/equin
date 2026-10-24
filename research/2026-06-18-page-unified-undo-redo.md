@@ -84,10 +84,10 @@ One stack, one patch pipeline (`optimistic` `{tag:"patch"}`), one router. Text a
 - `plugins/page/plugins/editor/CLAUDE.md` — rewrite undo section.
 
 ## Verification
-1. `./singularity build`, open `http://<worktree>.localhost:9000/pages`, open a page.
+1. `./equin build`, open `http://<worktree>.localhost:9000/pages`, open a page.
 2. **The reported bug:** type text → Enter (split) → Cmd+Z → the new block is removed. Script with `e2e/screenshot.mjs` (`--click`/keyboard) for before/after.
 3. **Text undo:** type a sentence → Cmd+Z → reverts as a chunk; Cmd+Shift+Z → reapplies.
 4. **Interleaving:** type in A → Enter → type in B → Cmd+Z ×3 → undoes B-text, then the split, then A-text, in order.
 5. **Persistence:** after an undo, reload the page → the undone state persisted (patch hit the server).
 6. **Block-selection mode:** select a block (no editor focused) → Cmd+Z/Cmd+Shift+Z drive the same stack.
-7. `./singularity check` (type-check + boundaries). If a pure helper is extracted, add a co-located `*.test.ts` and run `bun test plugins/page/plugins/editor/...`.
+7. `./equin check` (type-check + boundaries). If a pure helper is extracted, add a co-located `*.test.ts` and run `bun test plugins/page/plugins/editor/...`.

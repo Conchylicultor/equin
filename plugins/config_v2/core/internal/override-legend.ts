@@ -11,7 +11,7 @@
  */
 export const LEGEND_MARKER = "// @legend";
 
-const LEGEND_HEAD = `${LEGEND_MARKER} — how to write this file (rewritten by ./singularity build; edits inside this block are lost):`;
+const LEGEND_HEAD = `${LEGEND_MARKER} — how to write this file (rewritten by ./equin build; edits inside this block are lost):`;
 
 // A legend line is indented under the head, which is what marks where the
 // block ends — the author's own comments below it use a single space.

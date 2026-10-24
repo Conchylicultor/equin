@@ -77,12 +77,12 @@ Decided with the user: make it the type-check, in this session, with:
 
 ## Verification
 
-- Tests (`./singularity test plugins/framework/plugins/tooling/plugins/checks/plugins/type-check`):
+- Tests (`./equin test plugins/framework/plugins/tooling/plugins/checks/plugins/type-check`):
   `keyed-check.test.ts`'s fixtures ported to the new check, the closure fixtures, warm from
   another tree's entries, and directive files.
-- `./singularity check` and `./singularity build` green.
+- `./equin check` and `./equin build` green.
 - Benchmark: before = the merge-base (step 1c, lint included), after = this branch. Each side
-  has its own `SINGULARITY_DIR`, warmed and snapshotted. Measured with `./singularity check
+  has its own `SINGULARITY_DIR`, warmed and snapshotted. Measured with `./equin check
   type-check --jobs 1`:
   - the 14 step 1c scenarios;
   - the unchanged tree;

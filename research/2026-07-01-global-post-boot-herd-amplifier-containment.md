@@ -11,7 +11,7 @@ On `singularity` (main) a backend restart intermittently takes **~46 s** instead
 warm **~10 s**. Prior perf sessions (see the companion issue) traced this to a **post-boot
 herd** with two compounding drivers:
 
-1. **Rate.** Every `./singularity push` advances `refs/heads/main` → git-watcher fires
+1. **Rate.** Every `./equin push` advances `refs/heads/main` → git-watcher fires
    `git.refAdvanced` → auto-build → the backend restarts. Main reboots **~20×/day**, each a
    cold boot.
 2. **Amplitude.** On every restart (and every WS reconnect), each open tab's `replaySubs()`
@@ -156,7 +156,7 @@ Reuse / reference:
 
 ## Verification
 
-1. **Build:** `./singularity build` (run from this worktree). Confirms the new job registers and
+1. **Build:** `./equin build` (run from this worktree). Confirms the new job registers and
    `plugins-*-in-sync` / boundary checks pass.
 2. **Lever C — debounce:**
    - Enqueue two `refAdvanced` bursts within 5 s (e.g. two quick no-op commits on a scratch

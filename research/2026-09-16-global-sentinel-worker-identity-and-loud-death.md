@@ -73,7 +73,7 @@ very first import declares it.
   argv is the same in dev and in a release.
 - **Verify during implementation:** check that Bun's `Worker` `argv` option
   shows up in the worker's `process.argv`, with a scratch script run through
-  `./singularity run`. The bun-script guard blocked the bare check during
+  `./equin run`. The bun-script guard blocked the bare check during
   planning. If `argv` does not work, use `workerData` from
   `node:worker_threads`; the shape stays the same.
 
@@ -162,13 +162,13 @@ A status that main holds, pushed to every surface that needs it:
 1. **Reproduce first.** Before any fix, on this worktree's backend,
    `logs/sentinel.jsonl` should show the same crash, but only if this worktree
    starts the sentinel. It does not: the sentinel runs only in main. So:
-   `./singularity test plugins/debug/plugins/sentinel`, with a new test that
+   `./equin test plugins/debug/plugins/sentinel`, with a new test that
    spawns the real worker through `worker-host` in a process whose namespace is
    declared. The test asserts that `ready` arrives. It fails before the fix and
    passes after.
-2. **Checks.** `./singularity check sentinel:worker-closure-lean` fails on the
+2. **Checks.** `./equin check sentinel:worker-closure-lean` fails on the
    current tree, printing the health-monitor → slow-ops → config_v2 chain, and
-   passes after the fix. Then run the full `./singularity check`.
+   passes after the fix. Then run the full `./equin check`.
 3. **Loudness.** A test uses a worker URL that throws when it loads. It asserts
    5 deaths → status `down` → one `sentinel-down` report recorded → status file
    written. On the deployed worktree
@@ -177,7 +177,7 @@ A status that main holds, pushed to every surface that needs it:
 4. **After push** (main rebuilds): `logs/sentinel.jsonl` shows no new crash,
    `duress-episodes` gets lines again when the machine is under load, and
    `query_db` on `singularity` shows no `sentinel-down` report.
-5. **Release.** `./singularity release` builds a vendored `sentinel/worker.js`
+5. **Release.** `./equin release` builds a vendored `sentinel/worker.js`
    that boots, if releases are exercised locally. Otherwise, bundle
    `entry.ts` and run the closure check against the bundle.
 

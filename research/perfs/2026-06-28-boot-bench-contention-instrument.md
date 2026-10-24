@@ -77,7 +77,7 @@ The 2026-06-28 assessment found the dominant cost of slow boot/git loaders is **
 
 ### 10. boot-bench MCP tool + docs
 - `boot-bench/server/internal/mcp-tools.ts`: add `loadConcurrency` to `inputSchema`, thread into `reqBody`. Rewrite the description to cover: the wait/work split, loader **and** db top-N, `persistedReadMs`, that **bloat only reproduces in warm mode against main** (`worktree: "singularity"`) and cold-clearing churns the table, and that `loadConcurrency` saturates the **host-wide** `heavy-read` gate (contends with other live worktrees during the run). Cross-reference `firstSubscribe.loaderMs` (end-to-end) vs `loaders[key].workMs` + waits (split).
-- Update `boot-bench/CLAUDE.md` (new `Uses` entries: `host-read-pool`, `runtime-profiler/core.waitSplit`) and run `./singularity build` to regenerate the autogen doc/registry blocks.
+- Update `boot-bench/CLAUDE.md` (new `Uses` entries: `host-read-pool`, `runtime-profiler/core.waitSplit`) and run `./equin build` to regenerate the autogen doc/registry blocks.
 
 ## Files to modify
 - `plugins/infra/plugins/runtime-profiler/core/recorder.ts`, `core/index.ts` — `waitSplit`
@@ -98,7 +98,7 @@ The 2026-06-28 assessment found the dominant cost of slow boot/git loaders is **
 - `assembleBootSnapshot`, `bootCriticalKeys` (`boot-snapshot/server`); `clearPersistedSnapshots` (`live-state-snapshot/server`); `measureSubscribeCycle` (`server-core/core`); `db` (`database/server`).
 
 ## Verification
-1. `./singularity build` (regenerates migrations/docs; runs checks). Confirm `plugin-boundaries`, `type-check`, `plugins-doc-in-sync` pass.
+1. `./equin build` (regenerates migrations/docs; runs checks). Confirm `plugin-boundaries`, `type-check`, `plugins-doc-in-sync` pass.
 2. `bun test plugins/debug/plugins/profiling/plugins/boot-bench/server/internal/aggregate.test.ts` — extend fixtures for the new shape (union-by-label loaders/db, per-layer wait Stats, `persistedReadMs`, `snapshotBloat`).
 3. **Wait-split visible (gap 1+3):** run `benchmark_boot` against this worktree → confirm `runtimeProfile.loaders[edited-files]` shows `workMs` ≪ `avgMs` with a `heavy-read-*` wait, and `db` top-N is populated.
 4. **Load generator (gap 2):** `benchmark_boot { loadConcurrency: <≥ slot count>, mode: "warm" }` → confirm the measured loaders' `heavy-read-acquire` wait (and ELD max) rise materially vs `loadConcurrency: 0`, proving the gate is saturated. Confirm occupants release after the run (`heavyReadQueueDepth()` returns to 0; no leaked slot files).

@@ -126,11 +126,11 @@ Because recognition accepts `<prefix>-<uuid>`, the rewrite is just **prepend the
 - `plugins/infra/plugins/entities/server/internal/define-entity.ts` (`onUpdate` already forwarded)
 - `plugins/infra/plugins/events/server/internal/base-columns.ts` (all trigger tables)
 - `plugins/infra/plugins/worktree/core/internal/worktree-name.ts`, `plugins/conversations/plugins/runtime-tmux/server/internal/{pane-status,pane-rows}.ts`, `plugins/conversations/server/internal/handle-delete.ts`
-- Migrations: data migrations via `./singularity build --custom-migration --migration-name <slug>`; precedent `plugins/database/plugins/migrations/data/20260603_150847_c72bb218__reorder_plugin_id_path_rename.sql` and the fork-safety header of `20260807_005217_4ff1ca12__rename_agent_notes_block_type.sql`
+- Migrations: data migrations via `./equin build --custom-migration --migration-name <slug>`; precedent `plugins/database/plugins/migrations/data/20260603_150847_c72bb218__reorder_plugin_id_path_rename.sql` and the fork-safety header of `20260807_005217_4ff1ca12__rename_agent_notes_block_type.sql`
 
 ## Verification
 
-- `./singularity test plugins/ids` — per shape: mint ↔ `is` ↔ `pattern` round-trip (1e5 mints, suffix length always 6), legacy bodies recognised (task ms/6, att s/4, `block-<ms>-<6>`, `<prefix>-<uuid>`, `claude-` aliases), prose boundaries (`id/logs`, `id.ts`, `/id` rejected; trailing period accepted), `parse()` upgrades bare uuid for `legacyBareUuid` kinds.
-- `./singularity check` — `ids:*`, `active-data:*`, `migrations-in-sync`, `migration-applies-clean` (dry-runs each rewrite against live main), `type-check` (branded columns).
+- `./equin test plugins/ids` — per shape: mint ↔ `is` ↔ `pattern` round-trip (1e5 mints, suffix length always 6), legacy bodies recognised (task ms/6, att s/4, `block-<ms>-<6>`, `<prefix>-<uuid>`, `claude-` aliases), prose boundaries (`id/logs`, `id.ts`, `/id` rejected; trailing period accepted), `parse()` upgrades bare uuid for `legacyBareUuid` kinds.
+- `./equin check` — `ids:*`, `active-data:*`, `migrations-in-sync`, `migration-applies-clean` (dry-runs each rewrite against live main), `type-check` (branded columns).
 - Rewrite migrations: `query_db` before/after on the worktree DB — `count(*) WHERE id NOT LIKE 'song-%'` = 0, child tables' FK columns match, no orphan soft refs; run the migration twice (idempotent).
-- E2E: `./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts` on a conversation whose transcript mentions `task-…`, `att-…`, `song-…`, `proto-…` → each renders a chip and opens its pane; open an old `/sonata/song/<bare-uuid>` URL → resolves to the song.
+- E2E: `./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts` on a conversation whose transcript mentions `task-…`, `att-…`, `song-…`, `proto-…` → each renders a chip and opens its pane; open an old `/sonata/song/<bare-uuid>` URL → resolves to the song.

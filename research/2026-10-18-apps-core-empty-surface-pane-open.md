@@ -101,8 +101,8 @@ becomes a tab.
   - boot with persisted empty set → open works; `defaultStore` never live-sink.
   - empty → `navigate()` opens a tab → later open goes to that tab, not a stale
     empty store.
-- `./singularity test plugins/apps-core`.
-- `./singularity build`, then browser_* on the desktop: close every window,
+- `./equin test plugins/apps-core`.
+- `./equin build`, then browser_* on the desktop: close every window,
   open a build run from the Builds popover (homed path — must still work) and
   an unhomed pane through the live store (e.g. `restoreRoute`/`openPane` from
   global chrome) → a window opens with the pane; reload an empty desktop,

@@ -367,10 +367,10 @@ holds only `{ digit, page }` and renders it.
 
 ## Verification
 
-1. `./singularity test plugins/apps/plugins/chord` — the pure tests above.
-2. `./singularity build` (background): migrations, boundaries, type-check, the
+1. `./equin test plugins/apps/plugins/chord` — the pure tests above.
+2. `./equin build` (background): migrations, boundaries, type-check, the
    plugin docs.
-3. `./singularity run …/curriculum/e2e/ladder-preview.ts` — the first ~20 levels
+3. `./equin run …/curriculum/e2e/ladder-preview.ts` — the first ~20 levels
    against this worktree's index, to see by eye that the inversion levels are
    now per chord and how far down the ladder reaches.
 4. `…/trainer/e2e/trainer-verify.ts`, extended: with reveal set to `keyboard`,

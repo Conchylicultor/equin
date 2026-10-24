@@ -135,14 +135,14 @@ The `renderDoc` output must match `docgen.ts` line 41 exactly: `` `${s.groupName
 
 ```bash
 # Save baseline
-./singularity build
+./equin build
 cp docs/plugins-details.md /tmp/baseline-details.md
 cp docs/plugins-compact.md /tmp/baseline-compact.md
 
 # After all changes
-./singularity build
+./equin build
 # Diff should only show new slots plugin entry, not changes to existing plugins
 diff /tmp/baseline-details.md docs/plugins-details.md
 diff /tmp/baseline-compact.md docs/plugins-compact.md
-./singularity check
+./equin check
 ```

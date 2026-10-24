@@ -128,7 +128,7 @@ render). Plus a check with streaming off (no subscriber) that (b) is unchanged.
 
 ## Verification
 
-- `./singularity test` on runtime-sdk (fold of stream events into
+- `./equin test` on runtime-sdk (fold of stream events into
   `PartialMessage`: deltas, new message, interrupt, error result; frames
   round-trip through the protocol schema) and on the web reconcile (block hidden
   once landed; multi-block message; no matching row).

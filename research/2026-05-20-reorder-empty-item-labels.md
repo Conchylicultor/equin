@@ -125,7 +125,7 @@ return (
 
 ## Verification
 
-1. `./singularity build`
+1. `./equin build`
 2. Open a task detail pane for a task **without** dependencies (so TaskGraph returns null)
 3. Click the pen (edit mode) button in the toolbar
 4. Verify: the empty ring box for TaskGraph now shows a muted italic label like "Task Graph"

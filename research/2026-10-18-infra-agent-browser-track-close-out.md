@@ -34,7 +34,7 @@ Multi-session (A/B) scripts under `--attach` stay `[Later]`.
 
 ### 1. Bring the attach commit in
 
-`git cherry-pick -n 3038f34710` (no commit; `./singularity push` commits), plus the
+`git cherry-pick -n 3038f34710` (no commit; `./equin push` commits), plus the
 `host-attach.ts` prettier change. This adds `browser_attach` (ticket), `--attach` in
 `withBrowser`, `bindEndpoint()` / page adoption in `bin/host-session.ts`,
 `connectChromium`, the `core/` attach-ticket codec, and docs. Review it against the
@@ -106,7 +106,7 @@ as a failed revert.
   the Ops Gantt. The wait itself goes in the tool result: a call that queued over 1 s says
   "waited N s for a browser slot", so a slow call explains itself. The health-row status
   keeps a counter of drives in progress and queued (`status.json` → `agent-browser.status`).
-- A script attached via `--attach` already holds the slot through `./singularity run`'s
+- A script attached via `--attach` already holds the slot through `./equin run`'s
   e2e op. The host's tool calls during it are separate MCP calls and take their own slot,
   which is correct.
 
@@ -120,8 +120,8 @@ as a failed revert.
 
 ## Verification
 
-- `./singularity build`, then with the browser_* tools on this worktree's build:
-  - Run `browser_attach` → `./singularity run <e2e script> --attach <ticket>` → `browser_read_page`
+- `./equin build`, then with the browser_* tools on this worktree's build:
+  - Run `browser_attach` → `./equin run <e2e script> --attach <ticket>` → `browser_read_page`
     and confirm the script's tab is still there.
   - Click a DataView "Group by", then `browser_close` immediately. `GET /api/agent-writes`
     should be empty, and the grouping reverted on reload.
@@ -132,7 +132,7 @@ as a failed revert.
   says it waited, and the health row shows the queue.
 - Harness regression: `screenshot.ts --click "…"` on a DataView, and a plain e2e script.
   Both pass, and their writes are reverted.
-- `./singularity test plugins/infra/plugins/mcp/plugins/browser plugins/infra/plugins/deps/plugins/playwright-browser`
+- `./equin test plugins/infra/plugins/mcp/plugins/browser plugins/infra/plugins/deps/plugins/playwright-browser`
   passes. Add a unit test for `drainWrites` against a local Bun.serve: a slow POST
   resolves the drain only after its response, a request sent after drain starts is
   aborted, and a hanging POST times out.

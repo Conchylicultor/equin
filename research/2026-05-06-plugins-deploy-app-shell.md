@@ -199,7 +199,7 @@ For any future app:
 ## Verification
 
 ```bash
-./singularity build
+./equin build
 # Visit http://<worktree>.localhost:9000
 # → App rail shows two icons: Agent Manager (dashboard) + Deploy (cloud)
 # → Click Deploy icon → navigates to /deploy, shows server list in Miller

@@ -3,7 +3,7 @@
  * the tab's `key`, labelled "Key", which a song with no UG row (or a tab with
  * no key) reads as null.
  *
- * Run: `./singularity test plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar`.
+ * Run: `./equin test plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar`.
  */
 
 import { describe, expect, test } from "bun:test";

@@ -250,7 +250,7 @@ Reuse (no new deps): existing `buildBarStaff`/`decomposeDuration`/`bars`/
 
 ## Verification
 
-1. `./singularity build` (regenerates docs/registry; runs checks).
+1. `./equin build` (regenerates docs/registry; runs checks).
 2. `bun test plugins/apps/plugins/sonata/plugins/notation/web/internal` — pure
    converter + voice-partition unit tests (held-note no-re-strike, SATB, explicit
    voices, per-track grouping).

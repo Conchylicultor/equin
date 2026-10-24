@@ -219,7 +219,7 @@ Mechanical, file-by-file. No semantic edits in the moved files except the two in
 
 ### Boundary linter expectations
 
-After the refactor, `./singularity check --plugin-boundaries` must pass. Three rules to verify:
+After the refactor, `./equin check --plugin-boundaries` must pass. Three rules to verify:
 
 - **R3 (barrel purity)**: every new `index.ts` is imports + named re-exports + a single `export default`. Verified by inspection — the bodies above conform.
 - **R4 (grammar)**: cross-plugin imports terminate at `web` / `server` / `shared`. All consumer rewrites target `@plugins/primitives/plugins/{name}/{web|shared}` — valid barrels.
@@ -246,18 +246,18 @@ Order of operations within the PR:
 5. Rewrite the 44 non-framework consumer imports (`rg -l 'useResource\|useEditableField\|...'` + sed-style mechanical replace).
 6. Add the 4 new plugins to `web/src/plugins.ts`.
 7. `bun install` (workspace registers the new package.json files).
-8. `./singularity build` — type-checks, regenerates `docs/plugins.md`, restarts server.
-9. `./singularity check --plugin-boundaries` and `./singularity check --plugins-doc-in-sync` — both must pass.
+8. `./equin build` — type-checks, regenerates `docs/plugins.md`, restarts server.
+9. `./equin check --plugin-boundaries` and `./equin check --plugins-doc-in-sync` — both must pass.
 
 ## Verification
 
-1. **Type-check passes**: `./singularity build` completes cleanly. The frontend builds with no `@core` resolution errors.
-2. **Boundary linter clean**: `./singularity check --plugin-boundaries` returns ok. (R4 grammar in particular: no consumer imports a deeper path than `/web` or `/shared`.)
-3. **Docgen in sync**: `./singularity check --plugins-doc-in-sync` passes — `docs/plugins.md` includes new entries for `primitives`, `primitives/plugins/live-state`, `primitives/plugins/networking`, `primitives/plugins/editable-field`, with their public exports listed.
+1. **Type-check passes**: `./equin build` completes cleanly. The frontend builds with no `@core` resolution errors.
+2. **Boundary linter clean**: `./equin check --plugin-boundaries` returns ok. (R4 grammar in particular: no consumer imports a deeper path than `/web` or `/shared`.)
+3. **Docgen in sync**: `./equin check --plugins-doc-in-sync` passes — `docs/plugins.md` includes new entries for `primitives`, `primitives/plugins/live-state`, `primitives/plugins/networking`, `primitives/plugins/editable-field`, with their public exports listed.
 4. **Live-state still works** (the highest-blast-radius surface): open `http://<worktree>.localhost:9000`, confirm tasks list, conversation list, attempts list, push counters all render and update reactively. These all flow through `useResource` — if the `NotificationsProvider`/`NotificationsClient` rewire is broken, they go stale.
 5. **Networking still works**: open `Debug → Logs` (uses `useReconnectingWebSocket` + `ReconnectingEventSource` + `fetchWithRetry`), terminal pane (uses `useReconnectingWebSocket`). Each must connect and stream.
 6. **Editable-field still works**: focus a task description, type, pause >500 ms — saves and stays in place (no caret jump). Repeat on agent name/description/prompt.
-7. **Status bus still works**: kill the server (`./singularity build` restart), confirm the health plugin's reconnect toast appears (it subscribes via `subscribeWsStatus`).
+7. **Status bus still works**: kill the server (`./equin build` restart), confirm the health plugin's reconnect toast appears (it subscribes via `subscribeWsStatus`).
 8. **No git noise in `plugin-core/`**: after the PR, `plugin-core/` contains exactly `types.ts`, `slots.ts`, `commands.ts`, `context.tsx`, `error-boundary.tsx`, `index.ts`, `package.json`, `CLAUDE.md`. `shared/` is gone.
 
 Done when all 8 pass and the diff is dominated by `git mv` + import path rewrites (no surprise behavioral edits).

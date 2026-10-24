@@ -194,7 +194,7 @@ Two implementation paths; pick **(A)** for clarity.
 ### (A) Build-time codegen — recommended
 
 Extend `cli/src/docgen.ts`'s existing `collectAllPlugins(root)` walker
-(`cli/src/docgen.ts:71+`) to emit three files during `./singularity build`:
+(`cli/src/docgen.ts:71+`) to emit three files during `./equin build`:
 
 - `web/src/plugins.generated.ts`
 - `server/src/plugins.generated.ts`
@@ -463,7 +463,7 @@ Side-effect lifts (8 plugin server barrels listed in the table above).
 
 ## Verification
 
-- **Unit / boot**: `./singularity build` succeeds; gateway responds at
+- **Unit / boot**: `./equin build` succeeds; gateway responds at
   `http://<worktree>.localhost:9000`. Server logs show all `Registration.register()`
   tokens firing before any `onReady`.
 - **Topo-sort**: temporarily add a fake cycle in two plugins' `dependsOn`
@@ -481,9 +481,9 @@ Side-effect lifts (8 plugin server barrels listed in the table above).
 - **Trigger registry**: confirm `trigger(...)` calls in `onReady` still find
   their event tables in `triggerTableRegistry` (regression check for the
   duplicate-guard relocation).
-- **Checker**: run `./singularity check` → all pass, including the new
+- **Checker**: run `./equin check` → all pass, including the new
   `plugins-registry-in-sync`.
-- **Add a plugin**: scaffold a trivial new plugin, run `./singularity build`,
+- **Add a plugin**: scaffold a trivial new plugin, run `./equin build`,
   confirm it appears in `*.generated.ts` and is reachable from its slot.
 
 ## Open questions

@@ -23,7 +23,7 @@
 //
 // Writes, so a worktree deploy only (`openDeployDb` refuses main).
 //
-//   ./singularity run plugins/hints/e2e/first-launch.ts [--out /tmp/first-launch]
+//   ./equin run plugins/hints/e2e/first-launch.ts [--out /tmp/first-launch]
 
 import type { Locator, Page } from "playwright";
 import {

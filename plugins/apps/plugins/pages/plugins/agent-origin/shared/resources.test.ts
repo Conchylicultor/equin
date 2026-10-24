@@ -3,7 +3,7 @@
  * on the field id `origin` (`origin is user` / `origin is agent`), so the id,
  * its two values and what a page with no marker reads are pinned.
  *
- * Run: `./singularity test plugins/apps/plugins/pages/plugins/agent-origin`.
+ * Run: `./equin test plugins/apps/plugins/pages/plugins/agent-origin`.
  */
 
 import { expect, test } from "bun:test";

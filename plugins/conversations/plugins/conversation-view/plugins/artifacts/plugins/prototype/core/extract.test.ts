@@ -37,7 +37,7 @@ describe("extractPrototypeHits — created", () => {
   test("a `prototype new` command creates the id it printed", () => {
     const event = toolCall(
       "Bash",
-      { command: './singularity prototype new "Artifacts popover"' },
+      { command: './equin prototype new "Artifacts popover"' },
       { content: `Created ${A}\n  ${DIR}/${A}\n  http://…/${A}` },
     );
     expect(rows(event)).toEqual([[A, "created"]]);
@@ -45,7 +45,7 @@ describe("extractPrototypeHits — created", () => {
 
   test("a mint still running claims nothing — there is no id yet", () => {
     const event = toolCall("Bash", {
-      command: "./singularity prototype new",
+      command: "./equin prototype new",
     });
     expect(rows(event)).toEqual([]);
   });
@@ -53,7 +53,7 @@ describe("extractPrototypeHits — created", () => {
   test("a mint that failed created nothing", () => {
     const event = toolCall(
       "Bash",
-      { command: "./singularity prototype new" },
+      { command: "./equin prototype new" },
       { content: `boom ${A}`, isError: true },
     );
     expect(rows(event)).toEqual([]);

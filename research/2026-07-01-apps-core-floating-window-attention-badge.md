@@ -103,7 +103,7 @@ the `Tab.badge` prop, and `TabIcon` all already exist.
 
 ## Verification
 
-1. `./singularity build` — must succeed (types + checks).
+1. `./equin build` — must succeed (types + checks).
 2. In the app, open **Mail** (or Settings) and put it in a state that triggers its
    attention badge (Mail sync-error / Settings config-conflict). The dot shows on
    the app-rail + docked tab today.

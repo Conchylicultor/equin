@@ -64,7 +64,7 @@ Deliberately **not** moved:
 only `node_modules`/`plugins`. Make it also drop `isTestCodePath` files
 (from `plugin-id/core`, the same predicate `parse-utils`' walker uses). Add a
 case to `plugin-registry-gen.test.ts`: a `*.test.ts` and a `testing/` import add
-no edge. `./singularity build` regenerates `server.generated.ts` (and web/
+no edge. `./equin build` regenerates `server.generated.ts` (and web/
 central) without the test-only edges. Do this first: without it, moving
 `createTestDb` to `…/server/testing` still maps back to the plugin and keeps the
 edge.
@@ -119,20 +119,20 @@ other rules (`parse.test.ts` style), and document it in
 ### 4. Docs
 - `boundaries/CLAUDE.md` "Test code": one line listing where the harnesses
   now live, as the examples of the pattern.
-- `./singularity build` regenerates `docs/plugins-details.md`,
+- `./equin build` regenerates `docs/plugins-details.md`,
   `plugins-compact.md` and each plugin's autogen block (harness symbols drop
   out of "Exports").
 
 ## Verification
-- `./singularity check plugin-boundaries`, `./singularity check boundary-rules`
-  and `./singularity check type-check` pass; the new R12 fails if an
+- `./equin check plugin-boundaries`, `./equin check boundary-rules`
+  and `./equin check type-check` pass; the new R12 fails if an
   `export { resetFooForTests }` is added back to a public barrel (checked by its
   unit test).
-- `./singularity test` on every touched plugin: db-test-fixture users
+- `./equin test` on every touched plugin: db-test-fixture users
   (tasks-core, infra/jobs, change-feed, chord, …), networking, live-state,
   web-sdk, duress, runtime-identity, page/editor, hooktheory, pane, deploy
   dashboard, codegen.
 - `server.generated.ts` no longer lists `database/plugins/db-test-fixture` in
   any `dependsOn`, and `rg "db-test-fixture/server\"" plugins` finds nothing.
-- `./singularity build` (in the background) succeeds: the registry, docs and
+- `./equin build` (in the background) succeeds: the registry, docs and
   migrations checks are in sync.

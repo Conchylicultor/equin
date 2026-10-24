@@ -211,11 +211,11 @@ rowDrop?: {
 
 ## Verification
 
-- **Unit tests:** `./singularity test plugins/primitives/plugins/tree`
+- **Unit tests:** `./equin test plugins/primitives/plugins/tree`
   (selection reducer: toggle, range across collapsed nodes, extend, all) and
   `plugins/infra/plugins/host-fs` (move: into-self refusal, exists, same-dir,
   EXDEV fallback via a tmp dir).
-- **Build and checks:** `./singularity build`, then `./singularity check`.
+- **Build and checks:** `./equin build`, then `./equin check`.
 - **E2E script** `file-explorer/plugins/browser/e2e/select-and-move.ts`. It
   works in a tmp folder it creates under `~` and removes afterwards.
   - Drag across rows: no text selection.

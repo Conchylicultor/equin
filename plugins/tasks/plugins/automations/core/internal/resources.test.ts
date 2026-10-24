@@ -3,7 +3,7 @@
  * over the `automationId` column) and reads NULL — by hand — for a task no
  * automation filed.
  *
- * Run: `./singularity test plugins/tasks/plugins/automations`.
+ * Run: `./equin test plugins/tasks/plugins/automations`.
  */
 
 import { expect, test } from "bun:test";

@@ -136,7 +136,7 @@ parent does not import these children).
 
 ## Verification
 
-1. `./singularity build`; open a conversation transcript.
+1. `./equin build`; open a conversation transcript.
 2. Hover a tool-call card: actions appear **in the header row**, right-aligned
    with (next to) the file path / running-dots, and the collapsible body below is
    full width. Nothing below the card is covered.

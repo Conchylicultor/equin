@@ -42,9 +42,9 @@ Out of scope: `<video>` / `<audio>` page blocks (same problem, different element
 
 ## Verification
 
-- `./singularity test plugins/primitives/plugins/overlay/plugins/image-viewer`:
+- `./equin test plugins/primitives/plugins/overlay/plugins/image-viewer`:
   - jsdom: `useImageProbe` gives 404 → `gone` and 500 → `unreadable`.
-- `./singularity check type-check`.
-- `./singularity build`, then `screenshot.ts`:
+- `./equin check type-check`.
+- `./equin build`, then `screenshot.ts`:
   - a task with an image attachment: the thumbnail opens the viewer;
   - the file viewer on a host path to a deleted `.png`: the "No longer available" box, with no zoom.

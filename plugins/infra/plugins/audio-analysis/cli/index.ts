@@ -1,7 +1,7 @@
 import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
 
 /**
- * `./singularity audio …` — run audio analyses from a terminal, in the
+ * `./equin audio …` — run audio analyses from a terminal, in the
  * foreground, with the same `ensureBeatFeatures` the job runs. Boots this
  * checkout's backend in `exec` mode (the deps and the jobs are server
  * contributions), so the checkout must have been built once.

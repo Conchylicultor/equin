@@ -223,8 +223,8 @@ Phases 3–4 are independent of 1–2 and can run in parallel.
 
 ## Verification
 
-- Phase 1: `./singularity build`; launch, resume, fork and push an ordinary task — identical to before;
-  `./singularity test plugins/conversations plugins/tasks/plugins/tasks-core`.
+- Phase 1: `./equin build`; launch, resume, fork and push an ordinary task — identical to before;
+  `./equin test plugins/conversations plugins/tasks/plugins/tasks-core`.
 - Phase 2: launch a scratch conversation with a trivial test profile; confirm in its transcript that
   the first-turn context has **no** repo CLAUDE.md / plugin index (ask it to list its instructions,
   and check the usage stat's context size vs a worktree agent), `/mcp` shows only the allowlisted

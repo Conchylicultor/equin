@@ -116,7 +116,7 @@ Auth.ScopeRequirement({
 ```
 New legal cross-plugin edge: `backup/google-drive/web → auth/web` (runtime barrel import).
 
-**10. `./singularity build`** — regenerates the web registry (new edge + slot) so
+**10. `./equin build`** — regenerates the web registry (new edge + slot) so
 `plugins-registry-in-sync` passes; regenerates the affected `CLAUDE.md` reference blocks.
 
 ### No central/server changes required
@@ -131,7 +131,7 @@ correctness).
 
 - **Unit (automatable):** `bun test plugins/auth/web/scopes.test.ts` — the union/diff math
   that protects against the full-replace. This is the load-bearing correctness check.
-- **Build/types/boundaries:** `./singularity build` — confirms the new cross-plugin edge is
+- **Build/types/boundaries:** `./equin build` — confirms the new cross-plugin edge is
   legal, registry in sync, types check.
 - **Manual smoke (Google consent is interactive — cannot be automated):**
   1. Connect Google (defaults only) → Accounts shows 3 scopes, **no** grant notice (Drive disabled).

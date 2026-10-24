@@ -102,14 +102,14 @@ local alias is legal; a `cross-plugin-reexport` (`export { … } from "@plugins/
     - `debug/slow-ops/server/internal/install-slow-span.ts` — `ConfigValues` **unchanged** (local alias).
     - Also update `primitives/avatar/server/internal/register-resolver.ts` (`registerFieldResolver` →
       fields/core).
-13. **Prose-only CLAUDE.md edits** (let `./singularity build` regen the `## Plugin reference` blocks):
+13. **Prose-only CLAUDE.md edits** (let `./equin build` regen the `## Plugin reference` blocks):
     - `fields/core/CLAUDE.md` — now owns the field atom + zod-derivation; note "zod permitted
       (browser-safe, pure)".
     - `fields/CLAUDE.md` — extend the "sources FieldType from fields/core" blurb to "sources the field
       atom + zod-derivation from fields/core".
     - `config_v2/CLAUDE.md` — retarget the "Schema evolution"/"Declaring config" prose naming
       `buildFieldsSchema`/`fieldSchemaWithDefault` to `@plugins/fields/core` + `fieldsToZodObject`.
-14. `./singularity build` then `./singularity check`.
+14. `./equin build` then `./equin check`.
 
 ## Critical files
 
@@ -136,7 +136,7 @@ local alias is legal; a `cross-plugin-reexport` (`export { … } from "@plugins/
 
 ## Verification
 
-- `./singularity check` green: **`type-check`** (the backstop for every flipped import),
+- `./equin check` green: **`type-check`** (the backstop for every flipped import),
   **`plugin-boundaries`** (no new cycle, no `cross-plugin-reexport` — confirm the `ConfigValues` alias
   is a local declaration), **`plugins-doc-in-sync`** (barrels shifted between the two plugins),
   **`config-origins-in-sync`**.

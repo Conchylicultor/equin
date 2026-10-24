@@ -14,7 +14,7 @@ its own "installed" test, its own locking, and its own update story:
 | Sheet Sage dumps (`apps/chord/song-index`) | pinned URL and sha256, supervised job, its own flock, its own data dir | supervised job |
 | IP-country DB (`deploy/analytics/ip-country`) | **unpinned** current-month URL, no sha, boot plus weekly cron, compiled to `ip-country.bin` | backend (deployed boxes too) |
 | signal-origin shim (`packages/signal-origin`) | `cc` run synchronously on the first arm, content-addressed name, fail-open and silent. A release ships no `.c`, so it never arms there | **CLI ops**, with no backend |
-| Gateway binary (`infra/launcher`) | `go build` into `<main>/gateway/gateway`, where `existsSync` counts as installed. Only `start` rebuilds it; `release` cross-builds it | **`./singularity start`**, before any DB or backend exists |
+| Gateway binary (`infra/launcher`) | `go build` into `<main>/gateway/gateway`, where `existsSync` counts as installed. Only `start` rebuilds it; `release` cross-builds it | **`./equin start`**, before any DB or backend exists |
 | Chromium (`safe-fetch/browser-fetch/provision`, reused by the e2e harness) | `playwright install` at **every** `bun install`, with a stamp in `node_modules`. Cannot see a cache deleted by hand | provision, then backend, checks and e2e |
 
 Two gaps block the move, and both are structural:
@@ -209,7 +209,7 @@ release for the first time.
   - **layout-harness check / measure-page** (the CLI check process):
     `ensureDep(chromium, cliExecContext())`.
   - **e2e harness `withBrowser`**: `readyNow`. When the dep is absent, it runs
-    `./singularity deps install chromium` as a child process (the e2e
+    `./equin deps install chromium` as a child process (the e2e
     process is off-loop, and the CLI no longer boots a backend for it), then
     reads again.
 - The `e2e-harness:pinned-playwright-invocation` check still covers the new
@@ -236,7 +236,7 @@ release for the first time.
 5. **Sealed installs**, then the gateway (`start`, launcher boot, `release`).
 6. **`playwright-browser` kind**, then Chromium's callers, then delete both
    provisions.
-7. `./singularity build`, `./singularity check`, tests.
+7. `./equin build`, `./equin check`, tests.
 
 These are large. If the session gets long, steps 5 and 6 are natural points
 to file with `add_task`, each with this doc as its spec.
@@ -254,7 +254,7 @@ to file with `add_task`, each with this doc as its spec.
 
 ## Verification
 
-- **Unit tests** (`./singularity test plugins/infra/plugins/deps`): the
+- **Unit tests** (`./equin test plugins/infra/plugins/deps`): the
   existing engine suite passes after the move.
   - New `download` tests: sha mismatch throws and leaves the dep absent;
     `derive` output only.
@@ -263,7 +263,7 @@ to file with `add_task`, each with this doc as its spec.
   - `readyNow`: every arm.
   - `@ts-expect-error`: a request handler still cannot call `ensureDep`, and
     `launchChromium` without a `Ready` does not compile.
-- **Static registry**: `./singularity deps list` with no backend built lists
+- **Static registry**: `./equin deps list` with no backend built lists
   all six deps (hello-python plus the five).
 - **Each migration, for real:**
   - **Sheet Sage**: `deps remove sheetsage-dumps`, then open the chord
@@ -271,17 +271,17 @@ to file with `add_task`, each with this doc as its spec.
     reuses the install.
   - **IP-country**: `deps install ip-country-db` gives a `.bin`, and a
     collect call resolves a known IP.
-    `./singularity deps upgrade db-ip` returns `current` or `upgraded`.
-  - **signal-origin**: `./singularity check` arms it, and the sink has no
+    `./equin deps upgrade db-ip` returns `current` or `upgraded`.
+  - **signal-origin**: `./equin check` arms it, and the sink has no
     `arm-failed` line. With `CC=false` and a fresh identity, the op still
     runs, and Dependencies shows `failed`.
   - **Gateway**: edit a comment in a `.go` file, then
-    `./singularity start --force` (with the user's OK, since it is
+    `./equin start --force` (with the user's OK, since it is
     system-level) builds a new identity and the plist points at it. A local
-    `./singularity release` bundle boots from the sealed gateway.
+    `./equin release` bundle boots from the sealed gateway.
   - **Chromium**: after `bun install` in a fresh worktree, no Chromium is
     downloaded. The first `screenshot.ts` e2e run installs it once, and a
     second worktree reuses it. browser-fetch while absent returns
     `browser-unavailable/installing` and then succeeds.
-- `./singularity check` passes, including boundary-rules, plugin-boundaries
+- `./equin check` passes, including boundary-rules, plugin-boundaries
   and registry-in-sync.

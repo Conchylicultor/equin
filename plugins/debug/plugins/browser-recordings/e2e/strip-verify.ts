@@ -3,7 +3,7 @@
 // has thumbnails, and screenshots it.
 //
 // Usage:
-//   ./singularity run plugins/debug/plugins/browser-recordings/e2e/strip-verify.ts \
+//   ./equin run plugins/debug/plugins/browser-recordings/e2e/strip-verify.ts \
 //     --conversation <conv-id> [--out /tmp/strip] --no-record
 
 import {

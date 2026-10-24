@@ -1,5 +1,5 @@
 /**
- * Tests for the `no-row-in-panel` lint rule. Run with `./singularity test
+ * Tests for the `no-row-in-panel` lint rule. Run with `./equin test
  * plugins/primitives/plugins/css/plugins/control-panel`.
  */
 import { RuleTester } from "eslint";

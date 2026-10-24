@@ -39,7 +39,7 @@ type Check = { id: string; description: string; run(): Promise<CheckResult> };
 // Validate a config file's content against its descriptor's Zod schema. Returns
 // a failure when the parsed document fails — the same `safeParse` the runtime
 // applies in `readTypedConfig`, lifted to check time so a schema that drifts
-// from stored data is caught at `./singularity check`, not silently surfaced
+// from stored data is caught at `./equin check`, not silently surfaced
 // months later as a `kind: "invalid"` conflict banner (and an HTTP 400 on the
 // reset button) the first time someone opens the file in settings.
 function validateSchema(
@@ -58,7 +58,7 @@ function validateSchema(
   return {
     ok: false,
     message: `${rel} fails the "${descriptor.name}" config schema: ${issues}`,
-    hint: "A field's schema changed under stored data. Migrate the file's values to the current schema (or run `./singularity build` to regenerate the origin).",
+    hint: "A field's schema changed under stored data. Migrate the file's values to the current schema (or run `./equin build` to regenerate the origin).",
   };
 }
 
@@ -85,7 +85,7 @@ const check: Check = {
         return {
           ok: false,
           message: `${rel} is missing`,
-          hint: "Run `./singularity build` to generate it.",
+          hint: "Run `./equin build` to generate it.",
         };
       }
       const raw = readFileSync(filePath, "utf8");
@@ -93,7 +93,7 @@ const check: Check = {
         return {
           ok: false,
           message: `${rel} is out of sync with defineConfig defaults`,
-          hint: "Run `./singularity build` and commit the regenerated file.",
+          hint: "Run `./equin build` and commit the regenerated file.",
         };
       }
       const descriptor = descriptorsByOriginRel.get(relPath);
@@ -113,7 +113,7 @@ const check: Check = {
 
     // Orphan pass: any `*.origin.jsonc` present in the WORKING TREE that
     // `renderConfigOriginContent` did not produce is no longer backed by a
-    // `defineConfig` (its descriptor was moved or removed). `./singularity build`
+    // `defineConfig` (its descriptor was moved or removed). `./equin build`
     // prunes these via `pruneOrphanedConfigFiles`, which — like every other
     // codegen step — mutates the working tree only (staging is `push`'s
     // `git add -A` job, never the build's). So orphan-ness must be judged on
@@ -136,7 +136,7 @@ const check: Check = {
       return {
         ok: false,
         message: `Orphaned origin file(s) no longer backed by any defineConfig:\n  ${orphans.join("\n  ")}`,
-        hint: "These were generated for a config descriptor that was moved or removed. Run `./singularity build` to prune them automatically (or `git rm` them), then re-run the check.",
+        hint: "These were generated for a config descriptor that was moved or removed. Run `./equin build` to prune them automatically (or `git rm` them), then re-run the check.",
       };
     }
 
@@ -156,7 +156,7 @@ const check: Check = {
         return {
           ok: false,
           message: `${relFromRoot} is missing a // @hash line`,
-          hint: "Re-generate the file via `./singularity build`.",
+          hint: "Re-generate the file via `./equin build`.",
         };
       }
       const hash = match[1]!;
@@ -170,7 +170,7 @@ const check: Check = {
         return {
           ok: false,
           message: `${relFromRoot} references a hash but ${originRel} does not exist`,
-          hint: "Run `./singularity build` to regenerate origin files.",
+          hint: "Run `./equin build` to regenerate origin files.",
         };
       }
 

@@ -4,11 +4,11 @@
  * several time zones, and the all-time counts.
  *
  * A throwaway database with the real schema, applied by the real migration
- * chain — so it needs the migration `./singularity build` generates from
+ * chain — so it needs the migration `./equin build` generates from
  * `tables.ts`, and the running embedded cluster. `createTestDb` throws loudly
  * rather than skipping when the cluster is not up.
  *
- * Run: `./singularity test plugins/apps/plugins/chord/plugins/progress`
+ * Run: `./equin test plugins/apps/plugins/chord/plugins/progress`
  */
 
 import {

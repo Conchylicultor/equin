@@ -7,7 +7,7 @@
 ## Context
 
 An agent (this session) was asked to "release sonata on tauri" and ran
-`./singularity release --composition sonata --target tauri` by hand. It worked,
+`./equin release --composition sonata --target tauri` by hand. It worked,
 but exposed three gaps that make agent-run releases **undiscoverable**:
 
 1. **Two divergent path conventions.** The CLI default `--out` is
@@ -148,17 +148,17 @@ path; the `latest` symlink is the stable "current build" pointer. Releases are
 
 ## Verification
 
-1. `./singularity build` (regenerates nothing schema-wise; ensures it compiles +
-   `./singularity check` passes — boundaries/type-check).
+1. `./equin build` (regenerates nothing schema-wise; ensures it compiles +
+   `./equin check` passes — boundaries/type-check).
 2. **Tauri (the original ask):**
-   `./singularity release --composition sonata --target tauri`
+   `./equin release --composition sonata --target tauri`
    - Assert `~/.singularity/releases/<wt>/sonata-tauri/<run-id>/bundle/Sonata.app`
      and `Sonata.dmg` exist.
    - Assert `~/.singularity/releases/<wt>/sonata-tauri/latest` resolves to
      `<run-id>` (`readlink`).
    - Assert `<run-id>/RELEASE.json` contains `runId`, `composition: "sonata"`,
      `target: "tauri"`.
-3. **Web:** `./singularity release --composition sonata --target web`
+3. **Web:** `./equin release --composition sonata --target web`
    - Assert the binary is at `<out>/dist/sonata-web-<platform>` and runs:
      execute it, confirm `http://sonata.localhost:9100` serves, and confirm (via
      the launch log `Root:` line / `lsof`) the PG socket is under `/tmp/sgs-*`,
@@ -167,7 +167,7 @@ path; the `latest` symlink is the stable "current build" pointer. Releases are
    (engine path, `--dev`), open the preview — confirm it still starts (engine sets
    `artifactPath` to the new versioned dir and `preview-manager` spawns
    `<artifactPath>/launch` with the `/tmp/sgp-*` data root).
-5. **Discovery doc check:** `./singularity check` (plugins-doc-in-sync) passes
+5. **Discovery doc check:** `./equin check` (plugins-doc-in-sync) passes
    after the CLAUDE.md edits.
 
 ## Out of scope / follow-ups

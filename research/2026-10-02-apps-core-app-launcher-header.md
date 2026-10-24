@@ -57,7 +57,7 @@ A single-contribution slot `AppShell.Brand: { component: ComponentType<{ form: "
 
 ## Verification
 
-- `./singularity build`, then `screenshot.ts` on `/agents`, `/pages`, `/files`, `/prototypes`, `/chord` (light + dark): header present, launcher icon in first pane header on sidebar-less apps.
+- `./equin build`, then `screenshot.ts` on `/agents`, `/pages`, `/files`, `/prototypes`, `/chord` (light + dark): header present, launcher icon in first pane header on sidebar-less apps.
 - e2e `plugins/apps-core/plugins/app-launcher/e2e/launcher.ts`: hover icon → popover with N app tiles; hover name → no popover; click name on a sub-route → app basePath; click icon → Home; click a tile → that app; Esc closes.
 - `compare-diff.ts --name proto-1790939876-0tjb --options popover=grid` against `app:/agents`.
-- `./singularity check` (boundaries, plugins-doc-in-sync, eslint).
+- `./equin check` (boundaries, plugins-doc-in-sync, eslint).

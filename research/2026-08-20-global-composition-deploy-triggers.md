@@ -128,7 +128,7 @@ const ids = await compositionsWantingRebuild(new Date());
 if (ids.length > 0) triggerBuild("auto", { compositions: ids });      // ONE invocation, N targets
 ```
 
-The fan-out is **one** `./singularity build --composition a b c`: one install,
+The fan-out is **one** `./equin build --composition a b c`: one install,
 one codegen, one checks pass, one transcript, one `build_runs` row with N chips —
 which `targets: text[]` and `isMainCompositionBuild` already model. Main's build
 and the composition build stay separate invocations on purpose: a run whose
@@ -276,10 +276,10 @@ docblock still say reclaiming is future Phase 5 work. Those are item 4 above.
 
 ## Verification
 
-1. `./singularity build` (background), then `./singularity check` — in particular
+1. `./equin build` (background), then `./equin check` — in particular
    `composition-closure`, `config-stable-list-ids`, `data-view:configs-authored`,
    `plugins-doc-in-sync`.
-2. `./singularity test plugins/build` — the new pure trigger test plus the
+2. `./equin test plugins/build` — the new pure trigger test plus the
    existing `derive.test.ts` / `run-build.test.ts`.
 3. In Studio → Compositions → `sonata` → Build & serve: press **Serve**, confirm
    `http://sonata.<worktree>.localhost:9000` comes up and

@@ -135,7 +135,7 @@ The mechanism exists and is grounded (`eslint.config.ts` auto-discovers `plugins
   - `ignores["no-arbitrary-font-size"]` = list from `rg -l 'text-\[\d+px\]' plugins`, with a "temporary — migrate then delete" comment.
 - Defer `no-raw-tight-padding` (noisier; tight paddings also appear off-chip). Ship later, narrowly scoped, after primitives land.
 
-No manual edit to `eslint.config.ts` / `lint.generated.ts` — codegen regenerates on `./singularity build`.
+No manual edit to `eslint.config.ts` / `lint.generated.ts` — codegen regenerates on `./equin build`.
 
 ## Files touched (summary)
 **Modify**
@@ -154,9 +154,9 @@ No manual edit to `eslint.config.ts` / `lint.generated.ts` — codegen regenerat
 3. **Font-weight shadowing** — redeclaring `--font-weight-medium` etc. over v4 defaults to make `font-medium` themeable; confirm ours win without changing the default look. If contentious, drop weight tokens (usage is already near-standard 500/600).
 
 ## Verification
-1. `./singularity build` (regenerates `lint.generated.ts`, builds, restarts).
+1. `./equin build` (regenerates `lint.generated.ts`, builds, restarts).
 2. **Utilities exist & resolve:** load `http://att-1780485330-lyo2.localhost:9000`, inspect a migrated chip — computed `font-size: 10px`, paired `line-height` present, `p-chip` padding from `--pad-chip-*`.
 3. **Runtime themeable:** open the theme customizer → Typography section shows the new fields; Density section shows Comfortable/Cozy/Compact; switching Density visibly retightens chips/rows app-wide (Compact) without touching margins/gaps. Per-token override on a font size live-updates.
-4. **Lint guard:** add a stray `text-[10px]` to a non-allowlisted file → `./singularity check --eslint` fails; `--fix` rewrites it to `text-3xs`. Existing allowlisted files still pass.
+4. **Lint guard:** add a stray `text-[10px]` to a non-allowlisted file → `./equin check --eslint` fails; `--fix` rewrites it to `text-3xs`. Existing allowlisted files still pass.
 5. **Exemplars unchanged visually** (Comfortable defaults equal the old hard-coded values): screenshot queue-view / gantt before+after with `e2e/screenshot.mjs`.
-6. `./singularity check` green (incl. `plugins-doc-in-sync`, `migrations-in-sync`).
+6. `./equin check` green (incl. `plugins-doc-in-sync`, `migrations-in-sync`).

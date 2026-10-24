@@ -352,11 +352,11 @@ Waves run serially. Each wave is one Workflow:
      - W5: all of Sonata, stores included.
 2. **Migrate** (one agent per cluster, in this worktree with no isolation: ownership is disjoint).
    - Each agent migrates declaration, serving, every reader (in any plugin), tests and prose.
-   - It runs `./singularity test` on every plugin it touched.
+   - It runs `./equin test` on every plugin it touched.
    - It never edits shared files: the lint allowlist, the scanner fixtures and root docs. It reports the edits those files need.
 3. **Barrier** (me):
    - apply the shared-file edits, shrink the allowlist, and do the wave's hook deletions;
-   - `./singularity build` in the background. It regenerates docs, the eager tier and the registries, then runs every check, so check never runs standalone and fails on docs drift;
+   - `./equin build` in the background. It regenerates docs, the eager tier and the registries, then runs every check, so check never runs standalone and fails on docs drift;
    - one fix agent per failing cluster;
    - the wave's e2e scripts and the boot-snapshot check.
 4. **Review.**
@@ -396,8 +396,8 @@ Waves run serially. Each wave is one Workflow:
 ## Verification
 
 - **Per wave:**
-  - `./singularity test` on every touched plugin, plus `plugins/network/plugins/live`, `plugins/primitives/plugins/live-state`, `plugins/primitives/plugins/optimistic-mutation`, `plugins/framework/plugins/resource-runtime`, `plugins/infra/plugins/query-resource`, `plugins/plugin-meta/plugins/facets/plugins/resources` and `plugins/framework/plugins/tooling`;
-  - `./singularity build`: type-check, eslint with the new rule, `resource-vocabulary`, `eager-tier-in-sync`, `keyed-resource-scope`, `no-db-backed-notify`, `plugins-doc-in-sync`, `plugin-boundaries`;
+  - `./equin test` on every touched plugin, plus `plugins/network/plugins/live`, `plugins/primitives/plugins/live-state`, `plugins/primitives/plugins/optimistic-mutation`, `plugins/framework/plugins/resource-runtime`, `plugins/infra/plugins/query-resource`, `plugins/plugin-meta/plugins/facets/plugins/resources` and `plugins/framework/plugins/tooling`;
+  - `./equin build`: type-check, eslint with the new rule, `resource-vocabulary`, `eager-tier-in-sync`, `keyed-resource-scope`, `no-db-backed-notify`, `plugins-doc-in-sync`, `plugin-boundaries`;
   - the optimistic-mutation suite's case count never drops.
 - **Boot snapshot** (after W1 and W4): `GET /api/resources/boot-snapshot` on the worktree deploy must contain:
   - `agents`, `worktree-ops`, `release.previews`, `conversations-gone-stats`;
@@ -509,10 +509,10 @@ item. Each wave's builds and checks passed.
 
 ### Verification
 
-- **Builds:** `./singularity build` (all checks) passed at every barrier. The boot snapshot still carries `agents`, `worktree-ops`,
+- **Builds:** `./equin build` (all checks) passed at every barrier. The boot snapshot still carries `agents`, `worktree-ops`,
   `release.previews`, `conversations-gone-stats` and `build.history`. `agents` and `conversations-gone-stats` keep their
   `live_state_snapshot` rows.
-- **Full suite:** `./singularity test` fails 32 cases.
+- **Full suite:** `./equin test` fails 32 cases.
   - All 32 fail identically on a clean checkout of the branch base, or come from the pre-existing `define-extension.test.ts`
     module-mock leak.
   - The branch fixes the base's 24 `views.test.ts` failures.

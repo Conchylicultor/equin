@@ -7,10 +7,10 @@
  * would be testing Playwright's ability to find a combobox rather than testing
  * the roll:
  *
- *   ./singularity build
- *   ./singularity run plugins/apps/plugins/sonata/plugins/look/e2e/look-verify.ts --out /tmp/flat
+ *   ./equin build
+ *   ./equin run plugins/apps/plugins/sonata/plugins/look/e2e/look-verify.ts --out /tmp/flat
  *   # switch Look → Sketch in the app
- *   ./singularity run plugins/apps/plugins/sonata/plugins/look/e2e/look-verify.ts --out /tmp/sketch
+ *   ./equin run plugins/apps/plugins/sonata/plugins/look/e2e/look-verify.ts --out /tmp/sketch
  *
  * `--song` takes a song id, NOT a library card to click: the cards' actions are
  * hover-revealed, so a click-through has to hover first and still races the

@@ -221,7 +221,7 @@ squeezed (`debug/paging-probe` pressure), any pane paints **< 2 s** from last-kn
   only consumer is catch-up — this removes a per-write amplifier paid by EVERY DB write today),
   delete `retainSnapEncoder` + the persisted-M5 reconstruction, retire the `scopedMembership`
   alias (one membership algorithm remains), and drop boot-snapshot's persisted-jsonb fast path
-  (boot = bounded default-window loaders, one code path). Add the fence: a `./singularity check`
+  (boot = bounded default-window loaders, one code path). Add the fence: a `./equin check`
   that rejects any DB-backed keyed resource without a bounded membership (or an explicit,
   justified `recompute:{full}` over a provably-bounded query) — so the unbounded shape cannot be
   reintroduced. **Gate:** boot re-validated under paging-probe squeeze with loaders replacing the
@@ -259,7 +259,7 @@ endpoint+tick for deep pagination (shares the keyset primitive).
 
 1. `bun test plugins/framework/plugins/resource-runtime/core` + the DOM hazard suites
    (`bun run test:dom plugins/primitives/plugins/live-state plugins/primitives/plugins/networking`).
-2. `./singularity build` → live worktree: `_debug` shows bounded `loaderStats`, single-row deltas
+2. `./equin build` → live worktree: `_debug` shows bounded `loaderStats`, single-row deltas
    in the live-state trace, snapshot rows gone for migrated keys.
 3. `benchmark_boot` MCP before/after (boot-snapshot working set), `get_runtime_profile` loader
    avg/max for migrated keys.

@@ -139,7 +139,7 @@ tokens (a small palette block in `app.css`/tokens, respecting light/dark).
    strikethrough/code sub-plugins + shortcuts.
 3. **Link + color** — `LinkNode` integration + link popover; color palette + picker.
 
-Each phase ends with `./singularity build` + targeted tests + a Playwright check.
+Each phase ends with `./equin build` + targeted tests + a Playwright check.
 
 ## Risks / subtleties
 

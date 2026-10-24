@@ -130,7 +130,7 @@ export type SpawnOptions = SpawnBaseOptions &
          * reads it at runtime — so its whole value is that a reviewer and
          * `rg "unbounded:"` can both find it.
          *
-         * The honest case is the CLI: a `./singularity build` step runs for ten
+         * The honest case is the CLI: a `./equin build` step runs for ten
          * minutes because the build takes ten minutes, and there is no shorter
          * deadline to borrow from. A server-side call site almost never belongs
          * here — its request or its job has a deadline, and that is the bound.

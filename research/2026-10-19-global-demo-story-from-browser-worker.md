@@ -178,7 +178,7 @@ The seam sits at "raw JSONL lines of a conversation's chain", so the real parser
    `$columns.category`), `conversations-active`, `queue-ranks` and `jsonl-events`.
 5. **Delete the pack** and the pack machinery, rewrite the tests, update the docs.
 6. **Close-out:**
-   - `./singularity check`, then `./singularity build`, then the verification below.
+   - `./equin check`, then `./equin build`, then the verification below.
    - Update the subtrack page (tick the row, status, the bundle size and boot time delta) and the
      track card.
    - File the next main task, "[Apps]: move the Demo.Resource stubs, delete the page server and
@@ -198,7 +198,7 @@ The seam sits at "raw JSONL lines of a conversation's chain", so the real parser
 
 ## Verification
 
-- **Tests:** `./singularity test` on transcript-watcher, transcript-source, jsonl-viewer, queue,
+- **Tests:** `./equin test` on transcript-watcher, transcript-source, jsonl-viewer, queue,
   attempt-work, browser-server/demo and task-category (including the new demo-host PGlite boot test).
 - **Checks:** `boundaries:portable-closure` (queue, task-source-url, jsonl-viewer, transcript-source
   and memory are clean), `migrations-in-sync` (no diff from the event move), `type-check`.

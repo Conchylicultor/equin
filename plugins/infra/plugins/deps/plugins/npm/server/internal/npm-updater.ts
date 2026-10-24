@@ -1,3 +1,4 @@
+import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
@@ -91,7 +92,7 @@ async function planNow(root: string): Promise<{
   const ws = await readWorkspace(root);
   if (ws.policyErrors.length > 0) {
     throw new Error(
-      `dependencyPolicy does not parse (\`./singularity check deps-npm:policy\`):\n  ${ws.policyErrors.map((e) => `${e.manifest}: ${e.message}`).join("\n  ")}`,
+      `dependencyPolicy does not parse (\`./equin check deps-npm:policy\`):\n  ${ws.policyErrors.map((e) => `${e.manifest}: ${e.message}`).join("\n  ")}`,
     );
   }
   const installed = installedVersions(ws);
@@ -153,15 +154,12 @@ async function regenGenerated(
   root: string,
   log: (line: string) => void,
 ): Promise<void> {
-  log("  ./singularity regen-generated");
-  const regen = await spawnCaptured(
-    [join(root, "singularity"), "regen-generated"],
-    {
-      cwd: root,
-      timeoutMs: 20 * MINUTE,
-      mergeStderr: true,
-    },
-  );
+  log("  ./equin regen-generated");
+  const regen = await spawnCaptured([join(root, CLI_NAME), "regen-generated"], {
+    cwd: root,
+    timeoutMs: 20 * MINUTE,
+    mergeStderr: true,
+  });
   if (regen.exitCode !== 0)
     throw new Error(
       `regen-generated failed (exit ${regen.exitCode}):\n${regen.stdout.trim().split("\n").slice(-30).join("\n")}`,

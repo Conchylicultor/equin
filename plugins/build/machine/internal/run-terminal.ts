@@ -17,7 +17,7 @@ import {
 // change signal for live values over a run's artifacts (its step logs, its
 // profile, its termination record).
 //
-// **Why the exit marker and never the ledger row.** `./singularity build`
+// **Why the exit marker and never the ledger row.** `./equin build`
 // (`framework/cli/plugins/build/cli/run.ts`) closes its own `build_runs` row
 // BEFORE it writes its artifacts: the success path runs `recorder.closeRun`,
 // then `writeBuildProfile`, then `writeBuildLogs`, and the failure funnel writes
@@ -148,7 +148,7 @@ const hub = createRunTerminalHub(async () => {
  * idempotent — a `notify` is.
  *
  * Covers supervised runs only — the ones the backend started. A hand-run
- * `./singularity build` has no shim and therefore no exit marker, and is never
+ * `./equin build` has no shim and therefore no exit marker, and is never
  * announced.
  */
 export function onRunTerminal(

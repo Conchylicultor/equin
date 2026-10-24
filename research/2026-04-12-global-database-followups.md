@@ -17,7 +17,7 @@ The plan's headline feature, deferred because one-agent-at-a-time hasn't hit it 
 - **Orphaned databases.** `dropDatabase` runs inside `deleteConversation`. If tmux is killed outside the app (`tmux kill-session` manually, machine crash mid-session, worktree removed via `git worktree remove`), the DB stays behind. Need a sweeper: list `pg_database` entries, cross-check against active worktree registry (`~/.singularity/worktrees/*.json`), drop orphans.
 - **Pre-existing worktrees.** Any worktree created before the DB code existed has no forked DB. Accessing it now errors on connect. Need either a lazy "fork on first miss" or a one-off backfill command.
 - **Connection pool sizing.** `client.ts` sets `max: 10` per process. N running worktrees × 10 = 10N connections against one Postgres server. Postgres default `max_connections=100` caps this at ~10 worktrees. Revisit when concurrent worktrees grow: lower per-process pool, raise Postgres cap, or pool at the gateway.
-- **Head DB bootstrap.** `createdb singularity` is a manual setup step. Could be auto-created on first `./singularity build` if missing.
+- **Head DB bootstrap.** `createdb singularity` is a manual setup step. Could be auto-created on first `./equin build` if missing.
 - **Gateway env propagation.** Current deployed gateway binary predates the `SINGULARITY_WORKTREE` env. Restart required after gateway rebuild — document or automate.
 
 ## Tooling correctness

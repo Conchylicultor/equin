@@ -23,7 +23,7 @@ Conversations still can't use it: `runtime-api` registers a stub `ConversationRu
 
 ### 0. Rename `runtime-api` → `runtime-sdk`, id `api` → `sdk`
 
-- Done with `./singularity plugin move`. This makes it symmetric with `runtime-tmux`.
+- Done with `./equin plugin move`. This makes it symmetric with `runtime-tmux`.
 - No rows use `api` (the stub could never create one). Check with `query_db` before renaming.
 
 ### 1. Make the runtime contract stop assuming an input box
@@ -142,11 +142,11 @@ The file moves also clear part of `runtime-tmux`'s `no-platform-api` exemption d
 
 ## Verification
 
-- `./singularity test` on the touched plugins. New unit tests:
+- `./equin test` on the touched plugins. New unit tests:
   - the consumer's reducer: event lines → table rows, including a rotation-gap report and replay from a cursor;
   - `parsePaneRows` skipping `@singularity-host`;
   - the `LaunchFragment` rendering for both runtimes.
-- `./singularity build` (in the background). Then, on `http://<worktree>.localhost:9000` and through the `browser_*` tools, a conversation launched with Runtime = sdk in a scratch workspace:
+- `./equin build` (in the background). Then, on `http://<worktree>.localhost:9000` and through the `browser_*` tools, a conversation launched with Runtime = sdk in a scratch workspace:
   - send → busy → idle;
   - AskUserQuestion answered from the web form;
   - "reply instead" on an open question;
@@ -154,7 +154,7 @@ The file moves also clear part of `runtime-tmux`'s `no-platform-api` exemption d
   - Fork from a message;
   - hibernate and resume;
   - the read-only terminal button.
-- Restart test: a backend restart mid-turn (`./singularity build` while a `sleep 20` Bash runs) and while a question is open. The turn completes, the cursor replays without gaps, and the question form reappears and can be answered.
+- Restart test: a backend restart mid-turn (`./equin build` while a `sleep 20` Bash runs) and while a question is open. The turn completes, the cursor replays without gaps, and the question form reappears and can be answered.
 - Before/after latency for the track's exit criteria: Send → first assistant entry, and Send → idle status in the DB, on sdk versus tmux. The numbers go on the track page.
 - `query_db` on main: no new `tmux` rows adopted from sdk sessions.
 

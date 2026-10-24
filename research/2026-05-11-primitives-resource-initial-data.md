@@ -192,7 +192,7 @@ Other consumers' `?? []` becomes dead code but compiles fine — clean up increm
 
 1. `bunx tsc --noEmit` — type-check passes; consumers with leftover `?? []` on migrated resources will have dead fallback code but no type errors.
 2. `bunx eslint .` — the `exhaustive-deps` warnings for useMemo anti-patterns should be gone. `rules-of-hooks` now `error`.
-3. `./singularity build` — builds and deploys.
+3. `./equin build` — builds and deploys.
 4. Browser:
    - Conversations list, task detail, task graph, grouped conversations view load correctly.
    - Active-data widgets still show loading state before WS response — no flash of editable card.

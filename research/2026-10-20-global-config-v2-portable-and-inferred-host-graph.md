@@ -208,11 +208,11 @@ build-propagated `.origin.jsonc` (`tier-logic.ts:73`). The repo is read only by 
    throwing on a latent import: STOP.
 2. **Desktop split, flag not set** (A, B without `portable: true`, C, the fork/orphan/raw-file
    moves, the `needsMachine` readers, `config_v2/exempt` deleted). Build.
-   Gate: `./singularity check type-check boundary-rules plugin-boundaries config-v2:registrations-paired plugins-registry-in-sync exempt eslint`;
-   `config_v2#machine` depends on `config_v2`; `./singularity test plugins/config_v2 plugins/debug/plugins/config-orphans`;
+   Gate: `./equin check type-check boundary-rules plugin-boundaries config-v2:registrations-paired plugins-registry-in-sync exempt eslint`;
+   `config_v2#machine` depends on `config_v2`; `./equin test plugins/config_v2 plugins/debug/plugins/config-orphans`;
    the desktop smoke list below. Any desktop divergence: STOP.
 3. **Flip to portable, in one step** (D; `portable: true` on `config_v2/server`; the page's 4 extra
-   claims; test updates). `./singularity check boundaries:portable-closure` before building, then
+   claims; test updates). `./equin check boundaries:portable-closure` before building, then
    build. Gate: graph diff is exactly `+config_v2`, `+config_v2/plugins/browser-store`; no
    node-builtin offenders in the host build; the desktop boots with no `assertHostServices` error;
    the boot test passes. On a portable-closure failure, report the chain; never add an exemption.
@@ -220,12 +220,12 @@ build-propagated `.origin.jsonc` (`tier-logic.ts:73`). The repo is read only by 
 5. Wiki: `read_page` the subtrack page, then update it (it is an agent page): tick/annotate the
    "[Hubs] config_v2 split" row, add "[Framework] the browser host's graph is inferred from its
    composition (no hand-written hostPlugins)" with D1–D3 and E, the status and the measurements.
-6. Full `./singularity check`; report. File the next main task (next-session list below) with the
+6. Full `./equin check`; report. File the next main task (next-session list below) with the
    subtrack page id and `block-361815ed-5750-413a-b5ab-31c5dc855144`. No push.
 
 ## Verification
 
-- **Checks:** all of `./singularity check`; in particular `plugins-registry-in-sync`,
+- **Checks:** all of `./equin check`; in particular `plugins-registry-in-sync`,
   `boundaries:portable-closure`, `host-services:provider-placement`, `config-v2:registrations-paired`,
   `exempt`, `migrations-in-sync`, `type-check`.
 - **Tests:**
@@ -240,7 +240,7 @@ build-propagated `.origin.jsonc` (`tier-logic.ts:73`). The repo is read only by 
     throws with the chain; zero or two providers throw; `review.plugin-changes` is not revived.
   - `demo/bin/browser-host.test.ts`: the worker serves exactly the 6 portable `config-v2.*` keys
     (raw-file absent); the page `Demo.Resource` claims all 6 (pins D3); `DEMO_READS` still passes.
-  - `./singularity test plugins/config_v2 plugins/debug/plugins/config-orphans plugins/plugin-meta/plugins/composition plugins/apps/plugins/agent-manager/plugins/demo plugins/framework/plugins/browser-server plugins/tasks/plugins/task-category`
+  - `./equin test plugins/config_v2 plugins/debug/plugins/config-orphans plugins/plugin-meta/plugins/composition plugins/apps/plugins/agent-manager/plugins/demo plugins/framework/plugins/browser-server plugins/tasks/plugins/task-category`
 - **Browser:** `exhibit-shot.ts --id agent-manager/demo`; `/debug/exhibits/x/agent-manager/demo`
   and `/demo` via `browser_*`: no error boundary; no unknown-key, contract or use-config guard
   errors in `browser_console`; a config toggle round-trips; no "Not available" toast during normal
@@ -286,4 +286,4 @@ build-propagated `.origin.jsonc` (`tier-logic.ts:73`). The repo is read only by 
 ## Out of scope
 
 - A persistent (IndexedDB/OPFS) user layer; web-artifacts and release changes; deleting
-  `WebRegister` or the use-config guard; any `./singularity push`.
+  `WebRegister` or the use-config guard; any `./equin push`.

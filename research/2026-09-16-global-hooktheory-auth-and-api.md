@@ -148,9 +148,9 @@ loop yet, and a visible failure beats a silent backoff while we learn the API.
 
 ## Verification
 
-1. `./singularity build` (background) — boundaries, type-check, plugin docs,
+1. `./equin build` (background) — boundaries, type-check, plugin docs,
    central-routes manifest regenerate.
-2. `./singularity test plugins/integrations/plugins/hooktheory` — schema tests
+2. `./equin test plugins/integrations/plugins/hooktheory` — schema tests
    (`server/internal/*.test.ts`) against the real `Let It Be` section captured
    during this design (`_NgbRXeYgQA`), kept verbatim as a `fixtures.ts` module
    (the `events/sources/coworkmeet` convention), plus an error-envelope parse.

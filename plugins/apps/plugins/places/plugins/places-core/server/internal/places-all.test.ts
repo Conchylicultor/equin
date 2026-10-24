@@ -6,8 +6,8 @@
  * real declarations, compiled with the served bindings against a throwaway
  * database carrying the real schema, load each whole set FULL, in its order.
  *
- * Requires a running Postgres cluster (started by ./singularity build).
- * Run: `./singularity test plugins/apps/plugins/places`.
+ * Requires a running Postgres cluster (started by ./equin build).
+ * Run: `./equin test plugins/apps/plugins/places`.
  */
 
 import { afterAll, beforeAll, expect, setDefaultTimeout, test } from "bun:test";

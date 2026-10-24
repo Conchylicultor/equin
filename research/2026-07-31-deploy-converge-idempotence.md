@@ -6,7 +6,7 @@
 
 ## Context
 
-`./singularity deploy converge <c> --server <s>` restarts a live install on every run,
+`./equin deploy converge <c> --server <s>` restarts a live install on every run,
 even when the run changes nothing. Observed on the equin.ai `website` install: every step
 reported `[=]`, followed by `[~] restarted equin@website.service to pick up
 /srv/equin/website/env`. The site goes down for the length of a restart each time.
@@ -187,14 +187,14 @@ restart landed in the same second.
 ## Verification
 
 1. `bun test plugins/framework/plugins/cli/bin/commands/internal/converge-script.test.ts`
-2. `./singularity check` (type-check + lint) and `./singularity build`.
+2. `./equin check` (type-check + lint) and `./equin build`.
 3. **The acceptance criterion needs a real host.** Against the equin.ai `website`
    deployment:
 
    ```bash
    ssh … systemctl show -p ExecMainStartTimestamp --value equin@website.service   # note it
-   ./singularity deploy converge website --server <server>   # run 1: restarts ONCE (new env/unit bytes may land)
-   ./singularity deploy converge website --server <server>   # run 2: must print no [~] at all
+   ./equin deploy converge website --server <server>   # run 1: restarts ONCE (new env/unit bytes may land)
+   ./equin deploy converge website --server <server>   # run 2: must print no [~] at all
    ssh … systemctl show -p ExecMainStartTimestamp --value equin@website.service   # unchanged since run 1
    ```
 

@@ -32,7 +32,7 @@ function reject(script: string, abs: string, why: string): never {
 const run: CliAction<[string, string[]], object> = async (script, args) => {
   const root = await getWorktreeRoot();
 
-  // `./singularity` cd's to the checkout root before exec'ing the CLI, so
+  // `./equin` cd's to the checkout root before exec'ing the CLI, so
   // `process.cwd()` IS the root here: a relative path is repo-root-relative,
   // which is how scripts are written down everywhere in this repo.
   const abs = resolve(process.cwd(), script);

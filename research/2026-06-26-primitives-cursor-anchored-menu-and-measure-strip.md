@@ -185,7 +185,7 @@ shipped on. Extend the rule to also flag string-literal `position` values in inl
 `style` objects, redirecting future hand-rolled positioning to the two primitives.
 
 **Sequencing (important):** land this **after** Parts 1 & 2. The rule fires repo-wide
-at `error`, and `./singularity check` (and `build`) would fail on the 5 existing
+at `error`, and `./equin check` (and `build`) would fail on the 5 existing
 sites until they're migrated. Once Parts 1 & 2 + the allowlist below are in, the
 standing violation count is **0** — the rule becomes a pure forward guardrail. A
 genuine one-off still escapes per-site via
@@ -238,7 +238,7 @@ it must be empty outside the allowlist.
   `@plugins/primitives/plugins/cursor-menu/web`; `cursor-menu` imports
   `@plugins/primitives/plugins/css/plugins/ui-kit/web`. No re-exports, no deep paths.
 - Each new plugin needs `web/index.ts` with a single `export default {...} satisfies PluginDefinition`.
-- **Do not hand-edit any registry.** Run `./singularity build` — it regenerates
+- **Do not hand-edit any registry.** Run `./equin build` — it regenerates
   `web.generated.ts` from the filesystem (the `plugins-registry-in-sync` check
   fails on drift). Add a one-line autogen-style `CLAUDE.md` per plugin (the
   `plugins-doc-in-sync` check expects it; build regenerates the reference block).
@@ -266,7 +266,7 @@ Reuse / mirror (don't reinvent):
 
 ## Verification
 
-1. `./singularity build` (regenerates registry + docs; runs checks). Must pass
+1. `./equin build` (regenerates registry + docs; runs checks). Must pass
    `type-check`, `plugins-registry-in-sync`, `plugins-doc-in-sync`,
    `plugin-boundaries`, and `eslint` (Part 3 — the extended rule must report
    **0** standing violations once all 5 sites are migrated + allowlisted).

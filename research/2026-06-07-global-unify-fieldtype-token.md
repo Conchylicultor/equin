@@ -126,9 +126,9 @@ calls for, so it is in-scope here.
 
 ## Verification
 
-1. `./singularity build` — succeeds; regenerates docs (the `config_v2 → fields` edge appears in
+1. `./equin build` — succeeds; regenerates docs (the `config_v2 → fields` edge appears in
    `docs/plugins-*.md` and the config_v2 CLAUDE.md autogen block) and migrations stay in sync.
-2. `./singularity check` — all pass. Specifically `plugin-boundaries` passes (the one re-export is
+2. `./equin check` — all pass. Specifically `plugin-boundaries` passes (the one re-export is
    allowlisted; everything else still enforced), plus `plugins-doc-in-sync`, `eslint`, `typescript`.
 3. Sanity that the exception is *scoped*: temporarily add an unrelated cross-plugin re-export to some
    other barrel → `plugin-boundaries` still fails on it (confirms we didn't broaden the rule). Revert.

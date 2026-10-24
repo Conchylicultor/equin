@@ -30,7 +30,7 @@ pathIgnorePatterns = ["**/web/__tests__/**"]
 # said 1.60.0, demanding a chromium revision nothing had provisioned.
 #
 # NARROW ON PURPOSE: this does not stop resolution walking UP to another
-# checkout's node_modules — that is what `./singularity run` and the `bun-script`
+# checkout's node_modules — that is what `./equin run` and the `bun-script`
 # guard are for. It only removes the registry-latest arm when nothing is found at
 # all, turning a silent wrong version into `Cannot find package 'x'`.
 [install]

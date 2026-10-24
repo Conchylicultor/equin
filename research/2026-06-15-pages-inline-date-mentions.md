@@ -110,7 +110,7 @@ arbitrary `[[...]]` text the user types.
 
 - `server/internal/tables.ts` — `page_reminders` table:
   `id` (= the token's reminder UUID, PK), `pageId`, `blockId`, `fireAt` (timestamptz),
-  `status` (`pending|fired|canceled`), `createdAt`. (DDL auto-migrated by `./singularity build`.)
+  `status` (`pending|fired|canceled`), `createdAt`. (DDL auto-migrated by `./equin build`.)
 - `server/internal/reconcile.ts` — `reconcileReminders(pageId)`, diff-based & idempotent:
   1. load the page's blocks, `scanReminderTokens` across all `data.text`
   2. for each `{id, iso}` not yet `pending` with that `fireAt`: upsert row `pending` and
@@ -153,7 +153,7 @@ Add `chrono-node` as a plugin-local dependency in `plugins/page/plugins/inline-d
 
 ## Verification
 
-1. `./singularity build` (regenerates the `page_reminders` migration, rebuilds, restarts).
+1. `./equin build` (regenerates the `page_reminders` migration, rebuilds, restarts).
 2. Open a page at `http://att-1781558763-wnri.localhost:9000` (Pages app), in a text block
    type `@tomorrow` → confirm the typeahead shows a "📅 …" and "🔔 Remind me · …" row;
    pick the date row → inline date chip appears; reload the page → chip persists (token
@@ -166,7 +166,7 @@ Add `chrono-node` as a plugin-local dependency in `plugins/page/plugins/inline-d
 5. **Cancellation**: delete a pending reminder chip, save, then confirm via `query_db` the row
    is `canceled` and (at its original time) no notification fires.
 6. Scripted check with `e2e/screenshot.mjs --click` to confirm the typeahead menu opens on `@`.
-7. `./singularity check` (boundaries, type-check, migrations-in-sync, plugins-doc-in-sync).
+7. `./equin check` (boundaries, type-check, migrations-in-sync, plugins-doc-in-sync).
 
 ## Open questions / decisions taken as defaults
 

@@ -4,7 +4,7 @@
 
 The theme token system defines `--destructive` (used ~108x) but has **no `--success`, `--warning`, or `--info` semantic tokens**. Feature plugins compensate by hardcoding raw Tailwind color literals (~150 status-semantic occurrences like `bg-emerald-600`, `text-amber-500`) plus ~100 manual `dark:` overrides. These ignore the active theme and break under tweakcn community presets and the light/dark engine.
 
-The fix: define the missing tokens in the existing `color-palette` group (where `destructive` already lives), migrate the status-semantic offenders, and add a `./singularity check` guardrail to prevent regression.
+The fix: define the missing tokens in the existing `color-palette` group (where `destructive` already lives), migrate the status-semantic offenders, and add a `./equin check` guardrail to prevent regression.
 
 ## Step 1 — Define tokens in `color-palette` group
 
@@ -239,14 +239,14 @@ Points agents to the semantic token alternatives: success/warning/info/destructi
 3. Step 4 (tweakcn convert.ts) — independent
 4. Steps 5a–5f (migrations) — depend on step 3
 5. Step 6 (check plugin) — last, after migrations, so it starts green
-6. `./singularity build` — regenerates check.generated.ts, deploys
+6. `./equin build` — regenerates check.generated.ts, deploys
 
 ## Verification
 
-1. **TypeScript** — `./singularity check --typescript` enforces preset completeness
+1. **TypeScript** — `./equin check --typescript` enforces preset completeness
 2. **CSS variables** — DevTools: `getComputedStyle(root).getPropertyValue('--success')` returns oklch
 3. **Tailwind classes** — `bg-success` resolves to the expected green in browser
 4. **Theme switching** — Default/Ocean/Warm × light/dark: migrated components maintain readable contrast
 5. **Tweakcn presets** — status tokens fall back to defaults when tweakcn theme doesn't define them
-6. **Guardrail** — `./singularity check --no-hardcoded-colors` passes with 0 violations
+6. **Guardrail** — `./equin check --no-hardcoded-colors` passes with 0 violations
 7. **Visual spot-check** — task status icons, build badges, queue state chips, diff +/− counters all look correct

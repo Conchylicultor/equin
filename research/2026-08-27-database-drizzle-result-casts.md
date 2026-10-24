@@ -357,14 +357,14 @@ a rule can be, because these are the sites that would otherwise become its
 
 ## Verification
 
-- `./singularity check` — `type-check` is the real proof for classes A through D:
+- `./equin check` — `type-check` is the real proof for classes A through D:
   every deleted cast leaves a *checked* assignment behind, so a residual mismatch
   is a compile error rather than a silent pass. There is no lint proof, because
   there is no rule (see "Enforcement — deferred, and why"); what stands in for it
   is the sweep recorded in "The rest of the class", which is the account of every
   site of this shape the repo holds and which population each belongs to.
-- `./singularity test plugins/infra/plugins/query-resource` — the compiler suites
+- `./equin test plugins/infra/plugins/query-resource` — the compiler suites
   drive both fake dbs through the newly generic seam.
-- `./singularity build`, then spot-check: the task list and a task's detail
+- `./equin build`, then spot-check: the task list and a task's detail
   (class D), the agents sidebar (D), a page and its sidebar tree (A, B′, D),
   Studio → Compositions → a composition's release history and run detail (B).

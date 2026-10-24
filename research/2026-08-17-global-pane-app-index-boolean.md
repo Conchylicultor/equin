@@ -141,8 +141,8 @@ got here and are left as written.
 
 ## Verification
 
-1. `./singularity build` (background) — type-check + checks + deploy.
-2. `./singularity test plugins/primitives/plugins/pane`.
+1. `./equin build` (background) — type-check + checks + deploy.
+2. `./equin test plugins/primitives/plugins/pane`.
 3. Drive the deployed app: every app's **bare root** must still land on its
    index pane rather than an empty main area —
    `http://<worktree>.localhost:9000/mail`, `/pages`, `/agents`, `/settings`,

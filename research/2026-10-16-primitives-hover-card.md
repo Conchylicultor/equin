@@ -151,19 +151,19 @@ match.
 
 ## Verification
 
-1. `./singularity build` (checks, boundaries, docs regen).
+1. `./equin build` (checks, boundaries, docs regen).
 2. Screenshot, light and dark: open a task, open the workspace pill, hover a
    scratch-profile row and the worktree row:
-   `./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --path <task route> --click "Workspace" --out /tmp/ws`
+   `./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --path <task route> --click "Workspace" --out /tmp/ws`
    (hover via a small e2e flow in the launch-option plugin if `--click` is not
    enough).
 3. Compare against the mock:
-   `./singularity run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts --name proto-1789901373-oy29 --options placement=icons`.
+   `./equin run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts --name proto-1789901373-oy29 --options placement=icons`.
    Check the card's width, its top aligned to the row, its side, the struck-out
    chips and the mono footer.
 4. Hover a disabled (unavailable) row and check the card still shows with its
    notice. Move between rows and check the card switches with no re-delay.
    Open the menu near the right viewport edge and check the card flips to the
    left.
-5. `./singularity test plugins/primitives/plugins/text-editor/plugins/composer/plugins/picker-pill`
+5. `./equin test plugins/primitives/plugins/text-editor/plugins/composer/plugins/picker-pill`
    (and any existing PickerPill jsdom tests).

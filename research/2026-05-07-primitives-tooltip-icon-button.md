@@ -162,15 +162,15 @@ These use Tooltip with non-button triggers — NOT candidates for `IconButton`:
 
 1. Create `plugins/primitives/plugins/tooltip/` (package.json, kbd.tsx, index.ts)
 2. Create `plugins/primitives/plugins/icon-button/` (package.json, icon-button.tsx, index.ts)
-3. Run `bun install` (new workspaces) + `./singularity build` to regenerate plugins.generated.ts
+3. Run `bun install` (new workspaces) + `./equin build` to regenerate plugins.generated.ts
 4. Migrate 4 icon-button consumers to `<IconButton>`
 5. Refactor `PaneIconAction` to use `<IconButton>` internally
 6. Switch raw tooltip imports in 8 files to `@plugins/primitives/plugins/tooltip/web`
-7. Run `./singularity build` and verify in browser
+7. Run `./equin build` and verify in browser
 
 ## Verification
 
-- `./singularity build` succeeds
+- `./equin build` succeeds
 - Toolbar buttons (theme, screenshot, draw, pen) show tooltips on hover after 300ms delay
 - Pane action buttons (VSCode, Open app, Expand, etc.) show tooltips instead of native title
 - App rail buttons still show `side="right"` tooltips

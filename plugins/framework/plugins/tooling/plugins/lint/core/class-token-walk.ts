@@ -23,7 +23,7 @@ import type { TSESLint, TSESTree } from "@typescript-eslint/utils";
  * import that jiti would then try (and fail) to resolve.
  *
  * A rule that declared its own walk would be back where we started, so
- * `./singularity check class-token-walk-single-source` fails if any rule file
+ * `./equin check class-token-walk-single-source` fails if any rule file
  * declares one.
  */
 

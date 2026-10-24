@@ -161,7 +161,7 @@ from `WorktreeOpSchema` — no client churn).
 
 All bug-prone logic is the **pure** `derivePushPhases(...)`, tested in-memory with
 fabricated markers/holder and **injected** `isAlive`/`lockHeld` — no flock, no
-process spawning, no `./singularity push`. Thin fs/FFI adapters are tested in
+process spawning, no `./equin push`. Thin fs/FFI adapters are tested in
 isolation against throwaway paths.
 
 Add `plugins/infra/plugins/worktree/server/internal/worktree-op.test.ts` using
@@ -192,7 +192,7 @@ project. Vitest-node is the alternative if a single runner is preferred). Cases:
 Run: `bun test plugins/infra/plugins/worktree/server/internal/worktree-op.test.ts`.
 
 **Then** the standard gate + a manual smoke:
-- `./singularity build` (regen + checks) and `./singularity check` must pass
+- `./equin build` (regen + checks) and `./equin check` must pass
   (boundary checker: the worktree primitive owns the holder/flock helpers;
   op-status only consumes them — preserves the boundary in `op-status/CLAUDE.md`).
 - Optional end-to-end confirmation (no merge risk): launch a real push, `kill -9`

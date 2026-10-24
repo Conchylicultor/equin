@@ -20,7 +20,7 @@ backstop and for the fallback + remove paths; clonefile is the **origin cure** f
   (**< 1 %**; measured across the last 60 commits on `main`). This is the number the gate doc
   asked for.
 - **But "fraction edited" is the wrong axis** — the binding constraint is *fraction read by the
-  mandatory tooling*, which is **~100 %**. `./singularity build` (required every session)
+  mandatory tooling*, which is **~100 %**. `./equin build` (required every session)
   type-checks the whole tree, cross-plugin `@plugins/*` imports span everything, boundary/codegen
   walk all plugins. `setupWorktree` even seeds `.tsbuildinfo` precisely so the first build
   "type-checks only its own diff instead of the whole tree" (`worktree.ts:39-43`). ⇒ **sparse /
@@ -81,7 +81,7 @@ not write). See *Stat-cache* below.
 ## Why each lever lives or dies (stopping-gate discipline)
 
 - **Sparse / partial checkout — REFUTED (gate 2 legitimacy + counterfactual).** The tooling read-set
-  is the whole tree and `./singularity build` is mandatory; a sparse tree is not a cheaper correct
+  is the whole tree and `./equin build` is mandatory; a sparse tree is not a cheaper correct
   worktree, it is a *broken* one. The "agent edits little" fact does not license it.
 - **Per-file clonefile (`cp -c`) — REFUTED (probe 2).** Cost is per-file metadata, not bytes; no win
   over checkout. A cache/copy that still pays the per-occurrence cost is containment, not a cure.
@@ -154,14 +154,14 @@ background (reap) / rare (manual), and the gate already bounds it. If wanted lat
 1. Micro-bench on a **quiescent** box (per the doc-currency rule — current load 34 contaminates
    wall-clock): sweep fast-path vs checkout for add wall + CPU + first-`git status` cost; pick the
    stat-cache option from data.
-2. Correctness: fast-path worktree must pass a real `./singularity build`, a commit, and a
-   `./singularity push` dry-run; `git status` clean; diffs correct.
+2. Correctness: fast-path worktree must pass a real `./equin build`, a commit, and a
+   `./equin push` dry-run; `git status` clean; diffs correct.
 3. Template lifecycle: force a `main` advance mid-flight; confirm refresh + fallback both yield a
    correct worktree at the right base commit.
 4. Live: trigger a reap concurrent with several launches; confirm `conversations.spawn` `workMs` no
    longer tracks the checkout and the new fast-path add stays flat under the reap (via
    `get_runtime_profile`).
-5. `./singularity build` green (all checks) before/after.
+5. `./equin build` green (all checks) before/after.
 
 ## Follow-ups
 - File the remove-side rename-to-trash idea if the reap's write-IO remains a contention source after

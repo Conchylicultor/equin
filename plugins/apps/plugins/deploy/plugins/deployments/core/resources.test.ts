@@ -2,7 +2,7 @@
  * The deployment collections' derived fields: the ids the DataViews (and every
  * saved view) name are unchanged.
  *
- * Run: `./singularity test plugins/apps/plugins/deploy/plugins/deployments`.
+ * Run: `./equin test plugins/apps/plugins/deploy/plugins/deployments`.
  */
 
 import { describe, expect, test } from "bun:test";

@@ -223,16 +223,16 @@ measurement.)
 
 ## Verification
 
-1. `./singularity build` — rebuilds; no codegen change expected (rule already
+1. `./equin build` — rebuilds; no codegen change expected (rule already
    registered). Confirm it completes.
-2. `./singularity check eslint` — must pass **green**, proving all 139 sites were
+2. `./equin check eslint` — must pass **green**, proving all 139 sites were
    fixed or justified-disabled and the rule is active.
 3. Re-run the detector script → must report **0** non-disabled parameterless
    catches.
 4. Negative tests (temporary): add `try { f() } catch { return }` to a `.ts` and
    confirm `eslint` flags `swallowingCatch`; confirm `try { f() } catch (e) { throw e }`
    is **not** flagged; confirm an existing justified-disable site stays green.
-5. `./singularity check` (full) — all checks green.
+5. `./equin check` (full) — all checks green.
 
 ## Follow-up (separate plan, not this change)
 

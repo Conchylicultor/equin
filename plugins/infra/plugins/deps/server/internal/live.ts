@@ -34,7 +34,7 @@ export const depsCacheWatcher = defineFileWatcher({
  * Every declared dependency with its state, pushed.
  *
  * The truth is files under the deps cache, written by whichever process
- * installs (a supervised child, a `./singularity deps` command) — so the push
+ * installs (a supervised child, a `./equin deps` command) — so the push
  * comes from a watcher on that directory for as long as anyone is subscribed,
  * not from polling. The payloads (`env/`) are ignored: a `uv sync` writes
  * thousands of files there, and only the state files beside them matter.

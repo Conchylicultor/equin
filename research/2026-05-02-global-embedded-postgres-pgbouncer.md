@@ -21,7 +21,7 @@ User decisions (from clarifying questions):
 | `adminPool` (`CREATE/DROP DATABASE`) | Direct PG socket | Admin ops on `postgres` DB, max:1, doesn't fit pooling |
 | graphile-worker Runner + WorkerUtils | Direct PG socket | Uses LISTEN/NOTIFY + advisory locks — **incompatible with tx pooling** |
 | `db-fork.ts` (`pg_dump`/`pg_restore`) | Direct PG socket | Subprocesses; tx pooling adds nothing |
-| drizzle-kit migration generation | Direct PG socket | One-shot subprocess in `./singularity build` |
+| drizzle-kit migration generation | Direct PG socket | One-shot subprocess in `./equin build` |
 
 Single PgBouncer instance in transaction mode. graphile-worker bypasses entirely — no second session-mode PgBouncer (added ops surface not worth it).
 
@@ -123,7 +123,7 @@ Watchdog: `setInterval(2s, pg_isready).unref()`. On PG death: log, attempt one r
 
 Failure handling: if step 4 or 5 errors, leave sentinel in place, log the error, abort `onReady`. The central plugin reports `crashed: true` via status endpoint; the user sees a clear error and can retry by removing the sentinel + the half-populated `data-pg18/` dir. The original system-PG data is untouched (reads only).
 
-### `./singularity build` integration
+### `./equin build` integration
 
 Today `cli/src/commands/build.ts:202-244` calls `waitForDatabase(name)` which shells out to `psql`. Post-migration, `psql` connects via `PGHOST=<socket-dir>` — but **central might not be running yet** when build runs in a fresh terminal (gateway lazy-spawns central only on HTTP request to a central route).
 
@@ -144,7 +144,7 @@ Replace `brew install postgresql@18` section. New flow:
 ```bash
 git clone ...
 bun install              # postinstall: pulls @embedded-postgres/* + downloads PgBouncer
-./singularity start      # gateway → central → initdb (first run ~30s, may auto-migrate from system PG)
+./equin start      # gateway → central → initdb (first run ~30s, may auto-migrate from system PG)
 ```
 
 Open `http://singularity.localhost:9000`. Document `SINGULARITY_USE_SYSTEM_PG=1` as escape hatch for users who explicitly want to keep system PG (skips the postinstall + central PG supervision; falls back to existing env-var logic).
@@ -179,15 +179,15 @@ End-to-end smoke (run in this order):
 1. **Fresh install path:**
    - `rm -rf ~/.singularity/postgres/` (simulating fresh install).
    - `bun install` — confirm `@embedded-postgres/*` extracted, PgBouncer downloaded.
-   - `./singularity start` — observe initdb logs, PG spawn, PgBouncer spawn.
+   - `./equin start` — observe initdb logs, PG spawn, PgBouncer spawn.
    - `psql -h ~/.singularity/postgres/socket -p 5433 -l` — confirm cluster up.
-   - `./singularity build` — succeeds (migrations apply on fresh embedded `singularity` DB).
+   - `./equin build` — succeeds (migrations apply on fresh embedded `singularity` DB).
    - Open `http://singularity.localhost:9000` — app loads, no PG errors.
 
 2. **Auto-migration path:**
    - Start with system PG running and `singularity` + a few `att-*` DBs populated.
    - `rm -rf ~/.singularity/postgres/`.
-   - `./singularity start` — observe "Detected system PG, migrating…" log lines.
+   - `./equin start` — observe "Detected system PG, migrating…" log lines.
    - Verify `psql -h ~/.singularity/postgres/socket -p 5433 -l` lists the migrated DBs.
    - Open the app, confirm conversations + tasks load from migrated data.
 
@@ -204,7 +204,7 @@ End-to-end smoke (run in this order):
    - SIGTERM the gateway. Confirm via logs that central calls `onShutdown` → PgBouncer SIGTERM → `pg_ctl stop`. Confirm no leftover `postmaster.pid` after a clean stop.
 
 6. **Existing tests:**
-   - `./singularity check` passes.
+   - `./equin check` passes.
    - All plugin unit/integration tests pass.
 
 ## Risks
@@ -219,4 +219,4 @@ End-to-end smoke (run in this order):
 
 - Replace `pg_dump | pg_restore` in `db-fork.ts` with `CREATE DATABASE … TEMPLATE singularity` after adding a "terminate connections to template DB" step.
 - Bundle `psql` / `pg_dump` directly in `@embedded-postgres/*` resolution so users don't need system PG client tools.
-- Add a `./singularity migrate-from-embedded` reverse-migration command for users who want to bail out.
+- Add a `./equin migrate-from-embedded` reverse-migration command for users who want to bail out.

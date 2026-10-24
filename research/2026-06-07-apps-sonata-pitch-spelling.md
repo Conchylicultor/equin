@@ -164,7 +164,7 @@ on the progress bar automatically (already reads `key` annotations).
 
 ## Verification
 
-1. `./singularity build`; open `http://<worktree>.localhost:9000/sonata`.
+1. `./equin build`; open `http://<worktree>.localhost:9000/sonata`.
 2. **Keyless MIDI in a flat key** (e.g. an F-major / B♭-major piece): chord
    readout shows normalized primary (`A#m`) with a muted spelled secondary
    (`B♭m`); piano-roll note labels read with flats; a key flag appears on the
@@ -177,5 +177,5 @@ on the progress bar automatically (already reads `key` annotations).
    `spelledSymbol`, `Note.spelling` left undefined — identical to today
    (confidence-floor guard).
 6. `query_db` not needed (pure client transform); confirm via the UI + piano-roll
-   labels. `./singularity check` passes (boundaries, eslint, docs in sync).
+   labels. `./equin check` passes (boundaries, eslint, docs in sync).
 ```

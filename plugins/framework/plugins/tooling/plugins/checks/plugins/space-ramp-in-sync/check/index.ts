@@ -29,7 +29,7 @@ const check: Check = {
       return {
         ok: false,
         message: `app.css @ramp declarations are invalid: ${err instanceof Error ? err.message : String(err)}`,
-        hint: "Fix the `/* @ramp … */` declaration (or add the missing `@utility`) in app.css, then run `./singularity build`.",
+        hint: "Fix the `/* @ramp … */` declaration (or add the missing `@utility`) in app.css, then run `./equin build`.",
       };
     }
 
@@ -37,7 +37,7 @@ const check: Check = {
       return {
         ok: false,
         message: `${rel} is missing`,
-        hint: "Run `./singularity build` to generate it.",
+        hint: "Run `./equin build` to generate it.",
       };
     }
     if (
@@ -47,7 +47,7 @@ const check: Check = {
       return {
         ok: false,
         message: `${rel} is out of sync with the app.css @ramp declarations`,
-        hint: "Run `./singularity build` and commit the regenerated file.",
+        hint: "Run `./equin build` and commit the regenerated file.",
       };
     }
     return { ok: true };

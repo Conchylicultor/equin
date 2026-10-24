@@ -4,7 +4,7 @@
 
 Agents burn turns watching long operations finish instead of letting the harness
 wake them. The trigger was `conv-1786116592-b70n`, where an agent ran
-`./singularity push` in the foreground, the tool timed out, and it then re-read
+`./equin push` in the foreground, the tool timed out, and it then re-read
 the leftover output file every ~4 seconds for 35 calls.
 
 This is not one bad session. Replaying every transcript under
@@ -70,7 +70,7 @@ and it silently defeats **`git-push`, `git-reset-main`, `migrations`, `postgres`
 and `main-writes`**.
 
 This is a prerequisite here, not a drive-by: change 2 below must see
-`./singularity build` inside `until …; do ./singularity build; done`, which is
+`./equin build` inside `until …; do ./equin build; done`, which is
 exactly the shape agents already write.
 
 **Change:** after splitting, flatten each segment before emitting a `ShellCall`.
@@ -93,7 +93,7 @@ each get a loop-body and a `$(…)` case asserting they now deny — e.g.
 
 New: `core/guards/background-ops.ts`, registered in `core/registry.ts`.
 
-**Rule.** Deny a Bash call that invokes `./singularity <build|push|check|test|release>`
+**Rule.** Deny a Bash call that invokes `./equin <build|push|check|test|release>`
 unless the tool input carries `run_in_background: true`.
 
 Also deny the shell-level fakes — trailing `&`, `nohup`, `setsid`, `disown` —
@@ -109,7 +109,7 @@ PreToolUse payload already carries the full `tool_input`).
 
 **Deny message** names the fix and the reason:
 
-> `./singularity build` takes ~10 min at the median and can exceed the 600 s
+> `./equin build` takes ~10 min at the median and can exceed the 600 s
 > foreground maximum. Re-run it with `run_in_background: true` and end your turn
 > — you will be re-invoked when it finishes. A foreground timeout leaves the
 > build running with no handle and no notification.
@@ -210,7 +210,7 @@ session, was invisible).
 
 One case is deliberately left uncovered: the same **mutating** command repeated
 identically. `poll-loop` treats a mutation as progress and clears the window, so
-it will never fire there. That is the right call — re-running `./singularity
+it will never fire there. That is the right call — re-running `./equin
 build` after each fix is legitimate work and looks identical every time, so the
 old guard's "any command, 5 in a row" scope was a false positive waiting to
 happen.
@@ -237,7 +237,7 @@ are agents working, not waiting.
 
 Two things the implementation forced that the plan did not anticipate:
 
-- **Wrappers hide commands the same way loop bodies do.** `nohup ./singularity
+- **Wrappers hide commands the same way loop bodies do.** `nohup ./equin
   build` parses to a call named `nohup`, so `background-ops` never saw it — and
   the same hole meant `nohup git push` walked straight past `git-push` today.
   `parseShell` now peels `nohup`/`env`/`sudo`/`timeout`/`nice`/`xargs`/… one
@@ -279,7 +279,7 @@ Reuse rather than re-implement: `defineGuard` (structured `blocked`/`why`/`hint`
 
 ## Explicitly not doing
 
-**No new CLI command.** An earlier draft proposed `./singularity wait` plus a
+**No new CLI command.** An earlier draft proposed `./equin wait` plus a
 push receipt. With change 2 in place every long op is a tracked background task
 that notifies on exit, so there is never an op without a handle — `wait` would
 have no caller.
@@ -298,10 +298,10 @@ have no caller.
    rather than asserted, and re-runnable when the rule is tuned. Target: ≥125
    sessions trip, ≥2,000 calls prevented, and the 12 lowest-yield trips stay
    genuine on audit.
-3. **Live** — in this worktree run `./singularity build` in the foreground and
+3. **Live** — in this worktree run `./equin build` in the foreground and
    confirm `background-ops` denies with the right message; re-run with
    `run_in_background: true` and confirm it passes and the completion
    notification arrives. Then `cat` the task output file four times and confirm
    `poll-loop` denies on the fourth with the "you will be notified" arm.
-4. `./singularity check` (guards are plain TS under `type-check`), then
-   `./singularity build`.
+4. `./equin check` (guards are plain TS under `type-check`), then
+   `./equin build`.

@@ -4,7 +4,7 @@
 // page errors.
 //
 // Usage:
-//   ./singularity run plugins/primitives/plugins/overlay/plugins/image-viewer/e2e/viewer-verify.ts \
+//   ./equin run plugins/primitives/plugins/overlay/plugins/image-viewer/e2e/viewer-verify.ts \
 //     --conv <conversation id with ≥ 2 transcript images> [--out /tmp/image-viewer]
 
 import {

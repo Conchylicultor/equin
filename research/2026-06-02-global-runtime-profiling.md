@@ -23,7 +23,7 @@ Decisions (confirmed with user):
 - **Scope: full stack** — recorder + 4 instrumentation points + MCP tool + web Profiling section
   + `e2e/perf.mjs` frontend harness.
 
-The closed loop this enables: change code → `./singularity build` → call the MCP tool / run the
+The closed loop this enables: change code → `./equin build` → call the MCP tool / run the
 e2e script → see which routes/queries/loaders are slow → fix → re-measure. No human-in-DevTools.
 
 ---
@@ -191,8 +191,8 @@ All three import `recordSpan` from `@plugins/infra/plugins/runtime-profiler/core
 
 ## Verification
 
-1. `./singularity build` (regenerates nothing DB-side — no new table; just rebuilds + restarts).
-2. `./singularity check --plugin-boundaries` — confirm the recorder import edges form no cycle and
+1. `./equin build` (regenerates nothing DB-side — no new table; just rebuilds + restarts).
+2. `./equin check --plugin-boundaries` — confirm the recorder import edges form no cycle and
    all cross-plugin imports go through barrels.
 3. Exercise the app (open a conversation, the tasks pane, etc.) at
    `http://<worktree>.localhost:9000` to generate spans.

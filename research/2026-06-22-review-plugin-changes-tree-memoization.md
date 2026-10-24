@@ -211,8 +211,8 @@ partial-build redesign is recorded as a follow-up rather than bundled here.
 
 ## Verification
 
-1. **Build:** `./singularity build` (regenerates nothing schema-wise; confirms TS + barrel-purity + boundary checks pass — the new git-watcher / git-read-cache / commit-list / code imports are all legal runtime-barrel imports).
-2. **Checks:** `./singularity check type-check plugin-boundaries` — confirm the new cross-plugin export and imports don't trip boundary rules, and the pure `computePluginChanges` signature change type-checks at both call sites.
+1. **Build:** `./equin build` (regenerates nothing schema-wise; confirms TS + barrel-purity + boundary checks pass — the new git-watcher / git-read-cache / commit-list / code imports are all legal runtime-barrel imports).
+2. **Checks:** `./equin check type-check plugin-boundaries` — confirm the new cross-plugin export and imports don't trip boundary rules, and the pure `computePluginChanges` signature change type-checks at both call sites.
 3. **Functional (push path):** open a review pane for a push (`/api/review/plugin-changes?pushId=…`) and confirm the per-plugin API/file diffs render identically to before (pure refactor of the diff logic).
 4. **Functional (worktree path):** open a review pane on an active conversation; edit a worktree plugin file → confirm the changed plugin's diff updates. Confirm an *unrelated* main advance does **not** change the worktree diff content.
 5. **Memoization proof:** the `git-memo-hit:review.plugin-changes.main-tree` / `…worktree-tree` and `git-memo-miss:…` markers are emitted automatically by `createGitStateMemo`. Inspect the runtime-profiler / Debug → Reports:

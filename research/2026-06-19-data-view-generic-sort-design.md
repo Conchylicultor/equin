@@ -471,7 +471,7 @@ additive multi-sort prop on the `data-table` primitive — file as its own task;
   round-trip, **legacy-`sort` migration** (load a view with a committed legacy
   single-sort config and confirm it reads as one rule and re-serializes to an
   array on first edit).
-- `./singularity build` + screenshots.
+- `./equin build` + screenshots.
 
 ---
 

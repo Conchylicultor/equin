@@ -207,7 +207,7 @@ Note: PromptBar drops `getGroup` (section constraint). Items reorder freely. Sec
 
 ## Verification
 
-1. `./singularity build` — compiles and deploys
+1. `./equin build` — compiles and deploys
 2. Test edit mode: pen button → drag handles appear on toolbar items, sidebar items → drag to reorder → ranks persist across refresh
 3. Test groups: drag item onto item in toolbar → group created → expand/collapse → rename → delete group
 4. Test spacers: add spacer in edit mode → drag spacer → delete spacer

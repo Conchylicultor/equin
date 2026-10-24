@@ -28,7 +28,7 @@ Three causes, all in one code path:
 - **Once `--composition` does this directly**, `--serve-composition` and the
   compose-serve stage have no caller left.
 
-Outcome: `./singularity build --composition sonata` builds and serves sonata
+Outcome: `./equin build --composition sonata` builds and serves sonata
 from any checkout, at `http://sonata.<checkout>.localhost:9000`. Databases become
 one per (composition × checkout).
 
@@ -54,7 +54,7 @@ Both are the same bug. The fix makes the composition explicit:
 
 1. `WorktreeSpec` gains `composition?: string`, and the backend reads it back
    off its own `spec.json` at boot (one field, one read). NOT an env var the
-   gateway passes: `./singularity build` does not rebuild the Go gateway, so a
+   gateway passes: `./equin build` does not rebuild the Go gateway, so a
    running gateway is routinely older than the tree it serves and would simply
    not pass it — and a backend that saw no composition would boot the full app
    under the composition's own namespace and database, which is the exact bug
@@ -265,7 +265,7 @@ row, one pair of artifacts.
 >
 > Two facts combine:
 >
-> 1. **Ordering.** `./singularity build` mints its `build_runs` row
+> 1. **Ordering.** `./equin build` mints its `build_runs` row
 >    (`recorder.insertRun`, `bin/commands/build.ts:~1168`) *before*
 >    `generateAppSources` (`:~1195`) generates the migration, and the migration
 >    is not APPLIED until the backend restarts at the very end of the build. So a
@@ -390,7 +390,7 @@ invocation writes one `build-<buildId>` profile and log.
 - **`web-artifacts:map-in-sync`** — becomes reachable-stale: a composition-only
   build runs codegen + format (mutating the tree) without republishing ckNs's
   dist. `isBuildInProgress()` skips it during the build and `push` uses
-  `--scope tree`, so it only bites on a bare `./singularity check`. Documented
+  `--scope tree`, so it only bites on a bare `./equin check`. Documented
   consequence, and arguably the correct loud signal.
 - **`plugins-registry-in-sync`** — unaffected, and it is what proves the main
   composition's registry equals the committed one.
@@ -441,29 +441,29 @@ guarded — both are higher rungs than a check.
 
 ## Verification
 
-Land in three commits, each green on `./singularity check`:
+Land in three commits, each green on `./equin check`:
 
-1. **Registry selection.** After landing: `./singularity build` from a worktree is
-   byte-equivalent to today's; `bun ./singularity test
+1. **Registry selection.** After landing: `./equin build` from a worktree is
+   byte-equivalent to today's; `bun ./equin test
    plugins/framework/plugins/server-core` covers `select-registry.test.ts`
    (extended with the fail-loud arm); drop a stray
    `server.composition.singularity.generated.ts` into main's `server-core/core/`
    and confirm main's backend still boots the committed registry;
-   `./singularity build --hermetic --composition singularity` now succeeds.
-2. **Namespace cap + DB grammar.** `bun ./singularity test
+   `./equin build --hermetic --composition singularity` now succeeds.
+2. **Namespace cap + DB grammar.** `bun ./equin test
    plugins/infra/plugins/namespace`; `namespaceFor` throws over 63 bytes.
 3. **The fan-out.**
-   - `./singularity build --composition sonata` **from this worktree** →
+   - `./equin build --composition sonata` **from this worktree** →
      `http://sonata.<checkout>.localhost:9000` renders, with `psql` showing a
      database named `sonata.<checkout>` and a `composition.json` marker carrying
      `{ composition: "sonata", checkout: "<checkout>" }`.
    - Same command **on a host where main has not been built** — the
      `readFleetVendorMeta` throw is what this proves gone.
-   - `./singularity build --composition sonata website` — two namespaces, **one**
+   - `./equin build --composition sonata website` — two namespaces, **one**
      `build_runs` row rendering `[sonata] [website]`, one transcript, one
      profile, and the second target's artifact counts showing reuse rather than
      rebuild. Then run the two sequentially and confirm **two** rows.
-   - `./singularity build` with no flag — deploy receipt at
+   - `./equin build` with no flag — deploy receipt at
      `~/.singularity/worktrees/<checkout>/build-status.json` reads `status: ok`,
      and the build profile's span list is unchanged span-for-span.
    - Studio → Compositions → **Serve** from a worktree: the toggle is enabled,
@@ -472,7 +472,7 @@ Land in three commits, each green on `./singularity check`:
    - Kill a two-target build mid-second-target (SIGTERM) and confirm exactly one
      verdict is printed, one row is closed, the first target's receipt is
      terminal, and the second's reads `interrupted`.
-   - `./singularity check migrations-in-sync` after the `targets` migration, and
+   - `./equin check migrations-in-sync` after the `targets` migration, and
      `query_db` on `build_runs` to confirm the column is `text[]` and that a
      fresh plain build lands `{singularity}`. Confirm `target` is gone and no
      code path writes `main` any more (`rg '"main"' plugins/build` should return

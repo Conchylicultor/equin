@@ -21,7 +21,7 @@
  * the worktree of `--attempt`; the prompts touch no file. Spawns real agents —
  * run it deliberately.
  *
- *   ./singularity run plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/assistant-text/e2e/first-token.ts --attempt <attempt-id> [--conversations 2] [--turns 5]
+ *   ./equin run plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/assistant-text/e2e/first-token.ts --attempt <attempt-id> [--conversations 2] [--turns 5]
  */
 import {
   agentFetch,

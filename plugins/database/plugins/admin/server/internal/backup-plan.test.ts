@@ -6,7 +6,7 @@
  * with an exclusion, restore, find the table empty — lives in
  * `backup/sources/databases` (`backup-exclusion.test.ts`).
  *
- * Run: `./singularity test plugins/database/plugins/admin`
+ * Run: `./equin test plugins/database/plugins/admin`
  */
 
 import { describe, test, expect } from "bun:test";

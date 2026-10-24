@@ -244,14 +244,14 @@ inside `internal/` and is not re-exported from the barrel.
 
 ## Verification
 
-1. `./singularity test plugins/conversations/plugins/conversation-view/plugins/pending-turn`
+1. `./equin test plugins/conversations/plugins/conversation-view/plugins/pending-turn`
    — runs bun (`reconcile.test.ts`, the lint suites) **and** vitest (the new seam test).
    The 36-case matrix must be green, and the seam test must **fail on stashed `main` and
    pass after** — confirm that asymmetry explicitly or the test is decoration.
-2. `./singularity test plugins/conversations/plugins/transcript-watcher` for Step 0.
-3. `./singularity check` — the type-check finds every `baselineUserText` reader (three
+2. `./equin test plugins/conversations/plugins/transcript-watcher` for Step 0.
+3. `./equin check` — the type-check finds every `baselineUserText` reader (three
    files, all in this plugin; nothing outside constructs a `PendingTurnRecord`).
-4. `./singularity build` (background, end the turn), then in the deployed app: send a
+4. `./equin build` (background, end the turn), then in the deployed app: send a
    turn and watch the echo card vanish as the row lands; send a turn whose text
    duplicates an earlier message in the same conversation and confirm it still resolves;
    exercise an AskUserQuestion answer and Push & Close, since both appear in the report

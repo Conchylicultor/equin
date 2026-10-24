@@ -47,7 +47,7 @@ The derived view `tasks` in `plugins/tasks/server/schema.ts` uses `getTableColum
 (t) => [index("tasks_parent_rank_idx").on(t.parentId, t.rank)]
 ```
 
-**Migration + seeding.** `./singularity build` regenerates migrations from `schema.ts`. Because `rank` is `NOT NULL`, the generated migration will need to seed existing rows. Simplest path:
+**Migration + seeding.** `./equin build` regenerates migrations from `schema.ts`. Because `rank` is `NOT NULL`, the generated migration will need to seed existing rows. Simplest path:
 
 1. Let drizzle-kit generate the `ALTER TABLE … ADD COLUMN rank text NOT NULL` migration.
 2. Hand-edit that migration file to:
@@ -173,7 +173,7 @@ No plugin boundary changes, no new plugin; this is all internal to `tasks`.
 
 # Verification
 
-After `./singularity build`:
+After `./equin build`:
 
 1. Load `http://<worktree>.localhost:9000/tasks` and confirm the tree renders in the same order as before the change (seed preserved ordering).
 2. Drag a task row up/down within its parent → order updates instantly and persists after a hard refresh.

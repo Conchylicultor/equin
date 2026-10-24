@@ -136,8 +136,8 @@ Sync `notify()` consumers need no edit; they already go through the mechanism.
    - **Ref filter:** events on `refs/heads/other-wt` are dropped; `refs/heads/main` and the own branch are delivered; the own branch is re-resolved after a HEAD change.
 3. **Engine and dir-hub tests:** a slow async `onChange` under rapid flushes is coalesced the same way, and so are reconcile ticks.
 4. **Lint test:** `onChange: () => { void work(); }` errors; `onChange: () => work()` and `onChange: () => notify()` pass.
-5. `./singularity test plugins/packages/plugins/coalesce plugins/infra/plugins/file-watcher plugins/infra/plugins/git/plugins/checkout-watch plugins/framework/plugins/tooling/plugins/lint/plugins/watcher-safety`
-6. `./singularity build`, which runs the checks, including type-check with the new lint rule over the whole repo.
+5. `./equin test plugins/packages/plugins/coalesce plugins/infra/plugins/file-watcher plugins/infra/plugins/git/plugins/checkout-watch plugins/framework/plugins/tooling/plugins/lint/plugins/watcher-safety`
+6. `./equin build`, which runs the checks, including type-check with the new lint rule over the whole repo.
 7. **Live check:** open a conversation's code view, then `git commit --allow-empty` in a *different* worktree. `get_runtime_profile` (kind bg) should show no new `watch-edited-files:recompute`. An edit inside the watched worktree still updates the list.
 
 ## Out of scope (separate tasks)

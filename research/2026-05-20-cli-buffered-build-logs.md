@@ -2,7 +2,7 @@
 
 ## Context
 
-The build pipeline (`./singularity build`) runs 4 steps in parallel — checks, tsc server, tsc central, vite build. All four use `stdout: "inherit"`, so their output interleaves on the terminal. Vite's hundreds of asset lines mix with tsc/ESLint errors, making failures hard to diagnose. Three problems to solve:
+The build pipeline (`./equin build`) runs 4 steps in parallel — checks, tsc server, tsc central, vite build. All four use `stdout: "inherit"`, so their output interleaves on the terminal. Vite's hundreds of asset lines mix with tsc/ESLint errors, making failures hard to diagnose. Three problems to solve:
 
 1. **Buffer output** — each parallel step captures stdout/stderr and prints a labeled block on completion
 2. **Persist logs** — per-step logs saved to disk alongside the build profile, queryable per-run
@@ -150,13 +150,13 @@ Use `useEndpoint` (TanStack Query wrapper from `@plugins/infra/plugins/endpoints
 6. `build-logs/server/` — endpoint handler + barrel
 7. `build-log-section.tsx` — two-mode component
 
-Steps 1-4 are CLI/server-side, verifiable by running `./singularity build`.
+Steps 1-4 are CLI/server-side, verifiable by running `./equin build`.
 Steps 5-7 complete the UI, verifiable in the browser.
 
 ## Verification
 
-1. `./singularity build` — terminal shows clean labeled blocks, no interleaving
+1. `./equin build` — terminal shows clean labeled blocks, no interleaving
 2. `cat ~/.singularity/worktrees/<name>-build-logs.json` — has `{ steps: [...] }` with per-step data
 3. Trigger build from UI, open build detail pane after completion — per-step collapsible log sections visible
 4. During an active build, live WS stream still works
-5. Introduce a lint error, run `./singularity build` — failure output is labeled and separated from passing steps
+5. Introduce a lint error, run `./equin build` — failure output is labeled and separated from passing steps

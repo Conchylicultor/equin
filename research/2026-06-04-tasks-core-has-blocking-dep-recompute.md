@@ -107,7 +107,7 @@ The full `tasks_v` (which also computes `has_active`, `has_waiting`,
     .select(...)`. drizzle's `.with()` is variadic; `task_completed` declared
     first so `task_facts` can reference it. The status `CASE`, `active`,
     `finishedAt`, and `dependencies` selects are unchanged.
-- Then `./singularity build --migration-name tasks-v-precompute-completion`
+- Then `./equin build --migration-name tasks-v-precompute-completion`
   (regenerates the `DROP VIEW`/`CREATE VIEW "tasks_v"` migration under
   `plugins/database/plugins/migrations/data/` and applies it on restart). **Never**
   run `drizzle-kit generate` or the migration runner manually.
@@ -142,7 +142,7 @@ same two-CTE structure.
 1. **Baseline** (already captured): `EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM
    tasks_v;` via `query_db` on `database: "singularity"` — two `has_blocking_dep`
    subplans (~57 ms + ~71 ms), `Rows Removed by Join Filter: ~1.31M` each.
-2. **Build**: `./singularity build --migration-name tasks-v-precompute-completion`;
+2. **Build**: `./equin build --migration-name tasks-v-precompute-completion`;
    open the generated `…__tasks_v_precompute_completion.sql` and confirm the
    `CREATE VIEW "tasks_v"` body declares both CTEs and that `has_blocking_dep`
    references `task_completed`. Confirm server restarts cleanly (no view-dependency

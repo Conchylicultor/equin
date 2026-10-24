@@ -140,7 +140,7 @@ collector is not mounted during boot:
 
 Caveat to state in the code comment: in a fully wedged backend this POST may itself stall;
 the server's span-stuck traces cover that side, and the report lands if the backend recovers.
-Verify with `./singularity check boundary-rules` that `web-core/web/App.tsx` may import
+Verify with `./equin check boundary-rules` that `web-core/web/App.tsx` may import
 `reports/web` (it already imports several feature/primitive web barrels); if not, fall back to
 a held `bootReportSink` in web-sdk mirroring `pluginLoadReportSink`, registered at module
 eval by the reports plugin.
@@ -170,12 +170,12 @@ ticker on slow boots) the "next commit" could be a boot-screen commit. Move that
 
 ## Verification
 
-1. **jsdom** (`./singularity test plugins/framework/plugins/web-core`): never-resolving `block`
+1. **jsdom** (`./equin test plugins/framework/plugins/web-core`): never-resolving `block`
    task → `[data-boot-state=waiting]` in the first commit; fake timers past 15 s → `stuck` +
    one `report` call; rejecting task → `failed` at once; overdue task resolving later → app
    renders `Core.Root`; `continue` task overdue → app renders, report filed; Continue anyway
    → app renders.
-2. **e2e** `./singularity run plugins/infra/plugins/boot-snapshot/e2e/boot-stall.ts`
+2. **e2e** `./equin run plugins/infra/plugins/boot-snapshot/e2e/boot-stall.ts`
    (harness `stallRoute`, `withBrowser`, `report()`):
    - stalled snapshot: `[data-boot-state=waiting]` attached within ~1 s of navigation, visible
      text names "Boot snapshot" and an elapsed clock; after the deadline `stuck` with Retry /
@@ -186,4 +186,4 @@ ticker on slow boots) the "next commit" could be a boot-screen commit. Move that
    Screenshots of each state with `--color-scheme dark|light`.
 3. **No slower**: `cold-start.ts` / `benchmark_boot` before vs after — `boot:first-commit`,
    `first-data-commit`, `route-content` within noise.
-4. `./singularity build` (checks incl. boundary-rules, type-check, plugins-doc-in-sync).
+4. `./equin build` (checks incl. boundary-rules, type-check, plugins-doc-in-sync).

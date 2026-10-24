@@ -129,7 +129,7 @@ Compact floating panel in the top-right of the scroll area.
 
 ## Verification
 
-1. `./singularity build` — ensure no build errors
+1. `./equin build` — ensure no build errors
 2. Open a conversation with multiple user messages at `http://<worktree>.localhost:9000`
 3. Verify: floating TOC appears in top-right with all user messages listed
 4. Click a message entry → view scrolls to that user message

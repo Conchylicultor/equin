@@ -164,8 +164,8 @@ void recordReport({
 
 ## Verification
 
-1. `./singularity build` — generates the additive column migration + `slow-op.origin.jsonc`, regenerates registry/docs, restarts. Commit the generated SQL so `migrations-in-sync` passes.
-2. `./singularity check` — `migrations-in-sync`, `plugin-boundaries`, `plugins-doc-in-sync`, `type-check` green.
+1. `./equin build` — generates the additive column migration + `slow-op.origin.jsonc`, regenerates registry/docs, restarts. Commit the generated SQL so `migrations-in-sync` passes.
+2. `./equin check` — `migrations-in-sync`, `plugin-boundaries`, `plugins-doc-in-sync`, `type-check` green.
 3. App loads at `http://att-1781341189-mov4.localhost:9000`. Open **Debug → Reports**; confirm it still renders crashes.
 4. **Server span:** temporarily lower `dbMs`/`loaderMs` to ~1 ms via Settings → Config (or the JSONC), exercise a page, and confirm `query_db` on `reports` shows rows with `kind='slow-op'`, `operation_kind in ('db','loader','http')`, populated `duration_ms`/`threshold_ms`, crash columns NULL; a task is filed under the **Reports** meta-task; repeat hits grow `count` on one row. Restore thresholds.
 5. **Element:** lower `elementMs` to ~1 ms, reload; confirm `operation_kind='element'` rows keyed by resource key, deduped per resource.

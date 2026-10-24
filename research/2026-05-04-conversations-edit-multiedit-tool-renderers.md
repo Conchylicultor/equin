@@ -294,7 +294,7 @@ All cross-plugin imports go through barrels:
 - `edit/web` → `@plugins/.../tool-call/shared` ✓
 - `edit/web` → `@plugins/.../file-pane/plugins/diff/web` ✓ (barrel; `DiffRenderer` must be exported there)
 
-Run `./singularity check --plugin-boundaries` to verify after implementation.
+Run `./equin check --plugin-boundaries` to verify after implementation.
 
 ## Files modified
 
@@ -311,7 +311,7 @@ Run `./singularity check --plugin-boundaries` to verify after implementation.
 ## Verification
 
 ```bash
-./singularity build
+./equin build
 ```
 
 1. Open a conversation with Edit calls — cards show file path in collapsed summary, ✓ chip when successful, expand by default with syntax-highlighted split diff.
@@ -320,4 +320,4 @@ Run `./singularity check --plugin-boundaries` to verify after implementation.
 4. Live conversation — Edit card appears open mid-run (no result chip), ✓ chip appears in summary without collapsing when done.
 5. `DiffView` in the file-pane still works — verify in Code > Diff tab on any conversation.
 6. Other tool cards (Bash, Read, etc.) unaffected by slot shape change.
-7. `./singularity check --plugin-boundaries` — no violations.
+7. `./equin check --plugin-boundaries` — no violations.

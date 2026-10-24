@@ -54,18 +54,18 @@ Critical files: `plugins/debug/plugins/logs/**` (rewrite, gains `core/` + `serve
 
 ## Steps
 
-1. **Prototype** — `./singularity prototype new "Logs V2"` (blank `_template/`, `<meta name="mocks" content="route:/debug/logs">`), realistic fake sinks from the table above. Options: `reader: inline | split` (reader below the catalog vs Miller column), `catalog: table | cards`. Screens: catalog, reader mid-scroll crossing a rotation divider, reader opened from a report deep link (`at` + `q`), loading state, "nothing older" end.
+1. **Prototype** — `./equin prototype new "Logs V2"` (blank `_template/`, `<meta name="mocks" content="route:/debug/logs">`), realistic fake sinks from the table above. Options: `reader: inline | split` (reader below the catalog vs Miller column), `catalog: table | cards`. Screens: catalog, reader mid-scroll crossing a rotation divider, reader opened from a report deep link (`at` + `q`), loading state, "nothing older" end.
 2. **User review** of the prototype. ← stop here.
 3. Revise this plan (v2 doc if the direction changes), then implement: file-sink paged reader + eager registration → catalog value → reader value → web panes → `logHref` + report links → follow-up tasks (`add_task`) for health/slow-op-markers/boot/duress-episodes → tables.
-4. `./singularity build`, verify.
+4. `./equin build`, verify.
 
 ## Verification
 
-- `./singularity test plugins/infra/plugins/file-sink` — paged read across a forced rotation (small `maxBytes`), cursor stable after rotation, explicit end past `keep`.
-- `./singularity build`, then `screenshot.ts --path /debug/logs` and `--path "/debug/logs/ch/migrations?at=…"`: every declared sink listed (including never-written ones), meters sane, scroll-up crosses `.1`.
+- `./equin test plugins/infra/plugins/file-sink` — paged read across a forced rotation (small `maxBytes`), cursor stable after rotation, explicit end past `keep`.
+- `./equin build`, then `screenshot.ts --path /debug/logs` and `--path "/debug/logs/ch/migrations?at=…"`: every declared sink listed (including never-written ones), meters sane, scroll-up crosses `.1`.
 - Write to a sink while the reader is open → line appears without reload (push, no polling).
 - `compare-diff.ts --name <proto-id>` against the built route.
-- `./singularity check` (exempt debt removed, `no-adhoc-row-list`, `config:overrides-authored`).
+- `./equin check` (exempt debt removed, `no-adhoc-row-list`, `config:overrides-authored`).
 
 ## After review — as built
 

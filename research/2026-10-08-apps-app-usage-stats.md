@@ -129,18 +129,18 @@ cannot double-count.
 
 ## Verification
 
-1. `./singularity test plugins/apps-core/plugins/app-usage` covers:
+1. `./equin test plugins/apps-core/plugins/app-usage` covers:
    - tracker unit tests on a fake clock and events: launch on transition only, no launch on a
      same-app reload, idle cut at `lastInputAt`, hidden/blur pause, midnight split, flush batching
      and restore on failure
    - a DB test that the upsert is additive and the summary SQL computes 7d vs total
-2. Run `./singularity build` in the background, then open `http://<worktree>.localhost:9000/home`.
+2. Run `./equin build` in the background, then open `http://<worktree>.localhost:9000/home`.
    Switch between a few apps, wait, then switch to Home → Stats.
    - Opens and time should increase.
    - `query_db`: `select * from app_usage_daily` shows the rows.
 3. Idle: stay without input for over 5 minutes, then check that time stopped accruing.
    For the test, use a short idle threshold via the tracker's injectable config, not a code edit.
 4. Take a screenshot of the Stats view with
-   `./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --path /home --click "Stats" --out /tmp/stats`,
+   `./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --path /home --click "Stats" --out /tmp/stats`,
    and confirm the icons view is unchanged.
-5. Run `./singularity check`, which covers boundaries, the live-state lint rules and migrations-in-sync.
+5. Run `./equin check`, which covers boundaries, the live-state lint rules and migrations-in-sync.

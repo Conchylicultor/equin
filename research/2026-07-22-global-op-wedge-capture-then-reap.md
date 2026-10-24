@@ -2,7 +2,7 @@
 
 ## Context
 
-The CLI op wedge (a `./singularity {build,check,push}` burning ~1 core forever,
+The CLI op wedge (a `./equin {build,check,push}` burning ~1 core forever,
 gridlocking the fleet behind cpu-slots and the push mutex) was captured live on
 2026-07-22 and its mechanism named to the JS boundary: a **native microtask
 storm** drained forever by `processTicksAndRejections` at the `drainMicrotasks()`
@@ -196,7 +196,7 @@ reap: z.object({
 
 ## Verification (end-to-end)
 
-1. `./singularity build` to deploy.
+1. `./equin build` to deploy.
 2. Synthetic wedge: launch a long-running armed dummy op — write a fake marker
    (`~/.singularity/worktrees/<wt>/ops/check.json` with a live pid of a
    `bun --inspect` dummy spinning a yielding loop, `startedAt` older than
@@ -205,7 +205,7 @@ reap: z.object({
    dummy's hot function, dump contains probe JSON + both lsofs, dummy pid is
    gone, reap outcome recorded.
 3. Confirm marker was reaped by the next `resolveActiveWorktreeOps` pass and no
-   stale flock remains (`./singularity push` from another worktree proceeds).
+   stale flock remains (`./equin push` from another worktree proceeds).
 4. Real-world: next field wedge (several/day currently) should appear in
    Debug → Reports with a named hot stack and `reaped` — and the push mutex
    should free within ~2 min of the budget tripping instead of hours.

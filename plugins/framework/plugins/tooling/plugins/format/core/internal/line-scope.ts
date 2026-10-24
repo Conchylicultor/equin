@@ -9,7 +9,7 @@
 // so it repeats until nothing more is selected.
 //
 // ONE function decides the bytes, and it is a pure function of (content, base):
-// the writer (build, `./singularity format`) and the readers (`format-clean`,
+// the writer (build, `./equin format`) and the readers (`format-clean`,
 // `lint-directives-stable`) call it alike, so "formatted" means the same thing
 // to all of them. In particular a file the writer left as `X` is one where the
 // reader's `formatInScope(X)` is `X` — the loop stops exactly at that fixed point.

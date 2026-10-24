@@ -93,7 +93,7 @@ New plugin `plugins/apps/plugins/sonata/plugins/icons/`:
 
 ## Verification
 
-- `./singularity test plugins/ui/plugins/icons` (resolver: family chain, inline
+- `./equin test plugins/ui/plugins/icons` (resolver: family chain, inline
   vs sprite, custom kind, unregistered family).
-- `./singularity build`; screenshot a Sonata song (`/sonata/song/<id>`) and
+- `./equin build`; screenshot a Sonata song (`/sonata/song/<id>`) and
   compare its rail / transport icons against the prototype.

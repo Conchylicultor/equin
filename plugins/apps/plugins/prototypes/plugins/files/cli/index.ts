@@ -3,7 +3,7 @@ import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
 /**
  * `prototype` is a GROUP: it routes and never runs. The declaration union makes
  * that exclusive — a group carries `subcommands` and cannot also carry `run` —
- * so `./singularity prototype` printing its own help is a property of the shape
+ * so `./equin prototype` printing its own help is a property of the shape
  * rather than a runtime check.
  *
  * Every leaf works straight against the filesystem, never over HTTP, and that
@@ -12,7 +12,7 @@ import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
  * the user picked, and read or rewind the history of mocks with no backend
  * running and nothing built.
  *
- * This file is reached on EVERY `./singularity` invocation (commander needs the
+ * This file is reached on EVERY `./equin` invocation (commander needs the
  * names and flags before it can parse argv), so it imports `defineCliCommand`
  * and nothing else; `mintPrototype`, the lister, the picks and history stores sit
  * behind the dynamic `run: () => import(…)`. `cli:command-declarations-light` measures that

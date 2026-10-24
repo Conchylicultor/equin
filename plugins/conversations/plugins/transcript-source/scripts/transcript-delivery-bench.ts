@@ -1,6 +1,6 @@
 // Transcript delivery bench: what one change to a big transcript costs the
 // server and the wire, and what opening it costs. Usage:
-//   ./singularity run plugins/conversations/plugins/transcript-source/scripts/transcript-delivery-bench.ts <transcript.jsonl> [appends=50]
+//   ./equin run plugins/conversations/plugins/transcript-source/scripts/transcript-delivery-bench.ts <transcript.jsonl> [appends=50]
 //
 // Replays the transcript the way the watcher reads it: the file minus its last
 // `appends` lines read whole, then each remaining line appended and read

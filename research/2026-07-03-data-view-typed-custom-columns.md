@@ -143,7 +143,7 @@ already exists in data-view core and is already read by the enum cell/editor/fil
     **immutable after creation** (picker only in the add row).
 
 **G. Build**
-16. `./singularity build` to regenerate plugin manifests / generated registries.
+16. `./equin build` to regenerate plugin manifests / generated registries.
     **No migration** — `tables.ts`, the endpoint body (`value: z.string()`), and
     the handler are all unchanged.
 
@@ -198,7 +198,7 @@ already exists in data-view core and is already read by the enum cell/editor/fil
   `useMemo` deps or cells go stale.
 
 ## Verification
-1. `./singularity build`; open `http://<worktree>.localhost:9000` on a DataView
+1. `./equin build`; open `http://<worktree>.localhost:9000` on a DataView
    surface (e.g. tasks or all-conversations).
 2. **Fields UI:** add a Number column, a Date column, a Checkbox column, and a
    Select column (with 2–3 options). Confirm the type picker shows icons/labels
@@ -216,5 +216,5 @@ already exists in data-view core and is already read by the enum cell/editor/fil
 6. Optionally verify stored encodings with `query_db`:
    `SELECT column_id, value FROM data_view_custom_values` — numbers as decimal
    strings, bools `"true"/"false"`, dates ISO, enum as option values.
-7. `./singularity check` (boundaries, type-check, doc/registry in-sync for the new
+7. `./equin check` (boundaries, type-check, doc/registry in-sync for the new
    sub-plugins).

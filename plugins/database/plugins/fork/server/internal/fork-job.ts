@@ -26,7 +26,7 @@ const forkLog = defineLogSink({
 });
 
 // Durable, self-healing worktree DB fork, run in a detached child
-// (`./singularity supervised-exec database.fork`). A restart or deploy of the
+// (`./equin supervised-exec database.fork`). A restart or deploy of the
 // backend no longer interrupts a `pg_dump | pg_restore` in flight: the child
 // keeps going and whichever backend is alive when it exits records the outcome.
 //

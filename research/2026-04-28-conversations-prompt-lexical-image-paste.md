@@ -149,7 +149,7 @@ These are unknown without observing real behavior; resolve with quick experiment
 
 ## Verification plan (end-to-end test)
 
-1. From the worktree dir, run `./singularity build`. Confirm clean build (TypeScript + Vite).
+1. From the worktree dir, run `./equin build`. Confirm clean build (TypeScript + Vite).
 2. Open `http://<worktree>.localhost:9000`, start a conversation.
 3. **Text-only sanity**: type "hello", Enter. Confirm message reaches Claude (matches today's behavior).
 4. **Shift+Enter**: type "line1", Shift+Enter, "line2", Enter. Confirm two-line message arrives.

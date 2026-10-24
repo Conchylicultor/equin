@@ -8,7 +8,7 @@
  * `writes` **survives** — nothing is deleted.
  *
  * Requires the running embedded cluster AND the `data_view_row_order` migration
- * (i.e. `./singularity build` first):
+ * (i.e. `./equin build` first):
  *
  *   bun test plugins/primitives/plugins/data-view/plugins/view-order/server
  */

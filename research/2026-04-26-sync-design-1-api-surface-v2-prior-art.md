@@ -230,7 +230,7 @@ export const tasksCoreApi = definePluginApi("tasks-core", {
 });
 ```
 
-Two new symbols (`internalQuery`, `internalMutation`). The wire layer skips internal-prefixed entries; `call()` resolves both. `./singularity check` rejects `useQuery(api.foo.findNextRankUnder)` at compile time because `internalQuery` returns a different branded type than `query`.
+Two new symbols (`internalQuery`, `internalMutation`). The wire layer skips internal-prefixed entries; `call()` resolves both. `./equin check` rejects `useQuery(api.foo.findNextRankUnder)` at compile time because `internalQuery` returns a different branded type than `query`.
 
 This also clarifies the tx-sharing question (issue 4): internal mutations called via `call` join the parent tx; public mutations called from the web open a fresh tx.
 
@@ -279,7 +279,7 @@ handler: async ({ tx, call }) => {
 }
 ```
 
-`call.savepoint` is the only nested-tx primitive, and it's used rarely. Combine with the `internal*` rule from issue 3: only `internal*` mutations can be called via `call`; public mutations always open a fresh tx (because they may be entered from web with no parent tx in scope). This makes the rule **a function of declaration site, not call site** — the kind of property `./singularity check` can enforce statically.
+`call.savepoint` is the only nested-tx primitive, and it's used rarely. Combine with the `internal*` rule from issue 3: only `internal*` mutations can be called via `call`; public mutations always open a fresh tx (because they may be entered from web with no parent tx in scope). This makes the rule **a function of declaration site, not call site** — the kind of property `./equin check` can enforce statically.
 
 ---
 
@@ -347,7 +347,7 @@ export const conversationsApi = definePluginApi("conversations", {
 });
 ```
 
-The `schedules` block is metadata, not a verb — author symbol count unchanged. The runtime translates each entry into a `setInterval` / cron tick that calls the named function. **Mark this as the only legitimate way to do background work**; ban `setInterval` outside `definePluginApi.schedules` via `./singularity check`.
+The `schedules` block is metadata, not a verb — author symbol count unchanged. The runtime translates each entry into a `setInterval` / cron tick that calls the named function. **Mark this as the only legitimate way to do background work**; ban `setInterval` outside `definePluginApi.schedules` via `./equin check`.
 
 The existing `jobs` plugin handles long-running / multi-step work; cron is *not* the same primitive. Cron triggers; a `defineJob` body steps. The two compose: a cron's body can `await job.enqueue(...)`.
 
@@ -383,7 +383,7 @@ Three families of solutions:
 
 The proposed v2 surface inherits Drizzle's escape hatches (`db.execute(sql\`...\`)`, `sql\`raw\``). Tracking is partial unless we close the door.
 
-**Recommendation:** explicitly state in v2 that `ctx.db` is **a constrained subset of Drizzle** that prohibits raw SQL. Add `./singularity check --no-raw-sql-in-handlers` to enforce it. The escape hatch is `internalQuery` with a manual `invalidatesOn` — same way non-DB sources work. Make the constraint visible at lint time, not invisible at runtime.
+**Recommendation:** explicitly state in v2 that `ctx.db` is **a constrained subset of Drizzle** that prohibits raw SQL. Add `./equin check --no-raw-sql-in-handlers` to enforce it. The escape hatch is `internalQuery` with a manual `invalidatesOn` — same way non-DB sources work. Make the constraint visible at lint time, not invisible at runtime.
 
 This is also the place to acknowledge the granularity question (table vs row vs predicate): publish a "tracking guarantee table" listing which Drizzle operators yield row-level vs table-level invalidation, so authors can predict cost.
 
@@ -484,7 +484,7 @@ Codegen vs `typeof` is a classic trade-off:
 
 The `typeof` approach works fine for tRPC because there's one root router. v2's "one shared file per plugin" is the same thing per-plugin, which is fine — but it doesn't address the original concern (a missing plugin at runtime).
 
-**Recommendation:** keep the type bridge as `typeof` (per-plugin shared file is fine), AND add a `./singularity check --plugin-call-targets-exist` rule that statically verifies every `call(x, …)` target's plugin is in the registry's `web/src/plugins.ts` and `server/src/plugins.ts`. Plus emit a runtime error early at boot if a registered `call` target is missing — fail fast, not at first request.
+**Recommendation:** keep the type bridge as `typeof` (per-plugin shared file is fine), AND add a `./equin check --plugin-call-targets-exist` rule that statically verifies every `call(x, …)` target's plugin is in the registry's `web/src/plugins.ts` and `server/src/plugins.ts`. Plus emit a runtime error early at boot if a registered `call` target is missing — fail fast, not at first request.
 
 The third option — Convex-style real codegen with `convex dev` — is more powerful but more machinery. Defer.
 

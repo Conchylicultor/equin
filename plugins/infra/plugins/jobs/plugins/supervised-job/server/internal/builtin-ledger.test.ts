@@ -2,8 +2,8 @@
  * The built-in ledger: kind-id derivation, the failure-policy table, and the
  * claim lock against a real Postgres seeded with the real migration chain.
  *
- * Run: `./singularity test plugins/infra/plugins/jobs/plugins/supervised-job`
- * (the DB half requires the running embedded cluster — `./singularity build`
+ * Run: `./equin test plugins/infra/plugins/jobs/plugins/supervised-job`
+ * (the DB half requires the running embedded cluster — `./equin build`
  * first, which is also what generates the `supervised_job_runs` migration).
  */
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";

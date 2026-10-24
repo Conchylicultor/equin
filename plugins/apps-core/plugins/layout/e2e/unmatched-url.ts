@@ -4,7 +4,7 @@
 // and says so, because silently redirecting it to the homepage destroys the one
 // clue to what went wrong.
 //
-//   ./singularity run plugins/apps-core/plugins/layout/e2e/unmatched-url.ts [--headed]
+//   ./equin run plugins/apps-core/plugins/layout/e2e/unmatched-url.ts [--headed]
 //
 // Writes a screenshot per case to /tmp/unmatched-url-<case>.png.
 //

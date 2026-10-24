@@ -156,7 +156,7 @@ sees exactly one message, and nothing reaches the real server.
 
 ## Verification
 
-- `./singularity test plugins/framework/plugins/browser-server plugins/infra/plugins/endpoints plugins/primitives/plugins/live-state plugins/config_v2`
+- `./equin test plugins/framework/plugins/browser-server plugins/infra/plugins/endpoints plugins/primitives/plugins/live-state plugins/config_v2`
   - **`pack.test.ts`:** each builder answers its exact tuple; window limit slicing; `:rows`
     subsets; an unrecorded tuple → `DemoMissingError`; a schema mismatch → `DemoPackError`
     naming the key; `ago`.
@@ -169,9 +169,9 @@ sees exactly one message, and nothing reaches the real server.
       not called;
     - a key served twice throws;
     - a page-pipeline subscription beside the scope sees no crosstalk.
-- `./singularity build`, then smoke `http://<worktree>.localhost:9000`: a conversation still marks
+- `./equin build`, then smoke `http://<worktree>.localhost:9000`: a conversation still marks
   viewed on the real server through the migrated hook.
-- `./singularity check` (boundaries, plugin docs, registry sync, type-check).
+- `./equin check` (boundaries, plugin docs, registry sync, type-check).
 
 ## Wrap-up
 

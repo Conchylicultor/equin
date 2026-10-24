@@ -17,7 +17,7 @@
  *   subquery included —, a bad `sqlType`, an expression id, a nullable
  *   expression on a non-null field, a bare column) or does not type-check.
  *
- * Run: `./singularity test plugins/network/plugins/live`.
+ * Run: `./equin test plugins/network/plugins/live`.
  */
 
 import { describe, expect, test } from "bun:test";

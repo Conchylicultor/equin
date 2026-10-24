@@ -47,8 +47,8 @@ Out of scope: non-DB lists (liveValue, endpoint or config sources) and the [Guar
 
 ## Verification
 
-- `./singularity build`: green, with no new migration.
-- `./singularity test` on every touched plugin. The pinned `resources.test.ts` field-order tests must pass unchanged.
+- `./equin build`: green, with no new migration.
+- `./equin test` on every touched plugin. The pinned `resources.test.ts` field-order tests must pass unchanged.
 - Screenshot each touched list to check that it mounts, with the same columns, filters and sections.
 
 ## Outcome (2026-10-18)

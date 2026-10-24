@@ -82,7 +82,7 @@ function render(row: ReportRow, d: LeakedTestDbPayload): string {
   lines.push("");
   lines.push(
     "**So the thing to look at is the test run, not the database.** Ctrl+C on a " +
-      "local `./singularity test` is a perfectly ordinary cause and needs no " +
+      "local `./equin test` is a perfectly ordinary cause and needs no " +
       "action. A suite that is being killed repeatedly is not: it usually means " +
       "the suite hangs and someone (or a timeout) is SIGKILLing it, and the " +
       "hang is the real defect.",

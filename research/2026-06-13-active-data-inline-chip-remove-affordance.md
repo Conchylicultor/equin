@@ -139,7 +139,7 @@ so no change there.
 
 ## Verification
 
-1. `./singularity build`.
+1. `./equin build`.
 2. **Editor shows ×:** open `http://att-1781341482-9ud5.localhost:9000`, use the
    element-picker ("Pick UI element") to insert a `<ui-context>` chip into the
    Improve/compose editor. Hover the chip → a corner × appears → clicking it

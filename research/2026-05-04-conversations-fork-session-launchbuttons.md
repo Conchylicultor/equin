@@ -120,6 +120,6 @@ Eliminates: `useState`, `fetch`, `ConversationSchema.parse`, `conversationPane.o
 
 ## Verification
 
-1. `./singularity build` — zero errors; CLAUDE.md autogen updates to reflect `useLaunchConversation` export from `launch`.
+1. `./equin build` — zero errors; CLAUDE.md autogen updates to reflect `useLaunchConversation` export from `launch`.
 2. Hover over the last assistant message — the row-action strip shows the fork-session buttons (MdPlayArrow × 2) next to copy and markdown-toggle, unchanged visually.
 3. Click a fork-session button — new conversation opens in the pane. Non-ok responses now surface an error rather than silently doing nothing.

@@ -154,21 +154,21 @@ side imports only the child. The edit host mounts `DeferredSortableHost`.
 
 ## Verification
 
-1. **Closure diff.** A one-off `./singularity run` script, using the `composition-closure` recipe,
+1. **Closure diff.** A one-off `./equin run` script, using the `composition-closure` recipe,
    resolves every committed composition on `main` and on the branch and prints additions and removals.
    - Expected: `reorder.editor` is removed from every app composition, and `singularity` is
      unchanged.
    - Expected: `primitives.sortable-list` stays wherever data-view ships. Record these numbers on the
      track.
-2. **`./singularity check reorder:apply-is-lean`** passes. Temporarily re-adding the editor import
+2. **`./equin check reorder:apply-is-lean`** passes. Temporarily re-adding the editor import
    to `dnd-list-middleware.tsx` must make it fail with the inclusion path.
-3. **`./singularity test plugins/reorder plugins/primitives/plugins/sortable-list plugins/fields/plugins/reorder-tree`**,
+3. **`./equin test plugins/reorder plugins/primitives/plugins/sortable-list plugins/fields/plugins/reorder-tree`**,
    including:
    - the existing `item-claim` and `deferred-sortable` no-remount tests;
    - a new jsdom test: a slot contribution's mount count stays the same across `setEditMode(true/false)`
      in a vertical area with the edit plugin registered;
    - a new jsdom test: the missing-editor throw.
-4. **`./singularity build`**, then on the worktree app:
+4. **`./equin build`**, then on the worktree app:
    - Run `reorder/e2e/claim-verify.ts`, `reorder/plugins/node-types/e2e/container-members.ts` and
      `primitives/plugins/pane/e2e/header-reorder.ts`.
    - With `browser_*`: toggle edit mode, drag in a sidebar (vertical), and drag in a wide toolbar

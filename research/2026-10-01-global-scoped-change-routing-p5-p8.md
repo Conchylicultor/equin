@@ -79,7 +79,7 @@ and the deletion of the fetchPage DataView path.
      368 status flips per 8 h.
 5. **The L2 compaction job runs hourly on every namespace** (about 5 × 67 ms an hour).
 6. **The events-runs "Caveats" field is display-only** (no sort or filter; no saved view uses it).
-7. **A hand-run `./singularity release` with the Deploy pane open** shows on the next HEAD advance, release completion
+7. **A hand-run `./equin release` with the Deploy pane open** shows on the next HEAD advance, release completion
    or remount (`revalidate`). There is no file watcher.
 8. **A11 (writes that bypass the producer) is a check, not a runtime SQL observer.**
    - The design pass proposed a connection-level write observer that parses every statement's write target. That is
@@ -594,7 +594,7 @@ CTE) and keep the laterals for scoped shapes only. Decide before converting `tas
 
 ## Build sequence
 
-Each step ends with `./singularity build` green, `check` included. Checkpoints (★) stop for your review.
+Each step ends with `./equin build` green, `check` included. Checkpoints (★) stop for your review.
 
 | # | Step | Phase |
 |---|---|---|
@@ -713,9 +713,9 @@ The ids continue from the parent doc's A1–A10 and T1–T3.
 ## Verification
 
 **Per step**
-- `./singularity build`, backgrounded with `await`, and `check` green. That covers type-check, plugin-boundaries,
+- `./equin build`, backgrounded with `await`, and `check` green. That covers type-check, plugin-boundaries,
   `plugins-doc-in-sync`, `resource-runtime:compiled-routes`, the new A11 / A27 checks, and A28.
-- `./singularity test` over the touched plugins.
+- `./equin test` over the touched plugins.
 
 **Unit and type**
 - Every `@ts-expect-error` for T4–T17.

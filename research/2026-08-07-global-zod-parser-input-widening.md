@@ -234,10 +234,10 @@ masking the work.
 ## Verification
 
 ```bash
-./singularity check type-check     # the primary gate — the whole design is a type change
-./singularity check                # boundaries, registry/doc sync, eslint incl. the new rule
-./singularity build
-./singularity test plugins/fields
+./equin check type-check     # the primary gate — the whole design is a type change
+./equin check                # boundaries, registry/doc sync, eslint incl. the new rule
+./equin build
+./equin test plugins/fields
 bun test plugins/apps/plugins/events/plugins/event-date
 ```
 
@@ -252,7 +252,7 @@ scratchpad and confirmed, against zod 3.25.76:
 - the flight-window query types as `number`, no `??` needed
 - `tolerantEnum` and `RankSchema` compile as plain `z.preprocess` with **no casts**
 
-Runtime spot-checks after `./singularity build`, at
+Runtime spot-checks after `./equin build`, at
 `http://att-1786117820-0e11.localhost:9000`:
 
 1. **Events** — add a URL source, run a refresh, confirm a recurring event

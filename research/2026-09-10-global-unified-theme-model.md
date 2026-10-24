@@ -319,7 +319,7 @@ representative):
   - Add `config/ui/theme-engine/@app/website/theme.jsonc` = `{ "theme": "equin" }`,
     with a `// @hash` taken from the new `theme.origin.jsonc` the build generates.
   - Delete all of `config/ui/tokens/*/@app/website/`. The per-group
-    `config.origin.jsonc` files go away when `./singularity build` runs without
+    `config.origin.jsonc` files go away when `./equin build` runs without
     their descriptors.
 - Delete `plugins/ui/plugins/tokens/check/` (`tokens:app-theme-pins-total`).
 - Delete the 3 `GlobalPreset`s in `plugins/ui/plugins/tokens/web/index.ts`.
@@ -349,7 +349,7 @@ All of this lands in one branch and one push.
    drizzle-kit's interactive "is this a rename?" prompt.
 5. `theme-gallery` sub-plugin and its config views. Wire it into the customizer and
    quick-theme.
-6. Docs + skill. `./singularity build`, which regenerates origins, plugin docs and
+6. Docs + skill. `./equin build`, which regenerates origins, plugin docs and
    registries.
 
 ## Critical files
@@ -369,7 +369,7 @@ All of this lands in one branch and one push.
 
 ## Verification
 
-- **Tests** (`./singularity test plugins/ui`):
+- **Tests** (`./equin test plugins/ui`):
   - New `resolve-theme.test.ts`:
     - A group the theme doesn't mention gets schema defaults.
     - A leaf theme beats its `extends` parent.
@@ -381,12 +381,12 @@ All of this lands in one branch and one push.
   - `paint-cache-aggregator.test.ts` stays unchanged and must still pass.
   - tweakcn `convert` output shape.
   - saved-themes: `extends` validated on write; 409 vs `reassign` on delete.
-- **Checks:** `./singularity check`. Watch plugin-boundaries (new edges
+- **Checks:** `./equin check`. Watch plugin-boundaries (new edges
   tokens/* → saved-themes, tweakcn → saved-themes; no cycles),
   registrations-paired, origins in sync, `config:overrides-authored`, data-views in
   sync. `tokens:app-theme-pins-total` must be absent from `--list`.
-- **In the app**, after `./singularity build`, with the screenshot tool
-  (`./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts`):
+- **In the app**, after `./equin build`, with the screenshot tool
+  (`./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts`):
   1. `--path /website`, dark and light. Compare against the current site: same
      colors, type, spacing, and the Inter font.
   2. Desktop at `/`: Default theme, no flash on reload (warm cache).

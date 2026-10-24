@@ -264,7 +264,7 @@ the explicit ask (boot-critical wait/work).
 
 ## Verification
 
-1. `./singularity build` from the worktree; open `http://<worktree>.localhost:9000`.
+1. `./equin build` from the worktree; open `http://<worktree>.localhost:9000`.
 2. Navigate to **Debug → Boot Profile**. Confirm the Gantt shows the
    navigation → scripts → boot-tasks → resources → paint phases, and the summary
    strip shows TTFB / plugin-load / boot-tasks / first-commit / FCP.
@@ -275,7 +275,7 @@ the explicit ask (boot-critical wait/work).
    warm cache).
 5. Sanity-check the server timing: hit `GET /api/resources/boot-snapshot` (via the
    browser/`query`-style fetch) and confirm the `timings` map has a `workMs` per key.
-6. `./singularity check` (boundaries, plugins-registry-in-sync, plugins-doc-in-sync,
+6. `./equin check` (boundaries, plugins-registry-in-sync, plugins-doc-in-sync,
    type-check) is clean.
 
 ## Risks / notes

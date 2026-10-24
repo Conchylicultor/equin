@@ -199,7 +199,7 @@ export async function renderThumbnail(
     throw new ThumbnailRenderError(
       "browser-unavailable",
       `could not launch chromium (if its install is damaged, ` +
-        `\`./singularity deps install chromium\` reinstalls it): ${String(err)}`,
+        `\`./equin deps install chromium\` reinstalls it): ${String(err)}`,
       { cause: err },
     );
   }

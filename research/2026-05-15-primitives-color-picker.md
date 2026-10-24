@@ -87,8 +87,8 @@ plugins/primitives/plugins/color-picker/
 
 ## Verification
 
-1. `./singularity build` — TypeScript compiles, plugin auto-discovered
-2. `./singularity check --plugin-boundaries` — no forbidden imports
+1. `./equin build` — TypeScript compiles, plugin auto-discovered
+2. `./equin check --plugin-boundaries` — no forbidden imports
 3. Playwright screenshot of the picker in light + dark mode
 4. Interactive test: open popover, drag color area, verify hex input updates, type hex, verify area updates
 5. Edge cases: out-of-gamut OKLCH clamps correctly, invalid hex reverts, `showAlpha=false` hides alpha slider

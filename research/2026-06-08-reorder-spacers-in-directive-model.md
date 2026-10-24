@@ -107,7 +107,7 @@ routes to `ungrouped` and stays top-level, sorted by its walk position.
    the per-slot catalog (after the `:154` header) documenting:
    `Insert a blank gap by adding a "__spacer__<unique-id>" string into order.`
    Comments don't affect the config hash, so this is free — but it requires
-   `./singularity build` to regenerate the committed `.origin.jsonc` files and
+   `./equin build` to regenerate the committed `.origin.jsonc` files and
    keep `config-origins-in-sync` green.
 
 5. **`plugins/reorder/CLAUDE.md`** — Replace the "Spacers are temporarily
@@ -143,8 +143,8 @@ routes to `ungrouped` and stays top-level, sorted by its walk position.
 
 ## Verification
 
-1. `./singularity build` succeeds; regenerated `.origin.jsonc` files now carry
-   the spacer-convention comment. `./singularity check` passes
+1. `./equin build` succeeds; regenerated `.origin.jsonc` files now carry
+   the spacer-convention comment. `./equin check` passes
    (`config-origins-in-sync`, `eslint`, boundaries).
 2. **In-app add/drag/delete:** load `http://<worktree>.localhost:9000`, toggle
    the edit-mode pen, open the "Add" popover on a toolbar slot, click "Add
@@ -155,7 +155,7 @@ routes to `ungrouped` and stays top-level, sorted by its walk position.
    Script this with `bun e2e/screenshot.mjs` (before/after) to verify the
    `disabled`/state and capture the gap.
 3. **Agent-edit path:** hand-add a `__spacer__manual` token into a committed
-   `config/<plugin>/<slot>.jsonc` `order` array, `./singularity build`, reload →
+   `config/<plugin>/<slot>.jsonc` `order` array, `./equin build`, reload →
    gap renders at that position.
 4. **Dedup:** put two identical `__spacer__dup` tokens in `order`, reload →
    exactly one gap renders, no React key warning in the browser logs

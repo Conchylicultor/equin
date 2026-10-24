@@ -203,9 +203,9 @@ toolbar slots are pure hosts → `toolbarStart`. No slot or schema changes.
 
 ## Verification
 
-1. `./singularity build` from the worktree — regenerates the plugin registry +
+1. `./equin build` from the worktree — regenerates the plugin registry +
    CLAUDE.md graphs (surfaces the new `tree → multi-select` edge and any illegal
-   import), runs `./singularity check` (boundaries, type-check, eslint,
+   import), runs `./equin check` (boundaries, type-check, eslint,
    plugins-doc-in-sync, migrations-in-sync). Confirm clean start at
    `http://att-1781475612-b441.localhost:9000`.
 2. Tasks tree (scripted `e2e/screenshot.mjs`): checkboxes appear on row hover and

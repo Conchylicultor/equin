@@ -204,7 +204,7 @@ interface ArgvBody<S extends z.ZodType> {
 /** A child that runs in-process code — backup, the reaper, the fork. */
 interface RunBody<S extends z.ZodType> {
   /**
-   * The work, run in its own process: `./singularity supervised-exec <name>`
+   * The work, run in its own process: `./equin supervised-exec <name>`
    * boots the plugin graph in `exec` mode and calls this with the job's input.
    * Contributions, config and the database are all present, exactly as in the
    * backend. `log` writes to the transcript.

@@ -136,7 +136,7 @@ strips (and Bar's own internal file). Barrel:
 
 ### 5. Sweep fallout
 
-After converging, run `./singularity check eslint` (or the lint check). Any other
+After converging, run `./equin check eslint` (or the lint check). Any other
 existing hand-rolled `h-chrome-*` strip the new rule catches gets routed through
 `Bar` (or `eslint-disable`d with a named structural reason if genuinely special).
 Exploration found only the three known bars, but the rule may surface more.
@@ -186,13 +186,13 @@ intentional `flex-1 justify-center` layout), not the chrome-strip archetype.
 
 ## Verification
 
-1. `./singularity build` — regenerates the plugin registry + docs for the new `bar`
+1. `./equin build` — regenerates the plugin registry + docs for the new `bar`
    plugin (keeps `plugins-registry-in-sync` / `plugins-doc-in-sync` green) and runs checks.
-2. `./singularity check` — `eslint` (new `no-adhoc-bar` active + no other rule broken),
+2. `./equin check` — `eslint` (new `no-adhoc-bar` active + no other rule broken),
    `type-check`, `plugin-boundaries` (Bar is a clean leaf), all green.
 3. **Negative test for the rule:** temporarily paste a hand-rolled
    `<div className="flex h-chrome-bar border-b …">` into any web file and confirm
-   `./singularity check eslint` flags `bar/no-adhoc-bar`; remove it.
+   `./equin check eslint` flags `bar/no-adhoc-bar`; remove it.
 4. **Visual regression** at `http://att-1781510656-kl0v.localhost:9000` via Playwright
    (`bun e2e/screenshot.mjs`): confirm pixel-identical
    (a) the agent-manager top toolbar (app-shell), (b) a pane header with

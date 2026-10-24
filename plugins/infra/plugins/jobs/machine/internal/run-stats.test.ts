@@ -5,8 +5,8 @@
  * database (`db-test-fixture`), since the slot is derived IN SQL from the
  * counter the same statement increments.
  *
- * Run: `./singularity test plugins/infra/plugins/jobs`
- * (requires the running embedded cluster — `./singularity build` first).
+ * Run: `./equin test plugins/infra/plugins/jobs`
+ * (requires the running embedded cluster — `./equin build` first).
  */
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { sql } from "drizzle-orm";

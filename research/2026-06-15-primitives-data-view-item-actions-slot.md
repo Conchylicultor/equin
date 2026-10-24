@@ -282,7 +282,7 @@ calls unchanged in shape/order; swap `viewOptions.tree.renderItemActions` for
 
 Update CLAUDE.md prose: `data-view` (new `defineItemActions` factory +
 `itemActions` prop), `data-view/tree` (drop `renderItemActions`), `data-table`
-(new `rowActions` prop + `group/dt-row` row group). Run `./singularity build` —
+(new `rowActions` prop + `group/dt-row` row group). Run `./equin build` —
 it regenerates `web.generated.ts` and the autogen plugin-reference blocks.
 
 ## Critical files
@@ -301,7 +301,7 @@ it regenerates `web.generated.ts` and the autogen plugin-reference blocks.
 
 ## Verification
 
-1. `./singularity build` succeeds; `rg renderItemActions plugins` returns
+1. `./equin build` succeeds; `rg renderItemActions plugins` returns
    nothing.
 2. App at `http://<worktree>.localhost:9000`:
    - **Pages tree**: hover a page → Delete reveals; click → confirm dialog with

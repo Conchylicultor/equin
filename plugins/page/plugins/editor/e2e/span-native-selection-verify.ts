@@ -15,7 +15,7 @@
 //      one colour — and it is a colour, clearly apart from the page background —
 //      in BOTH light and dark schemes.
 //
-// Usage: ./singularity run plugins/page/plugins/editor/e2e/span-native-selection-verify.ts [--url <deploy>]
+// Usage: ./equin run plugins/page/plugins/editor/e2e/span-native-selection-verify.ts [--url <deploy>]
 import {
   colorDistance,
   report,

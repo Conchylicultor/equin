@@ -322,7 +322,7 @@ Per-plugin declarations (small, one `tag` each):
   `parse(serialize(forest)) ≡ forest` structurally. That is the assertion that
   actually encodes "lossless projection", and it is what would have caught the
   fence-indentation bug.
-- `./singularity build`, then in the app: build a page with a callout, an image, a
+- `./equin build`, then in the app: build a page with a callout, an image, a
   context card, a nested code block and an expanded sub-page; select all, copy,
   paste into a fresh page; confirm nothing vanished and the callout keeps its tint.
 - `bun plugins/page/plugins/editor/e2e/copy-paste-verify.ts` and

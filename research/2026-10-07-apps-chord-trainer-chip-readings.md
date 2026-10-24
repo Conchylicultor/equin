@@ -102,11 +102,11 @@ A reading has two sources, and each lives with the code that already owns that k
 
 ## Verification
 
-1. `./singularity test plugins/apps/plugins/chord/plugins/vocabulary plugins/apps/plugins/chord/plugins/curriculum`
+1. `./equin test plugins/apps/plugins/chord/plugins/vocabulary plugins/apps/plugins/chord/plugins/curriculum`
    checks the readings table (I6 → I/3, II → V/V, ♯iv°7 → vii°7/V, IV7 → null in major, V → null in
    minor), that minor's I reads Picardy and modal phrygian's ♭II reads phrygian in the built
    catalog, and that every `named` key is a real label.
-2. `./singularity build` in the background, then `./singularity await`.
+2. `./equin build` in the background, then `./equin await`.
 3. Run `compare-diff.ts --name proto-1791276393-29e2 --options data=index` and compare the chip
    sizes, captions and gold elements side by side.
 4. Take a screenshot with the Major track open (Secondary dominants, Inversions), hover a chip, and

@@ -119,7 +119,7 @@ mirroring the sibling `hook-success` plugin:
   - Body: `$ <command>`, `exit <exitCode>`, full `stderr` in `text-destructive`,
     plus `stdout` when present. No inline timestamp (`EventRow` adds it).
 
-`./singularity build` regenerates `web.generated.ts` and the docs/CLAUDE.md
+`./equin build` regenerates `web.generated.ts` and the docs/CLAUDE.md
 reference blocks from the filesystem — never register or edit those by hand.
 Benign unhandled subtypes (`file`, `directory`, `ultra_effort_enter`, …) stay on
 `GenericAttachmentView`.
@@ -144,7 +144,7 @@ Benign unhandled subtypes (`file`, `directory`, `ultra_effort_enter`, …) stay 
    `att-1782750675-pzl7` session) and confirm the emitted event list now includes
    24 `attachment`/`hook_non_blocking_error` events (0 before). A co-located
    `bun:test` is the cleanest form of this check.
-2. `./singularity build` (regenerates registry + docs; fails loudly on
+2. `./equin build` (regenerates registry + docs; fails loudly on
    boundary/doc-sync drift). Confirm `hook-error` appears under the attachment
    `JsonlViewerAttachment.Renderer` slot in the regenerated `…/attachment/CLAUDE.md`.
 3. **End-to-end:** open a conversation whose transcript contains a hook failure

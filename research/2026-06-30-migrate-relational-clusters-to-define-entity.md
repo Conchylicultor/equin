@@ -57,7 +57,7 @@ The stdlib field factories cover text / json<T> / uuid / int / bool / date(tz)
 
 ## Byte-identical DDL — the green-migration invariant
 
-Verification gate: after `./singularity build`, **no new migration file appears
+Verification gate: after `./equin build`, **no new migration file appears
 under `migrations/data/`** and `migrations-in-sync` stays green. Drizzle DDL is
 a pure function of: column order, column name, sql-type, notNull, default,
 PK/FK/index. So the field record must preserve, per table:

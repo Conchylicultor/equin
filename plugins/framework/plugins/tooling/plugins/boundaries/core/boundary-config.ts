@@ -78,7 +78,7 @@ export default defineBoundaries({
     // whole failure mode the registry exists to end. Importing a declaration
     // reads a path; it does not import the code under test.
     e2e: ["e2e", "core", "data-dirs", "deps"],
-    // cli/ — a plugin's `./singularity <verb>` contribution. A CLI command is a
+    // cli/ — a plugin's `./equin <verb>` contribution. A CLI command is a
     // host process like a server, so it may reach `core`, its own `shared`,
     // declared `data-dirs`, other plugins' `server` barrels, and other plugins'
     // `cli` barrels. That last edge is the point: shared CLI machinery lives in
@@ -92,7 +92,7 @@ export default defineBoundaries({
     // a component.
     //
     // THIS ROW DOES NOT CARRY THE EAGER-WEIGHT RULE, and must not be read as
-    // doing so. Every plugin's `cli/index.ts` is loaded on EVERY `./singularity`
+    // doing so. Every plugin's `cli/index.ts` is loaded on EVERY `./equin`
     // invocation (commander needs names and flags before it parses), while the
     // command's implementation must not be. That constraint is a property of one
     // file, not of the runtime, so it is enforced by
@@ -106,7 +106,7 @@ export default defineBoundaries({
     // `data-dirs`, so `web` and `core` do not list it — which is also why the
     // engine is a barrel of its own rather than `core/`. Every host-process row
     // (server, central, cli, check, e2e, scripts, bin) lists it, so a CLI op, a
-    // check or `./singularity start` reaches a declaration and `ensureDep`
+    // check or `./equin start` reaches a declaration and `ensureDep`
     // without booting a backend. Host admission, a server barrel, is injected
     // through the `ExecContext` rather than imported.
     deps: ["deps", "core", "data-dirs"],

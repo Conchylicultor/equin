@@ -30,7 +30,7 @@ load-bearing facts that decide it:
 Consequences that shaped the design:
 
 - **CLI `bin/` files** print to the developer's terminal — which *is* the
-  agent-visible channel (the agent runs `./singularity build` via Bash and reads
+  agent-visible channel (the agent runs `./equin build` via Bash and reads
   stdout). Routing them through `Log` would **hide** their output. → permanent
   exemption.
 - **`bin/` server/central entrypoints** (`server-core/bin`, `central-core/bin`)
@@ -150,10 +150,10 @@ Coverage check (all 13 former entries accounted for, **zero individual entries**
 
 ## Verification
 
-1. `./singularity build` — deploys; server boots and applies migrations. (Build
+1. `./equin build` — deploys; server boots and applies migrations. (Build
    runs `eslint` as a check; `no-console-log` must pass with the new globs and zero
    individual entries.)
-2. `./singularity check eslint` — green; confirms no remaining `console.log`
+2. `./equin check eslint` — green; confirms no remaining `console.log`
    violations and that the moved/refactored files are clean.
 3. `git grep -n "console\.log" -- <each of the 13 paths>` — every hit is now either
    removed (migrated/refactored) or sits under a `bin/` / `central/` / `scripts/`
@@ -164,12 +164,12 @@ Coverage check (all 13 former entries accounted for, **zero individual entries**
    `read_logs { channel: "migrations" }` (own worktree) shows the `[migrate] …`
    lines, and the JSONL exists at `~/.singularity/worktrees/<wt>/logs/migrations.jsonl`.
    (Caveat: silent on a no-op boot — that's expected.)
-5. `./singularity check` (direct) — check progress still prints to the terminal
-   via `check.ts`'s console `log` callback; `./singularity build` checks still
+5. `./equin check` (direct) — check progress still prints to the terminal
+   via `check.ts`'s console `log` callback; `./equin build` checks still
    stream into the build pane via its buffering `log`.
 6. **Codegen script still works from its new home:**
    `bun run plugins/primitives/plugins/avatar/scripts/gen-icon-svg-map.ts` —
    regenerates `server/internal/icon-svg-map.generated.ts` (unchanged content/hash)
-   and prints the "Generated …" line. Then `./singularity check` (the avatar
+   and prints the "Generated …" line. Then `./equin check` (the avatar
    plugin's own `check`) confirms the generated file is in sync.
 ```

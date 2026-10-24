@@ -305,31 +305,31 @@ Representative sites, one per kind:
 
 ## Verification
 
-1. `./singularity check paths:no-undeclared-data-dirs` — expect **green** only
+1. `./equin check paths:no-undeclared-data-dirs` — expect **green** only
    after every dir is declared. Before the declarations land it should list each
    undeclared entry by name; that listing is itself the acceptance test for the
    check.
-2. `./singularity check paths:data-root-not-joined` — green, and confirm it goes
+2. `./equin check paths:data-root-not-joined` — green, and confirm it goes
    **red** on a deliberate `join(dataRoot(), "x")` added to a scratch file.
-3. `./singularity check` — full suite, especially `type-check`,
+3. `./equin check` — full suite, especially `type-check`,
    `plugins-registry-in-sync`, `collected-dir-tsconfig-coverage`, and the two
    existing `paths:` checks.
-4. `./singularity build` (background) — the launcher migration runs on the way
+4. `./equin build` (background) — the launcher migration runs on the way
    up. Then confirm the deploy receipt at
    `~/.singularity/worktrees/<wt>/build-status.json` reads `status: ok`.
 5. `ls ~/.singularity/` — expect **8 entries** (the seven kinds plus
    `worktrees/`), with `postgres/`, `sockets/`, `zero/`, `node/` still present
    and declared via `legacyLocation`.
-6. Re-run `./singularity build` — the migration must be a no-op the second time
+6. Re-run `./equin build` — the migration must be a no-op the second time
    (marker present). Confirm no rename attempts in the launcher log.
 7. Exercise the moved dirs end-to-end: open the prototypes gallery (reads
    `apps/prototypes`), take a screenshot (writes `apps/attachments`), open
    Settings → Appearance (reads `state/config`), and run a second concurrent
    build (exercises `locks/cpu` + `locks/build`).
 8. `bun plugins/packages/plugins/host-semaphore/server/internal/host-semaphore.test.ts`
-   via `./singularity test plugins/packages/plugins/host-semaphore` — its eight
+   via `./equin test plugins/packages/plugins/host-semaphore` — its eight
    `join(SINGULARITY_DIR, \`${name}-slots\`)` assertions all move.
-9. `./singularity test plugins/infra/plugins/paths` — the two existing check
+9. `./equin test plugins/infra/plugins/paths` — the two existing check
    tests plus new coverage for `defineDataDir` (duplicate-name throw, name
    validation, lazy root resolution under a changed `SINGULARITY_DIR`).
 
@@ -366,7 +366,7 @@ else in the commit.
   age+count) are independent solutions to one problem. `ReclaimPolicy` gives
   them a common vocabulary; actually merging them is follow-up work.
 - **A Debug pane listing owner / purpose / size per dir.** The registry makes it
-  nearly free, and `./singularity clean` driven by `reclaim` likewise — both
+  nearly free, and `./equin clean` driven by `reclaim` likewise — both
   are worth doing, neither is needed for this change to be correct.
 - **`config/<worktree>/`.** Per-worktree data living under a host-global
   `state/config`, reaped by `worktree-cleanup`

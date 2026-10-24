@@ -233,7 +233,7 @@ would have to import `cli/bin/migrations`, which is not a runtime barrel, so
 
 - `.../migration-metadata-consistent/check/index.ts:97-105` — the hint points at
   `--reset-migration`, which does not repair an orphan `.sql`. Correct remedy is
-  now plain `./singularity build` (or `./singularity normalize-generated`).
+  now plain `./equin build` (or `./equin normalize-generated`).
 - `.../migration-metadata-consistent/CLAUDE.md` — delete "(a normal `build` does
   not regenerate the journal — only `--reset-migration`/rename does)" and state
   the new contract *and its consequence*: `J === S` is now a post-condition of
@@ -286,8 +286,8 @@ All steps landed as planned, with two deviations:
   suffix-free filter would have mistaken a sidecar for the prior snapshot.
 
 Verified: the reproduction below fails exactly as reported, and a plain
-`./singularity build` restores the journal byte-identically with no SQL edit.
-Full `./singularity build` green (type-check, plugin-boundaries,
+`./equin build` restores the journal byte-identically with no SQL edit.
+Full `./equin build` green (type-check, plugin-boundaries,
 snapshot-chain-intact, migration-metadata-consistent), 30/30 unit tests pass.
 
 Finding D's live repro (a schema change with no `--migration-name`) was **not**
@@ -298,23 +298,23 @@ directly from `drizzle-kit@0.28.1/bin.cjs:33619-33627`.
 ## Verification
 
 1. `bun test plugins/framework/plugins/cli/bin/migrations.test.ts` and
-   `./singularity test plugins/framework/plugins/tooling/plugins/checks/plugins/migration-metadata-consistent`.
-2. `./singularity build` on a clean tree → `git status` shows **no** change to
+   `./equin test plugins/framework/plugins/tooling/plugins/checks/plugins/migration-metadata-consistent`.
+2. `./equin build` on a clean tree → `git status` shows **no** change to
    `_journal.json` (byte-idempotence; zero churn).
 3. **Reproduce the bug and prove the repair.** Hand-delete the last entry from
    `_journal.json`, then:
-   - `./singularity check migration-metadata-consistent` → fails with the orphan
+   - `./equin check migration-metadata-consistent` → fails with the orphan
      `.sql` (confirms the starting state);
-   - `./singularity build` → journal restored, check passes, **without editing
+   - `./equin build` → journal restored, check passes, **without editing
      any SQL**. That is the recovery that was impossible before.
-4. **Finding D:** run `./singularity build` with a schema change but no
+4. **Finding D:** run `./equin build` with a schema change but no
    `--migration-name` (the `:385` abort), then
-   `./singularity check migration-metadata-consistent` → passes (before the fix
+   `./equin check migration-metadata-consistent` → passes (before the fix
    it reports `orphanJournal: 0NaN_…`).
 5. **Finding E:** unit-test `readPriorSnapshotViewDefs`' new selection against a
    fixture `meta/` containing `0NaN_snapshot.json` plus real ones — it must
    return the last *real* snapshot's view defs, not an empty map.
-6. `./singularity check` full pass — in particular `migrations-in-sync`,
+6. `./equin check` full pass — in particular `migrations-in-sync`,
    `snapshot-chain-intact`, `migration-hashes-unique`, `migration-applies-clean`,
    `generated-artifacts-normalized`.
 7. **Sentinel still intact** (the property the design depends on, unchanged by

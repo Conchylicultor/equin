@@ -21,7 +21,7 @@ export type { ReloadAdvice } from "./hooks/use-reload-advice";
 
 export default {
   collapsed: true,
-  description: "Trigger `./singularity build` from the toolbar.",
+  description: "Trigger `./equin build` from the toolbar.",
   contributions: [
     IdKinds.Kind({ kind: buildRunIdKind }),
     ActionBar.Item({

@@ -67,7 +67,7 @@ The proof surface is therefore the **layout harness**
 genuinely good fit rather than a workaround: it already renders real React
 components with real Tailwind, **sweeps each fixture across a range of widths**
 in a real headless Chromium, measures `data-geo` boxes through a generic
-geometry oracle, and is wired into `./singularity check layout-geometry`. It is
+geometry oracle, and is wired into `./equin check layout-geometry`. It is
 also a live Debug pane (`lab-pane.tsx`), so the same fixture is drivable by an
 e2e script. `adaptive-bar` contributes `fixtures/index.ts` — a collected-dir
 runtime, so this costs zero codegen edits.
@@ -524,7 +524,7 @@ displayed.
 the occupants, because it is the host's own layout policy (a tab strip scrolls; a
 chip strip that already has a separate "all templates" panel clips).
 
-Dependency edges (all acyclic; `./singularity check plugin-boundaries` is the gate):
+Dependency edges (all acyclic; `./equin check plugin-boundaries` is the gate):
 
 ```
 icon-button ─────────► action-presentation                       (unchanged)
@@ -674,7 +674,7 @@ twice while its menu is open" caveat all go. The edit-mode inline branch
 
 ## Verification
 
-**Pure (`./singularity test plugins/primitives/plugins/adaptive-bar`)**
+**Pure (`./equin test plugins/primitives/plugins/adaptive-bar`)**
 - `assign()`: everything fits; single demote; demote order follows yield rank; a
   pinned item never moves; trigger reserved exactly once; H1's band refuses a
   promote at the boundary and accepts one pixel past; H2's pin honoured and
@@ -699,7 +699,7 @@ observer is inert.
   children.
 - The `ViewportOverlay active` remount probe from the Correction section.
 
-**Geometry, in a real browser, gated (`./singularity check layout-geometry`)** —
+**Geometry, in a real browser, gated (`./equin check layout-geometry`)** —
 the `fixtures/index.ts` contribution. Across the harness's width sweep, on the
 rich fixture: no two `data-geo` boxes overlap, the ⋯ trigger is always inside the
 bar's box, and the bar's right edge never passes its parent's content edge. This
@@ -724,9 +724,9 @@ the Layout Lab pane (Debug sidebar) on the shared harness:
 
 **Repo-level**
 - `rg MeasureStrip` returns nothing.
-- `./singularity check` — `plugin-boundaries`, `type-check`, `eslint`,
+- `./equin check` — `plugin-boundaries`, `type-check`, `eslint`,
   `plugins-doc-in-sync`, `reorderable-slots-in-sync`.
-- `./singularity build`, then walk `http://<worktree>.localhost:9000` narrowing
+- `./equin build`, then walk `http://<worktree>.localhost:9000` narrowing
   each surface: the Layout Lab's adaptive-bar fixture, a task detail pane, the
   app tab bar with many tabs, a conversation's prompt-template strip, and any
   slot with an authored `overflow` bucket. **A Sonata song should look and behave

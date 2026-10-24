@@ -1,6 +1,6 @@
 /**
  * Tests for the `no-hand-rolled-entity-projection` lint rule. Run with
- * `./singularity test plugins/framework/plugins/tooling/plugins/lint/plugins/entity-projection-safety`.
+ * `./equin test plugins/framework/plugins/tooling/plugins/lint/plugins/entity-projection-safety`.
  *
  * The rule flags an all-pure identity `.map` over a `db.select().from(…)` chain
  * inside a resource loader — the `loader` property of `defineResource(…)` or of
@@ -15,7 +15,7 @@ import tsParser from "@typescript-eslint/parser";
 import rule from "./no-hand-rolled-entity-projection";
 
 // Hand RuleTester bun's own describe/it. Left to find them as globals, it
-// registers nothing under `./singularity test` ("Ran 0 tests across 1 file"):
+// registers nothing under `./equin test` ("Ran 0 tests across 1 file"):
 // it runs every case inline at module load and stops at the first failure.
 RuleTester.describe = describe;
 RuleTester.it = it;

@@ -276,7 +276,7 @@ const body: ImproveSubmitBody = {
 
 ## Verification
 
-1. `./singularity build` — no build errors
+1. `./equin build` — no build errors
 2. Open `http://att-1777505065-adjs.localhost:9000`
 3. Click "Improve" toolbar — see large single input with model chip + URL/Screenshot checkboxes inside the card
 4. Check "URL" on the head card; submit → task description includes URL

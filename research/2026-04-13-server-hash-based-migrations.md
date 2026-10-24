@@ -44,7 +44,7 @@ If a new file appeared **and** no `--migration-name` was passed: delete the just
 ```
 Error: schema.ts changed and would generate a new migration, but --migration-name was not provided.
 Re-run with:
-  ./singularity build --migration-name <short_slug>
+  ./equin build --migration-name <short_slug>
 e.g. --migration-name add_todo_status
 ```
 
@@ -56,7 +56,7 @@ This forces every schema change to be consciously named by the agent, and surfac
 
 This subsumes the "Readable migration names" item from the followup doc.
 
-### Generate flow (in `./singularity build`)
+### Generate flow (in `./equin build`)
 
 `build.ts` currently shells out to `drizzle-kit generate` (step 2, line 63-67). After that call:
 
@@ -83,7 +83,7 @@ We use our own table (not `__drizzle_migrations`) to make the schema-change expl
 After two agents merge into main with hash files `H_a` (timestamp T1) and `H_b` (timestamp T2, T2 > T1):
 
 - Files coexist: `20260413_100000_H_a__….sql`, `20260413_140000_H_b__….sql`. No filename collision (different hashes).
-- Journal regenerates from the file set on the next `./singularity build` (deterministic — both agents/CI produce the same journal). Not a merge conflict source.
+- Journal regenerates from the file set on the next `./equin build` (deterministic — both agents/CI produce the same journal). Not a merge conflict source.
 - On `runMigrations()` against an existing main DB that already applied `H_a`: the migrator sees `H_a` in `__singularity_migrations`, skips it, applies `H_b`. Against a fresh DB: applies both in `(T1, T2)` order.
 - Against agent A's DB *before* it pulled main: `H_a` already applied; pulling adds `H_b`; next start applies `H_b`. Order on A's DB is `[H_a, H_b]`. On B's DB before pull: `[H_b]`, then after pull `[H_b, H_a]`. **Different application orders across DBs** — safe under the additive-only assumption, unsafe otherwise. This is why followup item 4 (additive-only enforcement) becomes load-bearing once this lands.
 
@@ -97,11 +97,11 @@ After two agents merge into main with hash files `H_a` (timestamp T1) and `H_b` 
 
 ## Verification
 
-1. **Round-trip a schema change.** Edit `plugins/<x>/server/schema.ts` to add a column. Run `./singularity build`. Confirm:
+1. **Round-trip a schema change.** Edit `plugins/<x>/server/schema.ts` to add a column. Run `./equin build`. Confirm:
    - New file matches `^[a-z0-9]+_[0-9a-f]{8}__.*\.sql$`.
    - `meta/_journal.json` has no `idx` field and lists files in timestamp order.
    - Server starts; `__singularity_migrations` contains the new hash.
-   - Re-run `./singularity build` → no new file generated, server start is a no-op (idempotent).
+   - Re-run `./equin build` → no new file generated, server start is a no-op (idempotent).
 
 2. **Simulate parallel agents.** From main, branch twice:
    - In worktree A: add column `a` to a table, build.
@@ -111,7 +111,7 @@ After two agents merge into main with hash files `H_a` (timestamp T1) and `H_b` 
 
 3. **Bootstrap path.** On a worktree predating this change (DB has `__drizzle_migrations` rows, none in `__singularity_migrations`), start the server and confirm the bootstrap seeds the table without re-running migrations (no duplicate-table errors).
 
-4. **Check command.** `./singularity check --migrations-in-sync` still passes after a clean build.
+4. **Check command.** `./equin check --migrations-in-sync` still passes after a clean build.
 
 ## Out of scope (deferred to followup doc)
 

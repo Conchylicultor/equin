@@ -74,7 +74,7 @@ const check: Check = {
     //
     //    `assertCompositionId`, not `assertServableCompositionNamespace`: main's
     //    own composition is an ORDINARY manifest entry whose id is a reserved
-    //    namespace, because it is built by `./singularity build` into the main
+    //    namespace, because it is built by `./equin build` into the main
     //    checkout's namespace rather than provisioned as a composition. The two
     //    questions — "may it be called this?" and "may a namespace be
     //    provisioned for it?" — stopped being the same question here.
@@ -132,7 +132,7 @@ const check: Check = {
     if (mainServe !== "off") {
       return fail(
         `composition "${MAIN_COMPOSITION_ID}" has \`serve: "${mainServe}"\``,
-        `The main app is built and served by \`./singularity build\` into the checkout's own namespace — it is never served as a composition, so any \`serve\` mode on this row would describe something that cannot happen. Set it back to \`"off"\`.`,
+        `The main app is built and served by \`./equin build\` into the checkout's own namespace — it is never served as a composition, so any \`serve\` mode on this row would describe something that cannot happen. Set it back to \`"off"\`.`,
       );
     }
 

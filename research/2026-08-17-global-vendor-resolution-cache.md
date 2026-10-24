@@ -182,10 +182,10 @@ its own drift risk. `resolveVendorSet` stays the single source of the `setHash`.
 
 1. **The hash must not move.** Note the current set from the build log
    (`vendors: … (set …)`) or `ls ~/.singularity/web-artifacts/vendors`. After the
-   change, on an unchanged tree, `./singularity build` must report the *same*
+   change, on an unchanged tree, `./equin build` must report the *same*
    `setHash` and mint no new `set.*` dir. A moved hash means resolution changed —
    stop and diff the resolved records.
-2. **Warm win.** `./singularity build` twice (background; ~10 min each), then
+2. **Warm win.** `./equin build` twice (background; ~10 min each), then
    compare `artifacts:vendors` across
    `~/.singularity/worktrees/<worktree>/build-profile-*.json`. Second run should
    be milliseconds and log `72 cached / 0 resolved`.
@@ -195,10 +195,10 @@ its own drift risk. `resolveVendorSet` stays the single source of the `setHash`.
 4. **Gate invalidation.** Add a dependency (`bun add` in a scratch worktree):
    `bun.lock` changes ⇒ the whole cache drops ⇒ every specifier re-resolves ⇒ new
    `setHash` ⇒ the vendor set genuinely rebuilds.
-5. **The check still agrees.** `./singularity check web-artifacts:map-in-sync`
+5. **The check still agrees.** `./equin check web-artifacts:map-in-sync`
    must pass, and now cheaply — it is the second process that was paying the same
    35–110 s.
-6. `./singularity test plugins/framework/plugins/tooling/plugins/web-artifacts`
+6. `./equin test plugins/framework/plugins/tooling/plugins/web-artifacts`
    for the new unit test plus the existing `plan` / `hash` / `import-map` suites.
 7. Load the app at `http://<worktree>.localhost:9000` — a wrong wrapper or a
    stale `entryFile` surfaces immediately as a browser
@@ -251,7 +251,7 @@ The in-process A/B is the rigorous ratio.
   "builder edits auto-invalidate the fleet" invariant, not a regression.
 - Both builds `BUILD OK — deployed`, all checks green (`map-in-sync` and
   `no-vendored-state-inlined` included).
-- `./singularity test plugins/framework/plugins/tooling/plugins/web-artifacts`:
+- `./equin test plugins/framework/plugins/tooling/plugins/web-artifacts`:
   117 pass / 0 fail, including 13 new `vendor-cache` cases (read-set hit; mtime,
   size and deletion misses; gate change drops all records; unparseable and
   wrong-version files degrade to empty; per-`resolveDir` key separation).

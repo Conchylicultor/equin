@@ -201,7 +201,7 @@ Each phase builds and is usable on its own.
 
 ## Verification
 
-- **Unit tests** (`./singularity test <plugin>`):
+- **Unit tests** (`./equin test <plugin>`):
   - `host-fs` list / stat / complete (symlink-to-dir, ENOENT, EACCES on a `chmod 000` temp dir, `~` expansion, hidden flags);
   - the `file-type` table (special names beat extensions, unknown fallback);
   - the csv parser (quotes, embedded newlines);
@@ -217,9 +217,9 @@ Each phase builds and is usable on its own.
   - double-click to re-root;
   - click a `.md` → rendered preview;
   - an unknown type → the fallback.
-- **Prototype compare:** `./singularity run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts --name proto-1790864772-0r54 --width 1440` at the defaults. Iterate until the regions line up (expect content diffs, since the data is real).
+- **Prototype compare:** `./equin run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts --name proto-1790864772-0r54 --width 1440` at the defaults. Iterate until the regions line up (expect content diffs, since the data is real).
 - **Phase 3 regression:**
   - in a conversation, the Explorer button opens its worktree;
   - a modified file shows an M badge and a Diff tab vs `main`;
   - commit and push file peeks still render.
-- **Static checks:** `./singularity check boundary-rules plugin-boundaries` stays clean (`file-viewer` must not import conversations; the app's `browser` web barrel is imported by the conversation plugin, not the reverse).
+- **Static checks:** `./equin check boundary-rules plugin-boundaries` stays clean (`file-viewer` must not import conversations; the app's `browser` web barrel is imported by the conversation plugin, not the reverse).

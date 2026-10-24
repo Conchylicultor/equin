@@ -1,5 +1,5 @@
 /**
- * How one spawned `./singularity deploy` verb ended, and the single line that
+ * How one spawned `./equin deploy` verb ended, and the single line that
  * says so — the `message` stamped on the run and rendered in the UI.
  *
  * Its own file because the choice of sentence is a pure decision worth testing,
@@ -9,7 +9,7 @@
  * status. It was then recorded, and shown, as `Exited with code 143` — a
  * sentence about a command that never exited and never refused. Observed:
  * `drun-1787890652933-wr3v6d`, whose `ship` was killed 0.9 s after it spawned
- * because a `./singularity build` hot-restarted the backend it was a child of.
+ * because a `./equin build` hot-restarted the backend it was a child of.
  *
  * The verb now runs under the supervised-run primitive, which fixes both halves
  * of that incident: the child is detached, so a backend restart no longer kills
@@ -21,7 +21,7 @@
 import { HARD_KILL_EXIT_CODE } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 
 /**
- * The prefix `./singularity deploy`'s `refuse()` puts on every named refusal.
+ * The prefix `./equin deploy`'s `refuse()` puts on every named refusal.
  *
  * A failing run's `message` is the CLI's own words, and this is how the ONE line
  * that states the problem is picked out of a failure whose transcript also
@@ -102,7 +102,7 @@ export function verbFailureMessage(ending: VerbEnding): string {
  *
  * It no longer names a likely cause, and losing that sentence is the point. The
  * command used to be a plain child of this backend, sharing its process group,
- * so the gateway's hot-restart on every `./singularity build` killed whatever
+ * so the gateway's hot-restart on every `./equin build` killed whatever
  * was in flight — a cause the user could not see and therefore had to be told.
  * The leg is now detached and survives that restart, so a signal here means
  * something genuinely signalled this run's process group: someone cancelled it,

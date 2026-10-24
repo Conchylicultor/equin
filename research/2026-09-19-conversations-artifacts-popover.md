@@ -136,15 +136,15 @@ skill name itself.
 
 ## Verification
 
-1. `./singularity build` (background), then open a conversation at
+1. `./equin build` (background), then open a conversation at
    `http://<worktree>.localhost:9000`.
-2. Drive it: `./singularity run plugins/conversations/plugins/conversation-view/plugins/artifacts/e2e/artifacts-popover.ts`
+2. Drive it: `./equin run plugins/conversations/plugins/conversation-view/plugins/artifacts/e2e/artifacts-popover.ts`
    — a new e2e script that opens a conversation known to have artifacts, clicks the
    Artifacts button, asserts the section headings and the count on the button, clicks the
    first prototype row and asserts a prototype pane opened beside the chat.
-3. `./singularity test plugins/conversations/plugins/conversation-view/plugins/artifacts`
+3. `./equin test plugins/conversations/plugins/conversation-view/plugins/artifacts`
    — the extractors are pure functions over `JsonlEvent[]`: one fixture per kind, plus a
    merge case (same prototype referenced then edited → `edited`, one row).
 4. Check the empty case by hand: a conversation that touched nothing shows a disabled
    button with no count.
-5. `./singularity check` for boundaries, lint and the plugin docs being in sync.
+5. `./equin check` for boundaries, lint and the plugin docs being in sync.

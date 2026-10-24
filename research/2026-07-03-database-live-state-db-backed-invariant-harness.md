@@ -62,7 +62,7 @@ and refactor the listener into an injectable factory.
 **Tradeoff (documented, accepted):** these suites require the running cluster.
 Per repo policy (tests are optional/manual, run after a build, which starts the
 cluster) this is fine. If the cluster is unreachable the fixture throws **loudly**
-with an actionable message (`run ./singularity build first`), never silently
+with an actionable message (`run ./equin build first`), never silently
 skips.
 
 ## Design
@@ -163,7 +163,7 @@ no new production API, no boundary violation:
 //  - name = `ls_test_${process.pid}_${Date.now().toString(36)}`  (unique per run)
 //  - ensureDatabase(name); pool = openShortLivedClient(name); db = drizzle(pool)
 //  - drop(): pool.end(); dropDatabase(name)
-//  - beforeAll connection failure → throw with "run ./singularity build first"
+//  - beforeAll connection failure → throw with "run ./equin build first"
 ```
 
 Lives in `live-state-snapshot/server/internal/test-db.ts` for the persist +
@@ -254,13 +254,13 @@ sleeps.
 
 ## Verification
 
-- `./singularity build` — green (type-check picks up refactors + new `.ts`; no
+- `./equin build` — green (type-check picks up refactors + new `.ts`; no
   schema/migration surface touched; boundary check passes — only barrel imports).
   Build also confirms the listener factory refactor didn't break boot (the app
   deploys and live-state still works).
 - `bun test plugins/database/plugins/live-state-snapshot plugins/database/plugins/change-feed`
   — all suites green (existing `parse-payload.test.ts` + 3 new files). Run after
   the build so the cluster is up and `node_modules` is populated.
-- `./singularity check` — green.
+- `./equin check` — green.
 - Smoke the running app at `http://<worktree>.localhost:9000` — live-state still
   pushes (the listener refactor is behavior-preserving).

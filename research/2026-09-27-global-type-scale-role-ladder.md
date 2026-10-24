@@ -224,13 +224,13 @@ WP2, WP3 and WP4 touch disjoint files.
 
 ## Verification
 
-1. `./singularity build` succeeds; generated files regenerated.
-2. `./singularity check`: the new check, `app-css-utilities-in-sync`,
+1. `./equin build` succeeds; generated files regenerated.
+2. `./equin check`: the new check, `app-css-utilities-in-sync`,
    `token-group-vars-in-sync`, `class-token-walk-single-source`, eslint. Negative
    test: a temporary `fontSizeFoo` key or `@utility text-foo { font-size… }` fails.
-3. `./singularity test` on text, badge, ui-kit control-size, the two lint rules
+3. `./equin test` on text, badge, ui-kit control-size, the two lint rules
    (a cva case), and the new roles and line-height-length tests.
-4. `./singularity run plugins/apps/plugins/agent-manager/plugins/shell/e2e/sidebar-metrics.ts`. Expect:
+4. `./equin run plugins/apps/plugins/agent-manager/plugins/shell/e2e/sidebar-metrics.ts`. Expect:
    - nav rows and conversation titles: 13px / 500 / 18.2px
    - times: 11px
    - quiet headers: 13px / 600

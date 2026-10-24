@@ -17,7 +17,7 @@ was named, so finding each one cost another ~5 min build.
 only *reorders* PATH. When the starter's PATH has no mise entry, it returns the PATH unchanged
 (`if (shimsDirs.length === 0) return value;`). So what the runtime can see still depends on how the starter's shell was
 set up, which is exactly the kind of accident `runtime-env.ts` exists to remove. The consequences:
-- `./singularity start` launched from a shell where mise is not active (bun installed some other way, or a launchd or
+- `./equin start` launched from a shell where mise is not active (bun installed some other way, or a launchd or
   systemd unit) gives the gateway and every backend a PATH with no mise on it. They then run Homebrew's tmux, or no tmux
   at all.
 - `toolchain:resolved` probes that same PATH. Its comment says it probes "the runtime's PATH", but that is only true
@@ -65,7 +65,7 @@ normalise a PATH without the environment that says where mise lives.
 - `gateEnv()` → `{ ...process.env, PATH: runtimePath(process.env) }`.
 
 ### 4. `doctor.sh`
-- Keep "mise installed but not active". The interactive shell still needs it, because `./singularity` finds `bun`
+- Keep "mise installed but not active". The interactive shell still needs it, because `./equin` finds `bun`
   through the shell's PATH. Rewrite its reason to say exactly that: the runtime no longer depends on activation, your
   shell does.
 - Look up its shims dir in the same order: add the missing `XDG_DATA_HOME` step, i.e.
@@ -96,10 +96,10 @@ would now hit it too. Nearly all runtime spawns run inside a checkout. I'll corr
 `add_task` rather than widen this change.
 
 ## Verification
-- `./singularity test plugins/infra/plugins/launcher plugins/toolchain`
-- Reproduce by hand: `env -i HOME=$HOME PATH=/usr/bin:/bin:$(dirname $(which bun)) ./singularity check toolchain:resolved`
+- `./equin test plugins/infra/plugins/launcher plugins/toolchain`
+- Reproduce by hand: `env -i HOME=$HOME PATH=/usr/bin:/bin:$(dirname $(which bun)) ./equin check toolchain:resolved`
   (PATH with no mise entry). Before the fix this reports tmux/rustc not on PATH. After it, it passes because the
   derived shims resolve them.
 - Same with `HOME` pointing at an empty temp dir: the check fails with the "shims dir does not exist" hint and names
   every tool in one run.
-- `./singularity build` (background); `./singularity check launcher:runtime-env-declared`.
+- `./equin build` (background); `./equin check launcher:runtime-env-declared`.

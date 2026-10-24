@@ -2,7 +2,7 @@
  * The exposed track keeps the id saved task-list views name (`track`), reads
  * the declared default for a task with no row, and presents each value.
  *
- * Run: `./singularity test plugins/tasks/plugins/task-track`.
+ * Run: `./equin test plugins/tasks/plugins/task-track`.
  */
 
 import { expect, test } from "bun:test";

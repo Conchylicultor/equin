@@ -150,7 +150,7 @@ A native TS central-directory reader with no npm dependency (about 250 lines):
 
 ## Verification
 
-- **Unit tests** (`./singularity test plugins/infra/plugins/host-fs`):
+- **Unit tests** (`./equin test plugins/infra/plugins/host-fs`):
   - Test fixtures are zips built in the test with `zip` / `ditto -c -k` into a
     temp dir: stored and deflated entries, implicit dirs, a UTF-8 name without
     the flag (ditto), a CP437 name, an encrypted entry (`zip -e -P`), zip64
@@ -163,5 +163,5 @@ A native TS central-directory reader with no npm dependency (about 250 lines):
   put a fixture zip in a temp folder, open it in the tree, expand a sub-folder,
   click a text file and see its preview, then navigate to the zip's route via
   the path bar.
-- **Manual:** `./singularity build`, then open
+- **Manual:** `./equin build`, then open
   `~/Downloads/Edition 2022 (23-24 juillet)-…zip` in the deployed explorer.

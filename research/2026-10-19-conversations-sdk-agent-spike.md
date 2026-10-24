@@ -35,7 +35,7 @@ The spike code goes in the repo as the seed of the Phase 1 plugin. It is not wir
   - `canUseTool` writes a `permission_request` event and parks a promise. A later `answer` command resolves it with `updatedInput`.
   - Listens on `~/.singularity/sockets/agents/<id>.sock` (`--socket`). The path stays well under the 104-byte macOS limit with conversation ids; it cannot sit next to `events.jsonl` (see Findings).
   - Prints a human-readable log to stdout: assistant text, `tool: Bash(…)`, results truncated, `? question`, `● idle`.
-- `bin/spike.ts <scenario>`, the harness, run with `./singularity run`. It includes a tiny observer that stands in for the backend:
+- `bin/spike.ts <scenario>`, the harness, run with `./equin run`. It includes a tiny observer that stands in for the backend:
   - It tails `events.jsonl` with `fs.watch`, keeping a cursor file in place of the DB row, and sends commands over the socket.
   - It launches the agent the way production will: `tmux new-session -d -s <id> -c <cwd>`, wrapped in an `env -i` allowlist equivalent to `AGENT_SESSION_WRAPPER`, running `bun bin/agent.ts …`.
   - Each scenario writes a JSON result into `~/.singularity/agents/_spike/results/`.
@@ -64,8 +64,8 @@ Tmux baseline for latency: read-only from main's DB (`query_db`): `conversation_
 
 ## Verification
 
-- `./singularity run plugins/conversations/plugins/runtime-sdk/bin/spike.ts <scenario>` for each scenario. The results JSON files are the evidence quoted on the wiki.
-- `./singularity build` (run in the background), to confirm the new plugin passes checks (boundaries, docs in sync) and to give scenario 5 a build to drive.
+- `./equin run plugins/conversations/plugins/runtime-sdk/bin/spike.ts <scenario>` for each scenario. The results JSON files are the evidence quoted on the wiki.
+- `./equin build` (run in the background), to confirm the new plugin passes checks (boundaries, docs in sync) and to give scenario 5 a build to drive.
 - `tail -f ~/.singularity/agents/<id>/events.jsonl` and `tmux attach -r -t <id>` by hand, as a sanity check.
 
 ## Findings (2026-10-19)

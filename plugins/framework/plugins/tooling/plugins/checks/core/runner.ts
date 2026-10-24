@@ -890,7 +890,7 @@ export async function runChecks(
       const omitted = lines.length - 100;
       const moreHint = transcript
         ? `see ${transcript.path} for full output`
-        : `re-run \`./singularity check ${check.id}\` for full output`;
+        : `re-run \`./equin check ${check.id}\` for full output`;
       log(
         `  ${head}\n  ... (${omitted} lines omitted — ${moreHint})\n  ${tail}`,
         "stderr",

@@ -2,7 +2,7 @@
 
 ## Context
 
-`./singularity release --composition <name> --target tauri` should produce a desktop
+`./equin release --composition <name> --target tauri` should produce a desktop
 app end-to-end with a **single command on a clean checkout** — no manual pre-steps.
 
 Today it does not. `tauri/src-tauri/icons/` (the icns/png files referenced by
@@ -35,7 +35,7 @@ manual steps.
 Make the per-app icon **resolvable server-side from a plain string key in `core/`**,
 build an SVG string from the resolved nodes, rasterize it with `@resvg/resvg-js`
 (pure-Wasm, no native deps), and hand the PNG to `tauri icon` inside `wrapTauri` before
-either tauri invocation. A `./singularity check` guards against the web/core icon
+either tauri invocation. A `./equin check` guards against the web/core icon
 diverging.
 
 ### 1. `iconKey` as the server-readable single handle — `core/`
@@ -173,15 +173,15 @@ Reused as-is: `resolveIconSvgNodes` (`icon-picker/server`), `run(...)` / `buildP
 
 1. Confirm clean state: `tauri/src-tauri/icons/` absent (gitignored) —
    `git status --porcelain tauri/src-tauri/icons` empty.
-2. `./singularity build` then `./singularity check app-icon:key-in-sync` passes; flip one
+2. `./equin build` then `./equin check app-icon:key-in-sync` passes; flip one
    app's `iconKey` to mismatch its `mdAppIcon(...)` → check fails.
-3. Production path: `./singularity release --composition sonata --target tauri`. It no
+3. Production path: `./equin release --composition sonata --target tauri`. It no
    longer aborts on missing `icon.icns`. Then:
    - `ls tauri/src-tauri/icons/` shows the 5 referenced files.
    - `…/target/release/bundle/macos/Sonata.app/Contents/Resources/icon.icns` exists; open
      the `.app`/`.dmg` and confirm the piano glyph renders.
 4. Dev path (the server-side release passes `--dev` → `tauri dev`):
-   `./singularity release --composition sonata --target tauri --dev` — icon generation
+   `./equin release --composition sonata --target tauri --dev` — icon generation
    runs before `tauri dev`; dock/window shows the glyph.
 
 ## Risks / notes

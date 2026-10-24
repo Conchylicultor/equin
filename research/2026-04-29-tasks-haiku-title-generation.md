@@ -165,7 +165,7 @@ The server handler from step 4 will Haiku-generate the title from the descriptio
 
 # Verification
 
-1. `./singularity build` succeeds (typechecks, plugin-boundary checks, migrations clean).
+1. `./equin build` succeeds (typechecks, plugin-boundary checks, migrations clean).
 2. **Improve flow:** open the improve popup, type a multi-sentence prompt, submit. Expected:
    - The new task's title is a short Haiku-generated summary (~5-10 words).
    - The full prompt is in the description field.

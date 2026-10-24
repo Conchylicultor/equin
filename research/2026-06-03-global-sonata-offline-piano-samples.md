@@ -115,7 +115,7 @@ export const PIANO_REMOTE_BASE =
 ```
 
 **`server/index.ts`** (NEW — first server barrel for this plugin; auto-collected
-by the server registry codegen on `./singularity build`)
+by the server registry codegen on `./equin build`)
 ```ts
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { defineAssetMirror } from "@plugins/infra/plugins/asset-mirror/server";
@@ -177,8 +177,8 @@ are the loud signal for that case.)
 
 ## Verification (end-to-end)
 
-1. `./singularity build` from the worktree. Confirm the new piano `server/index.ts`
-   is picked up (no server-registry codegen errors) and `./singularity check` passes
+1. `./equin build` from the worktree. Confirm the new piano `server/index.ts`
+   is picked up (no server-registry codegen errors) and `./equin check` passes
    (plugin boundaries, eslint).
 2. **Online path:** open `http://<worktree>.localhost:9000/sonata`, load a MIDI,
    select **Acoustic Piano**, press Play → it sounds. In DevTools Network, confirm

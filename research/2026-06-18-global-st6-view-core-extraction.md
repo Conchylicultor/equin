@@ -30,7 +30,7 @@ diff is purely a boundary refactor.
 
 - **Boundary**: `boundary-config.ts` has a single catch-all `allow("plugin.** -> plugin.**")`
   and discovers plugins from the filesystem tree — a new `view-core/` needs **no**
-  boundary edits and is auto-registered by `./singularity build`.
+  boundary edits and is auto-registered by `./equin build`.
 - **DAG / no cycle**: parent→child (`data-view` → `view-core`) is allowed. The
   child **must never** import `@plugins/primitives/plugins/data-view/{core,web,server}`.
   There is **no automated guard** for this specific cycle (the wildcard allows it),
@@ -153,7 +153,7 @@ switcher/popover `ViewActions` shape unchanged.
 
 ## Implementation sequence (dependency-ordered)
 
-1. Scaffold `view-core/{core,web,server,shared}` barrels (empty `contributions: []` defaults) + `view-core/CLAUDE.md` stub stating the no-import-data-view invariant. `./singularity build` once → confirm zero boundary errors.
+1. Scaffold `view-core/{core,web,server,shared}` barrels (empty `contributions: []` defaults) + `view-core/CLAUDE.md` stub stating the no-import-data-view invariant. `./equin build` once → confirm zero boundary errors.
 2. Move pure types → `view-core/core`; add `DataViewContribution extends ViewTypeMeta` in `data-view/web/slots.ts`; drop `ViewInstance` from data-view barrels.
 3. Move `viewsDescriptor` → `view-core/shared`; repoint data-view's internal importers; delete `data-view/shared/views-config.ts` + barrel re-exports.
 4. Move + genericize `resolve-instances.ts` (`<T extends ViewTypeMeta>`).
@@ -165,7 +165,7 @@ switcher/popover `ViewActions` shape unchanged.
 10. Move switcher + settings popover → view-core (generic over `T`; popover uses `{merge:true}`).
 11. Write data-view's `useDataViewModel` wrapper (cycle + `stateFor` + `setSort`/`setFilter` + ephemeral, repacked into the existing `ViewModel`).
 12. Rewire `data-view.tsx`.
-13. `./singularity build` + `./singularity check`; regenerate both CLAUDE.md docs.
+13. `./equin build` + `./equin check`; regenerate both CLAUDE.md docs.
 14. Update the roadmap doc (see below).
 
 ## Seam resolutions
@@ -200,9 +200,9 @@ switcher/popover `ViewActions` shape unchanged.
 
 ## Verification
 
-- `./singularity build` succeeds; `data-views.generated.ts` unchanged (manifest
+- `./equin build` succeeds; `data-views.generated.ts` unchanged (manifest
   didn't move; marker untouched).
-- `./singularity check` green — specifically `type-check`, `plugin-boundaries`,
+- `./equin check` green — specifically `type-check`, `plugin-boundaries`,
   `data-views-in-sync`, `plugins-registry-in-sync`, `plugins-doc-in-sync`.
 - `rg "data-view/(core|web|server)" plugins/primitives/plugins/data-view/plugins/view-core` returns **nothing** (cycle invariant holds).
 - In-app smoke (Playwright) on `http://<worktree>.localhost:9000` against the only

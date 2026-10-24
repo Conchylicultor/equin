@@ -49,7 +49,7 @@ In-memory loaders never call `pool.query`, so they're never gated (the config pa
 
 - The runtime exposes **only** `getResourceValue`; `timedLoad`/`entry.loader` become private to the refill path. No caller can run a loader directly.
 - All worktree-pool access goes through the wrapped `pool.query`. The legitimate exceptions are small and stay documented: `awaitDbReady`/`warmPool` (boot readiness on the main pool) and `adminPool`/`openShortLivedClient` (separate pools for cross-DB inspection + fork — a *different* scarce set, intentionally outside this gate).
-- Add a `./singularity check` (or lint) that fails on new direct `pool.connect()`/`new Pool` against the worktree pool outside the sanctioned files — so the single path can't silently regrow bypasses. (Project principle: fix the class with a check, not the instance.)
+- Add a `./equin check` (or lint) that fails on new direct `pool.connect()`/`new Pool` against the worktree pool outside the sanctioned files — so the single path can't silently regrow bypasses. (Project principle: fix the class with a check, not the instance.)
 
 ## What this removes (complexity going down, not up)
 
@@ -78,7 +78,7 @@ Files: `resource-runtime/core/runtime.ts` (registry entry gains `value`/`stale`)
 Files: `infra/plugins/boot-snapshot/server`.
 
 **Task 5 — Make the single path un-bypassable (harden).**
-Audit + route remaining worktree-pool direct connects; add the `./singularity check`/lint that forbids new bypasses of the wrapped `pool.query` and of `getResourceValue`. Update `resource-runtime`/`database` CLAUDE.md with the two-path mental model.
+Audit + route remaining worktree-pool direct connects; add the `./equin check`/lint that forbids new bypasses of the wrapped `pool.query` and of `getResourceValue`. Update `resource-runtime`/`database` CLAUDE.md with the two-path mental model.
 Files: `framework/plugins/tooling/plugins/checks/...` (or a `lint/`), `database/CLAUDE.md`, `resource-runtime/CLAUDE.md`.
 
 *(Independent, complementary — schedule anytime):* **bound concurrent DB forks** with a `host-semaphore` (the worst cross-worktree I/O spike on spawn storms; `database/plugins/admin/server/internal/fork.ts`). Not part of the read-path unification; file as its own task.
@@ -96,4 +96,4 @@ Files: `framework/plugins/tooling/plugins/checks/...` (or a `lint/`), `database/
 - **Stampede gone:** after Task 3/4, a multi-tab reload + boot-snapshot shows **0 loader runs** for warm resources in `get_runtime_profile kind:"loader"` (memory reads), and `[acquire]`/`[loader-acquire]` max collapses.
 - **Interactive isolation:** under a deliberate background-refill storm, a mutation (POST) latency stays flat (reserved connections) — `get_runtime_profile kind:"http"`.
 - **No stale data:** isolated mutation → its resource updates promptly in an open tab; burst → one coalesced refill, correct final value; keyed delta-sync (attempts/tasks) still reconciles without torn snapshots.
-- `./singularity check` passes, and (Task 5) the new bypass check fails on a deliberately-added direct `pool.connect()`.
+- `./equin check` passes, and (Task 5) the new bypass check fails on a deliberately-added direct `pool.connect()`.

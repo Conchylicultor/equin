@@ -160,7 +160,7 @@ Docs: the three primitive `CLAUDE.md`s gain a "density from context" note mirror
 
 ## Verification
 
-1. `./singularity build` — `type-check` enforces `size?: never`, so any missed call site
+1. `./equin build` — `type-check` enforces `size?: never`, so any missed call site
    that still passes `size` is a compile error (the tsc-backed check is the safety net
    for completeness). `eslint`/`no-adhoc-*` must stay green.
 2. Scripted Playwright before/after on the highest-signal surfaces, confirming the

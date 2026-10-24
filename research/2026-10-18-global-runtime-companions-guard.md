@@ -152,10 +152,10 @@ knowledge so the runtime can tell **"no provider exists"** (a legitimate fallbac
    - A type with no provider anywhere still renders text.
    - An orphan view row renders its placeholder.
    - A `PluginProvider` without sprites throws `MissingCompanionError` after settle.
-3. **Bundle diff.** A one-off `./singularity run` script resolves every composition
+3. **Bundle diff.** A one-off `./equin run` script resolves every composition
    before and after, and prints additions and removals. Expected: only the §2
    decisions. Main is unchanged.
-4. `./singularity build`. Green, including the new check, `composition-closure`,
+4. `./equin build`. Green, including the new check, `composition-closure`,
    `companions-visible`, `keys-defined`, `plugins-registry-in-sync`,
    `eager-tier-in-sync` and `plugins-doc-in-sync`.
 5. **Served pages.**
@@ -207,7 +207,7 @@ knowledge so the runtime can tell **"no provider exists"** (a legitimate fallbac
   `copy-source-text` (some also `dom-selection`). The full `agent-manager`
   gains the 15 reporters and nothing beyond them.
 - **Verified.**
-  - `./singularity build` green, including the new checks.
+  - `./equin build` green, including the new checks.
   - Tests green: web-sdk, closure, composition, facets/slots, data-view
     (incl. the new `missing-companion` jsdom suite), codegen.
   - Two pre-existing `load-tiers.test.ts` failures, unchanged by this work:

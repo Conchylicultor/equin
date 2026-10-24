@@ -226,7 +226,7 @@ Reuse (do not reinvent): `defineFacetTable`/`PluginChip` (`catalog/web`), `Secti
 ## Conventions / gotchas
 
 - **Registration is automatic.** New `web/index.ts` plugins are discovered by codegen during
-  `./singularity build`, which regenerates `web-sdk/core/web.generated.ts` (validated by the
+  `./equin build`, which regenerates `web-sdk/core/web.generated.ts` (validated by the
   `plugins-registry-in-sync` check). No manual registry edit.
 - **Barrel purity** (boundary check): each `web/index.ts` contains only imports + a single default
   `PluginDefinition`. Table column/row logic lives in `exports-facet-table.tsx`, not the barrel.
@@ -235,7 +235,7 @@ Reuse (do not reinvent): `defineFacetTable`/`PluginChip` (`catalog/web`), `Secti
   are acyclic.
 - Each new sub-plugin needs a `package.json` (mirror a sibling) and a `CLAUDE.md`
   (`plugins-have-claudemd` check); run `bun install` from repo root after adding them.
-- `./singularity build` also regenerates `docs/plugins-*.md` (the `plugins-doc-in-sync` check) —
+- `./equin build` also regenerates `docs/plugins-*.md` (the `plugins-doc-in-sync` check) —
   commit the regenerated docs.
 
 ## Implementation note — facets/core browser-safety (added during build)
@@ -257,8 +257,8 @@ facet primitive at runtime.
 
 ## Verification
 
-1. `bun install` (repo root) → `./singularity build` succeeds (codegen + tsc green).
-2. `./singularity check` passes — specifically `typescript`, `plugin-boundaries`,
+1. `bun install` (repo root) → `./equin build` succeeds (codegen + tsc green).
+2. `./equin check` passes — specifically `typescript`, `plugin-boundaries`,
    `no-hardcoded-colors`, `plugins-registry-in-sync`, `plugins-doc-in-sync`,
    `plugins-have-claudemd`.
 3. Contributions registered: after build, `docs/plugins-details.md` lists the exports sub-plugins

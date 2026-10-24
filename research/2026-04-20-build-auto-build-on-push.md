@@ -2,7 +2,7 @@
 
 ## Context
 
-The build plugin provides a toolbar button to manually trigger `./singularity build`. When an agent pushes code to main, the worktree app is now out of date. Users must remember to manually click "Build" to pick up the new changes. This is friction — especially in a self-evolving system where agents push frequently.
+The build plugin provides a toolbar button to manually trigger `./equin build`. When an agent pushes code to main, the worktree app is now out of date. Users must remember to manually click "Build" to pick up the new changes. This is friction — especially in a self-evolving system where agents push frequently.
 
 This plan adds a server-side watcher that detects new pushes (via the `pushes` table maintained by the tasks push-watcher) and automatically triggers a build. The option is exposed as a boolean toggle in Settings (default: on).
 
@@ -19,7 +19,7 @@ export const buildConfig = defineConfig({
   autoBuild: {
     default: true,
     label: "Auto-build on push",
-    description: "Automatically run ./singularity build when a new push to main is detected.",
+    description: "Automatically run ./equin build when a new push to main is detected.",
   },
 });
 ```
@@ -31,7 +31,7 @@ export const buildConfig = defineConfig({
 Extract the core build logic out of `handle-build.ts` so both the HTTP handler and the auto-watcher can call it without duplication.
 
 ```ts
-// Spawns ./singularity build, streams output to the build log channel,
+// Spawns ./equin build, streams output to the build log channel,
 // calls gateway restart on success. Returns exit code.
 export async function runBuild(): Promise<number> { ... }
 ```

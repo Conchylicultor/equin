@@ -128,7 +128,7 @@ const cliFlag = opts?.model ? resolveCliFlag(opts.model) : undefined;
 
 ## Verification
 
-1. `./singularity build` — builds, generates config origin file, restarts server
+1. `./equin build` — builds, generates config origin file, restarts server
 2. Open Settings UI → confirm "Opus version" radio appears under Model Provider
 3. Switch to 4.7, launch an Opus conversation → check tmux pane shows `--model claude-opus-4-7`
 4. Switch back to 4.6, launch → confirm `--model claude-opus-4-6`

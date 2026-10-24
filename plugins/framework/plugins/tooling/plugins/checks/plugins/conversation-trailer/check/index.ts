@@ -32,7 +32,7 @@ async function currentBranch(): Promise<string> {
 // This branch's own commits: reachable from HEAD and from no `main` this
 // checkout knows of — local `main` or any `refs/remotes/<remote>/main` (the
 // published set, as `database/migrations`' `publishedMigrationRefs` reads it).
-// After `./singularity upstream merge` a clone's branch carries upstream's
+// After `./equin upstream merge` a clone's branch carries upstream's
 // commits, which sit on `<remote>/main` and not on local `main`: they were
 // authored in upstream's own sessions (or none), so their trailers are not
 // this pane's to have, and asking would fail every upstream update's push.
@@ -79,7 +79,7 @@ const check: Check = {
       return {
         ok: false,
         message:
-          "SINGULARITY_CONVERSATION_ID is not set in this shell. The `./singularity push` amend would strip attribution, orphaning the push from its task.",
+          "SINGULARITY_CONVERSATION_ID is not set in this shell. The `./equin push` amend would strip attribution, orphaning the push from its task.",
         hint: STOP_MESSAGE,
       };
     }
@@ -133,7 +133,7 @@ const check: Check = {
         hint:
           "If the commit was created by another conversation sharing this worktree, " +
           "you can safely uncommit (git reset HEAD~1) while keeping the changes, " +
-          "then run ./singularity push again — the new commit will carry the correct trailer for this conversation. " +
+          "then run ./equin push again — the new commit will carry the correct trailer for this conversation. " +
           STOP_MESSAGE,
       };
     }

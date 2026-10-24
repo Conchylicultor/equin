@@ -82,6 +82,6 @@ Then ask the user, per B-row, mock vs app.
 Files: `pages/plugins/apps/web/components/{app-card,apps-gallery,apps-search,apps-closing}.tsx`,
 `apps-gallery.css`; `shell/web/internal/theme.ts` (faint tone, any agreed scale/measure change);
 `primitives/plugins/filter-chips` + `css/plugins/toggle-chip` (outline look); the chrome-pad token
-plumbing for A1; `primitives/plugins/avatar` only if B4 = gradient. Then `./singularity build`,
+plumbing for A1; `primitives/plugins/avatar` only if B4 = gradient. Then `./equin build`,
 `compare-diff.ts … --options end-cards=question,<agreed picks>` until the mismatch is ~AA noise, and a
 scrolled capture for A10.

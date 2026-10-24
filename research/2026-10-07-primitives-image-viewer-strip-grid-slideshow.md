@@ -167,11 +167,11 @@ caller's image list` rather than becoming a DataView.
 
 ## Verification
 
-1. `./singularity test plugins/primitives/plugins/overlay/plugins/image-viewer`:
+1. `./equin test plugins/primitives/plugins/overlay/plugins/image-viewer`:
    unit tests for `viewerArea` (strip inset, slideshow zero insets), `grid.ts`,
    and key matching per layout; the existing `image-gallery.test.tsx` stays
    green.
-2. `./singularity build` (backgrounded).
+2. `./equin build` (backgrounded).
 3. Extend `e2e/viewer-verify.ts`: open a folder image in Files and
    - toggle the strip and assert the band, the ringed current image, and that
      the image refit smaller;

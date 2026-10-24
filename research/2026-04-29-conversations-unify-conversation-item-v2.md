@@ -105,7 +105,7 @@ Most of these are migrating to `<ConversationItem>` anyway — those imports are
 
 **New plugin (3 files):**
 - `plugins/conversations/plugins/conversation-item/package.json`
-- `plugins/conversations/plugins/conversation-item/CLAUDE.md` (one-line description; the autogen block is filled by `./singularity build`)
+- `plugins/conversations/plugins/conversation-item/CLAUDE.md` (one-line description; the autogen block is filled by `./equin build`)
 - `plugins/conversations/plugins/conversation-item/web/index.ts`
 - `plugins/conversations/plugins/conversation-item/web/components/conversation-item.tsx`
 
@@ -136,8 +136,8 @@ Most of these are migrating to `<ConversationItem>` anyway — those imports are
 
 ## Verification
 
-1. `./singularity build` from the worktree — frontend type-checks (catches any missed `CONV_STATUS_DOT` import) and bundle rebuilds.
-2. `./singularity check --plugin-boundaries` — confirms the new plugin's barrel is well-formed and no surface deep-imports past it.
+1. `./equin build` from the worktree — frontend type-checks (catches any missed `CONV_STATUS_DOT` import) and bundle rebuilds.
+2. `./equin check --plugin-boundaries` — confirms the new plugin's barrel is well-formed and no surface deep-imports past it.
 3. Open `http://att-1777459694-hrsy.localhost:9000`.
 4. **Sidebar list** — same visual as today: status dot, title, sys, time, spawnedBy line for system rows. Toggle "show system" — system rows still tinted.
 5. **Attempts under a task** — open a task in the Tasks pane; each conversation row shows status dot + title + sys + relative time (replacing today's status-text trailing span).

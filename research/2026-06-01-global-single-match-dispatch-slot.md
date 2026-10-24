@@ -204,17 +204,17 @@ keys on the callee name (`JsonlViewer.EventRenderer(`), not the prop fields.
   overlay, `message-toc` — unchanged.)
 
 ### Build / docs
-- `./singularity build` regenerates the slot-render and jsonl-viewer family
+- `./equin build` regenerates the slot-render and jsonl-viewer family
   CLAUDE.md / `plugins-details.md`. Commit the regen so `plugins-doc-in-sync`
   passes. (Diff is local to these plugins, since only `defineDispatchSlot` was
   added to the parser.)
 
 ## Verification
 
-1. `./singularity build` — must succeed (TS compile of the renamed contributions
+1. `./equin build` — must succeed (TS compile of the renamed contributions
    proves the uniform `match` types line up; `Key = JsonlEvent["kind"]` will fail
    the build if any `match:` string is not a valid kind).
-2. `./singularity check` — `eslint`, `plugin-boundaries`, and `plugins-doc-in-sync`
+2. `./equin check` — `eslint`, `plugin-boundaries`, and `plugins-doc-in-sync`
    green.
 3. Open a conversation at `http://<worktree>.localhost:9000/c/<id>` and confirm
    the transcript renders normally: tool cards (Bash/Read/Edit), attachments,

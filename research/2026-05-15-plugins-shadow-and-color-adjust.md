@@ -322,11 +322,11 @@ Add `"color-adjust": "default"` to all three GlobalPreset entries in `plugins/ui
 1. **Shadow token group** — all new files, then app.css updates, then GlobalPreset updates
 2. **ThemeEngine slot + transform** — add `ColorTransform` slot, create `transform.ts`, modify ThemeInjector
 3. **Color-adjust plugin** — all new files, then GlobalPreset updates
-4. `./singularity build` — auto-generates plugin registries, applies migrations (none needed — no DB schema), builds frontend and server
+4. `./equin build` — auto-generates plugin registries, applies migrations (none needed — no DB schema), builds frontend and server
 
 ## Verification
 
-1. `./singularity build` succeeds
+1. `./equin build` succeeds
 2. Open `http://<worktree>.localhost:9000`, go to Settings
 3. **Shadow**: "Shadow" picker appears in UI Themes section. Switching presets changes shadow appearance on cards/popovers using `shadow` utilities. Inspect element confirms `--shadow-color`, `--shadow-blur` etc. in `:root`.
 4. **Color Adjust**: "Color Adjust" picker appears with preset chips and sliders. Selecting "Grayscale" removes all color. Selecting "Vibrant" intensifies colors. Dragging Hue Shift slider rotates all colors in real-time. Inspect element confirms oklch values in `:root` change as sliders move.

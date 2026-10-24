@@ -20,7 +20,7 @@
  * mid-toggle cannot leave a source quietly switched. Everything else is a read.
  *
  * Usage:
- *   ./singularity run plugins/apps/plugins/events/plugins/sources/e2e/live-sources.ts [--headed]
+ *   ./equin run plugins/apps/plugins/events/plugins/sources/e2e/live-sources.ts [--headed]
  */
 
 import {

@@ -151,7 +151,7 @@ export const configConflictLocations = liveValue(
 // reactive read.
 //
 // "Modified" is measured against the GIT LAYER — the generated origin ⊕ any
-// committed authored override, as propagated by `./singularity build` — not
+// committed authored override, as propagated by `./equin build` — not
 // against `descriptor.defaults`. A value the repo commits is not something the
 // user changed. Same basis as the per-field `config-v2.tiers` attribution the
 // detail pane's stripes and Reset buttons read, so badge and pane agree.

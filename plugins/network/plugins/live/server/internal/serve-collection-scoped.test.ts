@@ -13,7 +13,7 @@
  * - the scope's `recomputeOn` reaches the window's server options;
  * - provenance: every shape joins exactly the members `usesOf` names.
  *
- * Run: `./singularity test plugins/network/plugins/live`.
+ * Run: `./equin test plugins/network/plugins/live`.
  */
 
 import { describe, expect, test } from "bun:test";

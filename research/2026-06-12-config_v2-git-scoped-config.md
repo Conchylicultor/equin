@@ -11,7 +11,7 @@ say "for app `agent-manager`, this field is X."
 The existing three-layer model already gives agents a documented, committed way
 to customize the **base** (global) config: write `config/<hier>/<name>.jsonc`
 (an override anchored by `// @hash` to the codegen-generated
-`config/<hier>/<name>.origin.jsonc`), and `./singularity build` propagates it to
+`config/<hier>/<name>.origin.jsonc`), and `./equin build` propagates it to
 every fresh install.
 
 **This plan extends that same git-layer mechanism to app scopes.** An agent
@@ -58,10 +58,10 @@ usually `config`):
    `{ "captureUrlByDefault": false }`.
 3. Line 1: `// @hash <hash>`, copied from the base origin
    `config/<hier>/<name>.origin.jsonc`.
-4. `./singularity build` — propagates it to `~/.singularity/config/…/@app/<id>/`.
+4. `./equin build` — propagates it to `~/.singularity/config/…/@app/<id>/`.
    The app at `http://<wt>.localhost:9000` (for app `<id>`) now resolves the
    scoped values; every other app keeps the base value.
-5. `./singularity check config-origins-in-sync` — validates the `@hash` against
+5. `./equin check config-origins-in-sync` — validates the `@hash` against
    the base origin and the document against the schema.
 
 Symmetric to the existing base-override workflow already in `CLAUDE.md`; the only
@@ -212,10 +212,10 @@ only), `computeTiers`, `themeScopeBootTask`.
    constant) — or use a throwaway descriptor.
 2. Commit `config/<hier>/@app/agent-manager/config.jsonc` = `{ <field>: <value> }`
    with `// @hash <base-origin-hash>`.
-3. `./singularity build` — confirm
+3. `./equin build` — confirm
    `~/.singularity/config/<wt>/<hier>/@app/agent-manager/config.origin.jsonc` is
    propagated as `baseEff ⊕ delta`.
-4. `./singularity check config-origins-in-sync` — passes; corrupt the `@hash` and
+4. `./equin check config-origins-in-sync` — passes; corrupt the `@hash` and
    confirm it fails against the **base** origin; add a wrong-typed field and
    confirm schema failure.
 5. UI: open the app for `agent-manager` vs another app at

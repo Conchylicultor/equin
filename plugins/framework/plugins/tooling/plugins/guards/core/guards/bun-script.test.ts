@@ -149,7 +149,7 @@ describe("bun-script guard", () => {
     });
 
     test("the sanctioned replacement is not itself blocked", () => {
-      expect(blocks("./singularity run scripts/verify.ts")).toBe(false);
+      expect(blocks("./equin run scripts/verify.ts")).toBe(false);
     });
 
     test("node running a .ts file is a different binary", () => {
@@ -157,14 +157,14 @@ describe("bun-script guard", () => {
     });
   });
 
-  // `./singularity` is a /bin/sh wrapper whose LAST line is
+  // `./equin` is a /bin/sh wrapper whose LAST line is
   // `exec bun plugins/framework/plugins/cli/bin/index.ts "$@"`. The guard reads
   // the Bash tool's command string, never the wrapper's contents, and
   // parse-shell takes the basename of the executable — so the call is named
   // `singularity`, not `bun`. If that ever inverted, every CLI verb (`build`,
   // `push`, `check`, `test`, and `run` itself) would deny itself: an agent could
   // not even run the command the denial tells it to use.
-  describe("the ./singularity wrapper can never trip its own guard", () => {
+  describe("the ./equin wrapper can never trip its own guard", () => {
     for (const verb of [
       "run plugins/apps-core/plugins/tabs/e2e/tabs-verify.ts",
       "run scripts/verify.mjs",
@@ -174,8 +174,8 @@ describe("bun-script guard", () => {
       "push -m 'msg'",
       "format",
     ]) {
-      test(`./singularity ${verb}`, () => {
-        expect(blocks(`./singularity ${verb}`)).toBe(false);
+      test(`./equin ${verb}`, () => {
+        expect(blocks(`./equin ${verb}`)).toBe(false);
       });
     }
 
@@ -189,9 +189,7 @@ describe("bun-script guard", () => {
 
     test("chained after a cd, the shape agents actually write", () => {
       expect(
-        blocks(
-          `cd ${USERS}me/repo/wt && ./singularity run e2e/verify.ts --headed`,
-        ),
+        blocks(`cd ${USERS}me/repo/wt && ./equin run e2e/verify.ts --headed`),
       ).toBe(false);
     });
   });

@@ -8,7 +8,7 @@
  * Run it after upgrading one of those packages; the `icons:symbol-names-in-sync`
  * check fails until you do.
  *
- * Usage: ./singularity run plugins/ui/plugins/icons/scripts/gen-symbol-names.ts
+ * Usage: ./equin run plugins/ui/plugins/icons/scripts/gen-symbol-names.ts
  */
 import { join } from "path";
 import { writeGenerated } from "@plugins/framework/plugins/tooling/plugins/codegen/core";

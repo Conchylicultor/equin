@@ -428,14 +428,14 @@ compile-error-driven UI work. 8 lands with 4; 9 is independent.
   `tables.ts` that shouldn't have.
 - **Docs:** update the hand-written prose in `ssh-setup/CLAUDE.md` to state the
   new ownership split (collection owns the flow, providers own console prose) —
-  the rule a future contributor is most likely to violate. `./singularity build`
+  the rule a future contributor is most likely to violate. `./equin build`
   regenerates the autogen blocks.
 
 ## Verification
 
 ```bash
-./singularity build
-./singularity check
+./equin build
+./equin check
 bun test plugins/apps/plugins/deploy/plugins/servers/server/internal/ssh-public-key.test.ts
 bun test plugins/apps/plugins/deploy/plugins/ssh-setup/web/internal/install-command.test.ts
 ```

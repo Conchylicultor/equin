@@ -104,7 +104,7 @@ plugins/conversations/plugins/conversation-view/plugins/notes/
 
 ## Verification
 
-1. `./singularity build` — migrations generate, server starts, frontend compiles
+1. `./equin build` — migrations generate, server starts, frontend compiles
 2. Open a conversation → prompt bar shows the note icon button
 3. Click the button → textarea appears above the prompt input
 4. Type text → "Saving…" appears briefly, text persists after page reload

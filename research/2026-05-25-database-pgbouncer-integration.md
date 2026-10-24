@@ -187,13 +187,13 @@ If both are present, the generated config gains:
 ## Verification
 
 1. `bun install` — confirm `node_modules/@equin/pgbouncer-darwin-arm64/native/bin/pgbouncer` exists under the pgbouncer plugin
-2. Delete `~/.singularity/database.json`, run `./singularity start` — confirm generated config has both postgres and pgbouncer services + the `pgbouncer` block
+2. Delete `~/.singularity/database.json`, run `./equin start` — confirm generated config has both postgres and pgbouncer services + the `pgbouncer` block
 3. Check gateway logs: postgres ready first, then pgbouncer ready
 4. `ls ~/.singularity/postgres/socket/` — both `.s.PGSQL.5433` and `.s.PGSQL.6432` present
 5. `cat ~/.singularity/postgres/pgbouncer.ini` — catch-all config with correct paths
 6. Open `http://singularity.localhost:9000` — app loads, no PG errors
 7. Create a conversation (triggers db-fork) — fork succeeds (uses direct PG)
-8. `./singularity build` — succeeds (drizzle-kit uses direct PG for migrations)
+8. `./equin build` — succeeds (drizzle-kit uses direct PG for migrations)
 9. With 5+ worktrees active: `psql -h ~/.singularity/postgres/socket -p 5433 -d postgres -c "SELECT count(*) FROM pg_stat_activity"` — connection count lower than pre-PgBouncer (PgBouncer multiplexes the 5-max pools)
 
 ## Risks

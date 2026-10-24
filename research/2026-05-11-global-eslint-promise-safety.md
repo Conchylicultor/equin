@@ -205,7 +205,7 @@ Add after the "On breakage, rebase to HEAD first" bullet (line 201), before the 
 1. `bunx eslint . 2>&1 | grep 'promise-safety/no-floating-promises'` — should show the 14 violations with custom instructional messages
 2. `bunx eslint . 2>&1 | grep 'promise-safety/no-bare-catch'` — should catch any existing bare `.catch(() => {})` patterns
 3. `bunx eslint . 2>&1 | grep 'no-misused-promises'` — should show fewer violations (the 74 JSX attribute false positives gone, ~11 remaining)
-4. `./singularity check --eslint` — should run without crashing (violations are expected, but the check runner shouldn't error)
+4. `./equin check --eslint` — should run without crashing (violations are expected, but the check runner shouldn't error)
 5. Write a quick test file with the bad patterns and verify each fires the right rule with the custom message:
    ```ts
    // test: should fire promise-safety/no-floating-promises

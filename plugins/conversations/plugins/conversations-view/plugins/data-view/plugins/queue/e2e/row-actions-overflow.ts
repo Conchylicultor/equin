@@ -8,7 +8,7 @@
  * so a bucket that painted its trigger from its AUTHORED membership would give
  * every closed conversation a `⋯` opening an empty menu.
  *
- *   ./singularity run plugins/conversations/plugins/conversations-view/plugins/data-view/plugins/queue/e2e/row-actions-overflow.ts --headed
+ *   ./equin run plugins/conversations/plugins/conversations-view/plugins/data-view/plugins/queue/e2e/row-actions-overflow.ts --headed
  */
 import {
   arg,

@@ -129,7 +129,7 @@ Places:
 
 ### Migration
 
-One DML-only data migration, created with `./singularity build --custom-migration`
+One DML-only data migration, created with `./equin build --custom-migration`
 (precedent: `20260601_130000_b4c0f111__backfill_conversation_model_aliases.sql`):
 
 ```sql
@@ -156,13 +156,13 @@ Update `model-provider/CLAUDE.md`:
 
 ## Verification
 
-- `./singularity test plugins/conversations/plugins/model-provider` with new registry
+- `./equin test plugins/conversations/plugins/model-provider` with new registry
   tests:
   - every `ModelFamily` resolves to its first entry;
   - `choiceLabel` and `choiceHint`;
   - the tolerant schemas report unknown values.
 - Also run the existing auto-start and price-table suites.
-- `./singularity build` (background). Then use `query_db` on the worktree DB:
+- `./equin build` (background). Then use `query_db` on the worktree DB:
   - `tasks_ext_auto_start` holds only `opus` / `sonnet` / `fable`;
   - no `conversations.model = 'opus'` row remains.
 - Screenshots (`screenshot.ts --click`):

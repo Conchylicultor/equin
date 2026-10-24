@@ -293,7 +293,7 @@ export default {
 
 ## Verification
 
-1. `./singularity build` — regenerates plugin registries (confirm `_hierarchyPath` appears in `web/src/plugins.generated.ts`), applies migrations, deploys
+1. `./equin build` — regenerates plugin registries (confirm `_hierarchyPath` appears in `web/src/plugins.generated.ts`), applies migrations, deploys
 2. Check resource debug: `curl http://<worktree>.localhost:9000/api/resources/_debug | jq '.resources[] | select(.key == "config-v2.values")'`
 3. Edit a JSONC file under `~/.singularity/config/` and confirm the browser reflects the change without refresh
-4. `./singularity check` passes (plugin boundaries, eslint, migrations-in-sync)
+4. `./equin check` passes (plugin boundaries, eslint, migrations-in-sync)

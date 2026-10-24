@@ -226,8 +226,8 @@ export const bootProfileDetailPane = Pane.define({
 
 ## Verification
 
-1. `./singularity build` (regenerates registries + the `boot_traces` migration; commit
-   the generated migration). Confirm `./singularity check` passes (boundaries,
+1. `./equin build` (regenerates registries + the `boot_traces` migration; commit
+   the generated migration). Confirm `./equin check` passes (boundaries,
    migrations-in-sync, plugins-registry-in-sync, plugins-doc-in-sync).
 2. Open `http://<wt>.localhost:9000/debug/boot-profile`, click **Copy permalink**.
    Confirm a toast with the URL, and `mcp__singularity__query_db`:

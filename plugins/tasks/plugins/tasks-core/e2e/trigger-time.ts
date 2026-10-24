@@ -31,7 +31,7 @@
  * pinned row that is gone, or no longer fits its role, refuses the run. Compare
  * the fan-out too: the same attempt can cascade to more rows later.
  *
- *   ./singularity run plugins/tasks/plugins/tasks-core/e2e/trigger-time.ts [--repeats 3] [--json /tmp/trigger-time.json] [--pin <baseline.json>]
+ *   ./equin run plugins/tasks/plugins/tasks-core/e2e/trigger-time.ts [--repeats 3] [--json /tmp/trigger-time.json] [--pin <baseline.json>]
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { Client } from "pg";

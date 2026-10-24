@@ -203,12 +203,12 @@ Also revert the import: `useConversationById` → `useConversation` (the non-nul
 
 ### Step 8: Build and verify
 
-Run `./singularity build` — regenerates `plugins.generated.ts` with new `text-editor` entries.
+Run `./equin build` — regenerates `plugins.generated.ts` with new `text-editor` entries.
 
 ## Verification
 
-1. `./singularity build` succeeds
-2. `./singularity check` passes (plugin boundaries, eslint)
+1. `./equin build` succeeds
+2. `./equin check` passes (plugin boundaries, eslint)
 3. **Conversation prompt**: open a conversation — template chips appear in the toolbar, insert and send-directly work
 4. **Task draft form**: open improve/new-task — editor renders without toolbar, image paste works
 5. **Other consumers** (agent detail, screenshot form, task description, branch, launch-prompts settings, prompt-templates settings): editor renders without toolbar

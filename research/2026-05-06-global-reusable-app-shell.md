@@ -165,7 +165,7 @@ export function ShellLayout() {
 
 ## Verification
 
-1. `./singularity build` — must succeed (frontend + server + registry generation)
+1. `./equin build` — must succeed (frontend + server + registry generation)
 2. Open `http://<worktree>.localhost:9000` — agent manager looks identical (sidebar, toolbar, all contributions present)
 3. Click folder icon in app rail → navigates to `/files`, shows empty sidebar+toolbar chrome with miller columns
-4. `./singularity check` — passes all checks (plugin boundaries, eslint, etc.)
+4. `./equin check` — passes all checks (plugin boundaries, eslint, etc.)

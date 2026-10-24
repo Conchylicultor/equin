@@ -89,8 +89,8 @@ All `Server-Timing` headers in cost/commits/tasks handlers stay — they're cons
 
 ## Verification
 
-1. `./singularity build` — should compile and deploy
-2. `./singularity check` — all checks pass
+1. `./equin build` — should compile and deploy
+2. `./equin check` — all checks pass
 3. Navigate to `/debug/profiling` — the Stats section should appear alongside Boot and Build, showing Gantt bars for all 14 stats endpoints grouped by commits/cost/tasks
 4. `curl -I /api/stats/cost/totals` — Server-Timing header still present
 5. Navigate to `/stats` — small "Profiling" link visible, clicking navigates to `/debug/profiling`

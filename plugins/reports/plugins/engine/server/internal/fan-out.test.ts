@@ -6,7 +6,7 @@
  * the window re-grants it, and nothing collapsed is ever silently lost — are
  * asserted directly, with no DB and no timers.
  *
- * Run: `./singularity test plugins/reports`
+ * Run: `./equin test plugins/reports`
  */
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";

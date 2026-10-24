@@ -232,7 +232,7 @@ rejected fuzzy frame-matching option.
 ## Verification (end-to-end)
 
 **`bg` spans in `get_runtime_profile`:**
-1. `./singularity build` (deploys + restarts). Boot runs `drainWarmups`, now `runTracked("warmup:<name>")`.
+1. `./equin build` (deploys + restarts). Boot runs `drainWarmups`, now `runTracked("warmup:<name>")`.
 2. Call `get_runtime_profile` (MCP) with `kind: "bg"` (the filter enum now includes `bg`). Expect `warmup:*`,
    `conversations:poller`, `conversations:turn-emitter`, `jobs:reconcile-dead`, and `watch:*` on file edits.
 3. Confirm a warmup's internal `db` spans now show `parent = { kind:"bg", label:"warmup:<name>" }` (byParent),

@@ -136,7 +136,7 @@ two are locked by construction.
 
 ## Verification
 
-1. `./singularity build` from the worktree; open `http://<worktree>.localhost:9000/sonata`.
+1. `./equin build` from the worktree; open `http://<worktree>.localhost:9000/sonata`.
 2. Load a source (e.g. the MIDI source) and press play; confirm falling notes hit
    the keyboard exactly as the sound plays.
 3. **Long-piece drift:** let a multi-minute piece play and watch the cursor vs.

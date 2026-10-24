@@ -312,11 +312,11 @@ Define `tweakcnThemesResource` with `mode: "invalidate"` (the payload is too lar
 
 ## Verification
 
-1. `./singularity build` — migration generates for `tweakcn_themes`, no check failures
+1. `./equin build` — migration generates for `tweakcn_themes`, no check failures
 2. Import a theme: POST to `/api/tweakcn/themes` with `{ themeId: "catppuccin" }` — verify response has all 6 groups with correct camelCase keys
 3. Persistence: restart server → GET `/api/tweakcn/themes` returns the theme
 4. CSS injection: apply imported theme → inspect `<style id="theme-engine-color-palette">` — oklch values from tweakcn are injected
 5. Picker visibility: open ThemeCustomizer Color Palette section → `tweakcn:catppuccin` appears as an option
 6. Delete: remove theme → preset disappears from pickers, CSS falls back to previous preset
 7. Upsert idempotency: import same ID twice → one row, not two
-8. `./singularity check --plugin-boundaries` — no boundary violations
+8. `./equin check --plugin-boundaries` — no boundary violations

@@ -115,7 +115,7 @@ always anchored by a `pushState`/`replaceState`; banning that anchor is
 necessary and sufficient.
 
 The root `eslint.config.ts` auto-discovers `lint/index.ts` via
-`buildLintConfig`/`loadContributions`; `./singularity build` regenerates
+`buildLintConfig`/`loadContributions`; `./equin build` regenerates
 `plugins/framework/plugins/tooling/plugins/lint/core/lint.generated.ts` to
 include the new `apps` entry.
 
@@ -146,9 +146,9 @@ to route through. Keep the `/` → `/home` special-case.
 
 ## Verification
 
-1. `./singularity build` — regenerates `lint.generated.ts` (confirm the `apps`
+1. `./equin build` — regenerates `lint.generated.ts` (confirm the `apps`
    entry appears) and deploys. App at `http://<worktree>.localhost:9000`.
-2. `./singularity check` — confirm `apps/no-raw-history-nav` fires on a probe
+2. `./equin check` — confirm `apps/no-raw-history-nav` fires on a probe
    `window.history.pushState` (and a bare `history.pushState`), the two
    allowlisted files are exempt, and the 4 migrated files pass clean.
 3. **Playwright desync regression** (the delta that was the bug):

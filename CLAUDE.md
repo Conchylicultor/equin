@@ -110,7 +110,7 @@ The project uses bun workspaces (defined in root `package.json`). Run `bun insta
 
 ## CLI
 
-The CLI is `./equin <verb>`. `./singularity <verb>` is its legacy name and still works (a shim), but write `./equin`.
+The CLI is `./equin <verb>`. Its old name, `singularity`, is still a shim at the repo root so old muscle memory works — always write `./equin`.
 
 ### Deploy
 

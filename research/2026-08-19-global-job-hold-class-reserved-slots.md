@@ -475,14 +475,14 @@ its own copy — point it at `LEGACY_JOB_TASK`.
 `plugins/infra/plugins/jobs/CLAUDE.md` gains a "Hold class: what bounds this handler" section
 covering the ladder, why the reservation is at fetch and not after dispatch, why conformance
 is measured on work rather than hold, why rung 3 is empty, and the standing re-point
-invariant. Then `./singularity build` regenerates the plugin reference
+invariant. Then `./equin build` regenerates the plugin reference
 (`plugins-doc-in-sync` fails otherwise).
 
 ---
 
 ## Ordering
 
-Each step ends with `./singularity build`.
+Each step ends with `./equin build`.
 
 1. `core/hold.ts` + `constants.ts` runner table, `hold` required on `DefineJobSpec`, all ~73
    assignments — with `taskFor()` still returning `LEGACY_JOB_TASK` and no priority stamped.

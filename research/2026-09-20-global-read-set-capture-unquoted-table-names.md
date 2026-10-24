@@ -211,7 +211,7 @@ out of scope.
 
 ### Why not the alternatives
 
-- **A `./singularity check` banning unquoted names in `sql` templates** (rung 3)
+- **A `./equin check` banning unquoted names in `sql` templates** (rung 3)
   — enforces a rule instead of removing it, and ~90 legitimate unquoted sites
   exist (studio's table inspector, graphile_worker job admin, page write paths).
   A static check cannot tell a loader path from an endpoint path, so it would be
@@ -269,8 +269,8 @@ singleton, so **reset it in `afterEach`** or state leaks across the file.
 
 ## 6. Verification
 
-1. `./singularity build` (background, per the build rule in CLAUDE.md).
-2. `./singularity test plugins/database`.
+1. `./equin build` (background, per the build rule in CLAUDE.md).
+2. `./equin test plugins/database`.
 3. Drive the real bug: open the chord trainer, play a round, confirm the progress
    panel updates with no reload. Then — to prove the fix rather than the
    pre-existing quotes — temporarily unquote the table names in `progress.ts`,

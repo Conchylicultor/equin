@@ -374,14 +374,14 @@ Two schema changes to generate together: drop `deploy_servers.status`, add
 accept it), so there is no data to preserve.
 
 ```bash
-./singularity build --migration-name deploy-server-health
+./equin build --migration-name deploy-server-health
 ```
 
 Never `drizzle-kit generate` directly; commit the generated file.
 
 ## Verification
 
-1. `./singularity build --migration-name deploy-server-health && ./singularity check`
+1. `./equin build --migration-name deploy-server-health && ./equin check`
    (plugin-boundaries, migrations-in-sync, plugins-doc-in-sync, type-check).
 2. `bun test plugins/infra/plugins/ssh` — the stderr classifier against verbatim
    OpenSSH samples for every `SshFailureKind`.

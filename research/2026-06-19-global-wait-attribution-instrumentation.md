@@ -104,7 +104,7 @@ Adding `"sub"|"push"` touches every kind enumeration:
   ```ts
   waits: jsonField<WaitBreakdown>({ schema: z.record(z.string(), z.number()), default: {} }),
   ```
-  Migration regenerates on `./singularity build`.
+  Migration regenerates on `./equin build`.
 - `debug/plugins/slow-ops/server/internal/install-slow-span.ts`: pass `waits: span.waits` into `recordSlowOp`.
 - `debug/plugins/slow-ops/server/internal/record-slow-op.ts`: add `waits?: WaitBreakdown` to `RecordSlowOpInput`; merge-sum per layer into the existing row's `waits` json inside the same transaction (mirror the existing `mergeCaller` helper with a `mergeWaits`).
 - UI (one column each, minimal):
@@ -122,7 +122,7 @@ Adding `"sub"|"push"` touches every kind enumeration:
 2. Charge sites (`client.ts`, host-read-pool `pool.ts`): swap standalone acquire spans → `chargeWait`. Loader spans now carry `waits`.
 3. SpanKind extension (`sub`/`push`) across the enumerations in step 6.
 4. Origin hooks (`runtime.ts` `wrapOrigin` + wrap sites; `resources.ts` supplies the hook). Loader spans get non-null sub/push parents.
-5. Surfacing — MCP + durable store + UI (steps 7–8). Run `./singularity build` for the migration.
+5. Surfacing — MCP + durable store + UI (steps 7–8). Run `./equin build` for the migration.
 
 ## Critical files
 
@@ -155,4 +155,4 @@ Adding `"sub"|"push"` touches every kind enumeration:
 - `db` aggregates keep `[acquire]` + `<sql text>`; the standalone `[loader-acquire]`/`[heavy-read-acquire]` rows no longer appear **except** under context-less callers (verify a poller-driven heavy read still records a fallback wait span).
 - No more `parent:null` loader spans under sub/push load.
 - central-core (no `wrapLoad`/`wrapOrigin`) still loads resources via identity passthrough.
-- `./singularity check` passes (boundaries, migrations-in-sync, doc-in-sync, type-check).
+- `./equin check` passes (boundaries, migrations-in-sync, doc-in-sync, type-check).

@@ -173,7 +173,7 @@ export async function spawnCaptured(
           // by a long synchronous pass: `child.exited` is already settled, its
           // continuation just has not been scheduled yet, and this callback runs
           // first in the same drain. Observed in the field, not theorised:
-          // `./singularity check` blocks its loop ~77 s building TypeScript
+          // `./equin check` blocks its loop ~77 s building TypeScript
           // programs, and a `git worktree list` that finished in ~73 ms came back
           // `timedOut: true, exitCode: 0` — a successful result reported, and
           // thrown away, as a timeout. Killing here would also be a no-op against
@@ -199,7 +199,7 @@ export async function spawnCaptured(
       // The timer only ever proves that the deadline elapsed without us having
       // OBSERVED an exit; it cannot prove the child was still running, because
       // `child.exitCode` is populated at reap time and reaping needs this event
-      // loop. Starve the loop — `./singularity check` blocks its own for ~77 s
+      // loop. Starve the loop — `./equin check` blocks its own for ~77 s
       // building TypeScript programs — and a child that finished in 73 ms is
       // still unreaped when the deadline fires, so the guard above sees `null`
       // and marks a timeout on a process that had already exited cleanly. The

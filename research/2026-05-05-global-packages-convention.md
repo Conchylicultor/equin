@@ -109,6 +109,6 @@ Add a `### Packages` section to the root CLAUDE.md explaining:
 ## Verification
 
 1. `bun install` — workspace glob resolves (no errors even with empty packages/)
-2. `./singularity check --package-boundaries` — passes (no packages with violations yet)
-3. `./singularity check --plugin-boundaries` — still passes (no regressions)
+2. `./equin check --package-boundaries` — passes (no packages with violations yet)
+3. `./equin check --plugin-boundaries` — still passes (no regressions)
 4. Create a temporary test package with a `@plugins/...` import → check fails with PB1

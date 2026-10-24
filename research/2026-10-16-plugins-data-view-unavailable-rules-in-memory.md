@@ -137,7 +137,7 @@ judged dangling from the DB alone, because field ids resolve at runtime.
   pruned tree (or `null`) and the rows come back. The same for a fold `keep` on a
   missing field (`setFold`). A `hideWhenEmpty` section with a dangling rule renders
   with the error, not hidden and not listing everything.
-- `./singularity test plugins/primitives/plugins/data-view plugins/apps/plugins/places`,
-  then `./singularity build`. Manually: add a custom column, filter a view on it,
+- `./equin test plugins/primitives/plugins/data-view plugins/apps/plugins/places`,
+  then `./equin build`. Manually: add a custom column, filter a view on it,
   delete the column, and check that the view shows the error with Remove at
   `http://<worktree>.localhost:9000`.

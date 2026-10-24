@@ -88,7 +88,7 @@ width, so overflow measurement stays correct.
 
 ## Verification
 
-1. `./singularity build` (regenerates docs/registry, restarts server).
+1. `./equin build` (regenerates docs/registry, restarts server).
 2. Open `http://<worktree>.localhost:9000`. Ensure a Mail account is in an
    unhealthy sync state (or temporarily force `MailSyncDot` to render) and/or a
    Settings config conflict exists — the rail already shows a dot. Confirm the

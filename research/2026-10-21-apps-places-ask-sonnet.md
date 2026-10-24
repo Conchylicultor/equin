@@ -153,11 +153,11 @@ Reused as is: `searchPlaces` and `searchBias` (places-core), `placeRichDetails` 
 
 ## Verification
 
-1. `./singularity test plugins/apps/plugins/places plugins/conversations/plugins/agent-thread` covers:
+1. `./equin test plugins/apps/plugins/places plugins/conversations/plugins/agent-thread` covers:
    - the tools: the unknown-pick refusal and the rung choice, with a fake client
    - question detection
    - `groupThread` over the recorded Places transcript
-2. `./singularity build`, then drive the worktree build with `browser_*`. This makes real Google calls, inside the
+2. `./equin build`, then drive the worktree build with `browser_*`. This makes real Google calls, inside the
    ladder.
    - Ask "chinese restaurant open tuesday". The steps should appear live, then the picks as cards with "why", and
      numbered pins on the map, with the camera unmoved.
@@ -173,7 +173,7 @@ Reused as is: `searchPlaces` and `searchBias` (places-core), `placeRichDetails` 
 ## Outcome (as built)
 
 Verified live on the worktree build (two questions, a "cheaper" reply, reload mid-run, Open conversation),
-`./singularity test` on both plugins green (151).
+`./equin test` on both plugins green (151).
 
 Deviations from the plan:
 

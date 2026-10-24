@@ -6,7 +6,7 @@
 ## Context
 
 The clone journey made local `main` the clone user's trunk and gave them
-`./singularity upstream merge`. The migration tooling was never adapted. It still
+`./equin upstream merge`. The migration tooling was never adapted. It still
 decides which migrations are "already on main, immutable" from `origin/main` (with
 local `main` only as a fallback). In a clone, `origin` is the **author's** repo:
 `install.sh` / `git clone` keep that name, and `resolveUpstreamRemote` treats the
@@ -147,7 +147,7 @@ before drizzle-kit, a new step `joinSnapshotTips(migrationsDir)` runs:
   `tables.public.foo.columns.bar.type: ours=text theirs=integer base=varchar`
   and the resolution below.
 
-So `./singularity build` in the upstream-merge worktree heals the chain itself,
+So `./equin build` in the upstream-merge worktree heals the chain itself,
 and so does push's normalize.
 
 **3-way merge** (pure; new `core/internal/snapshot-merge.ts` in the CLI
@@ -218,16 +218,16 @@ the real tree, because drizzle-kit reads real `schema.ts` files. So it:
    `origin`**, which is the real-clone shape and the one that exposes Problem 1.
    The existing text-fixture steps keep their own repos.
 2. **Upstream:** adds table `e2e_upstream_probe` to a fixture schema and generates
-   its migration via `./singularity regen-migrations --name e2e_upstream`
+   its migration via `./equin regen-migrations --name e2e_upstream`
    (subprocess in that tree). It then commits on `main`.
 3. **Clone, own work:** on a branch, adds `e2e_clone_probe` and generates. It
    then lands the branch on local `main` through the real push path
-   (`./singularity push`; the clone is `local`, so no network).
+   (`./equin push`; the clone is `local`, so no network).
    **Assert:** the clone migration kept its filename.
 4. **Clone, second push:** a branch with no migration runs push again (forced
    normalize). **Assert:** `git diff main -- …/migrations/data` reports no delete
    or rename. **This is Problem 1's repro, and it fails today.**
-5. **Update:** runs `./singularity upstream merge` in a clone worktree, then the
+5. **Update:** runs `./equin upstream merge` in a clone worktree, then the
    generate stage. **Assert:**
    - both sides' migration files are byte-identical to their published versions;
    - `snapshot-chain-intact` and `published-migrations-immutable` pass;
@@ -241,7 +241,7 @@ the real tree, because drizzle-kit reads real `schema.ts` files. So it:
 It asserts on git state and generated files only. The e2e barrel rule allows only
 `core` and `e2e` imports, so each CLI step runs as a subprocess. No DB is touched.
 The DB consequence (hash-keyed re-apply) follows mechanically and is already
-covered by the runner's own tests. The first `./singularity` call in the temp
+covered by the runner's own tests. The first `./equin` call in the temp
 clone installs its dependencies, which makes this the slow part (minutes). That
 is acceptable for a manual e2e.
 
@@ -293,14 +293,14 @@ as acd4f74e3d, and this branch is rebased onto it. What it changes here:
 
 ## Verification
 
-- `./singularity test plugins/database/plugins/migrations plugins/framework/plugins/cli/plugins/migrations plugins/framework/plugins/tooling/plugins/checks/plugins/snapshot-chain-intact`
-- `./singularity run plugins/upstream/e2e/clone-journey.ts`: every step passes,
+- `./equin test plugins/database/plugins/migrations plugins/framework/plugins/cli/plugins/migrations plugins/framework/plugins/tooling/plugins/checks/plugins/snapshot-chain-intact`
+- `./equin run plugins/upstream/e2e/clone-journey.ts`: every step passes,
   and steps 4–5 were seen failing before the fix.
-- `./singularity check`: `migration-applies-clean`, `migration-phases-valid`,
+- `./equin check`: `migration-applies-clean`, `migration-phases-valid`,
   `migration-hashes-unique`, `snapshot-chain-intact` and
   `published-migrations-immutable` all pass on this (author) checkout. This is
   the regression check that the union equals today's set for the author.
-- `./singularity build` in this worktree, with `build-status.json` reporting
+- `./equin build` in this worktree, with `build-status.json` reporting
   `status: ok`.
 
 ## Critical files

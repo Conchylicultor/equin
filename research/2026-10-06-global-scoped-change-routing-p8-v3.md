@@ -134,7 +134,7 @@ query-resource/server/internal/
 ### 4.3 Risk-4 trigger-time baseline: method, and what exists
 
 - **No trigger-time baseline exists on main.** `track_functions` is `none` (superuser context), `track_io_timing` is off, and `query_db` is read-only. No step from 7–14 recorded one.
-- **Method (new step 16·0):** a `./singularity run` script against the **worktree fork**. Inside `BEGIN … ROLLBACK`, run `EXPLAIN (ANALYZE)` on one representative DML per table. Parse the `Trigger <name>: time=… calls=…` lines; 3 repeats; report the median. The DML set:
+- **Method (new step 16·0):** a `./equin run` script against the **worktree fork**. Inside `BEGIN … ROLLBACK`, run `EXPLAIN (ANALYZE)` on one representative DML per table. Parse the `Trigger <name>: time=… calls=…` lines; 3 repeats; report the median. The DML set:
   - UPDATE tasks status;
   - INSERT attempt;
   - UPDATE conversations status;
@@ -193,7 +193,7 @@ query-resource/server/internal/
 | 23 | S6 deletions | 22, the C32 gate | |
 | **★24** | A7 pane + A26; final review | 16a, 23 | **STOP for review** |
 
-Every step: background `./singularity build` and then foreground `./singularity await`; `check` green; `./singularity test` over the touched plugins.
+Every step: background `./equin build` and then foreground `./equin await`; `check` green; `./equin test` over the touched plugins.
 
 ## 6. Per-step work lists
 
@@ -519,7 +519,7 @@ The gap is the *As landed → 16b.1* "Open gap — `within`" bullet: `within` is
 - **Re-run command:**
 
   ```
-  ./singularity run plugins/tasks/plugins/tasks-core/e2e/trigger-time.ts --repeats 9 \
+  ./equin run plugins/tasks/plugins/tasks-core/e2e/trigger-time.ts --repeats 9 \
     --attempt att-1790171990-gvf7 --conversation conv-1790171990-gsrc \
     --other-task task-1791291104773-ac57q3 \
     --dependency-task task-1791290989353-f13l6v --dependency-on task-1791031230318-lwd9lz \
@@ -546,7 +546,7 @@ The gap is the *As landed → 16b.1* "Open gap — `within`" bullet: `within` is
 
 **Union SQL + routes snapshot (C6).**
 
-- **Files:** the fixture is `network/live/server/testing/compile-union-golden.json`, the test is `server/internal/compile-union-golden.test.ts`, and the generator is `./singularity run plugins/network/plugins/live/server/testing/gen-compile-union-golden.ts`.
+- **Files:** the fixture is `network/live/server/testing/compile-union-golden.json`, the test is `server/internal/compile-union-golden.test.ts`, and the generator is `./equin run plugins/network/plugins/live/server/testing/gen-compile-union-golden.ts`.
 - **Provenance:** generated from the pre-16b code.
 - **Coverage:**
   - four arms: a text pk; a text pk with a LEFT lookup; an integer pk; a uuid pk with a REQUIRED lookup, which renders INNER JOIN;
@@ -664,7 +664,7 @@ The gap is the *As landed → 16b.1* "Open gap — `within`" bullet: `within` is
   - codegen: a hand-written *Eager tier* section (preload pins read through `mintsOf`, `requires`).
   - resource-vocabulary: the collection / served-collection matchers are described as matching `rows` (every form, `all` included), here and in `vocabulary.ts` / `check/index.ts`.
   - derived-tables: the A35 consequence for a collection joining a rollup whose hop is not a source.
-  - boot-snapshot: the L2 set is `persistedKeys()` through the usable-row predicate; the cold-boot paragraph names the alias seed and the backstop. boot-bench: `persisted` means a usable row. live-state-snapshot: `./singularity test`, not bare `bun test`; the server barrel description (usable row, persist modes, compact, seed + backstop).
+  - boot-snapshot: the L2 set is `persistedKeys()` through the usable-row predicate; the cold-boot paragraph names the alias seed and the backstop. boot-bench: `persisted` means a usable row. live-state-snapshot: `./equin test`, not bare `bun test`; the server barrel description (usable row, persist modes, compact, seed + backstop).
 - **Code comments:** `compile-window.ts` (header: the whole-set sibling is `./compile-alias`; the assemblers take one arm, the union and `all` compilers share only the routed half; the signature-field loop; `windowQueryResource`'s docstring no longer compares with `queryResource`), `raw-sql.ts` (the `all` compiler, not "the persisted alias next"). `arm-plan.ts`, the `rollup-spec.ts` W8 comment and the guard message + test regex were already done by 16b.2 / 16b.4 / 16b.5.
 - **Review fixes.** The signature-field loop in `assembleWindow` is deleted: the `readonly [WindowArmPlan]` 1-tuple already makes a second arm unwritable, so its guard could never fire (the type is the rule's strongest form). The docstring now says "over its one arm" and names the union and `all` compilers as the routed-half sharers; *Arms and assembly* no longer lists a cross-arm signature check. network/live *Preload* is split by form: a window collection hydrates `defaultParams`, an `all` collection hydrates `key` at `{}` (it has no `defaultParams`); `"boot-and-keep"` keeps the preloaded tuple's cache resident.
 
@@ -715,7 +715,7 @@ Caveats:
   - For every step it pins the probe's exact cost: insert is an entrant (`[T6]`, 1 `orderOf`); rename is an order move (`[T2]`, 1); hold, edges, conversations, push and reorder load nothing (route gate or table not read); an attempt insert or delete is one host refill; an attempt move is one load `[T2,T4]`; a task delete is an exit with no load; a drop is a where-flip refill `[T4]` that omits the id. No FULL load happens after the subscribe. It also checks the idle `{}` snapshot.
   - `task-category/server/internal/task-categories-oracle.test.ts` runs the same workload with the category writes spliced in. A category set is `[id]` plus 1 `orderOf`; a change is `[id]` with 0; a clear is no load; the task delete (an FK cascade of its category) is no load; every other tree write is no load.
   - It subscribes `{}` and `:rows` (two ids, one cascade-deleted mid-script). Both converge after every step, and neither has a FULL load after the subscribe. With no subscriber, a floor persist writes the kept value. The suite ends with the C39 case.
-- **Open item for step 19.** `bun test` runs all files in ONE process (`./singularity test` does not isolate them). A suite that registers a REAL tasks-core key (`tasks`) on the oracle will collide (`defineResource: duplicate key`) in any run that also loads a test importing the tasks-core SERVER barrel, because that barrel's `resources.ts` registers the real key on the real database. `deps-tree-move.test.ts` and the all-conversations suites import it today. Step 19 must solve this structurally, either by moving the served declarations out of the barrel's import graph or by giving the runtime a test seam. It must not loosen the duplicate guard. Step 18 does not hit it, because no test imports `task-category/server`.
+- **Open item for step 19.** `bun test` runs all files in ONE process (`./equin test` does not isolate them). A suite that registers a REAL tasks-core key (`tasks`) on the oracle will collide (`defineResource: duplicate key`) in any run that also loads a test importing the tasks-core SERVER barrel, because that barrel's `resources.ts` registers the real key on the real database. `deps-tree-move.test.ts` and the all-conversations suites import it today. Step 19 must solve this structurally, either by moving the served declarations out of the barrel's import graph or by giving the runtime a test seam. It must not loosen the duplicate guard. Step 18 does not hit it, because no test imports `task-category/server`.
 - **`tree-live-verify` (new):** `tasks-core/e2e/tree-live-verify.ts`. It seeds an inert task through the deploy DB (prefix `e2e-tree-`, swept on exit), opens `/agents/tasks`, and records the socket frames and every HTTP read of a tree key. It contains the step-18 phase; steps 19–22 add theirs. Run on this deploy (build `6b4c1c8223-1791383823582`), **ALL CHECKS PASSED (7)**:
   - a category set arrives as one upsert of `{ taskId, category }`, and no frame re-sends the whole set;
   - a change arrives as one upsert;
@@ -729,7 +729,7 @@ Caveats:
 - **Trigger time** (`--repeats 9`, the 16·0 pinned fixture; JSON in the session scratchpad as `trigger-time-18.json`). The host was more contended than at 16·0: the empty-transaction COMMIT measured 0.181 ms against 0.036 ms, and `DELETE task_dependencies`, whose layout did not change, measured 0.041 → 0.116 ms exec (trigger 0.033 → 0.090 ms, about 2.7×).
   - **UPDATE `tasks_ext_category`** (the one table whose layout changed): exec 0.057 → 0.233 ms; `live_state_tasks_ext_category_u` 0.040 → 0.206 ms (about 5×; the routed trigger builds old/new rows). Net of the run's ~2.7× noise, that is roughly 2× the PK-only trigger, about 0.1 ms per statement.
   - Other rows of this run, for the record: `UPDATE tasks status` 0.32 ms; `INSERT attempt` 0.127; `UPDATE conversations status` 0.966; `waiting_for` only 0.331; `INSERT pushes` 0.334; `INSERT task_dependencies` 0.196; `DELETE attempt` (cascade) 1.017; `UPDATE attempts.task_id` 0.267. COMMIT with throwaway rows 0.426 ms.
-- **Tests:** `./singularity test plugins/tasks/plugins/task-category plugins/tasks/plugins/tasks-core plugins/tasks/plugins/task-dependencies plugins/network/plugins/live` → bun 518 pass across 50 files; vitest 52 pass across 3 files.
+- **Tests:** `./equin test plugins/tasks/plugins/task-category plugins/tasks/plugins/tasks-core plugins/tasks/plugins/task-dependencies plugins/network/plugins/live` → bun 518 pass across 50 files; vitest 52 pass across 3 files.
 - **Build:** green (`6b4c1c8223-1791383823582`).
 - **Docs:** task-category CLAUDE.md (the `all` set, its costs, the C39 note, the tests). The tasks-core testing barrel's autogen lists the tree-oracle helpers.
 
@@ -743,7 +743,7 @@ Applies the step-18 review. Earlier text is unchanged. Where it disagrees with t
   - change-feed: `routeChange` is now `createChangeRouter({ routeTableChange, applyDbChange })`, bound to server-core's routers. The factory body is the old function with no behaviour change. It is exported from change-feed's `server/testing` only, and the oracle routes its LISTEN consumer through `createChangeRouter(runtime)`.
   - The duplicate guard is untouched. Two oracles can now coexist in one process, so the "one harness per process" note is gone.
   - **The step-19 open item is closed by the same change.** Registering the real `tasks` key on the oracle can no longer collide with suites that import the tasks-core server barrel, because the oracle never touches the global registry.
-  - Repro (`./singularity test` on `auto-start-launch.test.ts` + `task-categories-oracle.test.ts` + `tree-oracle.test.ts`): before, 7 pass and 1 fail (duplicate key). After, **12 pass, 0 fail**.
+  - Repro (`./equin test` on `auto-start-launch.test.ts` + `task-categories-oracle.test.ts` + `tree-oracle.test.ts`): before, 7 pass and 1 fail (duplicate key). After, **12 pass, 0 fail**.
 - **Major: the loading collapse in `CategoryField`. Fixed in the data-view primitive.**
   - `FieldDef` gains `pending?: boolean`, meaning the field's own values are not known yet. While it is set, `FieldCell` draws the loading block. `resolveBodyState` takes `readFields`, which `fieldsReadByView(fields, activeState)` computes: the group-by field, the sort fields, and every field named in the filter and fold trees.
   - The body's precedence is now `server error > failed read > failed field > loading > pending field > the view`. A view laid out by a pending field renders its loading state. A view laid out by a field with `readError` renders that failure (a new `field-error` arm in `BodyFallback`, which names the field and offers Retry) instead of filing every row under the field's unset bucket.
@@ -765,7 +765,7 @@ Applies the step-18 review. Earlier text is unchanged. Where it disagrees with t
   - The clear cost no load. **W1/W2 hold for this key.**
 - **e2e:** `tree-live-verify.ts` on this deploy reports **ALL CHECKS PASSED (8)**. Noise, all non-fatal: `429`s from the gateway and one `Failed to fetch` page error on the contended host.
 - **Tests:**
-  - `./singularity test` over task-category, tasks-core, task-dependencies, task-track, network/live, data-view, change-feed and `auto-start-launch.test.ts`: bun **894 pass / 0 fail** across 91 files; vitest 228 pass.
+  - `./equin test` over task-category, tasks-core, task-dependencies, task-track, network/live, data-view, change-feed and `auto-start-launch.test.ts`: bun **894 pass / 0 fail** across 91 files; vitest 228 pass.
   - Two vitest suites (`hosted-toolbar`, `sections-toolbar`) timed out at 5 s on their first render while the host was under duress. Rerun alone, they passed **18/18**.
 - **Build:** the first rebuild failed type-check. `foldResource` inferred its union from the first handler, a test call repeated `readFields`, and a manual `useMemo` over `activeState` broke React Compiler memoization. After those fixes the build is **green** (`6b4c1c8223-1791388654162`).
 
@@ -799,7 +799,7 @@ Applies the step-18 review. Earlier text is unchanged. Where it disagrees with t
   - On this deploy (`6b4c1c8223-1791394888817`) the horizon seeded to 28604792 (the oldest retained xid minus 1) against floor 28638037, and the boot replayed (866 and 930 rows, from the two backends of the hot swap). It did not backstop.
 - **Correction to the previous subsection.** It called the 65 ms load with no ids at boot "the L2 boot recompute". That load was the **heal backstop**: at 1791391510 the log says "boot reconcile healed rollup(s) task_latest_conversation", which is the W8 drift that the trigger-time run left behind. Separately, the backstop at 1791393260 ("oldest retained changelog xid 28604793 > snapshot floor 28604790") is the false positive that this round removes.
 - **Measurements:** no table's trigger layout changed in this round, so trigger time was not re-measured.
-- **Tests:** `./singularity test` over task-category, task-dependencies, tasks-core, data-view, live-state-snapshot, derived-views and migrations: bun **653 pass / 0 fail** (66 files); vitest **178 pass** (34 files).
+- **Tests:** `./equin test` over task-category, task-dependencies, tasks-core, data-view, live-state-snapshot, derived-views and migrations: bun **653 pass / 0 fail** (66 files); vitest **178 pass** (34 files).
 - **Build:** green on the first attempt (`6b4c1c8223-1791394888817`).
 - **Runtime profile** (`6b4c1c8223-1791394888817`, read after the e2e): `task-categories` loaded 6 times.
   - 2 loads on subscribe (the first one and the reload's): 19.1 ms and 18.4 ms.
@@ -902,7 +902,7 @@ Applies the step-18 review. Earlier text is unchanged. Where it disagrees with t
   - The rest: `INSERT attempt` 0.262; `UPDATE conversations status` 1.041 (`attempt_conv_agg__conversations_u` 0.240, which now also aggregates `has_waiting_conv`); `waiting_for` only 0.319 (both rollup triggers ≤ 0.015, so the diff still drops it); `INSERT pushes` 0.298; `UPDATE tasks_ext_category` 0.114; `DELETE attempt` (cascade) 0.815; `UPDATE attempts.task_id` 0.144. COMMIT with throwaway rows: 0.091 ms.
   - As in ★17, the script's committed throwaway delete leaves W8 drift on `task_latest_conversation` until step 21, so the next boot of this deploy will take the heal backstop.
 - **Tests.**
-  - `./singularity test` over `plugins/tasks` (every sub-plugin), active-data attempt / task / task-link, the page todo task-link, add-task, queue, dependencies, network/live and `auto-start-launch.test.ts`: bun **632 pass / 0 fail** (62 files); vitest **52 pass** (3 files).
+  - `./equin test` over `plugins/tasks` (every sub-plugin), active-data attempt / task / task-link, the page todo task-link, add-task, queue, dependencies, network/live and `auto-start-launch.test.ts`: bun **632 pass / 0 fail** (62 files); vitest **52 pass** (3 files).
   - The tree oracle passed in 2 separate runs (alone, and in the run above).
 - **Build:** green (`6b4c1c8223-1791397243309`, the e2e and profile deploy; final docs-only rebuild `6b4c1c8223-1791397921800`). The first build failed `plugin-boundaries` R13 (`TaskListItemSchema` public with only a test importer); see deviations.
 - **Deviations.**
@@ -931,7 +931,7 @@ Applies the step-18 review. Earlier text is unchanged. Where it disagrees with t
   - The `liveValue` doc example for `pluginChanges` drops `load: "on-demand"`, which the real declaration does not set.
   - The `TaskListItemSchema` comment in `core/internal/schema.ts` names `taskDescriptions` instead of the deleted `task-detail` resource.
 - **Measurements.** No table layout changed in this round (tests and docs only), so the trigger-time script was not re-run. Step 19's numbers stand. The runtime W-checks are unchanged for the same reason: no served code moved.
-- **Tests.** `./singularity test plugins/tasks/plugins/tasks-core`: bun **123 pass / 0 fail** (13 files). This includes the tree oracle with the description reader and `conversation.resume`, the frozen C39 case, the new `views.test.ts` case, and `all-parity`.
+- **Tests.** `./equin test plugins/tasks/plugins/tasks-core`: bun **123 pass / 0 fail** (13 files). This includes the tree oracle with the description reader and `conversation.resume`, the frozen C39 case, the new `views.test.ts` case, and `all-parity`.
 - **Build:** green (`6b4c1c8223-1791399040261`).
 
 ### 20 — `attempts` as an `all` collection; the carrier deleted; C36 (2026-10-07)
@@ -964,7 +964,7 @@ Applies the step-18 review. Earlier text is unchanged. Where it disagrees with t
 - **`tree-live-verify`.** The step-20 phase is in. The page is now the seeded task's detail pane (`/agents/tasks/t/<id>`), whose attempt sections read the set. Run on this deploy: **ALL CHECKS PASSED (25)**. An attempt arrives as an entrant (`pending`, no conversations) and the task as one upsert (`in_progress`); a `done` conversation as one upsert of the attempt (`closed`, listed); a `last_viewed_at` write produces no `attempts` frame (the next one is the retitle that follows it); a push is one upsert of the attempt (`completed`) and of the task (`done`); the attempt's delete is a delete and the task one upsert (`new`). No `attempts` frame re-sent the set, no HTTP read of a tree key after first paint, no reload. The step-18/19 checks still pass. Noise: two gateway `429`s.
 - **W3 (`get_runtime_profile kind=loader`, same deploy, after two e2e runs).** `attempts`: 14 loads, 4 `sub` (the subscribe and the reload of each run; 450–1230 ms on a contended host) and 10 `push`, avg 14 ms, max 41 ms, `measuresMax.ids` 1. `tasks`: 20 `push` loads, avg 32 ms, `measuresMax.ids` 1. **A push ⇒ 0 FULL on `attempts` and `tasks`; `pushes.attempts-cascade` no longer exists. W1/W2 hold for `attempts`.** Still open (step 22, W4): `conversations-active` had 21 push loads over the same window.
 - **Trigger time** (`--repeats 9`, the 16·0 pinned fixture; JSON in the session scratchpad as `trigger-time-20.json`; empty COMMIT 0.046 ms, so a quiet host like step 19's). Tables whose layout changed: `INSERT attempt` exec 0.198 ms (`live_state_attempts_i` 0.132); `UPDATE attempts.task_id` 0.175 (`_u` 0.151); `UPDATE conversations status` 1.070 (`live_state_conversations_u` 0.356, `task_latest_conversation` 0.313, `attempt_conv_agg` 0.222); `waiting_for` only 0.349 (both rollups ≤ 0.016); `INSERT pushes` 0.358 (`live_state_pushes_i` 0.131, `attempt_push_agg` 0.120); `DELETE attempt` (cascade) 0.994. The rest: `UPDATE tasks status` 0.634; `task_dependencies` INSERT 0.141 / DELETE 0.105; `tasks_ext_category` 0.213. COMMIT with throwaway rows 0.213 ms. All within step 19's range. As before, the script's committed throwaway delete leaves W8 drift on `task_latest_conversation` until step 21.
-- **Tests.** `./singularity test` over tasks-core, network/live, attempt-view, worktree-identity, attempt-work, task-events, active-data/attempt, commits-graph and conversation-ui: bun **559 pass / 0 fail** (54 files); vitest **52 pass** (3 files). tasks-core alone: 124 / 0 (13 files).
+- **Tests.** `./equin test` over tasks-core, network/live, attempt-view, worktree-identity, attempt-work, task-events, active-data/attempt, commits-graph and conversation-ui: bun **559 pass / 0 fail** (54 files); vitest **52 pass** (3 files). tasks-core alone: 124 / 0 (13 files).
 - **Build:** green (`6b4c1c8223-1791401647971`). The first build failed `plugin-boundaries` R13 (`AttemptWithConversationsSchema` public in core with only the oracle test importing it): it is dropped from the core barrel and the test imports `core/schemas` by relative path. The e2e's task-status expectation was corrected after that build (string and comment only).
 - **Deviations.**
   - **`jsonAgg` typing (network/live `serve-all.ts`).** An aggregate binding may now hold the field's JSON FORM (`JsonForm<V>`: a `Date` as its ISO string, recursively) as well as `V`. `jsonAgg` returns its elements as the JSON the driver parsed (a `timestamptz` as the compiler's ISO text), which is byte for byte what the wire makes of the decoded value; requiring `V` would have meant decoding every element only to re-encode it. Step 20 is the first `serveCollection` with a `jsonAgg`; the client parses `conversations[].createdAt` with the row schema as before. network/live CLAUDE.md (*The `all` arm*) states it.
@@ -977,7 +977,7 @@ Applies the step-18 review. Earlier text is unchanged. Where it disagrees with t
 - **The JSON form is a `jsonAgg`'s alone (rung 2).** Step 20's `AllFieldBinding` accepted `AggregateRef<…, JsonForm<V>>` for every aggregate, so a scalar `aggregate(sql\`max(x.ended_at)\`, { decoder: String, sqlType: "timestamp with time zone" })` bound to a `Date` field type-checked although it ships Postgres's text form (`2026-10-07 12:00:00.123+00`), not ISO. Now `Aggregate<V, F>` and `AggregateRef<R, N, V, F>` carry a type-only FORM phantom (`AggregateForm = "decoded" | "json"`, default the union, so every existing three-argument spelling still reads both): `aggregate` returns form `decoded`, `jsonAgg` form `json`, and `AggregateRefsOf` hands each ref its aggregate's form (`AggregateFormOf`). `serve-all`'s binding is `AggregateRef<…, V, "decoded"> | AggregateRef<…, JsonForm<V>, "json">`. Pinned in `serve-collection-all.test.ts` (types): a `jsonAgg` of a `timestamptz` binds a `{ at: Date }[]` field; a scalar `string` aggregate bound to a `Date` field is a `@ts-expect-error`. query-resource and network/live CLAUDE.md state it. No runtime or wire change (`AggregateForm` is not exported: nothing outside `all-joins.ts` names it).
 - **The e2e no longer claims the viewed-at cost.** The step-20 check "a viewed-at write reaches no `attempts` frame" could not fail on the regression it named: the runtime diffs a refill against the kept rows and sends no frame for an identical row, so a `last_viewed_at` write routed into `attempts` again (C1) would refill, send nothing, and pass. The `last_viewed_at` write is dropped from the e2e; the check is now "a retitle arrives as one upsert of its attempt, carrying the new title", and the script's header says the poller write's cost is NOT checked on the socket. Its evidence is the tree oracle, which counts loads: `conversation.poller` (`waiting_for` + `last_viewed_at` on C3, A3's conversation) is pinned at no load and no `orderOf` on `attempts`, `attempts:rows` and `tasks`. The step-20 bullet above (*`tree-live-verify`* — "a `last_viewed_at` write produces no `attempts` frame") overstated it: read it as the retitle check only.
 - **Rejected alternative:** reading `attempts` loader spans with `parent.kind === "push"` from the e2e. The runtime profile is served only through debug/profiling's plugin-private endpoint (`shared/`), which an `e2e/` script may not import, and a hard-coded path would drift silently; the oracle already pins the exact cost.
-- **Verification.** Build `6b4c1c8223-1791404242411` green (type-check included — the new `@ts-expect-error` is live). `./singularity test` over network/live, query-resource and tasks-core: bun 679 pass, 0 fail; vitest 52 pass. `tree-live-verify`: **ALL CHECKS PASSED (25)**. No layout changed, so the 16·0 trigger-time numbers of step 20 stand.
+- **Verification.** Build `6b4c1c8223-1791404242411` green (type-check included — the new `@ts-expect-error` is live). `./equin test` over network/live, query-resource and tasks-core: bun 679 pass, 0 fail; vitest 52 pass. `tree-live-verify`: **ALL CHECKS PASSED (25)**. No layout changed, so the 16·0 trigger-time numbers of step 20 stand.
 
 ### 21 — `agent-launches` as an `all` collection, atomic with `task_latest_conversation`'s `attempts` source (2026-10-08)
 
@@ -1066,7 +1066,7 @@ Applies the step-18 review. Earlier text is unchanged. Where it disagrees with t
   - The rest: `UPDATE conversations status` 2.067 ms; `waiting_for` only 1.123 ms (both rollup triggers ≤ 0.072 ms, so the diff still drops it); `INSERT pushes` 1.071 ms; `task_dependencies` INSERT 0.593 / DELETE 0.423 ms; `tasks_ext_category` 0.484 ms. COMMIT with throwaway rows: 0.330 ms.
   - Net of the host noise, the attempts source adds about one rollup maintain (≈0.1–0.2 ms on a quiet host) to an attempt update or delete. Both are rare statements.
 - **Tests.**
-  - `./singularity test` over agents, tasks-core, task-category, network/live, migrations, derived-tables and query-resource: bun **910 pass / 1 fail** (85 files); vitest **3 files pass**.
+  - `./equin test` over agents, tasks-core, task-category, network/live, migrations, derived-tables and query-resource: bun **910 pass / 1 fail** (85 files); vitest **3 files pass**.
   - The one failure is a 5 s timeout in `migrations/core/internal/published.test.ts` (a git spawn SIGTERMed under host duress), a file this step does not touch. Rerun alone, migrations is **206 pass / 0 fail**.
   - The agents oracle: 3 pass on its own and in the full run.
 - **Build:** green (`6b4c1c8223-1791409226480`, the deploy measured above; final rebuild after the e2e edit `6b4c1c8223-1791410707988`).
@@ -1091,7 +1091,7 @@ Applies the step-18 review. Earlier text is unchanged. Where it disagrees with t
   - A prototype was written: `Route.inertOps?: ("I" | "D")[]`, derived in `rollupSourceRoute` from the ops `src.ops` leaves out, with tests. It was reverted before the build, so the tree is unchanged.
   - The prototype fixed one design point. Only `I` and `D` can soundly be skipped by op. A `U` is the feed's catch-all, used by the reconnect sweep (`ids: null`), a change producer's coalesced upsert (which includes inserts) and the view fan-out, so a source with `ops: ["insert"]` could never skip a `U`.
   - Filed as sidequest `task-1791411816223-6tbpyf`. The oracle pin `attempt.insert: [L3]` is unchanged, and its comment now names the task as the change that turns it into NOTHING.
-- **Verification.** Build `6b4c1c8223-1791411975973` is green; it waited about 25 minutes for a host CPU grant under duress. `./singularity test` over tasks-core, agents and query-resource: bun **288 pass / 0 fail** (28 files); vitest has no suites under these paths. No table layout changed, so step 21's trigger-time numbers stand.
+- **Verification.** Build `6b4c1c8223-1791411975973` is green; it waited about 25 minutes for a host CPU grant under duress. `./equin test` over tasks-core, agents and query-resource: bun **288 pass / 0 fail** (28 files); vitest has no suites under these paths. No table layout changed, so step 21's trigger-time numbers stand.
 
 ### 22 — the conversation lists: `conversations-active` / `-system` as `all`, `-gone` a window, `conversations.by-id` (2026-10-08)
 
@@ -1155,7 +1155,7 @@ Applies the step-18 review. Earlier text is unchanged. Where it disagrees with t
     - a delete arrives as a delete from the window.
   - Over the phase, no active frame re-sent the set and no HTTP read of a list or of by-id happened.
   - Run on deploy `6b4c1c8223-1791417019579`: **ALL CHECKS PASSED (43)**. Noise: gateway `429`s, one aborted `task-source-url` read on navigation, and the post-reload screenshot timing out.
-- **W4 (`get_runtime_profile kind=loader`, same deploy).** Loader counts were snapshotted before and after a scripted probe: a temporary `./singularity run` script, deleted after use, that ran 5 × (task hold, release, attempt insert, attempt `worktree_path` update, attempt delete) plus a task insert and delete, through the deploy DB.
+- **W4 (`get_runtime_profile kind=loader`, same deploy).** Loader counts were snapshotted before and after a scripted probe: a temporary `./equin run` script, deleted after use, that ran 5 × (task hold, release, attempt insert, attempt `worktree_path` update, attempt delete) plus a task insert and delete, through the deploy DB.
   - `tasks` went from 41 to 62 push loads and `attempts` from 29 to 39 (the writes were routed).
   - `conversations-active` stayed at 19, `-system` at 15, `-gone` at 22, `conversations.by-id:rows` at 14, `conversations-gone-stats` at 27. **0 loader spans on the conversation lists for task and attempt writes. W4 holds.**
   - Over the e2e window: `conversations-active` had 19 push loads, avg 7 ms, max 17 ms; `-system` 15 (avg 9 ms); `-gone` 22 (avg 6 ms, `measuresMax.ids` 1).
@@ -1164,7 +1164,7 @@ Applies the step-18 review. Earlier text is unchanged. Where it disagrees with t
 - **Layouts:** the deployed `live_state_*` triggers on `conversations`, `attempts` and `tasks` are byte-identical to step 21's. The conversation lists' identity routes need no carry, and the owner joins' reverse routes were already installed by `conversations.all` / `.history` at P7. No table's trigger layout changed, so the 16·0 trigger-time script was not re-run; step 21's numbers stand.
 - **L2:** `conversations-active` and `-system` have a definition, `definition_at = persisted_at`, and `tables_read = {attempts, conversations, tasks}`. There is no `conversations-gone` row.
 - **Tests:**
-  - `./singularity test` over tasks-core, network/live, conversations/web, conversation-view/web, recover, the queue data-view and queue plugins, all-conversations, agent-notes, welcome, conversation-ui, task-category and agents: bun **571 pass / 1 fail** (59 files); vitest 52 pass.
+  - `./equin test` over tasks-core, network/live, conversations/web, conversation-view/web, recover, the queue data-view and queue plugins, all-conversations, agent-notes, welcome, conversation-ui, task-category and agents: bun **571 pass / 1 fail** (59 files); vitest 52 pass.
   - The one failure was all-conversations' A17 check, pre-existing since step 19 or 20 (see deviations). Fixed and re-run: all-conversations **17 / 0**.
 - **Build:** green (`6b4c1c8223-1791417019579`, the e2e and profile deploy; the final rebuild after the test and comment edits, `6b4c1c8223-1791418137974`, is green too).
 - **Deviations.**
@@ -1216,7 +1216,7 @@ Applies the step-18 review. Earlier text is unchanged. Where it disagrees with t
   - `tree-live-verify` on that deploy: **ALL CHECKS PASSED (45)** (43 before, plus the two boot checks).
   - The run before it failed one pre-existing check ("a new conversation arrives as an entrant of `conversations-active`", a 15 s wait). The run showed `PAGEERROR: Failed to fetch` and a 40 s boot snapshot under host duress. It passed on the clean rerun and on the run before that (45/45).
   - Noise: gateway `429`s, an aborted `task-source-url` read on navigation, a screenshot timeout.
-- **Tests:** `./singularity test` over tasks-core and conversations (web, server, core): bun **213 pass / 0 fail** (19 files). The tree oracle passes all 7 of its tests.
+- **Tests:** `./equin test` over tasks-core and conversations (web, server, core): bun **213 pass / 0 fail** (19 files). The tree oracle passes all 7 of its tests.
   - One earlier run failed the main oracle test's `tasks` cost for `conversation.insert`: `[T3, T6]` + rowLoads `[T3]` were expected, and nothing was received. The view still converged. The next three runs passed, so the load landed in a neighbouring step's cost window on a contended host. Its cause is pre-existing and not investigated here.
 - **Build:** green, `6b4c1c8223-1791421656736` (the e2e deploy; type-check and docs included). The final rebuild after the last test and e2e edits, `6b4c1c8223-1791426434129`, is green too.
 - **Not re-run:** no table's trigger layout changed and no runtime path changed beyond the deleted endpoint, so neither the 16·0 trigger-time script nor a `get_runtime_profile` pass was re-run. The step-22 W4 and W9 numbers stand.

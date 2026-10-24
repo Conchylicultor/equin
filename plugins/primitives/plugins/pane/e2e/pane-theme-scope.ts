@@ -42,7 +42,7 @@
  *
  * Manual only — nothing runs this automatically.
  *
- *   ./singularity run plugins/primitives/plugins/pane/e2e/pane-theme-scope.ts \
+ *   ./equin run plugins/primitives/plugins/pane/e2e/pane-theme-scope.ts \
  *     [--base http://<worktree>.localhost:9000] [--page <blockId>] [--headed]
  */
 import {

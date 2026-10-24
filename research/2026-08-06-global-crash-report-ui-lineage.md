@@ -291,7 +291,7 @@ neutral leaf:
 
 ## Verification
 
-1. `./singularity build` — regenerates the autogen doc blocks; the
+1. `./equin build` — regenerates the autogen doc blocks; the
    `plugins-doc-in-sync` and `plugin-boundaries` checks must stay green.
 2. **Token round-trip** — extend `plugins/primitives/plugins/ui-context/core/internal/token.test.ts`
    with a `"crash"`-provenance serialize→parse case and a legacy-body case:
@@ -310,9 +310,9 @@ neutral leaf:
 4. **No regression in the portal path**:
    ```bash
    bun run test:dom plugins/improve/plugins/element-picker   # portal-lineage.test.tsx
-   ./singularity test plugins/reports/plugins/render-loop
+   ./equin test plugins/reports/plugins/render-loop
    ```
-5. **End to end** — after `./singularity build`, trigger a real boundary crash in
+5. **End to end** — after `./equin build`, trigger a real boundary crash in
    the app, then confirm with the `query_db` MCP tool:
    ```sql
    SELECT data->'uiContext'->>'path', data->>'slot'

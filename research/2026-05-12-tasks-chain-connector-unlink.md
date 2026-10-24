@@ -146,7 +146,7 @@ if (!isHead && card.linkedToPrev !== false) {
 
 ## Verification
 
-1. `./singularity build` — confirm no TS errors, migrations unchanged
+1. `./equin build` — confirm no TS errors, migrations unchanged
 2. Open Improve button → add 3 tasks
 3. Hover the first connector → chain-break icon appears, click it
 4. Connector renders as dashed + `∥` label; insert `+` is hidden

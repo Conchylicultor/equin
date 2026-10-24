@@ -236,9 +236,9 @@ This means the toaster imports `toast` from `@plugins/notifications/web`.
 
 ## Verification
 
-1. `./singularity build` — no TS errors, no import cycles
+1. `./equin build` — no TS errors, no import cycles
 2. Trigger a toast (e.g. copy logs) — verify toast appears immediately AND notification appears in bell (no double-toast)
 3. Trigger a server-originated notification (crash) — verify toast appears via bell auto-toast AND appears in bell list
 4. Open bell with mixed types — verify filter chips work, counts are correct
-5. `./singularity check` — plugin boundaries, eslint pass
+5. `./equin check` — plugin boundaries, eslint pass
 6. Screenshot the bell popover with multiple notification types

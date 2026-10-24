@@ -11,7 +11,7 @@ import {
  * get wrong and expensive to discover in production — arming at all, and
  * disarming for a command that is MEANT to be detached — without waiting on real
  * poll ticks. The end-to-end reparent behaviour is verified by orphaning a real
- * `./singularity` invocation, which no unit test can stand in for.
+ * `./equin` invocation, which no unit test can stand in for.
  */
 
 // Every test must leave the runner with no live poll, or an unref'd interval

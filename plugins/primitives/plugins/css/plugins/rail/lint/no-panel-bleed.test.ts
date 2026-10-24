@@ -1,5 +1,5 @@
 /**
- * Tests for the `no-panel-bleed` lint rule. Run with `./singularity test`.
+ * Tests for the `no-panel-bleed` lint rule. Run with `./equin test`.
  *
  * The `valid` cases are the shapes that must NEVER trip it, and each is a real
  * one: a band INSIDE a panel bleeding (the sanctioned fix, and what the three

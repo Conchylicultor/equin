@@ -68,7 +68,7 @@ export function viewsDescriptor(
       // Config is the SINGLE SOURCE OF TRUTH for a surface's views — there is no
       // code synthesis of default view-instances, so a DataView whose config has
       // zero rows renders a "No views configured" placeholder at runtime.
-      // `./singularity build` seeds the override; these lines ride along as the
+      // `./equin build` seeds the override; these lines ride along as the
       // file's own comments and are what `config:overrides-authored` echoes back
       // when the seeded values have not yet been reviewed.
       requiresAuthoredOverride: {

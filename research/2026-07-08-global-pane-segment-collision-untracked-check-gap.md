@@ -27,7 +27,7 @@ const out = await git(root, ["grep", "-l", "-e", "Pane.define", "-e", "defineRou
 
 `git grep` only searches **tracked** files. The file that introduces a collision
 is a **newly-created, still-untracked** pane file — precisely what an agent
-produces when adding a pane. The agent's normal loop is *edit → `./singularity
+produces when adding a pane. The agent's normal loop is *edit → `./equin
 build` (which runs checks) → deploy → browser*; the new file is never committed
 before deploy, so `git grep` can't see it, the check passes, the app ships, and
 `core.root` crashes at runtime. (Editing an *existing* tracked file to add a
@@ -54,7 +54,7 @@ The pane check bypasses all of this, so it is blind to untracked files **and**
 its cached PASS is keyed on a tree hash that *did* include the missed file — the
 pass is recorded against content the check never actually inspected.
 
-**Intended outcome:** the collision is caught at `./singularity build` (before
+**Intended outcome:** the collision is caught at `./equin build` (before
 deploy) for new *and* modified files, the class of "check hand-rolls a
 git-state-dependent `git grep`" is structurally prevented from recurring, and
 runtime/build-time detection stay single-sourced.
@@ -139,7 +139,7 @@ future check re-hand-rolls a git-state-dependent scanner.
   - `lint/no-adhoc-git-grep.test.ts` — a `RuleTester` valid/invalid pair.
   - `CLAUDE.md` — one-paragraph "why", matching the sibling lint plugins.
 - The root `eslint.config.ts` auto-discovers every `lint/index.ts`, so no
-  registry edit; `./singularity build` regenerates and the `eslint` /
+  registry edit; `./equin build` regenerates and the `eslint` /
   `type-check` checks enforce it repo-wide.
 
 ## Critical files
@@ -163,22 +163,22 @@ future check re-hand-rolls a git-state-dependent scanner.
 
 ## Verification (end-to-end)
 
-1. **Build & regen:** `./singularity build` — regenerates the lint config to
+1. **Build & regen:** `./equin build` — regenerates the lint config to
    include `no-adhoc-git-grep`, then runs all checks; must stay green.
 2. **Reproduce the exact gap is now closed** (the core proof):
    - Create a **new, uncommitted** file, e.g.
      `plugins/apps/plugins/agent-manager/plugins/shell/web/__probe_panes.tsx`,
      containing `Pane.define({ id: "probe", segment: "agents", component: … })`
      (collides with `agentsRootPane`'s `"agents"`). Do **not** `git add` it.
-   - `./singularity check pane:segments-unique` → **must now FAIL**, reporting
+   - `./equin check pane:segments-unique` → **must now FAIL**, reporting
      both `"agents"` sites. (Sanity: `git stash -u` is not needed; confirm that
      reverting change #2 makes the same probe **pass**, proving the untracked
      blindness was the gap.)
    - Delete the probe file.
-3. **No false positives:** on the clean tree, `./singularity check
+3. **No false positives:** on the clean tree, `./equin check
    pane:segments-unique` passes (segments are currently unique).
 4. **Guard fires:** temporarily add a `Bun.spawn(["git","grep",…])` inside any
-   `check/index.ts` → `./singularity check eslint` (or `type-check`) reports
+   `check/index.ts` → `./equin check eslint` (or `type-check`) reports
    `no-adhoc-git-grep`; revert. The committed `RuleTester` test also covers this
    (`bun test .../git-grep-safety/lint/no-adhoc-git-grep.test.ts`).
-5. **Full sweep:** `./singularity check` all-green.
+5. **Full sweep:** `./equin check` all-green.

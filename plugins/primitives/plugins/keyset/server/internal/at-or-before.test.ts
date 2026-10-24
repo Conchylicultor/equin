@@ -5,7 +5,7 @@
  * agrees with an `ORDER BY … NULLS LAST` reference — the cut's position among
  * the rows as Postgres itself orders them.
  *
- * Run: `./singularity test plugins/primitives/plugins/keyset`
+ * Run: `./equin test plugins/primitives/plugins/keyset`
  * (requires the running embedded cluster).
  */
 

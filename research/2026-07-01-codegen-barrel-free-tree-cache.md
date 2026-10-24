@@ -39,7 +39,7 @@ glob walk), `collectCoreFields` ×840, `buildFsSnapshot` (reads every `.ts/.tsx/
 uncached, IO/CPU-bound build whose absolute cost varies with page-cache warmth and machine
 load, not a fixed hot op.
 
-The **same uncached barrel-free build** recurs elsewhere in one `./singularity build`:
+The **same uncached barrel-free build** recurs elsewhere in one `./equin build`:
 - pre-barrel phase: `renderReorderableSlotsManifest` → `collectReorderableSlotSet` (1)
 - `token-group-vars`: `collectTokenGroupVarsUncached` → its own `buildPluginTree(skipBarrel)`
   (`token-group-vars-gen.ts:84`) — its result is memoized (`collectCache`) but the tree
@@ -67,7 +67,7 @@ the tree: `enrichedTreeCache` (`docgen.ts:158`) and `RegistryGenContext` (commit
 ## Approach (structural: one shared barrel-free tree cache)
 
 Introduce a memoized barrel-free tree builder — the exact twin of `buildEnrichedTree` —
-and route every build-pipeline barrel-free caller through it, so one `./singularity build`
+and route every build-pipeline barrel-free caller through it, so one `./equin build`
 does **exactly one** barrel-free build (+ one enriched).
 
 ### 1. Add `buildBarrelFreeTree(root)` (mirror `enrichedTreeCache`)
@@ -81,7 +81,7 @@ const barrelFreeTreeCache = new Map<string, Promise<PluginTree>>();
 // The barrel-FREE plugin tree (skipBarrelImport) — a pure function of committed
 // plugin source (facet extraction reads only .ts/.tsx/package.json; no generated
 // manifest feeds it), so it is identical for every skipBarrelImport caller in a
-// build. Memoized per root so one ./singularity build does ONE barrel-free build,
+// build. Memoized per root so one ./equin build does ONE barrel-free build,
 // not one per codegen step. Twin of buildEnrichedTree.
 export function buildBarrelFreeTree(root: string): Promise<PluginTree> {
   let cached = barrelFreeTreeCache.get(root);
@@ -122,7 +122,7 @@ between them only central-spawn + migration generation run, and neither rewrites
 - All post-return uses of the tree are **read-only** (`collectRenderSlotsStatic`,
   `computeDisabledIds`, `collectEntries`, the token-group `byDir` walk) — same sharing
   contract `enrichedTreeCache` already relies on. No caller mutates the returned tree.
-- The cache is process-scoped, so the separate `./singularity check` processes each build
+- The cache is process-scoped, so the separate `./equin check` processes each build
   once (identical benefit, identical output).
 
 ### Files to modify
@@ -138,19 +138,19 @@ No signature changes to any public generator; only the internal tree-build call 
 
 ## Verification
 
-1. **Baseline first.** `./singularity build` on the unchanged branch; note the
+1. **Baseline first.** `./equin build` on the unchanged branch; note the
    `generate config origins` and `token-group vars manifest` span durations from the build
    profile (`~/.singularity/data/<worktree>/build-profile-<id>.json`, written by
    `writeBuildProfile`), and `git status` (clean generated tree).
-2. Apply the change; `./singularity build` again.
+2. Apply the change; `./equin build` again.
 3. **Byte-identity (the hard gate):** `git status --short` must show **only** the 5 source
    files above — **no** drift in `config/**/*.origin.jsonc`, `plugins/reorder/shared/
    reorderable-slots.generated.ts`, the token-group-vars / data-views manifests, or any
    `*.generated.ts`.
-4. **In-sync checks pass:** `./singularity check config-origins-in-sync
+4. **In-sync checks pass:** `./equin check config-origins-in-sync
    token-group-vars-in-sync reorderable-slots-in-sync plugins-registry-in-sync`
-   (or full `./singularity check`).
-5. **Idempotence:** a second `./singularity build` immediately after is a no-op tree
+   (or full `./equin check`).
+5. **Idempotence:** a second `./equin build` immediately after is a no-op tree
    (confirms `regen-generated` symmetry is preserved).
 6. **Perf win:** in the new build profile, `generate config origins` drops from ~15s to
    sub-second and `token-group vars manifest` drops by roughly one barrel-free build.
@@ -174,7 +174,7 @@ caller, matching the `enrichedTreeCache` / `RegistryGenContext` precedents.
   **separate** caches by design: they carry different facet data (runtime facets need barrel
   imports) and the barrel-free build must stay barrel-free for the pre-barrel freeze-point
   invariant. Merging them is out of scope and would violate that invariant.
-- Numerous `./singularity check` plugins also call `buildPluginTree(skipBarrelImport:true)`
+- Numerous `./equin check` plugins also call `buildPluginTree(skipBarrelImport:true)`
   directly (boundaries, facets, plugin-boundaries, …). Each already builds once per its own
   process, so they are out of scope here; they could adopt `buildBarrelFreeTree` later for
   cross-check sharing if a single check process ever runs several tree consumers.

@@ -329,22 +329,22 @@ migration, not the exemption. Re-measure the residue afterwards, with names.
 ## Verification
 
 - **Per primitive:** a pure `*-classes.test.ts` co-located with the source, run by
-  `./singularity test plugins/primitives/plugins/css/plugins/<name>`. `planeClasses`
+  `./equin test plugins/primitives/plugins/css/plugins/<name>`. `planeClasses`
   asserts *equality with* `clipClasses`/`fillClasses` output rather than hardcoded
   strings, so a change in `Clip`/`Fill` fails there instead of drifting silently.
 - **Geometry:** a `coords` fixture in the layout-harness (`noClip`/`noOverlap`
   invariants across the width sweep — the containment property all 52 sites rely
   on). The harness check keys its cache on the whole `css/plugins/**` tree, so it
   re-runs automatically and launches no browser when untouched.
-- **Types:** `./singularity check type-check` after each `as` wave, plus one
+- **Types:** `./equin check type-check` after each `as` wave, plus one
   `@ts-expect-error` fixture per wave under `web/__tests__/` — it fails the build
   when the error *stops* occurring, locking in strictness against a future "just
   add an index signature to unblock myself".
-- **Visual, per migration phase:** `./singularity build` (background), then the
+- **Visual, per migration phase:** `./equin build` (background), then the
   e2e screenshot script against the real surface — Debug → Profiling for the Gantt,
   Debug → Slow Events for the timeline, a data-view list for windowed rows. Sonata's
   progress bar must be checked **with playback running**; a static screenshot
   cannot show that the per-frame imperative writers still move.
-- **Whole gate:** `./singularity check` — `eslint` (the disables must be *gone*,
+- **Whole gate:** `./equin check` — `eslint` (the disables must be *gone*,
   and after stage 1.1 a leftover directive is itself an error), `type-check`,
   `layout-geometry`.

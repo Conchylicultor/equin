@@ -67,6 +67,6 @@ Renders each tool as a monospace line, identical to how `deferred-tools-delta` l
 
 ## Verification
 
-1. Build: `./singularity build`
+1. Build: `./equin build`
 2. Open conversation `conv-1779695590-m6pd` at `http://att-1779724174-kvak.localhost:9000` and scroll to the `command_permissions` attachment event — it should render with the collapsible "Command Permissions" header instead of a raw JSON dump.
-3. Run `./singularity check --plugin-boundaries` and `./singularity check --plugins-doc-in-sync` — both must pass.
+3. Run `./equin check --plugin-boundaries` and `./equin check --plugins-doc-in-sync` — both must pass.

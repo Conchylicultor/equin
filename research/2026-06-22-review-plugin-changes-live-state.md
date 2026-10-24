@@ -202,7 +202,7 @@ reused; recompute only on a real `editedFilesResource` / `refHeadResource` notif
 
 ## Verification
 
-1. `./singularity build` (regenerates plugin docs/registry; runs checks). Confirm
+1. `./equin build` (regenerates plugin docs/registry; runs checks). Confirm
    `plugins-doc-in-sync`, `plugin-boundaries`, and `type-check` pass — note
    `core` now exports schema values, `shared/resources.ts` is web-private,
    `code/server` gains one export.

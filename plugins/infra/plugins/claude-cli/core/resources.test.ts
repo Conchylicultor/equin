@@ -3,7 +3,7 @@
  * are unchanged, and the columns it filters / sorts are the ones it declared
  * before its fields were derived.
  *
- * Run: `./singularity test plugins/infra/plugins/claude-cli`.
+ * Run: `./equin test plugins/infra/plugins/claude-cli`.
  */
 
 import { describe, expect, test } from "bun:test";

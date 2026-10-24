@@ -1026,7 +1026,7 @@ const appDataDirsCheck: Check = {
         throw new Error(
           `[paths:app-data-dirs] loading plugins/${entry.pluginPath}/data-dirs/index.ts failed: ` +
             `${err instanceof Error ? err.message : String(err)}. ` +
-            `(If that file was moved or deleted, run \`./singularity build\` to regenerate core/data-dirs.generated.ts.)`,
+            `(If that file was moved or deleted, run \`./equin build\` to regenerate core/data-dirs.generated.ts.)`,
           { cause: err },
         );
       }

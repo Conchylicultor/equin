@@ -5,7 +5,7 @@
 // Manual only — nothing runs this automatically.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/prototypes/plugins/canvas/e2e/canvas-option-groups.ts \
+//   ./equin run plugins/apps/plugins/prototypes/plugins/canvas/e2e/canvas-option-groups.ts \
 //     [--name <prototype id>] [--out <prefix>] [--headed]
 
 import {

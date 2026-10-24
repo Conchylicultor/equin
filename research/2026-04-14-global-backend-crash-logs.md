@@ -93,8 +93,8 @@ Scope: only expose the *current* worktree's backend channel. Cross-worktree log 
 
 ## Verification
 
-1. `./singularity build` — deploy the change.
-2. Induce a crash: in a throwaway worktree, introduce a syntax error in `server/src/index.ts`, run `./singularity build`, hit the worktree URL.
+1. `./equin build` — deploy the change.
+2. Induce a crash: in a throwaway worktree, introduce a syntax error in `server/src/index.ts`, run `./equin build`, hit the worktree URL.
 3. Open the logs plugin, select the `backend` channel — should show the pre-crash stderr including the error trace. Verify the ring keeps ~1000 lines after repeated crash-loop attempts.
 4. Fix the code, rebuild — verify new stdout lines stream live via SSE into the same channel.
 5. `curl -N http://localhost:9000/gateway/worktrees/<name>/logs` — verify the SSE endpoint directly; confirm `event: history` fires first then live `event: entry` lines, and that it closes cleanly on Ctrl-C (no goroutine leak; check gateway log for unsubscribe).

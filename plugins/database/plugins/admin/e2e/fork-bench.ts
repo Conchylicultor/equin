@@ -4,9 +4,9 @@
  *
  * Manual only; nothing runs this automatically.
  *
- *   ./singularity run plugins/database/plugins/admin/e2e/fork-bench.ts [--runs 3] [--source singularity]
+ *   ./equin run plugins/database/plugins/admin/e2e/fork-bench.ts [--runs 3] [--source singularity]
  *
- * It drives `./singularity db fork <scratch>` as a subprocess rather than
+ * It drives `./equin db fork <scratch>` as a subprocess rather than
  * importing `forkDatabase` directly, for two reasons. The `e2e` runtime may
  * reach only other plugins' `core`/`e2e` barrels, so `admin/server` is out of
  * bounds by construction; and the subprocess IS the real path, exclusion
@@ -22,6 +22,7 @@
  * `bin/index.ts`), so per-run durations are printed rather than only a summary.
  */
 
+import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import { randomBytes } from "node:crypto";
 import { Pool } from "pg";
 import {
@@ -133,7 +134,7 @@ async function main(): Promise<void> {
       try {
         const started = performance.now();
         const result = await spawnCaptured(
-          ["./singularity", "db", "fork", target],
+          [`./${CLI_NAME}`, "db", "fork", target],
           {
             // This harness exists to MEASURE how long a fork takes, on a box
             // deliberately loaded to make it slow. Any ceiling here would be a
@@ -147,7 +148,7 @@ async function main(): Promise<void> {
         const elapsed = performance.now() - started;
         if (result.exitCode !== 0) {
           throw new Error(
-            `./singularity db fork ${target} exited ${result.exitCode}\n${
+            `./equin db fork ${target} exited ${result.exitCode}\n${
               result.stderr.trim() || result.stdout.trim()
             }`,
           );

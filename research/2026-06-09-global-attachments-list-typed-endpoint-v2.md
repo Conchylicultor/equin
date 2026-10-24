@@ -177,7 +177,7 @@ check's already-empty shape.
 
 ### 8. Docs
 
-`./singularity build` regenerates `docs/plugins-*.md` + per-plugin CLAUDE.md autogen
+`./equin build` regenerates `docs/plugins-*.md` + per-plugin CLAUDE.md autogen
 blocks: attachments gains a `core` runtime (`AttachmentSchema`, `Attachment`,
 `listAttachmentsEndpoint`) + a new route, loses web `listAttachments`/`Attachment`;
 tasks loses `getTaskAttachments`/`TaskAttachmentSchema` + the
@@ -205,9 +205,9 @@ tasks loses `getTaskAttachments`/`TaskAttachmentSchema` + the
 
 ## Verification
 
-1. `./singularity build` — compiles (component data typed `Attachment[]`), regenerates
+1. `./equin build` — compiles (component data typed `Attachment[]`), regenerates
    migrations (none expected — no schema change) and docs.
-2. `./singularity check`:
+2. `./equin check`:
    - `endpoints:typed-web-fetches` passes with an **empty** allowlist.
    - `plugin-boundaries` passes (new `attachments/core` barrel; tasks
      `task-attachments` → `attachments/core` import is legal).

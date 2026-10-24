@@ -104,8 +104,8 @@ analytics/
 - Possibly `plugins/apps/plugins/deploy/plugins/health/server/internal/handle-check.ts` (extract SSH target helper)
 
 ## Verification
-1. `./singularity test plugins/apps/plugins/deploy/plugins/analytics`: unit tests for the UA family parser, `channelOf`, the visit grouping (30-minute gap), the XFF parsing / `hostOnly` rules, and a `db-test-fixture` test for collect → rollup → retention (the `beforeDelete` guard throws when a day was not rolled up), and a parity test: for a seeded day, every single-filter report from `analytics_daily` equals the same report computed from raw rows.
-2. `./singularity build`, then browse the website app on this worktree (`screenshot.ts --path /website ...`) and open Improve. Visits recorded locally land in this worktree's DB, which is harmless because the dashboard reads the remote box. Check the rows with `query_db`, and call the host-only query endpoint on the worktree socket.
+1. `./equin test plugins/apps/plugins/deploy/plugins/analytics`: unit tests for the UA family parser, `channelOf`, the visit grouping (30-minute gap), the XFF parsing / `hostOnly` rules, and a `db-test-fixture` test for collect → rollup → retention (the `beforeDelete` guard throws when a day was not rolled up), and a parity test: for a seeded day, every single-filter report from `analytics_daily` equals the same report computed from raw rows.
+2. `./equin build`, then browse the website app on this worktree (`screenshot.ts --path /website ...`) and open Improve. Visits recorded locally land in this worktree's DB, which is harmless because the dashboard reads the remote box. Check the rows with `query_db`, and call the host-only query endpoint on the worktree socket.
 3. `caddySite` snapshot test shows the `respond /api/host-only/* 404` block.
 4. Real deploy (only with the user's go-ahead): `deploy converge` + `ship` the website. Then `curl https://<host>/api/host-only/analytics/query` → 404. Visit the site, open Improve, pick an element, click Show me. Open the deployment page in the local deploy app, where the Analytics section shows the visit, pages, source and the three events. Click a source and Pages narrows.
-5. `./singularity check` (boundaries, composition-closure, migrations-in-sync, endpoints checks).
+5. `./equin check` (boundaries, composition-closure, migrations-in-sync, endpoints checks).

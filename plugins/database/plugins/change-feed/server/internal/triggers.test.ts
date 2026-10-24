@@ -27,7 +27,7 @@ import {
 // oids across two calls therefore prove no DROP+CREATE ran — the actual property,
 // observed directly rather than through a spy or a log line.
 //
-// Requires a running Postgres cluster (started by ./singularity build). If the
+// Requires a running Postgres cluster (started by ./equin build). If the
 // cluster is unreachable, createTestDb() throws loudly rather than skipping.
 
 let testDb: TestDb;

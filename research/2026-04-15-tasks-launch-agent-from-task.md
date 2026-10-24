@@ -41,7 +41,7 @@ Extend the existing `POST /api/conversations` flow to accept `{ taskId?, prompt?
 
 ### Migrations
 
-`./singularity build` will regenerate a migration only if the schema changes. We aren't changing columns, so expect no new migration.
+`./equin build` will regenerate a migration only if the schema changes. We aren't changing columns, so expect no new migration.
 
 ## Critical files
 
@@ -61,7 +61,7 @@ Extend the existing `POST /api/conversations` flow to accept `{ taskId?, prompt?
 
 ## Verification
 
-1. `./singularity build`, open `http://claude-1776263907.localhost:9000`.
+1. `./equin build`, open `http://claude-1776263907.localhost:9000`.
 2. Create a task, set a description like "List files in /tmp and summarize".
 3. Click **Launch agent**. Expect: pane switches to the new conversation; worktree created; tmux session running `claude` with the prompt preloaded.
 4. DB check (via psql on the main DB):

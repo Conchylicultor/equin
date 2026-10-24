@@ -108,7 +108,7 @@ Key points / rationale for each decision:
 
 ## Verification
 
-1. `./singularity build` — must pass `type-check` + `eslint` (no `no-adhoc-*` regressions;
+1. `./equin build` — must pass `type-check` + `eslint` (no `no-adhoc-*` regressions;
    `border-dashed`/`size-3.5` are sanctioned, the body uses the `Text` primitive).
 2. Find a conversation whose transcript contains both a harness resume (loop/queue wakeup
    or "Continue from where you left off") and a launch preprompt. Screenshot via

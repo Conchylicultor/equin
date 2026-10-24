@@ -117,7 +117,7 @@ import holdAndExitPlugin from "@plugins/conversations/plugins/conversation-view/
 
 ## Verification
 
-1. `./singularity build` — no build errors
+1. `./equin build` — no build errors
 2. Open a conversation, confirm "Hold & Exit" button appears in the floating bar
 3. Click it — conversation closes, toast confirms success
 4. Navigate to Tasks — the task status shows `held` (not dropped, not active)

@@ -199,8 +199,8 @@ the rename is fully contained. No barrel/slot changes needed.
 
 ## Verification
 
-1. `./singularity build` from the worktree; fix any type/lint errors.
-2. `./singularity check` (eslint, boundaries) passes.
+1. `./equin build` from the worktree; fix any type/lint errors.
+2. `./equin check` (eslint, boundaries) passes.
 3. Open `http://<worktree>.localhost:9000`, go to the Sonata app.
 4. Load a **large** MIDI file via the MIDI source, press Play:
    - Playback **starts promptly** (no multi-second stall while the whole score is

@@ -162,14 +162,14 @@ from a live-state loader freezing the whole flush cycle* — should be prevented
 just patched here. **File each as a Singularity task via the `add_task` MCP tool during
 implementation** (not part of this change's diff):
 
-- A lint rule or `./singularity check` that flags `*Sync` `node:fs` calls in server
+- A lint rule or `./equin check` that flags `*Sync` `node:fs` calls in server
   resource-loader / `defineExternalResource` code paths, and
 - Converting the single-slug sync `isWorktreeOpActive` used by the tmux poller to
   async so per-pane polling can't block its runtime either.
 
 ## Verification
 
-1. `./singularity build` (from this worktree), confirm it boots clean.
+1. `./equin build` (from this worktree), confirm it boots clean.
 2. **Rate fix** — confirm artifact churn no longer triggers op-status:
    - Open a conversation with the op-status banner visible
      (`http://<worktree>.localhost:9000/...`).

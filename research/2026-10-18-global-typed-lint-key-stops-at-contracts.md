@@ -196,7 +196,7 @@ The method is the design page's "Step 1 result" method:
   this branch.
 - Two checkouts with separate lint, table and contract-refs stores, so no fleet result leaks in.
   Each side is warmed on the base tree, and its stores and buildinfo are snapshotted.
-- Each scenario restores the snapshot, applies one edit, and runs `./singularity check
+- Each scenario restores the snapshot, applies one edit, and runs `./equin check
   type-check --jobs 1`.
 - Read the `lint N/M` line, the typed-part counts and the worker `cpu` / `maxRSS` line.
 

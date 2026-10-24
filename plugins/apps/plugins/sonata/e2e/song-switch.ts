@@ -38,7 +38,7 @@
 // where a role locator does not.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/sonata/e2e/song-switch.ts \
+//   ./equin run plugins/apps/plugins/sonata/e2e/song-switch.ts \
 //     --song-a <songId> --song-b <songId> [--url http://<namespace>.localhost:9000] [--headed]
 
 import type { TrackViewRow } from "@plugins/apps/plugins/sonata/plugins/track-mixer/core";

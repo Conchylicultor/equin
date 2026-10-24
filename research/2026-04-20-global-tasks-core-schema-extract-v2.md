@@ -211,7 +211,7 @@ Rewriting every handler at once risks weeks of broken state. Migrate handler-by-
    ```
 
    This shim is a deliberate, *transient* R4 violation marked with a `// MIGRATION:` comment. It exists so Phase 2 can proceed handler-by-handler without breaking the build.
-8. `./singularity build`. No migration generated (DDL unchanged). Server comes up. Cycle gone (internally — shim papers over external view).
+8. `./equin build`. No migration generated (DDL unchanged). Server comes up. Cycle gone (internally — shim papers over external view).
 
 ### Phase 2 — handler-by-handler rewrite (many small commits)
 
@@ -220,7 +220,7 @@ For each handler in `tasks/` and `conversations/`:
 1. Identify the SQL it runs.
 2. Add the corresponding query/mutation function to `tasks-core/server/internal/{queries,mutations}/*.ts`, exported from `tasks-core/server/index.ts`.
 3. Rewrite the handler to call the new function. Delete the now-dead SQL imports.
-4. `./singularity build`, smoke-test the endpoint.
+4. `./equin build`, smoke-test the endpoint.
 
 Order suggestion (lowest risk first):
 
@@ -241,7 +241,7 @@ Once Phase 2 is complete and no non-`tasks-core` file references `_tasks`, `_att
 2. Run `grep -r "_tasks\|_attempts\|_taskDependencies\|_conversations\|pushes" plugins/ --include="*.ts" | grep -v "tasks-core"` — expect zero matches (modulo string literals in migrations or tests).
 3. Move resources (`tasksResource`, `attemptsResource`, `pushesResource`, `conversationsResource`) from their current plugins to `tasks-core`. Update consumers that subscribe. Remove the resource mounts from `tasks/` and `conversations/`'s `ServerPluginDefinition`.
 4. Move `CONVERSATIONS_META_TASK_ID`, `nextRankUnder` (as `findNextRankUnder`), and `ensureMetaTask` core logic from `tasks/` to `tasks-core`. Update consumers.
-5. `./singularity build`. Final state: `tasks-core` owns schema + repository + resources; `tasks` and `conversations` are purely HTTP + runtime + plugin-specific plumbing.
+5. `./equin build`. Final state: `tasks-core` owns schema + repository + resources; `tasks` and `conversations` are purely HTTP + runtime + plugin-specific plumbing.
 
 ## Resources — ownership transition
 
@@ -315,7 +315,7 @@ Resource keys (`tasks`, `attempts`, `pushes`, `conversations`) stay the same, so
 
 ## Verification
 
-1. **Phase 1 gate.** After scaffolding + table move + shim, `./singularity build` succeeds, app comes up at `http://<worktree>.localhost:9000`, `docs/plugins.md` shows `tasks-core` with no exports yet (barrel is empty except resources). No migration generated.
+1. **Phase 1 gate.** After scaffolding + table move + shim, `./equin build` succeeds, app comes up at `http://<worktree>.localhost:9000`, `docs/plugins.md` shows `tasks-core` with no exports yet (barrel is empty except resources). No migration generated.
 2. **Each Phase 2 handler migration.** After each handler rewrite, exercise its endpoint:
    - Task CRUD: create/list/update/delete via UI. Status derivations match pre-migration.
    - Conversation CRUD: create an attempt, launch a conversation, close it. Transitions match.
@@ -325,10 +325,10 @@ Resource keys (`tasks`, `attempts`, `pushes`, `conversations`) stay the same, so
    - `grep -rn "@plugins/conversations/server/internal" plugins/` → zero matches.
    - `grep -rEn "\\b(_tasks|_attempts|_taskDependencies|_conversations|pushes)\\b" plugins/ --include="*.ts" | grep -v "tasks-core/"` → zero matches (verify no false positives from string literals).
    - `grep -rEn "db\\.(select|insert|update|delete)" plugins/ --include="*.ts" | grep -v "tasks-core/"` → zero matches on the migrated tables.
-4. **Docgen.** `./singularity build` regenerates `docs/plugins.md` with `tasks-core` listing all public functions + Zod types; `tasks` and `conversations` no longer list moved symbols. `./singularity check --plugins-doc-in-sync` passes.
+4. **Docgen.** `./equin build` regenerates `docs/plugins.md` with `tasks-core` listing all public functions + Zod types; `tasks` and `conversations` no longer list moved symbols. `./equin check --plugins-doc-in-sync` passes.
 5. **End-to-end smoke test.**
    - Agent launch flow (uses `tasks-core.createTask`): create an agent, click launch, confirm a task + attempt + conversation appear and run.
-   - Build/push flow (uses `tasks-core.insertPush` + `pushesResource`): push a commit via `./singularity push` on a throwaway branch; confirm `pushesResource` updates and auto-build-watcher fires.
+   - Build/push flow (uses `tasks-core.insertPush` + `pushesResource`): push a commit via `./equin push` on a throwaway branch; confirm `pushesResource` updates and auto-build-watcher fires.
    - Stats chart (uses `tasks-core.listTasks`): open `/stats`, confirm active-tasks chart renders.
 6. **Cycle gone.** Attempting to re-introduce the deep imports (`@plugins/*/server/internal/tables`) in `conversations/` or `tasks/` fails the v2 plugin-boundaries check once wired. Confirm by staging a contrived violation, running the check, observing the failure, then reverting.
-7. **No migration generated.** Run `./singularity check --migrations-in-sync` — passes. Table DDL is identical to pre-migration; only code location changed.
+7. **No migration generated.** Run `./equin check --migrations-in-sync` — passes. Table DDL is identical to pre-migration; only code location changed.

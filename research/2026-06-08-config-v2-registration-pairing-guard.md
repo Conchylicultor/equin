@@ -165,7 +165,7 @@ is always present in the snapshot for a registered descriptor).
 ## Verification
 
 1. **Check is correct on a clean tree:**
-   `./singularity check config-v2:registrations-paired` → passes (no half/mismatched
+   `./equin check config-v2:registrations-paired` → passes (no half/mismatched
    registrations today, including `reorder`, which the old grep silently ignored).
 
 2. **Check catches web-only (the target bug):** temporarily remove the
@@ -184,11 +184,11 @@ is always present in the snapshot for a registered descriptor).
 
 5. **Runtime guard fails loudly:** with `floating-bar` server registration removed
    (and the check temporarily bypassed via `--skip-checks` on build),
-   `./singularity build`, open `http://<worktree>.localhost:9000`, and load a surface
+   `./equin build`, open `http://<worktree>.localhost:9000`, and load a surface
    that calls `useConfig(floatingBarConfig)`. Confirm a thrown error (caught by the
    nearest `error-boundary`, visible in the UI / browser console via
    `read_logs`) instead of silently showing defaults. Restore and rebuild.
 
-6. **No regression on the happy path:** full `./singularity build` succeeds, the app
+6. **No regression on the happy path:** full `./equin build` succeeds, the app
    loads, and config-backed surfaces (floating bar toggle, reorder edit mode, theme)
    render real values with no spurious throws.

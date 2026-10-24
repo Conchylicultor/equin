@@ -3,7 +3,7 @@ import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
 /**
  * `db` is a GROUP: it routes and never runs. The declaration union makes that
  * exclusive — a group has `subcommands` and cannot also carry `run` — so
- * `./singularity db` printing its own help rather than doing something is a
+ * `./equin db` printing its own help rather than doing something is a
  * property of the shape, not of a runtime check.
  *
  * One subcommand today. It stays a group because the verb it reserves is

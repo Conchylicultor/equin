@@ -333,7 +333,7 @@ Also delete the trailing "Shared-tx emit requires unifying the server on `pg.Poo
 
 End-to-end smoke test plan:
 
-1. **Build cleanly.** `./singularity build` — confirms migration runner still works against the new pool, all plugins compile against the new client export shape.
+1. **Build cleanly.** `./equin build` — confirms migration runner still works against the new pool, all plugins compile against the new client export shape.
 
 2. **Worktree fork still works.** Create a fresh worktree (which exercises `db-fork.ts`); confirm the new DB has the migrations table populated and Graphile's schema dropped+remigrated.
 

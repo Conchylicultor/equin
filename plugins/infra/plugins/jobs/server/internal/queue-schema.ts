@@ -128,7 +128,7 @@ export class QueueSchemaMissingError extends Error {
       `[jobs] this transaction is on a database whose \`${QUEUE_SCHEMA}\` schema is not installed, ` +
         `so the job row has nowhere to land. That schema is installed when a backend boots against ` +
         `a database, and inherited by any database forked from one — so this is a database that has ` +
-        `had neither. Run \`./singularity build\` for a worktree, or call ` +
+        `had neither. Run \`./equin build\` for a worktree, or call ` +
         `\`installQueueSchema(connectionString)\` for a throwaway test database.`,
       options,
     );

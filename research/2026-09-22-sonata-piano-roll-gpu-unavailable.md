@@ -83,7 +83,7 @@ no further change.
 
 ## Verification
 
-1. `./singularity build` (in the background), then `./singularity check type-check`.
+1. `./equin build` (in the background), then `./equin check type-check`.
 2. Normal case: open a song with
    `plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --path /sonata/song/<id>`.
    Notes draw (headless Chromium uses WebGL), and the log shows `pixi backend: webgl`.

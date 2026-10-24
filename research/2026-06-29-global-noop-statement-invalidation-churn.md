@@ -101,7 +101,7 @@ BEGIN
 
 ## Verification
 
-1. `./singularity build` (worktree); confirm clean restart and the change-feed boot log
+1. `./equin build` (worktree); confirm clean restart and the change-feed boot log
    (`installed live_state triggers on N table(s)`).
 2. **Trigger-level proof** via `query_db` on the worktree: capture
    `SELECT count(*) FROM live_state_changelog WHERE t='conversations' AND op='I'`, then run an

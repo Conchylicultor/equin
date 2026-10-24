@@ -2,7 +2,7 @@
 
 ## Context
 
-A self-contained release (`./singularity release`, which `bun build --compile`s the
+A self-contained release (`./equin release`, which `bun build --compile`s the
 backend) crashes at boot:
 
 ```
@@ -192,11 +192,11 @@ New rule sub-plugin, mirroring `icon-safety`:
 
 ## Verification
 
-1. `./singularity build` (regenerates docs/registry, runs `eslint` + `type-check` —
+1. `./equin build` (regenerates docs/registry, runs `eslint` + `type-check` —
    confirms the new lint rule loads and the codebase still passes; the rule fires on
    any stray `@parcel/watcher` value-import).
 2. Confirm the lint rule bites: temporarily add `import parcel from "@parcel/watcher"`
-   to a file outside file-watcher → `./singularity check eslint` should error; remove it.
+   to a file outside file-watcher → `./equin check eslint` should error; remove it.
 3. Cut a staged release of an app composition that starts a watcher (sonata):
    ```
    bun plugins/framework/plugins/cli/bin/index.ts release --composition sonata --target web --dev --out /tmp/sonata-rel

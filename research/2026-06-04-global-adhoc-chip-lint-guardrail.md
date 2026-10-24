@@ -222,9 +222,9 @@ irreducible overlay/container files (Tier 3) stay handled by markers.
 
 ## Verification
 
-1. `./singularity build` — regenerates `lint.generated.ts` (codegen discovers the
+1. `./equin build` — regenerates `lint.generated.ts` (codegen discovers the
    new `badge/lint` barrel); `plugins-registry-in-sync` confirms.
-2. `./singularity check --eslint` — must pass **green with empty `ignores`**,
+2. `./equin check --eslint` — must pass **green with empty `ignores`**,
    proving every chip site was migrated or marked. Confirm `badge/no-adhoc-chip`
    and `typography-tokens/no-arbitrary-font-size` are both registered as `error`.
 3. Negative test: temporarily add `<span className="rounded px-1.5 py-0.5
@@ -234,4 +234,4 @@ irreducible overlay/container files (Tier 3) stay handled by markers.
 4. Visual spot-check: screenshot a few migrated surfaces (queue view, claude-cli
    calls, tool-call cards) via Playwright to confirm chips render correctly after
    migration. See `e2e/screenshot.mjs`.
-5. `./singularity check` (full) — all checks green.
+5. `./equin check` (full) — all checks green.

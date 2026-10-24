@@ -170,13 +170,13 @@ Deliberately left out of the first cut: the "Open Timeline" link from the mock
 
 ## Verification
 
-- `./singularity test plugins/debug/plugins/sentinel`:
+- `./equin test plugins/debug/plugins/sentinel`:
   - `vitals-file.test.ts` — write/read round trip; missing → `none`; garbage → `unreadable`.
   - `vitals-view.test.ts` — tone at ⅔ and at the limit, null value, stale by age and by pid mismatch, banner wording.
   - `machine-watcher-health.test.ts` — the duress branch.
   - Extend the worker test that injects `__sample` frames (`latch-lapse.test.ts` pattern): after a tick `vitals.json` exists with the injected readings and the configured limits; a tripping sample sets `tripped` and `elevated`.
-- `./singularity check sentinel:worker-closure-lean sentinel:status-file-lean type-check`.
-- `./singularity build`, then on the deploy: open the health popover and expand
+- `./equin check sentinel:worker-closure-lean sentinel:status-file-lean type-check`.
+- `./equin build`, then on the deploy: open the health popover and expand
   Machine watcher (`screenshot.ts --click "All systems normal"`, then click
   the row) and compare against proto-1789664064-nr56's `calm` state. Confirm
   `~/.singularity/locks/sentinel/vitals.json` updates every 5 s, and that with

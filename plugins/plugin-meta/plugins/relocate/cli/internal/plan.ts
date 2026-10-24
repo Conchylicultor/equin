@@ -1,4 +1,4 @@
-// The pure half of `./singularity plugin move`: given the move, the refs the
+// The pure half of `./equin plugin move`: given the move, the refs the
 // plugin-refs locator found and the texts of the files they sit in, compute
 // every rename and every edit — touching no filesystem and no git. `move.ts`
 // is the thin shell that gathers the inputs and applies the result, so what a

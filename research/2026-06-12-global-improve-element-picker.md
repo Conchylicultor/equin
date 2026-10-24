@@ -222,7 +222,7 @@ identical shape to `screenshot` which has `web/`/`server/` + `draw-canvas`/`draw
 
 ## Verification
 
-1. `./singularity build`; open `http://<worktree>.localhost:9000`.
+1. `./equin build`; open `http://<worktree>.localhost:9000`.
 2. **Markers:** in devtools, confirm contributions carry `data-plugin-id`/`data-slot-id`
    and pane roots carry `data-pane-id`. Spot-check `document.elementFromPoint`→
    `findPluginContext` returns the expected plugin for a few regions.
@@ -235,7 +235,7 @@ identical shape to `screenshot` which has `web/`/`server/` + `draw-canvas`/`draw
 5. **Round-trip:** type a comment, confirm the chip persists; inspect the submitted
    task description (or `query_db` the task row) to confirm the prompt contains the
    readable `<ui-context plugin="…" url="…" element="…" />` tag.
-6. `./singularity check` (boundaries, type-check, plugins-doc-in-sync).
+6. `./equin check` (boundaries, type-check, plugins-doc-in-sync).
 
 ## Open follow-ups (not blocking)
 

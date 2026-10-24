@@ -9,7 +9,7 @@
 //     bug: the fold editor's rule rows spilled out of a menu-wide panel);
 //   - going back to the settings root returns to menu width.
 //
-//   ./singularity run plugins/primitives/plugins/data-view/e2e/panel-width-from-content.ts --out /tmp/pw [--view Recent] [--fold-field Updated] [--falsify]
+//   ./equin run plugins/primitives/plugins/data-view/e2e/panel-width-from-content.ts --out /tmp/pw [--view Recent] [--fold-field Updated] [--falsify]
 import {
   arg,
   pathUrl,

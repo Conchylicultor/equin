@@ -106,9 +106,9 @@ File: `plugins/conversations/plugins/conversation-view/plugins/op-status/web/com
 
 ## Verification
 
-1. `./singularity test plugins/primitives/plugins/data-view/plugins/table` (new and existing table tests).
-2. `./singularity build`, which also runs the checks: type-check, eslint, boundaries, `config:overrides-authored`, and plugin docs in sync.
-3. `./singularity run plugins/conversations/plugins/conversation-view/plugins/op-status/e2e/op-status-waits.ts`. It asserts the banner text: `Build — held: host under duress (…)`, `requeue #2`, then `Build — Building`, plus the chip hourglass. The header line is unchanged, so it should pass as is.
+1. `./equin test plugins/primitives/plugins/data-view/plugins/table` (new and existing table tests).
+2. `./equin build`, which also runs the checks: type-check, eslint, boundaries, `config:overrides-authored`, and plugin docs in sync.
+3. `./equin run plugins/conversations/plugins/conversation-view/plugins/op-status/e2e/op-status-waits.ts`. It asserts the banner text: `Build — held: host under duress (…)`, `requeue #2`, then `Build — Building`, plus the chip hourglass. The header line is unchanged, so it should pass as is.
 4. Screenshot the expanded banner while ops are in flight. Use `screenshot.ts --path /agents/c/<id> --click "<state line>"`, in light and dark. Compare it with the prototype's focus/open state:
    - labels once on the first section header;
    - columns aligned across sections;

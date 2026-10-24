@@ -2,7 +2,7 @@
 
 ## Context
 
-`./singularity push` from `att-1788884187-ak4l` failed on 2026-09-09 with:
+`./equin push` from `att-1788884187-ak4l` failed on 2026-09-09 with:
 
 ```
 type-check: 14 lintable file(s) belong to no tsconfig program:
@@ -211,10 +211,10 @@ git tree.
 
 ## Verification
 
-1. `./singularity check type-check` — passes on a clean worktree.
-2. **Repro the bug, confirm it is gone:** `mkdir -p .cache/scratch && echo 'export const x: number = 1;' > .cache/scratch/probe.ts`, then `./singularity check type-check`. Before: fails with "belong to no tsconfig program". After: passes. Repeat with the file under `plugins/` (e.g. `plugins/.cache/probe.ts`) and run `./singularity check plugin-boundaries`.
-3. **Confirm the gate still has teeth:** create a *tracked-eligible* stray, `echo 'export const y = 1;' > stray-probe.ts` at the repo root (untracked, not ignored). `./singularity check type-check` must FAIL naming it. Delete it.
-4. **Confirm the deleted-file hazard is handled:** `git rm --cached` a `.ts` file's worktree copy (`rm <file>` without staging the deletion), run `./singularity check type-check` — must not report it as uncovered. Restore.
-5. `./singularity test plugins/framework/plugins/tooling/plugins/checks` — the `outer-read-set` and `plugin-boundaries/read-set` suites.
-6. **Confirm the fingerprint no longer moves with build artifacts:** run `./singularity check type-check` twice with a `./singularity build` in between and check `check-type-check.log` reports a cache HIT rather than a full closure invalidation.
-7. `./singularity build` (background), then `./singularity check` for the full pass.
+1. `./equin check type-check` — passes on a clean worktree.
+2. **Repro the bug, confirm it is gone:** `mkdir -p .cache/scratch && echo 'export const x: number = 1;' > .cache/scratch/probe.ts`, then `./equin check type-check`. Before: fails with "belong to no tsconfig program". After: passes. Repeat with the file under `plugins/` (e.g. `plugins/.cache/probe.ts`) and run `./equin check plugin-boundaries`.
+3. **Confirm the gate still has teeth:** create a *tracked-eligible* stray, `echo 'export const y = 1;' > stray-probe.ts` at the repo root (untracked, not ignored). `./equin check type-check` must FAIL naming it. Delete it.
+4. **Confirm the deleted-file hazard is handled:** `git rm --cached` a `.ts` file's worktree copy (`rm <file>` without staging the deletion), run `./equin check type-check` — must not report it as uncovered. Restore.
+5. `./equin test plugins/framework/plugins/tooling/plugins/checks` — the `outer-read-set` and `plugin-boundaries/read-set` suites.
+6. **Confirm the fingerprint no longer moves with build artifacts:** run `./equin check type-check` twice with a `./equin build` in between and check `check-type-check.log` reports a cache HIT rather than a full closure invalidation.
+7. `./equin build` (background), then `./equin check` for the full pass.

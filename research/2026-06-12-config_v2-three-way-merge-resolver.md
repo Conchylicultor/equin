@@ -20,7 +20,7 @@ upstream value, untouched-by-upstream fields keep the user's value, and only fie
 A real three-way merge needs the **base** (the origin the override was written
 against). Today only its *hash* is stored, and the user-layer origin lives in
 `~/.singularity/config/` (not git), so the old content is unrecoverable. We therefore
-**snapshot the base at propagate-time**: when `./singularity build` is about to
+**snapshot the base at propagate-time**: when `./equin build` is about to
 overwrite a user origin that a still-in-sync override depends on, it writes the old
 origin content to a sibling `<name>.ancestor.jsonc` first. The merge is available for
 any conflict created after this ships; pre-existing conflicts (no snapshot) gracefully
@@ -154,12 +154,12 @@ Add `bun:test` units for the pure load-bearing logic:
 
 ## Verification
 
-1. `./singularity build` (regenerates origins, propagates, restarts server).
+1. `./equin build` (regenerates origins, propagates, restarts server).
 2. Reproduce a conflict end-to-end:
    - Open a config in Settings, edit one field (writes a user override against the
      current origin).
    - Edit that plugin's `defineConfig` defaults so a *different* field's default
-     changes, `./singularity build` again → propagate detects the stale override,
+     changes, `./equin build` again → propagate detects the stale override,
      writes `<name>.ancestor.jsonc`, surfaces a hash conflict.
    - Inspect: `query_db` is irrelevant here (file-based); instead check
      `~/.singularity/config/<worktree>/<tree>/<name>.ancestor.jsonc` exists and carries
@@ -172,6 +172,6 @@ Add `bun:test` units for the pure load-bearing logic:
 4. Drive it with `e2e/screenshot.mjs --url http://<worktree>.localhost:9000/... --click "Merge"`
    to capture before/after and confirm button state.
 5. Regression: pre-existing conflict with **no** ancestor → Merge button hidden,
-   Keep/Accept still work. `./singularity check config-origins-in-sync` still passes
+   Keep/Accept still work. `./equin check config-origins-in-sync` still passes
    (it scans git `config/`, never the user dir; `.ancestor.jsonc` is invisible to it).
 6. Run the new units: `bun test plugins/config_v2/core/internal/tier-logic.test.ts`.

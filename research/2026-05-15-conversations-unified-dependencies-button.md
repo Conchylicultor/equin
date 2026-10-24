@@ -101,7 +101,7 @@ Remove entirely:
 
 ### 5. Build and regenerate
 
-`./singularity build` will:
+`./equin build` will:
 - Regenerate `web/src/plugins.generated.ts` — removes `blocked-by` and `blocking`, adds `dependencies`
 - Regenerate CLAUDE.md autogen blocks
 
@@ -119,11 +119,11 @@ Remove entirely:
 
 ### Verification
 
-1. `./singularity build` succeeds
+1. `./equin build` succeeds
 2. Open conversation with a task that has deps in both directions
 3. Verify `{N} ← ⛓ → {M}` renders with correct counts
 4. Hover — peek tooltip shows both directions
 5. Click left half — blocked-by popover opens, can add/remove
 6. Click right half — blocking popover opens, can add/remove
 7. With 0 deps — shows just `⛓`, both halves still clickable
-8. `./singularity check` passes
+8. `./equin check` passes

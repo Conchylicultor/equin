@@ -241,9 +241,9 @@ no editor/marker internals. Graph stays a DAG.
 
 ## Build & verify
 
-1. `./singularity build` — codegen registers the new `web` index plugin. **No new
+1. `./equin build` — codegen registers the new `web` index plugin. **No new
    migration** (the marker owns the only DB table, already landed in T2).
-2. `./singularity check plugin-boundaries` and `./singularity check migrations-in-sync`.
+2. `./equin check plugin-boundaries` and `./equin check migrations-in-sync`.
 3. Screenshot the app:
    `bun e2e/screenshot.mjs --url http://att-1781104727-e7vf.localhost:9000/story --out /tmp/story`.
 4. Manual loop:

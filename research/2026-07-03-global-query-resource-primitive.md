@@ -198,7 +198,7 @@ K/full ⇒ full recompute diffed to changed rows.
 
 ## Verification (after M2 and each M3 batch)
 
-1. `./singularity build` + `./singularity check` green (boundaries: no drizzle
+1. `./equin build` + `./equin check` green (boundaries: no drizzle
    in core/; registry/doc in-sync; keyed-resource-scope).
 2. Debug → Read-set pane: migrated resources show coveredOrigins == captured
    read-set (scoped, not silent-FULL).
@@ -266,7 +266,7 @@ ripple into consumers): `conversationNotesResource`, `turnSummariesResource`,
   `slowOpsResource`) are on change-feed-excluded tables — the keyed model is
   inapplicable. Every remaining M3/M4 candidate should be checked for
   `ExcludeFromChangeFeed` before migrating; migrating one is a no-op that plants a
-  dead scope policy. Worth a `./singularity check` (a keyed/query-resource whose
+  dead scope policy. Worth a `./equin check` (a keyed/query-resource whose
   `identityTable` names a change-feed-excluded table is always dead config).
 - **Ordering rule, both outcomes exercised in this batch.** `starred` is the
   positive case (mutable order-by + wire-order-reliant consumer → K/full);
@@ -314,7 +314,7 @@ the tasks-core/agents cascade is deliberately deferred to M4.
   mutable-`where` rule and the LIMIT-window rule.
 - ~~Check: fail when a keyed resource's `identityTable` names a
   change-feed-excluded table (dead scope policy — the reports/slow-ops finding).~~
-  **DONE** — implemented as a boot-time invariant, not a `./singularity check`.
+  **DONE** — implemented as a boot-time invariant, not a `./equin check`.
   A static check can't reach it: `excludedTableNames()` only populates after server
   boot (contribution registry), and query-resource-derived `identityTable`s are
   runtime drizzle values, not statically parseable. Instead the change-feed's

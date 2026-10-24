@@ -211,9 +211,9 @@ Token format section.
 
 1. **Unit:** `bun test plugins/improve/plugins/element-picker/core/internal/token.test.ts`
    — `contribution` and `source` round-trip.
-2. **Build:** `./singularity build` — codegen emits `core/vite.generated.ts`; vite
+2. **Build:** `./equin build` — codegen emits `core/vite.generated.ts`; vite
    picks up the babel plugin. Confirm `plugin-boundaries` + `plugins-registry-in-sync`
-   pass (`./singularity check`).
+   pass (`./equin check`).
 3. **DOM sanity:** in the running app, inspect the LaunchControl `<button>` — it
    should carry `data-source="plugins/primitives/plugins/launch/web/components/launch-control.tsx:NNN"`.
 4. **End-to-end (Playwright):** open the picker (`MdAdsClick`), click the "Opus 4.8"

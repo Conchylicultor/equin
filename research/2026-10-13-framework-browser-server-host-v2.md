@@ -281,7 +281,7 @@ const server = createBrowserServer({
 ## Verification
 
 1. **Unchanged suites pass:**
-   `./singularity test plugins/framework/plugins/resource-runtime plugins/framework/plugins/server-core plugins/framework/plugins/central-core plugins/network/plugins/live plugins/packages/plugins/resource-protocol plugins/primitives/plugins/live-state`
+   `./equin test plugins/framework/plugins/resource-runtime plugins/framework/plugins/server-core plugins/framework/plugins/central-core plugins/network/plugins/live plugins/packages/plugins/resource-protocol plugins/primitives/plugins/live-state`
    - `compile-value.test.ts` and `serve-paged-value-oracle.test.ts` pass unchanged after the move
      (only their import paths change).
 2. **New unit tests:**
@@ -303,8 +303,8 @@ const server = createBrowserServer({
    - **unmatched:** `POST /api/x` → 409 `{ reason: "unsupported" }`, and a non-API path → 404;
    - **notify:** `notify` on a `"notified"` external collection lands a keyed delta in the
      client cache.
-4. **Build and checks.** Run `./singularity build`, then smoke `http://<worktree>.localhost:9000`
-   (the Bun server on the shared router, and central values still live). `./singularity check`
+4. **Build and checks.** Run `./equin build`, then smoke `http://<worktree>.localhost:9000`
+   (the Bun server on the shared router, and central values still live). `./equin check`
    must be green: boundaries, plugin docs, `resource-runtime:compiled-routes`,
    `live/no-legacy-resource-spelling` (no new exemption), and type-check.
 

@@ -104,7 +104,7 @@ All would use the same `extractFromSpecifier` + `resolveImport` pattern.
 
 ## Verification
 
-1. `./singularity check --plugin-boundaries` — should pass (no existing violations)
+1. `./equin check --plugin-boundaries` — should pass (no existing violations)
 2. Temporarily add `export { defineSlot } from "@plugins/shell/web"` to any barrel → check should fail with `[cross-plugin-reexport]`
 3. Verify the existing barrel-purity checks still work (add a `const x = 1` to a barrel → still caught)
-4. Full `./singularity check` should pass
+4. Full `./equin check` should pass

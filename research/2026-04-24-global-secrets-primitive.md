@@ -427,9 +427,9 @@ Idempotent: after first run the rows are gone, subsequent boots no-op.
 
 ## Ordering of work
 
-Seven commits, each independently buildable and testable. Each will be pushed via `./singularity push -m "…"` (per project rules) only when the user says to ship.
+Seven commits, each independently buildable and testable. Each will be pushed via `./equin push -m "…"` (per project rules) only when the user says to ship.
 
-1. **Land `plugins/secrets/` standalone.** Full plugin, `@napi-rs/keyring` optional dep, migration code, socket + RPC. Register in `server/src/plugins.ts`. Nothing consumes it yet. `./singularity build` succeeds, zero behavior change.
+1. **Land `plugins/secrets/` standalone.** Full plugin, `@napi-rs/keyring` optional dep, migration code, socket + RPC. Register in `server/src/plugins.ts`. Nothing consumes it yet. `./equin build` succeeds, zero behavior change.
 
 2. **Migrate auth to use secrets.** Rewrite `token-store.ts`, delete `crypto.ts` + `key-store.ts` from auth, wrap error types. First boot after this step migrates `tokens.json.enc` → secrets namespace. Smoke: pre-existing Google connection (from old code) survives through the migration.
 
@@ -441,13 +441,13 @@ Seven commits, each independently buildable and testable. Each will be pushed vi
 
 6. **Update `plugins/auth/CLAUDE.md`.** Remove "OS keychain deferred" note, point at `plugins/secrets/CLAUDE.md`.
 
-7. **Regenerate `docs/plugins.md`.** `./singularity build` does this.
+7. **Regenerate `docs/plugins.md`.** `./equin build` does this.
 
 ## Verification
 
 ### Happy-path smoke
 
-1. `./singularity build`. Check logs for `[secrets] keychain available` or `falling back to file`, and (first deploy only) `[secrets] migrated legacy auth tokens`.
+1. `./equin build`. Check logs for `[secrets] keychain available` or `falling back to file`, and (first deploy only) `[secrets] migrated legacy auth tokens`.
 2. At `http://singularity.localhost:9000`, Settings → Google section. Paste clientId (plain) and clientSecret (password input). Blur to commit.
 3. ClientSecret field should now render `•••••••• (saved)` after commit.
 4. Accounts pane → Google → Connect. Complete Google consent. Popup closes; email shown. **Token exchange should succeed** (was the failure mode).

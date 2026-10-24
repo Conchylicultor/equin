@@ -2,5 +2,5 @@
   "name": "@singularity/plugin-framework-cli-stop",
   "private": true,
   "version": "0.0.1",
-  "description": "`./singularity stop` — stop the gateway daemon (and with it every backend); `--disable` also stops it starting at login."
+  "description": "`./equin stop` — stop the gateway daemon (and with it every backend); `--disable` also stops it starting at login."
 }

@@ -123,11 +123,11 @@ if wanted; never a timer.
 2. Shared writer, and switch agent.ts to it.
 3. Machine probe and route.
 4. Web triggers and the refresh button.
-5. Update `CLAUDE.md`, then `./singularity build`.
+5. Update `CLAUDE.md`, then `./equin build`.
 
 ## Verification
 
-- `./singularity test plugins/conversations/plugins/runtime-sdk`.
+- `./equin test plugins/conversations/plugins/runtime-sdk`.
 - On the worktree build (`http://<worktree>.localhost:9000`):
   1. Add or switch to an account that has no `state/claude-usage/<id>.json`.
      The week meter fills within a few seconds, with no conversation launched.

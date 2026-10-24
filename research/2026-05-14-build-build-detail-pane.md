@@ -70,7 +70,7 @@ Add `export { buildPane } from "./panes"` so `build-detail` can import it for th
 
 ## Verification
 
-1. `./singularity build` — regenerates `plugins.generated.ts`, compiles everything
+1. `./equin build` — regenerates `plugins.generated.ts`, compiles everything
 2. Open `http://<worktree>.localhost:9000`, click Build toolbar button → popover shows history
 3. Click a build run → popover closes, build pane opens as root, build-detail pane appears as a second miller column
 4. Open build pane directly → click a run → detail pane pushes to the right

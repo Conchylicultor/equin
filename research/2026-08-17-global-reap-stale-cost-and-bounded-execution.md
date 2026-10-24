@@ -35,11 +35,11 @@ was actually killed** — and the two come apart under parent event-loop
 starvation, because `child.exitCode` is populated at reap time and reaping needs
 that same loop.
 
-Field evidence: `./singularity check` blocks its own loop ~77 s building
+Field evidence: `./equin check` blocks its own loop ~77 s building
 TypeScript programs, and a `git worktree list` that finished in ~73 ms returned
 `timedOut: true, exitCode: 0` — a successful result discarded as a timeout. With
 `worktreeListPaths` throwing on `timedOut`, that **crashed the CLI at boot, so
-`./singularity check` silently ran no checks at all** while still exiting 0.
+`./equin check` silently ran no checks at all** while still exiting 0.
 
 Fixed in `spawn-captured.ts` by deciding on the OUTCOME, not the timer: a child
 that exited of its own accord (clean status, no signal) did not time out, and its
@@ -392,8 +392,8 @@ A and B touch disjoint files except `safety.ts`, so A3 and B2 should be one comm
 - **Equivalence, the strongest available check:** snapshot the current on-disk + DB state once
   as a fixture and assert the new pure classifier returns the **identical target set** as the
   current logic. Cheap the moment A0 makes classification pure.
-- `./singularity test plugins/debug/plugins/worktree-cleanup` and
-  `./singularity test plugins/infra/plugins/spawn`.
+- `./equin test plugins/debug/plugins/worktree-cleanup` and
+  `./equin test plugins/infra/plugins/spawn`.
 - **Spawn unit tests** (mirror the existing `timeoutMs` triplet at `spawn-captured.test.ts:102-128`):
   abort before the call (no child spawned); abort mid-flight on `sleep 30` (rejects within the
   2 s grace, child gone); abort after clean exit (still rejects); `timeoutMs`+`signal` both set
@@ -411,7 +411,7 @@ A and B touch disjoint files except `safety.ts`, so A3 and B2 should be one comm
   - Re-run under host load and confirm duration **no longer tracks loadAvg**.
   - `reaped n/m` in the `worktree-cleanup` log sink must stay stable across the change — the
     target set is unchanged by construction.
-- `./singularity build` after each step (both plugin `CLAUDE.md`s regenerate their `Uses:`
+- `./equin build` after each step (both plugin `CLAUDE.md`s regenerate their `Uses:`
   lists; `plugins-doc-in-sync` fails otherwise).
 
 ## Open questions

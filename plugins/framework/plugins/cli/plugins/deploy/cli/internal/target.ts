@@ -144,7 +144,7 @@ async function toBackend<T>(send: (origin: string) => Promise<T>): Promise<T> {
     if (err instanceof TypeError) {
       return refuse(
         `cannot reach ${origin} — the "${await deployNamespace()}" backend is not serving. ` +
-          `Run \`./singularity build\` first; deploy reads its deployment records from it.`,
+          `Run \`./equin build\` first; deploy reads its deployment records from it.`,
       );
     }
     if (err instanceof EndpointError) return refuse(err.message);

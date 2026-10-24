@@ -168,7 +168,7 @@ Migration of the 23 sites (verified inventory):
 
 ## Verification
 
-1. `./singularity build` — generation succeeds, `web-tiers.generated.ts`
+1. `./equin build` — generation succeeds, `web-tiers.generated.ts`
    committed, checks green (`eager-tier-in-sync`, registry, docs, tsc).
 2. Diff the generated deferred set against the old `partitionWebEntries`
    output (expected diff above, nothing else).

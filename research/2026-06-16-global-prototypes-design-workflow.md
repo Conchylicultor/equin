@@ -48,7 +48,7 @@ prototypes/
 - `harness.html` is served with `window.__PROTO_NAME__` injected by the server so `harness.js` knows which folder to load (the router has no wildcard/`import.meta` support — see §2).
 - Migration: strip each existing mock down to `App` + styles; lift `RUNS`/`EVENTS`/`PUSHES` into `_shared/fixtures.js`; lift token blocks into `_shared/tokens.css`.
 
-**Tooling exclusion (verified):** `tsconfig*.json`, `./singularity check` (boundaries/docgen), and bun `workspaces` are all scoped to `plugins/` — repo-root `prototypes/` is invisible to them. Only safety net: add `"prototypes/**"` to the global `ignores` in `plugins/framework/plugins/tooling/plugins/lint/core/build-lint-config.ts` so a stray `bunx eslint prototypes/` is skipped rather than erroring.
+**Tooling exclusion (verified):** `tsconfig*.json`, `./equin check` (boundaries/docgen), and bun `workspaces` are all scoped to `plugins/` — repo-root `prototypes/` is invisible to them. Only safety net: add `"prototypes/**"` to the global `ignores` in `plugins/framework/plugins/tooling/plugins/lint/core/build-lint-config.ts` so a stray `bunx eslint prototypes/` is skipped rather than erroring.
 
 ### 2. Server: serve raw prototype files (`files` sub-plugin)
 
@@ -102,9 +102,9 @@ Each of the 4 new plugin dirs needs a `CLAUDE.md` (the `plugins-have-claudemd` c
 
 ## Verification
 
-1. `./singularity build`, then open `http://<worktree>.localhost:9000/prototypes`.
+1. `./equin build`, then open `http://<worktree>.localhost:9000/prototypes`.
 2. Gallery lists `helix` and `mist-panes`; open one → Focus shows the mock in a scaled iframe; Compare shows both side-by-side.
-3. `./singularity check` passes (boundaries, doc-in-sync, claudemd, registry-in-sync — commit regenerated `*.generated.ts`).
+3. `./equin check` passes (boundaries, doc-in-sync, claudemd, registry-in-sync — commit regenerated `*.generated.ts`).
 4. Push-reload: edit a value in `prototypes/helix/styles.css` → the open iframe reloads without manual refresh (watcher → version resource → cache-bust).
 5. "Improve this prototype" opens the task-draft popover pre-filled with the prototype path.
 6. Scripted check via `e2e/screenshot.mjs --url …/prototypes --click "Compare"` to confirm the Compare grid renders.

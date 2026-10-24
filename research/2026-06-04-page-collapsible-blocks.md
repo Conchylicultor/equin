@@ -287,7 +287,7 @@ guaranteed rather than incidental.
 - **`package.json`** — copy `to-do/package.json`, rename to `@singularity/plugin-page-toggle`.
 - **`CLAUDE.md`** — short prose + autogen block (build fills it).
 
-`./singularity build` auto-discovers the new web entry and regenerates
+`./equin build` auto-discovers the new web entry and regenerates
 `web-sdk/core/web.generated.ts` and the plugin docs.
 
 ---
@@ -316,7 +316,7 @@ No migration, no new endpoint.
 
 ## Verification
 
-1. `./singularity build` from the worktree; confirm it deploys clean (checks +
+1. `./equin build` from the worktree; confirm it deploys clean (checks +
    docs in sync). App at `http://att-1780582408-qcy9.localhost:9000`.
 2. Open the Pages app, create/open a page.
 3. **Generic collapse:** create a block, Tab a second block under it to nest.
@@ -336,4 +336,4 @@ No migration, no new endpoint.
    children stay with the original.
 7. **Regression:** existing pages still render all blocks (every row has
    `expanded = true`); bullets/to-dos/indent/outdent/drag-drop unaffected.
-8. `./singularity check` passes (plugin boundaries, migrations-in-sync, docs).
+8. `./equin check` passes (plugin boundaries, migrations-in-sync, docs).

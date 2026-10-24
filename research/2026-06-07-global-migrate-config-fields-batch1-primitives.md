@@ -172,7 +172,7 @@ Remove entirely:
 
 ### Step 5 — Build & regenerate
 
-`./singularity build` auto-regenerates `web.generated.ts` (adds the 5 new
+`./equin build` auto-regenerates `web.generated.ts` (adds the 5 new
 `fields/plugins/<T>/plugins/config` entries, drops the 2 legacy ones), the
 `docs/plugins-*.md` reference, and the CLAUDE.md autogen blocks. **Do not hand-edit**
 generated files. No `REEXPORT_EXCEPTIONS` change is needed — none of the new plugins
@@ -193,8 +193,8 @@ re-export across a boundary (they use normal cross-plugin named imports). The ex
 
 ## Verification
 
-1. `./singularity build` succeeds; `web.generated.ts` shows the 5 new config plugins and no `primitives`/`multiline-text` entries.
-2. `./singularity check` passes (plugin-boundaries, migrations-in-sync, eslint, plugins-doc-in-sync).
+1. `./equin build` succeeds; `web.generated.ts` shows the 5 new config plugins and no `primitives`/`multiline-text` entries.
+2. `./equin check` passes (plugin-boundaries, migrations-in-sync, eslint, plugins-doc-in-sync).
 3. App at `http://att-1780846155-i5vw.localhost:9000` — open a settings pane that uses these types (e.g. Backup config: text/bool/int; UI tokens: text/float/int). Confirm each renders identically, editing a value persists to JSONC, and stale-`// @hash` conflict detection still fires.
 4. `rg "config_v2/plugins/fields/plugins/(primitives|multiline-text)" plugins/` returns nothing (all importers moved).
 5. Spot-check a derived type still works end-to-end: an `int` config field edits via the new renderer **and** (unchanged) renders the shared number cell/filter in a data-view via the `extends` chain.

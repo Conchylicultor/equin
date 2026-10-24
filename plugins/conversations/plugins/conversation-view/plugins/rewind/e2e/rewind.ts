@@ -12,7 +12,7 @@
  * `--attempt` names the attempt whose worktree the throwaway sessions run in
  * (they never touch a file). Reusing an attempt avoids a worktree checkout.
  *
- *   ./singularity run plugins/conversations/plugins/conversation-view/plugins/rewind/e2e/rewind.ts --attempt <attempt-id>
+ *   ./equin run plugins/conversations/plugins/conversation-view/plugins/rewind/e2e/rewind.ts --attempt <attempt-id>
  */
 import {
   agentFetch,

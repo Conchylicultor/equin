@@ -240,7 +240,7 @@ same pair.*
 
 1. `bun test plugins/primitives/plugins/live-state plugins/conversations/plugins/conversation-view/plugins/code/server plugins/conversations/plugins/conversation-view/plugins/push-and-exit`
 2. `bun run test:dom plugins/primitives/plugins/live-state plugins/primitives/plugins/optimistic-mutation`
-3. `./singularity build && ./singularity check` (type-check enumerates the 4-site burndown;
+3. `./equin build && ./equin check` (type-check enumerates the 4-site burndown;
    `plugins-doc-in-sync` after the barrel additions).
 4. **D2, the wedge:** `query_db` for a conversation with `worktree_path IS NULL` (or null one out on
    a scratch conversation), then
@@ -270,7 +270,7 @@ same pair.*
 5. `edited-files`: `resolvableSchema` payload, `onWorktree` collapse, `initialData`, six consumers.
 6. `commits-graph.{delta,graph}`: same, plus chip + pane.
 7. Docs (`live-state`, `code`, `commits-graph` CLAUDE.md; `api-design` SKILL).
-8. `./singularity build` (regenerates registries + docs), `./singularity check`, targeted tests, then
+8. `./equin build` (regenerates registries + docs), `./equin check`, targeted tests, then
    the manual checks 4–7.
 
 ## Critical files

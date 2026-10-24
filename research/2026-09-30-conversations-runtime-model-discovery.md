@@ -247,7 +247,7 @@ pattern), `defineDataDir`, `defineJob` schedule (the `cost/refresh-job.ts` shape
 
 ## Verification
 
-- **Unit tests** (`./singularity test plugins/conversations/plugins/model-provider`):
+- **Unit tests** (`./equin test plugins/conversations/plugins/model-provider`):
   - the id format and date-suffix parsing (`claude-haiku-4-5-20251001` → `haiku-4-5`);
   - `modelMeta` labels;
   - `resolveModel` against catalogs where the current version moved, a pin is retired, or the id is
@@ -270,5 +270,5 @@ pattern), `defineDataDir`, `defineJob` schedule (the `cost/refresh-job.ts` shape
 - **Real run:** trigger `models.discover` via Run now in Debug → Background activity. The catalog
   should match the menu verified above (fable 5.1, opus 5.5, sonnet 5.5, haiku 4.5), with nothing
   retired.
-- Run `./singularity check`. `model-provider:no-raw-model-flags` still passes: the only flag
+- Run `./equin check`. `model-provider:no-raw-model-flags` still passes: the only flag
   literals left are the family aliases, not `claude-<tier>-<digit>`.

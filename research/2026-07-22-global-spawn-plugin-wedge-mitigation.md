@@ -8,7 +8,7 @@ a permanent native microtask storm: ~100% CPU, kevent starved, children
 zombify, the op never completes. Producer chain symbolicated from live field
 specimens: [`2026-07-22-global-cli-op-wedge-symbolication.md`](./2026-07-22-global-cli-op-wedge-symbolication.md),
 [`2026-07-22-global-cli-op-wedge-producer-fingerprint.md`](./2026-07-22-global-cli-op-wedge-producer-fingerprint.md).
-Every `./singularity build/check/push` wedge observed in the field is this bug.
+Every `./equin build/check/push` wedge observed in the field is this bug.
 
 Mitigation (and causal test): remove piped stdio from capture-shaped children —
 redirect stdout/stderr to temp-file fds, read after exit. No stream, no pull
@@ -175,7 +175,7 @@ No migration: all `Bun.spawnSync`/`execFileSync`; `plugins/**/server/**`.
    type-check, web-artifacts, build.ts, push.ts, migrations split,
    migrations-in-sync; delete cli/bin/git helpers.
 5. Verify: `bun test plugins/infra/plugins/spawn plugins/framework/plugins/cli/bin`;
-   `./singularity build`. Full `./singularity check` is expected to fail
+   `./equin build`. Full `./equin check` is expected to fail
    eslint ONLY on Phase-2 files — that residue is the batch to-do list.
 
 **Phase 2 — five parallel Opus agents (mechanical batches):**
@@ -185,11 +185,11 @@ No migration: all `Bun.spawnSync`/`execFileSync`; `plugins/**/server/**`.
   backfill-pushes.ts.
 - Each prompt carries the recipe + "mirror a Phase-1-migrated check
   byte-for-byte". Per-batch gate: `rg "Bun\.spawn\(" <files>` empty; `bun
-  test` touched tests; `./singularity check type-check` clean within the
+  test` touched tests; `./equin check type-check` clean within the
   batch's own file set.
 
 **Phase 3 — Fable (integration):** sweep `rg -l "Bun\.spawn\("` vs the ignore
-list; full `./singularity check` green; `./singularity build`; check wall-time
+list; full `./equin check` green; `./equin build`; check wall-time
 sanity (root memo should measurably cut spawns); **file the Stage-2 follow-up
 task via `add_task`**.
 
@@ -208,10 +208,10 @@ cli-op-wedge reports. Each batch shrinks the server ignore glob.
    #1 gate: numeric-fd stdio).
 2. `bun test plugins/framework/plugins/tooling/plugins/checks/core` —
    grep-code/read-set roundtrip suites over the migrated helpers.
-3. Full `./singularity check` — proves every check still finds its root and
+3. Full `./equin check` — proves every check still finds its root and
    candidates (the checks are their own integration tests).
-4. `./singularity build` — regenerates registries (new plugin appears),
-   deploys; then `./singularity push` dry confidence via `check --scope tree`.
+4. `./equin build` — regenerates registries (new plugin appears),
+   deploys; then `./equin push` dry confidence via `check --scope tree`.
 5. Field: watch `cli-op-wedge` reports over subsequent days — Stage-1 success
    criterion and the Stage-2 gate.
 

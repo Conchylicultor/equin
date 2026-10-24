@@ -23,7 +23,7 @@ Consequences:
   notices the broken step).
 - On a genuine **fresh-clone bootstrap** — the exact case the hook exists for —
   the base DB's `__singularity_migrations` ledger is never seeded, so the first
-  `./singularity build --allow-main` deadlocks waiting for it (server-core
+  `./equin build --allow-main` deadlocks waiting for it (server-core
   CLAUDE.md: "No bootstrap, no auto-seeding").
 
 **Outcome:** restore a runnable entry point that applies pending migrations to
@@ -126,7 +126,7 @@ In the `[tasks.setup]` `run` block, replace:
 SINGULARITY_WORKTREE=singularity bun server/src/db/migrate.ts
 ```
 
-with a direct bin invocation (avoids the extra `bun install` the `./singularity`
+with a direct bin invocation (avoids the extra `bun install` the `./equin`
 wrapper would re-run — setup already ran `bun install --silent`):
 
 ```
@@ -159,7 +159,7 @@ leave them.)
    `bun plugins/framework/plugins/cli/bin/index.ts --help` runs without throwing
    the `SINGULARITY_WORKTREE env var is required` error.
 3. **Boundaries/types pass:**
-   `./singularity check plugin-boundaries` and `./singularity check type-check`
+   `./equin check plugin-boundaries` and `./equin check type-check`
    — confirm the dynamic `@plugins/database/*` imports from the CLI root are
    accepted (CLI bin is in the boundary `exclude` set; dynamic barrel imports are
    the same grammar as static).
@@ -185,7 +185,7 @@ leave them.)
   config-resolution changes.
 - `runMigrations` writes to the `migrations` persisted log channel
   (`~/.singularity/.../logs`); harmless in a standalone run.
-- If `./singularity check plugin-boundaries` rejects the dynamic `await import()`
+- If `./equin check plugin-boundaries` rejects the dynamic `await import()`
   of a barrel (unlikely — same module specifier grammar), fall back to a
   top-of-action `await import()` is already used; otherwise gate behind a tiny
   helper module loaded only by the action. STOP and report rather than working

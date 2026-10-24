@@ -5,7 +5,7 @@
  *
  * This is not a build quirk, which is why it is tested here rather than through
  * a consumer. A kind whose own CLI closes its row does so while the child is
- * still running — `./singularity build` closes its row after the health probe
+ * still running — `./equin build` closes its row after the health probe
  * and then runs for another ~100s of compose-serve tail (measured: 75.8s). The
  * reconciler used to drop such a run from the live set on the ledger's say-so,
  * which stopped the tail mid-run (truncating the live log for EVERY kind that

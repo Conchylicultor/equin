@@ -194,11 +194,11 @@ Note: `--font-sans`, `--font-serif`, `--font-mono` do NOT need `:root`/`.dark` e
 3. Chart plugin (4) — 10 new files
 4. Typography plugin (5) — 10 new files
 5. Tokens umbrella (7) — wire into global presets
-6. `bun install` + `./singularity build`
+6. `bun install` + `./equin build`
 
 ## Verification
 
-1. `./singularity build` succeeds
+1. `./equin build` succeeds
 2. Open the app → Settings → UI Themes → verify all 5 token groups appear (Color Palette, Shape, Sidebar Palette, Chart, Typography)
 3. Switch global presets (Default, Ocean, Warm) — verify all groups update
 4. Inspect computed styles in browser dev tools:
@@ -209,4 +209,4 @@ Note: `--font-sans`, `--font-serif`, `--font-mono` do NOT need `:root`/`.dark` e
    - `--letter-spacing` present
    - `--spacing` present
 5. Toggle dark mode — verify dark values apply
-6. `./singularity check` passes
+6. `./equin check` passes

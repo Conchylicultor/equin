@@ -134,7 +134,7 @@ export const _slowOps = dbTable("slow_ops", SlowOpSchema, {
 });
 ```
 
-> **Hard requirement: zero schema drift.** The derived DDL must be byte-identical to the existing `slow_ops` table (same column names, types, nullability, defaults, and the existing unique index). Goal: `./singularity build` generates **no new migration** and `migrations-in-sync` passes clean. If a diff appears, adjust the mapping/`meta` to match the existing table exactly — do not just commit a generated migration.
+> **Hard requirement: zero schema drift.** The derived DDL must be byte-identical to the existing `slow_ops` table (same column names, types, nullability, defaults, and the existing unique index). Goal: `./equin build` generates **no new migration** and `migrations-in-sync` passes clean. If a diff appears, adjust the mapping/`meta` to match the existing table exactly — do not just commit a generated migration.
 
 **`plugins/debug/plugins/slow-ops/server/internal/resources.ts`** — delete the projection:
 
@@ -165,8 +165,8 @@ Other 1:1 table→resource loaders (`conversations/summary`, etc.) can adopt `db
 
 ## Verification
 
-1. `./singularity build` — regenerates migrations. **Confirm no new migration is produced** (DDL identical to existing `slow_ops`). If one is, fix the mapping until the diff is empty.
-2. `./singularity check` — `migrations-in-sync`, `type-check`, `table-defs-in-schema-glob`, and boundary checks all pass.
+1. `./equin build` — regenerates migrations. **Confirm no new migration is produced** (DDL identical to existing `slow_ops`). If one is, fix the mapping until the diff is empty.
+2. `./equin check` — `migrations-in-sync`, `type-check`, `table-defs-in-schema-glob`, and boundary checks all pass.
 3. `bun test plugins/database/plugins/schema-table/server/internal/db-table.test.ts` — mapping unit test passes.
 4. Open the Slow Ops debug pane at `http://<worktree>.localhost:9000` (Debug → Slow Ops) and confirm rows render with all fields, including `recentSamples`. Use `mcp__singularity__query_db` to confirm the `slow_ops` table structure is unchanged.
 5. **Footgun gone:** adding a field to `SlowOpSchema` now makes the column appear in the table and flow to the client with no other edits — there is no projection to forget and no second field list to drift from.

@@ -155,7 +155,7 @@ wave still costing (it won't, once warm).
 
 ## Verification
 
-Deploy with `./singularity build`, then measure on a fresh load of
+Deploy with `./equin build`, then measure on a fresh load of
 `http://<worktree>.localhost:9000` after a restart. Inspect spans via the runtime
 profiler (`get_runtime_profile` MCP / debug profiling pane) and slow-ops reports.
 

@@ -144,14 +144,14 @@ export default {
 
 ### 7. Build & verify
 
-`./singularity build` will:
+`./equin build` will:
 - Auto-discover `server/index.ts` and `web/index.ts`, regenerate `plugins.generated.ts`
 - Generate migration for `prompt_templates` + attachments join table
 - Build frontend + restart server
 
 ## Verification
 
-1. `./singularity build` succeeds
+1. `./equin build` succeeds
 2. Open Settings → "Prompt Templates" section → add a template (title + body) → verify it saves
 3. Open a conversation → verify dashed chips with PenLine icon appear above the prompt input
 4. Click a chip → verify template text is prepended to the editor (not sent)

@@ -321,7 +321,7 @@ member only.
 **Integration, real DB** — `…/internal/status-closure.test.ts`, using the rolled-back-transaction
 + `Rollback` sentinel pattern already established in
 `plugins/tasks/server/internal/deps-tree-move.test.ts` (which documents why: `tasks_v` only
-exists in a booted DB). Run with `./singularity test plugins/tasks` after a build.
+exists in a booted DB). Run with `./equin test plugins/tasks` after a build.
 1. Closure SQL: `C → B → A` ⇒ `closure([A]) = {A,B,C}`, `closure([C]) = {C}`; a diamond dedupes;
    a multi-id seed returns the union.
 2. **The incident as a three-row regression test.** The edge's dependent end must be **settled**,

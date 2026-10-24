@@ -167,7 +167,7 @@ Each section header names the layer and its on-disk path (muted caption) so the
 user can see exactly which file holds the bad data. The propagated user-layer
 `origin` (what the running app actually resolves to) is shown as a 4th
 **"Resolved origin (app reads)"** section *only when it differs* from `gitOrigin`
-— that divergence means a pending `./singularity build`/propagation and is the
+— that divergence means a pending `./equin build`/propagation and is the
 one case where the extra file is informative; otherwise it's redundant noise.
 
 ## Files to modify
@@ -184,11 +184,11 @@ one case where the extra file is informative; otherwise it's redundant noise.
 
 Docs: the config_v2 `CLAUDE.md` "Schema evolution" / "Invalid surfacing"
 paragraph mentions issues carry "the zod `issues`" — update wording to reflect the
-structured shape. `./singularity build` regenerates the autogen reference blocks.
+structured shape. `./equin build` regenerates the autogen reference blocks.
 
 ## Verification
 
-1. `./singularity build` (from the worktree). The bad `config/apps/apps.app.jsonc`
+1. `./equin build` (from the worktree). The bad `config/apps/apps.app.jsonc`
    spacer already provides a live invalid conflict to test against — no fixture
    needed.
 2. Open `http://att-1781173983-4v9o.localhost:9000/agents/config/cd/apps%252Fapps.app.jsonc`.
@@ -208,5 +208,5 @@ structured shape. `./singularity build` regenerates the autogen reference blocks
 4. Sanity on a **valid** config (e.g. a theme token config): no invalid banner;
    raw view shows the layers that exist with correct labels; existing hash-conflict
    diff path untouched.
-5. `./singularity check` — `config-origins-in-sync` and `eslint` stay green
+5. `./equin check` — `config-origins-in-sync` and `eslint` stay green
    (no floating promises, no `string[]`→structured type drift).

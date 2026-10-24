@@ -278,7 +278,7 @@ run. Open questions (row-reorder safety, the still-forking-DB race) tracked in t
 **Throughput follow-up (add/remove contention under load)** bounded by the host `worktree-mutate`
 semaphore (containment) → **[`2026-07-02-worktree-mutation-host-gate-DESIGN.md`](./2026-07-02-worktree-mutation-host-gate-DESIGN.md)**.
 **Cost-axis origin RESOLVED 2026-07-02 — the "checkout is irreducible" assumption is REFUTED:** agents
-edit < 1 % of the tree but the mandatory whole-tree `./singularity build` kills *sparse* checkout;
+edit < 1 % of the tree but the mandatory whole-tree `./equin build` kills *sparse* checkout;
 the real lever is APFS directory `clonefile(2)` — materialize the (still-full) tree copy-on-write in
 **~0.24 s vs ~3.8 s (16×, 80× under load)**, dissolving the add-vs-reap contention the gate only
 bounds. Design + measurements (3 probes) + clean git integration → **[`2026-07-02-worktree-checkout-clonefile-DESIGN.md`](./2026-07-02-worktree-checkout-clonefile-DESIGN.md)**
@@ -321,7 +321,7 @@ faceted build); `/api/composition/data` now **84 ms** (`git-memo-hit` on the sha
 duplicate walk). Both corrections confirmed against live data: the explorer `disabled` cascade is served as
 `disabledIds` on `/api/composition/data` (**12** = `review.plugin-changes` seed + subtree + `render-diff`
 importers) and derived client-side; the detail pane reads `importedBy` off the full faceted aggregate (339
-nodes populated). All 60 `./singularity check`s pass. **2026-07-10 verification: landed on main as
+nodes populated). All 60 `./equin check`s pass. **2026-07-10 verification: landed on main as
 `978a1d621` (2026-07-02).** Post-merge re-validation on `singularity` not yet recorded (corroboration:
 the latest stall capture, 2026-07-09, no longer names `buildPluginTree`).
 Residual: the rare faceted endpoint's cold build is still multi-second and can 502 under load (cached after;

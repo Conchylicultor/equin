@@ -151,7 +151,7 @@ Files:
 
 ## Verification
 
-1. `./singularity build`, open `http://<worktree>.localhost:9000/pages`.
+1. `./equin build`, open `http://<worktree>.localhost:9000/pages`.
 2. Create a page; add a block with text and a couple of indented children.
 3. Hover the block, click the drag handle → **Turn into → Page**.
 4. Expect: the block becomes a clickable "link to page" row in the body; a new
@@ -161,4 +161,4 @@ Files:
 6. Repeat with a **childless** block → new page opens with one empty, typeable
    text block.
 7. Scripted check with `e2e/screenshot.mjs` (`--click "Page"`) for before/after.
-8. `./singularity check` (plugin-boundaries, type-check) must pass.
+8. `./equin check` (plugin-boundaries, type-check) must pass.

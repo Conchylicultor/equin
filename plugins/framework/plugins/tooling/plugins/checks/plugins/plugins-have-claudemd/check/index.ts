@@ -23,7 +23,7 @@ const check: Check = {
       return {
         ok: false,
         message: `${missing.length} plugin(s) missing CLAUDE.md: ${missing.slice(0, 5).join(", ")}${missing.length > 5 ? ", …" : ""}`,
-        hint: "Run `./singularity build` to generate them.",
+        hint: "Run `./equin build` to generate them.",
       };
     }
     return { ok: true };

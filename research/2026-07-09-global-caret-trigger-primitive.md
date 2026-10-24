@@ -189,7 +189,7 @@ Each plugin keeps its own surface child, its own `onCommit` (`convertTo` for `/`
 
 ## Sequencing
 
-Each step builds, type-checks, and passes `./singularity check` on its own.
+Each step builds, type-checks, and passes `./equin check` on its own.
 
 1. **Scaffold + move (no behavior change).** Create the plugin; move `caret-anchor.ts`; drop editor's re-export; repoint all five importers. Validates the boundary graph and the no-cycle edge before any logic moves.
 2. **Add the pure core.** `scan-trigger.ts`, `trigger-state.ts` + both bun:test suites. Not yet consumed.
@@ -221,6 +221,6 @@ Cases: empty-block transition clears `dismissedId`; dismissal survives query typ
 
 Plus the arbiter: type `@friday [[bar` → assert exactly one popover in the DOM, and that it is the `[[` one.
 
-**Manual**, after `./singularity build`: confirm `$$` arrow keys still move the caret through LaTeX, and that Esc on a no-match `/zzzz` query does not swallow Esc from the surrounding UI.
+**Manual**, after `./equin build`: confirm `$$` arrow keys still move the caret through LaTeX, and that Esc on a no-match `/zzzz` query does not swallow Esc from the surrounding UI.
 
-`./singularity build` regenerates `docs/plugins-*.md` and the plugin registries; `./singularity check` must pass `plugin-boundaries`, `plugins-registry-in-sync`, `plugins-doc-in-sync`, `type-check`, and `eslint`.
+`./equin build` regenerates `docs/plugins-*.md` and the plugin registries; `./equin check` must pass `plugin-boundaries`, `plugins-registry-in-sync`, `plugins-doc-in-sync`, `type-check`, and `eslint`.

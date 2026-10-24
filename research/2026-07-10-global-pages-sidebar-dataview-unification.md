@@ -184,7 +184,7 @@ keep `6ec84829688d` verbatim. The resolver derives each instance id from `slug(n
 origin's `items` is the full live contribution list — so deleting the `Pages.Sidebar`
 "favorites" contribution regenerates `pages.sidebar.origin.jsonc` with a new hash, and a
 committed override carrying the old hash **hard-fails `config-origins-in-sync` on push**.
-After `./singularity build`, copy the regenerated origin's `@hash` into the override.
+After `./equin build`, copy the regenerated origin's `@hash` into the override.
 
 ### 4c. `config/apps/pages/page-tree/pages.tree.fields.jsonc` — **new, required**
 
@@ -198,7 +198,7 @@ it verbatim (it will contain the single `"apps.pages.starred:starred"` entry). P
 
 ## Migration
 
-`./singularity build` regenerates everything — **never invoke `drizzle-kit`**:
+`./equin build` regenerates everything — **never invoke `drizzle-kit`**:
 
 - `ALTER TABLE page_blocks_ext_starred DROP COLUMN rank`
 - `reorderable-slots.generated.ts` (+ `pages.tree.fields`, − `pages.sidebar`'s favorites entry)
@@ -249,10 +249,10 @@ Reference/template files (read, do not edit):
 
 ## Verification
 
-1. `./singularity build`. Confirm the generated migration drops `page_blocks_ext_starred.rank`,
+1. `./equin build`. Confirm the generated migration drops `page_blocks_ext_starred.rank`,
    and that `pages.tree.fields.origin.jsonc` appeared. Copy its body to the override; re-stamp
    `pages.sidebar.jsonc`'s `@hash` from its regenerated origin.
-2. `./singularity check` — must pass `migrations-in-sync`, `config-origins-in-sync`,
+2. `./equin check` — must pass `migrations-in-sync`, `config-origins-in-sync`,
    `reorder:configs-authored`, `data-view:configs-authored`, `reorderable-slots-in-sync`,
    `plugins-doc-in-sync`, `plugin-boundaries`, `type-check`.
 3. Open `http://<worktree>.localhost:9000/pages`. The sidebar shows the Search row, then a

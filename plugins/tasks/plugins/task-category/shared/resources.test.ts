@@ -2,7 +2,7 @@
  * The exposed category keeps the id saved task-list views name (`category`)
  * and reads NULL — the None bucket — for a task with no row.
  *
- * Run: `./singularity test plugins/tasks/plugins/task-category`.
+ * Run: `./equin test plugins/tasks/plugins/task-category`.
  */
 
 import { expect, test } from "bun:test";

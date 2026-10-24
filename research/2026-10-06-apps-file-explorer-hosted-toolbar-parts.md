@@ -106,14 +106,14 @@ frame portals them into a slot in the Bar:
 
 ## Verification
 
-- `./singularity test plugins/primitives/plugins/data-view`: extend `hosted-toolbar.test.tsx`:
+- `./equin test plugins/primitives/plugins/data-view`: extend `hosted-toolbar.test.tsx`:
   1. A frame rendering `body` but dropping `options` throws, and the message names the frame and `options`.
   2. With 2 views, dropping `switcher` throws; with 1 view (switcher `null`), dropping it passes.
   3. A frame hiding both body and options (collapsed) passes, and expanding it with body but no options throws.
   4. A frame portaling options into an attached node passes.
   5. `forms.options: "visible"` renders the trigger without the reveal class.
-- `./singularity test` for running-agents and the other hosted surfaces' suites.
-- `./singularity build`, then an e2e at `plugins/apps/plugins/file-explorer/plugins/browser/e2e/toolbar-controls.ts`:
+- `./equin test` for running-agents and the other hosted surfaces' suites.
+- `./equin build`, then an e2e at `plugins/apps/plugins/file-explorer/plugins/browser/e2e/toolbar-controls.ts`:
   open `/files`, assert the options trigger is visible in the Bar (not inside the tree),
   click it, and assert the sort/filter/fields rows are there.
 - `screenshot.ts --path /files` to check the toolbar row visually, light and dark.

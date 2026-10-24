@@ -93,14 +93,14 @@ surface):
   per `no-floating-promises` — `resume.mutate` returns void so this is fine;
   confirm against the mutation API.)
 - `package.json` — copy an existing sibling plugin's `package.json` shape.
-- `CLAUDE.md` — short prose (autogen block filled by `./singularity build`).
+- `CLAUDE.md` — short prose (autogen block filled by `./equin build`).
 
-Run `./singularity build` — regenerates the web registry (picks up the new
+Run `./equin build` — regenerates the web registry (picks up the new
 `web/index.ts`), then verify.
 
 ## Verification
 
-1. `./singularity build` — must pass checks (boundaries, plugins-registry-in-sync,
+1. `./equin build` — must pass checks (boundaries, plugins-registry-in-sync,
    type-check).
 2. DB inspection via `query_db`: find an account and set it errored to simulate
    the stuck state — actually simulate through the real path:

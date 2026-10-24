@@ -30,7 +30,7 @@ Preserved in `~/.singularity/wedge-repro/2026-07-21-inspector-session/`
 - `repro-loop.ts` — N concurrent `check --scope tree --no-cache` lanes under
   `--inspect=localhost:1660N/wedge` (grant-bypassed), auto-restart, wedge
   auto-flag (wall budget + sustained 30 s CPU delta), status ledger.
-- `build-loop.ts` — same shape but a REAL `./singularity build` (no grant
+- `build-loop.ts` — same shape but a REAL `./equin build` (no grant
   bypass → real cpu-slot flock admission; in-process frontend arm;
   `SINGULARITY_CHECK_NO_CACHE=1`), parameterized per worktree.
 - `capture-wedge.sh <pid> <ws>` — one-shot forensics: `ps`/`ps -M`, 5 s CPU
@@ -74,7 +74,7 @@ Operational traps for whoever loops this next:
   work. My first 20 min of "looping" (runs 2–99) were cache-hit no-ops. Use
   `check --no-cache` / `SINGULARITY_CHECK_NO_CACHE=1`.
 - A scratch worktree made with raw `git worktree add` has no DB fork; its build
-  aborts at "Waiting for DB fork" until `./singularity db fork` is run there.
+  aborts at "Waiting for DB fork" until `./equin db fork` is run there.
 
 ## What was run (all times 2026-07-21 UTC)
 
@@ -82,7 +82,7 @@ Operational traps for whoever loops this next:
 |---|---|---|
 | 14:46–15:12 | 3 × `check --scope tree` lanes, grant-bypassed, **cached** (my mistake) | run 1 healthy 275 s; runs 2–99 4 s no-ops — no pressure |
 | 15:13–16:03 | 3 × `check --scope tree --no-cache` lanes, grant-bypassed | ~4 full cycles/lane, all healthy ~300 s, host load 18–32 |
-| 16:03–17:05 | **3 × real `./singularity build` in parallel** (this worktree + 2 scratch worktrees), real slot admission, no cache | ~10 completed builds, 660–991 s each, ALL exit 0; zero wedge flags |
+| 16:03–17:05 | **3 × real `./equin build` in parallel** (this worktree + 2 scratch worktrees), real slot admission, no cache | ~10 completed builds, 660–991 s each, ALL exit 0; zero wedge flags |
 
 The 3-parallel-builds arm was run because the user reported the field trigger
 as "fires almost instantly as soon as 2–3 agents build in parallel", and

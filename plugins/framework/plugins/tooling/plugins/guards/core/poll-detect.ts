@@ -3,7 +3,7 @@ import {
   type ShellParseResult,
   type ShellRedirection,
 } from "./parse-shell";
-import { CLI_NAME } from "@plugins/framework/plugins/cli/core";
+import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 
 /**
  * Polling detection, as pure functions over a command string and a window.
@@ -248,7 +248,7 @@ export function watchSubjectsFrom(parsed: ShellParseResult): WatchSubject[] {
   add(/logs\/([a-z0-9-]+)\.jsonl/, (m) => `log:${m[1]}`);
 
   // Process probes read their target off the PARSED call: a pattern is routinely
-  // quoted (`pgrep -f "singularity push"`), and a regex over the raw text stops
+  // quoted (`pgrep -f "equin push"`), and a regex over the raw text stops
   // at the first space inside the quotes, splitting one watch into two.
   for (const call of parsed.calls) {
     if (call.name === "pgrep" || call.name === "pkill") {

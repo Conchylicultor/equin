@@ -100,7 +100,7 @@ Run: `bun run test:dom plugins/apps-core/plugins/surface/plugins/floating`.
 
 ## End-to-end verification
 
-1. `./singularity build`, then drive with the Playwright helper against
+1. `./equin build`, then drive with the Playwright helper against
    `http://<worktree>.localhost:9000`:
    - Switch the surface to **windows** mode (the placement `SegmentedControl` in the action bar).
    - Drag a window to a distinctive position and resize it; note its box.

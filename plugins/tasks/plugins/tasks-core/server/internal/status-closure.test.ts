@@ -18,8 +18,8 @@ import { runStatusBatchOn } from "./status-batch";
 //
 // Requires the running embedded cluster AND this worktree's database as a real
 // boot leaves it — the derived VIEW layer above is rebuilt from source on every
-// boot and is not part of the migration chain, so `./singularity build` first:
-//   ./singularity test plugins/tasks/plugins/tasks-core
+// boot and is not part of the migration chain, so `./equin build` first:
+//   ./equin test plugins/tasks/plugins/tasks-core
 //
 // The queue schema is NOT part of that requirement any more: `worktreeDbScenario`
 // installs `graphile_worker` itself before the first scenario opens, so the

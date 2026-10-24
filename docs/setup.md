@@ -40,8 +40,8 @@ git clone <repo url> singularity && cd singularity
 mise trust && mise install   # trust this checkout's mise.toml, then install
 
 # 5. The app.
-./singularity start               # compiles and starts the gateway, and brings up Postgres
-./singularity build --allow-main --skip-checks  # builds the app and deploys it
+./equin start               # compiles and starts the gateway, and brings up Postgres
+./equin build --allow-main --skip-checks  # builds the app and deploys it
 ```
 
 `mise install` also runs the repo's `setup` task (trusts every worktree's
@@ -51,14 +51,14 @@ Continue only once it says `all required present`. Claude Code is the one
 *recommended* item: the doctor names it with its fix but does not stop on it,
 since the app builds and runs without it — only agents need it, and the app
 says so where they are launched (the health report's Claude Code row). Re-run it any time with
-`mise run doctor`. `./singularity start` and `build` also run it first, so a
+`mise run doctor`. `./equin start` and `build` also run it first, so a
 missing tool is reported before any long step rather than minutes into one.
 
 Don't install Bun or Go another way (Homebrew included): a copy outside mise
 bypasses `mise.lock`, and the build's `toolchain:resolved` check rejects a
 release other than the locked one.
 
-**Do not run as root.** Postgres' `initdb` refuses to run as the root OS user, so the embedded cluster — and therefore every backend behind it — cannot start. `./singularity start` and a released bundle's `launch` both refuse outright rather than fail downstream. This bites on fresh servers in particular: the deploy plugin defaults `sshUser` to `root`, so create a non-root user and run as them (`adduser --disabled-password --gecos '' singularity`, `chown -R` the install dir, then `su - singularity`).
+**Do not run as root.** Postgres' `initdb` refuses to run as the root OS user, so the embedded cluster — and therefore every backend behind it — cannot start. `./equin start` and a released bundle's `launch` both refuse outright rather than fail downstream. This bites on fresh servers in particular: the deploy plugin defaults `sshUser` to `root`, so create a non-root user and run as them (`adduser --disabled-password --gecos '' singularity`, `chown -R` the install dir, then `su - singularity`).
 
 Postgres needs no install. `bun install` brings the server (`embedded-postgres` ships `postgres` / `initdb` / `pg_ctl`) and the client tools the app uses to fork and back up databases (`pg_dump` / `pg_restore`, from [`client-tools`](../plugins/database/plugins/client-tools/CLAUDE.md)). Both come from the same Postgres release.
 
@@ -66,14 +66,14 @@ The app is then at <http://singularity.localhost:9000>. `start` is a one-time,
 system-level step. On macOS it registers the gateway with launchd
 (`~/Library/LaunchAgents/dev.singularity.gateway.plist`), so it comes back on
 its own at every login — after a reboot too — and is relaunched if it crashes;
-the gateway then brings Postgres and the app back up. `./singularity stop` stops
-it until the next login, and `./singularity stop --disable` also stops it
+the gateway then brings Postgres and the app back up. `./equin stop` stops
+it until the next login, and `./equin stop --disable` also stops it
 starting at login. On Linux it is a systemd user unit
 (`~/.config/systemd/user/dev.singularity.gateway.service`) that starts at boot,
 nobody logged in — it needs lingering (`sudo loginctl enable-linger $USER`,
 which `install.sh` enables). On a server, `SINGULARITY_LISTEN=127.0.0.1:9000
-./singularity start` keeps it on loopback. Elsewhere (no launchd, no systemd)
-the gateway does not survive a reboot: run `./singularity start` again after one.
+./equin start` keeps it on loopback. Elsewhere (no launchd, no systemd)
+the gateway does not survive a reboot: run `./equin start` again after one.
 
 **Chromium is not part of the install.** It is an on-demand dependency
 ([`infra/deps`](../plugins/infra/plugins/deps/CLAUDE.md)), installed (~600 MB)
@@ -95,7 +95,7 @@ Each conversation (worktree) gets its own database inside the same cluster, fork
 
 ### Using system PG instead of embedded
 
-Edit `~/.singularity/state/db-config/database.json` (auto-generated on first `./singularity start`):
+Edit `~/.singularity/state/db-config/database.json` (auto-generated on first `./equin start`):
 
 ```json
 {
@@ -108,7 +108,7 @@ Edit `~/.singularity/state/db-config/database.json` (auto-generated on first `./
 }
 ```
 
-An empty `services` array disables the gateway's embedded-PG supervisor. The `connection` block tells the server and CLI how to reach your system PG. Then restart the gateway with `./singularity start --force`.
+An empty `services` array disables the gateway's embedded-PG supervisor. The `connection` block tells the server and CLI how to reach your system PG. Then restart the gateway with `./equin start --force`.
 
 In this mode the cluster is yours, not the app's, so nothing provisions inside it: you install and run a Postgres 18 server yourself and create the `singularity` database (on macOS, for example, `brew install postgresql@18 && brew services start postgresql@18 && createdb singularity`). The app still forks and backs up with its own bundled client tools, which are Postgres 18.
 
@@ -118,6 +118,6 @@ In this mode the cluster is yours, not the app's, so nothing provisions inside i
 
 ## If you cloned someone else's repo
 
-Nothing extra to configure. The first `./singularity push` asks the remote whether this checkout may write to it (a dry-run push, which writes nothing) and records the answer in `.git/config` beside `core.hooksPath`. With no write access, push commits, rebases, runs the checks and fast-forwards your **local** `main` — which is what main's auto-build watches — and pushes nothing. It also stops fetching the other repo's `main` into yours, which would otherwise pull in changes you never reviewed and eventually break push outright.
+Nothing extra to configure. The first `./equin push` asks the remote whether this checkout may write to it (a dry-run push, which writes nothing) and records the answer in `.git/config` beside `core.hooksPath`. With no write access, push commits, rebases, runs the checks and fast-forwards your **local** `main` — which is what main's auto-build watches — and pushes nothing. It also stops fetching the other repo's `main` into yours, which would otherwise pull in changes you never reviewed and eventually break push outright.
 
-The repo you cloned from is then your **upstream**: a daily check records a report when it has new commits, and you update on your own terms with `./singularity upstream status` and `./singularity upstream merge` in a worktree. If you fork instead, point `origin` at your fork; push publishes there, and `upstream` is added for you.
+The repo you cloned from is then your **upstream**: a daily check records a report when it has new commits, and you update on your own terms with `./equin upstream status` and `./equin upstream merge` in a worktree. If you fork instead, point `origin` at your fork; push publishes there, and `upstream` is added for you.

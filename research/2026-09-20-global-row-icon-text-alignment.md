@@ -151,7 +151,7 @@ horizontal claims. Add the vertical one:
    fixed layout agrees with itself.
 
 This is the rung that makes the *class* non-recurring: any future cell that
-re-inflates its height fails `./singularity check`.
+re-inflates its height fails `./equin check`.
 
 ### Phase 3 — the artifacts popover, on the primitive that owns this shape
 
@@ -189,7 +189,7 @@ variant-less `<Text>`; the panel header already uses `variant="label"`.
 
 Compare the result against the mock with the prototype harness rather than by
 eye:
-`./singularity run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts --name proto-1789731211-jeis`.
+`./equin run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts --name proto-1789731211-jeis`.
 
 ### Phase 4 (separable) — close the "no size chosen" hole
 
@@ -224,10 +224,10 @@ the rows that are wrong today and making the mistake unspellable.
 
 ## Verification
 
-1. `./singularity build`, then `./singularity check` — the new geometry
+1. `./equin build`, then `./equin check` — the new geometry
    invariant and its falsification run here, and the falsification failing to
    fail is itself a failure.
-2. `./singularity test plugins/primitives/plugins/css/plugins/text` and
+2. `./equin test plugins/primitives/plugins/css/plugins/text` and
    `…/layout-harness`.
 3. Measure the real row again, the same way the defect was found: drive the
    deployed app to the artifacts popover and read back the icon's ink centre and

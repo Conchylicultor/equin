@@ -78,8 +78,8 @@ status, which is the authority on "starting".
 
 ## Verification
 
-1. `./singularity test plugins/conversations/plugins/conversation-view/plugins/pending-turn plugins/conversations/plugins/agent-thread`
-2. `./singularity build`, then with `browser_*`: launch a conversation from the home prompt on
+1. `./equin test plugins/conversations/plugins/conversation-view/plugins/pending-turn plugins/conversations/plugins/agent-thread`
+2. `./equin build`, then with `browser_*`: launch a conversation from the home prompt on
    the worktree build and screenshot during the start — exactly one dots line, labelled
    "Starting the agent", echo captioned "Waiting for the agent to start…"; then it turns into
    "Working for …" and the echo retires.

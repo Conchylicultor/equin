@@ -3,7 +3,7 @@
  * surface's saved views and filter presets name (`<kind>.<field>`) are
  * unchanged, and they are listed under the arm's "Backup" band.
  *
- * Run: `./singularity test plugins/backup/plugins/runs-arm`.
+ * Run: `./equin test plugins/backup/plugins/runs-arm`.
  */
 
 import { describe, expect, test } from "bun:test";

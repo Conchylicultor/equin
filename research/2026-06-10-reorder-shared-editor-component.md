@@ -52,7 +52,7 @@ fields/reorder-tree/config/web → reorder/editor/web                  (NEW)
 
 `reorder/editor` is a sink (no path back to reorder or reorder-tree), so the
 pre-existing `reorder → reorder-tree` edge never closes a cycle.
-`./singularity check plugin-boundaries` must pass.
+`./equin check plugin-boundaries` must pass.
 
 ## The coupling to break
 
@@ -268,8 +268,8 @@ the shift). Drop the old `NodeRows` and the "No items." branch — an empty
 
 ## Verification
 
-1. `./singularity build`; `./singularity check plugin-boundaries` (confirms the
-   two new edges + DAG); `./singularity check` (typecheck/lint). Grep
+1. `./equin build`; `./equin check plugin-boundaries` (confirms the
+   two new edges + DAG); `./equin check` (typecheck/lint). Grep
    `plugins/reorder/plugins/editor` for `@plugins/reorder/web`, `@plugins/fields`,
    `@plugins/config_v2` → must be zero.
 2. **Field editor (new):** open a reorderable slot's `items` field in the Config

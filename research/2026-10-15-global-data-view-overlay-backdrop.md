@@ -114,13 +114,13 @@ Reuse: `Pin`, `Surface`, `Scroll`, `OverlayInteractive`, `spaceLength`,
 
 ## Verification
 
-1. `./singularity test plugins/primitives/plugins/data-view` — add a jsdom test
+1. `./equin test plugins/primitives/plugins/data-view` — add a jsdom test
    beside `web/__tests__/toolbar-arrangement.test.tsx`: with `backdrop`, switching
    between a full-bleed and a list instance keeps the backdrop element mounted
    (same DOM node), the list renders inside the panel, `reserve.right` moves the
    panel's right edge, and the guards throw (non-overlay arrangement, non-full-bleed
    backdrop type, `reserve` without `backdrop`).
-2. `./singularity build`, then on Places:
+2. `./equin build`, then on Places:
    - screenshots of Gallery and List with and without a selected place
      (`screenshot.ts --path /places --click "Gallery"`, then click a card);
    - `compare-diff.ts --name proto-1791725279-9yramg` for a visual check against the mockup;
@@ -128,4 +128,4 @@ Reuse: `Pin`, `Surface`, `Scroll`, `OverlayInteractive`, `spaceLength`,
    - new `places-map/e2e/backdrop-panel.ts`: zoom the map, go to Gallery and back —
      pins at the same screen positions (camera kept); open a card from Gallery —
      panel's right edge clears the card; click a pin through the visible map gap — card opens.
-3. `./singularity check` (boundaries, docs in sync).
+3. `./equin check` (boundaries, docs in sync).

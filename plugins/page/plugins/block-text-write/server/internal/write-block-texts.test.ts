@@ -18,8 +18,8 @@
  * transaction that last wrote a row): rows written by one patch share it, and a
  * transaction that wrote earlier holds a smaller one.
  *
- * Run: `./singularity test plugins/page/plugins/block-text-write`
- * (requires the running embedded cluster — `./singularity build` first).
+ * Run: `./equin test plugins/page/plugins/block-text-write`
+ * (requires the running embedded cluster — `./equin build` first).
  */
 
 import {

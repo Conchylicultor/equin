@@ -181,7 +181,7 @@ No-change (already `content`-equivalent, no width): `tasks/task-draft-form/.../t
 
 ## Verification
 
-1. `./singularity build` from the worktree; confirm no type errors (the new
+1. `./equin build` from the worktree; confirm no type errors (the new
    `PopoverWidth`/`PopoverPadding` unions are exhaustively checked at every call site).
 2. Reproduce the original bug: open `http://<worktree>.localhost:9000/pages`, click the
    active **Tree** view chip → the settings popover must render with content filling the

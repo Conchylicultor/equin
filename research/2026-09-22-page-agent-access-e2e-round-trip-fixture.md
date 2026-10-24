@@ -131,8 +131,8 @@ Reused: `typeLines`, `editableBlocks` / `blockIdOf` (`editor/e2e`), `fetchBlocks
 
 ## Verification
 
-1. `./singularity build` (backgrounded), then
-   `./singularity run plugins/page/plugins/annotations/plugins/agent-access/e2e/agent-access-verify.ts`.
+1. `./equin build` (backgrounded), then
+   `./equin run plugins/page/plugins/annotations/plugins/agent-access/e2e/agent-access-verify.ts`.
    Every check passes, including the new precondition.
 2. **Prove it can fail.** Once, locally and never committed, disable the
    line-leading escape in `editor/core/markdown.ts`, rebuild, and rerun. E4 must
@@ -141,7 +141,7 @@ Reused: `typeLines`, `editableBlocks` / `blockIdOf` (`editor/e2e`), `fetchBlocks
    two extra builds, ~20 min.
 3. Run the other e2e scripts that call `typeLines` and are affected by the helper
    change: a quick `rg`, then run any caller that passes a `\n`.
-4. `./singularity check` (type-check, lint, plugin docs in sync).
+4. `./equin check` (type-check, lint, plugin docs in sync).
 
 ## Outcome (2026-09-22)
 

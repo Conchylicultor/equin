@@ -251,7 +251,7 @@ No `select` projection needed (select-all from the view matches
 - `bun test plugins/framework/plugins/resource-runtime`
 - `bun test plugins/infra/plugins/query-resource`
 - `bun run test:dom plugins/primitives/plugins/live-state` (client contract untouched)
-- `./singularity build` + `./singularity check`
+- `./equin build` + `./equin check`
 - E2E: create a conversation → one scoped `delta` (upsert + order) on
   `conversations-active`, cascade scoped into attempts/tasks; flip a
   conversation done → row leaves the list via delete+order (the mutable-where

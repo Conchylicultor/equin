@@ -136,7 +136,7 @@ No DB migration, no schema change, no poller/job/event changes.
 
 ## Verification (end-to-end)
 
-1. `./singularity build`, open `http://<worktree>.localhost:9000`.
+1. `./equin build`, open `http://<worktree>.localhost:9000`.
 2. Launch a conversation and get the agent to call `AskUserQuestion`. Confirm the web
    pane shows the *"Answer here"* button (and `query_db`: `waiting_for = 'question'`).
 3. Click *Answer here*. Confirm: the tmux menu is dismissed; the AUQ `tool_use` +

@@ -3,7 +3,7 @@
 //   - the pencil revealed on hover — and only it — opens the inline editor.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/sonata/plugins/library/e2e/cell-affordance.ts
+//   ./equin run plugins/apps/plugins/sonata/plugins/library/e2e/cell-affordance.ts
 //     [--url http://<worktree>.localhost:9000] [--headed]
 
 import {

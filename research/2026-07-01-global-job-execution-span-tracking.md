@@ -189,7 +189,7 @@ so job data is silently dropped until each is extended:
   (jobs dispatcher chokepoint) to the "Entry points vs leaves" section.
 - `plugins/debug/plugins/slow-ops/CLAUDE.md` — document the `job` kind, the
   `jobMs` default (3000), and the `defineJob({ slowThresholdMs })` override.
-- `./singularity build` regenerates `docs/plugins-details.md` / `plugins-compact.md`
+- `./equin build` regenerates `docs/plugins-details.md` / `plugins-compact.md`
   and the plugin reference blocks; the `plugins-doc-in-sync` check enforces it.
 
 ## Critical files
@@ -218,9 +218,9 @@ so job data is silently dropped until each is extended:
 
 ## Verification
 
-1. `./singularity build` — must pass type-check (the two exhaustive switches +
+1. `./equin build` — must pass type-check (the two exhaustive switches +
    two `Record<SpanKind,…>` literals fail loudly if any `job` case is missing)
-   and all `./singularity check` (incl. `plugins-doc-in-sync`, boundaries).
+   and all `./equin check` (incl. `plugins-doc-in-sync`, boundaries).
 2. **Span recorded:** trigger a job (e.g. enqueue via an existing flow, or a
    scheduled job tick). Then call the `get_runtime_profile` MCP tool for this
    worktree and confirm a `job` aggregate with the job name as label appears; or

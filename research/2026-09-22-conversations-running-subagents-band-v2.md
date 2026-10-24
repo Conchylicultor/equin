@@ -85,12 +85,12 @@ entirely.
 
 ### 3. Verify
 
-- `./singularity test` on both plugins (new join tests; a jsdom test of the band
+- `./equin test` on both plugins (new join tests; a jsdom test of the band
   over fixture rows: running, background running, just-finished lingering,
   ended-without-reporting).
-- `./singularity build` (background, then `./singularity await`), then screenshot
+- `./equin build` (background, then `./equin await`), then screenshot
   `/agents/c/<id>` light + dark, and during a live fan-out of three sub-agents.
-- `./singularity check`.
+- `./equin check`.
 
 ## Critical files
 

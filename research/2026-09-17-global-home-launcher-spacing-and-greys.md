@@ -117,11 +117,11 @@ without knowing about Home.
 
 ## Verification
 
-- `./singularity test plugins/primitives/plugins/data-view plugins/primitives/plugins/search plugins/primitives/plugins/css/plugins/text`
+- `./equin test plugins/primitives/plugins/data-view plugins/primitives/plugins/search plugins/primitives/plugins/css/plugins/text`
   (capsule-toolbar, icons-view, search-input tests; add a case that `spaceBelow` lands outside the sticky band).
-- `./singularity build` (runs checks: spacing lint, css-vars-supplied, docs in sync).
+- `./equin build` (runs checks: spacing lint, css-vars-supplied, docs in sync).
 - `compare-diff.ts --name proto-1789509871-llga --options style=flat,palette=ocean,surface=black,header=capsule --width 1280`
   — differing-pixel ratio below the `7afb85b49` baseline (run it once before the change to record it); check the gaps and greys by eye on the side-by-side sheet. Repeat at `--width 700`.
 - `screenshot.ts --path /home` dark and light; hover a control circle → turns white.
 - Another DataView with the default bar (e.g. tasks list) looks identical before/after.
-- `./singularity run plugins/apps/plugins/home/e2e/launcher.ts` passes.
+- `./equin run plugins/apps/plugins/home/e2e/launcher.ts` passes.

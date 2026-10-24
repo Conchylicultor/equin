@@ -153,7 +153,7 @@ the engine and contribution closures in `lint-groups.ts`.
 
 ## Benchmark (exit criterion)
 
-Before = this branch's merge-base code, after = this branch, same host, `./singularity check
+Before = this branch's merge-base code, after = this branch, same host, `./equin check
 type-check --jobs 1`, store warm on the base tree, reading `lint N/M` and worker `cpu` / `maxRSS`:
 
 1. Body-only edit in a hub (a function body in `web-sdk#core`, about 1,078 direct importers).

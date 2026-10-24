@@ -253,7 +253,7 @@ import taskFilePeekPlugin from "@plugins/task-file-peek/web";
 
 ## Step-by-step migration (each step buildable + reviewable)
 
-Each step ends with `./singularity check --plugin-boundaries`, `./singularity build`, and a manual smoke test of the affected flows.
+Each step ends with `./equin check --plugin-boundaries`, `./equin build`, and a manual smoke test of the affected flows.
 
 1. **Carve out `task-detail` host (no behavior change).**
    - Create `plugins/tasks/plugins/task-detail/{package.json, web/{index.ts, panes.tsx, slots.ts, context.tsx, components/task-detail.tsx}}`.
@@ -293,7 +293,7 @@ Each step ends with `./singularity check --plugin-boundaries`, `./singularity bu
 
 7. **Cleanup.**
    - Delete `Tasks.View` slot.
-   - Update `plugins/tasks/CLAUDE.md` (autogen block regenerates on next `./singularity build`).
+   - Update `plugins/tasks/CLAUDE.md` (autogen block regenerates on next `./equin build`).
    - Confirm each sub-plugin has a generated `CLAUDE.md`.
    - Final boundary + build pass.
 
@@ -318,12 +318,12 @@ Each step ends with `./singularity check --plugin-boundaries`, `./singularity bu
 
 **Boundary check** after every step:
 ```
-./singularity check --plugin-boundaries
+./equin check --plugin-boundaries
 ```
 
 **Build** after every step:
 ```
-./singularity build
+./equin build
 ```
 
 **Manual smoke tests** (the user-visible flows that must keep working):

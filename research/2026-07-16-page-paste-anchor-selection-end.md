@@ -109,7 +109,7 @@ When a selection spans branches (a top-level root plus a root nested under a dif
 bun test plugins/page/plugins/editor/core/block-ops.test.ts
 ```
 
-**2. End-to-end in a real browser** — `./singularity build`, then:
+**2. End-to-end in a real browser** — `./equin build`, then:
 
 ```bash
 bun e2e/copy-paste-verify.mjs --base http://att-1784204878-drki.localhost:9000
@@ -120,4 +120,4 @@ bun e2e/copy-paste-verify.mjs --base http://att-1784204878-drki.localhost:9000
 
 All assertions must pass — B/C currently fail on an unmodified build, so a green run is only meaningful after they are fixed.
 
-**3. Checks**: `./singularity check` (type-check + lint + boundaries).
+**3. Checks**: `./equin check` (type-check + lint + boundaries).

@@ -176,10 +176,10 @@ highlights "Agents" there.
 
 ## Verification
 
-- `./singularity test` on `css/status-dot`, `css/badge`, `css/row`,
+- `./equin test` on `css/status-dot`, `css/badge`, `css/row`,
   `app-shell`, `data-view`, `conversation-ui/item`. New cases: `StatusDot`
   ring arm; `SidebarNavItem` active from the route; `Row` selected class.
-- `./singularity build` (background, then report the deploy).
+- `./equin build` (background, then report the deploy).
 - Re-run the computed-style dump on the deploy's sidebar and compare each
   validated sidebar item against the mockup numbers. Record the before/after
   measurements in the page card.

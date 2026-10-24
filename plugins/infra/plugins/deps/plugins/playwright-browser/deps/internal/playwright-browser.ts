@@ -224,7 +224,7 @@ export async function launchChromium(
   const read = readBrowserExecutables(ready.dir);
   if (!read.ok) {
     throw new Error(
-      `${ready.dep.id} is no longer intact (${read.reason}) — reinstall it: ./singularity deps install ${ready.dep.id}`,
+      `${ready.dep.id} is no longer intact (${read.reason}) — reinstall it: ./equin deps install ${ready.dep.id}`,
     );
   }
   const headless = opts.headless ?? true;

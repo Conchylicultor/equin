@@ -14,8 +14,8 @@
  *    an icon the page already has;
  *  - neither op reaches a non-page row, or a trashed one.
  *
- * Run: `./singularity test plugins/page/plugins/editor`
- * (requires the running embedded cluster — `./singularity build` first).
+ * Run: `./equin test plugins/page/plugins/editor`
+ * (requires the running embedded cluster — `./equin build` first).
  */
 
 import {

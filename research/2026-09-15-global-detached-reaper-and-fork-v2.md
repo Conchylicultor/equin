@@ -83,7 +83,7 @@ The Runs plugin records a deliberate decision to keep each domain's own ledger:
 "read-time federation, not a shared table" (`plugins/runs/CLAUDE.md`). The
 survey confirms that each own ledger is doing real work:
 
-- **build:** `./singularity build` run by hand in a shell inserts its own
+- **build:** `./equin build` run by hand in a shell inserts its own
   `build_runs` row and closes it about 100 s before the process exits. It does
   this with raw SQL, so it survives the schema change the build itself is
   applying. A primitive-owned table would need a second writer from that CLI.
@@ -162,7 +162,7 @@ All changes are in `plugins/infra/plugins/jobs/plugins/supervised-job`.
 
 - **`run` body.** The factory registers a supervised task under the job name,
   with payload `{ runId, attempt, input }`, and spawns
-  `./singularity supervised-exec <name>`. The child calls
+  `./equin supervised-exec <name>`. The child calls
   `run(input, { runId, log })`:
   - `log` writes to stdout/stderr, which becomes the transcript, which the
     parent tails into `channel`. So one process writes each log file.
@@ -241,7 +241,7 @@ All changes are in `plugins/infra/plugins/jobs/plugins/supervised-job`.
   - Its notifications stay in the body, and are now written from the child.
   - `createConversation` is unchanged.
 
-## 4. `./singularity build`'s wait for a new worktree's DB (needs your approval: under `plugins/framework/`)
+## 4. `./equin build`'s wait for a new worktree's DB (needs your approval: under `plugins/framework/`)
 
 The detached fork spends an exec boot before its temp DB appears, and that eats
 into build's 20 s grace. Once the workflow suspends, there is also no job row
@@ -284,7 +284,7 @@ misleading hint in a rare failure.
 
 ## Verification
 
-- **Unit tests** (`./singularity test <plugin>`):
+- **Unit tests** (`./equin test <plugin>`):
   - run-id derivation and the shared singleton key;
   - log discard on GC and supersede;
   - loop: close-before-reclaim, `not-claimed` on attempt 2 throwing, backoff
@@ -296,7 +296,7 @@ misleading hint in a rare failure.
 - **Survives a restart** (worktree deploy):
   1. Add an `events-test` job with a `run` body that sleeps about 90 s, and
      start it.
-  2. Run `./singularity build` mid-run.
+  2. Run `./equin build` mid-run.
   3. With `query_db`, confirm: the child stayed alive, its row closes with exit
      0, the workflow completes with no dead job, and a second start during the
      run loses its claim.
@@ -313,4 +313,4 @@ misleading hint in a rare failure.
   this machine. After push, check main's next hourly tick: its
   `supervised_job_runs` row, the lines in `logs/worktree-cleanup.jsonl`, and no
   slot-hog report.
-- `./singularity check`.
+- `./equin check`.

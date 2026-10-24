@@ -103,7 +103,7 @@ barrel-import pass, and `topoSortPlugins` for the register order of late plugins
 
 ## Verification
 
-- `./singularity run plugins/debug/plugins/profiling/plugins/cold-start/e2e/cold-start.ts --iterations 5` and the same with
+- `./equin run plugins/debug/plugins/profiling/plugins/cold-start/e2e/cold-start.ts --iterations 5` and the same with
   `--busy 3`, cold.
   - Run it before Phase 1, after Phase 1, and after Phase 3.
   - Record first screen with data, main screen, eager plugin count / bytes, the load-plugins span and the post-render burst.
@@ -112,7 +112,7 @@ barrel-import pass, and `topoSortPlugins` for the register order of late plugins
   - `gateway` go test for the header.
   - web-sdk jsdom tests: a slot read suspends, then lists the late contributors; a dispatch key loads only its match.
 - Deep links on a cold load: screenshots of `/agents`, a pages page, sonata, studio and settings. Everything must render with no not-found flash.
-- Run `./singularity check`.
+- Run `./equin check`.
 - Update the track page: Status, Tasks ([CPU profile], [Immutable code files], [Client lazy plugins]) and a Benchmark entry
   with before and after numbers. Add a wiki sub-page "Lazy plugins design" and file a follow-up task (page id + instructions id).
 

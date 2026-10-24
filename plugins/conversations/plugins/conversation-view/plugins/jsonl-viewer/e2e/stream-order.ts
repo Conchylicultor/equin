@@ -18,7 +18,7 @@
  *
  * Spawns a real agent — run it deliberately.
  *
- *   ./singularity run plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/e2e/stream-order.ts --attempt <attempt-id>
+ *   ./equin run plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/e2e/stream-order.ts --attempt <attempt-id>
  */
 import {
   agentFetch,

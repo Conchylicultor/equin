@@ -121,7 +121,7 @@ div with `h-full` — PaneChrome's scroll stays inert.
 
 ## Verification
 
-1. `./singularity build` — compiles cleanly
+1. `./equin build` — compiles cleanly
 2. Spot-check in browser:
    - **Category A panes** (task detail, agent detail, stats, backup, accounts, etc.): content scrolls, no double scrollbar
    - **Category B+D panes** (memory, broadcasts, profiling, logs, queue): header stays pinned, body scrolls

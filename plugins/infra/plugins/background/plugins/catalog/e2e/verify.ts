@@ -11,7 +11,7 @@
 //    renders its file-change trigger and its open instance.
 //
 // Usage:
-//   ./singularity run plugins/infra/plugins/background/plugins/catalog/e2e/verify.ts [--headed] [--out /tmp/bg-verify]
+//   ./equin run plugins/infra/plugins/background/plugins/catalog/e2e/verify.ts [--headed] [--out /tmp/bg-verify]
 
 import {
   arg,

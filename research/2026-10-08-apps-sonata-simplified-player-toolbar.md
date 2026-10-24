@@ -152,7 +152,7 @@ re-spell it.
 - Strip order is `play`, `progress-bar`, `loop-toggle`. `Transport` is a
   reorderable render slot, so the order goes in its reorder config, written the
   same way the actions config is. The slot is listed in
-  `reorder/shared/reorderable-slots.generated.ts`, so `./singularity build`
+  `reorder/shared/reorderable-slots.generated.ts`, so `./equin build`
   regenerates the file.
 
 ### 9. Remove the sustain chip
@@ -194,10 +194,10 @@ names the bar's contents ("display picker, transport, volume, the jog wheel").
 
 ## Verification
 
-1. `./singularity build` (backgrounded). Then `./singularity check` for
+1. `./equin build` (backgrounded). Then `./equin check` for
    boundaries, the docs in sync, the registry in sync and type-check.
 2. Screenshot the player on a song:
-   `./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --path /sonata/song/<id> --out /tmp/sonata-bar`
+   `./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --path /sonata/song/<id> --out /tmp/sonata-bar`
    - The header matches the target row: no seek buttons, no Ped., no "Display"
      label, view switcher far right.
    - The strip shows play · timeline · loop.

@@ -26,7 +26,7 @@ New **web-only** plugin at `plugins/page/plugins/debug/` (under the `page` umbre
 doc — co-located with the editor it tests, keeping the page feature self-contained). It contributes
 a `DebugApp.Sidebar` entry that opens a pane embedding `<BlockEditor>`.
 
-Plugin registration is **automatic** — `./singularity build` discovers `web/index.ts` from the
+Plugin registration is **automatic** — `./equin build` discovers `web/index.ts` from the
 filesystem and regenerates `web.generated.ts` (with `dependsOn` derived from imports). No manual
 registry edit.
 
@@ -173,7 +173,7 @@ No extra deps — all imports are workspace plugins + `react-icons` (already a r
 
 ## Verification
 
-1. `./singularity build` (from this worktree) — regenerates the plugin registry, builds, restarts.
+1. `./equin build` (from this worktree) — regenerates the plugin registry, builds, restarts.
    Confirm no boundary/registry-sync check failures.
 2. Open `http://att-1780404278-9gxh.localhost:9000/debug` → click **Page Editor** in the sidebar.
 3. Confirm the pane opens with an empty editable text block (auto-created document + block).

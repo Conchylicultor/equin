@@ -45,7 +45,7 @@ touching no consumer**, and delete the compat shim.
 The load-bearing principle, stated once:
 
 > A facet's **build-time** operations — `extract`, `relate`, `renderDoc` — live in
-> `facet/`, discovered by `loadFacets()` (dynamic import; runs inside `./singularity build`,
+> `facet/`, discovered by `loadFacets()` (dynamic import; runs inside `./equin build`,
 > browser-less). Its **browser** renderers — diff, detail, catalog — live in `web/`
 > sub-plugins, discovered by web slots. **Pure data transforms** (`toComparable`) live in
 > `core/` so either runtime can call them. The discriminator is *the runtime that executes
@@ -157,7 +157,7 @@ Define `CatalogFacetTable` + the `Catalog.FacetTable` web slot in `forge/catalog
 and detail slot already exist.)
 - NEW: `plugins/apps/plugins/forge/plugins/catalog/core/facet-table.ts`
 - EDIT: `catalog/web/index.ts` (define + export slot)
-- Verify: `./singularity build` succeeds.
+- Verify: `./equin build` succeeds.
 
 ### Phase 2 — Reference vertical slice: the `exports` facet
 Prove all surfaces originate from one facet folder. Doc already works via `renderDoc`.
@@ -167,7 +167,7 @@ Prove all surfaces originate from one facet folder. Doc already works via `rende
 - NEW `exports/plugins/render-detail/web` → move `RuntimeGroup`, `SymbolRow`, `CATEGORY_STYLES`,
   `categorize`, `ConsumerList` from `public-api-section.tsx`; reads `node.facets["exports"]`.
 - NEW `exports/plugins/render-catalog/web` → contributes the Exports aggregation table.
-- Verify: `./singularity build`; the exports section renders in detail/catalog/diff with real data.
+- Verify: `./equin build`; the exports section renders in detail/catalog/diff with real data.
 
 ### Phase 3 — Replicate for the remaining 8 facets
 First extract shared web components (`SubHeading`, `PluginLink`, `ConsumerList`) to a shared
@@ -204,7 +204,7 @@ home (`plugin-view/web/components/` or a small primitives plugin). Then, per fac
   `docs/*.md` byte-identical.
 
 ### Phase 5 — Completeness check (fail loudly)
-Add a `./singularity check` that, for every facet from `loadFacets()`, asserts a contributor
+Add a `./equin check` that, for every facet from `loadFacets()`, asserts a contributor
 exists in each of the three web render slots (diff/detail/catalog) with a matching `facetId`.
 Prevents a facet silently vanishing from a surface. (`facets/check/index.ts` or a built-in check)
 
@@ -239,7 +239,7 @@ Removable per-facet as each lands green; final state:
 
 ## Verification
 
-Per phase: `./singularity build` and `./singularity check` pass.
+Per phase: `./equin build` and `./equin check` pass.
 
 After Phase 4:
 - Forge detail pane + catalog show real data (screenshot before/after via `e2e/screenshot.mjs`).
@@ -250,7 +250,7 @@ After Phase 4:
 After Phase 6:
 - `rg "populateCompatFields|\.server\.httpRoutes|\.webApiUses|publicApi"` returns no hits.
 - `docs/routes.md` gone; `plugins-doc-in-sync` no longer references it.
-- `./singularity check --plugin-boundaries` passes.
+- `./equin check --plugin-boundaries` passes.
 
 ## Follow-on (tracked as Phase 7–8, after the core migration)
 

@@ -118,7 +118,7 @@ import { MillerColumns } from "@plugins/layouts/plugins/miller/web";
 - Update `plugins/primitives/plugins/app-shell/CLAUDE.md` and the
   plugin description: "Reusable sidebar + toolbar **chrome**; the app supplies
   the main-area layout renderer as children." (Drop "miller-columns".)
-- `./singularity build` regenerates the autogen reference blocks /
+- `./equin build` regenerates the autogen reference blocks /
   `plugins-*.md`; the `plugins-doc-in-sync` check keeps them honest.
 
 ## Out of scope (noted, not changed)
@@ -147,13 +147,13 @@ are unchanged.
 
 ## Verification
 
-1. `./singularity build` — must succeed (type-check + frontend build).
-2. `./singularity check plugin-boundaries` — confirms:
+1. `./equin build` — must succeed (type-check + frontend build).
+2. `./equin check plugin-boundaries` — confirms:
    - the new `app-shell → layouts/miller` edge is **gone** (app-shell no longer
      imports a layout plugin),
    - the 6 new `<app>/shell → layouts/miller` edges are legal barrel imports,
    - no cycles introduced.
-3. `./singularity check` (full) — `eslint`, `plugins-doc-in-sync`, etc.
+3. `./equin check` (full) — `eslint`, `plugins-doc-in-sync`, etc.
 4. Manual smoke via Playwright at `http://<worktree>.localhost:9000`:
    - `/agents`, `/forge`, `/pages`, `/debug`, `/files`, `/workflows` — sidebar +
      toolbar chrome present, Miller columns render and drill-down works

@@ -317,12 +317,12 @@ bun plugins/page/plugins/editor/e2e/drag-autoscroll-verify.ts
 editor's `web/__tests__/block-selection.test.tsx`) for the `SET_RANGE` bail; add a case
 asserting a repeated identical `SET_RANGE` returns the same state object.
 
-**4. Manual** — `./singularity build`, then on a long page at
+**4. Manual** — `./equin build`, then on a long page at
 `http://att-1785418929-ohmg.localhost:9000/pages`: drag from a block toward the bottom
 edge and hold — the document should scroll smoothly, faster the closer to the edge,
 with the highlight extending continuously and the marquee rectangle tracking it.
 
 ```bash
-./singularity build
-./singularity check
+./equin build
+./equin check
 ```

@@ -4,7 +4,7 @@ import type { AssetMirrorPrewarm } from "../../core";
 import { mirrorFetchToDisk } from "./fetch-to-disk";
 
 // The composition-filtered prewarm registry is gitignored and present only after
-// a `./singularity build --hermetic --composition <name>`. Keyed by that name —
+// a `./equin build --hermetic --composition <name>`. Keyed by that name —
 // there is no checkout-global one — and built as a variable (not a string
 // literal pointing at the maybe-absent file) so tsc never tries to resolve the
 // gitignored module, and gated on `existsSync` so a plain build no-ops without a

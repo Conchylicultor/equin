@@ -101,7 +101,7 @@ export function useBlockedReason(deployment: Deployment): string | null {
  * gave up the same two buttons for the same reason; a row that kept them made
  * the same deployment answer to two different vocabularies.
  *
- * `converge`/`ship` alone remain CLI verbs — `./singularity deploy converge`
+ * `converge`/`ship` alone remain CLI verbs — `./equin deploy converge`
  * repairs host drift without restarting what is serving — but a bare icon on a
  * list row is the wrong place to offer a partial deploy, because the row has
  * nowhere to say which part it left out.

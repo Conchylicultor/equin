@@ -352,7 +352,7 @@ Topological order, no back-edges: `shell`/`plugin-meta` < `explorer/web` < `expl
 5. **The five sub-plugins** — create each; `git mv` the three editor files into their new homes.
 6. **Release rewrite** — split `release-launcher.tsx` into the two sections; rewrite `panes.tsx`
    + `index.ts`.
-7. **CHECKPOINT — `./singularity build`, then reconcile config by hand.** Do not proceed with a
+7. **CHECKPOINT — `./equin build`, then reconcile config by hand.** Do not proceed with a
    red tree. The build regenerates the registries, docs, `reorderable-slots.generated.ts`
    (path-keyed), `data-views.generated.ts`, and every `*.origin.jsonc`; the committed
    **overrides** are hand-authored and go stale:
@@ -369,7 +369,7 @@ Topological order, no back-edges: `shell`/`plugin-meta` < `explorer/web` < `expl
      `{"views":[…]}`, hash unchanged; the `git mv` is the whole fix. Confirm nothing orphaned
      at the old path.
 
-   Then `./singularity check`. Expected gates: `plugins-registry-in-sync`, `plugins-doc-in-sync`,
+   Then `./equin check`. Expected gates: `plugins-registry-in-sync`, `plugins-doc-in-sync`,
    `plugins-have-claudemd`, `reorderable-slots-in-sync`, `data-views-in-sync`,
    `config-origins-in-sync`, `pane:segments-unique`, `config-stable-list-ids`, `composition-closure`.
 8. **Runtime verification** (below).
@@ -379,7 +379,7 @@ Topological order, no back-edges: `shell`/`plugin-meta` < `explorer/web` < `expl
 
 ## Verification
 
-`./singularity build`, then drive the real app at `http://att-1784281276-m7nu.localhost:9000/studio/compositions`
+`./equin build`, then drive the real app at `http://att-1784281276-m7nu.localhost:9000/studio/compositions`
 (scripted Playwright via `e2e/screenshot.mjs`, not blind screenshots):
 
 - **New** → lands on `/studio/compositions/comp/<uuid>`, row selected, sections render.

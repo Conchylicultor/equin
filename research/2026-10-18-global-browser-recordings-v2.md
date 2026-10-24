@@ -23,7 +23,7 @@ tools alike, rendered by one footer under any tool call.
 
 ### 1. One plugin, renamed: `debug/e2e-recordings` → `debug/browser-recordings`
 
-It is no longer e2e-only (unmerged, so the rename is free; `./singularity plugin
+It is no longer e2e-only (unmerged, so the rename is free; `./equin plugin
 move`). Data dir `browser-recordings`, same layout, `frames/` now PNG.
 
 - `core/` (browser-safe; web imports it): manifest schema (drop `traceZip`;
@@ -113,7 +113,7 @@ move`). Data dir `browser-recordings`, same layout, `frames/` now PNG.
 
 ## Verification
 
-- `./singularity test plugins/debug/plugins/browser-recordings` (writer: dedupe,
+- `./equin test plugins/debug/plugins/browser-recordings` (writer: dedupe,
   manifest last; matcher).
 - Build; run `screenshot.ts --click "Artifacts"` from this conversation: PNG
   frames at 1400×900 on disk, no zip, run size, run time vs `--no-record`.

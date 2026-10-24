@@ -201,17 +201,17 @@ as reorder's block-axis flag — it is no longer the thing a bar depends on.
 
 ## Verification
 
-- `./singularity test plugins/primitives/plugins/css/plugins/grow-relay` — the
+- `./equin test plugins/primitives/plugins/css/plugins/grow-relay` — the
   new jsdom suite: a cell with no `fill` grows once an `AdaptiveBar` is inside
   it; nested relays propagate and compose `granted`; `Line`/`Stop` terminate;
   `AdaptiveBar.Collapsed` asks for nothing; unmount releases the count.
-- `./singularity test plugins/primitives/plugins/adaptive-bar` — the existing
+- `./equin test plugins/primitives/plugins/adaptive-bar` — the existing
   seven suites must stay green, `no-slack` especially: its probe now runs only
   after the grant settles.
-- `./singularity test plugins/primitives/plugins/slot-render`.
-- `./singularity check` — boundaries, registry sync, plugin-doc sync, eslint,
+- `./equin test plugins/primitives/plugins/slot-render`.
+- `./equin check` — boundaries, registry sync, plugin-doc sync, eslint,
   types.
-- `./singularity build`, then look at the two real bars with the declarations
+- `./equin build`, then look at the two real bars with the declarations
   removed: the Sonata player header (`/sonata`, open a song) and the
   conversation prompt-template chip strip — narrow the pane and watch chips
   relocate into `⋯` rather than vanish. `Debug → Reports` must show no

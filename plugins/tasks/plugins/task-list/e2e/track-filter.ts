@@ -20,7 +20,7 @@
  * the end (also on failure). Refuses main.
  *
  * Manual only — nothing runs this automatically.
- *   ./singularity run plugins/tasks/plugins/task-list/e2e/track-filter.ts [--out /tmp/track-filter] [--headed]
+ *   ./equin run plugins/tasks/plugins/task-list/e2e/track-filter.ts [--out /tmp/track-filter] [--headed]
  */
 import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";

@@ -3,7 +3,7 @@
  * rule (`projectedRoots`), the field adaptation onto the projected wrapper
  * (`fieldsForProjected`), and the children-follow-their-root bucketing
  * (`bucketRowsByRootSection`).
- * Run with `./singularity test plugins/primitives/plugins/data-view`.
+ * Run with `./equin test plugins/primitives/plugins/data-view`.
  *
  * No DOM, no React render: all three are pure functions, so these are bun:test
  * (not the jsdom vitest suite). The shared `partitionIntoSections` itself is

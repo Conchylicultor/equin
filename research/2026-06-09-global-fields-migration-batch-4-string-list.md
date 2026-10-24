@@ -204,8 +204,8 @@ hand-edit those):
 5. Delete `plugins/config_v2/plugins/fields/plugins/string-list/` (and the now-empty
    `plugins/` subdir).
 6. Do the doc-prose cleanup above.
-7. `bun install` (new workspace package names), then `./singularity build`
-   (regenerates registries + autogen doc blocks), then `./singularity check`.
+7. `bun install` (new workspace package names), then `./equin build`
+   (regenerates registries + autogen doc blocks), then `./equin check`.
 
 ## Critical files
 
@@ -219,7 +219,7 @@ hand-edit those):
 
 ## Verification
 
-- `bun install` succeeds; `./singularity build` succeeds; `./singularity check`
+- `bun install` succeeds; `./equin build` succeeds; `./equin check`
   passes (`plugin-boundaries`, `migrations-in-sync`, `eslint`, `plugins-doc-in-sync`,
   `config-origins-in-sync`).
 - `rg` confirms **zero** remaining `@plugins/config_v2/plugins/fields/plugins/string-list`

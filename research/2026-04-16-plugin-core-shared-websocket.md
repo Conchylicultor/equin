@@ -152,7 +152,7 @@ Server-side `notificationsWsHandler` is untouched — sub tracking is already pe
 
 ## Verification
 
-1. `./singularity build` — deploy to `http://claude-1776294129.localhost:9000`.
+1. `./equin build` — deploy to `http://claude-1776294129.localhost:9000`.
 2. Manual multi-tab repro of the original bug (must now pass):
    - Open tab A on `http://singularity.localhost:9000/` (any page that doesn't subscribe `tasks`).
    - Open tab B on `http://singularity.localhost:9000/tasks`.

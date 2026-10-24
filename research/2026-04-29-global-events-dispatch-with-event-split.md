@@ -191,7 +191,7 @@ Defer to a follow-up PR. It's defensive infrastructure, not part of the structur
 
 ### Lint check — Nice-to-have, follow-up
 
-`./singularity check --no-input-event-collision` would flag any `defineJob` whose `input` and `event` schemas declare overlapping keys. The new architecture makes runtime collision impossible, but overlap is a code smell worth surfacing. Low priority — skip for now.
+`./equin check --no-input-event-collision` would flag any `defineJob` whose `input` and `event` schemas declare overlapping keys. The new architecture makes runtime collision impossible, but overlap is a code smell worth surfacing. Low priority — skip for now.
 
 ---
 
@@ -223,8 +223,8 @@ Trigger subscriber migration:
 
 End-to-end:
 
-1. `./singularity build` — types compile, plugin boundaries pass, migration check passes (no schema changes, so no new migration).
-2. `./singularity check --plugin-boundaries` — confirms `tasks → conversations` import doesn't introduce a cycle.
+1. `./equin build` — types compile, plugin boundaries pass, migration check passes (no schema changes, so no new migration).
+2. `./equin check --plugin-boundaries` — confirms `tasks → conversations` import doesn't introduce a cycle.
 3. **Repro the original bug.** Create task A with auto-start, depending on task B. Launch B and push. Confirm A auto-launches when B reaches `done`. Before the fix this fails silently; after, it works.
 4. **Forwarding path.** Run a push, confirm `build.run` fires (and reads nothing from `event` — its handler is unchanged in behavior).
 5. **Durable wait path.** Trigger a `push_and_exit` flow; the `ctx.waitFor(conversationTurnCompleted, …)` registers a `jobs.resume` trigger via `UNSAFE_triggerByName`; the resume reads `__resume_*` from `input` and the rest from `event`. Confirm `_jobWaits.payloadJson` contains the event payload as before.

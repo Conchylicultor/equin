@@ -195,7 +195,7 @@ seek-hold-controller.tsx}`; `library/web/panes.tsx`; engine `audio-store.ts`,
 
 ## Implementation order
 
-1. Build `scoped-store` primitive + jsdom test → `./singularity build`.
+1. Build `scoped-store` primitive + jsdom test → `./equin build`.
 2. `useSurfaceTabId` in pane + `tab-surface.tsx`.
 3. Focused-surface signal + manager filter + `surfaceId` + dynamic registry + `useSurfaceShortcuts`;
    wire `setFocusedSurfaceId` from `TabsProvider`.
@@ -206,7 +206,7 @@ seek-hold-controller.tsx}`; `library/web/panes.tsx`; engine `audio-store.ts`,
 8. Migrate Sonata shortcuts + seek-hold to per-instance/focus-scoped; **delete transport-store**;
    remove publish effect.
 9. Add lint rule.
-10. Docs + `./singularity build` + `./singularity check` (incl. `plugin-boundaries`).
+10. Docs + `./equin build` + `./equin check` (incl. `plugin-boundaries`).
 
 ## Verification (end-to-end)
 
@@ -219,7 +219,7 @@ Scripted Playwright (`e2e/screenshot.mjs`) against `http://<worktree>.localhost:
 4. **Hold ArrowRight in A** → only A scrubs (seek-hold focus gate).
 5. **A's volume slider / mute** → only A's audio changes.
 6. **Key auto-detect toggle in A** → only A re-infers.
-7. `./singularity check` green; the new lint rule would fail on a reintroduced module store.
+7. `./equin check` green; the new lint rule would fail on a reintroduced module store.
 
 ## Risks / flags
 
@@ -229,7 +229,7 @@ Scripted Playwright (`e2e/screenshot.mjs`) against `http://<worktree>.localhost:
 - **Cross-plugin barrel exports:** cursor/key-mode handles must be re-exported from the shell
   barrel under the *same names* (7+ consumers) to minimize churn and keep doc-sync green.
 - **New boundary edges:** `apps → shortcuts` (focus writer) and `shortcuts → pane`
-  (`useSurfaceTabId`). Neither cycles (verified). Run `./singularity check plugin-boundaries`.
+  (`useSurfaceTabId`). Neither cycles (verified). Run `./equin check plugin-boundaries`.
 - **`SonataProvider` wraps library + player**, so the implicit "player on screen" gate from the
   transport bus is gone — re-create it explicitly via `currentSongId !== null` in the per-surface
   shortcut/seek-hold contributions. Document in `controls/CLAUDE.md`.

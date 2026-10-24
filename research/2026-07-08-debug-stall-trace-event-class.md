@@ -185,7 +185,7 @@ Slow Events list. This is the sanctioned display-metadata home for trigger kinds
   `spans`/`gates`/`contention` (the "adding a class" section already generalizes).
 - `.claude/skills/debug/SKILL.md` — if it references `stall-profiles.jsonl`, point
   it at Debug → Slow Events instead.
-- `docs/plugins-*.md` regenerate on `./singularity build`.
+- `docs/plugins-*.md` regenerate on `./equin build`.
 
 ## Critical files
 
@@ -200,9 +200,9 @@ Slow Events list. This is the sanctioned display-metadata home for trigger kinds
 
 ## Verification
 
-1. **`./singularity build`** — green (registry regenerates the new sub-plugin;
+1. **`./equin build`** — green (registry regenerates the new sub-plugin;
    migration unaffected — no schema change).
-2. **`./singularity check`** — boundaries (DAG intact), `plugins-doc-in-sync`,
+2. **`./equin check`** — boundaries (DAG intact), `plugins-doc-in-sync`,
    `type-check`.
 3. **Unit:** `bun test plugins/debug/plugins/trace/plugins/engine/server/internal/rate-limit.test.ts`
    (critical bypasses cap, still honors cooldown); the existing

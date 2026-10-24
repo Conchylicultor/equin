@@ -156,8 +156,8 @@ function findCheckBarrels(dir: string): string[] {
 
 ### CLI: positional args replace --flags
 
-Current: `./singularity check --migrations-in-sync --eslint`
-New: `./singularity check migrations-in-sync eslint`
+Current: `./equin check --migrations-in-sync --eslint`
+New: `./equin check migrations-in-sync eslint`
 
 ```ts
 // cli/src/commands/check.ts
@@ -192,7 +192,7 @@ export type { RunChecksOptions } from "./runner";
 export type { Check, CheckResult } from "./types";
 ```
 
-Consumers: `build.ts` imports only `runChecks` (unaffected). `push.ts` spawns `./singularity check` as subprocess (unaffected).
+Consumers: `build.ts` imports only `runChecks` (unaffected). `push.ts` spawns `./equin check` as subprocess (unaffected).
 
 ### Type imports in sub-plugins
 
@@ -282,8 +282,8 @@ Delete all 19 individual `.ts` files (keep `runner.ts`, `index.ts`, `types.ts`, 
 
 ## Verification
 
-1. `./singularity check --list` — should show all 24 checks (19 built-in sub-plugins + boundary-rules + endpoints×2 + paths + welcome)
-2. `./singularity check` — all checks pass
-3. `./singularity check eslint typescript` — positional args work
-4. `./singularity check nonexistent` — prints "Unknown check(s): nonexistent"
-5. `./singularity build` — build succeeds (build.ts calls runChecks)
+1. `./equin check --list` — should show all 24 checks (19 built-in sub-plugins + boundary-rules + endpoints×2 + paths + welcome)
+2. `./equin check` — all checks pass
+3. `./equin check eslint typescript` — positional args work
+4. `./equin check nonexistent` — prints "Unknown check(s): nonexistent"
+5. `./equin build` — build succeeds (build.ts calls runChecks)

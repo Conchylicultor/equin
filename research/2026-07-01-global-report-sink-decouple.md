@@ -200,16 +200,16 @@ follow-up).
 
 ## Verification
 
-1. `./singularity build` — regenerates the plugin registry for the new
+1. `./equin build` — regenerates the plugin registry for the new
    `report-sink` plugin and rebuilds; also refreshes the autogen CLAUDE.md
    "Uses" blocks (`infra.health` should no longer list `reports.report`).
-2. `./singularity check composition-closure` — must pass. This is the proof:
+2. `./equin check composition-closure` — must pass. This is the proof:
    Sonata's `excludes: ["agent-runtime", "auth"]` fails if its hard closure
    still reaches any agent-runtime taproot. If an offender remains, the check
    prints it + the `explainInclusion` path; trace and confirm whether it is a
    residual reports edge (bug in the cut) or a genuine Sonata dependency (drop
    that exclude / file separately).
-3. `./singularity check` — full check pass (`type-check`, `plugin-boundaries`,
+3. `./equin check` — full check pass (`type-check`, `plugin-boundaries`,
    `plugins-doc-in-sync`, `plugins-registry-in-sync`).
 4. `bun test plugins/plugin-meta/plugins/composition/core/config.test.ts` — the
    seed/taxonomy test still parses with the new Sonata `excludes`.

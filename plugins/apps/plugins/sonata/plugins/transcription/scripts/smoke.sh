@@ -1,5 +1,5 @@
 #!/bin/sh
-# Manual check of the `st` toolkit: needs `./singularity deps install sonata-transcription`.
+# Manual check of the `st` toolkit: needs `./equin deps install sonata-transcription`.
 # Usage: scripts/smoke.sh <out-dir>   (ST_PYTHON defaults to the installed env)
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)

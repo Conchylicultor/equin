@@ -174,7 +174,7 @@ All in `plugins/apps/plugins/file-explorer/plugins/browser`:
 
 ## Verification
 
-1. Run `./singularity test plugins/primitives/plugins/data-view
+1. Run `./equin test plugins/primitives/plugins/data-view
    plugins/infra/plugins/host-fs plugins/apps/plugins/file-explorer`.
    - `fieldInUse` cases: hidden by default; explicitly shown; sorted while
      hidden; a filter leaf; group-by.
@@ -183,7 +183,7 @@ All in `plugins/apps/plugins/file-explorer/plugins/browser`:
      `ok`; a missing path; a file giving `not-a-dir`.
    - `itemCount` cases: listing-preferred; hidden and lens filtering; each
      state.
-2. Run `./singularity build` in the background.
+2. Run `./equin build` in the background.
 3. Run a new e2e script `item-count-verify.ts` on `/files` (home):
    - Record requests: **no `/api/host-fs/peek` while Items is hidden**.
    - Switch Items on from View options. Folder rows then show counts, and an

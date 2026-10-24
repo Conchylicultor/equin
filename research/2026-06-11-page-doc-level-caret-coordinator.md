@@ -236,7 +236,7 @@ Register the two **new** commands `KEY_ARROW_LEFT_COMMAND` /
   (register the rich `BlockFocusHandle` against `lexicalEditorRef`)
 - **Modify** `plugins/page/plugins/editor/web/types.ts` (`BlockEditorAPI`:
   `navigate(dir, caret)` replaces `focusUp/focusDown`; add `CaretContext` import)
-- Autogen docs regenerate via `./singularity build`.
+- Autogen docs regenerate via `./equin build`.
 
 Reuse, don't reinvent:
 - `getAbsoluteOffset` (offset) and `serializeBlockText` — existing in
@@ -252,7 +252,7 @@ Reuse, don't reinvent:
 
 - All changes internal to the `editor` plugin; one barrel per runtime untouched;
   no cross-plugin imports added; no registry/codegen edits. Run
-  `./singularity check plugin-boundaries` after.
+  `./equin check plugin-boundaries` after.
 - The reducer stays caret-free (per its own contract); the coordinator lives
   entirely on the web side, consistent with "caret/focus is imperative, not part
   of the op."
@@ -275,7 +275,7 @@ Reuse, don't reinvent:
 
 ## Verification
 
-1. `./singularity build`; open a page with mixed blocks at
+1. `./equin build`; open a page with mixed blocks at
    `http://<worktree>.localhost:9000` (Pages app).
 2. Unit tests: `keystroke-intent.test.ts` (every key×caret×context → intent) and
    `caret-geometry.test.ts` (line/column/EPS/clamp). Run via the repo test runner.

@@ -1,5 +1,5 @@
 /**
- * `./singularity deploy ship <composition> --server <server> [--release <run-id>]`
+ * `./equin deploy ship <composition> --server <server> [--release <run-id>]`
  * — put a bundle on a converged host and activate it behind a health gate.
  *
  * Bundle discovery is `@plugins/release/plugins/bundles`, which returns a
@@ -80,7 +80,7 @@ const run: CliAction<[string], { server: string; release?: string }> = async (
       refuse(
         `server "${server.name}" is not converged for "${composition}" ` +
           `(${UNIT_TEMPLATE_PATH} or ${install.envFile} is missing). Run:\n` +
-          `  ./singularity deploy converge ${composition} --server ${opts.server}`,
+          `  ./equin deploy converge ${composition} --server ${opts.server}`,
       );
     }
     refuse(

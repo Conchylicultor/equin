@@ -314,7 +314,7 @@ Four surfaces, each already precedented:
    is still 143 with the tap armed. This is the regression that matters most.
 3. **Fail-open** — run with `SINGULARITY_NO_SIGNAL_ORIGIN=1` and with a bogus `CC`;
    assert the build completes normally and one `{armed:false}` line lands in the sink.
-4. **End-to-end, reproducing the incident** — `./singularity build` in this worktree,
+4. **End-to-end, reproducing the incident** — `./equin build` in this worktree,
    `kill <pid>` from another shell mid-checks, then assert: the receipt carries
    `status:"failed"`, the real exit code and the signal; the verdict banner names the
    sender; `~/.singularity/signal-origin.jsonl` has the record; and
@@ -324,7 +324,7 @@ Four surfaces, each already precedented:
 5. **Status collapse is behaviour-preserving** — `bun:test` on `buildStatusOf` covering
    `0 / 1 / 75 / -1 / 143 / null-finishedAt`, and confirm the popover and detail pane now
    agree on `-1` (they disagree today).
-6. `./singularity check` and `./singularity build`.
+6. `./equin check` and `./equin build`.
 
 ## Explicitly out of scope
 

@@ -1,6 +1,6 @@
 // Build-process marker for dist-comparing checks.
 //
-// `./singularity build` runs the check fleet IN PARALLEL with the frontend
+// `./equin build` runs the check fleet IN PARALLEL with the frontend
 // build and publishes the fresh dist only afterwards — so a check that compares
 // the currently-DEPLOYED dist against the current tree (e.g.
 // `web-artifacts:map-in-sync`) would fail exactly when the build is about to

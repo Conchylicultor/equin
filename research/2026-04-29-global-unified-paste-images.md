@@ -221,7 +221,7 @@ Modified:
 
 After **each** migration step:
 
-1. Run `./singularity build` from this worktree.
+1. Run `./equin build` from this worktree.
 2. Open `http://att-1777478253-pdii.localhost:9000`.
 3. Visit the migrated surface. Type some text. Paste an image (Cmd+V from clipboard).
    - Confirm the thumbnail appears inline as a rich element.
@@ -240,7 +240,7 @@ After step 8 (full `prompt-input` migration), additionally:
 - Confirm Claude's transcript shows `@<absolute-path>` and the file exists at that path.
 - Confirm `_conversationAttachments` has rows linking the conversation to the uploaded
   attachments.
-- Run `./singularity check` and confirm no plugin-boundary or migration drift.
+- Run `./equin check` and confirm no plugin-boundary or migration drift.
 
 ## Open follow-ups (not blocking the design)
 

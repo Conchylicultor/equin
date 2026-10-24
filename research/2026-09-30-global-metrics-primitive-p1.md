@@ -291,8 +291,8 @@ Chart-kit is a port of the prototype's SVG kit. It knows nothing about metrics. 
 
 ## Verification
 
-1. `./singularity test plugins/primitives/plugins/metrics` runs bun and jsdom, all green.
-2. `./singularity build` runs in the background and ends with `build-status.json` `status: ok`.
+1. `./equin test plugins/primitives/plugins/metrics` runs bun and jsdom, all green.
+2. `./equin build` runs in the background and ends with `build-status.json` `status: ok`.
    Its `check` covers boundaries, barrel purity, the plugins-doc and registry sync, and the
    lints.
 3. `GET /api/metrics/catalog` returns an empty catalog, since there are no providers. A query

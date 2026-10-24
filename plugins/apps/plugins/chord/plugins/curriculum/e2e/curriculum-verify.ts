@@ -23,7 +23,7 @@
 //   8. Clear turns every chord off, and Undo clear puts them back.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/chord/plugins/curriculum/e2e/curriculum-verify.ts
+//   ./equin run plugins/apps/plugins/chord/plugins/curriculum/e2e/curriculum-verify.ts
 //   … [--timeout-min 15] [--headed]
 //
 // Mutates server state. The selection it finds is put back before the verdict

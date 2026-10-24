@@ -3,7 +3,7 @@ import { z } from "zod";
 /**
  * The verbs over a deployment, as the app launches them.
  *
- * **The CLI is the engine; this is only a launcher.** `./singularity deploy
+ * **The CLI is the engine; this is only a launcher.** `./equin deploy
  * converge|ship` owns every refusal, every host mutation and the health gate —
  * the endpoint spawns exactly that command and streams its output. Nothing about
  * converge or ship is re-implemented server-side, which is the same split

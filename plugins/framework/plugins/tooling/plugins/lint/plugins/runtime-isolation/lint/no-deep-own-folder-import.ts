@@ -102,7 +102,7 @@ export default createRule({
         '`{{from}}/` imports a file inside this plugin\'s own `{{to}}/` (import "{{specifier}}"). ' +
         "The browser build rewrites that to the `{{to}}/` barrel — it cannot inline the file " +
         "without a second copy of its module state — so a symbol `{{to}}/index.ts` does not " +
-        "export passes type-check here and fails `./singularity build` at compose. Import from " +
+        "export passes type-check here and fails `./equin build` at compose. Import from " +
         '"{{barrel}}" and export the symbol from `{{to}}/index.ts`.',
     },
   },

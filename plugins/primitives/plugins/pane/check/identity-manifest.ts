@@ -89,7 +89,7 @@ const WRITER_FILE = join(import.meta.dir, "write-identity-snapshot.ts");
 
 /** The copy-pasteable regeneration command, derived rather than spelled out. */
 function regenCommand(root: string): string {
-  return `./singularity run ${relative(root, WRITER_FILE)}`;
+  return `./equin run ${relative(root, WRITER_FILE)}`;
 }
 
 // Files that may author a pane identity: any source calling `defineRoute` or

@@ -164,9 +164,9 @@ PublicApiSection({ node })
 
 ## Verification
 
-1. `./singularity build` — confirms plugin discovery, type checking, and build pass
+1. `./equin build` — confirms plugin discovery, type checking, and build pass
 2. Open plugin-view for `conversations` (many exports, slots, routes) — verify all runtime groups, consumer annotations, slots, and routes render
 3. Open plugin-view for `plugin-meta` (umbrella with no barrel) — verify section returns null
 4. Open plugin-view for `live-state` (load-bearing, heavily imported) — verify importedBy banner and per-symbol consumers
-5. `./singularity check` — boundary check and registry check pass
+5. `./equin check` — boundary check and registry check pass
 6. Click a consumer name → navigates to that plugin's detail view

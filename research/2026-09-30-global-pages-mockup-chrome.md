@@ -205,7 +205,7 @@ user parent into Scratch, and drop the user children of an agent root.
 
 `page_links` stores only `(source_page_id, target_page_id)`.
 
-- **Table.** Add `source_block_id` to it (`server/internal/tables.ts`). The PK becomes `(source_page_id, target_page_id, source_block_id)`, with the target index kept. Migration through `./singularity build` only.
+- **Table.** Add `source_block_id` to it (`server/internal/tables.ts`). The PK becomes `(source_page_id, target_page_id, source_block_id)`, with the target index kept. Migration through `./equin build` only.
 - **Reindex.** `reindexPage` (`server/internal/reindex.ts`) already walks the source page's live blocks with the `PageLinks.Extractor` contributions. Record the block id of each extraction.
 - **Backfill.** Existing rows have no block id. Add a one-shot boot backfill that reindexes every page, the same pattern as content-search's backfill, so the table is rebuilt.
 - **Loader.** The `pageBacklinks` loader returns one row per **source page**: the first linking block in document order.
@@ -245,18 +245,18 @@ Each step leaves the app working.
 
 **Tests.**
 
-- `./singularity test plugins/primitives/plugins/data-view` covers:
+- `./equin test plugins/primitives/plugins/data-view` covers:
   - sections render every instance;
   - collapse persists per view;
   - `hideWhenEmpty` hides a section and never paints it while loading;
   - `filterScope: "roots"` keeps whole subtrees and pulls in no ancestors;
   - a creator's `views` filter.
-- `./singularity test plugins/primitives/plugins/css/plugins/control-panel` covers the Row `description` line.
-- `./singularity test plugins/page/plugins/links` covers the snippet derivation (inline link, page-link block giving `null`, truncation).
+- `./equin test plugins/primitives/plugins/css/plugins/control-panel` covers the Row `description` line.
+- `./equin test plugins/page/plugins/links` covers the snippet derivation (inline link, page-link block giving `null`, truncation).
 
 **Build and inspect.**
 
-- `./singularity build`, then screenshot `/pages/page/block-acef974d-…` with `screenshot.ts --path … --color-scheme dark`.
+- `./equin build`, then screenshot `/pages/page/block-acef974d-…` with `screenshot.ts --path … --color-scheme dark`.
 - Compare against the mockup with `compare-diff.ts --name proto-1790691924-p8nh`, sidebar and header regions only.
 
 **E2E.**
@@ -266,4 +266,4 @@ Each step leaves the app working.
 - Starring a page must make Favorites appear.
 - The Scratch section must be absent once its pages are gone.
 
-**Checks.** `./singularity check` passes: `migrations-in-sync`, `plugins-doc-in-sync`, `config:overrides-authored` and `config-stable-list-ids`.
+**Checks.** `./equin check` passes: `migrations-in-sync`, `plugins-doc-in-sync`, `config:overrides-authored` and `config-stable-list-ids`.

@@ -228,8 +228,8 @@ Check + docs:
 
 1. `tsc --noEmit` (or build typecheck) — confirm existing JSON `defineEndpoint`
    sites still infer body/response (inference gate, §4).
-2. `./singularity build` — compiles + deploys.
-3. `./singularity check` — `endpoints:typed-web-fetches` passes with 1 allowlist
+2. `./equin build` — compiles + deploys.
+3. `./equin check` — `endpoints:typed-web-fetches` passes with 1 allowlist
    entry (`list.ts`); `endpoints:typed-handlers` still empty; `eslint`,
    `plugins-doc-in-sync` pass.
 4. End-to-end at `http://<worktree>.localhost:9000` via `e2e/screenshot.mjs`:

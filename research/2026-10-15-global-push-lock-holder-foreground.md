@@ -50,5 +50,5 @@ The track proposed keying each generator on a hash of its inputs (`@inputs-hash`
 ## Verification
 
 1. Benchmark (before/after on the wiki): the forced normalize (`normalizeGeneratedArtifacts(root, { force: true })` minus the amend) 3× in the background vs 3× under `withHostGrant({ lane: "interactive" })`, interleaved, same tree, load recorded.
-2. `./singularity build` (checks incl. type-check) green.
+2. `./equin build` (checks incl. type-check) green.
 3. After landing: the op log's `normalize` step on the next pushes (expect median ≲ 20 s vs 109 s) and the `host-grant` wait now visible before `rebase`.

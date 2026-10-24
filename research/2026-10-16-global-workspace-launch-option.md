@@ -130,13 +130,13 @@ struck through), `owner · N MCP tools`.
 
 ## Verification
 
-- `./singularity test plugins/conversations/plugins/workspace` — catalog
+- `./equin test plugins/conversations/plugins/workspace` — catalog
   (owner, launchable derivation), option validate/apply, `getTaskWorkspace`
   default.
 - Lifecycle test: a task with `tasks_ext_workspace = scratch.hello` →
   `prepareConversation` creates a scratch attempt; explicit `opts.workspace`
   still wins.
-- `./singularity build`, then screenshot the composer exhibit
+- `./equin build`, then screenshot the composer exhibit
   (`exhibit:task-draft/composer`) default + menu open; `compare-diff.ts --name
   proto-1789901373-oy29 --options placement=icons`.
 - Manual: file a task from Improve with Scratch · Hello → its attempt runs in

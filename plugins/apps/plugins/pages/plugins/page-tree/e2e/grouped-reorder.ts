@@ -33,8 +33,8 @@
  * (`plugins/primitives/plugins/rank/server/internal/adjacent.test.ts`) and the
  * `POST /api/blocks/:id/move` contract itself.
  *
- * Manual only. Run after `./singularity build`:
- *   ./singularity run plugins/apps/plugins/pages/plugins/page-tree/e2e/grouped-reorder.ts [--headed]
+ * Manual only. Run after `./equin build`:
+ *   ./equin run plugins/apps/plugins/pages/plugins/page-tree/e2e/grouped-reorder.ts [--headed]
  */
 import type { Locator, Page } from "playwright";
 import {

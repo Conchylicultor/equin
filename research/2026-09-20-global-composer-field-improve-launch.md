@@ -249,11 +249,11 @@ Deleted
 
 ## Verification
 
-1. `./singularity build` (background), then read
+1. `./equin build` (background), then read
    `~/.singularity/worktrees/att-1789914840-gzr4/build-status.json`.
 2. Improve — empty and set, against the mock:
    ```
-   ./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
+   ./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts \
      --path /home --click "Improve" --viewport 1400x900 --out /tmp/improve
    ```
    Check by eye: one border; the attach button keeps its width when toggled; the
@@ -265,8 +265,8 @@ Deleted
    unchanged), set a preprompt, set Follow-up from a conversation, submit, and
    confirm the filed task carries preprompt, effort, auto-start model, the URL
    and the dependency edge.
-5. `./singularity test plugins/tasks/plugins/launch-options` and
-   `./singularity run plugins/tasks/plugins/launch-options/e2e/launch-options-verify.ts`
+5. `./equin test plugins/tasks/plugins/launch-options` and
+   `./equin run plugins/tasks/plugins/launch-options/e2e/launch-options-verify.ts`
    — the existing e2e that walks every registered option on both hosts.
-6. `./singularity check` (plugin boundaries, `no-adhoc-layout`, typography,
+6. `./equin check` (plugin boundaries, `no-adhoc-layout`, typography,
    control-size, plugins-doc-in-sync).

@@ -6,7 +6,7 @@
  * form would lose — and a `boolean`, whose many ties the id tiebreak splits. For every row of every order, `until = $key` returns exactly
  * the rows up to it, and `after = $key` exactly the rows past it.
  *
- * Run: `./singularity test plugins/network/plugins/live`
+ * Run: `./equin test plugins/network/plugins/live`
  * (requires the running embedded cluster).
  */
 

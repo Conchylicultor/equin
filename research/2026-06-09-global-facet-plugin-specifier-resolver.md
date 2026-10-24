@@ -58,7 +58,7 @@ layers without dragging the boundary checker into the browser bundle.
   that owns both the tree and `PluginId`). `plugin-id` can't host a node-returning
   resolver — it has no tree, and plugin-tree imports plugin-id (cycle).
 - **Fail-loud: throw in `relate()`.** `relate()` runs inside `buildEnrichedTree`,
-  which both `./singularity build` and the `plugins-doc-in-sync` check call, so a
+  which both `./equin build` and the `plugins-doc-in-sync` check call, so a
   throw fails both at the exact site — no new check infrastructure needed.
 - **The resolver needs no runtime vocabulary at all** (see below). The runtime
   *grouping* in the facets does, and derives from one browser-safe constant.
@@ -253,7 +253,7 @@ dot-form hierarchyId for nav). Display is slash-form via `asPath(id)`:
 
 ## Verification
 
-1. `./singularity build` — regenerates all docs. Expect:
+1. `./equin build` — regenerates all docs. Expect:
    - **New** lines for previously-dropped nested refs, e.g. in
      `apps/story/marker`'s `CLAUDE.md`: "Entity extension of `page/editor` (table
      `page_blocks_ext_story`)", and the reciprocal "Extended by" on `page/editor`.
@@ -261,10 +261,10 @@ dot-form hierarchyId for nav). Display is slash-form via `asPath(id)`:
      top-level plugins).
    - No throw on the current (valid) tree.
 2. Confirm fail-loud: temporarily point a `defineExtension`/import at
-   `@plugins/page/plugins/does-not-exist/server` → `./singularity build` (or
-   `./singularity check plugins-doc-in-sync`) must **fail** with the clear message.
+   `@plugins/page/plugins/does-not-exist/server` → `./equin build` (or
+   `./equin check plugins-doc-in-sync`) must **fail** with the clear message.
    Revert.
-3. `./singularity check` — `plugin-boundaries` (confirms the new
+3. `./equin check` — `plugin-boundaries` (confirms the new
    facets→plugin-id / boundaries→plugin-id edges are legal and no cycle),
    `plugins-doc-in-sync`, `eslint`, `typescript` all green.
 4. Studio → a nested plugin's detail pane: the cross-refs "Imported by" / db-schema

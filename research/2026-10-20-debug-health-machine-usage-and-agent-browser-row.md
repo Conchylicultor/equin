@@ -91,8 +91,8 @@ footer unchanged.
 
 ## Verification
 
-- `./singularity test` on the new plugin (attribution, view model) and sentinel / browser web tests.
-- `./singularity build` (codegen, checks), then `browser_*` on my build: open
+- `./equin test` on the new plugin (attribution, view model) and sentinel / browser web tests.
+- `./equin build` (codegen, checks), then `browser_*` on my build: open
   the health report, expand Machine watcher (breakdown renders, sums plausible
   vs Activity Monitor) and Agent browser (task titles, closes-in).
-- Screenshot compare against the prototype; then `./singularity push`.
+- Screenshot compare against the prototype; then `./equin push`.

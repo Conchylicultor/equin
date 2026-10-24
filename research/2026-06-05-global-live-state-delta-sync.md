@@ -269,7 +269,7 @@ Layer 1 snapshot, so nothing in Layer 1 is wasted.
 
 ## Verification
 
-1. `./singularity build` from this worktree.
+1. `./equin build` from this worktree.
 2. **Fan-out shrank (the win):** open 3+ tabs on the tasks list
    (`http://<worktree>.localhost:9000`), flip one conversation's status, and in
    the browser WS-frame inspector confirm the frame is a one-row upsert +
@@ -289,5 +289,5 @@ Layer 1 snapshot, so nothing in Layer 1 is wasted.
 6. **Edge fuzz:** add / delete / drag-reorder (rank) / drop-all tasks and an
    empty-list start; after each, assert the client array equals a fresh
    `GET /api/resources/tasks` full refetch.
-7. **Checks:** `./singularity check` passes (`eslint`, plugin-boundaries,
+7. **Checks:** `./equin check` passes (`eslint`, plugin-boundaries,
    `plugins-doc-in-sync`).

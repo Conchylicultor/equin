@@ -169,8 +169,8 @@ inference → `<button>`, split fixes the DOM:**
 
 ## Verification
 
-1. **Build:** `./singularity build` (regenerates docs/registry, type-checks, runs
-   `./singularity check`). Confirm `type-check`, `no-adhoc-layout`,
+1. **Build:** `./equin build` (regenerates docs/registry, type-checks, runs
+   `./equin check`). Confirm `type-check`, `no-adhoc-layout`,
    `plugins-doc-in-sync` pass.
 2. **Unit/DOM:** `bun run test:dom plugins/primitives/plugins/css/plugins/row` —
    the new regression test passes (no nested interactive; action click isolated;

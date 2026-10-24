@@ -37,7 +37,7 @@ const ruleIdsInSync: Check = {
     return {
       ok: false,
       message: `${EXEMPT_RULE_IDS_REL_PATH} is ${actual === null ? "missing" : "out of sync with the live rule set"}`,
-      hint: "Run `./singularity build` (it regenerates the union) and commit the file.",
+      hint: "Run `./equin build` (it regenerates the union) and commit the file.",
     };
   },
 };

@@ -12,7 +12,7 @@
 //  4. Collapse it again (back under the threshold): still unchanged.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/file-explorer/e2e/expand-scroll-verify.ts \
+//   ./equin run plugins/apps/plugins/file-explorer/e2e/expand-scroll-verify.ts \
 //     [--out /tmp/expand-scroll] [--headed]
 
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";

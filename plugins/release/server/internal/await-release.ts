@@ -128,7 +128,7 @@ async function otherOpenRelease(opts: {
  * promise**, and the difference is the whole point of the migration: the Deploy
  * app's `update` used to `await runRelease(...)` in-process for tens of minutes
  * between its converge and its ship legs, and that await is precisely the window
- * the 2026-08-28 incident died in — an unrelated `./singularity build` signalled
+ * the 2026-08-28 incident died in — an unrelated `./equin build` signalled
  * the process group and the deploy went with it. `ctx.waitFor` returns from the
  * handler through the jobs plugin's suspend sentinel, so nothing is holding
  * anything while the release runs, and the sequence resumes as a fresh dispatch

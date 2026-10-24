@@ -185,7 +185,7 @@ Cleanest migration: replace state + handler + inline Button with `<CopyButton>`.
 
 ## Verification
 
-1. **Build**: `./singularity build` — should complete with no TypeScript errors.
+1. **Build**: `./equin build` — should complete with no TypeScript errors.
 2. **Browser smoke tests**:
    - JSONL viewer: hover a row → copy icon → check icon appears ~1.5 s
    - Review pane: hover a file row → copy path → check icon appears, row doesn't toggle (confirms `stopPropagation`)

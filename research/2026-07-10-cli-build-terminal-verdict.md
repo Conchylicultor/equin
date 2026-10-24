@@ -1,8 +1,8 @@
-# `./singularity build` must own its terminal verdict
+# `./equin build` must own its terminal verdict
 
 ## Context
 
-A failed `./singularity build` currently ends its log with vite's success line:
+A failed `./equin build` currently ends its log with vite's success line:
 
 ```
 ✓ built in 72m 13s
@@ -52,12 +52,12 @@ I could not reproduce this, and an exhaustive walk of every termination path in
 signal handlers, the orphan watchdog) found **no exit-0 branch guarding a failure
 condition**. Empirically, on this repo's pinned Bun 1.3.13, an unhandled rejection
 from commander's un-awaited async `.action()` still exits 1. No caller masks the
-code: the `./singularity` wrapper `exec`s the CLI, and `run-build.ts:216` captures
+code: the `./equin` wrapper `exec`s the CLI, and `run-build.ts:216` captures
 `proc.exited` faithfully.
 
 Two plausible explanations for the observation, both worth designing against:
 
-- **A shell-pipeline artifact.** `./singularity build | tail -50` reports `tail`'s
+- **A shell-pipeline artifact.** `./equin build | tail -50` reports `tail`'s
   status, not the build's. zsh has no `pipefail` by default.
 - **A deliberate soft-warn degrade.** `probeHealth`'s non-restart deadline
   branches (`build.ts:564,585,592`) and `probeGatewayHealth`'s deadline
@@ -299,7 +299,7 @@ succeeds). Introduce a lint-only violation that vite happily compiles, e.g. a ba
 `.catch(() => {})` in a web file (caught by `promise-safety/no-bare-catch`). Then:
 
 ```bash
-./singularity build 2>/dev/null | tail -8   # stdout only, mimicking the trap
+./equin build 2>/dev/null | tail -8   # stdout only, mimicking the trap
 echo "exit=${PIPESTATUS[0]}"
 ```
 
@@ -309,7 +309,7 @@ no bare `✓ built` outside a `│ ` prefix; `PIPESTATUS[0]` is 1. Then confirm
 build UI's Live log (`plugins/build/plugins/build-logs/`) shows the banner followed
 by `run-build.ts`'s own `Build failed (exit 1)`.
 
-**End-to-end, success** — revert the violation, `./singularity build`, confirm the
+**End-to-end, success** — revert the violation, `./equin build`, confirm the
 tail is the `BUILD OK — deployed` box with the URL, `echo $?` is 0, and the app
 serves at `http://<worktree>.localhost:9000`.
 

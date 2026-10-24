@@ -35,7 +35,7 @@ import { rebuildTriggers } from "./triggers";
 // The second half runs the whole feed on a throwaway database: a real trigger,
 // the real listener, `routeChange`, and a delta on the wire.
 //
-// Requires a running Postgres cluster (started by ./singularity build) for the
+// Requires a running Postgres cluster (started by ./equin build) for the
 // feed half; createTestDb() throws loudly when it is unreachable.
 
 // The relation bases this file installs are process-global: reset them.

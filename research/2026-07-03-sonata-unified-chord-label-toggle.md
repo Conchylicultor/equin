@@ -127,7 +127,7 @@ Files:
   ```
 - `server/index.ts` — `ConfigV2.Register({ descriptor: chordLabelConfig })` (config_v2 reads
   back `undefined` unless registered on **both** runtimes — see `notation/server/index.ts`).
-- `package.json` + `CLAUDE.md` (autogen block filled by `./singularity build`).
+- `package.json` + `CLAUDE.md` (autogen block filled by `./equin build`).
 
 `displays: "global"` because the progression/readout Sections are display-agnostic and the
 overlay is on the piano roll — the preference is global to "how chords are labeled".
@@ -182,7 +182,7 @@ Reused: `romanNumeral`, `effectiveKeyAt`, `formatChordSymbol` (existing), `useSo
 ## Verification
 
 1. `bun test plugins/apps/plugins/sonata/plugins/theory/core/chord-label.test.ts` — formatter unit tests pass.
-2. `./singularity build` — type-check, boundary, doc-in-sync, migrations checks pass; regenerates
+2. `./equin build` — type-check, boundary, doc-in-sync, migrations checks pass; regenerates
    the plugin registry + `chord-label` CLAUDE.md.
 3. Open a chord-grid song (e.g. "Modal interchange", id `7c0c9447-…`) at
    `http://att-1783036518-e0fc.localhost:9000/sonata/song/<id>` on the Piano Roll lens.

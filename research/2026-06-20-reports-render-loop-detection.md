@@ -156,7 +156,7 @@ Edit (one generic, additive change):
 - **`plugins/reports/shared/types.ts`** — add `"client-render-loop"` to
   `CLIENT_REPORT_SOURCES`. The detector reports with `source: "client-render-loop"`.
 
-No registry edits — `./singularity build` auto-discovers the new plugin barrels.
+No registry edits — `./equin build` auto-discovers the new plugin barrels.
 
 ### `data` payload (validated server-side)
 
@@ -167,9 +167,9 @@ visibilityState, msSinceInteraction }`.
 
 ## Verification
 
-1. `./singularity build` from the worktree; confirm it boots and registers the
+1. `./equin build` from the worktree; confirm it boots and registers the
    new plugin (no boundary/registry/check failures). Run
-   `./singularity check plugin-boundaries` and `./singularity check type-check`.
+   `./equin check plugin-boundaries` and `./equin check type-check`.
 2. **Synthetic loop (positive case):** open the app, then in the browser console
    create an idle DOM-rebuild loop, e.g. a `requestAnimationFrame` loop that, on a
    real app element, repeatedly removes and re-appends an identical child (or

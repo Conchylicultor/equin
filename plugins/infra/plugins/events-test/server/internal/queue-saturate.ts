@@ -26,7 +26,7 @@ const DEFAULT_SLEEP_MS = 90_000;
 //
 // `ctx.signal` is deliberately the per-run DEADLINE, never shutdown (see its doc
 // in jobs/registry.ts), and graphile's graceful shutdown waits for running
-// handlers to settle. So without this, a `./singularity build` restart during a
+// handlers to settle. So without this, a `./equin build` restart during a
 // saturation run would sit for the rest of every sleeper's `sleepMs`. Plugin
 // `onShutdown` hooks run concurrently, so this fires while the jobs plugin's
 // `stopWorkers()` is waiting on these very handlers.

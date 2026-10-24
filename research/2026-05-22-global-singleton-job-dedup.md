@@ -137,8 +137,8 @@ All enqueue call sites that currently pass `jobKey` drop it — the key is now d
 
 ## Verification
 
-1. `./singularity build` — deploys cleanly
-2. `./singularity check` — passes all checks (TypeScript catches any `defineJob` missing `dedup`)
+1. `./equin build` — deploys cleanly
+2. `./equin check` — passes all checks (TypeScript catches any `defineJob` missing `dedup`)
 3. Trigger a hot restart — inspect `graphile_worker.jobs` to confirm only one `build.run` row exists
 4. Query `graphile_worker.jobs WHERE task_identifier = 'jobs.run'` — verify backup/notification jobs still reschedule with correct keys
 5. Trigger a manual backup — verify it deduplicates against a pending periodic backup (new behavior: both share the singleton key)

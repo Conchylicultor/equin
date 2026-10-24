@@ -197,7 +197,7 @@ deadline.
 
 ## Verification
 
-1. Tests (`./singularity test plugins/database plugins/infra/plugins/jobs`),
+1. Tests (`./equin test plugins/database plugins/infra/plugins/jobs`),
    against the existing black-hole proxy in `query-deadline.test.ts`:
    - query hang on a direct pool → rejects within the bound, client detached,
      pool builds a replacement, fd not closed;
@@ -211,7 +211,7 @@ deadline.
    - app-pool lease still frees its tx gate slot at expiry;
    - web verdict: message names pool and caller; old payloads without pool parse.
    - lint rule tests: raw `new Pool` in `server/` flagged; in `*.test.ts` / `cli/` not.
-2. `./singularity build` (runs checks incl. type-check, eslint, plugin boundaries,
+2. `./equin build` (runs checks incl. type-check, eslint, plugin boundaries,
    docs in sync).
 3. Live check on this worktree's deploy: the backend boots, jobs run, the
    change-feed reconnects, and Debug → Reports shows no new deadline reports

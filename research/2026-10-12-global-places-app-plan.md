@@ -86,17 +86,17 @@ Empty namespace + sub-plugins (create-app skill; full-pane like `apps/chord`):
 
 ## Execution
 
-Agents work in this one worktree on disjoint folders; none runs `./singularity build`
+Agents work in this one worktree on disjoint folders; none runs `./equin build`
 (the coordinator builds after each wave and fixes integration).
 
 - **Wave 1 (parallel):** §1 location field · §2 hierarchical options + operators · §3 floating chrome · §4 clustering · §6 backend (shell + places-core + seed + endpoints + Haiku job).
 - **Wave 2 (parallel, after build):** §5 map view · §6 web (places-map, pins, sidebar, card, add place, tag-manager).
-- **Wave 3:** build, `./singularity check`, screenshots against the prototype, fixes.
+- **Wave 3:** build, `./equin check`, screenshots against the prototype, fixes.
 
 ## Verification
 
-- `./singularity test` on: location field, data-view (closure/lowering), map (`clusterPins`), places-core helpers (colour inheritance, auto-tags).
-- `./singularity build` then `./singularity check` green.
+- `./equin test` on: location field, data-view (closure/lowering), map (`clusterPins`), places-core helpers (colour inheritance, auto-tags).
+- `./equin build` then `./equin check` green.
 - Screenshots (`e2e-harness/e2e/screenshot.ts --path /places`): map with clusters and drop pins, sidebar include/exclude changes the count, gallery/list switch, Manage tags, place card. Without a Google browser key the map shows its set-up action (expected); the sidebar, gallery and list still work.
 - Add a place end to end when a Places key is configured: auto tags + AUTO badge, icon appears after the Haiku job.
 

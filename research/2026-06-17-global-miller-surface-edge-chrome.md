@@ -209,7 +209,7 @@ floating bar is global).
 
 ## Verification
 
-1. `./singularity build` from the worktree, then open
+1. `./equin build` from the worktree, then open
    `http://<worktree>.localhost:9000/agents/c/<id>`.
 2. **Right edge:** confirm the rightmost column header's actions (⋯ / promote /
    close) are no longer under the floating action bar — there's clearance.
@@ -224,7 +224,7 @@ floating bar is global).
    confirm the floating action bar no longer overlaps the last column header.
 6. Scripted check with `e2e/screenshot.mjs` clicking the toggle to assert the
    sidebar `aria` state flips, plus before/after screenshots of the right edge.
-7. `./singularity check` (boundaries + type-check) passes — especially the new
+7. `./equin check` (boundaries + type-check) passes — especially the new
    app-shell → pane edge and `no-adhoc-bar`.
 </content>
 </invoke>

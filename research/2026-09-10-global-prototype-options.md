@@ -282,8 +282,8 @@ is animated, so it was checked by eye in both states.
 ## Verification
 
 ```bash
-./singularity test plugins/apps/plugins/prototypes/plugins/files
-./singularity build        # run_in_background: true, then end the turn
+./equin test plugins/apps/plugins/prototypes/plugins/files
+./equin build        # run_in_background: true, then end the turn
 ```
 
 - **Server:** `curl` `http://<this deploy>/api/prototypes/proto-1788797350-gqju/index.html?palette=azure`
@@ -303,4 +303,4 @@ is animated, so it was checked by eye in both states.
   prototypes re-render as ready (they load `file://`, so they prove the page
   renders with its authored defaults). Open each `index.html` off disk once as
   well.
-- `./singularity check` (type-check, `prototypes:self-contained`, docs in sync).
+- `./equin check` (type-check, `prototypes:self-contained`, docs in sync).

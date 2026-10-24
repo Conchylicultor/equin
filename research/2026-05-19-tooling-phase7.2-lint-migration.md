@@ -121,7 +121,7 @@ Also update the `hint` string on line 111 that references `tooling/src/lint/`:
 ## Verification
 
 1. `bunx eslint . --cache` — runs without import errors, rules fire correctly
-2. `./singularity check --eslint` — passes (cache-busting uses new path)
-3. `./singularity check --allow-default-project-in-sync` — passes (shim re-exports correctly)
-4. `./singularity check` — all checks pass
-5. `./singularity build` — full build succeeds
+2. `./equin check --eslint` — passes (cache-busting uses new path)
+3. `./equin check --allow-default-project-in-sync` — passes (shim re-exports correctly)
+4. `./equin check` — all checks pass
+5. `./equin build` — full build succeeds

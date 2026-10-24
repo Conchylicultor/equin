@@ -13,7 +13,7 @@
  * hence the two extra single-connection handles opened below.
  *
  * Run: `bun test plugins/page/plugins/editor/server/internal/page-forest.test.ts`
- * (requires the running embedded cluster — `./singularity build` first).
+ * (requires the running embedded cluster — `./equin build` first).
  */
 
 import {

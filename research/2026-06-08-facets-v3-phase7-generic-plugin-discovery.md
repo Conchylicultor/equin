@@ -57,7 +57,7 @@ Promoting the 3 nodes was analyzed against every `buildPluginTree` consumer:
 |---|---|
 | `plugin-boundaries` R1/R3/R11 | `web-core` hard-fails → fixed by `compositionRoot` marker + check honoring it. `cli`/`push-counter` pass. |
 | `boundary-rules` (boundary-config) | Safe — `cli/bin`, `web-core/web` files resolve to `runtime:null`/`web`; `plugin.**→plugin.**` + web→core edges already allow them. No new violations. |
-| docgen / `plugins-doc-in-sync` / `plugins-have-claudemd` | `./singularity build` auto-creates `cli/CLAUDE.md` (none today), appends the autogen block to `web-core`/`push-counter`, and writes the 3 new entries into `docs/plugins-*.md`. Docgen runs before checks in `build`, so they pass post-build. |
+| docgen / `plugins-doc-in-sync` / `plugins-have-claudemd` | `./equin build` auto-creates `cli/CLAUDE.md` (none today), appends the autogen block to `web-core`/`push-counter`, and writes the 3 new entries into `docs/plugins-*.md`. Docgen runs before checks in `build`, so they pass post-build. |
 | `plugin-registry-gen` (`*.generated.ts`) | Safe — none of the 3 have a `<runtime>/index.ts` default export, so no registry entry. |
 | `no-reexport-default`, `facets:render-complete` | Safe — none have `web/index.ts` barrels. |
 | plugin-view tree endpoint / UI, `compute-plugin-diff` | Node count increases; informational. Safe. |
@@ -170,10 +170,10 @@ every plugin with non-standard folders / loose files, via the generic facet pipe
 
 ## Verification
 
-1. `./singularity build` — must succeed; regenerates `cli/CLAUDE.md` (new), updates
+1. `./equin build` — must succeed; regenerates `cli/CLAUDE.md` (new), updates
    `web-core`/`push-counter` CLAUDE.md, and `docs/plugins-*.md` (3 new entries). Commit the
    regenerated files.
-2. `./singularity check` — all green. Specifically `plugin-boundaries` (web-core skipped via
+2. `./equin check` — all green. Specifically `plugin-boundaries` (web-core skipped via
    marker; R11 now generic), `plugins-doc-in-sync`, `plugins-have-claudemd`,
    `migrations-in-sync`, `eslint`.
 3. Confirm the 3 new nodes appear in `docs/plugins-compact.md`.

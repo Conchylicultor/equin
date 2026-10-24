@@ -450,7 +450,7 @@ export function refreshConflictLocations(storePath: string): void {
 
 // Per-descriptor count of BASE fields the USER LAYER supplied — the fields whose
 // value differs from what the repo commits (the generated origin ⊕ any committed
-// authored override, propagated down by ./singularity build). Paths with zero
+// authored override, propagated down by ./equin build). Paths with zero
 // modified fields are omitted.
 //
 // Reads the same per-field tier attribution the detail pane's stripes and Reset

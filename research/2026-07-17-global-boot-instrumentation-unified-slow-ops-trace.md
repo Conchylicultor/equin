@@ -146,7 +146,7 @@ plus `recordSlowOp` rows under a new open kind. The wedge-visible disk floor
 - `go postBootReport(...)` in both success paths immediately AFTER the proxy swap
   (`Ensure` ~:365, `Restart` ~:452) so it can never delay readiness.
 - **Rollout:** code lands in this worktree/push; the running gateway keeps its old
-  binary until the user runs the gateway recompile+restart (`./singularity start`,
+  binary until the user runs the gateway recompile+restart (`./equin start`,
   explicitly user-gated). The TS side is fully functional standalone — `section.gateway`
   is simply absent until then.
 
@@ -188,7 +188,7 @@ plus `recordSlowOp` rows under a new open kind. The wedge-visible disk floor
 
 ### Step 6 — Build + docs
 
-- `./singularity build` regenerates registries for the 3 new plugins (never hand-edit
+- `./equin build` regenerates registries for the 3 new plugins (never hand-edit
   generated roots).
 - Update `plugins/debug/plugins/trace/CLAUDE.md` umbrella prose (boot + client-boot as
   trigger-owned classes beside stall).
@@ -225,5 +225,5 @@ pattern (Go).
    network tab on main (worst-case asset count).
 4. **Unit:** `bun test plugins/debug/plugins/trace/plugins/boot` and
    `bun test plugins/debug/plugins/trace/plugins/client-boot`.
-5. **Regression:** `./singularity check`; boot-budget still files per-span reports
+5. **Regression:** `./equin check`; boot-budget still files per-span reports
    (set a phase budget to 0, restart, check Reports).

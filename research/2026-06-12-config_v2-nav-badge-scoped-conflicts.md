@@ -164,7 +164,7 @@ export function useConflictPaths(): ResourceResult<ConfigV2ConflictPaths> {
 
 ## Verification
 
-1. `./singularity build`.
+1. `./equin build`.
 2. Pick a descriptor that is git-scoped for an app (`config/<hier>/@app/<id>/<name>.jsonc`).
    Create a scoped conflict: bump the **base** origin's `// @hash` (e.g. change a
    base default and rebuild, or hand-edit the scoped override's `// @hash` to a
@@ -179,4 +179,4 @@ export function useConflictPaths(): ResourceResult<ConfigV2ConflictPaths> {
    still shows (unchanged). Resolve the scoped conflict (Keep/Accept/Merge) and
    confirm all three nav/rail/sidebar indicators clear live (push update, no reload).
 5. Regression: a **base-only** conflict still lights all three exactly as before.
-6. `./singularity check` (boundaries, type-check, origins-in-sync) passes.
+6. `./equin check` (boundaries, type-check, origins-in-sync) passes.

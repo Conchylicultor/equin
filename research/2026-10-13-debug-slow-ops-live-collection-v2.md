@@ -148,11 +148,11 @@ As v1 (slow-ops `CLAUDE.md`, change-feed `CLAUDE.md`, sql-column `CLAUDE.md`'s 1
 
 ## Verification
 
-- `./singularity test plugins/debug/plugins/slow-ops`:
+- `./equin test plugins/debug/plugins/slow-ops`:
   - `fold-batch.test.ts`: folding a batch equals applying its items one by one (out-of-order `occurredAt`, ties, same op with several callers).
   - DB-backed `record-slow-op.test.ts`: an equivalence oracle (random item sequences through the old JS merges against the fold plus both upserts: equal counters, waits, samples, measures, variant totals, and per-caller counts equal to the old `callers` list); first insert of a key; two concurrent overlapping batches complete without deadlock; emitted ids for both producers (`mountProducersForTest`, `flushNow`).
   - Cluster `aggregate.test.ts`.
-- `./singularity build` (background, then `./singularity await`): `change-feed:producer-writes`, `migrations-in-sync`, `migration-phases-valid`, `type-check`, `no-db-backed-notify`, plugin boundaries; boot assertions A2′, A3p, A6.
+- `./equin build` (background, then `./equin await`): `change-feed:producer-writes`, `migrations-in-sync`, `migration-phases-valid`, `type-check`, `no-db-backed-notify`, plugin boundaries; boot assertions A2′, A3p, A6.
 - `query_db` on this worktree:
   - the `slow_op_callers` row count matches the sum of the old `callers` array lengths (about 36 k on a fork of main);
   - no `live_state_*` trigger on either table;

@@ -119,8 +119,8 @@ Checked against the main checkout:
   - `.gitignore` itself → kept
   - a dir named `build` that isn't ignored → kept
   - no ignored paths → empty Set (the exit-1 path)
-- `./singularity test plugins/infra/plugins/git/plugins/checkout-watch plugins/conversations/plugins/conversation-view/plugins/code plugins/apps/plugins/file-explorer/plugins/git`
-- `./singularity build` (checks, including the `watcher-safety` lint and the doc sync).
+- `./equin test plugins/infra/plugins/git/plugins/checkout-watch plugins/conversations/plugins/conversation-view/plugins/code plugins/apps/plugins/file-explorer/plugins/git`
+- `./equin build` (checks, including the `watcher-safety` lint and the doc sync).
 - **Live check:** on the deployed worktree, open a conversation whose code tab watches this
   worktree. Then:
   - `touch` files under an ignored path (`dist/x`, and from main `.claude/worktrees/...`) →

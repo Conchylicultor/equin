@@ -266,7 +266,7 @@ cycle. The web half is eager by structure (it isn't under `apps/`).
 16. **`research/2026-09-10-global-unified-health-report.md:239-240`.** Correct the
     "push-based already" claim and point to this doc.
 17. Plugin reference blocks, registries and `plugins-details.md` regenerate on
-    `./singularity build`.
+    `./equin build`.
 
 ## Follow-ups (not in this task)
 
@@ -282,7 +282,7 @@ cycle. The web half is eager by structure (it isn't under `apps/`).
 
 1. **Tests.**
    ```bash
-   ./singularity test plugins/infra/plugins/jobs plugins/debug/plugins/queue-health plugins/framework/plugins/resource-runtime
+   ./equin test plugins/infra/plugins/jobs plugins/debug/plugins/queue-health plugins/framework/plugins/resource-runtime
    ```
    - Ledger:
      - start → complete frees the slot;
@@ -299,11 +299,11 @@ cycle. The web half is eager by structure (it isn't under `apps/`).
      - `useStatus` for disconnected, pending, error and data;
      - the glance renders busy, forfeited and tint correctly;
      - the detail lists only explaining jobs when not ok.
-2. **Deploy.** `./singularity build` in the background, then check the deploy receipt
+2. **Deploy.** `./equin build` in the background, then check the deploy receipt
    `~/.singularity/worktrees/att-1789119339-tt6y/build-status.json`.
 3. **Screenshots, idle.** Open the report and expand the queue row, in light and dark:
    ```bash
-   ./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --click "All systems normal" --out /tmp/qh
+   ./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --click "All systems normal" --out /tmp/qh
    ```
 4. **Saturation and dead jobs.** Add an `events-test` harness endpoint,
    `POST /api/events-test/queue-saturate`. It enqueues five 90 s `minutes`-class
@@ -320,6 +320,6 @@ cycle. The web half is eager by structure (it isn't under `apps/`).
      saturation harness.
    - `jobs-list` shows no loads while Debug → Queue is closed.
    - No new `read-set-gap` lines appear in the gateway log.
-6. **Checks.** `./singularity check`. This covers plugin boundaries (no cycle),
+6. **Checks.** `./equin check`. This covers plugin boundaries (no cycle),
    `no-db-backed-notify`, `jobs:no-raw-addjob`, `eager-tier-in-sync`, the registry
    and doc sync checks, and type-check/lint.

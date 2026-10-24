@@ -171,7 +171,7 @@ it terminate":
   over-wide sibling into the bar's own row until its cell measures ~0 (asserted,
   not assumed), waits real frames, removes it, and asserts the bar still
   relocates, still re-admits on widening, and still evicts on narrowing.
-- `./singularity check` (type-check, lint, layout-geometry). The
+- `./equin check` (type-check, lint, layout-geometry). The
   `adaptive-bar/host-stops-giving-room` fixture goes through branch **B** and is
   unaffected.
 

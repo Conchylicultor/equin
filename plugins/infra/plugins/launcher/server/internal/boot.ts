@@ -405,7 +405,7 @@ export async function bundledGateway(
 export interface GatewayLaunchOptions {
   /**
    * The installed gateway binary (`gateway-binary`): ensured from the checkout
-   * by `./singularity start` / `serve-app`, read from the bundle by a release.
+   * by `./equin start` / `serve-app`, read from the bundle by a release.
    * A `Ready`, so a launch that never ensured one does not compile.
    */
   gateway: Ready<BuildSource>;
@@ -439,7 +439,7 @@ export interface GatewayLaunchOptions {
 /**
  * How to run the gateway — argv, working dir, environment, and where its raw
  * stdio goes — as data. The ONE derivation of a gateway launch: the detached
- * spawn ({@link spawnGatewayDaemon}) and the launchd job `./singularity start`
+ * spawn ({@link spawnGatewayDaemon}) and the launchd job `./equin start`
  * registers on macOS (`login-service.ts`) are both rendered from it, so the two
  * ways the gateway gets started cannot drift apart.
  *
@@ -550,7 +550,7 @@ export function spawnGatewayDaemon(opts: GatewayLaunchOptions): Bun.Subprocess {
   // preview's reaper — which reads a missing file as "still booting" — would
   // wait on it forever. The gateway then rewrites the same value.
   writeFileSync(pidFile(), String(gw.pid) + "\n");
-  // Detached by default: `./singularity start` on a host without launchd and
+  // Detached by default: `./equin start` on a host without launchd and
   // the preview/desktop bring-up paths all outlive their launcher. A caller
   // that means to SUPERVISE the gateway (the release launcher under systemd)
   // calls `.ref()` on the returned handle and awaits `.exited`, which is why

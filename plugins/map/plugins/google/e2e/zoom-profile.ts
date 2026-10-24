@@ -6,7 +6,7 @@
 // location. The host is noisy: compare RecalcStyleDuration over several runs.
 //
 // Usage:
-//   ./singularity run plugins/map/plugins/google/e2e/zoom-profile.ts \
+//   ./equin run plugins/map/plugins/google/e2e/zoom-profile.ts \
 //     [--steps 6] [--out /tmp/map-zoom-profile] [--trace] [--strip-has=<regex>]
 //
 // --trace          also writes `<out>-trace.json` with style-invalidation

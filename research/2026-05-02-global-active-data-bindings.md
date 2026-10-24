@@ -172,13 +172,13 @@ Modify:
 
 ## Verification
 
-1. `./singularity build` regenerates the migration and restarts. Confirm the migration adds `active_data_bindings`.
+1. `./equin build` regenerates the migration and restarts. Confirm the migration adds `active_data_bindings`.
 2. In a live conversation, get the agent to emit `<task>do thing</task>`, click **Create**. Card collapses to chip.
 3. Reload the page. Card stays as the chip (was previously: editable card again).
 4. Same for **Launch** → reload → still shows `ConvChip`.
 5. Open a second `<task>` in the same message; verify `occurrenceIndex` keeps them independent (one chip, one editable, then both chips).
 6. Open a legacy conversation without `messageId` on assistant events — confirm card still works (just non-persistent), no errors.
-7. `./singularity check` to confirm plugin-boundary + schema-in-sync pass.
+7. `./equin check` to confirm plugin-boundary + schema-in-sync pass.
 
 ## Open questions
 

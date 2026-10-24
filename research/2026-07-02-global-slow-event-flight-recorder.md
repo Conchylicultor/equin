@@ -373,7 +373,7 @@ filtering, capture caps, gauge registry duplicate-layer throw.
 - `plugins/debug/plugins/flight-recorder/CLAUDE.md` — incl. "how to read a snapshot"
   (the blocking-chain walk) and the timestamp-join to stall-profiles/health/queue-health
 
-Then `./singularity build` (registry regen) and the Phase 4/5 verification.
+Then `./equin build` (registry regen) and the Phase 4/5 verification.
 
 ## Non-goals (v1)
 

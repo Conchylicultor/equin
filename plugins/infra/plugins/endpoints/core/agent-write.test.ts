@@ -76,9 +76,7 @@ describe("main's agent-write gate", () => {
     expect(body).toMatchObject({
       message: agentWriteRefusedMessage(write.route),
     });
-    expect(agentWriteRefusedMessage(write.route)).toContain(
-      "./singularity build",
-    );
+    expect(agentWriteRefusedMessage(write.route)).toContain("./equin build");
     expect(ran).toBe(false);
   });
 

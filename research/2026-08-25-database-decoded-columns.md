@@ -264,13 +264,13 @@ Each becomes `parsedText("<col>", <Schema>)` with the same modifiers. Plus:
 
 ## Verification
 
-- `./singularity test plugins/database/plugins/sql-column` — decoder/encoder unit
+- `./equin test plugins/database/plugins/sql-column` — decoder/encoder unit
   tests (qualified label through a real `pgTable`, `getSQLType() === "text"`,
   tolerant-schema normalization, write-side throw) and the lint `RuleTester` suite.
-- `./singularity check` — `migrations-in-sync` must generate **no** migration
+- `./equin check` — `migrations-in-sync` must generate **no** migration
   (fact 2 is the claim being tested); `eslint` must report zero remaining
   `text().$type<>()`; `type-check` catches any consumer relying on the old types.
-- `./singularity build`, then exercise the surfaces that read these columns: a
+- `./equin build`, then exercise the surfaces that read these columns: a
   task's auto-start chip and thinking-mode picker (Tasks detail → Prompt card),
   launching a queued task, and Debug → Queue (the `job_waits` rows behind a
   durable workflow).

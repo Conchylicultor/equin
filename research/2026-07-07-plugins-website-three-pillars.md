@@ -126,7 +126,7 @@ Cross-links use `useOpenPane` + `mode: "root"`. Scroll-to-band deep anchoring on
 ### theme-toy changes
 `web/index.ts`: retarget contribution `Website.Section` → `WebsitePlatform.Section`. `theme-toy.tsx`: delete local `SampleVignette`/`CHART_BARS`, import from sample-app; reframe copy to the platform story.
 
-## Reorder configs to author (after `./singularity build` regenerates origins; procedure in `plugins/reorder/authoring-overrides.md`)
+## Reorder configs to author (after `./equin build` regenerates origins; procedure in `plugins/reorder/authoring-overrides.md`)
 
 | File | Action |
 |---|---|
@@ -152,7 +152,7 @@ Deleting `landing/plugins/features/` shifts the section origin hash — build + 
 ## Verification
 
 Per phase:
-1. `./singularity build`, then `./singularity check` (registry sync, boundaries, `reorder:configs-authored`, `config-origins-in-sync`, lints).
+1. `./equin build`, then `./equin check` (registry sync, boundaries, `reorder:configs-authored`, `config-origins-in-sync`, lints).
 2. Scripted Playwright per `e2e/screenshot.mjs` (give every demo control a stable `aria-label`; before/after pairs):
    - Nav: landing → click "Agents" → agents pane renders; browser back returns.
    - Release switcher: click "Web app" segment → tab-strip/address-bar chrome appears.

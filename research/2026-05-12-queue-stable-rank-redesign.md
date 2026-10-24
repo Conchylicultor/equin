@@ -145,7 +145,7 @@ These call `POST /api/conversations-queue/rerank` after adding/removing dependen
 
 ## Verification
 
-1. `./singularity build` — generates migration for `queue_state`, builds everything
+1. `./equin build` — generates migration for `queue_state`, builds everything
 2. Create conversation → gets top rank, no pin yet (starting/working)
 3. Agent finishes → conversation becomes waiting → `validatePinJob` fires → becomes pinned
 4. Create second conversation → seeds at top rank, pin unchanged

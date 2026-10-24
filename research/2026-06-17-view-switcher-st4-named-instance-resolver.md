@@ -139,7 +139,7 @@ is already `scope:"app"`.
 ### Origin / `@hash` safety
 
 Actions are enabled **only** in config mode (registered) — and a registered `ConfigV2.Register`
-already makes `./singularity build` emit the origin (that's how `sonata/library/views.jsonc` got its
+already makes `./equin build` emit the origin (that's how `sonata/library/views.jsonc` got its
 `@hash`). So `setConfig` always has an origin to base on; **never** `setConfig` in default mode. No new
 build manifest is needed — ST3's manual per-consumer `ConfigV2.WebRegister`/`Register` + existing
 origin codegen suffice. When a view-type's `configSchema` changes the origin hash under a committed
@@ -175,8 +175,8 @@ instance set, `config-origins-in-sync` fails by design — re-run build and re-s
 
 ## Verification
 
-1. `./singularity build` (regen origins + autogen doc block; `config-origins-in-sync`,
-   `plugins-doc-in-sync`, `type-check` green) → `./singularity check`.
+1. `./equin build` (regen origins + autogen doc block; `config-origins-in-sync`,
+   `plugins-doc-in-sync`, `type-check` green) → `./equin check`.
 2. Playwright on `http://<worktree>.localhost:9000` at a `sonata:library` DataView:
    - chips render `Cards` / `All` borderless ghost; **add** a view via `+` (pick a type) → new chip;
      verify `config/apps/sonata/library/views.jsonc` gains a row (and `@hash` re-stamped) on disk.

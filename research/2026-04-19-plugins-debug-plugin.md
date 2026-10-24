@@ -195,7 +195,7 @@ dbBackupPlugin,
 
 ## Verification
 
-1. `./singularity build` — should compile with no errors
+1. `./equin build` — should compile with no errors
 2. Open the app; sidebar should show a "Debug" section (inline, always visible) with "Logs" and "DB Backup" items
 3. "Logs" click → opens log viewer (same as before)
 4. "DB Backup" click → opens backup panel; "Run Backup" triggers the endpoint; `~/.backups/singularity/` gets a timestamped folder with `singularity.dump`

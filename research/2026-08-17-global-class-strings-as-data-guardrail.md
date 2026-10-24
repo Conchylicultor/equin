@@ -244,18 +244,18 @@ that turn hostile *after* mount.
 
 ## Verification
 
-1. `./singularity check eslint` after each phase. Expect phase B to surface the
+1. `./equin check eslint` after each phase. Expect phase B to surface the
    ~8 violations tabulated above and nothing else; expect phase A to surface the
    three `apps-core/surface` placement strings.
-2. `./singularity check` in full — `class-token-walk-in-sync` must stay green
+2. `./equin check` in full — `class-token-walk-in-sync` must stay green
    (no new participant is added; the new declaration rule tokenizes nothing).
-3. `./singularity test plugins/primitives/plugins/css/plugins/viewport-overlay`
+3. `./equin test plugins/primitives/plugins/css/plugins/viewport-overlay`
    — the rule's own fixture suite, extended with a data-position case and a
    `<section className="fixed inset-0">` case.
-4. `./singularity test plugins/apps-core/plugins/surface` — the keep-alive and
+4. `./equin test plugins/apps-core/plugins/surface` — the keep-alive and
    viewport-escape suites must pass unchanged through phase D's rewrite; that is
    the guard that the role mapping reproduces today's classes byte-for-byte.
-5. `./singularity build`, then drive the real app: enter fullscreen (solo),
+5. `./equin build`, then drive the real app: enter fullscreen (solo),
    confirm the tab covers the rail and the tab strip, open a dropdown from
    inside it and confirm the popover still paints above. Switch docked → solo →
    floating and confirm no tab remounts (scroll position survives).

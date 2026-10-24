@@ -358,7 +358,7 @@ push mode, `defineEndpoint` + `implement` + `useEndpointMutation`.
    `applyMove` unit tests, **including a replay of the A2 counterexample asserting
    `A, C, B`**; plus `handle-set-row-order` against `db-test-fixture` (delete-not-in-order,
    dense re-rank, duplicate-key rejection).
-2. `./singularity build`; confirm the generated migration creates `data_view_row_order`.
+2. `./equin build`; confirm the generated migration creates `data_view_row_order`.
 3. `bun run test:dom plugins/primitives/plugins/data-view` — existing DOM suites still pass.
 4. Open `http://att-1783601294-zvpp.localhost:9000/agents`: drag a row in the queue
    sidebar → still reorders via the consumer's `manualOrder`; the Sort pill is now
@@ -374,7 +374,7 @@ push mode, `defineEndpoint` + `implement` + `useEndpointMutation`.
    persists. This is the check that A4 actually held.
 8. Type a search query, drag a visible row onto another → the hidden rows keep their
    relative positions and none are deleted (`SELECT count(*)` before/after is unchanged).
-9. `./singularity check` — `migrations-in-sync`, `reorder:configs-authored`,
+9. `./equin check` — `migrations-in-sync`, `reorder:configs-authored`,
    `data-view:configs-authored`, `plugins-doc-in-sync`, `plugin-boundaries`, `type-check`.
 
 ## Follow-ups (file as tasks, do not do here)

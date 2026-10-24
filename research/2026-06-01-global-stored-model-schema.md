@@ -146,10 +146,10 @@ fix shape (`tasks-core/server/internal/schema.ts:228` + deleted read-time normal
 
 ## Verification
 
-1. `./singularity build` — frontend + server build, migrations regenerate cleanly (no
-   enum *values* change → no new data migration). `./singularity check --migrations-in-sync`
+1. `./equin build` — frontend + server build, migrations regenerate cleanly (no
+   enum *values* change → no new data migration). `./equin check --migrations-in-sync`
    green.
-2. `./singularity check` — full check suite green (no new check added; confirm the
+2. `./equin check` — full check suite green (no new check added; confirm the
    plugin-boundaries check accepts the new `model-provider/core → live-state/core` edge).
 3. **Tolerance regression (the bug):** unit-assert `StoredModelSchema` (and
    `z.array(TaskAutoStartRowSchema)`) — parse rows containing `autoStartModel: "opus"`

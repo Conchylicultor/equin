@@ -210,11 +210,11 @@ fail.
 
 ## Verification
 
-1. `./singularity test plugins/primitives/plugins/adaptive-bar` — the existing
+1. `./equin test plugins/primitives/plugins/adaptive-bar` — the existing
    suites must be unchanged. jsdom has no layout engine and both engine-facing
    guards are gated on `useLayoutMeasured()`, so nothing there depends on flex
    behaviour or on computed styles.
-2. `./singularity check` — including `layout-geometry`, which builds the fixture
+2. `./equin check` — including `layout-geometry`, which builds the fixture
    page and sweeps it in headless Chromium.
 
    **Done, both directions, rather than assumed:**
@@ -224,7 +224,7 @@ fail.
    | fix present | 121 pass, 0 fail (the `shrinkSlots` falsification bites) |
    | `[&>*]:shrink-0` removed | 4 fail — `alpha/beta/gamma/delta` each 186.4px at 880 → 82.9px at 340 |
    | a bogus `rigidIntegrity` slot added | 1 fail naming `adaptive-bar/squeezable-occupants` — proof the fixture is in the catalog and its invariants are evaluated, not silently dropped |
-3. `./singularity build`, then on the deployed worktree:
+3. `./equin build`, then on the deployed worktree:
    - `bun plugins/primitives/plugins/adaptive-bar/e2e/adaptive-bar-churn.ts
      --url http://<worktree>.localhost:9000/agents` — it already asserts *no
      occupant was ever squeezed while inline*, measured by toggling

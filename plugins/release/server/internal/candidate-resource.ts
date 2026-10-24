@@ -17,7 +17,7 @@ import { createCandidateObserver } from "./candidate-observer";
  * `(composition, platform)`, read off the bundle directory and git.
  *
  * **Why external.** Its truth is the filesystem (`resolveBundle`, the exact
- * call `./singularity deploy ship` makes) and git (`compareToHead`), neither of
+ * call `./equin deploy ship` makes) and git (`compareToHead`), neither of
  * which the change feed can see. It recomputes on exactly the edges that can
  * move the answer:
  *
@@ -28,7 +28,7 @@ import { createCandidateObserver } from "./candidate-observer";
  *   `latest-<platform>` pointer before it exits, so by the time the row closes
  *   the new bundle is on disk.
  *
- * A hand-run `./singularity release` writes no row and so notifies nothing; it
+ * A hand-run `./equin release` writes no row and so notifies nothing; it
  * is seen on the next HEAD advance, release close or remount — the known limit
  * of a registry nothing watches.
  *

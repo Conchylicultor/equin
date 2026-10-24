@@ -126,7 +126,7 @@ The `Conversation.rank` field on the client is no longer used.
 
 ### Auto-generated migration
 
-`./singularity build` will diff schema, producing a single migration that
+`./equin build` will diff schema, producing a single migration that
 creates `conversations_ext_queue` and drops the `rank` column + index from
 `_conversations`. No manual migration writing; no backfill SQL.
 
@@ -160,20 +160,20 @@ acceptable.
 ## Implementation order
 
 1. Add the entity-extensions dep to the queue plugin's `package.json`; `bun install`.
-2. Add `_conversationsExtQueue` table file. Add the resource. Run `./singularity build` once to confirm migration generates and applies cleanly.
+2. Add `_conversationsExtQueue` table file. Add the resource. Run `./equin build` once to confirm migration generates and applies cleanly.
 3. Move `endRank` / `positionTwoRank` into `queue-ranks.ts`; rewrite all queue-ranks helpers to read from the ext table. Type-check.
 4. Add `seedRankJob` and the two `trigger()` calls in the queue plugin's `onReady`.
 5. Rewrite the four reorder route handlers to write the ext table directly.
 6. Update `queue-view.tsx` to read from `queueRanksResource`.
-7. Strip rank from `tasks-core` (column, schema, helpers, cycling branch, insert/patch types). Run `./singularity build` — migration drops the column. Confirm app boots clean.
+7. Strip rank from `tasks-core` (column, schema, helpers, cycling branch, insert/patch types). Run `./equin build` — migration drops the column. Confirm app boots clean.
 8. Delete `backfill-ranks.ts` and its `onReady` registration.
-9. `./singularity check` to make sure plugin boundaries and eslint stay green.
+9. `./equin check` to make sure plugin boundaries and eslint stay green.
 
 Each step compiles independently, so type errors surface incrementally.
 
 ## Verification
 
-End-to-end checks after `./singularity build`:
+End-to-end checks after `./equin build`:
 
 1. **Recover preserves rank** (the original bug). Send a `waiting` conversation
    to position N via the queue UI (`http://<worktree>.localhost:9000` →
@@ -189,6 +189,6 @@ End-to-end checks after `./singularity build`:
 4. **Manual reorder still works.** Drag, promote (top), demote (bottom), and
    step-down (Anki-style) buttons in the queue view all produce the expected
    movements.
-5. **`./singularity check`** passes (plugin boundaries + eslint).
+5. **`./equin check`** passes (plugin boundaries + eslint).
 6. **DB sanity:** `psql … -c "\d conversations_ext_queue"` shows the new
    table with FK CASCADE; `\d conversations` no longer shows `rank`.

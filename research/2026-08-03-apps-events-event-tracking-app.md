@@ -315,7 +315,7 @@ without bound and the user filters/sorts across all of it.
   view child** — a new view *type* registered into the global `DataViewSlots.View` slot,
   which every existing consumer opts into by adding one id. Zero changes to the Events app
   when it lands. That is precisely why the DataView route is right for this surface.
-- Config is the only source of view instances: `./singularity build` seeds
+- Config is the only source of view instances: `./equin build` seeds
   `config/apps/events/event-list/…jsonc` and **fails `config:overrides-authored` until the
   `// @review` marker is deleted**. Author `Upcoming` (filter `startsAt >= today`,
   sort asc), `All`, `By category` (grouped) — then delete the marker and rebuild.
@@ -361,7 +361,7 @@ workstreams are genuinely parallel. Implementation agents on Opus; lookups on So
 
 | # | Workstream | Depends on | Deliverable |
 |---|---|---|---|
-| 0 | **`events-core`** — field records, 3 entities, `defineEventSourceType` registry, `EventSources.Type` slot, categories/cadences in `core/`, endpoint contracts, revision-tick resource | — | contracts frozen; `./singularity build` green with a migration |
+| 0 | **`events-core`** — field records, 3 entities, `defineEventSourceType` registry, `EventSources.Type` slot, categories/cadences in `core/`, endpoint contracts, revision-tick resource | — | contracts frozen; `./equin build` green with a migration |
 | 1 | **`shell`** — app entry, sidebar slot, layout, landing pane | 0 | Events app opens in the rail |
 | 2 | **`refresh`** — both jobs, `runSource` engine, upsert/diff, run ledger, error classification, retention | 0 | a source can be refreshed end to end |
 | 3 | **`event-list`** — DataView pane, fields, server query, column map, authored view config | 0 | events are browsable/filterable |
@@ -370,13 +370,13 @@ workstreams are genuinely parallel. Implementation agents on Opus; lookups on So
 | 6 | **`manual`** — trivial type; `probe` → `{fingerprint:null}`, events authored through the UI | 0, 2 | usable before any extractor works |
 | 7 | *follow-ups* — `calendar` view child, `shotgun`, `meetup`, `ical`, RRULE materialization | 0 | — |
 
-Each agent runs `./singularity build` and must leave `./singularity check` green,
+Each agent runs `./equin build` and must leave `./equin check` green,
 including `config:overrides-authored` (DataView + reorder overrides authored, `// @review`
 deleted) and `plugins-doc-in-sync`.
 
 ## Verification
 
-1. `./singularity build` → app at `http://<worktree>.localhost:9000/events`.
+1. `./equin build` → app at `http://<worktree>.localhost:9000/events`.
 2. **Contract**: `bun test` on the pure units — externalId derivation, the upsert/diff
    (`created/updated/disappeared` counts), error classification, and the extraction
    response parser against a captured fixture. These are `*.test.ts` next to source.

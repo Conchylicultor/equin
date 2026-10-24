@@ -55,7 +55,7 @@ import {
 // `database/embedded` (not `readDatabaseConfig` from `database/core`: that edge
 // would close a plugin cycle, since `database` imports this plugin).
 //
-// Requires the running embedded cluster (./singularity build). Unreachable
+// Requires the running embedded cluster (./equin build). Unreachable
 // cluster ⇒ the first connect throws loudly, never a silent skip.
 
 const DEADLINE_MS = 300;

@@ -168,15 +168,15 @@ test today.
 - `formatIfFormattable` still trips `assertPathArg` on a newline-bearing `file`.
 
 ```bash
-./singularity test plugins/framework/plugins/tooling/plugins/format
+./equin test plugins/framework/plugins/tooling/plugins/format
 ```
 
 ## Verification
 
-1. `./singularity check type-check` — the compile errors are the migration's
+1. `./equin check type-check` — the compile errors are the migration's
    own checklist; green means every call site moved.
-2. `./singularity test plugins/framework/plugins/tooling/plugins/format`
-3. `./singularity build` (background, per the agent workflow) — this is the real
+2. `./equin test plugins/framework/plugins/tooling/plugins/format`
+3. `./equin build` (background, per the agent workflow) — this is the real
    end-to-end: codegen re-emits every generated artifact through the new
    `writeGenerated`, and the changed-set pass formats this branch's own diff
    through the new `formatSource`.
@@ -185,7 +185,7 @@ test today.
    `.jsonc` artifact may change content** — if one does, the pass-through split
    put a file on the wrong arm. Spot-check that no file's contents equal its own
    path.
-5. `./singularity check` — all 13 `*-in-sync` checks re-run their comparison
+5. `./equin check` — all 13 `*-in-sync` checks re-run their comparison
    through the new `formatGenerated`, which is the broadest available proof that
    the emit side and the check side still agree byte-for-byte.
 

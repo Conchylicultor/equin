@@ -2,5 +2,5 @@
   "name": "@singularity/plugin-framework-cli-regen-generated",
   "private": true,
   "version": "0.0.1",
-  "description": "`./singularity regen-generated` — the repo-tree half of build's codegen standalone (registries, barrels, plugin docs, manifests, config origins), for the post-rebase normalize step in `push`."
+  "description": "`./equin regen-generated` — the repo-tree half of build's codegen standalone (registries, barrels, plugin docs, manifests, config origins), for the post-rebase normalize step in `push`."
 }

@@ -15,11 +15,11 @@ import { declareGrowthBound } from "./growth-bounds";
 // edit that drops the `onDelete: "cascade"`) is caught by boot, not a DB probe.
 //
 // "Module eval of the consumer" = boot's import phase, so a violation is
-// BOOT-FATAL. `./singularity build` probes backend health after restart and fails
+// BOOT-FATAL. `./equin build` probes backend health after restart and fails
 // loudly ("Check server logs") when the new backend never takes over — so a bad
 // cascade claim surfaces as a failed build, not a silently-dead app. This mirrors
 // the precedent in change-feed's `assertRouteTablesCovered` (a throwing boot
-// invariant that a static `./singularity check` cannot express).
+// invariant that a static `./equin check` cannot express).
 
 /**
  * The first FK on `table` with `onDelete: "cascade"` whose referenced table is

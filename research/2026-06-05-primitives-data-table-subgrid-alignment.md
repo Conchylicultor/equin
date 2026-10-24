@@ -128,7 +128,7 @@ Files (all column `width` strings found via `rg "width:"` over data-table import
 
 ## Verification
 
-1. `./singularity build` (regenerates docs/registry; runs checks incl. eslint + boundaries).
+1. `./equin build` (regenerates docs/registry; runs checks incl. eslint + boundaries).
 2. Sonata table alignment — scripted Playwright, clicking into the table view:
    ```bash
    bun e2e/screenshot.mjs \

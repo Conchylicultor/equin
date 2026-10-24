@@ -127,7 +127,7 @@ naming any of their DOM.
 `app.css` is the **single source of truth** for every custom `@utility` AND for how
 `cn()`/tailwind-merge must classify it. The registry consumed by `cn()`
 (`custom-utilities.generated.ts`) is **generated** from co-located markers by
-`./singularity build` — there is no array to edit anywhere, and membership can't
+`./equin build` — there is no array to edit anywhere, and membership can't
 drift.
 
 Every `@utility` MUST carry one co-located `/* twmerge: <ref> */` marker (the
@@ -178,5 +178,5 @@ only when you can write down why.
 
 The marker may sit at end-of-line, on the line below, or inside the rule body — the
 generator slices from each `@utility` to the next and reads the first
-`/* twmerge: … */` in that slice. After editing, run `./singularity build`; the
+`/* twmerge: … */` in that slice. After editing, run `./equin build`; the
 `app-css-utilities-in-sync` check guards the regenerated file.

@@ -50,5 +50,5 @@ work is to close the gap and prove it with `compare-diff`.
 
 ## Verification
 
-`./singularity test` on the plugin; `./singularity build`; exhibit-shot + compare-diff vs the prototype
+`./equin test` on the plugin; `./equin build`; exhibit-shot + compare-diff vs the prototype
 in both schemes; spot-check a conversation fence via `browser_*`.

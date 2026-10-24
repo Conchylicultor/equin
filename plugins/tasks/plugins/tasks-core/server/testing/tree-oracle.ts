@@ -51,7 +51,7 @@ import { installTaskDerivedSchema } from "./install-derived-schema";
 // routed alias, its `{}` snapshot kept current with nobody subscribed.
 //
 // The runtime is the harness's OWN (`createResourceRuntime`), never
-// server-core's process-global one: `./singularity test` runs every bun suite
+// server-core's process-global one: `./equin test` runs every bun suite
 // in one process, and a suite that imports a plugin's server barrel (directly
 // or through a chain — conversations' auto-start → lifecycle →
 // `setTaskCategory`) registers that plugin's real keys on the global registry

@@ -150,7 +150,7 @@ Fully independent. Absorbs `boundary.config.ts` from root.
 - Remove `zone("tooling", ...)` and `allow("tooling -> ...")` from the boundary config
 - Delete moved files from old `tooling/` and root `boundary.config.ts`
 
-**Verification:** `./singularity check --boundary-rules` passes, with tooling scanned as `plugin.framework.tooling.*`.
+**Verification:** `./equin check --boundary-rules` passes, with tooling scanned as `plugin.framework.tooling.*`.
 
 ### Sub-task 7.4: Codegen → `tooling/plugins/codegen/`
 
@@ -161,7 +161,7 @@ Fully independent — consumed only by CLI.
 - Update generated-file header comment string
 - Delete moved files from old `tooling/`
 
-**Verification:** `./singularity build` succeeds (docgen + registry-gen run during build).
+**Verification:** `./equin build` succeeds (docgen + registry-gen run during build).
 
 ### Sub-task 7.5: Checks → `tooling/plugins/checks/`
 
@@ -175,7 +175,7 @@ Depends on 7.2 (lint) and 7.3 (boundaries).
 - Update `eslint` check: lint source path in `bustCacheIfStale`
 - Delete moved files from old `tooling/`
 
-**Verification:** `./singularity check` passes (all individual checks + check runner).
+**Verification:** `./equin check` passes (all individual checks + check runner).
 
 ### Sub-task 7.6: Final cleanup
 
@@ -184,7 +184,7 @@ Depends on 7.2 (lint) and 7.3 (boundaries).
 - Stale-reference audit: `rg 'tooling/' --type ts` for comment/string references
 - Update umbrella `tsconfig.json` to its final form (include all sub-plugin dirs, drop any temp aliases)
 
-**Verification:** `./singularity build` + `./singularity check` + hook fires.
+**Verification:** `./equin build` + `./equin check` + hook fires.
 
 ---
 
@@ -206,7 +206,7 @@ Depends on 7.2 (lint) and 7.3 (boundaries).
 
 | Risk | Severity | Mitigation |
 |------|----------|------------|
-| `boundary.config.ts` move breaks `./singularity check` bootstrap | **Critical** | Boundaries sub-task (7.3) is atomic: DSL, config, and checker move together. The config imports the DSL from a sibling file, not a cross-package path. |
+| `boundary.config.ts` move breaks `./equin check` bootstrap | **Critical** | Boundaries sub-task (7.3) is atomic: DSL, config, and checker move together. The config imports the DSL from a sibling file, not a cross-package path. |
 | Claude Code hook path wrong → blocks all tool calls | **High** | Guards sub-task (7.1) updates `.claude/settings.json` atomically. Verified immediately by running a tool call. |
 | Partial migration leaves tooling in inconsistent state | **Medium** | Each sub-task deletes its moved files from old `tooling/`. The `@tooling/*` alias continues resolving un-migrated modules until 7.6 removes it. |
 | Plugin tree walker generates registry entries for tooling | **Low** | Tooling sub-plugins have no `web/index.ts`, `server/index.ts`, or `central/index.ts` — registry codegen skips them. Verify `plugins.generated.ts` files are unchanged after each sub-task. |
@@ -215,8 +215,8 @@ Depends on 7.2 (lint) and 7.3 (boundaries).
 
 ## Done when
 
-- `./singularity build` succeeds
-- `./singularity check` passes (boundary-rules scans tooling as `plugin.framework.tooling.*`)
+- `./equin build` succeeds
+- `./equin check` passes (boundary-rules scans tooling as `plugin.framework.tooling.*`)
 - Claude Code hooks work (PreToolUse guard fires from new path)
 - `tooling/` deleted from repo root
 - `boundary.config.ts` deleted from repo root (lives in boundaries plugin)

@@ -65,7 +65,7 @@ function resolveUrl(s: Session, url: string): string {
     if (s.target.kind === "deploy") return `${s.target.origin}${url}`;
     throw new Error(
       `"${url}" is a route, and no deploy is registered for this conversation's checkout (${s.target.checkout}) to resolve it against. ` +
-        "Run `./singularity build` there first, or pass an absolute http(s) URL.",
+        "Run `./equin build` there first, or pass an absolute http(s) URL.",
     );
   }
   if (/^https?:\/\//.test(url)) return url;

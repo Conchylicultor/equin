@@ -144,9 +144,9 @@ The tree handler uses `resolve(import.meta.dir, "..", "..", "..")` to reach the 
 
 ## Verification
 
-1. `./singularity build` succeeds
+1. `./equin build` succeeds
 2. Navigate to `/publish` — shows tree-only column with stats header
 3. Click a plugin in the tree → detail opens as the adjacent Miller column (`/publish/:pluginId`)
 4. Direct URL `/plugin-view/tasks` — opens standalone detail for the "tasks" plugin
 5. `GET /api/plugin-view/tree` returns valid payload
-6. `./singularity check` passes (plugin boundaries, eslint)
+6. `./equin check` passes (plugin boundaries, eslint)

@@ -15,9 +15,9 @@
  * fixed chrome theme, and switching to an app with its own theme leaves the
  * chrome's ground untouched.
  *
- * Manual only. After `./singularity build`:
+ * Manual only. After `./equin build`:
  *
- *   ./singularity run plugins/apps-core/plugins/chrome-theme/e2e/chrome-vs-mock.ts [--out /tmp/chrome] [--color-scheme dark|light]
+ *   ./equin run plugins/apps-core/plugins/chrome-theme/e2e/chrome-vs-mock.ts [--out /tmp/chrome] [--color-scheme dark|light]
  */
 import type { Page } from "playwright";
 import {

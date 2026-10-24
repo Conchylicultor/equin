@@ -121,9 +121,9 @@ value every holder at `version` holds.
 
 ## Verification
 
-- `./singularity test` on value-patch, resource-protocol, resource-runtime,
+- `./equin test` on value-patch, resource-protocol, resource-runtime,
   live-state, network/live, jsonl-viewer.
-- `./singularity build`, then `stream-cost.ts` before/after;
+- `./equin build`, then `stream-cost.ts` before/after;
   `stream-order.ts` and `assistant-text/e2e/first-token.ts` still pass.
 
 ## Results

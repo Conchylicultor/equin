@@ -2,7 +2,7 @@
 
 ## Context
 
-Compositions (named plugin subsets defined in the `compositions` config_v2 config — `sonata`, `website`, `pages`, …) are today only a Studio inspection concept plus a heavyweight `./singularity release` input. We want each **activated** composition served live through the existing dev gateway at `http://<composition>.localhost:9000/`, rebuilt automatically as part of the normal main build, so every app-composition is continuously testable as the standalone product it will ship as.
+Compositions (named plugin subsets defined in the `compositions` config_v2 config — `sonata`, `website`, `pages`, …) are today only a Studio inspection concept plus a heavyweight `./equin release` input. We want each **activated** composition served live through the existing dev gateway at `http://<composition>.localhost:9000/`, rebuilt automatically as part of the normal main build, so every app-composition is continuously testable as the standalone product it will ship as.
 
 User-fixed requirements:
 
@@ -20,7 +20,7 @@ User-confirmed decisions: reuse main's full vendor set per composition dist (per
 - **Frontend**: parameterize the web-artifacts planner over an injected *fleet source* (entry list + registry file). A composition dist = filtered import map + symlinks into the same store — near-free after main's fleet build.
 - **DB**: `ensureDatabase(<id>)` (empty, race-safe — `plugins/database/plugins/admin/server/internal/databases.ts:37-48`) before the spec write; the backend's normal `onReadyBlocking` migration runner populates the schema on first boot (the release launcher's proven create-empty-then-migrate path, `plugins/infra/plugins/launcher/server/internal/boot.ts:502-549`).
 - **Lifecycle home**: everything per-composition lives under `~/.singularity/worktrees/<id>/` — `spec.json`, the composed `web/` dist, and a `composition.json` provenance marker distinguishing composition namespaces from git-worktree namespaces.
-- **Hook point**: the stage runs at the end of `./singularity build` **only when building from the main checkout**. Main already auto-rebuilds on every push (`plugins/build/server/index.ts:20`: `git.refAdvanced(refs/heads/main)` → debounced `build.run` job), so the push flow is covered with no new trigger.
+- **Hook point**: the stage runs at the end of `./equin build` **only when building from the main checkout**. Main already auto-rebuilds on every push (`plugins/build/server/index.ts:20`: `git.refAdvanced(refs/heads/main)` → debounced `build.run` job), so the push flow is covered with no new trigger.
 
 ---
 
@@ -40,7 +40,7 @@ All in `plugins/framework/plugins/tooling/plugins/web-artifacts/core/internal/`:
 3. Survival: `clearCompositionRegistries` (build.ts:1017) keeps clearing only the singletons; per-name files are owned exclusively by the Phase 3 stage (rewrites the activated set, deletes deactivated leftovers). `.gitignore` gains the per-name pattern.
 4. `build --composition` semantics unchanged; unifying release onto per-name files is a follow-up the fallback chain makes trivial.
 
-## Phase 3 — Auto-build stage in `./singularity build` (L)
+## Phase 3 — Auto-build stage in `./equin build` (L)
 
 New `plugins/framework/plugins/cli/bin/commands/internal/compose-serve.ts`, invoked after main's atomic publish + spec write, **gated on running from the main checkout** (same precedent as the central restart at build.ts:1499).
 
@@ -48,7 +48,7 @@ New `plugins/framework/plugins/cli/bin/commands/internal/compose-serve.ts`, invo
 2. **Validation + collision guard per activated id**: gateway name regex `^[a-z0-9][a-z0-9-]{0,62}$` (`gateway/registry.go:20`), reserved `{central, singularity, main}`, and: if `~/.singularity/worktrees/<id>/` exists **without** our `composition.json` marker, or a git worktree/branch of that name exists → fail loudly for that composition, never overwrite a foreign namespace.
 3. **Per activated composition** (one shared `buildPluginTree`): resolve closure (`flattenManifest` → `resolveComposition`, `plugins/plugin-meta/plugins/closure/core/resolve-composition.ts:62`) → write per-name server + web registries → compose dist (Phase 1) → `ensureDatabase(id)` → `propagateConfigToUser({root, worktreeName: id, singularityDir})` (`config-origin-gen.ts:500`) → write `composition.json` marker → **`writeWorktreeSpec` LAST** (mirrors `bootSelfContainedApp`'s load-bearing ordering — a backend spawned against a missing DB hard-crashes; 3D000 is not retried, `database/server/internal/client.ts:425-430`) → `POST /gateway/worktrees/<id>/restart` (tolerate 404/conn-refused like build.ts:1502-1516) so a running composition backend picks up new code.
 4. **Deactivation sweep**: every marker-carrying spec dir whose id is no longer activated → `removeWorktreeSpec` (spec + dist dir together) + delete its per-name registries. **DB is kept** (drop stays manual — e.g. via debug/worktree-cleanup later).
-5. **Dev flag** `./singularity build --serve-composition <name>` forces one composition through the stage regardless of config — the verification vehicle for Phases 1–3 before Phase 4 lands.
+5. **Dev flag** `./equin build --serve-composition <name>` forces one composition through the stage regardless of config — the verification vehicle for Phases 1–3 before Phase 4 lands.
 6. **Failure policy**: per-composition failures are collected, printed loudly, and produce a non-zero exit at the end — never silently absorbed, never aborting sibling compositions.
 
 ## Phase 4 — Config + Studio UI (M; parallel-safe with 1–3)
@@ -67,11 +67,11 @@ New `plugins/framework/plugins/cli/bin/commands/internal/compose-serve.ts`, invo
 ## Phase 6 — Verification (S)
 
 - **bun:test** (pure logic, co-located): `planFleet` with an injected source (filtered map entries, no out-of-closure specifiers); per-name registry rendering; `readEffectiveConfigFromDisk` against fixture jsonc trees (git-only, user-override, stale-override); name validation + collision guard; deactivation set arithmetic.
-- **E2E on main**: toggle `sonata` on (or `--serve-composition sonata`) → `./singularity build` → verify `http://sonata.localhost:9000` renders via the `e2e/release-boot-verify.mjs` harness pattern (SPA mounted, zero console errors, no /api 502 storm); assert the served import map contains no out-of-closure plugin entries.
+- **E2E on main**: toggle `sonata` on (or `--serve-composition sonata`) → `./equin build` → verify `http://sonata.localhost:9000` renders via the `e2e/release-boot-verify.mjs` harness pattern (SPA mounted, zero console errors, no /api 502 storm); assert the served import map contains no out-of-closure plugin entries.
 - **Empty DB**: `query_db` with `database: "sonata"` — migrations table populated, `tasks` / `mail_threads` at 0 rows.
 - **Deactivation**: toggle off → build → spec dir gone, gateway returns unknown-namespace, per-name registries deleted, DB still present.
 - **Restart-on-rebuild**: with sonata's backend running, rebuild main → backend restarts, new `.build-id` served.
-- **Regression**: plain worktree build clean (`plugins-registry-in-sync`, `map-in-sync`, clean git status); `./singularity release --composition sonata --dev` still works end-to-end.
+- **Regression**: plain worktree build clean (`plugins-registry-in-sync`, `map-in-sync`, clean git status); `./equin release --composition sonata --dev` still works end-to-end.
 
 ## Sizes
 

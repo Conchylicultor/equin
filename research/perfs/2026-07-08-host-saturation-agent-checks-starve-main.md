@@ -42,7 +42,7 @@ By design. `cli/bin/host-semaphore.ts` sizes the build pool as `floor(cpus/4)` �
 
 - `push` has its own reserved slot ("effectively never contended" — a push's checks run *in addition to* 4 builds).
 - main-branch builds are `exempt` (never queued).
-- Standalone `./singularity check` takes a `build` slot (`commands/check.ts:45`) unless `SINGULARITY_HOST_SLOT_HELD` marks it nested.
+- Standalone `./equin check` takes a `build` slot (`commands/check.ts:45`) unless `SINGULARITY_HOST_SLOT_HELD` marks it nested.
 
 So the admission math allows 4 fleets × ~4 tsc workers + eslint + vite ≈ 20+ heavy processes — the semaphore assumed each job costs ~4 cores, but a fleet peaks well above that. Concurrency bounding alone can't fix this without making agents queue badly; priority isolation is the designed answer (one build legitimately fans across every core — see `spawn-priority/CLAUDE.md`).
 
@@ -50,7 +50,7 @@ So the admission math allows 4 fleets × ~4 tsc workers + eslint + vite ≈ 20+ 
 
 1. **Type-check workers never demote at their own spawn site.** `plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/check/index.ts:115` — `Bun.spawn([process.execPath, WORKER, jobPath], …)` with no `backgroundArgv`. Relies entirely on parent inheritance.
 2. **`build.ts` demotes only tsc/vite, not the checks path.** `plugins/framework/plugins/cli/bin/commands/build.ts:951` — `const demote = slotKind === "build" ? backgroundArgv : …` is applied to the runtime-tsc/vite spawns; the in-process `runChecks()` call (which fans out the type-check workers) is not wrapped. The residual is even documented in the comment at build.ts:948-950 ("the checks runner's internal tsc/eslint workers are only demoted via session inheritance, not here").
-3. **Standalone `./singularity check` applies no demotion at all** (`commands/check.ts` imports the semaphore only).
+3. **Standalone `./equin check` applies no demotion at all** (`commands/check.ts` imports the semaphore only).
 4. **Agent sessions spawned before the Jul 7 deploy inherit nothing** — long-lived pre-Jul-7 tmux sessions still launch undemoted builds/checks. (This is the fleet observed undemoted today.)
 5. Gateway-side is already correct: agent-worktree *backends* spawn darwinbg and get promoted to default on readiness (`gateway/worktree.go:868-879`, `:835-852`).
 
@@ -77,7 +77,7 @@ So there are two symmetric moves, and they multiply:
 1. **Close the demotion gaps (the immediate fix — small, no privileges):**
    - Demote type-check workers at their own spawn site: `Bun.spawn(backgroundArgv([...]))` at `type-check/check/index.ts:115`. Since the check runner doesn't know the branch, plumb the decision from the callers (build.ts / check.ts know `branch === "main"`) — e.g. an env flag or `RunChecksOptions` field — so main-branch runs (user is waiting) stay undemoted and everything else demotes at the source, not via inheritance.
    - Extend the build.ts demotion to the checks path (kill the documented residual at build.ts:948-951).
-   - Demote standalone agent-worktree `./singularity check` runs the same way.
+   - Demote standalone agent-worktree `./equin check` runs the same way.
 2. **Sweep pre-Jul-7 agent sessions:** restart long-lived tmux agent sessions (or one-shot `taskpolicy -b -p` their PIDs) so inheritance-based demotion actually covers them. This is what made 10/11 workers undemoted on Jul 8 despite the Jul 7 fix.
 3. **QoS self-boost the main backend** (`pthread_set_qos_class_self_np` via bun:ffi at boot, main worktree only) — defense in depth: protects main from *any* future undemoted straggler instead of requiring every spawn site to be perfect forever. Optionally give the gateway a launchd `ProcessType: Interactive` plist. Measure A/B during a burst before declaring victory.
 4. **Re-examine admission control:** 4 build slots (`floor(18/4)`) each fanning ~4–6 heavy children over-admits. Either count slots per *worker* rather than per *job*, or cut `buildSlotCount` (env `SINGULARITY_BUILD_CONCURRENCY` exists already). With demotion complete this becomes a memory bound more than a CPU bound (each worker ≈ 2.7 GB — the per-fleet memory guard at type-check/check/index.ts:166-170 does not account for *other* fleets).

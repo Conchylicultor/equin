@@ -212,7 +212,7 @@ Files:
 - NEW: `plugins/review/plugins/plugin-changes/core/load-diff-renderers.ts`
 - EDIT: `plugins/review/plugins/plugin-changes/core/index.ts`
 
-Verify: `./singularity build` succeeds, generated `doc-renderer.generated.ts` (in
+Verify: `./equin build` succeeds, generated `doc-renderer.generated.ts` (in
 codegen core) and `diff-renderer.generated.ts` (in plugin-changes core) appear
 (initially empty).
 
@@ -230,7 +230,7 @@ logic from `compute-plugin-diff.ts` (lines 50-58).
 
 **2.4** Remove `renderDoc` from exports facet implementation.
 
-**2.5** Verify: `./singularity build`, check `doc-renderer.generated.ts` now contains
+**2.5** Verify: `./equin build`, check `doc-renderer.generated.ts` now contains
 the exports entry.
 
 Files (per sub-plugin: `doc-renderer/index.ts` + `package.json`):
@@ -386,8 +386,8 @@ Files:
 ## Verification
 
 After each phase:
-- `./singularity build` succeeds
-- `./singularity check` passes
+- `./equin build` succeeds
+- `./equin check` passes
 
 After Phase 4:
 - Byte-compare `docs/plugins-details.md`, `docs/plugins-compact.md`
@@ -396,7 +396,7 @@ After Phase 4:
 - PR diff view works (now with actual data instead of empty arrays)
 
 After Phase 5:
-- `./singularity check --plugin-boundaries` passes
+- `./equin check --plugin-boundaries` passes
 - No remaining imports of compat field types
 - `rg "populateCompatFields|\.server\.httpRoutes|\.webApiUses"` returns no hits
 

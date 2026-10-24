@@ -174,7 +174,7 @@ one existing copy is mechanical.
 
 ## Verification
 
-1. `./singularity build` (background — see the workflow rule).
+1. `./equin build` (background — see the workflow rule).
 2. `bun plugins/page/plugins/editor/e2e/format-shortcuts-verify.ts` — new, all
    green. Before the code fix it must be red for bold/italic/underline and green
    for code/strikethrough; run it once against the pre-fix build to prove it is
@@ -186,7 +186,7 @@ one existing copy is mechanical.
    through the same editor and asserts persisted rows.
 5. `bun plugins/page/plugins/editor/e2e/inline-format-verify.ts` — typing and
    undo unaffected.
-6. `./singularity check`.
+6. `./equin check`.
 7. By hand at `http://<worktree>.localhost:9000`: ⌘B/⌘I/⌘U/⌘E/⌘⇧X on a selection
    and on a caret; ⌘K inside a block opens the link popover; ⌘K outside a block
    still opens the command palette.

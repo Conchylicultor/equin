@@ -40,7 +40,7 @@ export const BUILD_ARTIFACTS_RETENTION = 50;
  * number on purpose: a build's checks write one of these per build, so a smaller
  * window would reap the transcript of a build whose `build-<id>.log` is still
  * there — and the build log's `Check logs:` pointer would then name a file that
- * no longer exists. Standalone `./singularity check` runs share the window, so
+ * no longer exists. Standalone `./equin check` runs share the window, so
  * the true depth is "the last 50 check runs", not "the last 50 builds".
  */
 export const CHECK_ARTIFACTS_RETENTION = 50;

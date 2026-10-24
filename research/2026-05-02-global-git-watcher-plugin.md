@@ -11,7 +11,7 @@ The fix is structural. There should be a single signal — "local main moved" �
 Goals:
 
 1. Dot and auto-build cannot disagree, by construction.
-2. Watch the local `refs/heads/main` (not `origin/main`). A `git pull` that ff-merges main locally still triggers; a remote-only push without a corresponding local update is intentionally invisible (acceptable since `./singularity push` always merges into local main before pushing).
+2. Watch the local `refs/heads/main` (not `origin/main`). A `git pull` that ff-merges main locally still triggers; a remote-only push without a corresponding local update is intentionally invisible (acceptable since `./equin push` always merges into local main before pushing).
 3. Close to instant via `fs.watch` (`@parcel/watcher`), with a low-frequency reconcile poll as safety net.
 4. Per-worktree watchers are fine; worktrees are temporary.
 
@@ -198,7 +198,7 @@ The `lastSha` state moves into the watcher's `lastKnownSha` map; the ingest job 
 
 ## Verification
 
-1. **Build:** `./singularity build` from this worktree — must regenerate `plugins-details.md` / `plugins-compact.md` (autogen check) and pass `./singularity check`.
+1. **Build:** `./equin build` from this worktree — must regenerate `plugins-details.md` / `plugins-compact.md` (autogen check) and pass `./equin check`.
 2. **Unit-level (manual):**
    - With server running, `touch` `refs/heads/main` (no SHA change): no notify should fire (sha guard).
    - Make a no-op commit on main locally (`git commit --allow-empty -m test` then move main): within ~100 ms the toolbar dot tooltip count should change without page reload, **and** the build should auto-run (toast appears, then `Build succeeded`).

@@ -115,7 +115,7 @@ so whatever happens to it, it wants a look.
 
 ## Verification
 
-- `./singularity build && ./singularity check`.
+- `./equin build && ./equin check`.
 - One URL, a tab strip of 8 mailboxes; switching tabs re-scopes the list.
 - **Filters are editable**: open Inbox's Filter pill, the `Labels contains
   Inbox` rule is an ordinary removable/editable chip; edits persist across

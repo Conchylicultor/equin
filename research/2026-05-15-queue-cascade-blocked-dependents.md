@@ -64,7 +64,7 @@ Add `await cascadeBlockedDependents(conversationId, tx)` after `reseatGroupMembe
 
 ## Verification
 
-1. `./singularity build`
+1. `./equin build`
 2. Create tasks A, B, C with dependencies: B depends on A, C depends on B
 3. In the queue, verify order is `[A, B, C]`
 4. Demote A → verify all three cascade: `[..., A, B, C]`

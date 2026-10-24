@@ -36,4 +36,4 @@ Why this eliminates the class: every binding now attaches to a doc that is empty
 
 - bun:test: second replica created against a populated canonical hydrates fully post-attach; edits on replica A appear on replica B and canonical; canonical undo reflected in replicas; relay terminates (latch) and echoes are no-ops; teardown destroys replicas without touching canonical retention semantics.
 - e2e (Playwright): expand a page-link inline, click through to the page detail pane, assert the detail pane's block text is NON-empty (the regression), and type in the detail pane then confirm the inline copy updates live (two-binding relay).
-- `./singularity build` + manual pass.
+- `./equin build` + manual pass.

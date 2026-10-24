@@ -26,7 +26,7 @@
 // dialog (opens from one click; carries the default ✕).
 //
 // Usage:
-//   ./singularity run plugins/primitives/plugins/css/plugins/ui-kit/e2e/dialog-box.ts
+//   ./equin run plugins/primitives/plugins/css/plugins/ui-kit/e2e/dialog-box.ts
 
 import {
   DEFAULT_VIEWPORT,

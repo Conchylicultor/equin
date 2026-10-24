@@ -124,9 +124,9 @@ Remove the grandfathered allowlist entry
 
 ## Verification
 
-1. `./singularity build` (regenerates `web.generated.ts`, runs checks incl.
+1. `./equin build` (regenerates `web.generated.ts`, runs checks incl.
    `eslint` / `type-check` / `plugins-doc-in-sync`).
-2. `./singularity check eslint` — confirm `no-adhoc-pane-toolbar` passes with the
+2. `./equin check eslint` — confirm `no-adhoc-pane-toolbar` passes with the
    allowlist entry removed (proves the migration is real, not re-exempted).
 3. Open `http://att-1781435531-7h0l.localhost:9000/story`, open a story, and via
    `e2e/screenshot.mjs` confirm: back button returns to gallery, title edits

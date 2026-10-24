@@ -34,7 +34,7 @@ Note: `transformValues` (color-adjust) only rewrites `oklch(L C H)` strings and 
 
 New check plugin mirroring `plugins/framework/plugins/tooling/plugins/checks/plugins/app-css-utilities-in-sync/check/index.ts` (structural template: `getRoot()`, `readFileSync`, comment-strip, inline `Check`/`CheckResult` types):
 
-- Location: `plugins/framework/plugins/tooling/plugins/checks/plugins/css-vars-supplied/check/` with `index.ts` (default-export `Check`, id `css-vars-supplied`), `package.json`, and `CLAUDE.md` (required by `plugins-have-claudemd`). Discovered after `./singularity build` regenerates `check.generated.ts` — no manual registration. **Omit `cacheSignature`** (pure function of tracked content → cacheable on tree hash).
+- Location: `plugins/framework/plugins/tooling/plugins/checks/plugins/css-vars-supplied/check/` with `index.ts` (default-export `Check`, id `css-vars-supplied`), `package.json`, and `CLAUDE.md` (required by `plugins-have-claudemd`). Discovered after `./equin build` regenerates `check.generated.ts` — no manual registration. **Omit `cacheSignature`** (pure function of tracked content → cacheable on tree hash).
 - **DEMAND** — across `git ls-files 'plugins/**/*.css'` (comment-strip each with `.replace(/\/\*[\s\S]*?\*\//g, "")` first): match `var\(\s*(--[\w-]+)\s*(,|\))`; a match whose delimiter is `)` is fallback-less → DEMAND. Track `Map<var, file>` for the error message. (`var(--x, …)` refs have a fallback → excluded, inherently safe. This correctly excludes `pr-floating-bar`'s `var(--floating-bar-safe-area, var(--chrome-pad-x))` at app.css:350 — no allowlist needed.)
 - **SUPPLY** — union of:
   - Token-group vars: glob `plugins/ui/plugins/tokens/plugins/*/shared/group.ts`, comment-strip, extract top-level schema keys with `(?:"([\w-]+)"|([A-Za-z_$][\w$]*))\s*:\s*\{` (matches `fontSizeCaption: {` / `"categorical-1": {`, not the nested `default:`/`label:` which are followed by a string), then `camelToKebab` (`s.replace(/[A-Z]/g, m => '-' + m.toLowerCase())`) → `--<kebab>`.
@@ -60,7 +60,7 @@ New check plugin mirroring `plugins/framework/plugins/tooling/plugins/checks/plu
 
 ## Verification
 
-1. `./singularity build` then `./singularity check css-vars-supplied` → passes on the current tree.
+1. `./equin build` then `./equin check css-vars-supplied` → passes on the current tree.
 2. **Build check negative:** temporarily reference `var(--nonexistent-token)` (no fallback) in app.css → check fails naming the var + file; revert.
 3. **Runtime fix (the bug):** with a tweakcn community theme active, screenshot the conversation header chips (`bun e2e/screenshot.mjs` / playwright helper). Confirm `Badge` chips render at caption size (~12px), not inherited-large, and that `success`/`warning`/`info` status colors resolve to their defaults rather than breaking. Compare against a tweakcn theme on `main` (broken) vs this branch (fixed).
 4. **Assertion negative:** temporarily blank a schema `default` (e.g. `fontSizeCaption`) → app throws loudly on theme injection with the group id + missing key; revert.

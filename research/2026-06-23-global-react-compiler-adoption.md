@@ -49,7 +49,7 @@ adopt-vs-not decision gate. The compiler does **not** cover element-type/remount
 ## Decisions taken (this conversation)
 
 - **ESLint rollout: warn-first, then ratchet.** Compiler diagnostic rules added at `"warn"`
-  so `./singularity check` stays green; the warning count is the silent-bail/coverage metric.
+  so `./equin check` stays green; the warning count is the silent-bail/coverage metric.
 - **Gating: structural only, no env flag.** The new `vite/` plugin's *presence* is the
   on/off switch. The evaluation happens in this worktree; rollback = delete the folder (or
   don't push). No flag branch in the factory.
@@ -95,7 +95,7 @@ only `node:*` imports (no `@plugins/*`, no `@babel/*`, no sibling `.ts`), becaus
 
 **Dependency:** add `babel-plugin-react-compiler` (latest, exact pin) as a devDependency.
 It is **not yet installed**. Put it in the new plugin's `package.json` (plugin-local dep,
-per repo convention) and/or root devDependencies; `./singularity build` runs `bun install`.
+per repo convention) and/or root devDependencies; `./equin build` runs `bun install`.
 
 ---
 
@@ -199,8 +199,8 @@ hooks) — display-only, **not** a gate failure.
 **Tests / checks / build:**
 - `bun run test:dom` (vitest/jsdom; discovers `plugins/**/web/__tests__/**`) — green.
 - `bun test <path>` for representative pure-logic suites — green.
-- `./singularity check` (type-check + eslint) — green with compiler rules at `"warn"`.
-- `./singularity build` — succeeds with the plugin present.
+- `./equin check` (type-check + eslint) — green with compiler rules at `"warn"`.
+- `./equin build` — succeeds with the plugin present.
 
 ---
 
@@ -267,7 +267,7 @@ React `19.2.5` (native runtime, no polyfill).
 | **G0** contract | ✅ PASS | Compiler emitted first (`order: -100` sorts before element-picker's `order: 0`); bundle contains `react/compiler-runtime` + `useMemoCache`; element-picker `data-source` survives in 331 files. |
 | **G1** coverage | ✅ PASS (strong) | `bunx eslint` over 2153 web files: **90.2% have zero compiler warnings** (211 files / 9.8% warn); **0 errors**. Bail-causing rules tiny: `incompatible-library` 1, `purity` 5, `immutability` 2, `use-memo` 3, `static-components` 3. Noise concentrated in `refs` (180) + `set-state-in-effect` (67), which rarely block compilation. |
 | **G2** render-cost | ⚠️ INCONCLUSIVE | See below — the `/agents` config-churn probe is too noisy to isolate the compiler effect. |
-| **G3** correctness | ✅ PASS | App boots; profiler still names real components (`GroupStyle`, `LaunchControl`, `ReorderListMiddlewareInner`, `CategoryAvatarRow` — not `Memo`/`Unknown`); remounts = 0 both builds; `bun run test:dom` 85/85 pass; `./singularity check` green (warn-first); build succeeds. |
+| **G3** correctness | ✅ PASS | App boots; profiler still names real components (`GroupStyle`, `LaunchControl`, `ReorderListMiddlewareInner`, `CategoryAvatarRow` — not `Memo`/`Unknown`); remounts = 0 both builds; `bun run test:dom` 85/85 pass; `./equin check` green (warn-first); build succeeds. |
 | **G4** effort | ✅ acceptable | 512 total warnings, mostly low-stakes `refs`/`set-state-in-effect`; bounded triage backlog. |
 
 ### G2 measurement — why it's inconclusive

@@ -1,5 +1,5 @@
 // The lister's implementation moved to `shared/list-metas.ts` so
-// `./singularity prototype list` can read the tree with no backend running (a
+// `./equin prototype list` can read the tree with no backend running (a
 // CLI process cannot import this barrel's boot-time machinery). Nothing in it
 // was server-specific.
 //

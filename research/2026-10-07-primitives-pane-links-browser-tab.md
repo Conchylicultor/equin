@@ -171,14 +171,14 @@ not pre-emptively.
 
 - Unit: `computeOpen` cases (root / push right / push left incl. already-ancestor / swap no-op /
   no caller / caller not in route / promote) asserting the route equals what the store ends up
-  with after the click — `./singularity test plugins/primitives/plugins/pane`.
-- Lint rule test (valid/invalid fixtures) — `./singularity test plugins/primitives/plugins/pane`.
-- `./singularity check` (type-check incl. the new rule over the whole repo = no remaining
+  with after the click — `./equin test plugins/primitives/plugins/pane`.
+- Lint rule test (valid/invalid fixtures) — `./equin test plugins/primitives/plugins/pane`.
+- `./equin check` (type-check incl. the new rule over the whole repo = no remaining
   violations).
 - E2E: extend `plugins/primitives/plugins/pane/e2e/expand-verify.ts` (`newTabGestures`):
   middle-click and ⌘-click on Open in <App> / Expand pane / a migrated `Button` and a sidebar
   entry → a new browser `page` event (Playwright `context.waitForEvent("page")`) whose URL
   cold-boots to the expected route, and the original tab's route is unchanged; plain click
   unchanged. Include the `⋯` overflow row case.
-- Manual: `./singularity build`, then middle-click the Prototypes "Open in Prototypes" button
+- Manual: `./equin build`, then middle-click the Prototypes "Open in Prototypes" button
   from a conversation pane.

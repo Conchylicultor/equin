@@ -4,7 +4,7 @@
 // which `server/internal/compile-union-golden.test.ts` reads and compares
 // against:
 //
-//   ./singularity run plugins/network/plugins/live/server/testing/gen-compile-union-golden.ts
+//   ./equin run plugins/network/plugins/live/server/testing/gen-compile-union-golden.ts
 //
 // Run it from the code the snapshot is meant to pin (a refactor that must not
 // change the union's SQL or routes generates BEFORE the refactor), then review

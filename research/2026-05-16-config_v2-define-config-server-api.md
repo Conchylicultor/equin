@@ -291,9 +291,9 @@ In `setConfig`, before writing, call `injectCollectionIds(doc, fields)`. For now
 
 ## Verification
 
-1. Create the files, run `./singularity build` — generated plugins file picks up new server barrel and emits `_hierarchyPath` stamps.
+1. Create the files, run `./equin build` — generated plugins file picks up new server barrel and emits `_hierarchyPath` stamps.
 2. Add a `ConfigV2.Register(buildConfig)` contribution to an existing plugin's server barrel.
 3. Call `getConfig(buildConfig)` from an HTTP handler → returns default values (no file on disk yet).
 4. Call `setConfig(buildConfig, "autoBuild", false)` → `.jsonc` file appears at the expected hierarchy path.
 5. Edit the file externally → `getConfig` returns updated value after debounce.
-6. `./singularity check` passes (plugin boundaries, eslint, migrations).
+6. `./equin check` passes (plugin boundaries, eslint, migrations).

@@ -43,7 +43,7 @@ type ChildEnv struct {
 // errChildEnvRequired is returned when -child-env is absent or empty. The
 // message names the fix, since the usual way to hit it is hand-running the
 // binary.
-var errChildEnvRequired = errors.New("-child-env is required — start the gateway with ./singularity start, " +
+var errChildEnvRequired = errors.New("-child-env is required — start the gateway with ./equin start, " +
 	"which declares the runtime environment (launcher/core runtimeEnvNames); to hand-run it, " +
 	"pass at least -child-env HOME,USER,PATH")
 

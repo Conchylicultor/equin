@@ -291,13 +291,13 @@ transaction's own writes.
 bun test plugins/infra/plugins/runtime-profiler/core/recorder.test.ts
 bun test plugins/database/server/internal/client.test.ts
 bun test plugins/packages/plugins/semaphore
-./singularity check           # incl. type-check + the new lint rule
+./equin check           # incl. type-check + the new lint rule
 ```
 
 **Behavioral, under synthetic load (the companion doc's T1 protocol):** the acceptance
 property is a *ratio*, so measure before and after on the same box.
 
-1. `./singularity build`, then push host load past 50 with ~30 `taskpolicy -b` busy-loops
+1. `./equin build`, then push host load past 50 with ~30 `taskpolicy -b` busy-loops
    (no agent builds — the trigger is out of scope, we only need the lag).
 2. Drive background churn with the existing synthetic emitter: Debug → Live-State Emit
    (`plugins/debug/plugins/live-state-churn/emit`) or `window.__liveStateEmit`.

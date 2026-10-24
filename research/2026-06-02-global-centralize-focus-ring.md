@@ -138,7 +138,7 @@ copies of the recipe; out of scope otherwise.
 
 ## Verification
 
-1. `./singularity build` from the worktree; app at `http://att-1780357454-47je.localhost:9000`.
+1. `./equin build` from the worktree; app at `http://att-1780357454-47je.localhost:9000`.
 2. Apply a **saturated-ring tweakcn theme** (the condition that exposes the bug) via the theme/tweakcn settings, so `--ring` has chroma > 0.
 3. Drive with Playwright (`e2e/screenshot.mjs`), focusing each control and capturing before/after:
    - Each text field (launch-agent textarea, Input, multiline Textarea, prompt/text-editor) — focus shows a **single** ring, border stays neutral (no second colored stroke).
@@ -146,7 +146,7 @@ copies of the recipe; out of scope otherwise.
    - Button (default/outline/ghost) — focus shows a normal single ring, no colored border stroke.
    - **Button `destructive`** — focus ring renders **destructive-colored** (confirms the §3 override survives; if grey, apply the §3 fallback).
 4. Toggle back to the default (grey-ring) theme and confirm focus still reads correctly (single neutral ring) in light and dark.
-5. `./singularity check` (eslint + boundaries) passes — no cross-plugin import was introduced (utility is pure CSS).
+5. `./equin check` (eslint + boundaries) passes — no cross-plugin import was introduced (utility is pure CSS).
 ```bash
 bun e2e/screenshot.mjs --url http://att-1780357454-47je.localhost:9000/ --click "<control>" --out /tmp/focus-<control>
 ```

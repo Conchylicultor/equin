@@ -229,7 +229,7 @@ comfortably outlasts the op round-trip.
      replay — apply split twice yields **one** new node, not a key collision).
    - Chained ops compose: `[split, outdent]` replayed on a base that already
      absorbed the split drops the split and still applies the outdent.
-2. `./singularity build`, open a page at `http://<worktree>.localhost:9000`.
+2. `./equin build`, open a page at `http://<worktree>.localhost:9000`.
 3. **Scripted Playwright** (`e2e/screenshot.mjs`):
    - Type text, caret mid-block, press Enter → two blocks, no duplicated text,
      visible **before** the network settles.
@@ -240,7 +240,7 @@ comfortably outlasts the op round-trip.
 4. **Clobber regression**: split mid-text, immediately click another block (blur
    the origin), wait past 500 ms, refresh → the split persists (origin shows
    `beforeText`, not the full text).
-5. `./singularity check plugin-boundaries` and `./singularity check type-check`.
+5. `./equin check plugin-boundaries` and `./equin check type-check`.
 
 ## Risks
 

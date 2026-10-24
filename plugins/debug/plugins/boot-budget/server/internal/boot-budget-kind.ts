@@ -43,7 +43,7 @@ function renderDescription(row: ReportRow, d: BootBudgetPayload): string {
   lines.push("");
   lines.push(
     `Boot work is re-paid on **every** backend boot: main after each ` +
-      `\`./singularity build\`, **plus** every worktree agent backend on launch. ` +
+      `\`./equin build\`, **plus** every worktree agent backend on launch. ` +
       `A heavy boot hook silently degrades every one of those — the whole reason ` +
       `this budget exists (see ` +
       `research/2026-07-08-global-bounding-boot-time-work.md).`,

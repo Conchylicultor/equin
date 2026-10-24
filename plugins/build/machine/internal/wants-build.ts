@@ -67,7 +67,7 @@ export async function lastClosedAttempt(): Promise<BuildAttempt | null> {
  * That asymmetry is the point. A run is main's attempt only when main is all it
  * built (a `--composition sonata` run says nothing about whether main is
  * current), but a run is sonata's attempt whenever sonata was among its targets:
- * one `./singularity build --composition a b` is one shared invocation that
+ * one `./equin build --composition a b` is one shared invocation that
  * genuinely attempted both, and reading it as an attempt for neither would break
  * termination for both.
  */

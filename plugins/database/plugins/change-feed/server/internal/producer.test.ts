@@ -4,7 +4,7 @@
  * runtime guards (A12, A13). The statements run on a throwaway database
  * (db-test-fixture); the routed changes are captured through
  * `mountProducersForTest`'s `route`. Run with
- * `./singularity test plugins/database/plugins/change-feed`.
+ * `./equin test plugins/database/plugins/change-feed`.
  */
 
 import {

@@ -78,7 +78,7 @@ Notes:
 ### 3. One-time cluster restart (the operationally subtle step)
 
 `scripts/start.ts` has a **reattach guard**: if the pidfile exists and the socket pings live,
-it returns early without touching the running postmaster. So a plain `./singularity build`
+it returns early without touching the running postmaster. So a plain `./equin build`
 will **not** apply the new GUCs. A one-time explicit stop + restart of the shared cluster is
 required. This briefly drops every worktree's DB connections; their pools auto-reconnect (the
 cluster is detached and survives gateway restarts, but here we're deliberately bouncing it).

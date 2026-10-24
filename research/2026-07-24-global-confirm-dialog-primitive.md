@@ -297,7 +297,7 @@ for this PR — recently-landed, their `.then(close).catch(EndpointError)` is de
 ## Part 5 — lint rule `imperative-dialog/no-native-dialog`
 
 New `plugins/primitives/plugins/imperative-dialog/lint/{index.ts, no-native-dialog.ts,
-no-native-dialog.test.ts}`. Auto-discovered into `lint.generated.ts` by `./singularity build`
+no-native-dialog.test.ts}`. Auto-discovered into `lint.generated.ts` by `./equin build`
 (imperative-dialog had no `lint/` before). Barrel `name: "imperative-dialog"`. Keep `lint/`
 free of any `@plugins/*` import (jiti can't resolve the alias).
 
@@ -336,16 +336,16 @@ all three member forms.
   policy (stay-open → inline → retry) and why reporting keys on `EndpointError` while stay-open
   does not, why no `destructive` flag.
 
-**Autogen (never hand-edit)** — `./singularity build` regenerates `web.generated.ts` (new
+**Autogen (never hand-edit)** — `./equin build` regenerates `web.generated.ts` (new
 `confirm` plugin), `lint.generated.ts` (new `imperative-dialog` lint entry), every touched
 CLAUDE.md fence (migrated callers' `Uses` lists drop `Surface`/`Clip`), `docs/plugins-{details,compact}.md`.
 
 **Verification:**
 ```bash
-./singularity build
+./equin build
 bun test plugins/primitives/plugins/imperative-dialog/lint/no-native-dialog.test.ts
 rg 'Surface|Clip' <each migrated dialog file>   # must return nothing dialog-related — proves double-wrap risk closed
-./singularity check
+./equin check
 ```
 Checks that care: `plugins-registry-in-sync`, `plugins-doc-in-sync`, `plugins-have-claudemd`,
 `type-check` (tsc + type-aware ESLint — where the new rule runs repo-wide and `plugin-boundaries`

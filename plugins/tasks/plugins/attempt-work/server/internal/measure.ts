@@ -192,7 +192,7 @@ export async function readPendingFromBranchRef(
  * record of what landed. The read is bounded by `since` (the attempt's own
  * lifetime) because a commit cannot predate the attempt that authored it.
  *
- * Returns the distinct push ids alongside the shas: one `./singularity push`
+ * Returns the distinct push ids alongside the shas: one `./equin push`
  * stamps one `Singularity-Push` value across every commit it rebases, so the
  * distinct count is the true number of pushes.
  */

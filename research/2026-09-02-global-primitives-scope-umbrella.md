@@ -171,12 +171,12 @@ still resolves. Verify rather than assume.
 
 ### Step 3 — Regenerate and validate (serial)
 
-1. `./singularity build` — **`run_in_background: true`, then end the turn**. Regenerates the
+1. `./equin build` — **`run_in_background: true`, then end the turn**. Regenerates the
    three registries, the docs, and every autogen CLAUDE.md block; `bun install` picks up the
    new workspace member. Confirm `status: ok` in
    `~/.singularity/worktrees/<wt>/build-status.json` — never infer a deploy from a log file's
    mtime.
-2. `./singularity check` and iterate to green. The checks that carry this refactor:
+2. `./equin check` and iterate to green. The checks that carry this refactor:
    - `type-check` — proves every import resolves.
    - `plugin-refs-resolve` — the safety net for hand-authored `plugins/…` string literals;
      it enumerates each unresolved reference with the hint *"A plugin was likely moved or
@@ -194,8 +194,8 @@ still resolves. Verify rather than assume.
    → **zero hits**. (`research/` keeps its historical spellings on purpose.)
 2. `rg -n "scope/plugins/scoped-store/plugins/dom-scope"` → **zero hits** — this is the
    specific signature of the rule-order mistake, and nothing else looks like it.
-3. `./singularity check` green, `./singularity build` reports `status: ok`.
-4. `./singularity test plugins/primitives/plugins/scope` — the four suites that came along
+3. `./equin check` green, `./equin build` reports `status: ok`.
+4. `./equin test plugins/primitives/plugins/scope` — the four suites that came along
    (`scoped-store`, `dom-scope`, `app-instance`, `install-sink`) plus the four lint-rule
    suites must all still run and pass from the new path.
 5. Playwright smoke at `http://<worktree>.localhost:9000` over the surfaces that consume

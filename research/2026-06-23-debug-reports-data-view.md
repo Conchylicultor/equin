@@ -97,7 +97,7 @@ Notes:
   (`crash`, `op-rate`, `queue-dead-job`, `queue-backlog`, `live-state-noop`) — **zero changes**.
 - `reportsResource` (core + server), routes, `reportsPane` / `reportDetailPane`, the detail body,
   and the Debug sidebar registration in `web/index.ts`.
-- No server code: `defineDataView` + `./singularity build` auto-registers the config descriptor via
+- No server code: `defineDataView` + `./equin build` auto-registers the config descriptor via
   `buildViewConfigRegistrations` (driven by `data-views.generated.ts`). The consumer writes no
   server registration.
 
@@ -120,13 +120,13 @@ Notes:
   `primary` (label) field; verify the List view looks acceptable and adjust which fields surface as
   subtitle/trailing if needed. Table is the default, so this is non-blocking.
 - **Boundary check.** New imports are all legal barrels (`@plugins/primitives/plugins/data-view/web`,
-  `@plugins/reports/web`, `@plugins/reports/core`). Run `./singularity check plugin-boundaries`.
+  `@plugins/reports/web`, `@plugins/reports/core`). Run `./equin check plugin-boundaries`.
 
 ## Verification
 
-1. `./singularity build` (regenerates `data-views.generated.ts` from the new `defineDataView`,
+1. `./equin build` (regenerates `data-views.generated.ts` from the new `defineDataView`,
    registers the config descriptor, runs checks).
-2. `./singularity check` — expect `plugins-doc-in-sync`, `plugin-boundaries`, `type-check`,
+2. `./equin check` — expect `plugins-doc-in-sync`, `plugin-boundaries`, `type-check`,
    `migrations-in-sync` green (no schema change, so migrations untouched).
 3. Open `http://<worktree>.localhost:9000/debug/reports`:
    - Table view shows columns; click column headers / sort pill → reorders.

@@ -179,7 +179,7 @@ Reuse, don't reinvent:
   primitives), consistent with the repo's "group related plugins under an
   umbrella" rule.
 - No registry edits / codegen — primitive is consumed by direct barrel import.
-- Run `./singularity check plugin-boundaries` after adding.
+- Run `./equin check plugin-boundaries` after adding.
 
 ## Risks
 
@@ -195,7 +195,7 @@ Reuse, don't reinvent:
 
 ## Verification
 
-1. `./singularity build`, open the validation surface at
+1. `./equin build`, open the validation surface at
    `http://<worktree>.localhost:9000`.
 2. Scripted Playwright (`e2e/screenshot.mjs`): perform the mutation (drag reorder)
    and assert the UI updates **immediately** (before the WS round-trip), then

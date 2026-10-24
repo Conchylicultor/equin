@@ -172,7 +172,7 @@ export default {
 | `plugins/ui/plugins/tokens/plugins/typography/plugins/google-fonts/package.json` | Create — workspace package |
 | Root `package.json` workspaces | May need to add the new plugin path |
 
-The `./singularity build` codegen step should auto-register the plugin in the generated registry.
+The `./equin build` codegen step should auto-register the plugin in the generated registry.
 
 ## Graceful Degradation
 
@@ -181,7 +181,7 @@ The `./singularity build` codegen step should auto-register the plugin in the ge
 
 ## Verification
 
-1. Run `./singularity build` to deploy
+1. Run `./equin build` to deploy
 2. Open the app, import a tweakcn theme that uses a custom font (e.g. one using Poppins)
 3. Apply the typography preset — verify `<link data-google-font="Poppins">` appears in `<head>`
 4. Verify the font renders correctly (DevTools → Elements → Computed style → font-family shows Poppins)

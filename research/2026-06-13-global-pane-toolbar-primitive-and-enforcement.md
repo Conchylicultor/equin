@@ -165,12 +165,12 @@ Reused: `defineRenderSlot` (`primitives/slot-render`), `cn`/`Button`/`Text` (`ui
 
 ## Verification
 
-1. `./singularity build` (regens reorder manifest + lint config; runs checks).
+1. `./equin build` (regens reorder manifest + lint config; runs checks).
 2. Screenshot the player and confirm the bar looks the same:
    `bun e2e/screenshot.mjs --url http://att-1781302814-fnxc.localhost:9000/sonata/song/<id> --out /tmp/sonata`
    — verify back / title / picker / transport all present; check the tighter padding doesn't clip the picker.
 3. Reorder works: enter global edit mode (reorder edit-mode pen) and drag a toolbar item; confirm it persists.
-4. Lint: `./singularity check eslint` passes (allowlists in place). Add a fixture in
+4. Lint: `./equin check eslint` passes (allowlists in place). Add a fixture in
    `no-adhoc-pane-toolbar.test.ts` proving a `border-b … pr-floating-bar` `<div>` errors and a
    `PaneToolbar.Host`-style host passes. Run `bun test plugins/primitives/plugins/pane-toolbar/lint`.
 5. `add_task` (MCP): "Migrate story-detail (StoryEditor) toolbar onto the PaneToolbar primitive and remove its

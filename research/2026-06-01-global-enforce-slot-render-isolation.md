@@ -150,7 +150,7 @@ isolation it lacks today.
 
 `plugins/framework/plugins/web-sdk/CLAUDE.md` currently *teaches the unsafe pattern*
 under "Rendering contributions" (`panels.map((p) => <p.component/>)`). Rewrite it
-to teach `.Render`/`.Dispatch` and state the invariant. `./singularity build`
+to teach `.Render`/`.Dispatch` and state the invariant. `./equin build`
 regenerates the slot-render / migrated-plugin autogen doc blocks.
 
 ## Migration (Class B → primitives)
@@ -194,7 +194,7 @@ where a `match`/key field is added (dispatch targets).
      F: `page` Editor.Block + `config_v2` Fields + `file-pane` + pane `actionsSlot`  ·
      G: exemptions (allow-comments) + web-sdk CLAUDE.md doc.
 3. **Close-out (last)** — register `slot-isolation/no-raw-component-slot: error` in
-   `eslint.config.ts`; `./singularity build`; fix fallout; `./singularity check`.
+   `eslint.config.ts`; `./equin build`; fix fallout; `./equin check`.
 
 ## Critical files
 
@@ -207,10 +207,10 @@ where a `match`/key field is added (dispatch targets).
 
 ## Verification
 
-1. `./singularity build` — TS compile is the primary gate: privacy makes every
+1. `./equin build` — TS compile is the primary gate: privacy makes every
    surviving `<c.component/>` (off a render slot's `useContributions()`) a compile
    error, and the dispatch key types catch bad `match` strings.
-2. `./singularity check` — `eslint` (incl. the new rule as `error`),
+2. `./equin check` — `eslint` (incl. the new rule as `error`),
    `plugin-boundaries`, `plugins-doc-in-sync` all green. Confirm the rule fires:
    temporarily add `defineSlot<{component: ComponentType}>("x")` somewhere → eslint
    errors with the guidance message; remove it.

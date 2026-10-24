@@ -29,7 +29,7 @@ export default {
     // there is no second "I am a container" flag to drift from who actually
     // paints a box. `anchor` rides on the SAME registration, so the handle's
     // `anchor: true` cannot claim a decoration that nothing supplies
-    // (`./singularity check page-editor:anchor-has-decoration`). No `menu`: a
+    // (`./equin check page-editor:anchor-has-decoration`). No `menu`: a
     // quote has no per-instance appearance to reach from the rail.
     Editor.BlockFrame({
       match: quoteBlock.type,

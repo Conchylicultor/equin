@@ -9,7 +9,7 @@ import {
 } from "@plugins/framework/plugins/cli/plugins/bootstrap/cli";
 
 /**
- * `./singularity`'s entrypoint — and deliberately NOT the CLI. Four ordered
+ * `./equin`'s entrypoint — and deliberately NOT the CLI. Four ordered
  * steps that must all be able to run with `node_modules` absent or stale:
  *
  *   1. arm the orphan guard
@@ -26,7 +26,7 @@ import {
  * concurrent installs in one checkout race on `clonefileat` and one loses).
  * `set -e` then aborted the wrapper before `exec`, and `--silent` meant nothing
  * was printed: every subcommand looked like it had failed on its own, with exit
- * 1 and zero bytes of output — `./singularity check` reading as "checks failed"
+ * 1 and zero bytes of output — `./equin check` reading as "checks failed"
  * when no check ever ran. The fix is structural rather than better error
  * handling in shell: there is now NO step before the CLI process, so no step can
  * die before the CLI. The wrapper is a bare `exec`, and the install lives here,
@@ -80,7 +80,7 @@ installOrphanGuard(() => process.exit(ORPHAN_EXIT_CODE));
 
 // Take this invocation's re-exec budget out of the environment before anything
 // is spawned (the install below included): it counts THIS chain of re-execs, and
-// a descendant `./singularity` is a new invocation with a budget of its own.
+// a descendant `./equin` is a new invocation with a budget of its own.
 const reexecBudget = takeReexecBudget();
 
 // Run on the Bun `mise.lock` records, not whichever one the caller's PATH found.

@@ -190,18 +190,18 @@ drain sites.
 
 ## Verification
 
-1. `./singularity check type-check` — the whole rule set still loads and type-checks.
+1. `./equin check type-check` — the whole rule set still loads and type-checks.
 2. `bunx eslint <one file>` — **the load-bearing check.** This is the jiti path; if
    a type-only import were ever emitted as a runtime import, it fails here and not
    in the Bun-loaded worker.
-3. `./singularity test plugins/primitives/plugins/css plugins/primitives/plugins/bar plugins/primitives/plugins/pane-toolbar` — rule tests.
-4. `./singularity check` — `class-token-walk-single-source` passes, and
+3. `./equin test plugins/primitives/plugins/css plugins/primitives/plugins/bar plugins/primitives/plugins/pane-toolbar` — rule tests.
+4. `./equin check` — `class-token-walk-single-source` passes, and
    `class-token-walk-in-sync` is gone from `check --list`.
 5. **Prove the holes are closed, don't assume it.** Re-run the three-mode probe
    (baseline / +maps / +string-consts) used to measure this: with the shipped walk
    as baseline, the mode diffs must be empty. That is the only evidence that the
    escapes are gone rather than merely re-hidden.
-6. `./singularity build`, then confirm the drained surfaces are visually unchanged —
+6. `./equin build`, then confirm the drained surfaces are visually unchanged —
    the code blocks and log viewers that moved onto `<Text variant="code">`
    (`build-logs`, `page/code-block`, `syntax-highlight`), the surface placements,
    and the page editor's block anchors.

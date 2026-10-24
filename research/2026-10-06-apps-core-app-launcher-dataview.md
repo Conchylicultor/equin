@@ -123,13 +123,13 @@ precedent of a compact DataView in a popover (`QuickThemePicker`,
 
 ## Verification
 
-1. `./singularity test plugins/primitives/plugins/data-view/plugins/icons`:
+1. `./equin test plugins/primitives/plugins/data-view/plugins/icons`:
    extend `icons-view.test.tsx` with (a) compact density applying the compact
    geometry class, (b) `selectedRowId` setting `aria-current` and the marker,
    (c) roving tabindex: exactly one `tabIndex=0`, ArrowRight/Left/Home/End move
    focus. Up/Down depend on layout, which jsdom does not compute, so they are
    covered in e2e.
-2. `./singularity build` (runs `type-check`, `eslint`, `plugins-doc-in-sync` and
+2. `./equin build` (runs `type-check`, `eslint`, `plugins-doc-in-sync` and
    `plugins-registry-in-sync`).
 3. Update and run `app-launcher/e2e/launcher.ts`: replace the `menu`/`menuitem`
    locators with the tiles (`[data-row-key]` buttons inside the popover). Keep

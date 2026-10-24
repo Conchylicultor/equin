@@ -48,7 +48,7 @@ async function enumerateTests(
     console.error(`No such path: ${target}`);
     process.exit(1);
   }
-  // `""` is the repo root itself (`./singularity test .`), which as a runner
+  // `""` is the repo root itself (`./equin test .`), which as a runner
   // path filter would match nothing rather than everything.
   const rel = relative(root, abs) || ".";
   if (rel.startsWith("..")) {
@@ -117,7 +117,7 @@ function runnerOutcome(
 }
 
 /**
- * The run-level single-flight for a test run: an identical `./singularity test`
+ * The run-level single-flight for a test run: an identical `./equin test`
  * already in flight in this worktree — the same test FILES (however the paths
  * that selected them were spelled), on the same TREE — is joined instead of
  * run again. `undefined` (no flight) when the tree hash is unavailable
@@ -201,7 +201,7 @@ const run: CliAction<[string[]], object> = async (paths) => {
   if (orphan.length > 0) {
     console.error(
       `\nIn neither runner's scope (these tests would NOT run):\n  ${orphan.join("\n  ")}\n` +
-        "Run `./singularity check test-layout:runner-split` for the rule.",
+        "Run `./equin check test-layout:runner-split` for the rule.",
     );
     process.exit(1);
   }

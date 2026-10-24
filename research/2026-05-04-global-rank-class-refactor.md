@@ -240,9 +240,9 @@ The mutations layer (`updateTask`, `createTask`) receives `rank?: Rank` (from St
 
 ## Verification
 
-1. `./singularity build` — TypeScript compile must pass with zero errors. Any missed `rank: string` site will surface as a type error.
-2. `./singularity check --plugin-boundaries` — no new violations (imports of `Rank` and `RankSchema` from rank shared/web barrels are legal cross-plugin paths).
-3. `./singularity check --eslint` — lint rule is removed; check still passes (no rule to fail).
+1. `./equin build` — TypeScript compile must pass with zero errors. Any missed `rank: string` site will surface as a type error.
+2. `./equin check --plugin-boundaries` — no new violations (imports of `Rank` and `RankSchema` from rank shared/web barrels are legal cross-plugin paths).
+3. `./equin check --eslint` — lint rule is removed; check still passes (no rule to fail).
 4. Drag tasks in the UI — items land in the correct position.
 5. Drag agents in the sidebar — same.
 6. Create a task below an existing one (Tab key or +) — new task ranks correctly after its sibling.

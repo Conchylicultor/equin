@@ -4,7 +4,7 @@ import { defineDataDir } from "@plugins/infra/plugins/paths/core";
  * The on-disk release-bundle registry: one
  * `<namespace>/<composition>-<target>/<run-id>/` dir per release run, plus the
  * `latest-<platform>` pointers beside them. Written by the release CLI, read by
- * `resolveBundle` and by `./singularity deploy ship`.
+ * `resolveBundle` and by `./equin deploy ship`.
  */
 export const releasesDir = defineDataDir({
   kind: "state",

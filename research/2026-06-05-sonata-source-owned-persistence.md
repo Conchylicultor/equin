@@ -251,7 +251,7 @@ the only durable data are the auto-seeded starters. Flag at hand-off.
 
 ## Verification
 
-1. `./singularity build` — regenerates the migration (drop 2 cols + create `sonata_songs_ext_midi`),
+1. `./equin build` — regenerates the migration (drop 2 cols + create `sonata_songs_ext_midi`),
    regenerates docs/registry, seeds MIDI starters on boot. Confirm no check fails
    (`migrations-in-sync`, `plugin-boundaries` — especially **no `library → midi` edge** remains,
    and **no cycle**).

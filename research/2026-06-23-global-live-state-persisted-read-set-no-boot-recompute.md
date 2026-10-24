@@ -213,13 +213,13 @@ on the hot tables, no loaders) can be reintroduced later — not part of this ch
 
 ## Verification
 
-1. `./singularity build` (regenerates nothing schema-wise — derived DDL; restart
+1. `./equin build` (regenerates nothing schema-wise — derived DDL; restart
    applies the `ALTER`). Confirm boot is clean.
 2. **Migration boot:** first build after the change → expect a one-time
    force-FULL of all boot-critical keys (logs from `recomputeResource`/persist).
    `query_db` (MCP): `SELECT resource_key, tables_read FROM live_state_snapshot` —
    every boot-critical row now has a non-empty `tables_read`.
-3. **Steady-state deploy:** trigger a second `./singularity build` with no data
+3. **Steady-state deploy:** trigger a second `./equin build` with no data
    change. Expect: **zero** boot-critical loader runs at boot. Verify via the
    Debug → Gantt boot-profiling pane / runtime-profiler (`get_runtime_profile`
    MCP) that no `loader` spans fire for persisted keys on boot, and catch-up logs
@@ -235,4 +235,4 @@ on the hot tables, no loaders) can be reintroduced later — not part of this ch
 6. **Reconnect defense-in-depth:** confirm `fullSweep` still fires on a *reconnect*
    (e.g. bounce the LISTEN socket) but not on the first boot connect (listener
    logs).
-7. `./singularity check` (boundaries, type-check, plugins-doc-in-sync).
+7. `./equin check` (boundaries, type-check, plugins-doc-in-sync).

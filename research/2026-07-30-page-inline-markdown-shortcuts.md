@@ -364,9 +364,9 @@ companion guard → docs.
 ## Verification
 
 1. `bun test plugins/page/plugins/editor/core/inline-markdown.test.ts`.
-2. `./singularity build` — regenerates the registry + docs (`plugins-doc-in-sync`,
+2. `./equin build` — regenerates the registry + docs (`plugins-doc-in-sync`,
    `plugins-registry-in-sync` both need it after a new `core/` export and new files).
-3. `./singularity check` — `type-check`, `plugin-boundaries`, the in-sync checks.
+3. `./equin check` — `type-check`, `plugin-boundaries`, the in-sync checks.
 4. `bun plugins/page/plugins/editor/e2e/inline-format-verify.ts`, following the
    `crdt-undo-verify.ts` idiom (`openBlankPage`, `report()`, `snap`). It asserts
    against the **persisted rows** via `GET /api/pages/:pageId/blocks`, not just the

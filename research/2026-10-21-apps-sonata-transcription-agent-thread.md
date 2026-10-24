@@ -34,7 +34,7 @@ hibernation, then flip back on every reply.
 - `rollup-spec.ts`:
   - `attempt_push_agg` gains `has_delivery`: `bool_or(kind = 'delivery')`, with a `kind` tag added to the UNION arms.
   - `attempt_conv_agg` gains `has_working_conv`: `bool_or(status IN ('starting','working'))`.
-  - The columns go in `rollup-table.ts`, and their migration comes from `./singularity build`.
+  - The columns go in `rollup-table.ts`, and their migration comes from `./equin build`.
 - `derived.ts` `attemptDerived` gets one new arm, right after `in_progress`:
   `WHEN hasDelivery AND NOT coalesce(hasWorkingConv,false) THEN 'completed'`.
   - A delivered attempt whose conversation is idle (`waiting`), hibernated or closed is `completed`, so its task is
@@ -119,8 +119,8 @@ Reused as is: `AgentThread`, `useThreadProgress`, `defineThreadResult` (agent-th
 
 ## Verification
 
-1. `./singularity test plugins/tasks/plugins/tasks-core plugins/apps/plugins/sonata/plugins/transcription plugins/conversations/plugins/agent-thread`.
-2. `./singularity build`, then drive the worktree with `browser_*`:
+1. `./equin test plugins/tasks/plugins/tasks-core plugins/apps/plugins/sonata/plugins/transcription plugins/conversations/plugins/agent-thread`.
+2. `./equin build`, then drive the worktree with `browser_*`:
    - Transcribe a small one-page PDF or image. The pending body shows the live thread (Bash steps, the answer), then
      swaps to the score on submit.
    - The task reads **done** in the Agent Manager while the conversation is waiting.
@@ -133,7 +133,7 @@ Reused as is: `AgentThread`, `useThreadProgress`, `defineThreadResult` (agent-th
 
 ## Outcome (as built)
 
-`./singularity test` on tasks-core, transcription and agent-thread is green (175). The change was verified live on the
+`./equin test` on tasks-core, transcription and agent-thread is green (175). The change was verified live on the
 worktree build with a song transcribed before this change (song-1792261574-oejpvy):
 
 - The player's Transcription section showed the old run as a thread: the request, 42 steps folded, "score in", the

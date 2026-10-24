@@ -221,11 +221,11 @@ git-watcher / worktree. (`shell/plugins/notifications` closure verified clean.)
 
 ## Verification
 
-1. `./singularity build` — regenerates `server.generated.ts` (2 new plugin nodes; reports'
+1. `./equin build` — regenerates `server.generated.ts` (2 new plugin nodes; reports'
    `dependsOn` drops `build`/`container-tasks`/`tasks-core`; reports/crash drops `build`), doc
    autogen blocks, and migrations (**no schema change** — `_reports.taskId` unchanged, so no new
    migration expected).
-2. `./singularity check` — must stay green, in particular:
+2. `./equin check` — must stay green, in particular:
    - `plugin-boundaries` (no cross-plugin re-export; new `tasks → reports` and leaf edges are legal)
    - `plugins-registry-in-sync`, `plugins-doc-in-sync`, `type-check`
    - `composition-closure` (Sonata still passes; no new excludes added)

@@ -170,7 +170,7 @@ Each view resolves `useResolveCell()` + `useResolveCellEditor()` **once at the t
 
 ## Verification
 
-1. `./singularity build` (regenerates registries/docs, type-checks). Fix any boundary
+1. `./equin build` (regenerates registries/docs, type-checks). Fix any boundary
    / type-check errors.
 2. `bun run test:dom plugins/primitives/plugins/data-view` — the existing table
    `inline-edit.test.tsx` must still pass after the hoist; add DOM tests for gallery
@@ -181,7 +181,7 @@ Each view resolves `useResolveCell()` + `useResolveCellEditor()` **once at the t
      view): click a title/composer card field → inline editor → commit persists.
    - Tasks tree sidebar: create a task → label opens focused for naming; rename an
      existing task → persists via `patchTask`. Pages sidebar + agents list likewise.
-4. `./singularity check` (boundaries, plugins-doc-in-sync, type-check).
+4. `./equin check` (boundaries, plugins-doc-in-sync, type-check).
 
 ## Tradeoffs / notes
 

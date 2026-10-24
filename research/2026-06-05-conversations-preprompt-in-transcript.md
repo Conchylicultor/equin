@@ -158,7 +158,7 @@ message (the only one that can carry the tag):
 
 ## Verification (end-to-end)
 
-1. `./singularity build`.
+1. `./equin build`.
 2. Ensure a preprompt exists in config and is selected on a task (preprompts settings + task-preprompt
    picker). Launch a fresh conversation under that task.
 3. **Transcript:** `query_db` the conversation's `claude_session_id`, open its `.jsonl`, confirm the
@@ -172,4 +172,4 @@ message (the only one that can carry the tag):
    shows exactly one Instructions card (inherited, not re-injected) and the system still behaves.
 6. **No-prompt edge:** create a conversation with a preprompt but empty prompt; confirm the first
    turn is the preprompt block alone and the agent starts cleanly.
-7. `./singularity check` green (migrations/docs/boundaries/eslint).
+7. `./equin check` green (migrations/docs/boundaries/eslint).

@@ -103,10 +103,10 @@ Identical for all five, and identical to what v1 spells out in full. Per wave:
    `plugins/<um>/plugins/<name>/` → `plugins/<um>/plugins/<group>/plugins/<name>/`, which
    catches both `@plugins/…` specifiers and plain path literals in one pass.
 4. Fix the deep paths by hand (below).
-5. `./singularity build` — **`run_in_background: true`, then end the turn.** Confirm
+5. `./equin build` — **`run_in_background: true`, then end the turn.** Confirm
    `status: ok` in `~/.singularity/worktrees/<wt>/build-status.json`; never infer a deploy
    from a log file's mtime.
-6. `./singularity check` to green, then checkpoint as one commit before starting the next
+6. `./equin check` to green, then checkpoint as one commit before starting the next
    wave.
 
 **The one hazard in the scripted pass is rule order.** `dom-scope`'s current path is inside
@@ -145,12 +145,12 @@ Per wave, before checkpointing:
 2. `rg -n "scope/plugins/scoped-store/plugins/dom-scope"` → **zero hits** (wave 1 only —
    the exact signature of the rule-order mistake).
 3. `rg -rn '\.\./\.\./\.\.' plugins/<um>/plugins/<group>/` → every hit resolves. Walk them.
-4. `./singularity check` green — `type-check` proves imports resolve, `plugin-refs-resolve`
+4. `./equin check` green — `type-check` proves imports resolve, `plugin-refs-resolve`
    catches stale `plugins/…` string literals by name, `plugins-registry-in-sync` and
    `plugins-doc-in-sync` prove the regenerated artifacts are committed,
    `plugins-have-claudemd` proves the new umbrella has one, `plugin-boundaries` proves no
    import reaches inside a barrel at the new depth.
-5. `./singularity test plugins/<um>/plugins/<group>` — the suites that came along must still
+5. `./equin test plugins/<um>/plugins/<group>` — the suites that came along must still
    run from the new path (wave 1: 4 test suites + 4 lint-rule suites; wave 4: `overscroll-hint`
    and `copy-source-text` also carry `e2e/`).
 6. `git diff --stat $(git merge-base HEAD main)` — renames, import-string edits, the listed

@@ -1,8 +1,8 @@
-# Affected-set ESLint on `./singularity push`
+# Affected-set ESLint on `./equin push`
 
 ## Context
 
-Every `./singularity push` runs the `eslint` and `typescript` checks on the rebased tree —
+Every `./equin push` runs the `eslint` and `typescript` checks on the rebased tree —
 this is the **authoritative gate**: it's exactly what lands on `main`. Today push runs
 `eslint .` over the whole repo (~2256 files). When the per-worktree `.cache/eslint`
 content-cache is cold (which happens on a worktree's first push, because ESLint invalidates
@@ -164,7 +164,7 @@ back. No behavior change for build.
 
 ## Verification
 
-Run in a scratch worktree, never on `main`. Build first (`./singularity build`).
+Run in a scratch worktree, never on `main`. Build first (`./equin build`).
 
 1. **Soundness — the cross-file case (the whole point).** In file A, change a function from sync to
    `async`/Promise-returning; leave an existing unawaited call to it in a **different, unchanged**
@@ -180,7 +180,7 @@ Run in a scratch worktree, never on `main`. Build first (`./singularity build`).
 4. **`--from-main` & main.** `onMain` ⇒ full lint (`lint-full`).
 5. **Same-file gate intact.** A floating promise / type error in a *changed* file is still caught
    (in-scope for eslint; tsc always full).
-6. **No cache interference.** After a push run, a subsequent `./singularity build` scoped run still
+6. **No cache interference.** After a push run, a subsequent `./equin build` scoped run still
    uses `.cache/eslint-scoped` normally (push ran no-cache, wrote nothing).
 
 ## Risks / limitations

@@ -284,7 +284,7 @@ closed at build time and belongs one rung higher than a runtime refusal: extend
 `plugins/page/plugins/editor/check/index.ts` with a case asserting every declared
 split-target type is text-bearing. A container declaring
 `splitChildWhenExpanded: { childType: "divider" }` then fails
-`./singularity check` instead of 400ing on every Enter. The merge refusal covers
+`./equin check` instead of 400ing on every Enter. The merge refusal covers
 the dynamic path; this covers the declared one.
 
 ### Files
@@ -419,12 +419,12 @@ disagree.
 
 ## Verification
 
-1. `./singularity test plugins/page/plugins/editor` — the funnel test and the
+1. `./equin test plugins/page/plugins/editor` — the funnel test and the
    reducer refusal test both fail before their respective changes, pass after.
-2. `./singularity check page.editor:block-data-registered` plus the new
+2. `./equin check page.editor:block-data-registered` plus the new
    split-target case — green, and red against a deliberately-broken
    `splitChildWhenExpanded: { childType: "divider" }`.
-3. `./singularity build` (background), then
+3. `./equin build` (background), then
    `bun plugins/page/plugins/editor/e2e/convert-in-place-verify.ts` — every case
    green, no rejected row write in the new phase.
 4. `bun plugins/page/plugins/place/e2e/place-block.ts` — the original repro, no

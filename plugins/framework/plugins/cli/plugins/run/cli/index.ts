@@ -16,7 +16,7 @@ import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
  * `node_modules`, installed from this branch's lock, plus the postinstall
  * provisioning that goes with it (~140 ms on the fresh-stamp path).
  *
- * Deliberately ONE general verb, not `./singularity e2e`. The defect is not
+ * Deliberately ONE general verb, not `./equin e2e`. The defect is not
  * e2e-specific — the `scripts/` directories under `plugins/` hold a dozen more
  * runnable scripts, one of which writes to the database through `drizzle-orm`
  * — and an e2e script is just a script.

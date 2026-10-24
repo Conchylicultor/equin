@@ -99,10 +99,10 @@ the follow-up task. Per phase (each has its own "as landed" section below):
   `type-check/check/prepare-thread.test.ts` (a warm-base pool left by a
   concurrent type-check run).
 
-**Final verification:** `./singularity format` (5 files rewritten); a sweep of
-`./singularity test` over the 45 plugin roots the diff touches — 3710 pass, 5
+**Final verification:** `./equin format` (5 files rewritten); a sweep of
+`./equin test` over the 45 plugin roots the diff touches — 3710 pass, 5
 fail: the three unrelated failures above, plus the live lint barrel test timing
-out at 5 s under load (it passes re-run alone); `./singularity build` success
+out at 5 s under load (it passes re-run alone); `./equin build` success
 (its checks include `type-check` and `plugin-boundaries`).
 
 ## Status (2026-10-02): P5 landed in `3f7fe72db4`
@@ -1062,7 +1062,7 @@ K = 1 first; the conversions do not wait for segments.
      - the footer mapping.
 3. **Mail threads conversion.**
    - `mailAccount` value;
-   - `./singularity build`, then `mailbox-tabs-verify.ts`;
+   - `./equin build`, then `mailbox-tabs-verify.ts`;
    - the profile check (Verification §7): marking a thread read gives **K scoped refills (one non-empty),
      0 `windowIdsOf`, 0 FULL**. K is 1 until the segments land.
 4. **Contributed columns + deferred bind.**
@@ -1110,7 +1110,7 @@ K = 1 first; the conversions do not wait for segments.
    - **a head that keeps filling at the cap** (repeated inserts at the order's start with K = 16) still
      satisfies the gap-free prefix invariant at every flush, and ends collapsed rather than hiding rows.
 
-Then `./singularity check` and `./singularity test` over `keyset`, `live-state`, `network/live`,
+Then `./equin check` and `./equin test` over `keyset`, `live-state`, `network/live`,
 `query-resource`, `data-view`, `cursor-pagination`, `entity-extensions`, `resource-runtime`, `server-core`
 and the two proof plugins.
 
@@ -1561,7 +1561,7 @@ problems. Each was checked against the code; the valid ones were fixed, and none
   spelled alias can take (a spelled member starts with `[A-Za-z0-9]` or `_<hex>`) — and two members meeting
   on one alias now fail the compile instead of sharing the first one's join. Test: the real `cc-<uuid>` id
   still spells out (62 bytes); a longer one hashes within the limit.
-- **Verification**: after `./singularity build` (success), `deploy-history/e2e/history-live-verify.ts`
+- **Verification**: after `./equin build` (success), `deploy-history/e2e/history-live-verify.ts`
   7/7. `get_runtime_profile` over that run: `deploy.run-history` 1 sub load, 5 push loads all scoped
   (`ids` 1, 1, 1, 1, 3), 4 `windowIdsOf`, no FULL load. The mail threads, mailbox tabs, Sonata library and
   release history e2e scripts were re-run on that deploy, after both collections gained a `columnScope`:
@@ -1773,10 +1773,10 @@ and five low problems. Each was checked against the code:
 - **Doc drift (low, fixed).** `events-core/CLAUDE.md` names the
   `events.list` collection and the flat `sourceType` / `sourceConfig`.
 
-Verification: `./singularity test` over `resource-runtime`, `query-resource`,
+Verification: `./equin test` over `resource-runtime`, `query-resource`,
 `change-feed`, `live-state-snapshot` and `network/live` — 777 bun tests over 62
-files and 39 vitest tests pass; `./singularity check type-check` ok;
-`./singularity build` success (the rebuilt triggers' gates read back from
+files and 39 vitest tests pass; `./equin check type-check` ok;
+`./equin build` success (the rebuilt triggers' gates read back from
 `pg_trigger` as listed above).
 
 **Final holistic review fixes — as landed (2026-09-30).** Three reviews of the
@@ -1940,11 +1940,11 @@ was valid and fixed:
 5. **Feed DB tests** (`listener.test.ts`, `catch-up.test.ts`): the layout / `changed` payloads, over-cap nulling
    all three, changelog replay parity, composite PK, key change.
 6. **Assertion fixtures** for A1–A4 and A10, in the style of `identity-coverage.test.ts`.
-7. **Per proof site** (`./singularity build`, then an e2e script in the owning plugin, e.g.
+7. **Per proof site** (`./equin build`, then an e2e script in the owning plugin, e.g.
    `sonata/plugins/library/e2e/library-live-sort.ts`): edit the side value in a second tab and see the row move.
    `get_runtime_profile` should show one scoped refill plus at most one `windowIdsOf`, and no loads on unrelated
    keys or tuples.
-8. `./singularity check` and `./singularity test` over `resource-runtime`, `query-resource`, `network/live`,
+8. `./equin check` and `./equin test` over `resource-runtime`, `query-resource`, `network/live`,
    `change-feed`, `live-state-snapshot` and the proof-site plugins.
 
 ## Design provenance

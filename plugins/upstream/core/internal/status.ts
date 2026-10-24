@@ -98,7 +98,7 @@ function parseLogLine(line: string): UpstreamCommit {
 /**
  * Fetch upstream and measure how far behind local `main` is.
  *
- * ONE definition of that question, because two things ask it: `./singularity
+ * ONE definition of that question, because two things ask it: `./equin
  * upstream status|merge`, and main's daily detection job. They ran the same
  * three git commands either way — this is them written once, so the command a
  * user runs by hand and the report that wakes them up can never disagree about

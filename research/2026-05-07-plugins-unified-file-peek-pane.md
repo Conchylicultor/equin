@@ -142,7 +142,7 @@ Change `id: "conv-file-peek"` → `id: "file-peek"`.
 
 ## Verification
 
-1. `./singularity build` — must compile and deploy
+1. `./equin build` — must compile and deploy
 2. Open a conversation → click a file path in assistant text → file-peek pane opens
 3. Open a file-peek pane → click a markdown link inside → navigates to new file in same pane
 4. Open `/tasks/:id` standalone → click file link in description → file-peek pane opens

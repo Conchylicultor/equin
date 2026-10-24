@@ -98,7 +98,7 @@ Two open checks for the build:
 
 ## Verification
 
-1. `./singularity build`; `./singularity check` passes (boundaries, migrations-in-sync for the new side-table, and `type-check`, which catches every row type missing `taskTitle`).
-2. `./singularity test plugins/tasks/plugins/task-title`: unit tests for `generateShortTitle`'s parsing and validation (≤3 words, quotes stripped, fallback) and for the resolver's stale / loading / mode cases.
+1. `./equin build`; `./equin check` passes (boundaries, migrations-in-sync for the new side-table, and `type-check`, which catches every row type missing `taskTitle`).
+2. `./equin test plugins/tasks/plugins/task-title`: unit tests for `generateShortTitle`'s parsing and validation (≤3 words, quotes stripped, fallback) and for the resolver's stale / loading / mode cases.
 3. `query_db`: `select t.title, s.short_title, s.source_title from tasks t join tasks_ext_short_title s on s.task_id = t.id limit 20`. Create a task through `add_task` and one through the UI, rename one, and confirm each row updates to match the new `source_title`.
 4. Screenshots of the `/agents` list in each mode: `screenshot.ts --path /agents --out /tmp/title-<mode>` after switching the setting in Settings → Config. Check that hover shows the full title, that the list's gear menu has no new entry, and that a chip in a conversation and the task's attempts section still show the conversation title.

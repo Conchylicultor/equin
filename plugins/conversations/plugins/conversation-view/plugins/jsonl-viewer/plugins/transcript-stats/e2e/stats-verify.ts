@@ -5,7 +5,7 @@
 // A transcript tool, not a gate: it logs, it does not assert.
 //
 // Usage:
-//   ./singularity run plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/e2e/stats-verify.ts \
+//   ./equin run plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/e2e/stats-verify.ts \
 //     --conv <conversationId> [--url http://<worktree>.localhost:9000] [--headed]
 
 import {

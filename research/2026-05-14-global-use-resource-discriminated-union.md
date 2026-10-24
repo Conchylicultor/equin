@@ -105,7 +105,7 @@ Already handle empty data gracefully (`.find()` → undefined → `return null`)
 ### Step 4: Documentation
 
 - Update `plugins/primitives/plugins/live-state/CLAUDE.md` — document `ResourceResult<T>`, remove `dataUpdatedAt === 0` guidance
-- Run `./singularity build` which regenerates `docs/plugins-details.md`
+- Run `./equin build` which regenerates `docs/plugins-details.md`
 
 ## Edge cases
 
@@ -118,6 +118,6 @@ Already handle empty data gracefully (`.find()` → undefined → `return null`)
 ## Verification
 
 1. `bunx tsc --noEmit` — every consumer that accesses `.data` without narrowing will produce a compile error
-2. `./singularity build` — full build validates everything compiles and runs
+2. `./equin build` — full build validates everything compiles and runs
 3. Visual check: open the app, verify list views show a brief loading state instead of empty, then populate correctly
 4. Check the reorder/DnD behavior — the original bug report — ranks should show as loading, not "all unranked"

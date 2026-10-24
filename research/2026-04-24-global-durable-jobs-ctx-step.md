@@ -4,7 +4,7 @@
 
 `research/2026-04-24-global-jobs-events-split.md` landed the jobs + events primitives. `research/2026-04-24-push-and-exit-jobs-migration.md` then migrated push-and-exit onto `defineJob` with `maxAttempts: 1`. That migration worked for the happy path but exposed a class of bug we haven't solved:
 
-> **A 10-minute polling loop inside a handler doesn't survive server restart.** When auto-build (`plugins/build`) runs `./singularity build` in response to `pushes.landed` — which happens mid-run, because push-and-exit *causes* that event — the bun server restarts. Graphile-worker has already incremented `attempts` to 1 at pickup; with `max_attempts: 1`, the job is permanently failed. The `_push_and_exit_jobs` row stays `status='running'` forever. UI stuck at "Pushing…".
+> **A 10-minute polling loop inside a handler doesn't survive server restart.** When auto-build (`plugins/build`) runs `./equin build` in response to `pushes.landed` — which happens mid-run, because push-and-exit *causes* that event — the bun server restarts. Graphile-worker has already incremented `attempts` to 1 at pickup; with `max_attempts: 1`, the job is permanently failed. The `_push_and_exit_jobs` row stays `status='running'` forever. UI stuck at "Pushing…".
 
 The deeper issue: graphile-worker restarts are only useful when the handler is short and idempotent. Our current shape bakes both the side-effect (`sendTurn`) and the wait (10-min poll) into one non-idempotent handler. `maxAttempts: 1` was chosen precisely because a retry would silently re-prompt Claude.
 
@@ -391,12 +391,12 @@ The watcher already runs per-conversation and has access to `conversationId`. Th
 1. **Unit: `ctx.step` memoization.** Spawn a handler that increments a module-level counter inside a step. Fail the handler by throwing after the step. Retry → assert the counter is still 1 after 3 retries.
 2. **Unit: `ctx.waitFor` + event resume.** Define a test event. Enqueue a handler that does `step → waitFor → step`. Emit the event; assert the second step runs and the workflow completes.
 3. **Unit: timeout path.** Same as above but emit nothing; wait past `timeoutMs`; assert `waitFor` returns null and the handler's null-branch runs.
-4. **Race: server restart mid-wait.** Enqueue a push-and-exit workflow on a live worktree. Kill the bun server (`kill -9` on the pid) while `waitFor` is pending. Restart via `./singularity build`. Emit the `conversation.turn-completed` event (e.g. by completing a Claude turn); assert the workflow resumes, the state row moves to `clean`, and the conversation is deleted.
+4. **Race: server restart mid-wait.** Enqueue a push-and-exit workflow on a live worktree. Kill the bun server (`kill -9` on the pid) while `waitFor` is pending. Restart via `./equin build`. Emit the `conversation.turn-completed` event (e.g. by completing a Claude turn); assert the workflow resumes, the state row moves to `clean`, and the conversation is deleted.
 5. **Race: event fires during suspend commit.** Harder to test deterministically; simulate by calling `jobsResumeJob.enqueue` from inside `ctx.waitFor` BEFORE throwing Suspend. Assert the resumed run doesn't re-send the prompt (step cached).
 6. **End-to-end: push-and-exit success.** Fresh conversation; click Push & Exit; Claude pushes and emits `PUSH_EXIT_CLEAN`; assert `_push_and_exit_jobs.status='clean'` and the conversation row is gone.
 7. **End-to-end: push-and-exit + auto-build.** Same as (6), but with `autoBuild: true` (default). This is the scenario that motivated the doc — the server WILL restart mid-run. Assert the workflow survives and completes.
 8. **End-to-end: push-and-exit timeout.** Send a prompt that deliberately avoids the sentinel; wait past `timeoutMs`; assert `_push_and_exit_jobs.status='flag'` with "No final message" detail.
-9. **Migrations in sync.** `./singularity check --migrations-in-sync` after adding the tables.
+9. **Migrations in sync.** `./equin check --migrations-in-sync` after adding the tables.
 10. **Manual UI smoke.** Confirm the Push & Exit button flow end-to-end in the browser at `http://<worktree>.localhost:9000`.
 
 ## Out of scope (follow-ups)

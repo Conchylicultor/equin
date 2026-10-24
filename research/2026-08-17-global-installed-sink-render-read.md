@@ -230,12 +230,12 @@ argument, so a render path can only obtain it from the hook.
 
 ## Verification
 
-- `./singularity check` (type-check + eslint over the new rules, plugin
+- `./equin check` (type-check + eslint over the new rules, plugin
   boundaries, doc sync, registry sync).
-- `./singularity test plugins/primitives/plugins/install-sink` — the rule suites.
-- `./singularity test plugins/primitives/plugins/pane` +
+- `./equin test plugins/primitives/plugins/install-sink` — the rule suites.
+- `./equin test plugins/primitives/plugins/pane` +
   `plugins/apps-core/plugins/tabs` — the existing history/isolation suites are
   the regression net for the migration.
-- `./singularity build`, then drive the real app: open a conversation pane inside
+- `./equin build`, then drive the real app: open a conversation pane inside
   a foreign app (`/pages/…` hosting a conversation) and confirm Expand appears on
   the *first* paint — the original symptom — via the e2e screenshot harness.

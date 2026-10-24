@@ -119,7 +119,7 @@ exempt primitive (confirmed: `top-*`/`translate-*` are not banned anyway). Add a
   `eslint-disable -- floating-ui fixed strategy` (or already popover-primitive internals);
   viewport banners (`fixed inset-x-0 top-0`) → `ViewportOverlay` or disable. Not worth a primitive.
 
-**Phase 0 done:** four primitives build green (`./singularity build`), pure class-map tests pass,
+**Phase 0 done:** four primitives build green (`./equin build`), pure class-map tests pass,
 the [`css` skill](../.claude/skills/css/SKILL.md) layout list + this mapping table updated to name
 Scroll/Clip/Sticky/Pin.
 
@@ -178,7 +178,7 @@ validate the Frame choice.
 ### Phase 1 — COMPLETE (primitive APIs FROZEN as shipped)
 
 Drained the 22 `jsonl-viewer/.../tool-call` files (allowlist entries removed; `bunx eslint`
-clean → **zero `layout/no-adhoc-layout`**; `./singularity build` green; verified against real
+clean → **zero `layout/no-adhoc-layout`**; `./equin build` green; verified against real
 transcripts — collapsed Frame label-rows, Bash (`Clip`+`Frame`+`Scroll`), Edit/MultiEdit, Read,
 Write all render with correct truncation and **no badge-over-text overlap**). **No primitive API
 needed changing** — every rough edge resolved as a *composition pattern*, so Scroll/Clip/Sticky/Pin
@@ -250,7 +250,7 @@ oracle during conversion.
   header), studio explorer (scroll + tree), settings→appearance (token rows), sonata library (Pin).
 - **Final done state:** `ignores: { "no-adhoc-layout": [] }` (keep the key + the PERMANENT glob;
   update the BURNDOWN comment to "fully drained" per the spacing precedent), then
-  `./singularity check type-check` green (rule now repo-wide). Sanity grep: every remaining banned
+  `./equin check type-check` green (rule now repo-wide). Sanity grep: every remaining banned
   token in former offenders carries an adjacent `// eslint-disable-next-line layout/no-adhoc-layout -- …`.
 
 ### Risks
@@ -259,7 +259,7 @@ oracle during conversion.
   reintroduces the overlap bug (renders fine until content is long). Prefer Frame when ambiguous.
 - **Never convert JS/inline-style-coordinate positions to Pin** — those are the disable cases
   (breaks drag/canvas).
-- **Stop at build + verify; do NOT `git commit` / `./singularity push`** — hand back for review.
+- **Stop at build + verify; do NOT `git commit` / `./equin push`** — hand back for review.
 
 ---
 
@@ -279,7 +279,7 @@ its own worktree):
    spuriously), then convert each file per the mapping table + Frame-vs-Stack tree.
 3. Verify: `bunx eslint <files>` → zero `layout/no-adhoc-layout`, no new errors; `bun run test:dom <plugin>`
    where present; screenshot before/after for high-risk files (scroll panes, sticky headers, Pin/Overlay,
-   any `min-h-0 flex-1`). `./singularity build`.
+   any `min-h-0 flex-1`). `./equin build`.
 4. Genuine long-tail → `// eslint-disable-next-line layout/no-adhoc-layout -- <reason>`.
 5. **Do not commit / push.** On success call `exit_clean`; if blocked or APIs need changes, `flag_raise`.
 
@@ -298,7 +298,7 @@ its own worktree):
 12. stats + debug/profiling
 13. plugin-meta/facets + ui/tokens
 14. tasks
-15. **tail (reorder/review/screenshot/layouts/misc) + final gate** — assert allowlist `[]` and `./singularity check` green.
+15. **tail (reorder/review/screenshot/layouts/misc) + final gate** — assert allowlist `[]` and `./equin check` green.
 
 If the pilot (task 2) forces primitive API changes, downstream tasks pick up the updated primitives
 automatically (they reference this doc, not a frozen snapshot).

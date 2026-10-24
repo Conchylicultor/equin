@@ -1,6 +1,6 @@
 // ─── Does the incremental walk ever differ from the full walk? ─────────────
 //
-//   ./singularity run plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/scripts/walk-replay.ts \
+//   ./equin run plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/scripts/walk-replay.ts \
 //     <scratch checkout> <from> <to> --data <dir> [--out <steps.json>]
 //
 // Replays the first-parent commits `<from>..<to>` (and `<from>` itself) in a

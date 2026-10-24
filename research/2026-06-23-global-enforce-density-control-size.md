@@ -192,14 +192,14 @@ the source of truth for the complete list (multi-line JSX openings a grep misses
 
 ## Verification
 
-1. `./singularity build` — typecheck (confirms the `& DensityControlled` tightening
+1. `./equin build` — typecheck (confirms the `& DensityControlled` tightening
    compiles everywhere) + eslint runs.
 2. `bun test plugins/primitives/plugins/css/plugins/control-size/lint/no-adhoc-density.test.ts`
    — RuleTester valid/invalid cases pass.
-3. `./singularity check class-token-walk-in-sync` — confirms the copied
+3. `./equin check class-token-walk-in-sync` — confirms the copied
    `collectTokens` walk is byte-identical across the `no-adhoc-*` rules.
-4. `./singularity check type-check` (runs eslint) — passes with **zero** remaining
+4. `./equin check type-check` (runs eslint) — passes with **zero** remaining
    `control-size/no-adhoc-density` violations (after the worktree-cleanup fix).
 5. Negative smoke test: temporarily add `<Badge size="sm">` to any `.tsx`, confirm
    eslint flags `control-size/no-adhoc-density`, then revert.
-6. `./singularity check plugins-doc-in-sync` — CLAUDE.md edits stay in sync.
+6. `./equin check plugins-doc-in-sync` — CLAUDE.md edits stay in sync.

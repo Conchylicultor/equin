@@ -207,7 +207,7 @@ Render after `WorkingIndicator`, guarded by `!isWorking && !!conversation.waitin
 
 ## Verification
 
-1. `./singularity build` — generates migration, deploys
+1. `./equin build` — generates migration, deploys
 2. Open a conversation where Claude is waiting for AskUserQuestion
 3. Verify the JSONL viewer shows "Content pending in terminal" at the bottom
 4. Answer the question in the terminal

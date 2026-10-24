@@ -195,7 +195,7 @@ in bucket B). All listed with current line of the `Pane.define` call:
 
 ## Verification
 
-1. `./singularity build` succeeds (worktree deploys at
+1. `./equin build` succeeds (worktree deploys at
    `http://<worktree>.localhost:9000`).
 2. Click through every sidebar entry and confirm:
    - Bucket A panes show the chrome header with title; back/forward

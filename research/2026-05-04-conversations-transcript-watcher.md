@@ -177,9 +177,9 @@ async function subscribeToConversation(conversationId: string): Promise<() => vo
 
 ## Verification
 
-1. `./singularity build` — no TypeScript errors
-2. `./singularity check --plugin-boundaries` — no cross-plugin boundary violations
-3. `./singularity check --eslint` — no lint errors
+1. `./equin build` — no TypeScript errors
+2. `./equin check --plugin-boundaries` — no cross-plugin boundary violations
+3. `./equin check --eslint` — no lint errors
 4. Open an active conversation in the UI: JSONL viewer renders correctly and streams new events without page reload
 5. Trigger `push-and-exit`: durable job resumes correctly after turn completes (normal `hasPrimed` path)
 6. Restart the server during an active conversation, then complete a turn: `push-and-exit` still resolves (server restart recovery / `hasPendingTrigger` path)

@@ -39,7 +39,7 @@ dist.stats.html
 /plugins/config_v2/web/internal/git-layer.generated.ts
 
 # Composition build-gating: per-worktree filtered registries emitted only by
-# `./singularity build --hermetic --composition <name…>` (never committed;
+# `./equin build --hermetic --composition <name…>` (never committed;
 # siblings of the committed `<dir>.generated.ts`). The second pattern covers the per-name
 # auto-serve registries (`<dir>.composition.<name>.generated.ts`).
 *.composition.generated.ts
@@ -58,7 +58,7 @@ dist.stats.html
 .cache/
 .eslintcache
 
-# Transient dirs created by ./singularity check (e.g. migrations-in-sync)
+# Transient dirs created by ./equin check (e.g. migrations-in-sync)
 .check-*/
 # drizzle-kit's staged out-dir (migrations core `stageDrizzleOut`), removed after each run.
 .drizzle-stage-*/

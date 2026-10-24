@@ -3,7 +3,7 @@
  * barrel becomes `exempt/index.ts` manifest entries (owner = the plugin that
  * owns the file), `outOfScope` categories, or `closed` rule ids.
  *
- *   ./singularity run plugins/framework/plugins/tooling/plugins/exempt/scripts/migrate-lint-ignores.ts [--apply] [--debt-task <id>]
+ *   ./equin run plugins/framework/plugins/tooling/plugins/exempt/scripts/migrate-lint-ignores.ts [--apply] [--debt-task <id>]
  *
  * Without --apply it prints the plan only. Leading comments of an entry become
  * its `reason` (a comment applies to the entries after it until the next one);

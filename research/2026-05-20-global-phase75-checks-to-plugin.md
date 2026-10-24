@@ -66,7 +66,7 @@ Create `plugins/framework/plugins/tooling/plugins/checks/package.json`:
   "name": "@singularity/plugin-framework-tooling-checks",
   "version": "0.0.1",
   "private": true,
-  "description": "Check runner and built-in checks for ./singularity check"
+  "description": "Check runner and built-in checks for ./equin check"
 }
 ```
 
@@ -179,7 +179,7 @@ import { runChecks } from "@plugins/framework/plugins/tooling/plugins/checks/cor
 
 ## Verification
 
-1. `./singularity check` — full run, all checks pass
-2. `./singularity build` — config-origin codegen resolves from codegen barrel; checks run in build pipeline
+1. `./equin check` — full run, all checks pass
+2. `./equin build` — config-origin codegen resolves from codegen barrel; checks run in build pipeline
 3. `rg "@tooling/" --type ts` in `cli/` — zero results
 4. `rg "tooling/src/" --type ts` — zero code references (only Phase 7.6 cleanup docs)

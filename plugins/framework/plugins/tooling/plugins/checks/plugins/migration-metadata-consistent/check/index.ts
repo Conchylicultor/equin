@@ -134,7 +134,7 @@ const check: Check = {
         sections.join("\n\n"),
       hint:
         "Migration metadata must stay mutually consistent. For an orphan .sql or " +
-        "journal entry, run `./singularity build` (or `./singularity normalize-generated`): " +
+        "journal entry, run `./equin build` (or `./equin normalize-generated`): " +
         "the journal is derived from the .sql filenames and is regenerated unconditionally " +
         "on every run, so a plain build repairs both. Do NOT reach for " +
         "`--reset-migration` — it drops branch-local SCHEMA migrations and does not " +

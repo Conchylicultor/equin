@@ -160,7 +160,7 @@ No new migration (no schema change). No registry edits (contributions are discov
 
 ## Verification
 
-1. `./singularity build`, then `./singularity check --plugin-boundaries` (confirm no cycle) and the full `./singularity check`.
+1. `./equin build`, then `./equin check --plugin-boundaries` (confirm no cycle) and the full `./equin check`.
 2. Scripted Playwright run at `http://att-1780525914-xm7m.localhost:9000` (Pages app):
    - Create page **A** and page **B**. In **A**, add a page-link block targeting **B**. Open **B** → Backlinks shows **A**.
    - Keep **B**'s detail open; in another tab delete **A**. **B**'s Backlinks panel clears **live** (no reload). Before the fix it keeps showing **A**.

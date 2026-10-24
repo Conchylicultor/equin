@@ -42,7 +42,7 @@ already publishes the exact per-descriptor list of such scopes live through
    scope makes it exist *and* readable — fully symmetric, no fork ceremony.
 
 After both, the only loud failure left is the legitimate one: a write when
-`./singularity build` was never run (no base origin at all).
+`./equin build` was never run (no base origin at all).
 
 ## Approach
 
@@ -128,7 +128,7 @@ origin as the base and writes the override with the changed field).
   a new `scope-snapshot.ts`) and call it from both `forkDescriptor`
   (`scope-fork.ts`) and `setConfig` (`registry.ts`) so the two never drift.
 - **Preserve the legitimate loud failure:** if the *base* origin is also missing
-  (build never ran), still throw the existing "run ./singularity build" error.
+  (build never ran), still throw the existing "run ./equin build" error.
   Fork-on-write applies to scoped writes only — base (`scopeId === ""`) writes are
   unchanged.
 - After fork-on-write, surface the scope-membership flip promptly (rather than
@@ -184,8 +184,8 @@ that already exists in that subtree.
 
 ## Verification
 
-1. `./singularity build` (regenerates, type-checks, restarts server).
-2. `./singularity check` — expect `plugins-doc-in-sync` to require the doc edits
+1. `./equin build` (regenerates, type-checks, restarts server).
+2. `./equin check` — expect `plugins-doc-in-sync` to require the doc edits
    above; `config-origins-in-sync` unaffected (no committed config changes).
 3. **Unit:** add a `bun:test` next to `registry.ts` for `setConfig` fork-on-write:
    - scoped write to a fresh scope (base origin present) creates

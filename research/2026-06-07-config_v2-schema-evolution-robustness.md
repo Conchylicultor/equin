@@ -198,7 +198,7 @@ No new endpoint needed — `deleteOverride` and `getConfigRawFile` already exist
 
 ## Verification
 
-1. **The actual regression (A).** `./singularity build`, open the main namespace
+1. **The actual regression (A).** `./equin build`, open the main namespace
    preprompts config
    (`http://singularity.localhost:9000/agents/config/cd/conversations%252Fpreprompts%252Fconfig.jsonc`).
    Both "Auto-implement" and "Auto-push" reappear, each with a default (no) icon.
@@ -212,7 +212,7 @@ No new endpoint needed — `deleteOverride` and `getConfigRawFile` already exist
    zod issue and **Reset to defaults** / **View raw** actions; the server logs
    the `console.warn`. Click **Reset to defaults** → banner clears, value returns
    to default.
-4. **No regressions.** `./singularity check` (eslint + boundaries +
+4. **No regressions.** `./equin check` (eslint + boundaries +
    config-origins-in-sync). Existing hash-conflict flow still renders/behaves as
    before (its entries default to `kind: "hash"`).
 

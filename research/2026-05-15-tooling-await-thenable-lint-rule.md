@@ -39,9 +39,9 @@ The tmux-runtime.ts instance was already fixed earlier in this session.
 
 ### 3. Run eslint to catch any other violations
 
-`./singularity check --eslint` — fix anything it finds.
+`./equin check --eslint` — fix anything it finds.
 
 ## Verification
 
-1. `./singularity check --eslint` passes
-2. `./singularity build` succeeds
+1. `./equin check --eslint` passes
+2. `./equin build` succeeds

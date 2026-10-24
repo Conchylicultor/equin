@@ -2,12 +2,12 @@
  * The DataView data origin is a UNION, so a stand-in cannot be spelled — on
  * `DataViewProps`, and through the `DataViewSwitcher` path's
  * `DataViewSourceBundle` (a plain `Omit` would have merged the arms back into
- * one object type). Checked by tsc (`./singularity check type-check`): each
+ * one object type). Checked by tsc (`./equin check type-check`): each
  * `Rejects<…>` must compute `true`, so a spelling that became legal is a type
  * error here. Written as type-level assignability, not object literals, so no
  * formatting can move an expect-error off its line.
  *
- * Run: `./singularity test plugins/primitives/plugins/data-view`.
+ * Run: `./equin test plugins/primitives/plugins/data-view`.
  */
 
 import { describe, expect, test } from "bun:test";

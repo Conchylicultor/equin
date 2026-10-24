@@ -104,7 +104,7 @@
 //      entry
 //      (`research/2026-09-22-page-agent-access-e2e-round-trip-fixture.md`).
 //
-// Manual only. Requires `./singularity build` first.
+// Manual only. Requires `./equin build` first.
 // Usage: bun plugins/page/plugins/annotations/plugins/agent-access/e2e/agent-access-verify.ts [--url <deploy>] [--out <path>]
 import type { Page } from "playwright";
 import {

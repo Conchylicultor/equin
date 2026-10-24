@@ -160,13 +160,13 @@ export function BashToolView({ event }: ToolRendererProps) {
 
 ## Files to edit
 
-**`web/src/plugins.generated.ts`** — do not edit manually. After creating the three files above, run `./singularity build`. The generator discovers every `web/index.ts` under `plugins/` and regenerates this file automatically. The expected diff is a new import and a new array entry directly after `conversationsConversationViewJsonlViewerToolCallPlugin`.
+**`web/src/plugins.generated.ts`** — do not edit manually. After creating the three files above, run `./equin build`. The generator discovers every `web/index.ts` under `plugins/` and regenerates this file automatically. The expected diff is a new import and a new array entry directly after `conversationsConversationViewJsonlViewerToolCallPlugin`.
 
 ---
 
 ## Verification
 
-1. **Build:** `./singularity build` — must complete without TypeScript errors and the new plugin must appear in `plugins.generated.ts`.
+1. **Build:** `./equin build` — must complete without TypeScript errors and the new plugin must appear in `plugins.generated.ts`.
 
 2. **Normal output** — open a conversation with completed Bash calls. Expand one:
    - Description label visible above the code block (if present in the event).

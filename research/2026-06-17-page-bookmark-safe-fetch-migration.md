@@ -101,7 +101,7 @@ domain error type internally.
 
 ## Verification
 
-1. **Build** — `./singularity build` must pass (type-check, boundary checks, migrations-in-sync).
+1. **Build** — `./equin build` must pass (type-check, boundary checks, migrations-in-sync).
 2. **Happy path** — open a bookmark pane and paste a real public URL (e.g. `https://example.com`);
    confirm title/favicon appear in the preview.
 3. **SSRF block** — send `GET /api/link-preview?url=http://localhost` from browser devtools;

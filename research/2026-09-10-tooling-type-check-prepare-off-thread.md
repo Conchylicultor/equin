@@ -2,7 +2,7 @@
 
 ## Context
 
-`./singularity check` runs every selected check concurrently in ONE process.
+`./equin check` runs every selected check concurrently in ONE process.
 `type-check` does 70–130 s of synchronous work on that process's main thread
 before it spawns a single tsc worker. For that whole time no other check makes
 progress: no promise settles, no timer fires, no socket is serviced.
@@ -162,14 +162,14 @@ skip but not the record; the coverage gate returns before any cache is opened.
 
 ## Verification
 
-1. **Unit tests.** `./singularity test plugins/framework/plugins/tooling/plugins/checks/plugins/type-check`
+1. **Unit tests.** `./equin test plugins/framework/plugins/tooling/plugins/checks/plugins/type-check`
    — existing `outer-read-set` and `program-key` suites pass after the
    signature change. Add `prepare-thread.test.ts`: over a small fixture repo
    (the `outer-read-set.test.ts` pattern), (a) the Plan from the thread equals
    `openPreparation(...).plan` run in-process; (b) a thrown error in the worker
    rejects `prepare()` with the worker's stack.
 2. **The runner's loop stays free, and the real failure is gone.** A temporary,
-   uncommitted probe script (run with `./singularity run`) that, in ONE
+   uncommitted probe script (run with `./equin run`) that, in ONE
    process: starts a 1 s timer chain recording the largest gap between ticks,
    opens a `pg` connection to the main DB the way `migration-applies-clean`
    does (`plugins/database/plugins/migrations/check/index.ts:112`), and calls
@@ -177,16 +177,16 @@ skip but not the record; the coverage gate returns before any cache is opened.
    once on `main`'s code and once on this branch.
    Before: largest gap ~70–100 s and the connect fails with `ECONNREFUSED`.
    Target: largest gap under ~1 s and the connect succeeds.
-3. **The failing pair, for real.** `./singularity check type-check migration-applies-clean`
+3. **The failing pair, for real.** `./equin check type-check migration-applies-clean`
    on a branch that changes `plugins/database/plugins/migrations/data/` (one of
    the two branches named in the issue, rebased onto this change). Before:
    ECONNREFUSED. Target: both pass.
-4. **Cache semantics unchanged.** Run `./singularity check type-check` twice on
+4. **Cache semantics unchanged.** Run `./equin check type-check` twice on
    an unchanged tree: the second run is an outer-cache HIT (no workers). Edit
    one `.ts` file: the run misses, logs `skipped N of 7` with the same N a
    pre-change run gives, and the transcript's `type-check:` lines match the
    old format plus the new "prepared off-thread" line.
-5. **Full pass.** `./singularity build` (background) — `build-status.json`
+5. **Full pass.** `./equin build` (background) — `build-status.json`
    `status: ok`, and the checks section shows type-check green.
 
 ## Follow-up (not in this change)

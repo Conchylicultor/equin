@@ -201,13 +201,13 @@ browser-config resource and its file watcher, `fetchEndpoint`, and
 
 ## Verification
 
-- `./singularity test plugins/integrations/plugins/google-maps plugins/map`:
+- `./equin test plugins/integrations/plugins/google-maps plugins/map`:
   - store round-trip (key kept when the Map ID changes, both cleared together,
     a Map ID refused without a key)
   - `MAP_ID_PATTERN`
   - `usePlanZoom` re-renders only on level crossings
   - `planPins` unchanged
-- `./singularity build`, then with the user (Claude in Chrome on
+- `./equin build`, then with the user (Claude in Chrome on
   `http://<worktree>.localhost:9000`):
   1. Settings → Accounts → Google Maps → Live map: the Smooth zoom steps.
      Copy the JSON, then the user creates the style and the Map ID in the
@@ -228,7 +228,7 @@ browser-config resource and its file watcher, `fetchEndpoint`, and
   transforms, which a vector map does not have. Its frame and long-frame
   numbers still apply, and its `[probe]` line already says "motion not
   tracked" when there is nothing to read.
-- `./singularity check`.
+- `./equin check`.
 
 ## Risks
 

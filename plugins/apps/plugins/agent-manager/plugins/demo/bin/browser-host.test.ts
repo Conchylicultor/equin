@@ -23,7 +23,7 @@
  * and registers its graph's resources process-wide, which would leak into every
  * suite after it in the shared `bun test` process.
  *
- * Run: `./singularity test plugins/apps/plugins/agent-manager/plugins/demo`.
+ * Run: `./equin test plugins/apps/plugins/agent-manager/plugins/demo`.
  */
 
 import { beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test";

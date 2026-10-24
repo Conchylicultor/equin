@@ -104,7 +104,7 @@ const TOP_LEVEL: ReadonlyArray<{ re: RegExp; cls: StatementClass }> = [
       kind: "reject",
       op: "dml",
       reason:
-        "DML belongs in a data migration (./singularity build --custom-migration --migration-name <slug>), which this schema migration then claims and runs between expand and contract",
+        "DML belongs in a data migration (./equin build --custom-migration --migration-name <slug>), which this schema migration then claims and runs between expand and contract",
     },
   },
   {

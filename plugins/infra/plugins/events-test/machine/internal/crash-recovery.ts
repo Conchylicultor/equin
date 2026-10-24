@@ -34,7 +34,7 @@ import { jobTaskList } from "../../server/internal/queue-probe";
 // `UPDATE ... locked_at = now() - interval '6 minutes'` — a test of a timestamp
 // comparison, nothing more. It could not express "held by someone still alive",
 // so it passed for three months while every job that ran longer than five minutes
-// (nightly backups, DB forks, `./singularity push`) had its row stolen and
+// (nightly backups, DB forks, `./equin push`) had its row stolen and
 // re-dispatched CONCURRENTLY with the still-running handler. Case 1 is the
 // assertion that bug could not survive: the row here is two minutes "overdue" by
 // every timestamp measure and must still not be touched.

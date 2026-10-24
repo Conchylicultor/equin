@@ -1,5 +1,5 @@
 /**
- * Tests for the `no-row-focus-class` lint rule. Run with `./singularity test
+ * Tests for the `no-row-focus-class` lint rule. Run with `./equin test
  * plugins/primitives/plugins/css/plugins/row`.
  *
  * The second invalid case is the acceptance test the rule exists for: the

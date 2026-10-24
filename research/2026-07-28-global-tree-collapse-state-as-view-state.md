@@ -190,11 +190,11 @@ compile-time forcing function that surfaces anything missed.
 *parent* — so creating a child currently bumps the folder's "Updated" too. Deleted
 here for free.
 
-`./singularity build` generates `ALTER TABLE … DROP COLUMN IF EXISTS "expanded"`
+`./equin build` generates `ALTER TABLE … DROP COLUMN IF EXISTS "expanded"`
 (precedent: `20260413_180905_30e2b38e__drop_worktree_column.sql`). This is
 classified `drop-column` destructive, which needs **no flag or approval** to
 author — but after it lands on main, other worktrees whose DB forked post-merge
-will fail `./singularity check` with a `fork-schema-drift` error until they rebase.
+will fail `./equin check` with a `fork-schema-drift` error until they rebase.
 Worth one line in the push message.
 
 ### Step 5 — Docs
@@ -209,7 +209,7 @@ Worth one line in the push message.
 
 ## Verification
 
-1. `./singularity build`, then open `http://<worktree>.localhost:9000/agents/tasks`.
+1. `./equin build`, then open `http://<worktree>.localhost:9000/agents/tasks`.
 2. **The reported bug:** note a task's "Updated" value, collapse its folder,
    confirm the value does not change. Confirm the same for the parent when adding
    a child.
@@ -224,7 +224,7 @@ Worth one line in the push message.
    expand-collapse-all row action is absent, and nothing throws.
 8. **Agents tree:** repeat 2-6 at `/agents`.
 9. `bun test plugins/tasks/plugins/task-deps-tree/core` and
-   `./singularity check`.
+   `./equin check`.
 10. `mcp__singularity__query_db`: confirm `expanded` is gone from `tasks` and
     `agents`.
 

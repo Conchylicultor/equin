@@ -109,7 +109,7 @@ const check: Check = {
           message:
             "Schema has ambiguous changes (rename vs create) requiring interactive resolution.",
           hint:
-            "Run `./singularity build --migration-name <slug>` to see the detected prompts " +
+            "Run `./equin build --migration-name <slug>` to see the detected prompts " +
             "and provide explicit --migration-answers.\n\n" +
             "AGENT: Stop here and report this to the user. Do not retry or work around this. " +
             "If this check fails unexpectedly, report the limitation clearly.",
@@ -121,7 +121,7 @@ const check: Check = {
         return {
           ok: false,
           message: `plugin schema files diverge from committed migrations (would add: ${added.join(", ")})`,
-          hint: "Run `./singularity build` and commit the generated migration files.",
+          hint: "Run `./equin build` and commit the generated migration files.",
         };
       }
       return { ok: true };

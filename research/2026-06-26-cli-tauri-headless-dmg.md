@@ -1,11 +1,11 @@
 # Tauri release: headless-safe `.app` build + self-owned `.dmg` packaging
 
 > Status: implementation plan. Category: `cli` (the release command) + the `tauri/` shell + docs.
-> Scope: fixes the headless `.dmg` failure in `./singularity release --composition <name> --target tauri`.
+> Scope: fixes the headless `.dmg` failure in `./equin release --composition <name> --target tauri`.
 
 ## Context
 
-`./singularity release --composition <name> --target tauri` runs `tauri build`
+`./equin release --composition <name> --target tauri` runs `tauri build`
 (via `wrapTauri` in `plugins/framework/plugins/cli/bin/commands/release.ts:455-459`).
 Tauri's macOS bundler honors `tauri.conf.json`'s `"targets": "all"`
 (`tauri/src-tauri/tauri.conf.json:28`), so after it successfully builds the
@@ -133,7 +133,7 @@ two-step macOS build (`tauri build --bundles app` → `appdmg`).
 ## Verification (end to end, on a macOS Rust host)
 
 1. **Headless build succeeds.** From a non-interactive shell (no Aqua session),
-   run `./singularity release --composition sonata --target tauri`. It must run to
+   run `./equin release --composition sonata --target tauri`. It must run to
    completion with exit 0 — no `-1712`, no AppleEvent timeout.
 2. **Both artifacts exist.**
    - `tauri/src-tauri/target/release/bundle/macos/Sonata.app`

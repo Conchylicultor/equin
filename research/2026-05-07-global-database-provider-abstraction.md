@@ -240,10 +240,10 @@ Phases 1 and 2 are independent (parallel). Phase 3 needs 2. Phases 4 and 5 need 
 
 ## Verification
 
-1. Delete `~/.singularity/database.json`, run `./singularity start` → auto-generates embedded config, PG comes up
+1. Delete `~/.singularity/database.json`, run `./equin start` → auto-generates embedded config, PG comes up
 2. `http://singularity.localhost:9000` loads → embedded PG supervised correctly
-3. `./singularity build` from a worktree → CLI reads config, waits for PG, builds
-4. Edit `database.json` to system PG (`"services": []`, `localhost:5432`), `./singularity start --force` → skips supervision
+3. `./equin build` from a worktree → CLI reads config, waits for PG, builds
+4. Edit `database.json` to system PG (`"services": []`, `localhost:5432`), `./equin start --force` → skips supervision
 5. `GET /gateway/services` returns `[{"name":"postgres","state":"running"}]` for embedded, `[]` for system
 6. `GET /gateway/services/postgres/status` returns individual state
 7. Kill PG manually → watchdog detects, re-runs start script once

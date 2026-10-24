@@ -6,7 +6,7 @@
  * error, and a reload paints the same order (server truth). Then drags the row
  * back, so the worktree's queue ends as it started.
  *
- *   ./singularity run plugins/conversations/plugins/conversations-view/plugins/data-view/plugins/queue/e2e/queue-reorder.ts [--out <prefix>] [--headed]
+ *   ./equin run plugins/conversations/plugins/conversations-view/plugins/data-view/plugins/queue/e2e/queue-reorder.ts [--out <prefix>] [--headed]
  */
 import type { Page } from "playwright";
 import {

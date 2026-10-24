@@ -50,7 +50,7 @@
  *
  * # What this does NOT prove
  *
- * The served dist, not the backend. `./singularity build --no-restart` writes
+ * The served dist, not the backend. `./equin build --no-restart` writes
  * an `ok` receipt with a new dist and leaves the previous backend running, so a
  * run can still be green against a new frontend talking to old server code.
  * Nothing here can see that; the receipt records one build id for both halves.
@@ -218,7 +218,7 @@ function wrongDeploy(
       `  serving : ${servingPhrase(p)}\n\n` +
       `Every assertion below would be made against code this checkout did not\n` +
       `produce, and every write would land on it.\n` +
-      `Run \`./singularity build\` here, then re-run this script.`,
+      `Run \`./equin build\` here, then re-run this script.`,
   );
 }
 
@@ -237,7 +237,7 @@ function notAnswering(
       `something after it did not: the gateway is not routing this namespace, or the\n` +
       `backend behind it is down or wedged (a wedged one accepts the connection and\n` +
       `then answers nothing, which is what a timeout above means). Re-run\n` +
-      `\`./singularity build\` here and check its output before reading anything into a\n` +
+      `\`./equin build\` here and check its output before reading anything into a\n` +
       `failure below.`,
   );
 }

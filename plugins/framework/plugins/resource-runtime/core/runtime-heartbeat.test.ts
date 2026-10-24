@@ -1,7 +1,7 @@
 /**
  * The heartbeat ping carries `flushOpenMs` — how long the running flush pass has
  * been open (0 when idle). Run with
- * `./singularity test plugins/framework/plugins/resource-runtime`.
+ * `./equin test plugins/framework/plugins/resource-runtime`.
  *
  * The 2026-09-11 incident: a DB socket was closed under a query inside a flush,
  * the query's promise never settled, and — flushes being single-active — every

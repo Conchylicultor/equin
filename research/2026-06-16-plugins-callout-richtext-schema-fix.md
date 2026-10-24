@@ -157,7 +157,7 @@ const snippet = blockParsed?.success ? stripInlineTokens(plainOf(blockParsed.dat
 
 ## Verification
 
-1. `./singularity build` from the worktree.
+1. `./equin build` from the worktree.
 2. Reproduce-before / confirm-after with a scripted Playwright load of the repro
    page and a check for the console ZodError:
    ```bash
@@ -172,4 +172,4 @@ const snippet = blockParsed?.success ? stripInlineTokens(plainOf(blockParsed.dat
    reminder row is created (`query_db` on `page_reminders`) and the fired
    notification description shows the block snippet — previously empty for
    array-form blocks.
-4. `./singularity check` (type-check + boundaries) passes.
+4. `./equin check` (type-check + boundaries) passes.

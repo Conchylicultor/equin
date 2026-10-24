@@ -84,10 +84,10 @@ Reuses: `registerHttpRoute` / `matchParamRoute` in `server/src/index.ts:28-70`; 
 
 ## Verification
 
-1. `./singularity build` — app deploys at `http://<worktree>.localhost:9000`.
+1. `./equin build` — app deploys at `http://<worktree>.localhost:9000`.
 2. Open the app, open several conversations in multiple tabs. In DevTools → Network, confirm exactly **one** `/api/events?urls=...` EventStream per browser (not per tab, not per URL). Inspect frames: `event: /api/conversations/stream` and `event: /api/conversations/:id/edited-files/stream` interleaved, plus `: ping` every ~20s.
 3. Conversation list updates (create/delete/title change) continue to propagate across tabs.
 4. Edited-files counter still updates in under ~1s after a file edit in a worktree, in every open tab for that conversation.
 5. Close all tabs but one, open a new conversation view → confirm the `urls=` query on `/api/events` updates (connection reopens) to include the new virtual URL.
 6. Kill the server (`singularity build` restart) → every tab reconnects via the shared leader; no reconnect storm (commit `b72918d` regression guard still holds).
-7. Run `./singularity check` — `no-raw-event-source` check passes.
+7. Run `./equin check` — `no-raw-event-source` check passes.

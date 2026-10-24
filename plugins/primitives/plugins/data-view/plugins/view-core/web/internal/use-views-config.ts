@@ -84,7 +84,7 @@ function newId(): string {
  * config has zero rows the
  * engine returns an empty instance list and the host renders a placeholder. The
  * forcing function that an agent author the config is the descriptor's
- * `requiresAuthoredOverride` opt-in: `./singularity build` seeds the config file
+ * `requiresAuthoredOverride` opt-in: `./equin build` seeds the config file
  * with a `// @review` marker, and `config:overrides-authored` fails until the
  * rows are reviewed and the marker deleted.
  *
@@ -111,7 +111,7 @@ export function useViewsConfig<T extends ViewTypeMeta>(
     throw new Error(
       `view-core: no registered descriptor for storageKey "${storageKey}". ` +
         `Declare it (e.g. defineDataView("${storageKey}")) under the plugin's ` +
-        `web/ and run \`./singularity build\` to regenerate the manifest.`,
+        `web/ and run \`./equin build\` to regenerate the manifest.`,
     );
   }
   // No `scopeId`: runtime per-instance edits write to the user-global layer

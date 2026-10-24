@@ -16,9 +16,9 @@
  *   extension-only statement (outcome 2: only the tuples whose query reads the
  *   table).
  *
- * Requires a running Postgres cluster (started by ./singularity build);
+ * Requires a running Postgres cluster (started by ./equin build);
  * createTestDb() throws loudly when it is unreachable.
- * Run: `./singularity test plugins/network/plugins/live`.
+ * Run: `./equin test plugins/network/plugins/live`.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";

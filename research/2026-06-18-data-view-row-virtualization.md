@@ -44,7 +44,7 @@ unbounded body. The fix targets the **real** scroller by discovering it.
 
 1. **Dependency.** Added `@tanstack/react-virtual` (`^3.13`) to
    `plugins/primitives/plugins/data-view/package.json` (React-19 compatible;
-   none existed before). Installed by `bun install` during `./singularity build`.
+   none existed before). Installed by `bun install` during `./equin build`.
 
 2. **Reusable `<VirtualRows>` component** — new
    `web/components/virtual-rows.tsx`, exported from the data-view web barrel so

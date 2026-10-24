@@ -8,10 +8,10 @@
  * and it reports which layout it saw instead of assuming one. Run it once per
  * layout to get the pair (and once per look for the full six):
  *
- *   ./singularity build
- *   ./singularity run plugins/apps/plugins/sonata/plugins/pitch-layout/e2e/pitch-layout-verify.ts --out /tmp/piano
+ *   ./equin build
+ *   ./equin run plugins/apps/plugins/sonata/plugins/pitch-layout/e2e/pitch-layout-verify.ts --out /tmp/piano
  *   # switch Keyboard layout → Jankó in the View popover
- *   ./singularity run plugins/apps/plugins/sonata/plugins/pitch-layout/e2e/pitch-layout-verify.ts --out /tmp/janko
+ *   ./equin run plugins/apps/plugins/sonata/plugins/pitch-layout/e2e/pitch-layout-verify.ts --out /tmp/janko
  *
  * `--song` takes a song id, NOT a library card to click: the cards' actions are
  * hover-revealed, so a click-through has to hover first and still races the

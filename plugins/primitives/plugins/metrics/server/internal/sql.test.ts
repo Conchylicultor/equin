@@ -2,7 +2,7 @@
  * sqlFlow / sqlLevel against a real Postgres: the interval join, the split
  * grouping, the fill of empty cells, and a distinct count over the range.
  *
- * Requires the running embedded cluster (`./singularity build` first);
+ * Requires the running embedded cluster (`./equin build` first);
  * `createTestDb` throws loudly rather than skipping when it is not up.
  */
 

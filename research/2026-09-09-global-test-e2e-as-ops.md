@@ -1,4 +1,4 @@
-# `./singularity test` and e2e runs as first-class ops
+# `./equin test` and e2e runs as first-class ops
 
 ## Context
 
@@ -8,7 +8,7 @@ op-status banner and sidebar chip, in the op history (the Debug → Profiling �
 Ops Gantt), with its lock/grant wait visible, and admitted to the host through
 the same scheduler. Its checklist names `singularity test` as not covered.
 
-Today `./singularity test` and an e2e script run (`./singularity run
+Today `./equin test` and an e2e script run (`./equin run
 plugins/<…>/e2e/<name>.ts`) are plain `spawnPassthrough` wrappers. They write
 no worktree op marker (so the conversation reads `waiting` while tests run and
 the banner shows nothing), no op-log record (invisible in the Gantt), and take
@@ -19,7 +19,7 @@ Decisions taken with the user:
 
 - `test` and `e2e` **take a host CPU grant** like a direct `check`, with the
   queue time recorded as a `host-grant` wait.
-- **Not every `./singularity run` is an op.** Only a script under an `e2e/`
+- **Not every `./equin run` is an op.** Only a script under an `e2e/`
   directory (the documented convention `plugins/<path>/e2e/<name>.ts`) is an
   `e2e` op. The `run` command decides from the path; every other script runs
   exactly as today, with no grant and no marker.
@@ -279,10 +279,10 @@ command).
   branch), `worktree-op.ts` module comment, ops/op-gantt CLAUDE.md fill table.
 - Root `CLAUDE.md`: one line under "Testing" and one under "Driving the app":
   a test run / an `e2e/` script run is an op — it takes a host CPU grant and
-  shows in the op-status banner like `./singularity check`.
-- Autogen reference blocks regenerate on `./singularity build`.
+  shows in the op-status banner like `./equin check`.
+- Autogen reference blocks regenerate on `./equin build`.
 
-## Step 8 — Tests (`./singularity test <plugin>`)
+## Step 8 — Tests (`./equin test <plugin>`)
 
 - `worktree/core/internal/op-kind.test.ts`: `isOpKind`, `OP_KIND_IDS` ==
   `Object.keys(OP_KINDS)`.
@@ -299,14 +299,14 @@ command).
 
 ## Verification
 
-1. `./singularity build` in the background; confirm `status: ok` in
+1. `./equin build` in the background; confirm `status: ok` in
    `~/.singularity/worktrees/<slug>/build-status.json`.
-2. Background: `./singularity test plugins/primitives/plugins/optimistic-mutation`.
+2. Background: `./equin test plugins/primitives/plugins/optimistic-mutation`.
    While it runs, screenshot this worktree's own conversation via the e2e
    screenshot tool: banner reads "Test in progress" with a ticking timer, the
    sidebar chip shows the test icon, and the conversation status is `working`
    (`query_db`: `select status from conversations where id = …`).
-3. Background: `./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --out <scratch>/e2e-op`.
+3. Background: `./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --out <scratch>/e2e-op`.
    Banner reads "E2E in progress"; expanding it lists both ops in the no-queue
    group.
 4. `grep -E '"kind":"(test|e2e)"' ~/.singularity/logs/op-log/op-log.jsonl`:
@@ -314,12 +314,12 @@ command).
    `waits` empty on an idle host (expected) or one `host-grant` entry under load.
 5. Screenshot Debug → Profiling → Ops: two new bars with their fills, legend
    lists `test` and `e2e`.
-6. Regression: `./singularity check --list` / `--status` still take no grant;
-   a direct `./singularity check <cheap-id>` still shows "Check in progress";
-   `./singularity build` still runs its nested check with no `check` marker
-   and no second op-log record; `./singularity run <non-e2e script>` produces
+6. Regression: `./equin check --list` / `--status` still take no grant;
+   a direct `./equin check <cheap-id>` still shows "Check in progress";
+   `./equin build` still runs its nested check with no `check` marker
+   and no second op-log record; `./equin run <non-e2e script>` produces
    no marker and no record.
-7. `./singularity check` passes (plugin-boundaries: the dropped op-log
+7. `./equin check` passes (plugin-boundaries: the dropped op-log
    re-export, the new edges; plugins-doc-in-sync; type-check).
 
 ## Follow-ups (not in this change)
@@ -329,7 +329,7 @@ command).
   the Gantt reads it; projecting it into the SQL union is a separate design.
 - A durable `test-<opId>.log` transcript: `spawnPassthrough` cannot tee, and
   switching to buffered capture would lose live output.
-- Whether `./singularity run <e2e>` should be forced into a background task by
+- Whether `./equin run <e2e>` should be forced into a background task by
   the `background-ops` guard — decide from measured e2e durations in
   op-log.jsonl once they exist, the way `LONG_OPS` cites p50/p90.
 - A second `test` in one worktree overwrites the single `test.json` marker
@@ -339,8 +339,8 @@ command).
 
 Built as planned, with these notes:
 
-- **Verified end to end on the deployed worktree.** A `./singularity test` over
-  the four touched plugins and a `./singularity run …/e2e/screenshot.ts` were
+- **Verified end to end on the deployed worktree.** A `./equin test` over
+  the four touched plugins and a `./equin run …/e2e/screenshot.ts` were
   launched together on a host at load 21. Both wrote their marker in the
   `waiting-for-lock` phase within a second, both landed a `requested` op-log
   record attributed to this conversation with an open `host-grant` wait, both

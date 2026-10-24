@@ -9,7 +9,7 @@
  * split. The parent must import nothing from here (see its `CLAUDE.md`), so the
  * test moved rather than the factory.
  *
- * Run with `./singularity test plugins/primitives/plugins/text-editor/plugins/token-extension`.
+ * Run with `./equin test plugins/primitives/plugins/text-editor/plugins/token-extension`.
  */
 
 import { describe, expect, test } from "bun:test";

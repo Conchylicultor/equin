@@ -171,7 +171,7 @@ Path cells need "how well do you know vi when half the loop is blank":
   - `trainer/core/target.ts` — weakest among practised.
 - `plugins/apps/plugins/chord/plugins/progress/` — `blanks` column, `byBlanks`
   standings, record endpoint body.
-- Migration via `./singularity build` (DDL) + a data migration seeding the
+- Migration via `./equin build` (DDL) + a data migration seeding the
   start selection.
 - e2e: rewrite `curriculum/e2e/curriculum-verify.ts`; delete `ladder-preview.ts`;
   adjust `trainer/e2e/trainer-verify.ts` and `piano/e2e/piano-shot.ts` if they
@@ -185,11 +185,11 @@ chrome lists — annotate the `no-adhoc-row-list` disables).
 
 ## Verification
 
-1. `./singularity test plugins/apps/plugins/chord` — new `path.test.ts`
+1. `./equin test plugins/apps/plugins/chord` — new `path.test.ts`
    (route shape, `cellSettings`/`cellOf` round-trip, every row token in its
    chapter's stage), `ask.test.ts` (one/half/all, never empty, only practised),
    progress `byBlanks` test.
-2. `./singularity build`, then open the trainer:
+2. `./equin build`, then open the trainer:
    - fresh start shows I IV V, Half, 2 boxes to name with the rest given;
    - clicking vi's chip (Off → Practise) adds a vi button and loops with vi;
      setting it to Hear removes the button and vi boxes come given;

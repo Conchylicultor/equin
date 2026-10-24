@@ -94,7 +94,7 @@ Guidelines:
 - "research": Exploring code, reading files, asking questions. No concrete plan or code written yet.
 - "plan": A design doc or plan has been written (e.g. a research/*.md file). Implementation not started.
 - "implementation": Code has been written, edited, or bugs fixed. Agent is actively building.
-- "pushed": Changes pushed to the repository (e.g. ./singularity push completed successfully).
+- "pushed": Changes pushed to the repository (e.g. ./equin push completed successfully).
 ```
 
 ### `server/internal/push-job.ts` — push-event triggered
@@ -214,10 +214,10 @@ contributions: [
 
 ## Verification
 
-1. `./singularity build` — no TS errors; `conversation_progress` migration generated and applied.
+1. `./equin build` — no TS errors; `conversation_progress` migration generated and applied.
 2. Send a message in any agent conversation → after ~5 s, toolbar shows `● ── ○ ── ○ ── ○  Research`; sidebar chip shows `● ○ ○ ○`.
 3. A conversation where a plan doc was written shows 2 filled dots (`plan` phase) after the next turn.
-4. After `./singularity push`, the bar immediately jumps to all 4 dots filled (`Pushed`) without requiring another turn.
+4. After `./equin push`, the bar immediately jumps to all 4 dots filled (`Pushed`) without requiring another turn.
 5. A conversation previously at `implementation` never regresses to `research` even if Haiku mis-classifies.
 6. Hard-refresh the browser — phases persist (data is in DB, served via push resource).
 7. `kind === "system"` conversations show no progress bar in either location.

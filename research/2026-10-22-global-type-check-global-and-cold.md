@@ -142,7 +142,7 @@ only its affected set, with 0 diagnostic divergences against a fresh whole progr
 
 ## Verification
 
-- `./singularity test plugins/framework/plugins/tooling/plugins/checks/plugins/type-check`. New
+- `./equin test plugins/framework/plugins/tooling/plugins/checks/plugins/type-check`. New
   cases: an ambient `.d.ts` edit re-checks only its importers, a leaf package bump re-checks only its
   importers, an `@types/bun` bump is global, and an engine-plumbing edit keeps every key.
 - `scripts/walk-replay.ts` and `scripts/dual-check.ts` over the 31 main trees and the 42 trigger

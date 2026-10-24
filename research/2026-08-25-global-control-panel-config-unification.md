@@ -679,13 +679,13 @@ between each. Watch this on the widest descriptors during Phase 3 (`debug/sentin
 # Verification
 
 ```bash
-./singularity check layout-geometry     # the fixtures, now including 500px
-./singularity check plugin-boundaries
-./singularity check config-origins-in-sync
-./singularity check                     # type-check, eslint, docs, registries
-./singularity test plugins/primitives/plugins/css/plugins/control-panel
-./singularity test plugins/config_v2
-./singularity build
+./equin check layout-geometry     # the fixtures, now including 500px
+./equin check plugin-boundaries
+./equin check config-origins-in-sync
+./equin check                     # type-check, eslint, docs, registries
+./equin test plugins/primitives/plugins/css/plugins/control-panel
+./equin test plugins/config_v2
+./equin build
 ```
 
 `control-panel/web/__tests__/control-panel.test.tsx` asserts host inference and the

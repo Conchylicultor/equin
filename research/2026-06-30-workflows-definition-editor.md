@@ -133,7 +133,7 @@ Contribute via the existing `Workflows.StepType({ pluginId:"branch", …, config
 
 ## Verification
 
-1. `./singularity build` (from the worktree).
+1. `./equin build` (from the worktree).
 2. `bun test plugins/apps/plugins/workflows/plugins/editor/shared/step-ops.test.ts`.
 3. Open `http://<worktree>.localhost:9000/workflows`, create a workflow, add 2–3 branch
    steps, set an entry, drag-connect them, add a conditional route + key, configure a

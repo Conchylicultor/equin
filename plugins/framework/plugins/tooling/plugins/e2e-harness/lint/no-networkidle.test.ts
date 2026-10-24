@@ -1,5 +1,5 @@
 /**
- * Tests for the `no-networkidle` lint rule. Run with `./singularity test`.
+ * Tests for the `no-networkidle` lint rule. Run with `./equin test`.
  *
  * The rule bans the `"networkidle"` literal in e2e scripts only — server-side
  * Playwright renderers of other pages keep it.

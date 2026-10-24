@@ -27,7 +27,7 @@ Inventory of every runtime spawn of a mise tool by name:
 | gateway supervisor → PG/PgBouncer start (`launcher/server/internal/boot.ts:293`) | bun | inherited: gateway cwd `<repoRoot>/gateway` | yes (a release uses compiled binaries) |
 | launcher `go build` (`boot.ts:405`) | go | `<repoRoot>/gateway` | yes (dev only) |
 | tmux client calls (`runtime-tmux/server/internal/tmux-runtime.ts`, `paths/server/internal/bins.ts` `TMUX` = the shim's path) | tmux | inherited: backend cwd | yes |
-| supervised jobs / toolbar build / deploy legs (`./singularity …` → `exec bun`) | bun | explicit `REPO_ROOT` | yes |
+| supervised jobs / toolbar build / deploy legs (`./equin …` → `exec bun`) | bun | explicit `REPO_ROOT` | yes |
 | `release/cli` `go build` | go | `<checkout>/gateway` | yes |
 | release preview `launch`, `claude --print` (`cwd: "/tmp"`) | none by name | outside | n/a |
 
@@ -76,7 +76,7 @@ So the variable changes behaviour **only** where resolution currently fails or d
 - The same for central-core's entry, if it has a separate bin.
 - Per backend rather than in the gateway: a worktree backend belongs to *its* checkout, not main. The gateway is Go
   and knows no repo layout. The backend already knows its root.
-- Every child that inherits `process.env` (tmux clients through the `TMUX` shim path, `./singularity`, `spawnCaptured`
+- Every child that inherits `process.env` (tmux clients through the `TMUX` shim path, `./equin`, `spawnCaptured`
   with `{...process.env}`) gets the pin. Children built from a closed list (`pickHostEnv`: `claude --print`, agent
   panes) do not. Agent panes run in their worktree, where the local walk applies. Decide per call site whether
   `pickHostEnv` should carry the pin. Recommendation: yes for `claude --print` (cwd `/tmp`), so add an optional
@@ -102,11 +102,11 @@ So the variable changes behaviour **only** where resolution currently fails or d
   one ever does, a release should skip the shims and ship or require its own tmux. Worth an `add_task`.
 
 ## Verification
-- `./singularity test plugins/infra/plugins/launcher plugins/toolchain`, including new unit cases for `toolchainPin`.
+- `./equin test plugins/infra/plugins/launcher plugins/toolchain`, including new unit cases for `toolchainPin`.
 - Manual: from `mkdtemp`, `env PATH=<runtimePath> MISE_GLOBAL_CONFIG_FILE=<wt>/mise.toml bun --version` gives the
   locked version. Without the variable you get the mise error (the baseline recorded above).
-- `./singularity build` (background), then from the deployed backend: confirm tmux sessions still spawn (open an agent
-  conversation) and `./singularity check toolchain:resolved` passes.
+- `./equin build` (background), then from the deployed backend: confirm tmux sessions still spawn (open an agent
+  conversation) and `./equin check toolchain:resolved` passes.
 - Negative control: temporarily point the pin at a probe lock with an older go and confirm the new check fails.
 
 ## As implemented (deviations from the plan above)

@@ -166,16 +166,16 @@ Task 2 (auto-build):
 
 ## Verification
 
-Run `./singularity build` — drizzle-kit picks up `_push_and_exit_jobs` and `_push_landed_triggers`, server restart applies migrations.
+Run `./equin build` — drizzle-kit picks up `_push_and_exit_jobs` and `_push_landed_triggers`, server restart applies migrations.
 
 **Task 1 (push-and-exit)**:
 1. Open a conversation, click Push & Exit. Verify the UI shows "Pushing…", then a flag sheet with Claude's text (if it finds issues), or the conversation disappears with a "Pushed and closed" toast.
 2. Click Push & Exit again; inspect `SELECT * FROM _push_and_exit_jobs` — one row with `status='running'`. Confirm `SELECT * FROM graphile_worker.jobs WHERE task_identifier = 'events.direct'` has one job.
-3. **Crash recovery**: while a job is running, `kill -9` the server. `./singularity build`. Watch the logs: the action re-runs, finds the verdict token in the transcript, writes the terminal state.
+3. **Crash recovery**: while a job is running, `kill -9` the server. `./equin build`. Watch the logs: the action re-runs, finds the verdict token in the transcript, writes the terminal state.
 4. **Dismiss a flag**: DELETE the row via the UI close-sheet button; confirm `_push_and_exit_jobs` row is gone and the button reappears.
 
 **Task 2 (auto-build)**:
-1. With `autoBuild = true` in config, `./singularity push` some commit to main from another worktree. Watch the main worktree's server logs: push-watcher records the push, `pushLanded` emits, autoBuild action fires, build runs.
+1. With `autoBuild = true` in config, `./equin push` some commit to main from another worktree. Watch the main worktree's server logs: push-watcher records the push, `pushLanded` emits, autoBuild action fires, build runs.
 2. `SELECT * FROM _push_landed_triggers` — one row (the singleton trigger), `action_name='build.autoBuild'`, `attempt_id IS NULL` (match-any subscription).
 3. **Boot catch-up**: stop the server, push a commit from another worktree, start the server back up. `getMainAheadCount()` is > 0 on boot → `runBuild()` fires once directly. `SELECT * FROM graphile_worker.jobs` should be empty (the build was a direct call, not a queued action). Push-watcher backfill then records the push; that *does* emit and enqueue an autoBuild, but the action's `isBuildInflight()` early-return means no duplicate build.
 4. **Idempotent subscription**: restart the server three times; `SELECT count(*) FROM _push_landed_triggers WHERE action_name='build.autoBuild'` stays at 1.

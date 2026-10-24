@@ -35,7 +35,7 @@ and each one costs ~13 minutes to disprove.
    `docs/plugins-details.md` held **331 bare `ConfigV2.WebRegister` lines** (main's content)
    while `plugins/config_v2/web/internal/slots.ts` still held my `docLabel`. Source and
    generated artifact disagreed, in the commit.
-5. **The repair works when it runs.** `./singularity normalize-generated` on that state
+5. **The repair works when it runs.** `./equin normalize-generated` on that state
    consumed the marker, regenerated (0 bare lines, 6 folded), and amended the commit.
 
 ## The mechanism
@@ -76,7 +76,7 @@ shows a clean tree and why fact (1) above kept misleading me.
 The sections above were written mid-investigation and their conclusion is WRONG. Keep them
 for the merge-driver bug they document (which is real, see "Second bug" below), but the
 push failures had a different cause, proved by one fact the merge-driver story cannot
-explain: **`plugins-doc-in-sync` also failed inside a plain `./singularity build`, with no
+explain: **`plugins-doc-in-sync` also failed inside a plain `./equin build`, with no
 rebase anywhere in it.**
 
 ### The actual cause: the fold made the doc depend on process history
@@ -99,7 +99,7 @@ alone was the one case that could not fail, and it was the case I kept measuring
 **Fix (landed):** sort the labels in the folded line. The folded line collapses entries whose
 only distinguishing content is the label, so it denotes a SET, and a set must be spelled in a
 canonical order. The per-line (unfolded) path keeps its original order. After the fix a full
-`./singularity build` passes checks.
+`./equin build` passes checks.
 
 ## Second bug, real but not the blocker: the marker lands where nobody reads it
 
@@ -159,9 +159,9 @@ without fixing push first:
 
 1. `git fetch origin main && git rebase origin/main` (background — a foreground rebase hit
    the 2-minute cap once and left a `rebase-merge` dir that broke the next push).
-2. `./singularity normalize-generated` — verify `grep -c '`ConfigV2.WebRegister`$'` is **0**
+2. `./equin normalize-generated` — verify `grep -c '`ConfigV2.WebRegister`$'` is **0**
    and `grep -c '×[0-9]*:'` is **6**.
-3. `./singularity push` immediately.
+3. `./equin push` immediately.
 
 Step 3 still races: if main lands a doc-touching commit inside the push window, the driver
 reverts again and the push fails the same way. That race is the bug, not the workaround.

@@ -2,7 +2,7 @@
  * `timing` — `{changedAt, sentAt, deliverMs}` on pushed value frames, so an open
  * tab can split change → applied into server and transport layers on a clock the
  * serving thread does not own; and `changedAt` beside it on `onDelivered`. Run
- * with `./singularity test plugins/framework/plugins/resource-runtime`.
+ * with `./equin test plugins/framework/plugins/resource-runtime`.
  *
  * Observability only: no runtime decision reads it. What is pinned here is what a
  * latency reader depends on — a frame carries `timing` exactly when its pending

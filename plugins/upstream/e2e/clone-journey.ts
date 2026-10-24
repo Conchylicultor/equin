@@ -21,7 +21,7 @@
  * upstream's, through the real CLI. It tests this checkout's working tree,
  * uncommitted changes included; `--pristine` tests committed HEAD only.
  *
- * Run: ./singularity run plugins/upstream/e2e/clone-journey.ts
+ * Run: ./equin run plugins/upstream/e2e/clone-journey.ts
  *        [--pristine]            migration journey against HEAD, no overlay
  *        [--skip-migrations]     only the (fast) text-fixture journey
  *        [--keep]                leave the temp repos and CLI logs behind

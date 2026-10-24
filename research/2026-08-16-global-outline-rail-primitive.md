@@ -258,7 +258,7 @@ surfaces already load.
 
 ## Verification
 
-1. `./singularity build` (background; it deploys to
+1. `./equin build` (background; it deploys to
    `http://att-1786876499-h21a.localhost:9000`).
 2. **Conversation** — open a long conversation and confirm: dashes on the right
    edge; the highlighted dash tracks scrolling both directions; hover expands to
@@ -274,4 +274,4 @@ surfaces already load.
 5. **Second pane open** — two conversation panes side by side; clicking in one
    must not scroll the other (the `[data-pane-scroll]` scoping).
 6. **Keyboard/touch** — Tab reaches the rail and expands it; Esc closes;
-   `./singularity check` clean (layout/spacing/typography/z-index/data-view lint).
+   `./equin check` clean (layout/spacing/typography/z-index/data-view lint).

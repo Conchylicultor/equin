@@ -1,5 +1,5 @@
 /**
- * Tests for the `no-model-focus-ring` lint rule. Run with `./singularity test
+ * Tests for the `no-model-focus-ring` lint rule. Run with `./equin test
  * plugins/page/plugins/editor`.
  *
  * The first invalid case is the acceptance test the rule exists for: the page

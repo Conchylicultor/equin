@@ -218,7 +218,7 @@ optimistic overlay + in-memory store consume `empty()`/seeds directly):
 - `parseMarkdownToForest` already emits runs from Stage 1; `keyboard-plugin.tsx` convertTo
   already emits runs (`serializeBlockRuns`) — no change.
 
-**Migration** — `./singularity build --custom-migration` (DML-only, snapshot-less; style
+**Migration** — `./equin build --custom-migration` (DML-only, snapshot-less; style
 precedent `20260710_120000_577ba77b__repair_block_data.sql`), slug
 `normalize_block_text_runs`:
 ```sql
@@ -268,7 +268,7 @@ acceptable v1.
 
 ---
 
-## Verification (after `./singularity build`, scripted à la `e2e/screenshot.mjs`)
+## Verification (after `./equin build`, scripted à la `e2e/screenshot.mjs`)
 
 1. **Block-selection copy→paste (Stage 1):** page with heading + 2 bullets + a to-do; Esc →
    Shift+Arrow select → Cmd+C → click empty area → Cmd+V. `query_db`:

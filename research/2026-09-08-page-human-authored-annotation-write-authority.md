@@ -225,7 +225,7 @@ export const humanNotesBlock = defineAnnotationBlock({
   for the page's own voice — every other semantic hue carries a status
   connotation the family doc explicitly documents, and a nested `muted` card
   stays legible against `agent-note`'s `bg-info/10`.
-- No registry edits: `./singularity build` regenerates `web.generated.ts` /
+- No registry edits: `./equin build` regenerates `web.generated.ts` /
   `server.generated.ts` from the filesystem.
 
 ### 7. Tool descriptions
@@ -258,11 +258,11 @@ export const humanNotesBlock = defineAnnotationBlock({
 
 ## Verification
 
-1. `./singularity check` — `annotations:parties-declared`,
+1. `./equin check` — `annotations:parties-declared`,
    `page.editor:markdown-tag-names-unique` (the `human` name is unclaimed),
    `page-editor:anchor-has-decoration`, `type-check`.
-2. `./singularity test plugins/page/plugins/markdown-apply plugins/page/plugins/annotations`
-3. `./singularity build` (background), then on a scratch page:
+2. `./equin test plugins/page/plugins/markdown-apply plugins/page/plugins/annotations`
+3. `./equin build` (background), then on a scratch page:
    - `read_page` a page holding a `<human>` card inside an `<agent-note>` — both
      appear, the `<human>` card carries an id.
    - `edit_page` changing text inside the `<human>` card → 403 naming the card.
@@ -270,7 +270,7 @@ export const humanNotesBlock = defineAnnotationBlock({
    - `write_agent_note` omitting the `<human>` card → 403, and `query_db` shows
      the rows untouched.
    - `write_agent_note` echoing it back → succeeds, human card's id unchanged.
-4. `./singularity run …/annotations/e2e/annotations-verify.ts` (the `MEMBERS`
+4. `./equin run …/annotations/e2e/annotations-verify.ts` (the `MEMBERS`
    entry becomes Human) and `…/agent-access/e2e/agent-access-verify.ts`, extended
    with a nested-`<human>` case asserting the 403 and a zero-change row snapshot.
 5. In the browser at `http://<worktree>.localhost:9000`: `/human`, `/user` and

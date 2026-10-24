@@ -272,7 +272,7 @@ export const promptTemplatesConfig = defineConfig({
 
 ## Verification
 
-After each plugin, run `./singularity build` to generate DROP TABLE migrations, rebuild, and verify:
+After each plugin, run `./equin build` to generate DROP TABLE migrations, rebuild, and verify:
 1. Settings UI auto-renders the new config fields with list CRUD (add/remove/reorder)
 2. Consumer components work correctly with the new data shape
 3. No TypeScript errors, no stale imports

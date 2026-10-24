@@ -96,7 +96,7 @@ means deleting a group cleans up memberships.
 Reuses `rankText` from `@server/db/types` (same fractional-indexing string
 type used by `_tasks.rank`). No changes needed in `tasks-core`.
 
-> **Migration step:** run `./singularity build` after writing the schema —
+> **Migration step:** run `./equin build` after writing the schema —
 > drizzle-kit picks up the new tables and emits a migration; commit it.
 > Never run `drizzle-kit generate` manually (per CLAUDE.md).
 
@@ -222,7 +222,7 @@ Drop *out* of a group (for v1) is via the small `×` button on each row inside a
 ### Plugin registration
 
 - Add `"conversation-groups"` to `web/src/plugins.ts` and `server/src/plugins.ts`.
-- Update `plugins-doc-in-sync` runs as part of `./singularity build`; the plugin's `CLAUDE.md` autogen block is regenerated automatically.
+- Update `plugins-doc-in-sync` runs as part of `./equin build`; the plugin's `CLAUDE.md` autogen block is regenerated automatically.
 
 ## Files to create
 
@@ -264,7 +264,7 @@ Drop *out* of a group (for v1) is via the small `×` button on each row inside a
 
 ## Verification
 
-1. `./singularity build` from this worktree — confirms the migration is generated, cleared, the build succeeds, gateway is notified.
+1. `./equin build` from this worktree — confirms the migration is generated, cleared, the build succeeds, gateway is notified.
 2. Open `http://att-1777490382-j0lv.localhost:9000/`. Sidebar conversation list renders unchanged for a user with zero groups.
 3. **Create-by-drop:** drag any active conversation onto another. Expected: a labeled box appears containing both. Title defaults to first conv's title. Persists across reload.
 4. **Join-by-drop:** drag a third conversation onto either member of the box (or onto the box header). Expected: it joins the existing group, no new group created.

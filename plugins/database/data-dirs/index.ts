@@ -4,7 +4,7 @@ import { defineDataDir } from "@plugins/infra/plugins/paths/core";
  * `database.json` — where Postgres listens and which managed services the Go
  * gateway supervisor must start before it binds its listener.
  *
- * Written by `./singularity start` (and by a release launch) from the embedded
+ * Written by `./equin start` (and by a release launch) from the embedded
  * cluster's own constants; read by `readDatabaseConfig()` here and by the
  * gateway through its `-db-config` flag. A directory of its own rather than a
  * loose file at the root, because a `DataDir` names a directory and the file

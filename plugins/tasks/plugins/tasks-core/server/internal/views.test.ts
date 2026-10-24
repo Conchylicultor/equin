@@ -24,7 +24,7 @@
  * to what `rebuildDerivedViews` / `rebuildDerivedTables` install at boot.
  *
  * Run: `bun test plugins/tasks/plugins/tasks-core/server/internal/views.test.ts`
- * (requires the running embedded cluster — `./singularity build` first).
+ * (requires the running embedded cluster — `./equin build` first).
  */
 
 import {

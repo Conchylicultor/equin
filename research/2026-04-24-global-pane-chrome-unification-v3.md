@@ -353,7 +353,7 @@ single-pane wraps + the two `chrome: false` opt-outs (`tasksRootPane`,
 
 ## Verification
 
-1. `./singularity build`; load at `http://<worktree>.localhost:9000`.
+1. `./equin build`; load at `http://<worktree>.localhost:9000`.
 2. `/c/<convId>` — confirm the chrome bar shows:
    - ‹ › on the far left.
    - `[ModelBadge] [StatusBadge]` left of the title (position=left).

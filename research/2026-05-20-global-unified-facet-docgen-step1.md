@@ -166,10 +166,10 @@ Our approach does NOT use a custom namespace. `onResolve` returns `{ path: "/__b
 
 ## Verification
 
-1. `./singularity build` succeeds (barrel imports, migrations, docs all regenerate)
+1. `./equin build` succeeds (barrel imports, migrations, docs all regenerate)
 2. `diff` on `docs/plugins-compact.md`, `docs/plugins-details.md`, `docs/routes.md` — empty (doc output unchanged)
 3. Spot-check 2-3 per-plugin `CLAUDE.md` autogen blocks — unchanged
-4. `./singularity check` passes all checks
+4. `./equin check` passes all checks
 
 ## Risks
 

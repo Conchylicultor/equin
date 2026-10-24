@@ -1,8 +1,8 @@
-# Speed up the first `./singularity build` on a fresh worktree
+# Speed up the first `./equin build` on a fresh worktree
 
 ## Context
 
-The first `./singularity build` on a freshly-created git worktree takes ~9 min; subsequent
+The first `./equin build` on a freshly-created git worktree takes ~9 min; subsequent
 builds in the same worktree take ~30 s. Builds on `main` are fast. This makes the agent's first
 deploy painfully slow on every new worktree.
 
@@ -102,7 +102,7 @@ Pitfalls / why it's safe:
 Build profiles land at `~/.singularity/worktrees/<name>/build-profile.json`. Spans of interest:
 `check:typescript`, `tsc:<target>`, `check:eslint`, `viteBuild`.
 
-1. **Baseline (cold):** in this worktree run `./singularity build`, save `build-profile.json`; record
+1. **Baseline (cold):** in this worktree run `./equin build`, save `build-profile.json`; record
    `totalDurationMs` and the spans above (this worktree has no profile yet — captures a true cold run).
 2. **After L1+L2 (cold):** create a *new* fresh worktree (so `setupWorktree` seeds `.cache/tsbuildinfo`),
    build, and confirm:
@@ -138,7 +138,7 @@ actual fix:
 - **`build.ts`** — `computeEslintScope()` lists `.ts/.tsx` files changed vs
   `git merge-base HEAD main` (+ untracked), filtered against the config's ignore globs
   and existence; sets the env var on non-main builds only. Null (undeterminable or
-  >400 files) → full lint. Push / `./singularity check` never set it → full lint.
+  >400 files) → full lint. Push / `./equin check` never set it → full lint.
 
 Measured result: cold first build **595.6s → 63.5s** (eslint 591.6s → 17.3s); warm
 **43.3s**, now bounded by `vite` (39s, the deferred L4). Correctness verified: full

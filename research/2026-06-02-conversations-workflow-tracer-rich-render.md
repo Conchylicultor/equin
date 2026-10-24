@@ -276,7 +276,7 @@ thread). NO worker file in v1.
 ## 5. Verification plan
 
 Build + checks:
-- `./singularity build` (runs web build + tsc + checks). Confirm `no-hardcoded-colors` passes — the
+- `./equin build` (runs web build + tsc + checks). Confirm `no-hardcoded-colors` passes — the
   workflow component path is ALREADY in `ALLOWED_PATHS`
   (`.../no-hardcoded-colors/check/index.ts:34`); if new color-bearing component files are added under
   a different filename, add those paths to the allowlist too (or keep all color usage inside

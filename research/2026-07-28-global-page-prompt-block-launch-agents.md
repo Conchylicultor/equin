@@ -247,7 +247,7 @@ New:
 - `plugins/apps/plugins/pages/plugins/prompt-origin/web/`
 - a `package.json` + `CLAUDE.md` per plugin (copy `plugins/page/plugins/callout/package.json`)
 
-Modified: none. Every plugin is discovered from the filesystem by `./singularity build`;
+Modified: none. Every plugin is discovered from the filesystem by `./equin build`;
 never hand-edit `web.generated.ts` / `server.generated.ts`.
 
 Reference implementations to copy shape from, in order of usefulness:
@@ -260,8 +260,8 @@ Reference implementations to copy shape from, in order of usefulness:
 
 ## Verification
 
-1. `./singularity build` — regenerates migrations (a new `tasks_ext_prompt_block`
-   table), the plugin registries, and the plugin docs. Then `./singularity check`.
+1. `./equin build` — regenerates migrations (a new `tasks_ext_prompt_block`
+   table), the plugin registries, and the plugin docs. Then `./equin check`.
 2. In `http://<worktree>.localhost:9000/pages`, open a page, type `/prompt`, confirm
    the block appears in the slash menu and converts. Type a prompt.
 3. Click ▶. Expect: a conversation pane opens as a right-hand column, and a chip for

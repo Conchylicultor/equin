@@ -9,7 +9,7 @@
 // (`--none`, default "Done").
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/places/plugins/places-map/e2e/camera-stays.ts \
+//   ./equin run plugins/apps/plugins/places/plugins/places-map/e2e/camera-stays.ts \
 //     [--keep Status] [--none Done] [--out /tmp/places-camera]
 //
 // Writes `<out>-<step>.png`; exits non-zero on the first broken expectation.

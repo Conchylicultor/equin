@@ -193,11 +193,11 @@ broader "background churn destroys user context" family:
 - **new** `plugins/framework/plugins/tooling/plugins/lint/plugins/scroll-reveal-safety/{package.json,CLAUDE.md,lint/index.ts,lint/no-adhoc-scroll-into-view.ts}`
 - `plugins/primitives/plugins/tree/web/internal/use-tree-row.tsx` + `tree-list.tsx` (+ context type)
 - the 8 migrated call sites listed in §3
-- registries regenerate via `./singularity build` (no manual edits)
+- registries regenerate via `./equin build` (no manual edits)
 
 ## Verification
 
-1. `./singularity build` (regenerates registry, deploys) then re-run the repro:
+1. `./equin build` (regenerates registry, deploys) then re-run the repro:
    `bun <scratchpad>/scroll-jump-repro.mjs --url http://att-1784327226-eebi.localhost:9000/agents/tasks/t/task-1784326319521-u1802y`
    — assert **no** `SCROLL-JUMP` lines in the ~1.5 s window after each `PATCH`
    (before the fix: one per save, 836 → 166). The probe scripts live in the
@@ -206,7 +206,7 @@ broader "background churn destroys user context" family:
    the Tasks sidebar — the selected row is scrolled into view exactly once.
 3. Keyboard nav in Cmd+K / quick-find still follows the highlight past the fold.
 4. New-tab reveal in the tab strip still works (open many tabs, spawn one more).
-5. `./singularity check` — the new lint rule passes repo-wide (all sites
+5. `./equin check` — the new lint rule passes repo-wide (all sites
    migrated), `type-check` green.
 6. `bun run test:dom plugins/primitives/plugins/tree` (existing tree suites, if
    present) — unchanged behavior on selection transitions.

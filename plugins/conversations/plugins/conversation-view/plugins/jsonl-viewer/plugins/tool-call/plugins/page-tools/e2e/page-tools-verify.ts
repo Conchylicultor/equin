@@ -4,7 +4,7 @@
  *
  * Point it at a conversation whose transcript contains the calls:
  *
- *   ./singularity run plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/page-tools/e2e/page-tools-verify.ts \
+ *   ./equin run plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/page-tools/e2e/page-tools-verify.ts \
  *     --conv conv-1786847461-nwja
  *
  * A rendered row is recognized by what only the renderer paints: content beside

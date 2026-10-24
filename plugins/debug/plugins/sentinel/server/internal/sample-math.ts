@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CLI_NAME_PATTERN } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 
 // Pure helpers for the sentinel tick — kept IO-free so they are bun-testable.
 
@@ -60,16 +61,21 @@ export function counterDelta(
   return delta < 0 ? null : delta;
 }
 
+/** A build/check/push CLI invocation, under any of the CLI's names. */
+const BUILD_PROCESS_RE = new RegExp(
+  String.raw`(^|/|\s)${CLI_NAME_PATTERN}\s+(build|check|push)\b`,
+);
+
 /**
- * Counts singularity build/check/push CLI processes in a `ps -axo command=`
- * listing. Matches the CLI invocation shapes (`./singularity build`,
- * `singularity check ...`) while excluding this scan itself (`ps`) and
+ * Counts build/check/push CLI processes in a `ps -axo command=` listing.
+ * Matches the CLI invocation shapes (`./equin build`, `equin check ...`, and
+ * the legacy `singularity` name) while excluding this scan itself (`ps`) and
  * unrelated mentions (paths containing the word inside another token).
  */
 export function countBuildProcesses(psOutput: string): number {
   let n = 0;
   for (const line of psOutput.split("\n")) {
-    if (/(^|\/|\s)singularity\s+(build|check|push)\b/.test(line)) n++;
+    if (BUILD_PROCESS_RE.test(line)) n++;
   }
   return n;
 }

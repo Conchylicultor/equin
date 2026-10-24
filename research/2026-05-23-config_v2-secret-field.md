@@ -284,7 +284,7 @@ Modify `resetConfigByPath` in `plugins/config_v2/server/internal/registry.ts` to
 - Add `plugins/config_v2/plugins/fields/plugins/secret/` entries to:
   - `web/src/plugins.ts` (web plugin registry)
   - `plugins/framework/plugins/server-core/bin/plugins.ts` (server plugin registry)
-  - Or rely on `./singularity build` auto-generation
+  - Or rely on `./equin build` auto-generation
 
 ## Backward Compatibility
 
@@ -297,9 +297,9 @@ Existing secrets stored via the old config plugin at `{ namespace: "config-field
 
 ## Verification
 
-1. `./singularity build` — confirm build succeeds
+1. `./equin build` — confirm build succeeds
 2. Open Settings → verify Google auth config appears with "Configured" state (if credentials were previously set)
 3. Clear and re-enter credentials → verify they persist across server restart
 4. Open Accounts → verify Google connect flow still works
 5. Check the browser never receives secret values (inspect `config-v2.values` resource — secret fields show as `""`)
-6. Verify `./singularity check` passes
+6. Verify `./equin check` passes

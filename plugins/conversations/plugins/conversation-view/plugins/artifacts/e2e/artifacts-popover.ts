@@ -20,9 +20,9 @@
  *   4. clicking a research row opens the doc in a file pane BESIDE the
  *      conversation (`mode: "push"`), and the transcript is still on screen.
  *
- * Manual only — nothing runs this. After `./singularity build`:
+ * Manual only — nothing runs this. After `./equin build`:
  *
- *   ./singularity run \
+ *   ./equin run \
  *     plugins/conversations/plugins/conversation-view/plugins/artifacts/e2e/artifacts-popover.ts \
  *     [--conv <conversationId>] [--out <prefix>] [--headed]
  */

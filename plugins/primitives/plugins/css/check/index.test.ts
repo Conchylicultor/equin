@@ -2,7 +2,7 @@
  * Unit tests for the pure halves of `css:message-names-primitives` — the
  * directory→component-name mapping, the "is this primitive advertised?" test,
  * and the message-block extraction. The check's own end-to-end verdict is what
- * `./singularity check css:message-names-primitives` asserts; these lock in the
+ * `./equin check css:message-names-primitives` asserts; these lock in the
  * matching rules that decide it, especially the ones that must NOT match.
  */
 

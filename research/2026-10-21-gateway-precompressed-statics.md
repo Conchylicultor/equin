@@ -11,7 +11,7 @@ demo and mobile.
 Cache headers are **already fixed in source**: `serveArtifact`
 (`gateway/proxy.go`) sends `public, max-age=31536000, immutable` since
 2026-10-12. The machine's running gateway was started 2026-10-11, so it simply
-predates that — a gateway restart (`./singularity start`) after push picks it up.
+predates that — a gateway restart (`./equin start`) after push picks it up.
 
 ## Measurements (Bun's native zlib, one core)
 
@@ -80,8 +80,8 @@ This is the nginx `gzip_static` / `brotli_static` model.
 ## Verification
 
 - `go test ./...` in `gateway/` (negotiation, q=0, Range, Vary, content type, shell gzip).
-- `./singularity test` on web-artifacts (precompress unit test).
-- `./singularity build`, then `curl -sI -H 'Accept-Encoding: br, gzip'` on the
+- `./equin test` on web-artifacts (precompress unit test).
+- `./equin build`, then `curl -sI -H 'Accept-Encoding: br, gzip'` on the
   worktree's browser-host wasm/data/js, a module and `/` (needs the new gateway
-  binary: after push, `./singularity start` restarts the gateway, then re-check
+  binary: after push, `./equin start` restarts the gateway, then re-check
   on main's `/demo`).

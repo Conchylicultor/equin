@@ -152,13 +152,13 @@ Both real sites are fixed by this plan, so the rule lands with zero disables.
 
 ## Verification
 
-- `./singularity test plugins/apps-core/plugins/surface` and
+- `./equin test plugins/apps-core/plugins/surface` and
   `plugins/primitives/plugins/css/plugins/viewport-overlay` — the new suites; plus
   `plugins/primitives/plugins/adaptive-bar` unchanged (58 bun + 17 vitest green at
   baseline).
-- `./singularity check` — `type-check`, `eslint` (the new rule runs repo-wide),
+- `./equin check` — `type-check`, `eslint` (the new rule runs repo-wide),
   `plugins-doc-in-sync`.
-- `./singularity build`, then at `http://att-1786956371-h9fr.localhost:9000`:
+- `./equin build`, then at `http://att-1786956371-h9fr.localhost:9000`:
   open a Browser tab on a loaded page, a scrolled conversation, and a page with
   unsaved text; enter fullscreen and leave with `Esc`. Nothing reloads, nothing
   scrolls back to the top, the text is still there. Confirm fullscreen still

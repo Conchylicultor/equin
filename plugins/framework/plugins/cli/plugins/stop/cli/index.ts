@@ -1,7 +1,7 @@
 import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
 
 /**
- * Stop the gateway daemon `./singularity start` left running. Where the
+ * Stop the gateway daemon `./equin start` left running. Where the
  * gateway is an OS service (launchd on macOS, a systemd user unit on Linux) it
  * relaunches when it dies, so killing its pid is not a stop — this is. A system-level operation like `start`: never part of
  * the agent workflow.

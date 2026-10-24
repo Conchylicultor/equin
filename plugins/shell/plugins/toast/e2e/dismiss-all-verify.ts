@@ -15,7 +15,7 @@
 // is dismissed by id at the end, so the run leaves the worktree as it found it.
 //
 // Usage:
-//   ./singularity run plugins/shell/plugins/toast/e2e/dismiss-all-verify.ts [--headed] [--url http://<worktree>.localhost:9000]
+//   ./equin run plugins/shell/plugins/toast/e2e/dismiss-all-verify.ts [--headed] [--url http://<worktree>.localhost:9000]
 
 import {
   boot,

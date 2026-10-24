@@ -21,7 +21,7 @@ import { releaseRunsEntityRef } from "../../core/resources";
 // - `kind` is NOT NULL with a `staged` default so every row that existed before
 //   candidates reads as what it actually was, and no consumer has to handle a
 //   null third state.
-// - `pid` is the OS pid of the detached `./singularity release` process that
+// - `pid` is the OS pid of the detached `./equin release` process that
 //   owns this run. It outlives backend restarts, so its liveness — not an
 //   in-process flag — is the source of truth for whether the release is still
 //   running. Used by the durable lock and the orphan reconciler. A server

@@ -153,7 +153,7 @@ normal flow and sizes the box; render `" "` when empty so the box never collapse
 ## Files NOT touched
 
 - **No registry edits.** `web.generated.ts` / `server.generated.ts` are regenerated from
-  the filesystem by `./singularity build`; creating `web/index.ts` is sufficient.
+  the filesystem by `./equin build`; creating `web/index.ts` is sufficient.
 - **No DB migration.** `page_blocks.data` is already `jsonb`.
 - **No edits to the editor core, markdown-shortcut plugin, or insert menus** — they read
   block handles generically from the `Editor.Block` slot (collection-consumer separation).
@@ -169,7 +169,7 @@ normal flow and sizes the box; render `" "` when empty so the box never collapse
 
 ## Verification
 
-1. `./singularity build` (regenerates registry + migrations, rebuilds, restarts; runs checks).
+1. `./equin build` (regenerates registry + migrations, rebuilds, restarts; runs checks).
    Confirm the build is green and the new plugin appears in `web.generated.ts`.
 2. Open `http://att-1780615565-rt0w.localhost:9000` → Pages app → open/create a page.
 3. **Insertion paths:**

@@ -2,6 +2,13 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 
 export default [
   {
+    rule: "cli:legacy-cli-name",
+    paths: ["server/internal/sample-math.test.ts"],
+    kind: "sanctioned",
+    reason:
+      "Feeds a `ps` line running the CLI under its legacy name: the build-process gauge must still count processes started through the old shim.",
+  },
+  {
     rule: "detached-work-safety/no-raw-set-interval",
     paths: ["server/internal/worker/entry.ts"],
     kind: "sanctioned",

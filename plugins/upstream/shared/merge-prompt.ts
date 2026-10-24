@@ -54,7 +54,7 @@ ${commitLines(d)}`,
  * {@link INVESTIGATE_PUSH_TEXT}.
  *
  * Fixed text, and deliberately short on judgement calls: the mechanical half is
- * one command (`./singularity upstream merge`), so the agent never re-derives
+ * one command (`./equin upstream merge`), so the agent never re-derives
  * the fetch/merge/refspec dance from prose. What is left is the part only a
  * person present can decide — a conflicted migration — and whether it lands,
  * which the push policy says.
@@ -63,7 +63,7 @@ export const UPSTREAM_MERGE_PROMPT = `{{updates}}
 
 Bring them into THIS worktree. You own proving the merged tree works.
 
-1. Run \`./singularity upstream merge\` in this worktree. It fetches upstream and merges
+1. Run \`./equin upstream merge\` in this worktree. It fetches upstream and merges
    \`{{ref}}\` into the branch you are on.
    This is the one sanctioned merge in this repo: rebasing the user's own trunk onto
    upstream would replay their entire history on every update and rewrite \`main\` under
@@ -71,14 +71,14 @@ Bring them into THIS worktree. You own proving the merged tree works.
 
 2. Resolve whatever conflicts it leaves in the tree.
    - **Generated files re-derive themselves.** The \`.gitattributes\` merge drivers take the
-     upstream side, and \`./singularity push\` re-runs the generators over the merged tree.
+     upstream side, and \`./equin push\` re-runs the generators over the merged tree.
      Do not hand-resolve a generated artifact.
    - **A conflicted migration is the one thing to stop on.** Two sides altering the same
      table is a decision a person makes, not a merge you resolve. Report it and wait.
-   Then \`git add\` what you resolved and run \`./singularity upstream merge --continue\`, which
+   Then \`git add\` what you resolved and run \`./equin upstream merge --continue\`, which
    concludes the merge for you.
 
-3. Run \`./singularity build\` in the background, then confirm the deploy receipt at
+3. Run \`./equin build\` in the background, then confirm the deploy receipt at
    \`${WORKTREES_DIR_DISPLAY}/<worktree>/build-status.json\` says \`"status": "ok"\`.
 
    **Migrations.** When both sides added schema migrations, the build writes one new

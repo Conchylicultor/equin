@@ -25,7 +25,7 @@
  * the tag the run prints.
  *
  * Manual only — nothing runs this automatically.
- *   ./singularity run plugins/debug/plugins/reports/e2e/reports-live-verify.ts [--headed]
+ *   ./equin run plugins/debug/plugins/reports/e2e/reports-live-verify.ts [--headed]
  */
 import type { Page } from "playwright";
 import {

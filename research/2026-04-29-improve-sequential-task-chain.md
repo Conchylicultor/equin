@@ -272,7 +272,7 @@ otherwise add it.
 
 ## Verification
 
-After `./singularity build`:
+After `./equin build`:
 
 1. **Single-task regression.** Open `+improve`, type one line, click Submit
    with chip on Sonnet. Confirm a single task lands under "Improvements" and

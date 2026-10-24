@@ -233,7 +233,7 @@ again — a bigger corpus just takes longer in the background.
 
 ## Verification (end-to-end)
 
-1. `./singularity build` from the worktree; open
+1. `./equin build` from the worktree; open
    `http://att-1783506813-hvhk.localhost:9000` → Stats → Cost pane; confirm all
    charts render and totals are sane (exact cost will differ *slightly* from the
    old proportional numbers — expected).

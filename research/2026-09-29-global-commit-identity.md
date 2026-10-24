@@ -9,7 +9,7 @@ and hostname (`epot@etiennes-macbook-pro1.home`, verified 2026-09-29), which
 has two failure modes:
 
 - a hostname with no domain part → `fatal: unable to auto-detect email address`,
-  and `./singularity push` dies mid-flight at its `git commit`;
+  and `./equin push` dies mid-flight at its `git commit`;
 - otherwise every commit carries a hostname-derived junk email, which becomes
   public the day that checkout publishes (a fork, or a clone later granted write
   access).
@@ -24,16 +24,16 @@ already measures exactly that (`resolvePublishTarget`,
 Only two commands create or rewrite commits (agents never run raw `git commit`,
 enforced by guards):
 
-1. `./singularity push` — `git commit -m` (run.ts ~471), then the rebase
+1. `./equin push` — `git commit -m` (run.ts ~471), then the rebase
    `--exec` trailer amend (~527), which rewrites the committer on every replayed
    commit. `resolvePublishTarget` is already called at ~364, before the mutex
    and before the commit.
-2. `./singularity upstream merge` / `--continue` — `git merge` (writes a merge
+2. `./equin upstream merge` / `--continue` — `git merge` (writes a merge
    commit) and `git commit --no-edit`
    (`plugins/framework/plugins/cli/plugins/upstream/cli/merge.ts`).
 
 Nothing in the app UI commits; "the app pushes" means an agent running
-`./singularity push`. So the check goes into those two commands and nowhere else
+`./equin push`. So the check goes into those two commands and nowhere else
 — not `install.sh`, not the doctor, not `mise install`.
 
 ## Design
@@ -82,7 +82,7 @@ name or email to sign them with. Set them once:
   git config --global user.name  "Your Name"
   git config --global user.email "you@example.com"
 
-then re-run ./singularity push. (Agent: ask the user — never invent an identity.)
+then re-run ./equin push. (Agent: ask the user — never invent an identity.)
 ```
 
 The author's own checkout and every normal fork already have a global identity,
@@ -119,9 +119,9 @@ message mentions it.
   and `GIT_CONFIG_NOSYSTEM=1` — local target writes the three keys and a
   subsequent `git commit` is authored `<user>@singularity.invalid`; re-running is
   a no-op; a publish target with our marker removes the keys and refuses.
-  `./singularity test plugins/infra/plugins/git/plugins/remotes`.
+  `./equin test plugins/infra/plugins/git/plugins/remotes`.
 - Extend `plugins/upstream/e2e/clone-journey.ts`: run its clone with an empty
   global config, drive a local push commit and an upstream merge — both succeed
   with the placeholder; the author-side (publisher) assertion with an empty
   global config gets the refusal.
-- `./singularity check` (boundaries, type-check, docs in sync).
+- `./equin check` (boundaries, type-check, docs in sync).

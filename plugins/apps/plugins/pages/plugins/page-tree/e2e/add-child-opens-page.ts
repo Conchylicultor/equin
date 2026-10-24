@@ -7,8 +7,8 @@
  * could not resolve to a row yet, so the page was created and the user stayed
  * on whatever was already open. It now holds the id and activates on arrival.
  *
- * Manual only. Run after `./singularity build`:
- *   ./singularity run plugins/apps/plugins/pages/plugins/page-tree/e2e/add-child-opens-page.ts [--headed]
+ * Manual only. Run after `./equin build`:
+ *   ./equin run plugins/apps/plugins/pages/plugins/page-tree/e2e/add-child-opens-page.ts [--headed]
  */
 import {
   boot,

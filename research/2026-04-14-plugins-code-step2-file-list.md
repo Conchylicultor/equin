@@ -163,7 +163,7 @@ No changes:
 
 ## Verification
 
-1. `./singularity build` succeeds.
+1. `./equin build` succeeds.
 2. `http://claude-1776167923.localhost:9000` — open a conversation with real edits.
 3. Click the edited-files toolbar button → pane appears between toolbar and terminal; terminal shrinks.
 4. Button shows active styling while pane is open.

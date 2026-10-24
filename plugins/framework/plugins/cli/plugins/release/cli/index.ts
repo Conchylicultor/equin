@@ -37,7 +37,7 @@ export default defineCliCommand({
       flags: "--platform <tag>",
       // The tags are SPELLED here rather than read from `PLATFORM_TAGS`: that
       // list lives behind `@plugins/release/core`, which reaches zod, and a
-      // declaration loads on every `./singularity` invocation
+      // declaration loads on every `./equin` invocation
       // (`cli:command-declarations-light`). Only this help string restates the
       // set — the closed list still validates `--platform` at run time, from
       // `PLATFORM_TAGS` itself, in `run.ts`.

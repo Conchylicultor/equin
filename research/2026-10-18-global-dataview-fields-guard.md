@@ -119,11 +119,11 @@ Each refusal below takes the highest rung of the fix ladder that can express it.
 
 ## Verification
 
-- `./singularity build`: it must generate **no migration**, and boot must not throw (the bind
+- `./equin build`: it must generate **no migration**, and boot must not throw (the bind
   assert passes on every served collection).
-- `./singularity check`: type-check, `plugins-doc-in-sync`, change-feed producer-writes,
+- `./equin check`: type-check, `plugins-doc-in-sync`, change-feed producer-writes,
   db-schema facet.
-- `./singularity test` on `infra/entities`, `network/live`, `primitives/data-view`,
+- `./equin test` on `infra/entities`, `network/live`, `primitives/data-view`,
   `database/change-feed`, and the converted plugins (row oracles).
 - Negative proof: the type tests' `@ts-expect-error` cases, plus a temporary
   `serveCollection` of an own-fields collection over an entity, which must throw at boot.
@@ -166,12 +166,12 @@ Collections whose wire rows were pinned keep them with `baseExposures: false`.
 - Pinned by `data-view/core/internal/data-origin-types.test.ts` and `web/internal/body-types.test.ts`.
 
 **Findings**
-- `./singularity build` generates migrations, and loads every `tables.ts`, before it regenerates `fields/server-capabilities-loader`'s `eager.generated.ts`. So a new field type's storage cannot be used in the build that adds it. I added the generated line by hand, and `fields-eager-in-sync` agrees with it.
+- `./equin build` generates migrations, and loads every `tables.ts`, before it regenerates `fields/server-capabilities-loader`'s `eager.generated.ts`. So a new field type's storage cannot be used in the build that adds it. I added the generated line by hand, and `fields-eager-in-sync` agrees with it.
 - turn-ledger's wire `id` is now the branded `TurnId`. It was `string`.
 - usage-rank's `useCount` is an int field. It was a float over an integer column.
 
 **Verification**
-- `./singularity build` passed every check, including type-check.
+- `./equin build` passed every check, including type-check.
 - The tests of every touched plugin pass: 668 vitest tests and the bun suites. One fixture in `define-extension-join.test.ts` named its test extension `origin`. That collided with the real `tasks_ext_origin` in the process-wide derived-updatedAt registry, but only when tasks-core ran in the same process. It is renamed `probe_origin`.
 - In the app, the agent manager (queue order and pin, a conversation) and a page (text from `page_block_docs`, sidebar tags and backlinks) load with no console errors.
 - Not verified: the mail reading pane (no Gmail access in this worktree) and bookmarks.

@@ -22,7 +22,7 @@
  * The run itself is an `e2e` op in the same namespace, so the banner keeps
  * showing that one after step 3 — the check is that the synthetic BUILD is gone.
  *
- *   ./singularity run plugins/conversations/plugins/conversation-view/plugins/op-status/e2e/op-status-waits.ts \
+ *   ./equin run plugins/conversations/plugins/conversation-view/plugins/op-status/e2e/op-status-waits.ts \
  *     --conv <a conversation whose worktree is this checkout> [--out /tmp/op-status] [--main-reconciles]
  */
 import { mkdtempSync, rmSync } from "node:fs";

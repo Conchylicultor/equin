@@ -34,7 +34,7 @@ import { OP_KIND_IDS, type OpKind } from "@plugins/infra/plugins/worktree/core";
 // One file per op (not per (worktree, kind)): two checks in one worktree are two
 // markers, so neither overwrites the other and every reader sees both.
 //
-// Consumers: `./singularity await`, the stop guard, and the op-store orphan
+// Consumers: `./equin await`, the stop guard, and the op-store orphan
 // reconciler. Markers are keyed
 // on the checkout's namespace, which every writer (`build` / `push` / direct
 // ops) and reader agrees on.
@@ -268,7 +268,7 @@ export async function probeWorktreeOp(
 //
 // The one scan, so the questions asked of these markers — "is anything running
 // here" (the status reconciler), "what is running everywhere" (the stop guard)
-// and "is MY op still running" (`./singularity await`) — read the directory the
+// and "is MY op still running" (`./equin await`) — read the directory the
 // same way and reap on the same rule.
 export async function listWorktreeOps(slug: string): Promise<WorktreeOpInfo[]> {
   const dir = opsDir(slug);

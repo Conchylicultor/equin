@@ -120,15 +120,15 @@ Not part of this change; this change ships the primitive plus tests.
 
 ## Verification
 
-- `./singularity test plugins/primitives/plugins/data-view` — new cases in
+- `./equin test plugins/primitives/plugins/data-view` — new cases in
   `web/__tests__/` (pattern: `toolbar-arrangement.test.tsx`):
   - hosted frame receives `options`/`body`; no sticky band is rendered;
   - opening `options` shows search + applicable controls, and the switcher only
     when >1 instances (none when pinned);
   - badge counts an active filter and a non-empty query;
   - loading and no-views branches render through the frame with `options: null`.
-- `./singularity check type-check` (and full `check` via build).
-- `./singularity build`, then temporarily switch one small existing DataView
+- `./equin check type-check` (and full `check` via build).
+- `./equin build`, then temporarily switch one small existing DataView
   (e.g. `plugins/build/web/components/build-popover-content.tsx`) to a hosted
   frame locally, screenshot with the e2e `screenshot.ts --click` on the trigger
   to confirm the panel opens and filters apply; revert before review.

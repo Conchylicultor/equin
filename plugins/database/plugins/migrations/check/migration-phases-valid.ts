@@ -185,7 +185,7 @@ const check: Check = {
       message: `phased migration(s) the runner would refuse:\n${errors.map((e) => `  ${e}`).join("\n")}`,
       hint:
         "Schema migrations are generator output — never hand-edit one. Regenerate this branch's with\n" +
-        "  ./singularity build --reset-migration --migration-name <slug>\n" +
+        "  ./equin build --reset-migration --migration-name <slug>\n" +
         "which re-phases it and re-claims the branch's data migrations. See\n" +
         "plugins/database/plugins/migrations/CLAUDE.md → 'Phased schema migrations'.",
     };

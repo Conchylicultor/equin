@@ -9,7 +9,7 @@
 // script waits for the control to stop saying Off and reports where it landed.
 //
 // Usage:
-//   ./singularity run plugins/tasks/plugins/auto-start/e2e/auto-start-verify.ts \
+//   ./equin run plugins/tasks/plugins/auto-start/e2e/auto-start-verify.ts \
 //     --task <taskId> [--expect "Opus 5"] [--settle 60000] [--headed]
 //
 // `--task` is required — which task is armed is data this script cannot know:

@@ -27,7 +27,7 @@
 //  6. Cmd+Shift+Z re-trashes T and B (both rows gone, B's doc still readable);
 //     Cmd+Z restores them and B still renders the doc's text.
 //
-// Usage: ./singularity run plugins/page/plugins/editor/e2e/trash-block-doc-verify.ts [--url <deploy>] [--out /tmp/trash-doc]
+// Usage: ./equin run plugins/page/plugins/editor/e2e/trash-block-doc-verify.ts [--url <deploy>] [--out /tmp/trash-doc]
 import {
   agentFetch,
   arg,

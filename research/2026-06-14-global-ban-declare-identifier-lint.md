@@ -175,15 +175,15 @@ variables, so bindings-only falls out naturally.
 
 ## Verification
 
-1. `./singularity build` — regenerates `lint.generated.ts` to include the new
-   sub-plugin and runs `./singularity check` (the `eslint` + `type-check` checks
+1. `./equin build` — regenerates `lint.generated.ts` to include the new
+   sub-plugin and runs `./equin check` (the `eslint` + `type-check` checks
    pick up the rule automatically; `plugins-doc-in-sync` / `plugins-registry-in-sync`
    stay green from the regen).
 2. Negative check — confirm the rule actually fires. Temporarily add
    `const declare = {};` to any `.ts` file and run
-   `./singularity check eslint` (or `bunx eslint <file>`); expect a
+   `./equin check eslint` (or `bunx eslint <file>`); expect a
    `bun-safety/no-declare-identifier` error. Remove the temp line.
-3. Positive check — confirm no false positives: `./singularity check` is clean
+3. Positive check — confirm no false positives: `./equin check` is clean
    repo-wide (in particular `resources.ts`'s `declareResource` / `declareToken`
    are untouched).
 4. If the test file is added: `bun test plugins/framework/plugins/tooling/plugins/lint/plugins/bun-safety/lint/no-declare-identifier.test.ts`.

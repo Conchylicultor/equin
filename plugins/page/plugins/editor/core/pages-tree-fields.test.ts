@@ -5,7 +5,7 @@
  * reach the `page_blocks` entity, so every exposure of a block (starred,
  * origin, tags — pinned in their own plugins) folds into them.
  *
- * Run: `./singularity test plugins/page/plugins/editor/core/pages-tree-fields.test.ts`.
+ * Run: `./equin test plugins/page/plugins/editor/core/pages-tree-fields.test.ts`.
  */
 
 import { describe, expect, test } from "bun:test";

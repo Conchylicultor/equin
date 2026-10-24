@@ -223,8 +223,8 @@ consumption path with eyes open; Stage A's own unit tests populate the registry 
   `collectContributions([{ id: "t", contributions: [Fields.Storage({ type: intFieldType, build })] }])`
   then asserts `resolveFieldStorage("int")` returns the builder and `resolveFieldStorage("number")`
   (no contribution) returns `undefined`.
-- **Build + checks.** `./singularity build` (regenerates the plugin registries + autogen docs for the
-  new plugins) then `./singularity check` — `type-check`, `plugin-boundaries`, `plugins-registry-in-sync`,
+- **Build + checks.** `./equin build` (regenerates the plugin registries + autogen docs for the
+  new plugins) then `./equin check` — `type-check`, `plugin-boundaries`, `plugins-registry-in-sync`,
   `plugins-doc-in-sync` all green. **No new migration** is generated (no `tables.ts`/`schema.ts`
   added), so `migrations-in-sync` stays clean.
 - **No consumer / no UI surface to click** in this stage — correctness is the unit tests + a green

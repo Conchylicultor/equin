@@ -7,7 +7,7 @@
 // (`[data-pane-id]`) at each step.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/agent-manager/plugins/pages-nav/e2e/pages-tree-verify.ts \
+//   ./equin run plugins/apps/plugins/agent-manager/plugins/pages-nav/e2e/pages-tree-verify.ts \
 //     --conv <conversationId> [--url http://<worktree>.localhost:9000] [--headed]
 
 import {

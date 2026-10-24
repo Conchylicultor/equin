@@ -234,14 +234,14 @@ Order in `server/src/plugins.ts`: place `configPlugin` before `statsCommitsPlugi
 
 ## Verification
 
-1. `./singularity build` — triggers `drizzle-kit generate` (creates migration for `config` table), rebuilds web + server, restarts.
+1. `./equin build` — triggers `drizzle-kit generate` (creates migration for `config` table), rebuilds web + server, restarts.
 2. Open `http://<worktree>.localhost:9000` (clickable).
 3. Click **Settings** in the System sidebar group → page renders with "Stats: Commits" section containing "Excluded commit SHAs" textarea prefilled with the two default SHAs.
 4. Remove one SHA, wait 300ms → PATCH fires → resource notifies → reload Stats page → "Lines changed over time" chart now includes that commit's line delta.
 5. Open a second browser tab on Settings → edit value in tab A → tab B's value updates live (push notification path).
 6. Delete the custom value (reset) → defaults restore.
-7. `./singularity check` passes (no migration drift).
-8. On a fresh worktree fork (`./singularity push` then new worktree), the config table and values inherit from main — Settings page shows the same state as main had at fork time.
+7. `./equin check` passes (no migration drift).
+8. On a fresh worktree fork (`./equin push` then new worktree), the config table and values inherit from main — Settings page shows the same state as main had at fork time.
 
 Edge-case smoke checks:
 

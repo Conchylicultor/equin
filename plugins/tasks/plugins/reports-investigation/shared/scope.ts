@@ -49,7 +49,7 @@ Before debugging, read the \`debug\` skill (\`.claude/skills/debug/SKILL.md\`) â
 
 1. Find the root cause. Reproduce it if you can, and quote the evidence (log lines, trace, query) that pins it.
 2. Fix the cause, not the symptom â€” take the highest rung of the fix ladder in CLAUDE.md.
-3. Run \`./singularity build\` and confirm the reports stop recurring.
+3. Run \`./equin build\` and confirm the reports stop recurring.
 4. If you cannot find or fix the cause, write up what you learned and raise a flag.
 
 {{pushPolicy}}`;

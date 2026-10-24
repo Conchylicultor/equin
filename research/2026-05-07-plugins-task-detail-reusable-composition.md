@@ -86,7 +86,7 @@ Replace bare `<TaskDetail>` with `<TaskTreeDetail>`. Use `key={taskId}` to reset
 
 ## Verification
 
-1. `./singularity build` — must compile and deploy
+1. `./equin build` — must compile and deploy
 2. Open the standalone Tasks view (`/tasks`) — graph should render above sections (now scrolling with content instead of pinned)
 3. Open a conversation → click the Tasks toolbar button → verify tree + graph + detail all render as before
 4. In a conversation transcript, click a `task-<id>` chip → verify the side pane now shows tree + graph + detail (was only showing detail before)

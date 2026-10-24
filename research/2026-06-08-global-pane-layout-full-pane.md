@@ -268,11 +268,11 @@ gains an optional prop (existing mounts unaffected), `PaneOverlayHost` stays.
 Only Sonata's own files change. New checks to expect to pass: plugin-boundaries
 (host imports two sibling renderers via their `web` barrels — legal), no authored
 `id:` in barrels, `text-3xs` not `text-[10px]`, plugins-doc-in-sync (run
-`./singularity build`).
+`./equin build`).
 
 ## Verification (e2e)
 
-`./singularity build`, then adapt `e2e/screenshot.mjs` into a flow against
+`./equin build`, then adapt `e2e/screenshot.mjs` into a flow against
 `http://<worktree>.localhost:9000`:
 1. `/sonata` → library renders (empty route → index pane).
 2. Click a song card → assert `page.url()` matches `/sonata/song/<id>`, the

@@ -66,4 +66,4 @@ Change the PreToolUse hook command:
 1. **Type-check:** The tooling `tsconfig.json` already includes `plugins/*/core` and `plugins/*/bin` — the new files will be picked up automatically.
 2. **Hook fires:** In a fresh Claude Code session, run any Bash command. The PreToolUse hook must still intercept (e.g. running `find /` should be blocked by the find guard).
 3. **No stale refs:** `rg 'tooling/src/guard' --type ts` should return nothing.
-4. **Build:** `./singularity build` succeeds (guards contribute no runtime plugins, so `plugins.generated.ts` should be unchanged).
+4. **Build:** `./equin build` succeeds (guards contribute no runtime plugins, so `plugins.generated.ts` should be unchanged).

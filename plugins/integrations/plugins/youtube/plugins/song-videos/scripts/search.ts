@@ -1,6 +1,6 @@
 // ─── Find a song's videos from a terminal ────────────────────────────────────
 //
-//   ./singularity run plugins/integrations/plugins/youtube/plugins/song-videos/scripts/search.ts <artist> <title>
+//   ./equin run plugins/integrations/plugins/youtube/plugins/song-videos/scripts/search.ts <artist> <title>
 //
 // The live `youtube-search` source end to end — yt-dlp's flat search (the real
 // Python entry), the oEmbed embeddability check and the ranking — through the
@@ -23,7 +23,7 @@ if (artist === undefined || title === undefined) {
 }
 
 // A script holds no ExecContext: yt-dlp is installed through a
-// `./singularity deps install` child instead, and the one source here takes
+// `./equin deps install` child instead, and the one source here takes
 // the `Ready` proof directly, never the context.
 const ready = await ensureDepViaCli(ytDlpDep, {
   stdio: "inherit",

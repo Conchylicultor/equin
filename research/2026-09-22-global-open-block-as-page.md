@@ -173,7 +173,7 @@ It has two consumers:
 
 ## Verification
 
-- Unit tests, run with `./singularity test plugins/page/plugins/editor`:
+- Unit tests, run with `./equin test plugins/page/plugins/editor`:
   - `subtreeOf` flatten cases, plus a fuzz check that the subtree's flat list
     equals the matching run of the full flatten;
   - `zoom-scope.test.ts`, one case per op kind: an admitted op never shrinks
@@ -184,7 +184,7 @@ It has two consumers:
     paste, and the gone state after deleting the root.
 - The artifacts `extract.test.ts` stays green, plus a section test for block
   rows if a jsdom harness exists there.
-- `./singularity build`, then screenshot `--path /block/<id>` for a TODO card
+- `./equin build`, then screenshot `--path /block/<id>` for a TODO card
   in the worktree DB. Then click the ⋮⋮ menu → **Open as page** on a page, and
   check that a column opens beside it showing only that block, and that an
   edit there shows up on the full page.

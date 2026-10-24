@@ -285,10 +285,10 @@ Label derivation: camelCase → sentence case. `excludedShas` → `"Excluded sha
 
 Same as v1:
 
-1. `./singularity build` — generates migration for `config` table, rebuilds, restarts.
+1. `./equin build` — generates migration for `config` table, rebuilds, restarts.
 2. Open `http://<worktree>.localhost:9000` → click Settings → "Stats: Commits" section shows "Excluded shas" textarea with the 2 default SHAs.
 3. Remove one SHA → debounced PATCH → `configResource` push → Stats charts reflect the new filter within 30s (cache TTL).
 4. Two tabs: edit in A → B updates live; active input in A not overwritten by its own echo.
 5. Empty/whitespace/duplicate lines in textarea normalized.
-6. `./singularity check` passes.
+6. `./equin check` passes.
 7. Fresh worktree fork inherits whatever main's config table holds at fork time.

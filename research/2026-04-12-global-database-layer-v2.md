@@ -105,7 +105,7 @@ Two plugins could define a table called `"items"`. Convention: **prefix table na
 - **Cleanup:** `deleteConversation()` in the same file runs `DROP DATABASE "<name>";` after killing the tmux session.
 - The DB calls live in a small helper (`plugins/conversations/server/internal/db-fork.ts`) that imports the shared `postgres` client from `server/src/db/client.ts` — keeps the tmux module focused.
 - Server reads `SINGULARITY_WORKTREE` (set by the gateway) to pick which database to connect to.
-- Writes in a worktree stay local to its database. `./singularity push` only merges code + migration files.
+- Writes in a worktree stay local to its database. `./equin push` only merges code + migration files.
 - On main's server restart after a merge, Drizzle applies any new migrations to the `main` database.
 
 ### Prod
@@ -115,7 +115,7 @@ Two plugins could define a table called `"items"`. Convention: **prefix table na
 ## Parallel-agent migrations
 
 - Agents never write migrations by hand. They edit `schema.ts` in their plugin.
-- `./singularity push` runs `drizzle-kit generate` before pushing. Output: a migration file under `server/src/db/migrations/`.
+- `./equin push` runs `drizzle-kit generate` before pushing. Output: a migration file under `server/src/db/migrations/`.
 - **Filename = content-hash**, not timestamp. Two agents independently adding different columns produce different hashes → no filename collision on merge.
 - **Additive-only by default.** Adding tables/columns composes trivially. Drops/renames require a CLI opt-in flag; they can't auto-merge.
 - **Journal conflict:** Drizzle's `_meta/_journal.json` is a derived file. Regenerate it from the migration set at build time rather than relying on git merge.
@@ -150,9 +150,9 @@ Two plugins could define a table called `"items"`. Convention: **prefix table na
 
 1. `bun install` at repo root. Drizzle + `postgres` resolve.
 2. Start Postgres (compose or brew). `createdb main`.
-3. `./singularity build` in main. Server boots, migrations run, `smoketest` table exists in `main` db.
+3. `./equin build` in main. Server boots, migrations run, `smoketest` table exists in `main` db.
 4. `POST /api/smoketest` with a note; `GET` returns it.
 5. In the UI, create a new conversation (triggers `createConversation` → git worktree + tmux + `CREATE DATABASE TEMPLATE`). Verify `psql -l` shows the `<conversation-name>` database. Hit `GET /api/smoketest` on `http://<conversation>.localhost:9000` — the row from step 4 is present (forked).
 6. `POST` a different note in the conversation's server. In main, `GET` — new note is **not** visible (fork is isolated). Delete the conversation — `psql -l` no longer lists the db.
-7. In the worktree, add a column to `smoketest` schema. `./singularity push`. After main server restarts, column exists in `main` db; old row has the default.
+7. In the worktree, add a column to `smoketest` schema. `./equin push`. After main server restarts, column exists in `main` db; old row has the default.
 8. Parallel-agent smoke test: two worktrees each add a different column to `smoketest`. Merge both. Both migrations apply to `main`; both columns present.

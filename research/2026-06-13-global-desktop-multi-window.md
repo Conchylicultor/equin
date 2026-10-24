@@ -133,7 +133,7 @@ the `usePaneStore()` it already has), Sonata/Story back buttons, the various
 
 ### Stage 1 verification
 
-- `./singularity build`, then in tabs mode confirm **no behavior change**:
+- `./equin build`, then in tabs mode confirm **no behavior change**:
   switch tabs, open/close panes, maximize a Miller column, toggle theme per app
   — all identical to before.
 - `bun run test:dom plugins/primitives/plugins/pane` and any
@@ -235,7 +235,7 @@ arrangement variant.
 
 ### Stage 2 verification
 
-- `./singularity build`. Open the theme customizer → Surface arrangement →
+- `./equin build`. Open the theme customizer → Surface arrangement →
   Desktop. Confirm switching is live and reversible (tabs ⇄ desktop) with no
   reload.
 - Drive with `e2e/screenshot.mjs`: open 2–3 apps as windows, drag/resize,

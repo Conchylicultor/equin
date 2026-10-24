@@ -48,5 +48,5 @@ inapplicable from its read, at runtime):
 
 ## Verification
 
-- `./singularity test` on health-report, claude-cli/availability, runtime-sdk.
-- `./singularity build` (type-check + lint).
+- `./equin test` on health-report, claude-cli/availability, runtime-sdk.
+- `./equin build` (type-check + lint).

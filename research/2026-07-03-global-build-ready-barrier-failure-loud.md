@@ -1,8 +1,8 @@
-# Make `./singularity build` fail loudly when the new backend fails its ready barrier
+# Make `./equin build` fail loudly when the new backend fails its ready barrier
 
 ## Context
 
-`./singularity build` restarts the worktree backend and then probes `/api/health`
+`./equin build` restarts the worktree backend and then probes `/api/health`
 to smoke-test the boot. Today it reports **"Deployed" with exit 0 even when the
 freshly-restarted backend never passed its `onReadyBlocking` ready barrier** — so
 a boot-blocking bug (migration failure, `rebuildTriggers` failure, the new
@@ -46,7 +46,7 @@ adopted it.
 
 ### Intended outcome
 
-`./singularity build` exits **non-zero** whenever, after the build, the worktree
+`./equin build` exits **non-zero** whenever, after the build, the worktree
 is *not* serving the newly-built backend — i.e. the new process never passed its
 ready barrier and the gateway kept serving the old one. This closes the contract
 for **every** `onReadyBlocking` invariant, not just the change-feed one.
@@ -185,18 +185,18 @@ implementation and mirror the existing broken-path precedent.
 
 ## Verification
 
-1. `./singularity build` on this branch with **no** boot regression → still prints
+1. `./equin build` on this branch with **no** boot regression → still prints
    "Deployed", exit 0. Confirm the log shows the new `startedAt`-advance probe
    passing quickly.
 2. **Inject a boot-blocking failure** to prove the loud path. Temporarily make the
    `database` plugin's `onReadyBlocking` throw (it is `loadBearing`, so the new
    backend crashes and the gateway keeps the old one — the exact reported mode A):
    e.g. add `throw new Error("boot-barrier smoke test")` at the top of
-   `plugins/database/server/index.ts`'s `onReadyBlocking`, then `./singularity build`.
+   `plugins/database/server/index.ts`'s `onReadyBlocking`, then `./equin build`.
    Expect: non-zero exit, a clear error naming the stale-backend / ready-barrier
    failure and echoing the gateway's restart error, **no** "Deployed" line. Revert
    the injected throw and rebuild → back to green.
-3. Sanity: `./singularity check` passes (type-check + boundaries).
+3. Sanity: `./equin check` passes (type-check + boundaries).
 
 ## Critical files
 

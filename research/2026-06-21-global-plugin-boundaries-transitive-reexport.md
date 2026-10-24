@@ -163,9 +163,9 @@ import lines (types from `tasks-core/core`, functions from `tasks/core`).
    local symbol (NOT flagged), parent→descendant proxy (flagged, no carve-out),
    and an exception entry suppressing a flagged case.
 2. **Regression-proof the gap:** temporarily restore one proxy (e.g. recreate
-   `tasks/core/types.ts`) and confirm `./singularity check plugin-boundaries`
+   `tasks/core/types.ts`) and confirm `./equin check plugin-boundaries`
    now **fails** on it (it passed before this change), then revert.
-3. After migration, `./singularity check plugin-boundaries` **passes** with
+3. After migration, `./equin check plugin-boundaries` **passes** with
    `REEXPORT_EXCEPTIONS` empty.
-4. `./singularity build` — `type-check` passes with all repointed imports
+4. `./equin build` — `type-check` passes with all repointed imports
    resolving (no dangling imports from deleted proxies).

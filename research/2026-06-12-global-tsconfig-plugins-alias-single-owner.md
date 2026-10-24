@@ -129,7 +129,7 @@ new shared alias is added to base later, the check covers it automatically with 
 edits.
 
 Also add the plugin's `CLAUDE.md` (the `plugins-have-claudemd` check requires it) and
-let `./singularity build` regenerate the plugin docs.
+let `./equin build` regenerate the plugin docs.
 
 ## Critical files
 
@@ -142,22 +142,22 @@ let `./singularity build` regenerate the plugin docs.
 ## Verification
 
 1. **Type-check (tsc, all targets):**
-   `./singularity check type-check` — must stay green (proves every project still
+   `./equin check type-check` — must stay green (proves every project still
    resolves `@plugins/*` via inheritance).
 2. **bun docgen / plugin tree (the path that originally broke):**
-   `./singularity build` — the docgen / `barrel-import` step rebuilds the plugin tree
+   `./equin build` — the docgen / `barrel-import` step rebuilds the plugin tree
    under bun; a regression here is exactly the original `Cannot find module @plugins/...`.
    To target the failure class directly, confirm a `web-core/` file importing a plugin
    still resolves: temporarily run the barrel-import/docgen entry, or rely on the build's
    plugins-doc generation which walks `web-core/`.
 3. **New guard check passes on the cleaned tree, fails on a duplicate:**
-   - `./singularity check tsconfig-alias-single-owner` → green after step 1–3.
+   - `./equin check tsconfig-alias-single-owner` → green after step 1–3.
    - Manually re-add `"paths": { "@plugins/*": [...] }` to any leaf tsconfig and rerun
      → the check must fail and name that file. Revert.
-4. **Full sweep:** `./singularity check` — all checks green (includes
+4. **Full sweep:** `./equin check` — all checks green (includes
    `migrations-in-sync`, `plugins-doc-in-sync`, `plugins-have-claudemd` for the new
    sub-plugin, and `type-check`).
-5. **App boots:** `./singularity build` succeeds and `http://<worktree>.localhost:9000`
+5. **App boots:** `./equin build` succeeds and `http://<worktree>.localhost:9000`
    loads (Vite alias path, unaffected, sanity check).
 
 ## Notes / risks

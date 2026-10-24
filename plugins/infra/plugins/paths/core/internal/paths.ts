@@ -397,7 +397,7 @@ export const worktreeArtifacts = {
   buildStatus: (name: Namespace): string =>
     join(worktreeDataDir(name), "build-status.json"),
   /**
-   * One `./singularity test` run's record: which runners ran and which test
+   * One `./equin test` run's record: which runners ran and which test
    * cases failed. `test-status-<opId>.json`, written when the run STARTS
    * (`status: "running"`) and again with its verdict.
    *
@@ -413,7 +413,7 @@ export const worktreeArtifacts = {
   testReport: (name: Namespace, opId: string, runner: string): string =>
     join(worktreeDataDir(name), `test-${opId}-${runner}.xml`),
   /**
-   * This checkout's LAST `./singularity deps upgrade <updater>` — one updater named (or its alias
+   * This checkout's LAST `./equin deps upgrade <updater>` — one updater named (or its alias
    * `toolchain upgrade`, for `mise`): what it moved, the failures before and
    * after, and the verdict. One fixed path per updater, written at start, like
    * `buildStatus`.
@@ -421,7 +421,7 @@ export const worktreeArtifacts = {
   depsUpgrade: (name: Namespace, updaterId: string): string =>
     join(worktreeDataDir(name), `deps-upgrade-${updaterId}.json`),
   /**
-   * This checkout's LAST `./singularity deps upgrade` with no updater named —
+   * This checkout's LAST `./equin deps upgrade` with no updater named —
    * every updater moved together, behind one baseline and one candidate run.
    */
   depsUpgradeBatch: (name: Namespace): string =>

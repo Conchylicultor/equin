@@ -13,9 +13,9 @@
 // The wash is asserted by its class (`bg-info/10`, the agent-notes card's own),
 // which is what the decoration contributes; the screenshots are for the eye.
 //
-// Manual only. Requires `./singularity build` first, and a REAL conversation id
+// Manual only. Requires `./equin build` first, and a REAL conversation id
 // for the chip to name (a made-up id resolves to nothing and the chip shimmers).
-// Usage: ./singularity run plugins/page/plugins/annotations/plugins/agent-notes/plugins/agent-page/e2e/agent-page-ui-verify.ts \
+// Usage: ./equin run plugins/page/plugins/annotations/plugins/agent-notes/plugins/agent-page/e2e/agent-page-ui-verify.ts \
 //          --conversation <conv-id> [--out /tmp/agent-page-ui]
 import type { Locator, Page } from "playwright";
 import {

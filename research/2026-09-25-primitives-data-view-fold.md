@@ -98,9 +98,9 @@ Naming note: `grouped-sections.test.tsx` already uses "Fold" as a label for the 
 
 ## Verification
 
-1. Run `./singularity test plugins/primitives/plugins/data-view`.
-2. Run `./singularity build` in the background, then `./singularity await`.
-3. Screenshot the sidebar: `./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --path /agents --out /tmp/fold`. Check that the Done section ends in `… N more` and that clicking it reveals the older rows (`--click "more"`).
+1. Run `./equin test plugins/primitives/plugins/data-view`.
+2. Run `./equin build` in the background, then `./equin await`.
+3. Screenshot the sidebar: `./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --path /agents --out /tmp/fold`. Check that the Done section ends in `… N more` and that clicking it reveals the older rows (`--click "more"`).
 4. Check that Pinned and Disconnected never fold, that searching shows old matches, and that opening an old conversation by URL keeps it visible.
 5. Check the gear → Fold rows editor: edit, then clear, and confirm the list updates.
 6. Caveat to check: if this worktree already has a saved Queue view row, the authored default may not apply. Confirm how view-core merges authored defaults with saved rows, and note the result in the hand-off.

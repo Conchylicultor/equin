@@ -91,7 +91,7 @@ change to `<` does not regress the prime, which fires only at `entry.version ===
 
 ## Verification
 
-- `type-check` + `eslint` clean; `./singularity build`.
+- `type-check` + `eslint` clean; `./equin build`.
 - Reason through: cold prime (entry -1) still applies; invalidate refetch (equal version)
   applies; a stale late HTTP (older than an applied WS value) is dropped and the newer value
   retained.

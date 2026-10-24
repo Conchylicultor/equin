@@ -18,7 +18,7 @@
  * Refuses main (it seeds rows into the deploy's database).
  *
  * Manual only — nothing runs this automatically.
- *   ./singularity run plugins/apps/plugins/studio/plugins/compositions/plugins/release/e2e/history-live-verify.ts [--headed]
+ *   ./equin run plugins/apps/plugins/studio/plugins/compositions/plugins/release/e2e/history-live-verify.ts [--headed]
  */
 import { randomBytes } from "node:crypto";
 import type { Page } from "playwright";

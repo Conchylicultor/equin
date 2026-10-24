@@ -45,7 +45,7 @@ export const ConversationSchema = createSelectSchema(_conversations, {
 });
 ```
 
-**Migration** — regenerated automatically by `./singularity build` (never run `drizzle-kit generate` manually, per CLAUDE.md). Expected form:
+**Migration** — regenerated automatically by `./equin build` (never run `drizzle-kit generate` manually, per CLAUDE.md). Expected form:
 
 ```sql
 ALTER TABLE "conversations" ADD COLUMN "model" text DEFAULT 'opus' NOT NULL;
@@ -185,11 +185,11 @@ Add the new `model` plugin entry under the `conversation-view` plugins tree.
 
 ## Verification
 
-1. `./singularity build` — confirms a new migration is generated and commits it in the same PR.
+1. `./equin build` — confirms a new migration is generated and commits it in the same PR.
 2. Open `http://<worktree>.localhost:9000/` — sidebar shows **+Sonnet** and **+Opus**.
 3. Click **+Opus**, wait for the pane to start, and verify:
    - The conversation title shows a purple `opus` chip next to the green status chip.
    - `tmux list-sessions` (inside the worktree) shows a session running `claude --model opus`.
 4. Click **+Sonnet**, verify sky-blue chip and `claude --model sonnet` command line.
 5. Reload the page: chips persist (value came from the DB, not memory).
-6. `./singularity check` — migrations-in-sync passes.
+6. `./equin check` — migrations-in-sync passes.

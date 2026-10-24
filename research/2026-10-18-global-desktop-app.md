@@ -47,7 +47,7 @@ plugins/apps/plugins/desktop/            namespace; data-dirs/index.ts only
     └── wallpaper/    ← moved from floating/plugins/wallpaper (+ built-in source)
 ```
 
-Moves use `./singularity plugin move` (rewrites every reference). The placement id stays `"floating"` so persisted
+Moves use `./equin plugin move` (rewrites every reference). The placement id stays `"floating"` so persisted
 surface modes keep working; its label becomes "Desktop". `apps/plugins/*` may import `apps-core/*/web`, so
 `Surface.Placement(…)` contributed from `desktop/windows` is legal.
 
@@ -217,8 +217,8 @@ every hover and never kept. Known limit: canvases and iframes come out blank (So
 
 ## Verification
 
-- `./singularity build` (checks: boundaries, `paths:app-data-dirs`, `plugins-registry-in-sync`, type-check).
-- `./singularity test plugins/apps/plugins/desktop plugins/apps-core`: move the existing floating tests; add unit
+- `./equin build` (checks: boundaries, `paths:app-data-dirs`, `plugins-registry-in-sync`, type-check).
+- `./equin test plugins/apps/plugins/desktop plugins/apps-core`: move the existing floating tests; add unit
   tests for shelf grouping (active-tab app, pinned/running order), mode-entry activation, and the mockup snap
   thresholds in `use-snap.test.ts`.
 - New `plugins/apps/plugins/desktop/e2e/desktop-verify.ts`. It enters desktop mode from the app menu and asserts:

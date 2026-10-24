@@ -106,12 +106,12 @@ Boundary check: `toolchain/core` → `updates/core` and `uv-updater/check` → `
 
 ## Verification
 
-- Unit tests (`./singularity test` on `updates`, `npm`, `toolchain`, `uv-updater`):
+- Unit tests (`./equin test` on `updates`, `npm`, `toolchain`, `uv-updater`):
   - `hold.ts`: `heldBy` with `version` and with `below` under an injected order; inert on the day after `until`; `holdProblems` at exactly +90 and at +91 days.
   - `versions.test.ts`: `upgradeTarget` and `lockProblems` with an active hold and with an expired one.
   - `uv-updater.test.ts`: `newestCpython` and the held CPython row.
   - The existing npm `plan` and `coherence` tests, after the `names` rename.
   - The runner test: an updater whose `holds.read` returns an out-of-bound hold aborts with the file named.
-- `./singularity check toolchain:resolved deps-npm:policy deps-uv:holds`, then the full `./singularity build`.
+- `./equin check toolchain:resolved deps-npm:policy deps-uv:holds`, then the full `./equin build`.
 - Temporarily set a hold's `until` to 120 days out in `tools.ts`, confirm `toolchain:resolved` fails with the message, then revert.
-- Run `./singularity deps upgrade uv --only <x>` in the worktree: confirm the cpython 3.15.0 row shows as HELD until 2026-11-15 and is not moved.
+- Run `./equin deps upgrade uv --only <x>` in the worktree: confirm the cpython 3.15.0 row shows as HELD until 2026-11-15 and is not moved.

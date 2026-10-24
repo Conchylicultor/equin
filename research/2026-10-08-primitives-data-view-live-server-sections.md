@@ -147,8 +147,8 @@ No change in `all-conversations`: `model` is already a filterable `liveText()`.
   enum → one groups read with the full `where`; a section read only once
   expanded + in view, with `eq`/`isEmpty` ANDed; collapse unsubscribes; a
   non-lowerable field is not offered for group-by; full-at-100 shows truncation.
-- `./singularity test plugins/primitives/plugins/data-view`
-- `./singularity build`, then screenshot
+- `./equin test plugins/primitives/plugins/data-view`
+- `./equin build`, then screenshot
   `/agents/all-conversations` grouped by Model (`e2e-harness/e2e/screenshot.ts`):
   every model listed with counts; expanding a non-Opus model shows its rows and
   pages on scroll. Spot-check another live DataView (Runs, Events) grouped by an

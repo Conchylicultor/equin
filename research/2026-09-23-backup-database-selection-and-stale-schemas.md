@@ -112,16 +112,16 @@ classifyDatabase(name, marker: CompositionMarker | null): DbKind
 
 ## Verification
 
-- `./singularity test plugins/database/plugins/admin` — new `backup-plan.test.ts` cases:
+- `./equin test plugins/database/plugins/admin` — new `backup-plan.test.ts` cases:
   - lenient keeps the linked table and reports it;
   - the chain case (A kept → B excluded, B → C excluded ⇒ both B and C kept);
   - FK to a partition leaf keeps the parent and all its leaves;
   - strict still throws `BackupPlanError`;
   - no links ⇒ `keptForLinks` is empty.
-- `./singularity test plugins/backup/plugins/sources/plugins/databases` — classifier table test: `singularity`,
+- `./equin test plugins/backup/plugins/sources/plugins/databases` — classifier table test: `singularity`,
   `sonata`+marker, `sonata` without marker, `att-…`, `sonata.att-…`, `x__testdb`, legacy
   `page_forest_test_1_abc`, a fork temp name.
-- `./singularity test plugins/apps/plugins/mail`.
-- `./singularity build`, then run a backup from the Backup app on this worktree and check the run card:
+- `./equin test plugins/apps/plugins/mail`.
+- `./equin build`, then run a backup from the Backup app on this worktree and check the run card:
   every expected database is included, orphans are named, and there is no failed source. `query_db` on
   `backup_runs.manifest` confirms it.

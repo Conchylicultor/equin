@@ -107,7 +107,7 @@ Add a concise informational line (muted `Text` / existing primitives) above the 
 
 ## Verification
 
-1. `./singularity build` — compiles, migrations no-op (no schema change), server restarts and installs the hourly cron item (main runtime).
+1. `./equin build` — compiles, migrations no-op (no schema change), server restarts and installs the hourly cron item (main runtime).
 2. Inspect current fork count: `query_db` against `singularity` → `SELECT count(*) FROM pg_database WHERE datname LIKE 'att-%'`.
 3. Manually trigger one sweep without waiting an hour: enqueue `worktree-cleanup.reap-stale` (via the Debug → Queue surface, or a one-shot `.enqueue({})`), then re-count forks — backlog of orphaned `att-*` DBs (worktree dir gone) should collapse toward the count of live worktrees.
 4. Confirm a *recent* worktree (this agent's own `att-*`) survives: its DB still present, dir intact.

@@ -25,7 +25,7 @@ config entirely and used an `Apps.App` slot-metadata boolean instead — a stati
 per-app constant, but **not user-overridable** and not part of the config model.
 
 **Goal:** a first-class primitive that lets a plugin declare scoped defaults in
-code, has codegen emit per-scope origins, propagates them on `./singularity build`
+code, has codegen emit per-scope origins, propagates them on `./equin build`
 so they apply on a fresh install, resolves them at runtime, and keeps them
 **user-overridable** through the existing origin/override/conflict machinery.
 
@@ -232,7 +232,7 @@ No change expected: `config-origins-in-sync` check, the web boot tasks
   in `defineConfig`; codegen never emits them (existing strip). §1.
 - **Pre-build window:** a code default declared but not yet propagated — client
   optimistically shows the (intended) code default while the server returns base
-  until `./singularity build`. Self-heals on build; acceptable.
+  until `./equin build`. Self-heals on build; acceptable.
 - **Schema evolution:** scoped origins get default-backfill + the check's schema
   pass for free; a new field marks scoped overrides stale per-scope via R8.
 
@@ -248,11 +248,11 @@ No change expected: `config-origins-in-sync` check, the web boot tasks
 1. Add a temporary `scope: "app"` config with
    `scopeDefaults: { "agent-manager": { … } }` to a test descriptor (or wire the
    real `captureUrlByDefault` as a config field).
-2. `./singularity build` — confirm `config/<hier>/@app/agent-manager/<name>.origin.jsonc`
+2. `./equin build` — confirm `config/<hier>/@app/agent-manager/<name>.origin.jsonc`
    is generated and committed-clean, and that
    `~/.singularity/config/<wt>/<hier>/@app/agent-manager/<name>.origin.jsonc` is
    propagated.
-3. `./singularity check config-origins-in-sync` — passes; then hand-edit the
+3. `./equin check config-origins-in-sync` — passes; then hand-edit the
    scoped origin and confirm it fails (sync + orphan + schema coverage).
 4. Server: `mcp__singularity__query_db` not needed — instead read via a scoped
    `getConfig` log, or assert through the UI: open the app at

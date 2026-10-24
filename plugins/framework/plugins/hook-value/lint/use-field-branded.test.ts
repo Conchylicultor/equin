@@ -1,6 +1,6 @@
 /**
  * Tests for `hook-value/use-field-branded`. Run with
- * `./singularity test plugins/framework/plugins/hook-value`.
+ * `./equin test plugins/framework/plugins/hook-value`.
  *
  * Same typed RuleTester harness as `hook-binding-name.test.ts` (see
  * `plugins/primitives/plugins/passthrough/lint/no-unanchored-passthrough.test.ts`

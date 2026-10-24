@@ -121,8 +121,8 @@ Discriminated-union loading hooks and effect-driven panes keep their structure; 
 
 ## Verification
 
-1. `./singularity build` — regenerates docs/migrations, builds web + server, restarts. Adding query schemas / a blob response changes no exported symbol names, so `plugins-doc-in-sync` should stay green (build regenerates regardless).
-2. `./singularity check` — must pass `eslint` (the `no-raw-web-fetch` rule now runs against the migrated files with an empty burndown list) and `endpoints:typed-web-fetches` / `endpoints:no-raw-json-handlers`.
+1. `./equin build` — regenerates docs/migrations, builds web + server, restarts. Adding query schemas / a blob response changes no exported symbol names, so `plugins-doc-in-sync` should stay green (build regenerates regardless).
+2. `./equin check` — must pass `eslint` (the `no-raw-web-fetch` rule now runs against the migrated files with an empty burndown list) and `endpoints:typed-web-fetches` / `endpoints:no-raw-json-handlers`.
 3. `rg -n "fetch\(|fetchWithRetry\(" <each migrated file>` → zero raw matches (only `fetchEndpoint`).
 4. Manual spot-checks at `http://<worktree>.localhost:9000` via `e2e/screenshot.mjs`:
    - Studio → a table detail pane: columns / indexes / FKs / row-count / sample-rows sections populate.

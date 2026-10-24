@@ -122,7 +122,7 @@ Delete the inline `parseGrid` (lines ~49–84) and
 ### 4. Docs / description
 
 Update the `description` string in `index.ts` to mention the mini-language
-(groups + holds); `./singularity build` regenerates the plugin `CLAUDE.md`
+(groups + holds); `./equin build` regenerates the plugin `CLAUDE.md`
 autogen block and the compact/details docs from it.
 
 ### 5. Theory vocabulary (discovered during implementation)
@@ -157,7 +157,7 @@ Reused, unchanged: `parseChordSymbol` (`theory/core`), `ChordEvent` / voicings /
 
 No test runner exists in the repo, so verify in the live app:
 
-1. `./singularity build` from the worktree.
+1. `./equin build` from the worktree.
 2. Open `http://att-1780584938-vcjn.localhost:9000` → Sonata → add a **Chord
    Grid** source.
 3. Paste the target 4-line grid; confirm the loader shows the right chord count

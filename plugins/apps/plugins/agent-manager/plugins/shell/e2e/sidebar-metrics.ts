@@ -3,7 +3,7 @@
 // status dot with its x offset from the sidebar's edge, its box, and its font
 // and colour. Read-only.
 //
-//   ./singularity run plugins/apps/plugins/agent-manager/plugins/shell/e2e/sidebar-metrics.ts \
+//   ./equin run plugins/apps/plugins/agent-manager/plugins/shell/e2e/sidebar-metrics.ts \
 //     [--path /agents] [--url http://<ns>.localhost:9000/agents] [--color-scheme dark]
 
 import {

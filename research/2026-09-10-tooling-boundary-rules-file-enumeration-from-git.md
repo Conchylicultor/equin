@@ -103,7 +103,7 @@ already see those files, so they are probably clean.
 
 ## Verification
 
-1. `./singularity check boundary-rules`: green on the clean worktree.
+1. `./equin check boundary-rules`: green on the clean worktree.
 2. Probe, gitignored side: write `plugins/build/.cache/probe.ts` (and a
    `dist.x/` variant) with a `core → web` cross-plugin import. The old walk
    would scan it and fail. The new check passes, because git does not list it.
@@ -111,6 +111,6 @@ already see those files, so they are probably clean.
    `plugins/build/core/probe.ts` with a `core → web` cross-plugin import. The
    old walk skipped the directory. The new check fails with a runtime-isolation
    violation. Delete both probes afterwards.
-4. `./singularity check eslint` (or `type-check`): `no-adhoc-repo-walk` stays
+4. `./equin check eslint` (or `type-check`): `no-adhoc-repo-walk` stays
    green with the entry removed.
-5. `./singularity build`.
+5. `./equin build`.

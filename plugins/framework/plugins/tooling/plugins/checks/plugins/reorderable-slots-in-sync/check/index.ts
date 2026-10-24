@@ -26,8 +26,8 @@ function parseSlots(manifest: string): { slotId: string; pluginId: string }[] {
 // The override a reorderable slot owes, at the path config_v2 derives for it:
 // the slash form of the DEFINING plugin's id (reorder plants the directive under
 // that plugin's hierarchy via the `pluginId` override) joined with the literal
-// slotId. `./singularity build` SEEDS this file — naming it here is the
-// zero-build heads-up, so `./singularity check` on a tree that has never been
+// slotId. `./equin build` SEEDS this file — naming it here is the
+// zero-build heads-up, so `./equin check` on a tree that has never been
 // built still says exactly which file is about to appear.
 function overridePathFor(pluginId: string, slotId: string): string {
   return `config/${asPath(asPluginId(pluginId))}/${slotId}.jsonc`;
@@ -45,7 +45,7 @@ const check: Check = {
       return {
         ok: false,
         message: `${rel} is missing`,
-        hint: "Run `./singularity build` to generate it.",
+        hint: "Run `./equin build` to generate it.",
       };
     }
     const committed = readFileSync(file, "utf8");
@@ -63,7 +63,7 @@ const check: Check = {
       return {
         ok: false,
         message: `${rel} could not be regenerated: ${err instanceof Error ? err.message : String(err)}`,
-        hint: "Fix the slot-constructor call named above, then run `./singularity build`.",
+        hint: "Fix the slot-constructor call named above, then run `./equin build`.",
       };
     }
     if (committed !== rendered) {
@@ -82,7 +82,7 @@ const check: Check = {
         ok: false,
         message: `${rel} is out of sync with the reorderable render slots${owed}`,
         hint:
-          "Run `./singularity build` and commit the regenerated file." +
+          "Run `./equin build` and commit the regenerated file." +
           (added.length > 0
             ? " The build also SEEDS each override listed above (real hash, full" +
               " catalog) with a `// @review` marker: arrange its `items` for how" +

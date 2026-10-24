@@ -128,7 +128,7 @@ is internal to `reorder/web`).
 
 ## Verification
 
-- `./singularity build` (typecheck + lint + boundary checks); confirm `reorderable-slots-in-sync`
+- `./equin build` (typecheck + lint + boundary checks); confirm `reorderable-slots-in-sync`
   and `config-origins-in-sync` unaffected (no storage change).
 - Playwright (`e2e/screenshot.mjs`), in and out of edit mode:
   1. **Wide CollapsibleWrap host** (conversation header band): edit mode wraps across rows as

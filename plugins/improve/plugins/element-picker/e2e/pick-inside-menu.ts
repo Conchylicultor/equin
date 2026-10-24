@@ -6,7 +6,7 @@
 // picker was armed from must stay open), then plain-clicks an item of that menu
 // — which must be picked into the draft as a chip, not activated.
 //
-// Usage: ./singularity run plugins/improve/plugins/element-picker/e2e/pick-inside-menu.ts [--path <route>] [--headed]
+// Usage: ./equin run plugins/improve/plugins/element-picker/e2e/pick-inside-menu.ts [--path <route>] [--headed]
 import {
   pathUrl,
   report,

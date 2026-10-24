@@ -7,7 +7,7 @@ worktree backend rather than the live one the gateway serves. Observed:
 
 - Repeated calls returned byte-identical `sinceMs` and span `atMs` reaching ~11 min
   of process uptime, while `/api/health` reported the live backend had started ~2
-  min earlier (after a fresh `./singularity build`).
+  min earlier (after a fresh `./equin build`).
 - A span newly added to the live backend (`db [loader-acquire]`) was **absent**
   from the MCP output but **present** when reading the same worktree's profile via
   the gateway-served HTTP route `GET /api/debug/profiling/runtime`.
@@ -113,7 +113,7 @@ No other files change. The HTTP endpoint
 
 ## Verification
 
-1. `./singularity build` in the worktree.
+1. `./equin build` in the worktree.
 2. Add a temporary uniquely-named span to the live backend (or rely on an existing
    recent one), then compare the two data sources for **this** worktree:
    - MCP: call `get_runtime_profile` (no args).
@@ -124,7 +124,7 @@ No other files change. The HTTP endpoint
    `worktree: "singularity"` returns main's profile; an unknown name fails loudly.
 4. Reset round-trip: `POST /api/debug/profiling/runtime/reset` on the worktree,
    then `get_runtime_profile` reflects the reset `sinceMs`.
-5. `./singularity check` passes (type-check, boundaries, plugins-doc-in-sync).
+5. `./equin check` passes (type-check, boundaries, plugins-doc-in-sync).
 
 ## Follow-up (out of scope, file separately)
 

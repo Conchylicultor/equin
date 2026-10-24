@@ -11,7 +11,7 @@ const DEFAULT_PORT = 9100;
  * guard for every invocation — a CLI process dies with the shell that started
  * it, so an op can never sit on a host lock after its invoker is gone. That is
  * exactly wrong here: `serve-app` boots a runtime whose whole job is to outlive
- * the shell (`nohup ./singularity serve-app … &` is the sanctioned way to start
+ * the shell (`nohup ./equin serve-app … &` is the sanctioned way to start
  * a packaged app), and under the guard it would exit 140 the moment its
  * invoking shell went away. Declaring `detachable` makes the mapper disarm the
  * guard as the command begins, which is the one place "is this command meant to
@@ -48,7 +48,7 @@ export default defineCliCommand<
     {
       // No commander default, unlike every other option here: the value is
       // `REPO_ROOT`, which lives behind a *server* barrel, and a declaration is
-      // reached on every single `./singularity` invocation — so it may import
+      // reached on every single `./equin` invocation — so it may import
       // no server barrel at all (`cli:command-declarations-light`). The default
       // therefore moves into the action (`opts.repoRoot ?? REPO_ROOT`), and the
       // help text states it so the behaviour stays discoverable from

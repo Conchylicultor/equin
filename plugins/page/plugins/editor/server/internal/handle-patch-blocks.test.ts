@@ -13,8 +13,8 @@
  *  - a restored root whose slot was taken lands after the occupant;
  *  - every test ends with the ledger invariant asserted.
  *
- * Run: `./singularity test plugins/page/plugins/editor`
- * (requires the running embedded cluster — `./singularity build` first).
+ * Run: `./equin test plugins/page/plugins/editor`
+ * (requires the running embedded cluster — `./equin build` first).
  */
 
 import {

@@ -12,7 +12,7 @@ prettier-shaped, but it drifts: measured against prettier defaults, **53% of
 lines; extrapolated ~3,300 files / ~63,000 lines repo-wide).
 
 The intended outcome is that formatting stops being a thing anyone thinks about:
-an agent writes code, `./singularity build` normalizes it, and the diff a human
+an agent writes code, `./equin build` normalizes it, and the diff a human
 reviews is already clean. The constraint that shapes the entire design is
 **where** the formatter runs, because two caches key on source bytes:
 
@@ -77,7 +77,7 @@ export async function formatSource(file: string, source: string): Promise<string
 export async function listChangedFormattableFiles(root: string): Promise<string[]>;
 
 /** Read → format → write-iff-different. Called by build.ts and by
- *  `./singularity format`. Returns the paths actually rewritten. */
+ *  `./equin format`. Returns the paths actually rewritten. */
 export async function formatChangedSources(opts: {
   root: string; log?: (line: string) => void;
 }): Promise<{ formatted: string[] }>;
@@ -266,7 +266,7 @@ const check: Check = {
     const bad = await findUnformatted(root, files);
     if (bad.length === 0) return { ok: true };
     return { ok: false, message: /* first 20 paths + count */,
-             hint: "Run `./singularity format`, or `./singularity build`." };
+             hint: "Run `./equin format`, or `./equin build`." };
   },
 };
 ```
@@ -298,7 +298,7 @@ On main, `merge-base(HEAD, main) == HEAD`, so the set is just dirty/untracked
 files. Correct: main is formatted inductively because every branch formats its
 own diff before landing.
 
-### E. `./singularity format`
+### E. `./equin format`
 
 **Ship it — it is a prerequisite of `format-clean`, not an optional extra.**
 
@@ -376,7 +376,7 @@ still works: the driver takes upstream + drops a marker, and normalize
 regenerates through `writeGenerated`, so re-derived bytes are formatted by
 construction. Prettier availability on that path is guaranteed three times over —
 `normalize-generated.ts:70` and `.githooks/post-rewrite` both route through
-`bin/index.ts` / `./singularity` (which run `ensureDeps()`), and `push.ts` runs
+`bin/index.ts` / `./equin` (which run `ensureDeps()`), and `push.ts` runs
 `bun install --frozen-lockfile` between rebase and normalize.
 
 **Cross-worktree conflicts.** For a file only one branch touched, nothing
@@ -397,9 +397,9 @@ clean merge. Expect a burst in the first week, concentrated in hot files. No
    `core/internal/changed-files.ts`.
 4. `plugins/framework/plugins/tooling/plugins/lint/plugins/format-safety/` —
    `lint/index.ts`, `lint/no-adhoc-prettier.ts`, `lint/no-adhoc-prettier.test.ts`.
-5. `./singularity build` regenerates `lint.generated.ts` + docs; commit those.
+5. `./equin build` regenerates `lint.generated.ts` + docs; commit those.
 
-*Gate:* `./singularity check` green. Nothing formatted yet.
+*Gate:* `./equin check` green. Nothing formatted yet.
 
 **Commit 2 — the funnel. Byte-neutral refactor.**
 6. `codegen/core/write-generated.ts`; export from `codegen/core/index.ts`.
@@ -410,8 +410,8 @@ clean merge. Expect a burst in the first week, concentrated in hot files. No
 9. `pre-barrel-guard.ts` → compare against `formatGenerated(...)`. **Do not skip.**
 10. Wrap the comparison in all 10 in-sync checks.
 
-*Gate:* `./singularity build && git diff --stat` produces **empty** output —
-that single command proves byte-neutrality. Then `./singularity check` green.
+*Gate:* `./equin build && git diff --stat` produces **empty** output —
+that single command proves byte-neutrality. Then `./equin check` green.
 
 **Commit 3 — build formats changed sources.**
 11. `formatChangedSources` / `listChangedFormattableFiles` / `findUnformatted`.
@@ -421,28 +421,28 @@ that single command proves byte-neutrality. Then `./singularity check` green.
 *Gate:* build twice in a row; the second produces no diff. Deliberately
 misformat a file, build, confirm it is rewritten and logged.
 
-**Commit 4 — `./singularity format`.**
+**Commit 4 — `./equin format`.**
 
 **Commit 5 — the `format-clean` check.** Land only after commit 3 has been on
 main for a push cycle, so main is provably self-consistent before the gate turns
 on.
 
 **Commit 6 — generated `*.generated.ts` formatting.** One predicate flip plus
-the per-glob printWidth override; run `./singularity build` and commit the 18
+the per-glob printWidth override; run `./equin build` and commit the 18
 reformatted files **in the same commit**. Isolated last so it is revertible.
 
 ## Verification
 
-- `./singularity check` green after every commit.
-- Commit 2's byte-neutrality gate: `./singularity build && git diff --stat` empty.
-- Idempotence: `./singularity build` twice; second run reports 0 formatted.
+- `./equin check` green after every commit.
+- Commit 2's byte-neutrality gate: `./equin build && git diff --stat` empty.
+- Idempotence: `./equin build` twice; second run reports 0 formatted.
 - Negative test: misformat a `.tsx`, build, confirm rewrite + log line.
 - `format-clean` negative test: misformat a file, commit it without building,
-  run `./singularity check format-clean` — must fail naming that file, and
-  `./singularity format` must fix it in seconds.
+  run `./equin check format-clean` — must fail naming that file, and
+  `./equin format` must fix it in seconds.
 - Coupled-set test: touch one of the six `no-adhoc-*` lint files, build, confirm
   `class-token-walk-in-sync` is green (all six formatted together).
-- Cache test: after a build, re-run `./singularity check` — should be a cache hit,
+- Cache test: after a build, re-run `./equin check` — should be a cache hit,
   proving nothing wrote after the hash.
 
 ## Open decision — generated-file printWidth

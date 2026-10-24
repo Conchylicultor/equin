@@ -37,6 +37,6 @@ The `taskStatusChanged` event triggers `queue.task-status-pin` job, which calls 
 
 ## Verification
 
-1. `./singularity build`
+1. `./equin build`
 2. Reproduce: create two tasks A→B (A depends on B). Drop B's conversation, verify A gets pinned. Restore B's conversation. A should no longer be pinned (B is blocking it again).
 3. Check via `query_db`: `SELECT id, dropped_at, held_at FROM tasks WHERE id = '<task-b-id>'` — `dropped_at` should be null after restore.

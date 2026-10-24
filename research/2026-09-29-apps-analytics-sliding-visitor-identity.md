@@ -33,7 +33,7 @@ Privacy trade-off (accepted by the user; say it in "What one visit records"): fo
 ### Visitors stop being additive, enforced by types
 
 - Split core `Metrics` into `AdditiveMetrics` (visits, pageviews, bounces, durationMs, events: the only thing `addMetrics` and `analytics_daily` handle) and `Metrics = AdditiveMetrics & { visitors }`. Summing visitors across days becomes a type error rather than a silent overcount.
-- Drop `analytics_daily.visitors` (migration through `./singularity build`).
+- Drop `analytics_daily.visitors` (migration through `./equin build`).
 - New `visitorCounts(dbx, { from, to, filters, groupBy })` in `aggregate-sql.ts`, where `groupBy` is `total | dimension | bucket(granularity)`. It counts distinct `visitor_id` over one membership source: `analytics_visit_members` for rolled-up days, `UNION ALL` the raw `m` for days not rolled up (today, a missed night). Filters join the members table on `visit_id`, one `EXISTS` per filter, the same semantics as `keptVisits`. It serves both report sources, so raw and totals agree by construction.
 - `report.ts` / `periodData`: the summary, every dimension row and every series bucket (hour, day, month) get `visitors` from `visitorCounts` and the rest from the existing additive sums. `topRows` merges before it sorts and truncates, because it ranks by visitors.
 - `eventConversion` / `visitorShare` (core `metrics.ts`) are unchanged. They now divide distinct counts by distinct counts.
@@ -54,12 +54,12 @@ Privacy trade-off (accepted by the user; say it in "What one visit records"): fo
 
 ## Verification
 
-- `analytics.db.test.ts` (DB-backed, via `./singularity test <collect path>`):
+- `analytics.db.test.ts` (DB-backed, via `./equin test <collect path>`):
   - Same IP+UA on days 1..40 (salts rolled forward by `runRollup` each "night") → one `visitor_id`. A 7d/30d report shows `visitors = 1`, `visits = 40`.
   - A 31-day gap → a new `visitor_id`, and the old day's salt and links are deleted.
   - 12-month report (totals source, after the raw rows are swept past 90 days) → still `visitors = 1`, and it equals the raw-source count for a range inside the window (extend the existing parity test to cover visitors).
   - A filtered 12-month report: a visitor with a Search visit on day 1 and a Direct visit showing page X on day 2 is NOT counted under channel=Search / page X.
   - Retention refuses to sweep a day without members.
   - A visit that crosses midnight stays one visit.
-- `./singularity test` for the collect + dashboard plugins; `./singularity build` (migration generation + checks).
+- `./equin test` for the collect + dashboard plugins; `./equin build` (migration generation + checks).
 - On the deployed dashboard, check that the analytics section renders for 7d / 30d / 12m, using `screenshot.ts --path <deployment page> --click Analytics`.

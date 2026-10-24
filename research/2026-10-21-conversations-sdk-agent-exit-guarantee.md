@@ -32,7 +32,7 @@ On main, 2026-10-20 21:55 UTC, the handover sent `shutdown` to 10 agents. Nine e
 
 Not reproduced: the exact production setup. That means the real launch environment (the agent's
 restricted `env -i`, `taskpolicy -b`, hooks, MCP servers), a long resumed Opus session, and a real
-`./singularity push` as the background task.
+`./equin push` as the background task.
 
 The Bun-level reason that exit did not take effect stays unknown. So the fix has two halves:
 
@@ -186,7 +186,7 @@ stop anything that matters from relying on it as proof that the process is dead.
    - A second variant stubs out the hard exit as well, then sends SIGTERM: it must kill.
    - With that stubbed agent launched by a real build, the report must appear in Debug →
      Reports with the sample path.
-3. **Backend paths** (`./singularity build`, then in the worktree app with Haiku):
+3. **Backend paths** (`./equin build`, then in the worktree app with Haiku):
    - Stop and close a conversation: the agent and CLI are gone (`ps`), and Debug → Background
      activity shows the instance exited.
    - Relaunch while a predecessor is alive: start a conversation, `kill -STOP` its agent (it can no
@@ -195,8 +195,8 @@ stop anything that matters from relying on it as proof that the process is dead.
      conversation.
    - A background task during shutdown (the incident's shape): start a background Bash task, close
      the conversation, and check that it exits.
-4. `./singularity test plugins/conversations/plugins/runtime-sdk` (reducer and launch-options tests
-   unchanged), and `./singularity check`.
+4. `./equin test plugins/conversations/plugins/runtime-sdk` (reducer and launch-options tests
+   unchanged), and `./equin check`.
 
 ## Implemented (2026-10-21): differences from the plan
 
@@ -251,5 +251,5 @@ relaunches only a hibernated conversation, and only main's reconciler hibernates
 (`decideMissingProcessAction` returns `leave-unowned` off main). Its pieces did run live in B and
 C: `livePid`'s argv check and the CLI-then-agent kill.
 
-`./singularity test plugins/conversations/plugins/runtime-sdk`: 37 pass, including the new reducer
+`./equin test plugins/conversations/plugins/runtime-sdk`: 37 pass, including the new reducer
 test for `exit_stalled`.

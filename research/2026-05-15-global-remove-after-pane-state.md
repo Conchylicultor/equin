@@ -359,11 +359,11 @@ Once all consumers are migrated, delete:
 
 ## Verification
 
-1. `./singularity build` — full build passes
+1. `./equin build` — full build passes
 2. Navigate: sidebar → conversation → task detail → file peek → back/forward
 3. Refresh on deep URL (`/c/abc123/t/task456`) — chain reconstructs from URL
 4. Browser back/forward — chain restores from `history.state` (including input)
 5. pane-restore: open conversation, navigate sub-panes, leave, return — chain restores
 6. Open panes from sidebar (root mode) — ancestors appear via defaultAncestors
 7. Promote a pane to root — pane works standalone with its persisted input
-8. `./singularity check` passes
+8. `./equin check` passes

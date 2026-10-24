@@ -101,11 +101,11 @@ foreground hold. It carries the page id.
 
 ## Verification
 
-- `./singularity test` on host-admission (ledger acquire/release incl. crash path), file-sink
+- `./equin test` on host-admission (ledger acquire/release incl. crash path), file-sink
   (age retention), server-core phys-footprint (V4 offset).
-- `./singularity check type-check` in this worktree: the cost line shows peak footprint and
+- `./equin check type-check` in this worktree: the cost line shows peak footprint and
   phases, and `host-pool.jsonl` shows one acquire/release pair.
-- `./singularity build` passes. The 2b table is produced by real runs, and the raw lines are kept in the
+- `./equin build` passes. The 2b table is produced by real runs, and the raw lines are kept in the
   page's sub-section.
 - Footprint sanity: one run read with an external `footprint <pid>` sampled mid-run must match the
   logged peak within ~5 %.

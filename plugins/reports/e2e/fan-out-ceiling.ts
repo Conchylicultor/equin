@@ -17,8 +17,8 @@ import {
 // recorded, 10 collapsed, and ONE `report-storm` row about a window later
 // naming the collapsed set.
 //
-//   ./singularity run plugins/reports/e2e/fan-out-ceiling.ts
-//   ./singularity run plugins/reports/e2e/fan-out-ceiling.ts --count 30 --url http://x.localhost:9000
+//   ./equin run plugins/reports/e2e/fan-out-ceiling.ts
+//   ./equin run plugins/reports/e2e/fan-out-ceiling.ts --count 30 --url http://x.localhost:9000
 //
 // Each probe writes a real `crash` report into the target worktree's DB under
 // the errorType prefix below, so the run's rows are easy to find afterwards:

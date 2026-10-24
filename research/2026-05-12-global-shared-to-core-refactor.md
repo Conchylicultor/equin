@@ -84,7 +84,7 @@ Replace `shared` with `core` + `internal` in every place the runtime system is a
 | `web/tsconfig.app.json` | Add `../plugins/*/core` and `../plugins/*/internal` at all 5 nesting levels |
 | `central/tsconfig.json` | Add `../plugins/*/core` and `../plugins/*/internal` at all 4 nesting levels |
 
-**Verify:** `./singularity check` passes.
+**Verify:** `./equin check` passes.
 
 ### Phase 2: Migration script — rename all `shared/` directories
 
@@ -108,7 +108,7 @@ The target determination can be automated:
 
 Import rewriting is textual: replace the quoted string `"@plugins/<path>/shared"` with the target. Safe because import specifiers are always string literals.
 
-**Verify:** `./singularity check` passes. TypeScript compiles (`bunx tsc --noEmit` in server/, web/, central/). `./singularity build` succeeds.
+**Verify:** `./equin check` passes. TypeScript compiles (`bunx tsc --noEmit` in server/, web/, central/). `./equin build` succeeds.
 
 ### Phase 3: Lock down + cleanup
 
@@ -131,7 +131,7 @@ if (!frameworkExempt && resolved.suffixHead === "internal") {
 
 4. **Update `boundary.config.ts`** — remove `shared` from runtimes map entirely.
 
-**Verify:** `./singularity check` passes with 0 violations.
+**Verify:** `./equin check` passes with 0 violations.
 
 ### Phase 4: Documentation
 
@@ -145,8 +145,8 @@ Update `CLAUDE.md`, `plugin-core/CLAUDE.md`, `server/CLAUDE.md`:
 
 After full implementation:
 
-1. `./singularity check` — all checks pass
-2. `./singularity build` — builds clean, docs show `Exports (core):` where appropriate
+1. `./equin check` — all checks pass
+2. `./equin build` — builds clean, docs show `Exports (core):` where appropriate
 3. TypeScript: `bunx tsc --noEmit` in server/, web/, central/
 4. Smoke test: `server/src/` imports `@plugins/tasks-core/core` → compiles, passes checks
 5. `server/src/` imports `@plugins/tasks-core/internal` → R10 rejects it

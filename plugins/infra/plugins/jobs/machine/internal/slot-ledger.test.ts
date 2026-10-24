@@ -7,7 +7,7 @@
  * them; `jobs:insert` is announced by the one runner told to listen; and the
  * pickup ring keeps a bounded, windowed sample with nearest-rank percentiles.
  *
- * Run: `./singularity test plugins/infra/plugins/jobs`
+ * Run: `./equin test plugins/infra/plugins/jobs`
  */
 
 import { afterEach, describe, expect, test } from "bun:test";

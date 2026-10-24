@@ -85,7 +85,7 @@ export const _blocks = blocksEntity.table;
 
 ### 5. Docs and track
 
-- Regenerate the block-entity and editor `CLAUDE.md` / `REFERENCE.md` (the `rankWireField` and `BlockData` moves) through `./singularity build`.
+- Regenerate the block-entity and editor `CLAUDE.md` / `REFERENCE.md` (the `rankWireField` and `BlockData` moves) through `./equin build`.
 - Add an Outcome note to this doc.
 - On the track page: tick `page_blocks`, tick [Entities], update Status. Next step is [Lists].
 
@@ -99,8 +99,8 @@ export const _blocks = blocksEntity.table;
 
 ## Verification
 
-- `./singularity build`: no new file under migrations, and checks green (`type-check`, `migrations-in-sync`, `change-feed:producer-writes`, `plugins-doc-in-sync`, boundary checks).
-- `./singularity test plugins/page/plugins/editor plugins/page/plugins/block-entity plugins/page/plugins/editor-collab plugins/apps/plugins/pages`. The suites that matter most are the pages-tree oracle, `page-row-write`, `stored-block-data`, `parse-block-data`, `handle-patch-blocks`, and the `derived-updated-at` trigger behaviour on `page_blocks`.
+- `./equin build`: no new file under migrations, and checks green (`type-check`, `migrations-in-sync`, `change-feed:producer-writes`, `plugins-doc-in-sync`, boundary checks).
+- `./equin test plugins/page/plugins/editor plugins/page/plugins/block-entity plugins/page/plugins/editor-collab plugins/apps/plugins/pages`. The suites that matter most are the pages-tree oracle, `page-row-write`, `stored-block-data`, `parse-block-data`, `handle-patch-blocks`, and the `derived-updated-at` trigger behaviour on `page_blocks`.
 - `query_db`: `\d page_blocks`-equivalent via `pg_indexes`, `pg_constraint` and the `information_schema.columns` defaults, compared against main's DB. They must be identical.
 - E2E: `plugins/apps/plugins/pages/plugins/page-tree/e2e/page-tree-live-verify.ts` and a sidebar screenshot (create, reorder, trash and restore a page; edit a block, then check that Edited updates while an icon change does not).
 

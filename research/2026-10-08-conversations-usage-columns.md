@@ -234,7 +234,7 @@ Queue rows are full `Conversation`s built from three live resources
 
 ## Verification
 
-1. **Tests** (`./singularity test plugins/stats/plugins/cost plugins/conversations/plugins/usage`):
+1. **Tests** (`./equin test plugins/stats/plugins/cost plugins/conversations/plugins/usage`):
    - The cost suite is unchanged and green, which proves fold parity.
    - New `sync.test.ts` over fixture JSONL files covers:
      - append-only increments
@@ -244,7 +244,7 @@ Queue rows are full `Conversation`s built from three live resources
      - a resumed session copying history: no double count
      - sub-agent and `workflows/wf_*` files counted in the totals and in `agentCount`
      - unchanged totals → no write
-2. **Build** with `./singularity build` (run in the background). Then use `query_db`
+2. **Build** with `./equin build` (run in the background). Then use `query_db`
    on the worktree DB, once the backfill drains:
    - `conversations_ext_usage` is populated.
    - Spot-check 3 conversations' `costUsd` against the Stats → Cost sessions rows

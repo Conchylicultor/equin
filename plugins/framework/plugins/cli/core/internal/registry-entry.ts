@@ -13,7 +13,7 @@ export function cliEntrySourcePath(entry: { pluginPath: string }): string {
 /**
  * Whether an entry's declaration is still on disk. A missing one is a stale
  * registry line left by a deleted command — not a broken command — so readers
- * skip it rather than fail on it. That distinction is what lets `./singularity`
+ * skip it rather than fail on it. That distinction is what lets `./equin`
  * start after a command is deleted, which it must: the CLI is the only thing
  * that regenerates the registry.
  */

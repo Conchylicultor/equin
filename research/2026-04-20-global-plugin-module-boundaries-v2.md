@@ -6,7 +6,7 @@ Supersedes [`2026-04-18-global-plugin-module-boundaries.md`](./2026-04-18-global
 
 Duplication accumulates across plugins (`descriptor<T>()` copy-pasted 5×, `isDescendant` 4×, `buildTree`/`computeDrop` duplicated, `push-and-exit` prompt constants byte-identical in `web/prompt.ts` and `server/internal/prompt.ts`, etc.). More worrying than the specific cases: *there's no mechanism to prevent this from recurring*. Agents can't discover existing utilities; module boundaries are implicit; cross-plugin imports reach into `internal/` folders (3 imports into `@plugins/tasks/server/internal/tables`, 4 into `@plugins/conversations/server/internal/*`, plus deep component paths) with nothing to catch them.
 
-Most of the infra already exists: the `internal/` convention is used (16 folders), `docs/plugins.md` is auto-generated (`cli/src/docgen.ts`) and verified by `plugins-doc-in-sync`, the check framework (`cli/src/checks/`) gates `./singularity push`, and `tsconfig.json` already aliases `@plugins/*` to `./plugins/*`. This plan formalizes the boundary rules, closes the enforcement loop, and deletes the `api.ts` layer the earlier plan had proposed.
+Most of the infra already exists: the `internal/` convention is used (16 folders), `docs/plugins.md` is auto-generated (`cli/src/docgen.ts`) and verified by `plugins-doc-in-sync`, the check framework (`cli/src/checks/`) gates `./equin push`, and `tsconfig.json` already aliases `@plugins/*` to `./plugins/*`. This plan formalizes the boundary rules, closes the enforcement loop, and deletes the `api.ts` layer the earlier plan had proposed.
 
 ## The Rules
 
@@ -63,7 +63,7 @@ Cross-plugin FK use (`references(() => tasks.id)`) requires the owner to re-expo
 
 ## Check: `plugin-boundaries`
 
-New check at `cli/src/checks/plugin-boundaries.ts`, registered in `cli/src/checks/index.ts`. Runs automatically before `./singularity push`. Conforms to the existing `Check` interface (`{ id, description, run(): Promise<CheckResult> }`; see `cli/src/checks/types.ts` and `cli/src/checks/plugins-doc-in-sync.ts` for the shape).
+New check at `cli/src/checks/plugin-boundaries.ts`, registered in `cli/src/checks/index.ts`. Runs automatically before `./equin push`. Conforms to the existing `Check` interface (`{ id, description, run(): Promise<CheckResult> }`; see `cli/src/checks/types.ts` and `cli/src/checks/plugins-doc-in-sync.ts` for the shape).
 
 **Implementation:** one pass over `.ts`/`.tsx` files under `plugins/`, `web/src/`, `server/src/`. Regex-extract `from ["']@plugins/...["']` imports plus whether the import is default or named (`import foo from`, `import { ... } from`, `import type { ... } from`). Build:
 
@@ -106,12 +106,12 @@ Example:
 
 This closes the discoverability loop: the existing `plugins-doc-in-sync` check already fails on `docs/plugins.md` drift, so once exports are in the generator, they become part of the verified contract. Add one line to the root `CLAUDE.md`: *"Before writing a helper, search `docs/plugins.md` for it."*
 
-## Scaffolder: `./singularity plugin new <name>`
+## Scaffolder: `./equin plugin new <name>`
 
 New command at `cli/src/commands/plugin.ts`, registered in `cli/src/index.ts` next to `registerBuild/Check/Push`.
 
 ```
-./singularity plugin new <name> [--web-only] [--server-only] [--parent <path>]
+./equin plugin new <name> [--web-only] [--server-only] [--parent <path>]
 ```
 
 Generates the minimum that passes `plugin-boundaries` immediately:
@@ -183,14 +183,14 @@ The first run surfaces known violations. Fix iteratively; guard the check regist
 
 ## Verification
 
-1. **Dry-run violations.** Run `./singularity check --plugin-boundaries` on the current tree. Expect the violations listed in Migration. Fix iteratively; re-run until clean.
-2. **Docgen.** Run `./singularity build`. Confirm `docs/plugins.md` now has an "Exports:" subsection per plugin with named symbols grouped by kind.
-3. **Scaffolder round-trip.** Run `./singularity plugin new tree`. Inspect the skeleton: it must pass `plugin-boundaries` immediately with no edits, and entries must appear in `web/src/plugins.ts` and `server/src/plugins.ts`.
+1. **Dry-run violations.** Run `./equin check --plugin-boundaries` on the current tree. Expect the violations listed in Migration. Fix iteratively; re-run until clean.
+2. **Docgen.** Run `./equin build`. Confirm `docs/plugins.md` now has an "Exports:" subsection per plugin with named symbols grouped by kind.
+3. **Scaffolder round-trip.** Run `./equin plugin new tree`. Inspect the skeleton: it must pass `plugin-boundaries` immediately with no edits, and entries must appear in `web/src/plugins.ts` and `server/src/plugins.ts`.
 4. **Negative cases.** Deliberately add each of:
    - `import { TreeView } from "@plugins/primitives/plugins/tree/web/components/tree-view"` (deep path) → expect R4 violation.
    - `import treePlugin from "@plugins/primitives/plugins/tree/web"` in a non-registry file → expect R5 violation.
    - A `const foo = 1;` at the top of a plugin's `index.ts` → expect R3 violation.
    - A cycle: plugin A's `index.ts` imports from plugin B's `index.ts`, which imports from A's → expect R6 violation with the cycle path printed.
    Remove each after verifying the failure fires.
-5. **Full check run.** `./singularity check` (no flags) runs `plugin-boundaries` alongside existing checks.
-6. **Push gating.** On a throwaway branch, confirm `./singularity push` runs the check first and blocks the merge flow on failure.
+5. **Full check run.** `./equin check` (no flags) runs `plugin-boundaries` alongside existing checks.
+6. **Push gating.** On a throwaway branch, confirm `./equin push` runs the check first and blocks the merge flow on failure.

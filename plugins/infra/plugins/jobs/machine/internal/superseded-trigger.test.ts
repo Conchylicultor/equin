@@ -19,8 +19,8 @@
  * Runs against a throwaway database (`db-test-fixture`); the app's migration
  * chain is not needed — the queue schema is graphile's own.
  *
- * Run: `./singularity test plugins/infra/plugins/jobs`
- * (requires the running embedded cluster — `./singularity build` first).
+ * Run: `./equin test plugins/infra/plugins/jobs`
+ * (requires the running embedded cluster — `./equin build` first).
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";

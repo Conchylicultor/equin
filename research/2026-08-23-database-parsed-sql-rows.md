@@ -269,13 +269,13 @@ this, so the guardrail is "`sql<T>` must carry a `.mapWith(…)` unless `T` is
 
 ## Verification
 
-- `./singularity test plugins/database/plugins/sql-rows` — the parse unit tests
+- `./equin test plugins/database/plugins/sql-rows` — the parse unit tests
   (including the `name[]`-as-string reproduction) and the lint-rule `RuleTester`
   suite.
-- `./singularity check` — `type-check` (which also runs the type-aware lint pass)
+- `./equin check` — `type-check` (which also runs the type-aware lint pass)
   and `eslint`; the new rule must report **zero** remaining sites after the
   migration, which is the proof the inventory was exhaustive.
-- `./singularity build` — boot exercises the converted hot paths for real:
+- `./equin build` — boot exercises the converted hot paths for real:
   `change-feed/triggers.ts` (trigger install reads `pg_class`/`pg_attribute`),
   `derived-views/rebuild.ts`, `migrations/server/runner.ts`,
   `live-state-snapshot/catch-up.ts`. A schema that disagrees with reality now

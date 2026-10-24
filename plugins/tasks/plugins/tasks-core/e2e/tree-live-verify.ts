@@ -64,7 +64,7 @@
  * Refuses main.
  *
  * Manual only — nothing runs this automatically.
- *   ./singularity run plugins/tasks/plugins/tasks-core/e2e/tree-live-verify.ts [--headed] [--out /tmp/tree-live]
+ *   ./equin run plugins/tasks/plugins/tasks-core/e2e/tree-live-verify.ts [--headed] [--out /tmp/tree-live]
  */
 import { randomBytes } from "node:crypto";
 import type { Page } from "playwright";

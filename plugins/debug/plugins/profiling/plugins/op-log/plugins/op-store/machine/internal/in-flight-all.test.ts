@@ -6,8 +6,8 @@
  * with the served binding against a throwaway database carrying the real
  * schema, loads the whole set FULL, oldest requested first.
  *
- * Requires a running Postgres cluster (started by ./singularity build).
- * Run: `./singularity test plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store`.
+ * Requires a running Postgres cluster (started by ./equin build).
+ * Run: `./equin test plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store`.
  */
 
 import { afterAll, beforeAll, expect, setDefaultTimeout, test } from "bun:test";

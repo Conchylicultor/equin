@@ -1,7 +1,7 @@
 // Verifies the arc's click-to-pin tooltip on a conversation header: a click
 // opens it, it stays open after the pointer leaves, Esc closes it, and a
 // second click toggles it shut.
-//   ./singularity run plugins/ui/plugins/segmented-progress-bar/plugins/arc/e2e/pin-verify.ts --path /agents/c/<id>
+//   ./equin run plugins/ui/plugins/segmented-progress-bar/plugins/arc/e2e/pin-verify.ts --path /agents/c/<id>
 import { pageUrl } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { withBrowser } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 

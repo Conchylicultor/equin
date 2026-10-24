@@ -120,12 +120,12 @@ Reused pieces: `sendTurn` and `typeTurn` (verified typing), `captureInputDraft`,
 
 ## Verification
 
-- **Tests** (`./singularity test plugins/conversations`):
+- **Tests** (`./equin test plugins/conversations`):
   - Held-turn store on the DB test fixture: accept while `starting` holds; accept after the flip
     sends directly; concurrent accept and flip never strand a row (flip, then flush sees it).
   - Spawn path A merges preprompt + held turns in order and deletes only the claimed ids.
   - Reconcile suffix-match.
-- **Live**, after `./singularity build`, on the worktree deploy:
+- **Live**, after `./equin build`, on the worktree deploy:
   - Launch from the sidebar and type and send within ~1 s. Expect an echo card "Waiting for the
     agent to start…", then Claude starts working on it with no idle prompt in between (path A).
   - Launch, wait ~3 s (pane up, CLI booting), send. Expect the echo, then delivery right after the

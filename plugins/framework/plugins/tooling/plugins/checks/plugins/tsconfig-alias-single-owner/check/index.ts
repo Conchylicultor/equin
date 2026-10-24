@@ -5,7 +5,7 @@ import {
 } from "@plugins/infra/plugins/spawn/core";
 
 // Wedge-breaker for a metadata-only git read, not latency policing. Generous
-// because what these actually suffer under a saturated `./singularity check` is
+// because what these actually suffer under a saturated `./equin check` is
 // starvation rather than slowness, and starvation is not bounded by the p99 of
 // an idle box (the calibration note in `infra/worktree`'s `worktree.ts` has the
 // measurements). Only a genuinely wedged child trips it.

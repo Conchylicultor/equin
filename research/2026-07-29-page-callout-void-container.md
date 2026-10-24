@@ -108,7 +108,7 @@ nothing themselves, so the "hosts never compute the edge" invariant is intact.
   `defineDispatchSlot` already supports contribution extras (`Extra extends
   object`), which is how `BlockMeta.block` rides on `Editor.Block`. `useBlockAnchors()`
   derives the map exactly like `useFramedBlockTypes()` does today.
-  A `./singularity check` fails a handle that declares `anchor: true` whose plugin
+  A `./equin check` fails a handle that declares `anchor: true` whose plugin
   contributes no anchor component — the two live where each is needed and cannot
   silently disagree.
 - **`BlockHandle.wrapOnConvert?: true`** — *converting a block INTO this type is a
@@ -247,7 +247,7 @@ invariant rests on — a separate change with its own duality property test.
 9. **Migration** (below).
 10. **Docs.** `editor/CLAUDE.md` gains "A container that owns no text: the anchor
     row" under "Container frames", plus the amended rail sentence in "The page
-    column". `./singularity build` regenerates the autogen blocks.
+    column". `./equin build` regenerates the autogen blocks.
 
 ## Migration
 
@@ -255,7 +255,7 @@ Scale: main has **5** live callouts, **0** with children, 4 with empty text. Thi
 worktree has ~23 (dev data). Favour clarity over cleverness.
 
 Vehicle: a DML data migration —
-`./singularity build --custom-migration --migration-name callout_anchor_split`,
+`./equin build --custom-migration --migration-name callout_anchor_split`,
 hand-edited under `plugins/database/plugins/migrations/data/`. Precedent:
 `20260710_120000_577ba77b__repair_block_data.sql` does the same class of change
 (strip a stray `text` key from void block types).
@@ -313,9 +313,9 @@ Consequences, all checked:
 - `bun test plugins/page/plugins/editor/core/block-ops.test.ts` plus the
   `keystroke-intent`, `block-frames`, `block-forest`, `markdown` and
   `optimistic-block-ops` suites; `bun run test:dom plugins/page/plugins/editor`.
-- `./singularity check` — notably `migrations-in-sync` and
+- `./equin check` — notably `migrations-in-sync` and
   `migration-applies-clean`, which dry-runs the DML against main.
-- `./singularity build`, then drive the real app at
+- `./equin build`, then drive the real app at
   `http://att-1785247005-nn1x.localhost:9000`.
 
 **Rewrite** — `callout/core/callout-block.test.ts` (both cases assert

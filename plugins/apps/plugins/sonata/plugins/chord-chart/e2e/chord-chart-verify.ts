@@ -6,7 +6,7 @@
 // (turned back off afterwards when this run turned it on).
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/sonata/plugins/chord-chart/e2e/chord-chart-verify.ts \
+//   ./equin run plugins/apps/plugins/sonata/plugins/chord-chart/e2e/chord-chart-verify.ts \
 //     [--song "Blues"] [--lyrics-song <id>] [--color-scheme dark|light] \
 //     [--out /tmp/chord-chart] [--headed]
 

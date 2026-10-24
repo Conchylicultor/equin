@@ -122,7 +122,7 @@ Per the requirement the state is **invisible** to the user — no badge, status 
 
 ## Verification
 
-1. `./singularity build`; open `http://<worktree>.localhost:9000`.
+1. `./equin build`; open `http://<worktree>.localhost:9000`.
 2. **Proactive hibernate:** create a conversation, let it reach `waiting`. Temporarily set `hibernationConfig.idleHours` low (e.g. `0`) in the Config pane and run/await the `conversations.hibernate-idle` job (Debug → Queue can trigger/inspect). Confirm: `tmux ls` no longer shows the session; the sidebar still lists it as **Waiting** (not Disconnected); `query_db` shows `hibernated_at` set, `status = 'waiting'`.
 3. **Transparent restore:** open that conversation. Confirm: transcript renders instantly; `tmux ls` shows a fresh session; `query_db` shows `hibernated_at` cleared; status returns to `waiting`/`working`; sending a turn works. No visible disruption.
 4. **Reboot transparency:** `tmux kill-server` (simulates reboot — kills all sessions). Within ~1s confirm waiting conversations stay **Waiting** with `hibernated_at` set (not `gone`), while any `working` conversation goes **Disconnected** (`gone`). Open a waiting one → resumes transparently.

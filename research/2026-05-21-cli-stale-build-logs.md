@@ -36,6 +36,6 @@ Thread the `buildId` from the server into the CLI via env var. The CLI writes di
 
 ## Verification
 
-1. `./singularity build` from the CLI (no env var) — logs still written to the old generic filename
+1. `./equin build` from the CLI (no env var) — logs still written to the old generic filename
 2. Trigger a build from the UI — logs written to `<name>-build-logs-<buildId>.json`, no stale copy
 3. Kill a build mid-flight — the per-build log file shouldn't exist, and the UI should show no logs (not stale ones)

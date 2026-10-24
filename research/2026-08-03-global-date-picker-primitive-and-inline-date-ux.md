@@ -147,14 +147,14 @@ beat-for-beat — it is the working precedent for a click-to-edit decorator chip
 | Action | Path |
 |---|---|
 | new | `plugins/primitives/plugins/date-picker/{package.json,core/index.ts,core/internal/*.ts,web/index.ts,web/components/*.tsx}` |
-| new | `plugins/primitives/plugins/date-picker/CLAUDE.md` (hand-written prose; the autogen block is filled by `./singularity build`) |
+| new | `plugins/primitives/plugins/date-picker/CLAUDE.md` (hand-written prose; the autogen block is filled by `./equin build`) |
 | edit | `plugins/page/plugins/inline-date/web/internal/date-options.ts` (+ `.test.ts`) |
 | edit | `plugins/page/plugins/inline-date/web/components/inline-date-plugin.tsx` |
 | edit | `plugins/page/plugins/inline-date/web/components/date-mention-node.tsx` |
 | edit | `plugins/fields/plugins/date/plugins/filter/web/components/date-filter.tsx` |
 | edit | `plugins/fields/plugins/date/plugins/inline/web/components/date-editor.tsx` |
 
-Registration is filesystem-derived — create the barrels and run `./singularity build`; never
+Registration is filesystem-derived — create the barrels and run `./equin build`; never
 hand-edit `web.generated.ts`.
 
 ## Verification
@@ -167,7 +167,7 @@ hand-edit `web.generated.ts`.
    yields a pressable `Today` row (not the empty hint state), `@today` labels the date row
    `Today` with a `Mon, Aug 3` detail and emits exactly one date row, `@john` still closes the
    menu.
-3. `./singularity build`, then at `http://att-1785751631-kpzq.localhost:9000/pages/page/block-1785751438858-0dmjod`:
+3. `./equin build`, then at `http://att-1785751631-kpzq.localhost:9000/pages/page/block-1785751438858-0dmjod`:
    type `@tod` → `Today` highlighted, Enter inserts today's chip; type `@` → footer lists the
    formats; click the chip → calendar opens, pick another day → chip relabels; toggle **Remind
    me** → icon switches to the bell.
@@ -176,6 +176,6 @@ hand-edit `web.generated.ts`.
 5. Tasks pane → filter on **Created** → *is* → the anchor popover's "Exact date" section now
    shows the calendar; picking a day filters correctly (`resolveAnchorDay` reads the same
    `yyyy-mm-dd`).
-6. `./singularity check` — `no-adhoc-layout` / `-spacing` / `-radius` / `-typography` /
+6. `./equin check` — `no-adhoc-layout` / `-spacing` / `-radius` / `-typography` /
    `-control` all clean on the new components, plus `plugins-doc-in-sync` and
    `plugin-boundaries`.

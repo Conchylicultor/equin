@@ -69,11 +69,11 @@ socket RPC (not a `defineEndpoint`), third-party APIs, e2e scripts (`agentFetch`
 
 ## Verification
 
-- `./singularity test plugins/infra/plugins/endpoints` (new `call-endpoint.test.ts`:
+- `./equin test plugins/infra/plugins/endpoints` (new `call-endpoint.test.ts`:
   void/204, schema decode, error refinement, query/body encoding).
-- `./singularity check type-check` + `eslint`; the lint flags a reintroduced
+- `./equin check type-check` + `eslint`; the lint flags a reintroduced
   `post("/api/secrets/set", …)`.
-- `./singularity build`, then add/remove a secret path (Settings → Accounts) on the
+- `./equin build`, then add/remove a secret path (Settings → Accounts) on the
   worktree build.
 
 ## Follow-up: exceptions removed at the cause

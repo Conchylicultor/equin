@@ -83,7 +83,7 @@ It is built as an `Avatar` `gradient` presentation (`primitives/avatar`). Compar
 
 ## Verification
 
-- `./singularity build`.
+- `./equin build`.
 - `compare-diff.ts --name proto-1790867857-hug2 --options end-cards=question,measure=site-1040[,icons=…]`
   until only AA noise remains.
 - A scrolled 1920×3400 screenshot of the app and of the mock for the closing block and footer.

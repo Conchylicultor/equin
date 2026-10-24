@@ -80,8 +80,8 @@ Import `createTaskChain` from `@plugins/tasks/core`; `fetchEndpoint`/`getEndpoin
 
 ## Verification
 
-1. `./singularity build` (regenerates `web.generated.ts` so the new sub-plugin is registered via import analysis; satisfies `plugins-registry-in-sync`).
-2. `./singularity check --plugin-boundaries` and the `endpoints` typed-web-fetches check + typecheck pass.
+1. `./equin build` (regenerates `web.generated.ts` so the new sub-plugin is registered via import analysis; satisfies `plugins-registry-in-sync`).
+2. `./equin check --plugin-boundaries` and the `endpoints` typed-web-fetches check + typecheck pass.
 3. **Repro the original bug shape:** with the app at `http://<worktree>.localhost:9000`, drive a follow-up task submit whose body is rejected (e.g. temporarily via devtools send a `kind:"child"` body, or point at a route that 400-validates). Confirm a crash task appears under the crashes meta-task with title `[crash] EndpointError 400 POST /api/tasks/chain (target.kind): …` and an `error`-variant notification.
 4. **Dedup:** fire the same bad request 3×; confirm exactly **one** task, `count` = 3.
 5. **Negative — control flow not flagged:** trigger the block editor "merge with no previous sibling" 400 (plain-text body) and confirm **no** crash task is filed. Trigger/confirm a 404 path produces no crash.

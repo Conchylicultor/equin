@@ -92,7 +92,7 @@ The "×" button mirrors the node delete button styling: `hover:bg-destructive ho
 
 ## Verification
 
-1. `./singularity build`
+1. `./equin build`
 2. Open the app, navigate to a task with dependencies so the graph renders
 3. **Test drag-to-connect**: hover a node → handles appear → drag from right handle of node A to left handle of node B → edge created, graph updates via live-state
 4. **Test hover-x**: hover an edge → both "+" and "×" buttons appear → click "×" → edge removed, graph updates

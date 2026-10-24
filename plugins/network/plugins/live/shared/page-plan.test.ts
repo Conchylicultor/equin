@@ -6,7 +6,7 @@
  * applied value (a higher `appliedSeq`). The plan is driven to a fixpoint
  * after each step, as `useLive`'s paged read drives it (one reconcile per render).
  *
- * Run: `./singularity test plugins/network/plugins/live`.
+ * Run: `./equin test plugins/network/plugins/live`.
  */
 
 import { describe, expect, test } from "bun:test";

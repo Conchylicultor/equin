@@ -1,6 +1,6 @@
 /**
  * Tests for the `no-adhoc-install-sink` lint rule. Run with
- * `./singularity test plugins/primitives/plugins/install-sink`.
+ * `./equin test plugins/primitives/plugins/install-sink`.
  *
  * The rule bans a module-scope `let`/`var` written by an exported
  * `set*`/`install*`/`register*` function and read elsewhere, in a WEB-runtime

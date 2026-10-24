@@ -29,7 +29,7 @@ is not kept**:
 Open the mock with those options to see the target
 (`?style=flat&palette=ocean&surface=black&header=capsule` via the prototypes app's
 option picker), and compare with
-`./singularity run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts --name proto-1789509871-llga --options style=flat,palette=ocean,surface=black,header=capsule`.
+`./equin run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts --name proto-1789509871-llga --options style=flat,palette=ocean,surface=black,header=capsule`.
 
 ## The target, measured from the mock
 
@@ -239,7 +239,7 @@ their own inset with `rail-follow`. Read the `css` and `theme` skills first.
 
 ## Verification (for the implementer's plan)
 
-- `./singularity build`, then compare with the prototype using `compare-diff.ts`
+- `./equin build`, then compare with the prototype using `compare-diff.ts`
   (command in Context) at 1280 wide; check under 760px too.
 - `screenshot.ts --path /home` in dark and light colour scheme.
 - Debug app charts unchanged (their categorical colours must not shift).

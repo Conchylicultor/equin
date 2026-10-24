@@ -6,7 +6,7 @@
 // fragment: `/r/` for a build, `/br/` for a backup).
 //
 // Usage:
-//   ./singularity run plugins/runs/e2e/open-run.ts [--kind backup --expect /br/] [--out /tmp/open-run]
+//   ./equin run plugins/runs/e2e/open-run.ts [--kind backup --expect /br/] [--out /tmp/open-run]
 
 import {
   arg,

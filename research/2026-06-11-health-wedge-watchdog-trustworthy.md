@@ -218,7 +218,7 @@ enters `errorType`, so each kind still dedups into one growing-count task.
 
 ## Verification
 
-1. `./singularity build` — must pass `type-check` + `eslint` (note: the probe is
+1. `./equin build` — must pass `type-check` + `eslint` (note: the probe is
    async; `void`/`await`/`.finally` keep `no-floating-promises` happy).
 2. **No false positive on healthy refocus during active updates.** Drive with
    Playwright (`e2e/screenshot.mjs` as a base): open a page with a live list

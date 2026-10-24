@@ -16,7 +16,7 @@ Three quarters of this machine already exists and is production-grade. What is m
 
 | Piece | Where | What it already does |
 |---|---|---|
-| **Isolation engine** | `plugins/primitives/plugins/css/plugins/layout-harness/` | Programmatic Vite build (React + **real Tailwind**, `NODE_ENV` pinned to production) of a standalone page → served on an ephemeral `127.0.0.1` port → **one** headless Chromium → `window.__renderFixture(id, width)` / `window.__measure()` → pure DOM-free oracle → `./singularity check layout-geometry`, content-hash cached, host-serialized, with **falsification mutations** proving the gate bites. Plus a live in-app gallery (Debug → Layout Lab), one `PluginErrorBoundary` per cell. |
+| **Isolation engine** | `plugins/primitives/plugins/css/plugins/layout-harness/` | Programmatic Vite build (React + **real Tailwind**, `NODE_ENV` pinned to production) of a standalone page → served on an ephemeral `127.0.0.1` port → **one** headless Chromium → `window.__renderFixture(id, width)` / `window.__measure()` → pure DOM-free oracle → `./equin check layout-geometry`, content-hash cached, host-serialized, with **falsification mutations** proving the gate bites. Plus a live in-app gallery (Debug → Layout Lab), one `PluginErrorBoundary` per cell. |
 | **Fixture collection** | `layout-harness/core/collected.ts` | `defineCollectedDir("fixtures")` — a plugin drops `fixtures/index.ts`, codegen discovers it, **zero harness edits**. 9 contributors today, all `css/*`. |
 | **Mockup authoring** | `prototypes/`, `plugins/apps/plugins/prototypes/` | Minted flat folders in `~/.singularity/apps/prototypes/`, metadata parsed from `<title>`/`<meta>` by HTMLRewriter, gallery with Focus + Compare, `ScaledIframe`. |
 | **Isolated HTML → PNG** | `prototypes/plugins/thumbnails/server/internal/render.ts` | Headless Playwright against a **`file://`** doc at a declared viewport → PNG, content-addressed cache. A working mock→picture pipeline. |
@@ -186,13 +186,13 @@ The `TestSurface`-shaped provider scaffold plus `hydrateResource()` seeding, so 
 
 ## Verification
 
-- `./singularity test plugins/primitives/plugins/css/plugins/layout-harness` — the geometry suite must stay green through the theming change (it is the regression risk: seeding real tokens changes measured geometry).
-- `./singularity build`, then Debug → Layout Lab at `http://<worktree>.localhost:9000` — confirm the gallery renders themed, per theme × width, with mock/component side by side.
-- `./singularity check layout-geometry` — must still pass and still cache.
+- `./equin test plugins/primitives/plugins/css/plugins/layout-harness` — the geometry suite must stay green through the theming change (it is the regression risk: seeding real tokens changes measured geometry).
+- `./equin build`, then Debug → Layout Lab at `http://<worktree>.localhost:9000` — confirm the gallery renders themed, per theme × width, with mock/component side by side.
+- `./equin check layout-geometry` — must still pass and still cache.
 - Read the emitted gap table for `breadcrumb/overflow` and confirm each of the four outcome rows is reachable by hand-editing the mock (this is the falsification discipline the harness already uses: prove the report *bites*).
 
 ## Open questions for the user
 
 1. **Mock form** — free-CSS JSX beside the component (assumed above), versus binding an existing prototype, versus a checked-in PNG spec (which would force a vision/pixel comparison instead).
-2. **Gate or viewer** — should the signature diff fail `./singularity check`, or stay a report an agent reads?
+2. **Gate or viewer** — should the signature diff fail `./equin check`, or stay a report an agent reads?
 3. **Reach** — stop at prop-driven components, or fund the provider scaffold for data-fetching ones in the same pass?

@@ -202,7 +202,7 @@ At the end of `enrichPluginTreeDocs()`, after Pass 2 (contributions/registration
 
 ### Step 5: Build and verify
 
-Run `./singularity build`. This will:
+Run `./equin build`. This will:
 1. Regenerate `facet.generated.ts` with the commands entry
 2. Run docgen → `buildEnrichedTree()` → `enrichPluginTreeDocs()` → facet extraction runs
 3. Produce identical doc output (docgen still reads `node.commands`, not facets)
@@ -236,15 +236,15 @@ Run `./singularity build`. This will:
 
 ```bash
 # Before changes — save baseline
-./singularity build
+./equin build
 cp docs/plugins-details.md /tmp/baseline-details.md
 cp docs/plugins-compact.md /tmp/baseline-compact.md
 
 # After changes
-./singularity build
+./equin build
 diff /tmp/baseline-details.md docs/plugins-details.md    # must be empty (modulo new plugin entries)
 diff /tmp/baseline-compact.md docs/plugins-compact.md    # must be empty (modulo new plugin entries)
-./singularity check                                       # all pass
+./equin check                                       # all pass
 ```
 
 Note: The new `commands` sub-plugin will appear in the auto-generated plugin docs. The diff won't be fully empty — it will contain the new `commands` plugin entry. All *existing* plugin entries must be byte-identical.

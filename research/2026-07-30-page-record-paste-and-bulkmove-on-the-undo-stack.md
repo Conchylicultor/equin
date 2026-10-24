@@ -511,7 +511,7 @@ optimistic + push pipeline.
 | `e2e/copy-paste-verify.ts` | undo-after-paste phase |
 | `plugins/page/plugins/editor/CLAUDE.md` | rewrite the "Not recorded" paragraph (only `bulkDuplicate` remains); drop the "Paste is an op" bullet explaining why `store.paste` bypasses `dispatchOp`; note the apply-guard vs confirmation asymmetry; note the `bulkMove`-as-`BlockOp` endgame |
 
-`docs/plugins-details.md` / `plugins-compact.md` regenerate via `./singularity build`.
+`docs/plugins-details.md` / `plugins-compact.md` regenerate via `./equin build`.
 
 ## Follow-up task to file (`add_task`)
 
@@ -534,7 +534,7 @@ what makes it the duplicate path), so no client-computed after-state exists.
 
 ## Verification
 
-1. `./singularity build`
+1. `./equin build`
 2. `bun test plugins/page/plugins/editor/core/block-ops.test.ts` and
    `bun test plugins/page/plugins/editor/web/internal/optimistic-block-ops.test.ts`
 3. `bun run test:dom plugins/page/plugins/editor` — the per-mutation invariant
@@ -555,4 +555,4 @@ what makes it the duplicate path), so no client-computed after-state exists.
    Cmd+Z; a to-do checkbox toggle in a `/prompt`-free page and in the website
    `editor-toy` demo (memory mode — broken today, per Part 3); all of it once
    more inside an expanded nested page.
-10. `./singularity check`
+10. `./equin check`

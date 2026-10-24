@@ -264,12 +264,12 @@ This lets docgen, plugin-view, etc. check `node.facets["check"]` without new `Pl
 
 ## Verification
 
-1. `./singularity build` should generate the two new `.generated.ts` files
-2. `./singularity check` should pass — all existing checks work, `plugins-registry-in-sync` now covers 5 files
+1. `./equin build` should generate the two new `.generated.ts` files
+2. `./equin check` should pass — all existing checks work, `plugins-registry-in-sync` now covers 5 files
 3. ESLint continues to discover the `debug/plugins/logs/lint` rule (same scoping behavior)
 4. Adding a test facet (e.g. create a `guard/` entry in `KNOWN_FACETS`) should be detected by `findAllPluginDirs` without any other code changes
 5. `git diff $(git merge-base HEAD main)` for final review
 
 ## Tradeoff
 
-New check/lint barrels now require `./singularity build` before they take effect (same as web/server/central plugins). This trades instant ad-hoc discovery for a single unified mechanism. The `plugins-registry-in-sync` check catches drift.
+New check/lint barrels now require `./equin build` before they take effect (same as web/server/central plugins). This trades instant ad-hoc discovery for a single unified mechanism. The `plugins-registry-in-sync` check catches drift.

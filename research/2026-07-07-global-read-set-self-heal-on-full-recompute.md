@@ -141,7 +141,7 @@ seed converges to the current read-set on the resource's next FULL recompute.
 - The persisted replace's safety rests on "no persisted resource issues a
   data-dependent conditional query" — true today, but nothing ENFORCES it. A future
   conditional-query bootCritical resource would get the bounded staleness described
-  above. Follow-up filed to add a `./singularity check` (or a runtime assertion that
+  above. Follow-up filed to add a `./equin check` (or a runtime assertion that
   a persisted resource's successive FULL read-sets are stable) so the invariant is
   structural rather than assumed.
 - The in-memory `_debug` false-flag for a dead edge clears on the next boot (re-seed

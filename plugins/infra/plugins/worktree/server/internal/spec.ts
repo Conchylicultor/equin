@@ -28,7 +28,7 @@ export interface WorktreeSpec {
    * gateway carries the field through its own spec round-trip but never passes
    * it on: it reads this file, and so does the backend, so the two cannot
    * disagree and there is no second hop that could drop the value. (It also
-   * means the field works against a stale gateway binary — `singularity build`
+   * means the field works against a stale gateway binary — `./equin build`
    * rebuilds the backend but not the Go gateway.)
    *
    * Absent means "no composition declared", which the backend reads as the main

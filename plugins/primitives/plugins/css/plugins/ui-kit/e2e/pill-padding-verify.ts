@@ -14,7 +14,7 @@
 // the website's equin-document sub-theme (6px).
 //
 // Usage:
-//   ./singularity run plugins/primitives/plugins/css/plugins/ui-kit/e2e/pill-padding-verify.ts
+//   ./equin run plugins/primitives/plugins/css/plugins/ui-kit/e2e/pill-padding-verify.ts
 //
 // Manual only — nothing runs this automatically.
 

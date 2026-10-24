@@ -23,8 +23,8 @@
  *   now holds that one of them made room for (the next-newest run, when the
  *   newest is deleted).
  *
- * Requires a running Postgres cluster (started by ./singularity build).
- * Run: `./singularity test plugins/release`.
+ * Requires a running Postgres cluster (started by ./equin build).
+ * Run: `./equin test plugins/release`.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
@@ -76,7 +76,7 @@ const truth = new Map<
 >();
 
 // The suite's OWN runtime, never server-core's process-global one:
-// `./singularity test` runs every bun suite in one process, and any suite that
+// `./equin test` runs every bun suite in one process, and any suite that
 // loads `release/server` (directly, or through a barrel import of a plugin
 // that reads it) registers the real `release.history` on the global registry
 // at module eval — so registering it there too throws `defineResource:

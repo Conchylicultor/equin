@@ -102,4 +102,4 @@ Edit: 8 `render-contributions/web/*` (import swap); `db-schema/render-contributi
 (export `DbSchemaTableRow`); `studio/contributions/web/{index.ts, facet-table.ts,
 slots.ts, components/plugin-chip.tsx (delete), components/contributions-view.tsx}`;
 `studio/contributions/plugins/tables/web/index.ts` (add RowClick contribution).
-Then `./singularity build` regenerates registries + tiers + docs.
+Then `./equin build` regenerates registries + tiers + docs.

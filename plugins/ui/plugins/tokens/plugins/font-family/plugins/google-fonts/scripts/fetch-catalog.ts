@@ -3,7 +3,7 @@
  * web/internal/google-fonts-catalog.json.
  *
  * Usage:
- *   ./singularity run plugins/ui/plugins/tokens/plugins/font-family/plugins/google-fonts/scripts/fetch-catalog.ts
+ *   ./equin run plugins/ui/plugins/tokens/plugins/font-family/plugins/google-fonts/scripts/fetch-catalog.ts
  *
  * Why a committed snapshot: the loader has to answer "can Google actually serve
  * this family name?" for arbitrary names arriving from third-party themes. That

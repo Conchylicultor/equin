@@ -2,5 +2,5 @@
   "name": "@singularity/plugin-framework-cli-normalize-generated",
   "private": true,
   "version": "0.0.1",
-  "description": "`./singularity normalize-generated` — re-derive the generated artifacts a merge driver auto-resolved during a merge or rebase and amend the head commit; the `post-rewrite` git hook's entry point."
+  "description": "`./equin normalize-generated` — re-derive the generated artifacts a merge driver auto-resolved during a merge or rebase and amend the head commit; the `post-rewrite` git hook's entry point."
 }

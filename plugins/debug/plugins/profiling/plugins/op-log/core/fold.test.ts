@@ -546,7 +546,7 @@ describe("a build-shaped sequence end-to-end", () => {
 });
 
 describe("foldOpRecords — steps", () => {
-  // A standalone `./singularity check`: one step per individual check, recorded
+  // A standalone `./equin check`: one step per individual check, recorded
   // post-hoc through `OpProfiler.recordStep` (the mirror of `pushBuildSpan`)
   // from `checks/core`'s `onCheckDone`. `OpStep.startMs` is an offset from
   // `grantedAt` — NOT from `requestedAt` — so the wait that precedes the grant

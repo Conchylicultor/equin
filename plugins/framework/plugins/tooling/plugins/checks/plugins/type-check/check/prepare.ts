@@ -6,7 +6,7 @@
 //
 // It is SYNCHRONOUS work — 70–130 s of it when it ran the tsconfig expansion
 // over the filesystem and built a whole-repo import graph — and it used to run
-// on the check runner's own thread. `./singularity check` runs every selected check concurrently in
+// on the check runner's own thread. `./equin check` runs every selected check concurrently in
 // one process, so for that whole stretch no other check made progress: no
 // timer fired, no socket was serviced. `migration-applies-clean` opened a pg
 // connection, Postgres dropped it after its 60 s `authentication_timeout`, and

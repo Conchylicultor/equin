@@ -57,7 +57,7 @@ export interface RunTerminal {
    * program that deliberately calls `exit(143)` produce the identical number.
    * A run record that cannot separate them is what produced
    * `drun-1787890652933-wr3v6d`: a `ship` killed 0.9 s after spawn by an
-   * unrelated `./singularity build` restarting its parent backend, recorded and
+   * unrelated `./equin build` restarting its parent backend, recorded and
    * shown as `Exited with code 143` — a sentence about a command that never
    * exited and never refused. `verb-outcome.ts`'s own docblock is the long
    * form of this paragraph; do not re-derive killed-ness from `exitCode > 128`
@@ -115,7 +115,7 @@ export const HARD_KILL_EXIT_CODE = -1;
  * `pid` is what a ledger row stores: the pid of the shim `startSupervisedRun`
  * spawned `detached`, which makes the shim the leader of a fresh process group
  * whose id is that same number. The real work (`bun … supervised-exec …`,
- * `./singularity build`) lives inside that group. Kill already treats the pid
+ * `./equin build`) lives inside that group. Kill already treats the pid
  * as a group (`killSupervisedRun` signals `-pid`); liveness has to agree with
  * it, or a lone `kill -9 <shim>` reads as "no marker, pid dead" and closes the
  * row as a hard kill while the worker — re-parented to init, still in the group

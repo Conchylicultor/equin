@@ -353,7 +353,7 @@ export class DbClient extends Client {
     // The durable `[deadline]` line in `db.jsonl` is the sink handler's
     // (`database/query-deadline`, in the backend): this plugin stays below
     // log-channels, whose server barrel carries HTTP routes. A CLI process
-    // (`./singularity build`, `db fork`, `deploy` open admin connections) has
+    // (`./equin build`, `db fork`, `deploy` open admin connections) has
     // no runtime namespace, so no handler and no logs dir: its log is its own
     // stderr, where the person running the command reads it.
     if (!hasRuntimeNamespace()) {

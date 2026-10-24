@@ -264,7 +264,7 @@ only.
 
 ## Verification
 
-1. `./singularity build`, then open a page at `http://<worktree>.localhost:9000`.
+1. `./equin build`, then open a page at `http://<worktree>.localhost:9000`.
 2. Type `TODO ` to mint a card, write a line in it. Click the ⏱ glyph → panel
    opens; type extra context; launch. A conversation column opens; the glyph
    turns into the in-progress icon.
@@ -282,7 +282,7 @@ only.
 7. Delete the task → the link row cascades, the card returns to plain warning,
    and a fresh dispatch mints a new task.
 8. `bun test plugins/page/plugins/editor/core/markdown.test.ts` and
-   `./singularity check`.
+   `./equin check`.
 
 ## Stated bounds
 

@@ -151,7 +151,7 @@ Velocity is already fully wired, so this is about *authoring/shaping fidelity* a
 
 ## Verification
 
-1. `./singularity build`, open `http://<worktree>.localhost:9000` → Sonata.
+1. `./equin build`, open `http://<worktree>.localhost:9000` → Sonata.
 2. **Pure unit tests:** `bun test plugins/apps/plugins/sonata/plugins/score/core/` — cover `resolvePedalSustain`: extend-to-pedal-up, re-strike cap, no-pedal passthrough, un-pedaled tracks.
 3. **Import fidelity:** import a real piano `.mid` known to contain CC64; confirm `pedalEvents` populate and pedalled passages ring vs. before.
 4. **Audible A/B:** with pedal data present, held/arpeggiated passages sustain across the pedal span and release on pedal-up; unpedaled tracks unchanged.

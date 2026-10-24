@@ -106,9 +106,9 @@ import type { AgentsApi } from "../server/api"; // type-only — server file not
 export const agentsApi = createApiClient<AgentsApi>("agents");
 ```
 
-`createApiClient` returns a typed Proxy keyed on the plugin name. Web code calls `useQuery(agentsApi.list, input)` — TanStack-style — and the framework resolves the wire path. **No string key in user code**; the only string is the plugin name in two places (server `definePluginApi("agents", …)` and shared `createApiClient<…>("agents")`), and those are checkable by `./singularity check`.
+`createApiClient` returns a typed Proxy keyed on the plugin name. Web code calls `useQuery(agentsApi.list, input)` — TanStack-style — and the framework resolves the wire path. **No string key in user code**; the only string is the plugin name in two places (server `definePluginApi("agents", …)` and shared `createApiClient<…>("agents")`), and those are checkable by `./equin check`.
 
-(Codegen alternative: `./singularity build` could write `shared/api.generated.ts` automatically. Out of scope for v1; the three-line file is acceptable as a starting point.)
+(Codegen alternative: `./equin build` could write `shared/api.generated.ts` automatically. Out of scope for v1; the three-line file is acceptable as a starting point.)
 
 ### 3.4 The handler context
 
@@ -225,7 +225,7 @@ These four are not decided here; flagging them so the next iteration converges.
 
 4. **Type bridge: shared file vs codegen.**
    - **Shared file** (3 lines per plugin) — explicit, reviewable, no new build step. Recommended for v1.
-   - **Codegen** (`./singularity build` writes `shared/api.generated.ts`) — zero author boilerplate but a new generated artefact to commit and a new failure mode (forgot to rebuild).
+   - **Codegen** (`./equin build` writes `shared/api.generated.ts`) — zero author boilerplate but a new generated artefact to commit and a new failure mode (forgot to rebuild).
 
 ## 9. Out of scope (decided elsewhere)
 

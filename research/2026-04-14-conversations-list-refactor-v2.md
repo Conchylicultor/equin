@@ -186,12 +186,12 @@ Each step keeps the app green and is independently shippable.
 
 ## Verification
 
-1. `./singularity build`, load `http://claude-1776140275.localhost:9000`.
+1. `./equin build`, load `http://claude-1776140275.localhost:9000`.
 2. **New conversation is selected** — click "New conversation", row appears highlighted.
 3. **Click selection** — clicking another row updates the highlight.
 4. **Back/forward** — selection follows browser history.
 5. **Live presence** — start a Claude session, dot turns active, ordering pushes non-idle to top.
-6. **Reconnect** — `./singularity build` again, list refetches, presence recovers.
+6. **Reconnect** — `./equin build` again, list refetches, presence recovers.
 7. **Delete** — row disappears.
 8. **Devtools** — exactly one SSE subscription regardless of how many list mounts; one `shell:navigate` dispatch per `OpenPane`.
 9. **Type check** — `bun run tsc -b` passes; verify all existing `Shell` consumers still resolve through the new barrel.

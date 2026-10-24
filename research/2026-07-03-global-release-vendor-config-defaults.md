@@ -5,7 +5,7 @@
 
 ## Context
 
-A self-contained release (`./singularity release --composition <c> --target tauri|web`)
+A self-contained release (`./equin release --composition <c> --target tauri|web`)
 renders the app surface but drops every config_v2 "default-for-everyone" value at
 runtime. The reported symptom: a released Sonata app boots, but its Library pane
 shows *"No views configured — author config/<plugin>/sonata.library.jsonc"* instead
@@ -24,7 +24,7 @@ task's stated root cause). They are read from the **propagated user tier** at
 `CONFIG_DIR = SINGULARITY_DIR/config/<worktree>`
 (`plugins/config_v2/server/internal/config-dir.ts:11`). That tier is written by
 `propagateConfigToUser` (`.../codegen/core/config-origin-gen.ts:500`) during every
-`./singularity build`, which resolves each `config/<hier>/<name>.origin.jsonc ⊕
+`./equin build`, which resolves each `config/<hier>/<name>.origin.jsonc ⊕
 <name>.jsonc` (and `@app/<id>` deltas) into `~/.singularity/config/<worktree>/…`.
 
 In a release `SINGULARITY_DIR = <bundle>/data` (`launcher/bin/launch.ts:27`) and the
@@ -242,9 +242,9 @@ Drop the now-unused `REPO_ROOT` import from each file if no longer referenced.
 
 ## Verification (end-to-end)
 
-1. Build this worktree: `./singularity build`.
+1. Build this worktree: `./equin build`.
 2. Cut a Sonata Tauri release:
-   `./singularity release --composition sonata --target tauri`
+   `./equin release --composition sonata --target tauri`
    (and `--target web` — identical staged tree). Confirm the log shows the new
    `[3.6] Vendoring config defaults...` step, and that
    `<out>/config-seed/config/sonata/apps/sonata/…/*.origin.jsonc` and `<out>/config/…`
@@ -266,7 +266,7 @@ Drop the now-unused `REPO_ROOT` import from each file if no longer referenced.
    shows non-empty Git origin/override sections (reads `SINGULARITY_REPO_CONFIG_DIR`).
 7. Dev unchanged: `SINGULARITY_REPO_CONFIG_DIR` / seed are unset in dev, so
    `REPO_CONFIG_DIR` falls back to `REPO_ROOT/config` and CONFIG_DIR is populated by
-   `build` as before. Run `./singularity check` (config-origins-in-sync, boundaries,
+   `build` as before. Run `./equin check` (config-origins-in-sync, boundaries,
    type-check) to confirm no regressions.
 8. Once verified, drop the "config defaults absent in a release" caveat from
    `plugins/release/CLAUDE.md`.

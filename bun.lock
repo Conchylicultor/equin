@@ -3057,6 +3057,10 @@
       "name": "@singularity/plugin-framework-cli-check",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/cli/plugins/cli-name": {
+      "name": "@singularity/plugin-framework-cli-cli-name",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/cli/plugins/db": {
       "name": "@singularity/plugin-framework-cli-db",
       "version": "0.0.1",
@@ -8502,6 +8506,8 @@
     "@singularity/plugin-framework-cli-build": ["@singularity/plugin-framework-cli-build@workspace:plugins/framework/plugins/cli/plugins/build"],
 
     "@singularity/plugin-framework-cli-check": ["@singularity/plugin-framework-cli-check@workspace:plugins/framework/plugins/cli/plugins/check"],
+
+    "@singularity/plugin-framework-cli-cli-name": ["@singularity/plugin-framework-cli-cli-name@workspace:plugins/framework/plugins/cli/plugins/cli-name"],
 
     "@singularity/plugin-framework-cli-db": ["@singularity/plugin-framework-cli-db@workspace:plugins/framework/plugins/cli/plugins/db"],
 

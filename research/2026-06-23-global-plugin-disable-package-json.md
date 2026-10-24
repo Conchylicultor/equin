@@ -24,7 +24,7 @@ transitively imports X, so nothing enabled imports a disabled barrel and the
 disabled subtree tree-shakes out.
 
 Intended outcome: add `"singularity": { "disabled": true }` to one plugin's
-`package.json`, run `./singularity build`, and that plugin + its entire dependent
+`package.json`, run `./equin build`, and that plugin + its entire dependent
 closure vanish from `web/server/central.generated.ts` and the bundle, while the
 Studio plugin tree still lists them, badged "disabled" (seed vs cascade). It is
 intentionally OK to disable load-bearing plugins for experimentation — no safety
@@ -279,11 +279,11 @@ No `PluginProvider` filter, no boot-phase split, no `loadPlugins` change.
    direction is reverse (a *dependency* of the seed is NOT disabled).
 2. **End-to-end on the motivating case** — set
    `"singularity": { "disabled": true }` in
-   `plugins/review/plugins/plugin-changes/package.json`, run `./singularity build`.
+   `plugins/review/plugins/plugin-changes/package.json`, run `./equin build`.
    - Assert `web.generated.ts` / `server.generated.ts` no longer contain
      `review.plugin-changes`, its 2 children (`api-changes`, `file-changes`), or
      the ~10 `facets/*/render-diff` adapters (grep the generated files).
-   - `./singularity check plugins-registry-in-sync` passes (filter is
+   - `./equin check plugins-registry-in-sync` passes (filter is
      deterministic).
    - Open `http://<worktree>.localhost:9000` on a conversation: the Review button
      shows **no** plugin-count summary chip, and `query_db` /
@@ -292,7 +292,7 @@ No `PluginProvider` filter, no boot-phase split, no `loadPlugins` change.
 3. **Tree badge** — Studio → Explorer: `review.plugin-changes` shows "Disabled",
    the facet adapters show "Disabled (cascade)"; all still listed.
 4. **Docs** — `plugins-compact.md` shows the annotations;
-   `./singularity check plugins-doc-in-sync` passes.
+   `./equin check plugins-doc-in-sync` passes.
 5. **Reversibility** — remove the flag, rebuild: registries, bundle, and docs
    return to the full set; checks green.
 6. **Load-bearing experiment (no guard)** — flag a load-bearing plugin, rebuild,

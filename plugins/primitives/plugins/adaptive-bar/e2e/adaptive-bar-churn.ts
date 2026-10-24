@@ -5,7 +5,7 @@
  * isolation.
  *
  * `core/*.test.ts` proves the fit math without a layout engine. The jsdom suite
- * proves React never unmounted a relocated subtree. `./singularity check
+ * proves React never unmounted a relocated subtree. `./equin check
  * layout-geometry` proves the boxes do not collide, under a real layout engine,
  * but only for the fixture gallery and only at a handful of fixed widths. None
  * of them drive hundreds of small resize steps back-to-back the way a real drag
@@ -21,8 +21,8 @@
  *
  * Manual only — nothing runs this automatically.
  *
- *   ./singularity build
- *   ./singularity run plugins/primitives/plugins/adaptive-bar/e2e/adaptive-bar-churn.ts [--path /agents] [--headed]
+ *   ./equin build
+ *   ./equin run plugins/primitives/plugins/adaptive-bar/e2e/adaptive-bar-churn.ts [--path /agents] [--headed]
  */
 import {
   numArg,

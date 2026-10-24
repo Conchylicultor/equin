@@ -248,5 +248,5 @@ Block ids are stable through the migration (Yjs map keys = row ids), so
   a single `/ws/yjs` socket.
 - **Undo interleave:** type/split/type/merge then Cmd+Z repeatedly; assert
   chronological text+structure interleaving + correct focus.
-- Deploy each stage with `./singularity build`; verify on
+- Deploy each stage with `./equin build`; verify on
   `http://<worktree>.localhost:9000`.

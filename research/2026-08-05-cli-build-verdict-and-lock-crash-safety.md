@@ -2,7 +2,7 @@
 
 ## Context
 
-Two `./singularity build` runs reported success to an agent's shell while having
+Two `./equin build` runs reported success to an agent's shell while having
 actually failed. A full e2e suite was then run and believed against the
 **previous** bundle; ~1.5 h was lost before it was caught. Every downstream
 verification claim in that session was unsound.
@@ -204,7 +204,7 @@ without discipline:
    `interrupted`, print one loud line:
    `⚠ The previous build (<buildId>, started <t>) never completed — it did NOT deploy.`
    This needs no discipline from the caller and costs one small file read.
-3. **`CLAUDE.md`** — one line in the Agent Workflow section: after `./singularity
+3. **`CLAUDE.md`** — one line in the Agent Workflow section: after `./equin
    build`, the deploy receipt at that fixed path is the authority on whether the
    build landed; never infer it from `ls -t … build-*.log`.
 
@@ -236,7 +236,7 @@ No new CLI command, no `bin/cli.ts` change, no new registration.
 
 ## Verification
 
-1. `./singularity build` — must still deploy cleanly, and
+1. `./equin build` — must still deploy cleanly, and
    `http://att-1785922172-rm0r.localhost:9000` must serve the new bundle.
 2. `cat ~/.singularity/worktrees/att-1785922172-rm0r/build-status.json` — shows
    `"status": "ok"` with the current commit and a real `finishedAt`.
@@ -245,20 +245,20 @@ No new CLI command, no `bin/cli.ts` change, no new registration.
      critically, `ls -t …/build-*.log | head -1 | xargs grep 'BUILD OK'` still
      reports success off the *previous* run. Confirm that contrast explicitly:
      it is the exact false positive that cost 1.5 h.
-   - a second `./singularity build` acquires the lock **immediately** (the kernel
+   - a second `./equin build` acquires the lock **immediately** (the kernel
      released it on death — today this is where the stale lock appears) and prints
      the interrupted-predecessor warning.
-4. **Lock contention.** Two concurrent `./singularity build` runs in one checkout:
+4. **Lock contention.** Two concurrent `./equin build` runs in one checkout:
    the second prints "Another build is in progress; waiting…" and proceeds when
    the first finishes — never both at once.
 5. **Graceful failure still self-reports.** Break a step deliberately: the receipt
-   reads `failed`, and `./singularity build | tail -30` still shows the
+   reads `failed`, and `./equin build | tail -30` still shows the
    `BUILD FAILED` banner (confirming the existing verdict guard is untouched).
 6. **Wedge message.** With a holder stopped mid-span (`kill -STOP`), the waiter's
    message names the stuck span from `build-progress.jsonl`.
-7. `./singularity check` — in particular `cli:bootstrap-package-free` (the new
+7. `./equin check` — in particular `cli:bootstrap-package-free` (the new
    static import set) and `plugin-boundaries` (the new `flock` plugin).
-8. `./singularity test plugins/framework/plugins/cli plugins/packages/plugins/flock`
+8. `./equin test plugins/framework/plugins/cli plugins/packages/plugins/flock`
    — both runner buckets.
 9. `mcp__singularity__query_db` is not needed: every fact this plan reads lives on
    the filesystem, not in Postgres.

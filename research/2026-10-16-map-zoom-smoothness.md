@@ -187,9 +187,9 @@ The canvas pin layer is unaffected (an `OverlayView` works on vector maps, and
 - Pins cost: the pins-shown vs pins-hidden delta stays ≤ ~20 % on the real
   run. With fractional zoom it must not grow (no per-frame re-plan: the count
   of `planPins` calls during a pinch equals the number of plan levels crossed).
-- `./singularity test plugins/map`: plan-level derivation, and no re-plan
+- `./equin test plugins/map`: plan-level derivation, and no re-plan
   across fractional changes within a level.
-- `./singularity build`. Then run the e2e scripts that touch zoom or the
+- `./equin build`. Then run the e2e scripts that touch zoom or the
   camera: `zoom-perf.ts`, `zoom-profile.ts`, `wheel-over-pin.ts`,
   `camera-stays`, `click-away`, `open-card`. Hover, click and the card behave
   as before. The Fit flight still flies.

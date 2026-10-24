@@ -95,7 +95,7 @@ const SHIM_SCRIPT = [
   // would throw away the status the child is about to produce. So: wait again
   // whenever a signal fired and there is still a child to wait for. Measured on
   // a child that traps TERM and exits 42 after a moment — exactly what
-  // `./singularity build` does via `installFatalSignalExit`: without this the
+  // `./equin build` does via `installFatalSignalExit`: without this the
   // marker read `143 TERM` with the child still alive; with it, `42 TERM` and
   // the child already gone.
   //

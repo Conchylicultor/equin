@@ -7,7 +7,7 @@ import {
 } from "../shared/history/store";
 
 /**
- * `./singularity prototype restore <id> <vN|sha>` — the detail pane's Restore
+ * `./equin prototype restore <id> <vN|sha>` — the detail pane's Restore
  * button, from a terminal: unsaved changes are saved as "Before restore", the
  * old files are written back, and "Restored vN" is recorded. Nothing is lost,
  * so a restore is itself undone by restoring the "Before restore" version.
@@ -21,7 +21,7 @@ const run: CliAction<[string, string], object> = async (id, version) => {
       throw new Error(`no prototype ${id} in ${prototypesDir.path}`);
     case "unknown-version":
       throw new Error(
-        `${version} is not a version of ${id} — see ./singularity prototype log ${id}`,
+        `${version} is not a version of ${id} — see ./equin prototype log ${id}`,
       );
     case "restored":
       console.log(

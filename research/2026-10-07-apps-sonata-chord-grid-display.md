@@ -27,7 +27,7 @@ Decisions taken with the user:
 
 ## Phase 0: Prototype (gate)
 
-`./singularity prototype new "Sonata chord grid"`: one prototype, `prototype-viewport` `window`, with `mocks` = `route:/sonata` once the display exists. The mock is a static song with the hard-coded chord colours above (they are the requirement, not borrowed design), a simulated playhead running on a timer, and a play/pause control as part of the design.
+`./equin prototype new "Sonata chord grid"`: one prototype, `prototype-viewport` `window`, with `mocks` = `route:/sonata` once the display exists. The mock is a static song with the hard-coded chord colours above (they are the requirement, not borrowed design), a simulated playhead running on a timer, and a play/pause control as part of the design.
 
 It shows:
 
@@ -126,10 +126,10 @@ The deps are `player/web`, `session/web`, `document/web`, `shell/web` (Hud), `sc
 
 1. **Prototype:** the user reviews the variants in the gallery and picks one. Render each with `screenshot.ts --path "/api/prototypes/<id>/index.html?fill=…"`.
 2. **Tests:**
-   - `./singularity test plugins/apps/plugins/sonata/plugins/score` covers chord-bars.
-   - `./singularity test plugins/music/plugins/chord-paint` covers `majorDegree`.
+   - `./equin test plugins/apps/plugins/sonata/plugins/score` covers chord-bars.
+   - `./equin test plugins/music/plugins/chord-paint` covers `majorDegree`.
    - Chord's existing `degree.test.ts` must stay green.
-3. **Build:** `./singularity build`, background. Checks include boundary-rules, plugin-boundaries and docs-in-sync.
+3. **Build:** `./equin build`, background. Checks include boundary-rules, plugin-boundaries and docs-in-sync.
 4. **Chord app unchanged:** before and after `screenshot.ts --path /chord`, with a pixel compare of the trainer's answer strip, buttons and logo.
 5. **Sonata:**
    - Open a chord-grid song and a UG song.

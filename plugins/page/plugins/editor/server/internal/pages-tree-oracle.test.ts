@@ -47,8 +47,8 @@
  * Then C39: a tab still running a bundle that subscribed the old key `pages`
  * is refused `unknown-key`, a `skew` verdict (the Reload prompt).
  *
- * Requires a running Postgres cluster (started by ./singularity build).
- * Run: `./singularity test plugins/page/plugins/editor`.
+ * Requires a running Postgres cluster (started by ./equin build).
+ * Run: `./equin test plugins/page/plugins/editor`.
  */
 
 import {

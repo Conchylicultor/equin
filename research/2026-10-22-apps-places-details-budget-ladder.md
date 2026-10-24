@@ -99,7 +99,7 @@ row that is not a key (as Live map does), so no new slot and no edit to auth:
 
 - Unit: `budgetRung` (first in-budget rung, floor, new month), `detailsRung`, `richDetailsSku`
   per tier (full → enterprise-atmosphere, no-summary → enterprise, photos → ids).
-  `./singularity test plugins/integrations/plugins/google-maps plugins/apps/plugins/places`.
+  `./equin test plugins/integrations/plugins/google-maps plugins/apps/plugins/places`.
 - Live, on the worktree DB: set `placeDetailsEnterpriseAtmosphere` to 0 in Settings → Config,
   open a card → no summary, caption shown, `google_maps_usage` row for
   `place-details-enterprise` increments (`query_db`); set Enterprise to 0 too → photos only,
@@ -107,4 +107,4 @@ row that is not a key (as Live map does), so no new slot and no edit to auth:
   `screenshot.ts`.
 - Settings → Accounts → Google Maps → Usage this month: rows match `google_maps_usage`, a spent
   SKU reads `spent`, the row badge reads `N downgraded`; screenshot.
-- `./singularity build` green (checks included).
+- `./equin build` green (checks included).

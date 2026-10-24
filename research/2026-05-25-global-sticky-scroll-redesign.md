@@ -104,7 +104,7 @@ When updating an existing pane slot with new params, preserve the slot's `instan
 
 ## Verification
 
-1. `./singularity build` — deploys to worktree namespace
+1. `./equin build` — deploys to worktree namespace
 2. Open a conversation with tool calls (Read/Write/Edit)
 3. Scroll up partway in the conversation
 4. Click a file path link in a tool call → file pane opens, conversation should NOT scroll

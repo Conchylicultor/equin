@@ -1,6 +1,6 @@
 // End-to-end boot verification for a *packaged* release bundle.
 //
-// A staged/self-contained release (`./singularity release ... --dev`, or the
+// A staged/self-contained release (`./equin release ... --dev`, or the
 // Tauri `.app`'s embedded bundle) brings up its own gateway + embedded Postgres
 // + backend and serves the SPA single-origin. Process-liveness alone doesn't
 // prove the app is usable — the original desktop bug was "Starting… → black
@@ -19,14 +19,14 @@
 // port, so a defaulted base would silently verify the wrong server.
 //
 // Usage:
-//   ./singularity run plugins/release/e2e/release-boot-verify.ts --url <url> \
+//   ./equin run plugins/release/e2e/release-boot-verify.ts --url <url> \
 //     [--expect-selector <css>] [--expect-text <substr>] \
 //     [--settle <ms>] [--wait <ms>] [--out <path>] [--color-scheme dark|light]
 //
 // Exit code 0 = PASS, 1 = FAIL (any hard check failed), 2 = bad usage.
 //
 // Example (faithful desktop repro against a staged web --dev bundle on :9123):
-//   ./singularity run plugins/release/e2e/release-boot-verify.ts \
+//   ./equin run plugins/release/e2e/release-boot-verify.ts \
 //     --url http://localhost:9123/ \
 //     --expect-selector "[data-app-tab]" \
 //     --out /tmp/sonata-release

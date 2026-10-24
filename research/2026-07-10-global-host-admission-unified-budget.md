@@ -316,7 +316,7 @@ This also removes the last **blocking** `flock(LOCK_EX)` on a caller's own threa
 | `plugins/framework/plugins/tooling/plugins/checks/plugins/host-pools-declared/` | **new check** — only `host-admission` imports `createHostSemaphore` |
 | `plugins/debug/plugins/health-monitor/server/internal/host-sampler.ts` | sample `hostOccupancy()` on the 10 s tick |
 
-`./singularity build` regenerates `docs/plugins-*.md`; `plugins-doc-in-sync` covers drift.
+`./equin build` regenerates `docs/plugins-*.md`; `plugins-doc-in-sync` covers drift.
 
 ## Order of work
 
@@ -349,15 +349,15 @@ must pass **unmodified** (the regression gate). New:
 `grant.run` bounds concurrency to `units`; `inheritedGrant()` reads
 `SINGULARITY_HOST_GRANT` and never acquires.
 
-**Budget check** — `./singularity check host-budget` passes; adding a throwaway
+**Budget check** — `./equin check host-budget` passes; adding a throwaway
 `defineHostPool({ size: 8, cost: { cpu: 1 } })` makes it fail with the residual `B`
 going non-positive. That failure *is* the convergence property; assert it explicitly.
 
-**Solo build unchanged** — `./singularity build` on an idle host: 8 concurrent
+**Solo build unchanged** — `./equin build` on an idle host: 8 concurrent
 type-check workers (`backgroundLimit`), wall time within noise, zero `flock-wait`
 children (pure fast path).
 
-**Concurrent builds bounded** — the real test. `./singularity check` in 3–4 worktrees
+**Concurrent builds bounded** — the real test. `./equin check` in 3–4 worktrees
 at once:
 
 ```bash
@@ -371,11 +371,11 @@ Sample `uptime` across the run against the 50–63 load baseline in
 Before this change the same probe reads up to 18 workers.
 
 **The floor is reachable** — saturate the background window with agent checks, then
-`./singularity build --allow-main` on main. It must acquire ≥ 3 units from
+`./equin build --allow-main` on main. It must acquire ≥ 3 units from
 `slot-8..10` without waiting. This is the test that `exempt`'s deletion did not cost
 the main build its head-of-line position.
 
-**Push does not queue behind builds** — `./singularity push` from a worktree while
+**Push does not queue behind builds** — `./equin push` from a worktree while
 agent checks saturate the background lane. Its nested check must inherit the grant
 (never re-acquire) and land in the interactive lane.
 

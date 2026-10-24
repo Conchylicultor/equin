@@ -158,10 +158,10 @@ recents / game-views as real saved views). Screenshot-review the two chrome surf
 settings-nav) and the `embedded` tweakcn browser for polish; nothing blocks them functionally.
 
 ## Verification
-1. `./singularity build` → regenerates `data-views.generated.ts` (all 9 ids), regenerates config
+1. `./equin build` → regenerates `data-views.generated.ts` (all 9 ids), regenerates config
    origins (`config/primitives/data-view/<id>.origin.jsonc` per id), and the old sonata origin is
    gone (delete pre-build or confirm cleanup).
-2. `./singularity check` — focus:
+2. `./equin check` — focus:
    - `data-views-in-sync` (new) — manifest matches the marker scrape.
    - `plugins-registry-in-sync` + `plugins-doc-in-sync` — data-view + consumer barrels changed;
      docs regenerate (data-view will list ~9 `ConfigV2.{Web,}Register` like reorder).

@@ -124,7 +124,7 @@ change: it generalises to *any* gateway startup failure, not just this one.
 - **Also call `awaitGatewayReady` from
   `plugins/framework/plugins/cli/bin/commands/start.ts`**, which today prints
   `Gateway started (PID ${pid})` unconditionally at line 90 and returns. That is the
-  same false-success in dev: `./singularity start` reports success while the gateway
+  same false-success in dev: `./equin start` reports success while the gateway
   is already dead.
 
 Net effect on the incident: the launcher fails in ~2s with
@@ -209,7 +209,7 @@ Reused rather than rebuilt: `isRunning` / `isGatewayListening` / `readPid`
 1. `cd gateway && go build -o gateway . && go test ./...` — the supervisor has existing
    tests to extend; add one asserting `Get()` carries the error text after a failed
    start.
-2. `./singularity build`, then `./singularity check` (type-check, boundaries, docs
+2. `./equin build`, then `./equin check` (type-check, boundaries, docs
    in sync).
 3. **Reproduce the original failure without root.** Point a throwaway
    `database.json`'s `postgres.start` at a script that prints a distinctive string to
@@ -217,12 +217,12 @@ Reused rather than rebuilt: `isRunning` / `isGatewayListening` / `readPid`
    non-zero; `gateway-stdio.log` contains the string; `gateway.log` contains the slog
    line.
 4. **End-to-end launcher path.** With that same broken start command, run the release
-   `launch` binary (or `./singularity start`) and confirm the terminal shows the
+   `launch` binary (or `./equin start`) and confirm the terminal shows the
    distinctive string within a few seconds — not `Postgres did not become reachable
    within 90000ms` at 90s.
 5. **Root preflight.** `sudo <bundle>/launch` (or a container as uid 0) exits
    immediately with the non-root message and creates no data dir.
-6. **No regression on the happy path.** A normal `./singularity build` +
+6. **No regression on the happy path.** A normal `./equin build` +
    `http://<worktree>.localhost:9000` still serves; `GET /gateway/services` shows
    `running` with no `error` field.
 7. **Watchdog path unchanged.** With the gateway up, `pg_ctl stop` the cluster and

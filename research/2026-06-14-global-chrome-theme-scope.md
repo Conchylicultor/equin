@@ -176,11 +176,11 @@ Every consumer imports `CHROME_THEME_SCOPE` from `@plugins/primitives/plugins/ui
   consumer (`theme-engine`, `apps`, `desktop`, `shell/toaster`) already depends on `ui-kit` or
   adds a DAG-safe edge to it (`theme-engine → ui-kit` is new but cycle-free). No literals, no new
   edge into `apps`.
-- Run `./singularity check plugin-boundaries` and `type-check`.
+- Run `./equin check plugin-boundaries` and `type-check`.
 
 ## Verification
 
-1. `./singularity build`, open `http://att-1781451327-clgw.localhost:9000`.
+1. `./equin build`, open `http://att-1781451327-clgw.localhost:9000`.
 2. Switch to **Desktop** arrangement. Open two windows of different apps and set distinct
    presets per app (e.g. Studio = Ocean, Conversations = Warm).
 3. Focus the Studio window, then the Conversations window. **Confirm the tab bar, app rail, and
@@ -195,7 +195,7 @@ Every consumer imports `CHROME_THEME_SCOPE` from `@plugins/primitives/plugins/ui
 7. Switch to **Tabs** arrangement → behavior unchanged; the single surface still uses `:root`
    (focused-app theme), the tab bar/rail now show the stable chrome theme. Confirm warm-reload
    has no flash (global pre-paint cache untouched).
-8. `./singularity check`.
+8. `./equin check`.
 
 Use `e2e/screenshot.mjs` for the focus-switch before/after captures in step 3.
 

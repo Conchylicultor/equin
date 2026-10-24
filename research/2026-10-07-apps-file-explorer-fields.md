@@ -120,13 +120,13 @@ Check during implementation:
 
 ## Verification
 
-1. `./singularity test plugins/apps/plugins/file-explorer plugins/infra/plugins/host-fs`
+1. `./equin test plugins/apps/plugins/file-explorer plugins/infra/plugins/host-fs`
    runs the new `entry-kind.test.ts` (kind labels, category folding, and
    extension edge cases) and the existing host-fs and archive tests. Extend a
    host-fs entry test to assert `birthtimeMs > 0` and that `atimeMs` is present
    for a temp file, and that both are absent for a zip member.
-2. `./singularity build` (in the background), then
-   `./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --path "/files/at/~%2FDownloads" --out /tmp/files`
+2. `./equin build` (in the background), then
+   `./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --path "/files/at/~%2FDownloads" --out /tmp/files`
    should show the Kind column with "PDF document" and the other types.
 3. With `--click "View options"`, the Fields list should show Created,
    Accessed, Category, Extension, Path, and Link target. In the live app,

@@ -128,7 +128,7 @@ reorder, which happens with OR without the hoist). Remove the entire mechanism:
 
 ## Verification
 
-1. `./singularity build` (regenerates docs; run `./singularity check
+1. `./equin build` (regenerates docs; run `./equin check
    plugins-doc-in-sync` if docs drift).
 2. App at `http://<worktree>.localhost:9000` — open a conversation with a long
    transcript (`/c/<id>` or `/a/<id>`):
@@ -149,5 +149,5 @@ reorder, which happens with OR without the hoist). Remove the entire mechanism:
    list, and conversation sidebar still update live; navigating between
    conversations does not leak ever-growing subs (each tears down after the gc
    window).
-6. `./singularity check` (eslint incl. promise-safety/no-bare-catch on the new
+6. `./equin check` (eslint incl. promise-safety/no-bare-catch on the new
    timer code; plugin-boundaries; doc-in-sync).

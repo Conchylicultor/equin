@@ -14,7 +14,7 @@ import tsParser from "@typescript-eslint/parser";
 import rule from "./no-raw-pg-connection";
 
 // Hand RuleTester bun's own describe/it. Left to find them as globals, it
-// registers nothing under `./singularity test` ("Ran 0 tests across 1 file"),
+// registers nothing under `./equin test` ("Ran 0 tests across 1 file"),
 // so a broken rule would pass green.
 RuleTester.describe = describe;
 RuleTester.it = it;

@@ -9,7 +9,7 @@ between). To "collapse its commits" the agent ran `git reset --soft origin/main`
 Because `origin/main` (N) had advanced past the fork point B, the reset moved the
 **branch pointer** to N while leaving the index/worktree at **B + work**. The
 staged diff `(N → B+work)` therefore encoded *"delete everything that landed in
-between."* `./singularity push` faithfully committed and merged that, reverting
+between."* `./equin push` faithfully committed and merged that, reverting
 the intervening work off `main`. Nothing flagged it; caught only by chance.
 
 Two things in the repo actively nudge agents toward this command:
@@ -130,7 +130,7 @@ allowed by the guard; leave them unchanged.)
 + 2. If main's shape diverged so much your diff no longer applies, re-apply your changes by hand onto a
 +    fresh branch from `origin/main`. NEVER `git reset` your branch onto `origin/main`/`main`: when main
 +    has moved past your fork point it silently stages a deletion of every commit that landed in between,
-+    and the next `./singularity push` reverts that work off main. (This command is now blocked by a guard.)
++    and the next `./equin push` reverts that work off main. (This command is now blocked by a guard.)
 ```
 
 Also update the `MEMORY.md` index line for it: drop the "or reset + reapply"
@@ -148,7 +148,7 @@ No schema, no migration, no new plugin, no codegen registry edits (guards regist
 
 ## Verification
 
-1. `./singularity build` (compiles the guard; runs checks incl. eslint).
+1. `./equin build` (compiles the guard; runs checks incl. eslint).
 2. Guard unit behavior — feed commands through the guard runner and assert deny/allow.
    The guards plugin entrypoint is `plugins/framework/plugins/tooling/plugins/guards/bin/guard.ts`
    (reads a PreToolUse JSON on stdin, emits the decision). Drive it with each row of the

@@ -22,7 +22,7 @@
  *   - no marker, pid dead ⇒ hard SIGKILL ⇒ CLOSE with {-1, now}.
  *   - no marker, pid alive ⇒ still running ⇒ LEAVE OPEN.
  *
- * Run: `./singularity test plugins/infra/plugins/jobs/plugins/supervised-job`
+ * Run: `./equin test plugins/infra/plugins/jobs/plugins/supervised-job`
  */
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { afterEach, describe, expect, test } from "bun:test";

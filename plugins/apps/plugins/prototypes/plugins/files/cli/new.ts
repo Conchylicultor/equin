@@ -3,7 +3,7 @@ import { mintPrototype } from "../shared/mint";
 import { prototypeUrlFormatter } from "./prototype-url";
 
 /**
- * `./singularity prototype new [title]` — the terminal spelling of the mint.
+ * `./equin prototype new [title]` — the terminal spelling of the mint.
  *
  * Calls {@link mintPrototype} straight against the filesystem rather than
  * `POST /api/prototypes`, which is the point of having the verb at all: the

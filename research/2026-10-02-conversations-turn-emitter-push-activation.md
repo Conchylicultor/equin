@@ -61,7 +61,7 @@ The boot reconcile and the event jobs can interleave: the boot read sees X activ
 - Fix comments that name the turn-emitter as a poller caller: `listConversationsForInfra` in `tasks-core/server/internal/queries/conversations.ts` (callers become "poller; turn-emitter boot reconcile"), and the stale "No filter columns: the sole consumer (queue pin revalidation)…" comment on `conversationStatusChanged`, which should name the turn-emitter.
 - `stopTurnEmitter` currently has no callers. Keep it (unsubscribe all) only if it is still referenced after the change; otherwise delete it.
 - Leave `subscribeToConversation`, `hasPendingTrigger` (the seed-read replay for durable waiters) and `emitEndTurn` unchanged.
-- The autogen docs (`plugins/conversations/CLAUDE.md`, `docs/plugins-details.md` list `defineTimer('conversations.turn-emitter')`) regenerate on `./singularity build`.
+- The autogen docs (`plugins/conversations/CLAUDE.md`, `docs/plugins-details.md` list `defineTimer('conversations.turn-emitter')`) regenerate on `./equin build`.
 
 ### Residual risk (unchanged in kind)
 
@@ -76,7 +76,7 @@ The boot reconcile and the event jobs can interleave: the boot read sees X activ
 
 ## Verification
 
-1. `./singularity build` (background). The type-check and the timer lint pass, and the docs regenerate without the timer.
+1. `./equin build` (background). The type-check and the timer lint pass, and the docs regenerate without the timer.
 2. Debug → Background activity: `conversations.turn-emitter` is gone from Timers. `conversations.turn-emitter.reconcile` appears under jobs, triggered by `conversation.created` / `conversation.statusChanged`.
 3. Launch a conversation on the worktree deploy and let it finish a turn. Then, with `query_db` on the worktree DB:
    - `event_emissions` shows `conversation.created` / `conversation.statusChanged` and the reconcile jobs that ran;

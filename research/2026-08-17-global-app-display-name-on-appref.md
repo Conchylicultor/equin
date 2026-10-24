@@ -176,13 +176,13 @@ position — only the tooltip/aria-label gains the destination. `null` still mea
 
 ## Verification
 
-1. `./singularity check` — type-check + boundaries + `plugins-doc-in-sync`
+1. `./equin check` — type-check + boundaries + `plugins-doc-in-sync`
    (the deleted check must disappear from the generated docs), and confirm
-   `apps-paths-from-app-ref` is no longer listed by `./singularity check --list`.
-2. `./singularity test plugins/primitives/plugins/pane plugins/apps-core` —
+   `apps-paths-from-app-ref` is no longer listed by `./equin check --list`.
+2. `./equin test plugins/primitives/plugins/pane plugins/apps-core` —
    the pane jsdom suites and the tabs history/boot suites exercise `defineApp`
    fixtures and `.path`/`.id` reads.
-3. `./singularity build`, then in the deployed app:
+3. `./equin build`, then in the deployed app:
    - the app rail still shows every app's tooltip, and the tab bar still falls
      back to the app name for an untitled tab;
    - Home's launcher grid still lists app names;

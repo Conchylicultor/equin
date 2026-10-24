@@ -554,7 +554,7 @@ export async function setConfig<
     base = { ...(orig.content as Record<string, unknown>) };
     hash = computeHash(orig.content);
   } else {
-    // ./singularity build propagates a hashed origin for every registered
+    // ./equin build propagates a hashed origin for every registered
     // descriptor, so a missing origin here means the build never ran (or the
     // file was deleted). A base write with no origin — or a scoped write when
     // even the BASE origin is absent (the fork-on-write branch above can't fire,
@@ -563,7 +563,7 @@ export async function setConfig<
     // detection can't anchor — fail loudly.
     throw new Error(
       `[config-v2] setConfig: no origin file for "${entry.storePath}" at ${configFileRelPath(entry.files.origin)}. ` +
-        `Run ./singularity build to propagate the config origin before setting overrides.`,
+        `Run ./equin build to propagate the config origin before setting overrides.`,
     );
   }
 
@@ -627,7 +627,7 @@ export async function resetConfigByPath(
   // RESET RESTORES WHAT THE REPO COMMITS, not what the code declares.
   //
   // The git layer (the generated origin ⊕ any committed authored override) is
-  // what `./singularity build` propagated into this entry's origin file, and it
+  // what `./equin build` propagated into this entry's origin file, and it
   // is the baseline the settings pane calls "unmodified". Writing
   // `descriptor.defaults[key]` instead used to leave the field still marked as
   // modified — and for a reorder slot it wiped the committed arrangement to an
@@ -646,7 +646,7 @@ export async function resetConfigByPath(
     // removed.
     throw new Error(
       `[config-v2] resetConfigField: no origin file for "${storePath}" at ${configFileRelPath(entry.files.origin)}. ` +
-        `Run ./singularity build to propagate the config origin before resetting fields.`,
+        `Run ./equin build to propagate the config origin before resetting fields.`,
     );
   }
   const originDoc = asDocument(originData.content);

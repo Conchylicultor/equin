@@ -45,7 +45,7 @@ v1 ([2026-10-01-global-pages-mockup-pixel-match.md](2026-10-01-global-pages-mock
 
 Each new token:
 - gets its Tailwind mapping or `@utility` in `ui-kit/web/theme/app.css`;
-- needs `./singularity build` to regenerate `token-group-vars.generated.ts`.
+- needs `./equin build` to regenerate `token-group-vars.generated.ts`.
 
 ### 1.2 `pages-ink` theme
 
@@ -265,7 +265,7 @@ The existing `SectionRootPanel` already has the mockup's parts: note, search, co
 
 ## 6. Measuring
 
-- **Whole screen:** `./singularity run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts --name proto-1790691924-p8nh --color-scheme dark` after each build. Read only the sidebar, toolbar and header cells.
+- **Whole screen:** `./equin run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts --name proto-1790691924-p8nh --color-scheme dark` after each build. Read only the sidebar, toolbar and header cells.
 - **Menus:** new `plugins/apps/plugins/pages/plugins/page-tree/e2e/chrome-capture.ts`, using the harness `withBrowser`, `snap`, `diffImages` and `colorReport`.
   - For the app and for the mockup, it opens:
     - the kind menu;
@@ -291,14 +291,14 @@ The existing `SectionRootPanel` already has the mockup's parts: note, search, co
 
 ## Verification
 
-- `./singularity build` (in the background), then compare-diff and chrome-capture in dark mode.
+- `./equin build` (in the background), then compare-diff and chrome-capture in dark mode.
 - Light mode: screenshot `/pages/page/block-acef974d-…` with `--color-scheme light`. Today's colours stay; the new sizes apply.
 - Other apps: screenshot agent-manager and home before and after. They should be pixel-identical, since every new token defaults to today's value.
-- `./singularity test plugins/primitives/plugins/tree plugins/primitives/plugins/bar plugins/primitives/plugins/css plugins/apps/plugins/pages plugins/infra/plugins/host-account`. Add cases for:
+- `./equin test plugins/primitives/plugins/tree plugins/primitives/plugins/bar plugins/primitives/plugins/css plugins/apps/plugins/pages plugins/infra/plugins/host-account`. Add cases for:
   - the token-driven indent;
   - the trailing radio indicator;
   - the host-account name parse (id -F, GECOS, fallback).
-- `./singularity check`, including:
+- `./equin check`, including:
   - `type-scale:closed-role-ladder`;
   - `token-group-vars-in-sync`;
   - `icons:manifest-in-sync`, since new glyphs (`flare`, `sentiment-satisfied`, `sync`, `dock-to-left`) regenerate the manifest;

@@ -99,12 +99,12 @@ Add a `title` tooltip on the icon (`"Question phase"`, etc.) so the meaning is d
 
 ## Verification
 
-1. `./singularity build` — applies schema changes and restarts the server.
+1. `./equin build` — applies schema changes and restarts the server.
 2. Open `http://<worktree>.localhost:9000` sidebar and confirm each existing conversation row shows a phase icon.
 3. Manually walk a fresh conversation through the phases:
    - Create a new conversation → **question** (help icon, grey).
    - Inside it, write a file under `research/` only → within ~2 s, icon flips to **design** (edit-note, blue).
    - Edit any file outside `research/` → flips to **review** (amber).
-   - `./singularity push -m "…"` from that worktree → `push-watcher` inserts a row → after reverting/removing the local edits on next sweep, icon shows **completed** (green check). With uncommitted edits still present, it stays in review (latest-event-wins).
+   - `./equin push -m "…"` from that worktree → `push-watcher` inserts a row → after reverting/removing the local edits on next sweep, icon shows **completed** (green check). With uncommitted edits still present, it stays in review (latest-event-wins).
 4. Restart the server — phase map rebuilds correctly on boot (verify by refreshing the UI immediately after restart).
 5. Sidebar should not flicker: phase only re-notifies when a conversation's phase actually changes (compare tick-over-tick in the watcher).

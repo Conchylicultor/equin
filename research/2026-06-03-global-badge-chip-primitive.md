@@ -220,9 +220,9 @@ noisy, so propose as a separate PR after the migration settles, not part of the 
 
 ## Verification
 
-1. `./singularity build` from the worktree; confirm the two new primitives appear in the
+1. `./equin build` from the worktree; confirm the two new primitives appear in the
    generated registry and the app boots at `http://att-1780499219-s0eq.localhost:9000`.
-2. `./singularity check` — must pass `eslint`, `plugin-boundaries` (only
+2. `./equin check` — must pass `eslint`, `plugin-boundaries` (only
    `@plugins/primitives/plugins/{badge,link-chip}/web` imports cross-plugin), and
    `plugins-doc-in-sync` (CLAUDE.md autogen).
 3. Visual before/after with `bun e2e/screenshot.mjs` on the high-density surfaces:

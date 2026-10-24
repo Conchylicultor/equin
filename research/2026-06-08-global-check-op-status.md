@@ -1,4 +1,4 @@
-# Add `./singularity check` to the worktree op-status system
+# Add `./equin check` to the worktree op-status system
 
 ## Context
 
@@ -12,13 +12,13 @@ Today the agent-manager surfaces in-flight long-running worktree operations —
 and it keeps the conversation **status** reading as `working` while the op runs
 (otherwise a CLI subprocess in tmux "shell" state falls through to `waiting`).
 
-`./singularity check` is missing from all of this. When an agent runs checks
+`./equin check` is missing from all of this. When an agent runs checks
 standalone, the conversation shows as `waiting` (idle) even though checks are
 actively running, and neither the list chip nor the banner reflects it. We want
 to generalize the exact same pattern to `check`: a list icon, a banner status,
 and `working` conversation status while checks run.
 
-**Scope (confirmed):** standalone `./singularity check` only. Checks that run
+**Scope (confirmed):** standalone `./equin check` only. Checks that run
 *inside* build or push stay subsumed under the existing "Build in progress" /
 "Push in progress" status — no new marker is written in those nested contexts,
 avoiding label flicker and marker-priority churn.
@@ -117,7 +117,7 @@ that union is the seam to extend with `"check"`.
 
 ### 7. Docs
 - Update `plugins/.../op-status/CLAUDE.md` prose + the autogen reference will be
-  refreshed by `./singularity build` (codegen). Mention `check` in the marker
+  refreshed by `./equin build` (codegen). Mention `check` in the marker
   list and icon legend.
 
 ### No change needed
@@ -128,19 +128,19 @@ that union is the seam to extend with `"check"`.
 
 ## Verification
 
-1. `./singularity build` (regenerates docs, rebuilds, restarts).
-2. `./singularity check --list` then trigger a real run: in a worktree, run a
-   slow-ish `./singularity check` and, while it runs, observe via MCP:
+1. `./equin build` (regenerates docs, rebuilds, restarts).
+2. `./equin check --list` then trigger a real run: in a worktree, run a
+   slow-ish `./equin check` and, while it runs, observe via MCP:
    - `query_db` the `conversations` row → `status = 'working'` for that worktree.
 3. UI (`http://<worktree>.localhost:9000`):
    - Sidebar row for the conversation shows the `MdScience` icon with the
      "Checks running" tooltip.
    - The conversation banner above the prompt reads "Check in progress" with a
      live elapsed timer; expanding lists it in the no-queue group.
-4. Confirm **standalone-only scope**: run `./singularity push` (which runs checks
+4. Confirm **standalone-only scope**: run `./equin push` (which runs checks
    in a subprocess) and confirm the status stays "Push in progress" — no
    "Checking" flicker, and no stray `check.json` marker is left behind
    (`ls ~/.singularity/worktrees/<slug>/ops/` shows only `push.json` during push).
-5. Kill a running `./singularity check` with Ctrl-C and confirm the marker is
+5. Kill a running `./equin check` with Ctrl-C and confirm the marker is
    cleared (no stale "Check in progress" lingering) — exercises the exit guard /
    pid-reaping.

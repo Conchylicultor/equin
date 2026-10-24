@@ -357,7 +357,7 @@ Per phase, but the end-to-end target:
 4. A no-flag build is byte-equivalent to today's main build.
 5. A composition's `build_runs` row has no parent and its artifacts are named
    after its own id.
-6. `./singularity check` green throughout, in particular `migrations-in-sync`,
+6. `./equin check` green throughout, in particular `migrations-in-sync`,
    `plugins-registry-in-sync`, `web-artifacts:map-in-sync`, and
    `cli:codegen-manifests-not-frozen` (Phase 2's replacement for the old
    import-subset guard).

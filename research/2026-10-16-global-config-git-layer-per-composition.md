@@ -6,7 +6,7 @@ resolved layer into config_v2's web artifact").
 
 ## Context
 
-`./singularity build` bundles the committed config layer for the browser server. Codegen
+`./equin build` bundles the committed config layer for the browser server. Codegen
 (`tooling/plugins/codegen/core/config-git-layer-gen.ts`) walks the whole repo `config/` and writes
 ONE gitignored module, `plugins/config_v2/web/internal/git-layer.generated.ts`. `demo-resource.ts`
 reaches it through `import("./git-layer.generated")`, so it is a lazy chunk **inside config_v2's web
@@ -145,7 +145,7 @@ In `tooling/plugins/web-artifacts/core/internal/`:
 
 ## Verification
 
-- `./singularity test plugins/framework/plugins/tooling/plugins/codegen plugins/framework/plugins/tooling/plugins/web-artifacts plugins/config_v2`:
+- `./equin test plugins/framework/plugins/tooling/plugins/codegen plugins/framework/plugins/tooling/plugins/web-artifacts plugins/config_v2`:
   - **Generator, on a temp `config/` tree:**
     - a document whose plugin is outside the registry is dropped;
     - an `@app/<id>` scope for an app outside the composition is dropped;
@@ -155,13 +155,13 @@ In `tooling/plugins/web-artifacts/core/internal/`:
     - the registry `inputsHash` changes when only the layer file changes;
     - the import map has `@composition-config-layer` under the registry dir;
     - a composition source with no layer file throws.
-- `./singularity build`, then a screenshot of `/demo`: the Agent Manager sidebar still shows its
+- `./equin build`, then a screenshot of `/demo`: the Agent Manager sidebar still shows its
   committed views (Queue, Models, …).
-- `./singularity build --composition website`. In that composition's dist:
+- `./equin build --composition website`. In that composition's dist:
   - the registry artifact's `config-layer.js` names no `apps/mail`, `apps/places` or `apps/pages`
     storePath and no `@app` scope for them;
   - main's `config-layer.js` does;
   - no file in config_v2's artifact contains config data (grep for `conversations-sidebar`).
-- `./singularity check` is green: plugin-boundaries, type-check, `plugins-registry-in-sync`.
+- `./equin check` is green: plugin-boundaries, type-check, `plugins-registry-in-sync`.
 - Afterwards, on the track card: tick a "per-composition config" line and rewrite the config
   paragraph. Then file the next main task: the `turn-ledger.turns` demo answer.

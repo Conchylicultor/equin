@@ -233,7 +233,7 @@ executor pattern.
 
 ## Verification
 
-1. `./singularity build` (regenerates nothing schema-wise here; confirms tsc +
+1. `./equin build` (regenerates nothing schema-wise here; confirms tsc +
    checks pass — especially `type-check` and `plugin-boundaries`).
 2. **Reproduce the original bug is gone (rewire path).** Create task A (armed,
    auto-start) blocked by prerequisite B. Insert a new prerequisite C between

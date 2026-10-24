@@ -181,20 +181,20 @@ Two kinds of answers, with a clear owner each:
 
 ## Verification
 
-- `./singularity test plugins/network/plugins/live plugins/framework/plugins/browser-server plugins/apps-core plugins/primitives/plugins/pane`:
+- `./equin test plugins/network/plugins/live plugins/framework/plugins/browser-server plugins/apps-core plugins/primitives/plugins/pane`:
   - external exposing collection served, `$columns` defaulted, `arms` still refused;
   - pack shadows a contributed default; two contributions on one key throw;
   - `app-embed.test.tsx` (jsdom): renders a fixture app, a row click changes the embed's route and
     not `window.location`, a cross-app navigate calls `onLeave`, Expand of a foreign-homed pane
     calls `onLeave` (not the host navigator).
-- `./singularity build`, then
+- `./equin build`, then
   - `screenshot.ts --path /website --viewport 1440x2400` (and the exhibit): the band shows the
     sidebar (queue + done) and the conversation with its transcript; no `demo-missing`;
   - click a sidebar row in the embed: the embed's route changes, the host URL does not;
   - click the launcher / another app: refused with the toast;
   - `logs/live-state.jsonl`: no demo subscription on the real socket; server log: no `/api/`
     request with a demo id after mount.
-- `./singularity check`.
+- `./equin check`.
 
 ## Wrap-up
 

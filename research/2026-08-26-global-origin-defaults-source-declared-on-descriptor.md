@@ -211,10 +211,10 @@ and the runtime throw from step 5 catches the cast.
 
 ## Verification
 
-1. `./singularity build` (background) — must be **byte-clean**: no change to any
+1. `./equin build` (background) — must be **byte-clean**: no change to any
    `config/**/*.origin.jsonc` and no `@review` marker minted. Step 7 is the one that
    could break this; `git status config/` proves it did not.
-2. `./singularity check` — `type-check`, `config-origins-in-sync`,
+2. `./equin check` — `type-check`, `config-origins-in-sync`,
    `config:overrides-authored`, `plugins-registry-in-sync`, `composition-closure`.
    The type lives in `core`, so tsc covers it under `server-core`, `central-core`,
    `web-core`, `tsconfig.tools.json` and `tsconfig.test.json`.
@@ -223,10 +223,10 @@ and the runtime throw from step 5 catches the cast.
    and confirm tsc reports `Type '"build"' is not assignable to type '"descriptor"'`.
    Revert.
 4. **Prove the generator assert bites.** Temporarily flip `directive.ts` to
-   `originDefaultsFrom: "descriptor"` and confirm `./singularity check config-origins-in-sync`
+   `originDefaultsFrom: "descriptor"` and confirm `./equin check config-origins-in-sync`
    fails with the new message rather than silently rewriting origins. Revert.
-5. `./singularity test plugins/framework/plugins/tooling/plugins/codegen` and
-   `./singularity test plugins/config_v2`. Add a case to
+5. `./equin test plugins/framework/plugins/tooling/plugins/codegen` and
+   `./equin test plugins/config_v2`. Add a case to
    `config-origin-gen.test.ts` covering both arms of the step-6 assert.
 
 ---

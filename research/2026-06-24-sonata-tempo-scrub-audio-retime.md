@@ -137,7 +137,7 @@ wheel more tightly. As its **own commit** (bisectable if it regresses):
 ## Verification
 
 Audio artifacts require **listening in the running app** (a headless test cannot hear
-the buzz). After `./singularity build`, open a song at
+the buzz). After `./equin build`, open a song at
 `http://<worktree>.localhost:9000/sonata/song/<id>`, press play, and:
 
 1. **Drag the speed wheel** slowly and fast on a dense MIDI → **no buzz**; audio
@@ -148,5 +148,5 @@ the buzz). After `./singularity build`, open a song at
 5. After the separate lookahead commit: **backgrounded-tab playback** with the reduced
    lookahead — confirm no dropouts.
 
-No automated test covers the audible artifact; `./singularity check` + `type-check`
+No automated test covers the audible artifact; `./equin check` + `type-check`
 must still pass for the refactor.

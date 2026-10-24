@@ -249,7 +249,7 @@ not the MCP plugin, so a future non-MCP writer reuses it.
 
 ## Verification
 
-1. `./singularity build`, then `./singularity check` — `plugins-registry-in-sync`,
+1. `./equin build`, then `./equin check` — `plugins-registry-in-sync`,
    `plugins-doc-in-sync`, `migrations-in-sync`, `page.editor:block-data-registered`,
    `page-editor:anchor-has-decoration` and the new `annotations:audience-declared` are the
    ones that will bite.

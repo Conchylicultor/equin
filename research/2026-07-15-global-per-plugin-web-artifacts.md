@@ -2,7 +2,7 @@
 
 ## Context
 
-`./singularity build` is O(repo): the monolithic Vite/Rollup build re-transforms **6,745 modules on every build** regardless of the diff. Measured over recorded profiles (60 builds / 7 days):
+`./equin build` is O(repo): the monolithic Vite/Rollup build re-transforms **6,745 modules on every build** regardless of the diff. Measured over recorded profiles (60 builds / 7 days):
 
 - `viteBuild` is the critical path of virtually every build: **150s idle (main), 525s median (agent), 1,660s worst** — out of a 7.2-min median build.
 - ~71 builds/day × ~all-unchanged modules ≈ **129 wall-hours/week** of mostly redundant transforms; this fleet-wide CPU pressure is also what inflates checks (55–110s wall for 2–5s checks) and produces the 20–38 min tail builds.
@@ -11,7 +11,7 @@
 **Target: build cost O(changed plugins).** Each plugin builds into an independent ES-module artifact; the browser composes them via an import map. A change to plugin A rebuilds only A's artifact (late-bound exports ⇒ no rebuild cascade). Artifacts are content-addressed and shared across worktrees, so a fresh worktree (branched off main) reuses ~everything: cold build ≈ warm build.
 
 **Decisions made with the user (2026-07-15):**
-- **Scope:** agent worktrees **and** main-branch builds switch to artifact mode. Release/composition builds (`./singularity release`, `--composition`) keep the monolithic optimized Rollup build unchanged.
+- **Scope:** agent worktrees **and** main-branch builds switch to artifact mode. Release/composition builds (`./equin release`, `--composition`) keep the monolithic optimized Rollup build unchanged.
 - **Rollout:** land behind an opt-in (`SINGULARITY_WEB_ARTIFACTS=1` / `--artifacts`), prove parity, then flip the default with `--monolith` as escape hatch.
 - **Minify:** supported and **on by default** (artifacts will eventually serve remote deploys); esbuild minify with `keepNames: true` (parity with today's `esbuild: { keepNames: true }`). `--no-minify` for debugging. The minify flag is part of the artifact hash.
 
@@ -117,7 +117,7 @@ New plugin `plugins/framework/plugins/tooling/plugins/web-artifacts/`:
 4. **Cross-worktree reuse:** fresh worktree off main → first `--artifacts` build reuses store (0 or near-0 builds).
 5. **Stale-tab flow:** deploy twice, confirm the stale-frontend toast still fires (build-id refactor).
 6. **Unit tests (`bun:test`, co-located):** hash stability/sensitivity (content change ⇒ new hash; sibling-plugin change ⇒ same hash), import-map generation, allowlist externals function.
-7. Existing suites still pass: `bun run test:dom` (plugin-render smoke), `./singularity check`.
+7. Existing suites still pass: `bun run test:dom` (plugin-render smoke), `./equin check`.
 
 ## Risks & mitigations
 
@@ -134,8 +134,8 @@ Phase 1 landed behind the opt-in (`--artifacts` / `SINGULARITY_WEB_ARTIFACTS=1`;
 
 **Measured (this worktree, M-series host, 2026-07-16):**
 
-- Cold fleet: **924 artifacts** (707 web + 215 folder barrels + entry + registry) ≈ **150s** artifact-build stage standalone (in-process vite lib builds, semaphore cpus/2); ~236s when racing the full check fleet inside `./singularity build`.
-- Warm no-op `SINGULARITY_WEB_ARTIFACTS=1 ./singularity build`: **0 built / 924 reused**, web-artifacts step **6.9–8.9s** (detect ~0.7s stat fingerprints; global css ~5–7s dominates).
+- Cold fleet: **924 artifacts** (707 web + 215 folder barrels + entry + registry) ≈ **150s** artifact-build stage standalone (in-process vite lib builds, semaphore cpus/2); ~236s when racing the full check fleet inside `./equin build`.
+- Warm no-op `SINGULARITY_WEB_ARTIFACTS=1 ./equin build`: **0 built / 924 reused**, web-artifacts step **6.9–8.9s** (detect ~0.7s stat fingerprints; global css ~5–7s dominates).
 - One-file touch through the real build command: detect reports exactly **1 stale**, 1 built / 923 reused, web-artifacts step **8.0s** — vs the monolith's `vite build` step at **209.4s** on the same host, same session.
 - Vendor set: 62 specifiers ≈ 5–10s cold (ONE esbuild build), cached by set hash thereafter.
 - Import map ~985 entries; eager-tier modulepreload closure ~872 URLs (emitted in Phase 1, ahead of plan §6.4).
@@ -174,12 +174,12 @@ Phase 1 landed behind the opt-in (`--artifacts` / `SINGULARITY_WEB_ARTIFACTS=1`;
 All four hardening items landed:
 
 1. **`web-artifacts:map-in-sync` check** (`web-artifacts/check/index.ts`). Detects an artifact-mode dist by the compose-emitted `.web-artifacts.json` marker (now also recording `minify`, so the check recomputes with the dist's own flag); a monolith dist passes. It recomputes the EXACT expected composition — the pipeline's planning was factored into `core/internal/plan.ts` (target hashing, barrel closure, vendor requests, map-entry assembly) shared verbatim by the pipeline and `core/internal/expected.ts`, so expected vs deployed cannot drift by construction. `collectBareSpecifiers` was deliberately NOT used as the verdict input: the source scan includes `import type` edges the emitted artifacts tree-shake away, so it over-approximates the vendor set and would false-fail; the exact recompute is strictly stronger. Two failure shapes: URL diff (`stale artifact` / missing / extra specifiers, stale entry script) and `missing-artifacts` (an expected artifact absent from the store ⇒ the dist predates the tree). Both verified by break-glass (hand-edited map; unbuilt source edit).
-   - **Build-race resolution (plan assumption that broke):** checks run in parallel with the frontend build, BEFORE the atomic publish — a dist-vs-tree check would fail every build that changes source. New `markBuildInProgress()`/`isBuildInProgress()` in `checks/core/run-context.ts` (env marker set at the top of the build action): map-in-sync skips inside a build and returns `null` from `cacheSignature()` so the skip is never cached. `push` re-runs checks in a fresh subprocess and standalone `./singularity check` in its own process — both verify for real. Its `cacheSignature` otherwise folds in dist index.html + marker + store mtime, so a hand-edited dist can't hide behind the tree-hash cache.
+   - **Build-race resolution (plan assumption that broke):** checks run in parallel with the frontend build, BEFORE the atomic publish — a dist-vs-tree check would fail every build that changes source. New `markBuildInProgress()`/`isBuildInProgress()` in `checks/core/run-context.ts` (env marker set at the top of the build action): map-in-sync skips inside a build and returns `null` from `cacheSignature()` so the skip is never cached. `push` re-runs checks in a fresh subprocess and standalone `./equin check` in its own process — both verify for real. Its `cacheSignature` otherwise folds in dist index.html + marker + store mtime, so a hand-edited dist can't hide behind the tree-hash cache.
 2. **`web-artifacts:no-vendored-state-inlined` check** (same `check/index.ts`). Signal: sourcemap `sources` — `meta.staticImports` records only what stayed EXTERNAL, so it cannot see inlined modules, while every module bundled INTO an artifact appears in `sources` (the builder emits sourcemaps unconditionally). Scans the current tree's expected fleet (artifacts not yet in the store are skipped — staleness is map-in-sync's job; empty store ⇒ pass). A full-store scan measured 13s/3.4GB, so verdicts persist per artifact dir in `~/.singularity/web-artifacts/vendored-scan.json` (content-addressed dirs ⇒ immutable verdicts; stored unfiltered so an allowlist edit re-filters without re-scanning) — warm runs are ~ms. Fleet reality check: 923 artifacts scanned, the only node_modules package inlined anywhere is `react-icons` (the allowlist). Break-glass verified via a poisoned verdict (fails naming artifact + package) and unit tests.
 3. **Gateway `/artifacts/*` 404** (`gateway/proxy.go` `handleStatic`): a miss under `/artifacts/` — including a dangling store symlink — returns 404 instead of the SPA fallback (which handed the module loader index.html and surfaced as a cryptic parse error). 3 new tests in `proxy_test.go` (hit serves file, miss 404s, non-artifact routes keep the fallback); `go build`/`go vet`/`go test` clean. **Takes effect on the next gateway restart** (not restarted here).
 4. **Global-CSS pass caching** (`core/internal/global-css.ts`): the emitted stylesheet + font assets are cached content-addressed under `~/.singularity/web-artifacts/css/`, keyed by a fingerprint of the pass's TRUE input surface — Tailwind v4's automatic source detection scans the vite root (= repo root, honoring gitignore), so the key covers the git-enumerated worktree file set (tracked ∪ untracked-not-ignored) ∪ the `@source` dirs parsed from app.css (not hardcoded; covers them even if gitignored) + `@import` package versions (relative imports: content hash) + vite/tailwindcss/@tailwindcss/vite versions + minify + `BUILDER_VERSION`. Content hashing rides the shared stat-fingerprint fast path (`cachedAggregateHash`, factored out of `ownHashFor`), so a warm key is one `git ls-files` + a stat sweep. Over-inclusion (README edit ⇒ spurious 7s re-pass) is accepted; under-inclusion would silently serve stale CSS. Two profiler spans: `artifacts:css-key` and `artifacts:css` (labelled `global css (cached)` on hit). On a hit, vite/tailwind are never imported. Pruned like vendor sets (14d).
 
-**Measured (this worktree, same M-series host, 2026-07-16):** warm no-op `SINGULARITY_WEB_ARTIFACTS=1 ./singularity build` web-artifacts step **2.8s** (was 6.9–8.9s; css: cache hit) — remaining cost ≈ detect stats + css-key fingerprint + vendor-set key resolution + compose. First build after the change: one-time full-repo content hash into the fingerprint cache + tailwind pass (~52s racing the full check fleet), then steady-state 2.8s. Both checks green in the fleet on artifact and monolith dists; map-in-sync FAILs correctly on a hand-edited deployed map and on an unbuilt source edit.
+**Measured (this worktree, same M-series host, 2026-07-16):** warm no-op `SINGULARITY_WEB_ARTIFACTS=1 ./equin build` web-artifacts step **2.8s** (was 6.9–8.9s; css: cache hit) — remaining cost ≈ detect stats + css-key fingerprint + vendor-set key resolution + compose. First build after the change: one-time full-repo content hash into the fingerprint cache + tailwind pass (~52s racing the full check fleet), then steady-state 2.8s. Both checks green in the fleet on artifact and monolith dists; map-in-sync FAILs correctly on a hand-edited deployed map and on an unbuilt source edit.
 
 **Phase 3 hand-off:**
 
@@ -207,10 +207,10 @@ All four hardening items landed:
 **Measured (this worktree, M-series host, 2026-07-16):**
 
 - First default build after the change: 5 built / 923 reused (icon-picker web+core + 3 fixtures barrels), both web-artifacts checks green, **0 compose warnings** (was 6 per build).
-- Warm no-op `./singularity build` (quiet machine): web-artifacts step **2.2s** (0 built / 928 reused, css cache hit), checks 2.7s. Under post-monolith host contention the same no-op read 16.6s — contention, not work.
-- Rollback build `./singularity build --monolith`: green, deployed, vite step 143.6s (6,747 modules) — `map-in-sync` passes on a monolith dist by design.
+- Warm no-op `./equin build` (quiet machine): web-artifacts step **2.2s** (0 built / 928 reused, css cache hit), checks 2.7s. Under post-monolith host contention the same no-op read 16.6s — contention, not work.
+- Rollback build `./equin build --monolith`: green, deployed, vite step 143.6s (6,747 modules) — `map-in-sync` passes on a monolith dist by design.
 - Browser verification on the deployed artifact dist: 0 console errors, 0 plugin load errors; `loadFullIconSet()` through the real import map → 18 categories / 2,119 icons / search works (was a guaranteed `TypeError` before the fix); Layout Lab renders its 1 contributed fixture (= source truth; overlay/pin currently contribute none).
-- `bun test plugins/framework/plugins/tooling/plugins/web-artifacts`: 54 pass. `./singularity check`: exit 0.
+- `bun test plugins/framework/plugins/tooling/plugins/web-artifacts`: 54 pass. `./equin check`: exit 0.
 
 **Known Phase-3 costs / open items:**
 

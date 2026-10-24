@@ -8,7 +8,7 @@ subscribes to: `config-v2.values`, `config-v2.tiers`, `config-v2.conflicts`, and
 subscriptions **before** `onReady → initRegistry()` runs. `initRegistry()` is what
 populates the module-level `descriptorByPath` map and installs `configGetter` /
 `scopeForkedChecker`. So a client that subscribes during the boot window (Settings
-pane open across a `./singularity build` restart, or a cold reload on a pane chain
+pane open across a `./equin build` restart, or a cold reload on a pane chain
 that includes the config-detail pane) hits loaders whose backing state is still empty.
 
 The `values` loader was already hardened: it `await`s a module-level `registryReady`
@@ -103,11 +103,11 @@ descriptors → no conflicts." The gate alone is the fix there.
 
 ## Verification
 
-1. `./singularity build` from the worktree; confirm a clean boot (the doc/migration
+1. `./equin build` from the worktree; confirm a clean boot (the doc/migration
    checks and server start succeed).
 2. **Boot-window repro (the core fix):** open the Settings/Config pane in the app at
    `http://<worktree>.localhost:9000`, navigate to a config with a known git-tier or
-   user-tier field, then run `./singularity build` again while that pane stays open
+   user-tier field, then run `./equin build` again while that pane stays open
    (forces a server restart → fresh subscription during the boot window). After
    reconnect the field tier badges (git/user) must render correctly — not all
    "default". Before this fix they'd silently collapse to "default" until the next

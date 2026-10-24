@@ -2,7 +2,7 @@
 
 ## Context
 
-`./singularity build` runs the full check suite via `runChecks()`. Moments later, `./singularity push` re-runs the *identical* suite — frequently on a working tree that has not changed since the last green build. There is no memoization keyed on tree content, so push always pays full check cost even when the exact same tree was just verified. The auto-build (git-watcher → `buildRunJob` → `./singularity build --allow-main` in the **main** worktree, no `--skip-checks`) likewise re-runs the full suite.
+`./equin build` runs the full check suite via `runChecks()`. Moments later, `./equin push` re-runs the *identical* suite — frequently on a working tree that has not changed since the last green build. There is no memoization keyed on tree content, so push always pays full check cost even when the exact same tree was just verified. The auto-build (git-watcher → `buildRunJob` → `./equin build --allow-main` in the **main** worktree, no `--skip-checks`) likewise re-runs the full suite.
 
 **Goal:** memoize check passes keyed on a content hash of the working tree, stored in a shared location so `build`, `push`, and the auto-build all reuse each other's green results on an unchanged tree.
 
@@ -130,10 +130,10 @@ Add `.option("--no-cache", "Bypass the check result cache")`; pass `runChecks(id
 
 ## Verification
 
-1. Clean tree → `./singularity build`. Confirm checks pass; entries appear under `~/.singularity/check-cache/`.
-2. Without editing → `./singularity push`. In the check subprocess log: structural + `typescript` print `... ok (cached)`; `eslint`, `migration-hashes-unique`, `conversation-trailer` re-run.
+1. Clean tree → `./equin build`. Confirm checks pass; entries appear under `~/.singularity/check-cache/`.
+2. Without editing → `./equin push`. In the check subprocess log: structural + `typescript` print `... ok (cached)`; `eslint`, `migration-hashes-unique`, `conversation-trailer` re-run.
 3. Auto-build: after main advances via the push, confirm the main-worktree build's structural/typescript checks serve from cache (cross-worktree reuse).
-4. Edit one tracked `.ts` (add a comment) → `./singularity check`: tree hash changes → **every** check re-runs (miss).
-5. `./singularity check --no-cache` and `SINGULARITY_CHECK_NO_CACHE=1 ./singularity check`: no lookups/records; all run fresh.
+4. Edit one tracked `.ts` (add a comment) → `./equin check`: tree hash changes → **every** check re-runs (miss).
+5. `./equin check --no-cache` and `SINGULARITY_CHECK_NO_CACHE=1 ./equin check`: no lookups/records; all run fresh.
 6. Introduce a real eslint error → build fails, nothing recorded for eslint; fix → passes and records.
-7. `./singularity check` (full suite) green end-to-end after all edits.
+7. `./equin check` (full suite) green end-to-end after all edits.

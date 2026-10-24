@@ -26,7 +26,7 @@ import { buildRunsEntityRef } from "../../core/internal/entity";
 //   their own runs so inherited main builds don't surface a phantom "Build
 //   failed". Backfills to MAIN_WORKTREE_NAME — historically only main's
 //   auto-build wrote here.
-// - `targets` is WHICH COMPOSITIONS this one invocation built. `./singularity
+// - `targets` is WHICH COMPOSITIONS this one invocation built. `./equin
 //   build --composition sonata website` is ONE shared build — one install, one
 //   codegen, one migration pass, one checks pass, one transcript, one profile,
 //   one verdict — so it is ONE row carrying N target chips, not N rows sharing
@@ -53,7 +53,7 @@ const buildRunsEntity = defineEntity(
       // rather than kept as a fast path — it was a check-then-act with a TOCTOU
       // window. Two triggers racing across backend processes (where the in-process
       // `inflight` flag gives no protection) could both pass the liveness check
-      // before either inserted, then both spawn `./singularity build`, and the two
+      // before either inserted, then both spawn `./equin build`, and the two
       // competing builds stomp each other's backend restart, leaving both rows
       // unfinished → the reconciler stamps both exit_code=-1. Liveness is now the
       // supervised-run reconciler's single answer, and this index is the only

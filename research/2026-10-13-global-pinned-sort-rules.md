@@ -157,7 +157,7 @@ In `file-tree.tsx`:
 
 ## Verification
 
-- **Unit tests** (`./singularity test plugins/primitives/plugins/data-view`):
+- **Unit tests** (`./equin test plugins/primitives/plugins/data-view`):
   - `sort-cycle.test.ts`:
     - A header click on a user field keeps the pinned prefix.
     - Cycling to empty keeps the pinned rules.
@@ -167,7 +167,7 @@ In `file-tree.tsx`:
   - `summarize-sort.test.ts`: the pinned glyph.
   - `sort-rows.test.ts`: a pinned rule followed by a user rule gives folders
     first, then by date.
-- **Build:** `./singularity build`, then open
+- **Build:** `./equin build`, then open
   `http://<worktree>.localhost:9000/files/at/~%2FDownloads`:
   - With no header sort, folders are on top.
   - Click Modified, then click again: folders stay on top in both directions.
@@ -177,5 +177,5 @@ In `file-tree.tsx`:
   (it already relies on folders first), or add `e2e/folders-on-top-verify.ts`.
   The new script clicks the Modified header and asserts that every dir row
   precedes every file row at the root level.
-- **Checks:** `./singularity check` (type-check, plugins-doc-in-sync, config
+- **Checks:** `./equin check` (type-check, plugins-doc-in-sync, config
   hash).

@@ -10,8 +10,8 @@
 //      second line is the page's content, re-scoped into it; the row renders in
 //      the parent as a sub-page row titled with the first line.
 //
-// Manual only. Requires `./singularity build` first.
-// Usage: ./singularity run plugins/page/plugins/annotations/plugins/agent-notes/plugins/agent-page/e2e/card-turn-into-agent-page-verify.ts \
+// Manual only. Requires `./equin build` first.
+// Usage: ./equin run plugins/page/plugins/annotations/plugins/agent-notes/plugins/agent-page/e2e/card-turn-into-agent-page-verify.ts \
 //          [--out /tmp/card-agent-page]
 import type { Page } from "playwright";
 import {

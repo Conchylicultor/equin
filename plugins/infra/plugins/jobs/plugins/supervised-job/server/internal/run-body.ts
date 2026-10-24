@@ -42,7 +42,7 @@ function log(line: string, stream: "stdout" | "stderr" = "stdout"): void {
 
 /**
  * The child half of a `run`-body supervised job: a task registered under the
- * JOB NAME, which `./singularity supervised-exec <name> <payload>` resolves in a
+ * JOB NAME, which `./equin supervised-exec <name> <payload>` resolves in a
  * booted `exec` runtime.
  *
  * `recordErrors` is true for the built-in ledger: a throwing body records

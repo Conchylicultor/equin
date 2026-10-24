@@ -6,7 +6,7 @@
  * The check itself is database/admin's (`assertExclusionsClosed`): it derives
  * the catalog from the drizzle table objects rather than a live database.
  *
- * Run: `./singularity test plugins/apps/plugins/mail`
+ * Run: `./equin test plugins/apps/plugins/mail`
  */
 
 import { describe, test, expect, beforeAll } from "bun:test";

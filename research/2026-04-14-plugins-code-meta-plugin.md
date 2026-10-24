@@ -240,7 +240,7 @@ Modify:
 
 ## Verification
 
-1. `./singularity build` succeeds (no schema changes, so no migration).
+1. `./equin build` succeeds (no schema changes, so no migration).
 2. Open `http://claude-1776140814.localhost:9000`, pick a conversation whose
    worktree has actual changes.
 3. Toolbar shows the FileDiff icon with correct count (cross-check against

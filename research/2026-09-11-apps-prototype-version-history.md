@@ -23,7 +23,7 @@ Decided with the user:
   files back and records a new "Restored v3" version. Nothing is ever lost.
 - **Edits outside an agent turn** (hand edits, a plain terminal Claude): **fold
   into the next version.** Until then the arrows end on a "Live · unsaved
-  changes" position. `./singularity prototype checkpoint <id>` saves one by hand.
+  changes" position. `./equin prototype checkpoint <id>` saves one by hand.
 
 ## Storage: one private git repo per prototype, in the app's own data dir
 
@@ -217,7 +217,7 @@ next to the stage switcher (`gallery/web/components/detail-actions.tsx`), readin
 - Loading state while the resource is pending (never "0 versions").
 
 Improve prompt (`detail-actions.tsx:improveText`): add one line pointing at
-`./singularity prototype log <id> -p`. If the user launches Improve while
+`./equin prototype log <id> -p`. If the user launches Improve while
 looking at an old version, the prompt says which one ("the user was viewing v3,
 <sha>") — they may want to build from there.
 
@@ -249,7 +249,7 @@ infra/paths), `packages/flock`, `createFileWatcher` (infra/file-watcher),
 
 ## Verification
 
-- **Unit tests** (`./singularity test plugins/apps/plugins/prototypes`):
+- **Unit tests** (`./equin test plugins/apps/plugins/prototypes`):
   - version store against a temp dir: baseline, record, unchanged-is-a-no-op,
     duplicate `messageId` is a no-op, `dirty`, read a version's file (text and
     PNG bytes), restore (file added since, file deleted since, dirty before
@@ -257,8 +257,8 @@ infra/paths), `packages/flock`, `createFileWatcher` (infra/file-watcher),
   - turn attribution: a fixture event list → the right ids from Edit, Bash and
     Agent inputs; a window boundary at the previous end-of-turn; ids of other
     prototypes mentioned *before* the window are ignored.
-- **End to end:** `./singularity build`, then mint a prototype, launch Improve,
-  let the agent do two turns. `./singularity prototype log <id> -p` shows v0 plus
+- **End to end:** `./equin build`, then mint a prototype, launch Improve,
+  let the agent do two turns. `./equin prototype log <id> -p` shows v0 plus
   two versions with their requests and diffs. In the detail pane, `‹` goes back
   one version and the frame shows the older mock (screenshot with
   `e2e-harness/e2e/screenshot.ts --path /prototypes/proto/<id> --click …`);
@@ -266,5 +266,5 @@ infra/paths), `packages/flock`, `createFileWatcher` (infra/file-watcher),
   live file matches v1. Hand-edit the file → "Live · unsaved changes" appears.
   `_history` never shows as a gallery card or a "not a prototype id" problem,
   and `/api/prototypes/_history/…` returns 404.
-- `./singularity check` (data-dir registry, boundaries, self-contained check,
+- `./equin check` (data-dir registry, boundaries, self-contained check,
   docs in sync).

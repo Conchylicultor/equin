@@ -12,7 +12,7 @@
  * Manual only, like every script under `e2e/`. Needs a deployed worktree and a
  * source that has run at least once:
  *
- *   ./singularity run plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs/e2e/run-pane-verify.ts --source <sourceId>
+ *   ./equin run plugins/apps/plugins/events/plugins/sources/plugins/source-detail/plugins/runs/e2e/run-pane-verify.ts --source <sourceId>
  */
 import {
   arg,

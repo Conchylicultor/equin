@@ -1,3 +1,4 @@
+import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
@@ -52,7 +53,7 @@ function intentArgs(intent: ReleaseIntent): string[] {
 }
 
 /**
- * One `./singularity release`, as an ordinary durable job.
+ * One `./equin release`, as an ordinary durable job.
  *
  * The handler claims the composition's single in-flight slot, spawns a detached
  * child and SUSPENDS — it holds a worker slot for milliseconds, not for the
@@ -65,7 +66,7 @@ function intentArgs(intent: ReleaseIntent): string[] {
  * absorb that inversion by handing the terminal to a promise the starting
  * process was holding. That worked only while the process lived, which is
  * exactly what the Deploy app's `update` could not rely on: it awaited a release
- * in-process for tens of minutes, and an unrelated `./singularity build` ended
+ * in-process for tens of minutes, and an unrelated `./equin build` ended
  * both. `ctx.waitFor` is that mechanism now, and it is durable, so the map is
  * gone rather than generalised.
  *
@@ -138,7 +139,7 @@ export const releaseJob = defineSupervisedJob({
       );
     }
     const argv = [
-      "./singularity",
+      `./${CLI_NAME}`,
       "release",
       "--composition",
       input.composition,

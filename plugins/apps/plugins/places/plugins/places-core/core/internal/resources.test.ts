@@ -3,7 +3,7 @@
  * entities: the ids the DataViews (and their saved views) name are unchanged,
  * and Google's status presents as its chips.
  *
- * Run: `./singularity test plugins/apps/plugins/places/plugins/places-core/core`.
+ * Run: `./equin test plugins/apps/plugins/places/plugins/places-core/core`.
  */
 
 import { expect, test } from "bun:test";

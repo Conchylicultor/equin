@@ -145,6 +145,6 @@ Conversation.Toolbar({
 ## Verification
 
 1. `bun install` from root
-2. `./singularity build`
+2. `./equin build`
 3. Open a Claude session from the sidebar — should see the terminal with conversation toolbar area
 4. Verify the tmux session reattaches correctly on pane re-render

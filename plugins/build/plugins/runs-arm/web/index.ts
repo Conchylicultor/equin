@@ -28,7 +28,7 @@ export default {
       whereToDig: (run) => [
         `the build transcript: the \`${BUILD_LOG_CHANNEL}\` log channel of namespace \`${run.namespace ?? "?"}\`, and the build detail pane (Build → this run), which shows each step's output;`,
         `the ledger row: \`select * from build_runs where id = '${run.id}'\` via \`query_db\` (pass the namespace's database);`,
-        "`./singularity build` is the engine — a failed step is the CLI's verdict, so a wrong one is a CLI or code bug, not a UI one.",
+        "`./equin build` is the engine — a failed step is the CLI's verdict, so a wrong one is a CLI or code bug, not a UI one.",
       ],
     }),
   ],

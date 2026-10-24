@@ -42,7 +42,7 @@ and a missed rebuild become the same bug.
 
 - **Auto-build stays main-only.** `target` becomes per-namespace and the chain
   renders everywhere, but only main auto-builds on a ref advance. Worktrees keep
-  building via explicit `./singularity build`. No behaviour change beyond the bug.
+  building via explicit `./equin build`. No behaviour change beyond the bug.
 - **"N commits behind main" leaves the Build button.** That relationship is
   already owned by `tasks/attempt-work` and surfaced by the conversation
   commits-graph. The button answers deployment freshness only.
@@ -264,14 +264,14 @@ load-bearing deploy infra, not lookup work), reviewed before the next starts:
 | **2 · reconciler** | new `plugins/build/plugins/deployment/{core,server}`, `reconcileDeployment`, the deletions | `build/server/**`, new sub-plugin, `build/CLAUDE.md` |
 | **3 · chain UI** | `deployment/web`, `<DeploymentChain/>`, `CommitRowItem` `markers` prop | `deployment/web/**`, `build-popover-content.tsx`, `primitives/commit-list/web` |
 
-One `./singularity build` after step 3 (backgrounded — the median is ~10 min,
+One `./equin build` after step 3 (backgrounded — the median is ~10 min,
 over the foreground cap), then the end-to-end checks below. Steps 1 and 2 are
 verified by their pure tests and by reading the staged dist's dotfiles, so they
 do not each need a full deploy cycle.
 
 ## Verification
 
-**Pure tests** (`./singularity test plugins/build/plugins/deployment`) — the
+**Pure tests** (`./equin test plugins/build/plugins/deployment`) — the
 value of extracting `wantsBuild`/`convergenceOf` is that the properties are
 testable without the db/config/git singletons, exactly as `run-build.test.ts:300`
 does for `needsRebuild` today:
@@ -281,7 +281,7 @@ does for `needsRebuild` today:
   `target`) ⇒ build (this is today's incident as a unit test); `unresolved`
   server pin ⇒ build.
 
-**End-to-end, step 1:** `./singularity build`, then confirm the pin matches the
+**End-to-end, step 1:** `./equin build`, then confirm the pin matches the
 commit the build claimed:
 
 ```bash

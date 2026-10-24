@@ -7,7 +7,7 @@
  * `smart-toy`). Run it after upgrading an `@iconify-json/material-symbols*`
  * package; `icon-picker:symbols-metadata-in-sync` fails until you do.
  *
- * Usage: ./singularity run plugins/primitives/plugins/icon-picker/scripts/gen-symbols-metadata.ts
+ * Usage: ./equin run plugins/primitives/plugins/icon-picker/scripts/gen-symbols-metadata.ts
  */
 import { join } from "path";
 import { z } from "zod";

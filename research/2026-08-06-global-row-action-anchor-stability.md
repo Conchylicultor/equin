@@ -269,7 +269,7 @@ named `Todos` (the tree holds Daily / Website / Roadmap / Story / App / Jobs). R
 
 ## Verification (procedure)
 
-1. `./singularity build`, then confirm `status: ok` in
+1. `./equin build`, then confirm `status: ok` in
    `~/.singularity/worktrees/att-1785971660-qd3z/build-status.json` (never infer from a
    `build-*.log`).
 2. `bun plugins/apps/plugins/pages/plugins/page-tree/e2e/row-actions-overflow.ts` — the
@@ -278,8 +278,8 @@ named `Todos` (the tree holds Daily / Website / Roadmap / Story / App / Jobs). R
 3. Neighbouring e2e that touch the same rows:
    `plugins/apps/plugins/pages/plugins/page-tree/e2e/grouped-reorder.ts` and
    `plugins/reorder/plugins/node-types/e2e/container-members.ts`.
-4. `./singularity test plugins/primitives/plugins/popup-open` — both buckets.
-5. `./singularity check` — `eslint` (the new rule runs repo-wide),
+4. `./equin test plugins/primitives/plugins/popup-open` — both buckets.
+5. `./equin check` — `eslint` (the new rule runs repo-wide),
    `class-token-walk-in-sync`, `plugin-boundaries` (ui-kit → popup-open must not cycle),
    `plugins-doc-in-sync`, `tailwind-scan-covers-classes`.
 6. Manual hover pass on all four tree surfaces — Pages sidebar, agents list, task list,

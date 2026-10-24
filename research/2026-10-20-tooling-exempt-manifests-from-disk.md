@@ -5,10 +5,10 @@
 `exempt/core/exempt.generated.ts` is a codegen'd list of every plugin's
 `exempt/index.ts`, each with a static `import("@plugins/<p>/exempt")` loader.
 `loadExemptions()` trusts that list. Delete or move a manifest and, until
-`./singularity build` regenerates the list, every consumer throws
+`./equin build` regenerates the list, every consumer throws
 `Cannot find package …` — the ESLint config (IDE + type-check), the check
 runner (`plugin-boundaries`, `boundaries:portable-closure`, every check that
-calls `ctx.exempt`), `exempt:manifests-valid` and `./singularity exempt list`.
+calls `ctx.exempt`), `exempt:manifests-valid` and `./equin exempt list`.
 The message never says "the registry is stale". The reverse also holds: a new
 manifest is ignored until a build, so its exemptions silently do not apply and
 the violations it was written to cover fire anyway. Every agent in a
@@ -83,10 +83,10 @@ note in `research/2026-10-07-global-inverted-exemptions.md` pointing here.
 
 ## Verification
 
-- `./singularity test plugins/framework/plugins/tooling/plugins/exempt plugins/framework/plugins/tooling/plugins/codegen plugins/framework/plugins/tooling/plugins/checks/core plugins/framework/plugins/tooling/core`
+- `./equin test plugins/framework/plugins/tooling/plugins/exempt plugins/framework/plugins/tooling/plugins/codegen plugins/framework/plugins/tooling/plugins/checks/core plugins/framework/plugins/tooling/core`
   plus a new loader test: a temp repo with two manifests, one deleted → loads
   the other; one added → loaded without any codegen.
 - Manual repro: move an `exempt/index.ts` aside, run
-  `./singularity check exempt:manifests-valid plugin-boundaries` and
-  `./singularity exempt list` → no "Cannot find package"; restore.
-- `./singularity build` (full checks) green.
+  `./equin check exempt:manifests-valid plugin-boundaries` and
+  `./equin exempt list` → no "Cannot find package"; restore.
+- `./equin build` (full checks) green.

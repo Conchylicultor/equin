@@ -114,7 +114,7 @@ Add `ownScopes: ["@equin"]` to the **root** `package.json`'s `dependencyPolicy`
 `deps-npm:wrappers-declared`: every declared dependency in an owned scope belongs
 to a group that has `wraps`. Pure function in `coherence.ts` beside the other
 checks, registered in `npm/check/index.ts`. Removing `wraps` from pgbouncer then
-fails `./singularity check`.
+fails `./equin check`.
 
 ### 5. Docs
 
@@ -145,14 +145,14 @@ the row keeps asking until then.)
 
 ## Verification
 
-- `./singularity test plugins/infra/plugins/deps/plugins/npm`: `upstreamRows` —
+- `./equin test plugins/infra/plugins/deps/plugins/npm`: `upstreamRows` —
   upstream ahead → one BLOCKED row with `<version>` substituted; a wrapper
   release exists (even cooling down) → no row; `major.minor` mapping
   (PG `18.4` vs `18.3.0`); pattern capture padding; check fails for an `@equin`
   dep in a group without `wraps`.
-- `./singularity check deps-npm:policy deps-npm:wrappers-declared` green; drop
+- `./equin check deps-npm:policy deps-npm:wrappers-declared` green; drop
   `wraps` from pgbouncer in a scratch edit → fails.
-- Live: a small `./singularity run` script (or `deps detect` if the CLI exposes
+- Live: a small `./equin run` script (or `deps detect` if the CLI exposes
   it) calling `npmUpdater.detect(root)` in this worktree — confirm the real
   PgBouncer / Postgres tags parse and rows appear exactly when upstream is ahead
   of the published wrappers.

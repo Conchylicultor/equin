@@ -376,8 +376,8 @@ Verify nothing remains (there may be a stale `node_modules/` or `.turbo/` — sa
 ### Step 15: Full verification
 
 ```bash
-./singularity build    # regenerates plugins.generated.ts, builds frontend, boots server
-./singularity check    # all checks: boundary-rules, plugin-boundaries, no-relative-server-imports, eslint, etc.
+./equin build    # regenerates plugins.generated.ts, builds frontend, boots server
+./equin check    # all checks: boundary-rules, plugin-boundaries, no-relative-server-imports, eslint, etc.
 ```
 
 Navigate to `http://<worktree>.localhost:9000` — app loads and functions.
@@ -408,8 +408,8 @@ Phase 4b can run immediately after Phase 4 or in parallel (independent directory
 |------|----------|------------|
 | **Module identity split** — relative imports bypass alias, duplicating `resources.ts` singleton registry | High | `no-relative-server-imports` check (updated for new path). All 196 existing imports already use the alias. |
 | **tsconfig depth errors** — `@plugins/*` → `../../../*` resolves incorrectly | Medium | Verification gate at step 5: `bunx tsc --noEmit` from the new directory catches all resolution failures. |
-| **Stale spec JSON** — running worktrees have `server: <old-path>` in `~/.singularity/worktrees/*.json` | Low | `./singularity build` rewrites the spec. Gateway fsnotify picks up the change on next spawn. Already-running backends are unaffected (path is only used at spawn time). |
-| **Generated file colocation** — `plugins.generated.ts` has wrong `typeImport` after `types.ts` moves to `core/` | Medium | Fixed by step 6 (change `./types` → `@server/types`). `./singularity build` regenerates the file. Build failure is immediate and obvious. |
+| **Stale spec JSON** — running worktrees have `server: <old-path>` in `~/.singularity/worktrees/*.json` | Low | `./equin build` rewrites the spec. Gateway fsnotify picks up the change on next spawn. Already-running backends are unaffected (path is only used at spawn time). |
+| **Generated file colocation** — `plugins.generated.ts` has wrong `typeImport` after `types.ts` moves to `core/` | Medium | Fixed by step 6 (change `./types` → `@server/types`). `./equin build` regenerates the file. Build failure is immediate and obvious. |
 | **CLAUDE.md examples drift** — agent-facing docs show old import paths | Low | Updated in step 12. Stale examples cause style drift, not build failures. |
 | **bun workspace identity** — package.json `name: @singularity/server` under new path | None | No internal code imports via workspace name. `plugins/**` glob covers the new location. Name is cosmetic. |
 
@@ -417,8 +417,8 @@ Phase 4b can run immediately after Phase 4 or in parallel (independent directory
 
 ## Done when
 
-- `./singularity build` succeeds, server boots, `/api/health` returns 200
-- `./singularity check` passes (boundary-rules, plugin-boundaries, no-relative-server-imports, eslint, migrations-in-sync, plugins-registry-in-sync)
+- `./equin build` succeeds, server boots, `/api/health` returns 200
+- `./equin check` passes (boundary-rules, plugin-boundaries, no-relative-server-imports, eslint, migrations-in-sync, plugins-registry-in-sync)
 - `server/` fully deleted from repo root
 - All 196 `@server/*` import statements resolve to `plugins/framework/plugins/server/core/*`
 - Module identity verified: single `resources.ts` registry instance (check via `GET /api/resources/_debug`)

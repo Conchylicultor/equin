@@ -183,12 +183,12 @@ Replace the provider wrapping loop (lines 48-60) with simple `PaneInstanceContex
 
 ## Verification
 
-1. `./singularity build` — full build passes (TypeScript + ESLint)
+1. `./equin build` — full build passes (TypeScript + ESLint)
 2. Navigate: sidebar → conversation → task detail → file peek → back/forward
 3. Open server detail pane — verify server info renders correctly
 4. Open agent detail pane — verify agent info renders
 5. Open task detail pane — verify task info renders, sections load
 6. Refresh on a deep URL — chain reconstructs from URL parsing (cold load)
 7. Back/forward — chain restores from `history.state`
-8. `./singularity check` passes
+8. `./equin check` passes
 9. Grep verification: `rg 'useData|provides:|provide:|useDataMaybe|DATA_NOT_PROVIDED' -g '*.ts' -g '*.tsx' plugins/` returns zero hits (excluding comments/docs)

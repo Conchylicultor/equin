@@ -155,11 +155,11 @@ key tinted by its palette color" — strictly better than today, never blank.
   (`useTrackColorMap`, `useHiddenTrackIds`, `useMutedTrackIds`)
 
 The piano-keyboard plugin doc autogen will pick up the new `track-mixer` web
-dependency on the next `./singularity build`; no hand edits to CLAUDE.md.
+dependency on the next `./equin build`; no hand edits to CLAUDE.md.
 
 ## Verification
 
-1. `./singularity build` from the worktree, open `http://<worktree>.localhost:9000`,
+1. `./equin build` from the worktree, open `http://<worktree>.localhost:9000`,
    go to Sonata, open a multi-track song (e.g. a MIDI source with ≥2 tracks).
 2. In the **Tracks** panel: confirm each track's lit keys on the keyboard now
    match that track's color chip (compare against the falling notes' tint).

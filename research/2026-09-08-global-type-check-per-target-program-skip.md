@@ -384,7 +384,7 @@ nothing more — so Part 2 is a nicety, and can ship second or not at all.
 
 ## Verification
 
-1. `./singularity check type-check` twice on an unchanged tree: the second run's transcript
+1. `./equin check type-check` twice on an unchanged tree: the second run's transcript
    (`~/.singularity/worktrees/<wt>/check-<runId>.log`) shows `skipped 7 of 7 targets` and the
    check settles in seconds (this also measures the graph + fingerprint floor).
 2. Edit one file under `plugins/apps/**/web/`, run again: `skipped 5 of 7` (`web-core`, `test`
@@ -393,8 +393,8 @@ nothing more — so Part 2 is a nicety, and can ship second or not at all.
    `core/` edit shared by both sides runs everything — correct).
 4. Introduce a type error in a skipped-by-default target's file and confirm the check FAILS
    (the key changes because the file's closure fingerprint changes).
-5. `./singularity test plugins/framework/plugins/tooling/plugins/checks/plugins/type-check` for the
-   new unit tests; `./singularity check` for the full suite; `./singularity build` to deploy.
+5. `./equin test plugins/framework/plugins/tooling/plugins/checks/plugins/type-check` for the
+   new unit tests; `./equin check` for the full suite; `./equin build` to deploy.
 6. Shadow phase (step 1 above): after a few days, grep transcripts for `would skip` and the
    per-worker `cpu` lines — baseline CPU per run, would-skip histogram, and zero
    would-skip-but-failed cases.
@@ -515,8 +515,8 @@ next thing worth attacking; before this change it was invisible under the worker
 
 ### A build skips less than a bare check, and that is not a defect
 
-The `./singularity build` immediately after run 4 reported `skipped 1 of 7` (only `tools`), and a
-bare `./singularity check type-check` on the very next command reported `skipped 7 of 7` again. The
+The `./equin build` immediately after run 4 reported `skipped 1 of 7` (only `tools`), and a
+bare `./equin check type-check` on the very next command reported `skipped 7 of 7` again. The
 difference is real and worth knowing: **a build regenerates codegen artifacts BEFORE it runs
 checks**, so its checks see a tree that just changed. In this build the changed file was a barrel
 stub, regenerated because this very change added a type to spawn's barrel — a file six of the seven

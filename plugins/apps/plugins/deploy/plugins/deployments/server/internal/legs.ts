@@ -1,7 +1,8 @@
+import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import type { DeployVerb } from "../../core/runs";
 
 /**
- * A **leg**: one spawned `./singularity deploy` command inside one deploy run.
+ * A **leg**: one spawned `./equin deploy` command inside one deploy run.
  *
  * A run and a leg are not the same thing, and this file exists because the
  * supervised-run primitive names legs while everything else here names runs. A
@@ -73,13 +74,13 @@ export function asDeployLeg(step: string): DeployLeg {
 }
 
 /**
- * The command one leg runs: `./singularity deploy <leg> <composition> --server
+ * The command one leg runs: `./equin deploy <leg> <composition> --server
  * <server>`, plus `--release <runId>` for a ship that pinned one.
  *
  * A pure function of the ledger row, so the line announcing a leg (written as
  * the leg begins) and the argv actually spawned cannot name different commands.
  *
- * `./singularity` from the checkout this backend was built from (the caller's
+ * `./equin` from the checkout this backend was built from (the caller's
  * `cwd` is `REPO_ROOT`), so the CLI resolves the SAME namespace: it reads its
  * deployment record over HTTP from `<worktree>.localhost:9000` and its server
  * row from that worktree's DB fork.
@@ -101,7 +102,7 @@ export function legArgv(
   leg: DeployLeg,
 ): string[] {
   return [
-    "./singularity",
+    `./${CLI_NAME}`,
     "deploy",
     leg,
     row.compositionId,

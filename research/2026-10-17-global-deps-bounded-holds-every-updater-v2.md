@@ -50,4 +50,4 @@ Also delete any hold (lapsed or not) whose release a newer one has superseded.
 
 ## Verification
 
-Unit tests: `holdState` / `heldBy` ignoring dates; runner ends `holds-to-review` with nothing planned when a hold is lapsed; prompt renders the review section and the overdue HELD row; `lockProblems` / `upgradeTarget` / `newestCpython` honour a lapsed hold. Then `./singularity build` (all checks) and `./singularity test` on the touched plugins.
+Unit tests: `holdState` / `heldBy` ignoring dates; runner ends `holds-to-review` with nothing planned when a hold is lapsed; prompt renders the review section and the overdue HELD row; `lockProblems` / `upgradeTarget` / `newestCpython` honour a lapsed hold. Then `./equin build` (all checks) and `./equin test` on the touched plugins.

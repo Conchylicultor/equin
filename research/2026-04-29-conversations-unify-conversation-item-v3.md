@@ -149,9 +149,9 @@ Seven import sites today:
 
 ## Verification
 
-1. `./singularity build` from the worktree — frontend type-checks and bundle rebuilds.
-2. `./singularity check --plugin-boundaries` — confirms both new plugins' barrels are well-formed and surfaces don't deep-import past them.
-3. `./singularity check --plugins-doc-in-sync` — autogen blocks update.
+1. `./equin build` from the worktree — frontend type-checks and bundle rebuilds.
+2. `./equin check --plugin-boundaries` — confirms both new plugins' barrels are well-formed and surfaces don't deep-import past them.
+3. `./equin check --plugins-doc-in-sync` — autogen blocks update.
 4. Open `http://att-1777459694-hrsy.localhost:9000`.
 5. **Sidebar list** — same visual as today (status dot, title, sys, time, spawnedBy line for system rows). System toggle still tints rows.
 6. **Attempts under a task** — open a task in the Tasks pane; conversation rows show status dot + title + sys + relative time (replacing the status text).

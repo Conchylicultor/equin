@@ -87,7 +87,7 @@ In `plugins/database/plugins/live-state-snapshot/server/index.ts`:
 - Rewrite the now-false comment (lines 33-41) that says "`onReadyBlocking` hooks run in PARALLEL" — state instead that ordering is guaranteed by the `dependsOn` edge to `database`.
 - Drop the now-unused imports: `awaitDbReady` (from `@plugins/database/server`, keep `db`) and `migrationsReady` (from `@plugins/database/plugins/migrations/server`).
 
-**Watch the auto-derived `dependsOn` after removing the `migrationsReady` import:** codegen derives edges from static imports, so dropping that import removes the `database/migrations` edge from live-state-snapshot's `dependsOn`. Ordering is still preserved — live-state-snapshot still imports `db` (→ `database` edge) and `routeChange` (→ `change-feed` edge), and `change-feed` itself orders after migrations. After the edit, run `./singularity build` and re-verify the regenerated `server.generated.ts`; the `plugins-registry-in-sync` / `plugins-doc-in-sync` checks will flag drift if anything is off.
+**Watch the auto-derived `dependsOn` after removing the `migrationsReady` import:** codegen derives edges from static imports, so dropping that import removes the `database/migrations` edge from live-state-snapshot's `dependsOn`. Ordering is still preserved — live-state-snapshot still imports `db` (→ `database` edge) and `routeChange` (→ `change-feed` edge), and `change-feed` itself orders after migrations. After the edit, run `./equin build` and re-verify the regenerated `server.generated.ts`; the `plugins-registry-in-sync` / `plugins-doc-in-sync` checks will flag drift if anything is off.
 
 `migrationsReady` then has no remaining `onReadyBlocking` consumer. Leave the export + resolve/reject plumbing in `runner.ts` in place (harmless, still settled by `runMigrations`); a follow-up could remove it, but that's out of scope here.
 
@@ -117,7 +117,7 @@ In `plugins/database/plugins/live-state-snapshot/server/index.ts`:
 
 ## Verification
 
-1. **Build clean:** `./singularity build` from the worktree. Confirm the server boots and reports ready (gateway serves `http://<worktree>.localhost:9000`). Confirm `plugins-registry-in-sync` and `plugins-doc-in-sync` pass (run `./singularity check`).
+1. **Build clean:** `./equin build` from the worktree. Confirm the server boots and reports ready (gateway serves `http://<worktree>.localhost:9000`). Confirm `plugins-registry-in-sync` and `plugins-doc-in-sync` pass (run `./equin check`).
 2. **Ordering in boot profile:** open the Debug → Profiling (Gantt) boot pane, or call the boot-profiling endpoint / `get_runtime_profile` MCP tool. Verify the `onReadyBlocking:database/change-feed` span now starts **at or after** `onReadyBlocking:database` ends (today they start together). Verify `onReadyBlocking:config_v2` still overlaps `database` (no edge).
 3. **Triggers present:** via `query_db`, confirm change-feed triggers exist on a representative table, e.g.
    `SELECT tgname FROM pg_trigger WHERE tgrelid = 'public.conversations'::regclass AND NOT tgisinternal;`
@@ -126,7 +126,7 @@ In `plugins/database/plugins/live-state-snapshot/server/index.ts`:
    ```bash
    psql -d postgres -c 'DROP DATABASE IF EXISTS "<worktree>" WITH (FORCE)'
    psql -d postgres -c 'CREATE DATABASE "<worktree>"'   # empty, no __singularity_migrations
-   ./singularity build
+   ./equin build
    ```
-   Confirm boot succeeds, migrations create the tables, and the trigger query in step 3 returns the triggers (proving `rebuildTriggers` ran *after* migrations). Re-fork afterward if needed (`DROP DATABASE` + `./singularity build`).
+   Confirm boot succeeds, migrations create the tables, and the trigger query in step 3 returns the triggers (proving `rebuildTriggers` ran *after* migrations). Re-fork afterward if needed (`DROP DATABASE` + `./equin build`).
 5. **Regression on live-state:** confirm a live resource still updates in the UI (e.g. create a task and watch the list update) — exercises the change-feed LISTEN path + live-state-snapshot catch-up end-to-end.

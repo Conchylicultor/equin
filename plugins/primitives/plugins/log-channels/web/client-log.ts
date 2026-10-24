@@ -110,7 +110,7 @@ function scheduleFlush(): void {
 /**
  * Why the last flush failed, which decides how a WS reconnect treats the hold:
  * - `failure`: the backend refused or was unreachable (mid-restart, the
- *   `./singularity build` case). A reconnect proves it is back, so it lifts the hold.
+ *   `./equin build` case). A reconnect proves it is back, so it lifts the hold.
  * - `backpressure`: the server answered `paused` because the host-global duress
  *   latch is set. A reconnect says nothing about the latch, so only the timer lifts it.
  */

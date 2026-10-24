@@ -473,7 +473,7 @@ New phases:
 
 ## 9. Implementation sequence
 
-Each step builds and passes `./singularity check` on its own.
+Each step builds and passes `./equin check` on its own.
 
 1. **Writer fix** (§3), failing tests first. Independent, and worth shipping on
    its own.
@@ -482,22 +482,22 @@ Each step builds and passes `./singularity check` on its own.
 3. **`restorePageContent`** (§5) with the two raw-read helpers, `page-content.test.ts`,
    and the deletions (§5.6).
 4. **History source** switch (§6); flip and extend the e2e.
-5. **Docs** (§7); `./singularity build`.
+5. **Docs** (§7); `./equin build`.
 
 ---
 
 ## 10. Verification
 
 ```bash
-./singularity build
-./singularity check
-./singularity test plugins/page/plugins/editor
-./singularity test plugins/page/plugins/block-text-write
-./singularity test plugins/page/plugins/markdown-apply
-./singularity test plugins/page/plugins/annotations/plugins/agent-access
-./singularity run plugins/apps/plugins/pages/plugins/history/e2e/crdt-restore-verify.ts
-./singularity run plugins/page/plugins/editor/e2e/crdt-undo-verify.ts   # merge/unwrap undo still green
-./singularity run plugins/page/plugins/annotations/plugins/agent-access/e2e/agent-access-verify.ts
+./equin build
+./equin check
+./equin test plugins/page/plugins/editor
+./equin test plugins/page/plugins/block-text-write
+./equin test plugins/page/plugins/markdown-apply
+./equin test plugins/page/plugins/annotations/plugins/agent-access
+./equin run plugins/apps/plugins/pages/plugins/history/e2e/crdt-restore-verify.ts
+./equin run plugins/page/plugins/editor/e2e/crdt-undo-verify.ts   # merge/unwrap undo still green
+./equin run plugins/page/plugins/annotations/plugins/agent-access/e2e/agent-access-verify.ts
 ```
 
 **Manual check** on the deployed worktree:

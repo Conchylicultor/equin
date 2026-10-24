@@ -1,3 +1,4 @@
+import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import { z } from "zod";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
 import { defineSupervisedJob } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
@@ -55,13 +56,13 @@ function targetsOf(input: BuildJobInput): string[] {
 }
 
 /**
- * One `./singularity build`, as an ordinary durable job.
+ * One `./equin build`, as an ordinary durable job.
  *
  * The handler claims this namespace's single in-flight slot, spawns a detached
  * child and SUSPENDS — it holds a worker slot for milliseconds, not for the
  * length of a build. It is woken by the child's exit marker in whichever backend
  * is alive by then, which matters more here than for any other supervised kind:
- * **`./singularity build` restarts the very backend that spawned it**, so the
+ * **`./equin build` restarts the very backend that spawned it**, so the
  * process that started a build is routinely not the one that sees it end.
  *
  * Nothing waits on a build. A caller enqueues and returns, and everything a
@@ -129,7 +130,7 @@ export const buildJob = defineSupervisedJob({
     // `--allow-main` stays BEFORE `--composition`: commander's variadic option
     // is greedy up to the next flag, so a flag placed after it would be
     // swallowed as another composition id.
-    const argv = ["./singularity", "build", "--allow-main"];
+    const argv = [`./${CLI_NAME}`, "build", "--allow-main"];
     if (!isMainCompositionBuild(targets))
       argv.push("--composition", ...targets);
     return {

@@ -2,7 +2,7 @@
 
 > Status: IMPLEMENTED & verified. Scope C (full generalization), em-based model.
 >
-> **Outcome (verified 2026-06-09):** `./singularity build` + all `./singularity check`
+> **Outcome (verified 2026-06-09):** `./equin build` + all `./equin check`
 > green (incl. new `app-css-utilities-in-sync` check, the precise
 > `no-adhoc-slot-icon-size` lint rule, typescript, and the `cn` vitest). Playwright
 > measurement of FilePath cards: copy button 32px → **~18–20px** (now tracks
@@ -286,10 +286,10 @@ driving the sweep to completion.
 
 ## Verification
 
-1. `./singularity build` — tsc + vite pass; confirm `check.generated.ts` /
+1. `./equin build` — tsc + vite pass; confirm `check.generated.ts` /
    `lint.generated.ts` regenerate to include the two new plugins (commit them or
    `plugins-registry-in-sync` fails).
-2. `./singularity check` — all checks incl. new `app-css-utilities-in-sync` +
+2. `./equin check` — all checks incl. new `app-css-utilities-in-sync` +
    eslint with `no-adhoc-slot-icon-size`.
 3. vitest in web-core for the `cn` conflict cases (above).
 4. **Playwright** on a conversation with a Read tool call rendering `<FilePath>`:

@@ -82,7 +82,7 @@ The `pinnedCount` config remains — it controls the max slice. ResponsiveOverfl
 
 ## Verification
 
-1. `./singularity build` — regenerates plugin registry, type-checks
+1. `./equin build` — regenerates plugin registry, type-checks
 2. Wide window: all pinned chips visible, identical to before
 3. Narrow window: chips disappear from the right, no empty space
 4. No flash on initial render (useLayoutEffect)

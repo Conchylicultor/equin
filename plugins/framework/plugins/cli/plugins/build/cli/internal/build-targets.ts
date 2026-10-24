@@ -19,7 +19,7 @@ import { getMainRepoRoot } from "@plugins/infra/plugins/spawn/core";
 import { configDir } from "@plugins/config_v2/data-dirs";
 
 /**
- * WHAT one `./singularity build` invocation deploys — the one place that decides
+ * WHAT one `./equin build` invocation deploys — the one place that decides
  * what a build TARGET is.
  *
  * A target is a (composition, checkout) pair, and the checkout half is the same

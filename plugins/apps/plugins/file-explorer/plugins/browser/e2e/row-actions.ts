@@ -2,7 +2,7 @@
 // here inline, Copy path behind the row's ⋯, and the cluster's scrim covering
 // the row's trailing cells rather than letting them show through the icons.
 //
-//   ./singularity run plugins/apps/plugins/file-explorer/plugins/browser/e2e/row-actions.ts \
+//   ./equin run plugins/apps/plugins/file-explorer/plugins/browser/e2e/row-actions.ts \
 //     --dir /path/to/folder --name archive.zip --out /tmp/row-actions
 import {
   arg,

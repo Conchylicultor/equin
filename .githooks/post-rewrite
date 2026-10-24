@@ -1,5 +1,5 @@
 #!/bin/sh
-# Repair generated artifacts after ANY rebase — not just the one `./singularity
+# Repair generated artifacts after ANY rebase — not just the one `./equin
 # push` drives.
 #
 # The .gitattributes merge drivers resolve a generated file by taking main's
@@ -45,4 +45,4 @@ unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_OBJECT_DIRECTORY
 
 cd "$ROOT" || exit 0
 echo "post-rewrite: generated artifacts were auto-resolved — normalizing..."
-SINGULARITY_SKIP_POST_REWRITE=1 ./singularity normalize-generated
+SINGULARITY_SKIP_POST_REWRITE=1 ./equin normalize-generated

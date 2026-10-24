@@ -3,7 +3,7 @@ import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import { openHistoryStore, type VersionEntry } from "../shared/history/store";
 
 /**
- * `./singularity prototype log <id> [-p]` — how a prototype got to where it is,
+ * `./equin prototype log <id> [-p]` — how a prototype got to where it is,
  * newest first: what each version was asked for, what the agent said it did,
  * and (with `-p`) the diff it made.
  *
@@ -24,7 +24,7 @@ const run: CliAction<[string], { patch?: boolean }> = async (id, opts) => {
       "* Live · unsaved changes — the folder differs from the newest version",
     );
     console.log(
-      `  (the next agent turn records them; or: ./singularity prototype checkpoint ${id})`,
+      `  (the next agent turn records them; or: ./equin prototype checkpoint ${id})`,
     );
     console.log("");
   }

@@ -10,7 +10,7 @@
  *   snapshot header (their sha8 is immutable), so this is where their lineage
  *   and their schema-migration status live.
  * - `<tag>_snapshot.json` — a pre-cutover per-migration snapshot. Present only
- *   until the next `./singularity build` folds it into `legacy-snapshots.json`
+ *   until the next `./equin build` folds it into `legacy-snapshots.json`
  *   (a clone that merged the cutover while holding its own legacy migrations).
  *
  * And the ONE answer to "is this a schema migration?" (`isSchemaMigration`):

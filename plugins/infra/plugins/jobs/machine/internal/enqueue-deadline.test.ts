@@ -13,8 +13,8 @@
  * Against a throwaway database with the queue schema installed, so graphile's
  * migration check at `makeWorkerUtils` is a read and the insert has a table.
  *
- * Run: `./singularity test plugins/infra/plugins/jobs`
- * (requires the running embedded cluster — `./singularity build` first).
+ * Run: `./equin test plugins/infra/plugins/jobs`
+ * (requires the running embedded cluster — `./equin build` first).
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";

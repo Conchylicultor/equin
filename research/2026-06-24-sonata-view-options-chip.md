@@ -165,8 +165,8 @@ descriptors already register via `ConfigV2.WebRegister`).
 
 ## Verification
 
-1. `./singularity build` (from this worktree). Expect a clean build +
-   `./singularity check` passing (notably `plugin-boundaries`,
+1. `./equin build` (from this worktree). Expect a clean build +
+   `./equin check` passing (notably `plugin-boundaries`,
    `plugins-doc-in-sync`, `type-check`).
 2. Open `http://<worktree>.localhost:9000/sonata/song/<id>` with a song loaded.
 3. Confirm a new chip (tune/sliders icon) sits beside the FX chip top-right.

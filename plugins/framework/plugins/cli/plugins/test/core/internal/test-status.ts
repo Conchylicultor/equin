@@ -38,7 +38,7 @@ export interface TestRunnerOutcome {
 }
 
 /**
- * One `./singularity test` run's record, at `worktreeArtifacts.testStatus(slug,
+ * One `./equin test` run's record, at `worktreeArtifacts.testStatus(slug,
  * opId)`. Written when the run starts and again when it ends; see that path's
  * doc for why it is keyed by the run's `opId`.
  */
@@ -91,7 +91,7 @@ export function readTestStatus(
 
 /**
  * The record of the newest run (by `startedAt`) in this checkout, or `null`
- * when it has none. For a caller that spawned `./singularity test` and so never
+ * when it has none. For a caller that spawned `./equin test` and so never
  * learned the run's `opId` (the deps upgrade gates); anything holding an
  * `opId` reads that run with `readTestStatus`.
  */

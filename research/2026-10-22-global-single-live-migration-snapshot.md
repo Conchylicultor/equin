@@ -216,10 +216,10 @@ published keys are immutable.
 
 ## Verification
 
-1. `./singularity build` in the branch. The cutover runs, and `meta/` holds only
+1. `./equin build` in the branch. The cutover runs, and `meta/` holds only
    `schema.snapshot.json`, `legacy-snapshots.json`, the journal and the answers
    files.
-2. `./singularity check` passes, in particular:
+2. `./equin check` passes, in particular:
    - `snapshot-chain-intact`
    - `migration-metadata-consistent`
    - `migrations-in-sync` (no diff)
@@ -233,10 +233,10 @@ published keys are immutable.
 4. Exercise the custom and failure paths:
    - `--custom-migration` creates no header and leaves the snapshot untouched.
    - `--reset-migration` restores the tip byte-identical to the merge-base.
-5. Run `./singularity test` on `plugins/database/plugins/migrations`,
+5. Run `./equin test` on `plugins/database/plugins/migrations`,
    `plugins/framework/plugins/cli/plugins/migrations` and
    `plugins/framework/plugins/cli/plugins/regen-migrations`.
-6. Run `./singularity run plugins/upstream/e2e/migration-journey.ts`. It covers
+6. Run `./equin run plugins/upstream/e2e/migration-journey.ts`. It covers
    the merge node and the clone transition, with the ancestor body read from
    git.
 7. Confirm the boot applies cleanly (`migration-applies-clean`) and that the

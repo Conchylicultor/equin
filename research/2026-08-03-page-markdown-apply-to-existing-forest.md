@@ -295,5 +295,5 @@ apply a one-word markdown edit via the tool, then assert: surviving block ids un
 block's text updated in **both** the doc and `data.text`; the star and the task↔block link intact;
 the open editor converged without clobbering.
 
-**Manual**: `./singularity build`, then drive `read_page` → `edit_page` over a real page via MCP
+**Manual**: `./equin build`, then drive `read_page` → `edit_page` over a real page via MCP
 and confirm with `query_db` that ids and side-table rows survived.

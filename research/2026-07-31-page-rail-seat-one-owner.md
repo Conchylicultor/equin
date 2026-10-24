@@ -254,10 +254,10 @@ the chevron targets the container on the borrowed line and is hoverable there):
 `"Reorder or open block actions"` handle and needs its expectation updated.
 
 ```bash
-./singularity build
+./equin build
 bun plugins/page/plugins/container/e2e/container-collapse-verify.ts --headed
 bun plugins/page/plugins/callout/e2e/callout-container-verify.ts
-./singularity check
+./equin check
 ```
 
 **Manual** — `http://att-1785418968-kadw.localhost:9000`: a callout whose first

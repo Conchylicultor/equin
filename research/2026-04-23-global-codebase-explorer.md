@@ -221,7 +221,7 @@ No virtualization — typical repos (a few thousand entries) render fine.
 
 ## Verification
 
-1. `./singularity build` — zero type errors (the `FileRendererContribution` signature change will catch any missed rename).
+1. `./equin build` — zero type errors (the `FileRendererContribution` signature change will catch any missed rename).
 2. **Regression — existing views:**
    - Open a conversation with edits → click Docs → select a `.md` file → Markdown tab renders (confirms `/api/code/:worktree/file` is reached).
    - Click Review → expand a modified file row → diff renders (`/api/code/:worktree/diff`).

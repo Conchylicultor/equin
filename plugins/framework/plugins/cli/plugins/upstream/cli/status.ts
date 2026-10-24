@@ -4,7 +4,7 @@ import { fetchUpstreamStatus } from "@plugins/upstream/core";
 import { noUpstreamSentence } from "./internal/describe";
 
 /**
- * `./singularity upstream status` — what upstream has that you do not.
+ * `./equin upstream status` — what upstream has that you do not.
  *
  * Read-only: it fetches (otherwise the count would be measured against however
  * old the remote-tracking ref on disk happens to be) and touches nothing else.
@@ -45,7 +45,7 @@ const run: CliAction<[], object> = async () => {
     console.log(`  … and ${status.count - shown} older`);
 
   console.log(
-    `\nRun \`./singularity upstream merge\` in a worktree to bring them in.`,
+    `\nRun \`./equin upstream merge\` in a worktree to bring them in.`,
   );
 };
 

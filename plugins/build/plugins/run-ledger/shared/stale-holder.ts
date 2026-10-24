@@ -13,7 +13,7 @@ import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 // Settling a DEAD holder of `build_runs_inflight_uniq`, at the moment the lock
 // is actually blocking someone.
 //
-// Only two paths in `./singularity build` close its own row (the ok verdict and
+// Only two paths in `./equin build` close its own row (the ok verdict and
 // the failure-verdict funnel). An early `process.exit`, a throw unwinding to
 // `runCli`, a catchable signal and a SIGKILL all leave it open — and the exit
 // hook cannot close it, because it runs only synchronous code and the close is a
@@ -29,7 +29,7 @@ import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 //
 // "Run alive" is `isRunAlive`: the holder pid OR its process group. A build the
 // backend started is a supervised run whose row pid is the shim — the leader of
-// the group the real `./singularity build` lives in — so a shim killed alone
+// the group the real `./equin build` lives in — so a shim killed alone
 // must not read as a dead holder. A plain CLI build's pid is covered by the
 // pid half of the same probe.
 //

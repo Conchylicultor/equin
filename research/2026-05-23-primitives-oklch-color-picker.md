@@ -181,7 +181,7 @@ Existing stored hex values continue to parse correctly — `Color.fromCss` handl
 
 ## Verification
 
-1. `./singularity build` — deploy
+1. `./equin build` — deploy
 2. Open theme customizer → pick a color token → edit via the picker → verify stored value is oklch, not hex
 3. Verify the hue/saturation/lightness sliders (color adjust) now affect user-overridden tokens (the bug fix)
 4. Open the shadow parameter editor → change the shadow color → verify it stores as bare channels

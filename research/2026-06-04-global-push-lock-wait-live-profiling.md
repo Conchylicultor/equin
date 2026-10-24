@@ -3,7 +3,7 @@
 ## Context
 
 The push lock (`~/.singularity/push.lock`, an `flock`) serializes the critical
-section of `./singularity push` across all concurrent agents. When two agents
+section of `./equin push` across all concurrent agents. When two agents
 push at once, one blocks on `ffi.flock(fd, LOCK_EX)` until the other finishes.
 
 The push profiler **already** records lock-wait time (`waitMs =
@@ -86,13 +86,13 @@ which may **not** equal the op slug. So the op slug must be carried explicitly.
 ## Verification (end-to-end)
 
 1. **Hold the lock**: start a real long push in worktree A (or a throwaway `bun -e` that opens `~/.singularity/push.lock` and `flock(LOCK_EX)` then sleeps) so the lock is held.
-2. **Contend**: in worktree B run `./singularity push -m "y"`. It prints "Another push is in progress — waiting for lock..." and blocks. A `lock_requested` record is now on disk.
+2. **Contend**: in worktree B run `./equin push -m "y"`. It prints "Another push is in progress — waiting for lock..." and blocks. A `lock_requested` record is now on disk.
 3. **See it live**: open Debug > Profiling > Push, hit refresh — worktree B shows a yellow "lock wait" bar (`waiting`). Refresh again a few seconds later: the bar has **grown**.
 4. **Acquire**: release A. B acquires → `lock_acquired` appended. Refresh: row flips to `running` (fixed wait bar + growing hold bar).
 5. **Complete**: B finishes → terminal `completed` record; row renders the real outcome and final durations.
 6. **Orphan**: start a waiting push, `kill -9` it. On the next main-backend `onReady`, `finalizeOrphanedPushes` sees the dead pid (`isWorktreeOpActive` self-heals to false) and stamps a terminal `interrupted` record → row renders as a fixed interrupted marker.
 
-Run `./singularity build` to deploy, then verify in the worktree app. Use
+Run `./equin build` to deploy, then verify in the worktree app. Use
 `bun plugins/framework/plugins/cli/bin/index.ts check` (tsc + boundaries + lint)
 during development.
 

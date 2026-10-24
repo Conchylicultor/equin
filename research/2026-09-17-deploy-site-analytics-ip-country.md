@@ -159,8 +159,8 @@ registers it itself), and `IP_COUNTRY_SOURCE` via core.
 
 ## Verification
 
-1. `./singularity test plugins/apps/plugins/deploy/plugins/analytics/plugins/ip-country plugins/apps/plugins/deploy/plugins/analytics`.
-2. `./singularity build`. After boot, the refresh job runs and `~/.singularity/cache/ip-country/ip-country.bin`
+1. `./equin test plugins/apps/plugins/deploy/plugins/analytics/plugins/ip-country plugins/apps/plugins/deploy/plugins/analytics`.
+2. `./equin build`. After boot, the refresh job runs and `~/.singularity/cache/ip-country/ip-country.bin`
    exists. Check the job row with `query_db`.
 3. Real lookup through the actual proxy chain. The gateway *appends* to `X-Forwarded-For`, so a
    header sent to this worktree's gateway URL arrives as `<given>, 127.0.0.1`, which reads as a
@@ -170,7 +170,7 @@ registers it itself), and `IP_COUNTRY_SOURCE` via core.
    no table should contain the address.
 4. Dashboard: `screenshot.ts` on a deployment page shows the Countries tab with rows and the
    credit line. "What one visit records" shows no "not collected yet".
-5. `./singularity check`: boundaries, composition-closure (the website closure gains
+5. `./equin check`: boundaries, composition-closure (the website closure gains
    `apps/deploy/analytics/ip-country` and still has no `auth` or `agent-runtime`), data-dirs, migrations-in-sync
    (no schema change).
 6. Deploy (only with the user's go-ahead): `deploy ship` the website. On the box, the refresh job

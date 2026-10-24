@@ -58,5 +58,5 @@ while a pending is held — never wrong.
 - New runtime test: a throttled entry notified repeatedly while a non-throttled
   entry flushes every tick recomputes once per window; a throttled downstream
   of a cascading upstream waits for its window.
-- `./singularity test plugins/framework/plugins/resource-runtime plugins/network/plugins/live`
-- `./singularity build` (checks + deploy).
+- `./equin test plugins/framework/plugins/resource-runtime plugins/network/plugins/live`
+- `./equin build` (checks + deploy).

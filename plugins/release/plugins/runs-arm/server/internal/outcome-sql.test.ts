@@ -12,8 +12,8 @@
  * The expression is evaluated over a parameter rather than over `release_runs`,
  * so the suite needs no table, no migration chain and no fixture rows.
  *
- * Run: `./singularity test plugins/release/plugins/runs-arm`
- * (requires the running embedded cluster — `./singularity build` first).
+ * Run: `./equin test plugins/release/plugins/runs-arm`
+ * (requires the running embedded cluster — `./equin build` first).
  */
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";

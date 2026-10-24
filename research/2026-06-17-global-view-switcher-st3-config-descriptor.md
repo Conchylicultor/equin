@@ -56,7 +56,7 @@ lines to its `web`/`server` barrels. Consequences:
 
 - **No new manifest, no new check.** A consumer's `ConfigV2.Register({ descriptor })` is discovered
   by the *existing* `discoverConfigs` walk (it already inspects every `server/index.ts` for
-  descriptor-shaped contributions), so `./singularity build` emits `views.origin.jsonc` and the
+  descriptor-shaped contributions), so `./equin build` emits `views.origin.jsonc` and the
   existing `config-origins-in-sync` check covers it. This is exactly how every other plugin's config
   is discovered.
 - **Zero change to non-adopters.** The 7 single-view call sites register nothing → no descriptor →
@@ -130,7 +130,7 @@ Mirror the two-level layout of `plugins/fields/plugins/reorder-tree/` exactly.
   view. **ST3 may ship the minimal renderer** (type label + opaque options) — the rich per-type
   sub-form is exercised by ST4's switcher UI. The field's *storage + validation* is the ST3
   deliverable.
-- `package.json` + `CLAUDE.md` for each new plugin level (copy `reorder-tree`'s). Run `./singularity build`
+- `package.json` + `CLAUDE.md` for each new plugin level (copy `reorder-tree`'s). Run `./equin build`
   to autoregister into `fields.identity` + `config-v2.fields.renderer` and regenerate docs.
 
 ### 2. `views` descriptor factory (in data-view, mirrors `reorder/web/internal/descriptors.ts`)
@@ -184,7 +184,7 @@ Mirror the two-level layout of `plugins/fields/plugins/reorder-tree/` exactly.
 
 - Create `config/apps/sonata/library/views.jsonc` with two instances (gallery + table), copying the
   `// @hash` from the generated `views.origin.jsonc` after the first build.
-- `./singularity build` regenerates the origin (default = empty `views: []`) and propagates.
+- `./equin build` regenerates the origin (default = empty `views: []`) and propagates.
 
 ### Out of scope for ST3 (→ ST4)
 
@@ -213,14 +213,14 @@ avoiding any conditional-hook / unregistered-descriptor `useConfig` throw.
   optional; the `shared/views-config.ts` factory omits it (server build is opaque), so importing the
   shared module on the server pulls no web code.
 - **Docs sync.** New plugins + changed barrels regenerate the autogen reference blocks;
-  `plugins-doc-in-sync` fails on drift → re-run `./singularity build` and commit.
+  `plugins-doc-in-sync` fails on drift → re-run `./equin build` and commit.
 
 ## Verification
 
-1. `./singularity build` — succeeds; emits `config/apps/sonata/library/views.origin.jsonc`
+1. `./equin build` — succeeds; emits `config/apps/sonata/library/views.origin.jsonc`
    (`// @hash …`, `views: []`) and registers `fields.identity` "variant" +
    `config-v2.fields.renderer` "variant".
-2. `./singularity check` — `type-check`, `config-origins-in-sync`, `plugins-doc-in-sync`,
+2. `./equin check` — `type-check`, `config-origins-in-sync`, `plugins-doc-in-sync`,
    `eslint`, `migrations-in-sync` all green (after committing generated files + the hand-authored
    `views.jsonc` with the matching `@hash`).
 3. **Field-level unit test** (`bun test`, co-located `variant/plugins/config/core/internal/variant.test.ts`):

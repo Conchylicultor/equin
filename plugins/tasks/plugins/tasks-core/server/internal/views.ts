@@ -20,7 +20,7 @@ import {
 // are derived code rebuilt from source on every boot, declared via the `View`
 // server contribution (see server/index.ts) + rebuildDerivedViews, never
 // tracked in the migration chain. To change a view, edit it here and
-// `./singularity build` — no migration is generated. See
+// `./equin build` — no migration is generated. See
 // plugins/database/plugins/derived-views/CLAUDE.md.
 //
 // The view objects stay valid `pgView` relations so the rest of tasks-core can

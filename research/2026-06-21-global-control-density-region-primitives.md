@@ -168,7 +168,7 @@ zero-hand-wrap end state.
 - `.claude/skills/theme/SKILL.md` (§ control size) + `control-size/CLAUDE.md` —
   update the model: region primitives (`Bar`, `DataTable`) now declare intrinsic
   density; `Card` opts in; consumers stop hand-wrapping for chrome/tables.
-- Autogen reference blocks (Uses/Exports) regenerate via `./singularity build` —
+- Autogen reference blocks (Uses/Exports) regenerate via `./equin build` —
   do not hand-edit.
 
 ### 7. Enforcement
@@ -186,8 +186,8 @@ re-declares a region primitive's own default, but that's premature here.)
 
 ## Verification
 
-1. `./singularity build` (regenerates autogen docs + runs `type-check`).
-2. `./singularity check type-check` — must be clean (new optional props, no
+1. `./equin build` (regenerates autogen docs + runs `type-check`).
+2. `./equin check type-check` — must be clean (new optional props, no
    removals → no call-site churn expected).
 3. Screenshots (use `bun e2e/screenshot.mjs --url … --out /tmp/density`):
    - **Any app toolbar** (e.g. `http://<wt>.localhost:9000/agents`) — toolbar

@@ -98,7 +98,7 @@ inline) is selected via an explicit `aspect` prop, which carries no density.
   produces an `icon*` key, so `iconOnly` stays correct).
 
 Net effect: `Omit<…,"size">` makes any `<Button size=…>` a **compile error**
-(`size` is not a member of `ButtonOwnProps`), so `./singularity check type-check`
+(`size` is not a member of `ButtonOwnProps`), so `./equin check type-check`
 enumerates every remaining call site — none can be missed.
 
 ### 2. Wrapper migrations (forward `size` to Button → must change)
@@ -140,7 +140,7 @@ density meaning is removed — keep only the icon-vs-text **aspect** selection
 
 ### 3. Direct `<Button>` call-site migration (driven by type-check)
 
-After the prop change, `./singularity check type-check` lists every offending
+After the prop change, `./equin check type-check` lists every offending
 site. Two buckets:
 
 - **Icon-shaped** (`size="icon"` / `"icon-sm"` / `"icon-xs"`, ~11 sites — custom
@@ -184,7 +184,7 @@ produces.
   to note `Button` now obeys it too (the last hold-out is closed).
 - Autogen CLAUDE.md "Plugin reference" blocks (icon-button, copy-to-clipboard,
   ui-kit, auth, launch) and any `package.json` description that feeds them →
-  **do not hand-edit**; `./singularity build` regenerates them (it will pick up
+  **do not hand-edit**; `./equin build` regenerates them (it will pick up
   the dropped `iconSizeFor`/`useControlSize` deps on icon-button and the changed
   CopyButton/GrantAccessButton/LaunchControl prop types).
 
@@ -208,11 +208,11 @@ declared once at the region, not per button.
 
 ## Verification
 
-1. `./singularity build` — regenerates autogen docs + runs checks; must pass.
-2. `./singularity check type-check` — must be clean. **This is the proof every
+1. `./equin build` — regenerates autogen docs + runs checks; must pass.
+2. `./equin check type-check` — must be clean. **This is the proof every
    `size=` call site was migrated**: any leftover `<Button size=…>` is a compile
    error. Treat each error as an un-migrated site, never cast it away.
-3. `./singularity check` (full) — lint (`no-adhoc-layout`, `no-adhoc-control`,
+3. `./equin check` (full) — lint (`no-adhoc-layout`, `no-adhoc-control`,
    spacing) must still pass; the `aspect` rename touches no layout/height classes.
 4. Run the button test + any IconButton/CopyButton tests:
    `bun run test:dom plugins/primitives/plugins/css/plugins/ui-kit`.

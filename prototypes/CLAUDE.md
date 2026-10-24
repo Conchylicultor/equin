@@ -8,7 +8,7 @@ soon as you save. No build is needed.
 
 ## Creating one
 
-- `./singularity prototype new "Title"` mints the folder from `_template/` and
+- `./equin prototype new "Title"` mints the folder from `_template/` and
   prints its id. Never copy the template by hand, and never name the folder:
   other places refer to the prototype by its id, so the id must never change.
   Its name is the `<title>`.
@@ -27,9 +27,9 @@ request that caused it. Before changing a prototype that already has versions,
 read how it got there:
 
 ```bash
-./singularity prototype log <id> -p      # versions, requests, diffs
-./singularity prototype restore <id> v3
-./singularity prototype checkpoint <id> -m "…"   # only for edits outside an agent turn
+./equin prototype log <id> -p      # versions, requests, diffs
+./equin prototype restore <id> v3
+./equin prototype checkpoint <id> -m "…"   # only for edits outside an agent turn
 ```
 
 The history is a bare git repo per prototype,
@@ -106,7 +106,7 @@ and thumbnails.
   (`sidebar-width` under "Sidebar" reads "Width").
 - An invalid line is left out of the picker and reported on the card.
 
-`./singularity prototype options <id>` prints the variant the user is looking
+`./equin prototype options <id>` prints the variant the user is looking
 at (one shared pick for every tab and deploy) and its URL. To render a variant,
 load `/api/prototypes/<id>/index.html?pane=floating&accent=%2310b981`, e.g. with
 `e2e-harness/e2e/screenshot.ts --path …`. **Never change the user's picks**:

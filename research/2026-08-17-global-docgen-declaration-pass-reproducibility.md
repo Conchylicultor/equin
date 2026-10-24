@@ -4,7 +4,7 @@ _2026-08-17 — status: proposed_
 
 ## Context
 
-`./singularity push` fails on `main` itself with:
+`./equin push` fails on `main` itself with:
 
 ```
 docs/plugins-details.md is out of sync with plugin source
@@ -31,7 +31,7 @@ config directive per reorderable slot).
 So the generator's output depends on what else already ran **in the same
 process**:
 
-- `./singularity build` runs the slot-declaration guard step
+- `./equin build` runs the slot-declaration guard step
   (`regen-pipeline.ts:178`) and *then* generates the docs. Array full → the doc
   gains reorder's 240 entries. That is the committed content.
 - The check calls `renderDetailsDoc()` directly. Nothing runs the pass. Array
@@ -48,7 +48,7 @@ would delete genuine content.
 ### Why it shipped, and why it surfaced four commits later
 
 Checks are cached globally, keyed by `(working-tree hash, check id)`
-(`checks/core/runner.ts:367`). `./singularity build` runs its checks
+(`checks/core/runner.ts:367`). `./equin build` runs its checks
 **in-process**, right after codegen (`cli/bin/commands/build.ts:1329`) — in the
 process where the declaration pass already ran. So each build passed the check
 for the wrong reason and recorded a durable PASS; `push` over the same tree hit
@@ -166,7 +166,7 @@ never runs facets. No current caller trips it once step 1 lands.
 
 ### 3. Tests
 
-- Existing: `./singularity test plugins/framework/plugins/tooling/plugins/codegen`
+- Existing: `./equin test plugins/framework/plugins/tooling/plugins/codegen`
   must stay green.
 - New (small, bun:test): the guard in step 2 throws when handed a fake
   `importedModules` entry in a process where no pass has run. Put it beside the
@@ -176,19 +176,19 @@ never runs facets. No current caller trips it once step 1 lands.
 
 ## Verification
 
-1. `./singularity check plugins-doc-in-sync` — the source change gives a fresh
+1. `./equin check plugins-doc-in-sync` — the source change gives a fresh
    tree hash, so this is a real run, not a cache hit. Expect `ok`. Re-run with
    `SINGULARITY_CHECK_NO_CACHE=1` to confirm repeatability.
-2. `git diff --stat docs/` after `./singularity build` — must be **empty**. The
+2. `git diff --stat docs/` after `./equin build` — must be **empty**. The
    fix must not rewrite a single byte of `docs/plugins-details.md` /
    `plugins-compact.md` / any `CLAUDE.md` AUTOGEN block.
-3. `./singularity check` (full, `SINGULARITY_CHECK_NO_CACHE=1`) — everything
+3. `./equin check` (full, `SINGULARITY_CHECK_NO_CACHE=1`) — everything
    green, including `page-editor:*` (the other `buildEnrichedTree` consumer) and
    `config-v2:registrations-paired` (the descriptor-set pairing the declaration
    pass feeds).
 4. Sanity on the real blocker: rebase `claude-web/att-1786989598-wcnd` onto this
-   and confirm `./singularity push` gets past checks.
-5. `./singularity build` and confirm the app boots at
+   and confirm `./equin push` gets past checks.
+5. `./equin build` and confirm the app boots at
    `http://att-1786998115-pp70.localhost:9000` — reorder middleware is on every
    slot, so a broken declaration pass would be immediately visible.
 

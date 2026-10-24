@@ -16,8 +16,8 @@ import { WORKTREE_SPEC_FILE } from "@plugins/infra/plugins/paths/core";
  * import closure.
  *
  * **Why the file and not a spawn-time value.** The first cut had the gateway
- * pass the composition to the backend it spawns. But `./singularity build`
- * rebuilds the backend and NOT the Go gateway (only `./singularity start`
+ * pass the composition to the backend it spawns. But `./equin build`
+ * rebuilds the backend and NOT the Go gateway (only `./equin start`
  * compiles that), so a running gateway is routinely older than the tree it
  * serves — it would not pass the variable at all, the backend would see no
  * composition, and it would boot the FULL app under a composition's own

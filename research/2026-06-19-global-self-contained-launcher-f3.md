@@ -7,9 +7,9 @@
 
 ## Context
 
-Today there is no single entry point that boots a packaged app's runtime end to end. Serving an app requires a prior `./singularity build` **and** `./singularity start`, and DB provisioning forks the `singularity` DB (git/conversation-coupled). A self-contained release needs a launcher that, on a machine with **no worktree and no prior build**, brings up embedded Postgres + PgBouncer + the gateway, registers a static app spec, ensures the app DB exists via **create-empty-then-migrate** (the boot migrator already applies the schema), and serves the app — using a **release-specific data root, ports, and socket dir** so a packaged install never collides with a developer's dev install on the same machine.
+Today there is no single entry point that boots a packaged app's runtime end to end. Serving an app requires a prior `./equin build` **and** `./equin start`, and DB provisioning forks the `singularity` DB (git/conversation-coupled). A self-contained release needs a launcher that, on a machine with **no worktree and no prior build**, brings up embedded Postgres + PgBouncer + the gateway, registers a static app spec, ensures the app DB exists via **create-empty-then-migrate** (the boot migrator already applies the schema), and serves the app — using a **release-specific data root, ports, and socket dir** so a packaged install never collides with a developer's dev install on the same machine.
 
-`start.ts` already supplies ~80% of this (embedded PG/PgBouncer supervision via the gateway, daemonize). Its only gap is that it assumes a prior `./singularity build` produced the spec + dist, and it always roots at the dev `~/.singularity`.
+`start.ts` already supplies ~80% of this (embedded PG/PgBouncer supervision via the gateway, daemonize). Its only gap is that it assumes a prior `./equin build` produced the spec + dist, and it always roots at the dev `~/.singularity`.
 
 ## Key facts that shaped this design (all verified)
 
@@ -68,7 +68,7 @@ The launcher is a **release entry point**, invoked with `SINGULARITY_DIR` alread
 8. `plugins/framework/plugins/cli/bin/commands/start.ts` — refactor to import the extracted helpers; thread the default port `9000` through the probes (replacing the hardcoded `:9000` strings). Behavior unchanged for dev `start`.
 
 ### F. The launcher command
-9. New `plugins/framework/plugins/cli/bin/commands/serve-app.ts` (thin) — `./singularity serve-app --name sonata --server <path> --web <path> --port <port>`:
+9. New `plugins/framework/plugins/cli/bin/commands/serve-app.ts` (thin) — `./equin serve-app --name sonata --server <path> --web <path> --port <port>`:
    - Assert `process.env.SINGULARITY_DIR` is set; else exit with a loud error.
    - Run the ordering above (steps 1–7), all helpers from the launcher plugin.
    - Default `--server` = `plugins/framework/plugins/server-core`, `--web` = `plugins/framework/plugins/web-core/dist` for dev-testing against the full tree.
@@ -94,7 +94,7 @@ The launcher is a **release entry point**, invoked with `SINGULARITY_DIR` alread
 
 ```bash
 # 1. Build the full web tree once (F3 serves it under a static spec).
-./singularity build
+./equin build
 
 # 2. Boot a self-contained instance under an isolated data root + port.
 SINGULARITY_DIR=$(mktemp -d /tmp/sonata-release.XXXX) \

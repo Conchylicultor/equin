@@ -108,7 +108,7 @@ well-documented note sequences and keeps only pieces it can encode confidently.
 
 ## Verification
 
-`./singularity build`, then Playwright: (1) delete all songs → confirm the
+`./equin build`, then Playwright: (1) delete all songs → confirm the
 onboarding hero + source cards render and a card opens the player; (2) open a
 demo song → confirm multi-track notes render in the piano roll and a grand
 staff in the notation lens.

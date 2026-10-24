@@ -8,7 +8,7 @@
 // Manual only — nothing runs this automatically.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/prototypes/plugins/canvas/e2e/canvas-version.ts \
+//   ./equin run plugins/apps/plugins/prototypes/plugins/canvas/e2e/canvas-version.ts \
 //     [--name <prototype id>] [--out <prefix>] [--headed]
 
 import type { Page } from "playwright";

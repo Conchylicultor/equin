@@ -180,7 +180,7 @@ The toast is `role="status"` via sonner, so match its title.
   - A detached write's 4xx emits the sink.
 - Collector test (like `page-undo-conflict/web/__tests__/collector.test.tsx`): one emit produces one
   toast and one `report()`.
-- Run: `./singularity test plugins/primitives/plugins/optimistic-mutation plugins/page/plugins/editor plugins/reports/plugins/optimistic-rejection`.
+- Run: `./equin test plugins/primitives/plugins/optimistic-mutation plugins/page/plugins/editor plugins/reports/plugins/optimistic-rejection`.
 
 **End to end**
 
@@ -194,4 +194,4 @@ The toast is `role="status"` via sonner, so match its title.
 
 **Build**
 
-- `./singularity build`, then a manual check at `http://<worktree>.localhost:9000`.
+- `./equin build`, then a manual check at `http://<worktree>.localhost:9000`.

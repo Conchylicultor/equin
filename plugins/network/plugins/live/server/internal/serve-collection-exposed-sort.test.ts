@@ -17,7 +17,7 @@
  * (The fold's shape, presence fields, related entities and boot are
  * `serve-collection-exposed.test.ts`'s.)
  *
- * Run: `./singularity test plugins/network/plugins/live`.
+ * Run: `./equin test plugins/network/plugins/live`.
  */
 
 import { describe, expect, test } from "bun:test";

@@ -117,7 +117,7 @@ manages the files day to day. That is intended, since the app owns the dir.
 
 ## Verification
 
-1. Unit tests (`./singularity test plugins/infra/plugins/paths`):
+1. Unit tests (`./equin test plugins/infra/plugins/paths`):
    - `data-dir.test.ts`:
      - `defineAppDataDir` derives the name, and a second call throws the app message.
      - `// @ts-expect-error` on `defineDataDir({ kind: "apps" })`.
@@ -128,8 +128,8 @@ manages the files day to day. That is intended, since the app owns the dir.
    - `defineDataDir({ kind: "apps", name: "prototype-history" })` fails tsc.
    - `defineAppDataDir(prototypesApp)` in `thumbnails/data-dirs` throws, and fails `paths:app-data-dirs`.
    - `defineDataDir({ kind: "state", … reclaim never })` inside an app fails rule B.
-3. `./singularity build` (background). It covers type-check, plugin-boundaries (no cycles, no re-exports), registry/doc sync and the new check.
-4. On the real root after the build: `./singularity check paths:no-undeclared-data-dirs` passes and reports the two moves as pending. On `~/.singularity`, `apps/attachments` and `apps/wallpaper` are still real dirs; the worktree build moved nothing.
+3. `./equin build` (background). It covers type-check, plugin-boundaries (no cycles, no re-exports), registry/doc sync and the new check.
+4. On the real root after the build: `./equin check paths:no-undeclared-data-dirs` passes and reports the two moves as pending. On `~/.singularity`, `apps/attachments` and `apps/wallpaper` are still real dirs; the worktree build moved nothing.
 5. In the worktree app (via `screenshot.ts`): a task attachment image and the floating desktop wallpaper both still render, read through the pending (old) paths.
 6. After the user pushes, main restarts and performs the moves. Then `state/attachments` and `apps/desktop/wallpaper` are real dirs, `apps/attachments` and `apps/wallpaper` are symlinks, and the audit passes.
 

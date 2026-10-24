@@ -113,7 +113,7 @@ share one implementation, like `shared/list-metas.ts`):
 
 ### 3. Agents can read and render — CLI + docs
 
-- New verb `./singularity prototype options <id>` (`files/cli/options.ts`, lazy,
+- New verb `./equin prototype options <id>` (`files/cli/options.ts`, lazy,
   declared in `cli/index.ts`; needs no backend). It prints each live option
   with its value, `picked` / `default`, and the declared values. It also
   prints the **document URL of this exact variant**, built with
@@ -125,7 +125,7 @@ share one implementation, like `shared/list-metas.ts`):
   when anything non-default is picked.
 - Improve prompt (`launch-rules.ts`): keep `pickedVariantLine` (what the user
   was looking at when they asked), and add "the user may change it; run
-  `./singularity prototype options <id>` for the current picks".
+  `./equin prototype options <id>` for the current picks".
 - `prototypes/CLAUDE.md` § Options: add "Which variant is the user looking at?"
   (the CLI verb) and "Rendering a variant yourself" (the document URL with
   `?<option>=<value>`, via `screenshot.ts --path`; picks are never written).
@@ -204,8 +204,8 @@ needs it". This is that second domain.
 
 ## Verification
 
-1. `./singularity build` (in the background). The receipt `build-status.json` must read `status: ok`.
-2. Unit tests: `./singularity test plugins/infra/plugins/request-origin plugins/apps/plugins/prototypes/plugins/files plugins/config_v2`.
+1. `./equin build` (in the background). The receipt `build-status.json` must read `status: ok`.
+2. Unit tests: `./equin test plugins/infra/plugins/request-origin plugins/apps/plugins/prototypes/plugins/files plugins/config_v2`.
    - New ledger tests (none exist today): first-write-wins `before`, a
      divergence is skipped and dropped, a failed restore stays, revert across
      two ledgers.
@@ -215,7 +215,7 @@ needs it". This is that second domain.
 3. Shared state: open a prototype with options on the worktree deploy and pick a
    value. `_picks/<id>.json` appears. The same prototype open at
    `singularity.localhost:9000` switches live (after main has this code).
-   `./singularity prototype options <id>` prints the pick and a URL.
+   `./equin prototype options <id>` prints the pick and a URL.
 4. Render without saving: `screenshot.ts --path "/api/prototypes/<id>/index.html?palette=<v>"`
    renders that variant, and `_picks/<id>.json` is unchanged.
 5. Undo: run `gallery/e2e/options-picker.ts`. It passes, the end-of-run line
@@ -223,4 +223,4 @@ needs it". This is that second domain.
    pre-run bytes again (or is absent again).
 6. Config undo still works: run an E2E that writes DataView config (e.g. one that
    groups a DataView). It reverts under the `Config documents` ledger. Then
-   `./singularity check`.
+   `./equin check`.

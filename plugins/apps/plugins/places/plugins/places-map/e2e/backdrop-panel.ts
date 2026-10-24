@@ -8,7 +8,7 @@
 // `tour.ts` first on an empty deploy).
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/places/plugins/places-map/e2e/backdrop-panel.ts \
+//   ./equin run plugins/apps/plugins/places/plugins/places-map/e2e/backdrop-panel.ts \
 //     [--map "All places"] [--gallery Gallery] [--list List] [--out /tmp/places-backdrop]
 //
 // Writes `<out>-<step>.png`; exits non-zero on the first broken expectation.

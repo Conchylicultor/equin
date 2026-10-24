@@ -44,7 +44,7 @@ A sibling of `saved-names`, with the same shape: a parsed, branded value.
 This is a narrowing, so it is inexpressible to store a symbol on a page afterwards.
 All call sites follow from tsc.
 
-- **Data migration** (custom SQL, `./singularity build --custom-migration --migration-name
+- **Data migration** (custom SQL, `./equin build --custom-migration --migration-name
   page_icons_to_emoji`). It follows the precedent
   `plugins/database/plugins/migrations/data/20260927_182347_81e713f0__remap_saved_icons_to_symbols.sql`.
   One idempotent statement sets `icon` to `NULL` on:
@@ -161,11 +161,11 @@ icon to null, and it stays null because the ext row exists.
 
 ## Verification
 
-- `./singularity test`:
+- `./equin test`:
   - `isEmoji` (ZWJ family, skin tone, flag, keycap, and 🗺️ with VS16 all accepted; "ab",
     "rocket" and two emoji rejected);
   - the answer parser (EMOJI/ALT, sibling fallback, junk → no write).
-- `./singularity build`, then `query_db`:
+- `./equin build`, then `query_db`:
   - no `page_blocks` page row has a non-emoji icon;
   - `page_blocks_ext_auto_icon` fills as the backfill drains;
   - `claude_cli_calls` rows are tagged `page-auto-icon`.

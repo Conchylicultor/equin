@@ -4,7 +4,7 @@
 
 Filesystem paths and system binary locations are scattered across 15+ server files as inline `homedir()` calls, bare `process.env.HOME` template strings, and hardcoded absolute paths like `/usr/bin/git`. This makes the codebase brittle on non-standard setups and creates no obvious canonical place to look for where data lives. A new `plugins/infra/plugins/paths/` sub-plugin becomes the single source of truth for all of this.
 
-A separate agent will add `./singularity check --no-hardcoded-paths` enforcement; this plan covers only the plugin and migration.
+A separate agent will add `./equin check --no-hardcoded-paths` enforcement; this plan covers only the plugin and migration.
 
 ---
 
@@ -186,7 +186,7 @@ Add `pathsPlugin` import alongside the other infra sub-plugin imports and insert
 
 - **CLI** (`cli/src/commands/build.ts`, `cli/src/commands/start.ts`) — separate runtime with its own tsconfig; cannot import from `@plugins/*`. Local `SINGULARITY_DIR` definitions stay as-is.
 - **Go gateway** — user excluded.
-- **`./singularity check --no-hardcoded-paths`** — separate agent.
+- **`./equin check --no-hardcoded-paths`** — separate agent.
 - **`plugins/code-explorer/server/internal/image-handler.ts` `~` expansion** (lines 37–38) — legitimate user-path expansion, not a hardcode.
 - **`plugins/terminal/server/internal/pty-manager.ts` `process.env.HOME || "/"`** — PTY cwd fallback, not a path construction concern.
 
@@ -195,7 +195,7 @@ Add `pathsPlugin` import alongside the other infra sub-plugin imports and insert
 ## Verification
 
 ```bash
-./singularity build   # must compile and restart cleanly
+./equin build   # must compile and restart cleanly
 ```
 
 After build:

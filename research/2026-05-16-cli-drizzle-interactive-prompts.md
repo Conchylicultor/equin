@@ -195,8 +195,8 @@ generateMigration(opts):
 
 ## Verification
 
-1. **No-prompt path:** Run `./singularity build` on a schema change that doesn't involve renames (add a new table). Should work exactly as before.
-2. **Detect mode:** Manually create an ambiguous change (rename a column in schema.ts). Run `./singularity build --migration-name test_rename`. Expect exit code 2 + JSON output listing the prompt with all available options.
+1. **No-prompt path:** Run `./equin build` on a schema change that doesn't involve renames (add a new table). Should work exactly as before.
+2. **Detect mode:** Manually create an ambiguous change (rename a column in schema.ts). Run `./equin build --migration-name test_rename`. Expect exit code 2 + JSON output listing the prompt with all available options.
 3. **Answer mode:** Re-run with `--migration-answers '[{"action":"rename","from":"old_col"}]'` to select the rename option. Expect successful migration generation with the rename SQL.
 4. **Edge case:** Provide wrong answer count or non-existent `from` name, verify clear error message.
-5. **migrations-in-sync check:** With an ambiguous schema change and no committed migration, run `./singularity check --migrations-in-sync`. Expect failure with "ambiguous changes requiring interactive resolution" (not a false pass).
+5. **migrations-in-sync check:** With an ambiguous schema change and no committed migration, run `./equin check --migrations-in-sync`. Expect failure with "ambiguous changes requiring interactive resolution" (not a false pass).

@@ -13,7 +13,7 @@
 //     now get `setBasePath` + a registry sync from the surface.
 //
 // Usage:
-//   ./singularity run plugins/primitives/plugins/pane/e2e/surface-match.ts \
+//   ./equin run plugins/primitives/plugins/pane/e2e/surface-match.ts \
 //     --page <pageId> --conv <conversationId> [--url http://<worktree>.localhost:9000]
 
 import type { Page } from "playwright";

@@ -245,12 +245,12 @@ legitimately read it. Say so rather than invent one.
 2. `core/argv.ts` + tests; export from the barrel.
 3. Rewrite `main-writes.ts`; extend its tests.
 4. Reroute `migrations.ts`.
-5. `guard-path-safety` lint rule + `./singularity build`.
+5. `guard-path-safety` lint rule + `./equin build`.
 6. Update the guards plugin `CLAUDE.md` with the residual gaps.
 
 ## Verification
 
-- `./singularity test plugins/framework/plugins/tooling/plugins/guards`
+- `./equin test plugins/framework/plugins/tooling/plugins/guards`
   (baseline today: 162 pass / 0 fail).
 - `bun …/guards/e2e/replay-transcripts.ts --guards --assert` before and after,
   diffing the per-guard table. Expected signature: `main-writes: 60 → ~10`, every
@@ -262,7 +262,7 @@ legitimately read it. Say so rather than invent one.
   `FLOOR_BASH_DENIES` doc comment with today's corpus and the post-change
   `main-writes` number — that comment is the record of what the floors were
   calibrated against, and a false-positive purge is exactly what it should note.
-- `./singularity check` (lint rule, docs-in-sync) and `./singularity build`.
+- `./equin check` (lint rule, docs-in-sync) and `./equin build`.
 - End to end: from this worktree, re-run the reported command
   (`sed -i '' 's|…"../../../..");|…"..");|' cli/singularity.ts`) and confirm it
   is allowed, and `sed -i '' 's|a|b|' <main>/x.ts` and confirm it still denies.

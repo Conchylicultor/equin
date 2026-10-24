@@ -98,7 +98,7 @@ Remove all launch/model language. New messages:
 
 ## Verification
 
-1. `./singularity build` — clean build
+1. `./equin build` — clean build
 2. Submit single-card Sonnet via Improve → see "Created" toast (immediate) then "Started · Sonnet" toast (~1s later, from watcher)
 3. Submit single-card queue via Improve → see "Queued" toast only, no conversation toast
 4. Submit chained tasks (card 1 sonnet, card 2 depends on card 1) → "Created 2 tasks" toast. Card 1 gets "Started · Sonnet" toast. Complete card 1 → card 2 gets "Task X unblocked · Sonnet" toast

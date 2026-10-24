@@ -6,7 +6,7 @@
  * Drives the draft popover from the task detail's "+ Prerequisite" button (a
  * plain always-mounted trigger), then the Workspace pill on its bar.
  *
- *   ./singularity run plugins/conversations/plugins/workspace/plugins/launch-option/e2e/workspace-card-verify.ts \
+ *   ./equin run plugins/conversations/plugins/workspace/plugins/launch-option/e2e/workspace-card-verify.ts \
  *     --task <taskId> [--out /tmp/ws-card] [--headed]
  */
 import {

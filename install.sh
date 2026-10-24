@@ -45,7 +45,7 @@ main() {
   SELF_DIR=""
   if [ -n "${BASH_SOURCE[0]:-}" ] && [ -f "${BASH_SOURCE[0]}" ]; then
     SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    if [ -x "$SELF_DIR/singularity" ] && [ -f "$SELF_DIR/mise.toml" ]; then
+    if [ -x "$SELF_DIR/equin" ] && [ -f "$SELF_DIR/mise.toml" ]; then
       INSTALL_DIR="$SELF_DIR"
     else
       SELF_DIR=""
@@ -119,7 +119,7 @@ EOF
     fi
     # Lingering: without it systemd stops the user's services — the gateway,
     # and with it every agent — when the last session closes, and never starts
-    # them at boot. `./singularity start` refuses without it.
+    # them at boot. `./equin start` refuses without it.
     if [ "$(loginctl show-user "$(id -un)" -p Linger --value 2>/dev/null)" != "yes" ]; then
       say "Enabling lingering for $(id -un), so the app runs with nobody logged in (asks for your password)"
       sudo loginctl enable-linger "$(id -un)"
@@ -177,7 +177,7 @@ EOF
 
   # ── 6. Start, 7. build ─────────────────────────────────────────────────────
   say "Starting the gateway and its Postgres"
-  ./singularity start
+  ./equin start
 
   STATUS="$HOME/.singularity/worktrees/singularity/build-status.json"
   before="$(grep -o '"buildId": *"[^"]*"' "$STATUS" 2>/dev/null || true)"
@@ -188,7 +188,7 @@ EOF
   # layout-geometry suite) — an on-demand dependency (infra/deps) installed the
   # first time a check, an e2e script or an agent's browser asks for it, never
   # to launch the app.
-  ./singularity build --allow-main --skip-checks
+  ./equin build --allow-main --skip-checks
   # The receipt is the authority on whether it deployed, not the exit code.
   after="$(grep -o '"buildId": *"[^"]*"' "$STATUS" 2>/dev/null || true)"
   if [ -z "$after" ] || [ "$after" = "$before" ] || ! grep -q '"status": *"ok"' "$STATUS"; then
@@ -207,7 +207,7 @@ EOF
 
   say "Singularity is running: http://singularity.localhost:9000"
   echo "  Checkout: $INSTALL_DIR"
-  [ "$EDIT_RC" = "1" ] && echo "  Open a new terminal to use ./singularity (mise is active there)."
+  [ "$EDIT_RC" = "1" ] && echo "  Open a new terminal to use ./equin (mise is active there)."
   if [ "$signed_in" = "0" ]; then
     echo "  One step left, for agents: $claude_bin auth login"
   fi

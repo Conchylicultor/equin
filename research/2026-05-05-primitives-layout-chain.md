@@ -489,4 +489,4 @@ For each: verify columns render, toggle buttons work (open + close), close butto
 
 Then test the new capability: opening attempt-view to the left of a conversation.
 
-Deploy via `./singularity build` and verify at `http://<worktree>.localhost:9000`.
+Deploy via `./equin build` and verify at `http://<worktree>.localhost:9000`.

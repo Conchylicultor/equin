@@ -8,12 +8,12 @@ Resolves deferred item 2 of [`research/2026-07-08-global-bounding-boot-time-work
 
 `plugins/infra/plugins/retention/` bounds unbounded-growth ("firehose") DB tables.
 A table declares itself a firehose (`defineRetention({firehose:true})` or
-`markFirehose(table)`), and the `retention:firehose-bounded` `./singularity check`
+`markFirehose(table)`), and the `retention:firehose-bounded` `./equin check`
 is supposed to fail when a declared firehose has neither a retention policy naming
 it nor a declared FK-cascade owner.
 
 The check reads a module-level registry populated as a **side effect of
-`defineRetention` / `markFirehose` at module eval**. `./singularity check` is a
+`defineRetention` / `markFirehose` at module eval**. `./equin check` is a
 standalone bun process that never loads server modules, so the registry is empty
 and the check passes silently. The original framing of the fix was "make the check
 statically load-complete." Investigation shows that framing is wrong on three
@@ -26,7 +26,7 @@ concurrently in one process (`tooling/plugins/checks/core/runner.ts`, `Promise.a
 and `plugins-doc-in-sync` calls `buildEnrichedTree` → `buildPluginTree({facets:true})`,
 which barrel-imports **every plugin's server barrel**. So whether the retention check
 observes `_reports` depends on whether docgen won the race to import `reports/server`
-into the shared process. Run alone (`./singularity check retention:firehose-bounded`)
+into the shared process. Run alone (`./equin check retention:firehose-bounded`)
 the registry is empty; run in a full pass it may be populated. A green result carries
 no information in either mode.
 
@@ -72,13 +72,13 @@ not the specific instance."* An assertion that a mounted job exists is a patch o
 footgun; deleting the footgun is the fix.
 
 Throwing is the right loudness tier here, and it reaches the author at the right
-moment — in fact **earlier than a boot crash**. `./singularity build` (and `push`'s
+moment — in fact **earlier than a boot crash**. `./equin build` (and `push`'s
 `regen-generated` normalize step) runs docgen, which calls
 `buildPluginTree({facets:true})` → `importBarrel` over **every** plugin's server
 barrel (`codegen/core/docgen.ts:160-167`). A `throw` at consumer module eval therefore
 fails the *build*, at the doc-generation step, before the frontend build and before the
 backend restarts. Verified: a deliberately false `markCascadeBounded(_reports, _reports)`
-fails `./singularity build` with `EXIT=1` and the full diagnostic, from
+fails `./equin build` with `EXIT=1` and the full diagnostic, from
 `[barrel-import] Failed to import …/conversations/server/index.ts`.
 
 This is what makes deleting the check free rather than a trade: the module-eval
@@ -91,7 +91,7 @@ for a throw that somehow only manifests at real boot.
 Precedent for a throwing boot invariant of exactly this shape:
 `plugins/database/plugins/change-feed/server/internal/identity-coverage.ts`
 (`assertScopePoliciesCovered`, thrown from `onReadyBlocking`; its header comment states
-the rationale — *"a static `./singularity check` can reach neither a live DB nor the
+the rationale — *"a static `./equin check` can reach neither a live DB nor the
 server-only contribution/registry sets"*).
 
 ## Design
@@ -218,7 +218,7 @@ FK-verified) rather than merely declared. `getGrowthBounds()` stays exported for
 - `plugins/infra/plugins/retention/check/firehose-check.test.ts`
 - `plugins/infra/plugins/retention/shared/internal/firehose-registry.ts` (and `shared/`)
 
-`check.generated.ts` drops the retention entry on the next `./singularity build`; the
+`check.generated.ts` drops the retention entry on the next `./equin build`; the
 `plugins-registry-in-sync` check guards the drift. No registry is hand-edited.
 
 ## Tests (`bun:test`, co-located)
@@ -237,10 +237,10 @@ Run: `bun test plugins/infra/plugins/retention`
 
 ## Verification
 
-1. `./singularity check --list` no longer lists `retention:firehose-bounded`; `./singularity check` is green.
-2. `./singularity build` succeeds and the backend boots.
+1. `./equin check --list` no longer lists `retention:firehose-bounded`; `./equin check` is green.
+2. `./equin build` succeeds and the backend boots.
 3. **G2 fires and the build reports it.** Temporarily add `markCascadeBounded(_reports, _tasks)`
-   (no such FK) to `plugins/reports/server/internal/retention.ts` and run `./singularity build`.
+   (no such FK) to `plugins/reports/server/internal/retention.ts` and run `./equin build`.
    Expect the build to fail at the health probe with "Check server logs", and the backend log to
    carry the assertion naming `_reports` / `_tasks`. Revert.
 4. **G1 is closed.** Temporarily remove `reportsRetention` from `register: [...]` in

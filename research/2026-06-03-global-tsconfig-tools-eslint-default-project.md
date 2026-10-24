@@ -128,7 +128,7 @@ targets.push({
 });
 ```
 
-This makes `./singularity check --typescript` (and the check phase of `./singularity
+This makes `./equin check --typescript` (and the check phase of `./equin
 build`) run `tsc -p tsconfig.tools.json --noEmit`. `build.ts:708` filters
 `hasEntrypoint`, so the build's separate entrypoint-tsc loop correctly ignores tools.
 
@@ -167,7 +167,7 @@ Its sole purpose is to assert `allowDefaultProject ∩ tsconfig-covered = ∅`. 
 allowlist gone, it's dead.
 
 - Delete `plugins/framework/plugins/tooling/plugins/checks/plugins/allow-default-project/`.
-- `./singularity build` regenerates `check.generated.ts` (drops the registration) and
+- `./equin build` regenerates `check.generated.ts` (drops the registration) and
   `plugins-doc-in-sync` docs. Do NOT hand-edit the generated registry.
 
 ## Critical files
@@ -212,11 +212,11 @@ Run from the worktree root. **The ESLint pass is the load-bearing gate** — wit
 4. **Full check suite** — confirms `allow-default-project-in-sync` is gone, docs regen
    clean, `typescript` check now includes the tools target:
    ```bash
-   ./singularity check
+   ./equin check
    ```
 5. **Build** — regenerates `check.generated.ts` / docs and confirms a clean deploy:
    ```bash
-   ./singularity build
+   ./equin build
    ```
 6. **Sanity on the win**: editing a lint barrel / `*.config.ts` and re-running
    `bunx eslint <that file>` no longer drags in the ~1,500-file web program (observably
@@ -235,7 +235,7 @@ Run from the worktree root. **The ESLint pass is the load-bearing gate** — wit
   were never `tsc`-checked. Budget a small fixup pass (step 1/2). If a fix is genuinely
   out of scope, narrow the tools `include` for that file and note it.
 - **Removing a check requires regeneration**, not a hand edit — always via
-  `./singularity build` (regenerates `check.generated.ts`).
+  `./equin build` (regenerates `check.generated.ts`).
 - **`findPluginDirs` / `walkPluginTree` must survive** the helper-file edit — they're
   used for lint-rule discovery, unrelated to the allowlist. Grep importers before
   deleting/renaming.

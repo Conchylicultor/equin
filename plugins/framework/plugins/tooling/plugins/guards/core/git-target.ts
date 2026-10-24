@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import type { ShellCall } from "./parse-shell";
-import { CLI_NAMES } from "@plugins/framework/plugins/cli/core";
+import { CLI_NAMES } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 
 /**
  * Which repository a `git` call acts on, and what it runs there.

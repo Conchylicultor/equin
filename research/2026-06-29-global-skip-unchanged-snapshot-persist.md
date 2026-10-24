@@ -123,7 +123,7 @@ hook; `persisted` is always false there, so the new serialize/hash never runs).
 
 ## Verification
 
-1. `./singularity build` (from the worktree), confirm the server restarts clean.
+1. `./equin build` (from the worktree), confirm the server restarts clean.
 2. **Unit (bun:test), co-located** `plugins/framework/plugins/resource-runtime/core/*.test.ts`
    if the runtime is unit-constructable via `createResourceRuntime` with stub hooks: assert that
    two drains producing an identical value call the injected `persistSnapshot` **once**, and a

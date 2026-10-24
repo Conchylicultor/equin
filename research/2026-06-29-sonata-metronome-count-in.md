@@ -154,7 +154,7 @@ score-reset effect; route `togglePlay` through `playWithCountIn`. Export
 
 ## Verification
 
-1. `./singularity build`; open `http://<worktree>.localhost:9000/sonata`, load a
+1. `./equin build`; open `http://<worktree>.localhost:9000/sonata`, load a
    song (e.g. a MIDI or chord-grid source).
 2. **Continuous metronome**: toggle the metronome button on, press Play → a click
    on every beat, accented on each bar's downbeat. Drag the speed wheel → clicks

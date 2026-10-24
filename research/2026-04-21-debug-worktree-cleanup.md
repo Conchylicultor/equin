@@ -186,7 +186,7 @@ This keeps the server simple and makes the endpoint reusable for any future sele
 
 ## Verification
 
-1. `./singularity build` completes without TypeScript errors.
+1. `./equin build` completes without TypeScript errors.
 2. Debug sidebar shows "Worktree Cleanup" item; clicking opens the pane.
 3. `GET /api/debug/worktrees` returns all attempts with correct git hygiene fields.
 4. Summary line totals match manual count.

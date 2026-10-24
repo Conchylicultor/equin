@@ -13,7 +13,7 @@
 // The script creates its OWN scratch pages and deletes them on the way out.
 //
 // Usage:
-//   ./singularity run plugins/page/plugins/inline-page-link/e2e/block-id-paste-verify.ts [--url <deploy>] [--headed]
+//   ./equin run plugins/page/plugins/inline-page-link/e2e/block-id-paste-verify.ts [--url <deploy>] [--headed]
 import type { Locator, Page } from "playwright";
 import {
   arg,

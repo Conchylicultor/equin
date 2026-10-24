@@ -131,7 +131,7 @@ plugins/plugin-meta/plugins/facets/
 
 ## Implementation Steps
 
-Each step is one agent conversation. Every step must pass `./singularity build` and produce byte-identical doc output until the final cleanup.
+Each step is one agent conversation. Every step must pass `./equin build` and produce byte-identical doc output until the final cleanup.
 
 ### Step 1: Foundation ✅ Done
 
@@ -178,7 +178,7 @@ See `research/2026-05-22-global-commands-facet-validation.md` for the detailed v
 - `plugin-boundaries.ts` — reads dir/path/runtimes + apiUses → needs cross-refs facet, or `skipBarrelImport` + keep apiUses parse in core
 - `runner.ts`, `no-reexport-default.ts`, `plugins-have-claudemd.ts`, `plugins-doc-in-sync.ts` — lightweight consumers → verify each
 
-**Verify**: All `./singularity check` checks pass. Doc output identical.
+**Verify**: All `./equin check` checks pass. Doc output identical.
 
 ### Step 5: Consumer Migration
 
@@ -189,7 +189,7 @@ See `research/2026-05-22-global-commands-facet-validation.md` for the detailed v
 - `compute-plugin-diff.ts`: read facets instead of `node.slots`, `node.exports`, etc.
 - `config-origin-gen.ts`: read contributions facet instead of re-importing barrels
 
-**Verify**: Doc output byte-identical. Plugin-view API JSON identical. `./singularity build` passes.
+**Verify**: Doc output byte-identical. Plugin-view API JSON identical. `./equin build` passes.
 
 ### Step 6: Cleanup
 
@@ -242,8 +242,8 @@ Step 1 (foundation) ✅
 ## Verification
 
 At every step:
-1. `./singularity build` succeeds
+1. `./equin build` succeeds
 2. `diff` on `docs/plugins-compact.md`, `docs/plugins-details.md`, `docs/routes.md` — must be empty (modulo new facet plugin entries)
 3. Spot-check 2-3 per-plugin `CLAUDE.md` files for identical autogen blocks
 4. Plugin-view API at `GET /api/plugin-view/tree` returns identical JSON (compare before/after)
-5. `./singularity check` passes all checks
+5. `./equin check` passes all checks

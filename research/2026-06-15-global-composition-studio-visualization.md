@@ -8,7 +8,7 @@ The [Plugin Compositions vision](./2026-06-09-global-plugin-compositions.md) int
 
 - **Closure engine** — `plugins/plugin-meta/plugins/closure/core` (pure, browser-safe). Exports `classifyEdges`, `resolveComposition`, `explainInclusion`, `impactOfPruning`, `impactOfSelecting`, `hardClosure` + types (`EdgeGraph`, `CompositionManifest`, `MembershipState`, `Composition`, `InclusionPath`).
 - **Manifest registry** — `plugins/plugin-meta/plugins/composition/core` (`loadCompositions()`, `defineCollectedDir("composition")`, build-generated registry).
-- **Validity check** — `composition-closure` (`./singularity check composition-closure`).
+- **Validity check** — `composition-closure` (`./equin check composition-closure`).
 - **Two anchor manifests** — `plugins/apps/plugins/agent-manager/composition/index.ts` defines `agent-manager` (full) and `agent-manager-lean` (no self-improvement). They differ by exactly `improve.element-picker, review, reports.crash, reports.launch-fix, screenshot.draw-on-app` — the with/without-self-improvement anchor demo.
 
 **What's missing is the visualization** — nothing in Studio references composition/closure/membership today. This plan builds it in three standalone increments.
@@ -97,15 +97,15 @@ Anchor demo: the diff tints **exactly** the self-improvement subtree (`improve.e
 
 **Reuse:** `defineEndpoint`/`implement`/`useEndpoint` (`infra/endpoints`); `buildPluginTree` (`plugin-tree/core`); `classifyEdges`/`resolveComposition`/`explainInclusion`/`impact*` (`closure/core`); `loadCompositions` (`composition/core`); `Explorer.TreeRowBadge`, `PluginViewSlots.Section`, `Pane.define`/`Pane.Register`, `Studio.Sidebar`/`sidebarNavItem`/`openPane`; primitives `z-layers`, `text`, `spacing`, `link-chip`, `badge`, `toggle-chip`, `loading`.
 
-Each new runtime plugin needs a `CLAUDE.md` (`plugins-have-claudemd`). `./singularity build` regenerates the web/server registries + docs (`plugins-registry-in-sync`, `plugins-doc-in-sync`).
+Each new runtime plugin needs a `CLAUDE.md` (`plugins-have-claudemd`). `./equin build` regenerates the web/server registries + docs (`plugins-registry-in-sync`, `plugins-doc-in-sync`).
 
 ## Verification
 
-- **Build:** `./singularity build`, then `http://att-1781511041-v3sc.localhost:9000` → Studio.
+- **Build:** `./equin build`, then `http://att-1781511041-v3sc.localhost:9000` → Studio.
 - **Inc 1:** Explorer → pin `apps.agent-manager` (or any node) as root → tree tints (`required`/`available`/`excluded`); the whole `apps.sonata.*` subtree reads `excluded`. Open a plugin's detail → "Composition membership" shows the hard-edge "why included" path. `bun e2e/screenshot.mjs --url …/studio --click "Show closure from here" --out /tmp/inc1` for before/after.
 - **Inc 2:** Compositions pane → select `agent-manager-lean` → tint updates; toggle `review` on → it flips to `contributor` and its closure tints live; "Draft — not saved" shown; confirm no file changed (`git status`).
 - **Inc 3:** Compare `agent-manager` vs `agent-manager-lean` → diff highlights exactly the self-improvement set + closure as the delta; feature-delta list matches. Screenshot the compare view.
-- **Engine regression:** `bun test plugins/plugin-meta/plugins/closure/core/closure.test.ts`; `./singularity check composition-closure`.
+- **Engine regression:** `bun test plugins/plugin-meta/plugins/closure/core/closure.test.ts`; `./equin check composition-closure`.
 
 ## Follow-ups (filed, not built)
 

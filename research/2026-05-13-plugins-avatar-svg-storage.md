@@ -49,7 +49,7 @@ On cold page load, avatar icons picked from the full 2160-icon set render as bla
 - `plugins/agents/server/internal/tables.ts`: add `iconSvgNodes: text("icon_svg_nodes")`
 - `plugins/conversations/plugins/conversation-category/server/internal/tables-colors.ts`: add `iconSvgNodes: text("icon_svg_nodes")`
 
-Run `./singularity build` to generate the migration.
+Run `./equin build` to generate the migration.
 
 ### Step 5 — Update Zod schemas, API handlers, and resources
 
@@ -156,10 +156,10 @@ pie→MdPieChart, currency→MdAttachMoney
 
 ## Verification
 
-1. `./singularity build` — generates migration, builds successfully
+1. `./equin build` — generates migration, builds successfully
 2. Open the app — existing agent avatars render correctly (backfill resolves stored keys to SVG data)
 3. Open an agent detail → click avatar → pick a full-set icon (e.g. "precision_manufacturing") → icon renders immediately
 4. Reload the page — the icon persists (rendered from stored SVG, no lazy load needed)
 5. Open Settings → Category avatars → pick icons for categories → verify they persist across reload
 6. Create a new agent → verify it gets the default robot avatar
-7. `./singularity check` passes
+7. `./equin check` passes

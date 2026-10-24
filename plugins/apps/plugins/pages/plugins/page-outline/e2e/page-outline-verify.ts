@@ -11,7 +11,7 @@
  * container arrived late), which is why this one asserts the same property for
  * the other consumer.
  *
- *   ./singularity run plugins/apps/plugins/pages/plugins/page-outline/e2e/page-outline-verify.ts --page <blockId>
+ *   ./equin run plugins/apps/plugins/pages/plugins/page-outline/e2e/page-outline-verify.ts --page <blockId>
  */
 import {
   arg,

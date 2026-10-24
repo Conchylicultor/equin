@@ -4,15 +4,15 @@
 
 On 2026-10-20, worktree `att-1792493943-evj2y1` stopped deploying after its own push:
 
-1. The branch authored `…_38bc8c97__add_sdk_agent_background_tasks.sql` and `…_f09303fa__add_conversation_working_on.sql`. `./singularity build` applied both to the worktree DB, so the ledger (`__singularity_migrations`) has rows for 38bc8c97 and f09303fa.
-2. `./singularity push` → `regen-migrations` → `generateMigration({ resetMigration: true })` → `resetBranchLocalMigrations` deleted both files and drizzle re-emitted the same delta as `…_d36c582c__merged_20261020_1154.sql` (same `ADD COLUMN`s, new hash).
+1. The branch authored `…_38bc8c97__add_sdk_agent_background_tasks.sql` and `…_f09303fa__add_conversation_working_on.sql`. `./equin build` applied both to the worktree DB, so the ledger (`__singularity_migrations`) has rows for 38bc8c97 and f09303fa.
+2. `./equin push` → `regen-migrations` → `generateMigration({ resetMigration: true })` → `resetBranchLocalMigrations` deleted both files and drizzle re-emitted the same delta as `…_d36c582c__merged_20261020_1154.sql` (same `ADD COLUMN`s, new hash).
 3. The next build in that worktree: `planSchemaSteps` (`plugins/database/plugins/migrations/server/internal/runner.ts`) sees d36c582c missing from the ledger and applies its expand phase. That fails with `column "background_tasks" … already exists`, the backend dies, and the gateway reports only `backend exited before ready`.
 
 What is wrong:
 
-- **Identity.** The ledger is keyed by content hash. The regen changes the hash without changing what the migration does, and nothing records that d36c582c replaces 38bc8c97 + f09303fa. This is not specific to push: `./singularity build --reset-migration` in a worktree that already built does the same thing.
+- **Identity.** The ledger is keyed by content hash. The regen changes the hash without changing what the migration does, and nothing records that d36c582c replaces 38bc8c97 + f09303fa. This is not specific to push: `./equin build --reset-migration` in a worktree that already built does the same thing.
 - **Misleading warning.** `reportPlan` says an applied hash with no file is "expected if this worktree predates a migration that landed on main". Here it was not expected: the branch had rewritten its own migrations.
-- **No recovery.** `./singularity db fork` does nothing when the DB already exists, and agents may not run SQL by hand.
+- **No recovery.** `./equin db fork` does nothing when the DB already exists, and agents may not run SQL by hand.
 - **Hidden error.** The pg error is only in `~/.singularity/logs/gateway/<wt>.log` (the gateway pumps the backend's stderr there). The runner throws without writing to its `migrations` sink, and the build prints only the gateway's `backend exited before ready`.
 
 Goal: a worktree that keeps working after a push (or a reset) builds again with its data intact. Main, fresh DBs and other worktrees behave exactly as before. When the runner cannot prove the DB is in a safe state, it fails before running any SQL, names the cause, and points to a supported fix.
@@ -64,11 +64,11 @@ This stays pure and portable (pglite and bundled-source hosts run it unchanged).
 - **Orphans covered by an adoption, or by an already-applied superseding file**: no warning. They are accounted for.
 - **Other orphans**: read the ledger's `file` column too (`getAppliedHashes` becomes hash → file). The message names the file and gives both readings:
   - "on main and your branch is behind: rebase";
-  - "a migration this branch authored and then rewrote: the DB keeps its effects; if a pending migration redoes them, re-fork with `./singularity db fork --replace`".
+  - "a migration this branch authored and then rewrote: the DB keeps its effects; if a pending migration redoes them, re-fork with `./equin db fork --replace`".
 
   The runner has no git, so it cannot tell which case applies and must not claim either one.
 
-### 4. Supported recovery: `./singularity db fork --replace`
+### 4. Supported recovery: `./equin db fork --replace`
 
 Add a `--replace` flag to `plugins/framework/plugins/cli/plugins/db/cli/fork.ts`. It drops this worktree's DB and re-forks it from main through the existing durable fork path (`database/fork`, `database/admin`).
 
@@ -106,7 +106,7 @@ Every loud failure in §2 and §3 names this command. Update the `db` group's de
 
 ## Verification
 
-**Unit tests** (`./singularity test plugins/database/plugins/migrations plugins/framework/plugins/cli/plugins/migrations`):
+**Unit tests** (`./equin test plugins/database/plugins/migrations plugins/framework/plugins/cli/plugins/migrations`):
 
 - `runner.test.ts`:
   - all predecessors applied → only a `record` step;
@@ -125,7 +125,7 @@ Every loud failure in §2 and §3 names this command. Update the `db` group's de
 **End to end in this worktree:**
 
 1. Add a nullable column and build.
-2. Run `./singularity regen-migrations` locally. This simulates the push's regen without landing anything.
+2. Run `./equin regen-migrations` locally. This simulates the push's regen without landing anything.
 3. Build again: the log shows `adopted …` and the deploy is healthy at `http://att-1792519856-tz5k6d.localhost:9000`.
 4. Revert the column, regen and build to clean up.
 
@@ -133,7 +133,7 @@ Every loud failure in §2 and §3 names this command. Update the `db` group's de
 
 - the build output shows the pg error through the gateway tail;
 - `logs/migrations.jsonl` has the failure line;
-- `./singularity db fork --replace` recovers.
+- `./equin db fork --replace` recovers.
 
 **Original worktree.** `att-1792493943-evj2y1` gets nothing automatic: its merged file is already published and has no header. Recover it with `db fork --replace` once that exists.
 

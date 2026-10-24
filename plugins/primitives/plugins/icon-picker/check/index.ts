@@ -10,7 +10,7 @@ import {
 } from "../shared/symbols-metadata";
 
 const REGEN =
-  "Run `./singularity run plugins/primitives/plugins/icon-picker/scripts/gen-symbols-metadata.ts` and commit the result.";
+  "Run `./equin run plugins/primitives/plugins/icon-picker/scripts/gen-symbols-metadata.ts` and commit the result.";
 
 const check: Check = {
   id: "icon-picker:symbols-metadata-in-sync",

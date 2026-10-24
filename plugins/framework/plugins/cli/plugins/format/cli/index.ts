@@ -10,7 +10,7 @@ export default defineCliCommand({
   name: "format",
   description:
     "Format every .ts/.tsx changed on this branch (vs merge-base with main) " +
-    "with prettier. The SAME pass `./singularity build` runs — use it to " +
+    "with prettier. The SAME pass `./equin build` runs — use it to " +
     "satisfy `format-clean` without paying for a full build. Idempotent.",
   run: () => import("./run"),
 });

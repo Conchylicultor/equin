@@ -10,7 +10,7 @@ const barrelFreeTreeCache = new Map<string, Promise<PluginTree>>();
  * The barrel-FREE plugin tree (`skipBarrelImport`) — a pure function of committed
  * plugin source (facet extraction reads only .ts/.tsx/package.json; no generated
  * manifest feeds it), so it is IDENTICAL for every skipBarrelImport caller in a
- * build. Memoized per root so one `./singularity build` does ONE barrel-free tree
+ * build. Memoized per root so one `./equin build` does ONE barrel-free tree
  * build, not one per codegen step. Twin of `buildEnrichedTree` (which is the
  * enriched, barrel-imported tree; the two are deliberately separate caches).
  *

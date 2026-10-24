@@ -200,7 +200,7 @@ comment cross-refs them in `runtime.test.ts`.
 
 - `bun test plugins/framework/plugins/resource-runtime` — all suites green
   (existing + 3 new files). Every new invariant maps to a named test.
-- `./singularity build` then `./singularity check` — green (type-check picks up
+- `./equin build` then `./equin check` — green (type-check picks up
   the new `.ts`; no schema/migration surface touched).
 - The harness is DB-free and socket-free, so it runs in the pure `bun:test`
   runner with no Postgres — the whole point of the fake-injection seam.

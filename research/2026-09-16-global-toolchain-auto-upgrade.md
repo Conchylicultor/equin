@@ -45,7 +45,7 @@ If the lock does not behave this way, fall back to exact versions in `mise.toml`
 
 This keeps the protection `bun-runtime` gives today: the version in git is exactly what runs, and a regression fails loudly.
 
-### 3. The upgrade command: `./singularity toolchain upgrade`
+### 3. The upgrade command: `./equin toolchain upgrade`
 
 The command is a CLI contribution from `plugins/toolchain/cli/`. It is fixed and repeatable, so the agent never improvises the gate. Steps:
 
@@ -58,7 +58,7 @@ The command is a CLI contribution from `plugins/toolchain/cli/`. It is fixed and
 
 `--tool <name>` upgrades a single tool, so the agent can find which tool is at fault.
 
-**Needed groundwork:** `./singularity check` and `./singularity test` currently print only human-readable lines. Add a structured results receipt next to `build-status.json`, written by the check runner (`plugins/framework/plugins/tooling/plugins/checks/core/runner.ts`) and the test CLI (`plugins/framework/plugins/cli/plugins/test/cli/run.ts`), listing failing check ids and failing test files and cases. It is written as a file, not added as a flag, so the "paths only, no flags" rule for `test` still holds. This is general-purpose infrastructure, not code specific to upgrades.
+**Needed groundwork:** `./equin check` and `./equin test` currently print only human-readable lines. Add a structured results receipt next to `build-status.json`, written by the check runner (`plugins/framework/plugins/tooling/plugins/checks/core/runner.ts`) and the test CLI (`plugins/framework/plugins/cli/plugins/test/cli/run.ts`), listing failing check ids and failing test files and cases. It is written as a file, not added as a flag, so the "paths only, no flags" rule for `test` still holds. This is general-purpose infrastructure, not code specific to upgrades.
 
 ### 4. Detection: a daily job that files an auto-started task
 
@@ -73,8 +73,8 @@ The command is a CLI contribution from `plugins/toolchain/cli/`. It is fixed and
 ### 5. What the agent is told to do
 
 The task description is fixed text owned by the toolchain plugin:
-1. Run `./singularity toolchain upgrade`.
-2. **Green:** run `./singularity build` for this worktree, confirm `build-status.json` is `ok`, then push with `./singularity push -m "chore(toolchain): …"`, listing old→new versions. The push is explicitly allowed in this prompt.
+1. Run `./equin toolchain upgrade`.
+2. **Green:** run `./equin build` for this worktree, confirm `build-status.json` is `ok`, then push with `./equin push -m "chore(toolchain): …"`, listing old→new versions. The push is explicitly allowed in this prompt.
 3. **Regression:** use `--tool` to find the tool responsible. Push the tools that pass. For the failing release, look for or report the upstream issue, add a `hold` with the reason, and push that change. If a floor or a fix in our own code is the right answer, make that change instead, and prove it with the same command.
 4. If the agent can't reach a clear result, raise a flag and do not push.
 
@@ -83,7 +83,7 @@ The task description is fixed text owned by the toolchain plugin:
 ### 6. How a change reaches the running system
 
 - After a push, main rebuilds (the build runs the `tree` checks, so `bun-runtime` and `toolchain:resolved` run again on main). Backends pick up new versions through shims when they restart.
-- A new Go reaches the running **gateway** only after `./singularity start`. This is out of scope, and noted in the toolchain `CLAUDE.md`.
+- A new Go reaches the running **gateway** only after `./equin start`. This is out of scope, and noted in the toolchain `CLAUDE.md`.
 - Every worktree reinstalls dependencies on its next command after a Bun change. This is expected, and it is why upgrades are batched.
 
 ## Files
@@ -98,8 +98,8 @@ The task description is fixed text owned by the toolchain plugin:
 ## Verification
 
 1. Phase 0 spike, (a)–(c), run by hand in two worktrees.
-2. `./singularity check bun-runtime toolchain:resolved` passes on the lock. A hand-edited lock (wrong bun, bun below the floor, a held version) makes each one fail with a clear message.
-3. Run `./singularity toolchain upgrade` for real in this worktree. It should bring tmux, rust, go and mise up to date, write a receipt, and give a green verdict. Commit the resulting `mise.lock`. This first run is the initial catch-up.
+2. `./equin check bun-runtime toolchain:resolved` passes on the lock. A hand-edited lock (wrong bun, bun below the floor, a held version) makes each one fail with a clear message.
+3. Run `./equin toolchain upgrade` for real in this worktree. It should bring tmux, rust, go and mise up to date, write a receipt, and give a green verdict. Commit the resulting `mise.lock`. This first run is the initial catch-up.
 4. Simulate a regression: add a check that fails only when `Bun.version` differs from the baseline, and confirm the verdict is a regression with a nonzero exit.
 5. Trigger the detection job once by hand on this worktree's deploy, pointed at the worktree. Confirm it files exactly one auto-start task in the `toolchain` category, and that a second run files nothing.
-6. `./singularity test plugins/toolchain` covers the parsing of `mise outdated --json`, the floor and hold comparisons, and the failure-set comparison.
+6. `./equin test plugins/toolchain` covers the parsing of `mise outdated --json`, the floor and hold comparisons, and the failure-set comparison.

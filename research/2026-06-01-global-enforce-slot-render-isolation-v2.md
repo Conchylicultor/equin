@@ -128,7 +128,7 @@ Rewrite the "Rendering contributions" section of
 `plugins/framework/plugins/web-sdk/CLAUDE.md` — it currently *teaches the unsafe
 pattern* (`panels.map((p) => <p.component/>)`). Replace with `.Render`/`.Dispatch`
 and state the invariant: **a contribution's `component` is renderable only through
-the render primitives; everything else is `UNSAFE_`.** `./singularity build`
+the render primitives; everything else is `UNSAFE_`.** `./equin build`
 regenerates autogen doc blocks.
 
 ### Optional backstop (not load-bearing)
@@ -174,7 +174,7 @@ non-`component` fields are unaffected.
 
 1. **Foundation (first, blocking):** `sealed-component.ts`; seal `Slot<P>`; barrel
    exports; render-primitive unseal (`.Render`/`.Dispatch`); predicate matcher;
-   `renderIsolated` export. *(After this, `./singularity build` surfaces every
+   `renderIsolated` export. *(After this, `./equin build` surfaces every
    migration site as a compile error — the worklist.)*
 2. **Framework `UNSAFE_` sites:** `App.tsx`, `plugin-error-boundary.tsx`, `active-data/*`.
 3. **Parallel migration agents** (per cluster): A `agents/*` · B `tasks/*` +
@@ -182,7 +182,7 @@ non-`component` fields are unaffected.
    D `ui/*` · E `apps/*` (Apps.App, Catalog, Deploy, Sonata, Profiling) ·
    F `page` Editor.Block + `config_v2` Fields + `file-pane` + pane `actionsSlot` ·
    G web-sdk `CLAUDE.md` doc.
-4. **Close-out:** `./singularity build`; fix fallout; `./singularity check`.
+4. **Close-out:** `./equin build`; fix fallout; `./equin check`.
 
 ## Critical files
 
@@ -194,12 +194,12 @@ non-`component` fields are unaffected.
 
 ## Verification
 
-1. `./singularity build` — primary gate. The seal makes every direct
+1. `./equin build` — primary gate. The seal makes every direct
    `<c.component/>` off `useContributions()` a compile error; dispatch key types
    catch bad `match` strings. Build must be green.
 2. **Seal proof** — in a scratch file, `MySlot.useContributions()[0].component`
    used as JSX must fail to typecheck (revert after).
-3. `./singularity check` — `eslint`, `plugin-boundaries`, `plugins-doc-in-sync` green.
+3. `./equin check` — `eslint`, `plugin-boundaries`, `plugins-doc-in-sync` green.
 4. Open `http://<worktree>.localhost:9000` — agent list/actions, task actions,
    conversation avatars/chips, theme customizer, profiling gantt, forge catalog,
    app rail, page editor blocks, file pane all render normally.

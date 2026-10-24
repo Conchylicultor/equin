@@ -54,10 +54,10 @@ step_02_one_command_TAG="from-docs"
 
 step_03_new_terminal() {
   cat <<'CMD'
-zsh -l -i -c 'for t in mise bun go; do printf "%-5s %s\n" "$t" "$(command -v $t || echo MISSING)"; done; command -v bun >/dev/null && cd ~/singularity && ./singularity --help >/dev/null && echo "./singularity runs"'
+zsh -l -i -c 'for t in mise bun go; do printf "%-5s %s\n" "$t" "$(command -v $t || echo MISSING)"; done; command -v bun >/dev/null && cd ~/singularity && ./equin --help >/dev/null && echo "./equin runs"'
 CMD
 }
-step_03_new_terminal_DOC="README.md: open a new terminal and ./singularity works there (install.sh's closing line says so)."
+step_03_new_terminal_DOC="README.md: open a new terminal and ./equin works there (install.sh's closing line says so)."
 step_03_new_terminal_TAG="from-docs"
 
 step_04_app_answers() {
@@ -73,7 +73,7 @@ step_04_app_answers_TAG="from-docs"
 
 step_05_screenshot() {
   cat <<'CMD'
-zsh -l -i -c 'cd ~/singularity && ./singularity run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --out /tmp/clean-install-shot' && ls -la /tmp/clean-install-shot*
+zsh -l -i -c 'cd ~/singularity && ./equin run plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts --out /tmp/clean-install-shot' && ls -la /tmp/clean-install-shot*
 CMD
 }
 step_05_screenshot_DOC="README.md: the app renders, not only answers."

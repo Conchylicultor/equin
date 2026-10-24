@@ -105,7 +105,7 @@ Compositions are **declarative static specs in the repo**, many per repo — the
 - New plugin `plugins/plugin-meta/plugins/composition/` owns `defineCollectedDir("composition")` in its `core/` (mirrors `checkCollectedDir`, `facetCollectedDir`).
   `plugins/framework/plugins/tooling/plugins/collected-dir/core/define.ts:17`.
 - Each composition is a `<plugin>/composition/index.ts` default-exporting a `CompositionManifest` (`{ name, entryPoints, softOptOuts }`, ids built via `asPluginId(...)` from `@plugins/framework/plugins/plugin-id/core`).
-- `loadCompositions()` = `loadCollectedDir<CompositionManifest>(compositionEntries, { isItem, dedupeKey: m => m.name })`. Codegen auto-discovers every `composition/index.ts` and emits `composition.generated.ts` on `./singularity build` — no central registry to edit.
+- `loadCompositions()` = `loadCollectedDir<CompositionManifest>(compositionEntries, { isItem, dedupeKey: m => m.name })`. Codegen auto-discovers every `composition/index.ts` and emits `composition.generated.ts` on `./equin build` — no central registry to edit.
 
 This is purely additive: defining compositions changes nothing about what builds today (the web/server registries remain filesystem-derived and complete). Gating the actual build on a composition is **future work** — it would filter the generated `web.generated.ts`/`server.generated.ts`, or gate contributions at runtime.
 
@@ -136,7 +136,7 @@ Persist selections as collected-dir manifests (above); a new Studio sidebar pane
 ## Explicitly out of scope (future work)
 
 1. **Capability ports** — restructuring `database`/`conversations`/`cli` into generic-interface + provider-slot so they can be dropped. The closure check's report is the worklist for this.
-2. **Build/deploy a composition** — making `./singularity build`/publish target a composition and deploy that flavor to its own namespace.
+2. **Build/deploy a composition** — making `./equin build`/publish target a composition and deploy that flavor to its own namespace.
 3. **Cross-source composition** — merging a user's custom-plugin repo with core (the multi-repo axis + write-routing/manifest). Same union algebra, plus a source-root + git layer.
 
 ---
@@ -167,8 +167,8 @@ Persist selections as collected-dir manifests (above); a new Studio sidebar pane
 ## Verification
 
 - **Engine (unit-level, no UI):** a script/test that runs `buildPluginTree` + `resolveComposition` on a hand-written manifest with `entryPoints: ["apps.agent-manager"]` and asserts the bundle excludes `apps.sonata`, includes `shell`/`live-state` as `required`, and that opting out the self-improvement plugins removes them and only them (via `impactOfPruning`).
-- **Check:** `./singularity check composition-closure` passes for a closed composition and fails with a precise "X hard-imports Y" message for a deliberately broken one.
-- **Visualization (Increment 1):** `./singularity build`, then open `http://<worktree>.localhost:9000` → Studio → Explorer; select an entry point and confirm the tree tints by membership state and the detail pane shows the "why included" hard-edge path. Verify with `bun e2e/screenshot.mjs` (click the entry, capture before/after).
+- **Check:** `./equin check composition-closure` passes for a closed composition and fails with a precise "X hard-imports Y" message for a deliberately broken one.
+- **Visualization (Increment 1):** `./equin build`, then open `http://<worktree>.localhost:9000` → Studio → Explorer; select an entry point and confirm the tree tints by membership state and the detail pane shows the "why included" hard-edge path. Verify with `bun e2e/screenshot.mjs` (click the entry, capture before/after).
 - **Anchor demo (Increment 2/3):** two compositions of `apps.agent-manager` — one full, one with self-improvement opted out — and confirm the diff view shows exactly the self-improvement subtree as the delta.
 
 ---

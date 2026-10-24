@@ -338,7 +338,7 @@ The memo must **never serve stale data**. Per loader:
 - `plugins/infra/plugins/git-watcher/server/internal/watcher.ts` + `server/index.ts` — Stage 2.1
 - `plugins/conversations/plugins/conversation-view/plugins/code/server/internal/get-edited-files.ts` — Stage 4
 - `plugins/conversations/plugins/conversation-view/plugins/code/server/internal/watch-edited-files.ts` — Stage 4
-- CLAUDE.md `Uses:`/`Exports:` blocks regenerate via `./singularity build` (the
+- CLAUDE.md `Uses:`/`Exports:` blocks regenerate via `./equin build` (the
   `plugins-doc-in-sync` check requires it).
 
 **Reuse (no change):** `createInflight` (`packages/inflight/core`),
@@ -358,7 +358,7 @@ The memo must **never serve stale data**. Per loader:
 3. **Stage 3** — commits-graph.delta generic memo + cross-view coalescing.
 4. **Stage 4** — edited-files watcher-generation memo.
 
-Each stage: `./singularity build` (both new plugins compile, barrels resolve,
+Each stage: `./equin build` (both new plugins compile, barrels resolve,
 `plugins-registry-in-sync` / `plugins-doc-in-sync` pass), then the verification
 below. Delegate each stage to an implementation agent (Opus for Stage 2's
 incremental logic; Sonnet acceptable for the more mechanical Stages 1/3/4).

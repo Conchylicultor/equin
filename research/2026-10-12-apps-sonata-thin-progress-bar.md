@@ -117,7 +117,7 @@ token later.
 - `…/progress/plugins/{bars,keys,sections}/web/**` — rewritten contributions
 - `…/progress/plugins/loop/web/components/loop-region.tsx`
 - delete `…/progress/plugins/chords/`
-- generated registries/docs regenerate on `./singularity build`
+- generated registries/docs regenerate on `./equin build`
 
 Reuse: `Placed`/`pct`/`Layer` (`primitives/css/coords`, `layer`), `Clip`,
 `hoverRevealGroup`/`hoverRevealTarget`, `IconButton`, `useCursorSelector` /
@@ -127,9 +127,9 @@ Reuse: `Placed`/`pct`/`Layer` (`primitives/css/coords`, `layer`), `Clip`,
 
 ## Verification
 
-1. `./singularity build` (checks incl. `plugin-boundaries`, `type-check`,
+1. `./equin build` (checks incl. `plugin-boundaries`, `type-check`,
    eslint `no-adhoc-layout`, `plugins-doc-in-sync`).
-2. `./singularity test plugins/apps/plugins/sonata/plugins/progress` — add a
+2. `./equin test plugins/apps/plugins/sonata/plugins/progress` — add a
    pure test for the label-lane grouping (same-beat folding, ordering, widths)
    and for the hover snap.
 3. Screenshots of `/sonata/song/song-bad4797a-…` with `screenshot.ts`

@@ -243,7 +243,7 @@ follow-up); `appendRunsAtEnd` for the forward merge only.
   carries its id. Flags are set only by `trashBlockRoots` in the same tx as
   `recordTrashEntry`; cleared only by `untrashBlocks(entry)`, which deletes its
   ledger row inside its own tx. A DB `CHECK ((deleted_at IS NULL) = (trash_entry_id IS NULL))`
-  on `page_blocks` backs it (migration via `./singularity build`).
+  on `page_blocks` backs it (migration via `./equin build`).
 - **P4** A patch `create` whose id matches **any** trashed row restores that row's
   whole entry through `untrashBlocks` before the write tx (today's page-shell path,
   generalised); restored ids are excluded from every write bucket. The
@@ -446,7 +446,7 @@ orphan sweep keeps a trashed block's file; inline-date reminder revives on
 restore; `page-forest.test.ts` delete case now expects inline trash; lint rule
 tests for `no-unfiltered-blocks-read` and `no-adhoc-doc-write`.
 
-**e2e (`./singularity run …`):** `crdt-undo-verify.ts` phase 2 flips
+**e2e (`./equin run …`):** `crdt-undo-verify.ts` phase 2 flips
 (`"P2 redo B-typing restores 'bravo'"` — the headline); phase 4 asserts byte
 identity of the merged-away source doc; new phases: type bold, delete, Ctrl+Z,
 Ctrl+Z (mark intact, exactly one paragraph); doc bytes before delete == after
@@ -474,7 +474,7 @@ two research docs named in the header; `docs/plugins-*.md` regenerate at build.
 
 ## 9. Implementation sequence
 
-Each step builds and passes `./singularity check` on its own.
+Each step builds and passes `./equin check` on its own.
 
 1. Lift the splice into `editor/core` (+ test de-mirror). No behaviour change.
 2. `runsNow()` memo on `BlockDocOwner`; projection reads it. No behaviour change.
@@ -483,7 +483,7 @@ Each step builds and passes `./singularity check` on its own.
    Ship early; independent of the entry model.
 4. **Server trash** (§3.1–3.2): constant, CHECK, hook signatures,
    `trashDeletedRows`, chokepoint, second source, patch prelude, 404s, contributor
-   hooks, reminder check, tests, `./singularity build` (inspect the generated
+   hooks, reminder check, tests, `./equin build` (inspect the generated
    migration SQL). *Must follow step 3.*
 5. `liveBlocks` + `no-unfiltered-blocks-read` + reader migration.
 6. `undo-redo`: `registerPendingFlush`, serialization, error message.
@@ -502,15 +502,15 @@ Each step builds and passes `./singularity check` on its own.
 ## 10. Verification
 
 ```bash
-./singularity build                                   # migration for the CHECK, registries, docs
-./singularity check                                   # boundaries, doc sync, lint incl. the two new rules
-./singularity test plugins/page/plugins/editor
-./singularity test plugins/page/plugins/markdown-apply
-./singularity test plugins/page/plugins/editor-collab
-./singularity test plugins/infra/plugins/trash
-./singularity test plugins/primitives/plugins/undo-redo
-./singularity run plugins/page/plugins/editor/e2e/crdt-undo-verify.ts
-./singularity run plugins/page/plugins/editor/e2e/trash-block-doc-verify.ts
+./equin build                                   # migration for the CHECK, registries, docs
+./equin check                                   # boundaries, doc sync, lint incl. the two new rules
+./equin test plugins/page/plugins/editor
+./equin test plugins/page/plugins/markdown-apply
+./equin test plugins/page/plugins/editor-collab
+./equin test plugins/infra/plugins/trash
+./equin test plugins/primitives/plugins/undo-redo
+./equin run plugins/page/plugins/editor/e2e/crdt-undo-verify.ts
+./equin run plugins/page/plugins/editor/e2e/trash-block-doc-verify.ts
 ```
 
 Manual: on the deployed worktree, in a page: type bold text into a block, delete

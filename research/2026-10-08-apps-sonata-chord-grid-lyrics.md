@@ -84,10 +84,10 @@ container). With lyrics on, a group renders as **explicit rows of 4 bars**, each
 
 ## Verification
 
-1. `./singularity test plugins/apps/plugins/sonata/plugins/chord-chart plugins/apps/plugins/sonata/plugins/lyric-line`
+1. `./equin test plugins/apps/plugins/sonata/plugins/chord-chart plugins/apps/plugins/sonata/plugins/lyric-line`
    — `placeLyrics` cases: two lines in one row side by side, line starting mid-row, two lines in one bar,
    pickup before bar 1, lyrics past the last bar.
-2. `./singularity build` (checks incl. boundaries, type-check, docs in sync).
+2. `./equin build` (checks incl. boundaries, type-check, docs in sync).
 3. Screenshots on a song with lyrics (e.g. the user's
    `/sonata/song/79fba881-b633-44b1-b669-36ba996469a7`), Chord grid display, option on and off; plus the
    Songsheet display unchanged. Compare with `proto-1791371059-oui6?mix=under`.

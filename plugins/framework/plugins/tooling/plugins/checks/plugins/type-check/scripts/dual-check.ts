@@ -1,6 +1,6 @@
 // ─── Does the two-program check ever differ from a full check? ──────────────
 //
-//   ./singularity run plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/scripts/dual-check.ts \
+//   ./equin run plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/scripts/dual-check.ts \
 //     <checkout> [--mode keyed|walks|dual] [--walk-base hint|none] [--json <out.json>]
 //
 // `--mode keyed` runs the two-program check alone (what a check run's tsc half

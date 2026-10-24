@@ -305,11 +305,11 @@ shell there is no common ancestor and the scope has nowhere to mount.
 
 ## Verification
 
-1. `./singularity build` (background — see CLAUDE.md), then confirm `status: ok` in
+1. `./equin build` (background — see CLAUDE.md), then confirm `status: ok` in
    `~/.singularity/worktrees/<wt>/build-status.json`.
-2. `./singularity check` — the new `dom-scope:bounded-attr-not-document-wide` must pass,
+2. `./equin check` — the new `dom-scope:bounded-attr-not-document-wide` must pass,
    and must **fail** if you temporarily restore `page-outline`'s `document.querySelector`.
-3. `./singularity test plugins/primitives/plugins/dom-scope` — jsdom tests asserting: two
+3. `./equin test plugins/primitives/plugins/dom-scope` — jsdom tests asserting: two
    `<Provider>`s side by side give each reader its own root; no Provider throws; two
    publishers in one Provider throws; a reader that renders before the owner attaches
    re-renders on attach (the late-fill case).

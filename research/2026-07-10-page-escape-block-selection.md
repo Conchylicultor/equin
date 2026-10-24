@@ -184,10 +184,10 @@ Run: `bun e2e/block-selection-verify.mjs --base http://<worktree>.localhost:9000
 
 ## Verification
 
-1. `./singularity build`
+1. `./equin build`
 2. `bun run test:dom plugins/page/plugins/editor` — jsdom suite green
 3. `bun e2e/block-selection-verify.mjs --base http://att-1783672287-e6qz.localhost:9000`
-4. `./singularity check` — boundaries, type-check, lint, doc sync
+4. `./equin check` — boundaries, type-check, lint, doc sync
 
 ## Deliberately not done
 

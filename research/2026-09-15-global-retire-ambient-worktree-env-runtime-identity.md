@@ -13,7 +13,7 @@ backend it spawns (`gateway/worktree.go`). But an env var reaches every
 descendant forever. The main backend was the first process to talk to the tmux
 server after a restart (Sept 6, and again after the Sept 10 kernel panic), so
 the tmux server kept main's environment, and from then on every agent session
-started from `SINGULARITY_WORKTREE=singularity`. Every `./singularity build`,
+started from `SINGULARITY_WORKTREE=singularity`. Every `./equin build`,
 `check`, `test` an agent ran inherited it. Nothing chose that value; the
 sessions picked up a variable nobody meant them to have.
 
@@ -86,7 +86,7 @@ worktrees (`log-channels/server/internal/handle-emit.test.ts`).
   It parses `--namespace <ns>` from `process.argv` and declares it.
   `plugins-active.ts` reads `runtimeNamespace()` instead of the env.
 - **Gateway-restart transition** (the Go daemon is not rebuilt on push; the
-  user restarts it by hand with `./singularity start`). Until then the running
+  user restarts it by hand with `./equin start`). Until then the running
   gateway still sets env and no argv. `declare-namespace.ts` therefore carries
   the **only** allowed env read in the tree: if no `--namespace` argv is present
   and the env var is, declare from it and log one warning naming the fix
@@ -226,8 +226,8 @@ tmux server's environment irrelevant by construction.
 
 ## Verification
 
-- `./singularity build` (background) green, then `./singularity check`.
-- Unit: `./singularity test plugins/debug/plugins/profiling/plugins/op-log`,
+- `./equin build` (background) green, then `./equin check`.
+- Unit: `./equin test plugins/debug/plugins/profiling/plugins/op-log`,
   `plugins/framework/plugins/tooling/plugins/lint/plugins/namespace-identity`,
   `plugins/primitives/plugins/log-channels`, `plugins/framework/plugins/server-core`.
 - Boot log of this worktree's backend (`~/.singularity/worktrees/<wt>/logs/`)
@@ -238,7 +238,7 @@ tmux server's environment irrelevant by construction.
   prints only `SINGULARITY_CONVERSATION_ID` and `SINGULARITY_PARENT_HOST`;
   `echo $TMUX_PANE` is set; `claude` boots and its MCP tools answer
   (`query_db` from that session).
-- Run `./singularity check` from this worktree, then query the op-log line:
+- Run `./equin check` from this worktree, then query the op-log line:
   `tail -1 ~/.singularity/logs/op-log/op-log.jsonl` has `opSlug` = this
   attempt id and no `worktree` key.
 - Open the conversation's Op profiling pane (`/agents/c/<conv>/pp`) via
@@ -246,14 +246,14 @@ tmux server's environment irrelevant by construction.
   one row per worktree, none named `singularity` except main's own ops.
 - Supervised task end-to-end: trigger a backup run from the UI; the child
   boots (`supervised-exec … --namespace <ns>` visible in `ps`) and completes.
-- Regression guard: a hand-run `SINGULARITY_WORKTREE=singularity ./singularity check`
+- Regression guard: a hand-run `SINGULARITY_WORKTREE=singularity ./equin check`
   from a worktree records `opSlug` = the worktree, not main.
 
 ## Follow-ups (own tasks)
 
 - ~~Delete the gateway-transition env fallback in `declare-namespace.ts` after
   the user has restarted the gateway; drop the lint allowlist entry.~~ Done
-  2026-09-15: gateway restarted with `./singularity start --force`, fallback and
+  2026-09-15: gateway restarted with `./equin start --force`, fallback and
   allowlist entry removed. The restart surfaced that the gateway daemon forwards
   its starter's whole environment to every backend; filed as its own task.
 - Live refresh of both op surfaces (file watcher on `op-log.jsonl` → push

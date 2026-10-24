@@ -137,8 +137,8 @@ write we can no longer explain.
      are no attempt rows, no conversation rows and no `graphile_worker.jobs` rows for the spawn.
    - Two concurrent `maybeLaunch` runs for one armed task produce exactly one attempt.
    - A run that finds an existing attempt leaves no new rows.
-2. `./singularity test plugins/conversations plugins/tasks/plugins/tasks-core`
-3. `./singularity check` (type-check, eslint including `no-pool-await-in-transaction`, boundaries).
-4. `./singularity build`, then in the worktree app: arm a task with a blocking dependency, then
+2. `./equin test plugins/conversations plugins/tasks/plugins/tasks-core`
+3. `./equin check` (type-check, eslint including `no-pool-await-in-transaction`, boundaries).
+4. `./equin build`, then in the worktree app: arm a task with a blocking dependency, then
    complete the dependency. The task launches once, reads "In progress", and the conversation starts.
    Use `query_db` to confirm one attempt and no `tasks_ext_auto_start` row.

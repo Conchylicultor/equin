@@ -73,7 +73,7 @@ Why `=> null` and not docs: TS infers a component that only ever `return null`s 
 
 ### 3. Codegen + check
 - `plugins/framework/plugins/tooling/plugins/codegen/core/reorderable-slots-gen.ts`, `collectReorderableSlots` (~L74-79): the filter becomes just `if (slot.kind !== "render") continue;` (drop the `slot.reorder === false` line — the field is gone). Mount slots (`kind: "mount"`) are excluded automatically.
-- `reorderable-slots-in-sync` check (`…/checks/plugins/reorderable-slots-in-sync/`): no edit — it's a pure drift detector; `./singularity build` regenerates the manifest.
+- `reorderable-slots-in-sync` check (`…/checks/plugins/reorderable-slots-in-sync/`): no edit — it's a pure drift detector; `./equin build` regenerates the manifest.
 
 ### 4. `effect` → mount slot
 - `plugins/apps/plugins/sonata/plugins/shell/web/slots.ts`: `Effect: defineMountSlot("sonata.effect", { docLabel: (p) => p.id })` (was `defineRenderSlot<{ component: ComponentType }>(…, { reorder: false, … })`).
@@ -103,7 +103,7 @@ Plain edits removing the option (now unconditionally reorderable). No host chang
   ```
   Keep the `if (!conversation) return null` guard. Remove now-unused imports (`useMemo`, `renderIsolated`, `Contribution`, `Fragment`). Order comes from the override authored in §8 (`hold → exit → drop → drop-dependents`).
 
-### 7. `./singularity build`
+### 7. `./equin build`
 Regenerates `reorderable-slots.generated.ts` (now lists the 8, not `effect`) and emits a `<slotId>.origin.jsonc` per reorderable slot under its defining plugin's `config/` dir.
 
 ### 8. Author the 8 config overrides
@@ -149,8 +149,8 @@ Ordering: **natural order (verbatim copy)** for all except `exit-menu`, whose `i
 
 ## Verification
 
-1. `./singularity build` — succeeds; regenerates `reorderable-slots.generated.ts` (contains the 8, not `effect`) + the 8 `.origin.jsonc`. Confirms the facet/codegen changes round-trip.
-2. `./singularity check` — all green. Key checks: `reorderable-slots-in-sync` (manifest matches), `reorder:configs-authored` (every reorderable slot has an authored override; none grandfathered), `type-check` (incl. that a JSX-returning mount component would fail — sanity-test by temporarily making one effect `return <div/>` and confirming a compile error, then revert), `plugin-boundaries`, `plugins-doc-in-sync`.
+1. `./equin build` — succeeds; regenerates `reorderable-slots.generated.ts` (contains the 8, not `effect`) + the 8 `.origin.jsonc`. Confirms the facet/codegen changes round-trip.
+2. `./equin check` — all green. Key checks: `reorderable-slots-in-sync` (manifest matches), `reorder:configs-authored` (every reorderable slot has an authored override; none grandfathered), `type-check` (incl. that a JSX-returning mount component would fail — sanity-test by temporarily making one effect `return <div/>` and confirming a compile error, then revert), `plugin-boundaries`, `plugins-doc-in-sync`.
 3. App at `http://att-1781350578-d8qh.localhost:9000` (Playwright `e2e/screenshot.mjs`):
    - **Sonata player** (`/sonata/song/:id`): transport strip + piano roll render; playback still records a play (effect mounts) → confirms `.Mount` isolation path works headlessly.
    - **Exit menu**: open a conversation's Close-options dropdown → items appear in order hold → exit → drop → drop-dependents (now from the override, not `order`).

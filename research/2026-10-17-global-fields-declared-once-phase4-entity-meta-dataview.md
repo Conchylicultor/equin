@@ -127,7 +127,7 @@ export const activity = liveCollection("activity", {
 
 Home is not the app that hosts these panes, so the link must navigate cross-app (the tab's `navigate()` from `apps-core/tabs`, or the pane layer's cross-app promote). The first step verifies which applies; if Home cannot host a cross-app link today, that is fixed generically in the activation fold, not per arm.
 
-**Indexes** (migrations via `./singularity build`):
+**Indexes** (migrations via `./equin build`):
 - `tasks (updated_at, id)` and `conversations (updated_at, id)`, so the keyset per arm is index-backed;
 - pages sort by an expression and do a bounded full sort over the live pages. This is acceptable at today's size and noted as a risk.
 
@@ -162,7 +162,7 @@ Home is not the app that hosts these panes, so the link must navigate cross-app 
    - row activation, with the cross-app verification;
    - the `live:arms-registered` / `live:exposures-registered` checks pass.
 5. **Home** `recent-activity` section.
-6. **Docs:** live, data-view and the activity CLAUDE.md. Run `./singularity build` to deploy, then verify (below).
+6. **Docs:** live, data-view and the activity CLAUDE.md. Run `./equin build` to deploy, then verify (below).
 7. **Track page:**
    - status;
    - Phase 4 checkbox with sub-items;
@@ -182,11 +182,11 @@ Home is not the app that hosts these panes, so the link must navigate cross-app 
 
 ## Verification
 
-- `./singularity test plugins/network/plugins/live plugins/primitives/plugins/data-view plugins/runs plugins/activity`:
+- `./equin test plugins/network/plugins/live plugins/primitives/plugins/data-view plugins/runs plugins/activity`:
   - the runs union golden is unchanged;
   - the new golden and oracle cases pass.
-- `./singularity check`.
-- `./singularity build`, then an e2e script `plugins/activity/e2e/recent-activity.ts` on Home:
+- `./equin check`.
+- `./equin build`, then an e2e script `plugins/activity/e2e/recent-activity.ts` on Home:
   - rows of all three types appear, newest first;
   - Type filter options are Task, Conversation, Page, in that order;
   - Filter Track = Sidequest leaves only sidequest tasks, and the request carries a server filter;

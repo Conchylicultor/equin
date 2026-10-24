@@ -67,7 +67,7 @@ After removing the workspace entry and deleting `tooling/`, run `bun install` to
 ## Verification
 
 1. `bun install` — succeeds without errors (no broken workspace reference)
-2. `./singularity build` — full build succeeds
-3. `./singularity check` — all checks pass
+2. `./equin build` — full build succeeds
+3. `./equin check` — all checks pass
 4. `rg '^[^/]*tooling/' --type ts` — no stale root-level `tooling/` references remain (matches inside `plugins/framework/plugins/tooling/` are expected and correct)
 5. Confirm `plugins.generated.ts` files are unchanged (tooling contributes no runtime plugin entries)

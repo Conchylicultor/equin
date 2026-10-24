@@ -72,7 +72,7 @@ const BUILTIN_GROUP_IDS = new Set([
 
 const MANIFEST_HEADER = [
   "// AUTO-GENERATED from app.css @utility `/* twmerge: … */` markers. Do not edit.",
-  "// Run `./singularity build` to regenerate.",
+  "// Run `./equin build` to regenerate.",
   "// (see plugins/framework/plugins/tooling/plugins/codegen/core/custom-utilities-gen.ts).",
   "//",
   "// The twMerge registry consumed by cn() (lib/utils.ts), derived from app.css —",

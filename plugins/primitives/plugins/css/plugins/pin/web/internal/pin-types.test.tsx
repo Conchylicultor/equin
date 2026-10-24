@@ -16,7 +16,7 @@ import { Pin, type PinAnchor } from "./pin";
 // whole-union case resolves to `SpaceStep | never` = `SpaceStep` and keeps
 // working — which is what the last case below pins down.
 //
-// Validated by `./singularity check type-check`: every `@ts-expect-error` must
+// Validated by `./equin check type-check`: every `@ts-expect-error` must
 // correspond to a real error (tsc fails on an UNUSED directive), and every
 // positive case must compile. Nothing here is rendered.
 // ---------------------------------------------------------------------------

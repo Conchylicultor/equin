@@ -86,25 +86,25 @@ The admin plugin imports `@plugins/database/plugins/client-tools/server`. The CL
 - `docs/setup.md`: the Prerequisites table becomes mise (`mise install`, which provides Bun, Go, tmux, Rust from `mise.lock`). Remove the Homebrew rows and the "client tools not bundled yet" paragraph. Replace it with one sentence: the client tools come with `bun install` and always match the server version. The "Using system PG instead of embedded" section keeps its `brew install postgresql@18` line, because that's how you run your own server, which that section is about. Reword it slightly so it reads as that section's own concern and not a global prerequisite.
 - `plugins/database/plugins/embedded/CLAUDE.md` line 18: remove "PATH-resolved … until we bundle our own", and point to `client-tools`.
 - `plugins/database/plugins/admin/CLAUDE.md`: note that `pg_dump` / `pg_restore` are resolved through `pgClientBin`.
-- `./singularity build` regenerates `docs/plugins-*.md`.
+- `./equin build` regenerates `docs/plugins-*.md`.
 
 ## Order of work
 
 1. Write the `pg-client-embedded` repo files. Run `build.sh` locally on darwin-arm64 and check the binary (version, `otool -L`, a dump/restore against the local cluster).
 2. User: create the repo, add the secret, tag `v18.3.0`, and confirm all four packages are on npm.
-3. In this worktree: steps 2–6 above, then `./singularity build`.
+3. In this worktree: steps 2–6 above, then `./equin build`.
 
 Step 3 can't install until step 2 has published. Until then, the Singularity side can be developed against a local `file:` path to the built package, but it can't be pushed.
 
 ## Verification
 
-- `./singularity build` passes, including the new check and lint rule. Change one pin temporarily to `18.4.0` and confirm the check fails.
-- `./singularity test plugins/database/plugins/client-tools`: a unit test for `pgClientBin`. The env override wins. A missing file throws `PgClientToolMissingError`. An unknown platform throws.
+- `./equin build` passes, including the new check and lint rule. Change one pin temporarily to `18.4.0` and confirm the check fails.
+- `./equin test plugins/database/plugins/client-tools`: a unit test for `pgClientBin`. The env override wins. A missing file throws `PgClientToolMissingError`. An unknown platform throws.
 - Remove Homebrew from the PATH (`PATH=/usr/bin:/bin` for the backend, or `brew unlink postgresql@18`), then:
-  - `./singularity db fork` into a scratch name succeeds;
+  - `./equin db fork` into a scratch name succeeds;
   - a backup run from the Backup app succeeds, and the resulting `.dump` restores with the bundled `pg_restore`.
 - Check `pg_dump --version` from the resolved path: it prints 18.3, the same as `SELECT version()` on the cluster.
-- Release: `./singularity release --dev` for the host platform. Confirm `<out>/pg-client/bin/pg_dump` exists, then launch it and trigger a backup inside the bundle.
+- Release: `./equin release --dev` for the host platform. Confirm `<out>/pg-client/bin/pg_dump` exists, then launch it and trigger a backup inside the bundle.
 
 ## Risks
 

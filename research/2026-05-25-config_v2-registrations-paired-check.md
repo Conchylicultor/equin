@@ -6,7 +6,7 @@ The config_v2 system has two independent registration mechanisms:
 - **Server**: `ConfigV2.Register({ descriptor })` in `contributions[]` of `server/index.ts`
 - **Web**: `ConfigV2.WebRegister({ descriptor })` in `contributions[]` of `web/index.ts`
 
-Today 23 plugins register both, perfectly paired — but by convention only. An agent can add a server config without the UI registration (or vice versa) and nothing catches it. This check enforces the pairing at `./singularity check` / `./singularity push` time.
+Today 23 plugins register both, perfectly paired — but by convention only. An agent can add a server config without the UI registration (or vice versa) and nothing catches it. This check enforces the pairing at `./equin check` / `./equin push` time.
 
 ## Plan
 
@@ -135,12 +135,12 @@ export default check;
 |---|---|
 | `plugins/config_v2/check/index.ts` | Create — the check implementation above |
 
-`./singularity build` will auto-regenerate `check.generated.ts` to pick up the new entry. No manual registration needed.
+`./equin build` will auto-regenerate `check.generated.ts` to pick up the new entry. No manual registration needed.
 
 ## Verification
 
-1. `./singularity build` — regenerates `check.generated.ts`
-2. `./singularity check --config-v2:registrations-paired` — should pass (all 23 are paired today)
+1. `./equin build` — regenerates `check.generated.ts`
+2. `./equin check --config-v2:registrations-paired` — should pass (all 23 are paired today)
 3. To test failure: temporarily remove the `ConfigV2.WebRegister` line from any plugin's `web/index.ts`, re-run the check, confirm it reports the mismatch, then restore.
 
 ## Reference files

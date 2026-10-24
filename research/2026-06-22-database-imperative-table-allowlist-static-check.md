@@ -15,7 +15,7 @@ live table set.
 allowlist. `orphaned-db-tables` is a lagging, environment-dependent detector — it
 reads a live DB's `pg_stat_user_tables` (so it only sees a table after the new
 code has booted and physically created it) and **soft-passes when it can't reach a
-DB**, which is exactly the situation in the `./singularity push` checks
+DB**, which is exactly the situation in the `./equin push` checks
 subprocess. So an unallowlisted imperative table can be merged to main and only
 surface as a broken *later* main build. This just happened with
 `live_state_changelog` and `live_state_snapshot`: they landed unallowlisted and
@@ -128,11 +128,11 @@ file already documents.
    array); `findOffenders` passes lines carrying an allowlist identifier and flags
    a bare `CREATE TABLE foo`, a `CREATE TABLE … ${UNKNOWN_CONST}`, and a
    `CREATE UNLOGGED TABLE` without a constant.
-2. **Green baseline:** `./singularity check imperative-create-table-allowlisted`
+2. **Green baseline:** `./equin check imperative-create-table-allowlisted`
    passes on the current tree (all 4 sites reference their constant).
 3. **Red proof:** temporarily add `await db.execute(drizzleSql.raw(\`CREATE TABLE
    IF NOT EXISTS rogue_tbl (id int)\`))` to a server file → the check fails with
    `…:rogue_tbl` and the allowlist hint; revert.
-4. **Full gate:** `./singularity build` (regenerates nothing new for the registry,
-   runs all checks) stays green; `./singularity check` lists the new check via
+4. **Full gate:** `./equin build` (regenerates nothing new for the registry,
+   runs all checks) stays green; `./equin check` lists the new check via
    `--list`.

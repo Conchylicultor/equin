@@ -120,11 +120,11 @@ Add the import to the plugin's `package.json` deps if needed (it already imports
 
 ## Verification
 
-1. `./singularity build` — regenerates plugin docs (compact/details) and runs
+1. `./equin build` — regenerates plugin docs (compact/details) and runs
    checks. Must pass: `app-css-utilities-in-sync` (new @utility registered),
    `type-check`, `eslint`/`no-adhoc-radius` (no arbitrary literal remains),
    `plugins-have-claudemd`, `plugin-boundaries`.
-2. `./singularity check` — green.
+2. `./equin check` — green.
 3. (Sanity) `cn("rounded-checkbox", "rounded-md")` resolves to `rounded-md`
    (mutual conflict, last wins) — confirms twMerge wiring; `cn("rounded-checkbox")`
    alone is untouched (the only call shape the component uses).

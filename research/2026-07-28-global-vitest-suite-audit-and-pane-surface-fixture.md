@@ -38,7 +38,7 @@ Two things follow, and this plan does both:
    moved twice in nine days. Fixing the two files in place just resets the clock.
    The fix is one fixture that mounts the *real* `PaneSurfaceProvider`, so the
    tests track the primitive by construction.
-2. **Nothing runs any of it.** No CI, no git hook, no `./singularity check`
+2. **Nothing runs any of it.** No CI, no git hook, no `./equin check`
    invokes vitest — `bun run test:dom` is manual. 39 suites across 36 plugins
    have therefore been unenforced for as long as they've existed, and the pane
    ones are just the two someone happened to run. The full suite gets audited and
@@ -199,8 +199,8 @@ not in a memory file.
 bun install                                              # worktree has none
 bun run test:dom plugins/primitives/plugins/pane         # 5 files, all green
 bun run test:dom                                         # whole repo green
-./singularity check type-check                           # fixture is typed TS
-./singularity build                                      # deploy
+./equin check type-check                           # fixture is typed TS
+./equin build                                      # deploy
 ```
 
 Then confirm nothing regressed at runtime: open

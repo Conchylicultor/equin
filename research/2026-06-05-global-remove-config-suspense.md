@@ -166,7 +166,7 @@ already fans base changes to unforked scopes). Drop the `useSuspenseResource` im
 
 ## Verification
 
-1. `./singularity build` — must pass `plugins-doc-in-sync` (deleted plugin, changed
+1. `./equin build` — must pass `plugins-doc-in-sync` (deleted plugin, changed
    live-state exports, new endpoint, config_v2 `Core.Boot`), `plugin-boundaries`,
    eslint (`rules-of-hooks` on the unconditional hooks in `useConfig`;
    `no-bare-catch` on boot-task error handling), type-check. Confirm

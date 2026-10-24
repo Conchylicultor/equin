@@ -111,7 +111,7 @@ export interface ForkSchemaExclusion {
 /**
  * What `forkDatabase` must be told not to copy — the DECLARED set, verbatim.
  *
- * Pure data on purpose. It crosses HTTP for the `./singularity db fork` path
+ * Pure data on purpose. It crosses HTTP for the `./equin db fork` path
  * (`database/fork`'s `GET /api/db/fork-exclusions` → the `cli/db` plugin's
  * `cli/fork.ts`),
  * so nothing here may be a function. Turning it into `pg_dump` flags is a

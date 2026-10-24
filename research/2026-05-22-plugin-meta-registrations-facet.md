@@ -153,13 +153,13 @@ Mirror the commands facet `package.json` exactly (same workspace deps).
 
 **NEW: `plugins/plugin-meta/plugins/facets/plugins/registrations/CLAUDE.md`**
 
-Minimal stub — the autogen block will be populated by `./singularity build`.
+Minimal stub — the autogen block will be populated by `./equin build`.
 
 ---
 
 ## Auto-Generated File
 
-After `./singularity build`, the codegen scanner discovers the new `facet/index.ts` and appends
+After `./equin build`, the codegen scanner discovers the new `facet/index.ts` and appends
 the registrations entry to:
 
 **`plugins/plugin-meta/plugins/facets/core/facet.generated.ts`**
@@ -170,13 +170,13 @@ No manual edits needed.
 
 ## Verification
 
-1. `./singularity build` succeeds — `facet.generated.ts` gets the new `registrations` entry.
+1. `./equin build` succeeds — `facet.generated.ts` gets the new `registrations` entry.
 2. `diff docs/plugins-compact.md` — empty (doc output unchanged; docgen still reads
    `node.runtimeRegistrations`).
 3. `diff docs/plugins-details.md` — empty (same reason).
 4. Spot-check: open the jobs plugin CLAUDE.md — autogen block still shows
    `Register: \`defineJob(...)\`` as before.
-5. `./singularity check` passes all checks.
+5. `./equin check` passes all checks.
 6. Manually verify: in a Node/Bun REPL or via a debug endpoint, check that
    `getFacet(jobsPluginNode, registrationsFacetDef)` returns the expected `DocMetaRegistration[]`
    for the jobs plugin.

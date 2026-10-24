@@ -103,10 +103,10 @@ Mirror `section-label`'s layout:
 - `…/jsonl-viewer/plugins/assistant-text/web/components/assistant-text-row.tsx` + `plugins/primitives/plugins/markdown/web/internal/base-components.tsx` — migration
 
 ## Verification
-1. `./singularity build` — codegen discovers the new `lint/index.ts`; Tailwind v4 fails the build on a bad `@utility`, so a green build confirms the CSS compiles and the barrel typechecks.
+1. `./equin build` — codegen discovers the new `lint/index.ts`; Tailwind v4 fails the build on a bad `@utility`, so a green build confirms the CSS compiles and the barrel typechecks.
 2. **Before/after** — `http://<worktree>.localhost:9000`, open a conversation whose assistant text has `##`/`###` headings (markdown mode on). Screenshot before vs. after via `e2e/screenshot.mjs`; expect tighter heading hierarchy, unchanged body.
-3. **Lint fires** — temporarily add `text-sm` to the migrated `assistant-text-row.tsx`, run `./singularity check` (eslint) → expect a `no-adhoc-typography` error. Remove it.
-4. **Repo green** — full `./singularity check` reports zero `no-adhoc-typography` errors (all migrated or allowlisted), and confirm the 2 migration targets are absent from `ignores`.
+3. **Lint fires** — temporarily add `text-sm` to the migrated `assistant-text-row.tsx`, run `./equin check` (eslint) → expect a `no-adhoc-typography` error. Remove it.
+4. **Repo green** — full `./equin check` reports zero `no-adhoc-typography` errors (all migrated or allowlisted), and confirm the 2 migration targets are absent from `ignores`.
 
 ## Follow-ups (out of scope)
 - Burn down the allowlist subtree-by-subtree (more transcript rows, sidebar, toolbar).

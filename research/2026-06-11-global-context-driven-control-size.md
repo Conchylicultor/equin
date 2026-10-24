@@ -184,9 +184,9 @@ named by a density `ControlSize = xs|sm|md|lg`. Don't size buttons individually.
 
 ## Verification
 
-1. `./singularity build` — tsc + vite pass; new control-size barrel discovered;
+1. `./equin build` — tsc + vite pass; new control-size barrel discovered;
    `plugins-doc-in-sync` / registry codegen regenerate (commit generated files).
-2. `./singularity check` — boundaries (no new cycle: control-size/web → react only;
+2. `./equin check` — boundaries (no new cycle: control-size/web → react only;
    web-core → control-size; slot-render → control-size), eslint (`no-adhoc-control`
    still green), plugins-doc-in-sync.
 3. **Playwright** on a conversation toolbar

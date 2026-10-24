@@ -256,7 +256,7 @@ and any edge that wasn't foreseen is fixed the same way.
 2. **Framework, part 2:**
    - `defineHostService` + boot assert.
    - Machine registry + boot of `server + machine` entries.
-   - `./singularity build` and confirm the desktop boots unchanged: the same plugin count and the same
+   - `./equin build` and confirm the desktop boots unchanged: the same plugin count and the same
      routes, minus none.
 3. **Hashing + server-core:** the portable sha256 (verify identical digests in a test against
    `node:crypto`); phys-footprint and `Bun.hash` out of core.
@@ -268,8 +268,8 @@ and any edge that wasn't foreseen is fixed the same way.
    `launchTask` migration and its two call sites.
 8. **needsMachine on live reads:** types, `live/machine`, `useLive` arm, tests.
 9. **Close-out:**
-   - `./singularity check` green.
-   - `./singularity build`.
+   - `./equin check` green.
+   - `./equin build`.
    - Update the subtrack card: tasks ticked, status, measurements (closure size before/after, debt
      count).
    - File the next main task (the browser worker on PGlite answering the demo), with the subtrack page
@@ -277,12 +277,12 @@ and any edge that wasn't foreseen is fixed the same way.
 
 ## Verification
 
-- `./singularity check`: boundary-rules, plugin-boundaries, type-check with the new lint,
+- `./equin check`: boundary-rules, plugin-boundaries, type-check with the new lint,
   `boundaries:portable-closure`, plugins-registry-in-sync and exempt manifests valid.
-- `./singularity test` on database, database/migrations, derived-views/derived-tables (digest parity),
+- `./equin test` on database, database/migrations, derived-views/derived-tables (digest parity),
   jobs, tasks-core (status batch, tree oracle), task-category (PGlite boot), endpoints (needsMachine
   types + unavailable), network/live (unavailable arm) and server-core (host service asserts).
-- `./singularity build` and then `http://<worktree>.localhost:9000`:
+- `./equin build` and then `http://<worktree>.localhost:9000`:
   - The task list groups by category.
   - Launching an agent from Welcome still works.
   - Debug → Jobs and Queue health still render.

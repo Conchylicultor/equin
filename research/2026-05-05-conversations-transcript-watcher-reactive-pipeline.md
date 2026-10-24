@@ -100,7 +100,7 @@ Each stage blocks until satisfied, then falls through. No branching, no nullable
 
 ## Verification
 
-1. `./singularity build` — compiles
+1. `./equin build` — compiles
 2. Open existing conversation in JSONL viewer — events stream
 3. Create brand-new conversation (bug case) — events appear after session ID is written to DB
 4. Kill + restart server — events resume on reconnect

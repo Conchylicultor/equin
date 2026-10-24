@@ -160,7 +160,7 @@ The rollup-join loader is untouched. Import bookkeeping: `conversationsView` in,
 2. New tests (below); both suites green.
 3. Descriptor swap, then tasks-core server migration, then agents migration
    (bottom-up in module-eval dependency order).
-4. `./singularity build` + `./singularity check`.
+4. `./equin build` + `./equin check`.
 5. Parity diff + end-to-end drive.
 6. Docs.
 
@@ -193,7 +193,7 @@ view closures, and the 2-hop launches chain ≡ the old 3-table join.
 
 ### End-to-end
 
-`./singularity build` green, then drive a real mutation (PATCH a task title / observe a
+`./equin build` green, then drive a real mutation (PATCH a task title / observe a
 live conversation status change) and confirm:
 
 - scoped keyed frames on `tasks`/`attempts`/`agent-launches` (live-state-health pane);

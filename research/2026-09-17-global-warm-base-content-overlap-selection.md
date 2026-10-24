@@ -239,21 +239,21 @@ Point `tsBuildInfoPoolDir` at the temp dir the way that suite isolates data dirs
 
 ## Verification
 
-1. `./singularity test plugins/framework/plugins/tooling/plugins/checks` — the new
+1. `./equin test plugins/framework/plugins/tooling/plugins/checks` — the new
    suite plus `program-key.test.ts` (moved helpers).
-2. `./singularity build` in this worktree (background). In
+2. `./equin build` in this worktree (background). In
    `~/.singularity/worktrees/att-1789642527-m2ou/check-<runId>.log` expect one
    `type-check: warm base <target>: …` line per target and the publish summary.
 3. The load-bearing measurement: create a fresh worktree from main (the app does
    this for any new task; or `git worktree add` a throwaway), run
-   `./singularity check type-check` there, and read its transcript's
+   `./equin check type-check` there, and read its transcript's
    `type-check worker web-core: cpu …s, maxRSS … GB` line. Success is the warm
    floor (≈2–3 GB, ≈30–60 s) instead of 6–11 GB / 240–600 s, and the warm-base line
    naming a sha-labelled entry with matched ≈ scored. Do it once more after a
    sibling has published a divergent base, to see the scored pick beat "newest".
 4. Watch `type-check: prepared off-thread in …s (finalize …s)` for a finalize
    jump from the `is-ancestor` spawns; if it appears, add the host-global sha memo.
-5. `./singularity build --skip-checks` in a worktree: its transcript shows the
+5. `./equin build --skip-checks` in a worktree: its transcript shows the
    worker lines, and the pool entry it publishes has real signatures
    (`fileInfos` objects with a `signature` field; a `--noEmit` base has none).
 6. After a day: `rg -h 'type-check worker web-core' ~/.singularity/worktrees/*/check-*.log`

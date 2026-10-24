@@ -69,10 +69,10 @@ nothing" becomes "loads its page's one row") and the `pages-tree-oracle` test.
 
 ## Verification
 
-- `./singularity test plugins/page/plugins/editor` (oracle + a new rollup test:
+- `./equin test plugins/page/plugins/editor` (oracle + a new rollup test:
   content edit moves `editedAt`, trash of the newest block moves it back, page-row
   rename moves it, move-between-pages updates both).
-- `./singularity build` (installs the rollup, checks).
+- `./equin build` (installs the rollup, checks).
 - In the deployed app: edit a page's body, see it rise to the top of sidebar Recent
   and Welcome Recent, with the same time as its header "Edited" label
   (screenshot.ts).

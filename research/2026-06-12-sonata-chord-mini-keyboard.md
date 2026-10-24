@@ -158,7 +158,7 @@ New cross-plugin imports in chord-readout (all legal runtime barrels):
 
 ## Verification
 
-1. `./singularity build` from the worktree (regenerates the registry, builds, restarts).
+1. `./equin build` from the worktree (regenerates the registry, builds, restarts).
 2. Open `http://att-1781255551-sdgs.localhost:9000`, go to Sonata, open a song with
    detected chords, and confirm the readout shows a mini keyboard with the current
    chord's notes lit; scrub playback and confirm the lit notes track the chord changes.

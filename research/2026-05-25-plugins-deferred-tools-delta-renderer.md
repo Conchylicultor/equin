@@ -70,7 +70,7 @@ Imports:
 
 ## Verification
 
-1. `./singularity build` — succeeds, no TS errors, no boundary violations
+1. `./equin build` — succeeds, no TS errors, no boundary violations
 2. Open conversation `conv-1779695590-m6pd` at `http://att-1779719034-q24a.localhost:9000`
 3. Scroll to the `deferred_tools_delta` attachment events — should show the new collapsible renderer with tool counts, not the generic JSON fallback
 4. Expand to verify added/removed tool names render correctly

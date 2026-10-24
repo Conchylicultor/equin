@@ -85,7 +85,7 @@ resurrected by a late event.
 
 ### 4. Persist the deadline for UI
 - Add `expiresAt timestamp (withTimezone, nullable)` to `_workflowExecutionSteps`
-  (**real migration** via `./singularity build`).
+  (**real migration** via `./equin build`).
 - Written **once** by the executor before `ctx.waitFor`, via a dedicated idempotent
   mutation `setStepExpiryIfUnset(stepId, expiresAt)`
   (`UPDATE … SET expires_at = ? WHERE id = ? AND expires_at IS NULL`). The
@@ -149,7 +149,7 @@ write-once.
 17. `…/executions/web/components/executions-section.tsx` — add `cancelled`,`expired` filter options.
 
 **Phase 6 — build**
-18. `./singularity build` (generates the `expires_at` migration) then `./singularity check`.
+18. `./equin build` (generates the `expires_at` migration) then `./equin check`.
 
 ## Verification (end-to-end)
 - **Expiry:** create a workflow with a `user-input` step, set `expiresAfter` to ~1 minute,
@@ -166,4 +166,4 @@ write-once.
 - **Happy path unchanged:** run, submit before the deadline → step `completed`, execution
   continues/`completed`; the timeout racer is deleted (event-resume path).
 - `bun test` any pure helpers added (`resolveTimeoutMs`, `formatTimeUntil`).
-- `./singularity check` passes (migrations-in-sync, type-check, boundaries).
+- `./equin check` passes (migrations-in-sync, type-check, boundaries).

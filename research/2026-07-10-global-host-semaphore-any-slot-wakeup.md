@@ -16,7 +16,7 @@ non-blocking sweep finds nothing free, the waiter parks on one slot. If a
 *different* slot frees, the waiter is never woken and that slot sits idle.
 
 Reproduced 2026-07-09 against the live `type-check-worker-background` pool (size 9)
-while a real `./singularity check` held 8 slots: a waiter stayed blocked 2.5+ min
+while a real `./equin check` held 8 slots: a waiter stayed blocked 2.5+ min
 with a free slot available. The bound is never violated (concurrency stays ≤ size),
 so this is a **utilization and latency defect, not a correctness one**.
 `research/2026-07-09-global-type-check-worker-host-budget.md:321-346` records the
@@ -239,7 +239,7 @@ packages/host-semaphore/server` is established and cycle-free (the barrel import
 >               FREE:    slot-0..3.lock      <- new-code processes sweep these
 > ```
 >
-> Two `./singularity check` processes begun before the CLI rewrite held the old files
+> Two `./equin check` processes begun before the CLI rewrite held the old files
 > while new-code processes saw an empty pool. Both bounds were individually respected;
 > the host ran 2× the intended build concurrency. This is precisely the window above,
 > and it confirms the fence is required rather than optional. The stale
@@ -266,7 +266,7 @@ packages/host-semaphore/server` is established and cycle-free (the barrel import
 | `plugins/debug/plugins/profiling/plugins/boot-bench/server/internal/load-generator.ts` | `run(fn)` — ditto |
 | `plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/check/index.ts` | `acquireShare(max, { onAcquired })` |
 
-`./singularity build` regenerates `docs/plugins-*.md`; `plugins-doc-in-sync` covers drift.
+`./equin build` regenerates `docs/plugins-*.md`; `plugins-doc-in-sync` covers drift.
 
 ## Verification
 
@@ -291,14 +291,14 @@ must pass **unmodified** — that is the regression gate. New cases:
 - **Size identity.** Create a size-4 pool, hold a slot, construct a size-8 pool on the
   same name → throws loudly. With the pool idle → resizes silently.
 
-**2. Single build unchanged** — `./singularity build` on an idle host: 8 type-check
+**2. Single build unchanged** — `./equin build` on an idle host: 8 type-check
 workers, wall time within noise. Zero `flock-wait` children (pure fast path).
 
 **3. The original repro** — saturate `type-check-worker-background` (8 of 9 slots) with
-a real `./singularity check`, take the last slot from a second process, release it, and
+a real `./equin check`, take the last slot from a second process, release it, and
 confirm a third, blocked caller is granted promptly instead of hanging 2.5 min.
 
-**4. Concurrent builds bounded** — run `./singularity check` in 3–4 worktrees at once:
+**4. Concurrent builds bounded** — run `./equin check` in 3–4 worktrees at once:
 
 ```bash
 pgrep -fl 'type-check/shared/worker.ts' | wc -l     # ≤ 9

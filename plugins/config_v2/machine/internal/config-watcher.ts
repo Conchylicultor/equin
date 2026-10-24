@@ -14,7 +14,7 @@ import type { Disposable } from "../../core";
 //
 // These events are therefore a PUSH-LATENCY mechanism, not a correctness one:
 // config files normally change in-process (setConfig / fork) or via
-// ./singularity build propagation and parcel fires on every disk write
+// ./equin build propagation and parcel fires on every disk write
 // regardless of writer, but an event can still be missed (an out-of-band
 // writer parcel doesn't see, a dropped fsevent). Nothing downstream may treat
 // "no event" as "no change" — derived state must be founded on the disk (see

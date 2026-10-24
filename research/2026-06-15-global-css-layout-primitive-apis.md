@@ -342,4 +342,4 @@ This task ships **only the doc**. It is "done" when:
 
 Downstream build tasks own the runtime verification the vision lists: the
 geometry/bounding-box matrix test per primitive, `bun run test:dom` render fixtures,
-and `./singularity check` once `no-adhoc-layout` lands.
+and `./equin check` once `no-adhoc-layout` lands.

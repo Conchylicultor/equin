@@ -294,18 +294,18 @@ The existing `walkFiles` already handles this via try/catch on `readdirSync`. Ve
 
 ```bash
 # Save baseline before changes
-./singularity build
+./equin build
 cp docs/plugins-details.md /tmp/baseline-details.md
 
 # After implementing the facet
-./singularity build
+./equin build
 
 # endpointCallers should now populate correctly
 # (look for "Endpoint callers" lines that were missing before)
 diff /tmp/baseline-details.md docs/plugins-details.md
 
 # All checks must pass
-./singularity check
+./equin check
 
 # Spot-check: tasks plugin should show endpoint callers
 grep -A5 "Endpoint callers" plugins/tasks/CLAUDE.md

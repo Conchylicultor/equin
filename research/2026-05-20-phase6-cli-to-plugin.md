@@ -118,7 +118,7 @@ Nothing imports from the CLI. It has no public API. Adding an empty `core/` woul
 +exec bun plugins/framework/plugins/cli/bin/index.ts "$@"
 ```
 
-**This is the single most important change.** If it's wrong, `./singularity build` can't run and nothing can be verified. Update and test this first before touching anything else.
+**This is the single most important change.** If it's wrong, `./equin build` can't run and nothing can be verified. Update and test this first before touching anything else.
 
 ### 2. `push.ts` — 3 self-invocation paths
 
@@ -153,7 +153,7 @@ All three use `cwd: root` (repo root), so the relative path from repo root is co
 
 These paths are passed to `git config --local` as `merge.<name>.driver` values. They're resolved relative to the repo root by git.
 
-**Note:** Existing worktrees that already have the old git config entries will keep using the old paths until they next run `./singularity build` (which calls `registerMergeDrivers`). Since `registerMergeDrivers` compares `current === want` and updates on mismatch, the first build after migration self-heals.
+**Note:** Existing worktrees that already have the old git config entries will keep using the old paths until they next run `./equin build` (which calls `registerMergeDrivers`). Since `registerMergeDrivers` compares `current === want` and updates on mismatch, the first build after migration self-heals.
 
 ### 4. `broadcasts.ts` — git-show path
 
@@ -272,12 +272,12 @@ git mv cli/package.json cli/tsconfig.json cli/broadcasts.json plugins/framework/
 
 ### Step 2: Update entry point (CRITICAL)
 
-Update `singularity` shell script immediately. Verify `./singularity --help` works.
+Update `singularity` shell script immediately. Verify `./equin --help` works.
 
 ### Step 3: Update all hardcoded paths
 
 In order of blast radius:
-1. `push.ts` — 3 self-invocation paths (breaks `./singularity push`)
+1. `push.ts` — 3 self-invocation paths (breaks `./equin push`)
 2. `register-merge-drivers.ts` — 3 script paths (breaks merge driver registration on next build)
 3. `broadcasts.ts` — 1 git-show path (degrades silently if stale, non-blocking)
 
@@ -292,8 +292,8 @@ In order of blast radius:
 ### Step 5: Verify
 
 1. `bun install` — workspace resolves at new location
-2. `./singularity build` — full build succeeds
-3. `./singularity check` — all checks pass (boundary rules, plugin boundaries, eslint, etc.)
+2. `./equin build` — full build succeeds
+3. `./equin check` — all checks pass (boundary rules, plugin boundaries, eslint, etc.)
 4. Navigate to `http://<worktree>.localhost:9000` — app loads
 
 ### Step 6: Confirm cleanup
@@ -306,15 +306,15 @@ Verify `cli/` no longer exists at repo root (handled by `git mv`).
 
 ### Entry point is the critical path
 
-If the `singularity` shell script points to a nonexistent path, every CLI command fails. The shell script must be updated immediately after the move. Verify `./singularity --help` works before proceeding.
+If the `singularity` shell script points to a nonexistent path, every CLI command fails. The shell script must be updated immediately after the move. Verify `./equin --help` works before proceeding.
 
 ### Self-invocation in push.ts
 
-`push.ts` spawns `bun cli/src/index.ts` as subprocesses (check, regen-migrations, regen-docs). These use `cwd: root` (repo root), so the relative path from repo root must be correct. If missed, `./singularity push` silently fails at the check step.
+`push.ts` spawns `bun cli/src/index.ts` as subprocesses (check, regen-migrations, regen-docs). These use `cwd: root` (repo root), so the relative path from repo root must be correct. If missed, `./equin push` silently fails at the check step.
 
 ### Merge driver paths in existing worktrees
 
-Existing worktrees have `git config --local merge.regen-docs.driver "cli/git-merge-drivers/regen-docs.sh %O %A %B %P"` baked into their `.git/config`. The old path won't exist after migration. Self-heals on next `./singularity build` (calls `registerMergeDrivers` which detects the mismatch and re-registers). **Risk window:** if an agent runs `git rebase` before their first post-migration build, the merge driver will fail to find the script. The merge itself won't fail (git falls back to default 3-way merge on driver failure), but the `singularity-merge-markers` won't be dropped, so `postRebaseNormalize` won't fire. Worst case: a manual `./singularity regen-migrations` or `./singularity regen-docs` is needed after the rebase.
+Existing worktrees have `git config --local merge.regen-docs.driver "cli/git-merge-drivers/regen-docs.sh %O %A %B %P"` baked into their `.git/config`. The old path won't exist after migration. Self-heals on next `./equin build` (calls `registerMergeDrivers` which detects the mismatch and re-registers). **Risk window:** if an agent runs `git rebase` before their first post-migration build, the merge driver will fail to find the script. The merge itself won't fail (git falls back to default 3-way merge on driver failure), but the `singularity-merge-markers` won't be dropped, so `postRebaseNormalize` won't fire. Worst case: a manual `./equin regen-migrations` or `./equin regen-docs` is needed after the rebase.
 
 ### Broadcasts git-show path transition
 
@@ -334,15 +334,15 @@ After migration lands on main, `origin/main:cli/broadcasts.json` no longer exist
 - **Gateway** — doesn't reference CLI at all. The gateway reads worktree spec JSON files; CLI writes them. No coupling.
 - **`.claude/settings.json`** — hooks reference `plugins/framework/plugins/tooling/plugins/guards/bin/guard.ts`, not CLI. Unchanged.
 - **`eslint.config.ts`** — references tooling, not CLI. Unchanged.
-- **CLAUDE.md files** — the root `CLAUDE.md` references `./singularity` commands, not `cli/src/...` paths. The `Folder Structure` section shows `cli/` but that's autogenerated documentation that will be updated by `./singularity build` (docgen).
+- **CLAUDE.md files** — the root `CLAUDE.md` references `./equin` commands, not `cli/src/...` paths. The `Folder Structure` section shows `cli/` but that's autogenerated documentation that will be updated by `./equin build` (docgen).
 
 ---
 
 ## Done when
 
-- `./singularity build` succeeds — full build, server boots, frontend loads
-- `./singularity check` passes — all checks including boundary rules
-- `./singularity push` works (dry-run: commit + rebase + checks + abort before actual push, or test on a disposable branch)
+- `./equin build` succeeds — full build, server boots, frontend loads
+- `./equin check` passes — all checks including boundary rules
+- `./equin push` works (dry-run: commit + rebase + checks + abort before actual push, or test on a disposable branch)
 - `cli/` deleted from repo root
 - `plugins/framework/plugins/cli/` is the only CLI location — with `bin/` (not `src/`) and `scripts/` (not `git-merge-drivers/`)
 - Root `package.json` workspaces is `["plugins/**"]` only

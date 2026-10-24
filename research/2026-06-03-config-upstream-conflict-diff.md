@@ -113,12 +113,12 @@ File: `plugins/config_v2/plugins/settings/web/components/config-detail.tsx`
 
 ## Verification
 
-1. `./singularity build` from the worktree; confirm the boundary/lint/migration
+1. `./equin build` from the worktree; confirm the boundary/lint/migration
    checks pass (no new cycle; barrel-purity intact). Run
-   `./singularity check --plugin-boundaries` explicitly.
+   `./equin check --plugin-boundaries` explicitly.
 2. Reproduce a hard conflict for a config: with an existing user override on disk
    under `~/.singularity/config/<tree>/<name>.jsonc`, change the upstream default in
-   the plugin's `defineConfig` so the origin hash advances, then `./singularity build`.
+   the plugin's `defineConfig` so the origin hash advances, then `./equin build`.
    Open Settings → the affected config; the "Upstream defaults changed" banner should
    appear.
 3. Scripted Playwright run (`e2e/screenshot.mjs`) on

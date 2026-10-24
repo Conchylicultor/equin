@@ -197,7 +197,7 @@ edit.
 
 The raised fingerprint is unchanged, so code that passed `no-adhoc-card` still
 passes. The **new overlay fingerprint** will flag open-coded overlays — migrate
-to `<Surface level="overlay">` (or eslint-disable with reason) or `./singularity
+to `<Surface level="overlay">` (or eslint-disable with reason) or `./equin
 check` fails:
 - `primitives/command-palette/.../command-palette-dialog.tsx:140`
 - `page/plugins/editor/web/components/slash-menu-plugin.tsx:165`
@@ -247,10 +247,10 @@ aren't hard-linted, so they can migrate incrementally (`add_task` a sweep).
 
 ## Verification
 
-1. `./singularity build` — must pass `app-css-utilities-in-sync` (surface utils
+1. `./equin build` — must pass `app-css-utilities-in-sync` (surface utils
    registered), `plugins-doc-in-sync`, `type-check`, and `eslint`
    (`no-adhoc-surface` registered; all overlay sites migrated).
-2. `./singularity check` green.
+2. `./equin check` green.
 3. Add a focused lint test (bun:test) next to `no-adhoc-surface.ts`: assert the
    raised + overlay fingerprints flag, and that `<Surface>`/`<Card>`/
    `PopoverContent` + the `p-card` escape do not.

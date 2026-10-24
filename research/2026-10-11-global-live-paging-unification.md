@@ -267,7 +267,7 @@ That task is re-planned on top of this plan.
 
 **Must pass unchanged:**
 
-- `./singularity test plugins/network/plugins/live`: `page-plan.test.ts` (27 cases), `serve-collection-pages-oracle.test.ts`, `scroll-key-roundtrip.test.ts`;
+- `./equin test plugins/network/plugins/live`: `page-plan.test.ts` (27 cases), `serve-collection-pages-oracle.test.ts`, `scroll-key-roundtrip.test.ts`;
 - `plugins/framework/plugins/resource-runtime`: `runtime-derive.test.ts`;
 - `plugins/primitives/plugins/live-state`: `notifications-derive.test.ts`;
 - `plugins/primitives/plugins/data-view`: `visible-rows.test.tsx`, `page-placeholders.test.tsx`;
@@ -292,6 +292,6 @@ That task is re-planned on top of this plan.
 
 **End to end:**
 
-- `./singularity build`, then `./singularity run plugins/primitives/plugins/data-view/e2e/live-pages-scroll.ts`. The deep scroll must still show every row (5033/5033).
+- `./equin build`, then `./equin run plugins/primitives/plugins/data-view/e2e/live-pages-scroll.ts`. The deep scroll must still show every row (5033/5033).
 - Spot-check the Queue's Done section and the runs list at `http://<worktree>.localhost:9000`, using the e2e harness's screenshot script.
-- `./singularity check` for boundaries, the minter lint, `plugins-doc-in-sync` and `type-check`.
+- `./equin check` for boundaries, the minter lint, `plugins-doc-in-sync` and `type-check`.

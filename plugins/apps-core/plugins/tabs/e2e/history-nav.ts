@@ -2,7 +2,7 @@
 // tabs (research/2026-07-18-global-shell-history-snapshots.md).
 //
 // Usage:
-//   ./singularity run plugins/apps-core/plugins/tabs/e2e/history-nav.ts [--url http://<worktree>.localhost:9000] [--out /tmp/histnav]
+//   ./equin run plugins/apps-core/plugins/tabs/e2e/history-nav.ts [--url http://<worktree>.localhost:9000] [--out /tmp/histnav]
 //
 // Scenarios (PASS/FAIL logged per assertion, exit 1 on any failure):
 //   A. /story → rail-click Settings → Back returns to /story; Forward → Settings.

@@ -17,7 +17,7 @@ We want users to fix this **entirely from the UI** — no manual env-var export 
 
 ### Why this works despite the gateway constraint
 
-`secrets/server.getSecret` is an HTTP client to `localhost:9000`, so the **gateway must be up** to read creds. We sidestep the "CLI is gateway-free" problem entirely: the **release engine** (`plugins/release/server/internal/run-release.ts`) runs inside the worktree server runtime (gateway up), reads the creds there, and injects them as **env vars** onto its `Bun.spawn` of `./singularity release`. The CLI/Tauri/notarytool inherit them — the CLI never touches the secrets store. Running `./singularity release --target tauri` from a bare terminal simply stays unsigned (or the power-user exports `APPLE_*` manually, which Tauri reads natively) — graceful degradation, no hard failure.
+`secrets/server.getSecret` is an HTTP client to `localhost:9000`, so the **gateway must be up** to read creds. We sidestep the "CLI is gateway-free" problem entirely: the **release engine** (`plugins/release/server/internal/run-release.ts`) runs inside the worktree server runtime (gateway up), reads the creds there, and injects them as **env vars** onto its `Bun.spawn` of `./equin release`. The CLI/Tauri/notarytool inherit them — the CLI never touches the secrets store. Running `./equin release --target tauri` from a bare terminal simply stays unsigned (or the power-user exports `APPLE_*` manually, which Tauri reads natively) — graceful degradation, no hard failure.
 
 ---
 
@@ -35,7 +35,7 @@ Studio → Run release (target=tauri)
    → POST /api/release → triggerRelease() → doRunRelease()   [worktree server, gateway up]
         │  collectReleaseEnv("tauri")  ──▶ apple-signing contributes APPLE_* env  (reads secrets)
         ▼
-   Bun.spawn(["./singularity","release","--target","tauri",...], { env: {...process.env, ...APPLE_*} })
+   Bun.spawn(["./equin","release","--target","tauri",...], { env: {...process.env, ...APPLE_*} })
         → wrapTauri(): `tauri build` (inherits env) signs .app  (APPLE_CERTIFICATE/_PASSWORD/_SIGNING_IDENTITY)
         → packageMacDmg(): appdmg → notarytool submit (.p8) → stapler staple   [new]
 ```
@@ -169,13 +169,13 @@ App signing is automatic once the env vars are present — `wrapTauri`'s `tauri 
 - `plugins/release/core` + `plugins/release/server` — `Release.EnvProvider` slot + `collectReleaseEnv`.
 - `plugins/release/server/internal/run-release.ts` — inject `collectReleaseEnv(target)` into the spawn env.
 
-Run `./singularity build` after — it regenerates the plugin registries, migrations, and docs.
+Run `./equin build` after — it regenerates the plugin registries, migrations, and docs.
 
 ---
 
 ## Verification
 
-1. `./singularity build`, open `http://<worktree>.localhost:9000` → Settings → Accounts. Confirm the **Apple Developer** row appears with a **Configure** CTA.
+1. `./equin build`, open `http://<worktree>.localhost:9000` → Settings → Accounts. Confirm the **Apple Developer** row appears with a **Configure** CTA.
 2. Open the wizard; verify all 6 steps render and external links point at the Apple pages above.
 3. **Cert step** (needs a real Developer ID `.p12`): upload + password → confirm the derived `signingIdentity` displays and the step shows ✓. Verify via MCP: `query_db` won't show secrets (encrypted); instead check `POST /api/secrets/meta {namespace:"config-fields", key:"apple-signing.p12Cert"}` returns `{set:true}`, and `useConfig` shows `signingIdentity` populated.
 4. **API-key step**: upload `.p8`, enter Key ID + Issuer ID → step ✓; row flips to **Signing configured ✓**.

@@ -205,7 +205,7 @@ Strict gain over today: the new `JumpToBottomButton` affordance (currently absen
 
 ## Verification
 
-1. **Build the primitive.** `./singularity build`. Expect green; `plugins-doc-in-sync` will flag the new plugin until `docs/plugins.md` is updated, which the build does.
+1. **Build the primitive.** `./equin build`. Expect green; `plugins-doc-in-sync` will flag the new plugin until `docs/plugins.md` is updated, which the build does.
 2. **Open a conversation with active streaming.** `http://<worktree>.localhost:9000/c/<id>` → status `working`. Confirm:
    - View opens scrolled to bottom (no flash at top).
    - New events stream in and the view stays pinned.

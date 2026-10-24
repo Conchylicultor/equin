@@ -102,7 +102,7 @@ apps-core/tabs, callers pass the `LinkTarget` in.
 
 ## Verification
 
-`./singularity test` on data-table, path-bar, filter-rules,
+`./equin test` on data-table, path-bar, filter-rules,
 inline-text-walker, open-pane-global-chrome and the lint test; then
 middle/⌘-click in the app: id chip, conv chip, page link, file chip, commit
 row, task-graph node, contributions row, config gear, page breadcrumb.

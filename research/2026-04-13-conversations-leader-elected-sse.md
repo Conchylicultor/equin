@@ -12,7 +12,7 @@ This is client-side only. No server changes.
 
 ## Server-restart handling
 
-`./singularity build` kills and respawns the backend; the SSE connection drops mid-flight. Three things must happen on reconnect:
+`./equin build` kills and respawns the backend; the SSE connection drops mid-flight. Three things must happen on reconnect:
 
 1. **Reconnect with backoff** — same curve as the rest of the app. plugin-core already ships `useReconnectingWebSocket` (`plugin-core/use-reconnecting-ws.ts`) with `BACKOFF_MS = [500, 1000, 2000, 5000]`. We mirror that for SSE so behavior is uniform.
 2. **Publish status to the global bus** — so `health/ReconnectWatcher` (`plugins/health/web/components/reconnect-watcher.tsx`) shows the same "Reconnected to server" toast for SSE drops as it already does for WS. This means calling `publishWsStatus({ url, status })` from `@core` on every state transition.
@@ -68,13 +68,13 @@ The `ConversationEvent` discriminated union (`plugins/conversations/shared/proto
 
 ## Verification
 
-1. `./singularity build` → load `http://claude-1776109343.localhost:9000` once. In DevTools → Network, filter by `stream`. Expect **exactly one** `/api/conversations/stream` request (was 2).
+1. `./equin build` → load `http://claude-1776109343.localhost:9000` once. In DevTools → Network, filter by `stream`. Expect **exactly one** `/api/conversations/stream` request (was 2).
 2. Open 5 more tabs of the same origin. Reload Network. Expect still **exactly one** `/api/conversations/stream` connection across all tabs (visible in any one tab's Network panel; the other tabs show no SSE request).
 3. Create a conversation in one tab via "New conversation". Verify all open tabs' sidebars receive the `created` event and update their list.
 4. Close the tab that holds the SSE (identifiable: it's the only one with a `/api/conversations/stream` entry in Network). Within ~100ms one of the remaining tabs should open a new `/api/conversations/stream` and continue receiving events. Confirm by triggering another action (rename, delete) and seeing it propagate.
 5. Open `chrome://inspect` → service workers / locks (or run `await navigator.locks.query()` in the console) → verify exactly one holder of `singularity:conversations:stream`.
 6. Multi-origin sanity check: open `singularity.localhost:9000` and `claude-XXX.localhost:9000` simultaneously. Each should have its own leader (different origin = different lock namespace).
-7. **Server-restart test:** with several tabs open, run `./singularity build` in another worktree. Within ~5s every tab should show the existing "Reconnected to server" toast (driven by `subscribeWsStatus`), and follower tabs' sidebars should re-fetch and reconcile. Verify by deleting a conversation while the server is mid-restart, then confirming the deletion is reflected in all tabs once the new SSE opens.
+7. **Server-restart test:** with several tabs open, run `./equin build` in another worktree. Within ~5s every tab should show the existing "Reconnected to server" toast (driven by `subscribeWsStatus`), and follower tabs' sidebars should re-fetch and reconcile. Verify by deleting a conversation while the server is mid-restart, then confirming the deletion is reflected in all tabs once the new SSE opens.
 
 ## Out of scope
 

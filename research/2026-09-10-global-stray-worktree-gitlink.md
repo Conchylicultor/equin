@@ -33,7 +33,7 @@ answers it completely:
 So it was not one accident but a pattern: four consecutive hand commits from the
 main checkout on 04-10, each a whole-tree `git add -A`-style stage, each sweeping
 in whichever Claude Code worktree checkouts existed (each gitlink pins the main
-commit that worktree branched from). `./singularity push` did not exist yet
+commit that worktree branched from). `./equin push` did not exist yet
 (added 04-11). The two cleanups each removed only the checkouts whose
 directories were gone at that moment — `81f9831e9` came in through a
 `--from-main` push whose `git add -A` staged the deletions incidentally.
@@ -48,7 +48,7 @@ now skips). What remains open:
 
 1. **The leftover entry itself.** Tracked paths ignore `.gitignore`. Today the
    main checkout carries its unstaged deletion, so the next
-   `./singularity push --from-main -m …` would sweep that deletion into an
+   `./equin push --from-main -m …` would sweep that deletion into an
    unrelated commit (the exact way two of its siblings left). Had the directory
    still existed with a moved HEAD, it would have swept in a new gitlink SHA.
 2. **Any nested checkout outside `.claude/worktrees/`.** `push` stages with
@@ -70,7 +70,7 @@ decision that should revisit this check.
 
 `git rm --cached .claude/worktrees/claude-1775848273` in this worktree (index
 only; the empty directory on disk is gitignored afterwards), committed through
-`./singularity push -m`. On main this is a fast-forward. The main checkout's
+`./equin push -m`. On main this is a fast-forward. The main checkout's
 permanent ` D` line goes away, and so do the empty directories in the other
 agent checkouts once they rebase.
 
@@ -98,7 +98,7 @@ It fails when either holds:
   ls-files recurses into ordinary untracked directories and lists only files.
   The one thing it shows as `dir/` is a directory it refuses to descend into
   because it holds its own repository, which is precisely what `git add -A`
-  turns into a gitlink. This fires at `build` / `./singularity check`, before
+  turns into a gitlink. This fires at `build` / `./equin check`, before
   anything is committed. Hint: move the checkout outside the repo, or gitignore
   its path.
 
@@ -120,13 +120,13 @@ listing each offending path.
 
 ## Verification
 
-1. Before the fix, `./singularity check no-gitlinks` fails naming
+1. Before the fix, `./equin check no-gitlinks` fails naming
    `.claude/worktrees/claude-1775848273`. After `git rm --cached` it passes.
 2. Nested-repo arm: in a scratch dir, `git init` a repo, `git init sub` inside
    it with one commit, and confirm `git ls-files -o --exclude-standard` prints
    `sub/` while an ordinary untracked dir prints its files. Also try a
    `git worktree add` target (a `.git` *file*, the April shape).
-3. `./singularity build` (runs all checks, including `plugins-doc-in-sync`,
+3. `./equin build` (runs all checks, including `plugins-doc-in-sync`,
    `plugins-registry-in-sync` and `type-check`) succeeds.
 4. After push: `git ls-files -s | awk '$1==160000'` on main is empty, and
    `git submodule status` exits 0.

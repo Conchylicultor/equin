@@ -102,7 +102,7 @@ export function getAdminPool(): Pool {
  * admin database would open a connection to `postgres` on its way out (and,
  * on a host with no database config, throw while doing it).
  *
- * The caller is a long-lived process ending: `./singularity build` calls it from
+ * The caller is a long-lived process ending: `./equin build` calls it from
  * its terminal funnel so the CLI exits immediately instead of waiting out the
  * pool's 20s idle timeout.
  */

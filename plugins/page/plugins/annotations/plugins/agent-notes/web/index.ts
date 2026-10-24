@@ -30,7 +30,7 @@ export default {
     // `anchor: true` cannot claim one that nothing supplies. This family asks for
     // the CORNER seat — the card's own name, revealed only while the pointer is
     // inside its box — where the callout asks for the gutter glyph.
-    // (`./singularity check page-editor:anchor-has-decoration`).
+    // (`./equin check page-editor:anchor-has-decoration`).
     Editor.BlockFrame({
       match: agentNotesBlock.type,
       component: AgentNotesFrame,

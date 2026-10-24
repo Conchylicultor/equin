@@ -35,7 +35,7 @@ feed===0` red. That is the migration's correctness oracle.
 - `affectedMap` is the **only** authored cross-resource coupling left (the
   upstream-id → downstream-id join the read-set can't infer).
 - Hand-`notify` on a DB-backed resource is made **structurally impossible** (a
-  compile error), with a backstop `./singularity check`.
+  compile error), with a backstop `./equin check`.
 
 ## 2. Enforcement: by-construction + backstop check (the chosen approach)
 
@@ -108,7 +108,7 @@ already routes base-table writes to the downstream resources as FULL.
 Driven by the self-verifying oracle; the rule is **fix the read-set gap at the
 source, never keep the notify.**
 
-1. **Baseline (no deletions).** `./singularity build`, then exercise each domain
+1. **Baseline (no deletions).** `./equin build`, then exercise each domain
    (create/update/delete task, push, conversation, agent launch, song, page
    block, etc.). Read the read-set debug pane. Any resource badged red (`hand>0 &&
    feed===0`), or any `[live-state] read-set-gap candidate` log line, is a table
@@ -164,7 +164,7 @@ pane): teach `applyDbChange` to treat `op="I"` as scopable for keyed resources
 
 ## 6. Verification
 
-- **`./singularity build`** type-checks. Removing `notify` from `Resource`
+- **`./equin build`** type-checks. Removing `notify` from `Resource`
   surfaces any *missed* DB-backed notify as a compile error (a free completeness
   check). Boot log shows `[change-feed] installed live_state triggers …` with no
   missing-trigger warning.
@@ -181,7 +181,7 @@ pane): teach `applyDbChange` to treat `op="I"` as scopable for keyed resources
   `agent-launches`.
 - **Out-of-process write:** mutate a migrated table via `psql` → open tabs update
   (the feed's reason for existing — a hand-notify never covered this).
-- **`./singularity check`** passes; the new `no-db-backed-notify` check fails when
+- **`./equin check`** passes; the new `no-db-backed-notify` check fails when
   a `defineExternalResource` loader references `db.`, and a deliberately-re-added
   `tasksResource.notify()` fails to compile.
 - **Regression bound:** spot-check `loaderStats` for `attempts`/`tasks` after

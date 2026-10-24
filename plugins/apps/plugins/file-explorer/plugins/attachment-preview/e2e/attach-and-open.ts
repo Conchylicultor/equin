@@ -10,7 +10,7 @@
 //   4. select all + copy, paste at the end → a second chip (copied as a node).
 // Then the same attach + click from the Improve popover over Pages.
 //
-// Usage: ./singularity run plugins/apps/plugins/file-explorer/plugins/attachment-preview/e2e/attach-and-open.ts [--headed]
+// Usage: ./equin run plugins/apps/plugins/file-explorer/plugins/attachment-preview/e2e/attach-and-open.ts [--headed]
 import type { Locator, Page } from "playwright";
 import {
   pathUrl,

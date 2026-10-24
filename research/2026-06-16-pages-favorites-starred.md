@@ -254,7 +254,7 @@ the left and the header-actions slot right-aligned:
 ### Reorder config overrides (after first build regenerates the `.origin.jsonc`)
 `Pages.Sidebar` and the new slots are `defineRenderSlot`s → automatically
 reorderable; default order comes from the committed override `.jsonc` files. After
-`./singularity build` regenerates the origins, edit the overrides and copy each new
+`./equin build` regenerates the origins, edit the overrides and copy each new
 `@hash` from the matching `.origin.jsonc`:
 
 - `config/apps/pages/shell/pages.sidebar.jsonc` → items:
@@ -269,11 +269,11 @@ reorderable; default order comes from the committed override `.jsonc` files. Aft
 
 ## Build & migration flow
 
-1. `./singularity build` — regenerates the migration for `page_blocks_ext_starred`,
+1. `./equin build` — regenerates the migration for `page_blocks_ext_starred`,
    the plugin registry, and the reorder `.origin.jsonc` files. NEVER run drizzle-kit
    or the migration runner manually.
 2. Apply the three reorder-config override edits above (copy the fresh `@hash`es).
-3. `./singularity build` again; confirm `./singularity check` passes (especially
+3. `./equin build` again; confirm `./equin check` passes (especially
    `migrations-in-sync`, `reorder:configs-authored`, `plugins-registry-in-sync`,
    `plugin-boundaries`, `type-check`).
 

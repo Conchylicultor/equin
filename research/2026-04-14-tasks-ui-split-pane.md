@@ -127,7 +127,7 @@ resolving to the same `tasksPane()` factory. The pane component reads the
 
 ## Verification
 
-1. `./singularity build` — clean build, no TS errors.
+1. `./equin build` — clean build, no TS errors.
 2. Open `http://claude-1776188416.localhost:9000/tasks`:
    - Left panel: `"No tasks yet."` placeholder (no `Tasks.List`
      contributions yet).

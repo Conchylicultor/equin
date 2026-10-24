@@ -29,7 +29,7 @@ still running (07-23 `03:00:00` + `03:05:16`; 07-24 `03:00:00` + `03:05:30`; 07-
 3. **Blast radius is not backup-specific.** Across main's last two log rotations (~8 days),
    **25 distinct jobs** crossed the 5-minute line and were therefore stolen and double-dispatched —
    roughly 3/day; the worst ran 69 minutes. Affected long jobs include the Google Drive backup
-   upload, `./singularity push`, DB fork / `pg_restore`, and long git checkouts. For non-idempotent
+   upload, `./equin push`, DB fork / `pg_restore`, and long git checkouts. For non-idempotent
    handlers concurrent execution is a corruption hazard, not just wasted CPU.
 
 **Why not just fix `workerId`.** That restores the intended lease, but a lease is a *timeout*, and a
@@ -208,7 +208,7 @@ assert the row is **not** reclaimed.
 
 ## Verification
 
-1. `./singularity build`, then confirm a clean boot: `tail ~/.singularity/logs/<worktree>.log`.
+1. `./equin build`, then confirm a clean boot: `tail ~/.singularity/logs/<worktree>.log`.
 2. **Crash recovery (positive):** `POST /api/events-test/crash-recovery` — asserts a job whose lock
    connection died is re-run within 8 s. This is the existing gate, now testing the real mechanism.
 3. **No-steal (negative, new):** hold the lock live, force `UNSAFE_sweepStuckLocks()`, assert the row

@@ -60,7 +60,7 @@ No-op when `extra` is undefined (the common case today).
 
 ## Verification
 
-1. `./singularity build` — confirm it compiles and deploys
+1. `./equin build` — confirm it compiles and deploys
 2. Open a conversation that has active background agents (task notifications appear in the JSONL stream)
 3. Confirm existing task-notification rows render identically (taskId chip, colored status, summary text)
 4. To test the `extra` bag: temporarily inject a test `<task-notification>` block with an unknown tag and confirm it appears as a pill in the row

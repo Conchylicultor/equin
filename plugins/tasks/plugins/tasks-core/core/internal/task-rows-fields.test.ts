@@ -5,7 +5,7 @@
  * exactly `TaskListItem`'s keys (the C39 old-bundle contract: additive
  * `$columns` aside, nothing removed or renamed).
  *
- * Run: `./singularity test plugins/tasks/plugins/tasks-core`.
+ * Run: `./equin test plugins/tasks/plugins/tasks-core`.
  */
 
 import { describe, expect, test } from "bun:test";

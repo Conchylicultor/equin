@@ -115,7 +115,7 @@ button rides on the existing `Conversation.Toolbar` slot.
 
 ## Verification
 
-1. `./singularity build` succeeds.
+1. `./equin build` succeeds.
 2. `http://claude-1776140814.localhost:9000` — open a conversation whose
    worktree has real changes. Button shows matching count.
 3. Compare to `git -C <worktree> diff --name-only main...HEAD | wc -l` plus

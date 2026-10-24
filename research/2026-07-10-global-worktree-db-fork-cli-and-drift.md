@@ -5,7 +5,7 @@
 A worktree's Postgres DB is created by `forkDatabase("singularity", <worktree>)`, called **only** by the `database.fork` graphile job (`plugins/database/plugins/fork/server/internal/fork-job.ts`), which is enqueued **only** from `createConversation` (`plugins/conversations/server/internal/lifecycle.ts:152`). Consequences:
 
 1. **A worktree created outside the standard path** (`git worktree add` + `claude`, no conversation) never gets a DB. There is no command to create one.
-2. **`./singularity build` then misleads.** `waitForDatabase` (`build.ts:402-435`) polls 60 s for a fork that was never enqueued, then exits(1) telling the user to inspect a `database.fork` job that does not exist.
+2. **`./equin build` then misleads.** `waitForDatabase` (`build.ts:402-435`) polls 60 s for a fork that was never enqueued, then exits(1) telling the user to inspect a `database.fork` job that does not exist.
 3. **A forked DB can silently mismatch the worktree's code.** Migrations are forward-only and hash-keyed, so a DB *ahead* of the branch applies nothing (`runner.ts:124-139` logs this as "expected"). That is correct for additive migrations, but if main dropped/renamed a column after the branch point, the worktree's code reads a column the DB no longer has — a runtime crash the boot log only whispers about. 32 of 194 migration files contain `DROP TABLE` / `DROP COLUMN` / `RENAME`.
 
 This plan adds the missing command, makes `forkDatabase` safe for a second concurrent caller, replaces the misleading build failure with an actionable one, and turns the destructive-drift case into a blocking check that forces a rebase.
@@ -13,7 +13,7 @@ This plan adds the missing command, makes `forkDatabase` safe for a second concu
 **Decisions taken (user):**
 - CLI: **only `db fork`.** No `drop`/`list`/`--force`/`--from` — the fork is for the exceptional outside-Singularity worktree; add more only when a real use-case appears.
 - Build: **fail and print the command**, do not fork inline.
-- Drift: **blocking `./singularity check`** — the agent rebases to HEAD to pull the migration into its branch.
+- Drift: **blocking `./equin check`** — the agent rebases to HEAD to pull the migration into its branch.
 
 ---
 
@@ -71,7 +71,7 @@ try {
 
 ---
 
-## Change 2 — `./singularity db fork`
+## Change 2 — `./equin db fork`
 
 **New file** `plugins/framework/plugins/cli/bin/commands/db.ts`:
 ```ts
@@ -163,9 +163,9 @@ async function waitForWorktreeDatabase(name: string): Promise<void> {
       "If this worktree was created outside Singularity (git worktree add),",
       "create its database with:",
       "",
-      "    ./singularity db fork",
+      "    ./equin db fork",
       "",
-      "Then re-run ./singularity build.",
+      "Then re-run ./equin build.",
     ].join("\n"),
   );
   process.exit(1);
@@ -254,8 +254,8 @@ run():
 ## Verification
 
 - **Classifier:** `bun test plugins/database/plugins/migrations/core/internal/destructive.test.ts`.
-- **Change 1 idempotent + concurrent:** on a throwaway target — fork it, confirm via `mcp__singularity__query_db` (`SELECT datname FROM pg_database WHERE datname='<t>' OR datname LIKE 'f\_%'`) that the target exists and no `f_*` temp lingers; run two `./singularity db fork <t>` in parallel after dropping it → both exit 0, exactly one `<t>`, loser temp gone (or reaped). Re-fork an existing target → instant no-op.
-- **Change 2:** `./singularity db fork` in a hand-made worktree creates its DB; a second run is a no-op.
-- **Change 3:** drop the current worktree's DB, run `./singularity build` → it prints the `./singularity db fork` hint and exits 1 (not the old 60 s job message). Create the DB, re-run → build proceeds.
-- **Change 4 blocking:** point a worktree whose branch predates a destructive migration on main at `./singularity check fork-schema-drift` → fails, naming the migration + dropped object, with the rebase hint. A fully-current worktree → passes. After `git rebase origin/main` → passes.
-- **Regression:** `./singularity check` and a normal `./singularity build` (tsc covers the new `cli/bin` and `migrations/core` modules).
+- **Change 1 idempotent + concurrent:** on a throwaway target — fork it, confirm via `mcp__singularity__query_db` (`SELECT datname FROM pg_database WHERE datname='<t>' OR datname LIKE 'f\_%'`) that the target exists and no `f_*` temp lingers; run two `./equin db fork <t>` in parallel after dropping it → both exit 0, exactly one `<t>`, loser temp gone (or reaped). Re-fork an existing target → instant no-op.
+- **Change 2:** `./equin db fork` in a hand-made worktree creates its DB; a second run is a no-op.
+- **Change 3:** drop the current worktree's DB, run `./equin build` → it prints the `./equin db fork` hint and exits 1 (not the old 60 s job message). Create the DB, re-run → build proceeds.
+- **Change 4 blocking:** point a worktree whose branch predates a destructive migration on main at `./equin check fork-schema-drift` → fails, naming the migration + dropped object, with the rebase hint. A fully-current worktree → passes. After `git rebase origin/main` → passes.
+- **Regression:** `./equin check` and a normal `./equin build` (tsc covers the new `cli/bin` and `migrations/core` modules).

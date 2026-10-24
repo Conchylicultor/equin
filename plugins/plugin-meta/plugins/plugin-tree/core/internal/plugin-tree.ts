@@ -110,7 +110,7 @@ function isWalkable(name: string): boolean {
  * This guards against *hollow shells*: when a plugin is relocated, `git mv`
  * removes its tracked files but leaves behind the untracked `node_modules/`
  * directory git never tracked. The leftover dir lingers on disk in long-lived
- * checkouts (notably the `main` worktree where `./singularity build` runs) while
+ * checkouts (notably the `main` worktree where `./equin build` runs) while
  * being absent from freshly-created worktrees. Without this gate the purely
  * positional walk resurrects each such shell as a phantom plugin, so discovery —
  * and every check/codegen step built on it — diverges between a clean worktree

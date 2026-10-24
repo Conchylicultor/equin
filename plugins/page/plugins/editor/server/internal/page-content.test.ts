@@ -16,8 +16,8 @@
  * Every test ends with the ledger invariant asserted: an entry exists ⇔ at
  * least one row carries its id.
  *
- * Run: `./singularity test plugins/page/plugins/editor`
- * (requires the running embedded cluster — `./singularity build` first).
+ * Run: `./equin test plugins/page/plugins/editor`
+ * (requires the running embedded cluster — `./equin build` first).
  */
 
 import { trashEntryIdKind } from "@plugins/infra/plugins/trash/core";

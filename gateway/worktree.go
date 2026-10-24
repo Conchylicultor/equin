@@ -77,7 +77,7 @@ type Spec struct {
 	// Carried, not decomposed — exactly like Name.
 	//
 	// Deliberately NOT passed as an env var to the spawned backend. `singularity
-	// build` does not rebuild this Go binary (only `singularity start` does), so
+	// build` does not rebuild this Go binary (only `./equin start` does), so
 	// a running gateway is routinely older than the backend it spawns; a backend
 	// that depended on a new env line would silently fall back to the full
 	// registry and boot the whole app under a composition's own namespace and
@@ -972,7 +972,7 @@ const exitTailLines = 40
 var errExitedBeforeReady = errors.New("backend exited before ready")
 
 // withStderrTail puts the backend's last stderr lines into the error, so the
-// restart's 500 body — which `./singularity build` prints — says WHY the boot
+// restart's 500 body — which `./equin build` prints — says WHY the boot
 // died instead of only that it did. The lines are also in the worktree's
 // gateway log; this is the one place the caller is already looking.
 func withStderrTail(err error, tail []logEntry) error {

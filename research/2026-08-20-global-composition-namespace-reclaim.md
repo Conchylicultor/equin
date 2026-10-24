@@ -214,7 +214,7 @@ Reused as-is, not reimplemented: `configDir.file(ns)`, `dropDatabase` /
 `readCompositionMarker` / `hasCompositionMarker`, `assertServableCompositionNamespace`,
 `worktreePathFor`, `dirExists`, `confirmDialog`, `ndjsonResponse`.
 
-No CLI verb. `./singularity clean` belongs to the `ReclaimPolicy` work in
+No CLI verb. `./equin clean` belongs to the `ReclaimPolicy` work in
 `research/2026-08-17-global-singularity-data-dir-layout.md`, which already owns
 that vocabulary.
 
@@ -226,11 +226,11 @@ that vocabulary.
 whose checkout dir is gone is a target; `checkout: null` is never a target;
 `checkout: undefined` is never a target; a marker whose checkout dir is present
 is not a target; a marker-less dir is not reached by the new branch. Run with
-`./singularity test plugins/debug/plugins/worktree-cleanup`.
+`./equin test plugins/debug/plugins/worktree-cleanup`.
 
 **End to end**, from this worktree:
 
-1. `./singularity build --composition sonata` → confirm `sonata.att-X` is live at
+1. `./equin build --composition sonata` → confirm `sonata.att-X` is live at
    `http://sonata.att-1787216249-3iy2.localhost:9000`, that
    `~/.singularity/worktrees/sonata.att-X/{spec.json,composition.json,web}` exist,
    and that the database exists (`query_db` on `singularity`:
@@ -249,7 +249,7 @@ is not a target; a marker-less dir is not reached by the new branch. Run with
    against the 182 / 77 GB baseline — the 16 checkout-less databases should be
    gone.
 
-**Checks** — `./singularity check` green, in particular `plugin-boundaries` (the
+**Checks** — `./equin check` green, in particular `plugin-boundaries` (the
 new edges `reclaim → database/admin` and `reclaim → database/zero/…/cache-service`
 are acyclic, verified above), `cli:codegen-manifests-not-frozen` (the reason the
 primitive is a sub-plugin — this check is what would catch the mistake if it were

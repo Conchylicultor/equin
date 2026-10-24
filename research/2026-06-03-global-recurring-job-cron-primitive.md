@@ -176,14 +176,14 @@ Files: `core/types.ts`, `core/profiler.ts` (`PhaseId`), `bin/index.ts`.
 
 ## Verification
 
-1. `./singularity build` — must succeed (migrations, codegen docs, boundary + eslint checks).
-2. `./singularity check` — boundary rules (new barrels), plugins-doc-in-sync.
+1. `./equin build` — must succeed (migrations, codegen docs, boundary + eslint checks).
+2. `./equin check` — boundary rules (new barrels), plugins-doc-in-sync.
 3. **Cron registered** — via MCP `query_db`:
    `SELECT identifier, last_execution FROM graphile_worker._private_known_crontabs ORDER BY 1;`
    Expect `cron:conversations.transcript-touch`, `cron:notifications.ttl-cleanup`,
    `cron:attachments.orphan-sweep`, and `cron:backup.run` (only if `periodicCron` non-empty).
 4. **Touch works end-to-end** — pick an active conversation's JSONL, `stat -f %m <path>`
-   to record mtime; temporarily set the touch job's cron to `"* * * * *"`, `./singularity
+   to record mtime; temporarily set the touch job's cron to `"* * * * *"`, `./equin
    build`, wait ~70s, `stat` again → mtime advanced. Revert to `"0 4 * * *"` + rebuild.
    (Confirm the path via `query_db` for an active `claude_session_id`, then `findTranscriptPath`'s
    glob `~/.claude/projects/*/<session>.jsonl`.)

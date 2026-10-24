@@ -144,7 +144,7 @@ VariantGroup to `<g.component/>` inside `<ThemeScopeProvider>`), below the exist
 
 ## Verification
 
-1. `./singularity build` — must pass (config origin file generated for the new descriptor; CLAUDE/docs regenerated). A half-registration (web but not server `ConfigV2`) throws at boot.
+1. `./equin build` — must pass (config origin file generated for the new descriptor; CLAUDE/docs regenerated). A half-registration (web but not server `ConfigV2`) throws at boot.
 2. Playwright at `http://<worktree>.localhost:9000`:
    - Open Pages → theme customizer → "Customize for Pages" → pick `floating`; screenshot shows the rounded floating sidebar card.
    - Open Studio (unforked) → screenshot shows default `flush` — proves per-app divergence.

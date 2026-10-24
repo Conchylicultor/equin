@@ -111,7 +111,7 @@ worktree DB starts up to date.
   `runMigrations`** (the column must exist), under the same `withQueryDeadline` wrapper as
   the other boot DDL. `database → infra/entities` is a new edge; entities imports no
   database code today (fields, server-core, zod-parser only), so there is no cycle. Verify
-  with `./singularity check plugin-boundaries`.
+  with `./equin check plugin-boundaries`.
 - After installing, it asserts (rung 4) that each registered table's trigger exists with
   the expected signature. If it doesn't, boot throws.
 
@@ -192,11 +192,11 @@ should migrate to entities to get the guarantee.
   - `markConversationClosed` → bump; `markConversationGone` → no bump;
   - `unionTaskClusters` → no bump on tasks.
 
-Run with `./singularity test plugins/infra/plugins/entities plugins/tasks/plugins/tasks-core`.
+Run with `./equin test plugins/infra/plugins/entities plugins/tasks/plugins/tasks-core`.
 
 ## Verification
 
-1. `./singularity build` (background), then `./singularity check`.
+1. `./equin build` (background), then `./equin check`.
 2. `query_db` on the worktree DB: `pg_trigger` has `*_derive_updated_at` on
    conversations, tasks and attempts, with signature comments.
 3. In the worktree app, open an old conversation. `query_db`: `last_viewed_at` moved,

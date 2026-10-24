@@ -241,8 +241,8 @@ import type { ConversationModel } from "@plugins/conversations/plugins/model-pro
 ## Verification
 
 ```bash
-./singularity build        # build + type-check + migrations
-./singularity check        # plugin boundary + eslint checks
+./equin build        # build + type-check + migrations
+./equin check        # plugin boundary + eslint checks
 ```
 
 Spot-check: launch a new Opus conversation, open the tmux pane, and confirm:

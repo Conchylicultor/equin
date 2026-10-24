@@ -237,7 +237,7 @@ Build the structural scaffold — plugin definitions, DB tables, pane shells, sl
 
 After each phase:
 ```bash
-./singularity build
+./equin build
 # Visit http://<worktree>.localhost:9000
 # → Deploy sidebar entry visible
 # → Can add/edit/delete servers

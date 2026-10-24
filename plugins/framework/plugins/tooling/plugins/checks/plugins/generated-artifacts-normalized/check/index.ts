@@ -45,8 +45,8 @@ const check: Check = {
           `carrying generated content that does not match its own sources — typically a plugin registry still listing ` +
           `plugins this branch deleted, or missing ones it added.`,
         hint:
-          "Run `./singularity build` (regenerates everything and clears the marker), or " +
-          "`./singularity normalize-generated` for just the repair + amend. " +
+          "Run `./equin build` (regenerates everything and clears the marker), or " +
+          "`./equin normalize-generated` for just the repair + amend. " +
           "If this fired after a plain `git rebase`, the `post-rewrite` hook did not run — " +
           "check `git config core.hooksPath` is `.githooks` and `.githooks/post-rewrite` is executable.",
       };

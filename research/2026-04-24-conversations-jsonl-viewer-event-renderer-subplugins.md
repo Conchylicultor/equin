@@ -125,7 +125,7 @@ export const plugins = [
 ### Step 7 — Deploy and verify
 
 ```bash
-./singularity build
+./equin build
 ```
 
 ## Critical Files
@@ -145,8 +145,8 @@ export const plugins = [
 
 ## Verification
 
-1. `./singularity build` succeeds (no TS errors, no plugin boundary violations)
+1. `./equin build` succeeds (no TS errors, no plugin boundary violations)
 2. Open any conversation → JSONL pane auto-opens
 3. All six event types render identically to before
 4. Markdown toggle still works for assistant-text events
-5. `./singularity check --plugin-boundaries` passes
+5. `./equin check --plugin-boundaries` passes

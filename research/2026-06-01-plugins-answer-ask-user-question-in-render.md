@@ -121,7 +121,7 @@ Plugin root:
   `exit/package.json`; depends on `@plugins/conversations`,
   `@plugins/infra`, `zod`).
 
-> Registration is automatic: `./singularity build` regenerates
+> Registration is automatic: `./equin build` regenerates
 > `web.generated.ts` / `server.generated.ts` by discovery. The
 > `plugins-registry-in-sync` check enforces it. No manual registry edits.
 
@@ -186,7 +186,7 @@ In `AskUserQuestionToolView`:
 ## Verification (end-to-end)
 
 1. **Step 1 live verification above** — gates everything.
-2. `./singularity build`, then open `http://<worktree>.localhost:9000`.
+2. `./equin build`, then open `http://<worktree>.localhost:9000`.
 3. Drive a conversation into `waitingFor:"question"`. Confirm the
    `AskUserQuestion` render now shows clickable options + an "Other" field +
    Submit (no terminal needed). Use `e2e/screenshot.mjs` with `--click` to
@@ -196,7 +196,7 @@ In `AskUserQuestionToolView`:
    "Other", and a multi-question prompt (full parity).
 5. Open a **historical, already-answered** `AskUserQuestion` → confirm it still
    renders read-only exactly as before (no interactive controls).
-6. `./singularity check` (boundaries, registry-in-sync, eslint, docs-in-sync).
+6. `./equin check` (boundaries, registry-in-sync, eslint, docs-in-sync).
 
 ## Risks / open questions
 
@@ -213,7 +213,7 @@ In `AskUserQuestionToolView`:
 
 ## Implementation status (2026-06-01)
 
-Built and verified (all 27 `./singularity check` pass; not pushed):
+Built and verified (all 27 `./equin check` pass; not pushed):
 
 - ✅ Runtime `answerPrompt(id, text)` — Escape → bounded `capture-pane`
   poll until the menu (`/Enter to select/`) clears (75ms interval, 3s cap,

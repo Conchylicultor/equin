@@ -68,7 +68,7 @@ const { nodes, edges } = useMemo(
 
 ## Verification
 
-1. `./singularity build`
+1. `./equin build`
 2. Open a task with dependencies in the graph (at least X→Y→Z)
 3. Hover Y — X button appears at top-right corner
 4. Click X — Y is deleted, graph updates to show X→Z

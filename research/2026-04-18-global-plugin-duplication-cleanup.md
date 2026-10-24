@@ -16,7 +16,7 @@ All atomic, no new abstractions, no cross-file coupling. Do first to shrink the 
 - **Remove the `ConversationState` alias** at `plugins/conversations/plugins/conversation-view/web/slots.ts:5` — it is a transparent alias for `ConversationRecord`. Replace with direct use of `ConversationRecord` throughout the file.
 - **Remove `console.log` at `plugins/tasks/server/index.ts:37`** — inconsistent with rest of codebase.
 
-**Verification:** `./singularity build` succeeds; frontend and server compile.
+**Verification:** `./equin build` succeeds; frontend and server compile.
 
 ## Phase 2 — Re-home to existing owners
 
@@ -159,12 +159,12 @@ If Phase 2b finds `nextAgentRankUnder` is still live, add a parameterized `nextR
 
 ## Verification
 
-1. Run `./singularity build` after each phase. Expect clean build at each checkpoint.
+1. Run `./equin build` after each phase. Expect clean build at each checkpoint.
 2. Open the app at `http://<worktree>.localhost:9000` after Phase 3 and verify:
    - Tasks list still renders, drag-drop still works (buildTree/computeDrop regression surface).
    - Agents list renders and its drag-drop works.
    - Agent-launches panel still shows status dots with correct colors.
    - Task-events panel still shows formatted dates.
-3. If `2026-04-18-global-plugin-module-boundaries.md` has landed first, run `./singularity check --plugin-boundaries` — it should pass. Any violation means a symbol was moved to a non-barrel path; fix by re-exporting via `api.ts`.
+3. If `2026-04-18-global-plugin-module-boundaries.md` has landed first, run `./equin check --plugin-boundaries` — it should pass. Any violation means a symbol was moved to a non-barrel path; fix by re-exporting via `api.ts`.
 4. If `plugins.md` generation was extended (per that plan), confirm new plugins (`tree`, `format`) appear with their `api.ts` exports listed.
 5. Grep-verify each cleanup landed: e.g. `grep -r "function descriptor<T>" plugins/` should return zero hits after Phase 3a.

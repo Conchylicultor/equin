@@ -15,8 +15,8 @@
  *
  * Manual only — nothing runs this automatically.
  *
- *   ./singularity build
- *   ./singularity run plugins/primitives/plugins/adaptive-bar/e2e/adaptive-bar-relocate.ts [--headed]
+ *   ./equin build
+ *   ./equin run plugins/primitives/plugins/adaptive-bar/e2e/adaptive-bar-relocate.ts [--headed]
  */
 import {
   pathUrl,

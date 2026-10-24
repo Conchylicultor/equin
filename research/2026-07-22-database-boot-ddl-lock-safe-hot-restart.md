@@ -2,7 +2,7 @@
 
 ## Context
 
-`./singularity build` deploys via a **ready-gated blue/green hot restart** (gateway
+`./equin build` deploys via a **ready-gated blue/green hot restart** (gateway
 `worktree.go`): it spawns the new backend while the **old backend keeps serving full
 DB traffic** (holding `AccessShareLock`s on the relations it reads), and drains the old
 one only *after* the new backend passes `/api/health/ready`. So for the whole duration
@@ -159,12 +159,12 @@ earlier table and now wants `pushes`; in A, `SELECT 1 FROM <that earlier table>;
    is no lock combination that yields a cycle — the structural proof.
 2. *Self-heal on partial:* kill the backend mid-rebuild (after some per-table txs commit) →
    confirm every table still has a working trigger set (old or new), the signature is unchanged,
-   and the next `./singularity build` re-runs the full rebuild and reaches ready.
-3. *Steady-state no-op:* `./singularity build` twice with no trigger-set change → change-feed
+   and the next `./equin build` re-runs the full rebuild and reaches ready.
+3. *Steady-state no-op:* `./equin build` twice with no trigger-set change → change-feed
    logs "up to date … skipping"; zero rebuild, zero blocking.
 
 **End-to-end** (`/verify`): force a real trigger-set change (add/remove a table) and run an actual
-`./singularity build` hot swap against the concurrently-serving old backend; confirm the deploy
+`./equin build` hot swap against the concurrently-serving old backend; confirm the deploy
 completes with no "backend exited before ready."
 
-Then `./singularity build` and `./singularity check`.
+Then `./equin build` and `./equin check`.

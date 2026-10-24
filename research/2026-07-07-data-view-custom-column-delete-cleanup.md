@@ -178,7 +178,7 @@ Mirror the existing `setCustomColumnValue` endpoint end-to-end.
 
 ## Verification
 
-1. `./singularity build` (from the worktree dir). No new migration expected.
+1. `./equin build` (from the worktree dir). No new migration expected.
 2. Drive the flow on a DataView surface with custom columns (e.g. a `/tasks` or
    Sonata library view) via Playwright / `e2e/screenshot.mjs`:
    - Add a custom column, type a value into a row's cell.
@@ -188,4 +188,4 @@ Mirror the existing `setCustomColumnValue` endpoint end-to-end.
    - Re-run the query → **no rows remain for that `column_id`**.
 3. New-id check: add a column, note its id shape — confirm it's `cc-<uuid>` (not
    `cc-<8char>`), so a subsequent add can never collide with a prior deletion.
-4. `./singularity check` (type-check + boundaries).
+4. `./equin check` (type-check + boundaries).

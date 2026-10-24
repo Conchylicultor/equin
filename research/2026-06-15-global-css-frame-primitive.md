@@ -46,7 +46,7 @@ plugins/primitives/plugins/css/                 # pure grouping umbrella (no run
 
 Import path: `@plugins/primitives/plugins/css/plugins/frame/web`. The boundary
 grammar already permits arbitrary nesting depth (`@plugins/<name>/plugins/.../web`),
-so `./singularity check plugin-boundaries` needs no config change. Mirror an existing
+so `./equin check plugin-boundaries` needs no config change. Mirror an existing
 **leaf-less umbrella** (e.g. `plugins/packages/`) for whatever scaffolding the
 codegen expects of the `css/` folder itself (likely just an autogen `CLAUDE.md`); the
 build regenerates `*.generated.ts`, `docs/plugins-*.md`, and the AUTOGEN blocks.
@@ -185,10 +185,10 @@ without a browser.
 
 ## Verification
 
-1. `./singularity build` — regenerates registries, `docs/plugins-*.md`, and CLAUDE.md
+1. `./equin build` — regenerates registries, `docs/plugins-*.md`, and CLAUDE.md
    AUTOGEN blocks from the new `css/` + `frame` folders; must succeed and
    `plugins-registry-in-sync` / `plugins-doc-in-sync` pass.
-2. `./singularity check plugin-boundaries` — clean (deep-nesting import path is legal).
+2. `./equin check plugin-boundaries` — clean (deep-nesting import path is legal).
 3. `bun test plugins/primitives/plugins/css/plugins/frame/web/internal/frame-grid-template.test.ts`
    — template strings correct.
 4. `bun test plugins/primitives/plugins/css/plugins/frame/web/internal/frame-geometry.test.ts`

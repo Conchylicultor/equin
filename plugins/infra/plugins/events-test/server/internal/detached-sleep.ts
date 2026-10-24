@@ -6,8 +6,8 @@ import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { detachedSleepEventsTest } from "../../shared/endpoints";
 
 // Restart-survival harness for `defineSupervisedJob`'s `run` body: the sleep
-// runs in a detached `./singularity supervised-exec` child, so a
-// `./singularity build` mid-run must leave the child alive and the workflow
+// runs in a detached `./equin supervised-exec` child, so a
+// `./equin build` mid-run must leave the child alive and the workflow
 // must still close its `supervised_job_runs` row. `fail` exercises the
 // dead-letter policy (non-retryable ⇒ one attempt; retryable ⇒ both attempts).
 const detachedSleepLog = defineLogSink({

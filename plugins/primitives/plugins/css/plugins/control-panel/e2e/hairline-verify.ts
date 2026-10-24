@@ -2,8 +2,8 @@
 // hairline between its bands, and that hairline is visibly distinct from the
 // surface the panel is painted on.
 //
-//   ./singularity run plugins/primitives/plugins/css/plugins/control-panel/e2e/hairline-verify.ts
-//   ./singularity run plugins/primitives/plugins/css/plugins/control-panel/e2e/hairline-verify.ts --headed
+//   ./equin run plugins/primitives/plugins/css/plugins/control-panel/e2e/hairline-verify.ts
+//   ./equin run plugins/primitives/plugins/css/plugins/control-panel/e2e/hairline-verify.ts --headed
 //
 // Why pixels and not the DOM. The rule shipped broken for exactly the reason a
 // DOM check could not see: `cp-body > * + *` matched nothing, because every

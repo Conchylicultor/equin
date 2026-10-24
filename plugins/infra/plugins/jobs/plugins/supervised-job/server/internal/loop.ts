@@ -11,7 +11,7 @@ import { runEnded, type RunEndedPayload } from "./tables-run-ended";
  * re-announce a live run — the supervising backend's own reconcile pass every
  * 60 s, and the boot reconcile of whatever backend comes up next — so this only
  * has to cover the case where NEITHER can: a kind whose own CLI stamped its
- * ledger row early (`./singularity build` does, ~100 s before its child exits)
+ * ledger row early (`./equin build` does, ~100 s before its child exits)
  * has already left `listUnfinished`, so a backend that restarts after the marker
  * landed will never re-announce it, and this timeout is the only thing that ever
  * closes the workflow.

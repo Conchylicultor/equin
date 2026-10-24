@@ -100,7 +100,7 @@ The main thread's periodic-JS branch has a stable offset chain across both sampl
    what the check log could not show. Zero cost, always-on, survives SIGKILL.
 2. **Reproduce under an inspectable bun.** The trigger correlates with **concurrent
    builds / memory pressure** (5 at once, heap → swap). Reproducible by running
-   several `./singularity build` across scratch worktrees. Under `bun --inspect`
+   several `./equin build` across scratch worktrees. Under `bun --inspect`
    (on demand — never always-on: it opens a full-control debug socket, inhibits JIT
    tiers, and shifts GC timing enough to be a heisenbug), a heap/sampling-profiler
    snapshot of the culprit phase names the function outright.

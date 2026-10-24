@@ -181,10 +181,10 @@ rather than the line.
 
 ## Verification
 
-- `./singularity test plugins/page/plugins/place` — `staleness.test.ts` extended
+- `./equin test plugins/page/plugins/place` — `staleness.test.ts` extended
   (kind survives `placeDataFromSnapshot`), new `type-to-kind.test.ts`, a
   markdown round-trip case for `kind`.
-- `./singularity build` (regenerates the icon manifest; `icons:manifest-in-sync`,
+- `./equin build` (regenerates the icon manifest; `icons:manifest-in-sync`,
   type-check, boundary checks pass).
 - In the deployed worktree: insert a `/place` block, pick a clothing store, a
   café, a park and a plain address; screenshot with

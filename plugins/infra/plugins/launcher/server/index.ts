@@ -40,7 +40,7 @@ export type { ListenAddress } from "./internal/listen";
 
 export default {
   description:
-    "Boots and tears down the self-contained stack (Go gateway, embedded Postgres, PgBouncer) for ./singularity start, serve-app and the release launcher, and keeps the gateway's launch spec in one place. In a running backend it attaches the gateway it runs behind as a long-lived process in Background activity.",
+    "Boots and tears down the self-contained stack (Go gateway, embedded Postgres, PgBouncer) for ./equin start, serve-app and the release launcher, and keeps the gateway's launch spec in one place. In a running backend it attaches the gateway it runs behind as a long-lived process in Background activity.",
   register: [gatewayDaemon],
   onReady: () => {
     attachGateway();

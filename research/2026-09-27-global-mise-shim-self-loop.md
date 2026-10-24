@@ -5,7 +5,7 @@
 On 2026-09-27 at 12:44:27 local time, every entry in `~/.local/share/mise/shims/` became a symlink to
 `shims/bun`, and `shims/bun` pointed at itself. From then on every worktree deploy failed. The
 gateway spawns backends as `taskpolicy -b -- bun …`, and resolving `bun` fails with ELOOP, which
-taskpolicy reports as `posix_spawn: No such file or directory`. `./singularity await` said
+taskpolicy reports as `posix_spawn: No such file or directory`. `./equin await` said
 "bun not found". The old backend kept serving, so it looked like a code problem.
 
 ### Root cause (confirmed from the host state and the session transcript)
@@ -58,7 +58,7 @@ That is loud, correct, and touches nothing shared.
 
 ### 2. Detection: doctor names a broken shims directory, with the fix
 
-Doctor already runs first in `./singularity build` and `start`, and the `./singularity` wrapper runs it
+Doctor already runs first in `./equin build` and `start`, and the `./equin` wrapper runs it
 when `bun` can't be found. That makes it the one place that turns "backend never ready" or
 "bun not found" into the real cause.
 
@@ -90,7 +90,7 @@ Update the doctor's `CLAUDE.md` to list the two new checks.
 
 ## Verification
 
-1. `./singularity test plugins/framework/plugins/cli/plugins/doctor` passes.
+1. `./equin test plugins/framework/plugins/cli/plugins/doctor` passes.
 2. Manual run on a copy only, never the live shims dir: build a temp `MISE_DATA_DIR/shims` with looped symlinks, run `MISE_DATA_DIR=<tmp> sh doctor.sh`, and confirm the finding and the fix line appear.
 3. `mise run setup`, then `~/.local/bin/mise settings get not_found_auto_install` returns `false`. In a scratch dir with a `.mise.toml` pinning `bun = "1.3.14"`, `bun --version` then errors "not installed". `ls -la ~/.local/share/mise/shims` is unchanged, and `installs/bun` still has only 1.4.2.
-4. `./singularity build` still succeeds, since doctor passes on a healthy machine.
+4. `./equin build` still succeeds, since doctor passes on a healthy machine.

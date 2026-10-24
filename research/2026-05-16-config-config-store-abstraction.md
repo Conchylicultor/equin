@@ -120,7 +120,7 @@ The `ServerPluginDefinition` owns the lifecycle:
 ## Verification
 
 1. `bun install` — confirms `jsonc-parser` resolves
-2. `./singularity build` — confirms type-checking passes, server starts
+2. `./equin build` — confirms type-checking passes, server starts
 3. Manual test via MCP `query_db` or a quick script:
    - Write: `getConfigStore().write("test/hello.jsonc", { greeting: "world" })`
    - Read: `getConfigStore().read("test/hello.jsonc")` → `{ greeting: "world" }`
@@ -129,4 +129,4 @@ The `ServerPluginDefinition` owns the lifecycle:
    - Watch: subscribe, edit file externally, confirm callback fires
    - Missing file: `getConfigStore().read("nonexistent.jsonc")` → `undefined`
    - Bad JSONC: write garbage to a `.jsonc` file, confirm `read()` returns `undefined` (not crash)
-4. `./singularity check` — all existing checks still pass
+4. `./equin check` — all existing checks still pass

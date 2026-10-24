@@ -147,8 +147,8 @@ Each plugin: remove `deleteTriggersFor`/`trigger` imports and calls from `onRead
 
 ## Verification
 
-1. `./singularity build` compiles and starts
-2. `./singularity check` passes
+1. `./equin build` compiles and starts
+2. `./equin check` passes
 3. Query trigger tables to verify correct row counts per job and no stale `improve.apply-queue-top` or `maybeLaunchTaskJob` rows
 4. Verify `build`'s imperative trigger still works on main
 5. Create a task with dependencies; verify `maybeLaunchDependentsJob` fires on dep status change

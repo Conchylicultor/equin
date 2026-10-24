@@ -1,9 +1,9 @@
 # Auto-generated artifacts: resolved by custom merge drivers in plugins/framework/plugins/cli/scripts/
-# (registered into .git/config by `./singularity build`). A driver takes the
+# (registered into .git/config by `./equin build`). A driver takes the
 # upstream side and drops a marker; the canonical content is then regenerated
 # from the MERGED source tree by whichever normalize pass runs first —
-# `.githooks/post-rewrite` after any rebase, `./singularity push` around its own,
-# or a full `./singularity build`. An un-normalized marker fails the
+# `.githooks/post-rewrite` after any rebase, `./equin push` around its own,
+# or a full `./equin build`. An un-normalized marker fails the
 # `generated-artifacts-normalized` check.
 
 # Plugin docs (fully generated)

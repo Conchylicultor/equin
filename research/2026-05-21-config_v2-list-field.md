@@ -157,7 +157,7 @@ function isFieldModified(field: FieldDef, value: unknown, defaultValue: unknown)
 
 **`package.json`**: `{ "name": "@singularity/plugin-config_v2-fields-list", "private": true, "description": "..." }`
 
-**Registry**: Auto-discovered by `./singularity build` codegen (scans for `web/index.ts` with default export). No manual registry edits.
+**Registry**: Auto-discovered by `./equin build` codegen (scans for `web/index.ts` with default export). No manual registry edits.
 
 ### 6. Origin file generation
 
@@ -189,7 +189,7 @@ IDs are intentionally absent in the origin file — they're injected at runtime.
 
 ## Verification
 
-1. **Build**: `./singularity build` — typescript check, plugin registry sync, origin file generation
+1. **Build**: `./equin build` — typescript check, plugin registry sync, origin file generation
 2. **Test with a real consumer**: Add a `listField` to an existing plugin's config (e.g., build or a test plugin) and verify:
    - Origin file generates with the array default
    - Server reads values with IDs injected
@@ -197,5 +197,5 @@ IDs are intentionally absent in the origin file — they're injected at runtime.
    - Add/remove/reorder items and verify persistence (check `~/.singularity/config/` files)
    - Reset to defaults works
    - `isModified` indicator behaves correctly
-3. **Boundary check**: `./singularity check --plugin-boundaries` passes
+3. **Boundary check**: `./equin check --plugin-boundaries` passes
 4. **Screenshot**: Take a screenshot of the settings pane showing the list field UI

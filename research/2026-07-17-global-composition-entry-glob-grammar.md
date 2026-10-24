@@ -250,14 +250,14 @@ non-website compositions.
   and `bun test plugins/plugin-meta/plugins/composition/core/config.test.ts`
   (both pure — no server/DB). The new cases (iii)/(iv) prove additivity and
   fail-loud; (v) proves `website` drops blog/editor-toy.
-- **Check:** `./singularity check composition-closure` (reads the committed
+- **Check:** `./equin check composition-closure` (reads the committed
   git-layer config off disk). Because the migration is bundle-preserving, every
   existing composition still passes its redundant / soft-option / `excludes`
   gates; `website`'s `excludes: ["agent-runtime"]` disjointness is the live proof
   the negatives dropped the `editor-toy → … → infra.worktree` taproot. Confirm the
   new negative-validation rejects a deliberately-broken seed (`!…blog.**` with no
   matching `.**` positive → "matches nothing").
-- **Build + eyeball:** `./singularity build`, then open
+- **Build + eyeball:** `./equin build`, then open
   `http://<worktree>.localhost:9000/studio/compositions/comp/website`. Confirm the
   Closure section tints `apps.website.blog.*` and `apps.website.demos.editor-toy.*`
   as `excluded`/`available` (not bundled), the sonata `piano` path and

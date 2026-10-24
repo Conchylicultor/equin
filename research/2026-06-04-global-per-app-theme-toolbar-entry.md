@@ -124,9 +124,9 @@ path. `@plugins/primitives/plugins/icon-button/web` is used by `PenButton`. Remo
 
 The theme-customizer `CLAUDE.md` autogen block records
 `Contributes: Pane.Register "theme-customizer", Shell.Sidebar "Theme"` and `Uses: ... shell.Shell`.
-`./singularity build` regenerates these from the contributions, so the new
+`./equin build` regenerates these from the contributions, so the new
 `ActionBar.Item "theme-customizer" → ThemeCustomizerButton` and the dropped `shell.Shell` edge
-update automatically. Run `./singularity check` (plugin-boundaries, plugins-doc-in-sync, eslint).
+update automatically. Run `./equin check` (plugin-boundaries, plugins-doc-in-sync, eslint).
 
 ## Critical files
 
@@ -161,7 +161,7 @@ export; `sonata-layout.tsx` (mount the host); `theme-customizer-button.tsx` (tog
 
 ## Verification (end-to-end)
 
-1. `./singularity build`.
+1. `./equin build`.
 2. **Every app:** open `http://<worktree>.localhost:9000/forge`, `/sonata`, `/debug`, `/deploy`,
    `/workflows`, `/files`, `/pages`. Hover the top-right floating bar → confirm a palette button
    sits next to the pen button. Click it → the theme customizer pane opens in that app.
@@ -173,4 +173,4 @@ export; `sonata-layout.tsx` (mount the host); `theme-customizer-button.tsx` (tog
    reachable). Un-fork reverts.
 5. Scripted: `bun e2e/screenshot.mjs --url http://<worktree>.localhost:9000/forge --click "Theme"
    --out /tmp/theme` to confirm the button exists and toggles the pane.
-6. `./singularity check` passes (plugin-boundaries, plugins-doc-in-sync, eslint).
+6. `./equin check` passes (plugin-boundaries, plugins-doc-in-sync, eslint).

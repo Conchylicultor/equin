@@ -83,19 +83,19 @@ Root cause: typography, control-size, and z-index were put on the token system w
     - `package.json` (copy + rename), `CLAUDE.md`.
     - `lint/no-adhoc-radius.ts`: copy `plugins/primitives/plugins/text/lint/no-adhoc-typography.ts` shape verbatim (`collectTokens` + `baseClass` duplicated per precedent, `JSXAttribute` + `CallExpression` for `cn`/`clsx`, no tag filter). Ban: `baseClass(t) === "rounded"` or `/^rounded-\[/`. Message: use `rounded-sm/md/lg/…` (token-driven via `--radius`), or `rounded-full`/`rounded-none` for intentional shapes.
     - `lint/index.ts`: `{ name: "radius", rules: { "no-adhoc-radius": rule }, ignores: { "no-adhoc-radius": [allowlist] } }`. Generate allowlist **after** Phases 2–6: `rg -l -e '\brounded(\s|"|'\''|`)' plugins | sort` then prune migrated files; document the regen recipe in a header comment like `text/lint/index.ts:13–17`.
-    - No registry edits — auto-discovered by `./singularity build` via `lint.generated.ts`.
+    - No registry edits — auto-discovered by `./equin build` via `lint.generated.ts`.
 
 ## Verification
 
-1. `./singularity build` after Phase 1 (app.css `@utility` and CSS vars are build-time) and again after Phase 7 (lint discovery). The build also restarts the server + redeploys.
+1. `./equin build` after Phase 1 (app.css `@utility` and CSS vars are build-time) and again after Phase 7 (lint discovery). The build also restarts the server + redeploys.
 2. Baseline screenshots BEFORE changes, then after: `bun e2e/screenshot.mjs --url http://<worktree>.localhost:9000/agents --out /tmp/chrome-after` + clipped 2× shots of toolbar / sidebar / pane-edge. Check: one shared left inset across sidebar header, toolbar, pane header; fewer stacked lines top-left; visible 1px column separators in dark mode.
 3. Theme customizer: toggle density presets (Comfortable/Cozy/Compact) → chrome bar/pane heights scale; toggle Shape presets (Sharp/Rounded/Pill) → list rows now respond (previously frozen at 0.25rem).
-4. `./singularity check eslint` → `radius/no-adhoc-radius` is active; `row.tsx` / `resize-handle.tsx` NOT in the allowlist.
+4. `./equin check eslint` → `radius/no-adhoc-radius` is active; `row.tsx` / `resize-handle.tsx` NOT in the allowlist.
 5. Queue: pinned card calmer; segmented pills render within row width; no blank avatar discs.
 
 ## Risks
 
-- **app.css edits silently inert until `./singularity build`** — highest "it didn't work" trap.
+- **app.css edits silently inert until `./equin build`** — highest "it didn't work" trap.
 - **Four-source numeric agreement** (group default / `:root` / `.dark` / comfortable preset) must hold or themed vs unthemed diverge.
 - **Row radius blast radius**: ~30 consumer plugins; soft visual change but sweep screenshots (tree, nav, menus).
 - **Bell badge overlay**: badge must wrap the IconButton (relative+absolute), not nest inside; verify no clipping under the tooltip wrapper.

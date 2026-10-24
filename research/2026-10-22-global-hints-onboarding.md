@@ -262,7 +262,7 @@ ctl = { go(stepId), next(), end(reason), data, setData, navigate(url) }
 
 ## Verification
 
-1. **Unit tests** (`./singularity test plugins/hints`):
+1. **Unit tests** (`./equin test plugins/hints`):
    - the tip queue: order, settle window, withdraw on leave, nothing while seen state is pending
    - the tour reducer: next, alt, onAnchorLost, signal advance, every end path firing the exit
      hook

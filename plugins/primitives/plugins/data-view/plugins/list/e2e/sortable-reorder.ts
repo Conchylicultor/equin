@@ -18,7 +18,7 @@
  *
  * Needs a section with at least three draggable rows; refuses otherwise.
  *
- *   ./singularity run plugins/primitives/plugins/data-view/plugins/list/e2e/sortable-reorder.ts [--out <prefix>] [--headed]
+ *   ./equin run plugins/primitives/plugins/data-view/plugins/list/e2e/sortable-reorder.ts [--out <prefix>] [--headed]
  */
 import {
   arg,

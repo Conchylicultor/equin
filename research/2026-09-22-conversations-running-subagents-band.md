@@ -140,7 +140,7 @@ slot's existing `gap-sm`, and the slot is reorderable, so the user can move it.
 ### 3. Docs
 
 `running-agents/CLAUDE.md` (what it shows, the foreground/background rule,
-why there is no stop). `./singularity build` regenerates the plugin registry
+why there is no stop). `./equin build` regenerates the plugin registry
 and `docs/plugins-*.md`.
 
 ## Critical files
@@ -156,12 +156,12 @@ and `docs/plugins-*.md`.
 
 ## Verification
 
-1. `./singularity test plugins/conversations/plugins/conversation-view/plugins/running-agents`
+1. `./equin test plugins/conversations/plugins/conversation-view/plugins/running-agents`
    — `derive.test.ts` covers: foreground running → done; background with the
    placeholder result stays running until its `task-notification`; interrupted
    foreground (error result) ends; notification for an unknown `toolUseId` is
    ignored; non-Agent tool-calls ignored; launch order kept.
-2. `./singularity build` (background), then in the deployed worktree open a
+2. `./equin build` (background), then in the deployed worktree open a
    conversation and ask the agent to launch two foreground and one background
    Explore sub-agent: the band appears with 3 rows and ticking clocks; each row
    turns to "done" and leaves as it finishes; the band disappears after the last.
@@ -169,4 +169,4 @@ and `docs/plugins-*.md`.
 3. Screenshot via `e2e-harness/e2e/screenshot.ts --path /agents/c/<id>` in light
    and dark, and alongside the op-status banner during a build, to confirm the
    boxes stack cleanly.
-4. `./singularity check` (boundaries, data-view rule, lint) passes.
+4. `./equin check` (boundaries, data-view rule, lint) passes.

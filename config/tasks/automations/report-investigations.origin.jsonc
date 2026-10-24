@@ -1,4 +1,4 @@
-// @hash 86508071f28a
+// @hash 18bef14bd284
 {
   // Off, it files nothing.
   "enabled": false,
@@ -25,7 +25,7 @@
   // An event-triggered run starts this long after the last event of a burst — at most 6× it after the first.
   "settleMinutes": 10,
   // What the agent is told: the filed task's description, or the first prompt of an agent it launches on an existing task. {{variable}} placeholders are filled per task; {{pushPolicy}} says what the Push setting allows.
-  "prompt": "These reports were filed and nobody has investigated them yet. They arrived together, so they may share one root cause — check that first.\n\n{{reports}}\n\nBefore debugging, read the `debug` skill (`.claude/skills/debug/SKILL.md`) — the map of logs, profiling, slow-ops, crashes and DB surfaces.\n\n1. Find the root cause. Reproduce it if you can, and quote the evidence (log lines, trace, query) that pins it.\n2. Fix the cause, not the symptom — take the highest rung of the fix ladder in CLAUDE.md.\n3. Run `./singularity build` and confirm the reports stop recurring.\n4. If you cannot find or fix the cause, write up what you learned and raise a flag.\n\n{{pushPolicy}}",
+  "prompt": "These reports were filed and nobody has investigated them yet. They arrived together, so they may share one root cause — check that first.\n\n{{reports}}\n\nBefore debugging, read the `debug` skill (`.claude/skills/debug/SKILL.md`) — the map of logs, profiling, slow-ops, crashes and DB surfaces.\n\n1. Find the root cause. Reproduce it if you can, and quote the evidence (log lines, trace, query) that pins it.\n2. Fix the cause, not the symptom — take the highest rung of the fix ladder in CLAUDE.md.\n3. Run `./equin build` and confirm the reports stop recurring.\n4. If you cannot find or fix the cause, write up what you learned and raise a flag.\n\n{{pushPolicy}}",
   // Which reports qualify by their kind's severity: errors, errors and warnings, or everything.
   // Allowed values: "error", "warning", "everything"
   "severity": "error",

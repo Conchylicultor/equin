@@ -124,7 +124,7 @@ derivation) into this doc / Stage A notes, then delete. Checklist for a green bu
 - Remove the `defineCollection` entry from `TABLE_FACTORIES` (~line 36) **and** its co-located test
   assertion (~line 71, `isCandidatePath(".../collections/.../table-builder.ts")`) in
   `plugins/framework/plugins/tooling/plugins/checks/plugins/table-defs-in-schema-glob/check/index.ts`.
-- `bun install` + `./singularity build` regenerates docs (`plugins-compact.md`, `plugins-details.md`,
+- `bun install` + `./equin build` regenerates docs (`plugins-compact.md`, `plugins-details.md`,
   `primitives/CLAUDE.md`) — `plugins-doc-in-sync` covers the removal. No code imports exist (verified),
   so no other edits. Drops the parallel field model from day one, leaving only `fields/` and `config_v2`.
 
@@ -154,7 +154,7 @@ a unique index. Unit-test the derived DDL + schema.
 Re-express `SlowOp` as a field record (the nested `CallerBreakdownSchema`/`SlowOpSampleSchema` become
 the `json` fields' value schemas). Table + wire schema + row-shape all derive; delete the projection;
 the live-state loader returns `db.select()` rows directly. The footgun is structurally gone, and
-slow_ops rows can feed a data-view cell/filter for free. **Verify zero schema drift** — `./singularity
+slow_ops rows can feed a data-view cell/filter for free. **Verify zero schema drift** — `./equin
 build` must generate no new migration; if it does, adjust `meta` until the DDL is byte-identical.
 
 ### Stage E — Grow list-semantics into `defineEntity` on demand (revive the boilerplate-kill) [C]
@@ -184,10 +184,10 @@ should be entities, so the footgun cannot reappear.
 
 ## Verification (per stage)
 
-- **Stage 0:** `./singularity check type-check` passes with the guard; intentionally renaming a `SlowOp` field without updating the table fails `tsc` (then revert).
-- **Stages A–C:** `bun test` on the new capability/factory units; `./singularity check` (boundaries, type-check, `table-defs-in-schema-glob`).
-- **Stage D:** `./singularity build` generates **no new migration** (DDL identical); `migrations-in-sync` clean; open the Slow Ops debug pane at `http://<worktree>.localhost:9000` (Debug → Slow Ops) and confirm all fields incl. `recentSamples` render; `mcp__singularity__query_db` confirms `slow_ops` structure unchanged.
-- **Stage 1:** `./singularity check` green after deletion (`plugins-doc-in-sync`, `table-defs-in-schema-glob`, `type-check`, boundaries); `rg defineCollection` returns nothing.
+- **Stage 0:** `./equin check type-check` passes with the guard; intentionally renaming a `SlowOp` field without updating the table fails `tsc` (then revert).
+- **Stages A–C:** `bun test` on the new capability/factory units; `./equin check` (boundaries, type-check, `table-defs-in-schema-glob`).
+- **Stage D:** `./equin build` generates **no new migration** (DDL identical); `migrations-in-sync` clean; open the Slow Ops debug pane at `http://<worktree>.localhost:9000` (Debug → Slow Ops) and confirm all fields incl. `recentSamples` render; `mcp__singularity__query_db` confirms `slow_ops` structure unchanged.
+- **Stage 1:** `./equin check` green after deletion (`plugins-doc-in-sync`, `table-defs-in-schema-glob`, `type-check`, boundaries); `rg defineCollection` returns nothing.
 - **Stage E:** the migrated boilerplate plugins (prompt-templates, …) produce **no migration drift** (DDL identical to their hand-written tables) and their list UI/CRUD behaves as before.
 
 ## Decided

@@ -106,7 +106,7 @@ sprite symbol id is `ms-<styleKey>-<name>`; brands use `si-<name>`.
 
 ### Only the icons the code uses ship: the manifest
 
-- `./singularity build` codegen scans the repo for `symbol("…")` /
+- `./equin build` codegen scans the repo for `symbol("…")` /
   `brand("…")` literals. It writes
   `plugins/ui/plugins/icons/core/icon-manifest.generated.ts` (sorted name
   lists).
@@ -245,11 +245,11 @@ Scale: about 630 files and 244 distinct `Md*` icons.
 
 ## Verification
 
-1. `./singularity check` passes: tsc (every name resolves, every slot host
+1. `./equin check` passes: tsc (every name resolves, every slot host
    updated), eslint (no `react-icons`, literal names), manifest in sync,
    app-icon check, boundaries.
-2. `./singularity test`, fully green.
-3. `./singularity build` succeeds, and the app renders with icons at first
+2. `./equin test`, fully green.
+3. `./equin build` succeeds, and the app renders with icons at first
    paint (screenshot harness, cold load, no empty icon boxes).
 4. Theme: in the customizer, set an app to `rounded` / `filled` / `light` and
    screenshot that app beside another. Only that app changes, and no icon box

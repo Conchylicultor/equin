@@ -45,7 +45,7 @@ The gateway today hardcodes `.localhost` in `parseWorktree()` (`gateway/proxy.go
 
 ## Step 3 — Profile / Export System
 
-**Goal:** `./singularity build --profile equin-ai` produces a deployable bundle with only the selected plugins.
+**Goal:** `./equin build --profile equin-ai` produces a deployable bundle with only the selected plugins.
 
 This is the foundational primitive for equin as a product platform. Every equin product is a profile.
 
@@ -58,7 +58,7 @@ This is the foundational primitive for equin as a product platform. Every equin 
 
 ### Build system changes
 
-- [ ] `--profile <name>` flag on `./singularity build`
+- [ ] `--profile <name>` flag on `./equin build`
   - Selects which `web/src/plugins.<profile>.ts` registry to use for the Vite build
   - Sets `VITE_MODE` / `VITE_PROFILE` env for frontend
   - Sets `SINGULARITY_PROFILE` env for the backend (passed via `Spec.Env` to the spawned process)
@@ -118,8 +118,8 @@ This is the foundational primitive for equin as a product platform. Every equin 
 ### CI
 
 - [ ] GitHub Actions workflow:
-  - `./singularity build --profile equin-ai` (or equivalent build command)
-  - Run checks (`./singularity check`)
+  - `./equin build --profile equin-ai` (or equivalent build command)
+  - Run checks (`./equin check`)
   - Package artifact
 - [ ] **Decision:** Docker container vs tarball + rsync to server
   - Docker: portable, reproducible, blue-green swap is easy

@@ -270,7 +270,7 @@ persistence there would restore a stale anchor on every channel switch.
 
 ## Verification
 
-1. `./singularity build`, then use `http://<worktree>.localhost:9000`.
+1. `./equin build`, then use `http://<worktree>.localhost:9000`.
 2. `bun test plugins/primitives/plugins/auto-scroll/web/internal/sticky-scroll-machine.test.ts`
 3. **The reported bug.** Open a conversation containing code blocks (forces the
    shiki async path), scroll to the very bottom, refresh. Assert
@@ -299,4 +299,4 @@ persistence there would restore a stale anchor on every channel switch.
     is the model for waiting on transcript rows.
 12. Guard: `rg '\.(scrollTop|scrollLeft)\s*=[^=]|\.(scrollTo|scrollBy)\('` must
     still match only `auto-scroll`'s allowlisted files.
-13. `./singularity check`.
+13. `./equin check`.

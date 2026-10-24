@@ -148,7 +148,7 @@ Notes / why this is safe:
 
 ## Verification
 
-1. `./singularity build` (regenerates plugin docs so the `plugins-doc-in-sync`
+1. `./equin build` (regenerates plugin docs so the `plugins-doc-in-sync`
    check stays green after the new `sortable-list` import).
 2. Open the app at `http://<worktree>.localhost:9000`, open 3+ tabs (`+`).
 3. **Drag** a tab left/right by its chip body → it reorders with smooth

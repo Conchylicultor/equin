@@ -30,7 +30,7 @@
 // 11. restore "Before restore": N comes back under its own id with doc bytes
 //     identical to before the first restore, and B is trashed again.
 //
-// Usage: ./singularity run plugins/apps/plugins/pages/plugins/history/e2e/crdt-restore-verify.ts [--url <deploy>] [--out <path>]
+// Usage: ./equin run plugins/apps/plugins/pages/plugins/history/e2e/crdt-restore-verify.ts [--url <deploy>] [--out <path>]
 import {
   agentFetch,
   arg,

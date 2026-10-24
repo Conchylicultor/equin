@@ -130,7 +130,7 @@ Metadata generator + check, a virtualized grid, `onSelect(name)`.
 `AvatarPicker` (`primitives/avatar`) passes the name through.
 
 ### 3. Data migration
-- **SQL, one custom migration** (`./singularity build --custom-migration --migration-name remap_saved_icons_to_symbols`),
+- **SQL, one custom migration** (`./equin build --custom-migration --migration-name remap_saved_icons_to_symbols`),
   created **before** the schema change so it gets the earlier timestamp (see
   the migrations CLAUDE.md "data migration before a schema change"):
   - `agents.icon` via `UPDATE … FROM (VALUES …) m(old,new)` (VALUES generated
@@ -195,10 +195,10 @@ Metadata generator + check, a virtualized grid, `onSelect(name)`.
 - `virtual-rows` for the picker grid; the precedent in `backfill_avatar_icon_aliases.sql` for key-remap SQL.
 
 ## Verification
-1. `./singularity check`: tsc (no `SvgNode` left, every `PageIcon`/`Avatar` site updated), eslint (`no-react-icons` with no exemption), picker-metadata in sync, migrations in sync, boundaries.
-2. `./singularity test`: mapping-table totality, loader batching, route, config-migration ledger (applied once, hash re-stamped), `callout-block` / `stored-block-data` / `parse-block-data` suites updated.
+1. `./equin check`: tsc (no `SvgNode` left, every `PageIcon`/`Avatar` site updated), eslint (`no-react-icons` with no exemption), picker-metadata in sync, migrations in sync, boundaries.
+2. `./equin test`: mapping-table totality, loader batching, route, config-migration ledger (applied once, hash re-stamped), `callout-block` / `stored-block-data` / `parse-block-data` suites updated.
 3. Migration on a fork of real data: `query_db` before/after. `agents.icon`, `page_blocks.data->>'icon'` (page/callout), preprompt snapshots and history snapshots all hold `SymbolName`s; no `iconSvgNodes` key remains; the classic-key count is 0.
-4. `./singularity build`, then screenshots: agents list, pages sidebar + breadcrumb, a callout, category avatars, preprompt chips at cold load. Saved icons are present at first paint (resident), with no empty boxes.
+4. `./equin build`, then screenshots: agents list, pages sidebar + breadcrumb, a callout, category avatars, preprompt chips at cold load. Saved icons are present at first paint (resident), with no empty boxes.
 5. Theme: set an app to `rounded` / `filled` / `light`. Its saved icons (agent avatars, page icons) change with its code icons; another app's don't.
 6. Picker: search "robot" finds `smart-toy`; scrolling loads rows; picking saves a kebab name and it renders everywhere.
 7. Page history: an old version's preview shows its icon.

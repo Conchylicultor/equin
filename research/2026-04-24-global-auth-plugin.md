@@ -539,7 +539,7 @@ Document in `plugins/auth/CLAUDE.md`:
 
 End-to-end smoke test after implementation:
 
-1. `./singularity build` in main worktree — deploys to `http://singularity.localhost:9000`. Verify the gateway also routes `http://localhost:9000/api/auth/start/` to the `singularity` backend.
+1. `./equin build` in main worktree — deploys to `http://singularity.localhost:9000`. Verify the gateway also routes `http://localhost:9000/api/auth/start/` to the `singularity` backend.
 2. Sidebar → Accounts → initially shows "Google: Credentials not configured".
 3. Click Setup → follow the Google Cloud Console instructions (Desktop-app client type, redirect URI `http://localhost:9000/api/auth/callback/google`) → paste only the client ID into Settings.
 4. Back to Accounts → click Connect Google → OAuth popup opens on `http://localhost:9000/...` → complete consent → popup closes, row flips to "Connected as <email>".

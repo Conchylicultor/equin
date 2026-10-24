@@ -1,6 +1,6 @@
 /**
  * Tests for the `no-anonymous-passthrough` lint rule. Run with
- * `./singularity test plugins/primitives/plugins/passthrough`.
+ * `./equin test plugins/primitives/plugins/passthrough`.
  *
  * The rule is purely syntactic, so this needs no TS program — unlike its
  * sibling `no-unanchored-passthrough`, whose test builds one.

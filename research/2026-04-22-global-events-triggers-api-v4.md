@@ -10,7 +10,7 @@ v3 made one table do double duty for cron and event triggers, with a single null
 2. **Single-key matching only.** "When task X completes *and* it's owned by agent Y" had no clean expression. Escape hatches (`'X:Y'` strings, post-fetch filtering in actions) were ugly.
 3. **Type safety stops at the API edge.** `match_value TEXT` and `action_config JSONB` are unchecked at the storage layer. Renaming a key in `action_config` silently breaks subscribers.
 
-v4's bet is that the per-event-type-table cost (one migration per new event type) is smaller than these costs, given Singularity's automatic migration pipeline (`./singularity build`) and small plugin count.
+v4's bet is that the per-event-type-table cost (one migration per new event type) is smaller than these costs, given Singularity's automatic migration pipeline (`./equin build`) and small plugin count.
 
 ## What changes from v3
 

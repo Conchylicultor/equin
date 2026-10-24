@@ -8,7 +8,7 @@
 // (research/2026-10-16-map-zoom-smoothness.md).
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/places/plugins/places-map/e2e/zoom-perf.ts \
+//   ./equin run plugins/apps/plugins/places/plugins/places-map/e2e/zoom-perf.ts \
 //     [--out /tmp/places-zoom] [--top 15] [--steps 8] [--hide-pins] [--no-profile] [--trace] [--css "<rules>"] [--headed]
 //
 // `--hide-pins` hides every pin (the pin canvas and any lifted pin, display: none) before zooming — the

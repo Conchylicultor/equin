@@ -13,7 +13,7 @@
 //   2. The CLI command declaration (`defineCliCommand` and friends), which every
 //      contributing plugin's `cli/index.ts` imports. Node builtins only, and
 //      NOTHING here may grow an npm import: a declaration loads on every single
-//      `./singularity` invocation, and `cli:command-declarations-light` measures
+//      `./equin` invocation, and `cli:command-declarations-light` measures
 //      that closure.
 
 export { resolveGitDir } from "./internal/git-dir";
@@ -39,5 +39,3 @@ export type {
   CliCommandSpec,
   CliOptionSpec,
 } from "./internal/command";
-
-export { CLI_NAME, CLI_NAMES, isCliName } from "./internal/cli-name";

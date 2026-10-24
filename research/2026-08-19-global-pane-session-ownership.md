@@ -219,7 +219,7 @@ conflicts on the already-present `baf9c302` row — `ON CONFLICT DO NOTHING`, no
 `seen_at` touched. **The foreign entry stays the chain tail forever.**
 
 So: a guarded DML data migration
-(`./singularity build --custom-migration --migration-name repair_conv_1786969506_7e03_foreign_session`),
+(`./equin build --custom-migration --migration-name repair_conv_1786969506_7e03_foreign_session`),
 following the `20260710_…__backfill_conversation_session_chain.sql` precedent:
 
 ```sql
@@ -312,7 +312,7 @@ partitioned; nothing resolves → empty, no anchor — the historical chain
 
 ## Verification
 
-1. `./singularity build` (background), then `./singularity test plugins/conversations/plugins/runtime-tmux plugins/conversations/plugins/transcript-watcher plugins/debug/plugins/session-divergence`.
+1. `./equin build` (background), then `./equin test plugins/conversations/plugins/runtime-tmux plugins/conversations/plugins/transcript-watcher plugins/debug/plugins/session-divergence`.
 2. **Resolution, live**: with the app deployed, confirm via `query_db` that
    `conversations.claude_session_id` for `conv-1786969506-7e03` reads
    `baf9c302-…` and that no conversation shares a `claude_session_id` with

@@ -73,7 +73,7 @@ if method ∉ SAFE && !endpoint.agentWrite && isProtectedDeploy():
   `@plugins/infra/plugins/runtime-identity/core` — computed once, so worktree
   backends pay nothing.
 - The 403 body is a typed, explanatory message (`"main is read-only for agent
-  sessions — reproduce on your own build (./singularity build)"`), so the
+  sessions — reproduce on your own build (./equin build)"`), so the
   agent reading the failed request, console or toast learns why and where to
   go. 403 is below the ≥500 crash-report threshold, so it files no report.
 
@@ -137,7 +137,7 @@ worktrees.
 
 ## Verification
 
-- Unit (`./singularity test plugins/infra/plugins/endpoints`): gate refuses a
+- Unit (`./equin test plugins/infra/plugins/endpoints`): gate refuses a
   non-GET with agent headers when main, passes without headers, passes on a
   non-main namespace, passes `agentWrite` endpoints, never touches GET.
 - `write-drain` test: a stamped request is not tracked.

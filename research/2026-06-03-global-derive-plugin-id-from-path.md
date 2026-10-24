@@ -108,13 +108,13 @@ display.)
   - **If some:** generate an idempotent data migration rewriting the prefix:
     `contribution_id = '<newId>' || substring(contribution_id from position(':' in contribution_id))`
     `WHERE contribution_id LIKE '<oldId>:%'`, one statement per changed plugin
-    that has rows. Go through `./singularity build` (never hand-run drizzle).
+    that has rows. Go through `./equin build` (never hand-run drizzle).
 
 ### 5. Build, regenerate, verify in-sync
-- `./singularity build` regenerates the plugin registries and docs. Docgen is
+- `./equin build` regenerates the plugin registries and docs. Docgen is
   blind to the barrel `id` (it derives everything from paths), so
   `plugins-doc-in-sync` and the registry stay consistent. Run
-  `./singularity check`.
+  `./equin check`.
 
 ### 6. central-core (NEEDS YOUR EXPLICIT APPROVAL)
 Central plugins (5: `auth`, `auth-google`, `auth-notion`,
@@ -126,7 +126,7 @@ which CLAUDE.md forbids without explicit in-conversation approval.
   web/server), pending your approval.
 - **Fallback if you'd rather not touch central-core now:** leave the 5 central
   plugins hand-authoring `id`, and instead add the small build-time
-  duplicate-id `./singularity check` *for central only* as a backstop. Slight
+  duplicate-id `./equin check` *for central only* as a backstop. Slight
   inconsistency, documented.
 
 ## Critical files
@@ -144,9 +144,9 @@ which CLAUDE.md forbids without explicit in-conversation approval.
 
 ## Verification
 
-1. `./singularity build` succeeds; server restarts clean (no duplicate-id throw,
+1. `./equin build` succeeds; server restarts clean (no duplicate-id throw,
    no load failures).
-2. `./singularity check` passes (`migrations-in-sync`, `plugins-doc-in-sync`,
+2. `./equin check` passes (`migrations-in-sync`, `plugins-doc-in-sync`,
    `eslint`, boundaries).
 3. App loads at `http://<worktree>.localhost:9000`: the previously-affected
    surfaces are intact — Settings toggles present, sidebar/toolbar render all

@@ -23,9 +23,9 @@
  * been migrated. Same shape as `server-core/scripts/backfill-pushes.ts`.
  *
  * Usage:
- *   ./singularity run plugins/infra/plugins/paths/scripts/migrate-data-layout.ts                # dry run
- *   ./singularity run plugins/infra/plugins/paths/scripts/migrate-data-layout.ts --apply        # pass 1
- *   ./singularity run plugins/infra/plugins/paths/scripts/migrate-data-layout.ts --drop-legacy  # pass 2
+ *   ./equin run plugins/infra/plugins/paths/scripts/migrate-data-layout.ts                # dry run
+ *   ./equin run plugins/infra/plugins/paths/scripts/migrate-data-layout.ts --apply        # pass 1
+ *   ./equin run plugins/infra/plugins/paths/scripts/migrate-data-layout.ts --drop-legacy  # pass 2
  *
  * No flag prints BOTH passes' plans and touches nothing. Pass 2 deletes things,
  * so it gets a reviewable dry run too — and there is no `--dry-run
@@ -454,7 +454,7 @@ function refuseIfGatewayAlive(): void {
       "",
       `    kill ${pid}`,
       "    bun plugins/infra/plugins/paths/scripts/migrate-data-layout.ts --apply",
-      "    ./singularity start",
+      "    ./equin start",
       "",
     ].join("\n"),
   );
@@ -589,6 +589,6 @@ for (const step of steps) {
 console.log(`Done. ${steps.length} step(s) executed.`);
 if (APPLY)
   console.log(
-    "\nNow start the gateway again: ./singularity start\n" +
+    "\nNow start the gateway again: ./equin start\n" +
       "Then `ls -l` the root: every legacy name should be a symlink into its kind dir.",
   );

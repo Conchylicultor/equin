@@ -10,7 +10,7 @@
  * `check/` is outside that graph (imperative-create-table-allowlisted.ts uses
  * the fixture the same way).
  *
- * Requires the running embedded cluster (`./singularity build` first).
+ * Requires the running embedded cluster (`./equin build` first).
  */
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";

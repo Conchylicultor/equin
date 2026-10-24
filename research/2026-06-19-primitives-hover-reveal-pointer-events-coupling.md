@@ -188,7 +188,7 @@ Modify:
 
 ## Verification
 
-1. `./singularity build` — regenerates the lint registry (`lint.generated.ts` picks up
+1. `./equin build` — regenerates the lint registry (`lint.generated.ts` picks up
    the new `lint/index.ts`), builds, and runs checks. The `type-check`/`eslint` check
    must be green: the 3 migrated sites pass, the rest are allowlisted.
 2. `bunx eslint plugins/primitives/plugins/data-table` (and the gallery/config files)

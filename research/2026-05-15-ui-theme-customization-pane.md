@@ -195,7 +195,7 @@ function resetOverride(key: string, mode: "light" | "dark") {
 
 ## Verification
 
-1. `./singularity build` succeeds
+1. `./equin build` succeeds
 2. Settings → UI Themes → "Customize" button opens the theme customizer pane
 3. All 7 sections render with correct current token values
 4. Switching global preset updates all section values live

@@ -195,7 +195,7 @@ Reused, not rebuilt: `MultiSpanLane` / `SpanBar` / `GanttContainer` / `formatDur
 
 ## Verification
 
-1. `./singularity build` — then `./singularity check` (type-check, boundaries, docs-in-sync).
+1. `./equin build` — then `./equin check` (type-check, boundaries, docs-in-sync).
 2. Unit:
    ```bash
    bun test plugins/infra/plugins/runtime-profiler/core/recorder.test.ts

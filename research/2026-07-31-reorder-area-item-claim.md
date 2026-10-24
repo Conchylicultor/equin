@@ -191,7 +191,7 @@ Deliberately **not** wrapped:
 
 ## Verification
 
-1. `./singularity build`, then `./singularity check`.
+1. `./equin build`, then `./equin check`.
 2. **Regression test** — `plugins/reorder/web/__tests__/item-claim.test.tsx`
    (vitest, auto-discovered by the root config; run with
    `bun run test:dom plugins/reorder`). Mount `ReorderAreaContext.Provider` +
@@ -239,5 +239,5 @@ Deliberately **not** wrapped:
   for a render slot (one contribution = one rendered thing); the claim makes the
   mismatch unreachable rather than fixing the key, which is the right order —
   changing the key would change persisted `ReorderTree` `entryKey`s.
-- Promoting the floor to a lint rule or `./singularity check`. There is no static
+- Promoting the floor to a lint rule or `./equin check`. There is no static
   signal for "rendered beneath an area", so the vitest regression is the guard.

@@ -11,7 +11,7 @@
 // bar's corner).
 //
 // Usage:
-//   ./singularity run plugins/shell/plugins/global-action-bar/e2e/collapsed-mark.ts \
+//   ./equin run plugins/shell/plugins/global-action-bar/e2e/collapsed-mark.ts \
 //     [--path /agents] [--out /tmp/collapsed-mark] [--wait-ring 600]
 
 import {

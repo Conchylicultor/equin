@@ -151,8 +151,8 @@ If/when a second SSE handler genuinely needs async setup, revisit with Option B.
 
 ## Verification
 
-1. `./singularity build`.
+1. `./equin build`.
 2. Open `/c/<any-id>` in Chrome; DevTools → Network filtered to `/api/events`. Expect exactly two requests over the lifetime of the page: `urls=stream` then `urls=stream,edited-files`. Both stay open. Periodic `: ping` frames every ~20 s.
 3. Toggle between two conversations rapidly. Expect one reopen per switch, no retries.
 4. Edited-files counter still updates within ~1 s of touching a file in the worktree.
-5. `./singularity check` passes.
+5. `./equin check` passes.

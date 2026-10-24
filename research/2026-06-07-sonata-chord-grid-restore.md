@@ -96,7 +96,7 @@ db.select().from(_songChordGridExt) → rows.map(r => ({songId:r.parentId, ...})
 
 **`server/index.ts`** — register the three routes + `Resource.Declare(songChordGridLiveResource)`;
 re-export `songChordGrid` and the live resource. (Optional `onReady` seed — see
-"Optional polish".) New server plugin is auto-discovered by `./singularity build`.
+"Optional polish".) New server plugin is auto-discovered by `./equin build`.
 
 ### 2. Library server — one new generic helper
 
@@ -197,7 +197,7 @@ from `@plugins/apps/plugins/sonata/plugins/library/web`, exactly as
 
 ## Verification
 
-1. `./singularity build` (regenerates the `sonata_songs_ext_chord_grid` migration,
+1. `./equin build` (regenerates the `sonata_songs_ext_chord_grid` migration,
    builds web/server, restarts; commit the generated migration). Confirm the build
    publishes (checks/health green — stale dist otherwise, per memory).
 2. Open `http://att-1780821184-4qoa.localhost:9000` → Sonata → Library. Verify a
@@ -213,7 +213,7 @@ from `@plugins/apps/plugins/sonata/plugins/library/web`, exactly as
    reflects edits.
 6. Delete the song from the gallery → confirm the `sonata_songs_ext_chord_grid`
    row is gone (FK CASCADE).
-7. `./singularity check` passes (migrations-in-sync, eslint, plugin-boundaries,
+7. `./equin check` passes (migrations-in-sync, eslint, plugin-boundaries,
    plugins-doc-in-sync).
 8. Scripted check (optional): `bun e2e/screenshot.mjs --url <player-url> --click
    "New Chord Grid" --out /tmp/chord` to confirm the affordance + editor render.

@@ -19,7 +19,7 @@
 //     counted, and the zip row keeps its byte size.
 //
 // Usage:
-//   ./singularity run plugins/apps/plugins/file-explorer/e2e/item-count-verify.ts \
+//   ./equin run plugins/apps/plugins/file-explorer/e2e/item-count-verify.ts \
 //     [--out /tmp/items] [--headed]
 
 import {

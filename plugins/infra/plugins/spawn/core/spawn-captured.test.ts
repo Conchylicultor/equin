@@ -398,7 +398,7 @@ test("a child that survives the deadline and succeeds is not reported as timed o
   // still running", never "our deadline elapsed without us observing an exit" —
   // the two come apart because `child.exitCode` is only populated at reap time,
   // and reaping needs the event loop the parent may be blocking. In the field,
-  // `./singularity check` blocks its own loop ~77s building TypeScript programs,
+  // `./equin check` blocks its own loop ~77s building TypeScript programs,
   // and a `git worktree list` that finished in 73ms came back
   // `timedOut: true, exitCode: 0` — a successful result discarded as a timeout,
   // which made `worktreeListPaths` throw and killed the CLI at boot.

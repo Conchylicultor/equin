@@ -44,7 +44,7 @@ may now dominate (154 CPU-s per 900 files vs 34 s warm tsc).
 ## Measurements (each answers one unknown from the track page)
 
 All scripts under `.check-scratch/rung2/` (gitignored, outside type-check's walk), run with
-`./singularity run`, single process at a time, interleaved A/B, CPU-s reported over wall (fleet load
+`./equin run`, single process at a time, interleaved A/B, CPU-s reported over wall (fleet load
 noise). Results tables go straight to the wiki page.
 
 **M1 — isolatedDeclarations debt.** Run the repo program with `isolatedDeclarations: true,

@@ -129,12 +129,12 @@ Not ideal (title in the middle), but this is the standard renderSlot tradeoff â€
 4. Remove TitlePrefix from conversation-view/slots.ts
 5. Migrate agents plugin: TitlePrefix â†’ Header, update component to use useData()
 6. Migrate all 5 chip contributors to Conversation.Header
-7. `./singularity build`
+7. `./equin build`
 8. Visual verification
 
 ## Verification
 
-1. `./singularity build` passes
+1. `./equin build` passes
 2. Normal conversation: title text visible with chips in header
 3. Agent conversation: avatar + title + chips all in one row
 4. AllowMonitorChip appears only when allow-files exist

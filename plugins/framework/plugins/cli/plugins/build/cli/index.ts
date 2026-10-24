@@ -1,7 +1,7 @@
 import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
 
 /**
- * The command the whole agent workflow runs on: `./singularity build` is how a
+ * The command the whole agent workflow runs on: `./equin build` is how a
  * checkout's work becomes a running app at `http://<worktree>.localhost:9000`.
  *
  * It is a leaf with two postures over one pipeline — deploy this checkout into

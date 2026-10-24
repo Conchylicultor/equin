@@ -1,6 +1,6 @@
 /**
  * Tests for the `no-render-phase-peek` lint rule. Run with
- * `./singularity test plugins/primitives/plugins/install-sink`.
+ * `./equin test plugins/primitives/plugins/install-sink`.
  *
  * The rule bans a `peek…()` call that executes during React render. It must NOT
  * fire from a deferred boundary (an effect callback, a `useCallback`, a closure

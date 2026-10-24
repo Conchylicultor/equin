@@ -3,8 +3,8 @@
 Status: **implemented** (uncommitted in this worktree, for review). Sibling: **Fix A**
 (`research/fix-a-deterministic-slots-scan.md`) made the reorderable-slots scan a pure,
 deterministic function of committed source. Fix B builds on top: it makes
-`./singularity push`'s post-rebase normalize step regenerate the **same** repo-tree
-codegen artifact set as `./singularity build`, via a single shared pipeline, so a full
+`./equin push`'s post-rebase normalize step regenerate the **same** repo-tree
+codegen artifact set as `./equin build`, via a single shared pipeline, so a full
 build immediately after a push is a genuine no-op and push-time checks catch all
 manifest drift.
 
@@ -20,7 +20,7 @@ command regenerated only **four** of the repo-tree codegen artifacts:
 - plugin docs (compact / details / per-plugin CLAUDE.md autogen blocks)
 - config origins
 
-The full `./singularity build` additionally regenerates three repo-tree manifests that
+The full `./equin build` additionally regenerates three repo-tree manifests that
 `regen-generated` skipped:
 
 - `generateReorderableSlots` → `plugins/reorder/shared/reorderable-slots.generated.ts`
@@ -172,8 +172,8 @@ follow-up for whoever picks up Fix A §3.2.
 
 ## 5. Verification (all green)
 
-1. **Build-is-a-no-op (double build).** `./singularity build` → exit 0. A second
-   `./singularity build` on the already-built tree left the diff **unchanged** (326 →
+1. **Build-is-a-no-op (double build).** `./equin build` → exit 0. A second
+   `./equin build` on the already-built tree left the diff **unchanged** (326 →
    326 lines). The pipeline is idempotent across full builds.
 2. **Push normalize parity (`regen-generated`).**
    - On a clean (already-built) tree, `bun …/cli/bin/index.ts regen-generated` is a
@@ -184,7 +184,7 @@ follow-up for whoever picks up Fix A §3.2.
      `token-group-vars.generated.ts`) and running `regen-generated` **restored each to its
      correct value** (sha round-trip confirmed). Before Fix B these survived
      `regen-generated` untouched — proving the parity gap is closed.
-3. **`./singularity check`** — exit 0, every check `ok`. Specifically green and in the
+3. **`./equin check`** — exit 0, every check `ok`. Specifically green and in the
    default set: `reorderable-slots-in-sync`, `data-views-in-sync`, `token-group-vars-in-sync`,
    `plugins-doc-in-sync`, `config-origins-in-sync`, `plugins-registry-in-sync`,
    `barrel-stubs-in-sync`, `type-check`. Each of the three newly-covered manifests has its

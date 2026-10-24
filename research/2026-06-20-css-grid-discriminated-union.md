@@ -135,14 +135,14 @@ Update `plugins/primitives/plugins/css/plugins/grid/web/internal/grid-template.t
 
 ## Docs to sync
 
-- `plugins/primitives/plugins/css/plugins/grid/CLAUDE.md` — the "Props" list and the track-function table say `cols` "**wins** over `minCellWidth`". Reword to: the two paths are an **xor** discriminated union — a fixed grid takes `cols` (no `minCellWidth`/`mode`), a responsive grid takes `minCellWidth` (+ optional `mode`); passing both is a type error. Update the autogen "Plugin reference" block via `./singularity build` if it drifts.
+- `plugins/primitives/plugins/css/plugins/grid/CLAUDE.md` — the "Props" list and the track-function table say `cols` "**wins** over `minCellWidth`". Reword to: the two paths are an **xor** discriminated union — a fixed grid takes `cols` (no `minCellWidth`/`mode`), a responsive grid takes `minCellWidth` (+ optional `mode`); passing both is a type error. Update the autogen "Plugin reference" block via `./equin build` if it drifts.
 - `research/2026-06-20-css-primitives-audit.md` §8 item 4 — mark resolved (the union landed); the §2 taxonomy row and §3 decision-tree mention of "Grid (minCellWidth + mode)" can note the `cols` alternative. Low priority; the audit is a dated snapshot.
 
 ## Verification
 
-1. `./singularity build` — regenerates nothing schema-wise; compiles frontend. The `type-check` check fails loudly on any fixed-`cols` caller still passing `minCellWidth` (this is the safety net that proves all call sites were migrated).
+1. `./equin build` — regenerates nothing schema-wise; compiles frontend. The `type-check` check fails loudly on any fixed-`cols` caller still passing `minCellWidth` (this is the safety net that proves all call sites were migrated).
 2. `bun test plugins/primitives/plugins/css/plugins/grid/web/internal/grid-template.test.ts` — pure track-function assertions pass.
-3. `./singularity check` — `type-check` + `eslint` + `plugins-doc-in-sync` green.
+3. `./equin check` — `type-check` + `eslint` + `plugins-doc-in-sync` green.
 4. Visual smoke (optional): load a fixed-grid surface (e.g. `http://<worktree>.localhost:9000` → Settings → Appearance theme customizer mode tabs, or the icon picker) and confirm columns render identically — geometry is unchanged, only the dead prop is gone.
 
 ## Out of scope

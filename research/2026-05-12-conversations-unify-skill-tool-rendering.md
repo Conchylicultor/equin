@@ -77,7 +77,7 @@ skill/
 
 ## Verification
 
-1. `./singularity build`
+1. `./equin build`
 2. Open a conversation that contains a Skill tool call (e.g. one that used `/plan`)
 3. Verify: single collapsible card instead of card + user bubble
 4. Verify: skill name, args, and injected context all visible in the card

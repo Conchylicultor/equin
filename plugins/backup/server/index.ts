@@ -37,7 +37,7 @@ export default {
   },
   // One token: `backupRunJob` mounts the queue job (with its nightly schedule),
   // its supervised-run kind — which is what makes a backup reconcilable after a
-  // restart — and the `run` body's task, which `./singularity supervised-exec`
+  // restart — and the `run` body's task, which `./equin supervised-exec`
   // resolves in the child.
   register: [backupRunJob],
 } satisfies ServerPluginDefinition;

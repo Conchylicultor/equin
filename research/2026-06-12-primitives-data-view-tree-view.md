@@ -209,8 +209,8 @@ are not part of these tasks.)
 
 ## Verification
 
-1. `./singularity build` from the worktree; confirm clean start and
-   `./singularity check` passes (boundaries, migrations, eslint, plugins-doc-in-sync).
+1. `./equin build` from the worktree; confirm clean start and
+   `./equin check` passes (boundaries, migrations, eslint, plugins-doc-in-sync).
 2. Open `http://att-1781116467-1uup.localhost:9000/pages` and exercise the migrated
    sidebar with `e2e/screenshot.mjs` (scripted, before/after):
    - tree renders nested pages; chevron expand/collapse persists (server round-trip);

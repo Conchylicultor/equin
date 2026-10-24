@@ -1,4 +1,4 @@
-# Unified generated-file conflict resolution in `./singularity push`
+# Unified generated-file conflict resolution in `./equin push`
 
 ## Context
 
@@ -48,7 +48,7 @@ Replace all entries. `regen-docs` driver references become `regen-generated`:
 
 ```gitattributes
 # Auto-generated artifacts: resolved by custom merge drivers in plugins/framework/plugins/cli/scripts/
-# plus a post-rebase normalize step in `./singularity push` that regenerates
+# plus a post-rebase normalize step in `./equin push` that regenerates
 # canonical content from the rebased source tree.
 
 # Plugin docs (fully generated)
@@ -117,8 +117,8 @@ Replace `docs` marker with `generated` marker:
 
 ## Verification
 
-1. `./singularity build` — registers the new driver in git config
+1. `./equin build` — registers the new driver in git config
 2. `git config --local --get-regexp 'merge\.regen'` — should show 3 drivers (`regen-generated`, `regen-claudemd`, `regen-migrations`)
 3. `bun plugins/framework/plugins/cli/bin/index.ts regen-generated` — should complete idempotently
 4. Conflict simulation: two branches adding different plugins, push one — should auto-resolve `web.generated.ts` etc.
-5. `./singularity check` — `plugins-registry-in-sync`, `barrel-stubs-in-sync`, `plugins-doc-in-sync` must pass
+5. `./equin check` — `plugins-registry-in-sync`, `barrel-stubs-in-sync`, `plugins-doc-in-sync` must pass

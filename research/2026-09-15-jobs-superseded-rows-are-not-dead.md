@@ -155,6 +155,6 @@ replay of completed steps is the ordinary resume behaviour.
    lock on a direct client, queue the same key again, destroy the socket, then
    `UNSAFE_sweepStuckLocks()`. Assert: the old row is deleted (not released),
    no row matches the dead predicate, and the new row runs to completion.
-3. `./singularity test plugins/infra/plugins/jobs`, then `./singularity build`.
+3. `./equin test plugins/infra/plugins/jobs`, then `./equin build`.
    Call the harness on this worktree's deploy, and `query_db` the worktree
    database to confirm the trigger exists.

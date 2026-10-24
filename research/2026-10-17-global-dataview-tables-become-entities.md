@@ -28,7 +28,7 @@ Real gaps, each closed by a primitive rather than a per-table workaround:
 1. **`text[]` has no field storage** (`build_runs.targets`, `deploy_deployments.hostnames`; the wire already says `stringListField`).
 2. **Generated column** (`job_runs.id` = `job_name || ':' || seq`): `defineEntity` cannot spell `generatedAlwaysAs`.
 3. **Columns that must never reach the wire** (`pid` ×3, `launchedFrom`/`legRunId`, `sshPublicKey`, `dedupKey`, page_blocks' `docRank`/`deletedAt`/`trashEntryId`): today they are simply absent from the ref. Once the ref IS the table they must be in it, and the browser must not be able to `pick` them. `serverOnly` exists only in the server `meta`, so the browser does not know.
-4. **CLI manifest freeze**: the regenerating `./singularity build` CLI imports `run-ledger/server` (recorder + `_buildRuns`). `defineEntity` loads the field-storage eager manifest, which `cli:codegen-manifests-not-frozen` forbids in that closure.
+4. **CLI manifest freeze**: the regenerating `./equin build` CLI imports `run-ledger/server` (recorder + `_buildRuns`). `defineEntity` loads the field-storage eager manifest, which `cli:codegen-manifests-not-frozen` forbids in that closure.
 
 ## Design
 
@@ -77,11 +77,11 @@ Session shape: one session, two builds — (1) primitives A–D + the 5 ref tabl
 
 ## Verification
 
-- `./singularity build` after each batch: **no new migration SQL** for any converted table (`git status` under the migrations folder); `migrations-in-sync`, `type-check`, `ids:pk-declared`, `cli:codegen-manifests-not-frozen`, `plugins-doc-in-sync` green.
-- Tests: `./singularity test plugins/infra/plugins/entities plugins/network/plugins/live plugins/build/plugins/run-ledger plugins/fields/plugins/string-list` plus new unit tests: string-list storage round-trip, generated column DDL, a picked server-only key rejected (tsc `@ts-expect-error` + runtime).
+- `./equin build` after each batch: **no new migration SQL** for any converted table (`git status` under the migrations folder); `migrations-in-sync`, `type-check`, `ids:pk-declared`, `cli:codegen-manifests-not-frozen`, `plugins-doc-in-sync` green.
+- Tests: `./equin test plugins/infra/plugins/entities plugins/network/plugins/live plugins/build/plugins/run-ledger plugins/fields/plugins/string-list` plus new unit tests: string-list storage round-trip, generated column DDL, a picked server-only key rejected (tsc `@ts-expect-error` + runtime).
 - `query_db` on the worktree: rows of each list unchanged (counts / a sample row per table).
 - Browser (`browser_*` MCP on the worktree build): open Reports, Notifications, Debug → Jobs (dead + runs), Trash, history dialog, Agents, Deploy (servers, deployments, history), Runs (build/release/deploy/backup), Pages sidebar — each renders as before.
-- Run a `./singularity build` from the worktree itself (exercises the split recorder: a `build_runs` row appears and finishes).
+- Run a `./equin build` from the worktree itself (exercises the split recorder: a `build_runs` row appears and finishes).
 
 ## After
 

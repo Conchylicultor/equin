@@ -216,7 +216,7 @@ Reuse:
 
 ## Verification
 
-- **Unit tests** (`./singularity test <plugin>`):
+- **Unit tests** (`./equin test <plugin>`):
   - `backgroundShellsOf` over fixture events covers: launch + ack; completed
     with exit 0; failed with exit 1; killed; no notification with the
     conversation live (running); no notification with it ended
@@ -225,7 +225,7 @@ Reuse:
     input.
   - Tests for the band's `summary` and the shell rows.
   - A server test for the path assertion: a forged or foreign path throws.
-- **Build**: `./singularity build`, then in the deployed app start a
+- **Build**: `./equin build`, then in the deployed app start a
   conversation that runs `for i in $(seq 60); do echo tick $i; sleep 1; done`
   in the background, and check:
   - The band shows a shell row whose last line advances every second.

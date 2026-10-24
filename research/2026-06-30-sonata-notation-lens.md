@@ -165,9 +165,9 @@ Server barrel registers it (`ConfigV2.ServerRegister`).
 
 ## Verification
 
-1. `./singularity build` from the worktree (runs `bun install`, picks up `vexflow`,
+1. `./equin build` from the worktree (runs `bun install`, picks up `vexflow`,
    regenerates the plugin registry + docs, restarts server). Confirm build is green
-   and `./singularity check` passes (boundaries, plugins-registry-in-sync,
+   and `./equin check` passes (boundaries, plugins-registry-in-sync,
    plugins-doc-in-sync, type-check).
 2. `bun test plugins/apps/plugins/sonata/plugins/notation/web/internal/convert.test.ts`
    — converter unit tests (measures, rests, ties, chords, staff split, quantize).

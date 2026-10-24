@@ -36,7 +36,7 @@ export function missingCompanions(registry: PluginRegistry): string[] {
     const entry = companionManifest[id];
     if (!entry) {
       problems.push(
-        `slot "${id}" (${pluginId}) is opened to companions, but companions.generated.ts does not list it — run \`./singularity build\``,
+        `slot "${id}" (${pluginId}) is opened to companions, but companions.generated.ts does not list it — run \`./equin build\``,
       );
       continue;
     }

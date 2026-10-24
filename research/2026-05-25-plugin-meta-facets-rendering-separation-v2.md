@@ -193,7 +193,7 @@ Files:
 - EDIT: `plugins/review/plugins/plugin-changes/core/index.ts`
 - EDIT: `plugins/review/plugins/plugin-changes/web/index.ts` (add slot definition)
 
-Verify: `./singularity build` succeeds.
+Verify: `./equin build` succeeds.
 
 ### Phase 2: Reference Implementation (exports facet)
 
@@ -210,7 +210,7 @@ facets/plugins/exports/plugins/render-diff/
 `SymbolRow`, `CATEGORY_STYLES`, `categorize()` from `public-api-section.tsx` and
 `tree-handler.ts`. Component reads `node.facets["exports"]` and casts to `ExportsData`.
 
-**2.3** Verify: `./singularity build`.
+**2.3** Verify: `./equin build`.
 
 Files:
 - NEW: `plugins/plugin-meta/plugins/facets/plugins/exports/plugins/render-diff/`
@@ -348,8 +348,8 @@ Files:
 ## Verification
 
 After each phase:
-- `./singularity build` succeeds
-- `./singularity check` passes
+- `./equin build` succeeds
+- `./equin check` passes
 
 After Phase 4:
 - Byte-compare `docs/plugins-details.md`, `docs/plugins-compact.md`
@@ -358,7 +358,7 @@ After Phase 4:
 - PR diff view works (now with actual data instead of empty arrays)
 
 After Phase 5:
-- `./singularity check --plugin-boundaries` passes
+- `./equin check --plugin-boundaries` passes
 - No remaining imports of compat field types
 - `rg "populateCompatFields|\.server\.httpRoutes|\.webApiUses"` returns no hits
 

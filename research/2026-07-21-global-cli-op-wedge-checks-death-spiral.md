@@ -15,7 +15,7 @@ memory pressure, not a pathological infinite loop**.
 
 ## The symptom (recap)
 
-A `./singularity {build,check,push}` op intermittently never exits: it spins ~1
+A `./equin {build,check,push}` op intermittently never exits: it spins ~1
 core (state `R`), its heap balloons to 0.95–2.8 GB and pages to swap, and it holds
 its host cpu-slots (`~/.singularity/cpu-slots/slot-N.lock`) — and for a push, the
 global push mutex — for hours, serialising and starving every build+push on the

@@ -216,7 +216,7 @@ Run manually: `bun plugins/ui/plugins/tweakcn/plugins/community-browser/scripts/
 
 ## Verification
 
-1. Run `./singularity build` — sub-plugin auto-discovered, no new DB migration needed (reuses `tweakcn_themes`)
+1. Run `./equin build` — sub-plugin auto-discovered, no new DB migration needed (reuses `tweakcn_themes`)
 2. Open `http://<worktree>.localhost:9000`, navigate to Theme settings pane
 3. Verify "Community Themes" section appears with grid of themed cards
 4. Verify mini mockup cards show actual theme colors (background + color bars)

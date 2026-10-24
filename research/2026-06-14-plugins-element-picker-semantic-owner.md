@@ -157,7 +157,7 @@ All degradations fail closed to the current `source=` behavior.
 ## Verification
 1. **Unit:** `bun test plugins/improve/plugins/element-picker/core/internal/token.test.ts`
    — `owner` round-trips.
-2. **Build:** `./singularity build`; `./singularity check` (plugin-boundaries,
+2. **Build:** `./equin build`; `./equin check` (plugin-boundaries,
    plugins-registry-in-sync, type-check pass — no new files/dirs, so registry is
    unaffected).
 3. **DOM sanity:** in the running app, inspect the LaunchControl dropdown `<button>`

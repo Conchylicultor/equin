@@ -107,7 +107,7 @@ The poller's subsequent `updateTaskTitle` call uses `UNINFORMATIVE_TITLES` as it
 
 ## Verification
 
-1. Run `./singularity build` and open `http://att-<id>.localhost:9000`.
+1. Run `./equin build` and open `http://att-<id>.localhost:9000`.
 2. Create a new task with a description (or start a conversation that auto-creates a task).
 3. Observe the conversation sidebar row — it should show "Starting…" for ~2–5 seconds, then switch to the Haiku-generated title (matching the task title) before the tmux pane title kicks in.
 4. Confirm that a conversation with an already-set title (pane-title path) is not overwritten.

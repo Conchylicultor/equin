@@ -170,7 +170,7 @@ Method as in step 1b:
 - two checkouts, one per side, with separate `SINGULARITY_DIR`;
 - before = main at this task's merge-base, after = this branch;
 - warm cold on the base tree, snapshot, then per scenario: restore, patch,
-  `./singularity check type-check --jobs 1`, reverse.
+  `./equin check type-check --jobs 1`, reverse.
 
 Report the worker's phase line, which gains a split: `tsc (build | keyed walk: N hit / M checked |
 emit)`, type fps, lint, and maxRSS. Same 11 scenarios as the step 1b table. Also report:
@@ -207,10 +207,10 @@ task-1792312301-fcfodz already exists, so confirm it is still next rather than d
 
 ## Verification
 
-- `./singularity test plugins/framework/plugins/tooling/plugins/checks` (unit, purity, program-key
+- `./equin test plugins/framework/plugins/tooling/plugins/checks` (unit, purity, program-key
   tests updated for the manifest).
 - Dual-mode gate (§6.3) with 0 divergences before `tscMode` defaults to `keyed`.
-- `./singularity check` green and `./singularity build` green on the branch.
+- `./equin check` green and `./equin build` green on the branch.
 - The benchmark table on the wiki sub-page, and the track page updated.
 
 ## Out of scope

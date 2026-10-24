@@ -7,7 +7,7 @@
 
 A deploy of `website` failed on 2026-08-28 with the message `Exited with code 143`
 (`drun-1787890652933-wr3v6d`). The root cause was not the remote host. An unrelated
-`./singularity build` of `main` finished mid-deploy; the gateway hot-restarts a backend by
+`./equin build` of `main` finished mid-deploy; the gateway hot-restarts a backend by
 signalling its **whole process group** (`gateway/worktree.go:584` → `killGroup` → `killPgid`),
 and `run-deploy.ts` spawns the deploy CLI as a plain child, so it shares that group. It was
 killed 0.9 s after spawning, during its pre-flight SSH check.
@@ -100,7 +100,7 @@ and makes "forgot to record the exit code" unspellable rather than a convention.
 >    trapped to a *handler* is reset to default in the child — only `trap ''` is inherited.
 > 3. **A trapped signal makes `wait` return `128 + signo` immediately — the child has NOT
 >    necessarily exited.** Measured against a child that traps TERM and exits 42 after a moment
->    (exactly what `./singularity build` does via `installFatalSignalExit`): the single-`wait`
+>    (exactly what `./equin build` does via `installFatalSignalExit`): the single-`wait`
 >    form recorded `143 TERM` *while the child was still alive*, reparented and unwatched, and
 >    threw away the status it was about to produce. With the retry: `42 TERM`, child already
 >    gone. The `kill -0` guard is load-bearing — a second `wait` on an already-reaped pid
@@ -360,7 +360,7 @@ row. All three consumers were verified against that.
    fixture, so it tests the *pure* decision functions against real files and real pids. Cover
    `readRunTerminal` (present / absent / unparseable / mtime-as-finish), `isPidAlive` (own pid, a
    reaped child), and the `close?` composition. Release has no tests today; this gives it some.
-2. **The incident, reproduced** — start a deploy `update`, run `./singularity build` while its
+2. **The incident, reproduced** — start a deploy `update`, run `./equin build` while its
    release leg is running, and assert the deploy still reaches `succeeded`. This is the exact
    sequence that produced `drun-1787890652933-wr3v6d`, and it currently fails 100% of the time.
 3. **Re-attach, visually** — start a long run, restart the backend, confirm the UI still shows it

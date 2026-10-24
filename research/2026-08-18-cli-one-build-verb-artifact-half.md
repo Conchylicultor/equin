@@ -7,9 +7,9 @@ Phase 2 of [`2026-08-17-global-composition-build-serve-model.md`](./2026-08-17-g
 There are two CLI commands that produce a composition's artifacts, and neither is
 named "build this composition":
 
-- `./singularity build` deploys **this checkout** into the live dev cluster. It
+- `./equin build` deploys **this checkout** into the live dev cluster. It
   cannot build a composition at all.
-- `./singularity build-composition --composition X` produces **one composition's**
+- `./equin build-composition --composition X` produces **one composition's**
   artifact set hermetically — filtered registries, migration SQL, web dist — with
   no cluster contact. It is what `release` shells into.
 
@@ -88,7 +88,7 @@ becomes vacuous with one file — but more importantly, **it never measured the
 property it claimed to protect.** Measured on this tree: `bin/cli.ts` statically
 reaches **14 plugin server barrels** already (`release.ts` pulls
 `icon-picker/server`, `release/bundles/server`, `asset-mirror/server`, …). Every
-`./singularity build` has always run with those frozen. "No plugin barrel in the
+`./equin build` has always run with those frozen. "No plugin barrel in the
 CLI's static closure" is false today and always was.
 
 A frozen *barrel* is harmless while everything it reaches is stable. The hazard is
@@ -316,20 +316,20 @@ research doc with the settled decisions.
 Ordered so each failure has one candidate cause.
 
 **Static**
-1. `./singularity check cli:codegen-manifests-not-frozen` → green.
+1. `./equin check cli:codegen-manifests-not-frozen` → green.
 2. **Break it deliberately**: add `import … from "@plugins/framework/plugins/web-sdk/core/web-tiers.generated"`
    to `build.ts`, re-run, confirm it names `web-tiers.generated.ts (eagerTier)`. Revert.
    A check never seen failing is a check not known to work — and this one is the
    repo's only guard against silent config deletion.
-3. `./singularity check cli:bootstrap-package-free pre-barrel-manifests-complete plugins-registry-in-sync migrations-in-sync` → green.
-4. `./singularity check` full → green; old id gone from the roster, new id present.
-5. `./singularity --help` has no `build-composition`; `build --help` documents both flags.
+3. `./equin check cli:bootstrap-package-free pre-barrel-manifests-complete plugins-registry-in-sync migrations-in-sync` → green.
+4. `./equin check` full → green; old id gone from the roster, new id present.
+5. `./equin --help` has no `build-composition`; `build --help` documents both flags.
 
 **Flag surface** — each must exit 1 in under ~2 s (longer means the guard sits
 downstream of `ensureDeps`): `--composition sonata` alone; `--hermetic` alone;
 `--hermetic --composition singularity`; the four deploy-only flag combinations;
 `--hermetic --composition sonata nosuchthing`. Plus
-`./singularity test plugins/framework/plugins/cli` for the
+`./equin test plugins/framework/plugins/cli` for the
 `hermeticFlagConflicts` matrix.
 
 **Behavioural**
@@ -343,7 +343,7 @@ downstream of `ensureDeps`): `--composition sonata` alone; `--hermetic` alone;
    ambiguous rename ⇒ stdout contains `MIGRATION_PROMPTS_DETECTED` and exit
    **2**, with no `BUILD FAILED` / `BUILD ABORTED` banner and no
    `build-status.json` rewrite.
-8. `./singularity release --composition sonata --target web` end to end.
+8. `./equin release --composition sonata --target web` end to end.
 9. **Variadic sharing**: `--composition sonata website` ⇒ one
    `Dependencies already up to date.`, one `Generating plugin registry…`, one
    `Generating DB migrations…`, one `checks (always-run)`; two closure lines; two
@@ -351,7 +351,7 @@ downstream of `ensureDeps`): `--composition sonata` alone; `--hermetic` alone;
    dominating (target-model verification #2).
 10. **Fail-fast**: break a plugin inside `website`'s closure only ⇒ sonata
     published, website fails, exit 1, message names both.
-11. **Deploy path unchanged**: plain `./singularity build` from this worktree;
+11. **Deploy path unchanged**: plain `./equin build` from this worktree;
     `build-profile-<id>.json`'s span id/phase/label set byte-identical to a
     pre-change build (this is why the `if` goes *inside* the
     `compositionRegistry` span).

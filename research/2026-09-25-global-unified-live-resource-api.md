@@ -202,7 +202,7 @@ through `URLSearchParams`.
 ### New plugin: `plugins/network/plugins/live/`
 
 The umbrella starts here, with the new API's own code (`core/`, `server/`, `web/`). The nine
-existing plugins move under it later with `./singularity plugin move`.
+existing plugins move under it later with `./equin plugin move`.
 
 - `core/`: `liveCollection`, the op table, the query codec (encode/decode/canonicalize) and
   the `LiveWhere` / `LiveQuery` types.
@@ -293,11 +293,11 @@ existing plugins move under it later with `./singularity plugin move`.
 
 ## Verification
 
-- `./singularity test plugins/network/plugins/live plugins/infra/plugins/query-resource plugins/framework/plugins/resource-runtime`,
+- `./equin test plugins/network/plugins/live plugins/infra/plugins/query-resource plugins/framework/plugins/resource-runtime`,
   including the unchanged `runtime-window-membership` suite.
-- `./singularity check`: type-check, plugin-boundaries, resource-vocabulary,
+- `./equin check`: type-check, plugin-boundaries, resource-vocabulary,
   keyed-resource-scope, plugins-doc-in-sync (the docs show both minted keys).
-- `./singularity build`, then an E2E script `plugins/apps/plugins/events/plugins/sources/e2e/live-sources.ts`:
+- `./equin build`, then an E2E script `plugins/apps/plugins/events/plugins/sources/e2e/live-sources.ts`:
   - open a source detail pane by id and see it found;
   - open an unknown id and see the explicit "missing" state, not a spinner;
   - toggle a source's `enabled` and see the list and detail update live;

@@ -170,10 +170,10 @@ if (p.extendedBy.length > 0) {
 
 ## Verification
 
-1. Run `./singularity build` — this triggers docgen as part of the build
+1. Run `./equin build` — this triggers docgen as part of the build
 2. Inspect `docs/plugins-details.md`:
    - `tasks-core` entry should have `Extended by: \`conversation-category\` (table \`conversations_ext_category\`), \`queue\` (table \`conversations_ext_queue\``
    - `agents` entry should have `Extended by: \`toggle\` (table \`agents_ext_auto_launch\`)`
    - `queue`, `conversation-category`, `toggle` entries should each have `Entity extension of: ...` inside their `Defines:` section
 3. Check `plugins/tasks-core/CLAUDE.md` — `## Plugin reference` block should include the `Extended by:` line
-4. Run `./singularity check` — verify no check failures
+4. Run `./equin check` — verify no check failures

@@ -10,8 +10,8 @@
  * trailer, and insert the missing push records.
  *
  * Usage (the namespace whose database to write is stated, never inherited):
- *   ./singularity run scripts/backfill-pushes.ts --namespace singularity          # dry run
- *   ./singularity run scripts/backfill-pushes.ts --namespace singularity --write  # apply
+ *   ./equin run scripts/backfill-pushes.ts --namespace singularity          # dry run
+ *   ./equin run scripts/backfill-pushes.ts --namespace singularity --write  # apply
  */
 
 import { drizzle } from "drizzle-orm/node-postgres";

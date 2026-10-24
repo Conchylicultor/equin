@@ -34,7 +34,7 @@
 //  8. Cmd+Z INSIDE the 500 ms idle window undoes the run being typed (the
 //     pending flush seals it first), not the entry below it.
 //
-// Usage: ./singularity run plugins/page/plugins/editor/e2e/crdt-undo-verify.ts [--url <deploy>] [--out /tmp/undo]
+// Usage: ./equin run plugins/page/plugins/editor/e2e/crdt-undo-verify.ts [--url <deploy>] [--out /tmp/undo]
 import {
   agentFetch,
   arg,
