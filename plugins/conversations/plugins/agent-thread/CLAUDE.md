@@ -69,7 +69,11 @@ newest turn's finished steps, its running step, its accepted results, and
   `<OpenConversationButton conversationId display="label" | "icon" />` (the
   Agent Manager link; `icon` is "Open in Agent Manager") and
   `EndThreadButton`. Status is
-  `useOptimisticConversationStatus`; the composer's draft is the conversation's
+  `useOptimisticConversationStatus`; `prepareTurn?: (text) => string` is the
+  host's hook on every turn sent from the thread (Enter, a `<go>`'s ▶), called
+  at the moment of sending: it returns the text that goes out — the words plus
+  what the agent should hear with them (Ask equin's page, when it changed);
+  the draft keeps the words alone. The composer's draft is the conversation's
   own prompt draft (`CONVERSATION_PROMPT_DRAFT_KEY`, shared with the Agent
   Manager and with Copy to draft); every turn goes through
   `useSendConversationTurn`; an ended conversation (`gone` / `done`) is resumed

@@ -5,7 +5,8 @@ import { z } from "zod";
  * into the agent's CLAUDE.md): the focused app, the route, the focused tab's
  * title, and the page's outline — every named control on screen as its
  * `{ path, element }` pair (`ui-context`'s `formatOutline`), what a Show me
- * names. Captured once, at the first question.
+ * names. Captured at the first question, and again by a reply sent from
+ * another page (its `<page-context>` token, `formatPageContext`).
  */
 export const AskInputSchema = z.object({
   /** The focused app's id ("pages"); null when no app is focused. */

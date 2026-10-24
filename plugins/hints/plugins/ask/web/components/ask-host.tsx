@@ -113,7 +113,11 @@ export function AskHost() {
           {mode === "min" && conversationId !== null ? (
             <AskPill conversationId={conversationId} onOpen={restoreCard} />
           ) : conversationId !== null ? (
-            <AskThreadCard conversationId={conversationId} drag={drag} />
+            <AskThreadCard
+              conversationId={conversationId}
+              drag={drag}
+              card={card}
+            />
           ) : (
             <AskEmptyCard key={fresh} drag={drag} card={card} />
           )}

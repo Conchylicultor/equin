@@ -21,7 +21,11 @@ import { FileLinksWorkspaceProvider } from "@plugins/primitives/plugins/file-lin
 import { pickSuggestions } from "../../core";
 import { minimizeAsk, releaseRun } from "../internal/ask-store";
 import { askQuestionDraft } from "../internal/stores";
-import { ASK_RESULTS, useAskQuestion } from "../internal/use-ask";
+import {
+  ASK_RESULTS,
+  useAskPrepareTurn,
+  useAskQuestion,
+} from "../internal/use-ask";
 import { useRunQuestion } from "../internal/use-question";
 import { FiledTaskCard } from "./filed-task-card";
 
@@ -88,15 +92,22 @@ function CardHeader({
   );
 }
 
-/** The card holding a run: the thread, its header actions, the reply box. */
+/**
+ * The card holding a run: the thread, its header actions, the reply box. A
+ * reply sent from another page carries it (`useAskPrepareTurn`); `card` is
+ * the card's own element, left out of that page's outline.
+ */
 export function AskThreadCard({
   conversationId,
   drag,
+  card,
 }: {
   conversationId: string;
   drag: DragHandle;
+  card: () => Element;
 }) {
   const question = useRunQuestion(conversationId) ?? "Ask equin";
+  const prepareTurn = useAskPrepareTurn(conversationId, card);
   return (
     <CardFrame>
       {/* The help agent reads the main checkout, so the paths it names are
@@ -107,6 +118,7 @@ export function AskThreadCard({
           conversationId={conversationId}
           results={ASK_RESULTS}
           height="hug"
+          prepareTurn={prepareTurn}
           resultWords={(n) => `${n} task${n === 1 ? "" : "s"} filed`}
           header={() => (
             <CardHeader drag={drag} title={question}>

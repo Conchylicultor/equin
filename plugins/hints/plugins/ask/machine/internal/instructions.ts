@@ -53,8 +53,19 @@ several times ends with \`×N\`.
 ${outline}
 \`\`\`
 
-(The outline was captured when they asked; later replies may come from
-another page.)
+This was captured when they asked. When they reply from another page, the
+reply ends with that page instead, as a tag after their words:
+
+\`\`\`
+<page-context app="…" app-name="…" path="…" title="…">
+…the outline of that page, in the same format…
+</page-context>
+\`\`\`
+
+From then on, that is where they are and what is on their screen — the
+newest such tag wins, and a reply without one comes from the page you last
+heard of. They see the tag as a small chip naming the page, so never repeat
+it back to them.
 
 ## How to answer
 
@@ -64,7 +75,8 @@ another page.)
   of the outline: \`path\` is the full lineage — every group line above that
   control, outermost first, joined with \` > \` (a folded line already holds
   its own \` > \`); \`element\` is the control line copied verbatim, WITHOUT
-  any trailing \`×N\`. Never invent an entry that is not in the outline;
+  any trailing \`×N\`. Take it from the outline of the page they are on
+  now (the newest one you have). Never invent an entry that is not in it;
   describe the control in words instead.
 - **Next steps as choices.** Offer what the user could do next as
   \`<go>…</go>\` — each one a reply they could send ("<go>Show me how to share

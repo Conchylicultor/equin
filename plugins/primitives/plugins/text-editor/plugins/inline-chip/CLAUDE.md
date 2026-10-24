@@ -168,6 +168,7 @@ rendered chip out of a read surface puts the token back on the clipboard.
     - `InlineChip.Tag` ← `active-data.report`
     - `InlineChip.Tag` ← `active-data.song`
     - `InlineChip.Tag` ← `active-data.task-link`
+    - `InlineChip.Tag` ← `hints.ask`
     - `InlineChip.Tag` ← `primitives.ui-context.element-picker`
   - Uses:
     - `primitives/dom/copy-source-text.copiesAsText`
@@ -195,6 +196,7 @@ rendered chip out of a read surface puts the token back on the clipboard.
     - `active-data`
     - `active-data/id-chip`
     - `conversations/runtime-sdk`
+    - `hints/ask`
     - `page/inline-page-link`
     - `page/links`
     - `primitives/ui-context/element-picker`

@@ -23,7 +23,7 @@ import type { ConversationEntry } from "@plugins/conversations/core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { groupThread } from "../../core";
 import { AgentThreadView } from "../components/agent-thread-view";
-import { ThreadComposer } from "../components/composer";
+import { ThreadComposer, type PrepareTurn } from "../components/composer";
 
 afterEach(cleanup);
 
@@ -72,7 +72,7 @@ const conversation = {
   claudeSessionId: "session-1",
 } as unknown as ConversationEntry;
 
-function Thread() {
+function Thread({ prepareTurn }: { prepareTurn?: PrepareTurn }) {
   const status = { status: "waiting", waitingFor: null } as const;
   return (
     <AgentThreadView
@@ -86,48 +86,61 @@ function Thread() {
           status="waiting"
           turnRunning={false}
           placeholder="Reply…"
+          prepareTurn={prepareTurn}
         />
       }
     />
   );
 }
 
+async function clickGo(prepareTurn?: PrepareTurn) {
+  const fake = fakeFetchEndpoint();
+  const Transport = withTransport(fake);
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <Transport>
+        <PluginProvider plugins={[slotsPlugin, activeDataPlugin, goPlugin]}>
+          <Thread prepareTurn={prepareTurn} />
+        </PluginProvider>
+      </Transport>
+    </QueryClientProvider>,
+  );
+
+  await screen.findByText("push it");
+  // The unit's ▶ (an inline span) — not the composer's own Send button.
+  const send = await waitFor(() => {
+    const cap = document.querySelector<HTMLElement>(
+      'span[role="button"][aria-label="Send"]',
+    );
+    if (!cap) throw new Error("the <go> has no send cap yet");
+    // Enabled once the composer has registered as the thread's prompt.
+    expect(cap.getAttribute("aria-disabled")).toBeNull();
+    return cap;
+  });
+  send.click();
+
+  return waitFor(() => {
+    const turns = fake.calls.filter(
+      (c) => c.route === "POST /api/conversations/:id/turn",
+    );
+    expect(turns).toHaveLength(1);
+    expect(turns[0]!.params).toEqual({ id: CONVERSATION_ID });
+    return (turns[0]!.body as { text: string }).text;
+  });
+}
+
 describe("a <go> in a thread's answer", () => {
   it("sends the choice as a turn when its ▶ is clicked", async () => {
-    const fake = fakeFetchEndpoint();
-    const Transport = withTransport(fake);
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <Transport>
-          <PluginProvider plugins={[slotsPlugin, activeDataPlugin, goPlugin]}>
-            <Thread />
-          </PluginProvider>
-        </Transport>
-      </QueryClientProvider>,
+    expect(await clickGo()).toContain("<go>push it</go>");
+  });
+
+  it("goes through the host's prepareTurn", async () => {
+    const text = await clickGo(
+      (t) => `${t}\n\n<page-context path="/x">\n</page-context>`,
     );
-
-    await screen.findByText("push it");
-    // The unit's ▶ (an inline span) — not the composer's own Send button.
-    const send = await waitFor(() => {
-      const cap = document.querySelector<HTMLElement>(
-        'span[role="button"][aria-label="Send"]',
-      );
-      if (!cap) throw new Error("the <go> has no send cap yet");
-      // Enabled once the composer has registered as the thread's prompt.
-      expect(cap.getAttribute("aria-disabled")).toBeNull();
-      return cap;
-    });
-    send.click();
-
-    await waitFor(() => {
-      const turns = fake.calls.filter(
-        (c) => c.route === "POST /api/conversations/:id/turn",
-      );
-      expect(turns).toHaveLength(1);
-      expect(turns[0]!.params).toEqual({ id: CONVERSATION_ID });
-      expect((turns[0]!.body as { text: string }).text).toContain(
-        "<go>push it</go>",
-      );
-    });
+    expect(text).toContain("<go>push it</go>");
+    expect(text.endsWith('<page-context path="/x">\n</page-context>')).toBe(
+      true,
+    );
   });
 });

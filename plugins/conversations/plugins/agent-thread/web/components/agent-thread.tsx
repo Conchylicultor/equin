@@ -42,7 +42,7 @@ import {
   type ThreadHeight,
 } from "./agent-thread-view";
 import { OpenConversationButton } from "./open-conversation";
-import { ThreadComposer } from "./composer";
+import { ThreadComposer, type PrepareTurn } from "./composer";
 
 export type AgentThreadProps<D extends ThreadResultDef> =
   AgentThreadBaseProps<D> & ThreadHeaderOptions;
@@ -62,6 +62,11 @@ interface AgentThreadBaseProps<D extends ThreadResultDef> {
    * card). See `AgentThreadView`'s `height`.
    */
   height?: ThreadHeight;
+  /**
+   * Called on every turn the user sends from the thread, at the moment it is
+   * sent: returns the text that goes to the agent (see `PrepareTurn`).
+   */
+  prepareTurn?: PrepareTurn;
 }
 
 /** A sent turn's echo: the thread's own user bubble, its status under it. */
@@ -117,6 +122,7 @@ function LiveThread<D extends ThreadResultDef>({
   resultWords,
   header,
   height,
+  prepareTurn,
 }: {
   conversation: ConversationEntry;
   events: readonly JsonlEvent[];
@@ -128,6 +134,7 @@ function LiveThread<D extends ThreadResultDef>({
   resultWords: ResultWords | undefined;
   header: ThreadHeaderOptions;
   height: ThreadHeight;
+  prepareTurn: PrepareTurn | undefined;
 }) {
   const status = useOptimisticConversationStatus(conversation);
   const turnRunning = useTurnRunning(conversation);
@@ -210,6 +217,7 @@ function LiveThread<D extends ThreadResultDef>({
           status={status}
           turnRunning={turnRunning}
           placeholder={placeholder}
+            prepareTurn={prepareTurn}
         />
       }
     />
@@ -256,6 +264,7 @@ export function AgentThread<D extends ThreadResultDef>(
     placeholder = "Reply…",
     resultWords,
     height = "fill",
+    prepareTurn,
   } = props;
   const raw = useThreadTranscript(conversationId);
   const events = useVisibleTranscript(raw);
@@ -300,6 +309,7 @@ export function AgentThread<D extends ThreadResultDef>(
             resultWords={resultWords}
             header={props}
             height={height}
+            prepareTurn={prepareTurn}
           />
         )
       }

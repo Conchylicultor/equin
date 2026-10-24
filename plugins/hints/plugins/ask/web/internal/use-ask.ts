@@ -23,9 +23,13 @@ import {
   HELP_ASK_PROFILE,
   askConfig,
   askFiledTask,
+  formatPageContext,
+  pageKey,
+  stripPageContext,
   type AskInput,
 } from "../../core";
 import { settleRestore, showRun, useAskState } from "./ask-store";
+import { askSeenPageStore } from "./stores";
 
 export const ASK_RESULTS = [askFiledTask];
 
@@ -39,6 +43,55 @@ interface AskSettings {
 export type AskBlocked = string | null;
 
 /**
+ * Where the user is, captured on demand: the focused app, the route, the
+ * focused tab's title and the page's outline (`card` — the Ask card itself —
+ * left out). Read at the moment of a send, so it is the page the words were
+ * typed on.
+ */
+function usePageContext(): (card: Element) => AskInput {
+  const app = useActiveApp();
+  const path = usePathname();
+  const tabTitle = useFocusedTabTitle();
+  return (card) => ({
+    app: app?.id ?? null,
+    appName: app?.app.name ?? null,
+    path,
+    title: tabTitle ?? null,
+    outline: formatOutline(collectOutline(document.body, { exclude: [card] })),
+  });
+}
+
+/** Record that run `conversationId`'s agent now knows the user is on `input`'s page. */
+function markPageSent(conversationId: string, input: AskInput): void {
+  // A refused write is already loud (the store's toast and report); the next
+  // reply then carries the page again, which is harmless.
+  askSeenPageStore.write(conversationId, pageKey(input));
+}
+
+/**
+ * The thread's `prepareTurn`: a reply sent from another page than the agent
+ * last heard of carries that page — a `<page-context>` token after the words
+ * (drawn as a chip in the bubble), the same fields the first question's
+ * context held. From the same page, the words go alone. A token already in
+ * the words (a stopped turn's text, back in the draft) is dropped first, so
+ * a turn never carries two.
+ */
+export function useAskPrepareTurn(
+  conversationId: string,
+  card: () => Element,
+): (text: string) => string {
+  const capture = usePageContext();
+  return (typed) => {
+    const text = stripPageContext(typed);
+    const input = capture(card());
+    const seen = askSeenPageStore.read(conversationId);
+    if (seen.kind === "value" && seen.value === pageKey(input)) return text;
+    markPageSent(conversationId, input);
+    return `${text}\n\n${formatPageContext(input)}`;
+  };
+}
+
+/**
  * Asking: the first question starts a run (a task in the Help category, under
  * the `help.ask` profile, on the configured model) with where the user is —
  * the focused app, the route, the focused tab's title and the page's outline
@@ -48,9 +101,7 @@ export function useAskQuestion(): {
   ask: (question: string, card: Element) => Promise<boolean>;
   blocked: AskBlocked;
 } {
-  const app = useActiveApp();
-  const path = usePathname();
-  const tabTitle = useFocusedTabTitle();
+  const capture = usePageContext();
   const config = useConfigResult(askConfig);
   // The configured model, or why a question cannot be asked yet: every send
   // waits for the settings to be known, never runs on a stand-in model.
@@ -78,15 +129,7 @@ export function useAskQuestion(): {
 
   const ask = async (question: string, card: Element): Promise<boolean> => {
     if (blocked !== null) return false;
-    const input: AskInput = {
-      app: app?.id ?? null,
-      appName: app?.app.name ?? null,
-      path,
-      title: tabTitle ?? null,
-      outline: formatOutline(
-        collectOutline(document.body, { exclude: [card] }),
-      ),
-    };
+    const input = capture(card);
     const result = await start({
       title: synthesiseTitleFallback(question.trim()),
       prompt: question,
@@ -100,6 +143,7 @@ export function useAskQuestion(): {
       });
       return false;
     }
+    markPageSent(result.value.conversationId, input);
     showRun(result.value.conversationId);
     return true;
   };

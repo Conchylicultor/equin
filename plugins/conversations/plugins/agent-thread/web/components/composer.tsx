@@ -29,6 +29,15 @@ import { resumeConversationEndpoint } from "@plugins/conversations/plugins/conve
 import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
 
 const sendIcon = symbol("arrow-upward");
+
+/**
+ * The host's hook on every turn the user sends from the thread (Enter, a
+ * `<go>`'s ▶): handed the words typed, it returns the text sent — the words
+ * plus what the agent should hear with them (Ask equin appends the page the
+ * user is on when it changed). The draft, and a failed send's restore, keep
+ * the words alone.
+ */
+export type PrepareTurn = (text: string) => string;
 const stopIcon = symbol("stop");
 
 export interface ThreadComposerViewProps {
@@ -127,6 +136,7 @@ export function ThreadComposer({
   status,
   turnRunning,
   placeholder,
+  prepareTurn,
 }: {
   conversation: ConversationEntry;
   /** The status as the user sees it (`useOptimisticConversationStatus`). */
@@ -134,6 +144,8 @@ export function ThreadComposer({
   /** Whether a turn runs, as the user sees it (`useTurnRunning`). */
   turnRunning: boolean;
   placeholder: string;
+  /** What a turn carries to the agent beyond its words (`AgentThread`'s `prepareTurn`). */
+  prepareTurn?: PrepareTurn | undefined;
 }) {
   const id = conversation.id;
   const [draft, setDraft, clearDraft] = useDraft(conversationPromptDraft, "", {
@@ -166,8 +178,11 @@ export function ThreadComposer({
   // Every turn's way out — the draft's (Enter) and a quick send's (a `<go>`'s
   // ▶) alike: straight to the agent, or through a resume when it ended.
   // `onNotSent` runs when the resume failed and nothing was sent.
+  // The host's additions are made here, at the moment of sending, so they
+  // say how things stand when the turn leaves — never in the draft.
   const deliver = useCallback(
-    (text: string, onNotSent?: () => void) => {
+    (typed: string, onNotSent?: () => void) => {
+      const text = prepareTurn ? prepareTurn(typed) : typed;
       if (!ended) {
         sendConversationTurn(id, { text });
         return;
@@ -183,7 +198,7 @@ export function ThreadComposer({
         },
       );
     },
-    [ended, id, resume, sendConversationTurn],
+    [ended, id, resume, sendConversationTurn, prepareTurn],
   );
 
   const send = useCallback(() => {

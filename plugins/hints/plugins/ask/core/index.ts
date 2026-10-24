@@ -10,3 +10,12 @@ export {
   type AskPosition,
 } from "./internal/placement";
 export { askConfig } from "./internal/config";
+export {
+  PAGE_CONTEXT_RE,
+  PAGE_CONTEXT_TAG,
+  formatPageContext,
+  pageKey,
+  parsePageContext,
+  stripPageContext,
+  type PageContextPage,
+} from "./internal/page-context";

@@ -26355,15 +26355,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `shell/global-action-bar`
       - `tasks/task-draft-form`
   - Plugins:
-    - **`ask`** — Ask equin, web half: the ? menu's entry (Ask equin how to… / Back to your question), and the AskHost at Core.Root — a draggable card in the chrome's theme holding one threaded conversation with the help agent (AgentThread; a filed task shows as its live status and title, opening in the Agent Manager), above every tab so it follows the user across apps: suggested questions and a first-question box when empty (the first send attaches the focused app, route, tab title and the page outline), minimized to a pill with the step it is on and an unseen dot, its position kept edge-anchored and snapped only near a corner, and the newest unseen or working run taken back as the pill once per load. Registers the Ask equin config with both model pickers. Ask equin, server half: the help agent's reserved ask_file_task tool (a task with no folder or dependency edges, in the default worktree workspace, filed under Improvements and armed with the configured model so it launches at once), and the Ask equin config (the answering model, the filed tasks' model).
+    - **`ask`** — Ask equin, web half: the ? menu's entry (Ask equin how to… / Back to your question), and the AskHost at Core.Root — a draggable card in the chrome's theme holding one threaded conversation with the help agent (AgentThread; a filed task shows as its live status and title, opening in the Agent Manager), above every tab so it follows the user across apps: suggested questions and a first-question box when empty (the first send attaches the focused app, route, tab title and the page outline), minimized to a pill with the step it is on and an unseen dot, its position kept edge-anchored and snapped only near a corner, and the newest unseen or working run taken back as the pill once per load. A reply sent from another page carries that page (a <page-context> token after the words, drawn as a chip naming the page). Registers the Ask equin config with both model pickers. Ask equin, server half: the help agent's reserved ask_file_task tool (a task with no folder or dependency edges, in the default worktree workspace, filed under Improvements and armed with the configured model so it launches at once), and the Ask equin config (the answering model, the filed tasks' model).
       - Web:
         - Contributes:
           - `Core.Root` → `AskHost`
           - `HelpMenu.Entry` "Ask equin how to…" → `AskEquinEntry`
+          - `InlineChip.Tag` "ask-page-context" → `PageContextChip`
           - `ConfigV2.WebRegister` "config"
           - `DynamicEnum.Options` "Model for filed tasks"
           - `DynamicEnum.Options` "Model"
-        - Uses: 54 symbols — full list in [`plugins/hints/plugins/ask/REFERENCE.md`](../plugins/hints/plugins/ask/REFERENCE.md)
+        - Uses: 58 symbols — full list in [`plugins/hints/plugins/ask/REFERENCE.md`](../plugins/hints/plugins/ask/REFERENCE.md)
           - `conversations/agent-thread` ×7
           - `apps-core` ×2
           - `config_v2` ×2
@@ -26372,6 +26373,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/ui-kit` ×2
           - `primitives/live-state` ×2
           - `primitives/persistent-draft` ×2
+          - `primitives/text-editor/inline-chip` ×2
           - `primitives/ui-context` ×2
           - `tasks/task-status` ×2
           - `apps-core/chrome-theme.chromeThemeScope`
@@ -26380,11 +26382,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations.useConversation`
           - `fields/dynamic-enum/config.DynamicEnum`
           - `network/live.useLiveRow`
+          - `primitives/css/badge.Badge`
           - `primitives/css/clip.clipClasses`
           - `primitives/css/column.Column`
           - `primitives/css/control-panel.ControlPanel`
           - `primitives/css/fill.Fill`
           - `primitives/css/line.Line`
+          - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.Stack`
           - `primitives/css/spinner.Spinner`
           - `primitives/css/status-dot.StatusDot`
@@ -26424,6 +26428,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `AskInput`
           - `AskPosition`
+          - `PageContextPage`
         - Exports (values):
           - `ALWAYS_SUGGESTIONS`
           - `askConfig`
@@ -26434,9 +26439,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CORNER_MARGIN`
           - `DEFAULT_ASK_POSITION`
           - `FILE_TASK_TOOL`
+          - `formatPageContext`
           - `HELP_ASK_PROFILE`
+          - `PAGE_CONTEXT_RE`
+          - `PAGE_CONTEXT_TAG`
+          - `pageKey`
+          - `parsePageContext`
           - `pickSuggestions`
           - `placeAfterDrag`
+          - `stripPageContext`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --border`
@@ -36695,7 +36706,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density` ×6
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 167 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 168 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×38
               - `debug` ×35
               - `conversations` ×24
@@ -36714,6 +36725,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `backup/runs-arm`
               - `config_v2/settings`
               - `database/query-deadline`
+              - `hints/ask`
               - `integrations/google-maps/usage`
               - `release/runs-arm`
               - `reorder/edit-mode`
@@ -37396,7 +37408,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Imported by: 124 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+            - Imported by: 125 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
               - `apps` ×29
               - `conversations` ×23
               - `primitives` ×16
@@ -37414,6 +37426,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `active-data/show-me`
               - `auth`
               - `code-explorer/commit-detail`
+              - `hints/ask`
               - `reorder/node-types/header`
               - `stats/commits`
         - **`row`** — Generic interactive row primitive (list, menu, nav, tree, and collapsible section-header rows) with a sanctioned home so ad-hoc rounded+padded interactive markup routes through one primitive.
@@ -43301,6 +43314,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `InlineChip.Tag` ← `active-data.report`
               - `InlineChip.Tag` ← `active-data.song`
               - `InlineChip.Tag` ← `active-data.task-link`
+              - `InlineChip.Tag` ← `hints.ask`
               - `InlineChip.Tag` ← `primitives.ui-context.element-picker`
             - Uses:
               - `primitives/dom/copy-source-text.copiesAsText`
@@ -43328,6 +43342,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `active-data`
               - `active-data/id-chip`
               - `conversations/runtime-sdk`
+              - `hints/ask`
               - `page/inline-page-link`
               - `page/links`
               - `primitives/ui-context/element-picker`

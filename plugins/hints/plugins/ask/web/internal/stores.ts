@@ -24,3 +24,19 @@ export const askQuestionDraft = defineStore<string>({
   whenFull: "refuse",
   schema: z.string(),
 });
+
+/**
+ * The page each run's agent last heard of (`pageKey`, by conversation id):
+ * the first question's, then each reply's that carried a `<page-context>`. A
+ * reply from another page carries one. Lost (another browser, evicted), the
+ * next reply carries it again — said twice, never missed.
+ */
+export const askSeenPageStore = defineStore<string>({
+  owner: "hints.ask.seen-page",
+  label: "Ask equin pages sent",
+  area: "local",
+  cap: "16 KB",
+  ttl: 30 * 24 * 60 * 60 * 1000,
+  whenFull: "evict-oldest",
+  schema: z.string(),
+});
