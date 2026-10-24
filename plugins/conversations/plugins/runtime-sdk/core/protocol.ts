@@ -233,6 +233,14 @@ export const AgentLaunchOptionsSchema = z.object({
    * previous launch. Defaulted for an options file written before it existed.
    */
   disclaimExec: z.string().nullable().default(null),
+  /**
+   * What the agent spawns in place of `claudeBin`: a hardlink to it named for
+   * the conversation (`<title> · <id>`), so a macOS permission prompt says
+   * which agent asks — and keeps that agent's grants its own. Null spawns
+   * `claudeBin`. Set with `disclaimExec`, at every start; the name is kept
+   * from the conversation's first start (`machine/internal/named-claude.ts`).
+   */
+  namedClaudeBin: z.string().nullable().default(null),
   /** The CLI's `--model` value. */
   model: z.string().nullable(),
   /** The CLI's `--effort` value. */

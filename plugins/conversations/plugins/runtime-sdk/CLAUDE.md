@@ -103,6 +103,17 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   experimental (`usage_EXPERIMENTAL_…`): an SDK bump that renames it fails
   tsc. Design: [`research/2026-10-22-conversations-claude-usage-on-demand.md`](../../../../research/2026-10-22-conversations-claude-usage-on-demand.md).
 
+- macOS permission prompts (`machine/internal/named-claude.ts`): with
+  disclaim-exec (packages/spawn-disclaim) claude is its own responsible
+  process, and a prompt names its executable file. Each start hardlinks
+  claude to `<agent dir>/bin/<title> · <conv-id>` and the agent spawns that
+  (`namedClaudeBin` in launch.json), so a prompt says which agent asks. TCC
+  keys a bundle-less client by path, so each conversation's grants are its
+  own; the name is chosen at its first start and kept across relaunches
+  (read back from the previous launch.json), relinked to the current binary
+  each start, and removed by the agent on exit (a kept link would pin a
+  deleted Claude version).
+
 Gotchas the spike hit:
 
 - The socket cannot sit next to `events.jsonl`: a kqueue watch of that
@@ -160,7 +171,9 @@ Gotchas the spike hit:
     - `infra/entity-extensions.defineExtension`
     - `network/live.serveCollection`
     - `network/live.ServeCollectionOptions`
+    - `tasks/tasks-core._attempts`
     - `tasks/tasks-core._conversations`
+    - `tasks/tasks-core._tasks`
   - DB schema: `plugins/conversations/plugins/runtime-sdk/server/internal/tables.ts`
   - Entity extension of: `tasks/tasks-core` (table `conversations_ext_sdk_agent`)
   - Resources:

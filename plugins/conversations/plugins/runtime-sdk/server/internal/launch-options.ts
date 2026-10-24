@@ -46,8 +46,9 @@ export function sdkLaunchOptions(input: SdkLaunchInput): AgentLaunchOptions {
   return {
     cwd: input.cwd,
     claudeBin: input.claudeBin,
-    // Resolved at the process start (machine/internal/agent-process.ts).
+    // Both resolved at the process start (machine/internal/agent-process.ts).
     disclaimExec: null,
+    namedClaudeBin: null,
     model: input.model ? cliFlagFor(input.model) : null,
     effort: (input.effort && resolveEffortFlag(input.effort)) ?? null,
     settings: mergeLaunchSettings(

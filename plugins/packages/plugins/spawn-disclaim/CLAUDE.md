@@ -6,8 +6,15 @@ process — by default the launchd-started root of the tree, which for every
 agent is the gateway (launchd → gateway → backend → `bun agent.ts` → `claude`).
 So every agent's prompt said "gateway", and one Allow covered every agent.
 Run through `disclaim-exec`, claude is responsible for itself and everything it
-starts: the prompt names claude (Developer-ID signed, so a grant survives
-Claude updates). Design: `research/2026-10-24-global-macos-permissions.md` §4.
+starts. Design: `research/2026-10-24-global-macos-permissions.md` §4.
+
+The prompt names claude's executable FILE (it has no bundle) — for the native
+installer its version, `2.1.308` — and TCC keys a bundle-less client's
+decisions by that path too (measured 2026-10-24: an Allow given to a renamed
+hardlink of the binary did not reach the original path). So
+`conversations/runtime-sdk` spawns a per-conversation hardlink named
+`<title> · <conv-id>` (`machine/internal/named-claude.ts`): the prompt says
+which agent asks, and each conversation's grants are its own.
 
 - `native/disclaim-exec.c` — `disclaim-exec <program> [args…]`:
   `posix_spawnattr_init` → `responsibility_spawnattrs_setdisclaim(&a, 1)` →

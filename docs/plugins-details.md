@@ -18355,7 +18355,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/entity-extensions.defineExtension`
           - `network/live.serveCollection`
           - `network/live.ServeCollectionOptions`
+          - `tasks/tasks-core._attempts`
           - `tasks/tasks-core._conversations`
+          - `tasks/tasks-core._tasks`
         - DB schema: `plugins/conversations/plugins/runtime-sdk/server/internal/tables.ts`
         - Entity extension of: `tasks/tasks-core` (table `conversations_ext_sdk_agent`)
         - Resources:

@@ -30,10 +30,15 @@ import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
 import { PGREP, PS } from "@plugins/infra/plugins/paths/server";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { backgroundPrefix } from "@plugins/packages/plugins/spawn-priority/server";
-import { launchAccount, type AgentLaunchOptions } from "../../core";
+import {
+  AgentLaunchOptionsSchema,
+  launchAccount,
+  type AgentLaunchOptions,
+} from "../../core";
 import { liveAgentIds } from "./agent-processes";
 import { readClaudeUsage } from "./claude-usage";
 import { resolveDisclaimExec } from "./disclaim";
+import { namedClaudeBin } from "./named-claude";
 import {
   AGENT_SCRIPT,
   agentDir,
@@ -119,6 +124,17 @@ export function nextLaunchAccount(): string {
 }
 
 /**
+ * The named claude the conversation's previous start spawned, from the options
+ * file it left — so a relaunch keeps the name (and its macOS grants).
+ */
+function previousNamedClaudeBin(id: string): string | null {
+  const path = agentOptionsPath(id);
+  if (!existsSync(path)) return null;
+  return AgentLaunchOptionsSchema.parse(JSON.parse(readFileSync(path, "utf8")))
+    .namedClaudeBin;
+}
+
+/**
  * Start the agent process for `id` with `options`, written here as its
  * options file — with this start's own `disclaimExec` (whatever `options`
  * carried from a previous launch is replaced). Its stdout and stderr (the
@@ -142,10 +158,17 @@ export async function startAgentProcess(
     });
   }
   mkdirSync(agentDir(id), { recursive: true });
+  const disclaimExec = await resolveDisclaimExec(id);
+  const namedClaude = await namedClaudeBin({
+    conversationId: id,
+    claudeBin: options.claudeBin,
+    disclaimExec,
+    previous: previousNamedClaudeBin(id),
+  });
   writeFileSync(
     agentOptionsPath(id),
     JSON.stringify(
-      { ...options, disclaimExec: await resolveDisclaimExec(id) },
+      { ...options, disclaimExec, namedClaudeBin: namedClaude },
       null,
       2,
     ),

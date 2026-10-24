@@ -358,7 +358,9 @@ const session = query({
     // message); they are folded here and never written to events.jsonl.
     includePartialMessages: true,
     enableFileCheckpointing: true,
-    pathToClaudeCodeExecutable: options.claudeBin,
+    // The conversation-named hardlink when the backend made one (so macOS
+    // names this agent in a permission prompt), else the CLI itself.
+    pathToClaudeCodeExecutable: options.namedClaudeBin ?? options.claudeBin,
     ...(options.model ? { model: options.model } : {}),
     // Thinking text is requested explicitly: under the SDK the CLI ignores
     // the `showThinkingSummaries` setting (the interactive CLI honours it), so
@@ -574,7 +576,17 @@ function shutdown(reason: string): void {
 process.on("SIGTERM", () =>
   closed ? hardExit("sigterm", exitReason) : shutdown("SIGTERM"),
 );
-process.on("exit", () => rmSync(pidPath, { force: true }));
+process.on("exit", removeExitFiles);
+
+/**
+ * What the agent leaves only while it lives: the named claude (left in place it
+ * would pin a Claude version the updater has since deleted; the next start
+ * makes it again, same name), then the pid file — last.
+ */
+function removeExitFiles(): void {
+  if (options.namedClaudeBin) rmSync(options.namedClaudeBin, { force: true });
+  rmSync(pidPath, { force: true });
+}
 
 /**
  * End a process whose exit stalled — loudly: capture what it was doing, write
@@ -619,7 +631,7 @@ function hardExit(
   } finally {
     try {
       cli?.kill("SIGKILL");
-      rmSync(pidPath, { force: true });
+      removeExitFiles();
     } finally {
       process.kill(process.pid, "SIGKILL");
     }

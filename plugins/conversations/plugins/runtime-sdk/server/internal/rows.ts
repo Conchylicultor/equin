@@ -1,6 +1,10 @@
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { _conversations } from "@plugins/tasks/plugins/tasks-core/server";
+import {
+  _attempts,
+  _conversations,
+  _tasks,
+} from "@plugins/tasks/plugins/tasks-core/server";
 import { EMPTY_PROJECTION, type AgentProjection } from "./reducer";
 import { sdkAgents } from "./tables";
 
@@ -60,6 +64,23 @@ export async function isSdkConversation(id: string): Promise<boolean> {
     .from(_conversations)
     .where(eq(_conversations.id, id));
   return row?.runtime === "sdk";
+}
+
+/**
+ * What a person would call the conversation: its own title, else its task's;
+ * null when it has neither (a conversation with no attempt, before titling).
+ */
+export async function conversationDisplayTitle(
+  id: string,
+): Promise<string | null> {
+  const [row] = await db
+    .select({ own: _conversations.title, task: _tasks.title })
+    .from(_conversations)
+    .leftJoin(_attempts, eq(_conversations.attemptId, _attempts.id))
+    .leftJoin(_tasks, eq(_attempts.taskId, _tasks.id))
+    .where(eq(_conversations.id, id))
+    .limit(1);
+  return row?.own ?? row?.task ?? null;
 }
 
 export interface AgentRow extends AgentProjection {
