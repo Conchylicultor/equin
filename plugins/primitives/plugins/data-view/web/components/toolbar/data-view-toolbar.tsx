@@ -247,7 +247,7 @@ export function DataViewToolbar({
           }
         : {})}
       lead={titleNode}
-      views={switcherCount > 1 ? switcher.strip : null}
+      views={switcherCount > 1 ? (switcher.strip ?? switcher.chip) : null}
       tools={
         toolsAtRest ? (
           <>

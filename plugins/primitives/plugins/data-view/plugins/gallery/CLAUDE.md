@@ -30,6 +30,10 @@ One card shape, everywhere — `DataCard`, built at ONE site in `GalleryView`:
     action itself as a round button for `placement: "primary"`): on hover, or
     at rest while active (playing).
 - **Badge**: an aggregate representative's `×N`, pinned top-left of the cover.
+- **Row hover**: a card reports pointer enter/leave to `onRowHoverChange`
+  (`DataCard onHoverChange`), and the `hoveredRowId` card holds the card's
+  own hover paint (`DataCard hovered`) while another surface hovers it (its
+  map pin).
 - **Selected** is a ring around the cover; **row tone** `"muted"` tones the
   title (`rowToneClass`) and veils the cover at rest (`DataCard dimmed`).
 - **Grid**: `<Grid minCellWidth="var(--gallery-card-min)">` (`density:
@@ -115,8 +119,8 @@ taking `{song, onOpen}` never trips it.
 - Description: Gallery view child for the data-view primitive: a responsive grid of cover cards — the cover is the card, its fields three fixed lines under it, its actions on the cover.
 - Web:
   - Contributes: `DataViewSlots.View` "Gallery" → `GalleryView`
-  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×24
+  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×25
     - `primitives/css/ui-kit` ×2
     - `primitives/row-actions` ×2
     - `primitives/css/badge.Badge`

@@ -1,12 +1,10 @@
-import { useState, type ComponentProps, type ReactNode } from "react";
+import { useState, type ReactNode, type Ref } from "react";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
-import { clipClasses } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -19,7 +17,7 @@ import { usePlaceDetails } from "@plugins/apps/plugins/places/plugins/place-deta
 import type { AskPickNote } from "../internal/ask-picks";
 import { washInk } from "../internal/pin-paint";
 import type { GoogleHit } from "./google-result-card";
-import { PLACE_CARD_WIDTH } from "./place-card";
+import { cardColumnProps, type CardFrame } from "./card-frame";
 import {
   DetailsNotice,
   GoogleCredit,
@@ -30,7 +28,6 @@ import {
 } from "./place-facts";
 import { PlaceHero } from "./place-hero";
 import {
-  cardWidthProps,
   PhotosGrid,
   PhotosHeader,
   PhotoThumbs,
@@ -45,11 +42,6 @@ const whyIcon = symbol("auto-awesome");
 /** A Google hit the detail card can show: one with its full candidate (a position). */
 export type DetailedHit = GoogleHit & { result: PlaceCandidate };
 
-/** The card's box: an overlay surface, laid out by the `Column` it hosts. */
-function OverlayCard(props: Omit<ComponentProps<typeof Surface>, "level">) {
-  return <Surface level="overlay" {...props} />;
-}
-
 /**
  * A Google place not saved yet — one of Sonnet's picks, or a search hit's
  * ghost pin — as a floating card the size of the place card: Google's photos
@@ -62,11 +54,17 @@ function OverlayCard(props: Omit<ComponentProps<typeof Surface>, "level">) {
 export function GooglePlaceCard({
   hit,
   pick,
+  frame,
+  ref,
   onClose,
   onSave,
 }: {
   hit: DetailedHit;
   pick: AskPickNote | null;
+  /** Floating on the map, or drilled into the side panel. */
+  frame: CardFrame;
+  /** The card's box (what a click away is measured against). */
+  ref?: Ref<HTMLElement>;
   onClose: () => void;
   /** Save it — the screen then shows it as a saved place. */
   onSave: () => Promise<void>;
@@ -96,27 +94,26 @@ export function GooglePlaceCard({
     address: result.address ?? "",
     location: { lat: result.lat, lng: result.lng },
   };
-  // The card and its photos panel are one element, so its width glides.
+  // The card and its photos panel are one element, so its width glides
+  // (floating; drilled into the panel it keeps the panel's width).
   const showPhotos = photosOpen && rich !== null;
-  const width = cardWidthProps(PLACE_CARD_WIDTH, showPhotos);
   return (
     <Column
-      as={OverlayCard}
-      className={cn(
-        "pointer-events-auto max-h-full",
-        clipClasses({ axis: "both", fill: false }),
-        width.className,
+      ref={ref}
+      {...cardColumnProps(
+        frame,
+        showPhotos
+          ? {
+              header: (
+                <PhotosHeader
+                  place={mapsPlace}
+                  count={rich.photos.length}
+                  onBack={() => setPhotosOpen(false)}
+                />
+              ),
+            }
+          : null,
       )}
-      style={width.style}
-      header={
-        showPhotos ? (
-          <PhotosHeader
-            place={mapsPlace}
-            count={rich.photos.length}
-            onBack={() => setPhotosOpen(false)}
-          />
-        ) : undefined
-      }
       body={
         showPhotos ? (
           <PhotosGrid photos={rich.photos} place={mapsPlace} />
@@ -138,13 +135,15 @@ export function GooglePlaceCard({
               }}
               onShowAll={() => setPhotosOpen(true)}
             >
-              <IconButton
-                icon={closeIcon}
-                label="Close"
-                onClick={onClose}
-                variant="floating"
-                className="rounded-full"
-              />
+              {frame.kind === "floating" ? (
+                <IconButton
+                  icon={closeIcon}
+                  label="Close"
+                  onClick={onClose}
+                  variant="floating"
+                  className="rounded-full"
+                />
+              ) : null}
             </PlaceHero>
             <Stack gap="lg" className="p-md">
               <Stack gap="2xs">

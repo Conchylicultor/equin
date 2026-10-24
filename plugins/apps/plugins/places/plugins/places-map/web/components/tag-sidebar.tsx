@@ -1,21 +1,23 @@
 import { useMemo, useState, type ReactNode } from "react";
 import {
+  DataViewViewChip,
+  DataViewViewList,
   useDataViewControls,
   useFlatRows,
   useRowFilter,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
-import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import {
+  Rigid,
+  rigidClass,
+} from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import {
   Button,
   Input,
@@ -23,13 +25,6 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import {
-  DEFAULT_DRAFT_TTL,
-  legacyDraftKeys,
-  useDraft,
-} from "@plugins/primitives/plugins/persistent-draft/web";
-import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
-import { z } from "zod";
 import {
   CollapsibleChevron,
   CollapsibleContent,
@@ -51,28 +46,17 @@ import {
   applySidebarState,
   toggleTag,
   hasPickedDescendant,
-  removeTag,
+  presetAutoName,
+  presetIcon,
   sidebarState,
   tagFilterState,
   withoutSidebarRules,
-  type IncludeMode,
   type SidebarState,
   type TagFilterState,
 } from "../internal/sidebar-filter";
 import { AppShellBrand } from "@plugins/primitives/plugins/app-shell/web";
 import { placeSearchText } from "../internal/fields";
-import { TagChip } from "./tag-chip";
-
-const tagSidebarOpenStore = defineStore({
-  owner: "places.tag-sidebar-open",
-  label: "Places sidebar folds",
-  area: "local",
-  cap: "1 KB",
-  ttl: DEFAULT_DRAFT_TTL,
-  whenFull: "refuse",
-  schema: z.boolean(),
-  legacy: legacyDraftKeys("places.tag-sidebar.open"),
-});
+import { TagFilterBox } from "./tag-filter-box";
 
 const checkIcon = symbol("check");
 const removeIcon = symbol("remove");
@@ -81,15 +65,6 @@ const tuneIcon = symbol("tune");
 
 /** One tree level's indent, in px. */
 const INDENT_PX = 14;
-
-const MODE_OPTIONS = [
-  { id: "all", label: "all", title: "A place with every one of these tags" },
-  { id: "any", label: "any", title: "A place with any of these tags" },
-] as const satisfies readonly {
-  id: IncludeMode;
-  label: string;
-  title: string;
-}[];
 
 export interface TagSidebarProps {
   /** Every saved place (the faceted counts run over them). */
@@ -100,30 +75,50 @@ export interface TagSidebarProps {
   onNewTag: () => Promise<void>;
   /** "Manage tags": open the tag manager. */
   onManageTags: () => void;
+  /** Unfolded: the presets, the tag filter, the tree. Folded: the header alone,
+   *  the active preset's name (a dropdown of every preset) as its title. */
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 /**
- * The Places surface's `aside`: the tag tree, and the tag half of the view
- * filter. It reads and writes the active view's filter through
- * `useDataViewControls()` — the filter is the one source of truth, and the
- * sidebar owns only its top-level nested-tags rules (`sidebar-filter.ts`).
+ * The Places surface's `aside`: the presets, the tag tree, and the tag half
+ * of the active preset's filter. It reads and writes the active view's filter
+ * through `useDataViewControls()` — the filter is the one source of truth, and
+ * the sidebar owns only its top-level nested-tags rules (`sidebar-filter.ts`).
+ * The surface drafts its view edits (`viewEdits`), so every tag picked here
+ * edits the preset's working copy until it is saved.
  *
- * Header: the app launcher (the app's mark), then "Places" and the total —
- * a click on those folds the sidebar to its header
- * (remembered per device) — then the "Tagged / Not tagged" summary with the
- * any / all switch and Clear (once anything is picked), shown folded too, so
- * an active tag filter never hides. Body: a tag search and the tree, each
- * row's count being how many places the REST of the filter keeps that carry
- * the tag or a tag nested under it. A click includes a tag, or drops a picked
- * one (an exclusion is written in the advanced filter). Footer: + New tag, Manage tags.
+ * Header: the app launcher (the app's mark), "Places" and how many places
+ * show, the fold chevron — folded, the card keeps its width and this header
+ * alone, its title the active preset (`DataViewViewChip appearance="title"`:
+ * every preset as a draggable list); unfolded, the presets (`DataViewViewList`: icon, name,
+ * count, dirty dot, ⋯, drag, "+ New preset" — a preset from the current
+ * filter, named after its tags, opened for renaming); then the tag filter box
+ * (`TagFilterBox`: AND-ed rows of OR-ed tags, the excluded ones) with the
+ * preset's actions while it has unsaved edits — on the home preset Clear and
+ * Save as preset, on another Reset, Save as new and Update. Body: a tag
+ * search and the tree, each row's count being how many places the REST of the
+ * filter keeps that carry the tag or a tag nested under it. A click includes a
+ * tag — it joins the row of its root tag (or), else starts one (and) — or drops
+ * a picked one (an exclusion is written in the advanced filter; the box shows
+ * it and a click drops it). Footer: + New tag, Manage tags.
  */
 export function TagSidebar({
   places,
   tags,
   onNewTag,
   onManageTags,
+  open,
+  onOpenChange,
 }: TagSidebarProps) {
-  const { filter: controller, fields, activeState } = useDataViewControls();
+  const {
+    filter: controller,
+    fields,
+    activeState,
+    activeViewId,
+    viewModel,
+  } = useDataViewControls();
   const { filter, setFilter, resolveOperatorSet } = controller;
   const state = useMemo(() => sidebarState(filter), [filter]);
   const write = (next: SidebarState) =>
@@ -155,18 +150,63 @@ export function TagSidebar({
     [keep, places, tags],
   );
 
-  const byId = useMemo(
-    () => new Map<string, PlaceTag>(tags.map((t) => [t.id, t])),
-    [tags],
+  const { drafts, dirtyFor, homeViewId, setRenamingId } = viewModel;
+  if (drafts === null) {
+    throw new Error(
+      "TagSidebar: the Places surface drafts its view edits (viewEdits), so its presets have working copies",
+    );
+  }
+  const dirty = dirtyFor(activeViewId);
+  // A preset from the filter as it stands: named after its tags, with its
+  // first tag's icon, active, and its name open for editing. The preset it
+  // was made from goes back to its saved filter.
+  const saveAsPreset = () => {
+    const icon = presetIcon(state, tags);
+    const id = drafts.saveAsNew(activeViewId, {
+      name: presetAutoName(state, tags),
+      ...(icon === null ? {} : { icon }),
+    });
+    setRenamingId(id);
+  };
+  const actions = !dirty ? undefined : activeViewId === homeViewId ? (
+    <>
+      <Button variant="ghost" onClick={() => drafts.discard(activeViewId)}>
+        Clear
+      </Button>
+      <Fill />
+      <Button onClick={saveAsPreset}>Save as preset</Button>
+    </>
+  ) : (
+    <>
+      <Button
+        variant="ghost"
+        tooltip="Back to the saved filter — leaving the preset does the same"
+        onClick={() => drafts.discard(activeViewId)}
+      >
+        Reset
+      </Button>
+      <Fill />
+      <Button variant="ghost" onClick={saveAsPreset}>
+        Save as new
+      </Button>
+      <Button
+        tooltip="Overwrite the preset with this filter"
+        onClick={() => drafts.save(activeViewId)}
+      >
+        Update
+      </Button>
+    </>
   );
-  const picked = (ids: readonly string[]) =>
-    ids.map((id) => byId.get(id)).filter((t): t is PlaceTag => !!t);
-  const [open, setOpen] = useDraft(tagSidebarOpenStore, true);
 
+  const count = <PlaceCount shown={shown} total={places.length} />;
+  const chevron = (
+    <CollapsibleChevron className="size-4 text-muted-foreground" />
+  );
   return (
-    // One fold for the tree and the footer: both slide away together under the
-    // header, which stays (with the filter summary, so a filter never hides).
-    <CollapsibleProvider open={open} onOpenChange={setOpen}>
+    // One fold for everything under the header: the presets, the tag box, the
+    // tree and the footer slide away together; the header (and the card's
+    // width) stays, naming the active preset.
+    <CollapsibleProvider open={open} onOpenChange={onOpenChange}>
       {/* `fill`: the floating aside card hugs this column's height up to the
           surface's, so the tree scrolls between a header and footer that stay put. */}
       <Column
@@ -175,33 +215,55 @@ export function TagSidebar({
         header={
           <Stack gap="sm" className="p-sm">
             {/* The launcher is a button of its own, so it sits beside the
-                fold trigger rather than inside it. */}
+                fold trigger rather than inside it — and folded, so does the
+                preset dropdown that takes the title's place. */}
             <Line className="gap-2xs">
               <AppShellBrand form="icon" />
-              <Fill>
-                <CollapsibleTrigger
-                  aria-label={open ? "Collapse sidebar" : "Expand sidebar"}
-                  className="gap-sm rounded-md p-xs hover:bg-hover-fill"
-                >
+              {open ? (
+                <Fill>
+                  <CollapsibleTrigger
+                    aria-label="Collapse sidebar"
+                    className="gap-sm rounded-md p-xs hover:bg-hover-fill"
+                  >
+                    <Fill>
+                      <Text variant="heading">Places</Text>
+                    </Fill>
+                    {count}
+                    {chevron}
+                  </CollapsibleTrigger>
+                </Fill>
+              ) : (
+                <>
                   <Fill>
-                    <Text variant="heading">Places</Text>
+                    <DataViewViewChip appearance="title" />
                   </Fill>
-                  <PlaceCount shown={shown} total={places.length} />
-                  <CollapsibleChevron className="size-4 text-muted-foreground" />
-                </CollapsibleTrigger>
-              </Fill>
+                  {/* Rigid: the trigger is full-width by default; here it
+                      sizes to its count and chevron beside the title. */}
+                  <Rigid>
+                    <CollapsibleTrigger
+                      aria-label="Expand sidebar"
+                      className="gap-sm rounded-md p-xs hover:bg-hover-fill"
+                    >
+                      {count}
+                      {chevron}
+                    </CollapsibleTrigger>
+                  </Rigid>
+                </>
+              )}
             </Line>
-            {state.include.length + state.exclude.length > 0 ? (
-              <FilterSummary
-                include={picked(state.include)}
-                exclude={picked(state.exclude)}
-                mode={state.mode}
-                tags={tags}
-                onRemove={(id) => write(removeTag(state, id))}
-                onMode={(mode) => write({ ...state, mode })}
-                onClear={() => write({ include: [], exclude: [], mode: "all" })}
-              />
-            ) : null}
+            <CollapsibleContent>
+              <Stack gap="sm">
+                <DataViewViewList newLabel="New preset" onNew={saveAsPreset} />
+                {state.rows.length + state.exclude.length > 0 || dirty ? (
+                  <TagFilterBox
+                    state={state}
+                    tags={tags}
+                    onChange={write}
+                    footer={actions}
+                  />
+                ) : null}
+              </Stack>
+            </CollapsibleContent>
           </Stack>
         }
         body={
@@ -231,69 +293,6 @@ export function TagSidebar({
         }
       />
     </CollapsibleProvider>
-  );
-}
-
-function FilterSummary(props: {
-  include: PlaceTag[];
-  exclude: PlaceTag[];
-  mode: IncludeMode;
-  tags: readonly PlaceTag[];
-  onRemove: (tagId: string) => void;
-  onMode: (mode: IncludeMode) => void;
-  onClear: () => void;
-}): ReactNode {
-  const { include, exclude, mode, tags, onRemove, onMode, onClear } = props;
-  return (
-    <Surface level="sunken" className="rounded-lg p-sm">
-      <Stack gap="xs">
-        {include.length > 0 ? (
-          <Cluster gap="xs">
-            <Text variant="caption" tone="muted">
-              Tagged
-            </Text>
-            {include.map((t) => (
-              <TagChip
-                key={t.id}
-                tag={t}
-                tags={tags}
-                onRemove={() => onRemove(t.id)}
-              />
-            ))}
-            {include.length > 1 ? (
-              <SegmentedControl
-                label="Match"
-                options={MODE_OPTIONS}
-                value={mode}
-                onChange={onMode}
-              />
-            ) : null}
-          </Cluster>
-        ) : null}
-        {exclude.length > 0 ? (
-          <Cluster gap="xs">
-            <Text variant="caption" tone="muted">
-              Not tagged
-            </Text>
-            {exclude.map((t) => (
-              <TagChip
-                key={t.id}
-                tag={t}
-                tags={tags}
-                excluded
-                onRemove={() => onRemove(t.id)}
-              />
-            ))}
-          </Cluster>
-        ) : null}
-        <Line>
-          <Fill />
-          <Button variant="link" onClick={onClear}>
-            Clear
-          </Button>
-        </Line>
-      </Stack>
-    </Surface>
   );
 }
 
@@ -462,6 +461,8 @@ function TagTreeRow(props: {
       </button>
       <Fill>
         <Row
+          // The tree row's identity on the DOM (e2e scripts find rows by it).
+          data-tag-row={tag.id}
           size="sm"
           selected={filterState === "include"}
           onClick={props.onPick}

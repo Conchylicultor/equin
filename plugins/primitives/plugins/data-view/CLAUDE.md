@@ -177,6 +177,7 @@ Storage for non-config state):
 | Active instance id | localStorage `${storageKey}:active-view` (per device) |
 | Tree expand map, collapsed group sections, collapsed view section (`collapsed`, sections chrome) | localStorage `${storageKey}:view-state` (per device) |
 | Search query | **sessionStorage** `${storageKey}:view-query` (per browser tab) |
+| Unsaved edits of a drafted view (`viewEdits`) | **sessionStorage** owner `data-view.view-drafts`, keyed by `storageKey` (per browser tab) — view-core's drafts |
 
 The localStorage reader ignores legacy `sort`/`filter`/`query` keys in a
 `view-state` blob, so no migration is needed.
@@ -1288,8 +1289,9 @@ tools floating over it — `floating-toolbar` is the reference arrangement).
   `viewOptions[backdrop]`. A body not showing its view (loading, error) keeps
   its card even over its own backdrop type. **`reserve?: { right }`** is room
   the surface's own chrome covers on that edge (a detail card); the card stops
-  a gutter short of it. Overlay arrangement only, `fullBleed` type only,
-  `reserve` only with `backdrop` — each throws otherwise. Places is the
+  a gutter short of it (and of the `asideEnd`). Overlay arrangement only,
+  `fullBleed` type only, `reserve` only with `backdrop` or `asideEnd` — each
+  throws otherwise. Places is the
   reference.
 - **`DataViewProps.aside?: ReactNode`** — a host panel (a facet sidebar) placed
   by `BandSurface` (`web/components/band-surface.tsx`): beside an overlay band
@@ -1305,6 +1307,83 @@ tools floating over it — `floating-toolbar` is the reference arrangement).
   It is a surface key (carried on `DataViewShellChrome`, omitted from
   `DataViewSourceBundle`), shown once there is an active view, and only a band
   chrome takes it — a hosted or sections toolbar throws.
+- **`DataViewProps.asideEnd?: ReactNode`** — the aside's mirror on the right
+  edge, but BELOW the band (the tools card holds the top-right corner): a
+  floating `Surface level="overlay"` card from `--dv-header-offset` to a gutter
+  above the bottom, a gutter in from `reserve.right`, sizing its own width and
+  height (capped at that column). It renders inside the controls provider too,
+  so a panel listing the active view's rows reads them there
+  (`useDataViewControls().rows`, `useFlatRows`). A `backdrop`'s floating view
+  card stops a gutter short of it. Overlay arrangement only — `BandSurface`
+  and the shell both throw otherwise.
+
+All of these chrome rules (`aside` needs a band; `asideEnd` and `backdrop` an
+overlay band; `reserve` a `backdrop` or an `asideEnd`) are checked in ONE
+place, `web/internal/surface-chrome-rules.ts` (`assertSurfaceChrome`), called
+by the shell before anything renders.
+
+### View edits: drafts, the home view, and the switcher's form
+
+A surface whose views are SAVED FILTERS (presets) rather than places wants an
+edit to stay an edit until the user keeps it. `viewEdits={{ mode: "draft",
+home? }}` turns that on, through view-core's drafts (see its CLAUDE.md, "Drafts"):
+
+- **Every write to a view's `view` value** — `setFilter`, `setSort*`,
+  `setGroupBy`, `setFold`, `setProperties`, the settings popover's options —
+  lands in the view's per-tab WORKING COPY; renaming, icons, reordering, adding
+  and deleting stay durable. A write equal to the saved value (compared by
+  `canonicalViewValue`: canonical JSON, filter-node ids ignored, since a filter
+  rebuilt to what it was carries fresh ids) drops the copy.
+- **`ReadyViewModel`** carries `dirtyFor` (a `ViewGetter<boolean>`), `drafts`
+  (`save` / `discard` / `restore` / `saveAsNew`, or `null` without drafts),
+  `homeViewId`, and the shared inline-rename state `renamingId` /
+  `setRenamingId`. All of it reaches the band, `aside` and `asideEnd` through
+  `useDataViewControls().viewModel`.
+- **Switching views discards** the view being left's copy and shows a toast
+  "<name> reset to its saved filter" whose **Undo** restores the copy and
+  switches back (`useDataViewModel`'s `setActiveView`).
+- **`home`** names the view that is always first: the model refuses to rename
+  or delete it (throws — no list offers it), drops a drag of it and clamps a
+  drop above it to just below it.
+
+`switcherForm` picks what the band's arrangement may place:
+`"strip"` (default, unchanged), `"chip"` (`switcher.strip` is `null`, so
+arrangements place the chip — `strip ?? chip`), `"none"` (both `null`: the
+surface lists its views itself). Under drafts the band's chip is
+`DataViewViewChip` (exported; `appearance="title"` for an aside header naming the active view) — the active view's count and dirty dot, opening every view
+as a draggable `ViewList` with no per-view actions.
+
+Listing the views yourself: **`DataViewViewList({ newLabel, onNew? })`**
+(`web/components/view-list.tsx`) is view-core's `ViewList` over the controls
+context — icon, name, count, dirty dot, ⋯ Rename / Duplicate / Delete (none on
+home), drag to reorder (home pinned), "+ {newLabel}" (default: add a view of the
+active view's type). Its counts are **`useViewRowCounts()`**: each view's FILTER
+(no search) over `useDataViewControls().rows`, one `ViewGetter` per view so an
+edit recounts that view alone; `undefined` while the rows are not in memory
+(`rows` is `null` under a live source, and while the read loads or failed).
+
+**`viewShortcuts`** binds ⌥1–⌥9 to the first nine views
+(`web/internal/use-view-shortcuts.ts`): surface-scoped (`useSurfaceShortcuts`),
+yielding to a focused text field (on macOS ⌥digit types a character there).
+
+### Row hover: `hoveredRowId` / `onRowHoverChange`
+
+A surface showing the same rows twice (a list beside a map) highlights one row
+in both. `DataViewProps.hoveredRowId` / `onRowHoverChange` are threaded to the
+views as the render props of the same name: a view reports pointer enter/leave
+of its rows and draws the `hoveredRowId` row in its hovered tone — the list
+holds `Row`'s own hover paint (`bg-hover-fill`), the gallery `Card`'s
+interactive hover, the map its pin's hover. A view that ignores them simply
+does not take part.
+
+A report is a **claim or a release**, `onRowHoverChange(id, hovered)` — never
+a bare "nothing hovered". Two surfaces report one pointer move (leaving a pin,
+entering a row) in an order nobody controls: React fires the row's
+`onPointerEnter` from the same `pointerout` the map's leave comes from, and a
+lifted pin is a portal whose own container React listens on first. A "none"
+from the surface left would erase the hover the other just claimed; a release
+of its own id cannot. Hold the shared state with the map primitive's
+`useLinkedHover()` (`nextLinkedHover`: a leave clears only the id it names).
 
 ### Search with suggestions (`search.suggestions`)
 
@@ -2865,15 +2944,15 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSlots.Control` ← `primitives.data-view`
     - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
     - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-  - Contributes: 85 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.WebRegister` ×77
+  - Contributes: 86 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×78
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
     - `IdKinds.Kind` ×2
-  - Uses: 116 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 119 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×18
     - `primitives/css/ui-kit` ×15
-    - `primitives/data-view/view-core` ×9
+    - `primitives/data-view/view-core` ×10
     - `primitives/live-state` ×6
     - `primitives/css/control-panel` ×4
     - `primitives/slot-render` ×4
@@ -2893,6 +2972,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `primitives/latest-ref` ×2
     - `primitives/loading` ×2
     - `primitives/search` ×2
+    - `primitives/shortcuts` ×2
     - `primitives/sortable-list` ×2
     - `shell/toast` ×2
     - `fields.Fields`
@@ -2951,6 +3031,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSourceProps`
     - `DataViewSources`
     - `DataViewSwitcherProps`
+    - `DataViewViewEdits`
     - `DataViewViewportSink`
     - `DropTargetProps`
     - `FieldCellProps`
@@ -3033,12 +3114,15 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `ChipSelectFilterInput`
     - `coverDetailClass`
     - `CoverFrame`
+    - `coverHeldAttr`
     - `coverHoverGroup`
     - `DATA_VIEW_HEADER_OFFSET_VAR`
     - `DataView`
     - `DataViewGroupHeader`
     - `DataViewSlots`
     - `DataViewSwitcher`
+    - `DataViewViewChip`
+    - `DataViewViewList`
     - `defineDataView`
     - `defineDataViewSources`
     - `defineItemActions`
@@ -3103,9 +3187,10 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `useRowDropState`
     - `useRowFilter`
     - `useSortController`
+    - `useViewRowCounts`
 - Server:
-  - Contributes: 79 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.Register` ×77
+  - Contributes: 80 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.Register` ×78
     - `ids.kind` ×2
   - Uses:
     - `config_v2.getConfig`
@@ -3156,6 +3241,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSectionPaging`
     - `DataViewSurfaceChrome`
     - `DataViewToolbarSpec`
+    - `DataViewViewEdits`
     - `DataViewViewportSink`
     - `DataViewVisibleRows`
     - `FieldDef`

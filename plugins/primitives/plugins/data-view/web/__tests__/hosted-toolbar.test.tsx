@@ -177,6 +177,8 @@ function readyModel(): ViewModel {
     activeId: "Queue",
     setActiveView: () => {},
     actions: { availableSources: [] },
+    drafts: null,
+    homeViewId: null,
   } as unknown as ViewModel;
 }
 

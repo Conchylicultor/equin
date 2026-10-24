@@ -23,11 +23,37 @@ export const NO_MAP_PADDING: MapPadding = {
   left: 0,
 };
 
+/**
+ * A lat/lng box. `west > east` is a box across the antimeridian (it runs east
+ * from `west` past 180° to `east`); `west: -180, east: 180` is every longitude.
+ */
 export interface MapBounds {
   south: number;
   west: number;
   north: number;
   east: number;
+}
+
+/** Wraps a longitude into [-180, 180). */
+function wrapLng(lng: number): number {
+  return ((((lng + 180) % 360) + 360) % 360) - 180;
+}
+
+/**
+ * Whether `p` lies in `b`, edges included. Antimeridian-aware: a box with
+ * `west > east` crosses it, and longitudes are compared wrapped, so 190° is
+ * -170°.
+ */
+export function boundsContain(b: MapBounds, p: LatLng): boolean {
+  if (p.lat < b.south || p.lat > b.north) return false;
+  // Every longitude: also catches an east of 180 that wraps to -180.
+  if (b.east - b.west >= 360) return true;
+  const lng = wrapLng(p.lng);
+  const west = wrapLng(b.west);
+  // 180 is a legal east edge; wrapping would turn it into -180.
+  const east = b.east === 180 ? 180 : wrapLng(b.east);
+  if (lng === -180 && east === 180) return true;
+  return west <= east ? lng >= west && lng <= east : lng >= west || lng <= east;
 }
 
 /**

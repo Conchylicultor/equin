@@ -26,6 +26,13 @@ on a full-bleed `<MapView>` (`plugins/map`), clustered by default.
   `onRowOpen` when the row does not activate. `selectedRowId` is the map's
   `activeId` (its pin renders active) and `focusId` (panned into view when
   off-screen).
+- **Row hover.** The surface's `hoveredRowId` render prop is the map's
+  `hoveredId` (that row's pin lifts as under the pointer) unless the
+  `hoveredId` option is non-null (a proposal's hover wins). A pin's enter /
+  leave is claimed / released through `onRowHoverChange(key, hovered)` as its
+  row's key (an extra overlay, which is no row, claims nothing; a release
+  always passes, a no-op for a row nobody holds) and through the option's
+  `onHoverChange(id, hovered)` as is.
 - **Kept rows.** The selected row is drawn even when the search or filter
   hides it (its detail is open beside the map — the pin is what it points
   at), and so is every row whose key is in the `keep` option
@@ -85,9 +92,13 @@ which decides which one draws on top).
   click on one goes to its `onActivate`, never to the row activation. Mark
   them `frame: false` to keep the camera off them (Places' ghost pins).
 - `hoveredId?` / `onHoverChange?` — the map primitive's linked hover, over row
-  pins and extra overlays alike.
-- `onCameraRest?` — the map primitive's: where the camera rested, and the
-  area it shows (`CameraRest.bounds`).
+  pins and extra overlays alike. `hoveredId` wins over the surface's
+  `hoveredRowId` while non-null.
+- `onCameraRest?` — the map primitive's: where the camera rested, the area it
+  shows (`CameraRest.bounds`) and the part `fitPadding` leaves uncovered
+  (`CameraRest.visible`, re-reported when the padding changes).
+- `fitRequest?` — the map primitive's: each change (not the mount's value)
+  frames the pins as the Fit control does.
 
 ```tsx
 <DataView

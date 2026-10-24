@@ -20,6 +20,7 @@ import {
   cameraFor,
   framingOverlays,
   overlayPositions,
+  uncoveredBounds,
   viewFor,
   type CameraRest,
   type CameraView,
@@ -124,6 +125,7 @@ function GoogleMapCanvas({
   pick,
   initialCamera,
   onCameraRest,
+  fitRequest,
 }: MapRendererProps & { browserKey: string; mapId: string | null }) {
   // Held in state, not a ref: the tone colours are read off this element, and
   // a ref cannot trigger the render that reads them.
@@ -193,9 +195,16 @@ function GoogleMapCanvas({
             <FitCamera overlays={framed} fitPadding={fitPadding} />
           ) : null}
           {onCameraRest === undefined ? null : (
-            <ReportCameraRest onCameraRest={onCameraRest} />
+            <ReportCameraRest
+              onCameraRest={onCameraRest}
+              fitPadding={fitPadding}
+            />
           )}
-          <FitControl overlays={framed} fitPadding={fitPadding} />
+          <FitControl
+            overlays={framed}
+            fitPadding={fitPadding}
+            fitRequest={fitRequest}
+          />
           {mapId === null ? null : <RasterNotice />}
           <WheelZoom />
           <FocusCamera
@@ -255,34 +264,64 @@ function roughView(overlays: readonly MapOverlay[]): CameraView {
 /**
  * Reports the camera each time it comes to rest (Google's `idle`: after a
  * pan, a zoom, a fit or a flight settles, and once when the map first
- * settles), with the area it shows.
+ * settles), with the area it shows and the part of it the chrome leaves
+ * uncovered. A change of the covered edges re-reports at once: the camera did
+ * not move, so no `idle` follows, but the uncovered area did change.
  */
 function ReportCameraRest({
   onCameraRest,
+  fitPadding,
 }: {
   onCameraRest: (rest: CameraRest) => void;
+  fitPadding: MapPadding;
 }) {
   const map = useMap();
   const report = useLatestRef(onCameraRest);
+  const padding = useLatestRef(fitPadding);
+  const { top, right, bottom, left } = fitPadding;
 
   useEffect(() => {
     if (map === null) return;
     const listener = map.addListener("idle", () => {
-      const center = map.getCenter();
-      const zoom = map.getZoom();
-      const bounds = map.getBounds();
-      if (center === undefined || zoom === undefined || bounds === undefined)
-        return;
-      report.current({
-        center: { lat: center.lat(), lng: center.lng() },
-        zoom,
-        bounds: bounds.toJSON(),
-      });
+      const rest = cameraRest(map, padding.current);
+      if (rest !== null) report.current(rest);
     });
     return () => listener.remove();
-  }, [map, report]);
+  }, [map, report, padding]);
+
+  useEffect(() => {
+    if (map === null) return;
+    // No bounds yet: the map has not settled, and its first `idle` reports.
+    const rest = cameraRest(map, padding.current);
+    if (rest !== null) report.current(rest);
+    // The covered edges are the trigger; `padding` carries them.
+  }, [map, report, padding, top, right, bottom, left]);
 
   return null;
+}
+
+/** Where the map rests now, or `null` before it has laid out. */
+function cameraRest(
+  map: google.maps.Map,
+  padding: MapPadding,
+): CameraRest | null {
+  const center = map.getCenter();
+  const zoom = map.getZoom();
+  const bounds = map.getBounds();
+  if (center === undefined || zoom === undefined || bounds === undefined) {
+    return null;
+  }
+  const view = { center: { lat: center.lat(), lng: center.lng() }, zoom };
+  const div = map.getDiv();
+  return {
+    ...view,
+    bounds: bounds.toJSON(),
+    visible: uncoveredBounds(
+      view,
+      { width: div.clientWidth, height: div.clientHeight },
+      padding,
+    ),
+  };
 }
 
 /**
@@ -388,14 +427,17 @@ function FitCamera({
  * flies to frame every overlay showing now, in the area the chrome leaves
  * uncovered — zooming out, gliding and zooming back in, never a jump. A
  * second click restarts the flight from wherever it is. Disabled while there
- * is nothing to frame.
+ * is nothing to frame. A change of `fitRequest` (never its first value) is the
+ * same click, made by the caller.
  */
 function FitControl({
   overlays,
   fitPadding,
+  fitRequest,
 }: {
   overlays: readonly MapOverlay[];
   fitPadding: MapPadding;
+  fitRequest: number | undefined;
 }) {
   const map = useMap();
   const stopFlight = useRef<(() => void) | null>(null);
@@ -407,6 +449,14 @@ function FitControl({
     stopFlight.current?.();
     stopFlight.current = flyCamera(map, view);
   };
+  const latestFit = useLatestRef(fit);
+  // The request seen last: the mount's value is not a request.
+  const seenRequest = useRef(fitRequest);
+  useEffect(() => {
+    if (fitRequest === seenRequest.current) return;
+    seenRequest.current = fitRequest;
+    latestFit.current();
+  }, [fitRequest, latestFit]);
   return (
     <MapControl position={ControlPosition.RIGHT_BOTTOM}>
       {/* The inset keeps the button off the map's edge, as Google's own

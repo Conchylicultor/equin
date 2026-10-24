@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { NO_MAP_PADDING } from "./camera";
-import { flyPath, viewFor, type CameraView } from "./fly";
+import { flyPath, uncoveredBounds, viewFor, type CameraView } from "./fly";
 
 const VIEWPORT = { width: 1000, height: 800 };
 
@@ -73,5 +73,68 @@ describe("flyPath", () => {
 
   test("going nowhere takes no time", () => {
     expect(flyPath(paris, paris, VIEWPORT).durationMs).toBe(0);
+  });
+});
+
+describe("uncoveredBounds", () => {
+  const paris = { center: { lat: 48.85, lng: 2.35 }, zoom: 12 };
+
+  test("no padding: a box centred on the view", () => {
+    const b = uncoveredBounds(paris, VIEWPORT, NO_MAP_PADDING);
+    expect((b.west + b.east) / 2).toBeCloseTo(2.35, 6);
+    expect(b.south).toBeLessThan(48.85);
+    expect(b.north).toBeGreaterThan(48.85);
+    // 1000 px at zoom 12: 1000 / (256 · 4096) of 360°.
+    expect(b.east - b.west).toBeCloseTo((1000 / (256 * 4096)) * 360, 6);
+  });
+
+  test("padding trims its own edge only", () => {
+    const full = uncoveredBounds(paris, VIEWPORT, NO_MAP_PADDING);
+    const b = uncoveredBounds(paris, VIEWPORT, {
+      top: 0,
+      right: 400,
+      bottom: 0,
+      left: 0,
+    });
+    expect(b.west).toBeCloseTo(full.west, 9);
+    expect(b.north).toBeCloseTo(full.north, 9);
+    expect(b.south).toBeCloseTo(full.south, 9);
+    expect(b.east - b.west).toBeCloseTo(
+      ((full.east - full.west) * 600) / 1000,
+      9,
+    );
+  });
+
+  test("a view across the antimeridian has west > east", () => {
+    const b = uncoveredBounds(
+      { center: { lat: 0, lng: 180 }, zoom: 4 },
+      VIEWPORT,
+      NO_MAP_PADDING,
+    );
+    expect(b.west).toBeGreaterThan(0);
+    expect(b.east).toBeLessThan(0);
+  });
+
+  test("an uncovered width wider than the world is every longitude", () => {
+    const b = uncoveredBounds(
+      { center: { lat: 0, lng: 0 }, zoom: 0 },
+      VIEWPORT,
+      NO_MAP_PADDING,
+    );
+    expect(b.west).toBe(-180);
+    expect(b.east).toBe(180);
+    expect(b.north).toBeCloseTo(85.0511287798, 6);
+    expect(b.south).toBeCloseTo(-85.0511287798, 6);
+  });
+
+  test("chrome covering everything leaves an empty box at the centre", () => {
+    const b = uncoveredBounds(paris, VIEWPORT, {
+      top: 500,
+      right: 600,
+      bottom: 500,
+      left: 600,
+    });
+    expect(b.west).toBeCloseTo(b.east, 9);
+    expect(b.south).toBeCloseTo(b.north, 9);
   });
 });

@@ -41,14 +41,23 @@ const GUTTER = "md";
  * - **Overlay + backdrop** (`DataViewProps.backdrop`): the backdrop view fills
  *   the surface at ONE tree position whatever view is active, so it never
  *   remounts; any other view floats over it as a card — below the band, past
- *   the aside, a gutter from the bottom and from the right edge's `reserve` —
- *   scrolling inside it, its sticky headers pinned at the card's top.
+ *   the aside, a gutter from the bottom and from the right edge's `reserve`
+ *   (and the `asideEnd`) — scrolling inside it, its sticky headers pinned at
+ *   the card's top.
+ * - **Overlay + asideEnd** (`DataViewProps.asideEnd`): a floating card on the
+ *   right, below the band, a gutter from the bottom and from `reserve.right`,
+ *   inside the controls context like the aside. Overlay only (throws else).
  */
 export function BandSurface(props: {
   /** Whether the toolbar arrangement floats its band over the view. */
   overlay: boolean;
   /** The surface's side panel, or `undefined`. */
   aside: ReactNode;
+  /** The surface's right-hand panel (`DataViewProps.asideEnd`). Overlay only. */
+  asideEnd?: ReactNode;
+  /** Room the surface's own chrome covers (`DataViewProps.reserve`): the
+   *  floating cards on the right stop a gutter short of it. */
+  reserve?: DataViewReserve;
   /** The active view type's `fullBleed`. */
   fullBleed: boolean;
   controls: DataViewControlsContextValue;
@@ -61,12 +70,29 @@ export function BandSurface(props: {
    * whether the body floats over it as a card (`panel: false` while the
    * active view IS the backdrop — the body is then not shown). Overlay only.
    */
-  backdrop?: { node: ReactNode; panel: boolean; reserve?: DataViewReserve };
+  backdrop?: { node: ReactNode; panel: boolean };
 }): ReactNode {
-  const { overlay, aside, fullBleed, controls, band, children, backdrop } =
-    props;
+  const {
+    overlay,
+    aside,
+    asideEnd,
+    reserve,
+    fullBleed,
+    controls,
+    band,
+    children,
+    backdrop,
+  } = props;
   const [asideRef, { width: asideWidth }] = useElementSize();
+  const [asideEndRef, { width: asideEndWidth }] = useElementSize();
   const hasAside = aside !== undefined;
+  const hasAsideEnd = asideEnd !== undefined;
+  if (hasAsideEnd && !overlay) {
+    throw new Error(
+      "BandSurface: `asideEnd` floats over the view, beside an overlay band " +
+        "only — an in-flow band leaves it no room.",
+    );
+  }
   // The floating aside's reach from the left edge: its gutter plus its own
   // measured width. Beside an in-flow band the aside has a column of its own,
   // so the band and the body start past it already.
@@ -85,6 +111,12 @@ export function BandSurface(props: {
 
   if (overlay) {
     const gutter = spaceLength(GUTTER);
+    // What the surface's right edge holds before a floating view card: the
+    // consumer's reserved room, then the asideEnd's card and its gutter.
+    const reserveRight = reserve?.right ?? "0px";
+    const rightInset = hasAsideEnd
+      ? `calc(${reserveRight} + ${gutter} + ${asideEndWidth}px)`
+      : reserveRight;
     const view = backdrop ? (
       <>
         {/* The backdrop: the same box a full-bleed view gets, at a position
@@ -100,7 +132,7 @@ export function BandSurface(props: {
             style={{
               top: `var(${DATA_VIEW_HEADER_OFFSET_VAR})`,
               left: `calc(${asideInset} + ${gutter})`,
-              right: `calc(${backdrop.reserve?.right ?? "0px"} + ${gutter})`,
+              right: `calc(${rightInset} + ${gutter})`,
               bottom: gutter,
             }}
           >
@@ -169,6 +201,34 @@ export function BandSurface(props: {
               </Surface>
             </Stack>
           </Pin>
+        ) : null}
+        {hasAsideEnd ? (
+          // The aside's mirror on the right, but below the band (the tools
+          // card holds the top-right corner): a click-through column from
+          // the band's foot to a gutter above the bottom, a gutter in from
+          // the reserved room, as wide as its card — which hugs its panel's
+          // height, capped at the column's.
+          <Layer
+            layer="nav"
+            decorative
+            ref={asideEndRef}
+            style={{
+              top: `var(${DATA_VIEW_HEADER_OFFSET_VAR})`,
+              right: `calc(${reserveRight} + ${gutter})`,
+              bottom: gutter,
+              left: "auto",
+            }}
+          >
+            <Stack gap="none" className="h-full">
+              <Surface level="overlay" className={yieldClass("y")}>
+                <Stack gap="none" as={OverlayInteractive} className="h-full">
+                  <DataViewControlsProvider {...controls}>
+                    {asideEnd}
+                  </DataViewControlsProvider>
+                </Stack>
+              </Surface>
+            </Stack>
+          </Layer>
         ) : null}
       </>
     );

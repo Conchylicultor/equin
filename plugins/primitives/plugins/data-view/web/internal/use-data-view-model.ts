@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
 import type { VariantEntry } from "@plugins/fields/plugins/variant/plugins/config/core";
 import type { SavedSymbolName } from "@plugins/ui/plugins/icons/core";
@@ -9,8 +9,10 @@ import {
 import type {
   AssertStableGetters,
   ResolvedViewInstance,
+  ViewDrafts,
   ViewGetter,
 } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
+import { showToast } from "@plugins/shell/plugins/toast/web";
 import type {
   AddableSource,
   ViewSourceEntry,
@@ -33,6 +35,7 @@ import { isFilterGroup } from "./filter-shape";
 import { dataViewDescriptors } from "./descriptors";
 import { IDENTITY_GROUPING } from "./identity-grouping";
 import { useViewEphemeral } from "./use-view-ephemeral";
+import { canonicalViewValue } from "./canonical-view";
 
 /** Instance actions for the editable view-switcher (every DataView has these). */
 export interface ViewActions {
@@ -93,6 +96,29 @@ export interface ReadyViewModel {
   setViewCollapsed: (id: string, collapsed: boolean) => void;
   /** Instance actions for the editable switcher (always present). */
   actions: ViewActions;
+  /** Whether THIS view has unsaved edits (always `false` without drafts —
+   *  `DataViewProps.viewEdits`). */
+  dirtyFor: ViewGetter<boolean>;
+  /** The working-copy actions (save / discard / restore / save as new), or
+   *  `null` when the surface does not draft its edits. */
+  drafts: ViewDrafts | null;
+  /** The surface's home view (`viewEdits.home`): first, never dragged,
+   *  renamed or deleted. `null` when it names none. */
+  homeViewId: string | null;
+  /** The view whose name is being edited inline, if any — shared by every
+   *  list of the views on the surface, so a host can start a rename (on a
+   *  view it just created). */
+  renamingId: string | null;
+  setRenamingId: (id: string | null) => void;
+}
+
+/** How a surface's view edits behave — `DataViewProps.viewEdits`. */
+export interface ViewEditsOptions {
+  /** Edits to a view's filter / sort / grouping go to a per-tab working copy
+   *  (`drafts`), saved or discarded explicitly. */
+  drafts: boolean;
+  /** The home view's id (see `ReadyViewModel.homeViewId`). */
+  home?: string;
 }
 
 /**
@@ -300,6 +326,7 @@ export function useDataViewModel(
   entries: ViewSourceEntry<DataViewContribution>[],
   defaultView: string | undefined,
   pinnedView?: string,
+  edits?: ViewEditsOptions,
 ): ViewModel {
   const core = useViewModel<DataViewContribution>(
     storageKey,
@@ -307,7 +334,10 @@ export function useDataViewModel(
     entries,
     defaultView,
     pinnedView,
+    { drafts: edits?.drafts === true, canonical: canonicalViewValue },
   );
+  const homeViewId = edits?.home ?? null;
+  const [renamingId, setRenamingId] = useState<string | null>(null);
   const ephemeral = useViewEphemeral(storageKey);
 
   const setSortRules = useCallback(
@@ -435,26 +465,81 @@ export function useDataViewModel(
     deriveCollapsedSet,
   );
 
-  const actions = useMemo<ViewActions>(
-    () => ({
+  // The home view stays first and keeps its name: renaming or deleting it is a
+  // caller bug (no list offers it), and a drop above it lands just below it.
+  const actions = useMemo<ViewActions>(() => {
+    const assertNotHome = (id: string, what: string) => {
+      if (id === homeViewId) {
+        throw new Error(
+          `DataView(${storageKey}): the home view "${id}" cannot be ${what}`,
+        );
+      }
+    };
+    return {
       availableSources: core.actions.availableSources,
       variantsFor: core.actions.variantsFor,
       addView: core.actions.addView,
-      renameView: core.actions.renameView,
+      renameView: (id, name) => {
+        assertNotHome(id, "renamed");
+        core.actions.renameView(id, name);
+      },
       setViewIcon: core.actions.setViewIcon,
       duplicateView: core.actions.duplicateView,
-      deleteView: core.actions.deleteView,
-      reorderView: core.actions.reorderView,
+      deleteView: (id) => {
+        assertNotHome(id, "deleted");
+        core.actions.deleteView(id);
+      },
+      reorderView: (id, toIndex) => {
+        if (homeViewId === null) {
+          core.actions.reorderView(id, toIndex);
+          return;
+        }
+        // Dragging the home view itself moves nothing: it is pinned first.
+        if (id === homeViewId) return;
+        const homeIndex = core.instances.findIndex(
+          (r) => r.instance.id === homeViewId,
+        );
+        core.actions.reorderView(id, Math.max(toIndex, homeIndex + 1));
+      },
       updateView: core.actions.updateView,
-    }),
-    [core.actions],
+    };
+  }, [core.actions, core.instances, homeViewId, storageKey]);
+
+  // Under drafts, leaving a view drops its unsaved edits — it shows its saved
+  // value the next time — and offers them back: Undo restores the copy and
+  // returns to the view.
+  const { drafts, setActiveView: selectView, activeId, instances } = core;
+  const setActiveView = useCallback(
+    (next: string) => {
+      const prev = activeId;
+      if (drafts !== null && next !== prev) {
+        const copy = drafts.discard(prev);
+        if (copy !== null) {
+          const name =
+            instances.find((r) => r.instance.id === prev)?.instance.name ??
+            prev;
+          showToast({
+            description: `${name} reset to its saved filter`,
+            action: {
+              label: "Undo",
+              onClick: () => {
+                drafts.restore(prev, copy);
+                selectView(prev);
+              },
+            },
+          });
+        }
+      }
+      selectView(next);
+    },
+    [activeId, drafts, instances, selectView],
   );
 
   const model = useMemo(
     (): ReadyViewModel => ({
       instances: core.instances,
       activeId: core.activeId,
-      setActiveView: core.setActiveView,
+      setActiveView,
       stateFor,
       setSort,
       setSortRules,
@@ -469,9 +554,17 @@ export function useDataViewModel(
       sectionFor,
       setViewCollapsed: ephemeral.setViewCollapsed,
       actions,
+      dirtyFor: core.dirtyFor,
+      drafts: core.drafts,
+      homeViewId,
+      renamingId,
+      setRenamingId,
     }),
     [
       core,
+      setActiveView,
+      homeViewId,
+      renamingId,
       stateFor,
       setSort,
       setSortRules,

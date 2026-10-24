@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { useJsonlConversationId } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
@@ -15,7 +15,7 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ResourceErrorInline } from "@plugins/primitives/plugins/live-state/web";
 import type { MapPin } from "@plugins/map/core";
-import { MapView } from "@plugins/map/web";
+import { MapView, useLinkedHover } from "@plugins/map/web";
 import type { PlaceCandidate } from "@plugins/integrations/plugins/google-maps/plugins/places-api/core";
 import {
   PlacesPicksSchema,
@@ -131,7 +131,7 @@ function LoadedPicks({
 }
 
 function PicksBody({ picks }: { picks: readonly ShownPick[] }) {
-  const [hovered, setHovered] = useState<string | null>(null);
+  const { hoveredId: hovered, onHoverChange: setHovered } = useLinkedHover();
   const pins = useMemo(
     (): MapPin[] =>
       picks.flatMap((p) =>
@@ -186,13 +186,13 @@ function PickRow({
 }: {
   pick: ShownPick;
   highlighted: boolean;
-  onHover: (id: string | null) => void;
+  onHover: (id: string, hovered: boolean) => void;
 }) {
   const { candidate } = pick;
   return (
     <li
-      onMouseEnter={() => onHover(`${PIN_PREFIX}${pick.placeId}`)}
-      onMouseLeave={() => onHover(null)}
+      onMouseEnter={() => onHover(`${PIN_PREFIX}${pick.placeId}`, true)}
+      onMouseLeave={() => onHover(`${PIN_PREFIX}${pick.placeId}`, false)}
       className={cn(
         "rounded-md px-xs py-2xs transition-colors",
         highlighted && "bg-hover-fill",

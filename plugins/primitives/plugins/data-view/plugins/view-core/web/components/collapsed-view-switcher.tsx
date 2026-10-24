@@ -20,6 +20,9 @@ import {
   useHoverReveal,
 } from "@plugins/primitives/plugins/hover-reveal/web";
 import { PopupOpenScope } from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
+import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
+import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { ViewTypeMeta } from "../../core";
 import type { ResolvedViewInstance } from "../internal/resolve-instances";
 import type { ViewActionsCore } from "../internal/use-view-model";
@@ -28,6 +31,7 @@ import {
   ViewSettingsPopover,
 } from "./view-settings-popover";
 import { AddViewMenuItems } from "./add-view-menu-items";
+import { ViewList } from "./view-list";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -60,6 +64,11 @@ const settingsIcon = symbol("settings");
  *   `label` role at medium weight; and a
  *   chevron that appears only on hover / keyboard focus and while the menu (or
  *   the settings panel) is open.
+ * - **`title`** — the view's name AS a card's heading (a sidebar card whose
+ *   title is the active view): a full-width `Row` holding the name in the
+ *   `heading` role, the dirty dot and a chevron shown only on hover / focus
+ *   and while the list is open. No icon and no count — the card's header
+ *   carries its own mark and count beside it.
  */
 export function CollapsedViewSwitcher<T extends ViewTypeMeta>({
   instances,
@@ -68,6 +77,10 @@ export function CollapsedViewSwitcher<T extends ViewTypeMeta>({
   actions,
   hostSettings,
   appearance = "chip",
+  menu = "menu",
+  countFor,
+  dirtyFor,
+  homeId,
 }: {
   instances: ResolvedViewInstance<T>[];
   activeId: string;
@@ -76,7 +89,15 @@ export function CollapsedViewSwitcher<T extends ViewTypeMeta>({
   /** The consumer's own per-instance settings (see `ViewSettingsPopover`). */
   hostSettings?: HostViewSettings<T>;
   /** The trigger's shape — see above. Default `"chip"`. */
-  appearance?: "chip" | "row";
+  appearance?: "chip" | "row" | "title";
+  /** What the chip opens — see above. Default `"menu"`. */
+  menu?: "menu" | "list";
+  /** A view's row count (`undefined` = not known — drawn as nothing). */
+  countFor?: (id: string) => number | undefined;
+  /** Whether a view has unsaved edits. */
+  dirtyFor?: (id: string) => boolean;
+  /** The view a `list` keeps first and undraggable. */
+  homeId?: string | null;
 }): ReactNode {
   // The settings panel's anchor: whichever trigger rendered. Written through a
   // callback because the two triggers type their `ref` differently (`Button`
@@ -86,6 +107,7 @@ export function CollapsedViewSwitcher<T extends ViewTypeMeta>({
     anchorRef.current = el;
   };
   const reveal = useHoverReveal();
+  const [listOpen, setListOpen] = useState(false);
   // WHICH view's settings are open (see EditableViewSwitcher): a boolean would
   // silently re-aim an open panel at a different view when the active one changes.
   const [settingsForId, setSettingsForId] = useState<string | null>(null);
@@ -98,8 +120,53 @@ export function CollapsedViewSwitcher<T extends ViewTypeMeta>({
   const settingsInstance = settingsForId === active.instance.id ? active : null;
 
   const label = `View: ${active.instance.name}`;
+  const activeCount = countFor?.(active.instance.id);
+  const activeDirty = dirtyFor?.(active.instance.id) ?? false;
+  // The active view's state on the trigger: its unsaved-edits dot and count.
+  const status = (
+    <>
+      {activeDirty ? (
+        <span title="Unsaved changes" aria-label="Unsaved changes">
+          <StatusDot colorClass="bg-primary" />
+        </span>
+      ) : null}
+      {activeCount !== undefined ? (
+        <Text variant="caption" className="text-muted-foreground tabular-nums">
+          {activeCount}
+        </Text>
+      ) : null}
+    </>
+  );
+  const dirtyDot = activeDirty ? (
+    <span title="Unsaved changes" aria-label="Unsaved changes">
+      <StatusDot colorClass="bg-primary" />
+    </span>
+  ) : null;
   const trigger = (popupOpen: boolean) =>
-    appearance === "row" ? (
+    appearance === "title" ? (
+      // A full-width `Row` (like the `row` form), so the whole stretch up to
+      // whatever sits beside it is the trigger; the chevron shows on hover /
+      // focus and while the list is open.
+      <Row
+        ref={setAnchor}
+        aria-label={label}
+        className="gap-xs"
+        {...reveal.groupProps}
+      >
+        <Fill>
+          <Text variant="heading">{active.instance.name}</Text>
+        </Fill>
+        {dirtyDot}
+        <Icon
+          icon={keyboardArrowDownIcon}
+          className={cn(
+            "text-faint-foreground",
+            rigidClass(),
+            hoverRevealClass(reveal.revealed || popupOpen),
+          )}
+        />
+      </Row>
+    ) : appearance === "row" ? (
       // `Row` infers a `<button>` from the `onClick` the menu trigger merges
       // in, so the trigger stays a native button (and the row's own focus
       // ring, hover tint and single-line truncation come with it).
@@ -127,6 +194,7 @@ export function CollapsedViewSwitcher<T extends ViewTypeMeta>({
         {...reveal.groupProps}
       >
         <Fill>{active.instance.name}</Fill>
+        {status}
         <Icon
           icon={keyboardArrowDownIcon}
           className={cn(
@@ -145,9 +213,41 @@ export function CollapsedViewSwitcher<T extends ViewTypeMeta>({
       >
         <Icon icon={ActiveIcon} className="text-muted-foreground" />
         {active.instance.name}
+        {status}
         <Icon icon={keyboardArrowDownIcon} className="text-faint-foreground" />
       </Button>
     );
+
+  if (menu === "list") {
+    return (
+      <PopupOpenScope>
+        {(popupOpen) => (
+          <InlinePopover
+            open={listOpen}
+            onOpenChange={setListOpen}
+            trigger={trigger(popupOpen)}
+            padding="2xs"
+            width="menu-fit"
+            maxHeight="lg"
+          >
+            <ViewList
+              instances={instances}
+              activeId={active.instance.id}
+              onSelect={(id) => {
+                setListOpen(false);
+                onSelect(id);
+              }}
+              actions={actions}
+              homeId={homeId ?? null}
+              {...(countFor ? { countFor } : {})}
+              {...(dirtyFor ? { dirtyFor } : {})}
+              editable={false}
+            />
+          </InlinePopover>
+        )}
+      </PopupOpenScope>
+    );
+  }
 
   return (
     // The scope hears every popup opened inside it — the menu and the settings

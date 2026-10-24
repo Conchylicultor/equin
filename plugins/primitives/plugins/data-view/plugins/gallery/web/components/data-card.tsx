@@ -15,6 +15,7 @@ import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
 import {
   CoverFrame,
   coverHoverGroup,
+  coverHeldAttr,
 } from "@plugins/primitives/plugins/data-view/web";
 import type { CoverContent } from "@plugins/primitives/plugins/data-view/core";
 
@@ -48,6 +49,14 @@ export interface DataCardProps {
   onActivate?: Activation;
   /** Persistent selected highlight: a ring around the cover. */
   selected?: boolean;
+  /**
+   * Draw the card as hovered whatever the pointer does — it is the hovered row
+   * of a surface showing the same rows elsewhere (a map pin). The card's own
+   * hover look, held: the cover lifted, a muted cover's veil lifted.
+   */
+  hovered?: boolean;
+  /** The pointer entered (`true`) or left (`false`) the card. */
+  onHoverChange?: (hovered: boolean) => void;
   /** The row reads as inactive (`RowTone` `"muted"`): the picture is veiled at
    *  rest, clear again under the pointer. The title's tone is the meta's. */
   dimmed?: boolean;
@@ -82,6 +91,8 @@ export function DataCard({
   rowKey,
   onActivate,
   selected,
+  hovered,
+  onHoverChange,
   dimmed,
   cover,
   badge,
@@ -103,6 +114,13 @@ export function DataCard({
       role={activates ? "button" : undefined}
       tabIndex={activates ? 0 : undefined}
       {...activationProps(onActivate)}
+      {...{ [coverHeldAttr]: hovered === true ? "true" : undefined }}
+      {...(onHoverChange === undefined
+        ? {}
+        : {
+            onPointerEnter: () => onHoverChange(true),
+            onPointerLeave: () => onHoverChange(false),
+          })}
       onKeyDown={
         activates
           ? (e) => {
@@ -130,7 +148,7 @@ export function DataCard({
         {dimmed ? (
           <Layer
             decorative
-            className="bg-background/50 transition-opacity group-hover/cover:opacity-0"
+            className="bg-background/50 transition-opacity group-hover/cover:opacity-0 group-data-[cover-held=true]/cover:opacity-0"
           />
         ) : null}
         {badge ? (

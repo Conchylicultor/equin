@@ -1336,6 +1336,20 @@ export interface DataViewRenderProps<TRow> {
    * {@link DataViewGroupHeaders}).
    */
   groupHeaders?: DataViewGroupHeaders;
+  /**
+   * The row the pointer is over — on THIS view or on another surface showing
+   * the same rows (a map pin beside a list), threaded from
+   * `DataViewProps.hoveredRowId`. A view draws that row in its hovered tone.
+   * Absent ⇒ the surface does not track hover.
+   */
+  hoveredRowId?: string | null;
+  /**
+   * The pointer entered (`true`) or left (`false`) the row `id` of this view,
+   * threaded from `DataViewProps.onRowHoverChange`. A leave names the row it
+   * leaves — never a bare "none" — so it cannot erase a hover another surface
+   * claimed in the same pointer move. Absent ⇒ nobody listens.
+   */
+  onRowHoverChange?: (id: string, hovered: boolean) => void;
 }
 
 /**
@@ -2112,10 +2126,64 @@ export interface DataViewBaseProps<TRow> {
    * Room on the surface's edges the consumer covers with chrome of its own (a
    * detail card pinned right), as CSS lengths from the edge: the floating view
    * card of a {@link DataViewBaseProps.backdrop} surface stops a gutter short
-   * of it. Only with `backdrop` (anything else throws — there is no card to
-   * move).
+   * of it, and so does `asideEnd`. Only with `backdrop` or `asideEnd`
+   * (anything else throws — there is nothing to move).
    */
   reserve?: DataViewReserve;
+  /**
+   * A panel on the surface's RIGHT edge — the mirror of `aside`: a floating
+   * card below the band, a gutter from the right edge (past `reserve.right`)
+   * and the bottom, sizing its own width and height (capped at the room it
+   * has). Rendered inside the controls context like `aside`, so it reads the
+   * active view (`useDataViewControls()`, its `rows`, `useFlatRows`). Only
+   * beside an {@link ToolbarArrangement.overlay} arrangement (anything else
+   * throws); a floating view card stops short of it.
+   */
+  asideEnd?: ReactNode;
+  /**
+   * How the surface's view edits behave. `{ mode: "draft" }`: an edit to a
+   * view's filter, sort or grouping goes to a per-tab WORKING COPY of the view
+   * (its saved config is untouched) — the view reads as dirty
+   * (`ReadyViewModel.dirtyFor`) until the copy is saved, saved as a new view,
+   * or discarded (`ReadyViewModel.drafts`); switching to another view
+   * discards it, with an Undo toast. Renaming, icons, reordering, adding and
+   * deleting views stay durable. `home` names the view that is always first
+   * and never dragged, renamed or deleted (an "All" view). Absent → every
+   * edit is saved as it is made.
+   */
+  viewEdits?: DataViewViewEdits;
+  /**
+   * Which form of the view switcher the band shows: `"strip"` (default — the
+   * arrangement's choice, today's behaviour), `"chip"` (the collapsed chip
+   * only; under `viewEdits` drafts, a chip carrying the active view's count and
+   * dirty dot whose popover lists every view, draggable), or `"none"` (no
+   * switcher: the surface lists its views itself, e.g. `DataViewViewList` in
+   * its `aside`).
+   */
+  switcherForm?: "strip" | "chip" | "none";
+  /**
+   * ⌥1–⌥9 select the surface's first nine views (in order). Surface-scoped,
+   * and yielding to a focused text field.
+   */
+  viewShortcuts?: true;
+  /**
+   * The row the pointer is over, controlled — so another surface showing the
+   * same rows (a map pin) and this one highlight together. Threaded to the
+   * views as `DataViewRenderProps.hoveredRowId`.
+   */
+  hoveredRowId?: string | null;
+  /**
+   * The pointer entered (`true`) or left (`false`) the row `id` of the active
+   * view: a claim or a release (map's `useLinkedHover` holds the shared state).
+   */
+  onRowHoverChange?: (id: string, hovered: boolean) => void;
+}
+
+/** {@link DataViewBaseProps.viewEdits}. */
+export interface DataViewViewEdits {
+  mode: "draft";
+  /** The always-first, fixed view's id. */
+  home?: string;
 }
 
 /** {@link DataViewBaseProps.reserve}: covered room per edge, a CSS length. */

@@ -1,9 +1,7 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   DataView,
   defineDataView,
-  fieldOverrides,
-  type CoverContent,
 } from "@plugins/primitives/plugins/data-view/web";
 import { floatingToolbar } from "@plugins/primitives/plugins/data-view/plugins/floating-toolbar/web";
 import type { MapViewOptions } from "@plugins/primitives/plugins/data-view/plugins/map/web";
@@ -18,7 +16,9 @@ import {
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
+import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import type { LatLng, MapBounds, MapPin } from "@plugins/map/core";
+import { useLinkedHover } from "@plugins/map/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import {
   placeFlags,
@@ -42,7 +42,16 @@ import {
   useUpdatePlace,
 } from "@plugins/apps/plugins/places/plugins/places-core/web";
 import { TagManagerPanel } from "@plugins/apps/plugins/places/plugins/tag-manager/web";
-import { placeExtraFields, placeSearchText } from "../internal/fields";
+import {
+  PLACE_OVERRIDES,
+  placeExtraFields,
+  placeSearchText,
+} from "../internal/fields";
+import {
+  panelLayoutStore,
+  panelScopeStore,
+  sidebarOpenStore,
+} from "../internal/layout-stores";
 import { useClickAway } from "../internal/use-click-away";
 import { useCoveredEdges } from "../internal/use-covered-edges";
 import { SAVED_PLACE_PIN_TYPE, placeVisual } from "../internal/place-visual";
@@ -65,25 +74,24 @@ import { ASK_THREAD_WIDTH, AskThreadCard } from "./ask-thread";
 import type { GoogleHit } from "./google-result-card";
 import { GooglePlaceCard, type DetailedHit } from "./google-place-card";
 import { UniversalSearchPanel } from "./universal-search";
-import { PLACE_CARD_WIDTH, PlaceCard } from "./place-card";
-import { PlaceCover, PlaceGlyph } from "./place-glyph";
+import { PlaceCard } from "./place-card";
+import { PANEL_WIDTH, PLACE_CARD_WIDTH, type CardFrame } from "./card-frame";
+import { PlacesPanel } from "./places-panel";
 import { PinPickBar, dropName, type PinPick } from "./pin-pick-bar";
 import { TagSidebar } from "./tag-sidebar";
 
 /**
- * The Places surface id. Config-backed like every DataView: its views (All
- * places on the map, Gallery, List) live in
- * `config/apps/places/places-map/places.map.jsonc`.
+ * The Places surface id. Config-backed like every DataView: its views are the
+ * filter presets, every one a map — authored in
+ * `config/apps/places/places-map/places.presets.jsonc` (All places, the home
+ * preset); the user's own are added from the sidebar. (The former
+ * `places.map` id, whose views were Map / Gallery / List, is retired: its
+ * user layer is left orphaned on purpose.)
  */
-const PLACES_VIEW = defineDataView("places.map");
+const PRESETS_VIEW = defineDataView("places.presets");
 
-/**
- * The location is the map's axis, not an ordering: it is the one derived
- * field the list does not sort by.
- */
-const PLACE_OVERRIDES = fieldOverrides(placesCollection, {
-  location: { sortable: false },
-});
+/** The home preset: always first, never renamed, dragged or deleted. */
+const HOME_PRESET = "all";
 
 /**
  * Where floating cards on the right start: below the toolbar's tools card
@@ -93,6 +101,9 @@ const BELOW_TOOLBAR = `calc(${spaceLength("md")} * 2 + 2.75rem)`;
 
 /** The tag sidebar's reach from the left edge (gutter + its `w-72`). */
 const PAST_SIDEBAR = `calc(${spaceLength("md")} * 2 + 18rem)`;
+
+/** The room the side panel covers on the right edge (gutter + its width). */
+const PANEL_REACH = `calc(${spaceLength("md")} + ${PANEL_WIDTH})`;
 
 /** The room the place card covers on the right edge (gutter + its width). */
 const CARD_REACH = `calc(${spaceLength("md")} + ${PLACE_CARD_WIDTH})`;
@@ -112,7 +123,14 @@ const CARD_BESIDE_THREAD_REACH = `calc(${PAST_THREAD} + ${PLACE_CARD_WIDTH})`;
 /** Past a card beside the thread. */
 const PAST_CARD_BESIDE_THREAD = `calc(${CARD_BESIDE_THREAD_REACH} + ${spaceLength("md")})`;
 
+/** Past the side panel (and the thread beside it, when shown). */
+const PAST_PANEL = `calc(${PANEL_REACH} + ${spaceLength("md")})`;
+const PAST_PANEL_BESIDE_THREAD = `calc(${THREAD_REACH} + ${PANEL_REACH} + ${spaceLength("md")})`;
+
 const NO_EXPANDED: ReadonlySet<string> = new Set();
+
+/** A card floating on the map (the side panel is hidden). */
+const FLOATING: CardFrame = { kind: "floating" };
 
 /** A Google place shown in the detail card: the hit, and Sonnet's words when it is a pick. */
 interface GoogleDetail {
@@ -125,20 +143,23 @@ function detailedHit(hit: GoogleHit): DetailedHit | null {
 }
 
 /**
- * The Places screen: one full-bleed DataView of every saved place — Map,
- * Gallery and List over the same filtered rows — with its chrome floating on
- * the map (`floatingToolbar`): the tag sidebar as the surface's `aside`, the
- * view tabs top-left, the "Search or add places" bar and the filter top-right.
- * The bar filters your places (and their pins) and, in its panel, proposes
- * Google's hits around the map's view as cards to save and as ghost pins on
- * the map, hover-linked both ways, never moving the camera. The map is the
- * surface's `backdrop`: Gallery and List float over it as a card (the map
- * behind showing the same places), which steps aside for the place card.
- * Selecting a place (a pin, a card, a row) opens its card on the right, and a click anywhere
- * else on the screen (the map, the sidebar, the toolbar) or Esc closes it; Manage tags
- * lays the tag manager over the map. Dropping a custom pin (from the search panel) or
- * moving one (from its card) puts the map in pick mode, with a bar at the
- * bottom: the next click on the map is where the pin goes.
+ * The Places screen: one full-bleed DataView of every saved place on the map,
+ * its views the filter PRESETS (every one a map; edits are drafts until the
+ * preset is saved), with its chrome floating on the map (`floatingToolbar`):
+ * the tag sidebar as the surface's `aside` (the presets, the tag filter, the
+ * tree) — collapsed, a preset pill top-left stands in for it — the "Search or
+ * add places" bar and the filter top-right, and the side panel as its
+ * `asideEnd`: the preset's places in view (or all of them) as a list or a
+ * gallery, hover-linked with their pins. The bar filters your places (and
+ * their pins) and, in its panel, proposes Google's hits around the map's view
+ * as cards to save and as ghost pins on the map, hover-linked both ways, never
+ * moving the camera. Selecting a place (a pin, a row) opens its card — drilled
+ * into the side panel while it is shown, else floating on the right — and a
+ * click anywhere else on the screen (the map, the sidebar, the toolbar), Back
+ * or Esc closes it; Manage tags lays the tag manager over the map. Dropping a
+ * custom pin (from the search panel) or moving one (from its card) puts the
+ * map in pick mode, with a bar at the bottom: the next click on the map is
+ * where the pin goes.
  *
  * The places and the tag tree are two live reads, and every part of the
  * screen (pins, sidebar counts, card) needs both — so the screen waits for
@@ -183,10 +204,23 @@ function PlacesSurface({
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [bounds, setBounds] = useState<MapBounds | null>(null);
+  // The part of the map the chrome leaves uncovered: what the side panel's
+  // "In view" lists.
+  const [visible, setVisible] = useState<MapBounds | null>(null);
+  // The panel's Fit map: each bump frames the preset's places.
+  const [fitRequest, setFitRequest] = useState(0);
+  // One hovered place, lit on both sides: its pin and its row in the panel.
+  const { hoveredId: hoveredPlaceId, onHoverChange: setHoveredPlaceId } =
+    useLinkedHover();
+  const [sidebarOpen, setSidebarOpen] = useDraft(sidebarOpenStore, true);
+  const [panelLayout, setPanelLayout] = useDraft(panelLayoutStore, "list");
+  const [panelScope, setPanelScope] = useDraft(panelScopeStore, "in-view");
+  const panelOpen = panelLayout !== "hidden";
   // One session per search round: an autocomplete answer (the ladder's last
   // rung) and the save it ends in are billed together.
   const [session, setSession] = useState(() => crypto.randomUUID());
-  const [hoveredGoogleId, setHoveredGoogleId] = useState<string | null>(null);
+  const { hoveredId: hoveredGoogleId, onHoverChange: setHoveredGoogleId } =
+    useLinkedHover();
   const [saveNotConfigured, setSaveNotConfigured] = useState(false);
   // Ask Sonnet: the question's background run, docked on the right as a
   // thread card the bar's pill shows and hides; its picks are on the map while
@@ -289,28 +323,37 @@ function PlacesSurface({
     selected !== undefined && manager === null && pinPick === null;
   const showDetail =
     detail !== null && !showCard && manager === null && pinPick === null;
-  // The place card or the detail card: one at a time, in the same spot.
+  // The place card or the detail card: one at a time, in the same spot —
+  // drilled into the side panel while it is shown, else floating.
   const cardOpen = showCard || showDetail;
+  const floatingCard = cardOpen && !panelOpen;
   const closeCards = useCallback(() => {
     setSelectedId(null);
     setDetail(null);
   }, []);
-  // Where the right-hand chrome ends: the card beside the thread, the card,
-  // the thread, or nothing.
-  const rightReach = cardOpen
+  // What the surface's own right-hand chrome covers (the side panel stands a
+  // gutter in from it): the thread, and a floating card beside it.
+  const rightReach = floatingCard
     ? ask.shown
       ? CARD_BESIDE_THREAD_REACH
       : CARD_REACH
     : ask.shown
       ? THREAD_REACH
       : null;
-  const pastRight = cardOpen
+  // Where the map's uncovered area ends on the right: past the panel (the
+  // hidden panel's pill is too small to count), the floating card, the
+  // thread, or nothing.
+  const pastRight = panelOpen
     ? ask.shown
-      ? PAST_CARD_BESIDE_THREAD
-      : PAST_CARD
-    : ask.shown
-      ? PAST_THREAD
-      : 0;
+      ? PAST_PANEL_BESIDE_THREAD
+      : PAST_PANEL
+    : floatingCard
+      ? ask.shown
+        ? PAST_CARD_BESIDE_THREAD
+        : PAST_CARD
+      : ask.shown
+        ? PAST_THREAD
+        : 0;
 
   const { containerRef, probeRef, padding: fitPadding } = useCoveredEdges();
   const cardRef = useRef<HTMLElement>(null);
@@ -393,19 +436,6 @@ function PlacesSurface({
     if (hit !== undefined) openHit(hit, null);
   });
 
-  // A place's picture, as its gallery card's cover (and its list thumbnail).
-  const placeCover = useCallback(
-    (p: Place): CoverContent => ({
-      kind: "node",
-      node: (
-        <PlaceCover
-          visual={placeVisual(p, tags)}
-          googlePlaceId={p.googlePlaceId}
-        />
-      ),
-    }),
-    [tags],
-  );
   const viewOptions = useMemo(
     () => ({
       map: {
@@ -429,13 +459,16 @@ function PlacesSurface({
         },
         hoveredId:
           hoveredGoogleId === null ? null : googlePinId(hoveredGoogleId),
-        onHoverChange: (id) =>
-          setHoveredGoogleId(id === null ? null : googlePlaceIdOfPin(id)),
-        onCameraRest: (rest) => setBounds(rest.bounds),
+        onHoverChange: (id, hovered) => {
+          const placeId = googlePlaceIdOfPin(id);
+          if (placeId !== null) setHoveredGoogleId(placeId, hovered);
+        },
+        onCameraRest: (rest) => {
+          setBounds(rest.bounds);
+          setVisible(rest.visible);
+        },
+        fitRequest,
       } satisfies MapViewOptions<Place>,
-      list: {
-        leading: (p: Place) => <PlaceGlyph visual={placeVisual(p, tags)} />,
-      },
     }),
     [
       tags,
@@ -444,7 +477,9 @@ function PlacesSurface({
       keepIds,
       ghostPins,
       hoveredGoogleId,
+      setHoveredGoogleId,
       activateGhost,
+      fitRequest,
     ],
   );
 
@@ -522,6 +557,50 @@ function PlacesSurface({
     });
   };
 
+  /** Save the detail card's place: it is one of your places now — its own card. */
+  const saveDetail = async (d: GoogleDetail): Promise<void> => {
+    const place = await saveHit(d.hit);
+    if (place !== null) {
+      setDetail(null);
+      setSelectedId(place.id);
+    }
+  };
+
+  // The open card drilled into the side panel, under the panel's Back line.
+  const drilledCard = (back: ReactNode): ReactNode => {
+    const frame = { kind: "panel", back } as const;
+    if (showCard && selected !== undefined) {
+      return (
+        <PlaceCard
+          key={selected.id}
+          ref={cardRef}
+          place={selected}
+          places={places}
+          tags={tags}
+          frame={frame}
+          onClose={() => setSelectedId(null)}
+          onMovePin={() => setPinPick({ kind: "move", place: selected })}
+        />
+      );
+    }
+    if (showDetail && detail !== null) {
+      return (
+        <GooglePlaceCard
+          key={detail.hit.placeId}
+          ref={cardRef}
+          hit={detail.hit}
+          pick={detail.pick}
+          frame={frame}
+          onClose={() => setDetail(null)}
+          onSave={() => saveDetail(detail)}
+        />
+      );
+    }
+    throw new Error(
+      "PlacesSurface: a card is drilled into the panel with none open",
+    );
+  };
+
   const newTag = useCallback(async () => {
     const tag = await createTag({
       name: freeSiblingName("New tag", null, tags),
@@ -546,7 +625,7 @@ function PlacesSurface({
         }}
       />
       <DataView<Place>
-        storageKey={PLACES_VIEW}
+        storageKey={PRESETS_VIEW}
         rows={places}
         collection={placesCollection}
         overrides={PLACE_OVERRIDES}
@@ -602,7 +681,10 @@ function PlacesSurface({
             ),
           },
         }}
-        views={["map", "gallery", "list"]}
+        views={["map"]}
+        viewEdits={{ mode: "draft", home: HOME_PRESET }}
+        viewShortcuts
+        switcherForm="none"
         toolbar={floatingToolbar}
         backdrop="map"
         reserve={rightReach === null ? undefined : { right: rightReach }}
@@ -612,10 +694,35 @@ function PlacesSurface({
             tags={tags}
             onNewTag={newTag}
             onManageTags={() => setManager({ focusTagId: null })}
+            open={sidebarOpen}
+            onOpenChange={setSidebarOpen}
           />
         }
+        {...(floatingCard
+          ? {}
+          : {
+              asideEnd: (
+                <PlacesPanel
+                  places={places}
+                  tags={tags}
+                  visible={visible}
+                  layout={panelLayout}
+                  onLayoutChange={setPanelLayout}
+                  scope={panelScope}
+                  onScopeChange={setPanelScope}
+                  selectedId={selected?.id ?? null}
+                  onSelect={openPlace}
+                  hoveredId={hoveredPlaceId}
+                  onHoverChange={setHoveredPlaceId}
+                  onFit={() => setFitRequest((n) => n + 1)}
+                  drill={cardOpen ? drilledCard : null}
+                  onBack={closeCards}
+                />
+              ),
+            })}
+        hoveredRowId={hoveredPlaceId}
+        onRowHoverChange={setHoveredPlaceId}
         viewOptions={viewOptions}
-        cover={placeCover}
         onRowActivate={(p) => {
           // Selecting another place swaps the card; it is not a click away.
           claim();
@@ -650,7 +757,7 @@ function PlacesSurface({
           />
         </Pin>
       ) : null}
-      {showCard && selected !== undefined ? (
+      {showCard && floatingCard && selected !== undefined ? (
         <Pin
           ref={cardRef}
           to="right"
@@ -671,12 +778,13 @@ function PlacesSurface({
             place={selected}
             places={places}
             tags={tags}
+            frame={FLOATING}
             onClose={() => setSelectedId(null)}
             onMovePin={() => setPinPick({ kind: "move", place: selected })}
           />
         </Pin>
       ) : null}
-      {showDetail && detail !== null ? (
+      {showDetail && floatingCard && detail !== null ? (
         <Pin
           ref={cardRef}
           to="right"
@@ -694,15 +802,9 @@ function PlacesSurface({
             key={detail.hit.placeId}
             hit={detail.hit}
             pick={detail.pick}
+            frame={FLOATING}
             onClose={() => setDetail(null)}
-            onSave={async () => {
-              const place = await saveHit(detail.hit);
-              // Saved: it is one of your places now — its own card.
-              if (place !== null) {
-                setDetail(null);
-                setSelectedId(place.id);
-              }
-            }}
+            onSave={() => saveDetail(detail)}
           />
         </Pin>
       ) : null}

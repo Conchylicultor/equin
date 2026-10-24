@@ -2,7 +2,7 @@
 // through the real search bar (Google results → Save on a card), then captures
 // the map, the sidebar's Restaurants filter included then excluded (logging
 // the map's marks and the sidebar counts at each step), a selected place's
-// card, the Gallery and List views and the tag manager. Needs the Google Maps Places key configured; without it the search
+// card, the side panel as a gallery and as a list, and the tag manager. Needs the Google Maps Places key configured; without it the search
 // panel shows the set-up action and the script stops there.
 //
 // Usage:
@@ -81,28 +81,26 @@ await withBrowser(async (h) => {
   await page.waitForTimeout(3000);
   await snap(page, out, "map");
 
-  // The sidebar's tag filter: Restaurants → include → exclude → off. Each step
+  // The sidebar's tag filter: Restaurants → include → off. Each step
   // logs what the map shows (pins and clusters by their accessible names) and
   // the sidebar's counts, so a change is visible in the output, not only in
   // the screenshots.
   const restaurants = page
-    .getByTitle("Click to include, again to exclude")
+    .locator("[data-tag-row]")
     .filter({ hasText: "Restaurants" })
     .first();
   const report = async (step: string) => {
     const marks = (await pinsOnScreen(page, { atLeastOne: false })).map(
       (p) => p.label,
     );
-    const rows = await page
-      .getByTitle("Click to include, again to exclude")
-      .allInnerTexts();
+    const rows = await page.locator("[data-tag-row]").allInnerTexts();
     console.log(`[${step}] map marks: ${JSON.stringify(marks)}`);
     console.log(
       `[${step}] sidebar: ${rows.map((r) => r.replace(/\s+/g, " ").trim()).join(" | ")}`,
     );
   };
   await report("all");
-  for (const step of ["filter-include", "filter-exclude", "filter-clear"]) {
+  for (const step of ["filter-include", "filter-clear"]) {
     await restaurants.click();
     await page.waitForTimeout(2000);
     await report(step);
@@ -118,11 +116,11 @@ await withBrowser(async (h) => {
     await snap(page, out, "selected");
   }
 
+  // The side panel's layouts (it may have been hidden: show it first).
+  const show = page.getByRole("button", { name: /^Show the list/ });
+  if (await show.isVisible()) await show.click();
   for (const view of ["Gallery", "List"]) {
-    const tab = page
-      .getByRole("button", { name: view, exact: true })
-      .or(page.getByRole("tab", { name: view, exact: true }));
-    await tab.first().click();
+    await page.getByRole("radio", { name: view, exact: true }).click();
     await page.waitForTimeout(1500);
     await snap(page, out, view.toLowerCase());
   }

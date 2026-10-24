@@ -41,6 +41,9 @@ import type {
   DataViewSourceBundle,
 } from "../internal/body-types";
 import { useDataViewDevGuards } from "../internal/use-dev-guards";
+import { assertSurfaceChrome } from "../internal/surface-chrome-rules";
+import { useViewShortcuts } from "../internal/use-view-shortcuts";
+import { DataViewViewChip } from "./view-list";
 import { useOrphanViewTypeGuard } from "../internal/use-orphan-view-type-guard";
 import { hoverRevealGroup } from "@plugins/primitives/plugins/hover-reveal/web";
 import { CreatorsControl, hostedCreators } from "./creators-control";
@@ -77,6 +80,14 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
     entries,
     props.defaultView,
     props.pinnedView,
+    props.viewEdits === undefined
+      ? undefined
+      : {
+          drafts: props.viewEdits.mode === "draft",
+          ...(props.viewEdits.home !== undefined
+            ? { home: props.viewEdits.home }
+            : {}),
+        },
   );
   return (
     <DataViewShellFrame
@@ -93,8 +104,11 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
       toolbar={props.toolbar}
       searchPlaceholder={props.searchPlaceholder}
       aside={props.aside}
+      asideEnd={props.asideEnd}
       backdrop={props.backdrop}
       reserve={props.reserve}
+      switcherForm={props.switcherForm}
+      viewShortcuts={props.viewShortcuts}
       pinnedView={props.pinnedView}
       hierarchical={props.hierarchy != null}
       renderSections={(instances, chrome, readyModel) => (
@@ -168,6 +182,12 @@ export function DataViewShellFrame(props: {
   backdrop?: string;
   /** The room the surface's own chrome covers (`DataViewProps.reserve`). */
   reserve?: DataViewReserve;
+  /** The surface's right-hand panel (`DataViewProps.asideEnd`). */
+  asideEnd?: ReactNode;
+  /** Which switcher form the band shows (`DataViewProps.switcherForm`). */
+  switcherForm?: "strip" | "chip" | "none";
+  /** ⌥1–9 select the first nine views (`DataViewProps.viewShortcuts`). */
+  viewShortcuts?: true;
   /** Present → this host shows one named instance and paints no switcher. */
   pinnedView?: string;
   /** The rows are a hierarchy: the view settings offer Sub-items. */
@@ -210,14 +230,24 @@ export function DataViewShellFrame(props: {
     toolbar,
     searchPlaceholder,
     aside,
+    asideEnd,
     backdrop,
     reserve,
+    switcherForm = "strip",
+    viewShortcuts,
     pinnedView,
     hierarchical,
     unavailable,
     children,
     renderSections,
   } = props;
+
+  // ⌥1–9 → the surface's first nine views. A pinned host shows one fixed view,
+  // so it has nothing to switch.
+  useViewShortcuts(
+    storageKey,
+    viewShortcuts === true && pinnedView === undefined ? viewModel : null,
+  );
 
   // DataView is always natural-height and never owns a scroller — the pane owns
   // exactly one scroll (via `<PaneScroll>`). Dev-only structural guard fires if
@@ -258,25 +288,15 @@ export function DataViewShellFrame(props: {
     : overlay
       ? "relative h-full"
       : undefined;
-  if (aside !== undefined && (hosted || sectioned)) {
-    throw new Error(
-      `DataView(${storageKey}): \`aside\` needs a band toolbar — a hosted ` +
-        "or sections toolbar has no band to place it beside.",
-    );
-  }
-  if (backdrop !== undefined && !overlay) {
-    throw new Error(
-      `DataView(${storageKey}): \`backdrop\` needs an overlay toolbar ` +
-        "arrangement — only a band floating over the view leaves the view " +
-        "a canvas to stay under every other view.",
-    );
-  }
-  if (reserve !== undefined && backdrop === undefined) {
-    throw new Error(
-      `DataView(${storageKey}): \`reserve\` moves the floating view card ` +
-        "of a `backdrop` surface — without a backdrop there is no card.",
-    );
-  }
+  assertSurfaceChrome(storageKey, {
+    hosted,
+    sectioned,
+    overlay,
+    aside,
+    asideEnd,
+    backdrop,
+    reserve,
+  });
   // The chrome of a state with no active instance (loading, or no views
   // authored): the band's stand-in toolbar, or the hosted frame without its
   // options — there is no instance for them to act on yet.
@@ -406,6 +426,21 @@ export function DataViewShellFrame(props: {
     actions: viewModel.actions,
     hostSettings: hierarchical ? subItemsSettings : undefined,
   };
+  // Under drafts a band's chip carries the active view's count and dirty dot
+  // and opens the views as a draggable list; it reads the counts from the
+  // controls context, which wraps the band (a hosted frame's switcher sits
+  // outside it, so that one stays the plain chip).
+  const chip =
+    viewModel.drafts !== null && !hosted ? (
+      <DataViewViewChip />
+    ) : (
+      <CollapsedViewSwitcher
+        {...switcherInputs}
+        // Only a hosted frame picks the switcher's form; a band
+        // arrangement places today's chip.
+        appearance={hosted ? (toolbar.forms?.switcher ?? "chip") : "chip"}
+      />
+    );
   const chrome: DataViewShellChrome = {
     // A pinned host paints NO switcher — the nodes themselves, not just its
     // count. `switcherCount` gates only the COMPACT toolbar (`switcherCount >
@@ -413,19 +448,18 @@ export function DataViewShellFrame(props: {
     // 1 alone would leave a wide pinned surface showing a live switcher, whose
     // clicks write a shared selection this host then ignores — a dead switcher,
     // which is worse than the shared-selection problem pinning solves.
-    switcher: pinned
-      ? { strip: null, chip: null }
-      : {
-          strip: <EditableViewSwitcher {...switcherInputs} />,
-          chip: (
-            <CollapsedViewSwitcher
-              {...switcherInputs}
-              // Only a hosted frame picks the switcher's form; a band
-              // arrangement places today's chip.
-              appearance={hosted ? (toolbar.forms?.switcher ?? "chip") : "chip"}
-            />
-          ),
-        },
+    //
+    // `switcherForm` narrows what an arrangement may place: `chip` leaves it
+    // only the chip, `none` nothing (the surface lists its views itself).
+    switcher:
+      pinned || switcherForm === "none"
+        ? { strip: null, chip: null }
+        : switcherForm === "chip"
+          ? { strip: null, chip }
+          : {
+              strip: <EditableViewSwitcher {...switcherInputs} />,
+              chip,
+            },
     switcherCount: pinned ? 1 : instances.length,
     title,
     actions,
@@ -435,6 +469,7 @@ export function DataViewShellFrame(props: {
     searchPlaceholder,
     stickyRef: toolbarRef,
     aside,
+    asideEnd,
     backdrop,
     reserve,
   };

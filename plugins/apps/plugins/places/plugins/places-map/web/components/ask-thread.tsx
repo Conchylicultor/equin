@@ -52,7 +52,7 @@ export interface AskThreadCardProps {
   bounds: MapBounds | null;
   savedByGoogleId: ReadonlyMap<string, Place>;
   hoveredGoogleId: string | null;
-  onHoverGoogle: (placeId: string | null) => void;
+  onHoverGoogle: (placeId: string, hovered: boolean) => void;
   onSave: (hit: GoogleHit) => Promise<void>;
   /** Open a pick's detail card (a saved one: its place card). */
   onOpenPick: (pick: AskPick) => void;

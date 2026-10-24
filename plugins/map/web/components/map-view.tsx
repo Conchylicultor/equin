@@ -23,6 +23,7 @@ import {
   type CameraRest,
   type CameraView,
   type LatLng,
+  type LinkedHoverChange,
   type MapCrowdRequest,
   type MapOverlay,
   type MapPadding,
@@ -55,13 +56,23 @@ export interface MapViewProps {
    * whatever outside the map stands for it (a result card beside the map).
    */
   hoveredId?: string | null;
-  /** The pin under the pointer changed (`null`: none) — to link it back. */
-  onHoverChange?: (id: string | null) => void;
+  /**
+   * The pointer entered (`true`) or left (`false`) a pin — to link it back.
+   * Reported as claims and releases (`nextLinkedHover`; `useLinkedHover`
+   * holds the shared state), never a bare "none".
+   */
+  onHoverChange?: LinkedHoverChange;
   /**
    * The camera came to rest (and once when the map first settles): where it
    * is, and the area it shows — what a search biased to "this map area" reads.
    */
   onCameraRest?: (rest: CameraRest) => void;
+  /**
+   * Re-frame on demand: each time the number changes (not its value at
+   * mount), the map frames its framed overlays as its Fit control does —
+   * a caller's own "Fit map" button bumps it.
+   */
+  fitRequest?: number;
   /**
    * How pins that crowd each other on screen are drawn: merged into clusters
    * (`GeoMap.Cluster`) or kept as spots (see `MapRendererProps.crowd`).
@@ -176,6 +187,7 @@ export function MapView({
   fitPadding = NO_MAP_PADDING,
   pick,
   cameraKey,
+  fitRequest,
   empty,
 }: MapViewProps) {
   const renderer = GeoMap.Renderer.useContributions()[0];
@@ -230,6 +242,7 @@ export function MapView({
     ...(pick === undefined ? {} : { pick }),
     ...(initialCamera === null ? {} : { initialCamera }),
     ...(onCameraRest === undefined ? {} : { onCameraRest }),
+    ...(fitRequest === undefined ? {} : { fitRequest }),
   };
   const notice =
     overlays.length === 0 && empty !== null ? (
@@ -277,7 +290,8 @@ function MarkedRenderer({
   const markPin = (pin: MapPin, scale: MapPinScale): MapMarkResult => {
     if (env === null) return MARK_PENDING;
     const mark =
-      matchPin({ pin, tiles, active: false, scale })?.mark ?? defaultPinMark;
+      matchPin({ pin, tiles, active: false, hovered: false, scale })?.mark ??
+      defaultPinMark;
     return mark({ pin, scale }, env);
   };
   const markCluster = (pins: readonly MapPin[]): MapMarkResult => {

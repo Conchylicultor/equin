@@ -24,7 +24,8 @@ import type { SortController } from "../../internal/use-sort-controller";
  * objects the row pipeline reads, so a control's summary and what actually
  * filters can never come from two different computations.
  *
- * Provided around **the toolbar only** — not around the view body. View children
+ * Provided around **the toolbar** (and the surface's `aside` / `asideEnd`)
+ * — not around the view body. View children
  * have a deliberate contract (`DataViewRenderProps`), and an ambient back door to
  * `viewModel` would be a second, undocumented seam into the same state. Popovers
  * portal out of the DOM but stay React children, so the context still reaches
@@ -72,6 +73,14 @@ export interface DataViewControlsContextValue {
   filter: FilterController<unknown>;
   /** The live sort-rule controller (rules, sortableFields, ruleCount, add/remove/…). */
   sort: SortController<unknown>;
+  /**
+   * The surface's rows when they are all in memory and read — RAW (no search,
+   * filter or sort applied), what `useFlatRows` and `useViewRowCounts` run
+   * over. `null` under a live source (its rows are the server's, one window
+   * at a time) and while the rows' read has not arrived or failed: not known,
+   * never an empty list.
+   */
+  rows: readonly unknown[] | null;
 }
 
 const DataViewControlsContext =
@@ -100,6 +109,7 @@ export function DataViewControlsProvider({
   manualOrderOverridden,
   filter,
   sort,
+  rows,
 }: DataViewControlsContextValue & { children: ReactNode }): ReactNode {
   const value = useMemo<DataViewControlsContextValue>(
     () => ({
@@ -117,6 +127,7 @@ export function DataViewControlsProvider({
       manualOrderOverridden,
       filter,
       sort,
+      rows,
     }),
     [
       storageKey,
@@ -133,6 +144,7 @@ export function DataViewControlsProvider({
       manualOrderOverridden,
       filter,
       sort,
+      rows,
     ],
   );
   return (

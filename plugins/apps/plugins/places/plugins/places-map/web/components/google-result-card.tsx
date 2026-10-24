@@ -57,7 +57,8 @@ export function GoogleResultCard({
 }: {
   hit: GoogleHit;
   highlighted: boolean;
-  onHover: (placeId: string | null) => void;
+  /** The pointer entered (`true`) or left (`false`) the card: a claim or a release. */
+  onHover: (placeId: string, hovered: boolean) => void;
   saved: boolean;
   onSave: () => Promise<void>;
   onOpenSaved: () => void;
@@ -75,8 +76,8 @@ export function GoogleResultCard({
   return (
     <div
       data-google-place-id={hit.placeId}
-      onMouseEnter={() => onHover(hit.placeId)}
-      onMouseLeave={() => onHover(null)}
+      onMouseEnter={() => onHover(hit.placeId, true)}
+      onMouseLeave={() => onHover(hit.placeId, false)}
       className={cn(
         "relative rounded-panel-row p-sm transition-colors",
         highlighted && "bg-hover-fill",

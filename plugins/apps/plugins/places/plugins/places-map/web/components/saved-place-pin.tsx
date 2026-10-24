@@ -16,10 +16,6 @@ import {
   type MapPinMarkFn,
   type MapPinProps,
 } from "@plugins/map/web";
-import {
-  hoverRevealGroup,
-  hoverRevealTarget,
-} from "@plugins/primitives/plugins/hover-reveal/web";
 import { hash53 } from "@plugins/packages/plugins/string-hash/core";
 import { readPlaceVisual } from "../internal/place-visual";
 import { DROP_HEAD_PX, placeDropSvg } from "./place-drop";
@@ -100,14 +96,16 @@ export const savedPlaceMark: MapPinMarkFn = ({ pin, scale }, env) => {
 
 /**
  * A saved place lifted into the DOM (hovered or selected): its mark, lifted
- * on hover and grown from its anchor while active, with its name beside it as
- * a halo `MapLabel` on hover and while selected — never always-on: at street
- * level the names would bury the map. A far spot's lead shows the spot's size
- * there instead, faded while a pin of its spot is hovered or this pin is.
+ * while `hovered` (the pointer on it, or its row hovered in a list) and grown
+ * from its anchor while active, with its name beside it as a halo `MapLabel`
+ * while hovered or selected — never always-on: at street level the names
+ * would bury the map. A far spot's lead shows the spot's size there instead,
+ * faded while a pin of its spot is hovered or this pin is.
  */
 export function SavedPlacePin({
   pin,
   active,
+  hovered,
   scale,
   spot,
   tiles,
@@ -122,10 +120,7 @@ export function SavedPlacePin({
     <span
       role="img"
       aria-label={name}
-      className={cn(
-        "group/pin relative block cursor-pointer",
-        hoverRevealGroup,
-      )}
+      className="relative block cursor-pointer"
       style={{ width: mark.width, height: mark.height }}
     >
       <MapMarkImage
@@ -135,10 +130,10 @@ export function SavedPlacePin({
           far
             ? active
               ? "scale-[1.3]"
-              : "group-hover/pin:scale-125"
+              : hovered && "scale-125"
             : active
               ? "scale-[1.18]"
-              : "group-hover/pin:-translate-y-0.5 group-hover/pin:scale-105",
+              : hovered && "-translate-y-0.5 scale-105",
         )}
         style={{ transformOrigin: `${mark.anchor.x}px ${mark.anchor.y}px` }}
       />
@@ -146,15 +141,20 @@ export function SavedPlacePin({
         <Beside
           mark={mark}
           className={cn(
-            "transition-opacity group-hover/pin:opacity-0",
-            (spot.hushed || active) && "opacity-0",
+            "transition-opacity",
+            (spot.hushed || active || hovered) && "opacity-0",
           )}
           decorative
         >
           <MapLabel tiles={tiles}>{spot.count}</MapLabel>
         </Beside>
       )}
-      <Name label={pin.label} active={active} tiles={tiles} mark={mark} />
+      <Name
+        label={pin.label}
+        shown={active || hovered}
+        tiles={tiles}
+        mark={mark}
+      />
     </span>
   );
 }
@@ -183,21 +183,21 @@ function Beside({
   );
 }
 
-/** The place's name: on hover, and always on the selected place. */
+/** The place's name: while hovered, and always on the selected place. */
 function Name({
   label,
-  active,
+  shown,
   tiles,
   mark,
 }: {
   label: string | undefined;
-  active: boolean;
+  shown: boolean;
   tiles: MapTileScheme;
   mark: MapMark;
 }) {
-  if (!label) return null;
+  if (!label || !shown) return null;
   return (
-    <Beside mark={mark} className={cn(!active && hoverRevealTarget)}>
+    <Beside mark={mark}>
       <MapLabel tiles={tiles}>{label}</MapLabel>
     </Beside>
   );

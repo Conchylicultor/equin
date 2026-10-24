@@ -129,6 +129,11 @@ function model(
       reorderView: () => {},
       updateView: () => {},
     },
+    dirtyFor: fakeViewGetter(() => false),
+    drafts: null,
+    homeViewId: null,
+    renamingId: null,
+    setRenamingId: () => {},
   };
 }
 

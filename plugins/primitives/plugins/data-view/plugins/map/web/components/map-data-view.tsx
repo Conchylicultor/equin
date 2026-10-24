@@ -145,6 +145,21 @@ export function MapDataView(props: DataViewRenderProps<unknown>): ReactNode {
     if (activation !== undefined) runActivation(activation);
     else props.onRowOpen?.(row);
   };
+  // The surface's row hover bridged to the pins: a hovered row lifts its pin,
+  // and a hovered row pin is claimed as that row (an extra overlay is no row,
+  // so it claims nothing; a release always passes — releasing a row nobody
+  // holds is a no-op, and its row may have left the set meanwhile). The
+  // option's own hover (a proposal's) wins while set.
+  const hoveredId = options.hoveredId ?? props.hoveredRowId ?? null;
+  const reportRowHover = props.onRowHoverChange;
+  const reportHover = options.onHoverChange;
+  const onHoverChange =
+    reportRowHover === undefined && reportHover === undefined
+      ? undefined
+      : (id: string, hovered: boolean) => {
+          reportHover?.(id, hovered);
+          if (!hovered || rowById.has(id)) reportRowHover?.(id, hovered);
+        };
   const crowd =
     options.crowd === false
       ? undefined
@@ -163,15 +178,14 @@ export function MapDataView(props: DataViewRenderProps<unknown>): ReactNode {
           ? {}
           : { cameraKey: options.cameraKey })}
         onActivate={onActivate}
-        {...(options.hoveredId === undefined
-          ? {}
-          : { hoveredId: options.hoveredId })}
-        {...(options.onHoverChange === undefined
-          ? {}
-          : { onHoverChange: options.onHoverChange })}
+        hoveredId={hoveredId}
+        {...(onHoverChange === undefined ? {} : { onHoverChange })}
         {...(options.onCameraRest === undefined
           ? {}
           : { onCameraRest: options.onCameraRest })}
+        {...(options.fitRequest === undefined
+          ? {}
+          : { fitRequest: options.fitRequest })}
         empty={
           // The surface's empty state speaks for an empty LIST. A list the
           // search or filter emptied is just a bare map (the map stays put,

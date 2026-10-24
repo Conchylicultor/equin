@@ -60,7 +60,7 @@ export interface UniversalSearchPanelProps {
   savedByGoogleId: ReadonlyMap<string, Place>;
   /** The Google hit hovered here or on the map (linked both ways). */
   hoveredGoogleId: string | null;
-  onHoverGoogle: (placeId: string | null) => void;
+  onHoverGoogle: (placeId: string, hovered: boolean) => void;
   onOpenPlace: (place: Place) => void;
   /** Open a hit's detail card (one with a position). */
   onOpenHit: (hit: GoogleHit) => void;

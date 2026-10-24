@@ -13,7 +13,14 @@ export interface CameraView {
 
 /** Where the camera came to rest: its view, and the area it shows. */
 export interface CameraRest extends CameraView {
+  /** Everything the map shows, chrome-covered edges included. */
   bounds: MapBounds;
+  /**
+   * The part of the map the chrome (`fitPadding`) leaves uncovered — what the
+   * user actually sees. Re-reported when the padding changes, though the
+   * camera did not move.
+   */
+  visible: MapBounds;
 }
 
 /** The map's size on screen, in CSS px. */
@@ -97,6 +104,38 @@ export function viewFor(
     }),
     zoom,
   };
+}
+
+/**
+ * The area a view shows inside the part of the viewport the padding leaves
+ * uncovered. Across the antimeridian `west > east`; an uncovered width wider
+ * than the world is every longitude (`-180..180`); latitudes stop at the
+ * Mercator edge. Fractional zooms are fine (a vector map's).
+ */
+export function uncoveredBounds(
+  view: CameraView,
+  viewport: MapViewport,
+  padding: MapPadding,
+): MapBounds {
+  const scale = 2 ** view.zoom;
+  const mid = project(view.center);
+  const left = mid.x + (padding.left - viewport.width / 2) / scale;
+  const right = mid.x + (viewport.width / 2 - padding.right) / scale;
+  const top = mid.y + (padding.top - viewport.height / 2) / scale;
+  const bottom = mid.y + (viewport.height / 2 - padding.bottom) / scale;
+  const clampY = (y: number) => Math.max(0, Math.min(WORLD_PX, y));
+  // Chrome covering everything leaves an empty strip at the centre line.
+  const [x0, x1] = right >= left ? [left, right] : [mid.x, mid.x];
+  const [y0, y1] = bottom >= top ? [top, bottom] : [mid.y, mid.y];
+  const north = unproject({ x: 0, y: clampY(y0) }).lat;
+  const south = unproject({ x: 0, y: clampY(y1) }).lat;
+  if (x1 - x0 >= WORLD_PX) return { south, west: -180, north, east: 180 };
+  const wrap = (lng: number) => ((((lng + 180) % 360) + 360) % 360) - 180;
+  const west = wrap(unproject({ x: x0, y: 0 }).lng);
+  let east = wrap(unproject({ x: x1, y: 0 }).lng);
+  // An east edge exactly on the antimeridian wraps to -180: keep it at 180.
+  if (east === -180 && west !== -180) east = 180;
+  return { south, west, north, east };
 }
 
 /** Curvature of the flight: how far it zooms out to travel (van Wijk & Nuij's ρ). */

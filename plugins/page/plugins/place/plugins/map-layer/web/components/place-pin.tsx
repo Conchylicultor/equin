@@ -80,7 +80,7 @@ export const placePinMark: MapPinMarkFn = ({ pin }, env) => {
  * and grown from its tip while active, the label riding along so it stays
  * centred on the head.
  */
-export function PlacePin({ pin, active, scale, tiles }: MapPinProps) {
+export function PlacePin({ pin, active, hovered, scale, tiles }: MapPinProps) {
   const env = useMapMarkEnv(tiles);
   if (env === null) return null;
   const mark = placePinMark({ pin, scale }, env);
@@ -88,8 +88,8 @@ export function PlacePin({ pin, active, scale, tiles }: MapPinProps) {
   return (
     <span
       className={cn(
-        "group/pin relative block cursor-pointer transition-transform",
-        active ? "scale-[1.18]" : "hover:-translate-y-0.5 hover:scale-105",
+        "relative block cursor-pointer transition-transform",
+        active ? "scale-[1.18]" : hovered && "-translate-y-0.5 scale-105",
       )}
       style={{
         width: mark.width,

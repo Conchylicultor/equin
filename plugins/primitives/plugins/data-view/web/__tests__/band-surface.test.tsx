@@ -100,4 +100,42 @@ describe("BandSurface", () => {
     expect(bleed.style.paddingTop).toBe("");
     expect(bleed.className).toContain("h-full");
   });
+
+  it("floats the asideEnd as a card beside an overlay band, inside the controls", () => {
+    render(
+      <BandSurface
+        overlay
+        aside={undefined}
+        asideEnd={<ReadsControls testId="aside-end" />}
+        reserve={{ right: "352px" }}
+        fullBleed
+        controls={CONTROLS}
+        band={() => null}
+      >
+        <div data-testid="body" />
+      </BandSurface>,
+    );
+    const panel = screen.getByTestId("aside-end");
+    expect(panel.textContent).toBe("band-surface-test");
+    const layer = panel.closest<HTMLElement>(".absolute")!;
+    expect(layer.style.top).toContain("--dv-header-offset");
+    expect(layer.style.right).toContain("352px");
+  });
+
+  it("refuses an asideEnd beside an in-flow band", () => {
+    expect(() =>
+      render(
+        <BandSurface
+          overlay={false}
+          aside={undefined}
+          asideEnd={<div />}
+          fullBleed={false}
+          controls={CONTROLS}
+          band={() => null}
+        >
+          <div />
+        </BandSurface>,
+      ),
+    ).toThrow(/asideEnd/);
+  });
 });

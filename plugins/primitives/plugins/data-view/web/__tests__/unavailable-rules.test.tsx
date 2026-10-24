@@ -156,6 +156,8 @@ function renderView(opts: {
     instances,
     activeId: "favorites",
     setActiveView: () => {},
+    drafts: null,
+    homeViewId: null,
     stateFor: fakeViewGetter(() => state),
     setSort: () => {},
     setSortRules: () => {},

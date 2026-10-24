@@ -58,6 +58,9 @@ export interface DataViewShellChrome {
   backdrop?: string;
   /** The room the surface's own chrome covers (`DataViewProps.reserve`). */
   reserve?: DataViewReserve;
+  /** The surface's right-hand panel (`DataViewProps.asideEnd`), a surface
+   *  property carried like `aside`. Validated by the shell. */
+  asideEnd?: ReactNode;
 }
 
 /** `Omit` over each member of a union — a plain `Omit` of a union is not a union. */
@@ -69,7 +72,8 @@ export type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
  * Everything a data source supplies: the full `DataViewProps` surface minus the
  * per-surface keys the shell owns (`storageKey` / `title` / `actions` /
  * `defaultView` / `views` / `density` / `groupHeaders` / `toolbar` /
- * `searchPlaceholder` / `aside` / `backdrop` / `reserve`).
+ * `searchPlaceholder` / `aside` / `backdrop` / `reserve` / `asideEnd` /
+ * `viewEdits` / `switcherForm` / `viewShortcuts`).
  *
  * `density` is on that list for the same reason `title` is: it describes the
  * SURFACE, not the data bundle, and the body reads it off `chrome`. Omitting it
@@ -108,6 +112,10 @@ type DataViewSurfaceBundle<TRow> = DistributiveOmit<
   | "aside"
   | "backdrop"
   | "reserve"
+  | "asideEnd"
+  | "viewEdits"
+  | "switcherForm"
+  | "viewShortcuts"
 >;
 
 /** Props of the per-active-instance body (`DataViewBody`) — an intersection,

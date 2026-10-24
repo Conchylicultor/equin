@@ -124,6 +124,39 @@ group chrome), and the `views` whitelist.
   whitelist excludes it (the whitelist gates addability, not authored rows), so
   the picker can render the value it is bound to.
 
+## Drafts: a per-tab working copy of each view
+
+`useViewModel(…, { drafts: true, canonical? })` makes a surface's views SAVED
+VALUES that edits do not touch until kept. Every write to a view's `view` value
+(`updateView`, and so `actions.updateView`) lands in that view's working copy;
+`viewFor` reads the copy (else the saved row), `savedViewFor` the saved row,
+`dirtyFor` (a `ViewGetter<boolean>`) says whether they differ, and the drafted
+instance is rebuilt from its copy (`instance.options`, a drafted type change).
+Renaming, icons, reordering, adding and deleting stay durable. `drafts`
+(`ViewDrafts`, `null` when off):
+
+- `save(id)` — write the copy to the config row (`merge: false`) and drop it;
+- `discard(id)` — drop the copy and return it (`null` if none), for an Undo;
+- `restore(id, view)` — make `view` the copy again;
+- `saveAsNew(id, { name, icon? })` — insert the copy as a new row right after
+  `id` (`duplicateView(id, { name, icon, view })`), drop `id`'s copy, select
+  the new view and return its id.
+
+A write that lands back on the saved value drops the copy. "The same value" is
+canonical JSON (key order and `undefined` members ignored) of the consumer's
+`canonical` projection — the engine still names no key of the blob; data-view
+passes `canonicalViewValue`, which drops filter-node ids.
+
+**Where copies live**: sessionStorage (owner `data-view.view-drafts`, one
+entry per surface `storageKey`, `whenFull: "refuse"`) behind a module-level map
+(`web/internal/view-drafts.ts`) read with `useSyncExternalStore`, so every mount
+of one surface in the tab sees the same copies, with the same identities (the
+getters downstream memoise on them), and an F5 keeps them while a new tab
+starts from the saved views — the search query's lifetime. Writes read the
+CURRENT map, so two writes in one tick compose. The pure value helpers
+(`canonicalJson`, `sameView`, `withDraft`, `cleanView`) are
+`web/internal/draft-values.ts`.
+
 ## ⚠️ Invariant: never import data-view (no cycle)
 
 `view-core` is a **child** of `data-view`, so `data-view → view-core` is the only
@@ -160,6 +193,7 @@ contributions each surface passes in, and per-entry plugin id
   `fakeViewGetter` from `web/testing`),
   `buildViewDescriptors`,
   `buildViewConfigContributions(entries: { id, descriptor, pluginId }[])`,
+  `ViewDrafts` / `ViewModelOptions` (see "Drafts"),
   `EditableViewSwitcher` (the chips, drag-reorderable, then an
   ALWAYS-visible `+` add-view button — adding a view is a first-class gesture,
   never hover-revealed chrome; the strip hugs its chips and never grows, so its
@@ -168,7 +202,15 @@ contributions each surface passes in, and per-entry plugin id
   into one chip — active view icon + name + chevron — whose menu lists the other
   views, an "Add view" submenu and "View settings…", which opens
   `ViewSettingsPopover` anchored to the chip via `ControlPanelPopover`'s
-  `anchor` arm; no drag reorder), `AddViewMenuItems` (the add-menu rows both
+  `anchor` arm; `menu="list"` opens a popover listing every view as a
+  draggable `ViewList` with no per-view actions instead; `countFor` /
+  `dirtyFor` put the active view's count and dirty dot on the chip),
+  `ViewList` / `ViewListProps` (the views as a vertical list — icon, name,
+  `countFor`, `dirtyFor` dot, a hover ⋯ menu of Rename (inline) / Duplicate /
+  Delete, drag to reorder over `sortable-list`, an optional "+ label" row;
+  `homeId` stays first, undraggable and actionless, a drop above it lands below
+  it; `renaming` makes the inline rename controlled; `editable={false}` drops
+  the menu and rename), `AddViewMenuItems` (the add-menu rows both
   switchers share: flat for one untitled source, one section per source
   otherwise), `ViewSettingsPopover` (plus an optional `hostSettings: HostViewSettings` render
   prop, threaded through both switchers, drawing the consumer's own per-instance
@@ -187,7 +229,7 @@ contributions each surface passes in, and per-entry plugin id
 - Description: Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. Type-agnostic named-view-instance engine (server): the per-id `views` config descriptor + a generic registration helper. Consumers register their own ids under their own plugin.
 - Web:
   - Contributes: `IdKinds.Kind` "view"
-  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×13
     - `config_v2` ×3
     - `primitives/css/control-panel` ×2
@@ -200,9 +242,13 @@ contributions each surface passes in, and per-entry plugin id
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
+    - `primitives/css/status-dot.StatusDot`
+    - `primitives/css/text.Text`
     - `primitives/css/toggle-chip.ToggleChip`
+    - `primitives/dom/web-storage.defineStore`
     - `primitives/icon-button.IconButton`
     - `primitives/latest-ref.useLatestRef`
+    - `primitives/overlay/popover.InlinePopover`
     - `primitives/overlay/popup-open.PopupOpenScope`
     - `primitives/view-switcher.useActiveViewId`
     - `ui/icons.Icon`
@@ -211,8 +257,11 @@ contributions each surface passes in, and per-entry plugin id
     - `HostViewSettings`
     - `ResolvedViewInstance`
     - `ViewActionsCore`
+    - `ViewDrafts`
     - `ViewGetter`
+    - `ViewListProps`
     - `ViewModelCore`
+    - `ViewModelOptions`
     - `ViewsConfigHandle`
   - Exports (values):
     - `AddViewMenuItems`
@@ -223,6 +272,7 @@ contributions each surface passes in, and per-entry plugin id
     - `useViewGetter`
     - `useViewModel`
     - `useViewsConfig`
+    - `ViewList`
     - `ViewSettingsPopover`
 - Server:
   - Contributes: `ids.kind` "view"
@@ -250,6 +300,8 @@ contributions each surface passes in, and per-entry plugin id
     - `ui/tokens/color-palette --faint-foreground`
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
+    - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/sidebar-metrics --sidebar-icon-gap`
     - `ui/tokens/sidebar-metrics --sidebar-icon-size`

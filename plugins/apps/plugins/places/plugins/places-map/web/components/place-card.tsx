@@ -1,19 +1,16 @@
-import { useState, type ComponentProps, type ReactNode } from "react";
+import { useState, type ReactNode, type Ref } from "react";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
-import { clipClasses } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import {
   SectionLabel,
   Text,
 } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   Button,
-  cn,
   Textarea,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -52,8 +49,8 @@ import {
   RatingLine,
 } from "./place-facts";
 import { PlaceHero } from "./place-hero";
+import { cardColumnProps, type CardFrame } from "./card-frame";
 import {
-  cardWidthProps,
   PhotosGrid,
   PhotosHeader,
   PhotoThumbs,
@@ -72,20 +69,13 @@ const quoteIcon = symbol("format-quote");
 /** The card's two independent toggles, in order: Want to go, then Been. */
 const ROLE_TOGGLES: readonly TagRole[] = ["want", "been"];
 
-/** The card's width — the screen also reads it, to keep pins out from under it. */
-export const PLACE_CARD_WIDTH = "340px";
-
 /** The drop under the hero, drawn at this multiple of the map pin. */
 const HERO_SCALE = 1.9;
 
-/** The card's box: an overlay surface, laid out by the `Column` it hosts. */
-function OverlayCard(props: Omit<ComponentProps<typeof Surface>, "level">) {
-  return <Surface level="overlay" {...props} />;
-}
-
 /**
- * The selected place, as a floating card on the right of the map, as tall as
- * its content (the body scrolls past the screen's height):
+ * The selected place, as a floating card on the right of the map — or drilled
+ * into the side panel (`frame`) — as tall as its content (the body scrolls
+ * past the screen's height):
  *
  * - the hero — Google's photos, else the tag colours' wash with the place's
  *   icon as a watermark — with the drop standing on its foot;
@@ -108,6 +98,8 @@ export function PlaceCard({
   place,
   places,
   tags,
+  frame,
+  ref,
   onClose,
   onMovePin,
 }: {
@@ -115,6 +107,11 @@ export function PlaceCard({
   /** Every saved place (the tag picker's counts). */
   places: readonly Place[];
   tags: readonly PlaceTag[];
+  /** Floating on the map, or drilled into the side panel. */
+  frame: CardFrame;
+  /** The card's box (what a click away is measured against). */
+  ref?: Ref<HTMLElement>;
+  /** Close the card: its Close button (floating), a delete. */
   onClose: () => void;
   /** Ask the map for the custom place's new position (pick mode). */
   onMovePin: () => void;
@@ -144,28 +141,27 @@ export function PlaceCard({
   const closed =
     place.businessStatus !== null && place.businessStatus !== "OPERATIONAL";
 
-  // The card and its photos panel are one element, so its width glides.
+  // The card and its photos panel are one element, so its width glides
+  // (floating; drilled into the panel it keeps the panel's width).
   const showPhotos = photosOpen && rich !== null;
-  const width = cardWidthProps(PLACE_CARD_WIDTH, showPhotos);
 
   return (
     <Column
-      as={OverlayCard}
-      className={cn(
-        "pointer-events-auto max-h-full",
-        clipClasses({ axis: "both", fill: false }),
-        width.className,
+      ref={ref}
+      {...cardColumnProps(
+        frame,
+        showPhotos
+          ? {
+              header: (
+                <PhotosHeader
+                  place={place}
+                  count={rich.photos.length}
+                  onBack={() => setPhotosOpen(false)}
+                />
+              ),
+            }
+          : null,
       )}
-      style={width.style}
-      header={
-        showPhotos ? (
-          <PhotosHeader
-            place={place}
-            count={rich.photos.length}
-            onBack={() => setPhotosOpen(false)}
-          />
-        ) : undefined
-      }
       body={
         showPhotos ? (
           <PhotosGrid photos={rich.photos} place={place} />
@@ -179,13 +175,15 @@ export function PlaceCard({
               visual={visual}
               onShowAll={() => setPhotosOpen(true)}
             >
-              <IconButton
-                icon={closeIcon}
-                label="Close"
-                onClick={onClose}
-                variant="floating"
-                className="rounded-full"
-              />
+              {frame.kind === "floating" ? (
+                <IconButton
+                  icon={closeIcon}
+                  label="Close"
+                  onClick={onClose}
+                  variant="floating"
+                  className="rounded-full"
+                />
+              ) : null}
             </PlaceHero>
             <Stack direction="row" align="start" gap="md" className="px-md">
               <HeroDrop visual={visual} />

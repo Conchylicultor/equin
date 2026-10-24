@@ -1,0 +1,15 @@
+// @hash 6ec84829688d
+{
+  // The filter presets: every one a map (the side panel lists its places).
+  // All places is the home preset — first, never renamed, dragged or deleted;
+  // the user saves their own from the tag sidebar. None is seeded beyond it:
+  // a preset names tags by their ids, which are the user's own.
+  "views": [
+    {
+      "id": "all",
+      "name": "All places",
+      "icon": "map",
+      "view": { "type": "map" }
+    }
+  ]
+}

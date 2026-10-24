@@ -29,9 +29,13 @@ export interface ToolbarParts {
   title: ReactNode;
   /**
    * The view switcher in both of its forms — `strip` (the editable chip row)
-   * and `chip` (one collapsed chip). Render exactly one. Both are `null` on a
-   * pinned surface. The switcher is the only way to add, rename or reorder
-   * views, so an arrangement must render one of them.
+   * and `chip` (one collapsed chip). Render exactly one — `strip ?? chip`
+   * for an arrangement that prefers the strip, `chip ?? strip` for one that
+   * prefers the chip: `strip` is `null` when the surface asked for the chip
+   * alone (`DataViewProps.switcherForm`). Both are `null` on a pinned surface
+   * and when the surface lists its views itself (`switcherForm: "none"`).
+   * Otherwise the switcher is the only way to add, rename or reorder views,
+   * so an arrangement must render one of them.
    */
   switcher: { strip: ReactNode; chip: ReactNode };
   /** The search input, in `forms.search`. Always render it: a non-empty query

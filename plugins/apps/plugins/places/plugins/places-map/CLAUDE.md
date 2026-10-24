@@ -15,23 +15,36 @@ all need both, so nothing renders an empty map or zero counts for a read that
 has not landed.
 Then `PlacesSurface` renders, inside a `relative h-full` box:
 
-- `<DataView storageKey="places.map" views={["map","gallery","list"]}
-  toolbar={floatingToolbar} aside={<TagSidebar/>} search={…}>` — the search
-  is controlled, with the universal search panel as its `suggestions` (below)
-  — the views are authored in `config/apps/places/places-map/places.map.jsonc`
-  (All places = map, Gallery, List). `backdrop="map"`: the map stays mounted
-  under every view — Gallery and List float over it as a card showing the
-  same places, its right edge stepping aside for whatever the right side
-  holds (`reserve={{ right }}`: the card, the Sonnet thread, or both) — so switching views
-  never moves the user's camera. `viewOptions.map` stamps
-  `pinType: "saved-place"` and `pinData: placeVisual(place, tags)` on every
-  pin, asks for `crowd: { kind: "spots" }` (every place always drawn — no
-  clusters) and ranks a Want to go place above the rest (`rank`); gallery
-  covers and list glyphs paint the same `PlaceVisual`.
+- `<DataView storageKey="places.presets" views={["map"]}
+  viewEdits={{ mode: "draft", home: "all" }} viewShortcuts
+  switcherForm="none" toolbar={floatingToolbar} aside={<TagSidebar/>} asideEnd={<PlacesPanel/>}
+  search={…}>` — the search is controlled, with the universal search panel as
+  its `suggestions` (below). Its views are the **filter presets** (below),
+  every one a map: All places is authored in
+  `config/apps/places/places-map/places.presets.jsonc`, the rest are the
+  user's. `backdrop="map"` keeps the one map mounted whatever preset is
+  active, so switching presets never moves the camera; `reserve={{ right }}`
+  is what the screen's own right-hand chrome covers (the Sonnet thread, and a
+  floating card beside it), which the side panel steps aside for.
+  `viewOptions.map` stamps `pinType: "saved-place"` and
+  `pinData: placeVisual(place, tags)` on every pin, asks for
+  `crowd: { kind: "spots" }` (every place always drawn — no clusters), ranks a
+  Want to go place above the rest (`rank`), reports each camera rest
+  (`bounds` for the Google search, `visible` for the panel's In view) and
+  carries the panel's `fitRequest`. One `hoveredPlaceId` (`useLinkedHover`,
+  `map`) is shared by the map (`hoveredRowId` / `onRowHoverChange`) and the
+  panel's list or gallery, so a row and its pin light together — a hovered row
+  lifts its pin exactly as the pointer would (drop raised, name shown).
+  The former `places.map` id (Map / Gallery / List views) is retired and its
+  committed config deleted; its **user layer is orphaned on purpose** — its
+  rows (Gallery, List, a filtered All places) would otherwise render as
+  presets, and config migrations are shared across view ids.
 - The selected place's `PlaceCard` and the `TagManagerPanel` (from
   `tag-manager`) as `Pin`ned floating cards on the right, below the toolbar's
   tools card (`BELOW_TOOLBAR`); the manager starts past the sidebar
-  (`PAST_SIDEBAR`, matching the sidebar's `w-72`). Selection is local state:
+  (`PAST_SIDEBAR`, matching the sidebar's `w-72`, while it is open). The card
+  floats only while the side panel is hidden; while it is shown, the card
+  drills into the panel instead (below). Selection is local state:
   `onRowActivate` (a pin, a card, a row) selects; `selectedRowId` makes the
   pin active and pans to it. A click anywhere else on the screen — the map,
   the sidebar, the toolbar — closes the card (`web/internal/use-click-away.ts`):
@@ -63,23 +76,38 @@ bodies — the map's axis) · note · createdAt ("Saved").
 ## The tag sidebar (`web/components/tag-sidebar.tsx`)
 
 The surface's `aside`: it edits the active view's filter through
-`useDataViewControls().filter`. It owns only the TOP-LEVEL rules of an `and`
-root on the tags field with `has-nested` (include) / `lacks-nested` (exclude)
-— `any` = one include rule with every id, `all` = one include rule per id,
-one exclude rule with every excluded id — and keeps every other node as it
-was (an `or` root is wrapped, never rewritten). All of it is pure and
-unit-tested in `web/internal/sidebar-filter.ts` (`sidebarState`,
-`applySidebarState`, `toggleTag`, `applySidebarClick`, `withoutSidebarRules`).
+`useDataViewControls().filter`. Its state is an AND of OR-rows
+(`{ rows: string[][]; exclude: string[] }`): it owns only the TOP-LEVEL rules
+of an `and` root on the tags field — one `has-nested` rule per row (the row's
+tags or-ed, the rows and-ed as siblings), one `lacks-nested` rule with every
+excluded id — and keeps every other node as it was (an `or` root is wrapped,
+never rewritten; rule ids are reused in order). The filters the former any /
+all switch wrote read back unchanged (one rule = one row). All of it is pure
+and unit-tested in `web/internal/sidebar-filter.ts` (`sidebarState`,
+`applySidebarState`, `rootOf`, `includeTag`, `toggleTag`, `removeTag`,
+`splitRow`, `mergeRows`, `moveTag`, `presetAutoName`, `presetIcon`,
+`withoutSidebarRules`).
+
+The tag filter box (`web/components/tag-filter-box.tsx`, under the presets,
+once anything is picked or the preset has unsaved edits): "Tagged" rows of `TagChip`s — a
+row of several chips drawn as one tinted group — with an `or` between two
+chips (a click splits the row there: both required) and an `and` between two
+rows (a click merges them: either one); an included chip drags (HTML5 drag)
+onto another row, or onto the "and …" zone shown only while dragging, for a
+row of its own; × removes. Then "Not tagged" (the excluded chips), then the
+`footer` line: the preset's actions (below), while it has unsaved edits.
 
 The header always says how many places show: the total alone, or `shown /
 total` while the filter or search narrows the view (`useFlatRows` over the
 active view state with the same `placeSearchText` the DataView searches by) —
 the one place a view narrowed to nothing is explained; the map stays bare.
 
-A row click toggles a tag off ↔ include (a tag excluded through the advanced
-filter is shown, and a click drops it); several included tags default to `all`;
-including a tag replaces any
-included tag it subsumes or narrows. A row's count is `tagPlaceCounts` over the
+A row click toggles a tag off ↔ include — it never excludes: an exclusion is
+written in the advanced filter (the box shows it under "Not tagged", and a
+click on its row or its chip's × drops it). Including a tag replaces any
+included tag it subsumes or narrows, then joins the row whose tags share its
+root tag (Museums joins Viewpoints under Culture: or), else starts a row
+(Want to go: and). A row's count is `tagPlaceCounts` over the
 places the REST of the filter keeps (`withoutSidebarRules` → `useRowFilter`),
 nested tags included. The quick-search text is not applied to the counts.
 While the rest of the filter names a rule that does not resolve, no counts
@@ -93,11 +121,59 @@ The tree walks are the tag-tree engine's (`flattenTagTree`, `tagDescendants`);
 (named by `freeSiblingName`, sibling names being unique) and opens the manager
 on it.
 
-Clicking the header's title line ("Places", the total, a chevron) folds the
-sidebar to its header — tree and footer gone, the tag-filter summary kept —
-remembered per device (`useDraft("places.tag-sidebar.open")`). The aside card
-hugs the sidebar's height (it is a `<Column fill>`), so the folded card is
-just the header and the map below it is reachable.
+The header folds the sidebar (its chevron, device-local,
+`web/internal/layout-stores.ts`) to the header card alone, at the same width:
+the app mark, the active preset's name as the title — `DataViewViewChip
+appearance="title"`, a dropdown of every preset (draggable) with the dirty dot
+— then `shown / total` and the chevron that unfolds it. Unfolded, the title is
+"Places" and the presets list below it. No tag chips and no preset actions
+while folded — the dirty dot is the only sign of edits. The surface's
+`switcherForm` is `"none"`: the band never draws a switcher.
+
+## Presets
+
+The presets DataView's views are saved FILTERS, never layouts
+(`viewEdits={{ mode: "draft", home: "all" }}` — data-view's "View edits"):
+every tag picked in the sidebar, and every filter edit, goes to the active
+preset's per-tab working copy (a dirty dot) until it is kept. The sidebar
+lists them at its top (`DataViewViewList`: icon, name, count, dirty dot, ⋯
+Rename / Duplicate / Delete, drag to reorder with All places pinned first,
+"+ New preset" — a preset from the current filter, named after its tags by
+`presetAutoName`, with `presetIcon`, opened for renaming); ⌥1–9 switch
+(`viewShortcuts`). The tag box's footer carries the actions while the active
+preset is dirty: on All places **Clear** (discard) and **Save as preset**
+(`drafts.saveAsNew` — All places goes back to its saved filter); on another
+**Reset** (discard) · **Save as new** · **Update** (`drafts.save`). Switching
+preset discards the edits with an Undo toast (data-view's own). Nothing is
+seeded beyond All places: a preset names tags by id, and tag ids are the
+user's.
+
+## The side panel (`web/components/places-panel.tsx`)
+
+The surface's `asideEnd` (`PANEL_WIDTH` 372px, `card-frame.tsx`): the active
+preset's places — the presets DataView's own rows, `useFlatRows` over its
+controls (filter and search) — scoped by `scopePlaces`
+(`web/internal/panel-scope.ts`, tested: `boundsContain` over the map's
+`CameraRest.visible`, the area the chrome leaves uncovered). Header:
+"In view N | All M" (device-local), list | gallery, Hide (the layout,
+device-local: `list | gallery | hidden`). Body: a second DataView,
+`places.panel` (`config/apps/places/places-map/places.panel.jsonc`: the
+fields the old Gallery / List views had, and NO sort — the rows arrive in the
+preset's own order, so the toolbar's Sort, which edits the preset, orders the
+panel), `pinnedView` = the layout, a body-only hosted frame, its covers
+and glyphs painting the same `PlaceVisual`. Footer while in view: "K more
+outside the map · Fit map · Show all" (Fit bumps the map's `fitRequest`);
+none in view: "None of the N places of <preset> are in view" with the same
+two. Hidden, the panel is a pill (the preset's name and count) that shows it
+again — gone while a floating card holds that corner.
+
+**Drill.** While the panel is shown, selecting a place (a row, a pin) or a
+Google place draws its card IN the panel (`CardFrame` `panel`: the panel's
+card is the surface, a Back line "← <preset> · in view" leads it, no Close);
+Back, Esc or a click away deselects. A row click pans only when the pin is
+covered (the map's focus rule). The map's fit-padding probe covers the
+panel's width (and the thread beside it), so In view means what the user
+sees; with the sidebar collapsed the probe starts at the left edge.
 
 ## Pins (`GeoMap.Pin` for `saved-place`)
 
@@ -152,15 +228,20 @@ scrolls, its footer stays):
   `image-viewer` (← / → through all), "See all" or the veiled one opens
   the photos panel: the SAME card element (local `photosOpen` state, in both
   `PlaceCard` and `GooglePlaceCard`) swaps its header / body / footer for
-  `PhotosHeader` / `PhotosGrid` and glides to `PLACE_PHOTOS_WIDTH` (760px,
-  `cardWidthProps` — one element, so the width transitions), showing every photo Google shares — at most ten, Google's cap, no
+  `PhotosHeader` / `PhotosGrid` (the photos header replaces the frame's own,
+  Back line included — `cardColumnProps(frame, photos)` in `card-frame.tsx`)
+  and, floating, glides to `PLACE_PHOTOS_WIDTH` (760px, `cardWidthProps` — one
+  element, so the width transitions). Drilled into the side panel it keeps the
+  panel's width (`PANEL_WIDTH`): the panel is a fixed column the map's
+  uncovered area and the pins' padding are measured against, so the photos lay
+  out inside it rather than widening it. It shows every photo Google shares — at most ten, Google's cap, no
   categories — in two columns at their own shape, each credited on hover
   (the place's own uploads marked Owner: the author is named as the place),
   then a "More on Google Maps" tile to the full album; a photo opens the
   viewer (an `ImageGallery`). Back returns to the card. Both share the
   Column's one scroller, so each resets it on mount (`ScrollTopOnMount`). The screen's reach
-  constants still assume the 340px card, so the wider panel overlays the map
-  (and a Gallery / List view) while it is open.
+  constants still assume the 340px card, so the wider floating panel overlays
+  the map while it is open.
 - **Head**: the name, edited in place (`PlaceTitleInput`: on a Google place it
   writes `title`, and blank or Google's own name clears it, with "On Google:
   <name>" under a title; on a custom place it renames, blank reverts) —
@@ -287,7 +368,7 @@ away closes it — a click in the thread is not away (`useClickAway`'s
 
 ## Plugin reference
 
-- Description: The Places app's index pane (/places): every saved place in one full-bleed DataView (Map, Gallery, List) with its chrome floating on the map — the tag sidebar owning the tag half of the view filter (include / exclude, any / all, faceted counts), the "Search or add places" bar (your places filtered live, Google's hits around the map's view as cards to save and as ghost pins hover-linked with them, the camera never moving; Ask Sonnet hands a question to a background run shown as a thread in a card docked on the right — the newest picks as Google cards with photos, why they fit, what makes them special and their sources, earlier answers folded, as numbered pins — its progress as a pill in the bar that shows and hides the card, and the recent questions in the panel to reopen), the selected place's card or a Google place's detail card — plus the saved-place pin (a drop near, a round badge far out with each spot's size beside it), the Google result's ghost pin, Sonnet's numbered pick pin, the thread's step labels for the Ask Sonnet tools, and the transcript row of places_show_picks (the numbered picks beside a mini map, hover-linked).
+- Description: The Places app's index pane (/places): every saved place on one full-bleed map whose views are filter presets (All places, then the user's own — edits are drafts until saved, ⌥1–9 switch), with its chrome floating on the map — the tag sidebar (the presets with their counts and dirty dots, the tag filter as AND-ed rows of OR-ed tags with the preset's Reset / Save as new / Update, the tag tree with faceted counts; folded, the header alone, titled by a dropdown of the presets), the side panel (the preset's places in view or all, as a list or a gallery, hover-linked with their pins, a selected place's card drilled into it), the "Search or add places" bar (your places filtered live, Google's hits around the map's view as cards to save and as ghost pins hover-linked with them, the camera never moving; Ask Sonnet hands a question to a background run shown as a thread in a card docked on the right — the newest picks as Google cards with photos, why they fit, what makes them special and their sources, earlier answers folded, as numbered pins — its progress as a pill in the bar that shows and hides the card, and the recent questions in the panel to reopen), the selected place's card or a Google place's detail card — plus the saved-place pin (a drop near, a round badge far out with each spot's size beside it), the Google result's ghost pin, Sonnet's numbered pick pin, the thread's step labels for the Ask Sonnet tools, and the transcript row of places_show_picks (the numbered picks beside a mini map, hover-linked).
 - Web:
   - Slots: `places-map.actions`
   - Slot contributors: `places-map.actions` ← `primitives.pane`
@@ -300,25 +381,26 @@ away closes it — a click in the thread is not away (`useClickAway`'s
     - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
     - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
     - `JsonlViewerTool.Renderer` "mcp__equin__places_show_picks" → `PicksToolView`
-  - Uses: 120 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 123 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×10
+    - `map` ×9
     - `apps/places/places-core` ×8
     - `conversations/agent-thread` ×8
-    - `map` ×8
-    - `primitives/data-view` ×8
     - `primitives/collapsible` ×6
     - `primitives/live-state` ×5
     - `network/live` ×4
     - `primitives/css/ui-kit` ×4
     - `primitives/overlay/image-viewer` ×4
     - `primitives/link-gesture/new-tab` ×3
-    - `primitives/persistent-draft` ×3
     - `ui/icons` ×3
     - `conversations/conversation-view/jsonl-viewer/tool-call` ×2
     - `integrations/google-maps` ×2
     - `primitives/css/layer` ×2
+    - `primitives/css/rigid` ×2
     - `primitives/css/text` ×2
     - `primitives/hover-reveal` ×2
     - `primitives/pane` ×2
+    - `primitives/persistent-draft` ×2
     - `primitives/relative-time` ×2
     - `tag-tree/picker` ×2
     - `apps/places/place-details.usePlaceDetails`
@@ -340,7 +422,6 @@ away closes it — a click in the thread is not away (`useClickAway`'s
     - `primitives/css/line.Line`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
-    - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
@@ -362,10 +443,10 @@ away closes it — a click in the thread is not away (`useClickAway`'s
     - `shell/toast.showToast`
     - `tag-tree/engine.useTagTreeActions`
 - Cross-plugin:
-  - Uses tokens: 29 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 30 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/color-palette` ×12
     - `ui/tokens/type-scale` ×7
-    - `ui/tokens/density` ×5
+    - `ui/tokens/density` ×6
     - `ui/tokens/shape` ×3
     - `ui/tokens/categorical --categorical-foreground`
     - `ui/tokens/shadow --shadow`

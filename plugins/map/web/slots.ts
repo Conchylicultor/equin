@@ -8,6 +8,7 @@ import {
   type CameraRest,
   type CameraView,
   type LatLng,
+  type LinkedHoverChange,
   type MapCrowd,
   type MapMarkResult,
   type MapOverlay,
@@ -44,8 +45,8 @@ export interface MapRendererProps {
    * hover wins while there is one.
    */
   hoveredId: string | null;
-  /** The pin under the pointer changed (`null`: none). */
-  onHoverChange?: (id: string | null) => void;
+  /** The pointer entered (`true`) or left (`false`) a pin: a claim or a release. */
+  onHoverChange?: LinkedHoverChange;
   /**
    * How pins that crowd each other are drawn (`MapCrowd`). Absent = every pin
    * on its own, near, at every zoom.
@@ -98,6 +99,12 @@ export interface MapRendererProps {
    * once when the map first settles): the view, and the area it shows.
    */
   onCameraRest?: (rest: CameraRest) => void;
+  /**
+   * A fit asked for by the caller: each time the number changes (never its
+   * value at mount), the renderer frames the overlays exactly as its Fit
+   * control does. Absent: only the Fit control frames on demand.
+   */
+  fitRequest?: number;
 }
 
 /**
@@ -152,6 +159,13 @@ export type MapPinScale = "near" | "far";
 export interface MapPinState {
   /** The pin is the selected one — grow and raise it. */
   active: boolean;
+  /**
+   * The pin is hovered — under the pointer, or linked from outside the map
+   * (`MapView`'s `hoveredId`: a list row, a card). Draw the hover look from
+   * this, never from CSS `:hover`: a linked hover has no pointer on the pin,
+   * so a `:hover`-only look would lift it into the DOM at rest.
+   */
+  hovered: boolean;
   scale: MapPinScale;
   /**
    * Set only on the lead of a far spot holding more than one pin: draw the

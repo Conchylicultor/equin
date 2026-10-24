@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { SINGLE_POINT_ZOOM, cameraFor, overlayPositions } from "./camera";
+import {
+  SINGLE_POINT_ZOOM,
+  boundsContain,
+  cameraFor,
+  overlayPositions,
+} from "./camera";
 import type { MapOverlay } from "./overlays";
 
 describe("cameraFor", () => {
@@ -54,5 +59,48 @@ describe("overlayPositions", () => {
       { lat: 3, lng: 3 },
       { lat: 4, lng: 4 },
     ]);
+  });
+});
+
+describe("boundsContain", () => {
+  const paris = { south: 48.8, west: 2.2, north: 48.9, east: 2.5 };
+  const pacific = { south: -30, west: 170, north: 10, east: -170 };
+
+  test("a point inside an ordinary box", () => {
+    expect(boundsContain(paris, { lat: 48.85, lng: 2.35 })).toBe(true);
+  });
+
+  test("edges are inside", () => {
+    expect(boundsContain(paris, { lat: 48.8, lng: 2.5 })).toBe(true);
+  });
+
+  test("outside by latitude or longitude", () => {
+    expect(boundsContain(paris, { lat: 49, lng: 2.35 })).toBe(false);
+    expect(boundsContain(paris, { lat: 48.85, lng: 2.6 })).toBe(false);
+  });
+
+  test("a box across the antimeridian holds both sides of it", () => {
+    expect(boundsContain(pacific, { lat: 0, lng: 175 })).toBe(true);
+    expect(boundsContain(pacific, { lat: 0, lng: -175 })).toBe(true);
+    expect(boundsContain(pacific, { lat: 0, lng: 180 })).toBe(true);
+    expect(boundsContain(pacific, { lat: 0, lng: 0 })).toBe(false);
+  });
+
+  test("an unwrapped longitude is compared wrapped", () => {
+    expect(boundsContain(pacific, { lat: 0, lng: 185 })).toBe(true);
+    expect(boundsContain(paris, { lat: 48.85, lng: 362.35 })).toBe(true);
+  });
+
+  test("the whole-world box holds every longitude", () => {
+    const world = { south: -85, west: -180, north: 85, east: 180 };
+    expect(boundsContain(world, { lat: 0, lng: 180 })).toBe(true);
+    expect(boundsContain(world, { lat: 0, lng: -180 })).toBe(true);
+    expect(boundsContain(world, { lat: 0, lng: 0 })).toBe(true);
+  });
+
+  test("an east edge on the antimeridian holds 180", () => {
+    const b = { south: -10, west: 170, north: 10, east: 180 };
+    expect(boundsContain(b, { lat: 0, lng: 180 })).toBe(true);
+    expect(boundsContain(b, { lat: 0, lng: -179 })).toBe(false);
   });
 });

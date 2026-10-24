@@ -22,10 +22,11 @@ function surface(backdrop?: {
       fullBleed={false}
       controls={{} as DataViewControlsContextValue}
       band={() => <div data-testid="band" />}
+      reserve={backdrop?.reserve}
       backdrop={
         backdrop === undefined
           ? undefined
-          : { node: <div data-testid="backdrop" />, ...backdrop }
+          : { node: <div data-testid="backdrop" />, panel: backdrop.panel }
       }
     >
       <div data-testid="body" />

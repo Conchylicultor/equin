@@ -171,7 +171,9 @@ export function PillsToolbar({
       className={className}
       style={style}
       lead={title}
-      views={switcher.strip}
+      // A surface that asked for the chip alone (`switcherForm="chip"`)
+      // gets the chip.
+      views={switcher.strip ?? switcher.chip}
       tools={
         <>
           {search}

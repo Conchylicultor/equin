@@ -9,9 +9,14 @@ import type { CoverContent } from "../../core";
 /**
  * The hover group a cover lifts with: put it on the element whose hover should
  * lift the cover (the whole gallery card), so pointing anywhere on the card —
- * its title included — raises the picture.
+ * its title included — raises the picture. The group's element also holds the
+ * lift while it carries {@link coverHeldAttr} `="true"` — the card is the
+ * surface's hovered row while the pointer is elsewhere (on its map pin).
  */
 export const coverHoverGroup = "group/cover";
+
+/** The data attribute that holds a {@link coverHoverGroup}'s hover look. */
+export const coverHeldAttr = "data-cover-held";
 
 /**
  * For a cover's DETAIL (a badge, a caption): shown on the card-sized cover,
@@ -40,7 +45,9 @@ const FRAME: Record<CoverFrameProps["size"], string> = {
     "aspect-[16/10] w-full rounded-cover shadow-cover",
     "transition-[translate,box-shadow] duration-200 ease-out",
     "group-hover/cover:-translate-y-0.5 group-hover/cover:shadow-cover-hover",
+    "group-data-[cover-held=true]/cover:-translate-y-0.5 group-data-[cover-held=true]/cover:shadow-cover-hover",
     "motion-reduce:transition-none motion-reduce:group-hover/cover:translate-y-0",
+    "motion-reduce:group-data-[cover-held=true]/cover:translate-y-0",
   ),
   thumb: "size-cover-thumb rounded-md",
 };

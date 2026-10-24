@@ -3,7 +3,10 @@ import {
   FieldPresentation,
   type LiveFieldOptionsRead,
 } from "@plugins/network/plugins/live/web";
-import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
+import {
+  fieldOverrides,
+  type FieldDef,
+} from "@plugins/primitives/plugins/data-view/web";
 import {
   mapResource,
   ResourceView,
@@ -12,6 +15,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   placeFlags,
   placeName,
+  places as placesCollection,
   placesEntityRef,
   type Place,
   type PlaceTag,
@@ -123,3 +127,12 @@ export function placeExtraFields(tags: readonly PlaceTag[]): FieldDef<Place>[] {
     },
   ];
 }
+
+/**
+ * The overrides every list of places applies (the map's presets and the side
+ * panel alike): the location is the map's axis, not an ordering — the one
+ * derived field the lists do not sort by.
+ */
+export const PLACE_OVERRIDES = fieldOverrides(placesCollection, {
+  location: { sortable: false },
+});

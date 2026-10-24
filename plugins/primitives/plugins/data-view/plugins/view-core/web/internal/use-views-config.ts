@@ -60,9 +60,19 @@ export interface ViewsConfigHandle {
   renameView: (id: string, name: string) => void;
   /** Set the switcher glyph; `null` reverts to the view-type's own icon. */
   setViewIcon: (id: string, icon: SavedSymbolName | null) => void;
-  duplicateView: (id: string) => string;
+  /** Insert a copy of `id` right after it and return the copy's id. The copy
+   *  is named `"<name> copy"` and carries the source's icon and `view`, unless
+   *  `overrides` names its own (a working copy saved as a new view). */
+  duplicateView: (id: string, overrides?: DuplicateOverrides) => string;
   deleteView: (id: string) => void;
   reorderView: (id: string, toIndex: number) => void;
+}
+
+/** What a duplicate takes from the caller instead of its source row. */
+export interface DuplicateOverrides {
+  name?: string;
+  icon?: SavedSymbolName;
+  view?: VariantValue;
 }
 
 /** Stable random id for new config rows (the listField also injects one on the
@@ -340,18 +350,21 @@ export function useViewsConfig<T extends ViewTypeMeta>(
   );
 
   const duplicateView = useCallback(
-    (id: string): string => {
+    (id: string, overrides?: DuplicateOverrides): string => {
       const newRowId = newId();
       applyMutation((rows) => {
         const idx = rows.findIndex((r) => r.id === id);
         if (idx < 0) return rows;
         const src = rows[idx]!;
+        const icon = overrides?.icon ?? src.icon;
         const clone: ViewConfigRow = {
           id: newRowId,
-          name: `${src.name} copy`,
-          ...(src.icon !== undefined ? { icon: src.icon } : {}),
+          name: overrides?.name ?? `${src.name} copy`,
+          ...(icon !== undefined ? { icon } : {}),
           // Deep-ish clone of the variant value (JSON-safe by construction).
-          view: JSON.parse(JSON.stringify(src.view)) as VariantValue,
+          view: JSON.parse(
+            JSON.stringify(overrides?.view ?? src.view),
+          ) as VariantValue,
           // Copy the source binding explicitly (conditional spread keeps
           // source-less clones byte-identical — no `source` key).
           ...(src.source !== undefined ? { source: src.source } : {}),

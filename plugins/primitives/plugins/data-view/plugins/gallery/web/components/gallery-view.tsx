@@ -115,6 +115,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
 
   // Documented cast boundary: creators arrives type-erased via render props.
   const creators = props.creators as CreateOption[] | undefined;
+  const { onRowHoverChange } = props;
 
   const totalCount = sections.reduce((sum, s) => sum + s.count.n, 0);
   if (totalCount === 0) {
@@ -154,6 +155,12 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
         rowKey={key}
         selected={key === props.selectedRowId}
         dimmed={tone === "muted"}
+        hovered={key === props.hoveredRowId}
+        {...(onRowHoverChange === undefined
+          ? {}
+          : {
+              onHoverChange: (inside: boolean) => onRowHoverChange(key, inside),
+            })}
         onActivate={props.rowActivation?.(row)}
         cover={coverOf(covers.coverOf(row), cardFields, (field) =>
           leadingSlot({

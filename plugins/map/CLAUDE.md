@@ -23,6 +23,12 @@ Plain data, no React:
   area clear of the covered edges; `flyPath` is the smooth zoom-and-pan
   between two views (van Wijk & Nuij: a far jump zooms out, glides, zooms
   in) with its duration — a renderer just plays its frames.
+  `uncoveredBounds(view, viewport, padding)` is the lat/lng box a view shows
+  inside the area the padding leaves uncovered (what `CameraRest.visible`
+  reports).
+- `MapBounds` (`south`/`west`/`north`/`east`; `west > east` crosses the
+  antimeridian, `-180..180` is every longitude) and `boundsContain(b, p)` —
+  antimeridian-aware, edges included, longitudes compared wrapped.
 - `MapPadding` (`{ top, right, bottom, left }` px, `NO_MAP_PADDING`): the room
   chrome floating over the map covers.
 - Crowding (`MapCrowdRequest` / `MapCrowd`, `resolveCrowd`): `cluster` or
@@ -86,11 +92,23 @@ Plain data, no React:
   never remembered).
 - `onCameraRest` (optional) — the caller's: each time the camera rests (and
   once when the map first settles), a `CameraRest` (`center`, `zoom`,
-  `bounds`) — what a search biased to "this map area" reads.
+  `bounds`, and `visible` — the part of `bounds` the `fitPadding` chrome
+  leaves uncovered) — what a search biased to "this map area" reads, and what
+  an "in view" count tests pins against (`boundsContain`). A change of
+  `fitPadding` re-reports at once, though the camera did not move (a side
+  panel toggling changes `visible`, not the camera).
+- `fitRequest` (optional number) — a caller's own Fit: each time it changes
+  (never its value at mount) the renderer frames the overlays exactly as its
+  Fit control does (a flight, `frame: false` overlays left out).
 - `hoveredId` / `onHoverChange` (optional) — hover linked to something outside
-  the map (a result card): `hoveredId` lifts that pin as a pointer hover does
-  (the pointer's own hover wins), and `onHoverChange` reports the pin under the
-  pointer (`null`: none).
+  the map (a result card, a list row): `hoveredId` lifts that pin as a pointer
+  hover does — the same `hovered: true` state, so the same look (the
+  pointer's own hover wins). `onHoverChange(id, hovered)` reports the pointer
+  entering / leaving a pin as a claim / release (`LinkedHoverChange`), never a
+  bare "none": the map's leave and a linked surface's enter for one pointer
+  move arrive in no fixed order, and a "none" would erase the other's claim.
+  `useLinkedHover()` (web) holds the shared state every surface reports into
+  (`nextLinkedHover`, core: a leave clears only the id it names).
 - `GeoMap.Renderer` — a data slot. **First contribution wins**; zero is a loud
   "no map renderer installed" state. Its contract is `Place.Provider`'s, widened
   to three states: `useReadiness(): "pending" | "ready" | "blocked"`, and
@@ -101,7 +119,7 @@ Plain data, no React:
   `renderPin(pin, state)`, `markPin(pin, scale)`, `onActivate`, `activeId`,
   `crowd`, `renderCluster(pins)`, `markCluster(pins)`, `focusId`,
   `fitPadding` — always set, zeros when nothing floats — and the optional
-  `pick`). **A renderer never styles a pin**: it draws every pin at rest from
+  `pick`, `initialCamera`, `onCameraRest`, `fitRequest`). **A renderer never styles a pin**: it draws every pin at rest from
   its mark (`markPin` — the matched contribution's `mark`, via
   `GeoMap.Pin.useMatch()`, the same match `.Dispatch` renders) on ONE surface
   (`map/pin-layer`), and lifts only the pins being interacted with (hovered,
@@ -125,7 +143,10 @@ Plain data, no React:
   name on hover. Its box is the mark's box, so lifting a pin moves no pixel. The
   host's `MarkHostProvider` (a hidden probe in the map's subtree) resolves the
   colours and measures the label fonts (`useMapTextStyle`). Its component gets
-  `{ pin, tiles }` and the renderer's `MapPinState`: `active`, `scale`
+  `{ pin, tiles }` and the renderer's `MapPinState`: `active`, `hovered`
+  (the pointer's hover OR the host's linked `hoveredId` — a pin draws its hover
+  look from this prop, never from CSS `:hover`, which a linked hover never
+  triggers, so a row-hovered pin would lift into the DOM at rest), `scale`
   (`near`: anchored at its bottom centre; `far`, spots mode only: anchored at
   its CENTRE, so draw centred) and `spot` (`{ count, hushed }`, on a far spot's
   lead only: draw the count beside the pin, faded while `hushed` — a pin of the
@@ -195,6 +216,7 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `MapLabel`
     - `MapMarkImage`
     - `MapView`
+    - `useLinkedHover`
     - `useMapMarkEnv`
     - `useMapTextStyle`
 - Core:
@@ -208,6 +230,7 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `DropShape`
     - `FlyPath`
     - `LatLng`
+    - `LinkedHoverChange`
     - `MapArea`
     - `MapBounds`
     - `MapCamera`
@@ -229,6 +252,7 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `PinSpot`
     - `SpotPoint`
   - Exports (values):
+    - `boundsContain`
     - `cameraFor`
     - `clusterPins`
     - `clusterPinType`
@@ -249,12 +273,14 @@ The namespace is `GeoMap`, not `Map`, so it does not shadow the JS global.
     - `markSvg`
     - `markSvgProblem`
     - `MIXED_PIN_TYPE`
+    - `nextLinkedHover`
     - `NO_MAP_PADDING`
     - `overlayPositions`
     - `pinStackOrder`
     - `resolveCrowd`
     - `SINGLE_POINT_ZOOM`
     - `sliceWedges`
+    - `uncoveredBounds`
     - `viewFor`
 - Cross-plugin:
   - Uses tokens:

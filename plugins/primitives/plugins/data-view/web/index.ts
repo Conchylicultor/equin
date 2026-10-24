@@ -65,6 +65,8 @@ export type {
 } from "./slots";
 export { getDataViewDescriptor } from "./internal/descriptors";
 export { useDataViewControls } from "./components/controls/controls-context";
+export { DataViewViewChip, DataViewViewList } from "./components/view-list";
+export { useViewRowCounts } from "./internal/use-view-row-counts";
 export type { DataViewControlsContextValue } from "./components/controls/controls-context";
 export { useResolveCell, useIsChipField } from "./cell-slot";
 export type { CellContributionMeta } from "./cell-slot";
@@ -80,6 +82,7 @@ export { EditableCell, isFieldValueEmpty } from "./components/editable-cell";
 export {
   CoverFrame,
   coverHoverGroup,
+  coverHeldAttr,
   coverDetailClass,
 } from "./components/cover-frame";
 export type { CoverFrameProps } from "./components/cover-frame";
@@ -202,6 +205,7 @@ export type {
   DataViewAggregateConfig,
   DataViewRenderProps,
   DataViewProps,
+  DataViewViewEdits,
   DataViewDensity,
   TableCellProps,
   CellEditorProps,

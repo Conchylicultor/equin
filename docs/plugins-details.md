@@ -5691,7 +5691,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/places/ask`
               - `apps/places/place-details`
               - `apps/places/places-map`
-        - **`places-map`** — The Places app's index pane (/places): every saved place in one full-bleed DataView (Map, Gallery, List) with its chrome floating on the map — the tag sidebar owning the tag half of the view filter (include / exclude, any / all, faceted counts), the "Search or add places" bar (your places filtered live, Google's hits around the map's view as cards to save and as ghost pins hover-linked with them, the camera never moving; Ask Sonnet hands a question to a background run shown as a thread in a card docked on the right — the newest picks as Google cards with photos, why they fit, what makes them special and their sources, earlier answers folded, as numbered pins — its progress as a pill in the bar that shows and hides the card, and the recent questions in the panel to reopen), the selected place's card or a Google place's detail card — plus the saved-place pin (a drop near, a round badge far out with each spot's size beside it), the Google result's ghost pin, Sonnet's numbered pick pin, the thread's step labels for the Ask Sonnet tools, and the transcript row of places_show_picks (the numbered picks beside a mini map, hover-linked).
+        - **`places-map`** — The Places app's index pane (/places): every saved place on one full-bleed map whose views are filter presets (All places, then the user's own — edits are drafts until saved, ⌥1–9 switch), with its chrome floating on the map — the tag sidebar (the presets with their counts and dirty dots, the tag filter as AND-ed rows of OR-ed tags with the preset's Reset / Save as new / Update, the tag tree with faceted counts; folded, the header alone, titled by a dropdown of the presets), the side panel (the preset's places in view or all, as a list or a gallery, hover-linked with their pins, a selected place's card drilled into it), the "Search or add places" bar (your places filtered live, Google's hits around the map's view as cards to save and as ghost pins hover-linked with them, the camera never moving; Ask Sonnet hands a question to a background run shown as a thread in a card docked on the right — the newest picks as Google cards with photos, why they fit, what makes them special and their sources, earlier answers folded, as numbered pins — its progress as a pill in the bar that shows and hides the card, and the recent questions in the panel to reopen), the selected place's card or a Google place's detail card — plus the saved-place pin (a drop near, a round badge far out with each spot's size beside it), the Google result's ghost pin, Sonnet's numbered pick pin, the thread's step labels for the Ask Sonnet tools, and the transcript row of places_show_picks (the numbered picks beside a mini map, hover-linked).
           - Web:
             - Slots: `places-map.actions`
             - Slot contributors: `places-map.actions` ← `primitives.pane`
@@ -5704,25 +5704,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
               - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
               - `JsonlViewerTool.Renderer` "mcp__equin__places_show_picks" → `PicksToolView`
-            - Uses: 120 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+            - Uses: 123 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+              - `primitives/data-view` ×10
+              - `map` ×9
               - `apps/places/places-core` ×8
               - `conversations/agent-thread` ×8
-              - `map` ×8
-              - `primitives/data-view` ×8
               - `primitives/collapsible` ×6
               - `primitives/live-state` ×5
               - `network/live` ×4
               - `primitives/css/ui-kit` ×4
               - `primitives/overlay/image-viewer` ×4
               - `primitives/link-gesture/new-tab` ×3
-              - `primitives/persistent-draft` ×3
               - `ui/icons` ×3
               - `conversations/conversation-view/jsonl-viewer/tool-call` ×2
               - `integrations/google-maps` ×2
               - `primitives/css/layer` ×2
+              - `primitives/css/rigid` ×2
               - `primitives/css/text` ×2
               - `primitives/hover-reveal` ×2
               - `primitives/pane` ×2
+              - `primitives/persistent-draft` ×2
               - `primitives/relative-time` ×2
               - `tag-tree/picker` ×2
               - `apps/places/place-details.usePlaceDetails`
@@ -5744,7 +5745,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/line.Line`
               - `primitives/css/pin.Pin`
               - `primitives/css/placeholder.Placeholder`
-              - `primitives/css/rigid.rigidClass`
               - `primitives/css/row.Row`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
@@ -5766,10 +5766,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `shell/toast.showToast`
               - `tag-tree/engine.useTagTreeActions`
           - Cross-plugin:
-            - Uses tokens: 29 vars — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+            - Uses tokens: 30 vars — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `ui/tokens/color-palette` ×12
               - `ui/tokens/type-scale` ×7
-              - `ui/tokens/density` ×5
+              - `ui/tokens/density` ×6
               - `ui/tokens/shape` ×3
               - `ui/tokens/categorical --categorical-foreground`
               - `ui/tokens/shadow --shadow`
@@ -31661,6 +31661,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `MapLabel`
       - `MapMarkImage`
       - `MapView`
+      - `useLinkedHover`
       - `useMapMarkEnv`
       - `useMapTextStyle`
   - Core:
@@ -31674,6 +31675,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `DropShape`
       - `FlyPath`
       - `LatLng`
+      - `LinkedHoverChange`
       - `MapArea`
       - `MapBounds`
       - `MapCamera`
@@ -31695,6 +31697,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `PinSpot`
       - `SpotPoint`
     - Exports (values):
+      - `boundsContain`
       - `cameraFor`
       - `clusterPins`
       - `clusterPinType`
@@ -31715,12 +31718,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `markSvg`
       - `markSvgProblem`
       - `MIXED_PIN_TYPE`
+      - `nextLinkedHover`
       - `NO_MAP_PADDING`
       - `overlayPositions`
       - `pinStackOrder`
       - `resolveCrowd`
       - `SINGLE_POINT_ZOOM`
       - `sliceWedges`
+      - `uncoveredBounds`
       - `viewFor`
   - Cross-plugin:
     - Uses tokens:
@@ -38570,7 +38575,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --status-dot-md`
               - `ui/tokens/density --status-dot-sm`
               - `ui/tokens/density --status-dot-xs`
-            - Imported by: 43 plugins — full list in [`plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md)
+            - Imported by: 44 plugins — full list in [`plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/status-dot/REFERENCE.md)
               - `apps` ×11
               - `conversations` ×9
               - `debug` ×8
@@ -38582,6 +38587,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2/settings`
               - `hints/ask`
               - `menu-bar`
+              - `primitives/data-view/view-core`
               - `runs/run-outcome`
         - **`sticky`** — Sticky positioning layout primitive: <Sticky edge offset layer> pins a header/footer to a scroll edge with a z-layer-aware stacking level; stickyOffsetPx turns a measured height into the exact offset a box stacked under it pins at.
           - Web:
@@ -38719,10 +38725,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×36
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 390 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 391 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×107
               - `conversations` ×73
-              - `primitives` ×43
+              - `primitives` ×44
               - `debug` ×37
               - `page` ×23
               - `ui` ×15
@@ -39244,15 +39250,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ← `primitives.data-view`
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-        - Contributes: 85 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.WebRegister` ×77
+        - Contributes: 86 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.WebRegister` ×78
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
-        - Uses: 116 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 119 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `network/live` ×18
           - `primitives/css/ui-kit` ×15
-          - `primitives/data-view/view-core` ×9
+          - `primitives/data-view/view-core` ×10
           - `primitives/live-state` ×6
           - `primitives/css/control-panel` ×4
           - `primitives/slot-render` ×4
@@ -39272,6 +39278,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/latest-ref` ×2
           - `primitives/loading` ×2
           - `primitives/search` ×2
+          - `primitives/shortcuts` ×2
           - `primitives/sortable-list` ×2
           - `shell/toast` ×2
           - `fields.Fields`
@@ -39330,6 +39337,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSourceProps`
           - `DataViewSources`
           - `DataViewSwitcherProps`
+          - `DataViewViewEdits`
           - `DataViewViewportSink`
           - `DropTargetProps`
           - `FieldCellProps`
@@ -39412,12 +39420,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ChipSelectFilterInput`
           - `coverDetailClass`
           - `CoverFrame`
+          - `coverHeldAttr`
           - `coverHoverGroup`
           - `DATA_VIEW_HEADER_OFFSET_VAR`
           - `DataView`
           - `DataViewGroupHeader`
           - `DataViewSlots`
           - `DataViewSwitcher`
+          - `DataViewViewChip`
+          - `DataViewViewList`
           - `defineDataView`
           - `defineDataViewSources`
           - `defineItemActions`
@@ -39482,9 +39493,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useRowDropState`
           - `useRowFilter`
           - `useSortController`
+          - `useViewRowCounts`
       - Server:
-        - Contributes: 79 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.Register` ×77
+        - Contributes: 80 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.Register` ×78
           - `ids.kind` ×2
         - Uses:
           - `config_v2.getConfig`
@@ -39535,6 +39547,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSectionPaging`
           - `DataViewSurfaceChrome`
           - `DataViewToolbarSpec`
+          - `DataViewViewEdits`
           - `DataViewViewportSink`
           - `DataViewVisibleRows`
           - `FieldDef`
@@ -39811,8 +39824,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`gallery`** — Gallery view child for the data-view primitive: a responsive grid of cover cards — the cover is the card, its fields three fixed lines under it, its actions on the cover.
           - Web:
             - Contributes: `DataViewSlots.View` "Gallery" → `GalleryView`
-            - Uses: 38 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/gallery/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/gallery/REFERENCE.md)
-              - `primitives/data-view` ×24
+            - Uses: 39 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/gallery/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/gallery/REFERENCE.md)
+              - `primitives/data-view` ×25
               - `primitives/css/ui-kit` ×2
               - `primitives/row-actions` ×2
               - `primitives/css/badge.Badge`
@@ -39970,7 +39983,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`view-core`** — Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. Type-agnostic named-view-instance engine (server): the per-id `views` config descriptor + a generic registration helper. Consumers register their own ids under their own plugin.
           - Web:
             - Contributes: `IdKinds.Kind` "view"
-            - Uses: 36 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md)
+            - Uses: 40 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/view-core/REFERENCE.md)
               - `primitives/css/ui-kit` ×13
               - `config_v2` ×3
               - `primitives/css/control-panel` ×2
@@ -39983,9 +39996,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/row.Row`
               - `primitives/css/spacing.Stack`
+              - `primitives/css/status-dot.StatusDot`
+              - `primitives/css/text.Text`
               - `primitives/css/toggle-chip.ToggleChip`
+              - `primitives/dom/web-storage.defineStore`
               - `primitives/icon-button.IconButton`
               - `primitives/latest-ref.useLatestRef`
+              - `primitives/overlay/popover.InlinePopover`
               - `primitives/overlay/popup-open.PopupOpenScope`
               - `primitives/view-switcher.useActiveViewId`
               - `ui/icons.Icon`
@@ -39994,8 +40011,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `HostViewSettings`
               - `ResolvedViewInstance`
               - `ViewActionsCore`
+              - `ViewDrafts`
               - `ViewGetter`
+              - `ViewListProps`
               - `ViewModelCore`
+              - `ViewModelOptions`
               - `ViewsConfigHandle`
             - Exports (values):
               - `AddViewMenuItems`
@@ -40006,6 +40026,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useViewGetter`
               - `useViewModel`
               - `useViewsConfig`
+              - `ViewList`
               - `ViewSettingsPopover`
           - Server:
             - Contributes: `ids.kind` "view"
@@ -40033,6 +40054,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --faint-foreground`
               - `ui/tokens/color-palette --foreground`
               - `ui/tokens/color-palette --muted-foreground`
+              - `ui/tokens/color-palette --primary`
+              - `ui/tokens/density --space-xs`
               - `ui/tokens/shape --spacing`
               - `ui/tokens/sidebar-metrics --sidebar-icon-gap`
               - `ui/tokens/sidebar-metrics --sidebar-icon-size`
@@ -40514,8 +40537,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useStorageUsage`
               - `WebStorageSlots`
           - Cross-plugin:
-            - Imported by: 41 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
-              - `primitives` ×14
+            - Imported by: 42 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
+              - `primitives` ×15
               - `apps` ×11
               - `conversations` ×5
               - `apps-core` ×2
@@ -42727,9 +42750,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlinePopoverProps`
             - Exports (values): `InlinePopover`
           - Cross-plugin:
-            - Imported by: 29 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md)
+            - Imported by: 30 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md)
               - `page` ×6
-              - `primitives` ×5
+              - `primitives` ×6
               - `apps` ×4
               - `conversations` ×4
               - `fields` ×2
@@ -43743,9 +43766,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useFocusedSurfaceId`
           - `useSurfaceShortcuts`
       - Cross-plugin:
-        - Imported by: 30 plugins — full list in [`plugins/primitives/plugins/shortcuts/REFERENCE.md`](../plugins/primitives/plugins/shortcuts/REFERENCE.md)
+        - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/shortcuts/REFERENCE.md`](../plugins/primitives/plugins/shortcuts/REFERENCE.md)
           - `apps` ×13
-          - `primitives` ×12
+          - `primitives` ×13
           - `apps-core` ×2
           - `hints`
           - `reorder/edit-mode`
@@ -51018,8 +51041,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 330 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
-              - `primitives` ×69
+            - Tokens used by: 331 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+              - `primitives` ×70
               - `apps` ×67
               - `conversations` ×48
               - `debug` ×28

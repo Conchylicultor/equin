@@ -108,6 +108,7 @@ export type {
   DataViewProps,
   DataViewBaseProps,
   DataViewReserve,
+  DataViewViewEdits,
   DataViewSearch,
   DataViewSearchSuggestions,
   DataViewDataOrigin,

@@ -403,6 +403,8 @@ function DataViewBodyInner<TRow>(
     rowDrop,
     itemActions,
     creators,
+    hoveredRowId,
+    onRowHoverChange,
     storageKey,
     viewModel,
     activeInstance,
@@ -1314,6 +1316,8 @@ function DataViewBodyInner<TRow>(
           // place both hosts set it) — the view child decides what to tighten.
           density: chrome.density,
           groupHeaders: chrome.groupHeaders,
+          hoveredRowId,
+          onRowHoverChange,
         };
 
         // The ONE context every toolbar control and settings contribution reads —
@@ -1340,6 +1344,13 @@ function DataViewBodyInner<TRow>(
           manualOrderOverridden,
           filter: filterController as FilterController<unknown>,
           sort: sortController as SortController<unknown>,
+          // In memory and read: the raw rows. A live source's are the
+          // server's, and a read still loading (or failed) has none to give.
+          rows:
+            origin == null &&
+            (readiness === undefined || readiness.status === "ready")
+              ? effectiveRows
+              : null,
         };
 
         const onQueryChange =
@@ -1554,7 +1565,6 @@ function DataViewBodyInner<TRow>(
                   </ControlSizeProvider>
                 ),
                 panel: !backdropIsActive || bodyState.kind !== "view",
-                reserve: chrome.reserve,
               };
         return (
           // The band, the surface's `aside` and the body — laid out per the
@@ -1563,6 +1573,8 @@ function DataViewBodyInner<TRow>(
           <BandSurface
             overlay={arrangement?.overlay === true}
             aside={chrome.aside}
+            asideEnd={chrome.asideEnd}
+            reserve={chrome.reserve}
             fullBleed={activeInstance.viewType.fullBleed === true}
             backdrop={backdrop}
             controls={controlsContext}

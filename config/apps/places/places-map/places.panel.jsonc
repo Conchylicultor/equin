@@ -1,15 +1,11 @@
 // @hash 6ec84829688d
 {
-  // Map first: the landing view is every place on the map, the screen's
-  // canvas. Gallery and List are the same rows read another way — the tag
-  // sidebar's filter is per view, so each starts unfiltered.
+  // The side panel beside the map: the active preset's places as a list or a
+  // gallery. The panel pins the view its layout names (list | gallery), so
+  // there is no switcher; the preset's filter, search AND sort are applied
+  // before the rows reach it — so no view here sorts (a sort of its own would
+  // override the toolbar's Sort, which edits the preset).
   "views": [
-    {
-      "id": "all",
-      "name": "All places",
-      "icon": "map",
-      "view": { "type": "map" }
-    },
     {
       "id": "gallery",
       "name": "Gallery",
@@ -30,8 +26,7 @@
           { "id": "location", "hidden": true },
           { "id": "note", "hidden": true },
           { "id": "createdAt", "hidden": true }
-        ],
-        "sort": [{ "fieldId": "createdAt", "direction": "desc" }]
+        ]
       }
     },
     {
@@ -54,8 +49,7 @@
           { "id": "location", "hidden": true },
           { "id": "note", "hidden": true },
           { "id": "createdAt", "hidden": true }
-        ],
-        "sort": [{ "fieldId": "name", "direction": "asc" }]
+        ]
       }
     }
   ]

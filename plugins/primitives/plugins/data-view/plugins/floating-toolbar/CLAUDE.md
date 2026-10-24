@@ -15,11 +15,15 @@ DataView's own two-pill toolbar — `PillsToolbar` (data-view web barrel) with
 `overlay` — so a floating surface and an in-flow one look the same:
 
 1. **Views pill** (top-left) — the surface `title` (when given; over a map
-   there is no band to read a bare title on, so it rides the pill) and
-   `switcher.strip` (`EditableViewSwitcher`: every view, the always-visible
-   `+`, View settings). It starts one `md` gutter past the surface's `aside`
-   (`ToolbarParts.asideInset`), hugs its chips, and is the one cell that
-   gives: past its room the strip scrolls sideways inside the pill.
+   there is no band to read a bare title on, so it rides the pill) and the
+   switcher: `switcher.strip` (`EditableViewSwitcher`: every view, the
+   always-visible `+`, View settings), or the chip when the surface asked for
+   it alone (`switcherForm="chip"` — the strip is then `null`). With neither a
+   title nor a switcher (`switcherForm="none"`: the surface lists its views in
+   its aside) there is no pill at all. It starts one `md` gutter past the
+   surface's `aside` (`ToolbarParts.asideInset`), hugs its chips, and is the
+   one cell that gives: past its room the strip scrolls sideways inside the
+   pill.
 2. Click-through slack, so the view stays reachable between the pills.
 3. **Tools pill** (top-right) — the search as a quiet well (`forms.search:
    "filled"`; `/` focuses it, a surface-scoped shortcut), the ghost control

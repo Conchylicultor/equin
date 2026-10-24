@@ -12,6 +12,7 @@ export {
 export {
   SINGLE_POINT_ZOOM,
   NO_MAP_PADDING,
+  boundsContain,
   cameraFor,
   framingOverlays,
   overlayPositions,
@@ -21,6 +22,7 @@ export {
 } from "./camera";
 export {
   flyPath,
+  uncoveredBounds,
   viewFor,
   type FlyPath,
   type CameraRest,
@@ -65,3 +67,4 @@ export {
   type DropIcon,
   type DropShape,
 } from "./drop";
+export { nextLinkedHover, type LinkedHoverChange } from "./linked-hover";

@@ -111,6 +111,25 @@ function ManualOrderRow({
   );
 }
 
+/** `Row`'s own hover paint (`bg-hover-fill`, the scrim the actions pin
+ *  paints), held while the row is the surface's hovered row. */
+const ROW_HOVERED_CLASS = "bg-hover-fill [--scrim:var(--hover-fill)]";
+
+/** The pointer enter/leave pair reporting a row's hover, or nothing. */
+function hoverProps(
+  onHover: ((id: string, hovered: boolean) => void) | null,
+  key: string,
+): {
+  onPointerEnter?: () => void;
+  onPointerLeave?: () => void;
+} {
+  if (onHover === null) return {};
+  return {
+    onPointerEnter: () => onHover(key, true),
+    onPointerLeave: () => onHover(key, false),
+  };
+}
+
 const expandIcon = symbol("expand-more");
 const collapseIcon = symbol("expand-less");
 
@@ -159,6 +178,9 @@ interface ListRowConfig {
   setExpanded: DataViewRenderProps<unknown>["setExpanded"];
   /** Native drop targets (`rowDrop`): `null` when the view takes none. */
   dnd: RowDnd<unknown> | null;
+  /** Reports the row under the pointer (`onRowHoverChange`), stable for the
+   *  view's life; `null` when nobody listens. */
+  onHover: ((id: string, hovered: boolean) => void) | null;
 }
 
 /** One row's props: the shared config plus what is this row's own. Each is a
@@ -170,6 +192,9 @@ interface ListEntryProps {
   rowKey: string;
   aggregateCount: number | undefined;
   selected: boolean;
+  /** The row is the surface's hovered row (`hoveredRowId`) — under the
+   *  pointer here, or on another surface showing the same rows. */
+  hovered: boolean;
   hasChildren: boolean;
   /** The row's detail is expanded (always `false` without `detail`). */
   open: boolean;
@@ -358,6 +383,13 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     sequence,
   });
 
+  // The hover report, stable whatever the host hands down (a fresh closure
+  // per render would bust the row config, and every row with it).
+  const hoverChange = props.onRowHoverChange;
+  const reportHover = useEventCallback((id: string, hovered: boolean) =>
+    hoverChange?.(id, hovered),
+  );
+  const onHover = hoverChange === undefined ? null : reportHover;
   const config = useMemo<ListRowConfig>(() => {
     const { leadingField, thumbnail, bodyFields } = layout;
     const titleField = pickPrimaryField(bodyFields);
@@ -396,6 +428,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       revealed,
       setExpanded,
       dnd,
+      onHover,
     };
   }, [
     layout,
@@ -415,6 +448,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     revealed,
     setExpanded,
     dnd,
+    onHover,
   ]);
 
   // The rank-reorder host's item list (id + rank + group); the provider keys
@@ -482,6 +516,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       rowKey={entry.key}
       aggregateCount={entry.aggregateCount}
       selected={entry.key === props.selectedRowId}
+      hovered={entry.key === props.hoveredRowId}
       hasChildren={props.hasChildren?.(entry.key) ?? false}
       open={detail ? props.expanded?.[entry.key] === true : false}
       rank={manualOrder ? manualOrder.getRank(entry.row) : null}
@@ -970,6 +1005,13 @@ function listRowNode(props: ListEntryProps): ReactNode {
       // it has on screen by.
       data-row-key={key}
       selected={props.selected}
+      // The surface's hovered row reads as hovered even when the pointer is
+      // elsewhere (on its map pin): Row's own hover paint, held. A selected
+      // row keeps its selection tier.
+      className={
+        props.hovered && !props.selected ? ROW_HOVERED_CLASS : undefined
+      }
+      {...hoverProps(config.onHover, key)}
       size={config.rowSize}
       // Straight through, `undefined` and all — NEVER `() => activate?.()`.
       // `Row` infers its element from `onClick`, so a closure is never null and

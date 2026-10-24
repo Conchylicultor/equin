@@ -66,6 +66,8 @@ function model(activeId: string): ViewModel {
     instances: INSTANCES,
     activeId,
     setActiveView: () => {},
+    drafts: null,
+    homeViewId: null,
     stateFor: fakeViewGetter(() => STATE),
     setSort: () => {},
     setSortRules: () => {},

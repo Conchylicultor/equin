@@ -82,10 +82,16 @@ The only map-vendor code in the repo. Everything else draws maps through
   press, wheel or drag stops it). Both target `frameView` → core `viewFor`.
   With an `initialCamera` (a remembered view) the map opens there and
   `FitCamera` is not mounted; `ReportCameraRest` reports Google's `idle`
-  (the camera at rest) through `onCameraRest`, with `getBounds()`. Both
+  (the camera at rest) through `onCameraRest`, with `getBounds()` and
+  `visible` (core `uncoveredBounds` over the centre, zoom, div size and
+  `fitPadding`) — and re-reports when the padding changes, since no `idle`
+  follows a padding change. A changed `fitRequest` runs `FitControl`'s own
+  fit (the same function as its click; the mount's value is skipped). Both
   framings and the opening view read `framingOverlays` (never a
   `frame: false` overlay). The lifted hover is the pointer's, else the
-  host's `hoveredId`; pointer changes are reported through `onHoverChange`.
+  host's `hoveredId`; pointer changes are reported through `onHoverChange`
+  from the pointer events themselves, as a release of the pin left and a claim
+  of the pin entered (`(id, false)` then `(id, true)`), never a bare "none".
 - **Pick mode** (`pick`): `draggableCursor: "crosshair"` and the map's own
   `click` (a pin stops its own clicks, so a pin click never lands there). The
   camera frames once, so a pin dropped or moved where the user clicked never

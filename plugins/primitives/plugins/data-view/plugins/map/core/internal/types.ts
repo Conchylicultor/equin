@@ -74,11 +74,22 @@ export interface MapViewOptions<TRow> {
   overlays?: MapExtraOverlays;
   /**
    * A pin to draw hovered though the pointer is not on it — a row's id, or an
-   * extra overlay's: the hover of whatever beside the map stands for it.
+   * extra overlay's: the hover of whatever beside the map stands for it. Wins
+   * over the surface's `hoveredRowId` while non-null.
    */
   hoveredId?: string | null;
-  /** The pin under the pointer changed (`null`: none). */
-  onHoverChange?: (id: string | null) => void;
-  /** The camera came to rest: where, and the area it shows. */
+  /** The pointer entered (`true`) or left (`false`) a pin — row pins and extra overlays alike. */
+  onHoverChange?: (id: string, hovered: boolean) => void;
+  /**
+   * The camera came to rest: where, the area it shows, and the part of it the
+   * chrome leaves uncovered (`CameraRest.visible`, re-reported when
+   * `fitPadding` changes).
+   */
   onCameraRest?: (rest: CameraRest) => void;
+  /**
+   * Re-frame on demand (the map primitive's `fitRequest`): each time the
+   * number changes — not its value at mount — the map frames its pins as its
+   * Fit control does.
+   */
+  fitRequest?: number;
 }

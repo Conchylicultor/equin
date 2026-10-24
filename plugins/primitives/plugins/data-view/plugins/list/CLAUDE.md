@@ -18,6 +18,9 @@ hover-revealed trailing actions, and leading icon slot all come for free:
 - **selection** — `selected = rowKey(row) === selectedRowId` → `Row` maps it to
   `bg-accent` (the same highlight a tree row uses). Baked in from the start.
 - **click** — `onRowActivate`.
+- **hover** — pointer enter/leave reports the row to `onRowHoverChange`, and
+  the `hoveredRowId` row holds `Row`'s own hover paint (`bg-hover-fill`) while
+  another surface hovers it (its map pin). The default row chrome only.
 - **item actions** — `useItemActionZones(itemActions, { hasPersistentSlot:
   false, hasPrimarySlot: <has thumbnail> })`: every cluster action (persistent
   zone included) in `Row`'s hover-revealed `actions` slot — list actions are

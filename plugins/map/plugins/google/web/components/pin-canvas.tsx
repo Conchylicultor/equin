@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
 import {
   cameraFor,
@@ -89,9 +89,19 @@ export function PinCanvas({
   // The pointer's hover wins; else the linked one from outside the map.
   const hoveredId = pointerHoverId ?? linkedHoverId;
   const reportHover = useLatestRef(onHoverChange);
-  useEffect(() => {
-    reportHover.current?.(pointerHoverId);
-  }, [pointerHoverId, reportHover]);
+  // Each change of the pin under the pointer is reported from the pointer
+  // event itself, as a release of the pin left and a claim of the pin entered
+  // (`LinkedHoverChange`) — so a linked surface's own hover, reported by the
+  // same pointer move in whatever order, is never erased by the map's leave.
+  const pointerHoverRef = useRef<string | null>(null);
+  const setPointerHover = useLatestRef((id: string | null) => {
+    const left = pointerHoverRef.current;
+    if (left === id) return;
+    pointerHoverRef.current = id;
+    setPointerHoverId(id);
+    if (left !== null) reportHover.current?.(left, false);
+    if (id !== null) reportHover.current?.(id, true);
+  });
   const [layerError, setLayerError] = useState<unknown>(null);
   if (layerError !== null) throw layerError;
 
@@ -231,16 +241,16 @@ export function PinCanvas({
         e.clientX - rect.left,
         e.clientY - rect.top,
       );
-      setPointerHoverId(hit?.id ?? null);
+      setPointerHover.current(hit?.id ?? null);
     };
-    const onLeave = () => setPointerHoverId(null);
+    const onLeave = () => setPointerHover.current(null);
     div.addEventListener("pointermove", onMove);
     div.addEventListener("pointerleave", onLeave);
     return () => {
       div.removeEventListener("pointermove", onMove);
       div.removeEventListener("pointerleave", onLeave);
     };
-  }, [host, map]);
+  }, [host, map, setPointerHover]);
 
   // A tap with no hover first (touch): the map's own click, hit-tested. A
   // lifted pin stops its own clicks, so a mouse click never lands here twice.
@@ -325,6 +335,7 @@ export function PinCanvas({
           {item.kind === "pin"
             ? renderPin(item.pin, {
                 active: item.id === activeId,
+                hovered: item.id === hoveredId,
                 scale: item.scale,
                 ...(item.spot === undefined ? {} : { spot: item.spot }),
               })

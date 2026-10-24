@@ -23,6 +23,7 @@ vi.mock(
 let initialViews: Record<string, VariantValue> = {};
 
 const NO_VARIANTS = new Map<string, never>();
+const NOT_DIRTY = fakeViewGetter(() => false);
 
 const ACTIONS = {
   availableSources: [],
@@ -55,6 +56,9 @@ function useFakeCore() {
       activeId: "a",
       setActiveView: () => {},
       viewFor,
+      savedViewFor: viewFor,
+      dirtyFor: NOT_DIRTY,
+      drafts: null,
       updateView,
       actions: ACTIONS,
       availableSources: [],
