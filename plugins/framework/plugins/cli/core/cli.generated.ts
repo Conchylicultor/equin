@@ -34,6 +34,7 @@ export const cliEntries: CollectedEntry[] = [
   { pluginPath: "framework/plugins/cli/plugins/upstream", id: "framework.cli.upstream", loader: () => import("@plugins/framework/plugins/cli/plugins/upstream/cli"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/exempt", id: "framework.tooling.exempt", loader: () => import("@plugins/framework/plugins/tooling/plugins/exempt/cli"), dependsOn: [] },
   { pluginPath: "infra/plugins/audio-analysis", id: "infra.audio-analysis", loader: () => import("@plugins/infra/plugins/audio-analysis/cli"), dependsOn: ["infra/plugins/jobs/plugins/supervised-job"] },
+  { pluginPath: "infra/plugins/codesign", id: "infra.codesign", loader: () => import("@plugins/infra/plugins/codesign/cli"), dependsOn: [] },
   { pluginPath: "infra/plugins/deps", id: "infra.deps", loader: () => import("@plugins/infra/plugins/deps/cli"), dependsOn: ["infra/plugins/jobs/plugins/supervised-job"] },
   { pluginPath: "infra/plugins/jobs/plugins/supervised-job", id: "infra.jobs.supervised-job", loader: () => import("@plugins/infra/plugins/jobs/plugins/supervised-job/cli"), dependsOn: [] },
   { pluginPath: "plugin-meta/plugins/relocate", id: "plugin-meta.relocate", loader: () => import("@plugins/plugin-meta/plugins/relocate/cli"), dependsOn: [] },

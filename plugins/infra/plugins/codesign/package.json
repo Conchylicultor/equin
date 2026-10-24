@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-infra-codesign",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Stable code signing for the binaries this machine builds (the gateway): signBinary signs with a configured keychain identity (/usr/bin/codesign) or the machine's own self-signed one (PEM under state/codesign, via the pinned rcodesign dependency), so macOS permission grants survive rebuilds."
+}

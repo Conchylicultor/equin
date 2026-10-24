@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -66,7 +68,7 @@ func dataRoot() string {
 // cfg.ChildEnv by main, once logging is set up to report a bad one.
 func parseFlags() (Config, string) {
 	var cfg Config
-	flag.StringVar(&cfg.Listen, "listen", ":9000", "address to listen on")
+	flag.StringVar(&cfg.Listen, "listen", loopbackHost+":9000", "address to listen on: loopback:<port> (127.0.0.1 and [::1]), a host:port, or :<port> for every interface")
 	flag.DurationVar(&cfg.IdleTimeout, "idle-timeout", 10*time.Minute, "backend idle timeout")
 	flag.DurationVar(&cfg.ShutdownGrace, "shutdown-grace", 5*time.Second, "grace period before SIGKILL")
 	flag.DurationVar(&cfg.ReadyTimeout, "ready-timeout", 15*time.Second, "max wait for backend readiness")
@@ -251,7 +253,7 @@ func main() {
 	// gateway whose managed Postgres never came up can serve static files and
 	// nothing else: continuing would trade a startup failure that names its
 	// cause ("initdb: error: cannot be run as root") for a timeout 90s later
-	// that names nothing. Because this runs before ListenAndServe, "the gateway
+	// that names nothing. Because this runs before the listeners open, "the gateway
 	// is listening" now implies "every managed service came up" — which is what
 	// lets the launcher wait on the port instead of on a service's socket.
 	//
@@ -274,8 +276,12 @@ func main() {
 		}()
 	}
 
+	listeners, err := listenAll(listenAddrs(cfg.Listen))
+	if err != nil {
+		fatal(fmt.Sprintf("gateway: fatal: %v", err), "listen failed", err)
+	}
+
 	srv := &http.Server{
-		Addr:              cfg.Listen,
 		Handler:           NewProxy(reg, routes, sup, cfg.DefaultNamespace),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
@@ -293,10 +299,22 @@ func main() {
 		sup.StopAll()
 	}()
 
-	slog.Info("gateway listening", "addr", cfg.Listen, "registry-dir", cfg.RegistryDir, "sockets-dir", cfg.SocketsDir)
-	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		slog.Error("server error", "err", err)
-		os.Exit(1)
+	addrs := make([]string, len(listeners))
+	for i, l := range listeners {
+		addrs[i] = l.Addr().String()
+	}
+	slog.Info("gateway listening", "addr", cfg.Listen, "listeners", addrs, "registry-dir", cfg.RegistryDir, "sockets-dir", cfg.SocketsDir)
+	// One http.Server over every listener, so srv.Shutdown closes them all and
+	// each Serve returns ErrServerClosed. Any other Serve error is fatal.
+	serveErrs := make(chan error, len(listeners))
+	for _, l := range listeners {
+		go func(l net.Listener) { serveErrs <- srv.Serve(l) }(l)
+	}
+	for range listeners {
+		if err := <-serveErrs; err != nil && err != http.ErrServerClosed {
+			slog.Error("server error", "err", err)
+			os.Exit(1)
+		}
 	}
 	// Block until the shutdown goroutine finishes stopping all backends.
 	// srv.Shutdown returns ErrServerClosed immediately, not when done, so
@@ -304,4 +322,62 @@ func main() {
 	// leaving bun children reparented to init instead of terminated.
 	<-shutdownDone
 	slog.Info("gateway stopped")
+}
+
+// loopbackHost is the -listen host keyword for "loopback only, both
+// families": loopback:<port> binds 127.0.0.1:<port> AND [::1]:<port>. It is
+// the default — every interface is the explicit opt-in :<port>. The launcher
+// spells the same keyword (LOOPBACK_BIND, plugins/infra/plugins/launcher).
+const loopbackHost = "loopback"
+
+// listenAddr is one address the gateway listens on. ipv6Loopback marks the
+// [::1] half of a loopback:<port> expansion, whose failure is tolerated when the
+// host simply has no IPv6 (see listenAll).
+type listenAddr struct {
+	addr         string
+	ipv6Loopback bool
+}
+
+// listenAddrs expands a -listen value into the addresses to bind: loopback:P
+// becomes 127.0.0.1:P plus [::1]:P (two listeners, because one dual-stack
+// socket cannot be scoped to loopback), anything else passes through as the
+// single address net.Listen gets.
+func listenAddrs(s string) []listenAddr {
+	host, port, err := net.SplitHostPort(s)
+	if err != nil || host != loopbackHost {
+		return []listenAddr{{addr: s}}
+	}
+	return []listenAddr{
+		{addr: net.JoinHostPort("127.0.0.1", port)},
+		{addr: net.JoinHostPort("::1", port), ipv6Loopback: true},
+	}
+}
+
+// listenAll opens a TCP listener on every address, or none: on a fatal
+// failure it closes the ones already open and returns the error.
+//
+// Every failure is fatal except the [::1] half of loopback:<port> failing
+// because the host has no IPv6 (EADDRNOTAVAIL / EAFNOSUPPORT) — then the
+// gateway serves on 127.0.0.1 alone and says so. [::1] being IN USE stays
+// fatal: someone else holding ::1:<port> would silently take every request
+// that resolves localhost to ::1 (the bind-shape squatting gateway/CLAUDE.md
+// describes for backends).
+func listenAll(addrs []listenAddr) ([]net.Listener, error) {
+	var listeners []net.Listener
+	for _, a := range addrs {
+		l, err := net.Listen("tcp", a.addr)
+		if err == nil {
+			listeners = append(listeners, l)
+			continue
+		}
+		if a.ipv6Loopback && (errors.Is(err, syscall.EADDRNOTAVAIL) || errors.Is(err, syscall.EAFNOSUPPORT)) {
+			slog.Warn("no IPv6 loopback; listening on IPv4 loopback only", "addr", a.addr, "err", err)
+			continue
+		}
+		for _, open := range listeners {
+			_ = open.Close()
+		}
+		return nil, fmt.Errorf("listen on %s: %w", a.addr, err)
+	}
+	return listeners, nil
 }

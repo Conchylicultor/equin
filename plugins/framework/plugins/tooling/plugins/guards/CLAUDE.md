@@ -62,6 +62,14 @@ lint plugin) keeps it fixed: inside `core/guards/`, importing a value from
   *out of* main is legitimate and common.
 - **`ln` over-blocks.** `ln -s <main>/a b` is denied even though `ln` only writes
   the link name. Narrowing it is a semantic change, not a parsing fix.
+- **`macos-automation` matches command names only.** It re-parses the script
+  of `bash|sh|zsh -c "<str>"` and `eval "<str>"` (up to three levels), which
+  `parse-shell.ts` leaves opaque, but it misses a launcher it doesn't model
+  (`arch -arm64 osascript …`), a command run from another language
+  (`python -c 'subprocess.run(["osascript", …])'`), and a name built at
+  runtime (`o=osa; ${o}script`). Its job is to stop accidents, not a determined
+  agent; scratch profiles get the same list as `Bash(<cmd>:*)` deny rules
+  (`MACOS_TCC_COMMANDS`), since they never run this hook.
 
 ## A block is a claim about the world, so check it
 
@@ -170,6 +178,7 @@ can blind or deafen all of them at once.
     - `detectPoll`
     - `fileHint`
     - `GUARDS`
+    - `MACOS_TCC_COMMANDS`
     - `matchesTool`
     - `MODULE_EXTENSION`
     - `parseArgv`

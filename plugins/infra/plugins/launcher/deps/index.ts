@@ -5,6 +5,6 @@
 // launcher reads it from there.
 import { gatewayBinary } from "./internal/gateway";
 
-export { gatewayBinary } from "./internal/gateway";
+export { gatewayBinary, signGateway } from "./internal/gateway";
 
 export default [gatewayBinary];

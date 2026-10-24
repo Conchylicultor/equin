@@ -9,7 +9,10 @@ import {
 } from "@plugins/infra/plugins/spawn/core";
 import { ensureDep, holdDep } from "@plugins/infra/plugins/deps/deps";
 import { cliExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/cli";
-import { gatewayBinary } from "@plugins/infra/plugins/launcher/deps";
+import {
+  gatewayBinary,
+  signGateway,
+} from "@plugins/infra/plugins/launcher/deps";
 import { gatewayLogs } from "@plugins/infra/plugins/launcher/data-dirs";
 import {
   MAIN_WORKTREE_NAME,
@@ -247,10 +250,14 @@ async function prepareGateway(opts: Opts): Promise<GatewayLaunchOptions> {
   // Built only when main's gateway source (or Go) changed since the last
   // build — the identity is the source hash — so a Go change takes effect
   // on the next `start` with no flag, and an unchanged one costs a hash.
-  const gateway = await ensureDep(gatewayBinary, cliExecContext(), {
+  const exec = cliExecContext();
+  const gateway = await ensureDep(gatewayBinary, exec, {
     root: repoRoot,
     log: console.log,
   });
+  // A ready install skips the build's signing step, so a changed identity
+  // (configured, or a reset local one) is applied here; a no-op otherwise.
+  await signGateway(gateway, exec, console.log);
   // The service job (and a detached gateway) names this binary by path long
   // after main's source moves on: keep the deps sweep off it until the next
   // `start` moves the hold to a newer build.
@@ -267,22 +274,25 @@ async function prepareGateway(opts: Opts): Promise<GatewayLaunchOptions> {
 }
 
 /**
- * Where the dev gateway binds: every interface by default (unchanged), or the
+ * Where the dev gateway binds: loopback by default (127.0.0.1 and [::1]), or the
  * host `SINGULARITY_LISTEN` names — the one listen override a release honours
- * too — so a server install can keep the agent manager on loopback by how it
- * was started, not by a firewall rule someone has to remember. Only the HOST
- * may change: every backend reaches central at `localhost:9000`.
+ * too. Every interface is the explicit opt-in `SINGULARITY_LISTEN=:9000`, so the
+ * agent manager is off-box only when someone asked for it. Only the HOST may
+ * change: every backend reaches central at `localhost:9000`.
  */
-function devBindHost(): string | undefined {
+function devBindHost(): string | null {
   const addr = resolveListenAddress(DEFAULT_PORT);
   if (addr.port !== DEFAULT_PORT) {
     throw new Error(
       `${LISTEN_ENV} names port ${addr.port}, but the dev gateway must listen on ${DEFAULT_PORT} (backends reach central at localhost:${DEFAULT_PORT}). Set only the host, e.g. ${LISTEN_ENV}=127.0.0.1:${DEFAULT_PORT}.`,
     );
   }
-  if (addr.host !== null)
-    console.log(`Binding the gateway to ${addr.host} (${LISTEN_ENV})`);
-  return addr.host ?? undefined;
+  console.log(
+    addr.host === null
+      ? `Binding the gateway to every interface (${LISTEN_ENV}=:${DEFAULT_PORT})`
+      : `Binding the gateway to ${addr.host}:${DEFAULT_PORT}`,
+  );
+  return addr.host;
 }
 
 function printRunning(headline: string): void {

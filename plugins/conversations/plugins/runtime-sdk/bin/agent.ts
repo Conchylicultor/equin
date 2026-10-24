@@ -39,6 +39,7 @@ import { basename, dirname, join } from "node:path";
 import { parseArgs } from "node:util";
 import { ZodError } from "zod";
 import { claudeAccountToken } from "@plugins/infra/plugins/claude-cli/plugins/accounts/server";
+import { disclaimArgv } from "@plugins/packages/plugins/spawn-disclaim/core";
 import {
   AGENT_EVENTS_FILE,
   AGENT_OPTIONS_FILE,
@@ -387,10 +388,20 @@ const session = query({
     ...(oauthToken
       ? { env: { ...process.env, CLAUDE_CODE_OAUTH_TOKEN: oauthToken } }
       : {}),
-    // Same argv, cwd, env and abort signal the SDK would spawn with. Its
-    // stderr goes straight to ours (agent.log).
+    // Same argv, cwd, env and abort signal the SDK would spawn with — run
+    // through `disclaim-exec` when the backend resolved it, which execs the
+    // CLI in place (same pid, stdio and signals) as its own responsible
+    // process, so macOS names claude, not the gateway, in a permission
+    // prompt. Its stderr goes straight to ours (agent.log).
     spawnClaudeCodeProcess: ({ command, args, cwd, env, signal }) => {
-      cli = spawn(command, args, {
+      const [bin, ...argv] = disclaimArgv(options.disclaimExec, [
+        command,
+        ...args,
+      ]);
+      log(
+        `● spawning claude: ${bin === command ? command : `${bin} ${command}`}`,
+      );
+      cli = spawn(bin, argv, {
         cwd,
         env,
         signal,

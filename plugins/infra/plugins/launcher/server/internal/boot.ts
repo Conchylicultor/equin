@@ -419,13 +419,14 @@ export interface GatewayLaunchOptions {
   cwd: string;
   port: number;
   /**
-   * Bind host, e.g. `127.0.0.1`. Omitted (the default) is a wildcard bind on
-   * every interface — dev and the desktop app, where the gateway IS the front
-   * door. A deployment passes loopback, so it is reachable only through the TLS
-   * reverse proxy in front of it: the public-port hole stops being something a
-   * firewall rule has to remember and becomes a property of how it was started.
+   * Bind host: `"loopback"` (127.0.0.1 and [::1] — what `resolveListenAddress`
+   * returns when nothing is set), a literal such as `127.0.0.1`, or `null` for a
+   * wildcard bind on every interface. Required, so a wildcard is always a
+   * caller's explicit choice and never what an omitted field silently means:
+   * the gateway being unreachable off-box is a property of how it was started,
+   * not something a firewall rule has to remember.
    */
-  bindHost?: string;
+  bindHost: string | null;
   logLevel: string;
   /**
    * Fallback namespace for subdomain-less requests, passed as
@@ -476,7 +477,7 @@ export function gatewayLaunchSpec(opts: GatewayLaunchOptions): {
     argv: [
       builtFile(opts.gateway),
       "-listen",
-      listenFlag({ host: opts.bindHost ?? null, port: opts.port }),
+      listenFlag({ host: opts.bindHost, port: opts.port }),
       "-log-level",
       opts.logLevel,
       // EVERY path the gateway reads or writes is passed explicitly, from the
@@ -799,8 +800,8 @@ export async function bootSelfContainedApp(opts: {
   server: string;
   web: string;
   port: number;
-  /** Gateway bind host; omitted is a wildcard bind. See `spawnGatewayDaemon`. */
-  bindHost?: string;
+  /** Gateway bind host; null is a wildcard bind. See `GatewayLaunchOptions.bindHost`. */
+  bindHost: string | null;
   /**
    * Which build this is (from the bundle's `RELEASE.json`), stamped into the env
    * before the gateway spawn so it reaches the backend and `/api/health` can

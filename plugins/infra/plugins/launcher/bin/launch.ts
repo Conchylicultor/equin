@@ -168,7 +168,8 @@ async function main(): Promise<void> {
   const name = asNamespace(manifest.composition);
 
   // Where to listen: `SINGULARITY_LISTEN=host:port` if set, else the port baked
-  // into RELEASE.json on a wildcard bind. That env var is the ONE runtime
+  // into RELEASE.json on loopback (127.0.0.1 and [::1]); `:port` is the explicit
+  // wildcard opt-in. That env var is the ONE runtime
   // authority — it replaced the older `PORT` override rather than joining it,
   // because `PORT` is the same knob minus the bind host, and the bind host is
   // what keeps a deployment's gateway off the public internet. See
@@ -234,7 +235,7 @@ async function main(): Promise<void> {
     command: [join(bundleRoot, "server")],
     web: join(bundleRoot, "web"),
     port,
-    bindHost: bindHost ?? undefined,
+    bindHost,
     repoRoot: bundleRoot,
     log: console.log,
   });

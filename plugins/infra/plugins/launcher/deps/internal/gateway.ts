@@ -1,6 +1,23 @@
 import { join } from "node:path";
-import { defineDep, type DepTarget } from "@plugins/infra/plugins/deps/deps";
-import { build } from "@plugins/infra/plugins/deps/plugins/build/deps";
+import { signBinary } from "@plugins/infra/plugins/codesign/deps";
+import {
+  defineDep,
+  type DepTarget,
+  type Ready,
+} from "@plugins/infra/plugins/deps/deps";
+import {
+  build,
+  builtFile,
+  type BuildSource,
+} from "@plugins/infra/plugins/deps/plugins/build/deps";
+import type { ExecContext } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
+
+/**
+ * The gateway's code-signing identifier: with the signing certificate, what
+ * macOS keys the gateway's permission grants to (Downloads for the File
+ * Explorer, …). The same as the launchd label, so the two read as one app.
+ */
+const GATEWAY_CODESIGN_IDENTIFIER = "dev.singularity.gateway";
 
 /** Go's spelling of a target (GOOS / GOARCH). */
 function goTarget(target: DepTarget): { GOOS: string; GOARCH: string } {
@@ -37,6 +54,12 @@ function goTarget(target: DepTarget): { GOOS: string; GOARCH: string } {
  *
  * Admitted like any install (one background unit): a cold `go build` is tens
  * of seconds of CPU.
+ *
+ * A darwin build made on a Mac is code-signed as `dev.singularity.gateway` by
+ * this machine's identity (`infra/codesign`), so macOS keeps its permission
+ * grants across rebuilds — an ad-hoc binary is keyed by its hash, and every
+ * rebuild was a new app to it. The identity is not part of the build's
+ * identity; `signGateway` re-signs an installed binary when it changes.
  */
 export const gatewayBinary = defineDep({
   id: "gateway-binary",
@@ -59,7 +82,43 @@ export const gatewayBinary = defineDep({
         },
         timeoutMs: 15 * 60_000,
       }),
+    then: async (ctx, built) => {
+      // Only a Mac signs, and only a binary for macOS.
+      if (ctx.target.platform !== "darwin" || process.platform !== "darwin") {
+        return;
+      }
+      await signBinary(built, {
+        identifier: GATEWAY_CODESIGN_IDENTIFIER,
+        exec: ctx.exec,
+        log: ctx.log,
+      });
+    },
   }),
   updates: { none: "built from this checkout's own source" },
   bundle: "required",
 });
+
+/**
+ * Make sure an installed gateway is signed by this machine's CURRENT identity —
+ * what `./equin start` runs after `ensureDep`, which skips a ready install and
+ * so never re-runs the build's signing step. A no-op when it already is (or off
+ * macOS); otherwise re-signs in place, which is safe under a running gateway
+ * (the signed copy is renamed over the file). Throws when a configured identity
+ * cannot be resolved.
+ */
+export async function signGateway(
+  gateway: Ready<BuildSource>,
+  exec: ExecContext,
+  log: (line: string) => void,
+): Promise<void> {
+  const outcome = await signBinary(builtFile(gateway), {
+    identifier: GATEWAY_CODESIGN_IDENTIFIER,
+    exec,
+    log,
+  });
+  if (outcome.kind === "already-signed") {
+    log(
+      `Gateway signed by the ${outcome.identity.kind} identity "${outcome.identity.label}" (${outcome.identity.sha1})`,
+    );
+  }
+}

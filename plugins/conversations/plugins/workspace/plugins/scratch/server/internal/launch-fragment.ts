@@ -1,4 +1,5 @@
 import type { LaunchFragment } from "@plugins/conversations/plugins/workspace/server";
+import { MACOS_TCC_COMMANDS } from "@plugins/framework/plugins/tooling/plugins/guards/core";
 
 /**
  * Claude Code's sandbox for a profile that asked for one (`sandbox: true`):
@@ -29,19 +30,28 @@ const SANDBOX = {
  *   no other — its tools are scoped to the profile's allowlist server-side
  *   (`Mcp.scope`).
  * - the profile's `permissions`, and its `sandbox` ({@link SANDBOX}), merged
- *   into the runtime's settings.
+ *   into the runtime's settings — with every macOS automation command
+ *   (`MACOS_TCC_COMMANDS`) always denied on top of the profile's own deny
+ *   list. Repo agents get that from the `macos-automation` guard, which a
+ *   scratch session never runs: it loads no repo `.claude/settings.json`.
  */
 export function scratchLaunchFragment(opts: {
   mcpUrl: string;
   permissions?: { allow?: readonly string[]; deny?: readonly string[] };
   sandbox?: boolean;
 }): LaunchFragment {
+  const deny = [
+    ...new Set([
+      ...(opts.permissions?.deny ?? []),
+      ...MACOS_TCC_COMMANDS.map((cmd) => `Bash(${cmd}:*)`),
+    ]),
+  ];
   return {
     settingSources: ["user", "project"],
     mcpServers: { equin: { type: "http", url: opts.mcpUrl } },
     strictMcpConfig: true,
     settings: {
-      ...(opts.permissions ? { permissions: opts.permissions } : {}),
+      permissions: { ...opts.permissions, deny },
       ...(opts.sandbox ? { sandbox: SANDBOX } : {}),
     },
   };

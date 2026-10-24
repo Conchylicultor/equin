@@ -28,6 +28,7 @@ export type { GatewayLaunchOptions } from "./internal/boot";
 export { GATEWAY_SERVICE, gatewayServiceJob } from "./internal/gateway-service";
 export {
   LISTEN_ENV,
+  LOOPBACK_BIND,
   resolveListenAddress,
   listenFlag,
 } from "./internal/listen";

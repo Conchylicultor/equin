@@ -16,11 +16,13 @@ export const depsEntries: CollectedEntry[] = [
   { pluginPath: "apps/plugins/chord/plugins/song-index", id: "apps.chord.song-index", loader: () => import("@plugins/apps/plugins/chord/plugins/song-index/deps"), dependsOn: [] },
   { pluginPath: "apps/plugins/sonata/plugins/transcription", id: "apps.sonata.transcription", loader: () => import("@plugins/apps/plugins/sonata/plugins/transcription/deps"), dependsOn: [] },
   { pluginPath: "infra/plugins/audio-analysis", id: "infra.audio-analysis", loader: () => import("@plugins/infra/plugins/audio-analysis/deps"), dependsOn: [] },
-  { pluginPath: "infra/plugins/launcher", id: "infra.launcher", loader: () => import("@plugins/infra/plugins/launcher/deps"), dependsOn: [] },
+  { pluginPath: "infra/plugins/codesign", id: "infra.codesign", loader: () => import("@plugins/infra/plugins/codesign/deps"), dependsOn: [] },
+  { pluginPath: "infra/plugins/launcher", id: "infra.launcher", loader: () => import("@plugins/infra/plugins/launcher/deps"), dependsOn: ["infra/plugins/codesign"] },
   { pluginPath: "infra/plugins/safe-fetch/plugins/browser-fetch", id: "infra.safe-fetch.browser-fetch", loader: () => import("@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/deps"), dependsOn: [] },
   { pluginPath: "integrations/plugins/youtube", id: "integrations.youtube", loader: () => import("@plugins/integrations/plugins/youtube/deps"), dependsOn: [] },
   { pluginPath: "menu-bar", id: "menu-bar", loader: () => import("@plugins/menu-bar/deps"), dependsOn: [] },
   { pluginPath: "packages/plugins/signal-origin", id: "packages.signal-origin", loader: () => import("@plugins/packages/plugins/signal-origin/deps"), dependsOn: [] },
+  { pluginPath: "packages/plugins/spawn-disclaim", id: "packages.spawn-disclaim", loader: () => import("@plugins/packages/plugins/spawn-disclaim/deps"), dependsOn: [] },
 ];
 
 export interface CompositionIdentity {

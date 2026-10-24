@@ -123,8 +123,12 @@ export const RUNTIME_FORWARDED_ENV = {
     "operator escape hatch that turns off darwinbg demotion of background work (packages/spawn-priority background.ts)",
   SINGULARITY_NO_SIGNAL_ORIGIN:
     "operator escape hatch that turns off the native signal-origin tap (packages/signal-origin signal-origin.ts)",
+  SINGULARITY_NO_SPAWN_DISCLAIM:
+    "operator escape hatch that runs agents' claude without the disclaim-exec helper; read by the backend that resolves it (packages/spawn-disclaim disclaim-argv.ts)",
   SINGULARITY_HEAVY_READ_LOCAL_CONCURRENCY:
     "operator tuning for the per-backend heavy-read gate (infra/host/host-read-pool pool.ts)",
+  SINGULARITY_CODESIGN_IDENTITY:
+    "operator-set keychain identity the gateway is code-signed with; a backend's deps.install job can build (and so sign) the gateway too, and must use the same signer as `./equin start` (infra/codesign identity.ts)",
 } as const satisfies Record<`SINGULARITY_${string}`, string>;
 
 /**

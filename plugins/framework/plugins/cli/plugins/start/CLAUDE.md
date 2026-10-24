@@ -72,9 +72,14 @@ manager none is started, and `start` says so.
 
 ## Bind address
 
-Every interface by default. `SINGULARITY_LISTEN=127.0.0.1:9000 ./equin start`
-binds loopback only — for a server, so the agent manager is unreachable off-box
-by how it was started. Only the host may change; the port stays 9000.
+Loopback only by default: the gateway's `-listen loopback:9000` binds
+`127.0.0.1:9000` and `[::1]:9000` (a host without IPv6 gets the first alone, with
+a warning; `[::1]` held by someone else is fatal). So the agent manager is
+unreachable off-box, and macOS never asks to "accept incoming network
+connections", unless someone asked for it: `SINGULARITY_LISTEN=:9000 ./equin start`
+binds every interface, and `SINGULARITY_LISTEN=<host>:9000` one address. Only the
+host may change; the port stays 9000. The bind is baked into the plist, so a
+change reaches the running gateway on `./equin start --force`.
 
 ## Other hosts: a detached spawn
 
@@ -93,7 +98,12 @@ unchanged one costs a hash. The plist (or the detached spawn) names that path;
 `start` rewrites the plist every run, and `start --force` reloads it. It then
 `holdDep`s the install as `machine-gateway`, so the daily deps sweep never
 deletes the binary launchd will relaunch, however long main has moved on; the
-next `start` moves the hold to the new build. A release never builds: its
+next `start` moves the hold to the new build. On macOS it then runs
+`signGateway` (`infra/codesign`): a no-op when the binary is already signed as
+`dev.singularity.gateway` by this machine's identity, a re-sign when the
+identity changed (`ensureDep` skips a ready install, so the build's own signing
+step does not run again). A configured identity that does not resolve fails
+`start`. A release never builds: its
 launcher reads the gateway sealed into the bundle.
 
 It waits for the gateway to actually answer before printing success, because a

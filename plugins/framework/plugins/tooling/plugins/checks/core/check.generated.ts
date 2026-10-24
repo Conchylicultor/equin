@@ -90,6 +90,7 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "framework/plugins/tooling/plugins/web-artifacts", id: "framework.tooling.web-artifacts", loader: () => import("@plugins/framework/plugins/tooling/plugins/web-artifacts/check"), dependsOn: ["infra/plugins/paths"] },
   { pluginPath: "framework/plugins/web-core", id: "framework.web-core", loader: () => import("@plugins/framework/plugins/web-core/check"), dependsOn: [] },
   { pluginPath: "ids", id: "ids", loader: () => import("@plugins/ids/check"), dependsOn: ["database/plugins/migrations", "framework/plugins/tooling/plugins/codegen", "plugin-meta/plugins/facets"] },
+  { pluginPath: "infra/plugins/codesign", id: "infra.codesign", loader: () => import("@plugins/infra/plugins/codesign/check"), dependsOn: [] },
   { pluginPath: "infra/plugins/deps/plugins/npm", id: "infra.deps.npm", loader: () => import("@plugins/infra/plugins/deps/plugins/npm/check"), dependsOn: [] },
   { pluginPath: "infra/plugins/deps/plugins/python/plugins/uv-updater", id: "infra.deps.python.uv-updater", loader: () => import("@plugins/infra/plugins/deps/plugins/python/plugins/uv-updater/check"), dependsOn: [] },
   { pluginPath: "infra/plugins/deps/plugins/rust/plugins/cargo-updater", id: "infra.deps.rust.cargo-updater", loader: () => import("@plugins/infra/plugins/deps/plugins/rust/plugins/cargo-updater/check"), dependsOn: [] },

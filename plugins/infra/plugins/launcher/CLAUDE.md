@@ -288,6 +288,7 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `isRunning`
     - `LISTEN_ENV`
     - `listenFlag`
+    - `LOOPBACK_BIND`
     - `pgbouncerConnection`
     - `pgbouncerService`
     - `propagateReleaseConfig`
@@ -301,10 +302,16 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
   - Register: `defineDaemon('launcher.gateway')`
 - Deps:
   - Uses:
+    - `infra/codesign.signBinary`
     - `infra/deps.defineDep`
     - `infra/deps.DepTarget`
+    - `infra/deps.Ready`
     - `infra/deps/build.build`
-  - Exports (values): `gatewayBinary`
+    - `infra/deps/build.BuildSource`
+    - `infra/deps/build.builtFile`
+  - Exports (values):
+    - `gatewayBinary`
+    - `signGateway`
 - Cross-plugin:
   - Imported by: `release`
 - Exemptions:

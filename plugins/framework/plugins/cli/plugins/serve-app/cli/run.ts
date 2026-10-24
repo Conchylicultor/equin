@@ -8,6 +8,7 @@ import {
 import {
   bootSelfContainedApp,
   gatewayPidFile,
+  LOOPBACK_BIND,
 } from "@plugins/infra/plugins/launcher/server";
 import { gatewayLogs } from "@plugins/infra/plugins/launcher/data-dirs";
 import { gatewayBinary } from "@plugins/infra/plugins/launcher/deps";
@@ -78,6 +79,9 @@ const run: CliAction<
     web: opts.web,
     composition: opts.composition ?? opts.name,
     port,
+    // Loopback only (127.0.0.1 and [::1]), like every launch that names no
+    // wildcard: the URL printed below is `localhost`.
+    bindHost: LOOPBACK_BIND,
     repoRoot,
     logLevel: opts.logLevel,
     log: console.log,

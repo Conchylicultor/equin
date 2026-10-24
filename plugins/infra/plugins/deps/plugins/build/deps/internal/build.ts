@@ -80,7 +80,11 @@ const PROBE_TIMEOUT_MS = MINUTE;
  *   `forTarget` (what `sealDep` calls for a release bundle) builds for another
  *   platform when `targets` says the toolchain can, and says why not otherwise.
  * - **Install**: `run(ctx)` builds straight into `ctx.dir`, leaving
- *   `ctx.output`; a run that finishes without it throws. `isIntact` is "the
+ *   `ctx.output`; a run that finishes without it throws. `then(ctx, output)`,
+ *   if declared, runs next on the produced file (code-signing it) before the
+ *   install counts as ready; a throw fails the install like a failed build.
+ *   What `then` reads (a signing identity) is NOT part of the identity: it
+ *   finishes a build, it does not change what was built. `isIntact` is "the
  *   output exists".
  * - **Staying current**: the source moves with the repo, so the declaration
  *   says `updates: { none: "built from this checkout's own source" }`.
@@ -94,6 +98,12 @@ export function build(opts: {
   /** The output's file name — per target when it differs (`.dylib` / `.so`). */
   output: string | ((target: DepTarget) => string);
   run(ctx: BuildContext): Promise<void>;
+  /**
+   * Runs once `run` has produced the output, with its absolute path (the same
+   * as `ctx.output`) — post-processing in place, such as code-signing it.
+   * Nothing it reads is part of the identity.
+   */
+  then?: (ctx: BuildContext, built: string) => Promise<void>;
   targets?: BuildTargets;
   admission?: { readonly none: string };
 }): BuildSource {
@@ -144,10 +154,12 @@ export function build(opts: {
       async install(ctx) {
         mkdirSync(ctx.dir, { recursive: true });
         const out = join(ctx.dir, output);
-        await run({ ...ctx, output: out, target });
+        const buildCtx: BuildContext = { ...ctx, output: out, target };
+        await run(buildCtx);
         if (!existsSync(out)) {
           throw new Error(`the build finished without producing ${out}`);
         }
+        if (opts.then !== undefined) await opts.then(buildCtx, out);
       },
 
       isIntact: (dir) => existsSync(join(dir, output)),

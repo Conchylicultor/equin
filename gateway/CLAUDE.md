@@ -6,7 +6,7 @@ See the top-level [`CLAUDE.md`](../CLAUDE.md) for overall architecture and [`ser
 
 ## What It Does
 
-- Listens on `:9000`, routes `<name>.localhost:9000` → that worktree's backend
+- Listens on loopback port 9000 (`-listen loopback:9000`: one listener on `127.0.0.1:9000`, one on `[::1]:9000`, one `http.Server`), routes `<name>.localhost:9000` → that worktree's backend
 - Serves each worktree's `web/dist` as static files directly (no backend spawn needed for page loads)
 - Lazy-spawns the backend on a page load (in the background, beside the SPA shell) or the first `/api/*` or `/ws/*` request; tears it down after 10 minutes idle
 - Hands each backend a Unix domain socket at `~/.singularity/sockets/<name>.sock` as `--socket <path>` on its argv. Gateway dials the socket directly — no TCP between gateway and backend.
@@ -22,6 +22,7 @@ See the top-level [`CLAUDE.md`](../CLAUDE.md) for overall architecture and [`ser
 - **Gateway owns backend lifecycles** — backends are spawned, supervised, and killed by the gateway. They never know the gateway exists. The convention is `bun bin/index.ts --namespace <name> --socket <path>` in the `server` directory, with the declared runtime environment and nothing else (`backendLaunch` in `worktree.go`)
 - **Children get a declared environment, not an inherited one** — the gateway used to hand every child its own environment, i.e. whatever its starter carried. Started from an agent shell, that put the shell's `SINGULARITY_CONVERSATION_ID`, `TMUX` and `CLAUDE_*` into every backend on the host. Now the launcher declares the names (`-child-env`), `env.go` captures that subset once at boot, and `env.go` is the only file allowed to call `os.Environ()` or `exec.Command` (the `launcher:gateway-env-explicit` check) — so no exec site can fall back to Go's nil-`Env` "inherit everything"
 - **Unix domain sockets, not TCP loopback** — eliminates the IPv4/IPv6 bind-shape asymmetry that allowed unrelated processes to silently steal traffic on macOS (an IPv4-loopback squatter could coexist with a dual-stack listener on the same port). UDS scopes the gateway↔backend channel by filesystem path, removes the port allocator entirely, and removes any LAN-exposure surface.
+- **Loopback front door, both families** — the gateway's own port binds `127.0.0.1` and `[::1]` as two listeners (`listenAddrs` in `main.go`), never one dual-stack wildcard, so it is unreachable off-box (and trips no macOS incoming-connections prompt) and no IPv4- or IPv6-loopback squatter can coexist with it on the port: `[::1]` in use is fatal, like `127.0.0.1`; only `[::1]` *unavailable* (no IPv6) degrades to IPv4 with a warning. Every interface is the explicit `-listen :<port>` (`SINGULARITY_LISTEN=:<port>`).
 - **`/gateway/*` is a reserved path** on every host — the gateway intercepts it before proxying. Apps call `GET /gateway/worktrees` to list instances. This is an official API, not internal plumbing
 
 ## Routing Rules
@@ -214,8 +215,8 @@ platform). By hand, for a debugger:
 
 ```sh
 go build -o /tmp/gateway .
-/tmp/gateway -child-env HOME,USER,PATH                   # minimal hand-run; defaults: :9000, ~/.singularity/worktrees/
-/tmp/gateway -child-env HOME,USER,PATH -listen :8080 -idle-timeout 5m -log-level debug
+/tmp/gateway -child-env HOME,USER,PATH                   # minimal hand-run; defaults: loopback:9000, ~/.singularity/worktrees/
+/tmp/gateway -child-env HOME,USER,PATH -listen loopback:8080 -idle-timeout 5m -log-level debug
 ```
 
 `-child-env` is **required**: a comma-separated list of the environment variable names children may receive (an entry ending in `*`, like `SINGULARITY_AUTH_*`, matches a prefix). Without it the gateway exits non-zero before doing anything. It has no Go-side default on purpose — the declaration lives in one place, `runtimeEnvNames()` in `plugins/infra/plugins/launcher/core`, and `./equin start` passes exactly that. The minimal form above is enough to poke at routing under a debugger; a backend that needs more (the `SINGULARITY_*` installation settings, OAuth credentials) needs the full list. At boot `gateway.log` records the forwarded names at info and, at warn, every name in the gateway's own environment it is NOT forwarding — the normal path drops nothing, so a warn line means a hand-run gateway. Names only, never values.

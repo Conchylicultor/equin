@@ -42,6 +42,7 @@ export const dataDirsEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/attachments", id: "infra.attachments", loader: () => import("@plugins/infra/plugins/attachments/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/audio-analysis", id: "infra.audio-analysis", loader: () => import("@plugins/infra/plugins/audio-analysis/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/claude-cli/plugins/accounts", id: "infra.claude-cli.accounts", loader: () => import("@plugins/infra/plugins/claude-cli/plugins/accounts/data-dirs"), dependsOn: [] },
+  { pluginPath: "infra/plugins/codesign", id: "infra.codesign", loader: () => import("@plugins/infra/plugins/codesign/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/deps", id: "infra.deps", loader: () => import("@plugins/infra/plugins/deps/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/deps/plugins/python", id: "infra.deps.python", loader: () => import("@plugins/infra/plugins/deps/plugins/python/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/deps/plugins/rust", id: "infra.deps.rust", loader: () => import("@plugins/infra/plugins/deps/plugins/rust/data-dirs"), dependsOn: [] },

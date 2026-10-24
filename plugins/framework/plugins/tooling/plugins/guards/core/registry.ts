@@ -13,6 +13,7 @@ import { mainWritesGuard } from "./guards/main-writes";
 import { noMemoryGuard } from "./guards/no-memory";
 import { packageJsonHint } from "./guards/package-json-hint";
 import { migrationsGuard } from "./guards/migrations";
+import { macosAutomationGuard } from "./guards/macos-automation";
 import { pipefailGuard } from "./guards/pipefail";
 import { pollLoopGuard } from "./guards/poll-loop";
 import { postgresGuard } from "./guards/postgres";
@@ -30,6 +31,7 @@ export const GUARDS: Guard<any>[] = [
   migrationsGuard,
   mainWritesGuard,
   postgresGuard,
+  macosAutomationGuard,
   backgroundOpsGuard,
   pollLoopGuard,
   // Rewrites run after every judging guard, so those see what the agent typed.

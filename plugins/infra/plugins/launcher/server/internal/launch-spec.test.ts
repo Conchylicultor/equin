@@ -5,6 +5,7 @@ import { builtFile } from "@plugins/infra/plugins/deps/plugins/build/deps";
 import { gatewayBinary } from "../../deps";
 import { gatewayLaunchSpec } from "./boot";
 import { gatewayServiceJob } from "./gateway-service";
+import { LOOPBACK_BIND } from "./listen";
 
 describe("gatewayLaunchSpec", () => {
   // The installed gateway as the deps cache names it: a path per identity.
@@ -16,6 +17,7 @@ describe("gatewayLaunchSpec", () => {
     gateway: ready,
     cwd: checkout,
     port: 9000,
+    bindHost: LOOPBACK_BIND,
     logLevel: "info",
   });
 
@@ -24,6 +26,19 @@ describe("gatewayLaunchSpec", () => {
     expect(spec.argv[0]).toBe(join(dir, "gateway"));
     expect(spec.cwd).toBe(checkout);
     expect(spec.argv).toContain("-child-env");
+  });
+
+  test("listens on loopback unless a wildcard is asked for explicitly", () => {
+    const at = spec.argv.indexOf("-listen");
+    expect(spec.argv[at + 1]).toBe("loopback:9000");
+    const wildcard = gatewayLaunchSpec({
+      gateway: ready,
+      cwd: checkout,
+      port: 9000,
+      bindHost: null,
+      logLevel: "info",
+    });
+    expect(wildcard.argv[wildcard.argv.indexOf("-listen") + 1]).toBe(":9000");
   });
 
   test("the service job names that binary, so a new identity is a new job definition", () => {

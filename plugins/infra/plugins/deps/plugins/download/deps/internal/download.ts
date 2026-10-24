@@ -78,6 +78,8 @@ export function download(opts: {
   derive?: DownloadDerive;
   /** Longest one file's download may take. Default: 30 minutes. */
   timeoutMs?: number;
+  /** See `DepSource.admission`: only for a download too small to be worth a host grant. */
+  admission?: { readonly none: string };
 }): DownloadSource {
   const { files, derive } = opts;
   const timeoutMs = opts.timeoutMs ?? 30 * MINUTE;
@@ -92,6 +94,7 @@ export function download(opts: {
     ].join(", ")}`,
     files,
     ...(derive === undefined ? {} : { derive }),
+    ...(opts.admission === undefined ? {} : { admission: opts.admission }),
 
     async identityInputs() {
       const inputs: Record<string, string> = {};

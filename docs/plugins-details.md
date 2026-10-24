@@ -26080,6 +26080,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `detectPoll`
               - `fileHint`
               - `GUARDS`
+              - `MACOS_TCC_COMMANDS`
               - `matchesTool`
               - `MODULE_EXTENSION`
               - `parseArgv`
@@ -27681,6 +27682,40 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/claude-cli`
               - `primitives/launch`
               - `tasks/task-triage`
+    - **`codesign`** — Stable code signing for the binaries this machine builds (the gateway): signBinary signs with a configured keychain identity (/usr/bin/codesign) or the machine's own self-signed one (PEM under state/codesign, via the pinned rcodesign dependency), so macOS permission grants survive rebuilds.
+      - Deps:
+        - Uses:
+          - `infra/deps.defineDep`
+          - `infra/deps.ensureDep`
+          - `infra/deps/download.download`
+          - `infra/deps/download.downloadedFile`
+        - Exports (types):
+          - `CodesignHost`
+          - `CommandResult`
+          - `ConfiguredValue`
+          - `LocalIdentityState`
+          - `SigningIdentity`
+          - `SignOutcome`
+        - Exports (values):
+          - `CODESIGN_IDENTITY_ENV`
+          - `configuredIdentityFile`
+          - `configuredValidTo`
+          - `isSignedBy`
+          - `LOCAL_IDENTITY_NAME`
+          - `localIdentityPaths`
+          - `machineHost`
+          - `rcodesign`
+          - `readConfiguredValue`
+          - `readLocalIdentity`
+          - `RESET_HINT`
+          - `resolveConfigured`
+          - `resolveSigningIdentity`
+          - `signBinary`
+          - `signedByRequirement`
+      - Cross-plugin:
+        - Imported by: `infra/launcher`
+      - Exemptions:
+        - Exempts itself from: `paths:no-hardcoded-paths` — `deps/internal/identity.ts`, `deps/internal/sign.ts`, `deps/internal/codesign.test.ts` (sanctioned)
     - **`corpus-index`** — Fingerprint-keyed incremental file index: defineCorpusIndex enumerates files under roots matching a predicate, re-parses only those whose (mtimeMs,size) changed through a bounded heavy-read-gated pipeline, drops vanished entries, and persists atomically (host scope ⇒ main-only). ensureFresh is the lazy on-read correctness fallback; startWatcher is main-only push freshness.
       - Server:
         - Uses:
@@ -27778,6 +27813,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/prototypes/thumbnails`
           - `apps/sonata/transcription`
           - `infra/audio-analysis`
+          - `infra/codesign`
           - `infra/deps/build`
           - `infra/launcher`
           - `infra/mcp/browser`
@@ -27785,6 +27821,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `integrations/youtube`
           - `menu-bar`
           - `packages/signal-origin`
+          - `packages/spawn-disclaim`
       - Deps:
         - Exports (types):
           - `BundleSpec`
@@ -27841,9 +27878,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/deps/rust`
               - `infra/launcher`
               - `packages/signal-origin`
+              - `packages/spawn-disclaim`
         - **`download`** — The download installer kind of infra/deps: download({ files: [{ name, url, sha256 }], derive? }) (its deps barrel) declares a dependency on pinned files — identity = every url + sha256 plus derive.version — fetched with curl into env/<name>.part (progress in the install log), sha256-checked and renamed, then optionally post-processed in place by derive.run; downloadedFile(ready, name) is the path of one of them.
           - Cross-plugin:
-            - Imported by: `apps/chord/song-index`
+            - Imported by:
+              - `apps/chord/song-index`
+              - `infra/codesign`
           - Deps:
             - Exports (types):
               - `DownloadDerive`
@@ -29639,6 +29679,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isRunning`
           - `LISTEN_ENV`
           - `listenFlag`
+          - `LOOPBACK_BIND`
           - `pgbouncerConnection`
           - `pgbouncerService`
           - `propagateReleaseConfig`
@@ -29652,10 +29693,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register: `defineDaemon('launcher.gateway')`
       - Deps:
         - Uses:
+          - `infra/codesign.signBinary`
           - `infra/deps.defineDep`
           - `infra/deps.DepTarget`
+          - `infra/deps.Ready`
           - `infra/deps/build.build`
-        - Exports (values): `gatewayBinary`
+          - `infra/deps/build.BuildSource`
+          - `infra/deps/build.builtFile`
+        - Exports (values):
+          - `gatewayBinary`
+          - `signGateway`
       - Cross-plugin:
         - Imported by: `release`
       - Exemptions:
@@ -32524,6 +32571,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `createSmoothClockModel`
           - `SMOOTH_CLOCK_MAX_SLEW`
           - `SMOOTH_CLOCK_SNAP_SEC`
+    - **`spawn-disclaim`**
+      - Deps:
+        - Uses:
+          - `infra/deps.defineDep`
+          - `infra/deps/build.build`
+        - Exports (values): `disclaimExec`
+      - Core:
+        - Exports (values):
+          - `disclaimArgv`
+          - `NO_SPAWN_DISCLAIM_ENV`
+          - `spawnDisclaimWanted`
+      - Structure:
+        - Non-standard folders: `native/`
     - **`spawn-priority`** — OS scheduling-priority isolation: backgroundArgv/backgroundPrefix wrap heavy background work (DB forks, agent sessions, builds, worktree checkouts) in darwinbg (taskpolicy -b) so it yields host CPU/IO to the interactive backends; spawnInForeground starts a scarce slot holder's child out of darwinbg; boostInteractiveQos raises the calling thread to user-interactive QoS (main backend's event loop only).
       - Cross-plugin:
         - Imported by:

@@ -65,7 +65,7 @@ preloaded, so neither needs eager registration.)
   direct `<out>/launch`. For **preview**, the data root is a `/tmp/sgp-XXXXXX`
   mkdtemp — short by construction.
 - **Preview** (`server/internal/preview-manager.ts`) spawns the staged `launch`
-  binary with `SINGULARITY_DIR=<tmp>` + `SINGULARITY_LISTEN=:<free>`, tracked in an in-memory
+  binary with `SINGULARITY_DIR=<tmp>` + `SINGULARITY_LISTEN=loopback:<free>`, tracked in an in-memory
   Map projected into the `release.previews` value
   (`server/internal/preview-state-resource.ts`: `serveValue(releasePreviews, {
   source: "external" })`, pushed by `releasePreviewsServed.notify()` on every

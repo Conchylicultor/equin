@@ -71,8 +71,9 @@ it until the next login, and `./equin stop --disable` also stops it
 starting at login. On Linux it is a systemd user unit
 (`~/.config/systemd/user/dev.singularity.gateway.service`) that starts at boot,
 nobody logged in — it needs lingering (`sudo loginctl enable-linger $USER`,
-which `install.sh` enables). On a server, `SINGULARITY_LISTEN=127.0.0.1:9000
-./equin start` keeps it on loopback. Elsewhere (no launchd, no systemd)
+which `install.sh` enables). The gateway listens on loopback only
+(`127.0.0.1` and `::1`); `SINGULARITY_LISTEN=:9000 ./equin start` opens it on
+every interface. Elsewhere (no launchd, no systemd)
 the gateway does not survive a reboot: run `./equin start` again after one.
 
 **Chromium is not part of the install.** It is an on-demand dependency

@@ -38,6 +38,7 @@ import { backgroundOpsGuard } from "../core/guards/background-ops";
 import { findGuard } from "../core/guards/find";
 import { gitPushGuard } from "../core/guards/git-push";
 import { gitResetMainGuard } from "../core/guards/git-reset-main";
+import { macosAutomationGuard } from "../core/guards/macos-automation";
 import { mainWritesGuard } from "../core/guards/main-writes";
 import { migrationsGuard } from "../core/guards/migrations";
 import { postgresGuard } from "../core/guards/postgres";
@@ -87,6 +88,7 @@ const PURE_GUARDS: Guard<unknown>[] = [
   migrationsGuard,
   mainWritesGuard,
   postgresGuard,
+  macosAutomationGuard,
   backgroundOpsGuard,
 ] as Guard<unknown>[];
 

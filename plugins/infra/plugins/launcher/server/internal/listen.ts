@@ -12,21 +12,38 @@
  * and "the gateway is not reachable off-box" must be a property of how it was
  * started, not of whether someone also remembered a firewall rule. Two knobs
  * for one value would let the weaker one win by accident.
+ *
+ * Unset, the gateway binds loopback only — both `127.0.0.1` and `[::1]`, via
+ * the host keyword {@link LOOPBACK_BIND} that the gateway's `-listen` expands.
+ * Every interface is an explicit opt-in (`:9000`), so the agent manager is
+ * never reachable off-box (and never trips the macOS "accept incoming network
+ * connections" prompt) unless someone asked for it.
  */
 
 /** The single runtime listen override, `host:port`. */
 export const LISTEN_ENV = "SINGULARITY_LISTEN";
 
+/**
+ * The bind host keyword for "loopback only, both families": the gateway's
+ * `-listen loopback:<port>` expands it into one listener on `127.0.0.1:<port>`
+ * and one on `[::1]:<port>` (gateway/main.go `listenAddrs`). The default.
+ */
+export const LOOPBACK_BIND = "loopback";
+
 /** A resolved listen address. `host: null` is a wildcard bind (all interfaces). */
 export interface ListenAddress {
-  /** Bind host exactly as `net.Listen` wants it (`127.0.0.1`, `[::1]`), or null for wildcard. */
+  /**
+   * Bind host exactly as the gateway's `-listen` wants it: {@link LOOPBACK_BIND},
+   * a literal (`127.0.0.1`, `[::1]`) passed to `net.Listen`, or null for
+   * wildcard (every interface — only when explicitly asked for with `:<port>`).
+   */
   host: string | null;
   port: number;
 }
 
 /**
  * Resolve where to listen: `SINGULARITY_LISTEN` if set, else `manifestPort` on
- * a wildcard bind (today's behavior when nothing is set).
+ * loopback ({@link LOOPBACK_BIND}). An explicit `:<port>` is the wildcard opt-in.
  *
  * A malformed override throws rather than falling back to the manifest — a
  * typo'd bind host that silently became a wildcard is exactly the failure this
@@ -35,7 +52,10 @@ export interface ListenAddress {
 export function resolveListenAddress(manifestPort: number): ListenAddress {
   const raw = process.env[LISTEN_ENV];
   if (raw === undefined || raw.trim() === "") {
-    return { host: null, port: assertPort(manifestPort, `RELEASE.json "port"`) };
+    return {
+      host: LOOPBACK_BIND,
+      port: assertPort(manifestPort, `RELEASE.json "port"`),
+    };
   }
 
   const value = raw.trim();
@@ -45,7 +65,7 @@ export function resolveListenAddress(manifestPort: number): ListenAddress {
   const split = value.lastIndexOf(":");
   if (split < 0) {
     throw new Error(
-      `${LISTEN_ENV}="${value}" is not a host:port address. Use ":9100" to listen on all interfaces, or "127.0.0.1:9100" to listen on loopback only.`,
+      `${LISTEN_ENV}="${value}" is not a host:port address. Use "${LOOPBACK_BIND}:9100" (or leave it unset) to listen on loopback only, "127.0.0.1:9100" for one address, or ":9100" to listen on all interfaces.`,
     );
   }
   const host = value.slice(0, split);

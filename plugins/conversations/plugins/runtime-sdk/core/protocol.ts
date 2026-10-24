@@ -225,6 +225,14 @@ export const AgentLaunchOptionsSchema = z.object({
   cwd: z.string(),
   /** The system `claude` the SDK runs (`pathToClaudeCodeExecutable`). */
   claudeBin: z.string(),
+  /**
+   * The `disclaim-exec` helper (packages/spawn-disclaim) the agent runs
+   * `claudeBin` through, so macOS attributes claude's permission prompts to
+   * claude, not the gateway; null runs it directly. Resolved by the backend at
+   * every process start (`startAgentProcess`), never carried over from a
+   * previous launch. Defaulted for an options file written before it existed.
+   */
+  disclaimExec: z.string().nullable().default(null),
   /** The CLI's `--model` value. */
   model: z.string().nullable(),
   /** The CLI's `--effort` value. */

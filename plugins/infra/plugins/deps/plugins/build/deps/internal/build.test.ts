@@ -147,6 +147,50 @@ describe("build", () => {
     expect((err as Error).message).toContain("without producing");
   });
 
+  test("then runs on the produced output, and a throw in it fails the install", async () => {
+    const seen: string[] = [];
+    const signed = dep(
+      build({
+        inputs: ["native/**"],
+        tool,
+        output: "out.bin",
+        run: concat,
+        then: async (ctx, built) => {
+          expect(built).toBe(ctx.output);
+          seen.push(built);
+          writeFileSync(built, "signed\n");
+        },
+      }),
+    );
+    const ready = await ensureDep(signed, exec, { store, root });
+    expect(seen).toEqual([builtFile(ready)]);
+    expect(readFileSync(builtFile(ready), "utf8")).toBe("signed\n");
+
+    // Not part of the identity: the same build without `then` is the same install.
+    const plain = dep(
+      build({ inputs: ["native/**"], tool, output: "out.bin", run: concat }),
+    );
+    expect((await readyNow(plain, { store, root })).kind).toBe("ready");
+
+    writeFileSync(join(root, "native", "a.c"), "int a = 3;\n");
+    const failing = dep(
+      build({
+        inputs: ["native/**"],
+        tool,
+        output: "out.bin",
+        run: concat,
+        then: async () => {
+          throw new Error("no signing identity");
+        },
+      }),
+    );
+    const err = await ensureDep(failing, exec, { store, root }).catch(
+      (e: unknown) => e,
+    );
+    expect((err as Error).message).toContain("no signing identity");
+    expect((await depState(failing, { store, root })).kind).toBe("failed");
+  });
+
   test("a missing tool or an input glob matching nothing is failed, not absent", async () => {
     const noTool = dep(
       build({

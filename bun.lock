@@ -3755,6 +3755,10 @@
       "name": "@singularity/plugin-infra-claude-cli-availability",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/codesign": {
+      "name": "@singularity/plugin-infra-codesign",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/corpus-index": {
       "name": "@singularity/plugin-infra-corpus-index",
       "version": "0.0.1",
@@ -4248,6 +4252,10 @@
     },
     "plugins/packages/plugins/smooth-clock": {
       "name": "@singularity/plugin-packages-smooth-clock",
+      "version": "0.0.1",
+    },
+    "plugins/packages/plugins/spawn-disclaim": {
+      "name": "@singularity/plugin-packages-spawn-disclaim",
       "version": "0.0.1",
     },
     "plugins/packages/plugins/spawn-priority": {
@@ -8934,6 +8942,8 @@
 
     "@singularity/plugin-infra-claude-cli-availability": ["@singularity/plugin-infra-claude-cli-availability@workspace:plugins/infra/plugins/claude-cli/plugins/availability"],
 
+    "@singularity/plugin-infra-codesign": ["@singularity/plugin-infra-codesign@workspace:plugins/infra/plugins/codesign"],
+
     "@singularity/plugin-infra-corpus-index": ["@singularity/plugin-infra-corpus-index@workspace:plugins/infra/plugins/corpus-index"],
 
     "@singularity/plugin-infra-deps": ["@singularity/plugin-infra-deps@workspace:plugins/infra/plugins/deps"],
@@ -9167,6 +9177,8 @@
     "@singularity/plugin-packages-sleep-clock": ["@singularity/plugin-packages-sleep-clock@workspace:plugins/packages/plugins/sleep-clock"],
 
     "@singularity/plugin-packages-smooth-clock": ["@singularity/plugin-packages-smooth-clock@workspace:plugins/packages/plugins/smooth-clock"],
+
+    "@singularity/plugin-packages-spawn-disclaim": ["@singularity/plugin-packages-spawn-disclaim@workspace:plugins/packages/plugins/spawn-disclaim"],
 
     "@singularity/plugin-packages-spawn-priority": ["@singularity/plugin-packages-spawn-priority@workspace:plugins/packages/plugins/spawn-priority"],
 

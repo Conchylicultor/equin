@@ -6,6 +6,7 @@ import {
   readFileSync,
   rmSync,
   statSync,
+  writeFileSync,
 } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { userInfo } from "node:os";
@@ -32,10 +33,12 @@ import { backgroundPrefix } from "@plugins/packages/plugins/spawn-priority/serve
 import { launchAccount, type AgentLaunchOptions } from "../../core";
 import { liveAgentIds } from "./agent-processes";
 import { readClaudeUsage } from "./claude-usage";
+import { resolveDisclaimExec } from "./disclaim";
 import {
   AGENT_SCRIPT,
   agentDir,
   agentLogPath,
+  agentOptionsPath,
   agentPidPath,
   agentSocketPath,
   claudeUsagePath,
@@ -116,9 +119,11 @@ export function nextLaunchAccount(): string {
 }
 
 /**
- * Start the agent process for `id`, from the options file already written in
- * its directory. Its stdout and stderr (the human log, the SDK's and the CLI's
- * warnings, a crash before the first event) append to `agent.log`.
+ * Start the agent process for `id` with `options`, written here as its
+ * options file — with this start's own `disclaimExec` (whatever `options`
+ * carried from a previous launch is replaced). Its stdout and stderr (the
+ * human log, the SDK's and the CLI's warnings, a crash before the first event)
+ * append to `agent.log`.
  */
 export async function startAgentProcess(
   id: string,
@@ -137,6 +142,14 @@ export async function startAgentProcess(
     });
   }
   mkdirSync(agentDir(id), { recursive: true });
+  writeFileSync(
+    agentOptionsPath(id),
+    JSON.stringify(
+      { ...options, disclaimExec: await resolveDisclaimExec(id) },
+      null,
+      2,
+    ),
+  );
   const account = chooseLaunchAccount();
   const command =
     backgroundPrefix() +

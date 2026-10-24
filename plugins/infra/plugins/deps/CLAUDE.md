@@ -237,7 +237,7 @@ module eval).
   `outputs`, which are what `isIntact` checks. No updater: a frozen dataset says
   `updates: { none }` (first user: `apps/chord/song-index`'s `sheetsage-dumps`).
 - `build` — the `build` kind (`build`, `builtFile`, its `deps/` barrel):
-  `build({ inputs: [globs], tool: { versionArgv }, output, run, targets?, admission? })`.
+  `build({ inputs: [globs], tool: { versionArgv }, output, run, then?, targets?, admission? })`.
   Identity = sha256 of every file the `git ls-files` globs match at the root
   (tracked + untracked-not-ignored, read from the working tree; a glob matching
   nothing throws), the tool's version output, and the target platform/arch.
@@ -378,6 +378,7 @@ torch.
     - `apps/prototypes/thumbnails`
     - `apps/sonata/transcription`
     - `infra/audio-analysis`
+    - `infra/codesign`
     - `infra/deps/build`
     - `infra/launcher`
     - `infra/mcp/browser`
@@ -385,6 +386,7 @@ torch.
     - `integrations/youtube`
     - `menu-bar`
     - `packages/signal-origin`
+    - `packages/spawn-disclaim`
 - Deps:
   - Exports (types):
     - `BundleSpec`

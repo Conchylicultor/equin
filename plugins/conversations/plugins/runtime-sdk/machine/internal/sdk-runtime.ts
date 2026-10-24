@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { z } from "zod";
 import type {
   ConversationRuntime,
@@ -40,7 +40,7 @@ import {
   startConsumer,
   waitForProjection,
 } from "./consumer";
-import { agentDir, agentEventsPath, agentOptionsPath } from "./paths";
+import { agentEventsPath, agentOptionsPath } from "./paths";
 import {
   attachRunningAgents,
   awaitAgentExit,
@@ -93,11 +93,6 @@ function eventsExist(id: string): boolean {
   return [path, `${path}.1`, `${path}.2`, `${path}.3`].some((p) =>
     existsSync(p),
   );
-}
-
-function writeOptions(id: string, options: AgentLaunchOptions): void {
-  mkdirSync(agentDir(id), { recursive: true });
-  writeFileSync(agentOptionsPath(id), JSON.stringify(options, null, 2));
 }
 
 function readOptions(id: string): AgentLaunchOptions {
@@ -270,7 +265,6 @@ async function moveOffSpentAccount(id: string): Promise<void> {
   if (nextLaunchAccount() === row.account) return;
   const relaunch = continueRelaunchOptions(readOptions(id), row.sessionId);
   await stopAgent(id);
-  writeOptions(id, relaunch);
   await recordLaunchSession(id, relaunch.sessionId);
   await awaitStart(id, await startAgentProcess(id, relaunch));
 }
@@ -339,7 +333,6 @@ export const sdkRuntime: ConversationRuntime = {
     await prepareAgentRow(id, cwd, !fresh, options.sessionId);
     if (fresh) forgetPosition(id);
     adoptAgent(id);
-    writeOptions(id, options);
     await awaitStart(id, await startAgentProcess(id, options));
   },
 
@@ -380,7 +373,6 @@ export const sdkRuntime: ConversationRuntime = {
       promptUuid: settled.lastPromptUuid,
     });
     await stopAgent(id);
-    writeOptions(id, relaunch);
     await recordLaunchSession(id, relaunch.sessionId);
     await startAgentProcess(id, relaunch);
     await waitForProjection(
