@@ -1,4 +1,5 @@
 import { defineApp } from "@plugins/primitives/plugins/pane/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 /**
  * The desktop — the floating-window surface mode, as an app. It has a name,
@@ -13,7 +14,7 @@ export const desktopApp = defineApp({
   id: "desktop",
   name: "Desktop",
   basePath: "/desktop",
-  iconKey: "desktop-windows",
+  icon: symbol("desktop-windows"),
 });
 
 /**

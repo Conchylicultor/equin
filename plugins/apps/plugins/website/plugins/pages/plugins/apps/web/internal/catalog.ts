@@ -22,7 +22,7 @@ export interface CatalogApp {
   id: string;
   name: string;
   category: AppCategoryId;
-  /** The glyph the app's own definition declares (`appIcon(symbol(…))`), so the card wears the icon the rail draws. */
+  /** The glyph the app's own definition declares (`defineApp({ icon: symbol(…) })`), so the card wears the icon the rail draws. */
   icon: SymbolRef;
   /** The tile's colour, one categorical palette slot. */
   color: AvatarColor;

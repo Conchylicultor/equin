@@ -5,7 +5,8 @@
 // segment param substitution and `:param` name inference.
 // ---------------------------------------------------------------------------
 
-import type { SymbolName } from "@plugins/ui/plugins/icons/core";
+import type { AvatarColor } from "@plugins/primitives/plugins/avatar/core";
+import type { SymbolRef } from "@plugins/ui/plugins/icons/core";
 
 // ---------------------------------------------------------------------------
 // Type machinery — extract `:param`, `:param*` and `:param?` names from a path
@@ -99,26 +100,66 @@ export interface AppRef {
   /** App base path, e.g. "/agents", "/pages", or "/" for the root app. */
   readonly basePath: string;
   /**
-   * The Material Symbols name of this app's icon (e.g. "piano", "bug-report"),
-   * which the release CLI reads statically to draw the app's favicon / window
-   * icon. Must match the `symbol("…")` the web shell passes to
-   * `Apps.App({ icon: appIcon(symbol("…")) })` — enforced by the
-   * `app-icon:key-in-sync` check.
+   * The app's icon glyph (`symbol("piano")`) — THE single place it is authored.
+   * Every surface drawing the app reads it from here: the launchers and rail
+   * (through `Apps.App`, which derives its icon from it), the server's web-app
+   * manifest and icon PNGs, the release CLI's favicon / window icon. A
+   * `symbol("…")` literal, so the icon manifest ships its glyph.
    */
-  readonly iconKey: SymbolName;
+  readonly icon: SymbolRef;
+  /**
+   * The app's declared tile colour. Omitted, every surface derives one from the
+   * app id, so only an app whose colour is part of its identity declares it.
+   */
+  readonly iconColor?: AvatarColor;
+  /**
+   * How the app picks light or dark by default (see {@link AppColorMode}).
+   * Omitted, it follows the global setting — so only an app whose scheme is
+   * part of its identity declares it. The user can still override it per app;
+   * theme-engine resolves the two (`effectiveColorMode`).
+   */
+  readonly colorMode?: AppColorMode;
+  /**
+   * `false` keeps the app out of every launcher — the rail, the app galleries
+   * and launchers, the installable set — for an app that is opened at its URL
+   * by something outside equin rather than picked from inside it (the
+   * menu-bar panel the native helper loads). Omitted, the app is listed.
+   */
+  readonly listed?: false;
 }
+
+/**
+ * An app's DEFAULT colour scheme, declared once on `defineApp`:
+ *
+ *  - `global` — follow the global light/dark setting (what an app that
+ *    declares nothing does);
+ *  - `system` — follow the OS `prefers-color-scheme`, live;
+ *  - `light` / `dark` — always that scheme.
+ */
+export type AppColorMode = (typeof APP_COLOR_MODES)[number];
+
+/** Every {@link AppColorMode}, in the order a picker lists them. */
+export const APP_COLOR_MODES = ["global", "system", "light", "dark"] as const;
 
 export function defineApp(def: {
   id: string;
   name: string;
   basePath: string;
-  iconKey: SymbolName;
+  icon: SymbolRef;
+  iconColor?: AvatarColor;
+  colorMode?: AppColorMode;
+  listed?: false;
 }): AppRef {
   return Object.freeze({
     id: def.id,
     name: def.name,
     basePath: def.basePath,
-    iconKey: def.iconKey,
+    icon: def.icon,
+    ...(def.iconColor !== undefined && { iconColor: def.iconColor }),
+    // "global" is what omission means: stored only when it says something.
+    ...(def.colorMode !== undefined &&
+      def.colorMode !== "global" && { colorMode: def.colorMode }),
+    ...(def.listed === false && { listed: false as const }),
   });
 }
 

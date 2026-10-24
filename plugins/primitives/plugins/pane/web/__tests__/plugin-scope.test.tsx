@@ -15,6 +15,7 @@ import {
   type PaneSlot,
 } from "@plugins/primitives/plugins/pane/web";
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 // A `PluginScope` renders its subtree as another composition: slot reads see
 // only the scope's plugins, `useComposition()` answers the scope — except for
@@ -27,13 +28,13 @@ const outerApp = defineApp({
   id: "scope-outer",
   name: "Outer",
   basePath: "/scope-outer",
-  iconKey: "science",
+  icon: symbol("science"),
 });
 const innerApp = defineApp({
   id: "scope-inner",
   name: "Inner",
   basePath: "/scope-inner",
-  iconKey: "science",
+  icon: symbol("science"),
 });
 const outerPane = Pane.define({
   route: defineRoute({ id: "scope-outer-list", segment: "outer-list" }),

@@ -24,7 +24,9 @@ App shell for Studio. Registers the /studio app entry and defines Studio.Sidebar
     - `primitives/slot-render.defineRenderSlot`
   - Exports (values): `Studio`
 - Core:
-  - Uses: `primitives/pane.defineApp`
+  - Uses:
+    - `primitives/pane.defineApp`
+    - `ui/icons.symbol`
   - Exports (values): `studioApp`
 - Cross-plugin:
   - Imported by:

@@ -13,6 +13,7 @@ import {
 } from "@plugins/primitives/plugins/pane/web";
 import { defaultStore } from "../testing";
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 // Proves the per-tab pane-store isolation invariants the multi-tab refactor
 // relies on. Each app tab owns its own `PaneStore` (independent route +
@@ -30,7 +31,7 @@ const testApp = defineApp({
   id: "iso-app",
   name: "Isolation test app",
   basePath: "/iso-app",
-  iconKey: "science",
+  icon: symbol("science"),
 });
 
 const testRoute = defineRoute({ id: "iso-test", segment: "iso/:id" });

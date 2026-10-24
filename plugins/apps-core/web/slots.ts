@@ -9,7 +9,10 @@ import {
   type RenderSlot,
 } from "@plugins/primitives/plugins/slot-render/web";
 import type { AppRef } from "@plugins/primitives/plugins/pane/core";
-import type { AppIcon } from "@plugins/apps-core/plugins/app-icon/core";
+import {
+  appIcon,
+  type AppIcon,
+} from "@plugins/apps-core/plugins/app-icon/core";
 import type { RailFramingProps } from "../core";
 
 /** One framing host that wraps the rail + app content; see RailFramingProps. */
@@ -60,17 +63,15 @@ export type AppLaunch =
 
 /**
  * One installed app, as its shell authors it. The app's identity — id, base
- * path, display name, icon key — is authored ONCE via `defineApp` in the
- * shell's `core/`, and handed here whole as {@link AppRef}. The contribution
+ * path, display name, icon and its colour — is authored ONCE via `defineApp` in
+ * the shell's `core/`, and handed here whole as {@link AppRef}. The contribution
  * restates none of it, so the two can never disagree.
  */
 interface AppEntryBase {
   /** The app itself (`defineApp(…)` from the shell's `core/app.ts`). */
   app: AppRef;
-  /** The app's canonical serializable icon descriptor (see {@link AppIcon}). */
-  icon: AppIcon;
   /** The app's brand mark — the icon heading its own chrome (the app
-   * launcher's button). Omitted, the launcher draws {@link icon}. For an app
+   * launcher's button). Omitted, the launcher draws {@link AppEntry.icon}. For an app
    * whose identity is a drawn logo rather than a glyph. */
   mark?: ComponentType<{ className?: string }>;
   /** The name heading the app's sidebar (the brand's `header` form), drawn
@@ -84,7 +85,18 @@ interface AppEntryBase {
   badge?: ComponentType<{ className?: string }>;
 }
 
-export type AppEntry = AppEntryBase & AppLaunch;
+/** What a shell hands `Apps.App`: the app and how it launches — no icon. */
+export type AppEntrySpec = AppEntryBase & AppLaunch;
+
+/**
+ * One installed app, as its readers see it: the authored {@link AppEntrySpec}
+ * plus its canonical icon descriptor, DERIVED from `app.icon` / `app.iconColor`
+ * by `Apps.App` — so no shell can draw an icon its `defineApp` does not name.
+ */
+export type AppEntry = AppEntrySpec & {
+  /** The app's canonical serializable icon descriptor (see {@link AppIcon}). */
+  icon: AppIcon;
+};
 
 const appSlot = defineRenderSlot<AppEntry>({
   docLabel: (p) => p.app.name,
@@ -92,15 +104,15 @@ const appSlot = defineRenderSlot<AppEntry>({
 
 /**
  * The `Apps.App` slot, with a call signature that accepts ONLY an
- * {@link AppEntry} — writing `id`, `path` or `tooltip` is a type error, because
- * there is nothing left to write them into.
+ * {@link AppEntrySpec} — writing `id`, `path`, `tooltip` or `icon` is a type
+ * error, because there is nothing left to write them into.
  *
  * Declared explicitly rather than inferred from `Object.assign`: an intersection
  * of two call signatures reads as an overload set, which would let an author
  * reach the raw slot's `id`-taking signature again.
  */
 export interface AppSlot {
-  (entry: AppEntry): Contribution;
+  (entry: AppEntrySpec): Contribution;
   id: string;
   useContributions: RenderSlot<AppEntry>["useContributions"];
   Render: RenderSlot<AppEntry>["Render"];
@@ -111,10 +123,15 @@ export interface AppSlot {
 }
 
 /** The contribution restates nothing about the app, so the framework-required
- *  contribution id is derived from the `AppRef` here — the one place it can be,
- *  and therefore the one value it can ever have. */
+ *  contribution id and the icon are derived from the `AppRef` here — the one
+ *  place they can be, and therefore the one value each can ever have. */
 const App: AppSlot = defineSlotFacade(
-  (entry: AppEntry) => appSlot({ ...entry, id: entry.app.id }),
+  (entry: AppEntrySpec) =>
+    appSlot({
+      ...entry,
+      id: entry.app.id,
+      icon: appIcon(entry.app.icon, { color: entry.app.iconColor }),
+    }),
   appSlot,
 ) as unknown as AppSlot;
 

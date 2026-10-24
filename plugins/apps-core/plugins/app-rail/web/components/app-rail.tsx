@@ -7,7 +7,7 @@ import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/we
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
-import { Apps, useActiveApp } from "@plugins/apps-core/web";
+import { Apps, isListedApp, useActiveApp } from "@plugins/apps-core/web";
 import { AppIconView } from "@plugins/apps-core/plugins/app-icon/web";
 import { chromeThemeScope } from "@plugins/apps-core/plugins/chrome-theme/web";
 import { useActivateApp } from "@plugins/apps-core/plugins/tabs/web";
@@ -34,7 +34,9 @@ export function AppRail() {
       className="relative z-nav w-(--app-rail-width) shrink-0 border-r py-xs"
     >
       <Apps.App.Render>
-        {(entry) => (
+        {(entry) =>
+          // An unlisted app (the menu-bar panel) is opened from outside equin.
+          !isListedApp(entry) ? null : (
           <WithTooltip content={entry.app.name} side="right">
             <Center
               as="button"
@@ -63,7 +65,8 @@ export function AppRail() {
               )}
             </Center>
           </WithTooltip>
-        )}
+          )
+        }
       </Apps.App.Render>
     </Theme>
   );

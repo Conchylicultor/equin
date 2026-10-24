@@ -22,6 +22,10 @@ import {
   themeDeclarationsManifestPath,
 } from "./theme-declarations-gen";
 import {
+  appDeclarationsManifestPath,
+  renderAppDeclarationsManifest,
+} from "./app-declarations-gen";
+import {
   companionManifestPath,
   renderCompanionManifest,
 } from "./companion-manifest-gen";
@@ -147,10 +151,13 @@ export const preBarrelManifests: readonly PreBarrelManifest[] = [
  *     plus `meta.reorderable` — facts that exist only once the web barrels have
  *     evaluated. Only `reorder/server` reads it (the server cannot see web
  *     slots); the web runtime derives the same set from the slot objects.
- *   - `themeDeclarations`, the token groups, themes and apps contributed to
- *     theme-engine's and apps-core's web slots, as data. Only
- *     `ui/theme-engine/server` reads it (to paint the first frame's theme CSS
- *     into the HTML); the web runtime reads the contributions themselves.
+ *   - `themeDeclarations`, the token groups and themes contributed to
+ *     theme-engine's web slots, as data. Only `ui/theme-engine/server` reads it
+ *     (to paint the first frame's theme CSS into the HTML); the web runtime
+ *     reads the contributions themselves.
+ *   - `appDeclarations`, the apps contributed to `Apps.App` (whole `AppRef` +
+ *     launch kind), as data. Read by `apps-core/server` (re-exported as
+ *     `declaredApps`) for the web-app manifests and the theme's first frame.
  */
 export const postWebManifests: readonly PreBarrelManifest[] = [
   {
@@ -162,6 +169,11 @@ export const postWebManifests: readonly PreBarrelManifest[] = [
     id: "themeDeclarations",
     path: themeDeclarationsManifestPath,
     render: renderThemeDeclarationsManifest,
+  },
+  {
+    id: "appDeclarations",
+    path: appDeclarationsManifestPath,
+    render: renderAppDeclarationsManifest,
   },
 ];
 

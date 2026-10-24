@@ -14,6 +14,8 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { notificationIdKind } from "../core";
 
 export { useToast, type Toast, type ToastArgs } from "./internal/toast";
+export { useNotificationArrivals } from "./internal/use-notification-arrivals";
+export type { Notification } from "../shared/resources";
 
 export default {
   description:

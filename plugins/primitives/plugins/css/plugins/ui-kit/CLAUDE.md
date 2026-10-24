@@ -601,30 +601,31 @@ guard: `confirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `ui/tokens/font-family` ×4
     - `ui/tokens/material` ×4
     - `ui/tokens/scrollbar --scrollbar-color`
-  - Imported by: 429 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 433 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×109
     - `apps` ×95
     - `conversations` ×55
     - `page` ×25
     - `debug` ×23
     - `ui` ×21
-    - `tasks` ×16
+    - `tasks` ×17
     - `fields` ×11
     - `plugin-meta` ×10
     - `apps-core` ×7
     - `reorder` ×6
     - `build` ×5
     - `review` ×5
+    - `shell` ×5
     - `auth` ×4
     - `config_v2` ×4
     - `infra` ×4
     - `integrations` ×4
-    - `shell` ×4
     - `active-data` ×3
     - `backup` ×2
     - `framework` ×2
     - `hints` ×2
     - `layouts` ×2
+    - `menu-bar` ×2
     - `screenshot` ×2
     - `code-explorer/commit-detail`
     - `history/dialog`

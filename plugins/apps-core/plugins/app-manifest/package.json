@@ -1,0 +1,8 @@
+{
+  "name": "@singularity/plugin-apps-core-app-manifest",
+  "private": true,
+  "version": "0.0.1",
+  "dependencies": {
+    "@resvg/resvg-js": "^2.6.2"
+  }
+}

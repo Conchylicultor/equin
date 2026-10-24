@@ -33,10 +33,29 @@ import {
  * a different theme than the focused app.
  */
 export function useRootThemeScope(): string | undefined {
+  const root = useRootThemeScopeState();
+  return root.known ? root.scopeId : undefined;
+}
+
+/**
+ * {@link useRootThemeScope}, with the window before the surface has registered
+ * its placements as a state of its own (`known: false`) rather than folded into
+ * "no app scope". A reader that must not paint a guess over the server's first
+ * frame — the `<html>.dark` class, which the server already set for the app
+ * the page opens — waits it out instead of applying the desktop's answer for
+ * one frame.
+ */
+export function useRootThemeScopeState():
+  { known: false } | { known: true; scopeId: string | undefined } {
   const activeApp = useActiveApp();
   const mode = useSurfaceMode();
   const placements = usePlacementCapabilities();
-  return placementHasAppThemeScope(placements, mode) && activeApp
-    ? appThemeScope(activeApp.id)
-    : undefined;
+  if (placements === null) return { known: false };
+  return {
+    known: true,
+    scopeId:
+      placementHasAppThemeScope(placements, mode) && activeApp
+        ? appThemeScope(activeApp.id)
+        : undefined,
+  };
 }

@@ -13,12 +13,13 @@ import {
   type TourRun,
   transitionTour,
 } from "./tour-machine";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const app = defineApp({
   id: "home",
   name: "Home",
   basePath: "/home",
-  iconKey: "home",
+  icon: symbol("home"),
 });
 const a = defineHintAnchor("t.a");
 const sent = defineHintSignal<{ taskId: string }>("t.sent");

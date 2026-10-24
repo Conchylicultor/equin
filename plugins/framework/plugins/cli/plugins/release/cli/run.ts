@@ -248,11 +248,11 @@ function writeDmgBackground(productName: string, outPath: string): void {
 function findDefineAppIconKey(node: PluginNode): SymbolName | null {
   const app = readDefineApp(node);
   if (app) {
-    // `defineApp` types `iconKey` as a SymbolName, so tsc has checked this literal.
+    // `defineApp` types `icon` as a `symbol(SymbolName)`, so tsc has checked this literal.
     if (app.iconKey !== null) return app.iconKey as SymbolName;
     throw new Error(
-      `release: ${app.file} calls defineApp(...) without an iconKey. ` +
-        `Add iconKey: "<material-symbols-name>" so the app is releasable.`,
+      `release: ${app.file} calls defineApp(...) without a literal \`icon: symbol("…")\`. ` +
+        `Write icon: symbol("<material-symbols-name>") so the app is releasable.`,
     );
   }
   for (const child of node.children) {
@@ -318,8 +318,8 @@ async function resolveCompositionIconKey(opts: {
   throw new Error(
     `release: composition "${composition}" (entry points ${entryPoints.join(
       ", ",
-    )}) has no app shell core declaring defineApp({ iconKey }). ` +
-      `App compositions must point at an app whose shell core declares an iconKey.`,
+    )}) has no app shell core declaring defineApp({ icon }). ` +
+      `App compositions must point at an app whose shell core declares an icon.`,
   );
 }
 

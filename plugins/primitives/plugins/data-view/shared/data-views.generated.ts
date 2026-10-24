@@ -61,6 +61,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "infra.deps.dependencies", pluginId: "infra.deps" },
   { id: "mail-search", pluginId: "apps.mail.search" },
   { id: "mail-threads", pluginId: "apps.mail.threads" },
+  { id: "menu-bar.apps", pluginId: "menu-bar.app-grid" },
   { id: "page.links.backlinks", pluginId: "page.links" },
   { id: "pages-sidebar", pluginId: "apps.pages.page-tree" },
   { id: "pages.trash", pluginId: "apps.pages.trash" },

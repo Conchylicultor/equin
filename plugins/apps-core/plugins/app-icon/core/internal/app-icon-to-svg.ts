@@ -22,8 +22,9 @@ export interface AppIconGlyph {
  * Rasterizable SVG markup for an app icon's glyph. Runtime-agnostic, pure, and
  * synchronous — the release CLI resolves the app's symbol to its glyph and feeds
  * this to resvg to mint favicon / Tauri window icons without a browser. The
- * `<g fill>` replaces the web's `currentColor` inheritance, since the rasterizer
- * has no ambient color.
+ * `<g fill color>` replaces the web's `currentColor` inheritance, since the
+ * rasterizer has no ambient color: `fill` for a glyph that inherits it, `color`
+ * for one whose paths say `fill="currentColor"` (Material Symbols do).
  */
 export function appIconToSvg(
   glyph: AppIconGlyph,
@@ -46,7 +47,7 @@ export function appIconToSvg(
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">` +
     bg +
-    `<g transform="translate(${translate},${translate}) scale(${scale})" fill="${foreground}">` +
+    `<g transform="translate(${translate},${translate}) scale(${scale})" fill="${foreground}" color="${foreground}">` +
     glyph.body +
     `</g>` +
     `</svg>`

@@ -11,13 +11,14 @@ import { type PaneStore, Pane } from "@plugins/primitives/plugins/pane/web";
 import { usePaneRoute } from "../pane";
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { createTestSurfaceStore, TestSurface } from "../testing";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 // Local fixture app — this suite is about URL resolution, not pane homes.
 const testApp = defineApp({
   id: "st-app",
   name: "Settle-then-register test app",
   basePath: "/app",
-  iconKey: "science",
+  icon: symbol("science"),
 });
 
 const indexRoute = defineRoute({ id: "st-index", segment: "" });

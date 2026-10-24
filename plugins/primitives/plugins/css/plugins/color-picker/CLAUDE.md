@@ -54,6 +54,7 @@
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shadow --shadow-sm`
   - Imported by:
+    - `apps-core/app-icon`
     - `apps/prototypes/canvas`
     - `apps/prototypes/files`
     - `apps/sonata/track-mixer`

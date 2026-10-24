@@ -1,12 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps-core/web";
-import { appIcon } from "@plugins/apps-core/plugins/app-icon/core";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { chordApp } from "../core";
 import { ChordLayout } from "./components/chord-layout";
 import { ChordLogo } from "./components/chord-logo";
 import { chordTheme } from "./internal/theme";
-import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -14,7 +12,6 @@ export default {
   contributions: [
     Apps.App({
       app: chordApp,
-      icon: appIcon(symbol("queue-music")),
       mark: ChordLogo,
       component: ChordLayout,
     }),

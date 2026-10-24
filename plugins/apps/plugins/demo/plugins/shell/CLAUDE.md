@@ -17,7 +17,9 @@
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
 - Core:
-  - Uses: `primitives/pane.defineApp`
+  - Uses:
+    - `primitives/pane.defineApp`
+    - `ui/icons.symbol`
   - Exports (values): `demoApp`
 - Cross-plugin:
   - Uses tokens:

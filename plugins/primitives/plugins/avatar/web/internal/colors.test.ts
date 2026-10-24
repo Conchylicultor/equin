@@ -1,9 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { AVATAR_COLOR_NAMES } from "../../core";
+import { AVATAR_COLOR_NAMES, avatarColorPick } from "../../core";
 import {
   AVATAR_COLORS,
   avatarColorClass,
-  avatarColorPick,
   avatarFlatClass,
   avatarSoftClass,
 } from "./colors";

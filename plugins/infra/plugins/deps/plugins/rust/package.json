@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-infra-deps-rust",
+  "version": "0.0.1",
+  "private": true,
+  "description": "The rust installer kind of infra/deps, on top of the build kind: cargoBuild({ crate, bin }) (its deps barrel) builds a plugin's rust/ crate with cargo build --release --locked under the mise-pinned toolchain into a shared cargo target dir (the cargo-target cache data dir), its identity every crate file plus rustc -vV; cargoBinary(ready) is the built binary. Bans spawning cargo outside it (rust/no-bare-cargo). Its cargo-updater sub-plugin keeps every rust/ crate's Cargo.lock current."
+}

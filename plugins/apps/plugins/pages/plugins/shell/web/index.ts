@@ -1,7 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps-core/web";
 
-import { appIcon } from "@plugins/apps-core/plugins/app-icon/core";
 import { pagesApp } from "../core";
 import { PagesLayout } from "./components/pages-layout";
 import {
@@ -9,7 +8,6 @@ import {
   PagesWorkspaceName,
 } from "./components/pages-workspace";
 import { Pages } from "./slots";
-import { symbol } from "@plugins/ui/plugins/icons/core";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { pagesInkTheme } from "./internal/theme";
 
@@ -22,7 +20,6 @@ export default {
   contributions: [
     Apps.App({
       app: pagesApp,
-      icon: appIcon(symbol("description")),
       // The sidebar's brand is the workspace: the user's initial tile (still
       // the app launcher) and "<first name>'s pages".
       mark: PagesWorkspaceMark,

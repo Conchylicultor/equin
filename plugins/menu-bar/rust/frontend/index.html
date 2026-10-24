@@ -1,0 +1,106 @@
+<!doctype html>
+<!--
+  The panel's offline page, bundled into equin-desktop: shown instead of
+  http://<namespace>.localhost:9000/home/menu-bar when nothing answers on the
+  gateway's port (only an outside process can say the gateway is absent).
+  Start asks the helper to start the gateway's login service; the helper loads
+  the panel once the gateway answers. Standalone — no class attributes (it is
+  not part of the Tailwind frontend; tailwind-scan-covers-classes).
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>equin isn't running</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #161618;
+        color: #e4e4e7;
+        font: 13px -apple-system, system-ui, sans-serif;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      main {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 24px;
+        box-sizing: border-box;
+        text-align: center;
+      }
+      svg {
+        width: 40px;
+        height: 40px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 600;
+      }
+      p {
+        margin: 0;
+        color: #a1a1aa;
+        max-width: 260px;
+      }
+      button {
+        font: inherit;
+        font-weight: 600;
+        color: #fff;
+        background: #3b82f6;
+        border: 0;
+        border-radius: 7px;
+        padding: 7px 18px;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: default;
+      }
+      #error {
+        color: #f87171;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <svg viewBox="0 0 100 100" fill="none" aria-hidden="true">
+        <path
+          d="M 50 10 A 40 40 0 1 1 10 50 A 27 27 0 1 0 64 50 A 14 14 0 1 1 36 50"
+          stroke="#a1a1aa"
+          stroke-width="12"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+      <h1>equin isn't running</h1>
+      <p>Nothing answers on localhost:9000.</p>
+      <button id="start" type="button">Start</button>
+      <p id="error" hidden></p>
+    </main>
+    <script>
+      const start = document.getElementById("start");
+      const error = document.getElementById("error");
+      start.addEventListener("click", async () => {
+        start.disabled = true;
+        start.textContent = "Starting…";
+        error.hidden = true;
+        try {
+          // Resolves once the gateway answers; the helper then loads the panel.
+          await window.__TAURI_INTERNALS__.invoke("start_gateway");
+        } catch (err) {
+          error.textContent = String(err);
+          error.hidden = false;
+          start.disabled = false;
+          start.textContent = "Start";
+        }
+      });
+    </script>
+  </body>
+</html>

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
-import { Apps, isTabApp } from "@plugins/apps-core/web";
+import { Apps, isListedApp, isTabApp } from "@plugins/apps-core/web";
 import { useTabs } from "@plugins/apps-core/plugins/tabs/web";
 import type { AppIcon } from "@plugins/apps-core/plugins/app-icon/core";
 import { isNodeData, useReorderedEntries } from "@plugins/reorder/web";
@@ -43,6 +43,7 @@ export function useLauncherApps(): LauncherApp[] {
         .filter((e) => !isNodeData(e))
         .map((e) => e as unknown as (typeof contributions)[number])
         .filter(isTabApp)
+        .filter(isListedApp)
         .map((a) => ({
           id: a.id,
           name: a.app.name,

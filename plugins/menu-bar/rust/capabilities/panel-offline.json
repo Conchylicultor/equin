@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "panel-offline",
+  "description": "The bundled \"equin isn't running\" page (local, in the panel window): its Start button, nothing else.",
+  "windows": ["panel"],
+  "permissions": ["allow-start-gateway"]
+}

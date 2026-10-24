@@ -439,8 +439,8 @@ export interface GatewayLaunchOptions {
 /**
  * How to run the gateway — argv, working dir, environment, and where its raw
  * stdio goes — as data. The ONE derivation of a gateway launch: the detached
- * spawn ({@link spawnGatewayDaemon}) and the launchd job `./equin start`
- * registers on macOS (`login-service.ts`) are both rendered from it, so the two
+ * spawn ({@link spawnGatewayDaemon}) and the login service `./equin start`
+ * registers (`gatewayServiceJob`, rendered by `launcher/login-services`) are both derived from it, so the two
  * ways the gateway gets started cannot drift apart.
  *
  * The gateway starts from the DECLARED runtime environment, not from ours:

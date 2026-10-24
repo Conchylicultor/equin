@@ -1,24 +1,22 @@
-import { existsSync } from "fs";
 import { join } from "path";
-import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
-import { importBarrel } from "@plugins/plugin-meta/plugins/barrel-import/core";
-import { buildBarrelFreeTree } from "./barrel-free-tree";
-import { declareSlotsFromBarrels } from "./slot-declaration-guard";
-import { mainBundle } from "./main-bundle";
+import {
+  collectWebSlotContributions,
+  type WebSlotContribution,
+} from "./web-slot-contributions";
 
 /**
  * Generates the theme-declarations manifest: every token group, code theme,
- * sub-theme and fixed theme the browser registers, plus every app's id and base
- * path — as plain data, for the SERVER, which paints the first frame's theme CSS
+ * sub-theme and fixed theme the browser registers — as plain data, for the SERVER, which paints the first frame's theme CSS
  * into the HTML (theme-engine's document head) and cannot see web slots.
  *
  * A pure-data bridge for ONE runtime, the reorderable-slots pattern: the web
  * runtime holds the contributions themselves and reads no generated file, so
  * this is a post-web manifest — written after the web barrels evaluated, before
  * any server barrel imports it. Generic: it collects whatever contributes to the
- * four theme-engine slots and the app slot, keyed on slot id, never naming a
- * contributor. Only what painting reads is kept: a token group's id, schema and
- * vars (not its typed `fragment` builder), an app's id and base path.
+ * four theme-engine slots, keyed on slot id, never naming a contributor. Only
+ * what painting reads is kept: a token group's id, schema and vars (not its
+ * typed `fragment` builder). Apps (id → base path) come from apps-core's own
+ * post-web manifest (`app-declarations-gen.ts`).
  *
  * Registry-scoped, like the declaration pass it rides: a plugin the app's
  * composition does not bundle is not loaded by the browser, so its themes are
@@ -30,7 +28,6 @@ const SLOT_IDS = {
   codeThemes: "ui.theme-engine.theme",
   subThemes: "ui.theme-engine.sub-theme",
   fixedThemes: "ui.theme-engine.fixed-theme",
-  apps: "apps-core.app",
 } as const;
 
 type Section = keyof typeof SLOT_IDS;
@@ -44,59 +41,26 @@ const MANIFEST_HEADER = [
   "// (see plugins/framework/plugins/tooling/plugins/codegen/core/theme-declarations-gen.ts).",
   "//",
   "// Every token group, code theme, sub-theme and fixed theme the browser registers",
-  "// (their theme-engine web-slot contributions), and every app's id and base path",
-  "// (Apps.App), as data. Read by the SERVER only, which paints the first frame's",
-  "// theme CSS into the HTML; the web runtime reads the contributions themselves.",
+  "// (their theme-engine web-slot contributions), as data. Read by the SERVER only,",
+  "// which paints the first frame's theme CSS into the HTML; the web runtime reads",
+  "// the contributions themselves.",
   "//",
   "// The `theme-declarations-in-sync` check fails on drift.",
 ].join("\n");
 
-type Contribution = Record<string, unknown> & { _slot?: SlotHandle };
-
 async function collectThemeDeclarations(
   root: string,
 ): Promise<Record<Section, unknown[]>> {
-  const tree = await buildBarrelFreeTree(root);
-  // The one registry declaration pass — it imports every bundled web barrel and
-  // stamps every slot's owner, so each contribution's slot can be named.
-  const naming = await declareSlotsFromBarrels(root, "registry");
-  const bundle = mainBundle(tree, root);
-  const sectionBySlotId = new Map<string, Section>(
-    (Object.entries(SLOT_IDS) as [Section, string][]).map(([s, id]) => {
-      // Resolved here so a stale id fails at this line instead of matching nothing.
-      naming.slotNamed(id);
-      return [id, s];
-    }),
-  );
-
-  const out: Record<Section, unknown[]> = {
-    tokenGroups: [],
-    codeThemes: [],
-    subThemes: [],
-    fixedThemes: [],
-    apps: [],
-  };
-  for (const node of tree.byDir.values()) {
-    if (!bundle.has(node.id)) continue;
-    const webIndex = join(node.dir, "web", "index.ts");
-    if (!existsSync(webIndex)) continue;
-    // An ESM-cache hit: the declaration pass above imported it.
-    const mod = await importBarrel(webIndex);
-    const def = mod.default as { contributions?: Contribution[] } | undefined;
-    for (const c of def?.contributions ?? []) {
-      if (c._slot === undefined) continue;
-      const lookup = naming.idOf(c._slot);
-      if (lookup.kind !== "named") continue;
-      const section = sectionBySlotId.get(lookup.id);
-      if (section === undefined) continue;
-      out[section].push(project(section, c));
-    }
+  const found = await collectWebSlotContributions(root, SLOT_IDS);
+  const out = {} as Record<Section, unknown[]>;
+  for (const section of Object.keys(SLOT_IDS) as Section[]) {
+    out[section] = found[section].map((c) => project(section, c));
   }
   return out;
 }
 
 /** What painting reads off one contribution — data only, in a stable key order. */
-function project(section: Section, c: Contribution): unknown {
+function project(section: Section, c: WebSlotContribution): unknown {
   switch (section) {
     case "tokenGroups": {
       const d = c.descriptor as {
@@ -105,10 +69,6 @@ function project(section: Section, c: Contribution): unknown {
         vars: unknown;
       };
       return { id: d.id, schema: d.schema, vars: d.vars };
-    }
-    case "apps": {
-      const app = c.app as { id: string; basePath: string };
-      return { id: app.id, basePath: app.basePath };
     }
     case "codeThemes":
     case "subThemes":
@@ -129,7 +89,6 @@ const SECTION_TYPES: Record<Section, string> = {
   codeThemes: "Theme[]",
   subThemes: "SubTheme[]",
   fixedThemes: "FixedTheme[]",
-  apps: "{ id: string; basePath: string }[]",
 };
 
 function renderManifest(data: Record<Section, unknown[]>): string {

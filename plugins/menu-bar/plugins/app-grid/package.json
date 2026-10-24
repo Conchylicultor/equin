@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-menu-bar-app-grid",
+  "description": "The menu-bar panel's app grid: every app with a URL as the compact icons DataView, drag-reorderable, badged, a tile opening its app in the browser through the helper.",
+  "private": true,
+  "version": "0.0.1"
+}

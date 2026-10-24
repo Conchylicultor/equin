@@ -1,7 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps-core/web";
-import { appIcon } from "@plugins/apps-core/plugins/app-icon/core";
-import { symbol } from "@plugins/ui/plugins/icons/core";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { desktopTheme } from "./internal/theme";
 import { ConfigV2 } from "@plugins/config_v2/web";
@@ -20,7 +18,6 @@ export default {
   contributions: [
     Apps.App({
       app: desktopApp,
-      icon: appIcon(symbol("desktop-windows")),
       surfaceMode: DESKTOP_PLACEMENT_ID,
     }),
     // The desktop chrome's theme, selected for the desktop app in

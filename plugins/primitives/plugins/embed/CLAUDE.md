@@ -39,8 +39,10 @@ durability; the boot-time read is what makes it correct.
 Two different questions, each with its own function — pick by what the branch
 is about:
 
-- `isChromelessDocument()` — "do I draw the app chrome?" Only the `chromeless`
-  mode says no.
+- `isChromelessDocument()` — "do I draw the app chrome?" The `chromeless`
+  mode says no, and so does an installed app's own window
+  (`display-mode: standalone`, read once — `apps-core/app-manifest`), which is
+  not embedded (it owns its storage) but is just the app.
 - `isEmbeddedDocument()` — "am I hosted by another page on this origin?" Both
   modes say yes.
 - `isFramedDocument()` — "am I inside a frame?" (`window.parent !== window`),

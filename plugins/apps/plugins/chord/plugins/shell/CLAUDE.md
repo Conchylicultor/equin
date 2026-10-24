@@ -34,7 +34,9 @@ The Chord app's identity and frame.
     - `primitives/css/ui-kit.cn`
     - `ui/theme-engine.ThemeEngine`
 - Core:
-  - Uses: `primitives/pane.defineApp`
+  - Uses:
+    - `primitives/pane.defineApp`
+    - `ui/icons.symbol`
   - Exports (values): `chordApp`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/font-family --font-serif`

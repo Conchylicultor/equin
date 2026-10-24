@@ -124,7 +124,6 @@ color palette.
     - `primitives/icon-picker.IconPicker`
     - `ui/icons.Icon`
   - Exports (types):
-    - `AvatarColorPick`
     - `AvatarPickerProps`
     - `AvatarPresentation`
     - `AvatarProps`
@@ -175,8 +174,11 @@ color palette.
 - Core:
   - Exports (types):
     - `AvatarColor`
+    - `AvatarColorPick`
     - `AvatarShape`
-  - Exports (values): `AVATAR_COLOR_NAMES`
+  - Exports (values):
+    - `AVATAR_COLOR_NAMES`
+    - `avatarColorPick`
 - Test helpers:
   - Web: `@plugins/primitives/plugins/avatar/web/testing`
     - `AVATAR_COLORS`

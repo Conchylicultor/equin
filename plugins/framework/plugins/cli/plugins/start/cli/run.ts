@@ -25,13 +25,21 @@ import {
   awaitGatewayReady,
   awaitProcessGone,
   terminateProcess,
-  gatewayLoginService,
   resolveListenAddress,
   LISTEN_ENV,
-  GATEWAY_SERVICE_LABEL,
+  GATEWAY_SERVICE,
+  gatewayServiceJob,
   type GatewayLaunchOptions,
-  type GatewayLoginService,
 } from "@plugins/infra/plugins/launcher/server";
+import {
+  declaredLoginServices,
+  loginServiceHolder,
+  loginServiceId,
+  loginServiceJob,
+  loginServiceManager,
+  type LoginService,
+  type LoginServiceManager,
+} from "@plugins/infra/plugins/launcher/plugins/login-services/machine";
 
 // The dev gateway always listens on the default port: every backend reaches
 // central through `localhost:9000`.
@@ -52,9 +60,12 @@ const run: CliAction<[], Opts> = async (opts) => {
   // the same embedded cluster, so the same machine facts have to hold.
   assertSupportedHost();
 
-  const service = gatewayLoginService();
-  if (service) await startAsLoginService(service, opts);
+  const manager = loginServiceManager();
+  if (manager)
+    await startAsLoginService(manager.service(GATEWAY_SERVICE), opts);
   else await startDetached(opts);
+  // Then every login service a plugin declares — none named here.
+  await startDeclaredLoginServices(manager, opts);
 };
 
 /**
@@ -64,7 +75,7 @@ const run: CliAction<[], Opts> = async (opts) => {
  * the job, (re)loads it, and waits for it to serve.
  */
 async function startAsLoginService(
-  loginService: GatewayLoginService,
+  loginService: LoginService,
   opts: Opts,
 ): Promise<void> {
   const manager = loginService.manager;
@@ -96,9 +107,9 @@ async function startAsLoginService(
   }
 
   const spec = gatewayLaunchSpec(await prepareGateway(opts));
-  const written = loginService.write(spec);
+  const written = loginService.write(gatewayServiceJob(spec));
   console.log(
-    `Registered ${GATEWAY_SERVICE_LABEL} with ${manager} (${written.path})`,
+    `Registered ${GATEWAY_SERVICE.label} with ${manager} (${written.path})`,
   );
 
   if (legacyPid !== null) {
@@ -132,6 +143,58 @@ async function startAsLoginService(
   printRunning(
     `Gateway started under ${manager} (PID ${pid}); it starts again at every ${loginService.startsAt}`,
   );
+}
+
+/**
+ * Every login service a plugin declares (`login-services/index.ts`, collected
+ * by `infra/launcher/login-services`), after the gateway: each one's dependency
+ * ensured from the MAIN checkout and held — like the gateway binary, the job
+ * names it by path long after main moves on — its job (re)written, and
+ * (re)loaded when it is not running, its job changed, or `--force`.
+ */
+async function startDeclaredLoginServices(
+  manager: LoginServiceManager | null,
+  opts: Opts,
+): Promise<void> {
+  const declared = await declaredLoginServices();
+  if (declared.length === 0) return;
+  if (manager === null) {
+    console.log(
+      `Not starting ${declared.map((d) => d.id).join(", ")}: this OS has no service manager to run them.`,
+    );
+    return;
+  }
+  const root = await getMainRepoRoot();
+  for (const decl of declared) {
+    const ready = await ensureDep(decl.dep, cliExecContext(), {
+      root,
+      log: console.log,
+    });
+    holdDep(ready, loginServiceHolder(decl));
+    const service = manager.service(loginServiceId(decl));
+    const before = await service.state();
+    const job = loginServiceJob(decl, ready);
+    const written = service.write(job);
+    const runningPid = before.kind === "loaded" ? before.pid : null;
+    if (runningPid !== null && !written.changed && !opts.force) {
+      console.log(
+        `${decl.id} (${decl.owner}) is already running under ${manager.manager} (PID ${runningPid})`,
+      );
+      continue;
+    }
+    if (before.kind === "loaded") {
+      // Neither manager re-reads a loaded job: a rewritten one takes effect
+      // only through a reload.
+      await service.unload();
+      if (runningPid !== null) await awaitProcessGone(runningPid);
+    }
+    // The manager appends; truncate so the log holds this start's output.
+    writeFileSync(job.stdioLog, "");
+    const pid = await service.load();
+    console.log(
+      `${decl.id} (${decl.owner}) started under ${manager.manager} (PID ${pid}); it starts again at every ${service.startsAt} (${written.path})`,
+    );
+  }
 }
 
 /**

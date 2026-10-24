@@ -2,12 +2,10 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps-core/web";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 
-import { appIcon } from "@plugins/apps-core/plugins/app-icon/core";
 import { sonataApp } from "../core";
 import { SonataLayout } from "./components/sonata-layout";
 import { Sonata } from "./slots";
 import { sonataTheme } from "./internal/theme";
-import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export {
   Sonata,
@@ -29,7 +27,6 @@ export default {
   contributions: [
     Apps.App({
       app: sonataApp,
-      icon: appIcon(symbol("piano")),
       component: SonataLayout,
     }),
     // Selected for the sonata app in `config/ui/theme-engine/@app/sonata/theme.jsonc`.

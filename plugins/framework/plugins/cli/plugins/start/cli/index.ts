@@ -16,7 +16,7 @@ import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
 export default defineCliCommand<[], { force?: boolean; logLevel: string }>({
   name: "start",
   description:
-    "Build the gateway, register it to start by itself (login on macOS, boot on Linux), and start it",
+    "Build the gateway, register it to start by itself (login on macOS, boot on Linux), and start it — then every declared login service",
   options: [
     { flags: "--force", description: "Restart even if already running" },
     {

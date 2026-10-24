@@ -8,6 +8,7 @@
 - Web:
   - Uses:
     - `apps-core.Apps`
+    - `apps-core.isListedApp`
     - `apps-core.useActiveApp`
     - `apps-core/app-icon.AppIconView`
     - `apps-core/chrome-theme.chromeThemeScope`

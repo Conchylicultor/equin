@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { openPane, Pane, type } from "./pane";
 import type { ResolveResult } from "./resolve";
 import { defineApp, defineRoute } from "../core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 // ---------------------------------------------------------------------------
 // Compile-time regression guard for the pane "write path" typing.
@@ -35,7 +36,7 @@ const testApp = defineApp({
   id: "wtp-app",
   name: "Write path test app",
   basePath: "/wtp-app",
-  iconKey: "science",
+  icon: symbol("science"),
 });
 
 const paramfulRoute = defineRoute({ id: "wtp-paramful", segment: "wtp/:foo" });

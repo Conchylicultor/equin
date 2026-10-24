@@ -1,0 +1,10 @@
+// @hash 6ec84829688d
+{
+  // The panel's one view: the launcher grid, in manual (drag) order.
+  "views": [
+    { "id": "apps", "name": "Apps", "icon": "apps", "view": { "type": "icons" } }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

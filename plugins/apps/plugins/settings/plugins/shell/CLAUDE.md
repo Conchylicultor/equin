@@ -23,7 +23,9 @@
     - `primitives/slot-render.defineRenderSlot`
   - Exports (values): `Settings`
 - Core:
-  - Uses: `primitives/pane.defineApp`
+  - Uses:
+    - `primitives/pane.defineApp`
+    - `ui/icons.symbol`
   - Exports (values): `settingsApp`
 - Cross-plugin:
   - Imported by:

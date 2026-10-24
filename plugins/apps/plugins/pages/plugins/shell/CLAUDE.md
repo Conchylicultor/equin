@@ -32,7 +32,9 @@
     - `Pages`
     - `PagesSidebarRow`
 - Core:
-  - Uses: `primitives/pane.defineApp`
+  - Uses:
+    - `primitives/pane.defineApp`
+    - `ui/icons.symbol`
   - Exports (values): `pagesApp`
 - Cross-plugin:
   - Uses tokens: 21 vars — full list in [REFERENCE.md](./REFERENCE.md)

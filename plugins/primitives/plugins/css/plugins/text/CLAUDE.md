@@ -281,15 +281,15 @@ to reconcile them; they never needed reconciling.
     - `ui/tokens/type-scale` ×36
     - `ui/tokens/color-palette` ×6
     - `ui/tokens/font-family --font-mono`
-  - Imported by: 383 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 387 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×105
     - `conversations` ×73
     - `primitives` ×43
     - `debug` ×36
     - `page` ×23
+    - `ui` ×15
     - `plugin-meta` ×14
-    - `ui` ×14
-    - `tasks` ×13
+    - `tasks` ×14
     - `fields` ×9
     - `stats` ×6
     - `build` ×5
@@ -298,6 +298,7 @@ to reconcile them; they never needed reconciling.
     - `integrations` ×4
     - `review` ×4
     - `reorder` ×3
+    - `shell` ×3
     - `active-data` ×2
     - `apps-core` ×2
     - `backup` ×2
@@ -306,10 +307,10 @@ to reconcile them; they never needed reconciling.
     - `hints` ×2
     - `map` ×2
     - `screenshot` ×2
-    - `shell` ×2
     - `framework/web-core`
     - `history/dialog`
     - `layouts/route-fallback`
+    - `menu-bar`
     - `search/quick-find`
     - `tag-tree/picker`
 - Core:

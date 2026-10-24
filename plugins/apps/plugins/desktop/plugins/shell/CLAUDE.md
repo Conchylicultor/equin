@@ -34,6 +34,7 @@
     - `config_v2.defineConfig`
     - `fields/string-list/config.stringListField`
     - `primitives/pane.defineApp`
+    - `ui/icons.symbol`
   - Exports (values):
     - `DESKTOP_PLACEMENT_ID`
     - `desktopApp`

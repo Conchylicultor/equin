@@ -85,10 +85,14 @@ export type RuntimeFolder = (typeof RUNTIME_FOLDERS)[number];
  *  `vite/` and `prewarm/` by their own collected dirs; `bin/` and `scripts/`
  *  are run by path; `python/` holds one uv project (`pyproject.toml`, `uv.lock`)
  *  that `infra/deps`' python kind installs and runs, and holds no TypeScript;
+ *  `rust/` holds one Cargo crate (`Cargo.toml`, `Cargo.lock`, `src/`) that
+ *  `infra/deps`' rust kind builds (`cargoBuild`), and holds no TypeScript;
  *  `exempt/` holds the plugin's exemption manifest (which of its own files may
  *  violate which rule, and why), collected by `tooling/exempt`; `guard/` holds
  *  the Claude Code hook guards a plugin adds for its own files, collected by
- *  `tooling/guards`.
+ *  `tooling/guards`; `login-services/` holds the per-user OS services a plugin
+ *  runs at login (`defineLoginService`), collected by `infra/launcher`'s
+ *  `login-services` and brought up by `./equin start`.
  *
  *  Together with `RUNTIME_FOLDERS` this is the whole folder vocabulary a
  *  plugin may contain (plus `plugins/`, which holds child plugins, not code).
@@ -104,8 +108,10 @@ export const LEAF_FOLDERS = [
   "vite",
   "prewarm",
   "python",
+  "rust",
   "exempt",
   "guard",
+  "login-services",
 ] as const;
 export type LeafFolder = (typeof LEAF_FOLDERS)[number];
 

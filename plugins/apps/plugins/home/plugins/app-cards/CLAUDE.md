@@ -22,10 +22,10 @@ create-app flow is designed.
 - Description: Launcher grid of one card per installed app (a DataView of the installedApp row kind; plugins add fields to it as client fields of that kind), plus the new-app placeholder.
 - Web:
   - Contributes: `Home.Section` "Apps" → `AppGrid`
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps-core/app-launcher` ×3
+    - `apps-core` ×3
     - `primitives/data-view` ×3
-    - `apps-core` ×2
     - `apps/prototypes/gallery` ×2
     - `infra/endpoints` ×2
     - `shell/notifications` ×2

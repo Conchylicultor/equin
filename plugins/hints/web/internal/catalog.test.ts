@@ -4,13 +4,14 @@ import type { HintSeen } from "../../core";
 import { defineHintAnchor } from "../../core/internal/anchors";
 import { defineHint, defineTour } from "../../core/internal/declarations";
 import { joinCatalog } from "./catalog";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const anchor = defineHintAnchor("c.a");
 const app = defineApp({
   id: "home",
   name: "Home",
   basePath: "/home",
-  iconKey: "home",
+  icon: symbol("home"),
 });
 
 describe("joinCatalog", () => {

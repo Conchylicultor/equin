@@ -31,7 +31,9 @@ rebuilt by `./equin start`, so a change to the Go half needs that restart.
 
 - Description: What the SPA shell's <head> must carry before the first frame, per app path: the DocumentHead.Fragment contribution a server plugin renders its head HTML through (the theme's CSS), and the merge of every source into one fragment per path.
 - Cross-plugin:
-  - Imported by: `ui/theme-engine`
+  - Imported by:
+    - `apps-core/app-manifest`
+    - `ui/theme-engine`
 - Server:
   - Exports (types):
     - `HeadFragments`

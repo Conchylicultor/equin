@@ -30,7 +30,9 @@
     - `PlacesState`
   - Exports (values): `FileExplorer`
 - Core:
-  - Uses: `primitives/pane.defineApp`
+  - Uses:
+    - `primitives/pane.defineApp`
+    - `ui/icons.symbol`
   - Exports (values): `fileExplorerApp`
 - Cross-plugin:
   - Imported by: `apps/file-explorer/places`

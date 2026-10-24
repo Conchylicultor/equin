@@ -23,3 +23,4 @@ export type {
   AppIconGlyph,
   AppIconSvgOptions,
 } from "./internal/app-icon-to-svg";
+export { appTileFill } from "./internal/tile-fill";

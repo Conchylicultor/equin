@@ -1,11 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps-core/web";
 
-import { appIcon } from "@plugins/apps-core/plugins/app-icon/core";
 import { debugApp } from "../core";
 import { DebugLayout } from "./components/debug-layout";
 import { DebugApp } from "./slots";
-import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { DebugApp } from "./slots";
 
@@ -15,7 +13,6 @@ export default {
   contributions: [
     Apps.App({
       app: debugApp,
-      icon: appIcon(symbol("bug-report")),
       component: DebugLayout,
     }),
   ],

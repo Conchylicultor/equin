@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-tasks-menu-bar-task",
+  "description": "The menu-bar panel's task field: type a task and press Enter to file it, through the task-draft form's own submit.",
+  "private": true,
+  "version": "0.0.1"
+}

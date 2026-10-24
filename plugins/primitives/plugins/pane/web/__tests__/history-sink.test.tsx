@@ -24,6 +24,7 @@ import {
 import { defaultStore } from "../testing";
 import { defaultHistoryAdapter } from "../history-sink";
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 // Proves the `HistoryAdapter` seam the shell-history-snapshot refactor rests on:
 // the pane store never touches `window.history` directly — it emits push/replace
@@ -44,7 +45,7 @@ const testApp = defineApp({
   // Rooted at "/": the stores here run at the bare base path, and a route
   // headed by another app's pane would be handed to that app.
   basePath: "/",
-  iconKey: "science",
+  icon: symbol("science"),
 });
 
 const rootRoute = defineRoute({ id: "hist-root", segment: "hist" });

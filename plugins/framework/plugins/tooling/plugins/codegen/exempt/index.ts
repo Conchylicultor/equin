@@ -5,6 +5,7 @@ export default [
     rule: "boundaries/no-platform-api",
     paths: [
       "core/app-css-utilities.ts",
+      "core/app-declarations-gen.ts",
       "core/authored-override-seed.ts",
       "core/barrel-free-tree.ts",
       "core/barrel-stubs-gen.ts",
@@ -31,6 +32,7 @@ export default [
       "core/test-helpers-doc.ts",
       "core/theme-declarations-gen.ts",
       "core/token-group-vars-gen.ts",
+      "core/web-slot-contributions.ts",
       "core/write-generated.ts",
     ],
     kind: "debt",

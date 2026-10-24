@@ -1,4 +1,4 @@
-// @hash 3b2fb2804ea9
+// @hash 3ef0bddfadaa
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -8,6 +8,7 @@
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
     "ui.theme-engine.theme-gallery:themes",
+    "ui.theme-toggle:color-mode",
     "ui.tokens.categorical:categorical",
     "ui.tokens.chart:chart",
     "ui.tokens.chord-palette:chord-palette",

@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Theme-scope helpers: the single definition of the focused full-surface app's theme scope, which decides the :root token layer, and useAppSettingsScope — the app:<id> config scope per-app theme settings (variants) are read in: the nearest app theme boundary's (a pane's home app), else the focused app's.
+- Description: Theme-scope helpers: the single definition of the focused full-surface app's theme scope, which decides the :root token layer and the document's light/dark (useRootThemeScopeState keeps the not-registered-yet window apart), and useAppSettingsScope — the app:<id> config scope per-app theme settings (variants) are read in: the nearest app theme boundary's (a pane's home app), else the focused app's.
 - Web:
   - Uses:
     - `apps-core.useActiveApp`
@@ -16,6 +16,7 @@
   - Exports (values):
     - `useAppSettingsScope`
     - `useRootThemeScope`
+    - `useRootThemeScopeState`
 - Cross-plugin:
   - Imported by:
     - `ui/segmented-progress-bar`

@@ -8,13 +8,17 @@ import {
   type HeadFragments,
 } from "@plugins/shell/plugins/document-head/server";
 import {
-  COLOR_MODE_SCOPE_ID,
+  appColorModeConfig,
+  effectiveColorMode,
+  parseAppColorModeOverride,
+  parseConfiguredColorMode,
   themeSelectionConfig,
   type Theme,
   type ThemeId,
 } from "../../core";
+import { declaredApps } from "@plugins/apps-core/server";
+import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import {
-  apps,
   codeThemes,
   fixedThemes,
   subThemes,
@@ -45,6 +49,22 @@ async function render(): Promise<HeadFragments> {
     scopeId,
     themeId: getConfig(themeSelectionConfig, scopeId).theme,
   }));
+  const globalMode = parseConfiguredColorMode(
+    getConfig(themeSelectionConfig).colorMode,
+  );
+  // Tab apps only: a surface-mode app (the desktop) owns no path to key by.
+  const apps = declaredApps
+    .filter(({ launch }) => launch === "tab")
+    .map(({ app }) => ({
+      id: app.id,
+      basePath: app.basePath,
+      colorMode: effectiveColorMode(globalMode, {
+        declared: app.colorMode,
+        override: parseAppColorModeOverride(
+          getConfig(appColorModeConfig, appThemeScope(app.id)).colorMode,
+        ),
+      }),
+    }));
   return renderThemeHead(
     {
       groups: tokenGroups,
@@ -55,8 +75,7 @@ async function render(): Promise<HeadFragments> {
     apps,
     {
       baseThemeId: getConfig(themeSelectionConfig).theme,
-      colorMode: getConfig(themeSelectionConfig, COLOR_MODE_SCOPE_ID)
-        .colorMode as "light" | "dark" | "system",
+      colorMode: globalMode,
       scopes,
     },
   );

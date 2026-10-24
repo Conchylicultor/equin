@@ -122,6 +122,11 @@ export {
 } from "./theme-declarations-gen";
 
 export {
+  appDeclarationsManifestPath,
+  renderAppDeclarationsManifest,
+} from "./app-declarations-gen";
+
+export {
   companionManifestPath,
   renderCompanionManifest,
 } from "./companion-manifest-gen";

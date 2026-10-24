@@ -8,18 +8,19 @@ import {
   segmentMatchPatterns,
   splitKeyedPart,
 } from "./route";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const agents = defineApp({
   id: "agent-manager",
   name: "Agent manager",
   basePath: "/agents",
-  iconKey: "chat-bubble",
+  icon: symbol("chat-bubble"),
 });
 const rootApp = defineApp({
   id: "home",
   name: "Home",
   basePath: "/",
-  iconKey: "home",
+  icon: symbol("home"),
 });
 
 describe("route link builder", () => {

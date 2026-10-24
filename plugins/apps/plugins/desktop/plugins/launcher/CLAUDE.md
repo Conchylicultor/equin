@@ -48,12 +48,12 @@ defaults.
   - Contributes:
     - `Desktop.Overlay` "Desktop overlay" → `LauncherOverlay`
     - `Shortcuts.Shortcut` "desktop.launcher (mod+k)"
-  - Uses: 46 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 47 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/desktop/windows` ×11
+    - `apps-core` ×3
     - `primitives/css/ui-kit` ×3
     - `primitives/shortcuts` ×3
     - `apps-core/tabs` ×2
-    - `apps-core` ×2
     - `apps/desktop/shell` ×2
     - `config_v2` ×2
     - `primitives/css/fill` ×2

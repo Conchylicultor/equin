@@ -3,7 +3,8 @@ import { cleanup, render } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { parseSavedSymbolName } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
 import { Avatar } from "../components/avatar";
-import { avatarColorPick, avatarFlatClass } from "../internal/colors";
+import { avatarColorPick } from "../../core";
+import { avatarFlatClass } from "../internal/colors";
 import {
   AvatarPresentationProvider,
   useAvatarPresentation,

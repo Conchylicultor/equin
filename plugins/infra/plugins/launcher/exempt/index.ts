@@ -24,12 +24,7 @@ export default [
   },
   {
     rule: "boundaries/no-platform-api",
-    paths: [
-      "server/internal/boot.ts",
-      "server/internal/config-propagate.ts",
-      "server/internal/launchd-service.ts",
-      "server/internal/systemd-service.ts",
-    ],
+    paths: ["server/internal/boot.ts", "server/internal/config-propagate.ts"],
     kind: "debt",
     task: "task-1792338443-riwqev",
     reason: "not yet split into server/ + machine/",

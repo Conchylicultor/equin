@@ -1,13 +1,11 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps-core/web";
 
-import { appIcon } from "@plugins/apps-core/plugins/app-icon/core";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { agentManagerApp } from "../core";
 import { AgentManagerLayout } from "./components/agent-manager-layout";
 import { EquinMark } from "./components/equin-mark";
 import { mistTheme } from "./internal/theme";
-import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
@@ -15,7 +13,6 @@ export default {
   contributions: [
     Apps.App({
       app: agentManagerApp,
-      icon: appIcon(symbol("chat-bubble")),
       mark: EquinMark,
       component: AgentManagerLayout,
     }),

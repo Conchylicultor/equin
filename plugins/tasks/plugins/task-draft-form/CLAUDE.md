@@ -156,6 +156,8 @@ it is handed and knows no tour.
   - Exports (types):
     - `ActiveRelateContext`
     - `CardDraft`
+    - `SubmitArgs`
+    - `SubmitOutcome`
     - `TaskDraftActionProps`
     - `TaskDraftHintAnchors`
     - `TaskDraftInsert`
@@ -165,6 +167,7 @@ it is handed and knows no tour.
     - `draftInsert`
     - `draftSeed`
     - `setActiveRelateContext`
+    - `submitChain`
     - `TaskDraftFormSlots`
     - `TaskDraftPopover`
     - `useActiveRelateContext`
@@ -190,6 +193,7 @@ it is handed and knows no tour.
     - `conversations/conversation-view/new-child-task`
     - `improve`
     - `improve/element-picker`
+    - `tasks/menu-bar-task`
     - `tasks/task-dependencies`
 - Core:
   - Exports (values): `TASK_DRAFT_FORM_WIDTH`

@@ -54,6 +54,10 @@ dist.stats.html
 /tauri/src-tauri/gen/
 /tauri/src-tauri/icons/
 
+# A plugin's `rust/` crate (infra/deps' rust kind builds it into a shared cache
+# target dir; this covers a `cargo` run by hand inside the crate).
+plugins/**/rust/target/
+
 # Caches
 .cache/
 .eslintcache

@@ -58,7 +58,9 @@
     - `useBrowserProxy`
     - `useBrowserTabs`
 - Core:
-  - Uses: `primitives/pane.defineApp`
+  - Uses:
+    - `primitives/pane.defineApp`
+    - `ui/icons.symbol`
   - Exports (values): `browserApp`
 - Cross-plugin:
   - Uses tokens:

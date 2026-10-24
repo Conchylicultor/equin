@@ -2,20 +2,31 @@
 
 ## An app is authored once, and `Apps.App` takes it whole
 
-An app's id, base path, display name and icon key live in exactly one place:
-`defineApp({ … })` in that app's shell `core/app.ts`. The web barrel hands the
-resulting `AppRef` over whole:
+An app's id, base path, display name, icon and tile colour live in exactly one
+place: `defineApp({ … })` in that app's shell `core/app.ts`
+(`icon: symbol("description")`, optional `iconColor: "slate"`). The web barrel
+hands the resulting `AppRef` over whole:
 
 ```ts
-Apps.App({ app: pagesApp, icon: mdAppIcon(MdDescription), component: PagesLayout })
+Apps.App({ app: pagesApp, component: PagesLayout })
 ```
 
-The contribution restates **nothing**: there is no `id`, `path` or `tooltip`
-prop, so drift has no spelling. `Apps.App` is a hand-declared callable (not a
+The contribution restates **nothing**: there is no `id`, `path`, `tooltip` or
+`icon` prop, so drift has no spelling. Readers still get `entry.icon` (an
+`AppIcon`): `Apps.App` derives it from `app.icon` + `app.iconColor`. `Apps.App` is a hand-declared callable (not a
 bare `defineRenderSlot`) purely so it can derive the framework-required
-contribution id from `app.id`. Consumers read `entry.app.name` /
+contribution id from `app.id` and the icon from the `AppRef`. Consumers read `entry.app.name` /
 `entry.app.basePath`; a lower layer that needs an app's name reads it off the
 `AppRef` it already holds, never by looking into `apps-core`.
+
+## An app can be unlisted
+
+`defineApp({ listed: false })` keeps an app out of every launcher — the rail,
+the app galleries and launcher grids (`isListedApp`), and the installable set
+(`installableApp`, which also gives it no manifest at its path) — while it keeps
+its URL, its tab and its `app:<id>` scope. For an app opened at its URL by
+something outside equin: the menu-bar panel (`menuBarApp`, mounted at
+`/home/menu-bar`, inside Home's path — the longest base path wins).
 
 ## Two kinds of app entry: a tab app, or a surface-mode app
 
@@ -64,7 +75,7 @@ Desktop tile opens a clear desktop.
 
 ## Plugin reference
 
-- Description: App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.
+- Description: App switcher rail. Wraps per-app shells; plugins contribute via Apps.App. Every app the browser registers, readable on the server: declaredApps — each Apps.App contribution's whole AppRef (id, name, base path, icon, tile colour) and its launch kind (tab or surface mode), generated at build time from the web contributions.
 - Load-bearing: yes
 - Web:
   - Slots:
@@ -74,8 +85,8 @@ Desktop tile opens a clear desktop.
     - `Apps.TabBar`
     - `Apps.TabBarActions`
     - `Apps.Overlay`
-  - Slot contributors: 24 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Apps.App` ×19
+  - Slot contributors: 25 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Apps.App` ×20
     - `Apps.Overlay` ← `apps-core.app-launcher`
     - `Apps.RailFraming` ← `apps-core.app-rail-framing`
     - `Apps.Surface` ← `apps-core.surface`
@@ -101,6 +112,7 @@ Desktop tile opens a clear desktop.
   - Exports (values):
     - `Apps`
     - `homeApp`
+    - `isListedApp`
     - `isTabApp`
     - `matchAppForPath`
     - `resolveAppForPath`
@@ -111,20 +123,24 @@ Desktop tile opens a clear desktop.
     - `useHomeApp`
     - `usePathname`
 - Cross-plugin:
-  - Imported by: 51 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 55 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×27
-    - `apps-core` ×11
-    - `ui` ×5
+    - `apps-core` ×12
+    - `ui` ×6
     - `config_v2` ×2
     - `hints` ×2
+    - `menu-bar` ×2
     - `plugin-meta/exhibits`
     - `reports/main-thread-stall`
     - `shell/global-action-bar`
     - `tasks/task-draft-form`
 - Exemptions:
   - Exempted by: `apps-core/layout` (0 debt)
+- Server:
+  - Exports (values): `declaredApps`
 - Core:
   - Exports (types):
+    - `AppDeclaration`
     - `Placement`
     - `RailFramingProps`
   - Exports (values): `APP_RAIL_WIDTH`
@@ -135,6 +151,7 @@ Desktop tile opens a clear desktop.
   - **`app-embed`** — <AppEmbed app route onLeave? />: one app surface rendered in-process — the SurfaceCore a tab mounts — with its own non-live pane store (seeded with route, never touching the page URL), its app theme…
   - **`app-icon`** — Canonical, serializable app-icon descriptor (a Material Symbols glyph now, image variant later), drawn by the icons primitive.
   - **`app-launcher`** — The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the composition's home app (the app gallery on main), hover or ArrowDown for a grid of…
+  - **`app-manifest`** — Makes every tab app installable as its own OS app: serves GET /api/apps/:appId/manifest.webmanifest (id / start_url / scope = the app's base path, its tile colour, its icon PNGs) from the generated…
   - **`app-rail`** — App rail: the far-left icon strip that switches the focused tab between apps, deriving its own active-app highlight and chrome theme scope.
   - **`app-rail-framing`** — App-rail framing region (rail / hidden). Contributes its variant-region host into Apps.RailFraming.
   - **`app-usage`** — Records per-app usage from the browser — a launch whenever the focused app changes to another, active time while the app is focused, the page visible, the window focused and the user not idle for 5…
@@ -144,6 +161,6 @@ Desktop tile opens a clear desktop.
   - **`tab-bar`** — App tab bar: the top tab strip with per-tab titles, overflow collapse, drag reorder/tear-off, and the new-tab/new-window + button.
   - **`tab-surface`** — Per-tab surface render core: TabSurface mounts a tab's PaneSurfaceProvider and reports its leaf title; AppTabsBody is the keep-alive fallback body that stacks every open tab.
   - **`tabs`** — Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, the focused tab's title as a module signal (useFocusedTabTitle, readable…
-  - **`theme-scope`** — Theme-scope helpers: the single definition of the focused full-surface app's theme scope, which decides the :root token layer, and useAppSettingsScope — the app:<id> config scope per-app theme…
+  - **`theme-scope`** — Theme-scope helpers: the single definition of the focused full-surface app's theme scope, which decides the :root token layer and the document's light/dark (useRootThemeScopeState keeps the…
 
 <!-- AUTOGENERATED:END -->

@@ -469,6 +469,12 @@
       "parent": null
     },
     {
+      "paneId": "menu-bar",
+      "segment": "",
+      "appIndex": true,
+      "parent": null
+    },
+    {
       "paneId": "notifications",
       "segment": "notifications",
       "appIndex": false,

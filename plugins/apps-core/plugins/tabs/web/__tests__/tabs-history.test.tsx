@@ -10,6 +10,7 @@ import { getFocusedAppId } from "@plugins/apps-core/web/testing";
 import { setLiveStore } from "@plugins/primitives/plugins/pane/web";
 import { defaultStore } from "@plugins/primitives/plugins/pane/web/testing";
 import { TabsProvider, useTabs, type TabsApi } from "../internal/use-tabs";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 // End-to-end proof of the shell-history-snapshot model at the TabsProvider
 // level: every user-initiated change to what's on screen PUSHES a composite
@@ -54,14 +55,22 @@ const appsPlugin = {
   description: "fake apps for the tabs-history suite",
   contributions: [
     Apps.App({
-      app: { id: "pages", name: "Pages", basePath: "/pages", iconKey: "home" },
+      app: {
+        id: "pages",
+        name: "Pages",
+        basePath: "/pages",
+        icon: symbol("home"),
+      },
       component: () => null,
-      icon: {} as never,
     }),
     Apps.App({
-      app: { id: "story", name: "Story", basePath: "/story", iconKey: "home" },
+      app: {
+        id: "story",
+        name: "Story",
+        basePath: "/story",
+        icon: symbol("home"),
+      },
       component: () => null,
-      icon: {} as never,
     }),
   ],
 } as unknown as LoadedPlugin;

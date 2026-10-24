@@ -76,7 +76,7 @@ className="max-h-96">` and a full-height one is `<Scroll className="h-full">`.
     - `useScrollsSideways`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --spacing`
-  - Imported by: 94 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 96 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×26
     - `apps` ×21
     - `primitives` ×14
@@ -85,6 +85,7 @@ className="max-h-96">` and a full-height one is `<Scroll className="h-full">`.
     - `build` ×3
     - `plugin-meta` ×3
     - `infra` ×2
+    - `menu-bar` ×2
     - `review` ×2
     - `code-explorer/file-resolve`
     - `config_v2/settings`

@@ -247,6 +247,14 @@ module eval).
   No updater: `updates: { none: "built from this checkout's own source" }`
   (users: `packages/signal-origin`'s `signal-origin-shim`, host only;
   `infra/launcher`'s `gateway-binary`, `targets: "any"`, `bundle: "required"`).
+- `rust` — the `rust` kind (`cargoBuild`, `cargoBinary`, `cargoCommand`, its
+  `deps/` barrel), ON the `build` kind: `cargoBuild({ crate, bin })` builds a
+  plugin's `rust/` folder (`cargo build --release --locked` under the
+  mise-pinned toolchain, `CARGO_TARGET_DIR` in the shared `cargo-target`
+  cache) and copies the binary into `env/` — or hands it to `then` to assemble
+  an `output` around it. `rust/no-bare-cargo` bans spawning cargo anywhere
+  else. Its `cargo-updater` sub-plugin moves every `rust/` crate's
+  `Cargo.lock` (crates.io, 3-day cooldown, `deps-cargo:holds`).
 - `playwright-browser` — the `playwright-browser` kind (`playwrightBrowser`,
   `launchChromium`, its `deps/` barrel; the `env/executables.json` record and
   its reader `readBrowserExecutables` in its `core/`):
@@ -373,6 +381,7 @@ torch.
     - `infra/mcp/browser`
     - `infra/safe-fetch/browser-fetch`
     - `integrations/youtube`
+    - `menu-bar`
     - `packages/signal-origin`
 - Deps:
   - Exports (types):
@@ -414,6 +423,7 @@ torch.
   - **`npm`** — The `npm` updater: moves every npm package a workspace package.json declares (its range and bun.lock) to the newest release past a 3-day cooldown, lockstep groups together, honouring reviewed holds…
   - **`playwright-browser`** — The playwright-browser installer kind of infra/deps: playwrightBrowser({ browser: "chromium" }) (its deps barrel) declares the browser build the workspace's playwright-core pins — identity = that…
   - **`python`** — The python installer kind of infra/deps (pythonEnv, runPython, PythonEntryError) over uv, with its caches as declared data dirs Its uv-updater sub-plugin keeps every python/ project's uv.lock and…
+  - **`rust`** — The rust installer kind of infra/deps, on top of the build kind: cargoBuild({ crate, bin }) (its deps barrel) builds a plugin's rust/ crate with cargo build --release --locked under the mise-pinned…
   - **`sweep`** — The daily deps.sweep job: removes installed optional-dependency identities that no checkout of this repo declares and that sat unused for 14 days (sweepUnusedDeps over the git worktree list).
   - **`updates`** — Registers the Dependency upgrades automation's config (schedule, push policy, model, prompt template) for the Automations pane and Settings → Config. The updater registry (UpdaterDeclare) and the…
 

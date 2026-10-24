@@ -1,7 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps-core/web";
-import { appIcon } from "@plugins/apps-core/plugins/app-icon/core";
-import { symbol } from "@plugins/ui/plugins/icons/core";
 import { demoApp } from "../core";
 import { DemoLayout } from "./components/demo-layout";
 
@@ -11,7 +9,6 @@ export default {
   contributions: [
     Apps.App({
       app: demoApp,
-      icon: appIcon(symbol("smart-display")),
       component: DemoLayout,
     }),
   ],

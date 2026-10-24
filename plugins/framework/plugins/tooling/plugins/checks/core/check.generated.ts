@@ -14,7 +14,6 @@ export interface CollectedEntry {
 
 export const checkEntries: CollectedEntry[] = [
   { pluginPath: "active-data", id: "active-data", loader: () => import("@plugins/active-data/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen", "plugin-meta/plugins/facets"] },
-  { pluginPath: "apps-core/plugins/app-icon", id: "apps-core.app-icon", loader: () => import("@plugins/apps-core/plugins/app-icon/check"), dependsOn: [] },
   { pluginPath: "apps/plugins/agent-manager/plugins/welcome", id: "apps.agent-manager.welcome", loader: () => import("@plugins/apps/plugins/agent-manager/plugins/welcome/check"), dependsOn: [] },
   { pluginPath: "apps/plugins/prototypes/plugins/files", id: "apps.prototypes.files", loader: () => import("@plugins/apps/plugins/prototypes/plugins/files/check"), dependsOn: [] },
   { pluginPath: "config_v2", id: "config_v2", loader: () => import("@plugins/config_v2/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen"] },
@@ -29,6 +28,7 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "framework/plugins/server-core", id: "framework.server-core", loader: () => import("@plugins/framework/plugins/server-core/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen"] },
   { pluginPath: "framework/plugins/tooling/plugins/boundaries", id: "framework.tooling.boundaries", loader: () => import("@plugins/framework/plugins/tooling/plugins/boundaries/check"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/app-css-utilities-in-sync", id: "framework.tooling.checks.app-css-utilities-in-sync", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/app-css-utilities-in-sync/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen"] },
+  { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/app-declarations-in-sync", id: "framework.tooling.checks.app-declarations-in-sync", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/app-declarations-in-sync/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen"] },
   { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/barrel-stubs-in-sync", id: "framework.tooling.checks.barrel-stubs-in-sync", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/barrel-stubs-in-sync/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen"] },
   { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/bun-runtime", id: "framework.tooling.checks.bun-runtime", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/bun-runtime/check"), dependsOn: ["toolchain"] },
   { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/class-token-walk-single-source", id: "framework.tooling.checks.class-token-walk-single-source", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/class-token-walk-single-source/check"), dependsOn: [] },
@@ -92,6 +92,7 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "ids", id: "ids", loader: () => import("@plugins/ids/check"), dependsOn: ["database/plugins/migrations", "framework/plugins/tooling/plugins/codegen", "plugin-meta/plugins/facets"] },
   { pluginPath: "infra/plugins/deps/plugins/npm", id: "infra.deps.npm", loader: () => import("@plugins/infra/plugins/deps/plugins/npm/check"), dependsOn: [] },
   { pluginPath: "infra/plugins/deps/plugins/python/plugins/uv-updater", id: "infra.deps.python.uv-updater", loader: () => import("@plugins/infra/plugins/deps/plugins/python/plugins/uv-updater/check"), dependsOn: [] },
+  { pluginPath: "infra/plugins/deps/plugins/rust/plugins/cargo-updater", id: "infra.deps.rust.cargo-updater", loader: () => import("@plugins/infra/plugins/deps/plugins/rust/plugins/cargo-updater/check"), dependsOn: [] },
   { pluginPath: "infra/plugins/endpoints", id: "infra.endpoints", loader: () => import("@plugins/infra/plugins/endpoints/check"), dependsOn: [] },
   { pluginPath: "infra/plugins/jobs", id: "infra.jobs", loader: () => import("@plugins/infra/plugins/jobs/check"), dependsOn: [] },
   { pluginPath: "infra/plugins/launcher", id: "infra.launcher", loader: () => import("@plugins/infra/plugins/launcher/check"), dependsOn: [] },

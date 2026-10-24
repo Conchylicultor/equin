@@ -2,7 +2,7 @@ import {
   ResourceErrorInline,
   useCombinedResources,
 } from "@plugins/primitives/plugins/live-state/web";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
@@ -13,7 +13,7 @@ import {
   pct,
 } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { recentClientIds } from "../internal/toast";
+import { useNotificationArrivals } from "../internal/use-notification-arrivals";
 import { notifications, notificationsUnread } from "../../shared/resources";
 import { markAllNotificationsRead } from "../../shared/endpoints";
 import { NotificationsPanel } from "./notifications-panel";
@@ -32,38 +32,14 @@ export function BellButton() {
   // window — an unread error older than the newest 200 still turns it red.
   const unreadResult = useLive(notificationsUnread);
 
-  // prevIdsRef must always run — it tracks new-notification arrivals for toasts.
-  const prevIdsRef = useRef<Set<string> | null>(null);
-
-  // Effect: fire toasts for newly arrived notifications. Reads notificationsResult
-  // directly and narrows inside so we never capture a stale unsettled snapshot.
-  useEffect(() => {
-    if (
-      notificationsResult.status === "loading" ||
-      notificationsResult.status === "error"
-    ) {
-      return;
-    }
-    const settled = notificationsResult.data;
-    const currentIds = new Set(settled.map((n) => n.id));
-    if (prevIdsRef.current !== null) {
-      for (const n of settled) {
-        if (
-          !prevIdsRef.current.has(n.id) &&
-          !recentClientIds.has(n.id) &&
-          !n.muted
-        ) {
-          showToast({
-            title: n.title,
-            description: n.description,
-            variant: n.variant,
-          });
-        }
-      }
-    }
-    prevIdsRef.current = currentIds;
-    // notificationsResult identity changes on every push; depend on the result object
-  }, [notificationsResult]);
+  // A toast for each notification that arrives while the bell is mounted.
+  useNotificationArrivals((n) =>
+    showToast({
+      title: n.title,
+      description: n.description,
+      variant: n.variant,
+    }),
+  );
 
   const hadUnreadRef = useRef(false);
 

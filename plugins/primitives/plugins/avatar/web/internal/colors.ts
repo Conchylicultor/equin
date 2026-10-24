@@ -1,4 +1,9 @@
-import { AVATAR_COLOR_NAMES, type AvatarColor } from "../../core";
+import {
+  AVATAR_COLOR_NAMES,
+  type AvatarColor,
+  avatarColorPick,
+  type AvatarColorPick,
+} from "../../core";
 
 // Three paints per colour, both keyed off the categorical palette slot:
 // - SOFT (badge presentation): a 15% tint of the slot with the slot as text —
@@ -96,54 +101,6 @@ const AVATAR_GRADIENT_COLORS = {
 } as const satisfies Record<AvatarColor, string>;
 
 export const AVATAR_COLOR_KEYS: readonly AvatarColor[] = AVATAR_COLOR_NAMES;
-
-const AUTO_ORDER: readonly AvatarColor[] = [
-  "sky",
-  "emerald",
-  "amber",
-  "rose",
-  "violet",
-  "indigo",
-  "teal",
-  "pink",
-];
-
-function hash(s: string): number {
-  let h = 5381;
-  for (let i = 0; i < s.length; i++) h = (h * 33) ^ s.charCodeAt(i);
-  return h >>> 0;
-}
-
-function isAvatarColor(color: string): color is AvatarColor {
-  return Object.hasOwn(AVATAR_COLORS, color);
-}
-
-/** Which palette slot an avatar paints, and which of its two tile shades. */
-export interface AvatarColorPick {
-  slot: AvatarColor;
-  /** Tile shade: 0 = the slot, 1 = the slot lifted in lightness. The soft
-   *  (badge) paint has one shade per slot and ignores this. */
-  shade: 0 | 1;
-}
-
-/**
- * The colour an avatar paints. An explicit known `color` wins (shade 0);
- * otherwise `fallbackKey` hashes to one of the eight automatic slots
- * (`hash % 8`) and a shade (`floor(hash / 8) % 2`). `null` = no colour: the
- * neutral muted box.
- */
-export function avatarColorPick(
-  color: string | null | undefined,
-  fallbackKey?: string,
-): AvatarColorPick | null {
-  if (color && isAvatarColor(color)) return { slot: color, shade: 0 };
-  if (!fallbackKey) return null;
-  const h = hash(fallbackKey);
-  return {
-    slot: AUTO_ORDER[h % AUTO_ORDER.length]!,
-    shade: Math.floor(h / AUTO_ORDER.length) % 2 === 0 ? 0 : 1,
-  };
-}
 
 /** Badge paint: the soft tint class for a pick (`bg-muted` for none). */
 export function avatarSoftClass(pick: AvatarColorPick | null): string {

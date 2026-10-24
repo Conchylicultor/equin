@@ -16,6 +16,7 @@ export {
   type ActiveApp,
 } from "./internal/use-active-app";
 export {
+  isListedApp,
   isTabApp,
   matchAppForPath,
   resolveAppForPath,

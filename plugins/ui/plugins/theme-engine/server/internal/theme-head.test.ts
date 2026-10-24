@@ -28,8 +28,8 @@ const sources = {
   fixedThemes: [],
 };
 const apps = [
-  { id: "home", basePath: "/home" },
-  { id: "pages", basePath: "/pages" },
+  { id: "home", basePath: "/home", colorMode: "dark" as const },
+  { id: "pages", basePath: "/pages", colorMode: "dark" as const },
 ];
 
 describe("renderThemeHead", () => {
@@ -73,6 +73,51 @@ describe("renderThemeHead", () => {
     );
     expect(render("system")).toEndWith(
       '<script>document.documentElement.classList.toggle("dark",matchMedia("(prefers-color-scheme: dark)").matches)</script>',
+    );
+  });
+
+  it("roots an app whose scheme differs from the global one at its base path, in its scheme", () => {
+    const head = renderThemeHead(
+      sources,
+      [...apps, { id: "panel", basePath: "/home/panel", colorMode: "system" }],
+      {
+        baseThemeId: DEFAULT_THEME_ID,
+        colorMode: "dark",
+        scopes: [{ scopeId: "app:pages", themeId: "ink" }],
+      },
+    );
+    expect(Object.keys(head).sort()).toEqual(["", "/home/panel", "/pages"]);
+    // No theme document of its own: the desktop's theme at :root…
+    expect(head["/home/panel"]).toContain(
+      '<style id="theme-engine-palette">:root {\n  --primary: blue;',
+    );
+    expect(head["/home/panel"]).toContain(
+      '<style id="theme-scope-app:pages-palette">',
+    );
+    // …in its own scheme, while every other entry keeps the global one.
+    expect(head["/home/panel"]).toEndWith(
+      '<script>document.documentElement.classList.toggle("dark",matchMedia("(prefers-color-scheme: dark)").matches)</script>',
+    );
+    expect(head["/pages"]).toEndWith(
+      '<script>document.documentElement.classList.toggle("dark",true)</script>',
+    );
+  });
+
+  it("paints a themed app in its own scheme", () => {
+    const head = renderThemeHead(
+      sources,
+      [{ id: "pages", basePath: "/pages", colorMode: "light" }],
+      {
+        baseThemeId: DEFAULT_THEME_ID,
+        colorMode: "dark",
+        scopes: [{ scopeId: "app:pages", themeId: "ink" }],
+      },
+    );
+    expect(head["/pages"]).toEndWith(
+      '<script>document.documentElement.classList.toggle("dark",false)</script>',
+    );
+    expect(head[""]).toEndWith(
+      '<script>document.documentElement.classList.toggle("dark",true)</script>',
     );
   });
 

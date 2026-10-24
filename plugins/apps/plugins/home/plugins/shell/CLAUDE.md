@@ -25,7 +25,9 @@ App shell for the Home launcher. Registers the `/home` app entry and defines the
     - `ui/theme-engine.ThemeEngine`
   - Exports (values): `Home`
 - Core:
-  - Uses: `primitives/pane.defineApp`
+  - Uses:
+    - `primitives/pane.defineApp`
+    - `ui/icons.symbol`
   - Exports (values): `homeApp`
 - Cross-plugin:
   - Uses tokens:

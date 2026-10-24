@@ -150,6 +150,13 @@
       "name": "@singularity/plugin-apps-core-app-launcher",
       "version": "0.0.1",
     },
+    "plugins/apps-core/plugins/app-manifest": {
+      "name": "@singularity/plugin-apps-core-app-manifest",
+      "version": "0.0.1",
+      "dependencies": {
+        "@resvg/resvg-js": "^2.6.2",
+      },
+    },
     "plugins/apps-core/plugins/app-rail": {
       "name": "@singularity/plugin-apps-core-app-rail",
       "version": "0.0.1",
@@ -2148,6 +2155,10 @@
       "name": "@singularity/plugin-conversations-hibernation",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/menu-bar-status": {
+      "name": "@singularity/plugin-conversations-menu-bar-status",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/model-provider": {
       "name": "@singularity/plugin-conversations-model-provider",
       "version": "0.0.1",
@@ -3203,6 +3214,10 @@
       "name": "@singularity/plugin-framework-tooling-checks-app-css-utilities-in-sync",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/app-declarations-in-sync": {
+      "name": "@singularity/plugin-framework-tooling-checks-app-declarations-in-sync",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/barrel-stubs-in-sync": {
       "name": "@singularity/plugin-framework-tooling-checks-barrel-stubs-in-sync",
       "version": "0.0.1",
@@ -3764,6 +3779,14 @@
       "name": "@singularity/plugin-infra-deps-python-uv-updater",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/deps/plugins/rust": {
+      "name": "@singularity/plugin-infra-deps-rust",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/deps/plugins/rust/plugins/cargo-updater": {
+      "name": "@singularity/plugin-infra-deps-rust-cargo-updater",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/deps/plugins/sweep": {
       "name": "@singularity/plugin-infra-deps-sweep",
       "version": "0.0.1",
@@ -3911,6 +3934,9 @@
     },
     "plugins/infra/plugins/launcher": {
       "name": "@singularity/plugin-infra-launcher",
+    },
+    "plugins/infra/plugins/launcher/plugins/login-services": {
+      "name": "@singularity/plugin-infra-launcher-login-services",
     },
     "plugins/infra/plugins/mcp": {
       "name": "@singularity/plugin-infra-mcp",
@@ -4103,6 +4129,14 @@
     },
     "plugins/map/plugins/pin-layer": {
       "name": "@singularity/plugin-map-pin-layer",
+      "version": "0.0.1",
+    },
+    "plugins/menu-bar": {
+      "name": "@singularity/plugin-menu-bar",
+      "version": "0.0.1",
+    },
+    "plugins/menu-bar/plugins/app-grid": {
+      "name": "@singularity/plugin-menu-bar-app-grid",
       "version": "0.0.1",
     },
     "plugins/music": {
@@ -5961,6 +5995,10 @@
       "name": "@singularity/plugin-shell-notifications",
       "version": "0.0.1",
     },
+    "plugins/shell/plugins/notifications/plugins/native": {
+      "name": "@singularity/plugin-shell-notifications-native",
+      "version": "0.0.1",
+    },
     "plugins/shell/plugins/toast": {
       "name": "@singularity/plugin-shell-toast",
       "version": "0.0.1",
@@ -6040,6 +6078,10 @@
     },
     "plugins/tasks/plugins/launch-options": {
       "name": "@singularity/plugin-tasks-launch-options",
+      "version": "0.0.1",
+    },
+    "plugins/tasks/plugins/menu-bar-task": {
+      "name": "@singularity/plugin-tasks-menu-bar-task",
       "version": "0.0.1",
     },
     "plugins/tasks/plugins/outcome-report": {
@@ -7181,6 +7223,8 @@
 
     "@singularity/plugin-apps-core-app-launcher": ["@singularity/plugin-apps-core-app-launcher@workspace:plugins/apps-core/plugins/app-launcher"],
 
+    "@singularity/plugin-apps-core-app-manifest": ["@singularity/plugin-apps-core-app-manifest@workspace:plugins/apps-core/plugins/app-manifest"],
+
     "@singularity/plugin-apps-core-app-rail": ["@singularity/plugin-apps-core-app-rail@workspace:plugins/apps-core/plugins/app-rail"],
 
     "@singularity/plugin-apps-core-app-rail-framing": ["@singularity/plugin-apps-core-app-rail-framing@workspace:plugins/apps-core/plugins/app-rail-framing"],
@@ -8111,6 +8155,8 @@
 
     "@singularity/plugin-conversations-hibernation": ["@singularity/plugin-conversations-hibernation@workspace:plugins/conversations/plugins/hibernation"],
 
+    "@singularity/plugin-conversations-menu-bar-status": ["@singularity/plugin-conversations-menu-bar-status@workspace:plugins/conversations/plugins/menu-bar-status"],
+
     "@singularity/plugin-conversations-model-provider": ["@singularity/plugin-conversations-model-provider@workspace:plugins/conversations/plugins/model-provider"],
 
     "@singularity/plugin-conversations-model-provider-catalog": ["@singularity/plugin-conversations-model-provider-catalog@workspace:plugins/conversations/plugins/model-provider/plugins/catalog"],
@@ -8611,6 +8657,8 @@
 
     "@singularity/plugin-framework-tooling-checks-app-css-utilities-in-sync": ["@singularity/plugin-framework-tooling-checks-app-css-utilities-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/app-css-utilities-in-sync"],
 
+    "@singularity/plugin-framework-tooling-checks-app-declarations-in-sync": ["@singularity/plugin-framework-tooling-checks-app-declarations-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/app-declarations-in-sync"],
+
     "@singularity/plugin-framework-tooling-checks-barrel-stubs-in-sync": ["@singularity/plugin-framework-tooling-checks-barrel-stubs-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/barrel-stubs-in-sync"],
 
     "@singularity/plugin-framework-tooling-checks-bun-runtime": ["@singularity/plugin-framework-tooling-checks-bun-runtime@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/bun-runtime"],
@@ -8875,6 +8923,10 @@
 
     "@singularity/plugin-infra-deps-python-uv-updater": ["@singularity/plugin-infra-deps-python-uv-updater@workspace:plugins/infra/plugins/deps/plugins/python/plugins/uv-updater"],
 
+    "@singularity/plugin-infra-deps-rust": ["@singularity/plugin-infra-deps-rust@workspace:plugins/infra/plugins/deps/plugins/rust"],
+
+    "@singularity/plugin-infra-deps-rust-cargo-updater": ["@singularity/plugin-infra-deps-rust-cargo-updater@workspace:plugins/infra/plugins/deps/plugins/rust/plugins/cargo-updater"],
+
     "@singularity/plugin-infra-deps-sweep": ["@singularity/plugin-infra-deps-sweep@workspace:plugins/infra/plugins/deps/plugins/sweep"],
 
     "@singularity/plugin-infra-deps-updates": ["@singularity/plugin-infra-deps-updates@workspace:plugins/infra/plugins/deps/plugins/updates"],
@@ -8944,6 +8996,8 @@
     "@singularity/plugin-infra-jobs-supervised-job": ["@singularity/plugin-infra-jobs-supervised-job@workspace:plugins/infra/plugins/jobs/plugins/supervised-job"],
 
     "@singularity/plugin-infra-launcher": ["@singularity/plugin-infra-launcher@workspace:plugins/infra/plugins/launcher"],
+
+    "@singularity/plugin-infra-launcher-login-services": ["@singularity/plugin-infra-launcher-login-services@workspace:plugins/infra/plugins/launcher/plugins/login-services"],
 
     "@singularity/plugin-infra-mcp": ["@singularity/plugin-infra-mcp@workspace:plugins/infra/plugins/mcp"],
 
@@ -9032,6 +9086,10 @@
     "@singularity/plugin-map-google": ["@singularity/plugin-map-google@workspace:plugins/map/plugins/google"],
 
     "@singularity/plugin-map-pin-layer": ["@singularity/plugin-map-pin-layer@workspace:plugins/map/plugins/pin-layer"],
+
+    "@singularity/plugin-menu-bar": ["@singularity/plugin-menu-bar@workspace:plugins/menu-bar"],
+
+    "@singularity/plugin-menu-bar-app-grid": ["@singularity/plugin-menu-bar-app-grid@workspace:plugins/menu-bar/plugins/app-grid"],
 
     "@singularity/plugin-music": ["@singularity/plugin-music@workspace:plugins/music"],
 
@@ -9891,6 +9949,8 @@
 
     "@singularity/plugin-shell-notifications": ["@singularity/plugin-shell-notifications@workspace:plugins/shell/plugins/notifications"],
 
+    "@singularity/plugin-shell-notifications-native": ["@singularity/plugin-shell-notifications-native@workspace:plugins/shell/plugins/notifications/plugins/native"],
+
     "@singularity/plugin-shell-toast": ["@singularity/plugin-shell-toast@workspace:plugins/shell/plugins/toast"],
 
     "@singularity/plugin-stats": ["@singularity/plugin-stats@workspace:plugins/stats"],
@@ -9926,6 +9986,8 @@
     "@singularity/plugin-tasks-automations": ["@singularity/plugin-tasks-automations@workspace:plugins/tasks/plugins/automations"],
 
     "@singularity/plugin-tasks-launch-options": ["@singularity/plugin-tasks-launch-options@workspace:plugins/tasks/plugins/launch-options"],
+
+    "@singularity/plugin-tasks-menu-bar-task": ["@singularity/plugin-tasks-menu-bar-task@workspace:plugins/tasks/plugins/menu-bar-task"],
 
     "@singularity/plugin-tasks-outcome-report": ["@singularity/plugin-tasks-outcome-report@workspace:plugins/tasks/plugins/outcome-report"],
 

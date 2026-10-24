@@ -1,4 +1,4 @@
-// @hash a947efd2a684
+// @hash 74fb72dd5a15
 {
   "manifests": [
     {
@@ -139,7 +139,11 @@
         "!tasks.outcome-report.**",
         "!apps.file-explorer.**",
         "!apps.pages.**",
-        "!apps.prototypes.**"
+        "!apps.prototypes.**",
+        "!menu-bar.**",
+        "!conversations.menu-bar-status.**",
+        "!tasks.menu-bar-task.**",
+        "!shell.notifications.native.**"
       ],
       "selectedContributors": [],
       "extends": [

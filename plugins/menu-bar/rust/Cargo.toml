@@ -1,0 +1,50 @@
+[package]
+name = "equin-desktop"
+version = "0.1.0"
+description = "equin's native helper: the menu-bar / top-bar tray and its panel (tray mode), and one app's window (window mode)"
+edition = "2021"
+rust-version = "1.77"
+publish = false
+
+# A crate of its own (infra/deps' rust kind builds it with --locked), never a
+# member of an enclosing workspace.
+[workspace]
+
+[[bin]]
+name = "equin-desktop"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+# Renders icons/*.svg (the spiral, the one source of truth) into the PNGs the
+# app compiles in — see build.rs.
+resvg = "0.45"
+
+[dependencies]
+tauri = { version = "2", features = ["image-png"] }
+tauri-plugin-notification = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+url = "2"
+
+# macOS: the status item is Tauri's own tray (NSStatusItem, template image).
+[target.'cfg(target_os = "macos")'.dependencies]
+tauri = { version = "2", features = ["image-png", "tray-icon"] }
+# A shim reads its own bundle's Info.plist (EquinAppId, EquinUrl) and the
+# installed set from every shim's.
+plist = "1"
+
+# Linux: a StatusNotifierItem over D-Bus, not libappindicator — so a left click
+# is `Activate` (the panel) instead of a forced menu.
+[target.'cfg(target_os = "linux")'.dependencies]
+ksni = { version = "0.3", features = ["blocking"] }
+# The app window's class / Wayland app id (glib prgname, gdk program class) —
+# the gtk Tauri itself links, not a second one.
+gtk = "0.18"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

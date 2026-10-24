@@ -1,7 +1,8 @@
 # start
 
 `./equin start` — ensure the gateway binary and make it the machine's
-running, self-restarting gateway daemon.
+running, self-restarting gateway daemon; then bring up every login service a
+plugin declares (see *Declared login services* below).
 
 A system-level host operation, run once at install. It is **not** part of the
 agent workflow: agents run `./equin build`, never this (nor `stop`).
@@ -10,7 +11,8 @@ agent workflow: agents run `./equin build`, never this (nor `stop`).
 
 The gateway is a per-user LaunchAgent, `dev.singularity.gateway`
 (`~/Library/LaunchAgents/dev.singularity.gateway.plist`, rendered by
-`infra/launcher`'s `login-service.ts`). launchd starts it at every login —
+`infra/launcher/login-services`' `launchd-plist.ts` from `GATEWAY_SERVICE` +
+`gatewayServiceJob`). launchd starts it at every login —
 which is what brings the app back after a reboot; before this the first reboot
 of a fresh install looked exactly like the install had broken — and relaunches
 it when it exits non-zero. Everything else follows from the gateway: its
@@ -44,7 +46,7 @@ the two launch paths cannot drift. Consequences worth knowing:
 ## Linux: a systemd user unit
 
 The same job as a systemd **user** unit, `~/.config/systemd/user/dev.singularity.gateway.service`
-(`infra/launcher`'s `systemd-service.ts`, rendered by the pure `systemd-unit.ts`),
+(`infra/launcher/login-services`' `systemd.ts`, rendered by the pure `systemd-unit.ts`),
 enabled into `default.target`. Same relaunch policy as the plist. It needs
 **lingering** (`sudo loginctl enable-linger <user>`, once): without it systemd
 stops the user's manager — gateway, backends and agents — when the last session
@@ -53,9 +55,20 @@ nobody logged in (nothing is locked until login: the secrets key is a file on
 Linux). `KillMode=process`: a stop signals the gateway alone, because every running
 agent process (started detached) lives in the unit's cgroup.
 
-`start` and `stop` drive both through one `GatewayLoginService` interface
-(`gatewayLoginService()`), so the bullets above hold for systemd too (reload is
-`stop` + `enable --now` after a `daemon-reload`).
+`start` and `stop` drive both through one `LoginService` interface
+(`loginServiceManager().service(GATEWAY_SERVICE)`), so the bullets above hold
+for systemd too (reload is `stop` + `enable --now` after a `daemon-reload`).
+
+## Declared login services
+
+After the gateway, `start` reads `declaredLoginServices()` — every plugin's
+`login-services/index.ts` (`infra/launcher/login-services`) — and names none of
+them. For each: `ensureDep` its dependency from the main checkout, `holdDep` it
+(`login-service-<label>`, like `machine-gateway`), write its job, and load it
+unless it is already running an unchanged job (`--force` reloads anyway). A
+`graphical` service is tied to the desktop session (launchd's Aqua session,
+systemd's `graphical-session.target`) and needs no lingering. With no service
+manager none is started, and `start` says so.
 
 ## Bind address
 

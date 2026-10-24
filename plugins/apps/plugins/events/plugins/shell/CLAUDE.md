@@ -47,7 +47,9 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `ui/icons.Icon`
   - Exports (values): `Events`
 - Core:
-  - Uses: `primitives/pane.defineApp`
+  - Uses:
+    - `primitives/pane.defineApp`
+    - `ui/icons.symbol`
   - Exports (values): `eventsApp`
 - Cross-plugin:
   - Uses tokens:

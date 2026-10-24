@@ -90,6 +90,7 @@ Ordering for both surfaces lives in
     - `primitives/launch`
     - `tasks`
     - `tasks/auto-start/launch-option`
+    - `tasks/menu-bar-task`
     - `tasks/task-description`
     - `tasks/task-draft-form`
     - `tasks/task-effort`

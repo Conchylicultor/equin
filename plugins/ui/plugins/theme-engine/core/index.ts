@@ -13,7 +13,14 @@ export type {
   TokenGroupFragment,
   TokenValues,
 } from "./define-token-group";
-export { COLOR_MODE_SCOPE_ID, themeSelectionConfig } from "./config";
+export {
+  appColorModeConfig,
+  effectiveColorMode,
+  parseAppColorModeOverride,
+  parseConfiguredColorMode,
+  themeSelectionConfig,
+} from "./config";
+export type { AppColorModeOverride, ConfiguredColorMode } from "./config";
 export {
   ColorAdjustmentSchema,
   DEFAULT_THEME_ID,

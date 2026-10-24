@@ -2122,6 +2122,7 @@ contribution can land in it.
 | table | `true` | `false` | the reserved trailing `auto` track, before the revealed cluster |
 | nested table | `true` (`false` for `outline`) | `false` | the row's trailing cell |
 | list | `false` | `true` while the row shows a cover thumbnail (the action sits over it, on hover) | — demoted to the hover cluster |
+| icons | `true` | `false` (the tile's click is its main verb) | the tile's top-right float chip, right of the revealed chip (the gallery's shape) |
 
 List says `false` to a persistent slot on purpose: a reserved trailing region
 would take width from the title in the app's narrowest surfaces (the Pages
@@ -2864,8 +2865,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSlots.Control` ← `primitives.data-view`
     - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
     - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-  - Contributes: 80 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.WebRegister` ×72
+  - Contributes: 81 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×73
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
     - `IdKinds.Kind` ×2
@@ -3103,8 +3104,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `useRowFilter`
     - `useSortController`
 - Server:
-  - Contributes: 74 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.Register` ×72
+  - Contributes: 75 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.Register` ×73
     - `ids.kind` ×2
   - Uses:
     - `config_v2.getConfig`
@@ -3258,7 +3259,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `ui/tokens/type-scale` ×10
     - `ui/tokens/shadow` ×3
     - `ui/tokens/shape` ×3
-  - Imported by: 104 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 105 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×31
     - `apps` ×24
     - `debug` ×13
@@ -3271,6 +3272,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `config_v2/settings`
     - `history/dialog`
     - `integrations/google-maps/usage`
+    - `menu-bar/app-grid`
     - `page/links`
     - `plugin-meta/exhibits`
     - `runs`

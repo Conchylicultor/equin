@@ -122,7 +122,9 @@ hover.
     - `WebsiteNavLink`
     - `WebsiteSoon`
 - Core:
-  - Uses: `primitives/pane.defineApp`
+  - Uses:
+    - `primitives/pane.defineApp`
+    - `ui/icons.symbol`
   - Exports (values):
     - `CONTACT_EMAIL`
     - `CONTACT_MAILTO`

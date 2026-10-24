@@ -10,6 +10,7 @@ import { useNavigate } from "@plugins/apps-core/plugins/tabs/web";
 import { useRouteState } from "@plugins/primitives/plugins/pane/web";
 import { ErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import { AppEmbed } from "../components/app-embed";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 // An embed is its own surface: its route lives in its own pane store (never the
 // page URL), and a hop read through the navigation boundary is the embed's — a
@@ -46,9 +47,13 @@ const appsPlugin = {
   description: "fake apps for the app-embed suite",
   contributions: [
     Apps.App({
-      app: { id: "emb", name: "Embedded", basePath: "/emb", iconKey: "home" },
+      app: {
+        id: "emb",
+        name: "Embedded",
+        basePath: "/emb",
+        icon: symbol("home"),
+      },
       component: Probe,
-      icon: {} as never,
     }),
   ],
 } as unknown as LoadedPlugin;

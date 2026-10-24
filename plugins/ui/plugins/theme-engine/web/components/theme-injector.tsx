@@ -10,7 +10,7 @@ import {
   fixedThemeScope,
   subThemeScope,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
-import { useResolvedColorMode, type ColorMode } from "../use-color-mode";
+import { useDocumentColorMode, type ColorMode } from "../use-color-mode";
 import { ThemeEngine } from "../slots";
 import type { TokenGroupContribution } from "../slots";
 import {
@@ -202,17 +202,17 @@ function useReportFaults(faults: ThemeResolutionFault[]): void {
   }, [faultsKey]);
 }
 
-// Toggles the single global `<html>.dark` class from the desktop (global,
-// unscoped) resolved color mode. Color mode is a single global class — no
-// per-app DOM scoping (per-scope dark is deferred) — and now follows the
-// desktop config, so switching the focused app never flips light/dark. The
-// resolution itself lives in useResolvedColorMode so the class and prop-themed
-// components never drift.
+// Toggles the document's `<html>.dark` class from the resolved colour mode of
+// the scope owning `:root` (use-color-mode: the focused full-surface app's
+// effective mode, or the global setting). `undefined` while that scope is not
+// known yet: the class the server's first frame set stays untouched, rather
+// than the desktop's answer flashing for a frame.
 //
 // An insertion effect for the same reason as usePaintedStyle: the class must be
 // on `<html>` before any layout effect of the commit can force a style recalc.
-function ColorModeApplier({ resolved }: { resolved: ColorMode }) {
+function ColorModeApplier({ resolved }: { resolved: ColorMode | undefined }) {
   useInsertionEffect(() => {
+    if (resolved === undefined) return;
     document.documentElement.classList.toggle("dark", resolved === "dark");
   }, [resolved]);
 
@@ -227,9 +227,8 @@ export function ThemeInjector() {
   // NOT follow it: it wears its own fixed theme (see FixedThemeStyles), so it
   // stays the same while the focused app changes underneath it.
   const rootScopeId = useRootThemeScope();
-  // `<html>.dark` is a single global class, owned by use-color-mode — the
-  // `:root` tokens follow `rootScopeId`, the class does not.
-  const resolved = useResolvedColorMode();
+  // `<html>.dark` follows the same root scope, resolved by use-color-mode.
+  const resolved = useDocumentColorMode();
   useDropRetiredThemeCache();
 
   // The `:root`/`.dark` blocks paint the FOCUSED full-surface app's theme
@@ -264,7 +263,7 @@ export function ThemeInjector() {
 // the `:root` path (all live in ScopeStyles / GroupStyle) — only the selector and
 // style id differ (via `scopeToken`). The server paints the same blocks into the
 // first frame's HTML for every app with its own theme. Deliberately omits
-// ColorModeApplier (light/dark stays global).
+// ColorModeApplier: a document has one scheme, the root scope's.
 //
 // Mounted centrally (one per registered app via AppScopeThemes at Core.Root),
 // not per open surface — so the degraded `AppTabsBody` fallback and the real

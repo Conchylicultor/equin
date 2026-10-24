@@ -19,7 +19,9 @@
     - `primitives/slot-render.defineRenderSlot`
   - Exports (values): `DebugApp`
 - Core:
-  - Uses: `primitives/pane.defineApp`
+  - Uses:
+    - `primitives/pane.defineApp`
+    - `ui/icons.symbol`
   - Exports (values): `debugApp`
 - Cross-plugin:
   - Imported by: 25 plugins — full list in [REFERENCE.md](./REFERENCE.md)

@@ -10,6 +10,7 @@ export const shim = defineDep({
   source: build({
     inputs: ["plugins/<feature>/native/**"],       // git ls-files globs, repo-relative
     tool: { versionArgv: ["cc", "--version"] },     // its stdout is in the identity
+    // tool.env?: () => env — what the version command runs under (default process.env)
     output: "shim.dylib",                           // what run leaves in env/ (or (target) => name)
     // targets: "any" — only when run honours ctx.target (see below)
     run: (ctx) => ctx.run(["cc", "-o", ctx.output, "…"], { cwd: ctx.root, env: { ...process.env }, timeoutMs }),
@@ -67,6 +68,7 @@ const path = builtFile(ready);
     - `builtFile`
 - Cross-plugin:
   - Imported by:
+    - `infra/deps/rust`
     - `infra/launcher`
     - `packages/signal-origin`
 

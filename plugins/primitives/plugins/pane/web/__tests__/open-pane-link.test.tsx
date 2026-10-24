@@ -29,6 +29,7 @@ import {
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { computeOpen } from "../pane";
 import { createTestSurfaceStore, TestSurface, defaultStore } from "../testing";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 // A LINK'S URL IS WHERE ITS CLICK GOES.
 //
@@ -43,7 +44,7 @@ const linkApp = defineApp({
   id: "link-app",
   name: "Link test app",
   basePath: "/lnk",
-  iconKey: "science",
+  icon: symbol("science"),
 });
 
 const convPane = Pane.define({

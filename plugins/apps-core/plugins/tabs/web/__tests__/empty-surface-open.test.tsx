@@ -17,6 +17,7 @@ import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { defaultStore } from "@plugins/primitives/plugins/pane/web/testing";
 import { TabsProvider, useTabs } from "../internal/use-tabs";
 import { registerPlacementCapabilities } from "../internal/placement-registry";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 // OPENING A PANE ON AN EMPTY SURFACE OPENS A TAB.
 //
@@ -53,13 +54,13 @@ const pagesApp = defineApp({
   id: "pages",
   name: "Pages",
   basePath: "/pages",
-  iconKey: "home",
+  icon: symbol("home"),
 });
 const storyApp = defineApp({
   id: "story",
   name: "Story",
   basePath: "/story",
-  iconKey: "home",
+  icon: symbol("home"),
 });
 
 // Homed in the composition's home app.
@@ -80,8 +81,8 @@ const plugin = {
   id: "tabs-empty-surface-test",
   description: "fake apps + panes for the empty-surface open suite",
   contributions: [
-    Apps.App({ app: pagesApp, component: () => null, icon: {} as never }),
-    Apps.App({ app: storyApp, component: () => null, icon: {} as never }),
+    Apps.App({ app: pagesApp, component: () => null }),
+    Apps.App({ app: storyApp, component: () => null }),
     Pane.Register({ pane: guestPane }),
     Pane.Register({ pane: storyPane }),
   ],

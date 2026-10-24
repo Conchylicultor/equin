@@ -40,7 +40,16 @@ phone home screen. Contributes one `DataViewSlots.View("icons")` entry.
   the ends. In a windowed section only mounted lanes are reachable by
   ArrowUp/Down.
 - Hover / keyboard focus lifts the tile 2px; press sinks it to 96%.
-- **Not rendered**: item actions, selection, aggregation — a launcher has none.
+- **Item actions** sit on the tile's top-right corner (`useItemActionZones(desc,
+  { hasPersistentSlot: true, hasPrimarySlot: false })`), the gallery card's
+  shape: ONE `Pin to="top-right"` holding `[revealed][at rest]`, each arm its own
+  float chip (`RowActions chrome="float"`). The whole tile (square and name) is
+  the `rowActionsAnchor` hover group; resting actions (persistent, or active per
+  `useActive` — an install in flight) stay painted. No primary slot: the tile's
+  click is the row's main verb, so a `primary` action joins the cluster. A
+  surface with no `itemActions` draws no corner and no hover group. The
+  menu-bar app grid's **+** (install) is the first consumer.
+- **Not rendered**: selection, aggregation — a launcher has none.
 
 ## Manual order
 
@@ -78,10 +87,11 @@ through the real body, `web/__tests__/paged-conformance.test.tsx` (data-view's
 - Description: Icons view child for the data-view primitive: a centred launcher grid of fixed-size tiles (the row's leading avatar filling a squircle) with the name underneath, drag-to-reorder in manual order.
 - Web:
   - Contributes: `DataViewSlots.View` "Icons" → `IconsView`
-  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×20
+  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×22
     - `primitives/avatar` ×2
     - `primitives/rank-reorder` ×2
+    - `primitives/row-actions` ×2
     - `primitives/css/center.Center`
     - `primitives/css/grid.Grid`
     - `primitives/css/pin.Pin`

@@ -16,7 +16,9 @@
     - `shell.Shell`
     - `ui/theme-engine.ThemeEngine`
 - Core:
-  - Uses: `primitives/pane.defineApp`
+  - Uses:
+    - `primitives/pane.defineApp`
+    - `ui/icons.symbol`
   - Exports (values): `agentManagerApp`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --radius`

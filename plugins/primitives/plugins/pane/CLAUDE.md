@@ -797,9 +797,11 @@ up. An app that has **not** forked emits no block, so its panes inherit `:root` 
 which currently carries the focused app's theme, i.e. the host's. Guest panes of
 unforked apps therefore still look like their host; see the `theme` skill.
 
-Light/dark is a single global `<html>.dark` class (per-scope color mode is
-deferred), so a scope switches tokens — palette, typography, radius — never the
-color mode.
+Light/dark is one `<html>.dark` class per document, decided by the app owning
+the document (`defineApp({ colorMode })` plus the user's override — see
+theme-engine), so a pane's scope switches tokens — palette, typography, radius
+— never the color mode. A surface that must wear its own scheme is an app of
+its own (the menu-bar panel), not a pane.
 
 **`app` is mandatory, with no opt-out** — being displayable in any app is a fact
 about hosting, not an absence of ownership. The case that looks like an
@@ -891,9 +893,9 @@ See "Open questions" in the design doc.
 - Load-bearing: yes
 - Web:
   - Slots: `Pane.Register`
-  - Slot contributors: 88 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Pane.Register` ×88
-  - Contributes: 115 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 89 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Pane.Register` ×89
+  - Contributes: 116 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `SlotRender.ItemMiddleware`
     - `WebsiteHeader` "title" → `PaneTitleItem`
     - `accountPane.Actions` "title" → `PaneTitleItem`
@@ -971,6 +973,7 @@ See "Open questions" in the design doc.
     - `pageDetailPane.Actions` "title" → `PaneTitleItem`
     - `pages-root.actions` "title" → `PaneTitleItem`
     - `pagesTreePane.Actions` "title" → `PaneTitleItem`
+    - `panel.actions` "title" → `PaneTitleItem`
     - `places-map.actions` "title" → `PaneTitleItem`
     - `plugin-conv-side.actions` "title" → `PaneTitleItem`
     - `pluginViewPane.Actions` "title" → `PaneTitleItem`
@@ -1137,7 +1140,7 @@ See "Open questions" in the design doc.
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-md`
     - `ui/tokens/shape --spacing`
-  - Imported by: 176 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 178 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×64
     - `conversations` ×30
     - `debug` ×26
@@ -1150,6 +1153,7 @@ See "Open questions" in the design doc.
     - `infra` ×2
     - `reports` ×2
     - `stats` ×2
+    - `ui` ×2
     - `auth`
     - `backup`
     - `build`
@@ -1157,11 +1161,11 @@ See "Open questions" in the design doc.
     - `config_v2/settings`
     - `hints/ask`
     - `integrations/google-maps`
+    - `menu-bar`
     - `review`
     - `runs`
     - `screenshot`
     - `shell/notifications`
-    - `ui/theme-engine/theme-customizer`
 - Exemptions:
   - Exempts itself from: `pane/no-core-define-route-in-web` — `.` (sanctioned)
   - Exempted by:
@@ -1169,11 +1173,13 @@ See "Open questions" in the design doc.
     - `primitives/pane` (0 debt)
 - Core:
   - Exports (types):
+    - `AppColorMode`
     - `AppRef`
     - `PositionalRouteParams`
     - `RouteDef`
     - `RouteParams`
   - Exports (values):
+    - `APP_COLOR_MODES`
     - `defineApp`
     - `defineRoute`
     - `fillSegment`

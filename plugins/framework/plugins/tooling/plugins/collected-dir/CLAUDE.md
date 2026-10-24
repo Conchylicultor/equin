@@ -64,6 +64,7 @@ relative specifier inside this leaf would resolve against the wrong module.
     - `improve/element-picker`
     - `infra/asset-mirror`
     - `infra/deps`
+    - `infra/launcher/login-services`
     - `infra/paths`
     - `plugin-meta/exhibits`
     - `plugin-meta/facets`

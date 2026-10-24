@@ -1,4 +1,5 @@
 import { stripBasePath } from "@plugins/primitives/plugins/pane/web";
+import type { AppRef } from "@plugins/primitives/plugins/pane/core";
 import type { ActiveApp } from "./use-active-app";
 
 /**
@@ -10,6 +11,17 @@ export function isTabApp(
   entry: ActiveApp,
 ): entry is ActiveApp & { component: NonNullable<ActiveApp["component"]> } {
   return entry.component !== undefined;
+}
+
+/**
+ * Whether launchers offer the app — the rail, the app galleries and launcher
+ * grids. An app declaring `defineApp({ listed: false })` is opened at its URL by
+ * something outside equin (the menu-bar panel) and is never picked from inside
+ * it; it still owns its URL, its tab and its `app:<id>` scope. The one
+ * predicate every launcher filters on.
+ */
+export function isListedApp(entry: { app: AppRef }): boolean {
+  return entry.app.listed !== false;
 }
 
 /** Path-prefix match: an app owns `pathname` if it equals or parents it. */

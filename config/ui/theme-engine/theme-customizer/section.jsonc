@@ -1,4 +1,4 @@
-// @hash 3b2fb2804ea9
+// @hash 3ef0bddfadaa
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -9,6 +9,8 @@
 {
   "items": [
     "ui.theme-engine.theme-gallery:themes",
+    // Light/dark sits right under the theme it paints.
+    "ui.theme-toggle:color-mode",
     "ui.tokens.color-palette:color-palette",
     "ui.tokens.color-adjust:color-adjust",
     "ui.tokens.font-family:font-family",

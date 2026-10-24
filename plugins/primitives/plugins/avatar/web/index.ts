@@ -10,7 +10,6 @@ export {
   AVATAR_COLOR_KEYS,
   avatarSoftClass,
   avatarFlatClass,
-  type AvatarColorPick,
 } from "./internal/colors";
 export {
   AvatarPresentationProvider,

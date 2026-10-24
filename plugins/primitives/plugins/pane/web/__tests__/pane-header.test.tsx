@@ -20,6 +20,7 @@ import { paneHeaderContributions } from "../header-slot";
 import { PANE_TITLE_SLOT_ERROR } from "../components/pane-title-guard";
 import { Pane as PaneSlots } from "../slots";
 import { createTestSurfaceStore, TestSurface } from "../testing";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 // One pane header is ONE slot, title included. These pin the facts that makes
 // true and that nothing else in the suite would notice breaking: the pane
@@ -71,7 +72,7 @@ function headerCase(id: string, title?: PaneTitle<Record<string, never>>) {
     id: `hdr-${id}`,
     name: `Header ${id}`,
     basePath: `/${id}`,
-    iconKey: "science",
+    icon: symbol("science"),
   });
   const pane = Pane.define({
     route: defineRoute({ id: `hdr-${id}-pane`, segment: "" }),

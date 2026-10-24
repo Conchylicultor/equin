@@ -21,6 +21,7 @@ import {
 import type { LinkGestureProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { createTestSurfaceStore, TestSurface, defaultStore } from "../testing";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 // A ROUTE BELONGS TO ITS ROOT PANE'S APP.
 //
@@ -35,13 +36,13 @@ const hostApp = defineApp({
   id: "home-host",
   name: "Host",
   basePath: "/host",
-  iconKey: "science",
+  icon: symbol("science"),
 });
 const guestApp = defineApp({
   id: "home-guest",
   name: "Guest",
   basePath: "/guest",
-  iconKey: "science",
+  icon: symbol("science"),
 });
 
 const hostPane = Pane.define({

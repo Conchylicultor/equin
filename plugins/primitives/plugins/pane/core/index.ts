@@ -1,4 +1,5 @@
 export {
+  APP_COLOR_MODES,
   defineApp,
   defineRoute,
   fillSegment,
@@ -13,6 +14,7 @@ export {
   splitKeyedPart,
 } from "./route";
 export type {
+  AppColorMode,
   AppRef,
   PositionalRouteParams,
   RouteDef,

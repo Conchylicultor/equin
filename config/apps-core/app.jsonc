@@ -1,4 +1,4 @@
-// @hash bc1bb5b8f500
+// @hash 2ae4043ce7ef
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -38,6 +38,9 @@
     "apps.demo.shell:demo",
     "apps.deploy.shell:deploy",
     "apps.settings.shell:settings",
-    "apps.debug.shell:debug"
+    "apps.debug.shell:debug",
+    // The menu-bar panel is an app only so it can wear its own light/dark; it
+    // is unlisted (`defineApp({ listed: false })`) — the native helper opens it.
+    { "item": "menu-bar:menu-bar", "hidden": true }
   ]
 }

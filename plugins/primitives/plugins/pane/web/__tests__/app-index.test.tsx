@@ -11,6 +11,7 @@ import {
 } from "@plugins/primitives/plugins/pane/web";
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { createTestSurfaceStore, TestSurface } from "../testing";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 // `appIndex` is a boolean, not a path: which app a pane is the index OF comes
 // from the `app` it already declares. This suite pins what that buys — the
@@ -22,13 +23,13 @@ const appA = defineApp({
   id: "ai-a",
   name: "App index A",
   basePath: "/app",
-  iconKey: "science",
+  icon: symbol("science"),
 });
 const appB = defineApp({
   id: "ai-b",
   name: "App index B",
   basePath: "/other",
-  iconKey: "science",
+  icon: symbol("science"),
 });
 
 function plugin(id: string, panes: AnyPane[]) {

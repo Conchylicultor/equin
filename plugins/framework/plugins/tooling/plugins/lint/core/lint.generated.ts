@@ -66,6 +66,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "framework/plugins/web-core", id: "framework.web-core", loader: () => import("@plugins/framework/plugins/web-core/lint"), dependsOn: [] },
   { pluginPath: "infra/plugins/background/plugins/timer", id: "infra.background.timer", loader: () => import("@plugins/infra/plugins/background/plugins/timer/lint"), dependsOn: [] },
   { pluginPath: "infra/plugins/deps/plugins/python", id: "infra.deps.python", loader: () => import("@plugins/infra/plugins/deps/plugins/python/lint"), dependsOn: [] },
+  { pluginPath: "infra/plugins/deps/plugins/rust", id: "infra.deps.rust", loader: () => import("@plugins/infra/plugins/deps/plugins/rust/lint"), dependsOn: [] },
   { pluginPath: "infra/plugins/endpoints", id: "infra.endpoints", loader: () => import("@plugins/infra/plugins/endpoints/lint"), dependsOn: [] },
   { pluginPath: "infra/plugins/spawn", id: "infra.spawn", loader: () => import("@plugins/infra/plugins/spawn/lint"), dependsOn: [] },
   { pluginPath: "infra/plugins/spawn/plugins/daemon", id: "infra.spawn.daemon", loader: () => import("@plugins/infra/plugins/spawn/plugins/daemon/lint"), dependsOn: [] },

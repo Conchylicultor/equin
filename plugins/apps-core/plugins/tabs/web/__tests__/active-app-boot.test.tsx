@@ -10,6 +10,7 @@ import { getFocusedAppId } from "@plugins/apps-core/web/testing";
 import { setLiveStore } from "@plugins/primitives/plugins/pane/web";
 import { defaultStore } from "@plugins/primitives/plugins/pane/web/testing";
 import { TabsProvider } from "../internal/use-tabs";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 // Chrome that reads the active app (the theme scope, a variant region) must
 // settle on its first render: the focused app TabsProvider publishes after
@@ -21,14 +22,22 @@ const appsPlugin = {
   description: "fake apps for the active-app boot suite",
   contributions: [
     Apps.App({
-      app: { id: "pages", name: "Pages", basePath: "/pages", iconKey: "home" },
+      app: {
+        id: "pages",
+        name: "Pages",
+        basePath: "/pages",
+        icon: symbol("home"),
+      },
       component: () => null,
-      icon: {} as never,
     }),
     Apps.App({
-      app: { id: "story", name: "Story", basePath: "/story", iconKey: "home" },
+      app: {
+        id: "story",
+        name: "Story",
+        basePath: "/story",
+        icon: symbol("home"),
+      },
       component: () => null,
-      icon: {} as never,
     }),
   ],
 } as unknown as LoadedPlugin;

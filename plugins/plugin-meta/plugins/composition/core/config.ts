@@ -347,6 +347,12 @@ export const compositionsConfig = defineConfig({
             "!apps.file-explorer.**",
             "!apps.pages.**",
             "!apps.prototypes.**",
+            // The OS menu-bar panel and its sections: a page the native
+            // helper opens on the computer, meaningless in a demo.
+            "!menu-bar.**",
+            "!conversations.menu-bar-status.**",
+            "!tasks.menu-bar-task.**",
+            "!shell.notifications.native.**",
           ],
           selectedContributors: [] as string[],
           extends: ["agent-manager"],

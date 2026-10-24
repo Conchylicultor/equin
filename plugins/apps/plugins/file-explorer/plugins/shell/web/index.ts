@@ -1,14 +1,12 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps-core/web";
 
-import { appIcon } from "@plugins/apps-core/plugins/app-icon/core";
 import { fileExplorerApp } from "../core";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { FileExplorerLayout } from "./components/file-explorer-layout";
 import { FilesMark } from "./components/files-mark";
 import { filesTheme } from "./internal/theme";
 import { FileExplorer } from "./slots";
-import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export {
   FileExplorer,
@@ -24,7 +22,6 @@ export default {
   contributions: [
     Apps.App({
       app: fileExplorerApp,
-      icon: appIcon(symbol("folder")),
       mark: FilesMark,
       component: FileExplorerLayout,
     }),

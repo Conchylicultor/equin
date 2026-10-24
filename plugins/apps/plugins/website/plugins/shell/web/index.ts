@@ -2,7 +2,6 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps-core/web";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 
-import { appIcon } from "@plugins/apps-core/plugins/app-icon/core";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { websiteApp } from "../core";
 import { WebsiteLayout } from "./components/website-layout";
@@ -15,7 +14,6 @@ import {
   equinPageHeroTheme,
   equinTheme,
 } from "./internal/theme";
-import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { Website, WebsiteHeader } from "./slots";
 export { WebsiteNavLink } from "./components/website-nav-link";
@@ -33,7 +31,6 @@ export default {
   contributions: [
     Apps.App({
       app: websiteApp,
-      icon: appIcon(symbol("public")),
       component: WebsiteLayout,
     }),
     WebsiteHeader({ id: "wordmark", component: WebsiteWordmark }),

@@ -4,7 +4,7 @@ import { readyForTests } from "@plugins/infra/plugins/deps/deps/testing";
 import { builtFile } from "@plugins/infra/plugins/deps/plugins/build/deps";
 import { gatewayBinary } from "../../deps";
 import { gatewayLaunchSpec } from "./boot";
-import { renderLaunchAgentPlist } from "./launchd-plist";
+import { gatewayServiceJob } from "./gateway-service";
 
 describe("gatewayLaunchSpec", () => {
   // The installed gateway as the deps cache names it: a path per identity.
@@ -26,19 +26,11 @@ describe("gatewayLaunchSpec", () => {
     expect(spec.argv).toContain("-child-env");
   });
 
-  test("the launchd job names that binary, so a new identity is a new plist", () => {
-    const xml = renderLaunchAgentPlist({
-      label: "dev.singularity.gateway",
-      argv: spec.argv,
-      cwd: spec.cwd,
-      env: {},
-      stdioLog: spec.stdioLog,
-    });
-    expect(xml).toContain(
-      `<key>ProgramArguments</key>\n\t<array>\n\t\t<string>${join(dir, "gateway")}</string>`,
-    );
-    expect(xml).toContain(
-      `<key>WorkingDirectory</key>\n\t<string>${checkout}</string>`,
-    );
+  test("the service job names that binary, so a new identity is a new job definition", () => {
+    const job = gatewayServiceJob(spec);
+    expect(job.argv).toEqual(spec.argv);
+    expect(job.argv[0]).toBe(join(dir, "gateway"));
+    expect(job.cwd).toBe(checkout);
+    expect(job.stdioLog).toBe(spec.stdioLog);
   });
 });

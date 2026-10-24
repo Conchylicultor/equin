@@ -30,13 +30,30 @@ export function isEmbeddedDocument(): boolean {
   return embedMode() !== undefined;
 }
 
+// `undefined` = not read yet.
+let standalone: boolean | undefined;
+
 /**
- * Is THIS document embedded WITHOUT its app chrome? The question for the
- * chrome itself — the tab bar, the app rail, the floating action bar. An embed
- * in `chrome` mode draws all three.
+ * Is THIS document an installed app's window (`display-mode: standalone` — a
+ * web app installed from its manifest, `apps-core/app-manifest`)? Read once,
+ * like {@link embedMode}: how the document was opened, not a live state.
+ */
+function isStandaloneDocument(): boolean {
+  standalone ??=
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(display-mode: standalone)").matches;
+  return standalone;
+}
+
+/**
+ * Is THIS document drawn WITHOUT its app chrome? The question for the chrome
+ * itself — the tab bar, the app rail, the floating action bar. True for an
+ * embed in `chromeless` mode (an embed in `chrome` mode draws all three) and
+ * for an installed app's own window (standalone), which is just the app.
  */
 export function isChromelessDocument(): boolean {
-  return embedMode() === "chromeless";
+  return embedMode() === "chromeless" || isStandaloneDocument();
 }
 
 /**
@@ -57,4 +74,5 @@ export function embedUrl(path: string, mode: EmbedMode): string {
 /** Drop the memoized read between tests (mirrors resetAppInstanceForTests). */
 export function resetEmbedForTests(): void {
   resolved = undefined;
+  standalone = undefined;
 }

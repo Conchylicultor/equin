@@ -36,6 +36,7 @@ documented with the mockup variable it is.
   - Uses:
     - `primitives/pane.defineApp`
     - `primitives/pane.defineRoute`
+    - `ui/icons.symbol`
   - Exports (values):
     - `prototypeDetailRoute`
     - `prototypesApp`

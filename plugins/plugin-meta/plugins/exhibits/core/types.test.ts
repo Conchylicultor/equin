@@ -7,6 +7,7 @@ import {
   isolatedExhibit,
   regionExhibit,
 } from "./types";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const load = () => Promise.resolve({ default: () => null });
 
@@ -96,7 +97,7 @@ describe("exhibit home", () => {
     id: "pages",
     name: "Pages",
     basePath: "/pages",
-    iconKey: "description",
+    icon: symbol("description"),
   } as const;
   it("carries an app ref or the chrome through the factory, and validates", () => {
     const inApp = appExhibit({ id: "g/a", label: "A", home: app, load });

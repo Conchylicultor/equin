@@ -9,18 +9,38 @@ half only, by `./equin start` / `stop`.
 
 `gatewayLaunchSpec` is the one derivation of how the gateway runs (argv, cwd,
 declared env, stdio log). `spawnGatewayDaemon` spawns it detached; where the host
-has a service manager `./equin start` instead renders it into a per-user
-service through `gatewayLoginService()` (`server/internal/login-service.ts`), one
-`GatewayLoginService` interface with two implementations — a launchd
-LaunchAgent on macOS (`launchd-service.ts` + the pure `launchd-plist.ts`) and a
-systemd user unit on Linux (`systemd-service.ts` + the pure `systemd-unit.ts`,
-which requires lingering and uses `KillMode=process` so a restart never kills
-the running agent processes). That is what makes the dev gateway come
-back after a reboot. `start` and `stop` name no manager. The gateway writes its own
-pidfile (`-pid-file`) because no launcher sees a launchd relaunch; the detached
-spawn writes it too, so a gateway that dies before getting that far still
-leaves its dead pid for a preview's reaper. Design:
+has a service manager `./equin start` instead registers it as a per-user
+login service: `GATEWAY_SERVICE` (`dev.singularity.gateway`, session
+`background`) with the job `gatewayServiceJob(spec)`
+(`server/internal/gateway-service.ts`), written and loaded through the generic
+`LoginService` of the `login-services` sub-plugin — a launchd LaunchAgent on
+macOS, a systemd user unit on Linux (which for a `background` service requires
+lingering and uses `KillMode=process`, so a restart never kills the running
+agent processes). That is what makes the dev gateway come back after a reboot.
+`start` and `stop` name no manager. The gateway writes its own pidfile
+(`-pid-file`) because no launcher sees a launchd relaunch; the detached spawn
+writes it too, so a gateway that dies before getting that far still leaves its
+dead pid for a preview's reaper. Design:
 [`research/2026-09-25-global-gateway-survives-reboot.md`](../../../../research/2026-09-25-global-gateway-survives-reboot.md).
+
+## Login services: the gateway's mechanism, for any plugin
+
+`plugins/login-services` is the gateway's old service code made generic: a
+`LoginServiceSpec { label, session, description, argv, cwd, env, stdioLog }`
+(`core`), rendered by the pure `launchd-plist.ts` / `systemd-unit.ts` and
+driven by one `LoginService` per manager (`machine`). `session: "graphical"`
+(a tray icon, a window) adds `LimitLoadToSessionType=Aqua` on macOS and ties the
+systemd unit to `graphical-session.target` (no lingering); a `background` one
+renders exactly the gateway's pre-generic plist / unit (pinned byte for byte by
+the renderer tests).
+
+A plugin declares its own in `<plugin>/login-services/index.ts` (a leaf folder,
+collected by codegen; see that sub-plugin's `CLAUDE.md`). `start` brings each
+one up after the gateway and `stop` / `stop --disable` take each one down,
+reading only the collected registry. The gateway itself is not a declaration:
+`start` gates every other step on it answering, hands over a gateway started
+outside the manager, and builds its launch from flags — so `start` drives it
+explicitly, through the same `LoginService`.
 
 ## The gateway binary is a dependency
 
@@ -250,8 +270,6 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `infra/worktree.writeWorktreeSpec`
   - Exports (types):
     - `GatewayLaunchOptions`
-    - `GatewayLoginService`
-    - `GatewayServiceState`
     - `ListenAddress`
   - Exports (values):
     - `assertSupportedHost`
@@ -261,10 +279,10 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `bootSelfContainedApp`
     - `bundledGateway`
     - `ensureDatabaseConfig`
-    - `GATEWAY_SERVICE_LABEL`
+    - `GATEWAY_SERVICE`
     - `gatewayLaunchSpec`
-    - `gatewayLoginService`
     - `gatewayPidFile`
+    - `gatewayServiceJob`
     - `hasPgBouncerPackage`
     - `isGatewayListening`
     - `isRunning`
@@ -294,7 +312,7 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `paths:data-root-not-joined` — `bin/launch.ts` (sanctioned)
     - `marker-scan-safety/no-adhoc-marker-scan` — `check/internal/strip-comments.ts` (sanctioned)
     - `spawn-safety/no-raw-bun-spawn` — `server/internal/boot.ts` (sanctioned)
-    - `boundaries/no-platform-api` — `server/internal/boot.ts`, `server/internal/config-propagate.ts`, `server/internal/launchd-service.ts`, `server/internal/systemd-service.ts` (debt)
+    - `boundaries/no-platform-api` — `server/internal/boot.ts`, `server/internal/config-propagate.ts` (debt)
 - Core:
   - Exports (values):
     - `isRuntimeEnvName`
@@ -308,5 +326,7 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `runtimeEnvNames`
     - `runtimePath`
     - `runtimeShimsDir`
+- Sub-plugins:
+  - **`login-services`** — Per-user login services, generalized from the gateway's: a LoginService over a LoginServiceSpec (label, argv, cwd, env, stdio log, session background | graphical), rendered as a launchd LaunchAgent…
 
 <!-- AUTOGENERATED:END -->

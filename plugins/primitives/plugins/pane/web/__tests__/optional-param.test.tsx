@@ -16,6 +16,7 @@ import {
 import { buildRouteUrl } from "../pane";
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { createTestSurfaceStore, TestSurface, defaultStore } from "../testing";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 // A VIEW OF A PANE HAS AN ADDRESS.
 //
@@ -32,7 +33,7 @@ const optApp = defineApp({
   // Rooted at "/": the surfaces here run at the bare base path, and a route
   // headed by another app's pane would be handed to that app.
   basePath: "/",
-  iconKey: "science",
+  icon: symbol("science"),
 });
 
 /** The prototype-detail shape: an entity, then an optional view of it. */

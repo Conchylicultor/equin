@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Apps, useCurrentAppId } from "@plugins/apps-core/web";
+import { Apps, isListedApp, useCurrentAppId } from "@plugins/apps-core/web";
 import { useActivateApp } from "@plugins/apps-core/plugins/tabs/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
@@ -155,7 +155,7 @@ export function AppGrid() {
   const activate = useActivateApp();
   const galleryRef = useHintAnchor(homeGalleryAnchor);
   const rows = useMemo(
-    () => apps.filter((a) => a.id !== currentId).map(appRow),
+    () => apps.filter((a) => a.id !== currentId && isListedApp(a)).map(appRow),
     [apps, currentId],
   );
 

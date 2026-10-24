@@ -31,7 +31,7 @@ const app = defineApp({
   id: "sidebar-nav-test-app",
   name: "Sidebar nav test app",
   basePath: "/nav",
-  iconKey: "science",
+  icon: symbol("science"),
 });
 const homePane = Pane.define({
   route: defineRoute({ id: "nav-home", segment: "home" }),

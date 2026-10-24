@@ -303,7 +303,7 @@ the outcome too, with no separate code path.
     - `useDispatchOutcome`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/density --control-height-sm`
-  - Imported by: 85 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 86 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×27
     - `conversations` ×13
     - `primitives` ×13
@@ -318,6 +318,7 @@ the outcome too, with no separate code path.
     - `improve`
     - `integrations/google-maps`
     - `map`
+    - `menu-bar`
     - `network/live`
     - `reorder/slot-middleware`
     - `reports`

@@ -20,6 +20,13 @@ export interface BuildTool {
    * dependency, never an install against an unknown toolchain.
    */
   readonly versionArgv: readonly string[];
+  /**
+   * The environment the version command runs under, read when the identity is
+   * derived — the same one `run` builds with, so the identity names the
+   * toolchain the build really uses (a mise-pinned one rather than whatever is
+   * first on the caller's PATH). Omitted: `process.env`.
+   */
+  readonly env?: () => Record<string, string | undefined>;
 }
 
 /** What a build's `run` gets: the engine's install context, plus where to write. */
@@ -159,7 +166,7 @@ async function toolVersion(tool: BuildTool, root: string): Promise<string> {
   const argv = [...tool.versionArgv];
   const result = await spawnCaptured(argv, {
     cwd: root,
-    env: { ...process.env },
+    env: tool.env === undefined ? { ...process.env } : tool.env(),
     timeoutMs: PROBE_TIMEOUT_MS,
   });
   if (result.exitCode !== 0) {

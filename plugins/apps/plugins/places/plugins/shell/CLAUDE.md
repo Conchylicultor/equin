@@ -16,7 +16,9 @@
     - `primitives/css/ui-kit.cn`
     - `ui/theme-engine.ThemeEngine`
 - Core:
-  - Uses: `primitives/pane.defineApp`
+  - Uses:
+    - `primitives/pane.defineApp`
+    - `ui/icons.symbol`
   - Exports (values): `placesApp`
 - Cross-plugin:
   - Uses tokens:

@@ -23,6 +23,9 @@ export { TaskDraftFormSlots } from "./slots";
 export type { TaskDraftActionProps } from "./slots";
 
 export { draftInsert, draftSeed } from "./insert-request";
+
+export { submitChain } from "./internal/submit";
+export type { SubmitArgs, SubmitOutcome } from "./internal/submit";
 export type { TaskDraftInsert } from "./insert-request";
 
 export default {

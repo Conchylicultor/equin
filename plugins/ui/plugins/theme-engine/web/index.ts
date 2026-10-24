@@ -4,7 +4,7 @@ import {
 } from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { DynamicEnum } from "@plugins/fields/plugins/dynamic-enum/plugins/config/web";
-import { themeSelectionConfig } from "../core";
+import { appColorModeConfig, themeSelectionConfig } from "../core";
 import {
   ThemeInjector,
   AppScopeThemes,
@@ -39,14 +39,22 @@ export {
 export { ScopedAppTheme } from "./components/theme-injector";
 export {
   useColorMode,
+  useColorModeSetting,
+  useColorModeSettingFor,
   useResolvedColorMode,
+  useSetAppColorMode,
   useSetColorMode,
+  useSetGlobalColorMode,
 } from "./use-color-mode";
-export type { ColorMode, ConfiguredColorMode } from "./use-color-mode";
+export type {
+  ColorMode,
+  ColorModeSetting,
+  ConfiguredColorMode,
+} from "./use-color-mode";
 
 export default {
   description:
-    "Paints each scope's selected theme: the token-group, theme and theme-source slots, the theme selection config, and the injector that resolves one theme per scope into CSS variables.",
+    "Paints each scope's selected theme: the token-group, theme and theme-source slots, the theme selection config, the injector that resolves one theme per scope into CSS variables, and the document's light/dark: the root scope's effective color mode (the app's declared default from defineApp, the user's per-app override, else the global setting), read and written through useColorModeSetting / useSetColorMode.",
   contributions: [
     Core.Root({ component: ThemeInjector }),
     Core.Root({ component: AppScopeThemes }),
@@ -54,6 +62,7 @@ export default {
     Core.Root({ component: FixedThemeStyles }),
     Core.Root({ component: ThemeSelectionsCollector }),
     ConfigV2.WebRegister({ descriptor: themeSelectionConfig }),
+    ConfigV2.WebRegister({ descriptor: appColorModeConfig }),
     DynamicEnum.Options({
       field: themeSelectionConfig.fields.theme,
       useOptions: useThemeOptions,

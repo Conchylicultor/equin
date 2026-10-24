@@ -48,6 +48,7 @@ delete it once none can be open.
     - `infra/deps/mise`
     - `infra/deps/npm`
     - `infra/deps/python/uv-updater`
+    - `infra/deps/rust/cargo-updater`
     - `toolchain`
 - Core:
   - Exports (types):

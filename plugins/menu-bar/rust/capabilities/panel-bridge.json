@@ -1,0 +1,19 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "panel-bridge",
+  "description": "window.equinNative: the bridge commands, for the panel window only and only while it shows an equin page (http://<namespace>.localhost:9000). No other window, no other origin, and not the bundled offline page.",
+  "windows": ["panel"],
+  "local": false,
+  "remote": {
+    "urls": ["http://*.localhost:9000/*"]
+  },
+  "permissions": [
+    "allow-host-info",
+    "allow-set-attention",
+    "allow-notify",
+    "allow-open-url",
+    "allow-launch-app",
+    "allow-hide-panel",
+    "allow-set-panel-height"
+  ]
+}

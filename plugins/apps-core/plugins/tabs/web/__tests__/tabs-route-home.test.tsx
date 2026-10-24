@@ -14,6 +14,7 @@ import {
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { defaultStore } from "@plugins/primitives/plugins/pane/web/testing";
 import { TabsProvider, useTabs, type TabsApi } from "../internal/use-tabs";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 // A ROUTE ARRIVING BY URL LANDS IN ITS ROOT PANE'S APP.
 //
@@ -50,13 +51,13 @@ const pagesApp = defineApp({
   id: "pages",
   name: "Pages",
   basePath: "/pages",
-  iconKey: "home",
+  icon: symbol("home"),
 });
 const storyApp = defineApp({
   id: "story",
   name: "Story",
   basePath: "/story",
-  iconKey: "home",
+  icon: symbol("home"),
 });
 
 const storyPane = Pane.define({
@@ -70,8 +71,8 @@ const plugin = {
   id: "tabs-route-home-test",
   description: "fake apps + a Story pane for the route-home suite",
   contributions: [
-    Apps.App({ app: pagesApp, component: () => null, icon: {} as never }),
-    Apps.App({ app: storyApp, component: () => null, icon: {} as never }),
+    Apps.App({ app: pagesApp, component: () => null }),
+    Apps.App({ app: storyApp, component: () => null }),
     Pane.Register({ pane: storyPane }),
   ],
 } as unknown as LoadedPlugin;

@@ -6,8 +6,8 @@
   // the desktop's runtime choice. This one selection is the whole per-app
   // theme: a group `home` does not mention paints its schema defaults.
   //
-  // `colorMode` is deliberately absent: light/dark is a single global setting
-  // today (`COLOR_MODE_SCOPE_ID` in `theme-engine/web/use-color-mode.ts`), so a
-  // value here would claim something that is not true.
+  // `colorMode` is deliberately absent: an app theme document's `colorMode` is
+  // never read. An app's light/dark is its `defineApp({ colorMode })` default
+  // plus the user's override in `color-mode.jsonc`.
   "theme": "home"
 }

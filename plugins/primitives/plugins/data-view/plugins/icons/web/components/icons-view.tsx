@@ -9,6 +9,10 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import {
+  RowActions,
+  rowActionsAnchor,
+} from "@plugins/primitives/plugins/row-actions/web";
+import {
   Avatar,
   AvatarPresentationProvider,
 } from "@plugins/primitives/plugins/avatar/web";
@@ -31,12 +35,14 @@ import {
   useResolveCellEditor,
   useResolveOperatorSet,
   useGridPhase,
+  useItemActionZones,
   type DataViewRenderProps,
   type DataViewRowEntry,
   type DataViewDensity,
   type DataViewSection,
   type FieldDef,
   type GridLine,
+  type ItemActionsDescriptor,
   type ManualOrderConfig,
 } from "@plugins/primitives/plugins/data-view/web";
 import type { DataViewPagePlaceholders } from "@plugins/primitives/plugins/data-view/core";
@@ -194,8 +200,10 @@ function TileRef({
  * `<AvatarPresentationProvider value="tile">`, so an avatar cell fills it
  * flat; a schema with no leading field gets a derived-colour letter tile, so
  * switching any DataView to icons still draws something. The name is the
- * primary field. Item actions, selection and aggregation are not rendered — a
- * launcher has none.
+ * primary field. Item actions sit on the tile's top-right corner, in float
+ * chips like a gallery card's: the resting ones at rest, the rest on hover or
+ * keyboard focus. Selection and aggregation are not rendered — a launcher has
+ * none.
  *
  * `rows`/`fields` arrive type-erased as `unknown`; this is the documented
  * re-cast boundary for the view child.
@@ -232,6 +240,16 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
   const geometry = GEOMETRY[props.density ?? "comfortable"];
   // Documented cast boundary: `options` is `viewOptions.icons`, opaque to the host.
   const { useTileRef } = (props.options ?? {}) as IconsViewOptions<unknown>;
+  // Documented cast boundary: itemActions arrives type-erased. A tile has an
+  // at-rest corner (the same float chip the hover arm uses) but no primary
+  // slot — its click IS the row's main verb. Resolved unconditionally (hooks
+  // rules) BEFORE the early empty-state return.
+  const itemActions = props.itemActions as
+    ItemActionsDescriptor<unknown> | undefined;
+  const { cluster } = useItemActionZones(itemActions, {
+    hasPersistentSlot: true,
+    hasPrimarySlot: false,
+  });
 
   const totalCount = sections.reduce((sum, s) => sum + s.count.n, 0);
   if (totalCount === 0) {
@@ -303,6 +321,8 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
         data-row-key={key}
         className={cn(
           "group/icon focus-ring relative",
+          // The item actions' hover group: the whole tile, square and name.
+          (cluster.atRest || cluster.revealed) && rowActionsAnchor,
           geometry.tilePad,
           activate && "cursor-pointer",
         )}
@@ -344,6 +364,26 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
         >
           {renderName(row)}
         </Text>
+        {cluster.atRest || cluster.revealed ? (
+          // The tile's corner: `[revealed][at rest]`, each its own float chip,
+          // so a resting action never moves when hover adds the others to its
+          // left. `RowActions` keeps a press on an action from activating or
+          // dragging the tile.
+          <Pin to="top-right">
+            <Stack direction="row" gap="2xs" align="center">
+              {cluster.revealed ? (
+                <RowActions pin={null} chrome="float">
+                  {cluster.revealed({ row, hasChildren: false })}
+                </RowActions>
+              ) : null}
+              {cluster.atRest ? (
+                <RowActions pin={null} alwaysVisible chrome="float">
+                  {cluster.atRest({ row, hasChildren: false })}
+                </RowActions>
+              ) : null}
+            </Stack>
+          </Pin>
+        ) : null}
         {/* The selected row (a launcher's current app): a dot under its name. */}
         {selected && (
           <Pin to="bottom" offset="2xs" decorative>

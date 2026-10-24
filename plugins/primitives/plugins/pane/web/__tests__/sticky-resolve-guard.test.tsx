@@ -14,13 +14,14 @@ import {
 import { PaneResolveGuard } from "../components/pane-resolve-guard";
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { createTestSurfaceStore, TestSurface } from "../testing";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 // Local fixture app — this suite is about the resolve guard, not pane homes.
 const testApp = defineApp({
   id: "sticky-guard-app",
   name: "Sticky guard test app",
   basePath: "/sticky-guard-app",
-  iconKey: "science",
+  icon: symbol("science"),
 });
 
 // Regression: a resolve hook whose live-state resource flips transiently back to

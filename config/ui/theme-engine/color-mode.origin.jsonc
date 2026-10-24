@@ -1,0 +1,5 @@
+// @hash eda83fbb62ec
+{
+  // Allowed values: "default", "global", "system", "light", "dark"
+  "colorMode": "default"
+}

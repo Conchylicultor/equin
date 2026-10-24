@@ -3,6 +3,7 @@ import { afterOpen } from "@plugins/primitives/plugins/link-gesture/core";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import {
   Apps,
+  isListedApp,
   useHomeApp,
   useActiveApp,
   type ActiveApp,
@@ -90,7 +91,7 @@ function useLaunchableApps(galleryId: string | undefined): ActiveApp[] {
       entries
         .filter((e) => !isNodeData(e))
         .map((e) => e as unknown as ActiveApp)
-        .filter((a) => a.id !== galleryId),
+        .filter((a) => a.id !== galleryId && isListedApp(a)),
     [entries, galleryId],
   );
 }

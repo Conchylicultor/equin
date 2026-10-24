@@ -1,0 +1,5 @@
+// @hash 6e322ece5c0c
+{
+  // Show each new notification as a native OS notification, through equin's menu-bar helper. Off by default; the switch is in the menu-bar panel, and only where the helper can notify.
+  "enabled": false
+}

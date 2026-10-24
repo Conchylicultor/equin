@@ -8,7 +8,7 @@ import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
  */
 export default defineCliCommand<[], { disable?: boolean }>({
   name: "stop",
-  description: "Stop the gateway daemon",
+  description: "Stop the gateway daemon and every declared login service",
   options: [
     {
       flags: "--disable",

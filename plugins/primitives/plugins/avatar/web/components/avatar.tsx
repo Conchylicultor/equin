@@ -11,11 +11,10 @@ import {
   type SavedSymbolName,
 } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import type { AvatarShape } from "../../core";
+import { avatarColorPick, type AvatarShape } from "../../core";
 import {
   AVATAR_FILL_FLAT_CLASS,
   AVATAR_FILL_SOFT_CLASS,
-  avatarColorPick,
   avatarFlatClass,
   avatarGradientClass,
   avatarSoftClass,

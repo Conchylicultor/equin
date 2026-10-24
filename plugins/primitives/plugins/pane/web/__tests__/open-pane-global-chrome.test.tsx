@@ -15,6 +15,7 @@ import {
 } from "@plugins/primitives/plugins/pane/web";
 import { defaultStore } from "../testing";
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 // Opening a pane from GLOBAL CHROME — anything mounted at `Core.Root` or in the
 // tab bar, which has no `PaneSurfaceProvider` of its own: the floating action
@@ -34,7 +35,7 @@ const testApp = defineApp({
   // Rooted at "/": the surfaces here run at the bare base path, and a route
   // headed by another app's pane would be handed to that app.
   basePath: "/",
-  iconKey: "science",
+  icon: symbol("science"),
 });
 
 const listRoute = defineRoute({ id: "chrome-list", segment: "list" });

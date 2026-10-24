@@ -17,13 +17,16 @@ import type {
 export interface DeclaredApp {
   /** The app id (`defineApp({ id })`) — what a composition's `home` names. */
   id: string;
-  /** The Material Symbols name, or null when the call declares none. */
+  /** The Material Symbols name of its `icon: symbol("…")`, or null when the call declares none. */
   iconKey: string | null;
   /** The plugin whose `core/` declares it — the app's shell. */
   plugin: PluginId;
   /** The declaring file, for error messages. */
   file: string;
 }
+
+/** `icon: symbol("…")` in a `defineApp({...})` argument: the glyph name. */
+const ICON_SYMBOL = /\bicon:\s*symbol\(\s*["']([^"']+)["']\s*\)/;
 
 /** A static string field of a `defineApp({...})` argument; null when absent or dynamic. */
 function stringProp(argsText: string, key: string): string | null {
@@ -34,7 +37,7 @@ function stringProp(argsText: string, key: string): string | null {
 /**
  * The app `node` ITSELF declares — the `defineApp({...})` in its own `core/*.ts`
  * (not its descendants') — or null. Static, barrel-free: every app shell writes
- * `defineApp({ id: "…", …, iconKey: "…" })` with string literals in `core/app.ts`
+ * `defineApp({ id: "…", …, icon: symbol("…") })` with string literals in `core/app.ts`
  * (tsc checks the literals; this only reads them back). A `defineApp` without a
  * literal `id` throws — an app the build cannot name is not one to guess at.
  */
@@ -70,7 +73,7 @@ export function readDefineAppIn(
           `Composition homes and releases read app ids statically — write it as a literal.`,
       );
     }
-    return { id, iconKey: stringProp(body, "iconKey"), plugin, file };
+    return { id, iconKey: ICON_SYMBOL.exec(body)?.[1] ?? null, plugin, file };
   }
   return null;
 }

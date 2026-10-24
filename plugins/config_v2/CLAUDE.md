@@ -394,8 +394,8 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
 - Description: Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins: the registry over the user-layer store (the ConfigStore host service) and the committed layer (ConfigGitLayer), its live values and the scope routes.
 - Web:
   - Slots: `ConfigV2.WebRegister`
-  - Slot contributors: 90 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.WebRegister` ×90
+  - Slot contributors: 91 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×91
   - Uses:
     - `infra/endpoints.useEndpointMutation`
     - `network/live.useLive`
@@ -575,7 +575,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `validationIssues`
     - `withOverrideLegend`
 - Cross-plugin:
-  - Imported by: 117 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 118 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×33
     - `backup` ×13
     - `conversations` ×13
@@ -588,6 +588,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `infra` ×2
     - `integrations` ×2
     - `reports` ×2
+    - `shell` ×2
     - `stats` ×2
     - `build`
     - `framework/tooling/codegen`
@@ -596,7 +597,6 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `plugin-meta/composition`
     - `reorder`
     - `review/code-review`
-    - `shell/global-action-bar`
 - Test helpers:
   - Core: `@plugins/config_v2/core/testing`
     - `LEGEND_MARKER` — The build-owned `// @legend` block of a committed config override: a descriptor's `overrideLegend` lines, stamped directly under the `// @hash` header so whoever opens the file to hand-edit it sees how to write its values — for a reorder slot, that a spacer node exists and what it does.

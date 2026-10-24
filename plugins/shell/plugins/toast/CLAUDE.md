@@ -28,7 +28,7 @@
     - `ui/tokens/color-palette --popover`
     - `ui/tokens/color-palette --popover-foreground`
     - `ui/tokens/shape --radius`
-  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×10
     - `conversations` ×3
     - `primitives` ×3
@@ -40,6 +40,7 @@
     - `config_v2/settings`
     - `debug/profiling/ops`
     - `infra/health`
+    - `menu-bar/app-grid`
     - `reports/optimistic-rejection`
     - `shell/notifications`
 - Core:

@@ -128,12 +128,21 @@ export default defineBoundaries({
     // One uv project (`infra/deps/plugins/python`): Python source plus
     // `pyproject.toml` / `uv.lock`. It holds no TypeScript, so it imports nothing.
     python: [],
+    // One Cargo crate (`infra/deps/plugins/rust`): Rust source plus
+    // `Cargo.toml` / `Cargo.lock`. It holds no TypeScript, so it imports nothing.
+    rust: [],
     // An exemption manifest (`tooling/exempt`): plain data that names its own
     // plugin's files, typed by the exempt primitive's `core`.
     exempt: ["core"],
     // Contributed hook guards (`tooling/guards`): loaded by the PreToolUse hook,
     // a host process, so a guard may read its owner's data-dir declaration.
     guard: ["core", "data-dirs"],
+    // Login-service declarations (`infra/launcher/login-services`): read only by
+    // `./equin start` / `stop`, host processes. A declaration names the
+    // dependency it runs (`deps`), where its stdio goes (`data-dirs`), and is
+    // typed by `defineLoginService`, which lives in a `machine` barrel beside
+    // the service managers it feeds.
+    "login-services": ["core", "data-dirs", "deps", "machine"],
   },
 
   // Which folders may import a platform API (a Node builtin, `bun`, `pg`,
@@ -167,8 +176,10 @@ export default defineBoundaries({
     vite: "allowed",
     prewarm: "allowed",
     python: "allowed",
+    rust: "allowed",
     exempt: "allowed",
     guard: "allowed",
+    "login-services": "allowed",
   },
 
   runtimeExceptions: [

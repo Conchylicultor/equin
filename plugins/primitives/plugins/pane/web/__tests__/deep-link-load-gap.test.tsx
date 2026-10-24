@@ -16,6 +16,7 @@ import {
 import { usePaneRoute } from "../pane";
 import { defineApp, defineRoute } from "@plugins/primitives/plugins/pane/core";
 import { createTestSurfaceStore, TestSurface } from "../testing";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 // A fixture app for the panes below. `Pane.define({ app })` is mandatory, but
 // this suite is about URL resolution, not homes — so the app is local to the
@@ -25,7 +26,7 @@ const testApp = defineApp({
   id: "deep-link-test-app",
   name: "Deep link test app",
   basePath: "/app",
-  iconKey: "science",
+  icon: symbol("science"),
 });
 
 // Regression: a cold deep-link reload must not flash the app's index/landing

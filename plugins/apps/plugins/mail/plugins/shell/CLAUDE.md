@@ -53,7 +53,9 @@ Auth state and affordances come only from
     - `primitives/slot-render.defineRenderSlot`
   - Exports (values): `Mail`
 - Core:
-  - Uses: `primitives/pane.defineApp`
+  - Uses:
+    - `primitives/pane.defineApp`
+    - `ui/icons.symbol`
   - Exports (values): `mailApp`
 - Cross-plugin:
   - Imported by:

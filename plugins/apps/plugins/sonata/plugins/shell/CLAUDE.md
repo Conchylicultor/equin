@@ -86,7 +86,9 @@ persistence); an effect that must run wherever a song plays is a
     - `useSonataApp`
     - `useSonataSectionOpen`
 - Core:
-  - Uses: `primitives/pane.defineApp`
+  - Uses:
+    - `primitives/pane.defineApp`
+    - `ui/icons.symbol`
   - Exports (values): `sonataApp`
 - Cross-plugin:
   - Uses tokens:
