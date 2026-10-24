@@ -326,8 +326,14 @@ const check: Check = {
       // build and check) and lint — then what each program held and checked.
       if (result) {
         const { check, lint } = result.phaseCpuSeconds;
+        const b = result.batchProcesses;
         ctx.log?.(
-          `type-check worker ${program.name} phases: type check ${check.toFixed(1)}s, lint ${lint.toFixed(1)}s (cpu)`,
+          `type-check worker ${program.name} phases: type check ${check.toFixed(1)}s, lint ${lint.toFixed(1)}s (cpu)` +
+            // The batch processes' share of the cost line's cpu (a reaped
+            // child counts in its parent's rusage) and their memory.
+            (b === null
+              ? ""
+              : `; ${b.count} batch processes: cpu ${b.cpuSeconds.toFixed(1)}s (type check and lint), maxRSS ${(b.maxRssBytes / 1e9).toFixed(1)} GB each, ≤ ${(b.concurrentRssBytes / 1e9).toFixed(1)} GB at once`),
           "stderr",
         );
         ctx.log?.(

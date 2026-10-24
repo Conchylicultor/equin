@@ -21,7 +21,11 @@
  *   6. typed lint: a file is linted in the program that holds it, and a valid
  *      file whose typed part is stale joins program 2 as source;
  *   7. a missed prediction (forced, by a store blind to inference edges):
- *      thrown, or answered by one whole program and reported.
+ *      thrown, or answered by one whole program and reported;
+ *   8. bounded batches: every run above is also made in batches of one file
+ *      (writes kept apart) and must check, key and report the same; a cold
+ *      run in batches keeps a cycle whole and the environment first, and
+ *      lints each file in its batch.
  */
 
 import { afterAll, expect, setDefaultTimeout, test } from "bun:test";
@@ -46,7 +50,12 @@ import {
   type LintHook,
   type NameRunOutput,
 } from "./name-run";
-import { memoryNameStore, type NameStore } from "./name-store";
+import { inProcessBatches } from "./batch-run";
+import {
+  bufferedNameStore,
+  memoryNameStore,
+  type NameStore,
+} from "./name-store";
 import { gitBlobSha, repoViewOver, type RepoView } from "./repo-view";
 import { canonicalDeclarations } from "./tsc-engine";
 
@@ -127,6 +136,8 @@ async function run(
     extra?: ts.CompilerOptions;
     order?: "reverse";
     onMiss?: "throw" | "whole";
+    /** Batches of at most this many files, in this process. */
+    batchK?: number;
   } = {},
 ): Promise<NameRunOutput> {
   const options = optionsFor(root, opts.extra);
@@ -135,6 +146,22 @@ async function run(
     .sort();
   if (opts.order === "reverse") list = list.reverse();
   const view = viewOf(root, files);
+  // The same run in batches of one file, over the same store with its writes
+  // kept apart: batching changes which program a file is checked in, never
+  // what it is checked against or keyed on (no lint: a hook records).
+  const shadow =
+    opts.lint === undefined && opts.batchK === undefined
+      ? await runNameCheck({
+          view,
+          options,
+          roots: list,
+          engine: "fixture",
+          store: bufferedNameStore(store),
+          cache: createSourceFileCache(),
+          onMiss: opts.onMiss ?? "throw",
+          batching: inProcessBatches(1),
+        })
+      : undefined;
   const out = await runNameCheck({
     view,
     options,
@@ -144,11 +171,37 @@ async function run(
     cache: createSourceFileCache(),
     ...(opts.lint ? { lint: opts.lint } : {}),
     onMiss: opts.onMiss ?? "throw",
+    ...(opts.batchK !== undefined
+      ? { batching: inProcessBatches(opts.batchK) }
+      : {}),
   });
   const full = fullCheck(view, options, list);
   expect(compareResults(out.results, full.results)).toEqual([]);
+  if (shadow !== undefined) {
+    expect(shadow.checked).toEqual(out.checked);
+    expect(Object.fromEntries(shadow.keys)).toEqual(
+      Object.fromEntries(out.keys),
+    );
+    expect(Object.fromEntries(shadow.results)).toEqual(
+      Object.fromEntries(out.results),
+    );
+    expect(shadow.programDiagnostics).toEqual(out.programDiagnostics);
+    expect(shadow.report.missed).toEqual(out.report.missed);
+  }
   return out;
 }
+
+/** A lint hook for a run that is not batched: nothing to speculate or adopt. */
+const unbatched = (
+  hook: Pick<LintHook, "wants" | "run" | "discard">,
+): LintHook => ({
+  ...hook,
+  spec: () => undefined,
+  lintIn: () => Promise.resolve({}),
+  adopt: () => {
+    throw new Error("an unbatched run adopted batch lint");
+  },
+});
 
 /** Run `trees` in order over one store; the files each run checked. */
 async function walk(trees: Record<string, string>[]): Promise<string[][]> {
@@ -348,7 +401,7 @@ test("a missed prediction under onMiss: whole answers from one whole program, an
   writeTree(root, edited, INFERRED);
   const linted: string[] = [];
   let discarded = 0;
-  const lint: LintHook = {
+  const lint = unbatched({
     wants: (p) => p === "f.ts" || p === "h.ts",
     run(_program, files) {
       for (const { path } of files) linted.push(path);
@@ -358,7 +411,7 @@ test("a missed prediction under onMiss: whole answers from one whole program, an
       discarded++;
       linted.length = 0;
     },
-  };
+  });
   // `run` compares with a full check: h's error (y: number = x, now a
   // string), which the missed prediction would have left out, is there.
   const out = await run(root, edited, store, { lint, onMiss: "whole" });
@@ -685,7 +738,7 @@ test("typed lint runs in the program holding the file; a valid file with a stale
   };
   writeTree(root, edited, CHAIN);
   const linted: { path: string; source: boolean }[] = [];
-  const lint: LintHook = {
+  const lint = unbatched({
     // k (re-checked) and lone (valid, its typed part evicted).
     wants: (p) => p === "k.ts" || p === "lone.ts",
     run(program, files) {
@@ -701,7 +754,7 @@ test("typed lint runs in the program holding the file; a valid file with a stale
     discard() {
       linted.length = 0;
     },
-  };
+  });
   const out = await run(root, edited, store, { lint });
   expect(linted.sort((x, y) => (x.path < y.path ? -1 : 1))).toEqual([
     { path: "k.ts", source: true },
@@ -724,7 +777,7 @@ test("a repo .d.ts has a typed key, and is linted in a program even when nothing
   const first = await run(root, files, store);
   expect(first.keys.get("env.d.ts")).toBeDefined();
   const linted: { path: string; declaration: boolean }[] = [];
-  const lint: LintHook = {
+  const lint = unbatched({
     wants: (p) => p === "env.d.ts",
     run(program, list) {
       for (const { path } of list) {
@@ -736,7 +789,7 @@ test("a repo .d.ts has a typed key, and is linted in a program even when nothing
     discard() {
       linted.length = 0;
     },
-  };
+  });
   const out = await run(root, files, store, { lint });
   expect(out.checked).toEqual([]);
   expect(linted).toEqual([{ path: "env.d.ts", declaration: true }]);
@@ -825,4 +878,134 @@ test("components are found iteratively, far deeper than the call stack", () => {
   );
   expect(order.length).toBe(n);
   expect(order[0]).toBe(0);
+});
+
+// ─── 8. Bounded batches ─────────────────────────────────────────────────────
+
+const BATCHED: Record<string, string> = {
+  ...CHAIN,
+  // A cycle: one batch, whatever k.
+  "p.ts": 'import { q } from "./q";\nexport const p = (): number => q() + 1;\n',
+  "q.ts":
+    'import { p } from "./p";\nexport const q = (): number => 1;\nexport const pp = p;\n',
+  "r.ts": 'import { pp } from "./q";\nexport const r = pp;\n',
+  // A repo .d.ts importing a source: in every program, so g goes first.
+  "env.d.ts":
+    'import type { G } from "./g";\ndeclare module "virtual:env" { export const g: G; }\n',
+  "uses-env.ts":
+    'import { g } from "virtual:env";\nexport const ex: number = g.x;\n',
+};
+
+test("a cold run in batches checks, keys and reports what one program does, a cycle whole and the environment first", async () => {
+  const root = freshRoot();
+  writeTree(root, BATCHED);
+  const one = await run(root, BATCHED, memoryNameStore());
+  const batched = await run(root, BATCHED, memoryNameStore(), { batchK: 2 });
+  expect(batched.checked).toEqual(one.checked);
+  expect(Object.fromEntries(batched.keys)).toEqual(
+    Object.fromEntries(one.keys),
+  );
+  expect(Object.fromEntries(batched.results)).toEqual(
+    Object.fromEntries(one.results),
+  );
+  const b = batched.report.p1Batches!;
+  expect(b.batches).toBeGreaterThan(1);
+  expect(b.largest).toBe(2);
+  expect(one.report.p1Batches).toBeNull();
+  // Every file of the set is in its batch as source, so none is SERVED in the
+  // walk's sense: nothing re-checked in program 2.
+  expect(batched.report.p2).toBeNull();
+});
+
+test("an API change whose affected set is batched keys what one program does", async () => {
+  const root = freshRoot();
+  writeTree(root, BATCHED);
+  const store = memoryNameStore();
+  const other = memoryNameStore();
+  await run(root, BATCHED, store);
+  await run(root, BATCHED, other);
+  const edited = {
+    ...BATCHED,
+    "g.ts": "export interface G { x: number; y?: string }\n",
+  };
+  writeTree(root, edited, BATCHED);
+  const one = await run(root, edited, store);
+  const batched = await run(root, edited, other, { batchK: 1 });
+  expect(batched.checked).toEqual(one.checked);
+  expect(Object.fromEntries(batched.keys)).toEqual(
+    Object.fromEntries(one.keys),
+  );
+});
+
+test("typed lint in batches: each file is linted inside its batch, and adopted under its key", async () => {
+  const root = freshRoot();
+  writeTree(root, BATCHED);
+  const wanted = new Set(["d.ts", "f.ts", "p.ts", "uses-env.ts"]);
+  const linted: { path: string; source: boolean }[] = [];
+  const adopted: { path: string; r: string }[] = [];
+  const syntactic: string[] = [];
+  const lint: LintHook = {
+    wants: (p) => wanted.has(p),
+    run() {
+      throw new Error("a batched set has no program to lint in");
+    },
+    spec: (p) =>
+      wanted.has(p)
+        ? { unit: "split", syntactic: ["(base)"], typed: ["t"] }
+        : undefined,
+    lintIn(program, specs) {
+      const out: Record<
+        string,
+        { typed: Record<string, []>; syntactic: Record<string, []> }
+      > = {};
+      for (const path of Object.keys(specs)) {
+        const sf = program.getSourceFile(join(root, path));
+        linted.push({
+          path,
+          source: sf !== undefined && !sf.isDeclarationFile,
+        });
+        out[path] = { typed: { t: [] }, syntactic: { "(base)": [] } };
+      }
+      return Promise.resolve(out);
+    },
+    adopt(outs, files) {
+      syntactic.push(...outs.keys());
+      adopted.push(...files);
+    },
+    discard() {
+      linted.length = 0;
+      adopted.length = 0;
+    },
+  };
+  const out = await run(root, BATCHED, memoryNameStore(), {
+    lint,
+    batchK: 2,
+  });
+  expect(linted.sort((a, b) => (a.path < b.path ? -1 : 1))).toEqual(
+    [...wanted].sort().map((path) => ({ path, source: true })),
+  );
+  expect(adopted.map((a) => a.path).sort()).toEqual([...wanted].sort());
+  for (const a of adopted) expect(a.r).toBe(out.keys.get(a.path)!);
+  expect(syntactic.sort()).toEqual([...wanted].sort());
+});
+
+test("a type reached through a barrel is spelled by its declaring file, whichever path the program printed", async () => {
+  // One program prints `job`'s type through the barrel it resolved `define`
+  // by; a batch served the barrel's .d.ts prints it through the file behind
+  // it. Same type: same signature (`run` compares one program with batches of
+  // one file).
+  const files = {
+    "reg/registry.ts":
+      "export interface Factory<N extends string> { name: N }\nexport function define<N extends string>(name: N): Factory<N> { return { name }; }\n",
+    "reg/index.ts":
+      'export { define } from "./registry";\nexport type { Factory } from "./registry";\n',
+    "use/job.ts":
+      'import { define } from "../reg";\nexport const job = define("x");\n',
+    "use/other.ts":
+      'import type { Factory } from "../reg";\nexport const f: Factory<"y"> = { name: "y" };\n',
+  };
+  const root = freshRoot();
+  writeTree(root, files);
+  const out = await run(root, files, memoryNameStore());
+  expect(out.results.get("use/job.ts")!.diagnostics).toEqual([]);
 });

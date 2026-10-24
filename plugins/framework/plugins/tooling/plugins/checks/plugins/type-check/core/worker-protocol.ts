@@ -207,6 +207,13 @@ export interface TypeCheckWorkerJob {
    * sides cannot see different trees.
    */
   tree: TypeCheckTree;
+  /**
+   * How a set of files too large for one program is checked: dependency-ordered
+   * batches of at most `k` files (an import cycle larger is one batch), each in
+   * its own process, one at a time
+   * (research/2026-10-23-global-type-check-bounded-batches.md).
+   */
+  batch: { k: number };
 }
 
 /**
@@ -274,6 +281,19 @@ export interface TypeCheckWorkerResult {
     full: number;
     lint: number;
   };
+  /**
+   * The batch processes this run spawned (a set larger than `job.batch.k`):
+   * their CPU (type check and lint — already inside the
+   * worker's rusage, which counts its reaped children), how many, the largest
+   * one's peak, and an upper bound on the peaks alive at once. Null when none
+   * ran.
+   */
+  batchProcesses: {
+    count: number;
+    cpuSeconds: number;
+    maxRssBytes: number;
+    concurrentRssBytes: number;
+  } | null;
   /** What the type check did: program sizes, files checked and linted. */
   stats: TypeCheckStats;
 }

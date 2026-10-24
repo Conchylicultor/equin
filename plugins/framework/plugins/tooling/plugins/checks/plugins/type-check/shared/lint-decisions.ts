@@ -57,6 +57,13 @@ export interface LintDecisions {
   jobs: readonly string[];
   /** The job a path is decided as under result key `r`, if any. */
   jobOf(path: string, r: string): LintFileJob | undefined;
+  /**
+   * The job a path WOULD be decided as if its key moved — a job, or a base
+   * file — for linting it in a batch before its key is known.
+   */
+  speculative(path: string): LintFileJob | undefined;
+  /** The typed parts' groups a job runs when all are stale. */
+  typedGroups(job: LintFileJob): string[];
   /** The typed parts of `path` to run under `r`. */
   stale(path: string, r: string): { group: string; key: string }[];
   /** Whether `path`'s typed lint must run under `r`. */
@@ -80,11 +87,7 @@ export function createLintDecisions(input: LintDecisionsInput): LintDecisions {
   const derived = new Map<string, LintFileJob>();
   const { base } = input;
 
-  const jobOf = (path: string, r: string): LintFileJob | undefined => {
-    const f = byRel.get(path);
-    if (f !== undefined) return f;
-    const b = base?.get(path);
-    if (b === undefined || b.r === r) return undefined;
+  const derive = (path: string, b: BaseFileKey): LintFileJob => {
     let d = derived.get(path);
     if (d === undefined) {
       // Carried by the plan only while its version is the base's: a base file
@@ -104,6 +107,13 @@ export function createLintDecisions(input: LintDecisionsInput): LintDecisions {
       derived.set(path, d);
     }
     return d;
+  };
+  const jobOf = (path: string, r: string): LintFileJob | undefined => {
+    const f = byRel.get(path);
+    if (f !== undefined) return f;
+    const b = base?.get(path);
+    if (b === undefined || b.r === r) return undefined;
+    return derive(path, b);
   };
   const partsOf = (f: LintFileJob) =>
     f.unit === "whole" ? input.typedParts.whole : input.typedParts.split;
@@ -145,6 +155,13 @@ export function createLintDecisions(input: LintDecisionsInput): LintDecisions {
     idle: byRel.size === 0 && base === undefined,
     jobs: [...byRel.keys()],
     jobOf,
+    speculative(path) {
+      const f = byRel.get(path);
+      if (f !== undefined) return f;
+      const b = base?.get(path);
+      return b === undefined ? undefined : derive(path, b);
+    },
+    typedGroups: (f) => partsOf(f).map((p) => p.group),
     stale(path, r) {
       const f = jobOf(path, r);
       return f === undefined ? [] : staleOf(f, r);

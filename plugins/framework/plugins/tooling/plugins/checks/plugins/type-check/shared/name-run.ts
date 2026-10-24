@@ -32,6 +32,16 @@ import ts from "typescript";
 // Through the barrel: the worker imports it the same way.
 import type { TscPredictionMiss } from "../core";
 import {
+  checkSet,
+  ContractMissing,
+  type BatchContext,
+  type BatchLintOut,
+  type BatchLintSpec,
+  type Batching,
+  type BatchStats,
+  type SetRun,
+} from "./batch-run";
+import {
   declaresGlobals,
   declScope,
   fileImports,
@@ -40,7 +50,6 @@ import {
   type AmbientModules,
   type CheckedFile,
   type DeclScope,
-  type ProgramRun,
   type ProgramStats,
 } from "./name-check";
 import { contractHash, type SourceFileCache } from "./name-host";
@@ -85,6 +94,26 @@ export interface LintHook {
   wants(path: string, r: string): boolean;
   /** Lint `files` (sources of `program`), each under its result key. */
   run(program: ts.Program, files: { path: string; r: string }[]): Promise<void>;
+  /**
+   * What to lint of a file checked in a BATCH (`./batch-run.ts`), before its
+   * result key is known: its stale syntactic groups and every typed part
+   * (undefined: nothing of it can need linting).
+   */
+  spec(path: string): BatchLintSpec | undefined;
+  /** Lint `specs` inside a program built in this process, keys not decided. */
+  lintIn(
+    program: ts.Program,
+    specs: Readonly<Record<string, BatchLintSpec>>,
+  ): Promise<Record<string, BatchLintOut>>;
+  /**
+   * What batches linted: every file's syntactic groups, and of each of
+   * `files` the typed parts stale under its key `r` (the rest is dropped:
+   * a typed result is a function of its key, so it is the stored one).
+   */
+  adopt(
+    outs: ReadonlyMap<string, BatchLintOut>,
+    files: { path: string; r: string }[],
+  ): void;
   /** Forget every result run so far: the run starts again, under other keys. */
   discard(): void;
   /**
@@ -111,17 +140,6 @@ export class PredictionMissed extends Error {
         .join(", ")}`,
     );
     this.name = "PredictionMissed";
-  }
-}
-
-/**
- * A program needs a file's stored `.d.ts`, and the store no longer holds it
- * (aged out): the run starts again with that file re-checked.
- */
-class ContractMissing extends Error {
-  constructor(readonly path: string) {
-    super(`type-check: the stored .d.ts of ${path} is gone`);
-    this.name = "ContractMissing";
   }
 }
 
@@ -152,6 +170,12 @@ export interface NameRunInput {
    * then, or when the base cannot answer for this tree, every file is walked.
    */
   base?: OpenedWalkBase;
+  /**
+   * How a set of files too large for one program is checked: in
+   * dependency-ordered batches of at most `k` (`./batch-run.ts`). Absent:
+   * every set is one program, whatever its size.
+   */
+  batching?: Batching;
 }
 
 export interface NameResult {
@@ -197,6 +221,11 @@ export interface NameRunReport {
   refreshed: number;
   p1: ProgramStats | null;
   p2: ProgramStats | null;
+  /** How each program's set was batched (null: one program). */
+  p1Batches: BatchStats | null;
+  p2Batches: BatchStats | null;
+  /** The global hash every result key holds (`./name-walk.ts`). */
+  global: string;
   /** Wall ms of each part. */
   ms: {
     versions: number;
@@ -681,6 +710,53 @@ async function walkAndCheck(a: Attempt): Promise<NameRunOutput> {
     return contractText(p, b.c);
   };
 
+  /** A fixed file's stored `.d.ts` hash (the base's), if it has one. */
+  const fixedHash = (p: string): string | undefined =>
+    sourceSet.has(p) ? base?.file(p)?.c : undefined;
+  /** A file's repo imports, for the batch order: its entry's, else read now. */
+  const importsOf = (p: string): string[] => {
+    const e = entries.get(p);
+    const targets =
+      e !== undefined
+        ? e.res.targets.map(([, , t]) => t)
+        : fileImports(
+            ts.createSourceFile(
+              p,
+              view.readText(p),
+              ts.ScriptTarget.Latest,
+              /*setParentNodes*/ true,
+            ),
+            options,
+          ).map(([spec, mode]) => resolver.target(p, spec, mode));
+    return targets.filter((t) => sourceSet.has(t));
+  };
+  const lint = input.lint;
+  const batchCtx: BatchContext = {
+    view,
+    options,
+    declRoots,
+    globals: [],
+    declScopes,
+    ambient,
+    cache,
+    resolver,
+    contractText,
+    ...(lint ? { lintIn: (prog, specs) => lint.lintIn(prog, specs) } : {}),
+  };
+  const lintSpec = lint ? { lintSpec: (p: string) => lint.spec(p) } : {};
+  const batching = input.batching ? { batching: input.batching } : {};
+  /** `.d.ts` texts this run produced, by hash: not in the store until the end. */
+  const freshTexts = new Map<string, string>();
+  /** Typed lint of what a set holds: in its program, or adopted from its batches. */
+  const lintSet = async (
+    run: SetRun,
+    files: { path: string; r: string }[],
+  ): Promise<void> => {
+    if (!lint) return;
+    if (run.program === undefined) lint.adopt(run.lint, files);
+    else if (files.length > 0) await lint.run(run.program, files);
+  };
+
   // ── Phase 0, growing D while a definite meaning moves ──
   let rounds = 0;
   const planShards = base?.shardsRead ?? 0;
@@ -730,21 +806,30 @@ async function walkAndCheck(a: Attempt): Promise<NameRunOutput> {
       paths: inc?.plan.paths ?? null,
     },
     missed: [],
+    p1Batches: null,
+    p2Batches: null,
+    global,
   };
+  batchCtx.globals = globals;
 
   // ── Program 1 ──
   let served = new Map<string, string>();
-  let p1Run: ProgramRun | undefined;
+  let p1Run: SetRun | undefined;
   if (p0.first.size > 0) {
-    p1Run = runProgram({
-      view,
-      options,
+    p1Run = await checkSet({
+      ctx: batchCtx,
+      all: sources,
       sources: p0.first,
       check: p0.first,
-      declRoots,
-      globals,
-      declScopes,
-      ambient,
+      fresh: freshTexts,
+      importsOf,
+      ...lintSpec,
+      ...batching,
+      hashOf: (p) => {
+        const f = files.get(p);
+        if (f === undefined) return fixedHash(p);
+        return (p0.valid.get(p) ?? f.variants[0])?.contract;
+      },
       contractOf: (p) => {
         const f = files.get(p);
         if (f === undefined) return fixedContract(p);
@@ -756,11 +841,10 @@ async function walkAndCheck(a: Attempt): Promise<NameRunOutput> {
         }
         return contractText(p, v.contract);
       },
-      cache,
-      resolver,
     });
     t = performance.now();
     report.p1 = p1Run.stats;
+    report.p1Batches = p1Run.batches ?? null;
     served = p1Run.served;
     programDiagnostics = p1Run.programDiagnostics;
     for (const [p, c] of p1Run.checked) {
@@ -770,6 +854,7 @@ async function walkAndCheck(a: Attempt): Promise<NameRunOutput> {
         );
       }
       fresh.set(p, c);
+      freshTexts.set(contractHash(c.contract), c.contract);
       files.set(p, {
         ...files.get(p)!,
         uses: c.uses,
@@ -798,11 +883,11 @@ async function walkAndCheck(a: Attempt): Promise<NameRunOutput> {
   report.usesBottom = [...p1.why.values()].filter((w) => w === "bottom").length;
 
   // Lint what program 1 holds and program 2 will not.
-  if (p1Run !== undefined && input.lint) {
+  if (p1Run !== undefined && lint) {
     const lintable = [...p1.confirmed]
-      .filter(([p, r]) => input.lint!.wants(p, r))
+      .filter(([p, r]) => lint.wants(p, r))
       .map(([path, r]) => ({ path, r }));
-    if (lintable.length > 0) await input.lint.run(p1Run.program, lintable);
+    await lintSet(p1Run, lintable);
     t = performance.now();
   }
 
@@ -821,19 +906,27 @@ async function walkAndCheck(a: Attempt): Promise<NameRunOutput> {
     }
   }
   report.lintOnly = lintOnly.size;
-  let p2Run: ProgramRun | undefined;
+  let p2Run: SetRun | undefined;
   const second = new Map<string, CheckedFile>();
   if (p1.second.size > 0 || lintOnly.size > 0) {
     p1Run = undefined; // program 1 is done: free it before program 2
-    p2Run = runProgram({
-      view,
-      options,
+    p2Run = await checkSet({
+      ctx: batchCtx,
+      all: sources,
       sources: new Set([...p1.second, ...lintOnly.keys()]),
       check: p1.second,
-      declRoots,
-      globals,
-      declScopes,
-      ambient,
+      fresh: freshTexts,
+      importsOf,
+      ...lintSpec,
+      ...batching,
+      hashOf: (p) => {
+        const f = fresh.get(p);
+        if (f !== undefined && p1.confirmed.has(p)) {
+          return contractHash(f.contract);
+        }
+        if (!files.has(p)) return fixedHash(p);
+        return p1.valid.get(p)?.contract;
+      },
       contractOf: (p) => {
         const f = fresh.get(p);
         if (f !== undefined && p1.confirmed.has(p)) return f.contract;
@@ -846,11 +939,10 @@ async function walkAndCheck(a: Attempt): Promise<NameRunOutput> {
         }
         return contractText(p, v.contract);
       },
-      cache,
-      resolver,
     });
     t = performance.now();
     report.p2 = p2Run.stats;
+    report.p2Batches = p2Run.batches ?? null;
     programDiagnostics = p2Run.programDiagnostics;
     for (const [p, c] of p2Run.checked) {
       second.set(p, c);
@@ -938,14 +1030,14 @@ async function walkAndCheck(a: Attempt): Promise<NameRunOutput> {
   }
 
   // ── Lint program 2 ──
-  if (p2Run !== undefined && input.lint) {
+  if (p2Run !== undefined && lint) {
     const lintable: { path: string; r: string }[] = [];
     for (const p of p1.second) {
       const r = fin.keys.get(p)!;
-      if (input.lint.wants(p, r)) lintable.push({ path: p, r });
+      if (lint.wants(p, r)) lintable.push({ path: p, r });
     }
     for (const [p, r] of lintOnly) lintable.push({ path: p, r });
-    if (lintable.length > 0) await input.lint.run(p2Run.program, lintable);
+    await lintSet(p2Run, lintable);
     t = performance.now();
   }
   // ── The repo `.d.ts`: keyed on their imports' meanings ──
@@ -987,8 +1079,8 @@ async function walkAndCheck(a: Attempt): Promise<NameRunOutput> {
       .map(([path, r]) => ({ path, r }));
     if (lintable.length > 0) {
       const holder =
-        p2Run ??
-        p1Run ??
+        p2Run?.program ??
+        p1Run?.program ??
         runProgram({
           view,
           options,
@@ -1001,8 +1093,8 @@ async function walkAndCheck(a: Attempt): Promise<NameRunOutput> {
           contractOf: finalContract,
           cache,
           resolver,
-        });
-      await input.lint.run(holder.program, lintable);
+        }).program;
+      await input.lint.run(holder, lintable);
       t = performance.now();
     }
   }

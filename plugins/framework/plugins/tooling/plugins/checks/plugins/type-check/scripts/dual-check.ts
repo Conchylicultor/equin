@@ -32,7 +32,11 @@ import os from "os";
 import { join, resolve } from "path";
 import { fileURLToPath } from "url";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
-import type { TypeCheckWorkerJob, TypeCheckWorkerResult } from "../core";
+import {
+  TYPE_CHECK_BATCH_FILES,
+  type TypeCheckWorkerJob,
+  type TypeCheckWorkerResult,
+} from "../core";
 import { readCheckTree } from "../shared/repo-view";
 
 const WORKER = fileURLToPath(new URL("../shared/worker.ts", import.meta.url));
@@ -45,13 +49,16 @@ const modeAt = args.indexOf("--mode");
 const mode = modeAt >= 0 ? args[modeAt + 1] : "dual";
 const baseAt = args.indexOf("--walk-base");
 const walkBase = baseAt >= 0 ? args[baseAt + 1] : "hint";
+const kAt = args.indexOf("--batch-k");
+const batchK = kAt >= 0 ? Number(args[kAt + 1]) : TYPE_CHECK_BATCH_FILES;
 if (
   root === undefined ||
+  !(batchK >= 1) ||
   (mode !== "keyed" && mode !== "walks" && mode !== "dual") ||
   (walkBase !== "hint" && walkBase !== "none")
 ) {
   console.error(
-    "usage: dual-check.ts <checkout> [--mode keyed|walks|dual] [--walk-base hint|none] [--json <out.json>]",
+    "usage: dual-check.ts <checkout> [--mode keyed|walks|dual] [--walk-base hint|none] [--batch-k <files>] [--json <out.json>]",
   );
   process.exit(2);
 }
@@ -70,6 +77,7 @@ const job: TypeCheckWorkerJob = {
   walkBase: { kind: walkBase },
   // The checkout's working tree as it is now, and its gitignored roots.
   tree: (await readCheckTree(root, tsconfigPath)).tree,
+  batch: { k: batchK },
 };
 const jobPath = join(os.tmpdir(), `dual-check-${process.pid}.json`);
 writeFileSync(jobPath, JSON.stringify(job));
@@ -89,7 +97,10 @@ const { check, full } = result.phaseCpuSeconds;
 const usage = run.resourceUsage;
 console.log(
   `dual-check: cpu two-program check ${check.toFixed(1)}s, full check ${full.toFixed(1)}s; ${result.stats.checked} files checked; ` +
-    `process cpu ${((usage.cpuTimeMicros ?? NaN) / 1e6).toFixed(1)}s, maxRSS ${((usage.maxRssBytes ?? NaN) / 1e9).toFixed(2)} GB`,
+    `process cpu ${((usage.cpuTimeMicros ?? NaN) / 1e6).toFixed(1)}s, maxRSS ${((usage.maxRssBytes ?? NaN) / 1e9).toFixed(2)} GB` +
+    (result.batchProcesses === null
+      ? ""
+      : `; ${result.batchProcesses.count} batch processes cpu ${result.batchProcesses.cpuSeconds.toFixed(1)}s, maxRSS ${(result.batchProcesses.maxRssBytes / 1e9).toFixed(2)} GB each, ≤ ${(result.batchProcesses.concurrentRssBytes / 1e9).toFixed(2)} GB at once`),
 );
 for (const d of result.divergences) {
   console.log(

@@ -22,19 +22,12 @@
 import { readFileSync, realpathSync, unlinkSync, writeSync } from "fs";
 import { join, relative } from "path";
 import ts from "typescript";
-import { Linter } from "eslint";
 import { exitWithParent } from "@plugins/packages/plugins/flock/core";
-import {
-  buildLintConfig,
-  loadLintContributions,
-} from "@plugins/framework/plugins/tooling/plugins/lint/core";
 // The job/result shapes live in this plugin's `core/` barrel: two spawners (the
 // check's fan-out and the build's fast path) name them, and only one worker
 // implements them. Through the barrel, not the file: a deep import into the
 // plugin's own `core/` is what the browser build cannot inline.
 import {
-  LINT_GROUP_ALL,
-  LINT_GROUP_BASE,
   type LintFileResult,
   type ProgramSize,
   type RawLintMessage,
@@ -46,7 +39,10 @@ import {
 import type { NameResult, NameRunOutput } from "./name-run";
 import { signatureEmitOptions } from "./emit-options";
 import { compareResults, fullCheck } from "./full-check";
+import type { Batching, BatchStats } from "./batch-run";
+import { processBatches, type BatchSpend } from "./batch-processes";
 import { createLintDecisions } from "./lint-decisions";
+import { createLintEngine, type LintOut } from "./lint-engine";
 import { openLintResultStore, type LintResultStore } from "./lint-results";
 import type { ProgramStats } from "./name-check";
 import { createSourceFileCache } from "./name-host";
@@ -82,6 +78,8 @@ function cpuSeconds(): number {
   return (user + system) / 1e6;
 }
 
+const gb = (bytes: number): string => `${(bytes / 1e9).toFixed(1)} GB`;
+
 const size = (s: ProgramStats | null): ProgramSize | null =>
   s === null
     ? null
@@ -89,10 +87,18 @@ const size = (s: ProgramStats | null): ProgramSize | null =>
 
 /** One greppable line per program and one for the walk. */
 function reportLines(r: NameRunReport): string[] {
-  const prog = (label: string, s: ProgramStats | null): string =>
+  const batched = (b: BatchStats | null): string =>
+    b === null
+      ? ""
+      : `; in ${b.batches} batches of ≤ ${b.k} (width ${b.width}; ${b.components} components, largest ${b.largest}, depth ${b.depth}; plan ${Math.round(b.planMs)}ms${b.cpuSeconds > 0 ? `; processes cpu ${b.cpuSeconds.toFixed(1)}s, peak ${gb(b.maxRssBytes)} each, ≤ ${gb(b.concurrentRssBytes)} at once` : ""})`;
+  const prog = (
+    label: string,
+    s: ProgramStats | null,
+    b: BatchStats | null,
+  ): string =>
     s === null
       ? `type-check: ${label}: none`
-      : `type-check: ${label}: ${s.sources} sources (${s.checked} checked) + ${s.contracts} .d.ts + ${s.repoDecls} repo decl + ${s.env} env; build ${Math.round(s.programMs)}ms, check ${Math.round(s.checkMs)}ms, records ${Math.round(s.recordMs)}ms`;
+      : `type-check: ${label}: ${s.sources} sources (${s.checked} checked) + ${s.contracts} .d.ts + ${s.repoDecls} repo decl + ${s.env} env; build ${Math.round(s.programMs)}ms, check ${Math.round(s.checkMs)}ms, records ${Math.round(s.recordMs)}ms${batched(b)}`;
   const ms = (x: number): number => Math.round(x);
   const w = r.walk;
   const moved =
@@ -100,9 +106,9 @@ function reportLines(r: NameRunReport): string[] {
       ? ""
       : ` (+${w.paths.added} -${w.paths.removed} ~${w.paths.modified} paths, ${w.paths.dirs} listings)`;
   return [
-    `type-check: walk: ${w.mode}; D₀ ${w.d0}${moved}, D ${w.d} of ${r.files} files after ${w.rounds} rounds; entries read ${w.entries}, base shards read ${w.shards} (plan ${w.shardsBy[0]}, phase 0 ${w.shardsBy[1]}, phase 1 ${w.shardsBy[2]}, end ${w.shardsBy[3]}); ${r.first} without a valid result, ${r.pending} pending, ${r.second} re-checked (${r.keyMoved} key moved, ${r.usesBottom} use a name that may move, ${r.tainted} after a stale .d.ts), ${r.lintOnly} only linted; resolutions ${r.moved} moved, ${r.refreshed} re-keyed; versions ${ms(r.ms.versions)}ms, plan ${ms(r.ms.plan)}ms, reads ${ms(r.ms.reads)}ms, listings ${ms(r.ms.listings)}ms, walk ${ms(r.ms.walk)}ms (${w.split}), write ${ms(r.ms.write)}ms`,
-    prog("program 1", r.p1),
-    prog("program 2", r.p2),
+    `type-check: walk: ${w.mode}; global ${r.global.slice(0, 12)}; D₀ ${w.d0}${moved}, D ${w.d} of ${r.files} files after ${w.rounds} rounds; entries read ${w.entries}, base shards read ${w.shards} (plan ${w.shardsBy[0]}, phase 0 ${w.shardsBy[1]}, phase 1 ${w.shardsBy[2]}, end ${w.shardsBy[3]}); ${r.first} without a valid result, ${r.pending} pending, ${r.second} re-checked (${r.keyMoved} key moved, ${r.usesBottom} use a name that may move, ${r.tainted} after a stale .d.ts), ${r.lintOnly} only linted; resolutions ${r.moved} moved, ${r.refreshed} re-keyed; versions ${ms(r.ms.versions)}ms, plan ${ms(r.ms.plan)}ms, reads ${ms(r.ms.reads)}ms, listings ${ms(r.ms.listings)}ms, walk ${ms(r.ms.walk)}ms (${w.split}), write ${ms(r.ms.write)}ms`,
+    prog("program 1", r.p1, r.p1Batches),
+    prog("program 2", r.p2, r.p2Batches),
   ];
 }
 
@@ -136,6 +142,8 @@ async function lintRunner(job: Job, view: RepoView) {
     abs: (path) => join(job.root, path),
   });
   const typedOut = new Map<string, TypedPartOutcome[]>();
+  /** Syntactic groups a batch already ran, by repo path (`LintHook.adopt`). */
+  const syntacticRan = new Map<string, Record<string, RawLintMessage[]>>();
   if (decisions.idle) {
     return {
       hook: undefined,
@@ -150,89 +158,7 @@ async function lintRunner(job: Job, view: RepoView) {
       jobs: decisions.jobs,
     };
   }
-  // A rule id's namespace is its contribution's `name`; anything else (the
-  // config builder's own typescript-eslint / react-hooks / core rules) and a
-  // null id (the linter itself: a parse failure) belong to the base group.
-  // Loaded on the first file that lints: a run with nothing to lint (most)
-  // never pays for the rules.
-  let groupOfNamespace: Map<string, string> | undefined;
-  const loadGroups = async (): Promise<void> => {
-    groupOfNamespace ??= new Map(
-      (await loadLintContributions(job.root)).map(
-        (c) => [c.name, c.relPath] as const,
-      ),
-    );
-  };
-  const groupOf = (ruleId: string | null): string => {
-    if (ruleId === null) return LINT_GROUP_BASE;
-    if (groupOfNamespace === undefined) {
-      throw new Error(
-        "type-check worker: rule groups read before they were loaded",
-      );
-    }
-    const slash = ruleId.lastIndexOf("/");
-    const ns = slash < 0 ? "" : ruleId.slice(0, slash);
-    return groupOfNamespace.get(ns) ?? LINT_GROUP_BASE;
-  };
-  // One config per (program, kind, group set), built on first use.
-  const configs = new Map<string, Promise<Linter.Config[]>>();
-  const programIds = new WeakMap<ts.Program, number>();
-  let nextProgram = 0;
-  const configFor = (
-    program: ts.Program | undefined,
-    kind: "syntactic" | "type-aware" | "whole",
-    groups: readonly string[],
-  ): Promise<Linter.Config[]> => {
-    let pid = -1;
-    if (program !== undefined) {
-      pid = programIds.get(program) ?? nextProgram++;
-      programIds.set(program, pid);
-    }
-    const key = `${pid}\n${kind}\n${groups.join("\n")}`;
-    let config = configs.get(key);
-    if (config === undefined) {
-      config = loadGroups().then(() =>
-        kind === "whole"
-          ? buildLintConfig({
-              root: job.root,
-              typeSource: { programs: [program!] },
-              exemptions: "report",
-            })
-          : buildLintConfig({
-              root: job.root,
-              typeSource:
-                kind === "syntactic"
-                  ? { none: true }
-                  : { programs: [program!] },
-              exemptions: "report",
-              rules: {
-                base: groups.includes(LINT_GROUP_BASE),
-                contributions: new Set(groups),
-                kind,
-              },
-            }),
-      );
-      configs.set(key, config);
-    }
-    return config;
-  };
-  const linter = new Linter({ configType: "flat" });
-  const verify = (
-    file: string,
-    code: string,
-    config: Linter.Config[],
-  ): RawLintMessage[] =>
-    linter
-      .verify(code, config, { filename: file })
-      // `--quiet` parity: error-level (2) and fatal parse errors only.
-      .filter((m) => m.severity === 2 || m.fatal)
-      .map((m) => ({
-        ruleId: m.ruleId,
-        fatal: m.fatal === true,
-        line: m.line,
-        column: m.column,
-        message: m.message,
-      }));
+  const engine = createLintEngine(job.root);
   // Through the view: the text checked against the version its results are
   // stored under, so a file edited mid-run fails the run instead of recording
   // a result under another text's key.
@@ -245,65 +171,75 @@ async function lintRunner(job: Job, view: RepoView) {
       for (const { path, r } of files) {
         const f = decisions.jobOf(path, r)!;
         const toRun = decisions.stale(path, r);
-        const code = read(f.file);
-        const out: TypedPartOutcome[] = [];
-        if (f.unit === "whole") {
-          for (const { group, key } of toRun) {
-            if (group !== LINT_GROUP_ALL) {
-              throw new Error(
-                `type-check worker: directive file ${path} was sent typed part "${group}"`,
-              );
-            }
-            out.push({
-              group,
-              kind: "ran",
-              key,
-              messages: verify(
-                f.file,
-                code,
-                await configFor(program, "whole", []),
-              ),
-            });
-          }
-        } else {
-          const byGroup = new Map<string, RawLintMessage[]>(
-            toRun.map((p) => [p.group, []]),
-          );
-          for (const m of verify(
-            f.file,
-            code,
-            await configFor(
-              program,
-              "type-aware",
-              toRun.map((p) => p.group),
-            ),
-          )) {
-            // Null-id messages (a parse failure) belong to the syntactic base
-            // part: the same text produced them there, run or stored.
-            if (m.ruleId === null) continue;
-            const bucket = byGroup.get(groupOf(m.ruleId));
-            if (bucket === undefined) {
-              throw new Error(
-                `type-check worker: ${m.ruleId} reported on ${path} from a typed part that was not run`,
-              );
-            }
-            bucket.push(m);
-          }
-          for (const { group, key } of toRun) {
-            out.push({
-              group,
-              kind: "ran",
-              key,
-              messages: byGroup.get(group)!,
-            });
-          }
+        const byGroup = await engine.typed(
+          program,
+          f.file,
+          read(f.file),
+          f.unit,
+          toRun.map((p) => p.group),
+        );
+        typedOut.set(
+          path,
+          toRun.map(({ group, key }) => ({
+            group,
+            kind: "ran",
+            key,
+            messages: byGroup[group]!,
+          })),
+        );
+        counts.typed++;
+      }
+    },
+    spec(path) {
+      const f = decisions.speculative(path);
+      if (f === undefined) return undefined;
+      return {
+        unit: f.unit,
+        syntactic: f.unit === "split" ? [...f.syntactic] : [],
+        typed: decisions.typedGroups(f),
+      };
+    },
+    async lintIn(program, specs) {
+      const byAbs = new Map(
+        Object.entries(specs).map(([p, spec]) => [join(job.root, p), spec]),
+      );
+      const out: Record<string, LintOut> = {};
+      for (const [abs, o] of await engine.files(program, byAbs, read)) {
+        out[rel(job.root, abs)] = o;
+      }
+      return out;
+    },
+    adopt(outs, files) {
+      for (const [path, o] of outs) {
+        if (Object.keys(o.syntactic).length > 0) {
+          syntacticRan.set(path, o.syntactic);
         }
-        typedOut.set(path, out);
+      }
+      for (const { path, r } of files) {
+        const o = outs.get(path);
+        if (o === undefined) {
+          throw new Error(
+            `type-check worker: ${path}'s typed lint was adopted from a batch that did not lint it`,
+          );
+        }
+        typedOut.set(
+          path,
+          decisions.stale(path, r).map(({ group, key }) => {
+            const messages = o.typed[group];
+            if (messages === undefined) {
+              throw new Error(
+                `type-check worker: ${path}'s typed part ${group} is stale and its batch did not run it`,
+              );
+            }
+            return { group, kind: "ran", key, messages };
+          }),
+        );
         counts.typed++;
       }
     },
     discard() {
       typedOut.clear();
+      syntacticRan.clear();
       counts.typed = 0;
     },
   };
@@ -319,20 +255,10 @@ async function lintRunner(job: Job, view: RepoView) {
      */
     finish: (keys: ReadonlyMap<string, string>) =>
       decisions.answer(keys, typedOut, async (f) => {
-        const syntactic: Record<string, RawLintMessage[]> = {};
-        for (const g of f.syntactic) syntactic[g] = [];
-        // A message outside the selection can only be a null-id one (a
-        // parse failure) on a run without the base group, whose stored
-        // result already holds it.
-        for (const m of verify(
-          f.file,
-          read(f.file),
-          await configFor(undefined, "syntactic", f.syntactic),
-        )) {
-          syntactic[groupOf(m.ruleId)]?.push(m);
-        }
         counts.syntactic++;
-        return syntactic;
+        const ran = syntacticRan.get(rel(job.root, f.file));
+        if (ran !== undefined) return ran;
+        return engine.syntactic(f.file, read(f.file), f.syntactic);
       }),
   };
 }
@@ -467,6 +393,7 @@ async function run(job: Job): Promise<Result> {
       checked: [],
       missed: [],
       phaseCpuSeconds: { check: cpuSeconds() - cpuStart, full: 0, lint: 0 },
+      batchProcesses: null,
       stats: empty,
     };
   }
@@ -495,9 +422,27 @@ async function run(job: Job): Promise<Result> {
       await lint.hook!.run(program, files);
       lintCpu += cpuSeconds() - c0;
     },
+    spec: lint.hook.spec,
+    async lintIn(program, specs) {
+      const c0 = cpuSeconds();
+      const out = await lint.hook!.lintIn(program, specs);
+      lintCpu += cpuSeconds() - c0;
+      return out;
+    },
+    adopt: lint.hook.adopt,
     discard: () => lint.hook!.discard(),
     jobs: lint.jobs,
   };
+  const spend: BatchSpend = { count: 0, cpuSeconds: 0, maxRssBytes: 0 };
+  // Each batch in its own process: a process's memory is what K bounds (in
+  // this one, programs built one after another kept 11–15 GB resident).
+  const batching: Batching = processBatches({
+    k: job.batch.k,
+    width: 1,
+    root: job.root,
+    tree: job.tree,
+    spend,
+  });
   const store: NameStore = openNameStore();
   const walkStore = openWalkBaseStore();
   const checkout = realpathSync(job.root);
@@ -515,6 +460,7 @@ async function run(job: Job): Promise<Result> {
       store: fullStore,
       cache: createSourceFileCache(),
       onMiss: "throw",
+      batching,
       base: {
         kind: "none",
         reason: "the full walk beside the incremental one",
@@ -530,6 +476,7 @@ async function run(job: Job): Promise<Result> {
     cache: createSourceFileCache(),
     ...(timedHook ? { lint: timedHook } : {}),
     onMiss: job.onMiss,
+    batching,
     base: opened,
   });
   const tscLines = [inputLine, ...reportLines(out.report)];
@@ -601,6 +548,7 @@ async function run(job: Job): Promise<Result> {
         store: coldWriteThrough(store),
         onMiss: "throw",
         cache: createSourceFileCache(),
+        batching,
         base: { kind: "none", reason: "a cold rewrite after a divergence" },
       });
       tscLines.push(
@@ -661,6 +609,18 @@ async function run(job: Job): Promise<Result> {
       full: cpuFull - cpuCheck,
       lint: lintCpu,
     },
+    batchProcesses:
+      spend.count === 0
+        ? null
+        : {
+            count: spend.count,
+            cpuSeconds: spend.cpuSeconds,
+            maxRssBytes: spend.maxRssBytes,
+            concurrentRssBytes: Math.max(
+              r.p1Batches?.concurrentRssBytes ?? 0,
+              r.p2Batches?.concurrentRssBytes ?? 0,
+            ),
+          },
     stats: {
       files: r.files,
       first: size(r.p1),

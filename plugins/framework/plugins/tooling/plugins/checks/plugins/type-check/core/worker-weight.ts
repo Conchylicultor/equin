@@ -37,3 +37,18 @@ export const TYPE_CHECK_WORKER_PEAK_BYTES = 7.2e9;
 export const TYPE_CHECK_WORKER_UNITS = Math.ceil(
   TYPE_CHECK_WORKER_PEAK_BYTES / PER_UNIT_BYTES,
 );
+
+/**
+ * K: the most source files one program holds. A set larger than this — a cold
+ * run, a global change, a wide rebase — is checked in dependency-ordered
+ * batches of at most K (an import cycle larger is one batch of its own), each
+ * in its own process, one at a time, so a process's memory is bounded by K,
+ * not by the repo. Every program re-pays the environment (lib, `@types`, the
+ * npm types the repo resolves: ~10–15 CPU-s), so a few batches, not many.
+ * Measured cold, lint included (one sample each, loaded host): one program
+ * 620 CPU-s / 22.1 GB; K 6000 370 / 17.4; 4000 495 / 14.8; 3000 404 / 12.8;
+ * 2000 (7 batches) 442 / 10.3 — the whole program's memory pressure costs
+ * more than the batches re-pay
+ * (research/2026-10-23-global-type-check-bounded-batches.md).
+ */
+export const TYPE_CHECK_BATCH_FILES = 2000;

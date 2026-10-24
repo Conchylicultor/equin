@@ -25596,7 +25596,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling` (1 debt)
               - `framework/tooling/boundaries` (2 debt)
               - `framework/tooling/checks` (11 debt)
-              - `framework/tooling/checks/type-check` (15 debt)
+              - `framework/tooling/checks/type-check` (17 debt)
               - `framework/tooling/codegen` (31 debt)
               - `framework/tooling/format` (5 debt)
               - `framework/tooling/guards` (10 debt)
@@ -25848,6 +25848,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values):
                   - `LINT_GROUP_ALL`
                   - `LINT_GROUP_BASE`
+                  - `TYPE_CHECK_BATCH_FILES`
                   - `TYPE_CHECK_DIVERGENCE_KIND`
                   - `TYPE_CHECK_WORKER_PEAK_BYTES`
                   - `TYPE_CHECK_WORKER_UNITS`
@@ -25856,7 +25857,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses tokens: `ui/tokens/shadow --shadow`
                 - Imported by: `framework/tooling/checks/type-check/backstop`
               - Exemptions:
-                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/full-check.ts`, `shared/keys.ts`, `shared/lockfile.ts`, `shared/name-check.ts`, `shared/name-host.ts`, `shared/name-records.ts`, `shared/name-resolve.ts`, `shared/name-run.ts`, `shared/name-store.ts`, `shared/name-walk.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (debt)
+                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/full-check.ts`, `shared/keys.ts`, `shared/lockfile.ts`, `shared/name-check.ts`, `shared/name-host.ts`, `shared/name-records.ts`, `shared/name-resolve.ts`, `shared/name-run.ts`, `shared/name-store.ts`, `shared/name-walk.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (debt)
               - Plugins:
                 - **`backstop`** — The two-program type check's backstop: a daily main-only job runs the type-check worker in dual mode (the two-program check beside a full check of a fresh whole program, compared file by file) and files a type-check-divergence report for every file whose result differs.
                   - Server:

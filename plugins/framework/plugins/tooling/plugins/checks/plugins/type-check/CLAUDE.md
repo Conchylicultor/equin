@@ -224,7 +224,8 @@ they are built**, against a host-wide per-file store — never the whole repo
 
 A body edit is program 1 alone (program 2 empty). A global change — a
 global `.d.ts`, the producer engine, a dependency, the compiler options —
-misses every key, so program 1 is the whole tree: one program.
+misses every key, so program 1 is the whole tree, checked in bounded batches
+(below).
 
 **Keys, name by name.** Each exported name's record (`shared/name-records.ts`)
 is its canonical `.d.ts` text hash `t` and its **name-use edges** `d` (what that
@@ -286,7 +287,7 @@ inside the settling loop, so a cycle-mate keys against its mates' ⊥ names, not
 their stand-in previous meanings. After program 2, every name predicted stable
 is compared. One that moved is a MISS (the affected set missed what uses it),
 handled per the job's `onMiss`: a check or build run (`whole`) discards the
-attempt, checks every file in one program over the store read as empty
+attempt, checks every file (in bounded batches) over the store read as empty
 (rewriting it), so its verdict is right, and `spawnTypeCheckWorker` files each
 miss as a `type-check-divergence` report (kind `prediction`: file, name,
 commit; `server/internal/miss-reports.ts`) plus a `PREDICTION MISSED`
@@ -319,7 +320,7 @@ not even its parent's listing: whether one exists is the lockfile's.
 `isolatedDeclarations`-clean `*.generated.ts` (contract-first) to break the
 registry cycles; here nothing waits for another file's contract — each program
 holds all its sources at once, a cycle settles like any file (above), and a
-cold run is one program.
+batch never splits a cycle.
 
 - **Soundness** is validated, not assumed. `dual` mode (`TscMode`) runs the
   check, then a full check of a FRESH whole program with TypeScript's own host
@@ -342,6 +343,52 @@ cold run is one program.
 Design: `research/2026-10-21-global-type-check-two-programs.md` (prototype:
 `…-2026-10-19-…-shadow-v2.md`; step 1c, which this replaced:
 `research/2026-10-18-global-tsc-recheck-follows-contracts.md`).
+
+## No program holds more than K files
+
+`shared/batch-run.ts` (`checkSet`). Program 1 and program 2 each check a SET.
+A set of at most K files (`TYPE_CHECK_BATCH_FILES`) is one program in the
+worker, as above. A larger one (a cold run, a global change, a wide rebase,
+the whole-program answer to a missed prediction) is checked in
+**dependency-ordered batches** (`shared/batch-plan.ts`): a batch is dispatched
+once every file its files import from the set is done, and is served, for
+every other file, the `.d.ts` it has now: an earlier batch's just-emitted
+one, or the stored one. That is how program 2 is already served program 1's
+results, so batching changes which program a file is checked in, never what it
+is checked against or keyed on. Before this, a cold run was one program over
+~12.7k files: 213–327 CPU-s and 26–30 GB in one process
+(`research/2026-10-23-global-type-check-bounded-batches.md`).
+
+- **An import cycle is one batch**, whatever K (its members see each other as
+  source). A **global source file** is seen by every file without an import,
+  so it counts as an import of each: what it imports shares its component, as
+  in one program. The repo sources a repo `.d.ts` root imports are in every
+  program, so they go first.
+- **A type is spelled by the file that declares it** in the canonical
+  `.d.ts` (`canonicalDeclarations`' `declaringOf`, from the checker): emit
+  names a type through whichever module path its program resolved it by — a
+  barrel in one program, the file behind it in a batch served the barrel's
+  `.d.ts` — so without it 12 of 12.8k signatures diverged from one program.
+- **A file of the set reaches a later batch as its just-emitted `.d.ts`**,
+  which is what holding it as source shows. So it is not SERVED in the walk's
+  sense (a stale-read in phase 1), and a batched run checks, keys and reports
+  what one program does. Every fixture run in `name-run.test.ts` is repeated
+  in batches of one file and compared.
+- **Missing edge = loud.** A batch that loads a file of the set not yet done
+  throws, naming the file: the plan missed an import.
+- **One process per batch, one at a time** (`shared/batch-processes.ts`,
+  `shared/batch-worker.ts`; a job file in, JSON out, the run's own `.d.ts`
+  through a spool directory). A fresh process is what K bounds: programs built
+  one after another in the worker kept 11–15 GB resident. One at a time, and K
+  large (`TYPE_CHECK_BATCH_FILES`), because every program re-pays the
+  environment (lib, `@types`, the npm types: ~10–15 CPU-s): three at once cost
+  +54–125 % CPU. A batch process's CPU and peak are on the check's phases line
+  (its CPU is inside the worker's rusage, which counts reaped children).
+- **Lint goes with the file.** A batch lints its files inside its program
+  (typed parts and stale syntactic groups) before their result keys exist;
+  the worker then keeps, per file, the typed parts stale under the key it
+  computes (`LintHook.adopt`). A typed result is a function of its key, so
+  linting early and deciding later gives the same outcome.
 
 ## The lint cache is keyed on what the rules read, and exemptions apply when it is read
 
@@ -569,7 +616,7 @@ fixed file reads.
 
 ## Host-wide worker admission — `server/spawnTypeCheckWorker`
 
-The worker builds a 7–14 GB TS program. `spawnTypeCheckWorker` (`server/`) is
+The worker builds TS programs of at most K files each (a few GB). `spawnTypeCheckWorker` (`server/`) is
 the ONE place a worker starts — for this check and for the build's
 `--skip-checks` fast path — and it takes the caller's `Grant`, so admission and
 priority cannot be skipped or disagree:
@@ -585,7 +632,9 @@ priority cannot be skipped or disagree:
    which is why the grant alone never bounded memory: up to `B` = 9 holders
    could each run one, and on 2026-10-14 two to four overlapped on a swapping
    host, each burning 718–2211 CPU-s on a 99.9 %-warm program (29–162 alone).
-   Step 1 is the bound; this is the CPU accounting.
+   Step 1 is the bound; this is the CPU accounting. A batched set's
+   processes run one at a time inside the same share (see "No program holds
+   more than K files").
 3. **The foreground, as the slot's holder — in either lane.** The pool is
    `holder: "foreground"`, and the worker is spawned through the held slot
    (`slot.spawn`), which starts it out of darwinbg even from a darwinbg agent
@@ -765,6 +814,7 @@ measures the queue, so any per-check cost claim needs `./equin check --jobs 1`.
   - Exports (values):
     - `LINT_GROUP_ALL`
     - `LINT_GROUP_BASE`
+    - `TYPE_CHECK_BATCH_FILES`
     - `TYPE_CHECK_DIVERGENCE_KIND`
     - `TYPE_CHECK_WORKER_PEAK_BYTES`
     - `TYPE_CHECK_WORKER_UNITS`
@@ -773,7 +823,7 @@ measures the queue, so any per-check cost claim needs `./equin check --jobs 1`.
   - Uses tokens: `ui/tokens/shadow --shadow`
   - Imported by: `framework/tooling/checks/type-check/backstop`
 - Exemptions:
-  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/full-check.ts`, `shared/keys.ts`, `shared/lockfile.ts`, `shared/name-check.ts`, `shared/name-host.ts`, `shared/name-records.ts`, `shared/name-resolve.ts`, `shared/name-run.ts`, `shared/name-store.ts`, `shared/name-walk.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (debt)
+  - Exempts itself from: `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/full-check.ts`, `shared/keys.ts`, `shared/lockfile.ts`, `shared/name-check.ts`, `shared/name-host.ts`, `shared/name-records.ts`, `shared/name-resolve.ts`, `shared/name-run.ts`, `shared/name-store.ts`, `shared/name-walk.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (debt)
 - Sub-plugins:
   - **`backstop`** — The two-program type check's backstop: a daily main-only job runs the type-check worker in dual mode (the two-program check beside a full check of a fresh whole program, compared file by file) and…
 

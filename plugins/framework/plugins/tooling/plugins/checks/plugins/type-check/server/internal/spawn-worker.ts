@@ -18,6 +18,7 @@ import { fileURLToPath } from "url";
 import type { Grant } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import type { ForegroundSlot } from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import {
+  TYPE_CHECK_BATCH_FILES,
   TYPE_CHECK_WORKER_UNITS,
   type TypeCheckTree,
   type TypeCheckWorkerJob,
@@ -97,7 +98,10 @@ export interface TypeCheckWorkerRun {
  *    bound the CPU grant cannot express (its weight clamps to each holder's
  *    share, so N holders ran N workers). Taken FIRST so a worker queued for it
  *    holds none of its holder's units, which the holder's other children use;
- * 2. `TYPE_CHECK_WORKER_UNITS` of the holder's grant — the CPU share.
+ * 2. `TYPE_CHECK_WORKER_UNITS` of the holder's grant — the CPU share. A set
+ *    larger than `TYPE_CHECK_BATCH_FILES` is checked in batch processes the
+ *    worker runs one at a time, inside the same share
+ *    (research/2026-10-23-global-type-check-bounded-batches.md).
  *
  * The lane picks only the slot window. The scheduling tier is the pool's:
  * the worker is spawned through the held slot (`holder: "foreground"`), so it
@@ -127,6 +131,8 @@ export async function spawnTypeCheckWorker(opts: {
    * versions. Omitted, it is read here, from the working tree as it is now.
    */
   tree?: TypeCheckTree;
+  /** Batching, by default `TYPE_CHECK_BATCH_FILES` files a program. */
+  batch?: TypeCheckWorkerJob["batch"];
   grant: Grant;
 }): Promise<TypeCheckWorkerRun> {
   const { root, name, tsconfigPath, tscMode, onMiss, lintFiles, grant } = opts;
@@ -134,6 +140,7 @@ export async function spawnTypeCheckWorker(opts: {
   const lintBase = opts.lintBase ?? null;
   const walkBase = opts.walkBase ?? { kind: "hint" };
   const tree = opts.tree ?? (await readCheckTree(root, tsconfigPath)).tree;
+  const batch = opts.batch ?? { k: TYPE_CHECK_BATCH_FILES };
   const queuedAt = performance.now();
   const run = await typeCheckWorkerPool.run(
     (slot) => {
@@ -154,6 +161,7 @@ export async function spawnTypeCheckWorker(opts: {
               lintBase,
               walkBase,
               tree,
+              batch,
             },
             slot,
           })),

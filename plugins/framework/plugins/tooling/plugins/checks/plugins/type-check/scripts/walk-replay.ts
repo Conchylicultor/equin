@@ -39,7 +39,11 @@ import { join, resolve } from "path";
 import { fileURLToPath } from "url";
 import { computeTreeHash } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
-import type { TypeCheckWorkerJob, TypeCheckWorkerResult } from "../core";
+import {
+  TYPE_CHECK_BATCH_FILES,
+  type TypeCheckWorkerJob,
+  type TypeCheckWorkerResult,
+} from "../core";
 import { readCheckTree } from "../shared/repo-view";
 import { splitKey } from "../shared/name-records";
 import { openNameStore } from "../shared/name-store";
@@ -61,9 +65,10 @@ const flag = (name: string): string | undefined => {
 const [scratchArg, from, to] = args;
 const data = flag("--data");
 const outPath = flag("--out");
-if (!scratchArg || !from || !to || !data) {
+const BATCH = { k: Number(flag("--batch-k") ?? TYPE_CHECK_BATCH_FILES) };
+if (!scratchArg || !from || !to || !data || !(BATCH.k >= 1)) {
   console.error(
-    "usage: walk-replay.ts <scratch checkout> <from> <to> --data <dir> [--out <steps.json>]",
+    "usage: walk-replay.ts <scratch checkout> <from> <to> --data <dir> [--batch-k <files>] [--out <steps.json>]",
   );
   process.exit(2);
 }
@@ -122,6 +127,7 @@ async function runChain(
     lintBase: null,
     walkBase: chain === "full" ? { kind: "none" } : { kind: "hint" },
     tree: (await readCheckTree(scratch, tsconfigPath, treeHash)).tree,
+    batch: BATCH,
   };
   const jobPath = join(os.tmpdir(), `walk-replay-${chain}-${process.pid}.json`);
   writeFileSync(jobPath, JSON.stringify(job));

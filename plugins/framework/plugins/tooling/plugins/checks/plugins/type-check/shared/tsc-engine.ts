@@ -132,7 +132,12 @@ export function engineSources(): string[] {
     .sort();
 }
 
-const NOT_ENGINE = new Set(["worker.ts", "full-check.ts"]);
+const NOT_ENGINE = new Set([
+  "worker.ts",
+  "full-check.ts",
+  "batch-processes.ts",
+  "batch-worker.ts",
+]);
 
 /**
  * A `.d.ts` in a canonical form: every type literal's PROPERTY signatures in
@@ -156,8 +161,19 @@ const NOT_ENGINE = new Set(["worker.ts", "full-check.ts"]);
  * replaying main's abd05b5fe7). An import declaration no reference is left
  * using is dropped. A name some type parameter in the file declares is left
  * alone (it may shadow the binding).
+ *
+ * And, given `declaringOf`, every import type `import("s").N` spelled through
+ * the module that DECLARES `N`: emit names a type through whichever module
+ * path the program had resolved it by — a barrel in one program, the file
+ * behind it in another (measured: `import("../../server").JobFactory` in one
+ * whole program, `import("../../server/internal/registry").JobFactory` in a
+ * batch served the barrel's `.d.ts`; 12 of 12.8k files). `declaringOf`
+ * returns the spec to spell it by, or undefined to keep `s`.
  */
-export function canonicalDeclarations(dts: string): string {
+export function canonicalDeclarations(
+  dts: string,
+  declaringOf?: (spec: string, name: string) => string | undefined,
+): string {
   const sf = ts.createSourceFile(
     "contract.d.ts",
     dts,
@@ -344,7 +360,41 @@ export function canonicalDeclarations(dts: string): string {
     };
     return (root) => ts.visitNode(root, visit) as ts.SourceFile;
   };
-  const result = ts.transform(sf, [qualifyImports, sortMembers]);
+  const declaringSpecs: ts.TransformerFactory<ts.SourceFile> = (context) => {
+    const visit = (node: ts.Node): ts.Node => {
+      const visited = ts.visitEachChild(node, visit, context);
+      if (
+        declaringOf === undefined ||
+        !ts.isImportTypeNode(visited) ||
+        visited.qualifier === undefined ||
+        !ts.isLiteralTypeNode(visited.argument) ||
+        !ts.isStringLiteral(visited.argument.literal)
+      ) {
+        return visited;
+      }
+      let first: ts.EntityName = visited.qualifier;
+      while (ts.isQualifiedName(first)) first = first.left;
+      const spec = declaringOf(visited.argument.literal.text, first.text);
+      if (spec === undefined || spec === visited.argument.literal.text) {
+        return visited;
+      }
+      const f = context.factory;
+      return f.updateImportTypeNode(
+        visited,
+        f.createLiteralTypeNode(f.createStringLiteral(spec)),
+        visited.attributes,
+        visited.qualifier,
+        visited.typeArguments,
+        visited.isTypeOf,
+      );
+    };
+    return (root) => ts.visitNode(root, visit) as ts.SourceFile;
+  };
+  const result = ts.transform(sf, [
+    qualifyImports,
+    declaringSpecs,
+    sortMembers,
+  ]);
   const text = printer.printFile(result.transformed[0]!);
   result.dispose();
   return text;

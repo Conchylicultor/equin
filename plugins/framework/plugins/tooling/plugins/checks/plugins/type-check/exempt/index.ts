@@ -5,6 +5,8 @@ export default [
     rule: "boundaries/no-platform-api",
     paths: [
       "server/internal/spawn-worker.ts",
+      "shared/batch-processes.ts",
+      "shared/batch-worker.ts",
       "shared/full-check.ts",
       "shared/keys.ts",
       "shared/lockfile.ts",

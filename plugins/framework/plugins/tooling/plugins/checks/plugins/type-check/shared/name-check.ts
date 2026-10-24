@@ -17,7 +17,7 @@
 // binding is the target name's own meaning (`./name-walk.ts`).
 
 import { createHash } from "crypto";
-import { join, relative } from "path";
+import { dirname, join, relative } from "path";
 import ts from "typescript";
 import { canonicalDeclarations, formatDiagnostic } from "./tsc-engine";
 import { createNameHost, type SourceFileCache } from "./name-host";
@@ -559,6 +559,63 @@ export interface FileCheck {
 }
 
 /**
+ * For `canonicalDeclarations`: the spec, relative to `sf`, of the repo file
+ * that DECLARES `name` as the module `spec` exports it — following re-exports
+ * through the checker, so a barrel and the file behind it spell one type one
+ * way whichever this program resolved it by. Undefined (keep the spec) when it
+ * does not resolve, or is declared outside the repo. A served contract
+ * (`x.d.ts` beside `x.ts`) and its source spell the same, extension dropped.
+ * Declarations merged across files are named by the first by path.
+ */
+function declaringSpecOf(
+  root: string,
+  program: ts.Program,
+  sf: ts.SourceFile,
+): (spec: string, name: string) => string | undefined {
+  const checker = program.getTypeChecker();
+  const options = program.getCompilerOptions();
+  // Candidates are the PROGRAM's files: a module served as its contract
+  // (`x.d.ts`) resolves to that, not to the `x.ts` on disk beside it.
+  const host: ts.ModuleResolutionHost = {
+    fileExists: (f) =>
+      program.getSourceFile(f) !== undefined ||
+      (f.endsWith("/package.json") && ts.sys.fileExists(f)),
+    readFile: (f) => ts.sys.readFile(f),
+  };
+  const memo = new Map<string, string | undefined>();
+  return (spec, name) => {
+    const key = `${spec}\0${name}`;
+    if (memo.has(key)) return memo.get(key);
+    let out: string | undefined;
+    const resolved = ts.resolveModuleName(spec, sf.fileName, options, host)
+      .resolvedModule?.resolvedFileName;
+    const target =
+      resolved === undefined ? undefined : program.getSourceFile(resolved);
+    const mod =
+      target === undefined ? undefined : checker.getSymbolAtLocation(target);
+    let sym =
+      mod === undefined
+        ? undefined
+        : checker.tryGetMemberInModuleExports(name, mod);
+    if (sym !== undefined && sym.flags & ts.SymbolFlags.Alias) {
+      sym = checker.getAliasedSymbol(sym);
+    }
+    const files = (sym?.declarations ?? [])
+      .map((d) => rel(root, d.getSourceFile().fileName))
+      .filter(isRepoPath)
+      .sort();
+    if (files.length > 0) {
+      const bare = files[0]!.replace(/(\.d)?\.[mc]?tsx?$/, "");
+      const from = dirname(rel(root, sf.fileName));
+      const r = relative(from, bare).split("\\").join("/");
+      out = r.startsWith(".") ? r : `./${r}`;
+    }
+    memo.set(key, out);
+    return out;
+  };
+}
+
+/**
  * Check one source file: its syntactic, semantic and declaration diagnostics,
  * and its `.d.ts` — forced even when a declaration diagnostic would block it
  * — whose canonical form (sorted type-literal properties and union members,
@@ -605,7 +662,10 @@ export function checkFile(
     );
   }
   const declLines = declaration.map((d) => formatDiagnostic(root, d));
-  const canonical = canonicalDeclarations(dts);
+  const canonical = canonicalDeclarations(
+    dts,
+    declaringSpecOf(root, program, sf),
+  );
   return {
     diagnostics: [
       ...syntactic.map((d) => formatDiagnostic(root, d)),
