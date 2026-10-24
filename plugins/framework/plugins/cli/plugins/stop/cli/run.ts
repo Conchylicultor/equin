@@ -2,14 +2,14 @@ import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import {
   readPid,
   isRunning,
-  awaitProcessGone,
-  terminateProcess,
   GATEWAY_SERVICE,
 } from "@plugins/infra/plugins/launcher/server";
 import {
+  awaitProcessGone,
   declaredLoginServices,
   loginServiceId,
   loginServiceManager,
+  terminateProcess,
   type LoginService,
 } from "@plugins/infra/plugins/launcher/plugins/login-services/machine";
 

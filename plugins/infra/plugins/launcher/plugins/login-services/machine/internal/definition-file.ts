@@ -23,6 +23,14 @@ export function writeDefinition(
   return { path, changed: true };
 }
 
+/**
+ * Whether the definition file holds exactly `content` — what
+ * {@link writeDefinition} would leave unchanged — without writing anything.
+ */
+export function isDefinitionCurrent(path: string, content: string): boolean {
+  return existsSync(path) && readFileSync(path, "utf-8") === content;
+}
+
 /** Delete a job definition file; whether there was one. */
 export function removeDefinition(path: string): boolean {
   if (!existsSync(path)) return false;

@@ -15,8 +15,6 @@ export {
   bundledGateway,
   spawnGatewayDaemon,
   gatewayLaunchSpec,
-  awaitProcessGone,
-  terminateProcess,
   awaitPgReady,
   bootSelfContainedApp,
   seedReleaseAssetMirror,

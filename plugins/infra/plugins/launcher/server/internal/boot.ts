@@ -560,39 +560,6 @@ export function spawnGatewayDaemon(opts: GatewayLaunchOptions): Bun.Subprocess {
   return gw;
 }
 
-/**
- * Wait for a stopped process to be gone, bounded to the gateway's own 15s
- * shutdown budget plus launchd's margin (the job's ExitTimeOut is 20s). Throws
- * if it outlives that.
- *
- * A stop must be observed, not assumed: a fixed sleep let an old gateway keep
- * tearing down its backends while the new one booted and ran its orphan
- * reconcile — overlapping generations, the routine trigger for orphaned
- * backends.
- */
-export async function awaitProcessGone(pid: number): Promise<void> {
-  const deadline = Date.now() + 20_000;
-  while (isRunning(pid) && Date.now() < deadline) {
-    await Bun.sleep(100);
-  }
-  if (isRunning(pid)) {
-    throw new Error(
-      `Process ${pid} is still running 20s after being stopped; refusing to carry on as if it were gone.`,
-    );
-  }
-}
-
-/** SIGTERM a process and {@link awaitProcessGone | wait for it to be gone}. */
-export async function terminateProcess(pid: number): Promise<void> {
-  try {
-    process.kill(pid, "SIGTERM");
-  } catch (err) {
-    // Exited between the caller's liveness check and the signal.
-    if ((err as NodeJS.ErrnoException).code !== "ESRCH") throw err;
-  }
-  await awaitProcessGone(pid);
-}
-
 // Generous: the gateway does not bind its listener until its supervisor has
 // brought EVERY managed service up (StartAll precedes ListenAndServe), and a
 // cold `initdb` on a fresh host legitimately takes tens of seconds. Nothing

@@ -63,12 +63,21 @@ for systemd too (reload is `stop` + `enable --now` after a `daemon-reload`).
 
 After the gateway, `start` reads `declaredLoginServices()` — every plugin's
 `login-services/index.ts` (`infra/launcher/login-services`) — and names none of
-them. For each: `ensureDep` its dependency from the main checkout, `holdDep` it
-(`login-service-<label>`, like `machine-gateway`), write its job, and load it
-unless it is already running an unchanged job (`--force` reloads anyway). A
+them. For each: `ensureDep` its dependency from the main checkout, then
+`reconcileLoginService` (the body main's boot shares to keep each registered
+service on main's build): `holdDep` it (`login-service-<label>`, like
+`machine-gateway`), write its job, and load it unless it is already running an
+unchanged job (`--force` reloads anyway). A
 `graphical` service is tied to the desktop session (launchd's Aqua session,
 systemd's `graphical-session.target`) and needs no lingering. With no service
 manager none is started, and `start` says so.
+
+`--only <ids>` (comma-separated: `dev.singularity.gateway` and/or declared ids)
+restricts `start` to those services — the gateway half runs only when it is
+named — and with `--force` restarts just them:
+`./equin start --only dev.equin.menu-bar --force` leaves the gateway (and every
+backend) alone. An unknown id fails before anything runs, listing the known
+ones.
 
 ## Bind address
 
@@ -94,8 +103,13 @@ kind of `infra/deps`): `start` runs `ensureDep(gatewayBinary, cliExecContext(),
 { root: <main checkout> })`. Its identity is main's Go source + `go version` +
 the platform, so a Go change is built on the next `start` (no flag) into
 `~/.singularity/cache/deps/gateway-binary/<identity>/env/gateway`, and an
-unchanged one costs a hash. The plist (or the detached spawn) names that path;
-`start` rewrites the plist every run, and `start --force` reloads it. It then
+unchanged one costs a hash. It does NOT reach a running gateway: with the
+gateway already running under the manager and no `--force`, `start` only asks
+`LoginService.isCurrent(job)` and, when the written job differs, prints a stale
+notice with `./equin start --only dev.singularity.gateway --force` — the plist
+is not rewritten, the binary neither signed nor held, so the plist keeps naming
+the binary that runs and the sweep keeps off it. When `start` launches, the
+plist (or the detached spawn) names that path and it
 `holdDep`s the install as `machine-gateway`, so the daily deps sweep never
 deletes the binary launchd will relaunch, however long main has moved on; the
 next `start` moves the hold to the new build. On macOS it then runs

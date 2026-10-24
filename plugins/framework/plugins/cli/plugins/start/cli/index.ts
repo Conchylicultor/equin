@@ -13,12 +13,20 @@ import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
  *
  * A system-level, one-time operation: never part of the normal agent workflow.
  */
-export default defineCliCommand<[], { force?: boolean; logLevel: string }>({
+export default defineCliCommand<
+  [],
+  { force?: boolean; logLevel: string; only?: string }
+>({
   name: "start",
   description:
     "Build the gateway, register it to start by itself (login on macOS, boot on Linux), and start it — then every declared login service",
   options: [
     { flags: "--force", description: "Restart even if already running" },
+    {
+      flags: "--only <ids>",
+      description:
+        "Comma-separated services to start (the gateway's dev.singularity.gateway, or a declared login service id); with --force, restarts only those",
+    },
     {
       flags: "--log-level <level>",
       description: "Gateway log level: debug|info|warn|error",

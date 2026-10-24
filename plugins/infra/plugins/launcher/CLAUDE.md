@@ -42,6 +42,12 @@ reading only the collected registry. The gateway itself is not a declaration:
 outside the manager, and builds its launch from flags — so `start` drives it
 explicitly, through the same `LoginService`.
 
+Every declared service a `start` registered **follows main by itself**: main's
+boot reconciles it against main's build of its dependency (see the sub-plugin's
+`CLAUDE.md`). The gateway does not — restarting it restarts every backend — but
+a plain `start` reports it stale (`LoginService.isCurrent`) with the command
+that swaps it: `./equin start --only dev.singularity.gateway --force`.
+
 ## The gateway binary is a dependency
 
 `gateway-binary` (`deps/index.ts`) is an `infra/deps` `build` dependency: `go
@@ -275,7 +281,6 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `assertSupportedHost`
     - `awaitGatewayReady`
     - `awaitPgReady`
-    - `awaitProcessGone`
     - `bootSelfContainedApp`
     - `bundledGateway`
     - `ensureDatabaseConfig`
@@ -297,7 +302,6 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `seedReleaseAssetMirror`
     - `spawnGatewayDaemon`
     - `teardownSelfContainedApp`
-    - `terminateProcess`
     - `writeReleaseDatabaseConfig`
   - Register: `defineDaemon('launcher.gateway')`
 - Deps:

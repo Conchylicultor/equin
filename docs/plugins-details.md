@@ -29666,7 +29666,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `assertSupportedHost`
           - `awaitGatewayReady`
           - `awaitPgReady`
-          - `awaitProcessGone`
           - `bootSelfContainedApp`
           - `bundledGateway`
           - `ensureDatabaseConfig`
@@ -29688,7 +29687,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `seedReleaseAssetMirror`
           - `spawnGatewayDaemon`
           - `teardownSelfContainedApp`
-          - `terminateProcess`
           - `writeReleaseDatabaseConfig`
         - Register: `defineDaemon('launcher.gateway')`
       - Deps:
@@ -29725,7 +29723,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtimePath`
           - `runtimeShimsDir`
       - Plugins:
-        - **`login-services`** — Per-user login services, generalized from the gateway's: a LoginService over a LoginServiceSpec (label, argv, cwd, env, stdio log, session background | graphical), rendered as a launchd LaunchAgent on macOS (graphical → LimitLoadToSessionType=Aqua) or a systemd user unit on Linux (graphical → graphical-session.target, no lingering); defineLoginService and the collected login-services/ registry, so ./equin start / stop bring every declared service up and down without naming one.
+        - **`login-services`** — Per-user login services, generalized from the gateway's: a LoginService over a LoginServiceSpec (label, argv, cwd, env, stdio log, session background | graphical), rendered as a launchd LaunchAgent on macOS (graphical → LimitLoadToSessionType=Aqua) or a systemd user unit on Linux (graphical → graphical-session.target, no lingering); defineLoginService and the collected login-services/ registry, so ./equin start / stop bring every declared service up and down without naming one. On main's boot, every declared service a start registered follows main: reloaded when main's build of its dependency changed its job (rewritten only, when stopped), the dependency requested through deps first when it is not built yet.
           - Core:
             - Uses: `framework/tooling/collected-dir.defineCollectedDir`
             - Exports (types):
@@ -29741,7 +29739,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `LoginServiceManager`
               - `LoginServiceRun`
               - `LoginServiceState`
+              - `ReconcileOutcome`
+              - `ReconcilePolicy`
             - Exports (values):
+              - `awaitProcessGone`
               - `declaredLoginServices`
               - `defineLoginService`
               - `loginService`
@@ -29749,6 +29750,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `loginServiceId`
               - `loginServiceJob`
               - `loginServiceManager`
+              - `reconcileLoginService`
+              - `terminateProcess`
     - **`mcp`** — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool, and serves the mcp.catalog live value: every tool, instructions section and the scope resolver with the plugin that declared each, each tool's input schema as tools/list sends it.
       - Server:
         - Contributes: `resource.declare` "mcp.catalog"

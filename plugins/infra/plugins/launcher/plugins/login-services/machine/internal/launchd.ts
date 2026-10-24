@@ -7,7 +7,11 @@ import {
 import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
 import { retryUntil, exponential } from "@plugins/packages/plugins/retry/core";
 import type { LoginServiceId } from "../../core";
-import { removeDefinition, writeDefinition } from "./definition-file";
+import {
+  isDefinitionCurrent,
+  removeDefinition,
+  writeDefinition,
+} from "./definition-file";
 import { renderLaunchAgentPlist } from "./launchd-plist";
 import type {
   LoginService,
@@ -113,6 +117,11 @@ function launchdService(id: LoginServiceId): LoginService {
     // takes effect on the next `bootout` + `bootstrap` (or the next login).
     write: (job) =>
       writeDefinition(plistPath(), renderLaunchAgentPlist({ ...id, ...job })),
+    isCurrent: (job) =>
+      isDefinitionCurrent(
+        plistPath(),
+        renderLaunchAgentPlist({ ...id, ...job }),
+      ),
     remove: async () => removeDefinition(plistPath()),
     load,
     // launchd SIGTERMs it (SIGKILL after the plist's ExitTimeOut). The plist

@@ -5,7 +5,11 @@ import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
 import { retryUntil, exponential } from "@plugins/packages/plugins/retry/core";
 import type { LoginServiceId } from "../../core";
-import { removeDefinition, writeDefinition } from "./definition-file";
+import {
+  isDefinitionCurrent,
+  removeDefinition,
+  writeDefinition,
+} from "./definition-file";
 import { renderSystemdUserUnit } from "./systemd-unit";
 import type {
   LoginService,
@@ -163,6 +167,8 @@ function systemdService(id: LoginServiceId): LoginService {
     state,
     write: (job) =>
       writeDefinition(unitPath(), renderSystemdUserUnit({ ...id, ...job })),
+    isCurrent: (job) =>
+      isDefinitionCurrent(unitPath(), renderSystemdUserUnit({ ...id, ...job })),
     remove,
     load,
     unload: async () => {

@@ -1,5 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { writeFileSync } from "node:fs";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { assertPrerequisites } from "@plugins/framework/plugins/cli/plugins/doctor/cli";
 import { installLockedToolchain } from "@plugins/infra/plugins/deps/plugins/mise/core";
@@ -27,8 +26,6 @@ import {
   spawnGatewayDaemon,
   gatewayLaunchSpec,
   awaitGatewayReady,
-  awaitProcessGone,
-  terminateProcess,
   resolveListenAddress,
   LISTEN_ENV,
   GATEWAY_SERVICE,
@@ -36,22 +33,29 @@ import {
   type GatewayLaunchOptions,
 } from "@plugins/infra/plugins/launcher/server";
 import {
+  awaitProcessGone,
   declaredLoginServices,
-  loginServiceHolder,
   loginServiceId,
-  loginServiceJob,
   loginServiceManager,
+  reconcileLoginService,
+  terminateProcess,
   type LoginService,
+  type LoginServiceDeclaration,
   type LoginServiceManager,
+  type ReconcileOutcome,
 } from "@plugins/infra/plugins/launcher/plugins/login-services/machine";
 
 // The dev gateway always listens on the default port: every backend reaches
 // central through `localhost:9000`.
 const DEFAULT_PORT = 9000;
 
-type Opts = { force?: boolean; logLevel: string };
+type Opts = { force?: boolean; logLevel: string; only?: string };
 
 const run: CliAction<[], Opts> = async (opts) => {
+  // `--only` is resolved first: a typo fails before anything is installed,
+  // built or restarted.
+  const declared = await declaredLoginServices();
+  const selected = selectServices(opts.only, declared);
   // The releases mise.lock records, installed if a lock arrived without them
   // (a clone, a pull, an upstream merge) — before the doctor, which would
   // otherwise only report them missing.
@@ -65,12 +69,45 @@ const run: CliAction<[], Opts> = async (opts) => {
   assertSupportedHost();
 
   const manager = loginServiceManager();
-  if (manager)
-    await startAsLoginService(manager.service(GATEWAY_SERVICE), opts);
-  else await startDetached(opts);
+  if (selected(GATEWAY_SERVICE.label)) {
+    if (manager)
+      await startAsLoginService(manager.service(GATEWAY_SERVICE), opts);
+    else await startDetached(opts);
+  }
   // Then every login service a plugin declares — none named here.
-  await startDeclaredLoginServices(manager, opts);
+  await startDeclaredLoginServices(
+    manager,
+    declared.filter((d) => selected(d.id)),
+    opts,
+  );
 };
+
+/**
+ * `--only <ids>`: which services this `start` touches — the gateway by its
+ * label, a declared one by its id; every one without the flag. An unknown id
+ * throws, listing the known ones. With `--force` it is the per-service
+ * restart (`--only dev.equin.menu-bar --force` leaves the gateway, and so every
+ * backend, alone).
+ */
+function selectServices(
+  only: string | undefined,
+  declared: readonly LoginServiceDeclaration[],
+): (id: string) => boolean {
+  if (only === undefined) return () => true;
+  const known = [GATEWAY_SERVICE.label, ...declared.map((d) => d.id)];
+  const ids = only
+    .split(",")
+    .map((id) => id.trim())
+    .filter((id) => id !== "");
+  const unknown = ids.filter((id) => !known.includes(id));
+  if (ids.length === 0 || unknown.length > 0) {
+    throw new Error(
+      `--only ${JSON.stringify(only)}: ${ids.length === 0 ? "names no service" : `unknown service${unknown.length > 1 ? "s" : ""} ${unknown.join(", ")}`}. Known: ${known.join(", ")}.`,
+    );
+  }
+  const picked = new Set(ids);
+  return (id) => picked.has(id);
+}
 
 /**
  * The gateway is a per-user OS service (a launchd LaunchAgent on macOS, a
@@ -97,6 +134,7 @@ async function startAsLoginService(
     printRunning(
       `Gateway is already running under ${manager} (PID ${managedPid})`,
     );
+    await reportStaleGateway(loginService, opts);
     return;
   }
   if (
@@ -110,7 +148,9 @@ async function startAsLoginService(
     return;
   }
 
-  const spec = gatewayLaunchSpec(await prepareGateway(opts));
+  const launch = await prepareGateway(opts);
+  await adoptGatewayLaunch(launch);
+  const spec = gatewayLaunchSpec(launch);
   const written = loginService.write(gatewayServiceJob(spec));
   console.log(
     `Registered ${GATEWAY_SERVICE.label} with ${manager} (${written.path})`,
@@ -121,7 +161,7 @@ async function startAsLoginService(
       // Registering is enough for the next login/boot; swapping the live
       // gateway restarts every backend, which only an explicit --force asks for.
       console.log(
-        `The running gateway (PID ${legacyPid}) was started before it was a ${manager} service. It keeps running now, and ${manager} starts it from the next ${loginService.startsAt} on. Run \`./equin start --force\` to hand it to ${manager} now.`,
+        `The running gateway (PID ${legacyPid}) was started before it was a ${manager} service. It keeps running now, and ${manager} starts it from the next ${loginService.startsAt} on. Run \`./equin start --only ${GATEWAY_SERVICE.label} --force\` to hand it to ${manager} now.`,
       );
       return;
     }
@@ -150,17 +190,37 @@ async function startAsLoginService(
 }
 
 /**
+ * Main's gateway job, built but not applied: the running gateway keeps its
+ * binary — swapping it restarts every backend, which only an explicit
+ * `--force` asks for — but a stale one is said, with the command that swaps
+ * it. The definition is not rewritten and the hold not moved, so the job keeps
+ * naming the binary that runs, and the deps sweep keeps off it.
+ */
+async function reportStaleGateway(
+  loginService: LoginService,
+  opts: Opts,
+): Promise<void> {
+  const launch = await prepareGateway(opts);
+  if (loginService.isCurrent(gatewayServiceJob(gatewayLaunchSpec(launch))))
+    return;
+  console.log(
+    `  Stale:   the gateway's job changed since the running gateway started (main's gateway binary is now ${launch.gateway.dir}, identity ${launch.gateway.identity}). It keeps running the old one; \`./equin start --only ${GATEWAY_SERVICE.label} --force\` swaps it (restarts every backend).`,
+  );
+}
+
+/**
  * Every login service a plugin declares (`login-services/index.ts`, collected
- * by `infra/launcher/login-services`), after the gateway: each one's dependency
- * ensured from the MAIN checkout and held — like the gateway binary, the job
- * names it by path long after main moves on — its job (re)written, and
- * (re)loaded when it is not running, its job changed, or `--force`.
+ * by `infra/launcher/login-services`) that `--only` selects, after the gateway:
+ * each one's dependency ensured from the MAIN checkout — a CLI may build in the
+ * foreground — then reconciled (`reconcileLoginService`, the body main's boot
+ * shares): held, its job (re)written, and (re)loaded when it is not running,
+ * its job changed, or `--force`.
  */
 async function startDeclaredLoginServices(
   manager: LoginServiceManager | null,
+  declared: readonly LoginServiceDeclaration[],
   opts: Opts,
 ): Promise<void> {
-  const declared = await declaredLoginServices();
   if (declared.length === 0) return;
   if (manager === null) {
     console.log(
@@ -174,33 +234,34 @@ async function startDeclaredLoginServices(
       root,
       log: console.log,
     });
-    holdDep(ready, loginServiceHolder(decl));
     const service = manager.service(loginServiceId(decl));
-    const before = await service.state();
-    const job = loginServiceJob(decl, ready);
-    const written = service.write(job);
-    const runningPid = before.kind === "loaded" ? before.pid : null;
-    if (runningPid !== null && !written.changed && !opts.force) {
-      console.log(
-        `${decl.id} (${decl.owner}) is already running under ${manager.manager} (PID ${runningPid})`,
-      );
-      continue;
-    }
-    if (before.kind === "loaded") {
-      // Neither manager re-reads a loaded job: a rewritten one takes effect
-      // only through a reload.
-      await service.unload();
-      if (runningPid !== null) await awaitProcessGone(runningPid);
-    }
-    // The manager appends; truncate so the log holds this start's output. Its
-    // folder may not exist yet (a declaration's first start), and neither
-    // launchd nor systemd creates it — the job would fail to spawn.
-    mkdirSync(dirname(job.stdioLog), { recursive: true });
-    writeFileSync(job.stdioLog, "");
-    const pid = await service.load();
-    console.log(
-      `${decl.id} (${decl.owner}) started under ${manager.manager} (PID ${pid}); it starts again at every ${service.startsAt} (${written.path})`,
+    const outcome = await reconcileLoginService(
+      service,
+      decl,
+      ready,
+      opts.force ? "force" : "start",
     );
+    console.log(
+      `${decl.id} (${decl.owner}) ${describeStart(outcome, service)}`,
+    );
+  }
+}
+
+function describeStart(
+  outcome: ReconcileOutcome,
+  service: LoginService,
+): string {
+  switch (outcome.kind) {
+    case "unchanged":
+      return `is already running under ${service.manager} (PID ${outcome.pid ?? "none"})`;
+    case "started":
+      return `${outcome.reloaded ? "restarted" : "started"} under ${service.manager} (PID ${outcome.pid}); it starts again at every ${service.startsAt} (${outcome.path})`;
+    // Only `follow` stops short of loading.
+    case "unregistered":
+    case "rewritten":
+      throw new Error(
+        `reconcileLoginService answered ${outcome.kind} to ./equin start`,
+      );
   }
 }
 
@@ -229,6 +290,7 @@ async function startDetached(opts: Opts): Promise<void> {
   }
 
   const launch = await prepareGateway(opts);
+  await adoptGatewayLaunch(launch);
   // `.pid` only, and no `.ref()`: the gateway deliberately outlives `start`.
   const { pid } = spawnGatewayDaemon(launch);
 
@@ -242,28 +304,24 @@ async function startDetached(opts: Opts): Promise<void> {
   );
 }
 
-/** Ensure the gateway binary and write `database.json` — the inputs to any launch. */
+/**
+ * Ensure main's gateway binary and derive the launch options — every input to
+ * a launch, nothing applied yet. Built only when main's gateway source (or Go)
+ * changed since the last build (the identity is the source hash), so an
+ * unchanged one costs a hash. It does not reach a RUNNING gateway: `start`
+ * without `--force` leaves that one on its binary and only reports it stale
+ * (`reportStaleGateway`); a launch applies the options first
+ * (`adoptGatewayLaunch`).
+ */
 async function prepareGateway(opts: Opts): Promise<GatewayLaunchOptions> {
   // The machine's gateway is MAIN's: built from the main checkout's Go source
   // whichever checkout runs `start`.
   const repoRoot = await getMainRepoRoot();
-  // Built only when main's gateway source (or Go) changed since the last
-  // build — the identity is the source hash — so a Go change takes effect
-  // on the next `start` with no flag, and an unchanged one costs a hash.
-  const exec = cliExecContext();
-  const gateway = await ensureDep(gatewayBinary, exec, {
+  const gateway = await ensureDep(gatewayBinary, cliExecContext(), {
     root: repoRoot,
     log: console.log,
   });
-  // A ready install skips the build's signing step, so a changed identity
-  // (configured, or a reset local one) is applied here; a no-op otherwise.
-  await signGateway(gateway, exec, console.log);
-  // The service job (and a detached gateway) names this binary by path long
-  // after main's source moves on: keep the deps sweep off it until the next
-  // `start` moves the hold to a newer build.
-  holdDep(gateway, "machine-gateway");
   console.log(`Gateway binary: ${gateway.dir} (${gateway.identity})`);
-  ensureDatabaseConfig(repoRoot, console.log);
   return {
     gateway,
     cwd: repoRoot,
@@ -271,6 +329,29 @@ async function prepareGateway(opts: Opts): Promise<GatewayLaunchOptions> {
     bindHost: devBindHost(),
     logLevel: opts.logLevel,
   };
+}
+
+/**
+ * Apply `launch` before it runs: its binary signed and held, `database.json`
+ * written. Only on the paths that launch — holding a build the running gateway
+ * does not run would move the sweep's hold off the live binary, and the
+ * running gateway's config is not this command's to change under it.
+ */
+async function adoptGatewayLaunch(launch: GatewayLaunchOptions): Promise<void> {
+  const { gateway } = launch;
+  // A ready install skips the build's signing step, so a changed identity
+  // (configured, or a reset local one) is applied here; a no-op otherwise.
+  await signGateway(gateway, cliExecContext(), console.log);
+  // The service job (and a detached gateway) names this binary by path long
+  // after main's source moves on: keep the deps sweep off it until the next
+  // `start` moves the hold to a newer build.
+  holdDep(gateway, "machine-gateway");
+  ensureDatabaseConfig(launch.cwd, console.log);
+  console.log(
+    launch.bindHost === null
+      ? `Binding the gateway to every interface (${LISTEN_ENV}=:${DEFAULT_PORT})`
+      : `Binding the gateway to ${launch.bindHost}:${DEFAULT_PORT}`,
+  );
 }
 
 /**
@@ -287,11 +368,6 @@ function devBindHost(): string | null {
       `${LISTEN_ENV} names port ${addr.port}, but the dev gateway must listen on ${DEFAULT_PORT} (backends reach central at localhost:${DEFAULT_PORT}). Set only the host, e.g. ${LISTEN_ENV}=127.0.0.1:${DEFAULT_PORT}.`,
     );
   }
-  console.log(
-    addr.host === null
-      ? `Binding the gateway to every interface (${LISTEN_ENV}=:${DEFAULT_PORT})`
-      : `Binding the gateway to ${addr.host}:${DEFAULT_PORT}`,
-  );
   return addr.host;
 }
 

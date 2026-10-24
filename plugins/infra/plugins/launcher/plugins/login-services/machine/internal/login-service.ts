@@ -35,6 +35,13 @@ export interface LoginService {
    * OAuth client secrets).
    */
   write(job: LoginServiceJob): { path: string; changed: boolean };
+  /**
+   * Whether the written definition is exactly what `write(job)` would write —
+   * asked without writing, for a running service whose definition must keep
+   * naming what it runs (the gateway's staleness notice). False when there is
+   * no definition.
+   */
+  isCurrent(job: LoginServiceJob): boolean;
   /** Delete the definition, so the service no longer starts by itself. */
   remove(): Promise<boolean>;
   /** Load (and so start) the written job; resolves with its pid once it runs. */
