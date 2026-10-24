@@ -4,6 +4,15 @@ A Notion-like multi-view data surface. One **data source** — `rows` plus a typ
 `FieldDef[]` schema — rendered through multiple **views** (gallery, table, …), each
 view independently sorted / searched / filtered.
 
+## Which surface?
+
+| You have | Use |
+| --- | --- |
+| One set of rows, seen several ways (gallery, list, sorted, grouped) | `<DataView>` — views are config rows |
+| Another list of the **same** records: a trash, an archive, a history, a queue, rows hidden by default | `<DataViewSwitcher>` — one view bar, each view bound to a contributed **source** ([Multi-source surfaces](#multi-source-surfaces-dataviewswitcher)). Never a second pane behind a button. |
+| Rows of several **different** kinds in one list (builds + backups as runs) | `<DataView>` over a union collection ([Meta-DataView](#meta-dataview-one-list-over-sources-of-different-entities)) |
+| Every view stacked at once | the `sections` toolbar ([Sections toolbar](#sections-toolbar-every-view-at-once)) |
+
 ## Architecture
 
 - A single **global `DataViewSlots.View` slot** (a plain `defineSlot`, rendered via
@@ -2782,8 +2791,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSlots.Control` ← `primitives.data-view`
     - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
     - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-  - Contributes: 81 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.WebRegister` ×73
+  - Contributes: 80 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×72
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
     - `IdKinds.Kind` ×2
@@ -3019,8 +3028,8 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `useRowFilter`
     - `useSortController`
 - Server:
-  - Contributes: 75 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.Register` ×73
+  - Contributes: 74 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.Register` ×72
     - `ids.kind` ×2
   - Uses:
     - `config_v2.getConfig`

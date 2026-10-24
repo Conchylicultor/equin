@@ -1,6 +1,2 @@
 export { prototypesApp } from "./app";
-export {
-  prototypesGalleryRoute,
-  prototypeDetailRoute,
-  prototypesTrashRoute,
-} from "./routes";
+export { prototypesGalleryRoute, prototypeDetailRoute } from "./routes";

@@ -40,7 +40,6 @@ documented with the mockup variable it is.
     - `prototypeDetailRoute`
     - `prototypesApp`
     - `prototypesGalleryRoute`
-    - `prototypesTrashRoute`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`

@@ -65,14 +65,15 @@ The Prototypes app's gallery: the list of every prototype, and New prototype.
 - **Delete and the Trash.** Delete (a card action, and the detail header's —
   which reads Restore on a deleted prototype) records `deletedAt` in the
   prototype's status (`files`); the folder stays. No confirm dialog: it is
-  reversible, and its toast's Undo restores at once. The gallery shows rows with
-  `deletedAt === null`; its header's **Trash** button (with the deleted count)
-  pushes the **Trash pane** (`/prototypes/trash`, `prototypesTrashRoute`) — the
-  same `PrototypeCollection` DataView over the deleted rows, with `trashFields`
-  (adds **Deleted**), its views in
-  `config/apps/prototypes/gallery/prototypes.trash.jsonc` (newest deletion
-  first), and `PrototypeTrashActions` (Restore) as its item actions. Opening a
-  Trash card shows its canvas, which carries the deleted notice.
+  reversible, and its toast's Undo restores at once. The Trash is a **view**,
+  not a pane: the gallery is one `DataViewSwitcher` over two contributed
+  sources (`PrototypeGallerySources`) — `gallery` (rows with
+  `deletedAt === null`, `PrototypeCardActions`) and `trash` (the deleted rows,
+  `trashFields` adding **Deleted**, `PrototypeTrashActions` = Restore). Every
+  row of `config/apps/prototypes/gallery/prototypes.gallery.jsonc` binds to
+  one by its `source` key, so a view the user adds reads one or the other and
+  never needs a "not deleted" filter. Opening a Trash card shows its canvas,
+  which carries the deleted notice.
 
 The detail pane itself — the canvas of frames, its version steppers, option
 picks, size and zoom — is the sibling `canvas` plugin. The gallery depends on
@@ -123,22 +124,23 @@ honest — the prototype does exist — and it self-corrects.
 
 ## Plugin reference
 
-- Description: Prototypes gallery list pane — one card per prototype over its rendered preview, on the prototype viewer's grid, with a Recently edited list; grouped (Pinned / In progress / Done) and filterable by a pin and a Done circle on every card and row (hover actions that stay shown while set; also in the detail pane's header), an undoable Delete on every card and in the detail header (deletedAt in the prototype's status — the folder stays), and a Trash pane listing the deleted ones with Restore — plus New prototype, which mints the folder before launching the agent that designs it.
+- Description: Prototypes gallery list pane — one card per prototype over its rendered preview, on the prototype viewer's grid, with a Recently edited list; grouped (Pinned / In progress / Done) and filterable by a pin and a Done circle on every card and row (hover actions that stay shown while set; also in the detail pane's header), an undoable Delete on every card and in the detail header (deletedAt in the prototype's status — the folder stays), and a Trash view (its own source in the same view bar) listing the deleted ones with Restore — plus New prototype, which mints the folder before launching the agent that designs it.
 - Web:
   - Slots:
     - `prototypesGalleryPane.Actions`
-    - `prototypes-trash.actions`
+    - `sources`
     - `PrototypeCardActions`
     - `trash-actions`
   - Slot contributors:
     - `prototypesGalleryPane.Actions` ← `primitives.pane`
-    - `prototypes-trash.actions` ← `primitives.pane`
+    - `sources` ← `apps.prototypes.gallery`
     - `PrototypeCardActions` ← `apps.prototypes.gallery`
     - `PrototypeCardActions` ← `apps.prototypes.present`
     - `trash-actions` ← `apps.prototypes.gallery`
   - Contributes:
     - `Pane.Register` "prototypes-gallery"
-    - `Pane.Register` "prototypes-trash"
+    - `sources` "Prototypes" → `GallerySource`
+    - `sources` "Trash" → `TrashSource`
     - `prototypeDetailPane.Actions` "pin" → `PinHeaderAction`
     - `prototypeDetailPane.Actions` "done" → `DoneHeaderAction`
     - `prototypeDetailPane.Actions` "delete" → `DeleteHeaderAction`
@@ -146,10 +148,10 @@ honest — the prototype does exist — and it self-corrects.
     - `PrototypeCardActions` "done" → `DoneCardAction`
     - `PrototypeCardActions` "delete" → `DeleteCardAction`
     - `trash-actions` "restore" → `RestoreCardAction`
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×7
     - `apps/prototypes/canvas` ×4
     - `infra/endpoints` ×4
-    - `primitives/data-view` ×3
     - `primitives/live-state` ×3
     - `primitives/pane` ×3
     - `apps/prototypes/thumbnails` ×2
@@ -172,7 +174,6 @@ honest — the prototype does exist — and it self-corrects.
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --accent`
-    - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --primary-text`
   - Imported by:
     - `apps/home/app-cards`

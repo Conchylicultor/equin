@@ -3,14 +3,15 @@
 // ("Pinned"), then the ones still being worked on ("In progress"), the finished
 // ones last ("Done"). Done cards also read
 // muted, so the second section is visibly a pile you are finished with rather
-// than more of the same.
+// than more of the same. Every view binds to a source: `gallery` (the live
+// prototypes) or `trash` (the deleted ones, Restore on each card).
 {
   "views": [
     {
       "id": "gallery",
       "name": "Gallery",
       "icon": "grid-view",
-      "icon": "grid-view",
+      "source": "gallery",
       "view": {
         "type": "gallery",
         "groupBy": { "fieldId": "status", "groupingId": "value" },
@@ -33,9 +34,29 @@
       "id": "recently-edited",
       "name": "Recently edited",
       "icon": "schedule",
+      "source": "gallery",
       "view": {
         "type": "list",
         "sort": [{ "fieldId": "modifiedAt", "direction": "desc" }]
+      }
+    },
+    {
+      // Deleted prototypes as the gallery draws them, the most recently
+      // deleted first, with when each was deleted as a token.
+      "id": "trash",
+      "name": "Trash",
+      "icon": "delete",
+      "source": "trash",
+      "view": {
+        "type": "gallery",
+        "sort": [{ "fieldId": "deletedAt", "direction": "desc" }],
+        "properties": [
+          { "id": "title" },
+          { "id": "problems" },
+          { "id": "blurb" },
+          { "id": "deletedAt" },
+          { "id": "versions" }
+        ]
       }
     }
   ]

@@ -1,6 +1,9 @@
 import {
-  DataView,
+  DataViewSwitcher,
   defineDataView,
+  type DataViewSourceProps,
+  type FieldDef,
+  type ItemActions,
 } from "@plugins/primitives/plugins/data-view/web";
 import {
   matchResource,
@@ -28,7 +31,9 @@ import { mintPrototypeFolder, newPrototypePrompt } from "./new-prototype";
 import { prototypeDetailPane } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
 import {
   PrototypeCardActions,
+  PrototypeGallerySources,
   PrototypeTrashActions,
+  type PrototypeGalleryHostProps,
   type PrototypeGalleryRow,
 } from "../slots";
 import {
@@ -36,14 +41,12 @@ import {
   joinGalleryRows,
   trashFields,
 } from "../internal/gallery-fields";
-import { TrashButton } from "./trash";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const addIcon = symbol("add");
 
 const PROTOTYPES_VIEW = defineDataView("prototypes.gallery");
-const TRASH_VIEW = defineDataView("prototypes.trash");
 
 /** Deterministic hue from the prototype's id, for the cover swatch. */
 function hueFor(seed: string): number {
@@ -65,43 +68,110 @@ function CoverSwatch({ meta }: { meta: PrototypeMeta }) {
 }
 
 /**
- * Which prototypes a collection shows: the gallery's live ones, or the Trash's
- * deleted ones. One surface, so a card in the Trash looks like the card it was.
+ * The gallery's view bar: ONE `DataViewSwitcher` surface over two sources —
+ * the live prototypes (Gallery, Recently edited, any view the user adds) and
+ * the deleted ones (Trash) — so the Trash is a view beside the others, bound
+ * to its own source by its config row's `source` key
+ * (`config/apps/prototypes/gallery/prototypes.gallery.jsonc`). Each source is
+ * contributed by this plugin ({@link GallerySource} / {@link TrashSource}) and
+ * only the active one mounts.
+ *
+ * A card shows the prototype as it renders, its `<title>`, blurb, when it was
+ * last edited and how many versions it has; before its picture exists an
+ * id-tinted swatch. Activating a card opens the Focus/Compare detail pane.
+ * "New prototype" mints an empty prototype folder and opens the launch-agent
+ * popover on it, so the background agent it fires is handed a folder that
+ * already exists.
  */
-type Shelf = "gallery" | "trash";
-
-/**
- * Gallery surface: a `DataView` over the live prototype list — cards (the
- * prototype as it renders, its `<title>`, blurb, when it was last edited and
- * how many versions it has) or a list. Before its picture exists a card shows
- * an id-tinted swatch. Activating a
- * card opens the Focus/Compare detail pane. "New prototype" mints an empty
- * prototype folder and opens the launch-agent popover on it, so the background
- * agent it fires is handed a folder that already exists. Deleted prototypes
- * are not here: the header's Trash button opens them ({@link PrototypeTrash}).
- */
-export function PrototypeGallery({ openTrash }: { openTrash: () => void }) {
-  return <PrototypeCollection shelf="gallery" openTrash={openTrash} />;
-}
-
-/**
- * The gallery's Trash: every deleted prototype, newest deletion first, as the
- * gallery draws it, with Restore on each card. Opening one shows its canvas,
- * which says it was deleted.
- */
-export function PrototypeTrash() {
-  return <PrototypeCollection shelf="trash" openTrash={undefined} />;
-}
-
-function PrototypeCollection({
-  shelf,
-  openTrash,
-}: {
-  shelf: Shelf;
-  openTrash: (() => void) | undefined;
-}) {
+export function PrototypeGallery() {
   const fetchEndpoint = useFetchEndpoint();
   const toast = useToast();
+  return (
+    <DataViewSwitcher
+      storageKey={PROTOTYPES_VIEW}
+      sources={PrototypeGallerySources}
+      hostProps={{}}
+      defaultView="gallery"
+      actions={
+        <LaunchAgentPopover
+          draftKey="new-prototype"
+          trigger={
+            <Button variant="default">
+              <Icon icon={addIcon} />
+              New prototype
+            </Button>
+          }
+          title="New prototype"
+          description="Launch an agent to scaffold a new throwaway UI prototype."
+          placeholder="Extra context (optional) — e.g. desired style, layout, reference…"
+          align="end"
+          getRequest={async (userText) => {
+            const id = await mintPrototypeFolder(fetchEndpoint, toast);
+            const parts = [newPrototypePrompt(id)];
+            if (userText.trim())
+              parts.push(`Additional context: ${userText.trim()}`);
+            return {
+              prompt: parts.join("\n\n"),
+              categoryId: PROTOTYPES_CATEGORY_ID,
+            };
+          }}
+        />
+      }
+    />
+  );
+}
+
+/** The Gallery source: every prototype that is not deleted. */
+export function GallerySource({
+  render,
+}: DataViewSourceProps<PrototypeGalleryHostProps>) {
+  return (
+    <PrototypeShelf
+      render={render}
+      keep={(r) => r.deletedAt === null}
+      fields={galleryFields}
+      itemActions={PrototypeCardActions}
+      emptyState="No prototypes yet. New prototype mints one and launches an agent to design it."
+    />
+  );
+}
+
+/**
+ * The Trash source: every deleted prototype, as the gallery draws it, with
+ * Restore on each card and when it was deleted as a field (its views sort by
+ * it, newest first). Opening one shows its canvas, which says it was deleted.
+ */
+export function TrashSource({
+  render,
+}: DataViewSourceProps<PrototypeGalleryHostProps>) {
+  return (
+    <PrototypeShelf
+      render={render}
+      keep={(r) => r.deletedAt !== null}
+      fields={trashFields}
+      itemActions={PrototypeTrashActions}
+      emptyState="Trash is empty. A deleted prototype waits here until it is restored."
+    />
+  );
+}
+
+/**
+ * One source's bundle: the joined prototype rows `keep` selects, drawn the
+ * same way by both sources, so a card in the Trash looks like the card it was.
+ */
+function PrototypeShelf({
+  render,
+  keep,
+  fields,
+  itemActions,
+  emptyState,
+}: {
+  render: DataViewSourceProps<PrototypeGalleryHostProps>["render"];
+  keep: (row: PrototypeGalleryRow) => boolean;
+  fields: FieldDef<PrototypeGalleryRow>[];
+  itemActions: ItemActions<PrototypeGalleryRow>;
+  emptyState: string;
+}) {
   // Both subscriptions are taken HERE, side by side, and the cards wait for
   // both. A value is filled by its subscription's first answer, asked for when
   // its first subscriber mounts, so a card that subscribed to its own thumbnail
@@ -112,8 +182,9 @@ function PrototypeCollection({
   const result = useCombinedResources({
     prototypes: useLive(prototypesList),
     thumbnails: usePrototypeThumbnails(),
-    // Whether each prototype is pinned / marked Done — joined onto the rows below, and
-    // awaited with the list so a Done card never paints as not done first.
+    // Whether each prototype is pinned / marked Done / deleted — joined onto
+    // the rows below, and awaited with the list so a Done card never paints as
+    // not done first.
     statuses: useLive(prototypeStatuses),
     // How many versions each prototype has — the card's "v12" token, awaited
     // with the list for the same reason the thumbnails are.
@@ -121,47 +192,19 @@ function PrototypeCollection({
   });
   const openPane = useOpenPane();
 
-  const newButton = (
-    <LaunchAgentPopover
-      draftKey="new-prototype"
-      trigger={
-        <Button variant="default">
-          <Icon icon={addIcon} />
-          New prototype
-        </Button>
-      }
-      title="New prototype"
-      description="Launch an agent to scaffold a new throwaway UI prototype."
-      placeholder="Extra context (optional) — e.g. desired style, layout, reference…"
-      align="end"
-      getRequest={async (userText) => {
-        const id = await mintPrototypeFolder(fetchEndpoint, toast);
-        const parts = [newPrototypePrompt(id)];
-        if (userText.trim())
-          parts.push(`Additional context: ${userText.trim()}`);
-        return {
-          prompt: parts.join("\n\n"),
-          categoryId: PROTOTYPES_CATEGORY_ID,
-        };
-      }}
-    />
-  );
-
-  const trash = shelf === "trash";
   const renderList = (
     rows: PrototypeGalleryRow[],
     thumbnails: Record<string, ThumbnailState>,
-    deleted: number | undefined,
-  ) => (
-    <DataView<PrototypeGalleryRow>
-      rows={rows}
-      fields={trash ? trashFields : galleryFields}
-      rowKey={(p) => p.name}
+  ) =>
+    render<PrototypeGalleryRow>({
+      rows,
+      fields,
+      rowKey: (p) => p.name,
       // The card's cover is the prototype as it actually renders (and the list
       // row's thumbnail). The id-tinted swatch stays as what a prototype looks
       // like before its picture exists (or when rendering it failed) — the
       // thumbnail owns the picture, this pane owns the stand-in.
-      cover={(p) => ({
+      cover: (p) => ({
         kind: "node",
         node: (
           <PrototypeThumbnail
@@ -169,49 +212,24 @@ function PrototypeCollection({
             fallback={<CoverSwatch meta={p} />}
           />
         ),
-      })}
-      views={["gallery", "list"]}
-      defaultView="gallery"
-      storageKey={trash ? TRASH_VIEW : PROTOTYPES_VIEW}
-      readiness={result}
-      itemActions={trash ? PrototypeTrashActions : PrototypeCardActions}
-      rowTone={(p) => (p.done ? "muted" : "default")}
-      rowActivation={(p) =>
-        openPane.to(prototypeDetailPane, { name: p.name }, { mode: "push" })
-      }
-      actions={
-        openTrash === undefined ? undefined : (
-          <>
-            <TrashButton count={deleted} onOpen={openTrash} />
-            {newButton}
-          </>
-        )
-      }
-      emptyState={
-        trash
-          ? "Trash is empty. A deleted prototype waits here until it is restored."
-          : "No prototypes yet. New prototype mints one and launches an agent to design it."
-      }
-    />
-  );
+      }),
+      readiness: result,
+      itemActions,
+      rowTone: (p) => (p.done ? "muted" : "default"),
+      rowActivation: (p) =>
+        openPane.to(prototypeDetailPane, { name: p.name }, { mode: "push" }),
+      emptyState,
+    });
 
   return matchResource(result, {
     // The DataView renders the loading and failed states (`readiness`) under
     // its stable chrome; only a ready read reaches the view.
-    loading: () => renderList([], {}, undefined),
-    error: () => renderList([], {}, undefined),
-    ready: ({ prototypes, thumbnails, statuses, versionCounts }) => {
-      const rows = joinGalleryRows(prototypes, statuses, versionCounts);
-      const deleted = rows.filter((r) => r.deletedAt !== null);
-      return trash
-        ? // Newest deletion first: the Trash's views sort by `deletedAt`
-          // (`config/apps/prototypes/gallery/prototypes.trash.jsonc`).
-          renderList(deleted, thumbnails, deleted.length)
-        : renderList(
-            rows.filter((r) => r.deletedAt === null),
-            thumbnails,
-            deleted.length,
-          );
-    },
+    loading: () => renderList([], {}),
+    error: () => renderList([], {}),
+    ready: ({ prototypes, thumbnails, statuses, versionCounts }) =>
+      renderList(
+        joinGalleryRows(prototypes, statuses, versionCounts).filter(keep),
+        thumbnails,
+      ),
   });
 }

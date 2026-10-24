@@ -24,13 +24,3 @@ export const prototypeDetailRoute = defineRoute({
   segment: "proto/:name",
   parent: prototypesGalleryRoute,
 });
-
-/**
- * The gallery's Trash: every deleted prototype, with Restore. A child of the
- * gallery, so its Back leads there.
- */
-export const prototypesTrashRoute = defineRoute({
-  id: "prototypes-trash",
-  segment: "trash",
-  parent: prototypesGalleryRoute,
-});

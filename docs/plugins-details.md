@@ -6129,22 +6129,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/artifacts/prototype`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/paths.ts`, `server/internal/picks.ts`, `server/internal/signature.ts`, `server/internal/status.ts`, `server/internal/tree-path.ts`, `shared/folder-signature.ts`, `shared/history/lock.ts`, `shared/history/store.ts`, `shared/list-metas.ts`, `shared/mint.ts`, `shared/read-folder.ts`, `shared/record-store.ts`, `shared/template.ts`, `shared/legacy-trash.ts` (debt)
-        - **`gallery`** — Prototypes gallery list pane — one card per prototype over its rendered preview, on the prototype viewer's grid, with a Recently edited list; grouped (Pinned / In progress / Done) and filterable by a pin and a Done circle on every card and row (hover actions that stay shown while set; also in the detail pane's header), an undoable Delete on every card and in the detail header (deletedAt in the prototype's status — the folder stays), and a Trash pane listing the deleted ones with Restore — plus New prototype, which mints the folder before launching the agent that designs it.
+        - **`gallery`** — Prototypes gallery list pane — one card per prototype over its rendered preview, on the prototype viewer's grid, with a Recently edited list; grouped (Pinned / In progress / Done) and filterable by a pin and a Done circle on every card and row (hover actions that stay shown while set; also in the detail pane's header), an undoable Delete on every card and in the detail header (deletedAt in the prototype's status — the folder stays), and a Trash view (its own source in the same view bar) listing the deleted ones with Restore — plus New prototype, which mints the folder before launching the agent that designs it.
           - Web:
             - Slots:
               - `prototypesGalleryPane.Actions`
-              - `prototypes-trash.actions`
+              - `sources`
               - `PrototypeCardActions`
               - `trash-actions`
             - Slot contributors:
               - `prototypesGalleryPane.Actions` ← `primitives.pane`
-              - `prototypes-trash.actions` ← `primitives.pane`
+              - `sources` ← `apps.prototypes.gallery`
               - `PrototypeCardActions` ← `apps.prototypes.gallery`
               - `PrototypeCardActions` ← `apps.prototypes.present`
               - `trash-actions` ← `apps.prototypes.gallery`
             - Contributes:
               - `Pane.Register` "prototypes-gallery"
-              - `Pane.Register` "prototypes-trash"
+              - `sources` "Prototypes" → `GallerySource`
+              - `sources` "Trash" → `TrashSource`
               - `prototypeDetailPane.Actions` "pin" → `PinHeaderAction`
               - `prototypeDetailPane.Actions` "done" → `DoneHeaderAction`
               - `prototypeDetailPane.Actions` "delete" → `DeleteHeaderAction`
@@ -6152,10 +6153,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeCardActions` "done" → `DoneCardAction`
               - `PrototypeCardActions` "delete" → `DeleteCardAction`
               - `trash-actions` "restore" → `RestoreCardAction`
-            - Uses: 29 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/gallery/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/gallery/REFERENCE.md)
+            - Uses: 33 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/gallery/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/gallery/REFERENCE.md)
+              - `primitives/data-view` ×7
               - `apps/prototypes/canvas` ×4
               - `infra/endpoints` ×4
-              - `primitives/data-view` ×3
               - `primitives/live-state` ×3
               - `primitives/pane` ×3
               - `apps/prototypes/thumbnails` ×2
@@ -6178,7 +6179,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --accent`
-              - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --primary-text`
             - Imported by:
               - `apps/home/app-cards`
@@ -6252,7 +6252,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `prototypeDetailRoute`
               - `prototypesApp`
               - `prototypesGalleryRoute`
-              - `prototypesTrashRoute`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --border`
@@ -38357,8 +38356,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ← `primitives.data-view`
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-        - Contributes: 81 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.WebRegister` ×73
+        - Contributes: 80 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.WebRegister` ×72
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
@@ -38594,8 +38593,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useRowFilter`
           - `useSortController`
       - Server:
-        - Contributes: 75 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.Register` ×73
+        - Contributes: 74 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.Register` ×72
           - `ids.kind` ×2
         - Uses:
           - `config_v2.getConfig`
@@ -41896,7 +41895,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots: `Pane.Register`
         - Slot contributors: 88 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `Pane.Register` ×88
-        - Contributes: 116 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Contributes: 115 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `SlotRender.ItemMiddleware`
           - `WebsiteHeader` "title" → `PaneTitleItem`
           - `accountPane.Actions` "title" → `PaneTitleItem`
@@ -41980,7 +41979,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `profilingPane.Actions` "title" → `PaneTitleItem`
           - `prototypeDetailPane.Actions` "title" → `PaneTitleItem`
           - `prototypes-present.actions` "title" → `PaneTitleItem`
-          - `prototypes-trash.actions` "title" → `PaneTitleItem`
           - `prototypesGalleryPane.Actions` "title" → `PaneTitleItem`
           - `queue-dead.actions` "title" → `PaneTitleItem`
           - `queue-emission.actions` "title" → `PaneTitleItem`

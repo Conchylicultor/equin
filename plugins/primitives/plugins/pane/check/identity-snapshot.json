@@ -529,12 +529,6 @@
       "parent": null
     },
     {
-      "paneId": "prototypes-trash",
-      "segment": "trash",
-      "appIndex": false,
-      "parent": "prototypes-gallery"
-    },
-    {
       "paneId": "queue",
       "segment": "queue/:tab?",
       "appIndex": false,

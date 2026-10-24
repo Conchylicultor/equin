@@ -1,8 +1,13 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { prototypeDetailPane } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
-import { prototypesGalleryPane, prototypesTrashPane } from "./panes";
-import { PrototypeCardActions, PrototypeTrashActions } from "./slots";
+import { prototypesGalleryPane } from "./panes";
+import {
+  PrototypeCardActions,
+  PrototypeGallerySources,
+  PrototypeTrashActions,
+} from "./slots";
+import { GallerySource, TrashSource } from "./components/prototype-gallery";
 import {
   DoneCardAction,
   DoneHeaderAction,
@@ -18,6 +23,7 @@ import {
   DeleteHeaderAction,
 } from "./components/delete-prototype";
 import { RestoreCardAction } from "./components/trash";
+import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { prototypesGalleryPane } from "./panes";
 export {
@@ -30,10 +36,26 @@ export type { PrototypeGalleryRow } from "./slots";
 
 export default {
   description:
-    "Prototypes gallery list pane — one card per prototype over its rendered preview, on the prototype viewer's grid, with a Recently edited list; grouped (Pinned / In progress / Done) and filterable by a pin and a Done circle on every card and row (hover actions that stay shown while set; also in the detail pane's header), an undoable Delete on every card and in the detail header (deletedAt in the prototype's status — the folder stays), and a Trash pane listing the deleted ones with Restore — plus New prototype, which mints the folder before launching the agent that designs it.",
+    "Prototypes gallery list pane — one card per prototype over its rendered preview, on the prototype viewer's grid, with a Recently edited list; grouped (Pinned / In progress / Done) and filterable by a pin and a Done circle on every card and row (hover actions that stay shown while set; also in the detail pane's header), an undoable Delete on every card and in the detail header (deletedAt in the prototype's status — the folder stays), and a Trash view (its own source in the same view bar) listing the deleted ones with Restore — plus New prototype, which mints the folder before launching the agent that designs it.",
   contributions: [
     Pane.Register({ pane: prototypesGalleryPane }),
-    Pane.Register({ pane: prototypesTrashPane }),
+    // The view bar's two sources: the live prototypes and the deleted ones.
+    PrototypeGallerySources({
+      id: "gallery",
+      title: "Prototypes",
+      icon: symbol("grid-view"),
+      order: 10,
+      views: ["gallery", "list"],
+      component: GallerySource,
+    }),
+    PrototypeGallerySources({
+      id: "trash",
+      title: "Trash",
+      icon: symbol("delete"),
+      order: 20,
+      views: ["gallery", "list"],
+      component: TrashSource,
+    }),
     // Mark the open prototype Done — the same shared flag as the card
     // checkbox, contributed into the canvas plugin's detail header.
     prototypeDetailPane.Actions({ id: "pin", component: PinHeaderAction }),
@@ -70,7 +92,7 @@ export default {
   ],
   slots: {
     "prototypes-gallery": prototypesGalleryPane,
-    "prototypes-trash": prototypesTrashPane,
+    sources: PrototypeGallerySources,
     "card-actions": PrototypeCardActions,
     "trash-actions": PrototypeTrashActions,
   },
