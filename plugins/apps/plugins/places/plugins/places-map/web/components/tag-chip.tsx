@@ -10,21 +10,13 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
   isRoleTag,
-  tagColor,
-  tagPath,
   type PlaceTag,
 } from "@plugins/apps/plugins/places/plugins/places-core/core";
-import { TagMark } from "@plugins/apps/plugins/places/plugins/tag-manager/web";
+import { tagColor, tagPathLabel } from "@plugins/tag-tree/plugins/engine/core";
+import { TagMark } from "@plugins/tag-tree/plugins/picker/web";
 
 const closeIcon = symbol("close");
 const autoIcon = symbol("auto-awesome");
-
-/** "Food & drinks › Restaurants › French" — a tag's place in the tree. */
-export function tagPathLabel(tagId: string, tags: readonly PlaceTag[]): string {
-  return tagPath(tagId, tags)
-    .map((t) => t.name)
-    .join(" › ");
-}
 
 /**
  * One tag as a chip: its mark, its name, its full path as the tooltip. Flags:
@@ -50,7 +42,8 @@ export function TagChip({
   onRemove?: () => void;
 }) {
   const color = tinted ? tagColor(tag.id, tags) : null;
-  const title = tagPathLabel(tag.id, tags);
+  // "Food › Restaurant › French" — the tag's place in the tree.
+  const title = tagPathLabel(tag.id, tags, " › ");
   return (
     <Badge
       variant={excluded ? "destructive" : "muted"}

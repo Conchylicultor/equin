@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "answers": [
+    {
+      "key": "column:place_tags.tree_rank",
+      "entityType": "column",
+      "entityName": "tree_rank",
+      "action": "create"
+    }
+  ]
+}

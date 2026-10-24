@@ -1,6 +1,7 @@
 import { count, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
+import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { parseSavedSymbolName } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
 import { placeTagIdKind, type PlaceTagId } from "../../core";
 import { _placeTags } from "./tables";
@@ -14,11 +15,12 @@ export interface SeedTagTree {
 
 /**
  * The seed as `place_tags` rows: each id minted, `parent` keys resolved to the
- * minted ids, rank = order among siblings in `SEED_TAGS`.
+ * minted ids, each rank a fractional key appended after its previous sibling
+ * in `SEED_TAGS` (a fresh table: these are the complete sibling sets).
  */
 export function seedTagTree(): SeedTagTree {
   const ids = new Map<string, PlaceTagId>();
-  const nextRank = new Map<string | null, number>();
+  const lastRank = new Map<string | null, Rank>();
   const rows = SEED_TAGS.map((tag) => {
     const id = placeTagIdKind.mint();
     ids.set(tag.key, id);
@@ -32,8 +34,8 @@ export function seedTagTree(): SeedTagTree {
       }
       parentId = parent;
     }
-    const rank = nextRank.get(parentId) ?? 0;
-    nextRank.set(parentId, rank + 1);
+    const rank = Rank.between(lastRank.get(parentId) ?? null, null);
+    lastRank.set(parentId, rank);
     return {
       id,
       name: tag.name,
@@ -43,7 +45,7 @@ export function seedTagTree(): SeedTagTree {
       childColors: tag.childColors ?? null,
       icon: parseSavedSymbolName(tag.icon),
       googleTypes: [...(tag.googleTypes ?? [])],
-      rank,
+      rank: rank.toString(),
     };
   });
   // Every SEED_TAGS key is a SeedTagKey: the map was filled from exactly them.

@@ -165,8 +165,8 @@ see `data-view/CLAUDE.md` ("The rail") and `data-table/CLAUDE.md`.
 - Description: Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort, and nests its rows (a tree is a table with no columns) when the source has a hierarchy.
 - Web:
   - Contributes: `DataViewSlots.View` "Table" → `TableView`
-  - Uses: 66 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×33
+  - Uses: 67 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×34
     - `primitives/tree` ×18
     - `primitives/data-table` ×6
     - `primitives/rank-reorder` ×3

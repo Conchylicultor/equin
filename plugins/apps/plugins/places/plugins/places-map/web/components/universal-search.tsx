@@ -22,11 +22,11 @@ import {
   isRoleTag,
   placeFlags,
   placeName,
-  tagPath,
   type Place,
   type PlaceTag,
 } from "@plugins/apps/plugins/places/plugins/places-core/core";
 import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
+import { tagPath } from "@plugins/tag-tree/plugins/engine/core";
 import { placeSearchText } from "../internal/fields";
 import { looksLikeQuestion } from "../internal/question";
 import { untilDay } from "../internal/until-day";

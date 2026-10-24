@@ -794,6 +794,10 @@
       "name": "@singularity/plugin-apps-prototypes-shell",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/prototypes/plugins/state": {
+      "name": "@singularity/plugin-apps-prototypes-state",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/prototypes/plugins/thumbnails": {
       "name": "@singularity/plugin-apps-prototypes-thumbnails",
       "version": "0.0.1",
@@ -2936,6 +2940,14 @@
     },
     "plugins/fields/plugins/string-list/plugins/storage": {
       "name": "@singularity/plugin-fields-string-list-storage",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/tag": {
+      "name": "@singularity/plugin-fields-tag",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/tag/plugins/data-view-group": {
+      "name": "@singularity/plugin-fields-tag-data-view-group",
       "version": "0.0.1",
     },
     "plugins/fields/plugins/tags": {
@@ -5986,6 +5998,18 @@
       "name": "@singularity/plugin-stats-tasks",
       "version": "0.0.1",
     },
+    "plugins/tag-tree": {
+      "name": "@singularity/plugin-tag-tree",
+      "version": "0.0.1",
+    },
+    "plugins/tag-tree/plugins/engine": {
+      "name": "@singularity/plugin-tag-tree-engine",
+      "version": "0.0.1",
+    },
+    "plugins/tag-tree/plugins/picker": {
+      "name": "@singularity/plugin-tag-tree-picker",
+      "version": "0.0.1",
+    },
     "plugins/tasks": {
       "name": "@singularity/plugin-tasks",
       "version": "0.0.1",
@@ -7425,6 +7449,8 @@
 
     "@singularity/plugin-apps-prototypes-shell": ["@singularity/plugin-apps-prototypes-shell@workspace:plugins/apps/plugins/prototypes/plugins/shell"],
 
+    "@singularity/plugin-apps-prototypes-state": ["@singularity/plugin-apps-prototypes-state@workspace:plugins/apps/plugins/prototypes/plugins/state"],
+
     "@singularity/plugin-apps-prototypes-thumbnails": ["@singularity/plugin-apps-prototypes-thumbnails@workspace:plugins/apps/plugins/prototypes/plugins/thumbnails"],
 
     "@singularity/plugin-apps-settings": ["@singularity/plugin-apps-settings@workspace:plugins/apps/plugins/settings"],
@@ -8466,6 +8492,10 @@
     "@singularity/plugin-fields-string-list-config": ["@singularity/plugin-fields-string-list-config@workspace:plugins/fields/plugins/string-list/plugins/config"],
 
     "@singularity/plugin-fields-string-list-storage": ["@singularity/plugin-fields-string-list-storage@workspace:plugins/fields/plugins/string-list/plugins/storage"],
+
+    "@singularity/plugin-fields-tag": ["@singularity/plugin-fields-tag@workspace:plugins/fields/plugins/tag"],
+
+    "@singularity/plugin-fields-tag-data-view-group": ["@singularity/plugin-fields-tag-data-view-group@workspace:plugins/fields/plugins/tag/plugins/data-view-group"],
 
     "@singularity/plugin-fields-tags": ["@singularity/plugin-fields-tags@workspace:plugins/fields/plugins/tags"],
 
@@ -9874,6 +9904,12 @@
     "@singularity/plugin-stats-responsiveness": ["@singularity/plugin-stats-responsiveness@workspace:plugins/stats/plugins/responsiveness"],
 
     "@singularity/plugin-stats-tasks": ["@singularity/plugin-stats-tasks@workspace:plugins/stats/plugins/tasks"],
+
+    "@singularity/plugin-tag-tree": ["@singularity/plugin-tag-tree@workspace:plugins/tag-tree"],
+
+    "@singularity/plugin-tag-tree-engine": ["@singularity/plugin-tag-tree-engine@workspace:plugins/tag-tree/plugins/engine"],
+
+    "@singularity/plugin-tag-tree-picker": ["@singularity/plugin-tag-tree-picker@workspace:plugins/tag-tree/plugins/picker"],
 
     "@singularity/plugin-tasks": ["@singularity/plugin-tasks@workspace:plugins/tasks"],
 

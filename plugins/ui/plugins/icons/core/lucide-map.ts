@@ -324,6 +324,7 @@ export const LUCIDE_MAP = {
   "stop-circle": "circle-stop",
   storage: "database",
   storefront: "store",
+  "subdirectory-arrow-left": "corner-down-left",
   "subdirectory-arrow-right": "corner-down-right",
   "surround-sound": MATERIAL_ONLY,
   "swap-horiz": "arrow-left-right",

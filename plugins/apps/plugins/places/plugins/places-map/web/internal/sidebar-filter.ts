@@ -8,7 +8,7 @@ import {
   isTagUnder,
   tagPath,
   type TagNode,
-} from "@plugins/apps/plugins/places/plugins/places-core/core";
+} from "@plugins/tag-tree/plugins/engine/core";
 
 // The tag sidebar's half of the view filter. The view's filter tree is the one
 // source of truth; the sidebar owns exactly the TOP-LEVEL rules of an `and`

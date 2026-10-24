@@ -25,14 +25,13 @@ import type { PlaceRichDetails } from "@plugins/integrations/plugins/google-maps
 import {
   isCustomPlace,
   isRoleTag,
-  isTagUnder,
   placeName,
-  tagColor,
   tagIdByRole,
   type Place,
   type PlaceTag,
   type TagRole,
 } from "@plugins/apps/plugins/places/plugins/places-core/core";
+import { isTagUnder, tagColor } from "@plugins/tag-tree/plugins/engine/core";
 import {
   useDeletePlace,
   useRegeneratePlaceIcon,
@@ -41,7 +40,7 @@ import {
 import { usePlaceDetails } from "@plugins/apps/plugins/places/plugins/place-details/web";
 import { placeVisual, type PlaceVisual } from "../internal/place-visual";
 import { washInk } from "../internal/pin-paint";
-import { TagMark } from "@plugins/apps/plugins/places/plugins/tag-manager/web";
+import { TagMark } from "@plugins/tag-tree/plugins/picker/web";
 import { DROP_HEAD_PX, PlaceDropHead } from "./place-drop";
 import {
   DetailsNotice,
@@ -107,11 +106,14 @@ function OverlayCard(props: Omit<ComponentProps<typeof Surface>, "level">) {
  */
 export function PlaceCard({
   place,
+  places,
   tags,
   onClose,
   onMovePin,
 }: {
   place: Place;
+  /** Every saved place (the tag picker's counts). */
+  places: readonly Place[];
   tags: readonly PlaceTag[];
   onClose: () => void;
   /** Ask the map for the custom place's new position (pick mode). */
@@ -279,8 +281,9 @@ export function PlaceCard({
                     />
                   ))}
                   <TagPicker
+                    place={place}
+                    places={places}
                     tags={tags}
-                    exclude={place.tags}
                     onPick={(tagId) =>
                       // A tag replaces the ancestors of it the place carried:
                       // "Restaurants › French" says "Restaurants" already.

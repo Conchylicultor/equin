@@ -8,10 +8,10 @@ import {
   isRoleTag,
   placeFlags,
   ringColors,
-  tagPath,
   type Place,
   type PlaceTag,
 } from "@plugins/apps/plugins/places/plugins/places-core/core";
+import { tagPath } from "@plugins/tag-tree/plugins/engine/core";
 import { placeColors } from "./pin-paint";
 
 /** The pin type the map view stamps on every saved place (`GeoMap.Pin` / `GeoMap.Cluster` key). */

@@ -5,17 +5,19 @@ import {
 import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 
 /**
- * One gallery card: the prototype as listed, joined with its status — whether
- * the user has marked it Done, pinned or deleted it (`files`'
- * `prototypes.statuses`) — and its version count (`prototypes.versionCounts`).
- * Joined once, in the gallery, so the `status` field, the muted tone and every
- * card action read the same value.
+ * One gallery card: the prototype as listed, joined with its state — whether
+ * the user has marked it Done, pinned or deleted it, and its one tag
+ * (`state`'s `prototypes.state.all`, per-instance DB rows) — and its version
+ * count (`prototypes.versionCounts`). Joined once, in the gallery, so the
+ * `status` and `tag` fields, the muted tone and every card action read the
+ * same value.
  */
 export type PrototypeGalleryRow = PrototypeMeta & {
   done: boolean;
   pinned: boolean;
-  /** When it was deleted (ISO instant) — `null` for a live prototype. */
-  deletedAt: string | null;
+  tagId: string | null;
+  /** When it was deleted — `null` for a live prototype. */
+  deletedAt: Date | null;
   /** How many versions it has; `undefined` when no count is known (never 0). */
   versions: number | undefined;
 };

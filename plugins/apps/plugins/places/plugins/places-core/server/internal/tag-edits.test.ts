@@ -1,22 +1,13 @@
 import { expect, test } from "bun:test";
-import type { TagNode, TagRole } from "../../core";
 import { editPlaceTags, replaceDeletedTag } from "./tag-edits";
 
 // Readable ids for legibility; the role tags are found by role, not id.
-function tag(id: string, role: TagRole | null = null): TagNode {
-  return {
-    id,
-    parentId: null,
-    color: null,
-    rank: 0,
-    googleTypes: [],
-    role,
-    childColors: null,
-  };
+function tag(id: string): { id: string } {
+  return { id };
 }
 const KNOWN = [
-  tag("want", "want"),
-  tag("been", "been"),
+  tag("want"),
+  tag("been"),
   tag("food"),
   tag("coffee"),
   tag("kids"),

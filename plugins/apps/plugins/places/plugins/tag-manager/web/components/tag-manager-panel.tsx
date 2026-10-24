@@ -19,15 +19,16 @@ import { confirmDialog } from "@plugins/primitives/plugins/overlay/plugins/imper
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   placeTags,
+  placeTagTree,
   tagPlaceCounts,
   type Place,
   type PlaceTag,
 } from "@plugins/apps/plugins/places/plugins/places-core/core";
 import {
-  useCreatePlaceTag,
-  useDeletePlaceTag,
-  useUpdatePlaceTag,
-} from "@plugins/apps/plugins/places/plugins/places-core/web";
+  freeSiblingName,
+  type UpdateTagBody,
+} from "@plugins/tag-tree/plugins/engine/core";
+import { useTagTreeActions } from "@plugins/tag-tree/plugins/engine/web";
 import { TagColorButton } from "./tag-color-button";
 import { TagIconButton } from "./tag-icon-button";
 import { TagNameInput } from "./tag-name-input";
@@ -61,8 +62,9 @@ export interface TagManagerPanelProps {
  * icon, name (edited in place), parent (never itself or a descendant), the
  * Google types that set it automatically, how many places carry it (nested
  * tags included), and Shade children (a parent's colourless children as a
- * light → deep ramp of its colour) / + Child / Delete. Every edit goes straight to the tag
- * endpoints; the live tag collection brings it back to every surface.
+ * light → deep ramp of its colour) / + Child / Delete. Every edit goes straight to the tag-tree
+ * engine's endpoints (`useTagTreeActions(placeTagTree)`); the live tag
+ * collection brings it back to every surface.
  *
  * The rows are a DataView (the table view) nesting the tag collection by
  * `parentId` — sorting is off on every column, since the tree order IS the
@@ -75,31 +77,28 @@ export function TagManagerPanel({
   onClose,
 }: TagManagerPanelProps) {
   const [focus, setFocus] = useState<string | null>(focusTagId);
-  const { mutateAsync: createTag } = useCreatePlaceTag();
+  const { create: createTag } = useTagTreeActions(placeTagTree);
   const counts = useMemo(() => tagPlaceCounts(places, tags), [places, tags]);
-  // A tag's parent is its `parentId`; siblings keep the order the tags arrive
-  // in (the collection is in `rank` order), so each tag's tree rank is its
-  // position, as an evenly spaced fractional key.
-  const hierarchy = useMemo(() => {
-    const ranks = new Map(
-      Rank.nBetween(null, null, tags.length).map((r, i) => [tags[i]!.id, r]),
-    );
-    return {
+  // A tag's parent is its `parentId`, its place among its siblings its stored
+  // fractional rank.
+  const hierarchy = useMemo(
+    () => ({
       getParentId: (t: PlaceTag) => t.parentId,
-      getRank: (t: PlaceTag) => {
-        const rank = ranks.get(t.id);
-        if (rank === undefined) throw new Error(`no rank for tag ${t.id}`);
-        return rank;
-      },
-    };
-  }, [tags]);
+      getRank: (t: PlaceTag) => Rank.from(t.rank),
+    }),
+    [],
+  );
 
+  // A sibling name must be free: "New tag", else "New tag 2", …
   const addTag = useCallback(
     async (parentId: string | null) => {
-      const tag = await createTag({ body: { name: "New tag", parentId } });
+      const tag = await createTag({
+        name: freeSiblingName("New tag", parentId, tags),
+        parentId,
+      });
       setFocus(tag.id);
     },
-    [createTag],
+    [createTag, tags],
   );
 
   // The tag and the Google types are the collection's, derived; what the
@@ -210,9 +209,8 @@ function TagNameCell({
   tags: readonly PlaceTag[];
   autoFocus: boolean;
 }): ReactNode {
-  const updateTag = useUpdatePlaceTag();
-  const update = (body: Parameters<typeof updateTag.mutateAsync>[0]["body"]) =>
-    updateTag.mutateAsync({ params: { id: tag.id }, body });
+  const { update: updateTag } = useTagTreeActions(placeTagTree);
+  const update = (body: UpdateTagBody) => updateTag(tag.id, body);
   return (
     <Line className="gap-xs">
       <TagColorButton
@@ -265,10 +263,10 @@ function TagRowActions({
   hasChildren: boolean;
   onAddChild: () => Promise<void>;
 }): ReactNode {
-  const deleteTag = useDeletePlaceTag();
-  const updateTag = useUpdatePlaceTag();
-  // A tag with a role (Been, Want to go) is how the app finds them: the
-  // endpoint refuses to delete it, so the action is not offered.
+  const { update: updateTag, remove: deleteTag } =
+    useTagTreeActions(placeTagTree);
+  // A tag with a role (Been, Want to go) is how the app finds them: the tree
+  // refuses to delete it (`refuseDelete`), so the action is not offered.
   const deletable = tag.role === null;
   const ramp = tag.childColors === "ramp";
   return (
@@ -280,10 +278,7 @@ function TagRowActions({
           active={ramp}
           tooltip="Colour the children without their own colour as shades of this one, light to deep in their order"
           onClick={() =>
-            void updateTag.mutateAsync({
-              params: { id: tag.id },
-              body: { childColors: ramp ? null : "ramp" },
-            })
+            void updateTag(tag.id, { childColors: ramp ? null : "ramp" })
           }
         >
           Shade children
@@ -301,8 +296,7 @@ function TagRowActions({
               description:
                 "Its child tags move up to its parent, and every place carrying it gets the parent instead.",
               confirmLabel: "Delete tag",
-              onConfirm: () =>
-                deleteTag.mutateAsync({ params: { id: tag.id } }),
+              onConfirm: () => deleteTag(tag.id),
             })
           }
         >

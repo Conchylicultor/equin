@@ -19,6 +19,7 @@ import {
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
 import type { QueryDb } from "@plugins/infra/plugins/query-resource/server";
 import { compileCollection } from "@plugins/network/plugins/live/server/testing";
+import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { placeIdKind, places, placeTagIdKind, placeTags } from "../../core";
 import { _places, _placeTags } from "./tables";
 
@@ -30,6 +31,8 @@ const COUNT = 5001;
 const placeIds = Array.from({ length: COUNT }, () => placeIdKind.mint());
 /** Every tag's id, by ascending rank. */
 const tagIds = Array.from({ length: COUNT }, () => placeTagIdKind.mint());
+/** Every tag's rank, ascending. */
+const tagRanks = Rank.nBetween(null, null, COUNT).map(String);
 
 let t: TestDb;
 
@@ -52,7 +55,7 @@ beforeAll(async () => {
       id,
       name: `tag ${i + 1}`,
       parentId: i === COUNT - 1 ? tagIds[0] : null,
-      rank: i,
+      rank: tagRanks[i]!,
     })),
   );
 });

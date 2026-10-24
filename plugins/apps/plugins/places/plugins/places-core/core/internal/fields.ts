@@ -10,7 +10,6 @@ import {
   parsedTextField,
   textField,
 } from "@plugins/fields/plugins/text/plugins/config/core";
-import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import { tagsField } from "@plugins/fields/plugins/tags/plugins/config/core";
@@ -23,10 +22,11 @@ import {
   parseSavedSymbolName,
   SavedSymbolNameSchema,
 } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
-import { placeIdKind, placeTagIdKind } from "./id-kinds";
-import { CHILD_COLOR_MODES, TAG_ROLES } from "./tag-tree";
+import { placeIdKind } from "./id-kinds";
+import { TAG_ROLES } from "./tag-tree";
 
-// Web-safe field records for the Places app's two tables — the single source of
+// Web-safe field records for the Places app's two tables (the tag tree's are
+// `tagTreeFields` plus `placeTagExtraFields`, `./entity-refs.ts`) — the single source of
 // truth for both the Drizzle pgTable (`defineEntity`, `server/internal/tables.ts`)
 // and the wire schema (`fieldsToZodObject`, `./schema.ts`). Keys are in column
 // order; DDL (defaults, unique indexes) lives in the `defineEntity` meta.
@@ -129,31 +129,17 @@ export const placeFields = {
 } satisfies FieldsRecord;
 
 /**
- * One tag of the single nested tag tree. There is no category / label split:
- * Been and Want to go are ordinary tags, found by their `role`.
+ * The Places tag tree's own columns, beyond the base every tag tree has
+ * (`tagTreeFields`: name, parent, colour, child colours, icon, rank). There is
+ * no category / label split: Been and Want to go are ordinary tags, found by
+ * their `role`.
  */
-export const placeTagFields = {
-  id: idKindField(placeTagIdKind),
-  name: textField({ label: "Name", primary: true }),
-  /** The parent tag; null at the root. Never a cycle (the PATCH rejects one). */
-  parentId: nullable(textField()),
-  /** Hex colour; null inherits the nearest ancestor's (`tagColor`). */
-  color: nullable(textField()),
-  /**
-   * How this tag colours its colourless children: `ramp` = an ordered shade of
-   * its colour by rank, light → deep (`tagColor`); null = they inherit it.
-   */
-  childColors: nullable(enumTextField(CHILD_COLOR_MODES)),
-  icon: savedIcon(),
+export const placeTagExtraFields = {
   /** Google place types that auto-set this tag on a newly saved place. */
   googleTypes: tagsField({ label: "Auto-set from Google types" }),
-  /** Order among siblings, ascending. */
-  rank: intField(),
   /**
    * What the app finds this tag by (`been`, `want`), set by the seed; null for
    * every other tag. Unique where set, and a tag with a role cannot be deleted.
    */
   role: nullable(enumTextField(TAG_ROLES)),
-  createdAt: dateField(),
-  updatedAt: dateField(),
 } satisfies FieldsRecord;

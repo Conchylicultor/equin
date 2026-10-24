@@ -23,6 +23,7 @@
     - `apps/pages/auto-icon`
     - `apps/pages/content-search`
     - `apps/places/places-core`
+    - `apps/prototypes/state`
     - `apps/sonata/sources/midi/folders`
     - `infra/corpus-index`
     - `infra/warmup/background-arm`

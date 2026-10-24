@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { FilterGroup } from "@plugins/primitives/plugins/data-view/core";
-import type { TagNode } from "@plugins/apps/plugins/places/plugins/places-core/core";
+import type { TagNode } from "@plugins/tag-tree/plugins/engine/core";
 import {
   applySidebarClick,
   applySidebarState,
@@ -16,9 +16,7 @@ function tag(id: string, parentId: string | null): TagNode {
     id,
     parentId,
     color: null,
-    rank: 0,
-    googleTypes: [],
-    role: null,
+    rank: "a0",
     childColors: null,
   };
 }

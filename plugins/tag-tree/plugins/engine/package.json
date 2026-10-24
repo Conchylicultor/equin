@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-tag-tree-engine",
+  "description": "Tag-tree engine: tagTreeEntityRef / defineTagTree declare a tree, defineTagTreeTable builds its table, serveTagTree + TagTrees.Tree register it behind the ONE /api/tag-trees/:tree endpoint set (create, create path, update, move, delete re-parenting children and rewriting carriers), the pure tree helpers (paths, colours, rolled-up counts, field options, path resolution) and the web hooks useTagTree / useTagTreeActions.",
+  "private": true,
+  "version": "0.0.1"
+}

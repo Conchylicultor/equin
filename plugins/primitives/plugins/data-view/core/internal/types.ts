@@ -536,6 +536,10 @@ export interface FieldOption {
    * names no option, or a cycle, is tolerated there.
    */
   parent?: string;
+  /** The option's own colour (`#rrggbb`, user data — a tag's): a grouping that
+   *  carries it to its bucket (`GroupBucket.swatch`) has the section header draw
+   *  it as a dot before the label. */
+  swatch?: string;
 }
 
 /**
@@ -921,6 +925,18 @@ export interface DataViewSection<TRow> {
    * expanded and its footer has come into view.
    */
   paging?: DataViewSectionPaging;
+  /**
+   * Present only on a NESTED section — one partitioned from buckets carrying
+   * `GroupBucket.ancestors`: its depth (roots 0) and its parent section's key.
+   * Nested sections come in tree order (pre-order: a section, its own rows,
+   * then its child sections), and a nested section's `count` covers its whole
+   * subtree (its own rows plus every descendant's). The "None" section is never
+   * nested. A renderer hides a collapsed section's descendants with
+   * `visibleSections`.
+   */
+  nesting?: { depth: number; parentKey: string | null };
+  /** The bucket's `swatch` — the header draws it as a dot before the label. */
+  swatch?: string;
 }
 
 /**

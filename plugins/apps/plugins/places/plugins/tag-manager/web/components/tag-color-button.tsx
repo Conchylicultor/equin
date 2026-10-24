@@ -7,11 +7,8 @@ import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import {
-  tagColor,
-  type PlaceTag,
-} from "@plugins/apps/plugins/places/plugins/places-core/core";
-import { TAG_PALETTE } from "../internal/palette";
+import { type PlaceTag } from "@plugins/apps/plugins/places/plugins/places-core/core";
+import { TAG_PALETTE, tagColor } from "@plugins/tag-tree/plugins/engine/core";
 
 const inheritIcon = symbol("subdirectory-arrow-right");
 const noneIcon = symbol("format-color-reset");

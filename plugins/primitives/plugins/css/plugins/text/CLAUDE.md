@@ -281,7 +281,7 @@ to reconcile them; they never needed reconciling.
     - `ui/tokens/type-scale` ×36
     - `ui/tokens/color-palette` ×6
     - `ui/tokens/font-family --font-mono`
-  - Imported by: 382 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 383 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×105
     - `conversations` ×73
     - `primitives` ×43
@@ -311,6 +311,7 @@ to reconcile them; they never needed reconciling.
     - `history/dialog`
     - `layouts/route-fallback`
     - `search/quick-find`
+    - `tag-tree/picker`
 - Core:
   - Exports (types):
     - `TextTreatment`

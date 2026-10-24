@@ -272,6 +272,8 @@ export const browserHost = {
     "fields.secret.config",
     "fields.string-list",
     "fields.string-list.config",
+    "fields.tag",
+    "fields.tag.data-view-group",
     "fields.tags",
     "fields.tags.config",
     "fields.tags.filter",

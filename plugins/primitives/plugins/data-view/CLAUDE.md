@@ -621,7 +621,9 @@ interface FieldGrouping {
   plan: (ctx: GroupingPlanContext) => (value: FieldValue) => GroupBucket | null;
 }
 interface GroupingPlanContext { now: number; values: readonly FieldValue[]; field: FieldDef<unknown> }
-interface GroupBucket { key: string; label: string; order: number }
+interface GroupBucket { key: string; label: string; order: number;
+  ancestors?: GroupBucketAncestor[];   // root first — the buckets form a tree (below)
+  swatch?: string }                    // a colour dot before the label (user data)
 interface GroupByRule { fieldId: string; groupingId: string }
 ```
 
@@ -798,6 +800,56 @@ ROOTS partition by the group-by field and every descendant follows its root's
 section) rather than `useDataViewSections`, which resolves the grouping registry
 itself; it draws each section's slice of the ONE flattened tree as a
 `DataTableGroup`.
+
+## Nested sections: a grouping whose buckets form a tree
+
+A field whose `options` are a FOREST (`FieldOption.parent` — a tag tree's
+tags) groups as nested sections: `app ▸ website ▸ homepage`, each header
+counting its whole subtree, a parent's own rows above its child sections, every
+level folding on its own, the one "None" last. Nesting is a property of the
+**buckets**, not of a field type: a grouping returns `GroupBucket.ancestors`
+(root first, each `{ key, label, order, swatch? }`) and data-view does the
+rest, naming no type (`fields/tag`'s grouping is the one that does today —
+`tagFieldOptions` from `tag-tree/engine` makes the forest).
+
+- **Partition** (`partitionIntoSections`): if any bucket carries ancestors, the
+  buckets become a key → node forest — an ancestor is a section of its own even
+  with no rows (count 0 of its own), every sibling level is ordered by the
+  usual rule (`(order × dir) || discovery`), and sections come out in tree
+  order (pre-order) with `DataViewSection.nesting = { depth, parentKey }`. A
+  subtree holding no rows is never emitted. "None" stays last, at depth 0, with
+  no `nesting`. Every bucket naming an ancestor must agree on the chain above
+  it, and no chain may cycle — the partition throws naming the grouping.
+- **Flat where order is not ours**: `appearance` sectioning (row order — the
+  server's) and `declared` sections (servers never send ancestors) stay flat,
+  and so does the nested table's group-by over its roots (`flat: true` — its
+  rows already nest by their own hierarchy).
+- **Counts roll up LAST** (`rollUpNestedCounts`, the pipeline's final step,
+  after manual order, aggregate and fold, which all write a section's OWN
+  count): a nested section's `count` is `sumSectionCounts` (core) of its own
+  and every descendant's — exact only when every part is, so one lower bound
+  below makes each ancestor `n+`. `entries` stay the section's own rows.
+- **Render**: `visibleSections(sections, collapsed)` (core) drops every
+  section under a collapsed ancestor; the collapsed section itself keeps its
+  header. `GroupedSections` (list, gallery, icons) renders through it, indents
+  a nested section's header and body `depth` tree steps
+  (`NestedSectionIndent`, web barrel: `--tree-indent` per level, a guide
+  hairline per ancestor level in `--tree-guide` under the parent header's
+  chevron), and draws a section with no rows of its own (no entries, fold or
+  paging) as its header alone. The **table** applies `visibleSections` to its
+  group rows and the indent (no guides) to its group header. Collapse state
+  stays keyed by `section.key`, so each level folds independently.
+- **Header**: `DataViewGroupHeader` draws `section.swatch` (the bucket's,
+  from `FieldOption.swatch`) as a dot before the label, and a depth ≥ 1 header
+  in medium weight (a quiet root header is semibold).
+- **Sticky**: nested headers stack like flat ones (one `StickyStack` over the
+  visible sections), degrading to the swap hand-off past the stack cap.
+- **Body state**: the paging tail counts as hidden when its section — or any
+  ancestor — is collapsed (`isSectionCollapsed` in `data-view-body.tsx`).
+
+Pinned by `web/internal/use-data-view-sections.test.ts` ("nested buckets",
+`rollUpNestedCounts`, `visibleSections`) and
+`web/__tests__/grouped-sections.test.tsx` ("nested sections").
 
 ## Aggregating sections (`aggregate`)
 
@@ -2798,14 +2850,14 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSlots.ValueCodec`
     - `DataViewSlots.Grouping`
     - `DataViewSlots.ColumnConfig`
-  - Slot contributors: 51 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 52 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `DataViewSlots.Cell` ×10
     - `DataViewSlots.CollectionItemAction` ×7
     - `DataViewSlots.Filter` ×7
     - `DataViewSlots.CellEditor` ×6
     - `DataViewSlots.View` ×5
     - `DataViewSlots.CollectionRowActivation` ×4
-    - `DataViewSlots.Grouping` ×3
+    - `DataViewSlots.Grouping` ×4
     - `DataViewSlots.ValueCodec` ×3
     - `DataViewSlots.Setting` ×2
     - `DataViewSlots.ColumnConfig` ← `fields.enum.column-config`
@@ -2817,7 +2869,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `DataViewSlots.Control` ×3
     - `DataViewSlots.Setting` ×3
     - `IdKinds.Kind` ×2
-  - Uses: 115 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 116 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×18
     - `primitives/css/ui-kit` ×15
     - `primitives/data-view/view-core` ×9
@@ -2846,6 +2898,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `ids.IdKinds`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
+    - `primitives/css/coords.Placed`
     - `primitives/css/inline.Inline`
     - `primitives/css/layer.Layer`
     - `primitives/css/line.Line`
@@ -3009,6 +3062,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `liveDataSource`
     - `makeSortComparator`
     - `MissingDataCellError`
+    - `NestedSectionIndent`
     - `partitionCardFields`
     - `partitionIntoSections`
     - `pickCoverField`
@@ -3129,6 +3183,7 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `FilterValueInputProps`
     - `FoldRule`
     - `GroupBucket`
+    - `GroupBucketAncestor`
     - `GroupByRule`
     - `GroupingPlanContext`
     - `HierarchyConfig`
@@ -3193,16 +3248,18 @@ Background: `research/2026-06-18-data-view-row-virtualization.md`.
     - `scopeFilterRows`
     - `SHARED_FIELD_SECTION`
     - `splitFieldSections`
+    - `sumSectionCounts`
     - `UNGROUPED_FOLD_KEY`
+    - `visibleSections`
 - Cross-plugin:
-  - Uses tokens: 42 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/density` ×15
-    - `ui/tokens/color-palette` ×11
+  - Uses tokens: 45 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/density` ×17
+    - `ui/tokens/color-palette` ×12
     - `ui/tokens/type-scale` ×10
     - `ui/tokens/shadow` ×3
     - `ui/tokens/shape` ×3
-  - Imported by: 103 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `fields` ×30
+  - Imported by: 104 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `fields` ×31
     - `apps` ×24
     - `debug` ×13
     - `primitives` ×10

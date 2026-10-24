@@ -1,5 +1,3 @@
-import type { TagNode } from "../../core";
-
 // The pure halves of the tag writes: what a place's `tags` / `autoTags` become
 // under a PATCH or a tag delete. The repo functions load, call these, and write.
 
@@ -16,7 +14,7 @@ export type TagListEdit =
 export function editPlaceTags(
   current: { tags: readonly string[]; autoTags: readonly string[] },
   patch: { tags?: readonly string[] },
-  allTags: readonly TagNode[],
+  allTags: readonly { readonly id: string }[],
 ): TagListEdit {
   const known = new Set(allTags.map((t) => t.id));
   let tags = [...current.tags];

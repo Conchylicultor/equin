@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   formatSectionCount,
+  sumSectionCounts,
+  visibleSections,
   type DataViewSection,
   type DataViewSectioning,
   type DataViewSectionPaging,
@@ -16,6 +18,7 @@ import {
   NULL_GROUP_KEY,
   orderSectionsByRank,
   partitionIntoSections,
+  rollUpNestedCounts,
   type PartitionOptions,
 } from "./use-data-view-sections";
 import { foldSections } from "./fold-sections";
@@ -1054,5 +1057,339 @@ describe("declared sections (a server-sectioned live source)", () => {
       openKeys: new Set(["doing"]),
     });
     expect(open!.paging?.canGrow).toBe(true);
+  });
+});
+
+// ── Nested sections ────────────────────────────────────────────────────────
+//
+// A grouping whose buckets carry `ancestors` (a forest of options) — written as
+// a stub so the suite proves the MECHANISM without naming the `tag` type.
+
+interface Proto {
+  id: string;
+  tag: string | null;
+}
+
+// app ▸ website ▸ homepage, app ▸ chord; infra ▸ data-view; theme — in tree
+// order, so an option's index is its ordinal among its siblings too.
+const TAGS = [
+  { value: "app", label: "app" },
+  { value: "website", label: "website", parent: "app" },
+  { value: "homepage", label: "homepage", parent: "website" },
+  { value: "chord", label: "chord", parent: "app" },
+  { value: "infra", label: "infra" },
+  { value: "data-view", label: "data-view", parent: "infra" },
+  { value: "theme", label: "theme" },
+];
+
+const swatchOf = (key: string) => (key === "app" ? { swatch: "#7c5cff" } : {});
+
+const forestGrouping: FieldGrouping = {
+  id: "tree",
+  label: "Nested",
+  plan: ({ field }) => {
+    const options = field.options ?? [];
+    const index = new Map(options.map((o, i) => [o.value, i]));
+    const ancestorsOf = (key: string) => {
+      const chain = [];
+      for (
+        let up = options[index.get(key)!]!.parent;
+        up !== undefined;
+        up = options[index.get(up)!]!.parent
+      ) {
+        chain.unshift({
+          key: up,
+          label: up,
+          order: index.get(up)!,
+          ...swatchOf(up),
+        });
+      }
+      return chain;
+    };
+    return (value) => {
+      const key = String(value);
+      if (!index.has(key)) return null;
+      const ancestors = ancestorsOf(key);
+      return {
+        key,
+        label: key,
+        order: index.get(key)!,
+        ...swatchOf(key),
+        ...(ancestors.length ? { ancestors } : {}),
+      };
+    };
+  },
+};
+
+const tagField: FieldDef<Proto> = {
+  id: "tag",
+  label: "Tag",
+  type: "tag",
+  options: TAGS,
+  value: (p) => p.tag,
+};
+
+const nestedOpts = (
+  extra: Partial<PartitionOptions<Proto>> = {},
+): PartitionOptions<Proto> => ({
+  ...stubOpts<Proto>({ tag: forestGrouping }),
+  ...extra,
+});
+
+const protoKey = (p: Proto) => p.id;
+
+/** `[key, depth, parentKey, own entry ids, count]` per section — the shape a
+ *  reader sees, in emission order. */
+const shape = (sections: DataViewSection<Proto>[]) =>
+  sections.map((s) => [
+    s.key,
+    s.nesting?.depth ?? null,
+    s.nesting?.parentKey ?? null,
+    s.entries.map((e) => e.row.id),
+    formatSectionCount(s.count),
+  ]);
+
+const PROTOS: Proto[] = [
+  { id: "p1", tag: "homepage" },
+  { id: "p2", tag: "app" },
+  { id: "p3", tag: "chord" },
+  { id: "p4", tag: null },
+  { id: "p5", tag: "data-view" },
+  { id: "p6", tag: "homepage" },
+  { id: "p7", tag: "gone" },
+];
+
+describe("partitionIntoSections — nested buckets", () => {
+  test("emits tree order (pre-order) with depth, ancestors as sections with no own rows, None last", () => {
+    const sections = partitionIntoSections(
+      PROTOS,
+      [tagField],
+      by("tag", "tree"),
+      protoKey,
+      nestedOpts(),
+    );
+    // Counts are OWN rows here — the roll-up runs last in the pipeline.
+    expect(shape(sections)).toEqual([
+      ["app", 0, null, ["p2"], "1"],
+      ["website", 1, "app", [], "0"],
+      ["homepage", 2, "website", ["p1", "p6"], "2"],
+      ["chord", 1, "app", ["p3"], "1"],
+      ["infra", 0, null, [], "0"],
+      ["data-view", 1, "infra", ["p5"], "1"],
+      // No row is tagged "theme": a subtree with no rows is never emitted.
+      // An unknown tag joins the null value in the ONE None, at the top level.
+      [NULL_GROUP_KEY, null, null, ["p4", "p7"], "2"],
+    ]);
+    expect(sections[0]!.swatch).toBe("#7c5cff");
+    expect(sections[1]!.swatch).toBeUndefined();
+  });
+
+  test("desc reverses each sibling level, children still under their parent, None still last", () => {
+    const sections = partitionIntoSections(
+      PROTOS,
+      [tagField],
+      by("tag", "tree"),
+      protoKey,
+      nestedOpts({ order: "desc" }),
+    );
+    expect(sections.map((s) => s.key)).toEqual([
+      "infra",
+      "data-view",
+      "app",
+      "chord",
+      "website",
+      "homepage",
+      NULL_GROUP_KEY,
+    ]);
+  });
+
+  test("`flat` (the nested table) and `appearance` sectioning ignore ancestors", () => {
+    for (const extra of [
+      { flat: true },
+      { sectioning: { kind: "appearance" } as const },
+    ]) {
+      const sections = partitionIntoSections(
+        PROTOS,
+        [tagField],
+        by("tag", "tree"),
+        protoKey,
+        nestedOpts(extra),
+      );
+      expect(sections.every((s) => s.nesting === undefined)).toBe(true);
+      expect(sections.map((s) => s.key)).not.toContain("website");
+    }
+  });
+
+  test("two different ancestor chains for one bucket throw, naming the grouping", () => {
+    const flaky: FieldGrouping = {
+      id: "flaky",
+      label: "Flaky",
+      plan: () => (value) =>
+        value === "x"
+          ? {
+              key: "x",
+              label: "x",
+              order: 0,
+              ancestors: [{ key: "a", label: "a", order: 0 }],
+            }
+          : {
+              key: "y",
+              label: "y",
+              order: 1,
+              ancestors: [
+                { key: "x", label: "x", order: 0 },
+                { key: "a", label: "a", order: 9 },
+              ],
+            },
+    };
+    expect(() =>
+      partitionIntoSections(
+        [
+          { id: "1", tag: "x" },
+          { id: "2", tag: "y" },
+        ],
+        [tagField],
+        by("tag", "flaky"),
+        protoKey,
+        stubOpts<Proto>({ "tag:flaky": flaky }),
+      ),
+    ).toThrow(/"flaky".*"a"|"flaky".*"x"/);
+  });
+});
+
+describe("rollUpNestedCounts", () => {
+  const partition = (
+    rows: Proto[],
+    extra: Partial<PartitionOptions<Proto>> = {},
+  ) =>
+    partitionIntoSections(
+      rows,
+      [tagField],
+      by("tag", "tree"),
+      protoKey,
+      nestedOpts(extra),
+    );
+
+  test("a nested section counts its whole subtree; None and flat sections are untouched", () => {
+    const rolled = rollUpNestedCounts(partition(PROTOS));
+    expect(rolled.map((s) => [s.key, formatSectionCount(s.count)])).toEqual([
+      ["app", "4"],
+      ["website", "2"],
+      ["homepage", "2"],
+      ["chord", "1"],
+      ["infra", "1"],
+      ["data-view", "1"],
+      [NULL_GROUP_KEY, "2"],
+    ]);
+    // Entries stay each section's OWN rows.
+    expect(rolled[0]!.entries.map((e) => e.row.id)).toEqual(["p2"]);
+  });
+
+  test("a lower bound anywhere below makes every ancestor's count a lower bound", () => {
+    const growable = (p: Proto) => p.id === "p1";
+    const rolled = rollUpNestedCounts(
+      partition(PROTOS, { rowsComplete: { growable, total: null } }),
+    );
+    const count = (key: string) =>
+      formatSectionCount(rolled.find((s) => s.key === key)!.count);
+    expect(count("homepage")).toBe("2+");
+    expect(count("website")).toBe("2+");
+    expect(count("app")).toBe("4+");
+    expect(count("chord")).toBe("1");
+    expect(count("infra")).toBe("1");
+  });
+
+  test("is a no-op without nesting", () => {
+    const flat = partitionIntoSections(
+      [{ id: "1", status: "todo" }] as Task[],
+      [statusField],
+      by("status"),
+      rowKey,
+      stubOpts({ enum: optionOrderGrouping }),
+    );
+    expect(rollUpNestedCounts(flat)).toBe(flat);
+  });
+
+  test("runs after aggregate and fold: a parent counts what its children's headers say", () => {
+    const rows: Proto[] = [
+      { id: "a1", tag: "app" },
+      { id: "h1", tag: "homepage" },
+      { id: "h2", tag: "homepage" },
+      { id: "h3", tag: "homepage" },
+    ];
+    // h1 + h2 collapse into one aggregate entry; the fold hides a1 (count kept).
+    let sections = partition(rows);
+    sections = aggregateSections(sections, {
+      getKey: (p) => (p.id === "h1" || p.id === "h2" ? "pair" : null),
+    });
+    sections = foldSections(sections, {
+      isKept: (e) => e.row.id !== "a1",
+      openKeys: new Set(),
+    });
+    const rolled = rollUpNestedCounts(sections);
+    expect(rolled.map((s) => [s.key, formatSectionCount(s.count)])).toEqual([
+      ["app", "3"], // its own 1 (folded, still counted) + homepage's 2 entries
+      ["website", "2"],
+      ["homepage", "2"],
+    ]);
+    expect(rolled[0]!.fold).toEqual({ hidden: 1, open: false });
+  });
+});
+
+describe("sumSectionCounts", () => {
+  test("exact only when every part is; no parts is an exact zero", () => {
+    expect(sumSectionCounts([])).toEqual({ kind: "exact", n: 0 });
+    expect(
+      sumSectionCounts([
+        { kind: "exact", n: 2 },
+        { kind: "exact", n: 3 },
+      ]),
+    ).toEqual({ kind: "exact", n: 5 });
+    expect(
+      sumSectionCounts([
+        { kind: "exact", n: 2 },
+        { kind: "atLeast", n: 3 },
+      ]),
+    ).toEqual({ kind: "atLeast", n: 5 });
+  });
+});
+
+describe("visibleSections", () => {
+  const sections = partitionIntoSections(
+    PROTOS,
+    [tagField],
+    by("tag", "tree"),
+    protoKey,
+    nestedOpts(),
+  );
+  const keys = (collapsed: string[]) =>
+    visibleSections(sections, new Set(collapsed)).map((s) => s.key);
+
+  test("a collapsed section keeps its header but hides every descendant", () => {
+    expect(keys(["app"])).toEqual([
+      "app",
+      "infra",
+      "data-view",
+      NULL_GROUP_KEY,
+    ]);
+  });
+
+  test("each level folds on its own", () => {
+    expect(keys(["website"])).toEqual([
+      "app",
+      "website",
+      "chord",
+      "infra",
+      "data-view",
+      NULL_GROUP_KEY,
+    ]);
+    // Reopening the parent shows the child still folded.
+    expect(keys(["app", "website"])).toEqual(keys(["app"]));
+  });
+
+  test("nothing collapsed, or flat sections: everything stays", () => {
+    expect(keys([])).toEqual(sections.map((s) => s.key));
+    const flat = [{ key: "a" }, { key: "b" }];
+    expect(visibleSections(flat, new Set(["a"]))).toEqual(flat);
   });
 });

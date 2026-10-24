@@ -28,6 +28,7 @@
 //   - apps/plugins/prototypes/plugins/files: dependency closure (imported by an eager plugin)
 //   - apps/plugins/prototypes/plugins/gallery: dependency closure (imported by an eager plugin)
 //   - apps/plugins/prototypes/plugins/icons: dependency closure (imported by an eager plugin)
+//   - apps/plugins/prototypes/plugins/state: dependency closure (imported by an eager plugin)
 //   - apps/plugins/prototypes/plugins/thumbnails: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/document: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/library: dependency closure (imported by an eager plugin)

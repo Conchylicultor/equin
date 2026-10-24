@@ -7,11 +7,14 @@ import {
   SelectValue,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
-  flattenTagTree,
-  wouldCycle,
+  placeTagTree,
   type PlaceTag,
 } from "@plugins/apps/plugins/places/plugins/places-core/core";
-import { useUpdatePlaceTag } from "@plugins/apps/plugins/places/plugins/places-core/web";
+import {
+  flattenTagTree,
+  wouldCycle,
+} from "@plugins/tag-tree/plugins/engine/core";
+import { useTagTreeActions } from "@plugins/tag-tree/plugins/engine/web";
 
 /** The select value standing for "no parent". */
 const ROOT = "__root__";
@@ -19,7 +22,8 @@ const ROOT = "__root__";
 /**
  * Where a tag sits: "Top level" or any other tag, listed in tree order and
  * indented by depth — never the tag itself or one of its descendants (the
- * endpoint refuses a cycle; the list does not offer one).
+ * move refuses a cycle; the list does not offer one). A new parent takes the
+ * tag as its last child.
  */
 export function TagParentSelect({
   tag,
@@ -28,7 +32,7 @@ export function TagParentSelect({
   tag: PlaceTag;
   tags: readonly PlaceTag[];
 }) {
-  const updateTag = useUpdatePlaceTag();
+  const { move } = useTagTreeActions(placeTagTree);
   const options = useMemo(
     () => [
       { value: ROOT, label: "— Top level" },
@@ -49,10 +53,8 @@ export function TagParentSelect({
         if (v === null) return;
         const parentId = v === ROOT ? null : v;
         if (parentId === tag.parentId) return;
-        void updateTag.mutateAsync({
-          params: { id: tag.id },
-          body: { parentId },
-        });
+        // Moved in as the new parent's last child.
+        void move(tag.id, { parentId, targetId: null, zone: "after" });
       }}
     >
       <SelectTrigger aria-label={`Parent of ${tag.name}`} className="w-full">

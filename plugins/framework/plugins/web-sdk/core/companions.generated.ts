@@ -63,6 +63,7 @@ export const companionManifest: Readonly<
       "bool": ["fields.bool.data-view-group"],
       "date": ["fields.date.data-view-group"],
       "enum": ["fields.enum.data-view-group"],
+      "tag": ["fields.tag.data-view-group"],
     },
   },
   "primitives.data-view.value-codec": {

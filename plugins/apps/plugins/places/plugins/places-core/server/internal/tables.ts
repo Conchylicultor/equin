@@ -4,6 +4,7 @@ import {
   defineEntity,
   defaultNow,
 } from "@plugins/infra/plugins/entities/server";
+import { defineTagTreeTable } from "@plugins/tag-tree/plugins/engine/server";
 import { placesEntityRef, placeTagsEntityRef } from "../../core";
 
 // Physical tables for the Places app, derived from the field records in
@@ -58,27 +59,15 @@ const places = defineEntity(placesEntityRef, {
   ],
 });
 
-const placeTags = defineEntity(placeTagsEntityRef, {
-  primaryKey: "id",
-  updatedAt: {
-    touchedBy: {
-      id: false,
-      name: true,
-      parentId: true,
-      color: true,
-      childColors: true,
-      icon: true,
-      googleTypes: true,
-      rank: true,
-      role: true,
-      createdAt: false,
-    },
-  },
+// The tag tree: the tag-tree table (base columns, derived `updatedAt`, the
+// `(parent_id, rank)` index) plus the Places extras. Its fractional rank lives
+// in `tree_rank`: the column replaced an integer `rank` (migration
+// `place_tags_tree_rank`, which carried each parent's order over).
+const placeTags = defineTagTreeTable(placeTagsEntityRef, {
+  touchedBy: { googleTypes: true, role: true },
   columns: {
     googleTypes: { default: [] },
-    rank: { default: 0 },
-    createdAt: { default: defaultNow() },
-    updatedAt: { default: defaultNow() },
+    rank: { name: "tree_rank" },
   },
   indexes: (t) => [
     // At most one tag per role: the app resolves Been / Want to go by it.

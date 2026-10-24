@@ -43,6 +43,16 @@ describe("classifyTreePath", () => {
     }
   });
 
+  test("anything under the retired _status dir is nothing to react to", () => {
+    for (const path of [
+      `${ROOT}/_status/${ID}.json`,
+      `${ROOT}/_status/${ID}.lock`,
+      `${ROOT}/_status`,
+    ]) {
+      expect(classifyTreePath(ROOT, path)).toEqual({ kind: "retired" });
+    }
+  });
+
   test("a prototype's files and the template are the tree", () => {
     expect(classifyTreePath(ROOT, `${ROOT}/${ID}/index.html`)).toEqual({
       kind: "tree",

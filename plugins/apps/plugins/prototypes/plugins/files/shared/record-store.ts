@@ -13,11 +13,12 @@ import { withHistoryLock } from "./history/lock";
 
 // A small JSON record per prototype, kept BESIDE the folders in a `_`-prefixed
 // dir of the data dir: `<prototypes>/_<kind>/<id>.json`. The user's option
-// picks (`picks.ts`) and the prototype's status (`status.ts`) are two of them.
+// picks (`picks.ts`) are one. (The Done / pinned status was another, until it
+// moved into the instance's DB — `apps/prototypes/state`.)
 //
 // Beside the folders, not in them: a record inside a prototype would churn its
 // signature (a reload of every open frame), its thumbnail fingerprint and its
-// version history — and neither a pick nor a status is part of the design. The
+// version history — and a pick is not part of the design. The
 // dir is `_`-prefixed, so every reader of the tree skips it the way it skips
 // `_template/` and `_history/` (`listPrototypeDirNames`).
 //

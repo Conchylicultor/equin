@@ -27,7 +27,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`mail`** [exempt] [12 sub-plugins] — Mail — a Gmail-class client.
     - **`pages`** [exempt] [16 sub-plugins] — Notion-like pages app.
     - **`places`** [exempt] [7 sub-plugins] — Places — the places you want to go and have been, on a map: saved Google places organised by one nested tag tree, coloured by their tags.
-    - **`prototypes`** [exempt] [12 sub-plugins] — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under.
+    - **`prototypes`** [exempt] [13 sub-plugins] — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under.
     - **`settings`** [4 sub-plugins] — Settings app.
     - **`sonata`** [test helpers] [exempt] [81 sub-plugins] — Sonata — extensible piano and music app.
     - **`studio`** [exempt] [27 sub-plugins] — Plugin inspection and visualization; home for the plugin graph and contribution tables.
@@ -100,7 +100,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`debug`** [exempt] [61 sub-plugins] — Debug tools umbrella plugin.
 
-- **`fields`** [test helpers] [98 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
+- **`fields`** [test helpers] [100 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
 
 - **`framework`** — Umbrella for framework primitives: web plugin SDK, server, central
   - Plugins:
@@ -288,6 +288,11 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`toast`** — Global toast notifications: a plain showToast() backed by sonner's global API, plus the Core.Root-mounted sonner Toaster host. Degrades to a silent no-op when no host is mounted.
 
 - **`stats`** [exempt] [5 sub-plugins] — Root plugin hosting stacked chart contributions from child plugins.
+
+- **`tag-tree`** — Umbrella for nested tag trees: one per-plugin table of tags (name, parent, colour, icon, fractional rank) declared in three lines, served through one endpoint set, and picked, created, renamed…
+  - Plugins:
+    - **`engine`** — Tag-tree engine (web): useTagTree reads a declared tree live (the whole tree, in rank order) and useTagTreeActions binds the engine's create / create-path / update / move / delete endpoints to it.…
+    - **`picker`** — The shared tag picker: TagPickerPanel (pure — search or create a typed path, the foldable tree with rolled-up counts, inline create and rename, a ⋯ menu to recolour, nest out and delete, whole-row…
 
 - **`tasks`** — Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations: the task CRUD, chain, dependency and auto-start routes, portable (arming a task wakes the…
   - Plugins:

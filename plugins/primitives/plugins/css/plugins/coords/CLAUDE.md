@@ -161,9 +161,9 @@ default is stated twice and can therefore drift.
     - `placedClasses`
     - `placedStyle`
 - Cross-plugin:
-  - Imported by: 39 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 40 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×18
-    - `primitives` ×9
+    - `primitives` ×10
     - `debug` ×3
     - `hints` ×2
     - `page` ×2

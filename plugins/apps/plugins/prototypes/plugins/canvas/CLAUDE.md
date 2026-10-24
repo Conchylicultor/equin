@@ -446,7 +446,7 @@ navigation, so it starts from nothing remembered.
     - `PrototypeFrameActions` "close" → `CloseFrameAction`
     - `PrototypeVersionActions` "compare" → `CompareVersionAction`
     - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-  - Uses: 87 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 88 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×9
     - `primitives/data-view` ×6
     - `primitives/collapsible` ×5
@@ -465,6 +465,7 @@ navigation, so it starts from nothing remembered.
     - `primitives/pane` ×2
     - `primitives/slot-render` ×2
     - `apps-core/tabs.appLinkProps`
+    - `apps/prototypes/state.usePrototypeState`
     - `network/live.useLive`
     - `primitives/adaptive-bar.AdaptiveBar`
     - `primitives/css/badge.Badge`

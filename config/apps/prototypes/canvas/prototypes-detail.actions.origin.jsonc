@@ -1,4 +1,4 @@
-// @hash ced0df06c844
+// @hash 28cf1db8775f
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -8,6 +8,7 @@
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
     "apps.prototypes.copy-id:copy-id",
+    "apps.prototypes.gallery:tag",
     "apps.prototypes.gallery:pin",
     "apps.prototypes.gallery:done",
     "apps.prototypes.gallery:delete",

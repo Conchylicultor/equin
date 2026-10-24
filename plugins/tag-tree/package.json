@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-tag-tree",
+  "description": "Umbrella for nested tag trees: one per-plugin table of tags (name, parent, colour, icon, fractional rank) declared in three lines, served through one endpoint set, and picked, created, renamed, recoloured, nested and reordered in one shared picker.",
+  "private": true,
+  "version": "0.0.1"
+}

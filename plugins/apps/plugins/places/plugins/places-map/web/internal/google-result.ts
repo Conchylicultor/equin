@@ -4,10 +4,10 @@ import type { IconRef } from "@plugins/ui/plugins/icons/core";
 import {
   autoTagsFor,
   mainColor,
-  tagPath,
   type PlaceTag,
 } from "@plugins/apps/plugins/places/plugins/places-core/core";
 import type { GoogleHit } from "../components/google-result-card";
+import { tagPath } from "@plugins/tag-tree/plugins/engine/core";
 import { fallbackIcon, tagIcon } from "./place-visual";
 
 /** The pin type of a Google result proposed on the map (`GeoMap.Pin` key). */

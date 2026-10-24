@@ -287,8 +287,8 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `loadKnownRelations`
     - `quotedRelationsIn`
 - Cross-plugin:
-  - Imported by: 121 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×33
+  - Imported by: 123 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×34
     - `page` ×15
     - `infra` ×13
     - `conversations` ×12
@@ -311,6 +311,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `release`
     - `search/engine`
     - `shell/notifications`
+    - `tag-tree/engine`
     - `ui/theme-engine/saved-themes`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/config.ts` (debt)

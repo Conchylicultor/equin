@@ -15,6 +15,7 @@ import {
   isHostedToolbar,
   isSectionsToolbar,
   scopeFilterRows,
+  visibleSections,
   type DataViewRenderProps,
   type FieldDef,
   type FieldGrouping,
@@ -1649,17 +1650,23 @@ const NO_ROWS: readonly unknown[] = [];
 // A backdrop type the surface gives no code options.
 const NO_VIEW_OPTIONS = {};
 
-/** Whether the section holding the entry keyed `key` is collapsed. */
+/** Whether the section holding the entry keyed `key` is collapsed — itself,
+ *  or under a collapsed ancestor (nested sections hide with their parent). */
 function isSectionCollapsed(
   sections: readonly {
     key: string | null;
     entries: readonly { key: string }[];
+    nesting?: { depth: number; parentKey: string | null };
   }[],
   key: string,
   collapsed: ReadonlySet<string>,
 ): boolean {
   const section = sections.find((s) => s.entries.some((e) => e.key === key));
-  return section?.key != null && collapsed.has(section.key);
+  if (section?.key == null) return false;
+  return (
+    collapsed.has(section.key) ||
+    !visibleSections(sections, collapsed).includes(section)
+  );
 }
 const NO_QUERY = { query: "", filter: null };
 const NO_UNAVAILABLE: readonly UnavailableRule[] = [];

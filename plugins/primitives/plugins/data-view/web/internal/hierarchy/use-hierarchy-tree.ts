@@ -159,7 +159,9 @@ export function useHierarchyTree(args: {
       fieldsForProjected(fields),
       groupBy,
       (p) => p.id,
-      { resolveGrouping, now, order: groupOrder },
+      // Flat: the rows already nest by their own hierarchy, so a forest-shaped
+      // grouping (`GroupBucket.ancestors`) partitions the roots one level deep.
+      { resolveGrouping, now, order: groupOrder, flat: true },
     );
     const buckets = bucketRowsByRootSection(sortedProjected, sections);
     return {

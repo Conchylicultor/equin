@@ -10,10 +10,12 @@ import {
 } from "@plugins/primitives/plugins/collapsible/web";
 import {
   DATA_VIEW_HEADER_OFFSET_VAR,
+  visibleSections,
   type DataViewGroupHeaders,
   type DataViewSection,
 } from "@plugins/primitives/plugins/data-view/core";
 import { DataViewGroupHeader } from "./group-header";
+import { NestedSectionIndent } from "./nested-section-indent";
 
 export interface GroupedSectionsProps {
   /** The grouped sections — every `key` non-null. The ungrouped single implicit
@@ -108,6 +110,13 @@ export interface GroupedSectionsProps {
  * displacing them out of the grid and breaking column alignment. The header NODE
  * is still the same one: both render `DataViewGroupHeader`, so a table's group
  * header honours `headerStyle` exactly like a list's.
+ *
+ * **Nested sections** (`section.nesting`, a forest-shaped grouping) render
+ * flat, in tree order, through the same stack: a collapsed section hides its
+ * descendants (`visibleSections`) as well as its own body, so each level folds
+ * independently; a nested section's header and body are indented `depth` tree
+ * steps with a guide per ancestor level (`NestedSectionIndent`); and a section
+ * holding no rows of its own (an ancestor of rows only) draws its header alone.
  */
 export function GroupedSections({
   sections,
@@ -118,16 +127,34 @@ export function GroupedSections({
   children,
 }: GroupedSectionsProps): ReactNode {
   const quiet = headerStyle === "quiet";
+  const shown = visibleSections(sections, collapsedSections);
   return (
     <Stack gap="none">
       <StickyStack
-        keys={sections.map((section) => section.key!)}
+        keys={shown.map((section) => section.key!)}
         base={`var(${DATA_VIEW_HEADER_OFFSET_VAR}, 0px)`}
       >
-        {sections.map((section) => {
+        {shown.map((section) => {
           const key = section.key!;
+          const depth = section.nesting?.depth ?? 0;
           const collapsed = collapsedSections?.has(key) ?? false;
           const action = headerActions?.(section);
+          const header = (
+            <DataViewGroupHeader
+              section={section}
+              headerStyle={headerStyle}
+              action={action}
+              className={quiet ? undefined : "rail-follow"}
+            />
+          );
+          // An ancestor of rows only — a nested section with nothing of its
+          // own to draw — is its header alone: an empty band would open a gap
+          // between it and its first child.
+          const ownBody =
+            section.nesting === undefined ||
+            section.entries.length > 0 ||
+            section.fold !== undefined ||
+            section.paging !== undefined;
           return (
             <CollapsibleProvider
               key={key}
@@ -143,16 +170,26 @@ export function GroupedSections({
                 // column (rail + row pad) — a caption over the rows. A standard
                 // header pays the rail on the row itself, which replaces the
                 // row's inline pad, so its label sits on the row pills' edge.
-                className={quiet ? "rail-follow" : undefined}
+                // A nested quiet header pays it inside its indent instead, so
+                // the indent (and its guides) sit outside the rail like the
+                // body's.
+                className={quiet && depth === 0 ? "rail-follow" : undefined}
               >
-                <DataViewGroupHeader
-                  section={section}
-                  headerStyle={headerStyle}
-                  action={action}
-                  className={quiet ? undefined : "rail-follow"}
-                />
+                <NestedSectionIndent depth={depth}>
+                  {quiet && depth > 0 ? (
+                    <div className="rail-follow">{header}</div>
+                  ) : (
+                    header
+                  )}
+                </NestedSectionIndent>
               </StickyStackItem>
-              <CollapsibleContent>{children(section)}</CollapsibleContent>
+              <CollapsibleContent>
+                {ownBody && (
+                  <NestedSectionIndent depth={depth}>
+                    {children(section)}
+                  </NestedSectionIndent>
+                )}
+              </CollapsibleContent>
             </CollapsibleProvider>
           );
         })}

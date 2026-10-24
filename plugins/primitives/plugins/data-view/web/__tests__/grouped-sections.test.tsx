@@ -139,3 +139,101 @@ describe("GroupedSections — section body", () => {
     expect(screen.queryByRole("button", { name: "… 3 more" })).toBeNull();
   });
 });
+
+// Nested sections (a forest-shaped grouping): tree order, each level folding on
+// its own, a collapsed parent hiding every descendant.
+describe("GroupedSections — nested sections", () => {
+  const exact = (n: number) => ({ kind: "exact", n });
+  const NESTED = [
+    {
+      key: "app",
+      label: "app",
+      count: exact(4),
+      entries: [{ key: "p2", row: {} }],
+      nesting: { depth: 0, parentKey: null },
+      swatch: "#7c5cff",
+    },
+    {
+      key: "website",
+      label: "website",
+      count: exact(2),
+      entries: [],
+      nesting: { depth: 1, parentKey: "app" },
+    },
+    {
+      key: "homepage",
+      label: "homepage",
+      count: exact(2),
+      entries: [{ key: "p1", row: {} }],
+      nesting: { depth: 2, parentKey: "website" },
+    },
+    {
+      key: "chord",
+      label: "chord",
+      count: exact(1),
+      entries: [{ key: "p3", row: {} }],
+      nesting: { depth: 1, parentKey: "app" },
+    },
+  ] as unknown as DataViewSection<unknown>[];
+
+  function renderNested(collapsed: string[]) {
+    return render(
+      <GroupedSections sections={NESTED} collapsedSections={new Set(collapsed)}>
+        {(section) => <div>rows of {section.key}</div>}
+      </GroupedSections>,
+    );
+  }
+
+  // A header's text is its label then its count ("app" + "4"): strip the
+  // trailing tally to read the label.
+  const headers = () =>
+    screen
+      .getAllByRole("button")
+      .map((b) => (b.textContent ?? "").replace(/\d+\+?$/, ""))
+      .filter((t) => t !== "");
+
+  it("renders every section in tree order, each header indented by its depth", () => {
+    renderNested([]);
+    expect(headers()).toEqual(["app", "website", "homepage", "chord"]);
+    const depthOf = (label: string) =>
+      screen
+        .getByRole("button", { name: new RegExp(`^${label}\\d`) })
+        .closest("[data-section-depth]")
+        ?.getAttribute("data-section-depth") ?? "0";
+    expect(["app", "website", "homepage", "chord"].map(depthOf)).toEqual([
+      "0",
+      "1",
+      "2",
+      "1",
+    ]);
+    // A parent's own rows sit above its child sections.
+    expect(screen.getByText("rows of app")).toBeTruthy();
+    // A section with no rows of its own draws its header alone.
+    expect(screen.queryByText("rows of website")).toBeNull();
+  });
+
+  it("draws the section's swatch as a dot before its label", () => {
+    const { container } = renderNested([]);
+    const dots = container.querySelectorAll("[data-section-swatch]");
+    expect(dots).toHaveLength(1);
+    expect((dots[0] as HTMLElement).style.backgroundColor).toBe(
+      "rgb(124, 92, 255)",
+    );
+  });
+
+  it("collapsing a parent hides every descendant, header and rows", () => {
+    renderNested(["app"]);
+    expect(headers()).toEqual(["app"]);
+    expect(screen.queryByText("rows of app")).toBeNull();
+    expect(screen.queryByText("rows of homepage")).toBeNull();
+    expect(screen.queryByText("rows of chord")).toBeNull();
+  });
+
+  it("children fold independently: a collapsed child hides only its subtree", () => {
+    renderNested(["website"]);
+    expect(headers()).toEqual(["app", "website", "chord"]);
+    expect(screen.getByText("rows of app")).toBeTruthy();
+    expect(screen.queryByText("rows of homepage")).toBeNull();
+    expect(screen.getByText("rows of chord")).toBeTruthy();
+  });
+});

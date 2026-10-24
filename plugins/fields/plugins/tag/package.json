@@ -1,0 +1,9 @@
+{
+  "name": "@singularity/plugin-fields-tag",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Tag field type: one value out of an option forest (options carrying `parent`, e.g. a tag tree). Identity only, extends enum — reusing enum's cell, filter and inline editor; its own grouping nests sections along the forest.",
+  "singularity": {
+    "collapsed": true
+  }
+}

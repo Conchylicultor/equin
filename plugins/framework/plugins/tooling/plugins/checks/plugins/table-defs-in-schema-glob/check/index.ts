@@ -41,6 +41,10 @@ const TABLE_FACTORIES: { name: string; definedIn: string }[] = [
     definedIn:
       "plugins/infra/plugins/entities/server/internal/define-entity.ts",
   },
+  {
+    name: "defineTagTreeTable",
+    definedIn: "plugins/tag-tree/plugins/engine/server/internal/table.ts",
+  },
 ];
 
 const FACTORY_DEFINITION_FILES = new Set(

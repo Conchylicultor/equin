@@ -18,11 +18,13 @@ import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import type { ThumbnailState } from "@plugins/apps/plugins/prototypes/plugins/thumbnails/core";
 import { PROTOTYPES_CATEGORY_ID } from "@plugins/apps/plugins/prototypes/core";
 import {
-  prototypeStatuses,
   prototypeVersionCounts,
   prototypesList,
   type PrototypeMeta,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import { prototypeTagTree } from "@plugins/apps/plugins/prototypes/plugins/state/core";
+import { usePrototypeStates } from "@plugins/apps/plugins/prototypes/plugins/state/web";
+import { useTagTree } from "@plugins/tag-tree/plugins/engine/web";
 import {
   PrototypeThumbnail,
   usePrototypeThumbnails,
@@ -40,6 +42,7 @@ import {
   galleryFields,
   joinGalleryRows,
   trashFields,
+  type TagFieldTree,
 } from "../internal/gallery-fields";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -168,7 +171,8 @@ function PrototypeShelf({
 }: {
   render: DataViewSourceProps<PrototypeGalleryHostProps>["render"];
   keep: (row: PrototypeGalleryRow) => boolean;
-  fields: FieldDef<PrototypeGalleryRow>[];
+  /** The source's fields, over the prototypes' tag tree (the Tag field's options). */
+  fields: (tags: TagFieldTree) => FieldDef<PrototypeGalleryRow>[];
   itemActions: ItemActions<PrototypeGalleryRow>;
   emptyState: string;
 }) {
@@ -182,10 +186,12 @@ function PrototypeShelf({
   const result = useCombinedResources({
     prototypes: useLive(prototypesList),
     thumbnails: usePrototypeThumbnails(),
-    // Whether each prototype is pinned / marked Done / deleted — joined onto
-    // the rows below, and awaited with the list so a Done card never paints as
-    // not done first.
-    statuses: useLive(prototypeStatuses),
+    // Whether each prototype is pinned / marked Done / deleted, and its tag —
+    // joined onto the rows below, and awaited with the list so a Done card
+    // never paints as not done first.
+    states: usePrototypeStates(),
+    // The tag tree, for the Tag field's options (its sections nest along it).
+    tags: useTagTree(prototypeTagTree),
     // How many versions each prototype has — the card's "v12" token, awaited
     // with the list for the same reason the thumbnails are.
     versionCounts: useLive(prototypeVersionCounts),
@@ -195,10 +201,11 @@ function PrototypeShelf({
   const renderList = (
     rows: PrototypeGalleryRow[],
     thumbnails: Record<string, ThumbnailState>,
+    tags: TagFieldTree,
   ) =>
     render<PrototypeGalleryRow>({
       rows,
-      fields,
+      fields: fields(tags),
       rowKey: (p) => p.name,
       // The card's cover is the prototype as it actually renders (and the list
       // row's thumbnail). The id-tinted swatch stays as what a prototype looks
@@ -224,12 +231,13 @@ function PrototypeShelf({
   return matchResource(result, {
     // The DataView renders the loading and failed states (`readiness`) under
     // its stable chrome; only a ready read reaches the view.
-    loading: () => renderList([], {}),
-    error: () => renderList([], {}),
-    ready: ({ prototypes, thumbnails, statuses, versionCounts }) =>
+    loading: () => renderList([], {}, []),
+    error: () => renderList([], {}, []),
+    ready: ({ prototypes, thumbnails, states, tags, versionCounts }) =>
       renderList(
-        joinGalleryRows(prototypes, statuses, versionCounts).filter(keep),
+        joinGalleryRows(prototypes, states, versionCounts).filter(keep),
         thumbnails,
+        tags,
       ),
   });
 }

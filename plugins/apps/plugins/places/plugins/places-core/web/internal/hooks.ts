@@ -5,18 +5,16 @@ import {
   type LiveRowResult,
 } from "@plugins/network/plugins/live/web";
 import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
+import { useTagTree } from "@plugins/tag-tree/plugins/engine/web";
 import {
   createCustomPlace,
-  createPlaceTag,
   deletePlace,
-  deletePlaceTag,
   places,
-  placeTags,
+  placeTagTree,
   regeneratePlaceIcon,
   savePlace,
   placeSearch,
   updatePlace,
-  updatePlaceTag,
   type Place,
   type PlaceTag,
   type PlaceSearchQuery,
@@ -35,9 +33,12 @@ export function usePlaceRow(placeId: string): LiveRowResult<Place> {
   return useLiveRow(places, placeId);
 }
 
-/** The whole tag tree, live, as flat rows (rank order; `parentId` links them). */
+/**
+ * The whole tag tree, live, as flat rows (rank order; `parentId` links them).
+ * Its writes are `useTagTreeActions(placeTagTree)` (the tag-tree engine).
+ */
 export function usePlaceTags(): ResourceResult<PlaceTag[]> {
-  return useLive(placeTags);
+  return useTagTree(placeTagTree);
 }
 
 /**
@@ -80,17 +81,4 @@ export function useDeletePlace() {
 /** Re-pick the place's icon with Haiku now (pending for the call's lifetime). */
 export function useRegeneratePlaceIcon() {
   return useEndpointMutation(regeneratePlaceIcon);
-}
-
-export function useCreatePlaceTag() {
-  return useEndpointMutation(createPlaceTag);
-}
-
-export function useUpdatePlaceTag() {
-  return useEndpointMutation(updatePlaceTag);
-}
-
-/** Delete a tag: its children and places move to its parent. */
-export function useDeletePlaceTag() {
-  return useEndpointMutation(deletePlaceTag);
 }

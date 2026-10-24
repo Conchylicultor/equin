@@ -2342,6 +2342,13 @@
     },
     {
       "version": "7",
+      "when": 1792549563000,
+      "tag": "20261021_022603_54e56754__place_tags_fractional_rank",
+      "hash": "54e56754",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
       "when": 1792573200000,
       "tag": "20261021_090000_90bf3912__retire_orphan_ledger_rows",
       "hash": "90bf3912",
@@ -2401,6 +2408,13 @@
       "when": 1792810607000,
       "tag": "20261024_025647_9ab72fe1__merged_20261024_0256",
       "hash": "9ab72fe1",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1792816822000,
+      "tag": "20261024_044022_427aa051__merged_20261024_0440",
+      "hash": "427aa051",
       "breakpoints": true
     }
   ]

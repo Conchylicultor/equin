@@ -12,7 +12,6 @@ import {
   prototypeVersionCountsServed,
 } from "./history";
 import { prototypePicksServed } from "./picks";
-import { prototypeStatusesServed } from "./status";
 import { prototypesListServed } from "./resources";
 import { changedPrototypes, readPrototypesSignature } from "./signature";
 import { classifyTreePath } from "./tree-path";
@@ -25,15 +24,14 @@ import { classifyTreePath } from "./tree-path";
 export const prototypesTreeWatcher = defineFileWatcher({
   name: "prototypes-files.tree",
   description:
-    "Watches the prototypes folder and reloads open prototypes, their history, picks and status when a file really changes.",
+    "Watches the prototypes folder and reloads open prototypes, their history and picks when a file really changes.",
   // Everything a self-contained prototype can ship. No `.jsx`: JSX lives
   // inline in index.html, because Babel fetches an external `src` with XHR
   // and Chrome blocks that over file:// (the `prototypes:self-contained`
   // check rejects such a script tag, so an external .jsx cannot exist).
   // `.json` also passes each history's `latest.json` stamp — git's own
   // files carry no extension, so they never reach `onChange` — and each
-  // `_picks/<id>.json` and `_status/<id>.json` (their `.lock` and
-  // `.json.tmp` do not pass).
+  // `_picks/<id>.json` (its `.lock` and `.json.tmp` do not pass).
   extensions: [
     ".html",
     ".css",
@@ -93,8 +91,8 @@ async function refreshOnce(): Promise<void> {
   lastSignature = signature;
 
   prototypesListServed.notify();
-  // Only a prototype still on disk has a history to re-read: a deleted one
-  // (moved to `_trash/`) would make the loader throw "no such prototype" for
+  // Only a prototype still on disk has a history to re-read: a removed one
+  // (its folder gone) would make the loader throw "no such prototype" for
   // a pane still open on it — which unmounts once the list above reaches it.
   for (const name of changed) if (signature.has(name)) notifyHistory(name);
   for (const listener of listeners) listener();
@@ -130,19 +128,17 @@ const refreshes = createCoalescer({
  * history and nothing else: the prototype's bytes did not move, so nothing may
  * reload. Picks written under `_picks/` likewise re-read that one prototype's
  * picks and reload nothing — the frames follow on their own, because their `src`
- * carries the picks. A status written under `_status/` re-reads the statuses,
- * and likewise reloads nothing. Everything else goes through the signature gate.
+ * carries the picks. Anything under a retired dir (`_status/`, `_trash/`) is nothing to
+ * react to. Everything else goes through the signature gate.
  */
 function onTreeEvents(paths: string[]): Promise<void> | undefined {
   let treeMoved = false;
   const recorded = new Set<string>();
   const picked = new Set<string>();
-  let statusMoved = false;
   for (const path of paths) {
     const kind = classifyTreePath(prototypesDir.path, path);
     if (kind.kind === "version-recorded") recorded.add(kind.id);
     else if (kind.kind === "picks-recorded") picked.add(kind.id);
-    else if (kind.kind === "status-recorded") statusMoved = true;
     else if (kind.kind === "tree") treeMoved = true;
   }
   for (const id of recorded) notifyHistory(id);
@@ -150,7 +146,6 @@ function onTreeEvents(paths: string[]): Promise<void> | undefined {
   // value, so a batch re-reads it once.
   if (recorded.size > 0) prototypeVersionCountsServed.notify();
   for (const name of picked) prototypePicksServed.notify({ name });
-  if (statusMoved) prototypeStatusesServed.notify();
   return treeMoved ? refreshes.run() : undefined;
 }
 

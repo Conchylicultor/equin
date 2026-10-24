@@ -2,6 +2,8 @@ import { type ReactNode } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { RowActions } from "@plugins/primitives/plugins/row-actions/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   formatSectionCount,
   type DataViewGroupHeaders,
@@ -52,6 +54,15 @@ export function DataViewGroupHeader({
   action,
   className,
 }: DataViewGroupHeaderProps): ReactNode {
+  // A nested section's header below the roots steps its label down a weight
+  // (medium, against a quiet root's semibold), so the levels read apart.
+  const sub = (section.nesting?.depth ?? 0) >= 1;
+  const label = (
+    <>
+      {section.swatch !== undefined && <SectionSwatch color={section.swatch} />}
+      {section.label}
+    </>
+  );
   if (headerStyle === "quiet") {
     return (
       <SectionHeaderRow
@@ -61,7 +72,7 @@ export function DataViewGroupHeader({
         disclosure="trailing"
         open={open}
         onClick={onClick}
-        className={className}
+        className={cn(sub && "font-medium", className)}
         // The count is part of the label's run here, so the trailing cluster
         // holds only an action — and, like the standard header, nothing at all
         // when there is none.
@@ -71,7 +82,7 @@ export function DataViewGroupHeader({
           )
         }
       >
-        {section.label}
+        {label}
         {/* A quiet header's count is a faint, semibold tally right after its
             label ("Queue 6"). */}
         <Text variant="caption" tone="faint" className="font-semibold">
@@ -92,7 +103,7 @@ export function DataViewGroupHeader({
       rule
       open={open}
       onClick={onClick}
-      className={className}
+      className={cn(sub && "font-medium", className)}
       // This `null` test is the ONLY thing between a section and an empty
       // `RowActions` — which is not nothing: the cluster is a flex item, so an
       // empty one still spends the `gap` before the chevron. Hence the
@@ -105,12 +116,28 @@ export function DataViewGroupHeader({
         )
       }
     >
-      {section.label}
+      {label}
       {/* The count right beside its label: a faint tally in the code role
           (mono figures), part of the label's run so the rule starts after it. */}
       <Text variant="code" tone="faint">
         {formatSectionCount(section.count)}
       </Text>
     </SectionHeaderRow>
+  );
+}
+
+/**
+ * The section's colour dot (`DataViewSection.swatch`), ahead of its label. The
+ * colour is user data (a tag's stored hex), so it is the one thing painted
+ * through `style`.
+ */
+function SectionSwatch({ color }: { color: string }): ReactNode {
+  return (
+    <span
+      aria-hidden
+      data-section-swatch
+      className={cn("inline-block size-2.5 rounded-full", rigidClass())}
+      style={{ backgroundColor: color }}
+    />
   );
 }

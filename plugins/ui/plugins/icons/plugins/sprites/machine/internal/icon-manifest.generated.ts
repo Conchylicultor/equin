@@ -303,6 +303,7 @@ export const ICON_MANIFEST: {
     "stop-circle",
     "storage",
     "storefront",
+    "subdirectory-arrow-left",
     "subdirectory-arrow-right",
     "surround-sound",
     "swap-horiz",

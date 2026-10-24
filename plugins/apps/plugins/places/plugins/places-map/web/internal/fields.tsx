@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import {
   FieldPresentation,
-  type LiveFieldOption,
   type LiveFieldOptionsRead,
 } from "@plugins/network/plugins/live/web";
 import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
@@ -18,27 +17,19 @@ import {
   type PlaceTag,
 } from "@plugins/apps/plugins/places/plugins/places-core/core";
 import { usePlaceTags } from "@plugins/apps/plugins/places/plugins/places-core/web";
+import { tagFieldOptions } from "@plugins/tag-tree/plugins/engine/core";
 import { PlaceTagChips } from "../components/tag-chip";
 
-// A tag as the tags field's option: each names its parent, so the nested
-// operators (`has-nested` / `lacks-nested`, the sidebar's rules) reach a tag's
-// descendants and the filter builder lists the tree. Stable (module-level), so
-// the mapped read changes only with the tag tree.
-function tagOptions(tags: readonly PlaceTag[]): readonly LiveFieldOption[] {
-  return tags.map((t) => ({
-    value: t.id,
-    label: t.name,
-    ...(t.parentId === null ? {} : { parent: t.parentId }),
-  }));
-}
-
 /**
- * The tags field's options: the LIVE tag tree. Loading until it is known —
- * never an empty vocabulary, or the sidebar's rules would match nothing.
+ * The tags field's options: the LIVE tag tree, in tree order (`tagFieldOptions`)
+ * — each names its parent, so the nested operators (`has-nested` /
+ * `lacks-nested`, the sidebar's rules) reach a tag's descendants and the
+ * filter builder lists the tree. Loading until it is known — never an empty
+ * vocabulary, or the sidebar's rules would match nothing.
  */
 function useTagFieldOptions(): LiveFieldOptionsRead {
   const tags = usePlaceTags();
-  return useMemo(() => mapResource(tags, tagOptions), [tags]);
+  return useMemo(() => mapResource(tags, tagFieldOptions), [tags]);
 }
 
 /** A place's tags as chips, the tree read where the cell is drawn. */

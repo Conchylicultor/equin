@@ -11,6 +11,7 @@ import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import {
   DataViewGroupHeader,
   FieldCell,
+  NestedSectionIndent,
   pickPrimaryField,
   resolveBodyFields,
   SectionBody,
@@ -31,6 +32,7 @@ import {
   RankReorderProvider,
   useRankSortableItem,
 } from "@plugins/primitives/plugins/rank-reorder/web";
+import { visibleSections } from "@plugins/primitives/plugins/data-view/core";
 import type { TableViewOptions } from "../../core";
 import { mapPrimary } from "../internal/map-primary";
 import { NestedTableView } from "./nested-table-view";
@@ -275,33 +277,43 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
       // Grouped: interleave a full-width collapsible header row per section.
       <DataTable
         data={[]}
-        groups={sections.map((section): DataTableGroup<unknown> => {
-          const key = section.key!;
-          const collapsed = props.collapsedSections?.has(key) ?? false;
-          return {
-            key,
-            collapsed,
-            rows: section.entries.map((e) => e.row),
-            // Hidden with the group's rows when collapsed, like GroupedSections:
-            // the fold line, and a declared section's own paging footer.
-            footer:
-              section.fold || section.paging ? (
-                <SectionBody section={section} foldLines={props.foldLines}>
-                  {null}
-                </SectionBody>
-              ) : undefined,
-            // The same header node the flat views render (GroupedSections),
-            // so `groupHeaders` reads identically here.
-            header: (
-              <DataViewGroupHeader
-                section={section}
-                headerStyle={props.groupHeaders}
-                open={!collapsed}
-                onClick={() => props.setSectionCollapsed?.(key, !collapsed)}
-              />
-            ),
-          };
-        })}
+        // A collapsed nested section hides its descendants' group rows too.
+        groups={visibleSections(sections, props.collapsedSections).map(
+          (section): DataTableGroup<unknown> => {
+            const key = section.key!;
+            const collapsed = props.collapsedSections?.has(key) ?? false;
+            return {
+              key,
+              collapsed,
+              rows: section.entries.map((e) => e.row),
+              // Hidden with the group's rows when collapsed, like GroupedSections:
+              // the fold line, and a declared section's own paging footer.
+              footer:
+                section.fold || section.paging ? (
+                  <SectionBody section={section} foldLines={props.foldLines}>
+                    {null}
+                  </SectionBody>
+                ) : undefined,
+              // The same header node the flat views render (GroupedSections),
+              // so `groupHeaders` reads identically here.
+              // A nested section's header steps in by its depth. The band
+              // around it already paid the rail, so no guides (they start at it).
+              header: (
+                <NestedSectionIndent
+                  depth={section.nesting?.depth ?? 0}
+                  guides={false}
+                >
+                  <DataViewGroupHeader
+                    section={section}
+                    headerStyle={props.groupHeaders}
+                    open={!collapsed}
+                    onClick={() => props.setSectionCollapsed?.(key, !collapsed)}
+                  />
+                </NestedSectionIndent>
+              ),
+            };
+          },
+        )}
         {...shared}
       />
     );

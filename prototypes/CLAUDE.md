@@ -4,7 +4,8 @@ A prototype is a throwaway UI mockup: one flat folder in
 `~/.singularity/apps/prototypes/<id>/`, with an `index.html`. It is **not in
 the repo**: write there directly and commit nothing. That folder is shared by
 every worktree and main and shows at `http://singularity.localhost:9000` as
-soon as you save. No build is needed.
+soon as you save. No build is needed. Its pin, Done mark, tag and deletion are not in
+the folder: they are per-instance DB state, set in the app.
 
 ## Creating one
 

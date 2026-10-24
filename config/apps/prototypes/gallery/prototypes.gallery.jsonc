@@ -1,9 +1,13 @@
 // @hash 6ec84829688d
-// The gallery is grouped by `status`: the pinned prototypes come first
-// ("Pinned"), then the ones still being worked on ("In progress"), the finished
-// ones last ("Done"). Done cards also read
-// muted, so the second section is visibly a pile you are finished with rather
-// than more of the same. Every view binds to a source: `gallery` (the live
+// The gallery is grouped by `tag`: sections NEST along the prototypes' tag
+// tree (app ▸ website ▸ homepage), each header counting its whole subtree, a
+// parent's own cards above its child sections, the untagged ones last
+// ("None"). Within a section the cards sort by `status` — the pinned ones
+// first, then the ones still being worked on, the finished ones last (Done
+// cards also read muted). DESCENDING because an enum sorts by its VALUE, not
+// its options order: "pinned" > "in-progress" > "done". Group by Status
+// instead for the old Pinned / In progress / Done sections. Every view binds
+// to a source: `gallery` (the live
 // prototypes) or `trash` (the deleted ones, Restore on each card).
 {
   "views": [
@@ -14,7 +18,8 @@
       "source": "gallery",
       "view": {
         "type": "gallery",
-        "groupBy": { "fieldId": "status", "groupingId": "value" },
+        "groupBy": { "fieldId": "tag", "groupingId": "tree" },
+        "sort": [{ "fieldId": "status", "direction": "desc" }],
         // Authored, not defaulted: each card is the prototype's picture, its
         // title (with the problems mark after it), the blurb as the subtitle,
         // and when it was last edited and how many versions it has as tokens.
@@ -30,7 +35,7 @@
     },
     {
       // The same prototypes as one list, the most recently edited first —
-      // "what was I working on", without the status sections.
+      // "what was I working on", without the tag sections.
       "id": "recently-edited",
       "name": "Recently edited",
       "icon": "schedule",

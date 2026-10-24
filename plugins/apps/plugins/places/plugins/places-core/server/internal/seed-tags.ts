@@ -1,4 +1,5 @@
-import type { ChildColorMode, TagRole } from "../../core";
+import type { ChildColorMode } from "@plugins/tag-tree/plugins/engine/core";
+import type { TagRole } from "../../core";
 
 // The tag tree a new Places install starts from: the two role tags (Want to
 // go, Been — independent, found by role), then the categories with their

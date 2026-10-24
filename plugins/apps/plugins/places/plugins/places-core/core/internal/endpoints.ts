@@ -1,14 +1,13 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { SavedSymbolNameSchema } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
-import { PlaceSchema, PlaceTagSchema } from "./schema";
-import { CHILD_COLOR_MODES } from "./tag-tree";
+import { PlaceSchema } from "./schema";
 import { MapsNotConfiguredSchema } from "./maps";
 
-// Place and tag CRUD and the icon re-pick. Every read is live
-// (`./resources.ts`): the `places.places.all` / `places.tags.all` collections,
-// which every write here reaches through the change feed, and the
-// `placeSearch` value.
+// Place CRUD and the icon re-pick. Every read is live (`./resources.ts`): the
+// `places.places.all` / `places.tags.all` collections, which every write
+// reaches through the change feed, and the `placeSearch` value. Tag writes are
+// the tag-tree engine's endpoints (`placeTagTree`).
 
 export const SavePlaceBodySchema = z.object({
   googlePlaceId: z.string().min(1),
@@ -111,53 +110,4 @@ export const regeneratePlaceIcon = defineEndpoint({
   response: RegeneratePlaceIconResultSchema,
   // One Haiku call: seconds by design.
   slowThresholdMs: 45_000,
-});
-
-const HexColorSchema = z
-  .string()
-  .regex(/^#[0-9a-fA-F]{6}$/, "a colour is #rrggbb");
-
-export const CreatePlaceTagBodySchema = z.object({
-  name: z.string().trim().min(1),
-  parentId: z.string().nullable().optional(),
-  color: HexColorSchema.nullable().optional(),
-  icon: SavedSymbolNameSchema.nullable().optional(),
-  googleTypes: z.array(z.string()).optional(),
-});
-export type CreatePlaceTagBody = z.infer<typeof CreatePlaceTagBodySchema>;
-
-/** Create a tag, last among its siblings. */
-export const createPlaceTag = defineEndpoint({
-  route: "POST /api/places/tags",
-  body: CreatePlaceTagBodySchema,
-  response: PlaceTagSchema,
-});
-
-export const UpdatePlaceTagBodySchema = z.object({
-  name: z.string().trim().min(1).optional(),
-  /** Move the tag; a parent that is the tag or one of its descendants is refused. */
-  parentId: z.string().nullable().optional(),
-  /** `null` inherits the nearest ancestor's colour. */
-  color: HexColorSchema.nullable().optional(),
-  /** `ramp` shades the colourless children by rank; `null` lets them inherit. */
-  childColors: z.enum(CHILD_COLOR_MODES).nullable().optional(),
-  icon: SavedSymbolNameSchema.nullable().optional(),
-  googleTypes: z.array(z.string()).optional(),
-  rank: z.number().int().optional(),
-});
-export type UpdatePlaceTagBody = z.infer<typeof UpdatePlaceTagBodySchema>;
-
-export const updatePlaceTag = defineEndpoint({
-  route: "PATCH /api/places/tags/:id",
-  body: UpdatePlaceTagBodySchema,
-  response: PlaceTagSchema,
-});
-
-/**
- * Delete a tag. Its children move up to its parent, and every place carrying it
- * gets the parent instead (nothing, at the root). A tag with a role (Been,
- * Want to go) cannot be deleted.
- */
-export const deletePlaceTag = defineEndpoint({
-  route: "DELETE /api/places/tags/:id",
 });

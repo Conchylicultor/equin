@@ -23,6 +23,7 @@ import {
   DeleteHeaderAction,
 } from "./components/delete-prototype";
 import { RestoreCardAction } from "./components/trash";
+import { TagHeaderAction } from "./components/tag-chip";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export { prototypesGalleryPane } from "./panes";
@@ -30,13 +31,12 @@ export {
   mintPrototypeFolder,
   newPrototypePrompt,
 } from "./components/new-prototype";
-export { useSetPrototypeStatus } from "./components/set-status";
 export { PrototypeCardActions } from "./slots";
 export type { PrototypeGalleryRow } from "./slots";
 
 export default {
   description:
-    "Prototypes gallery list pane — one card per prototype over its rendered preview, on the prototype viewer's grid, with a Recently edited list; grouped (Pinned / In progress / Done) and filterable by a pin and a Done circle on every card and row (hover actions that stay shown while set; also in the detail pane's header), an undoable Delete on every card and in the detail header (deletedAt in the prototype's status — the folder stays), and a Trash view (its own source in the same view bar) listing the deleted ones with Restore — plus New prototype, which mints the folder before launching the agent that designs it.",
+    "Prototypes gallery list pane — one card per prototype over its rendered preview, on the prototype viewer's grid, with a Recently edited list; grouped by its tag as nested sections along the prototypes' tag tree (or by status: Pinned / In progress / Done), with a pin and a Done circle on every card and row (hover actions that stay shown while set; also in the detail pane's header, beside the tag chip opening the shared tag picker), an undoable Delete on every card and in the detail header (deletedAt in the prototype's state — the folder stays), and a Trash view (its own source in the same view bar) listing the deleted ones with Restore — plus New prototype, which mints the folder before launching the agent that designs it.",
   contributions: [
     Pane.Register({ pane: prototypesGalleryPane }),
     // The view bar's two sources: the live prototypes and the deleted ones.
@@ -56,8 +56,9 @@ export default {
       views: ["gallery", "list"],
       component: TrashSource,
     }),
-    // Mark the open prototype Done — the same shared flag as the card
-    // checkbox, contributed into the canvas plugin's detail header.
+    // The open prototype's tag, pin and Done — the same state as the card's,
+    // contributed into the canvas plugin's detail header.
+    prototypeDetailPane.Actions({ id: "tag", component: TagHeaderAction }),
     prototypeDetailPane.Actions({ id: "pin", component: PinHeaderAction }),
     prototypeDetailPane.Actions({ id: "done", component: DoneHeaderAction }),
     // Delete the open prototype (undoable from its toast) — Restore instead

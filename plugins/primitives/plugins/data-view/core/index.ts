@@ -42,7 +42,9 @@ export {
   atLeastCount,
   exactCount,
   formatSectionCount,
+  sumSectionCounts,
 } from "./internal/section-count";
+export { visibleSections } from "./internal/nested-sections";
 
 export type {
   LiveDataSource,
@@ -64,6 +66,7 @@ export type {
   FieldGroupingSet,
   GroupingPlanContext,
   GroupBucket,
+  GroupBucketAncestor,
   GroupByRule,
 } from "./internal/grouping";
 

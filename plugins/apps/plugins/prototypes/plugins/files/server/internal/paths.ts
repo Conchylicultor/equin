@@ -1,5 +1,8 @@
+import { statSync } from "node:fs";
 import { resolve, sep } from "node:path";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
+import type { IdOf } from "@plugins/ids/core";
+import { protoIdKind } from "../../core";
 
 // A prototype ships whatever it references, so the served set is not just code:
 // images and a font are part of "self-contained". No `.jsx` — JSX lives inline
@@ -40,4 +43,13 @@ export function resolvePrototypeFile(name: string, rel: string): string | null {
     return null;
   }
   return abs;
+}
+
+/** A prototype folder exists under this id (a minted `proto-…` name). */
+export function prototypeExists(
+  name: string,
+): name is IdOf<typeof protoIdKind> {
+  if (!protoIdKind.is(name)) return false;
+  const stat = statSync(prototypesDir.file(name), { throwIfNoEntry: false });
+  return stat?.isDirectory() ?? false;
 }

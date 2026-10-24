@@ -15,6 +15,7 @@ import {
   type FilterOperatorSet,
   type GroupByRule,
   type SectionCount,
+  sumSectionCounts,
   type ViewState,
 } from "../../core";
 import { useGroupingRegistry } from "../grouping-slot";
@@ -98,6 +99,12 @@ export interface PartitionOptions<TRow = unknown> {
    * listed them, each with its own rows (`rows` is then not read).
    */
   sectioning?: DataViewSectioning<TRow>;
+  /**
+   * Ignore `GroupBucket.ancestors`: one flat section per bucket. The nested
+   * table's group-by over its ROOTS sets it — its rows already nest by their
+   * own hierarchy, so its sections stay flat.
+   */
+  flat?: boolean;
 }
 
 /**
@@ -175,8 +182,64 @@ export function partitionIntoSections<TRow>(
     order: number;
     seq: number;
     rows: TRow[];
+    swatch?: string;
+    /** Nested only: the parent bucket's key (`null` at a root), and the whole
+     *  chain above it — what every later mention must agree with. */
+    parentKey: string | null;
+    chain: string;
   }
+  const byAppearance = opts.sectioning?.kind === "appearance";
+  // Sections in row order are the server's order; a tree over them would
+  // reorder them, so they stay flat (as do callers that ask, see `flat`).
+  const honourAncestors = !byAppearance && !opts.flat;
+  let nested = false;
   const buckets = new Map<string, Bucket>();
+  // Checked once per bucket, not per row. A non-finite ordinal is only ever
+  // reached for as "put this last", which it does not do — `Infinity - n` is
+  // `Infinity`, so it pins last ascending and FIRST descending, and two of
+  // them subtract to `NaN`. A bucket with no position is not a bucket; the
+  // bucketer returns `null` for that and the row joins "None" below.
+  const checkOrder = (key: string, order: number) => {
+    if (!Number.isFinite(order)) {
+      throw new Error(
+        `[data-view] grouping "${grouping.id}" gave bucket "${key}" a non-finite order ` +
+          `(${String(order)}). Return null from the bucketer for a value you cannot ` +
+          `bucket — it joins the "None" section, which is ordered last in both directions.`,
+      );
+    }
+  };
+  // One node of the bucket forest: created on first mention (as a row's
+  // bucket or as an ancestor of one), and every later mention must place it
+  // under the same chain — two answers would be two trees.
+  const node = (
+    entry: { key: string; label: string; order: number; swatch?: string },
+    above: readonly string[],
+  ): Bucket => {
+    const chain = above.join("\u0000");
+    const existing = buckets.get(entry.key);
+    if (existing) {
+      if (existing.chain !== chain) {
+        throw new Error(
+          `[data-view] grouping "${grouping.id}" placed bucket "${entry.key}" under two ` +
+            `different ancestor chains ([${existing.chain.split("\u0000").join(", ")}] and ` +
+            `[${above.join(", ")}]). A bucket's ancestors must be the same for every value.`,
+        );
+      }
+      return existing;
+    }
+    checkOrder(entry.key, entry.order);
+    const bucket: Bucket = {
+      label: entry.label,
+      order: entry.order,
+      seq: buckets.size,
+      rows: [],
+      ...(entry.swatch === undefined ? {} : { swatch: entry.swatch }),
+      parentKey: above.at(-1) ?? null,
+      chain,
+    };
+    buckets.set(entry.key, bucket);
+    return bucket;
+  };
   // The ONE catch-all: no value, and a value the grouping cannot bucket. Both
   // read as "None" to the user, and giving them one section is what stops a
   // grouping from minting a rival "None" with an ordinal of its own.
@@ -185,6 +248,8 @@ export function partitionIntoSections<TRow>(
     order: 0,
     seq: -1,
     rows: [],
+    parentKey: null,
+    chain: "",
   };
   rows.forEach((row, i) => {
     const value = values[i] as FieldValue;
@@ -193,58 +258,135 @@ export function partitionIntoSections<TRow>(
       nullBucket.rows.push(row);
       return;
     }
-    const { key, label, order } = bucketed;
-    let bucket = buckets.get(key);
-    if (!bucket) {
-      // Checked once per bucket, not per row. A non-finite ordinal is only ever
-      // reached for as "put this last", which it does not do — `Infinity - n` is
-      // `Infinity`, so it pins last ascending and FIRST descending, and two of
-      // them subtract to `NaN`. A bucket with no position is not a bucket; the
-      // bucketer returns `null` for that and the row joins "None" above.
-      if (!Number.isFinite(order)) {
+    const ancestors = honourAncestors ? (bucketed.ancestors ?? []) : [];
+    // The first nested bucket turns the partition into a tree: every bucket
+    // met so far was a root (no ancestors), which its empty chain says.
+    if (ancestors.length > 0) nested = true;
+    const above: string[] = [];
+    for (const ancestor of ancestors) {
+      if (ancestor.key === bucketed.key || above.includes(ancestor.key)) {
         throw new Error(
-          `[data-view] grouping "${grouping.id}" gave bucket "${key}" a non-finite order ` +
-            `(${String(order)}). Return null from the bucketer for a value you cannot ` +
-            `bucket — it joins the "None" section, which is ordered last in both directions.`,
+          `[data-view] grouping "${grouping.id}" gave bucket "${bucketed.key}" a cycle in ` +
+            `its ancestors ([${ancestors.map((a) => a.key).join(", ")}]).`,
         );
       }
-      bucket = { label, order, seq: buckets.size, rows: [] };
-      buckets.set(key, bucket);
+      node(ancestor, above);
+      above.push(ancestor.key);
     }
-    bucket.rows.push(row);
+    node(bucketed, above).rows.push(row);
   });
 
   const dir = opts.order === "desc" ? -1 : 1;
-  const byAppearance = opts.sectioning?.kind === "appearance";
   // In row order, a section's first row is where the server's sort placed it;
   // otherwise the bucket's ordinal decides, discovery order breaking ties.
-  const ordered: [string, Bucket][] = [...buckets.entries()].sort(
-    ([, a], [, b]) =>
-      byAppearance ? a.seq - b.seq : (a.order - b.order) * dir || a.seq - b.seq,
-  );
-  // "None" is not a point on the ordinal — it is the absence of one — so it
-  // trails the real sections whichever way they read.
-  if (nullBucket.rows.length > 0) ordered.push([NULL_GROUP_KEY, nullBucket]);
+  const bySiblingOrder = ([, a]: [string, Bucket], [, b]: [string, Bucket]) =>
+    byAppearance ? a.seq - b.seq : (a.order - b.order) * dir || a.seq - b.seq;
 
   // Index counter is global across sections so `rowKey(row, index)` stays
   // stable and unique even when the consumer's key depends on the index.
   let globalIndex = 0;
-  return ordered.map(([key, bucket], i) => ({
-    key,
-    label: bucket.label,
-    // Exact when every row is loaded — or, sections in row order, when a later
-    // section has started: a later page can only add sections after the tail.
-    count:
-      byAppearance && i < ordered.length - 1
-        ? exactCount(bucket.rows.length)
-        : sectionCount(bucket.rows, rows, completeness, {
-            fieldId: field.id,
-          }),
-    entries: bucket.rows.map((row) => ({
-      row,
-      key: rowKey(row, globalIndex++),
-    })),
-  }));
+  const entriesOf = (bucket: Bucket) =>
+    bucket.rows.map((row) => ({ row, key: rowKey(row, globalIndex++) }));
+  const ownCount = (bucket: Bucket) =>
+    sectionCount(bucket.rows, rows, completeness, { fieldId: field.id });
+  const withSwatch = (bucket: Bucket) =>
+    bucket.swatch === undefined ? {} : { swatch: bucket.swatch };
+
+  const sections: DataViewSection<TRow>[] = [];
+  if (nested) {
+    // Tree order (pre-order): a section, then its children, each sibling level
+    // ordered by the same rule as flat sections. A section's count is its OWN
+    // rows here; `rollUpNestedCounts` sums the subtree once every step that
+    // rewrites own counts (aggregate, fold) has run.
+    const children = new Map<string | null, [string, Bucket][]>();
+    for (const entry of buckets) {
+      const siblings = children.get(entry[1].parentKey) ?? [];
+      siblings.push(entry);
+      children.set(entry[1].parentKey, siblings);
+    }
+    const emit = (parentKey: string | null, depth: number) => {
+      for (const [key, bucket] of (children.get(parentKey) ?? []).sort(
+        bySiblingOrder,
+      )) {
+        sections.push({
+          key,
+          label: bucket.label,
+          count: ownCount(bucket),
+          entries: entriesOf(bucket),
+          nesting: { depth, parentKey },
+          ...withSwatch(bucket),
+        });
+        emit(key, depth + 1);
+      }
+    };
+    emit(null, 0);
+  } else {
+    const ordered = [...buckets.entries()].sort(bySiblingOrder);
+    ordered.forEach(([key, bucket], i) => {
+      sections.push({
+        key,
+        label: bucket.label,
+        // Exact when every row is loaded — or, sections in row order, when a
+        // later section (the trailing "None" included) has started: a later
+        // page can only add sections after the tail.
+        count:
+          byAppearance && (i < ordered.length - 1 || nullBucket.rows.length > 0)
+            ? exactCount(bucket.rows.length)
+            : ownCount(bucket),
+        entries: entriesOf(bucket),
+        ...withSwatch(bucket),
+      });
+    });
+  }
+  // "None" is not a point on the ordinal — it is the absence of one — so it
+  // trails the real sections whichever way they read, at the top level.
+  if (nullBucket.rows.length > 0) {
+    sections.push({
+      key: NULL_GROUP_KEY,
+      label: nullBucket.label,
+      count: ownCount(nullBucket),
+      entries: entriesOf(nullBucket),
+    });
+  }
+  return sections;
+}
+
+/**
+ * Pure roll-up step (testable without React): a NESTED section's count becomes
+ * its whole subtree's — its own entries plus every descendant section's
+ * (`sumSectionCounts`: exact only when every part is). Runs LAST in the
+ * pipeline, after aggregation and fold have written each section's own count,
+ * so a parent counts what its children's headers say. A no-op when no section
+ * is nested.
+ */
+export function rollUpNestedCounts<TRow>(
+  sections: DataViewSection<TRow>[],
+): DataViewSection<TRow>[] {
+  if (!sections.some((s) => s.nesting)) return sections;
+  // Children before parents: walk tree order backwards, folding each nested
+  // section's subtree total into its parent's list.
+  const parts = new Map<string, SectionCount[]>();
+  const totals = new Map<string, SectionCount>();
+  for (let i = sections.length - 1; i >= 0; i--) {
+    const section = sections[i]!;
+    if (!section.nesting || section.key === null) continue;
+    const total = sumSectionCounts([
+      section.count,
+      ...(parts.get(section.key) ?? []),
+    ]);
+    totals.set(section.key, total);
+    const parentKey = section.nesting.parentKey;
+    if (parentKey !== null) {
+      const siblings = parts.get(parentKey) ?? [];
+      siblings.push(total);
+      parts.set(parentKey, siblings);
+    }
+  }
+  return sections.map((section) =>
+    section.nesting && section.key !== null
+      ? { ...section, count: totals.get(section.key)! }
+      : section,
+  );
 }
 
 /**
@@ -481,8 +623,9 @@ export function useDataViewSections<TRow>(
     if (manualRank) sections = orderSectionsByRank(sections, manualRank);
     // Collapse aggregate groups within each (already-ordered) section.
     if (aggregate) sections = aggregateSections(sections, aggregate);
-    // Fold LAST, so it counts the entries the user sees (an aggregate's
-    // representative decides) and pulls folded rows from wherever they sort.
+    // Fold after aggregation, so it counts the entries the user sees (an
+    // aggregate's representative decides) and pulls folded rows from wherever
+    // they sort.
     if (fold) {
       const key = rowKey ?? ((_row: TRow, i: number) => String(i));
       sections = foldSections(sections, {
@@ -495,7 +638,9 @@ export function useDataViewSections<TRow>(
         openKeys: openFolds ?? EMPTY_KEYS,
       });
     }
-    return sections;
+    // Roll nested counts up LAST: every step above writes a section's OWN
+    // count, and a parent's header counts what its children's headers say.
+    return rollUpNestedCounts(sections);
   }, [
     flat,
     fields,

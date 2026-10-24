@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-tag-tree-picker",
+  "description": "The shared tag picker: TagPickerPanel (search or create a path, a foldable tree with rolled-up counts, inline create and rename, a menu to recolour, nest out and delete, whole-row drag to reorder and nest), TagPickerPopover wiring it to a tree, the TagPathChip header chip and TagMark.",
+  "private": true,
+  "version": "0.0.1"
+}

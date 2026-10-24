@@ -78,6 +78,36 @@ export interface GroupBucket {
    * position is not a bucket — return `null` from the bucketer instead.
    */
   readonly order: number;
+  /**
+   * The bucket's ancestors, root first — present only when the grouping's
+   * buckets form a tree (a field whose options are a forest: a tag under its
+   * parent tag). The sections then NEST: each ancestor is a section of its own,
+   * even with no row of its own, its count rolled up over its subtree, and a
+   * parent's own rows sit above its child sections.
+   *
+   * Every bucket naming an ancestor must agree on where it sits (the same
+   * chain above it) — the partition throws otherwise. An ancestor's `order`
+   * ranks it among its own siblings, like a bucket's.
+   *
+   * Honoured only where sections are partitioned by bucket ordinal (in memory,
+   * `sectioning: { kind: "bucket" }`). Sections in row order (`appearance`)
+   * and server-declared sections stay flat, and so does the nested table's
+   * group-by over its roots — no live source groups by such a field today.
+   */
+  readonly ancestors?: readonly GroupBucketAncestor[];
+  /** A colour dot drawn before the section label — user data (a tag's
+   *  `#rrggbb`), painted through `style`. */
+  readonly swatch?: string;
+}
+
+/** One ancestor of a nested {@link GroupBucket}: a section with its own
+ *  header, which the partition creates even when no row is bucketed into it. */
+export interface GroupBucketAncestor {
+  readonly key: string;
+  readonly label: string;
+  /** Its ordinal among its siblings — finite, plain ascending, like a bucket's. */
+  readonly order: number;
+  readonly swatch?: string;
 }
 
 /**

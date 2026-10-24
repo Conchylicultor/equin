@@ -5417,7 +5417,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: `apps/places/places-map`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/thumbnail.ts` (debt)
-        - **`places-core`** — Contract layer for the Places app, web half: the live places and tag-tree hooks, the Google Places search read, and the place and tag mutations. Contract layer for the Places app: the places / place_tags entities, the starter tag tree seeded on an empty install, the live places and tags collections, Google Places search and save (auto-tagged from the place's Google types, tagged Want to go), custom places (a named pin with no Google place behind it), the user's own title over Google's name, place and tag CRUD (a deleted tag's children and places move to its parent), the Haiku job that picks each place's Material Symbols icon, and the monthly job that re-fetches each place's Google details (whether it is still open).
+        - **`places-core`** — Contract layer for the Places app, web half: the live places and tag-tree hooks, the Google Places search read, and the place mutations (tag writes are the tag-tree engine's, on placeTagTree). Contract layer for the Places app: the places / place_tags entities, the starter tag tree seeded on an empty install, the live places and tags collections, Google Places search and save (auto-tagged from the place's Google types, tagged Want to go), custom places (a named pin with no Google place behind it), the user's own title over Google's name, place CRUD, the tag tree served through the tag-tree engine (a deleted tag's children and places move to its parent; Been / Want to go cannot be deleted), the Haiku job that picks each place's Material Symbols icon, and the monthly job that re-fetches each place's Google details (whether it is still open).
           - Web:
             - Contributes:
               - `IdKinds.Kind` "place"
@@ -5428,11 +5428,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live.LiveRowResult`
               - `network/live.useLive`
               - `network/live.useLiveRow`
+              - `tag-tree/engine.useTagTree`
             - Exports (values):
               - `useCreateCustomPlace`
-              - `useCreatePlaceTag`
               - `useDeletePlace`
-              - `useDeletePlaceTag`
               - `usePlaceRow`
               - `usePlaces`
               - `usePlaceSearch`
@@ -5440,7 +5439,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useRegeneratePlaceIcon`
               - `useSavePlace`
               - `useUpdatePlace`
-              - `useUpdatePlaceTag`
           - Server:
             - Contributes:
               - `ids.kind` "place"
@@ -5450,24 +5448,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resource.declare` "places.search"
               - `resource.declare` "places.tags.all"
               - `resource.declare` "places.tags.all:rows"
-            - Uses:
-              - `database.db`
-              - `database.DbExecutor`
+              - `tag-tree.tree` "places"
+            - Uses: 21 symbols — full list in [`plugins/apps/plugins/places/plugins/places-core/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-core/REFERENCE.md)
+              - `integrations/google-maps/places-api` ×3
+              - `tag-tree/engine` ×3
+              - `database` ×2
+              - `infra/endpoints` ×2
+              - `infra/entities` ×2
+              - `infra/jobs` ×2
+              - `network/live` ×2
               - `ids.IdKinds`
               - `infra/claude-cli.runClaudePrint`
-              - `infra/endpoints.HttpError`
-              - `infra/endpoints.implement`
-              - `infra/entities.defaultNow`
-              - `infra/entities.defineEntity`
-              - `infra/jobs.defineJob`
-              - `infra/jobs.NonRetryableError`
               - `infra/warmup.defineWarmup`
               - `integrations/google-maps.getPlacesClient`
-              - `integrations/google-maps/places-api.autocomplete`
-              - `integrations/google-maps/places-api.placeDetails`
-              - `integrations/google-maps/places-api.searchText`
-              - `network/live.serveCollection`
-              - `network/live.serveValue`
               - `primitives/log-channels.Log`
             - DB schema: `plugins/apps/plugins/places/plugins/places-core/server/internal/tables.ts`
             - Exports (types):
@@ -5496,11 +5489,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PATCH /api/places/places/:id`
               - `DELETE /api/places/places/:id`
               - `POST /api/places/places/:id/icon`
-              - `POST /api/places/tags`
-              - `PATCH /api/places/tags/:id`
-              - `DELETE /api/places/tags/:id`
           - Core:
-            - Uses: 26 symbols — full list in [`plugins/apps/plugins/places/plugins/places-core/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-core/REFERENCE.md)
+            - Uses: 31 symbols — full list in [`plugins/apps/plugins/places/plugins/places-core/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-core/REFERENCE.md)
+              - `tag-tree/engine` ×6
               - `fields` ×4
               - `integrations/google-maps/places-api` ×4
               - `fields/text/config` ×3
@@ -5508,7 +5499,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live` ×2
               - `ui/icons/saved-names` ×2
               - `fields/date/config.dateField`
-              - `fields/int/config.intField`
               - `fields/json/config.jsonField`
               - `fields/location.locationField`
               - `fields/tags/config.tagsField`
@@ -5516,9 +5506,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/entities.entityRef`
               - `integrations/google-maps/usage.budgetRung`
             - Exports (types):
-              - `ChildColorMode`
               - `CreateCustomPlaceBody`
-              - `CreatePlaceTagBody`
               - `Place`
               - `PlaceBounds`
               - `PlaceId`
@@ -5527,27 +5515,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PlaceSearchResult`
               - `PlaceTag`
               - `PlaceTagId`
+              - `PlaceTagNode`
               - `RegeneratePlaceIconResult`
               - `SavePlaceBody`
               - `SavePlaceResult`
               - `SearchRung`
-              - `TagNode`
               - `TagRole`
-              - `TagTreeEntry`
               - `UpdatePlaceBody`
-              - `UpdatePlaceTagBody`
             - Exports (values):
               - `autoTagsFor`
               - `createCustomPlace`
               - `CreateCustomPlaceBodySchema`
-              - `createPlaceTag`
-              - `CreatePlaceTagBodySchema`
               - `deletePlace`
-              - `deletePlaceTag`
-              - `flattenTagTree`
               - `isCustomPlace`
               - `isRoleTag`
-              - `isTagUnder`
               - `mainColor`
               - `MapsNotConfiguredSchema`
               - `NEUTRAL_PLACE_COLOR`
@@ -5563,11 +5544,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PlaceSearchQuerySchema`
               - `PlaceSearchResultSchema`
               - `placesEntityRef`
-              - `placeTagFields`
               - `placeTagIdKind`
               - `placeTags`
               - `PlaceTagSchema`
               - `placeTagsEntityRef`
+              - `placeTagTree`
               - `regeneratePlaceIcon`
               - `RegeneratePlaceIconResultSchema`
               - `ringColors`
@@ -5576,22 +5557,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SavePlaceResultSchema`
               - `SEARCH_RUNGS`
               - `searchRung`
-              - `tagColor`
-              - `tagDescendants`
               - `tagIdByRole`
-              - `tagPath`
               - `tagPlaceCounts`
               - `updatePlace`
               - `UpdatePlaceBodySchema`
-              - `updatePlaceTag`
-              - `UpdatePlaceTagBodySchema`
-              - `wouldCycle`
           - Cross-plugin:
             - Imported by:
               - `apps/places/ask`
               - `apps/places/place-details`
               - `apps/places/places-map`
-              - `apps/places/tag-manager`
         - **`places-map`** — The Places app's index pane (/places): every saved place in one full-bleed DataView (Map, Gallery, List) with its chrome floating on the map — the tag sidebar owning the tag half of the view filter (include / exclude, any / all, faceted counts), the "Search or add places" bar (your places filtered live, Google's hits around the map's view as cards to save and as ghost pins hover-linked with them, the camera never moving; Ask Sonnet hands a question to a background run shown as a thread in a card docked on the right — the newest picks as Google cards with photos, why they fit, what makes them special and their sources, earlier answers folded, as numbered pins — its progress as a pill in the bar that shows and hides the card, and the recent questions in the panel to reopen), the selected place's card or a Google place's detail card — plus the saved-place pin (a drop near, a round badge far out with each spot's size beside it), the Google result's ghost pin, Sonnet's numbered pick pin, the thread's step labels for the Ask Sonnet tools, and the transcript row of places_show_picks (the numbered picks beside a mini map, hover-linked).
           - Web:
             - Slots: `places-map.actions`
@@ -5605,29 +5579,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
               - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
               - `JsonlViewerTool.Renderer` "mcp__equin__places_show_picks" → `PicksToolView`
-            - Uses: 122 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
-              - `apps/places/places-core` ×9
+            - Uses: 120 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+              - `apps/places/places-core` ×8
               - `conversations/agent-thread` ×8
               - `map` ×8
               - `primitives/data-view` ×8
               - `primitives/collapsible` ×6
-              - `network/live` ×5
               - `primitives/live-state` ×5
+              - `network/live` ×4
               - `primitives/css/ui-kit` ×4
               - `primitives/overlay/image-viewer` ×4
               - `primitives/link-gesture/new-tab` ×3
               - `primitives/persistent-draft` ×3
               - `ui/icons` ×3
-              - `apps/places/tag-manager` ×2
               - `conversations/conversation-view/jsonl-viewer/tool-call` ×2
               - `integrations/google-maps` ×2
-              - `primitives/css/control-panel` ×2
               - `primitives/css/layer` ×2
               - `primitives/css/text` ×2
               - `primitives/hover-reveal` ×2
               - `primitives/pane` ×2
               - `primitives/relative-time` ×2
+              - `tag-tree/picker` ×2
               - `apps/places/place-details.usePlaceDetails`
+              - `apps/places/tag-manager.TagManagerPanel`
               - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
               - `integrations/google-maps/usage.useMapsBudget`
               - `primitives/app-shell.AppShellBrand`
@@ -5637,6 +5611,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/clip.clipClasses`
               - `primitives/css/cluster.Cluster`
               - `primitives/css/column.Column`
+              - `primitives/css/control-panel.ControlPanel`
               - `primitives/css/coords.Placed`
               - `primitives/css/fill.Fill`
               - `primitives/css/grid.Grid`
@@ -5662,9 +5637,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/loading.Loading`
               - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
               - `primitives/overlay/tooltip.Kbd`
-              - `primitives/search.SearchInput`
               - `primitives/shortcuts.useSurfaceShortcuts`
               - `shell/toast.showToast`
+              - `tag-tree/engine.useTagTreeActions`
           - Cross-plugin:
             - Uses tokens: 29 vars — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `ui/tokens/color-palette` ×12
@@ -5691,12 +5666,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/categorical --categorical-foreground`
               - `ui/tokens/shadow --shadow-sm`
-        - **`tag-manager`** — The Places tag manager: the one tag tree as an editable table (colour, icon, name, parent, Google types, place count, + Child, Delete) on a floating card the map opens; and TagMark, how a tag shows beside its name everywhere (its tinted icon, else a dot of its colour).
+        - **`tag-manager`** — The Places tag manager: the one tag tree as an editable table (colour, icon, name, parent, Google types, place count, + Child, Delete, Shade children) on a floating card the map opens, written through the tag-tree engine.
           - Web:
-            - Uses: 30 symbols — full list in [`plugins/apps/plugins/places/plugins/tag-manager/REFERENCE.md`](../plugins/apps/plugins/places/plugins/tag-manager/REFERENCE.md)
+            - Uses: 28 symbols — full list in [`plugins/apps/plugins/places/plugins/tag-manager/REFERENCE.md`](../plugins/apps/plugins/places/plugins/tag-manager/REFERENCE.md)
               - `primitives/css/ui-kit` ×8
               - `primitives/data-view` ×4
-              - `apps/places/places-core` ×3
               - `primitives/css/control-panel` ×2
               - `primitives/css/badge.Badge`
               - `primitives/css/cluster.Cluster`
@@ -5710,13 +5684,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/toggle-chip.ToggleChip`
               - `primitives/icon-picker.IconPicker`
               - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
+              - `tag-tree/engine.useTagTreeActions`
               - `ui/icons.Icon`
-            - Exports (types):
-              - `TagManagerPanelProps`
-              - `TagMarkProps`
-            - Exports (values):
-              - `TagManagerPanel`
-              - `TagMark`
+            - Exports (types): `TagManagerPanelProps`
+            - Exports (values): `TagManagerPanel`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --background`
@@ -5763,7 +5734,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeFrameActions` "close" → `CloseFrameAction`
               - `PrototypeVersionActions` "compare" → `CompareVersionAction`
               - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-            - Uses: 87 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
+            - Uses: 88 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/canvas/REFERENCE.md)
               - `primitives/css/ui-kit` ×9
               - `primitives/data-view` ×6
               - `primitives/collapsible` ×5
@@ -5782,6 +5753,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/pane` ×2
               - `primitives/slot-render` ×2
               - `apps-core/tabs.appLinkProps`
+              - `apps/prototypes/state.usePrototypeState`
               - `network/live.useLive`
               - `primitives/adaptive-bar.AdaptiveBar`
               - `primitives/css/badge.Badge`
@@ -5980,7 +5952,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/canvas.TitleActionButton`
               - `apps/prototypes/canvas.usePrototypeDetail`
               - `primitives/copy-to-clipboard.useCopyToClipboard`
-        - **`files`** — Registers the prototype id kind (`proto-…`) in the browser's id-kind registry. Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), mints new prototypes into it from the running checkout's prototypes/_template/, deletes one by recording deletedAt in its status (the folder stays; restorable, and undone for automated sessions), declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html> (data-* for a choice, a --<name> custom property for a color), stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), stores whether the user marked each prototype Done, pinned or deleted it as one shared record under _status/ (the prototypes.statuses resource, its PUT, DELETE and restore, undone the same way), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
+        - **`files`** — Registers the prototype id kind (`proto-…`) in the browser's id-kind registry. Serves raw prototype files from the host-global prototypes data dir (the `apps/prototypes` declaration — shared by every worktree and main, so a mock is visible without a build and without being committed), mints new prototypes into it from the running checkout's prototypes/_template/, declares the list + version live-state resources, watches the dir to auto-reload open iframes on edit, stamps a document's picked options (?<option>=<value>) onto its <html> (data-* for a choice, a --<name> custom property for a color), stores the user's option picks as one shared record per prototype under _picks/ (the prototypes.picks resource and its PUT, undone for automated sessions through the agent-write ledger), and keeps each prototype's version history (a private git repo per prototype under _history/: the per-prototype history resource, a version's files, restore, and checkpointPrototype).
           - Web:
             - Contributes: `IdKinds.Kind` "proto"
             - Uses: `ids.IdKinds`
@@ -5990,7 +5962,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resource.declare` "prototypes.history"
               - `resource.declare` "prototypes.list"
               - `resource.declare` "prototypes.picks"
-              - `resource.declare` "prototypes.statuses"
               - `resource.declare` "prototypes.versionCounts"
             - Uses:
               - `ids.IdKinds`
@@ -6004,22 +5975,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `checkpointPrototype`
               - `listPrototypeMetas`
               - `onPrototypesChanged`
+              - `prototypeExists`
               - `readPrototypeTitle`
             - Register: `defineFileWatcher('prototypes-files.tree')`
             - Resources:
               - `prototypes.history` (push, notified)
               - `prototypes.list` (push, notified)
               - `prototypes.picks` (push, notified)
-              - `prototypes.statuses` (push, notified)
               - `prototypes.versionCounts` (push, notified)
             - Routes:
               - `GET /api/prototypes`
               - `POST /api/prototypes`
-              - `DELETE /api/prototypes/:name`
               - `POST /api/prototypes/:name/versions/:sha/restore`
               - `PUT /api/prototypes/:name/picks`
-              - `PUT /api/prototypes/:name/status`
-              - `POST /api/prototypes/:name/restore`
           - Core:
             - Uses:
               - `ids.defineIdKind`
@@ -6044,20 +6012,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeMeta`
               - `PrototypeOption`
               - `PrototypeProblem`
-              - `PrototypeStatus`
-              - `PrototypeStatusChange`
-              - `PrototypeStatusEdit`
               - `PrototypeVersion`
               - `PrototypeVersionKind`
               - `PrototypeViewport`
               - `StoredPicks`
             - Exports (values):
               - `applyPicksChange`
-              - `applyPrototypeStatusChange`
               - `colorPickValue`
               - `createPrototype`
               - `DEFAULT_PROTOTYPE_VIEWPORT`
-              - `deletePrototype`
               - `describeOptionValues`
               - `foldOptions`
               - `groupOptions`
@@ -6070,7 +6033,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `listPrototypes`
               - `MocksDeclarationSchema`
               - `mocksProblemDetail`
-              - `NO_PROTOTYPE_STATUS`
               - `optionLabel`
               - `parseMocks`
               - `parseOptionColor`
@@ -6097,9 +6059,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeProblemSchema`
               - `PROTOTYPES_API_BASE`
               - `prototypesList`
-              - `PrototypeStatusChangeSchema`
-              - `prototypeStatuses`
-              - `PrototypeStatusSchema`
               - `prototypeUrl`
               - `prototypeVersionCounts`
               - `PrototypeVersionSchema`
@@ -6108,12 +6067,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `readOptionSource`
               - `readPrototypeOptions`
               - `resolvePicks`
-              - `restorePrototype`
               - `restorePrototypeVersion`
               - `setPrototypePicks`
-              - `setPrototypeStatus`
               - `SIZE_PRESETS`
-              - `statusOf`
               - `StoredPicksSchema`
               - `UNTITLED_PROTOTYPE`
               - `validatePrototypeFolder`
@@ -6125,11 +6081,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `active-data/prototype`
               - `apps/prototypes/canvas`
               - `apps/prototypes/checkpoints`
+              - `apps/prototypes/state`
               - `apps/prototypes/thumbnails`
               - `conversations/conversation-view/artifacts/prototype`
           - Exemptions:
-            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/paths.ts`, `server/internal/picks.ts`, `server/internal/signature.ts`, `server/internal/status.ts`, `server/internal/tree-path.ts`, `shared/folder-signature.ts`, `shared/history/lock.ts`, `shared/history/store.ts`, `shared/list-metas.ts`, `shared/mint.ts`, `shared/read-folder.ts`, `shared/record-store.ts`, `shared/template.ts`, `shared/legacy-trash.ts` (debt)
-        - **`gallery`** — Prototypes gallery list pane — one card per prototype over its rendered preview, on the prototype viewer's grid, with a Recently edited list; grouped (Pinned / In progress / Done) and filterable by a pin and a Done circle on every card and row (hover actions that stay shown while set; also in the detail pane's header), an undoable Delete on every card and in the detail header (deletedAt in the prototype's status — the folder stays), and a Trash view (its own source in the same view bar) listing the deleted ones with Restore — plus New prototype, which mints the folder before launching the agent that designs it.
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/paths.ts`, `server/internal/picks.ts`, `server/internal/signature.ts`, `server/internal/tree-path.ts`, `shared/folder-signature.ts`, `shared/history/lock.ts`, `shared/history/store.ts`, `shared/list-metas.ts`, `shared/mint.ts`, `shared/read-folder.ts`, `shared/record-store.ts`, `shared/template.ts` (debt)
+        - **`gallery`** — Prototypes gallery list pane — one card per prototype over its rendered preview, on the prototype viewer's grid, with a Recently edited list; grouped by its tag as nested sections along the prototypes' tag tree (or by status: Pinned / In progress / Done), with a pin and a Done circle on every card and row (hover actions that stay shown while set; also in the detail pane's header, beside the tag chip opening the shared tag picker), an undoable Delete on every card and in the detail header (deletedAt in the prototype's state — the folder stays), and a Trash view (its own source in the same view bar) listing the deleted ones with Restore — plus New prototype, which mints the folder before launching the agent that designs it.
           - Web:
             - Slots:
               - `prototypesGalleryPane.Actions`
@@ -6146,6 +6103,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "prototypes-gallery"
               - `sources` "Prototypes" → `GallerySource`
               - `sources` "Trash" → `TrashSource`
+              - `prototypeDetailPane.Actions` "tag" → `TagHeaderAction`
               - `prototypeDetailPane.Actions` "pin" → `PinHeaderAction`
               - `prototypeDetailPane.Actions` "done" → `DoneHeaderAction`
               - `prototypeDetailPane.Actions` "delete" → `DeleteHeaderAction`
@@ -6153,21 +6111,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeCardActions` "done" → `DoneCardAction`
               - `PrototypeCardActions` "delete" → `DeleteCardAction`
               - `trash-actions` "restore" → `RestoreCardAction`
-            - Uses: 33 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/gallery/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/gallery/REFERENCE.md)
+            - Uses: 40 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/gallery/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/gallery/REFERENCE.md)
               - `primitives/data-view` ×7
               - `apps/prototypes/canvas` ×4
               - `infra/endpoints` ×4
+              - `apps/prototypes/state` ×3
               - `primitives/live-state` ×3
               - `primitives/pane` ×3
               - `apps/prototypes/thumbnails` ×2
               - `primitives/css/ui-kit` ×2
+              - `tag-tree/picker` ×2
               - `network/live.useLive`
               - `primitives/css/badge.Badge`
               - `primitives/icon-button.IconButton`
               - `primitives/launch.LaunchAgentPopover`
+              - `primitives/loading.Loading`
               - `primitives/relative-time.RelativeTime`
               - `shell/notifications.useToast`
               - `shell/toast.showToast`
+              - `tag-tree/engine.useTagTree`
               - `ui/icons.Icon`
             - Exports (types): `PrototypeGalleryRow`
             - Exports (values):
@@ -6175,7 +6137,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `newPrototypePrompt`
               - `PrototypeCardActions`
               - `prototypesGalleryPane`
-              - `useSetPrototypeStatus`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --accent`
@@ -6265,6 +6226,90 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow --shadow-popover`
               - `ui/tokens/shadow --shadow-xl`
               - `ui/tokens/shape --radius`
+        - **`state`** — Per-instance prototype state, web half: registers the prototype tag id kind (`prtag-…`), and the hooks reading and writing a prototype's pinned / Done / tag state (usePrototypeStates, usePrototypeState, useSetPrototypeState). Per-instance prototype state in the DB: the prototype_state table (pinned, Done, one tag per prototype, deletedAt) and its PATCH, the delete / restore endpoints (deleted is a field — the folder stays), the prototypes' tag tree (prototype_tags, served through the tag-tree engine; a deleted tag's prototypes move to its parent), both live collections, the one-time import of the retired host-global _status/<id>.json records into an empty table, and (main only) the adoption of the old _trash/<id>/ folders as deleted prototypes.
+          - Web:
+            - Contributes: `IdKinds.Kind` "prtag"
+            - Uses:
+              - `ids.IdKinds`
+              - `infra/endpoints.useEndpointMutation`
+              - `network/live.mapRow`
+              - `network/live.useLive`
+              - `network/live.useLiveRow`
+            - Exports (values):
+              - `usePrototypeState`
+              - `usePrototypeStates`
+              - `useSetPrototypeState`
+          - Server:
+            - Contributes:
+              - `ids.kind` "prtag"
+              - `resource.declare` "prototypes.state.all"
+              - `resource.declare` "prototypes.state.all:rows"
+              - `resource.declare` "prototypes.tags.all"
+              - `resource.declare` "prototypes.tags.all:rows"
+              - `tag-tree.tree` "prototypes"
+            - Uses:
+              - `apps/prototypes/files.prototypeExists`
+              - `database.db`
+              - `ids.IdKinds`
+              - `infra/endpoints.HttpError`
+              - `infra/endpoints.implement`
+              - `infra/entities.defaultNow`
+              - `infra/entities.defineEntity`
+              - `infra/warmup.defineWarmup`
+              - `network/live.serveCollection`
+              - `tag-tree/engine.defineTagTreeTable`
+              - `tag-tree/engine.serveTagTree`
+              - `tag-tree/engine.singleTagCarrier`
+              - `tag-tree/engine.TagTrees`
+            - DB schema: `plugins/apps/plugins/prototypes/plugins/state/server/internal/tables.ts`
+            - Register:
+              - `defineWarmup('prototypes.import-status-files')`
+              - `defineWarmup('prototypes.adopt-legacy-trash')`
+            - Resources:
+              - `prototypes.state.all` (keyed)
+              - `prototypes.state.all:rows` (keyed, point)
+              - `prototypes.tags.all` (keyed)
+              - `prototypes.tags.all:rows` (keyed, point)
+            - Routes:
+              - `PATCH /api/prototypes/:name/state`
+              - `DELETE /api/prototypes/:name`
+              - `POST /api/prototypes/:name/restore`
+          - Core:
+            - Uses:
+              - `apps/prototypes/files.protoIdKind`
+              - `fields.nullable`
+              - `fields/bool/config.boolField`
+              - `fields/date/config.dateField`
+              - `fields/text/config.textField`
+              - `ids.defineIdKind`
+              - `ids.idKindField`
+              - `infra/endpoints.defineEndpoint`
+              - `infra/entities.entityRef`
+              - `network/live.liveCollection`
+              - `tag-tree/engine.defineTagTree`
+              - `tag-tree/engine.tagTreeEntityRef`
+            - Exports (types):
+              - `PrototypeState`
+              - `PrototypeStateChange`
+            - Exports (values):
+              - `deletePrototype`
+              - `NO_PROTOTYPE_STATE`
+              - `PrototypeStateChangeSchema`
+              - `prototypeStateEntityRef`
+              - `prototypeStateFields`
+              - `prototypeStates`
+              - `prototypeTagIdKind`
+              - `prototypeTags`
+              - `prototypeTagsEntityRef`
+              - `prototypeTagTree`
+              - `restorePrototype`
+              - `setPrototypeState`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/prototypes/canvas`
+              - `apps/prototypes/gallery`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/import-status-files.ts`, `server/internal/legacy-trash.ts` (debt)
         - **`thumbnails`** — The rendered-preview cover for a prototype card: the cached PNG, the caller's fallback while it renders, and a visible 'Preview failed' marker carrying the reason. Rendered PNG previews for the prototypes gallery: a content-addressed disk cache, a headless-chromium render job driven by the files watcher, the push state resource the cards read, and the immutable serving route.
           - Server:
             - Contributes: `resource.declare` "prototypes.thumbnails"
@@ -18789,8 +18834,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadKnownRelations`
       - `quotedRelationsIn`
   - Cross-plugin:
-    - Imported by: 121 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
-      - `apps` ×33
+    - Imported by: 123 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+      - `apps` ×34
       - `page` ×15
       - `infra` ×13
       - `conversations` ×12
@@ -18813,6 +18858,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `release`
       - `search/engine`
       - `shell/notifications`
+      - `tag-tree/engine`
       - `ui/theme-engine/saved-themes`
   - Exemptions:
     - Exempts itself from: `boundaries/no-platform-api` — `core/internal/config.ts` (debt)
@@ -22506,13 +22552,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`fields`** — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
   - Web:
     - Slots: `Fields.Identity`
-    - Slot contributors: 27 contributors — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
-      - `Fields.Identity` ×27
+    - Slot contributors: 28 contributors — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+      - `Fields.Identity` ×28
     - Exports (values): `Fields`
   - Cross-plugin:
-    - Imported by: 104 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
-      - `fields` ×50
-      - `apps` ×12
+    - Imported by: 107 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+      - `fields` ×51
+      - `apps` ×13
       - `conversations` ×8
       - `debug` ×5
       - `infra` ×5
@@ -22531,6 +22577,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `reports`
       - `runs`
       - `shell/notifications`
+      - `tag-tree/engine`
   - Core:
     - Exports (types):
       - `DeclaredDefault`
@@ -22666,9 +22713,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boolField`
               - `boolSample`
           - Cross-plugin:
-            - Imported by: 30 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
+            - Imported by: 31 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
               - `debug` ×11
-              - `apps` ×7
+              - `apps` ×8
               - `conversations` ×4
               - `tasks` ×2
               - `history/engine`
@@ -22850,8 +22897,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `DateFieldDef`
             - Exports (values): `dateField`
           - Cross-plugin:
-            - Imported by: 47 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
-              - `apps` ×9
+            - Imported by: 49 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
+              - `apps` ×10
               - `conversations` ×9
               - `debug` ×5
               - `infra` ×5
@@ -22867,6 +22914,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reports`
               - `runs`
               - `shell/notifications`
+              - `tag-tree/engine`
         - **`data-view-codec`** — Date field type: data-view custom-column value codec (native Date ↔ canonical ISO text).
           - Web:
             - Contributes: `DataViewSlots.ValueCodec` "date"
@@ -23123,7 +23171,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `enumFieldType`
           - `enumIdentity`
       - Cross-plugin:
-        - Imported by: `fields/enum/config`
+        - Imported by:
+          - `fields/enum/config`
+          - `fields/tag`
       - Plugins:
         - **`column-config`** — Enum field type: data-view custom-column add-time config editor (options add/rename/remove), plus the projection of that config onto the generic FieldDef.options.
           - Web:
@@ -23372,9 +23422,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `intField`
               - `intSample`
           - Cross-plugin:
-            - Imported by: 38 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
+            - Imported by: 37 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
               - `debug` ×12
-              - `apps` ×9
+              - `apps` ×8
               - `infra` ×4
               - `conversations` ×3
               - `backup` ×2
@@ -23737,6 +23787,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversations-view/queue`
               - `page/block-entity`
               - `page/editor`
+              - `tag-tree/engine`
               - `tasks/tasks-core`
         - **`storage`** — Rank field type: DB storage capability — maps to the rank_text (C-collation) Postgres domain column.
           - Server:
@@ -23964,6 +24015,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `fields/server-capabilities.Fields`
           - Cross-plugin:
             - Imported by: `fields/server-capabilities-loader`
+    - **`tag`** — Tag field type: identity only, extends enum — one value out of an option forest, reusing enum's cell, filter and inline editor via the extends chain. Its nested grouping lives in the plugins/data-view-group sub-plugin.
+      - Web:
+        - Contributes: `Fields.Identity` "tag"
+        - Uses: `fields.Fields`
+      - Core:
+        - Uses:
+          - `fields.defineFieldIdentity`
+          - `fields.defineFieldType`
+          - `fields/enum.enumFieldType`
+          - `ui/icons.symbol`
+        - Exports (values):
+          - `tagFieldType`
+          - `tagIdentity`
+      - Plugins:
+        - **`data-view-group`** — Tag field type: data-view grouping strategy — one section per tag, nested along the option forest (`FieldOption.parent`), labelled, ordered and coloured by `field.options`.
+          - Web:
+            - Contributes: `DataViewSlots.Grouping` "tag"
+            - Uses: `primitives/data-view.DataViewSlots`
+          - Core:
+            - Exports (values): `tagGroupings`
     - **`tags`** — Tags (multi-value) field type: identity only. The data-view filter (multi-select tag chips with array-aware match-any) lives in the plugins/filter sub-plugin.
       - Web:
         - Contributes: `Fields.Identity` "tags"
@@ -24104,8 +24175,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 70 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
-              - `apps` ×18
+            - Imported by: 72 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+              - `apps` ×19
               - `conversations` ×15
               - `tasks` ×9
               - `debug` ×5
@@ -24123,6 +24194,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reports`
               - `runs`
               - `shell/notifications`
+              - `tag-tree/engine`
         - **`filter`** — Text field type: data-view filter operator set (contains / is / is-empty …).
           - Web:
             - Contributes: `DataViewSlots.Filter` "text"
@@ -25042,7 +25114,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/file-explorer/git` (2 debt)
               - `apps/pages/content-search` (1 debt)
               - `apps/places/place-details` (1 debt)
-              - `apps/prototypes/files` (14 debt)
+              - `apps/prototypes/files` (12 debt)
+              - `apps/prototypes/state` (2 debt)
               - `apps/prototypes/thumbnails` (3 debt)
               - `apps/sonata/covers` (1 debt)
               - `apps/sonata/sources/midi` (1 debt)
@@ -26610,8 +26683,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Slots:
       - `IdKinds.Kind`
       - `IdKinds.Presenter`
-    - Slot contributors: 36 contributors — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
-      - `IdKinds.Kind` ×27
+    - Slot contributors: 37 contributors — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+      - `IdKinds.Kind` ×28
       - `IdKinds.Presenter` ×9
     - Exports (types):
       - `IdPresenter`
@@ -26663,8 +26736,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `parseKindLabel`
       - `storedIdSchema`
   - Cross-plugin:
-    - Imported by: 32 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
-      - `apps` ×10
+    - Imported by: 34 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+      - `apps` ×11
       - `conversations` ×5
       - `primitives` ×3
       - `build` ×2
@@ -26677,6 +26750,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `plugin-meta/plugin-health`
       - `reports`
       - `shell/notifications`
+      - `tag-tree/engine`
 
 - **`improve`** — Toolbar button for app-improvement feedback. Files a task under "Improvements" with the current URL. Companion actions join it as segments of one split pill via ImproveSlots.Segment. Toolbar button and category for app-improvement feedback. Files tasks stamped "Improvements" via the shared task-draft-form primitive.
   - Web:
@@ -27739,8 +27813,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 224 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×55
+        - Imported by: 227 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×56
           - `conversations` ×32
           - `page` ×20
           - `debug` ×19
@@ -27757,6 +27831,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `history` ×2
           - `integrations` ×2
           - `screenshot` ×2
+          - `tag-tree` ×2
           - `apps-core/app-usage`
           - `backup`
           - `database/fork`
@@ -27837,8 +27912,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `entityRef`
           - `wireSchema`
       - Cross-plugin:
-        - Imported by: 38 plugins — full list in [`plugins/infra/plugins/entities/REFERENCE.md`](../plugins/infra/plugins/entities/REFERENCE.md)
-          - `apps` ×8
+        - Imported by: 40 plugins — full list in [`plugins/infra/plugins/entities/REFERENCE.md`](../plugins/infra/plugins/entities/REFERENCE.md)
+          - `apps` ×9
           - `conversations` ×7
           - `infra` ×5
           - `debug` ×4
@@ -27852,6 +27927,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `release`
           - `reports`
           - `shell/notifications`
+          - `tag-tree/engine`
           - `tasks/tasks-core`
     - **`entity-extensions`** — Lets sub-plugins attach typed DB fields to a parent's entity table via 1:1 side-tables. Each consumer owns its <parent>_ext_<name> table; FK CASCADE on parent delete.
       - Server:
@@ -30250,6 +30326,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/pages/auto-icon`
           - `apps/pages/content-search`
           - `apps/places/places-core`
+          - `apps/prototypes/state`
           - `apps/sonata/sources/midi/folders`
           - `infra/corpus-index`
           - `infra/warmup/background-arm`
@@ -31491,8 +31568,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveCollectionOn`
           - `serveValueOn`
       - Cross-plugin:
-        - Imported by: 278 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `apps` ×75
+        - Imported by: 280 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `apps` ×76
           - `conversations` ×50
           - `tasks` ×28
           - `debug` ×27
@@ -31520,6 +31597,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports`
           - `runs`
           - `shell/notifications`
+          - `tag-tree/engine`
       - Exemptions:
         - Exempts itself from:
           - `live/no-legacy-resource-spelling` — `.` (sanctioned)
@@ -36792,7 +36870,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 118 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+            - Imported by: 119 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
               - `apps` ×35
               - `primitives` ×25
               - `page` ×17
@@ -36812,6 +36890,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `layouts/route-fallback`
               - `reorder/node-types/header`
               - `screenshot`
+              - `tag-tree/picker`
         - **`clip`** — Clipping layout primitive: <Clip axis fill> hides overflow without scrolling. Sibling of Scroll, kept orthogonal.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
@@ -37032,9 +37111,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `placedClasses`
               - `placedStyle`
           - Cross-plugin:
-            - Imported by: 39 plugins — full list in [`plugins/primitives/plugins/css/plugins/coords/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/coords/REFERENCE.md)
+            - Imported by: 40 plugins — full list in [`plugins/primitives/plugins/css/plugins/coords/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/coords/REFERENCE.md)
               - `apps` ×18
-              - `primitives` ×9
+              - `primitives` ×10
               - `debug` ×3
               - `hints` ×2
               - `page` ×2
@@ -37055,7 +37134,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 165 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+            - Imported by: 166 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
               - `apps` ×47
               - `primitives` ×29
               - `conversations` ×25
@@ -37074,13 +37153,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `auth`
               - `build/deployment`
               - `code-explorer/commit-detail`
+              - `tag-tree/picker`
         - **`grid`** — Responsive/uniform grid layout primitive: <Grid minCellWidth> lays out a wrapping, equal-width card grid via a closed prop surface — not a raw grid-template passthrough.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
             - Exports (types): `GridProps`
             - Exports (values): `Grid`
           - Cross-plugin:
-            - Imported by: 40 plugins — full list in [`plugins/primitives/plugins/css/plugins/grid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/grid/REFERENCE.md)
+            - Imported by: 41 plugins — full list in [`plugins/primitives/plugins/css/plugins/grid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/grid/REFERENCE.md)
               - `apps` ×18
               - `primitives` ×9
               - `ui` ×3
@@ -37090,6 +37170,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/claude-cli`
               - `page/formatting/color`
               - `screenshot`
+              - `tag-tree/picker`
               - `tasks/task-triage`
         - **`grow`** — Growing-cell layout primitive: growClass() is the flex child that takes the row's slack (flex-1) while staying floored at its own content width. The half of <Fill> that grows, without the half that gives.
           - Cross-plugin:
@@ -37224,7 +37305,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 118 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+            - Imported by: 119 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
               - `apps` ×32
               - `primitives` ×19
               - `conversations` ×18
@@ -37244,6 +37325,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `hints/ask`
               - `integrations/youtube`
               - `map`
+              - `tag-tree/picker`
         - **`link-chip`** — Inline, clickable navigational chip — a clickable Badge drawn as an outlined tile (bg-muted, hairline border, hover:bg-accent) rather than as underlined link text, its label sitting on the baseline of the sentence holding it. A proportional label takes one text rung above a plain Badge so it holds up beside body copy; a monospace label keeps Badge's own rung, the size markdown gives inline code in the same prose, because the mono face already sets wider at any given rung. Its passthrough lands on the chip's own button, so it can be an overlay trigger.
           - Web:
             - Uses:
@@ -37605,7 +37687,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 409 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 410 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×106
               - `conversations` ×65
               - `primitives` ×54
@@ -37637,6 +37719,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `music/chord-box`
               - `reports/launch-fix`
               - `search/quick-find`
+              - `tag-tree/picker`
         - **`spinner`** — Spinner for loading states: the spinning refresh glyph (default) or, with shape="ring", a thin ring (hover-tone track, current-colour arc). Always spinning by default; spinning={false} pauses.
           - Web:
             - Uses:
@@ -37831,7 +37914,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×36
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 382 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 383 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×105
               - `conversations` ×73
               - `primitives` ×43
@@ -37861,6 +37944,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `history/dialog`
               - `layouts/route-fallback`
               - `search/quick-find`
+              - `tag-tree/picker`
           - Core:
             - Exports (types):
               - `TextTreatment`
@@ -38122,7 +38206,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family` ×4
               - `ui/tokens/material` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 428 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 429 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×109
               - `apps` ×95
               - `conversations` ×55
@@ -38154,6 +38238,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `music/chord-box`
               - `search/quick-find`
               - `stats/commits`
+              - `tag-tree/picker`
           - Exemptions:
             - Exempts itself from:
               - `surface/no-adhoc-surface` — `web/components/ui` (sanctioned)
@@ -38351,14 +38436,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.ValueCodec`
           - `DataViewSlots.Grouping`
           - `DataViewSlots.ColumnConfig`
-        - Slot contributors: 51 contributors — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Slot contributors: 52 contributors — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `DataViewSlots.Cell` ×10
           - `DataViewSlots.CollectionItemAction` ×7
           - `DataViewSlots.Filter` ×7
           - `DataViewSlots.CellEditor` ×6
           - `DataViewSlots.View` ×5
           - `DataViewSlots.CollectionRowActivation` ×4
-          - `DataViewSlots.Grouping` ×3
+          - `DataViewSlots.Grouping` ×4
           - `DataViewSlots.ValueCodec` ×3
           - `DataViewSlots.Setting` ×2
           - `DataViewSlots.ColumnConfig` ← `fields.enum.column-config`
@@ -38370,7 +38455,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×3
           - `DataViewSlots.Setting` ×3
           - `IdKinds.Kind` ×2
-        - Uses: 115 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 116 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `network/live` ×18
           - `primitives/css/ui-kit` ×15
           - `primitives/data-view/view-core` ×9
@@ -38399,6 +38484,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ids.IdKinds`
           - `primitives/css/center.Center`
           - `primitives/css/clip.Clip`
+          - `primitives/css/coords.Placed`
           - `primitives/css/inline.Inline`
           - `primitives/css/layer.Layer`
           - `primitives/css/line.Line`
@@ -38562,6 +38648,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `liveDataSource`
           - `makeSortComparator`
           - `MissingDataCellError`
+          - `NestedSectionIndent`
           - `partitionCardFields`
           - `partitionIntoSections`
           - `pickCoverField`
@@ -38682,6 +38769,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FilterValueInputProps`
           - `FoldRule`
           - `GroupBucket`
+          - `GroupBucketAncestor`
           - `GroupByRule`
           - `GroupingPlanContext`
           - `HierarchyConfig`
@@ -38746,16 +38834,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `scopeFilterRows`
           - `SHARED_FIELD_SECTION`
           - `splitFieldSections`
+          - `sumSectionCounts`
           - `UNGROUPED_FOLD_KEY`
+          - `visibleSections`
       - Cross-plugin:
-        - Uses tokens: 42 vars — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ui/tokens/density` ×15
-          - `ui/tokens/color-palette` ×11
+        - Uses tokens: 45 vars — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ui/tokens/density` ×17
+          - `ui/tokens/color-palette` ×12
           - `ui/tokens/type-scale` ×10
           - `ui/tokens/shadow` ×3
           - `ui/tokens/shape` ×3
-        - Imported by: 103 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `fields` ×30
+        - Imported by: 104 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `fields` ×31
           - `apps` ×24
           - `debug` ×13
           - `primitives` ×10
@@ -39052,8 +39142,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort, and nests its rows (a tree is a table with no columns) when the source has a hierarchy.
           - Web:
             - Contributes: `DataViewSlots.View` "Table" → `TableView`
-            - Uses: 66 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md)
-              - `primitives/data-view` ×33
+            - Uses: 67 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/table/REFERENCE.md)
+              - `primitives/data-view` ×34
               - `primitives/tree` ×18
               - `primitives/data-table` ×6
               - `primitives/rank-reorder` ×3
@@ -40218,7 +40308,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 122 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 123 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×40
           - `conversations` ×21
           - `primitives` ×21
@@ -40237,6 +40327,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fullscreen`
           - `map/google`
           - `plugin-meta/exhibits`
+          - `tag-tree/picker`
     - **`icon-picker`** — Searchable, categorized picker over the Material Symbols set: a windowed grid of runtime-symbol cells browsing and searching Google's vendored Material Symbols metadata; onSelect hands back the picked SavedSymbolName. avatar, the page icon button and the callout panel compose it.
       - Web:
         - Uses:
@@ -40732,8 +40823,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 200 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
-          - `apps` ×64
+        - Imported by: 202 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+          - `apps` ×65
           - `ui` ×21
           - `conversations` ×19
           - `debug` ×19
@@ -40760,6 +40851,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `screenshot`
           - `search/quick-find`
           - `shell/notifications`
+          - `tag-tree/picker`
     - **`log-channels`** — Persistent log-channel substrate: clientLog browser emitter that buffers and flushes log lines over plain HTTP to the per-worktree JSONL files. Server barrel owns Log/persist/registry and the /api/logs/emit + /ws/logs routes; debug/logs is the viewer.
       - Server:
         - Contributes: `host-service:log-channels.persistence` "log-channels.persistence"
@@ -41821,7 +41913,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlinePopoverProps`
             - Exports (values): `InlinePopover`
           - Cross-plugin:
-            - Imported by: 28 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md)
+            - Imported by: 29 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/popover/REFERENCE.md)
               - `page` ×6
               - `primitives` ×5
               - `apps` ×4
@@ -41831,6 +41923,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `shell` ×2
               - `build`
               - `config_v2/settings`
+              - `tag-tree/picker`
               - `tasks/task-draft-form`
         - **`popup-open`** — Typed 'is a popup open inside me' signal: PopupOpenScope aggregates every popup opened under it and hands the boolean to its render-prop child; ui-kit's Root wrappers publish it via useReportPopupOpen. Replaces CSS selectors that named a popup library's own attribute contract. Sits below ui-kit (imports only react) so ui-kit can consume it without a cycle.
           - Cross-plugin:
@@ -42410,6 +42503,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/markdown-apply`
           - `primitives/data-view/view-order`
           - `primitives/tree`
+          - `tag-tree/engine`
           - `tasks`
           - `tasks/tasks-core`
       - Web:
@@ -42453,6 +42547,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/data-view/list`
           - `primitives/data-view/table`
           - `primitives/tree`
+          - `tag-tree/picker`
       - Exemptions:
         - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
@@ -42674,13 +42769,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --line-height-body`
           - `ui/tokens/type-scale --line-height-label`
         - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/search/REFERENCE.md`](../plugins/primitives/plugins/search/REFERENCE.md)
-          - `apps` ×13
+          - `apps` ×12
           - `primitives` ×4
           - `page` ×2
           - `ui` ×2
           - `conversations/conversation-view/dependencies`
           - `debug/read-set`
           - `search/quick-find`
+          - `tag-tree/picker`
     - **`section-card`** — Titled collapsible card primitive: Card chrome + a SectionHeaderRow trigger (chevron, icon, title, sibling header actions) + an unmounted-while-collapsed body. The sanctioned home for the 'card whose title expands it' shape, so a stack of such cards is uniform by construction.
       - Web:
         - Uses:
@@ -43637,6 +43733,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/data-view`
           - `primitives/data-view/list`
           - `primitives/data-view/table`
+          - `tag-tree/picker`
           - `ui/tree-disclosure`
           - `ui/tree-disclosure/column`
           - `ui/tree-disclosure/dimmed-leaf`
@@ -46370,6 +46467,179 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasksHistory`
           - `velocitySeries`
 
+- **`tag-tree`** — Umbrella for nested tag trees: one per-plugin table of tags (name, parent, colour, icon, fractional rank) declared in three lines, served through one endpoint set, and picked, created, renamed, recoloured, nested and reordered in one shared picker.
+  - Plugins:
+    - **`engine`** — Tag-tree engine (web): useTagTree reads a declared tree live (the whole tree, in rank order) and useTagTreeActions binds the engine's create / create-path / update / move / delete endpoints to it. Tag-tree engine (server): defineTagTreeTable builds a tree's table from its ref, serveTagTree + the TagTrees.Tree contribution register a tree with its carriers, and the ONE /api/tag-trees/:tree endpoint set writes any registered tree under a table lock — create (unique sibling names, appended rank), create path, update, move (positional intent, cycles refused) and delete (children lifted to the parent at the tag's position, carriers rewritten).
+      - Web:
+        - Uses:
+          - `infra/endpoints.useEndpointMutation`
+          - `network/live.useLive`
+        - Exports (types): `TagTreeActions`
+        - Exports (values):
+          - `useTagTree`
+          - `useTagTreeActions`
+      - Server:
+        - Uses:
+          - `database.db`
+          - `infra/endpoints.HttpError`
+          - `infra/endpoints.implement`
+          - `infra/entities.DefaultedKeys`
+          - `infra/entities.defaultNow`
+          - `infra/entities.defineEntity`
+          - `infra/entities.Entity`
+          - `infra/entities.EntityMetaBase`
+          - `primitives/rank.rankAdjacentTo`
+        - DB schema: `plugins/tag-tree/plugins/engine/server/internal/table.ts`
+        - Exports (types):
+          - `ServedTagTree`
+          - `TagCarrier`
+          - `TagTreeColumnsMeta`
+          - `TagTreeTable`
+          - `TagTreeTableHandle`
+          - `TagTreeTableMeta`
+          - `TagTreeTx`
+        - Exports (values):
+          - `defineTagTreeTable`
+          - `serveTagTree`
+          - `singleTagCarrier`
+          - `TagTrees`
+        - Routes:
+          - `POST /api/tag-trees/:tree/tags`
+          - `POST /api/tag-trees/:tree/paths`
+          - `PATCH /api/tag-trees/:tree/tags/:id`
+          - `POST /api/tag-trees/:tree/tags/:id/move`
+          - `DELETE /api/tag-trees/:tree/tags/:id`
+      - Core:
+        - Uses:
+          - `fields.FieldDef`
+          - `fields.FieldsRecord`
+          - `fields.fieldsToZodObject`
+          - `fields.nullable`
+          - `fields/date/config.dateField`
+          - `fields/rank/config.rankField`
+          - `fields/text/config.enumTextField`
+          - `fields/text/config.parsedTextField`
+          - `fields/text/config.textField`
+          - `ids.IdKind`
+          - `ids.idKindField`
+          - `infra/endpoints.defineEndpoint`
+          - `infra/entities.entityRef`
+          - `infra/entities.EntityRef`
+          - `ui/icons/saved-names.parseSavedSymbolName`
+          - `ui/icons/saved-names.SavedSymbolNameSchema`
+        - Exports (types):
+          - `AnyTagTreeEntityRef`
+          - `AnyTagTreeFields`
+          - `ChildColorMode`
+          - `CreateTagBody`
+          - `CreateTagPathBody`
+          - `CreateTagPathResult`
+          - `ExtraKeyOf`
+          - `MoveTagBody`
+          - `NamedTagNode`
+          - `ResolvedTagSegment`
+          - `TagNode`
+          - `TagRow`
+          - `TagTree`
+          - `TagTreeBaseFields`
+          - `TagTreeBaseKey`
+          - `TagTreeEntityRef`
+          - `TagTreeEntry`
+          - `TagTreeFields`
+          - `UpdateTagBody`
+        - Exports (values):
+          - `CHILD_COLOR_MODES`
+          - `createTag`
+          - `CreateTagBodySchema`
+          - `createTagPath`
+          - `CreateTagPathBodySchema`
+          - `CreateTagPathResultSchema`
+          - `defineTagTree`
+          - `deleteTag`
+          - `flattenTagTree`
+          - `freeSiblingName`
+          - `HexColorSchema`
+          - `isTagUnder`
+          - `moveTag`
+          - `MoveTagBodySchema`
+          - `parseTagPath`
+          - `rampShade`
+          - `resolveTagPath`
+          - `rolledUpTagCounts`
+          - `TAG_PALETTE`
+          - `TAG_TREE_BASE_KEYS`
+          - `tagColor`
+          - `tagDescendants`
+          - `tagFieldOptions`
+          - `tagPath`
+          - `tagPathLabel`
+          - `TagRowSchema`
+          - `tagTreeEntityRef`
+          - `tagTreeFields`
+          - `updateTag`
+          - `UpdateTagBodySchema`
+          - `wouldCycle`
+      - Cross-plugin:
+        - Imported by:
+          - `apps/places/places-core`
+          - `apps/places/places-map`
+          - `apps/places/tag-manager`
+          - `apps/prototypes/gallery`
+          - `apps/prototypes/state`
+          - `tag-tree/picker`
+    - **`picker`** — The shared tag picker: TagPickerPanel (pure — search or create a typed path, the foldable tree with rolled-up counts, inline create and rename, a ⋯ menu to recolour, nest out and delete, whole-row drag to reorder and nest), TagPickerPopover wiring it to a declared tree, the TagPathChip header chip and TagMark.
+      - Web:
+        - Uses: 29 symbols — full list in [`plugins/tag-tree/plugins/picker/REFERENCE.md`](../plugins/tag-tree/plugins/picker/REFERENCE.md)
+          - `primitives/css/ui-kit` ×8
+          - `primitives/tree` ×5
+          - `primitives/css/spacing` ×2
+          - `tag-tree/engine` ×2
+          - `infra/endpoints.EndpointError`
+          - `primitives/css/center.Center`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/grid.Grid`
+          - `primitives/css/line.Line`
+          - `primitives/css/text.Text`
+          - `primitives/icon-button.IconButton`
+          - `primitives/loading.Loading`
+          - `primitives/overlay/popover.InlinePopover`
+          - `primitives/rank-reorder.RankReorderDndContext`
+          - `primitives/search.SearchInput`
+          - `ui/icons.Icon`
+        - Exports (types):
+          - `TagMarkProps`
+          - `TagPathChipProps`
+          - `TagPickerOptions`
+          - `TagPickerPanelProps`
+          - `TagPickerPopoverProps`
+          - `TagPickerWrites`
+        - Exports (values):
+          - `TagMark`
+          - `TagPathChip`
+          - `TagPickerPanel`
+          - `TagPickerPopover`
+      - Cross-plugin:
+        - Uses tokens:
+          - `ui/tokens/color-palette --background`
+          - `ui/tokens/color-palette --border`
+          - `ui/tokens/color-palette --faint-foreground`
+          - `ui/tokens/color-palette --foreground`
+          - `ui/tokens/color-palette --muted`
+          - `ui/tokens/color-palette --muted-foreground`
+          - `ui/tokens/color-palette --primary`
+          - `ui/tokens/color-palette --primary-text`
+          - `ui/tokens/color-palette --strong-foreground`
+          - `ui/tokens/density --space-2xs`
+          - `ui/tokens/density --space-sm`
+          - `ui/tokens/density --space-xs`
+          - `ui/tokens/shape --radius`
+          - `ui/tokens/shape --spacing`
+          - `ui/tokens/type-scale --font-weight-medium`
+          - `ui/tokens/type-scale --font-weight-semibold`
+        - Imported by:
+          - `apps/places/places-map`
+          - `apps/prototypes/gallery`
+
 - **`tasks`** — Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations: the task CRUD, chain, dependency and auto-start routes, portable (arming a task wakes the launcher through the tasks.autoStartArmed trigger event). Launching, the repo info, the add_task MCP tool and the auto-start catch-up are the machine half's.
   - Server:
     - Contributes: `resource.declare` "tasks.repo-info"
@@ -48597,12 +48867,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 316 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 318 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×72
           - `conversations` ×59
           - `primitives` ×41
           - `page` ×40
-          - `fields` ×34
+          - `fields` ×35
           - `debug` ×14
           - `ui` ×8
           - `tasks` ×7
@@ -48625,6 +48895,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `map`
           - `reports/launch-fix`
           - `screenshot`
+          - `tag-tree/picker`
       - Exemptions:
         - Exempts itself from:
           - `icons/reserved-nav-icon` — `core/nav-icons.ts` (sanctioned)
@@ -48773,6 +49044,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields/icon/config`
               - `page/callout`
               - `primitives/icon-picker`
+              - `tag-tree/engine`
           - Core:
             - Exports (values):
               - `allSavedSymbolNames`
@@ -49675,7 +49947,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Tokens used by: 509 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 510 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×111
               - `conversations` ×89
               - `primitives` ×77
@@ -49710,6 +49982,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `music/chord-box`
               - `release/runs-arm`
               - `search/quick-find`
+              - `tag-tree/picker`
         - **`density`** — Density token group (padding intents, control heights, the spacing ramp) with its customizer section and "Fill from…" shortcuts.
           - Web:
             - Contributes:
@@ -49735,7 +50008,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 325 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 326 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `primitives` ×69
               - `apps` ×66
               - `conversations` ×49
@@ -49766,6 +50039,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `layouts/miller`
               - `reports/launch-fix`
               - `search/quick-find`
+              - `tag-tree/picker`
         - **`file-type-palette`** — File-type colour token group: the closed --file-<tone> tints file-type glyphs are drawn in (Seti's palette on dark, darkened on light) and the --folder tint, with their customizer section.
           - Web:
             - Contributes:
@@ -50090,7 +50364,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 425 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 426 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×94
               - `apps` ×84
               - `primitives` ×70
@@ -50121,6 +50395,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `map/pin-layer`
               - `reports/launch-fix`
               - `search/quick-find`
+              - `tag-tree/picker`
         - **`sidebar-metrics`** — Sidebar metrics token group (panel width, nav row height, padding, icon size, icon gap — no type: the nav label is the `label` role) with its customizer section.
           - Web:
             - Contributes:
@@ -50220,7 +50495,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 228 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+            - Tokens used by: 229 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
               - `apps` ×58
               - `primitives` ×38
               - `conversations` ×37
@@ -50246,6 +50521,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `layouts/miller`
               - `screenshot`
               - `search/quick-find`
+              - `tag-tree/picker`
           - Exemptions:
             - Exempts itself from: `type-scale:closed-role-ladder:raw-vars` — `.` (sanctioned)
     - **`tree-disclosure`** — Tree-row disclosure region (merged / dimmed-leaf / column). Contributes its variant-region host into Tree.Disclosure.

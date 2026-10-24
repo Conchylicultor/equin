@@ -24,13 +24,17 @@ import {
   placeFlags,
   placeName,
   places as placesCollection,
-  tagPath,
+  placeTagTree,
   type Place,
   type PlaceTag,
 } from "@plugins/apps/plugins/places/plugins/places-core/core";
 import {
+  freeSiblingName,
+  tagPath,
+} from "@plugins/tag-tree/plugins/engine/core";
+import { useTagTreeActions } from "@plugins/tag-tree/plugins/engine/web";
+import {
   useCreateCustomPlace,
-  useCreatePlaceTag,
   useDeletePlace,
   usePlaces,
   usePlaceTags,
@@ -168,7 +172,7 @@ function PlacesSurface({
     null,
   );
   const [pinPick, setPinPick] = useState<PinPick | null>(null);
-  const { mutateAsync: createTag } = useCreatePlaceTag();
+  const { create: createTag } = useTagTreeActions(placeTagTree);
   const { mutateAsync: createCustomPlace } = useCreateCustomPlace();
   const { mutateAsync: updatePlace } = useUpdatePlace();
   const { mutateAsync: savePlace } = useSavePlace();
@@ -519,9 +523,12 @@ function PlacesSurface({
   };
 
   const newTag = useCallback(async () => {
-    const tag = await createTag({ body: { name: "New tag", parentId: null } });
+    const tag = await createTag({
+      name: freeSiblingName("New tag", null, tags),
+      parentId: null,
+    });
     setManager({ focusTagId: tag.id });
-  }, [createTag]);
+  }, [createTag, tags]);
 
   return (
     <div ref={containerRef} className="relative h-full">
@@ -662,6 +669,7 @@ function PlacesSurface({
           <PlaceCard
             key={selected.id}
             place={selected}
+            places={places}
             tags={tags}
             onClose={() => setSelectedId(null)}
             onMovePin={() => setPinPick({ kind: "move", place: selected })}

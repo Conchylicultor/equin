@@ -1,4 +1,5 @@
 import { liveCollection, liveValue } from "@plugins/network/plugins/live/core";
+import { defineTagTree } from "@plugins/tag-tree/plugins/engine/core";
 import { placesEntityRef, placeTagsEntityRef } from "./entity-refs";
 import { PlaceSearchQuerySchema, PlaceSearchResultSchema } from "./maps";
 
@@ -48,10 +49,12 @@ export const places = liveCollection("places.places.all", {
 });
 
 /**
- * The tag tree, live, as flat rows in rank order (`parentId` links them;
- * `tagPath` / `tagDescendants` walk it) — the WHOLE ordered set (`all`): every
- * surface reads the tree entire, and a tree cut at a window's edge orphans the
- * children of a tag past it.
+ * The tag tree, live, as flat rows in rank order (`parentId` links them; the
+ * tag-tree helpers walk it) — the WHOLE ordered set (`all`): every surface
+ * reads the tree entire, and a tree cut at a window's edge orphans the
+ * children of a tag past it. The spec is the tag-tree spelling (pick the name
+ * plus the listed extras, carry the rest) written out: the resource scanners
+ * read a spec only as an inline object literal.
  *
  * The key is `places.tags.all`, not the old window's `places.tags` (see
  * `places`).
@@ -81,6 +84,16 @@ export const placeTags = liveCollection("places.tags.all", {
       reason: "a person adds every tag by hand, and the tag tree is read whole",
     },
   },
+});
+
+/**
+ * The Places tag tree: the `:tree` id `places` of the tag-tree endpoints
+ * (create, create path, update, move, delete) and what the shared picker reads.
+ */
+export const placeTagTree = defineTagTree({
+  id: "places",
+  entity: placeTagsEntityRef,
+  collection: placeTags,
 });
 
 /**

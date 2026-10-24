@@ -9,12 +9,9 @@ import {
   ResourceErrorInline,
 } from "@plugins/primitives/plugins/live-state/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
-import {
-  deletePrototype,
-  prototypeStatuses,
-  prototypesList,
-  statusOf,
-} from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import { prototypesList } from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import { deletePrototype } from "@plugins/apps/plugins/prototypes/plugins/state/core";
+import { usePrototypeState } from "@plugins/apps/plugins/prototypes/plugins/state/web";
 import {
   prototypeDetailPane,
   TitleActionButton,
@@ -27,11 +24,11 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 const deleteIcon = symbol("delete");
 const restoreIcon = symbol("restore-from-trash");
 
-// Deleting a prototype (`files`' `DELETE /api/prototypes/:name`) records
-// `deletedAt` in its status: nothing on disk moves, the gallery stops listing
-// it and its Trash starts to. So a delete is as reversible as a Done tick —
-// no confirm dialog, but a toast whose Undo restores it at once. The statuses
-// re-broadcast on the write, so nothing here removes the card by hand.
+// Deleting a prototype (`state`'s `DELETE /api/prototypes/:name`) records
+// `deletedAt` in its state row: nothing on disk moves, the gallery stops
+// listing it and its Trash starts to. So a delete is as reversible as a Done
+// tick — no confirm dialog, but a toast whose Undo restores it at once. The
+// states are live rows, so nothing here removes the card by hand.
 
 /**
  * Delete prototype `name`; once the server has recorded it, a toast says so
@@ -86,7 +83,7 @@ export function DeleteCardAction({
  * The detail pane header's Delete, after the pin and the Done toggle. Once
  * deleted the pane goes back to the gallery it came from (the toast's Undo
  * still restores it). On a prototype already deleted — opened from the Trash,
- * or a link — it is Restore instead. Disabled until the list and the statuses
+ * or a link — it is Restore instead. Disabled until the list and its state
  * are known, since the toast names the prototype by its title and the button
  * must know which of the two it is; a failed read is the error icon, whose
  * click retries.
@@ -95,7 +92,7 @@ export function DeleteHeaderAction() {
   const { name } = usePrototypeDetail();
   const result = useCombinedResources({
     list: useLive(prototypesList),
-    statuses: useLive(prototypeStatuses),
+    state: usePrototypeState(name),
   });
   const back = prototypeDetailPane.useBack();
   const deleteNow = useDeletePrototype();
@@ -114,11 +111,11 @@ export function DeleteHeaderAction() {
         refetch={result.refetch}
       />
     ),
-    ready: ({ list, statuses }) => {
+    ready: ({ list, state }) => {
       const meta = list.find((p) => p.name === name);
       // No such prototype: the pane body says so; there is nothing to delete.
       if (meta === undefined) return disabled;
-      if (statusOf(statuses, name).deletedAt !== null) {
+      if (state.deletedAt !== null) {
         return (
           <TitleActionButton
             icon={restoreIcon}

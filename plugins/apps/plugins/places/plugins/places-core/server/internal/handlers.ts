@@ -1,13 +1,10 @@
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import {
   createCustomPlace,
-  createPlaceTag,
   deletePlace,
-  deletePlaceTag,
   regeneratePlaceIcon,
   savePlace,
   updatePlace,
-  updatePlaceTag,
 } from "../../core";
 import {
   createCustomPlace as dropCustomPlace,
@@ -16,7 +13,6 @@ import {
   savePlace as insertPlace,
   updatePlace as editPlace,
 } from "./places-repo";
-import { createTag, deleteTag, updateTag } from "./tags-repo";
 import { generatePlaceIcon } from "./place-icon";
 
 export const handleSavePlace = implement(savePlace, async ({ body }) =>
@@ -48,22 +44,5 @@ export const handleRegeneratePlaceIcon = implement(
       throw new Error(`Could not regenerate the icon: ${result.reason}`);
     }
     return result;
-  },
-);
-
-export const handleCreatePlaceTag = implement(
-  createPlaceTag,
-  async ({ body }) => createTag(body),
-);
-
-export const handleUpdatePlaceTag = implement(
-  updatePlaceTag,
-  async ({ params, body }) => updateTag(params.id, body),
-);
-
-export const handleDeletePlaceTag = implement(
-  deletePlaceTag,
-  async ({ params }) => {
-    await deleteTag(params.id);
   },
 );

@@ -54,7 +54,8 @@ Then `PlacesSurface` renders, inside a `relative h-full` box:
 
 name (primary — `placeName`: the user's title, else Google's or a custom
 place's name; search reads the title AND Google's name) · address · tags (`type: "tags"`, `values` = every tag id incl.
-Been / Want to go, `options` = the tree with `parent`, so the nested operators
+Been / Want to go, `options` = the tree as `tagFieldOptions` (tag-tree
+engine: tree order, `parent`, the tag colour as `swatch`), so the nested operators
 reach descendants; the cell draws the non-role tags as colour chips) · want /
 been (derived bools, `placeFlags`; filterable, groupable) · location (`data` = the `Location`, hidden from
 bodies — the map's axis) · note · createdAt ("Saved").
@@ -86,7 +87,11 @@ are drawn (the DataView shows the rule error).
 
 The tree rows are transient filter chrome (the brief's exemption from
 DataView): a disclosure button beside a `Row` (never nested in it), the
-tri-state box, `TagMark`, name, count. Roots start open.
+tri-state box, `TagMark` (`tag-tree/picker`), name, count. Roots start open.
+The tree walks are the tag-tree engine's (`flattenTagTree`, `tagDescendants`);
+"+ New tag" creates a root tag through `useTagTreeActions(placeTagTree)`
+(named by `freeSiblingName`, sibling names being unique) and opens the manager
+on it.
 
 Clicking the header's title line ("Places", the total, a chevron) folds the
 sidebar to its header — tree and footer gone, the tag-filter summary kept —
@@ -164,8 +169,12 @@ scrolls, its footer stays):
   closure pill.
 - **Body**: Google's summary · Want to go / Been (two independent toggles in
   their tag's colour, each a `tags` PATCH) · tags (tinted `TagChip`s, path
-  tooltip, ✨ for `autoTags`, ×, "+ Tag" picker that replaces the picked tag's
-  ancestors) · the note slip (saved on blur, `aria-label="Note"`) · facts
+  tooltip, ✨ for `autoTags`, ×, and "+ Tag": `tag-picker.tsx`, the shared
+  `TagPickerPopover` (`tag-tree/picker`) on `placeTagTree` with counts
+  `tagPlaceCounts` over every place, Been / Want to go and the place's own tags
+  excluded — a pick adds that tag and drops the ancestors of it the place
+  carried; search, create a typed path, rename, recolour, nest and reorder
+  edit the tree itself) · the note slip (saved on blur, `aria-label="Note"`) · facts
   (`place-facts.tsx`): the week (folding out), address + copy, phone + copy,
   website, saved date + Google type, the icon's provenance + Regenerate.
 - **Footer**: Open in Google Maps (`mapsUrl`, else a search pinned to the
@@ -291,29 +300,29 @@ away closes it — a click in the thread is not away (`useClickAway`'s
     - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
     - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
     - `JsonlViewerTool.Renderer` "mcp__equin__places_show_picks" → `PicksToolView`
-  - Uses: 122 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps/places/places-core` ×9
+  - Uses: 120 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/places/places-core` ×8
     - `conversations/agent-thread` ×8
     - `map` ×8
     - `primitives/data-view` ×8
     - `primitives/collapsible` ×6
-    - `network/live` ×5
     - `primitives/live-state` ×5
+    - `network/live` ×4
     - `primitives/css/ui-kit` ×4
     - `primitives/overlay/image-viewer` ×4
     - `primitives/link-gesture/new-tab` ×3
     - `primitives/persistent-draft` ×3
     - `ui/icons` ×3
-    - `apps/places/tag-manager` ×2
     - `conversations/conversation-view/jsonl-viewer/tool-call` ×2
     - `integrations/google-maps` ×2
-    - `primitives/css/control-panel` ×2
     - `primitives/css/layer` ×2
     - `primitives/css/text` ×2
     - `primitives/hover-reveal` ×2
     - `primitives/pane` ×2
     - `primitives/relative-time` ×2
+    - `tag-tree/picker` ×2
     - `apps/places/place-details.usePlaceDetails`
+    - `apps/places/tag-manager.TagManagerPanel`
     - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
     - `integrations/google-maps/usage.useMapsBudget`
     - `primitives/app-shell.AppShellBrand`
@@ -323,6 +332,7 @@ away closes it — a click in the thread is not away (`useClickAway`'s
     - `primitives/css/clip.clipClasses`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/column.Column`
+    - `primitives/css/control-panel.ControlPanel`
     - `primitives/css/coords.Placed`
     - `primitives/css/fill.Fill`
     - `primitives/css/grid.Grid`
@@ -348,9 +358,9 @@ away closes it — a click in the thread is not away (`useClickAway`'s
     - `primitives/loading.Loading`
     - `primitives/overlay/imperative-dialog/confirm.confirmDialog`
     - `primitives/overlay/tooltip.Kbd`
-    - `primitives/search.SearchInput`
     - `primitives/shortcuts.useSurfaceShortcuts`
     - `shell/toast.showToast`
+    - `tag-tree/engine.useTagTreeActions`
 - Cross-plugin:
   - Uses tokens: 29 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/color-palette` ×12

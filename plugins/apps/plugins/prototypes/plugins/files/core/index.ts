@@ -74,22 +74,6 @@ export {
   setPrototypePicks,
 } from "./picks";
 export type { StoredPicks, PicksChange } from "./picks";
-export {
-  PrototypeStatusSchema,
-  PrototypeStatusChangeSchema,
-  NO_PROTOTYPE_STATUS,
-  applyPrototypeStatusChange,
-  prototypeStatuses,
-  statusOf,
-  setPrototypeStatus,
-  deletePrototype,
-  restorePrototype,
-} from "./status";
-export type {
-  PrototypeStatus,
-  PrototypeStatusChange,
-  PrototypeStatusEdit,
-} from "./status";
 export type {
   PrototypeOption,
   ChoiceOption,

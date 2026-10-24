@@ -6,7 +6,7 @@ import {
 } from "../../shared/history/store";
 import { PICKS_DIR_NAME } from "../../shared/picks";
 import { RECORD_FILE_EXT } from "../../shared/record-store";
-import { STATUS_DIR_NAME } from "../../shared/status";
+import { isRetiredDirName } from "../../shared/retired";
 
 /**
  * What a path the watcher reported is, as far as the tree's consumers care:
@@ -20,9 +20,8 @@ import { STATUS_DIR_NAME } from "../../shared/status";
  *   this backend or any other. Re-reads that one record; nothing reloads on
  *   its account (the frames' `src` carries the picks, so they follow).
  * - `picks-internal` — anything else under `_picks/`: nothing to react to.
- * - `status-recorded` — `_status/<id>.json`: `id`'s status changed, by this
- *   backend or any other. Re-reads the statuses; nothing reloads.
- * - `status-internal` — anything else under `_status/`: nothing to react to.
+ * - `retired` — anything under a retired dir (`_status/`, `_trash/`,
+ *   `shared/retired.ts`): nothing to react to.
  * - `tree` — everything else: a prototype's own files, `_template/`. Goes
  *   through the signature gate like before.
  */
@@ -31,8 +30,7 @@ export type TreePath =
   | { kind: "history-internal" }
   | { kind: "picks-recorded"; id: string }
   | { kind: "picks-internal" }
-  | { kind: "status-recorded"; id: string }
-  | { kind: "status-internal" }
+  | { kind: "retired" }
   | { kind: "tree" };
 
 export function classifyTreePath(root: string, path: string): TreePath {
@@ -44,12 +42,7 @@ export function classifyTreePath(root: string, path: string): TreePath {
       ? { kind: "picks-internal" }
       : { kind: "picks-recorded", id };
   }
-  if (segments[0] === STATUS_DIR_NAME) {
-    const id = recordId(segments);
-    return id === null
-      ? { kind: "status-internal" }
-      : { kind: "status-recorded", id };
-  }
+  if (isRetiredDirName(segments[0])) return { kind: "retired" };
   return { kind: "tree" };
 }
 

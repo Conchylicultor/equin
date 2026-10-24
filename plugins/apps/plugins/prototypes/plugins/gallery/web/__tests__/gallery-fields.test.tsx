@@ -25,7 +25,7 @@ const META: PrototypeMeta = {
 };
 
 function field(id: string): FieldDef<PrototypeGalleryRow> {
-  const f = galleryFields.find((x) => x.id === id);
+  const f = galleryFields([]).find((x) => x.id === id);
   if (!f) throw new Error(`no field ${id}`);
   return f;
 }
@@ -36,24 +36,44 @@ function cellText(id: string, row: PrototypeGalleryRow): string {
 }
 
 describe("joinGalleryRows", () => {
-  it("joins each prototype's status and version count", () => {
+  it("joins each prototype's state and version count", () => {
+    const deletedAt = new Date(Date.UTC(2026, 0, 3));
     const [row] = joinGalleryRows(
       [META],
-      { [META.name]: { done: true, pinned: false, deletedAt: null } },
+      [
+        {
+          id: META.name,
+          done: true,
+          pinned: false,
+          tagId: "prtag-1789000000-abcd",
+          deletedAt,
+        },
+      ],
       { [META.name]: 12 },
     );
-    expect(row).toMatchObject({ done: true, pinned: false, versions: 12 });
+    expect(row).toMatchObject({
+      done: true,
+      pinned: false,
+      tagId: "prtag-1789000000-abcd",
+      deletedAt,
+      versions: 12,
+    });
   });
 
-  it("a prototype without a recorded status or count: not done, count unknown", () => {
-    const [row] = joinGalleryRows([META], {}, {});
-    expect(row).toMatchObject({ done: false, pinned: false });
+  it("a prototype without a recorded state or count: not done, untagged, not deleted, count unknown", () => {
+    const [row] = joinGalleryRows([META], [], {});
+    expect(row).toMatchObject({
+      done: false,
+      pinned: false,
+      tagId: null,
+      deletedAt: null,
+    });
     expect(row!.versions).toBeUndefined();
   });
 });
 
 describe("galleryFields — the card's lines", () => {
-  const visible = galleryFields.filter((f) => f.visible !== false);
+  const visible = galleryFields([]).filter((f) => f.visible !== false);
   const card = partitionCardFields(visible);
 
   it("title, the problems mark, the blurb subtitle, edited + versions tokens", () => {
@@ -76,14 +96,14 @@ describe("galleryFields — the card's lines", () => {
 });
 
 describe("galleryFields — values", () => {
-  const [row] = joinGalleryRows([META], {}, { [META.name]: 12 });
+  const [row] = joinGalleryRows([META], [], { [META.name]: 12 });
 
   it("versions reads as v12", () => {
     expect(cellText("versions", row!)).toBe("v12");
   });
 
   it("an unknown version count is omitted, never v0", () => {
-    const [unknown] = joinGalleryRows([META], {}, {});
+    const [unknown] = joinGalleryRows([META], [], {});
     expect(isFieldValueEmpty(field("versions"), unknown!)).toBe(true);
   });
 

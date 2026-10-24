@@ -127,6 +127,7 @@ It must NOT import `tree` or `data-view` — the dependency graph stays a DAG
     - `primitives/data-view/list`
     - `primitives/data-view/table`
     - `primitives/tree`
+    - `tag-tree/picker`
 - Exemptions:
   - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
 

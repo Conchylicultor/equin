@@ -54,7 +54,9 @@ server.
     - `enumFieldType`
     - `enumIdentity`
 - Cross-plugin:
-  - Imported by: `fields/enum/config`
+  - Imported by:
+    - `fields/enum/config`
+    - `fields/tag`
 - Sub-plugins:
   - **`column-config`** — Enum field type: data-view custom-column add-time config editor (options add/rename/remove), plus the projection of that config onto the generic FieldDef.options.
   - **`config`** — Enum field type: config-render capability. Contributes the radio/dropdown renderer to the config-v2.fields.renderer slot.

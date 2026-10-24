@@ -17,3 +17,20 @@ export function atLeastCount(n: number): SectionCount {
 export function formatSectionCount(count: SectionCount): string {
   return count.kind === "exact" ? String(count.n) : `${count.n}+`;
 }
+
+/**
+ * Several sections' counts as one — a nested section's own rows plus every
+ * descendant's. Exact only when every part is: one lower bound makes the sum a
+ * lower bound. No parts is an exact zero.
+ */
+export function sumSectionCounts(
+  counts: readonly SectionCount[],
+): SectionCount {
+  let n = 0;
+  let exact = true;
+  for (const count of counts) {
+    n += count.n;
+    if (count.kind !== "exact") exact = false;
+  }
+  return exact ? exactCount(n) : atLeastCount(n);
+}

@@ -11,10 +11,8 @@ import {
   type SavedSymbolName,
 } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import {
-  tagColor,
-  type PlaceTag,
-} from "@plugins/apps/plugins/places/plugins/places-core/core";
+import { type PlaceTag } from "@plugins/apps/plugins/places/plugins/places-core/core";
+import { tagColor } from "@plugins/tag-tree/plugins/engine/core";
 
 const addIcon = symbol("add-reaction");
 const closeIcon = symbol("close");

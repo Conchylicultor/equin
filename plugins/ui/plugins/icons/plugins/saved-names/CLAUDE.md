@@ -14,6 +14,7 @@
     - `fields/icon/config`
     - `page/callout`
     - `primitives/icon-picker`
+    - `tag-tree/engine`
 - Core:
   - Exports (values):
     - `allSavedSymbolNames`

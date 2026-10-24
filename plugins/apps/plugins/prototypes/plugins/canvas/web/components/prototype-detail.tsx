@@ -16,12 +16,11 @@ import {
   Stack,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
-  prototypeStatuses,
   prototypesList,
-  restorePrototype,
-  statusOf,
   type PrototypeMeta,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import { restorePrototype } from "@plugins/apps/plugins/prototypes/plugins/state/core";
+import { usePrototypeState } from "@plugins/apps/plugins/prototypes/plugins/state/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
   Button,
@@ -139,14 +138,14 @@ function PrototypeCanvas(): ReactNode {
  * "Deleted 3 days ago · Restore", over the canvas's bottom-left corner, while
  * the prototype is deleted. A deleted prototype is still a prototype — its
  * folder, versions and picks untouched — so its canvas opens as ever (from
- * the Trash, a link, Back) and says so here. Nothing while the statuses are
+ * the Trash, a link, Back) and says so here. Nothing while its state is
  * unknown: no claim either way. A failed read says so inline, so a broken
- * status record is never silently read as "not deleted".
+ * state read is never silently taken as "not deleted".
  */
 function DeletedBanner({ name }: { name: string }): ReactNode {
-  const statuses = useLive(prototypeStatuses);
+  const state = usePrototypeState(name);
   const mutation = useEndpointMutation(restorePrototype);
-  return matchResource(statuses, {
+  return matchResource(state, {
     loading: () => null,
     error: (error) => (
       <Surface level="float">
@@ -155,20 +154,19 @@ function DeletedBanner({ name }: { name: string }): ReactNode {
             variant="inline"
             subject="whether it was deleted"
             error={error}
-            refetch={statuses.refetch}
+            refetch={state.refetch}
           />
         </Inset>
       </Surface>
     ),
-    ready: (all) => {
-      const { deletedAt } = statusOf(all, name);
+    ready: ({ deletedAt }) => {
       if (deletedAt === null) return null;
       return (
         <Surface level="float">
           <Inset pad="sm">
             <Stack direction="row" gap="sm" align="center">
               <Badge variant="destructive" icon={<Icon icon={deleteIcon} />}>
-                Deleted <RelativeTime date={new Date(deletedAt)} />
+                Deleted <RelativeTime date={deletedAt} />
               </Badge>
               <ControlSizeProvider size="sm">
                 <Button

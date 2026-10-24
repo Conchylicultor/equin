@@ -38,13 +38,15 @@ import {
   useCollapsibleContext,
 } from "@plugins/primitives/plugins/collapsible/web";
 import {
-  flattenTagTree,
-  tagDescendants,
   tagPlaceCounts,
   type Place,
   type PlaceTag,
 } from "@plugins/apps/plugins/places/plugins/places-core/core";
-import { TagMark } from "@plugins/apps/plugins/places/plugins/tag-manager/web";
+import {
+  flattenTagTree,
+  tagDescendants,
+} from "@plugins/tag-tree/plugins/engine/core";
+import { TagMark } from "@plugins/tag-tree/plugins/picker/web";
 import {
   applySidebarState,
   toggleTag,
