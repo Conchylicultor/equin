@@ -38,5 +38,5 @@ export {
   holdForTask,
 } from "./hold";
 export type { HoldClass, HoldClassSpec, RunnerSpec } from "./hold";
-export { nextCronFiring, parseCrontab } from "./cron";
+export { cronMatches, nextCronFiring, parseCrontab } from "./cron";
 export type { Crontab } from "./cron";

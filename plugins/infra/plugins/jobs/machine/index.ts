@@ -6,8 +6,6 @@ import { graphileQueue } from "./internal/graphile-queue";
 import { stuckLockSweeperTimer } from "./internal/stuck-lock-sweeper";
 
 export { nextScheduledRun, onJobSchedulesChanged } from "./internal/worker";
-export { cronRanges } from "./internal/cron-schedule";
-export type { CronRanges } from "./internal/cron-schedule";
 export {
   onJobRunsChanged,
   readJobRunStats,

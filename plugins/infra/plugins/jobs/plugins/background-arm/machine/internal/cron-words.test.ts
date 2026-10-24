@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { cronRanges } from "@plugins/infra/plugins/jobs/machine";
+import { parseCrontab } from "@plugins/infra/plugins/jobs/core";
 import { cronWords } from "./cron-words";
 
-// Through graphile's own parse, as the provider does — so a pattern the
-// scheduler reads differently from how it looks would show up here.
-const words = (expr: string) => cronWords(cronRanges(expr), expr);
+// Through the one parse every scheduler reads, as the provider does — so a
+// pattern the scheduler reads differently from how it looks would show up here.
+const words = (expr: string) => cronWords(parseCrontab(expr));
 
 describe("cronWords", () => {
   test.each([

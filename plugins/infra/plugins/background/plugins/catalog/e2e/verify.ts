@@ -2,7 +2,8 @@
 //
 // 1. The pane lists the catalog, and a known scheduled job reads its schedule
 //    in words — `ip-country.refresh` shows "Mondays 03:40 UTC" (the words come
-//    from graphile's own parse of the crontab, so this is the whole chain).
+//    from the one crontab parse graphile's cron item matches by, so this is the
+//    whole chain).
 // 2. A timer row (kind `timer`, from `defineTimer`) opens its detail pane,
 //    which renders its interval trigger and its recent runs.
 // 3. A warm-up row (kind `warmup`) opens its detail pane, which renders

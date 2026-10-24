@@ -122,7 +122,9 @@ describe("the cron item", () => {
       run: neverRun,
     }).register();
 
-    const item = buildCronItems().find((i) => i.identifier === `cron:${name}`);
+    const item = buildCronItems().find(
+      (s) => s.item.identifier === `cron:${name}`,
+    )?.item;
     expect(item?.options.jobKey).toBe(singletonJobKey(name));
     expect(item?.payload).not.toHaveProperty("workflowRunId");
   });

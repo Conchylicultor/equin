@@ -10,9 +10,10 @@ the catalog.
   `event` schema is not `z.never()`, `On demand` otherwise. `defineJob({
   internal: true })` (the events dispatcher, the resumer) is listed as internal
   and hidden by default.
-- **Schedule.** Words come from graphile's own parse of the resolved crontab
-  (`cronRanges` → `cronWords`); the next run from the INSTALLED cron item's
-  matcher (`nextScheduledRun`), so a main-only job seen from a worktree has no
+- **Schedule.** Words come from the one crontab parse every scheduler reads
+  (`jobs/core`'s `parseCrontab` → `cronWords`); graphile's cron item matches by
+  that same parse. The next run is from the INSTALLED item's crontab
+  (`nextScheduledRun`), so a main-only job seen from a worktree has no
   next run and reads "Runs on main". A resolver returning null is `Disabled`.
 - **Runs.** From the jobs run history (`job_run_stats`, `job_runs`),
   written on graphile's `job:complete`; a run in flight comes from memory.
@@ -23,10 +24,9 @@ the catalog.
 
 ## Plugin reference
 
-- Description: Jobs in the Background activity catalog: registers the `job` background kind — every registered job with its trigger (a schedule in words and its next firing, read from graphile's own parse and installed matcher), scope, latest run and recent runs from the jobs run history, retention sweeps grouped as Cleanup and queue plumbing marked internal — and Run now for scheduled jobs; pushes the catalog when a run starts or finishes.
+- Description: Jobs in the Background activity catalog: registers the `job` background kind — every registered job with its trigger (a schedule in words and its next firing, read from the one crontab parse every scheduler matches by, and the installed item), scope, latest run and recent runs from the jobs run history, retention sweeps grouped as Cleanup and queue plumbing marked internal — and Run now for scheduled jobs; pushes the catalog when a run starts or finishes.
 - Machine:
   - Uses:
-    - `infra/jobs.cronRanges`
     - `infra/jobs.JobRunRecord`
     - `infra/jobs.JobRunStats`
     - `infra/jobs.nextScheduledRun`

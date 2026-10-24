@@ -7,7 +7,7 @@ import { jobsBackgroundKind } from "./internal/provider";
 
 export default {
   description:
-    "Jobs in the Background activity catalog: registers the `job` background kind — every registered job with its trigger (a schedule in words and its next firing, read from graphile's own parse and installed matcher), scope, latest run and recent runs from the jobs run history, retention sweeps grouped as Cleanup and queue plumbing marked internal — and Run now for scheduled jobs; pushes the catalog when a run starts or finishes.",
+    "Jobs in the Background activity catalog: registers the `job` background kind — every registered job with its trigger (a schedule in words and its next firing, read from the one crontab parse every scheduler matches by, and the installed item), scope, latest run and recent runs from the jobs run history, retention sweeps grouped as Cleanup and queue plumbing marked internal — and Run now for scheduled jobs; pushes the catalog when a run starts or finishes.",
   register: [jobsBackgroundKind],
   onReady: () => {
     // For the life of the process: the catalog value throttles the pushes.

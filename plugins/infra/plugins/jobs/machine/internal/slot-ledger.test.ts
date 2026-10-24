@@ -12,7 +12,12 @@
 
 import { afterEach, describe, expect, test } from "bun:test";
 import { EventEmitter } from "node:events";
-import type { Job, Worker, WorkerEvents } from "graphile-worker";
+import type {
+  Job,
+  Worker,
+  WorkerEvents,
+  WorkerPluginContext,
+} from "graphile-worker";
 import { setErrorReporter } from "@plugins/framework/plugins/server-core/core";
 import { LEGACY_JOB_TASK, taskFor } from "../../core/hold";
 import {
@@ -31,6 +36,9 @@ const T0 = Date.UTC(2026, 8, 11, 12, 0, 0);
 function fakeWorker(workerId: string): Worker {
   return { workerId } as Worker;
 }
+
+// The ledger never reads graphile's plugin context; the events carry one.
+const ctx = {} as WorkerPluginContext;
 
 function fakeJob(over: {
   id: string;
@@ -62,10 +70,11 @@ function runner(
     events,
     detach,
     start(workerId: string, job: Job) {
-      events.emit("job:start", { worker: fakeWorker(workerId), job });
+      events.emit("job:start", { ctx, worker: fakeWorker(workerId), job });
     },
     complete(workerId: string, job: Job) {
       events.emit("job:complete", {
+        ctx,
         worker: fakeWorker(workerId),
         job,
         error: null,
@@ -73,6 +82,7 @@ function runner(
     },
     fatal(workerId: string) {
       events.emit("worker:fatalError", {
+        ctx,
         worker: fakeWorker(workerId),
         error: new Error("release failed"),
         jobError: null,

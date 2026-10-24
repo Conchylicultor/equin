@@ -1,7 +1,8 @@
-import type { CronRanges } from "@plugins/infra/plugins/jobs/machine";
+import type { Crontab } from "@plugins/infra/plugins/jobs/core";
 
-// A crontab in plain language, from graphile's parse of it (never from the
-// string) — so "Mondays 03:40 UTC" is what the scheduler will actually do. The
+// A crontab in plain language, from the one parse every scheduler reads
+// (`jobs/core`'s `parseCrontab`, never the string) — so "Mondays 03:40 UTC" is
+// what the scheduler will actually do. The
 // shapes phrased are the ones schedules use; anything else reads as its
 // expression, which is never wrong, only less friendly.
 
@@ -18,13 +19,11 @@ const DAY_NAMES = [
 const FULL = {
   minutes: 60,
   hours: 24,
-  dates: 31,
   months: 12,
-  dows: 7,
 } as const;
 
-function isFull(ranges: CronRanges, field: keyof typeof FULL): boolean {
-  return ranges[field].length === FULL[field];
+function isFull(tab: Crontab, field: keyof typeof FULL): boolean {
+  return tab[field].length === FULL[field];
 }
 
 /** `n` when `values` is exactly 0, n, 2n, … covering a range of `size` that n
@@ -55,20 +54,22 @@ function days(dows: readonly number[]): string {
 }
 
 /**
- * Describe a parsed crontab, or return `expr` itself for a shape this does not
- * phrase. Times are UTC, as graphile schedules them.
+ * Describe a parsed crontab, or return its expression for a shape this does
+ * not phrase. Times are UTC, as every scheduler reads them. Which day fields
+ * are restricted is the matcher's own flag, not "lists every value".
  */
-export function cronWords(ranges: CronRanges, expr: string): string {
-  const allDates = isFull(ranges, "dates");
-  const allMonths = isFull(ranges, "months");
-  const allDows = isFull(ranges, "dows");
+export function cronWords(tab: Crontab): string {
+  const { expr } = tab;
+  const allDates = !tab.domRestricted;
+  const allMonths = isFull(tab, "months");
+  const allDows = !tab.dowRestricted;
   if (!allMonths) return expr;
 
   const everyDay = allDates && allDows;
-  const { minutes, hours } = ranges;
+  const { minutes, hours } = tab;
 
-  if (everyDay && isFull(ranges, "hours")) {
-    if (isFull(ranges, "minutes")) return "Every minute";
+  if (everyDay && isFull(tab, "hours")) {
+    if (isFull(tab, "minutes")) return "Every minute";
     const step = evenStep(minutes, FULL.minutes);
     if (step !== null) return `Every ${step} minutes`;
     if (minutes.length === 1) {
@@ -88,10 +89,10 @@ export function cronWords(ranges: CronRanges, expr: string): string {
     return `Daily ${times(hours, minute)} UTC`;
   }
   if (allDates && !allDows) {
-    return `${days(ranges.dows)} ${times(hours, minute)} UTC`;
+    return `${days(tab.dows)} ${times(hours, minute)} UTC`;
   }
   if (!allDates && allDows) {
-    const on = ranges.dates.map(ordinal).join(", ");
+    const on = tab.dates.map(ordinal).join(", ");
     return `Monthly on the ${on} ${times(hours, minute)} UTC`;
   }
   return expr;

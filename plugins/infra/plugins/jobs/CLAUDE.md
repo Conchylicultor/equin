@@ -27,6 +27,11 @@ call, so every dependent observes them exactly where it always has.
 - **No graphile: `plugins/in-process`** — an in-memory queue over the portable
   row runner `UNSAFE_runJobRow` (schema-drift check, durable ctx, suspension,
   failure classification) and the portable crontab reading in `core/cron.ts`.
+- **One crontab reading for both.** `core/cron.ts` (`parseCrontab`) is the
+  only cron parser: the desktop hands graphile a `match` FUNCTION over it
+  (`cronMatches`), never the pattern string, so graphile's own (private)
+  grammar never decides when a job fires, and the Background catalog's words
+  and next run read the same parse.
 
 ## Every job says what it does: `description`
 
@@ -710,6 +715,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
   - Exports (values):
     - `ALL_JOB_TASKS`
     - `cancelJob`
+    - `cronMatches`
     - `DeadJobRowSchema`
     - `deadJobs`
     - `DeadJobsPayloadSchema`
@@ -763,7 +769,6 @@ connection and every statement on it gives up after 60 s with no reply, and the
 - Machine:
   - Exports (types):
     - `BacklogJobStat`
-    - `CronRanges`
     - `DeadJobGroupStat`
     - `DeadJobStat`
     - `ForfeitedSlot`
@@ -778,7 +783,6 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `RunningJobStat`
     - `WaitingJobStat`
   - Exports (values):
-    - `cronRanges`
     - `DEAD_ERROR_PREVIEW_CHARS`
     - `getForfeitedSlots`
     - `getOccupiedSlots`
@@ -806,7 +810,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
   - Server: `@plugins/infra/plugins/jobs/server/testing`
     - `installQueueSchema` — Install (or bring up to date) graphile-worker's own schema on the database `connectionString` names, plus this plugin's superseded-row trigger on graphile's job table.
 - Sub-plugins:
-  - **`background-arm`** — Jobs in the Background activity catalog: registers the `job` background kind — every registered job with its trigger (a schedule in words and its next firing, read from graphile's own parse and…
+  - **`background-arm`** — Jobs in the Background activity catalog: registers the `job` background kind — every registered job with its trigger (a schedule in words and its next firing, read from the one crontab parse every…
   - **`deadline-audit`** — Job deadline audit: registers a handler on the jobs plugin's deadline seam and turns each announcement into a report — job-deadline-exceeded (warning) when a run passes its hold class's wall-clock…
   - **`in-process`** (excluded) — The in-process job queue: provides the JobQueue host service in memory — a row runs in this process when it is due (a transaction's enqueue only once it commits), scheduled jobs fire on a one-shot…
   - **`supervised-job`** — Out-of-process work as an ordinary job: defineSupervisedJob composes defineJob + a supervised-run kind into a handler that claims, spawns detached and SUSPENDS — so no worker slot is held while the…

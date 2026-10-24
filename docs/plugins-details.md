@@ -29402,6 +29402,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `ALL_JOB_TASKS`
           - `cancelJob`
+          - `cronMatches`
           - `DeadJobRowSchema`
           - `deadJobs`
           - `DeadJobsPayloadSchema`
@@ -29455,7 +29456,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Machine:
         - Exports (types):
           - `BacklogJobStat`
-          - `CronRanges`
           - `DeadJobGroupStat`
           - `DeadJobStat`
           - `ForfeitedSlot`
@@ -29470,7 +29470,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RunningJobStat`
           - `WaitingJobStat`
         - Exports (values):
-          - `cronRanges`
           - `DEAD_ERROR_PREVIEW_CHARS`
           - `getForfeitedSlots`
           - `getOccupiedSlots`
@@ -29498,10 +29497,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Server: `@plugins/infra/plugins/jobs/server/testing`
           - `installQueueSchema` — Install (or bring up to date) graphile-worker's own schema on the database `connectionString` names, plus this plugin's superseded-row trigger on graphile's job table.
       - Plugins:
-        - **`background-arm`** — Jobs in the Background activity catalog: registers the `job` background kind — every registered job with its trigger (a schedule in words and its next firing, read from graphile's own parse and installed matcher), scope, latest run and recent runs from the jobs run history, retention sweeps grouped as Cleanup and queue plumbing marked internal — and Run now for scheduled jobs; pushes the catalog when a run starts or finishes.
+        - **`background-arm`** — Jobs in the Background activity catalog: registers the `job` background kind — every registered job with its trigger (a schedule in words and its next firing, read from the one crontab parse every scheduler matches by, and the installed item), scope, latest run and recent runs from the jobs run history, retention sweeps grouped as Cleanup and queue plumbing marked internal — and Run now for scheduled jobs; pushes the catalog when a run starts or finishes.
           - Machine:
             - Uses:
-              - `infra/jobs.cronRanges`
               - `infra/jobs.JobRunRecord`
               - `infra/jobs.JobRunStats`
               - `infra/jobs.nextScheduledRun`

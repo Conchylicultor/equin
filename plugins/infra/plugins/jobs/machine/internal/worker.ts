@@ -34,6 +34,12 @@ import {
   type HoldClass,
 } from "../../core/hold";
 import {
+  cronMatches,
+  nextCronFiring,
+  parseCrontab,
+  type Crontab,
+} from "../../core/cron";
+import {
   getScheduledJobs,
   jobRegistry,
   resolveJobCron,
@@ -60,7 +66,6 @@ import {
 import { attachSlotLedger, clearSlotLedger } from "./slot-ledger";
 import { attachRunStats, clearRunStats, markRunSuspended } from "./run-stats";
 import { jobsLog } from "./jobs-log";
-import { nextFiring } from "./cron-schedule";
 
 // One runner per entry in the ladder (`RUNNERS`), all sharing one pg pool.
 let runners: Runner[] | null = null;
@@ -154,6 +159,11 @@ export function getWorkerUtils(): Promise<WorkerUtils> {
 // resolver may read another plugin's config (populated in its onReady).
 const scheduledCronItems: ParsedCronItem[] = [];
 
+// The parsed crontab behind each installed item, by its identifier — the one
+// reading its `match` closes over, so a next-run estimate reads the same parse
+// graphile's cron loop asks every minute.
+const installedCrontabs = new Map<string, Crontab>();
+
 // Whether the onAllReady install has run: before it, a schedule resolver may
 // read config that is not loaded yet, so a refresh must not install early.
 let cronItemsInstalled = false;
@@ -162,7 +172,15 @@ const scheduleListeners = new Set<() => void>();
 // (Re)build cron items from the registry into the live array. Call once after
 // the onAllReady barrier; `refreshJobSchedules` calls it again.
 export function installScheduledCronItems(): void {
-  scheduledCronItems.splice(0, scheduledCronItems.length, ...buildCronItems());
+  const schedules = buildCronItems();
+  scheduledCronItems.splice(
+    0,
+    scheduledCronItems.length,
+    ...schedules.map((s) => s.item),
+  );
+  installedCrontabs.clear();
+  for (const s of schedules)
+    installedCrontabs.set(s.item.identifier, s.crontab);
   cronItemsInstalled = true;
   for (const listener of scheduleListeners) listener();
 }
@@ -196,8 +214,8 @@ function cronIdentifier(jobName: string): string {
 }
 
 /**
- * When a scheduled job next fires in THIS backend, by the installed cron item's
- * own matcher: `{ installed: false }` when this backend did not install it (a
+ * When a scheduled job next fires in THIS backend, from the crontab its
+ * installed cron item matches by: `{ installed: false }` when this backend did not install it (a
  * main-only schedule in a worktree, a resolver that returned null, or before
  * the `onAllReady` install), else the next firing (`null` past the lookahead).
  */
@@ -205,10 +223,9 @@ export function nextScheduledRun(
   jobName: string,
   from: Date,
 ): { installed: false } | { installed: true; next: Date | null } {
-  const identifier = cronIdentifier(jobName);
-  const item = scheduledCronItems.find((i) => i.identifier === identifier);
-  if (item === undefined) return { installed: false };
-  return { installed: true, next: nextFiring(item, from) };
+  const crontab = installedCrontabs.get(cronIdentifier(jobName));
+  if (crontab === undefined) return { installed: false };
+  return { installed: true, next: nextCronFiring(crontab, from) };
 }
 
 // Build graphile-worker cron items from every job that declared a `schedule`.
@@ -218,8 +235,12 @@ export function nextScheduledRun(
 // path uses, so a scheduled job is reachable by exactly the runners its class
 // says it is. The per-tick payload carries the job name and its default input,
 // and graphile injects `_cron`. Exported for `run-identity.test.ts`.
-export function buildCronItems(): ParsedCronItem[] {
-  const items: ParsedCronItem[] = [];
+//
+// graphile gets a `match` FUNCTION over our own parse (`core/cron.ts`), never
+// the pattern string: its parser is private, and the in-process host and the
+// Background catalog read the same crontab, so no two readings can disagree.
+export function buildCronItems(): { item: ParsedCronItem; crontab: Crontab }[] {
+  const items: { item: ParsedCronItem; crontab: Crontab }[] = [];
   const main = isMain();
   for (const job of getScheduledJobs()) {
     const { schedule } = job;
@@ -234,10 +255,14 @@ export function buildCronItems(): ParsedCronItem[] {
     // Scheduled jobs take no caller input; the tick payload is the schema's
     // default shape. Fail loud at startup if the input isn't defaultable.
     const input = job.inputSchema.parse({});
-    items.push(
-      parseCronItem({
+    // Throws on an unreadable crontab — a schedule must fail at install, never
+    // silently not fire.
+    const crontab = parseCrontab(cron);
+    items.push({
+      crontab,
+      item: parseCronItem({
         task: taskFor(job.hold),
-        match: cron,
+        match: (digest) => cronMatches(crontab, digest),
         identifier: cronIdentifier(job.name),
         payload: { jobName: job.name, input } satisfies JobTaskPayload,
         options: {
@@ -318,7 +343,7 @@ export function buildCronItems(): ParsedCronItem[] {
         // every tick of a scheduled workflow replay the FIRST tick's cached
         // steps forever.
       }),
-    );
+    });
   }
   return items;
 }

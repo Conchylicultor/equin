@@ -7,8 +7,8 @@ import {
   resolveJobCron,
   type RegisteredJob,
 } from "@plugins/infra/plugins/jobs/server";
+import { parseCrontab } from "@plugins/infra/plugins/jobs/core";
 import {
-  cronRanges,
   nextScheduledRun,
   readJobRunStats,
   readRecentJobRuns,
@@ -141,7 +141,7 @@ function triggerOf(job: RegisteredJob, now: Date): BackgroundTrigger {
   return {
     kind: "cron",
     expr,
-    words: cronWords(cronRanges(expr), expr),
+    words: cronWords(parseCrontab(expr)),
     nextAt:
       next.installed && next.next !== null ? next.next.toISOString() : null,
     disabled: false,
