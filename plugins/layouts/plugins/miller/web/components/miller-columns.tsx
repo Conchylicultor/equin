@@ -14,6 +14,7 @@ import {
   SortableItem,
   SortableList,
 } from "@plugins/primitives/plugins/sortable-list/web";
+import { COLUMN_ATTR, useColumnAppear } from "../hooks/use-column-appear";
 import { Column } from "./column";
 
 export function MillerColumns() {
@@ -41,6 +42,7 @@ export function MillerColumns() {
     }
     lastLength.current = len;
   }, [match?.panes.length]);
+  useColumnAppear(ref, match?.panes);
 
   const handleMove = useCallback(
     (activeId: string, overId: string) => {
@@ -87,6 +89,7 @@ export function MillerColumns() {
                 id={String(entry.instanceId)}
                 handle
                 disabled={!canReorder}
+                wrapperProps={{ [COLUMN_ATTR]: entry.uuid }}
                 // The leaf column flex-grows to fill remaining width; fixed-width
                 // columns stay rigid. The grow/shrink choice is per-column state,
                 // so it stays raw.

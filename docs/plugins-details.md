@@ -31418,11 +31418,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `PaneLayoutHost`
     - **`miller`** — Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
       - Web:
-        - Uses: 27 symbols — full list in [`plugins/layouts/plugins/miller/REFERENCE.md`](../plugins/layouts/plugins/miller/REFERENCE.md)
+        - Uses: 28 symbols — full list in [`plugins/layouts/plugins/miller/REFERENCE.md`](../plugins/layouts/plugins/miller/REFERENCE.md)
           - `primitives/pane` ×12
           - `primitives/hover-reveal` ×2
           - `primitives/sortable-list` ×2
           - `layouts/route-fallback.DeferredRouteFallback`
+          - `primitives/collapsible.prefersReducedMotion`
           - `primitives/css/spacing.Stack`
           - `primitives/css/theme-boundary.Theme`
           - `primitives/css/ui-kit.cn`
@@ -37220,7 +37221,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-caption`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-caption`
-        - Imported by: 56 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
+        - Imported by: 57 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
           - `conversations` ×14
           - `ui` ×11
           - `apps` ×10
@@ -37231,6 +37232,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build/build-logs`
           - `code-explorer/commit-detail`
           - `debug/read-set`
+          - `layouts/miller`
           - `reorder/node-types/header`
           - `shell/health-report`
       - Core:
