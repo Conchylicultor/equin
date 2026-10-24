@@ -106,6 +106,29 @@ listener the callback attached is removed again before the client is abandoned.
 A late real reply (a slow call, not a lost one) is dropped: its call was already
 settled. The cost is one leaked server connection until the backend restarts.
 
+## When a connection breaks
+
+A connection that *breaks* is a different event from one that goes silent: its
+socket errors (the server terminated the session, the cluster restarted). With no
+listener, that `'error'` event kills the process. pg-pool re-emits an idle
+client's error on the pool, and a checked-out client emits it on itself. So
+`createDbPool` attaches both listeners itself: one on the pool, and one on each
+client as it connects. No consumer adds its own.
+
+Neither listener recovers anything, because nothing needs it: pg-pool has already
+dropped the idle client, and a checked-out client is no longer queryable. Its
+holder's next statement rejects, and pg-pool drops it on release. The listeners
+report the error, once per connection, as
+`[db] pool=<name>: connection error: …`. In a backend that goes to
+`reportServerError` (`errorType` `DbConnectionError`); in a CLI process it goes to
+stderr. A lost (abandoned) client is never reported: its socket events belong to
+the abandon.
+
+This also covers libraries handed a pool. graphile-worker (`infra/jobs`, given
+`jobs-runner` / `jobs-enqueue` as `pgPool`) installs its own logging handlers,
+with a "Your pool doesn't have error handlers!" warning, only on a pool that has
+none.
+
 ## Pool names
 
 A closed list in `core` (`DB_POOL_NAMES`, `DbPoolName`) — plain data both
@@ -174,7 +197,7 @@ deadline sees it go silent. That needs a heartbeat.
 
 ## Plugin reference
 
-- Description: Every backend database connection, built one way: createDbPool / createDbClient give each pool or standalone client a name from the closed pool-name set and a pg.Client subclass that bounds connect() and every query() with a deadline (60 s, widened per scope by withQueryDeadline). A call with no reply rejects with QueryDeadlineExceededError (pool, phase, sql, origin), and its connection is abandoned — detached, held, never closed, since its fd may already be someone else's — and announced on queryDeadlineSink.
+- Description: Every backend database connection, built one way: createDbPool / createDbClient give each pool or standalone client a name from the closed pool-name set and a pg.Client subclass that bounds connect() and every query() with a deadline (60 s, widened per scope by withQueryDeadline). A call with no reply rejects with QueryDeadlineExceededError (pool, phase, sql, origin), and its connection is abandoned — detached, held, never closed, since its fd may already be someone else's — and announced on queryDeadlineSink. Every pool also carries its own connection-error listeners (pool and per client), which report a broken connection once instead of letting it crash the process — so a library handed the pool (graphile-worker) installs none of its own.
 - Cross-plugin:
   - Imported by:
     - `database/admin`

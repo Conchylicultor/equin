@@ -5,6 +5,7 @@ import {
   recordSpan,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { hasRuntimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
+import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import type { DbCallPhase, DbPoolName } from "../../core";
 import {
   CONNECT_CALL_LABEL,
@@ -438,6 +439,7 @@ export function createDbPool(options: CreateDbPoolOptions): Pool {
   // Fail at build, not later inside a deadline timer, if a pg-pool upgrade moved
   // the internals a lost connection's abandon relies on.
   assertPgPoolInternals(pool);
+  installConnectionErrorHandlers(pool, options.name);
 
   // A deadline reads its bound (`withQueryDeadline`) and its caller (the
   // runtime-profiler entry) from AsyncLocalStorage, synchronously, at the
@@ -461,6 +463,49 @@ export function createDbPool(options: CreateDbPoolOptions): Pool {
 
   built = pool;
   return pool;
+}
+
+// A connection error with nobody listening is an unhandled `'error'` event, which
+// kills the process: pg-pool re-emits an IDLE client's socket error on the pool
+// (after ending and dropping the client), and a CHECKED-OUT client whose socket
+// breaks between statements emits it on the client. So every pool carries both
+// listeners by construction, rather than each consumer remembering to — or a
+// library (graphile-worker, handed the jobs pools as `pgPool`) installing its
+// own, which would log through its own logger, outside our reports.
+//
+// Neither listener recovers anything; nothing has to be: pg-pool has already
+// dropped an idle client, and a checked-out client is no longer queryable — its
+// holder's next statement rejects, and pg-pool drops it on release. What they do
+// is make the event loud in the one place errors go: `reportServerError` in a
+// backend, stderr in a CLI process (no runtime namespace, no reporter).
+//
+// A LOST client's socket events are the abandon's (./abandon.ts): its fd may
+// already be someone else's, so whatever it says is expected and not reported.
+function installConnectionErrorHandlers(pool: Pool, name: DbPoolName): void {
+  const reported = new WeakSet<ClientBase>();
+  const onClientError = (client: ClientBase, err: Error): void => {
+    if (client instanceof DbClient && client.lostError) return;
+    // pg-pool's idle listener answers any later error on a dropped client
+    // itself; one report per connection is the event.
+    if (reported.has(client)) return;
+    reported.add(client);
+    const message = `[db] pool=${name}: connection error: ${err.message}`;
+    if (!hasRuntimeNamespace()) process.stderr.write(`${message}\n`);
+    reportServerError({
+      message,
+      stack: err.stack ?? null,
+      errorType: "DbConnectionError",
+    });
+  };
+  // Registered on connect, so it is ahead of pg-pool's idle listener on every
+  // client: an idle client's error is reported here before the pool re-emits
+  // it, and the pool listener below has nothing left to do but exist.
+  pool.on("connect", (client) => {
+    client.on("error", (err) => onClientError(client, err));
+  });
+  pool.on("error", () => {
+    /* reported by the client's own listener above */
+  });
 }
 
 export interface CreateDbClientOptions {

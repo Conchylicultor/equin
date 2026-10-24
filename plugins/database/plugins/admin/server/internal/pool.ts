@@ -113,30 +113,15 @@ export async function closeAdminPool(): Promise<void> {
   await pool.end();
 }
 
+// An idle client's connection error (the socket dropping between one query and
+// `end()`) is handled by `createDbPool` itself, as on every pool.
 export function openShortLivedClient(dbName: string): Pool {
-  const pool = createDbPool({
+  return createDbPool({
     name: "admin-short-lived",
     connectionString: buildConnString(getConn(), dbName),
     max: 1,
     idleTimeoutMillis: 1_000,
   });
-  // A pg.Pool emits `error` when an IDLE client's connection breaks — the
-  // socket dropping between one query and `end()`, or during teardown. That is
-  // a connection-lifecycle event, not an operation failure: whatever the caller
-  // actually asked for still rejects at its own `query()`, loudly. Left
-  // unhandled, though, node turns it into an uncaught exception and kills the
-  // BACKEND — a 1-second-idle pool inside a long-lived server is exactly the
-  // shape that trips it.
-  //
-  // Handled here rather than at each call site because every caller of a
-  // short-lived pool has the same exposure and none of them wants a different
-  // answer (`fork-schema-drift.ts` learned this the hard way and installs the
-  // same handler on its own disposable pool). Silencing nothing: no verdict, no
-  // row and no failure of any awaited call passes through this path.
-  pool.on("error", () => {
-    /* idle-client connection loss on a disposable pool; see above */
-  });
-  return pool;
 }
 
 export function libpqSubprocessEnv(): Record<string, string> {

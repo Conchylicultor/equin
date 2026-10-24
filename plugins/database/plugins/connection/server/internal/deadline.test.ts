@@ -29,6 +29,7 @@ import {
   runtimeNamespace,
 } from "@plugins/infra/plugins/runtime-identity/core";
 import { resetRuntimeNamespaceForTest } from "@plugins/infra/plugins/runtime-identity/core/testing";
+import { setErrorReporter } from "@plugins/framework/plugins/server-core/core";
 import { createDbClient, createDbPool, type DbClient } from "./client";
 import {
   QueryDeadlineExceededError,
@@ -658,6 +659,75 @@ describe("withQueryDeadline", () => {
     expect(() =>
       withQueryDeadline({ ms: 0, reason: "x" }, async () => 1),
     ).toThrow(RangeError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Connection errors (a socket that breaks, as opposed to one that goes silent)
+// ---------------------------------------------------------------------------
+
+describe("connection errors on a pooled client", () => {
+  const reports: Parameters<Parameters<typeof setErrorReporter>[0]>[0][] = [];
+
+  beforeEach(() => {
+    reports.length = 0;
+    setErrorReporter((r) => reports.push(r));
+  });
+  afterEach(() => {
+    setErrorReporter(() => {});
+  });
+
+  async function backendPid(client: PoolClient): Promise<number> {
+    const { rows } = await client.query<{ pid: number }>(
+      "select pg_backend_pid() as pid",
+    );
+    return rows[0]!.pid;
+  }
+
+  /** Kill a server session from another connection. */
+  async function terminate(pid: number): Promise<void> {
+    await createTestPool().pool.query("select pg_terminate_backend($1)", [pid]);
+  }
+
+  async function until(cond: () => boolean): Promise<void> {
+    for (let i = 0; i < 100 && !cond(); i++) await sleep(10);
+    expect(cond()).toBe(true);
+  }
+
+  it("carries its own error and connect listeners, so a library handed the pool installs none", () => {
+    const { pool } = createTestPool();
+    expect(pool.listenerCount("error")).toBeGreaterThan(0);
+    expect(pool.listenerCount("connect")).toBeGreaterThan(0);
+  });
+
+  it("reports an idle client's error once, and the pool drops it without crashing", async () => {
+    const { pool } = createTestPool();
+    const client = await pool.connect();
+    const pid = await backendPid(client);
+    client.release();
+    expect(pool.idleCount).toBe(1);
+    await terminate(pid);
+    await until(() => reports.length > 0 && pool.totalCount === 0);
+    await sleep(50);
+    expect(reports).toHaveLength(1);
+    expect(reports[0]).toMatchObject({ errorType: "DbConnectionError" });
+    expect(reports[0]!.message).toStartWith(
+      "[db] pool=jobs-runner: connection error: ",
+    );
+    expect(await pool.query("select 1 as one")).toMatchObject({
+      rows: [{ one: 1 }],
+    });
+  });
+
+  it("reports a checked-out client's error; its next statement rejects and release drops it", async () => {
+    const { pool } = createTestPool();
+    const client = await pool.connect();
+    await terminate(await backendPid(client));
+    await until(() => reports.length > 0);
+    expect(reports).toHaveLength(1);
+    await rejectionOf(client.query("select 1"));
+    client.release();
+    expect(pool.totalCount).toBe(0);
   });
 });
 
