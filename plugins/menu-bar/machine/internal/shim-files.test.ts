@@ -18,7 +18,7 @@ import { installCapabilities } from "./capabilities";
 const MAIL: ShimApp = {
   id: "mail",
   name: "Mail",
-  url: "http://singularity.localhost:9000/mail",
+  url: "http://equin.localhost:9000/mail",
   namespace: "singularity",
 };
 const ROOTS = {
@@ -48,7 +48,7 @@ describe("macOS shim", () => {
     expect(value("CFBundleIconFile")).toBe("app");
     expect(value("CFBundlePackageType")).toBe("APPL");
     expect(value("EquinAppId")).toBe("mail");
-    expect(value("EquinUrl")).toBe("http://singularity.localhost:9000/mail");
+    expect(value("EquinUrl")).toBe("http://equin.localhost:9000/mail");
     expect(value("EquinNamespace")).toBe("singularity");
     expect(plist).not.toContain("LSUIElement");
     // Without the ATS exception the bundle's WKWebView never loads
@@ -79,7 +79,7 @@ describe("Linux shim", () => {
   test("runs the stable helper in window mode, grouped by its WM class", () => {
     const text = renderDesktopFile(MAIL, "/data/state/menu-bar/equin-desktop");
     expect(text).toContain(
-      "Exec=/data/state/menu-bar/equin-desktop window --app mail --url http://singularity.localhost:9000/mail\n",
+      "Exec=/data/state/menu-bar/equin-desktop window --app mail --url http://equin.localhost:9000/mail\n",
     );
     expect(text).toContain("StartupWMClass=equin-mail\n");
     expect(text).toContain("Icon=equin-mail\n");

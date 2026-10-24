@@ -257,9 +257,9 @@ mod tests {
 
     #[test]
     fn scope_script_is_filled() {
-        let js = scope_script(&Url::parse("http://singularity.localhost:9000/mail").unwrap());
+        let js = scope_script(&Url::parse("http://equin.localhost:9000/mail").unwrap());
         assert!(!js.contains("__EQUIN_SCOPE__"));
         assert!(js.contains(r#""base":"/mail""#));
-        assert!(js.contains(r#""origin":"http://singularity.localhost:9000""#));
+        assert!(js.contains(r#""origin":"http://equin.localhost:9000""#));
     }
 }

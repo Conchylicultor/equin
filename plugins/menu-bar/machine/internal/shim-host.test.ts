@@ -41,7 +41,7 @@ function app(id: string, name: string): ShimApp {
   return {
     id,
     name,
-    url: `http://singularity.localhost:9000/${id}`,
+    url: `http://equin.localhost:9000/${id}`,
     namespace: "singularity",
   };
 }
@@ -163,7 +163,7 @@ describe("Linux shim layout", () => {
       "utf-8",
     );
     expect(desktop).toContain(
-      "Exec=/stable/equin-desktop window --app mail --url http://singularity.localhost:9000/mail",
+      "Exec=/stable/equin-desktop window --app mail --url http://equin.localhost:9000/mail",
     );
     expect(
       readFileSync(

@@ -20,7 +20,7 @@ const LINUX_PREFIX = "equin-";
 export interface ShimApp {
   id: string;
   name: string;
-  /** The app's absolute URL (`http://singularity.localhost:9000/mail`). */
+  /** The app's absolute URL (`http://equin.localhost:9000/mail`). */
   url: string;
   /** The namespace the URL is on. */
   namespace: string;

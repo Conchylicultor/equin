@@ -327,15 +327,15 @@ mod tests {
 
     #[test]
     fn scope_is_origin_and_base_path() {
-        let base = u("http://singularity.localhost:9000/mail");
-        assert!(in_scope(&base, &u("http://singularity.localhost:9000/mail")));
-        assert!(in_scope(&base, &u("http://singularity.localhost:9000/mail/inbox?x=1")));
-        assert!(!in_scope(&base, &u("http://singularity.localhost:9000/mailbox")));
-        assert!(!in_scope(&base, &u("http://singularity.localhost:9000/agents")));
+        let base = u("http://equin.localhost:9000/mail");
+        assert!(in_scope(&base, &u("http://equin.localhost:9000/mail")));
+        assert!(in_scope(&base, &u("http://equin.localhost:9000/mail/inbox?x=1")));
+        assert!(!in_scope(&base, &u("http://equin.localhost:9000/mailbox")));
+        assert!(!in_scope(&base, &u("http://equin.localhost:9000/agents")));
         assert!(!in_scope(&base, &u("http://other.localhost:9000/mail")));
         assert!(!in_scope(&base, &u("https://example.com/mail")));
-        let root = u("http://singularity.localhost:9000/");
-        assert!(in_scope(&root, &u("http://singularity.localhost:9000/anything")));
+        let root = u("http://equin.localhost:9000/");
+        assert!(in_scope(&root, &u("http://equin.localhost:9000/anything")));
     }
 
     #[test]
@@ -350,7 +350,7 @@ mod tests {
     #[cfg(target_os = "linux")]
     #[test]
     fn reads_a_desktop_entry() {
-        let text = "[Desktop Entry]\nType=Application\nName=Mail\nExec=\"/home/u/.singularity/state/menu-bar/equin desktop\" window --app mail --url http://singularity.localhost:9000/mail\nStartupWMClass=equin-mail\n";
+        let text = "[Desktop Entry]\nType=Application\nName=Mail\nExec=\"/home/u/.singularity/state/menu-bar/equin desktop\" window --app mail --url http://equin.localhost:9000/mail\nStartupWMClass=equin-mail\n";
         let shim = platform::read_desktop(std::path::Path::new("/x/equin-mail.desktop"), text).unwrap();
         assert_eq!(shim.app_id, "mail");
         assert_eq!(shim.name, "Mail");

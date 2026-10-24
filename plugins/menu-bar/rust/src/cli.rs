@@ -107,11 +107,11 @@ mod tests {
 
     #[test]
     fn shim_takes_only_an_in_scope_url() {
-        let base = Url::parse("http://singularity.localhost:9000/mail").unwrap();
+        let base = Url::parse("http://equin.localhost:9000/mail").unwrap();
         assert_eq!(shim_url(&args(&["-psn_0_1"]), &base), base);
         assert_eq!(
-            shim_url(&args(&["--url", "http://singularity.localhost:9000/mail/t/1"]), &base).as_str(),
-            "http://singularity.localhost:9000/mail/t/1"
+            shim_url(&args(&["--url", "http://equin.localhost:9000/mail/t/1"]), &base).as_str(),
+            "http://equin.localhost:9000/mail/t/1"
         );
         assert_eq!(shim_url(&args(&["--url", "https://evil.com/mail"]), &base), base);
     }
@@ -121,7 +121,7 @@ mod tests {
         assert!(parse(&args(&["window", "--app", "mail"])).is_err());
         assert!(parse(&args(&["window", "--app", "mail", "--url", "file:///etc"])).is_err());
         assert!(matches!(
-            parse(&args(&["window", "--app", "mail", "--url", "http://singularity.localhost:9000/mail"])),
+            parse(&args(&["window", "--app", "mail", "--url", "http://equin.localhost:9000/mail"])),
             Ok(Mode::Window { .. })
         ));
     }
