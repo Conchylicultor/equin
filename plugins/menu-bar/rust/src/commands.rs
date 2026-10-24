@@ -21,11 +21,22 @@ pub struct Capabilities {
     open_url: bool,
 }
 
+/// The panel window is a transparent vibrancy material (macOS): the page must
+/// paint no background of its own and round its corners at this radius.
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Material {
+    corner_radius: f64,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct HostInfo {
     version: u8,
     platform: &'static str,
     capabilities: Capabilities,
+    /// `None` where the panel is an opaque square window (Linux).
+    material: Option<Material>,
 }
 
 #[tauri::command]
@@ -34,6 +45,7 @@ fn host_info() -> HostInfo {
         version: BRIDGE_VERSION,
         platform: if cfg!(target_os = "macos") { "macos" } else { "linux" },
         capabilities: Capabilities { notify: true, attention: true, launch_app: true, open_url: true },
+        material: panel::MATERIAL_RADIUS.map(|corner_radius| Material { corner_radius }),
     }
 }
 

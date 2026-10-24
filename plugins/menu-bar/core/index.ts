@@ -4,6 +4,7 @@ export {
   type EquinNativeBridge,
   type NativeCapabilities,
   type NativeHostInfo,
+  type NativeMaterial,
   type NativeNotification,
 } from "./native-bridge";
 export {

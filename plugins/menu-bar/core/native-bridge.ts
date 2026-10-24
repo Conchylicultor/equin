@@ -17,11 +17,24 @@ export interface NativeCapabilities {
   openUrl: boolean;
 }
 
+/**
+ * The panel window is a transparent system material (macOS vibrancy) clipped
+ * to rounded corners: the page paints no opaque background of its own, tints
+ * the material with a translucent fill, and rounds its content to
+ * `cornerRadius` (CSS px) — the window's own corner radius.
+ */
+export interface NativeMaterial {
+  cornerRadius: number;
+}
+
 /** `hostInfo()`'s answer: the bridge's version, the OS and its capabilities. */
 export interface NativeHostInfo {
   version: 1;
   platform: "macos" | "linux";
   capabilities: NativeCapabilities;
+  /** `null`: an opaque square window (Linux, or a helper that predates the
+   *  material). */
+  material: NativeMaterial | null;
 }
 
 /** One native notification. `tag` coalesces notifications sharing it. */
@@ -67,4 +80,11 @@ export const NativeHostInfoSchema: ZodParser<NativeHostInfo> = z.object({
     launchApp: z.boolean(),
     openUrl: z.boolean(),
   }),
+  // Absent from a helper built before the material existed (an installed
+  // binary outlives the web it was built beside): that window is the opaque
+  // square one, so it reads as `null`.
+  material: z
+    .object({ cornerRadius: z.number().positive() })
+    .nullable()
+    .default(null),
 });

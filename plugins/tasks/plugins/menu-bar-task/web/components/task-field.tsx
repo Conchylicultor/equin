@@ -17,6 +17,7 @@ import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 
 const fileIcon = symbol("bolt");
 const filedIcon = symbol("check-circle");
@@ -122,25 +123,30 @@ export function MenuBarTaskField() {
       : "Ask or file a task…";
 
   return (
-    <Stack gap="2xs" className={insetClass({ x: "2xs", b: "xs" })}>
+    <Stack gap="2xs" className={insetClass({ x: "xs", b: "sm" })}>
       <Surface
         level="sunken"
-        className="rounded-lg focus-within:ring-2 focus-within:ring-ring/50"
+        className="rounded-lg focus-within:ring-2 focus-within:ring-ring"
       >
         <Stack
           direction="row"
-          gap="sm"
+          gap="md"
           align="start"
-          className={insetClass({ y: "xs", r: "xs", l: "sm" })}
+          className={insetClass({ y: "sm", r: "sm", l: "lg" })}
         >
-          <Icon
-            icon={outcome.kind === "filed" ? filedIcon : fileIcon}
-            className={cn(
-              "size-4 text-muted-foreground",
-              rigidClass(),
-              outcome.kind === "filed" && "text-success",
-            )}
-          />
+          {/* As tall as the field's first line, so the glyph sits centred on
+              it however many lines the field grows to. */}
+          <Center className={cn("h-5.5", rigidClass())}>
+            <Icon
+              icon={outcome.kind === "filed" ? filedIcon : fileIcon}
+              className={cn(
+                "size-4",
+                outcome.kind === "filed"
+                  ? "text-success"
+                  : "text-faint-foreground",
+              )}
+            />
+          </Center>
           <textarea
             ref={field}
             rows={1}
@@ -153,12 +159,12 @@ export function MenuBarTaskField() {
             }}
             onKeyDown={onKeyDown}
             className={cn(
-              "resize-none bg-transparent text-body text-foreground outline-none placeholder:text-muted-foreground",
+              "resize-none bg-transparent py-2xs text-body text-foreground outline-none placeholder:text-faint-foreground",
               fillClasses("x"),
             )}
           />
           {text.trim() !== "" && (
-            <ControlSizeProvider size="xs">
+            <ControlSizeProvider size="sm">
               <IconButton
                 variant="default"
                 icon={sendIcon}

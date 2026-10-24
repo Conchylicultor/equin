@@ -25,6 +25,12 @@ const MARGIN: f64 = 6.0;
 /// the user meant "close", so it must not reopen.
 const REOPEN_GUARD: Duration = Duration::from_millis(250);
 
+/// macOS: the panel is a transparent window over the system menu material,
+/// clipped to this corner radius (logical px); reported to the page through
+/// `host_info`, which draws no background of its own. Elsewhere an opaque
+/// square window.
+pub const MATERIAL_RADIUS: Option<f64> = if cfg!(target_os = "macos") { Some(12.0) } else { None };
+
 const BRIDGE_JS: &str = include_str!("bridge.js");
 
 pub struct Panel {
@@ -65,7 +71,7 @@ pub fn create(app: &AppHandle) -> tauri::Result<WebviewWindow> {
         eprintln!("equin-desktop: nothing answers on port {}; panel shows the offline page", gateway::PORT);
         offline_url()
     };
-    let window = WebviewWindowBuilder::new(app, LABEL, initial)
+    let builder = WebviewWindowBuilder::new(app, LABEL, initial)
         .title("equin")
         .inner_size(WIDTH, INITIAL_HEIGHT)
         .resizable(false)
@@ -81,8 +87,8 @@ pub fn create(app: &AppHandle) -> tauri::Result<WebviewWindow> {
             if matches!(payload.event(), tauri::webview::PageLoadEvent::Finished) {
                 eprintln!("equin-desktop: panel loaded {}", payload.url());
             }
-        })
-        .build()?;
+        });
+    let window = with_material(builder).build()?;
 
     let handle = app.clone();
     window.on_window_event(move |event| {
@@ -91,6 +97,39 @@ pub fn create(app: &AppHandle) -> tauri::Result<WebviewWindow> {
         }
     });
     Ok(window)
+}
+
+/// macOS: transparent window + the menu vibrancy material, rounded. The panel
+/// page is designed light, so the window pins the light appearance (else the
+/// material turns dark with the system and the light page sits on it).
+#[cfg(target_os = "macos")]
+fn with_material<'a, M: Manager<tauri::Wry>>(
+    builder: WebviewWindowBuilder<'a, tauri::Wry, M>,
+) -> WebviewWindowBuilder<'a, tauri::Wry, M> {
+    use tauri::utils::config::WindowEffectsConfig;
+    use tauri::utils::{WindowEffect, WindowEffectState};
+    builder
+        .transparent(true)
+        // The bundled offline page has no bridge; this tells it (and only it)
+        // that its window is a transparent material, so it rounds itself.
+        .initialization_script(
+            "if (location.protocol === 'tauri:') document.documentElement.setAttribute('data-material', '');",
+        )
+        .theme(Some(tauri::Theme::Light))
+        .effects(WindowEffectsConfig {
+            effects: vec![WindowEffect::Menu],
+            state: Some(WindowEffectState::Active),
+            radius: MATERIAL_RADIUS,
+            color: None,
+            interactive: false,
+        })
+}
+
+#[cfg(not(target_os = "macos"))]
+fn with_material<'a, M: Manager<tauri::Wry>>(
+    builder: WebviewWindowBuilder<'a, tauri::Wry, M>,
+) -> WebviewWindowBuilder<'a, tauri::Wry, M> {
+    builder
 }
 
 /// Point the panel at the equin page or the offline page, whichever the

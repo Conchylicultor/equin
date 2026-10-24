@@ -73,7 +73,8 @@ export function InstallAppAction({ row }: ItemActionProps<AppRow>): ReactNode {
           <IconButton
             icon={errorIcon}
             label={`Can't tell whether ${row.name} can be installed: ${state.error.message} — click to retry`}
-            variant="ghost"
+            variant="floating"
+            shape="pill"
             className="text-destructive"
             onClick={(e) => {
               e.stopPropagation();
@@ -104,14 +105,21 @@ export function InstallAppAction({ row }: ItemActionProps<AppRow>): ReactNode {
   return (
     <ControlSizeProvider size="xs">
       <IconButton
+        // Its own round button on the icon's corner (the grid draws no chip):
+        // the panel's surface, lit in the accent under the pointer.
+        variant="floating"
+        shape="pill"
         icon={failed ? errorIcon : addIcon}
         label={
           failed
             ? `Installing ${row.name} failed: ${failed.message} — click to retry`
             : `Install ${row.name} as an app`
         }
-        variant="ghost"
-        className={failed ? "text-destructive" : undefined}
+        className={
+          failed
+            ? "text-destructive"
+            : "hover:bg-primary hover:text-primary-foreground"
+        }
         loading={request?.state === "waiting-for-helper"}
         onClick={(e) => {
           e.stopPropagation();

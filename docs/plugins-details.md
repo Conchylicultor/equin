@@ -31674,7 +31674,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by: `map/google`
 
-- **`menu-bar`** — The menu-bar panel the native helper opens: the menu-bar app (unlisted, colorMode system — it follows the OS light/dark) mounted at /home/menu-bar, whose index pane is the panel (rendered chromeless under ?embed=1), whose body is the MenuBar.Section slot, plus the header (the spiral and a status line joined from MenuBar.Status parts, whose attention lights the menu-bar icon's dot) and the footer ('Running · <host>', opening equin). useNativeHost() reads the helper's bridge (window.equinNative): pending, absent (a plain browser), or present with its platform, capabilities and methods — a capability the host lacks has no method. MenuBar.Mount runs headless work while the panel page is alive; the panel reports its content height to the helper.
+- **`menu-bar`** — The menu-bar panel the native helper opens: the menu-bar app (unlisted, colorMode light — the panel is designed light) mounted at /home/menu-bar, whose index pane is the panel (rendered chromeless under ?embed=1), whose body is the MenuBar.Section slot, drawn in its own theme (a native menu's: the system font, 13px rows, a 2–16px spacing ramp, the menu palette), plus the header (the spiral and a status line joined from MenuBar.Status parts, whose attention lights the menu-bar icon's dot) and the footer ('Running · <host>', opening equin). useNativeHost() reads the helper's bridge (window.equinNative): pending, absent (a plain browser), or present with its platform, capabilities and methods — a capability the host lacks has no method. MenuBar.Mount runs headless work while the panel page is alive; the panel reports its content height to the helper.
   - Web:
     - Slots:
       - `MenuBar.Section`
@@ -31692,17 +31692,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Contributes:
       - `Apps.App` "Menu bar" → `FullPane`
       - `Pane.Register` "menu-bar"
+      - `ThemeEngine.Theme` "Menu bar"
       - `MenuBar.Section` "Header" → `PanelHeader`
       - `MenuBar.Section` "Footer" → `PanelFooter`
-    - Uses:
+    - Uses: 23 symbols — full list in [`plugins/menu-bar/REFERENCE.md`](../plugins/menu-bar/REFERENCE.md)
+      - `primitives/css/spacing` ×3
+      - `primitives/pane` ×3
+      - `primitives/slot-render` ×2
       - `apps-core.Apps`
       - `layouts/full-pane.FullPane`
+      - `primitives/css/clip.Clip`
       - `primitives/css/fill.Fill`
       - `primitives/css/rigid.rigidClass`
       - `primitives/css/row.Row`
       - `primitives/css/scroll.Scroll`
-      - `primitives/css/spacing.insetClass`
-      - `primitives/css/spacing.Stack`
       - `primitives/css/status-dot.StatusDot`
       - `primitives/css/surface.Surface`
       - `primitives/css/text.Text`
@@ -31710,11 +31713,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/dom/element-size.useResizeObserver`
       - `primitives/loading.Loading`
       - `primitives/overlay/surface-overlay.SurfaceOverlay`
-      - `primitives/pane.defineRoute`
-      - `primitives/pane.Pane`
-      - `primitives/pane.PaneChrome`
-      - `primitives/slot-render.defineMountSlot`
-      - `primitives/slot-render.defineRenderSlot`
+      - `ui/theme-engine.ThemeEngine`
     - Exports (types):
       - `MenuBarStatus`
       - `NativeHost`
@@ -31752,6 +31751,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `InstallRequests`
       - `NativeCapabilities`
       - `NativeHostInfo`
+      - `NativeMaterial`
       - `NativeNotification`
     - Exports (values):
       - `BRIDGE_METHODS`
@@ -31772,7 +31772,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Exports (values): `menuBarHelper`
   - Cross-plugin:
     - Uses tokens:
+      - `ui/tokens/color-palette --background`
+      - `ui/tokens/color-palette --popover`
       - `ui/tokens/color-palette --success`
+      - `ui/tokens/density --space-md`
+      - `ui/tokens/material --popover-fill`
       - `ui/tokens/shadow --shadow`
       - `ui/tokens/shape --spacing`
       - `ui/tokens/type-scale --font-weight-semibold`
@@ -31783,18 +31787,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `tasks/menu-bar-task`
     - Endpoint callers: `app-grid`
   - Plugins:
-    - **`app-grid`** — The menu-bar panel's app grid (MenuBar.Section 'apps'): every Apps.App with a URL — the current app and surface-mode apps (the desktop) left out — as the compact icons DataView over the installedApp row kind (the tile and name Home and the launcher draw), each tile wearing its app's badge. Four columns, scrolling past four rows; drag reorders it, persisted per view (defineDataView('menu-bar.apps')). A tile opens its app in its own OS window through the helper when it is installed (launchApp), else in the default browser (openUrl), or in this tab when the panel is not inside the helper. On hover a tile offers + (AppGridActions 'install'): installs the app as an OS app through POST /api/menu-bar/install/:appId — hidden once installed (menu-bar.installed) or where the host cannot install (menu-bar.capabilities), a spinner while pending, an error mark when the install failed.
+    - **`app-grid`** — The menu-bar panel's app grid (MenuBar.Section 'apps'): every Apps.App with a URL — the current app and surface-mode apps (the desktop) left out — as the icons DataView over the installedApp row kind, laid out as a menu's grid (viewOptions.icons.menu: four cells sharing the panel's width) (the tile and name Home and the launcher draw), each tile wearing its app's badge. Scrolling past four rows; drag reorders it, persisted per view (defineDataView('menu-bar.apps')). A tile opens its app in its own OS window through the helper when it is installed (launchApp), else in the default browser (openUrl), or in this tab when the panel is not inside the helper. On hover a tile offers + (AppGridActions 'install'): installs the app as an OS app through POST /api/menu-bar/install/:appId — hidden once installed (menu-bar.installed) or where the host cannot install (menu-bar.capabilities), a spinner while pending, an error mark when the install failed.
       - Web:
         - Slots: `item-actions`
         - Slot contributors: `item-actions` ← `menu-bar.app-grid`
         - Contributes:
           - `MenuBar.Section` "Apps" → `MenuBarAppGrid`
           - `item-actions` "install" → `InstallAppAction`
-        - Uses: 25 symbols — full list in [`plugins/menu-bar/plugins/app-grid/REFERENCE.md`](../plugins/menu-bar/plugins/app-grid/REFERENCE.md)
+        - Uses: 27 symbols — full list in [`plugins/menu-bar/plugins/app-grid/REFERENCE.md`](../plugins/menu-bar/plugins/app-grid/REFERENCE.md)
           - `primitives/data-view` ×5
           - `apps-core` ×4
           - `apps-core/app-launcher` ×2
           - `menu-bar` ×2
+          - `primitives/css/ui-kit` ×2
           - `primitives/live-state` ×2
           - `apps-core/app-icon.AppIconAvatar`
           - `apps-core/tabs.useActivateApp`
@@ -31802,13 +31807,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.useLive`
           - `primitives/css/pin.Pin`
           - `primitives/css/scroll.Scroll`
-          - `primitives/css/ui-kit.ControlSizeProvider`
+          - `primitives/css/spacing.insetClass`
           - `primitives/icon-button.IconButton`
           - `primitives/loading.Loading`
           - `shell/toast.showToast`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
+          - `ui/tokens/color-palette --primary`
+          - `ui/tokens/color-palette --primary-foreground`
+          - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --spacing`
 
 - **`music`** — Umbrella for music building blocks shared across apps, knowing pitch classes and strings only: the chord box (a chord's degree colour, numeral and tile).
@@ -37517,7 +37525,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 119 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+            - Imported by: 120 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
               - `apps` ×35
               - `primitives` ×25
               - `page` ×17
@@ -37526,11 +37534,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui` ×6
               - `apps-core` ×3
               - `plugin-meta` ×3
+              - `tasks` ×3
               - `fields` ×2
               - `integrations` ×2
               - `map` ×2
               - `shell` ×2
-              - `tasks` ×2
               - `active-data/go`
               - `config_v2/settings`
               - `framework/web-core`
@@ -37549,7 +37557,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `clipClasses`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Imported by: 66 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
+            - Imported by: 67 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
               - `apps` ×21
               - `primitives` ×10
               - `conversations` ×8
@@ -37563,6 +37571,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build/build-logs`
               - `config_v2/settings`
               - `hints/ask`
+              - `menu-bar`
               - `plugin-meta/plugin-view/file-tree`
               - `screenshot`
               - `tasks/task-graph`
@@ -38341,7 +38350,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 414 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 415 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×106
               - `conversations` ×64
               - `primitives` ×54
@@ -38365,12 +38374,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `code-explorer` ×2
               - `config_v2` ×2
               - `layouts` ×2
+              - `menu-bar` ×2
               - `screenshot` ×2
               - `framework/web-core`
               - `hints/ask`
               - `history/dialog`
               - `map/google`
-              - `menu-bar`
               - `music/chord-box`
               - `reports/launch-fix`
               - `search/quick-find`
@@ -39713,9 +39722,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`icons`** — Icons view child for the data-view primitive: a centred launcher grid of fixed-size tiles (the row's leading avatar filling a squircle) with the name underneath, drag-to-reorder in manual order.
           - Web:
             - Contributes: `DataViewSlots.View` "Icons" → `IconsView`
-            - Uses: 37 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/icons/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/icons/REFERENCE.md)
+            - Uses: 38 symbols — full list in [`plugins/primitives/plugins/data-view/plugins/icons/REFERENCE.md`](../plugins/primitives/plugins/data-view/plugins/icons/REFERENCE.md)
               - `primitives/data-view` ×22
               - `primitives/avatar` ×2
+              - `primitives/css/ui-kit` ×2
               - `primitives/rank-reorder` ×2
               - `primitives/row-actions` ×2
               - `primitives/css/center.Center`
@@ -39723,12 +39733,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/pin.Pin`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.cn`
               - `primitives/dom/element-size.useResizeObserver`
               - `primitives/link-gesture.activationProps`
               - `primitives/virtual-rows.VirtualRows`
           - Cross-plugin:
             - Uses tokens:
+              - `ui/tokens/color-palette --accent`
               - `ui/tokens/color-palette --foreground`
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --ring`
@@ -46806,6 +46816,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `menu-bar.useNativeHost`
               - `primitives/css/fill.Fill`
               - `primitives/css/row.Row`
+              - `primitives/css/spacing.Inset`
               - `primitives/css/spacing.Stack`
               - `primitives/css/switch.SwitchIndicator`
               - `primitives/css/text.Text`
@@ -46816,7 +46827,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `ConfigV2.Register` "config"
             - Uses: `config_v2.ConfigV2`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/color-palette --muted-foreground`
+            - Uses tokens:
+              - `ui/tokens/color-palette --muted-foreground`
+              - `ui/tokens/density --space-md`
     - **`toast`** — Global toast notifications: a plain showToast() backed by sonner's global API, plus the Core.Root-mounted sonner Toaster host. Degrades to a silent no-op when no host is mounted.
       - Web:
         - Contributes: `Core.Root` → `ToasterHost`
@@ -48027,6 +48040,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `infra/endpoints.useFetchEndpoint`
           - `menu-bar.MenuBar`
+          - `primitives/css/center.Center`
           - `primitives/css/fill.fillClasses`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/spacing.insetClass`
@@ -48041,10 +48055,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/icons.Icon`
       - Cross-plugin:
         - Uses tokens:
+          - `ui/tokens/color-palette --faint-foreground`
           - `ui/tokens/color-palette --foreground`
-          - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/color-palette --ring`
           - `ui/tokens/color-palette --success`
+          - `ui/tokens/density --space-2xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-scale`
@@ -50271,9 +50286,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ThemeEngine.SubTheme`
           - `ThemeEngine.FixedTheme`
           - `ThemeEngine.ThemeSource`
-        - Slot contributors: 44 contributors — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+        - Slot contributors: 45 contributors — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ThemeEngine.TokenGroup` ×18
-          - `ThemeEngine.Theme` ×11
+          - `ThemeEngine.Theme` ×12
           - `ThemeEngine.VariantGroup` ×6
           - `ThemeEngine.SubTheme` ×5
           - `ThemeEngine.FixedTheme` ×2
@@ -50422,11 +50437,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shadow` ×5
           - `ui/tokens/type-scale` ×4
           - `ui/tokens/shape` ×3
-        - Imported by: 46 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+        - Imported by: 47 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ui` ×28
           - `apps` ×14
           - `apps-core/chrome-theme`
           - `hints`
+          - `menu-bar`
           - `plugin-meta/token-usage`
           - `reports/theme-resolution`
       - Plugins:
@@ -50845,7 +50861,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 325 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 329 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `primitives` ×69
               - `apps` ×66
               - `conversations` ×48
@@ -50853,14 +50869,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page` ×20
               - `ui` ×17
               - `plugin-meta` ×13
+              - `tasks` ×8
               - `fields` ×7
               - `reorder` ×7
-              - `tasks` ×7
               - `review` ×5
               - `infra` ×4
+              - `shell` ×4
               - `apps-core` ×3
               - `build` ×3
-              - `shell` ×3
               - `stats` ×3
               - `active-data` ×2
               - `backup` ×2
@@ -50868,6 +50884,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2` ×2
               - `framework` ×2
               - `map` ×2
+              - `menu-bar` ×2
               - `screenshot` ×2
               - `auth`
               - `hints/ask`
@@ -51022,6 +51039,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --popover`
               - `ui/tokens/shape --spacing`
             - Tokens used by:
+              - `menu-bar`
               - `primitives/css/ui-kit`
               - `primitives/overlay/floating-action`
         - **`overlay`** — Overlay token group (how a floating panel enters — instant by default — and the tooltip's fill, ink, ring, corners, padding, shadow, distance and arrow) with its customizer section.

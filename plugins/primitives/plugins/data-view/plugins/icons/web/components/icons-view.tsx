@@ -2,10 +2,14 @@ import { useState, type KeyboardEvent, type ReactNode, type Ref } from "react";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { runActivation } from "@plugins/primitives/plugins/link-gesture/core";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  ControlSizeProvider,
+  cn,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import type { SpaceStep } from "@plugins/primitives/plugins/css/plugins/space-ramp/core";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import {
@@ -88,18 +92,35 @@ const GEOMETRY = {
     laneEstimate: 84,
     lanePad: "pb-xs",
   },
-} as const satisfies Record<
-  DataViewDensity,
-  {
-    classes: string;
-    gap: "2xl" | "xs";
-    tileGap: "md" | "xs";
-    tilePad: string;
-    laneEstimate: number;
-    /** A windowed lane's bottom padding — the row gap between lanes. */
-    lanePad: string;
-  }
->;
+} as const satisfies Record<DataViewDensity, Geometry>;
+
+/**
+ * A menu's grid (`IconsViewOptions.menu`): its columns share the view's width
+ * (`Grid cols`), 40px tiles, `2xs` gaps both ways, each cell a rounded target
+ * `sm` tall above and below its tile.
+ */
+const MENU_GEOMETRY = {
+  classes: "[--icons-tile:2.5rem]",
+  gap: "2xs",
+  tileGap: "xs",
+  tilePad: "rounded-lg py-sm",
+  laneEstimate: 72,
+  lanePad: "pb-2xs",
+} as const satisfies Geometry;
+
+interface Geometry {
+  classes: string;
+  gap: SpaceStep;
+  tileGap: SpaceStep;
+  tilePad: string;
+  laneEstimate: number;
+  /** A windowed lane's bottom padding — the row gap between lanes. */
+  lanePad: string;
+}
+
+/** How a grid lays its columns: a menu's fixed count, else fixed-width cells. */
+type GridColumns = { cols: number } | { cellWidth: string };
+
 const CELL_WIDTH = "var(--icons-cell)";
 
 /** The tiles a keyboard user moves between: activating tiles, in render order. */
@@ -237,9 +258,15 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
   // longer an activating tile) → the selected row's tile, else the first.
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
   const vis = resolveBodyFields(props.fields, props.state.properties);
-  const geometry = GEOMETRY[props.density ?? "comfortable"];
   // Documented cast boundary: `options` is `viewOptions.icons`, opaque to the host.
-  const { useTileRef } = (props.options ?? {}) as IconsViewOptions<unknown>;
+  const { useTileRef, menu } = (props.options ??
+    {}) as IconsViewOptions<unknown>;
+  const geometry: Geometry = menu
+    ? MENU_GEOMETRY
+    : GEOMETRY[props.density ?? "comfortable"];
+  const gridColumns: GridColumns = menu
+    ? { cols: menu.columns }
+    : { cellWidth: CELL_WIDTH };
   // Documented cast boundary: itemActions arrives type-erased. A tile has an
   // at-rest corner (the same float chip the hover arm uses) but no primary
   // slot — its click IS the row's main verb. Resolved unconditionally (hooks
@@ -325,16 +352,23 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
           (cluster.atRest || cluster.revealed) && rowActionsAnchor,
           geometry.tilePad,
           activate && "cursor-pointer",
+          menu && activate && "hover:bg-accent",
         )}
       >
         <Center
           className={cn(
             "size-[var(--icons-tile)]",
-            // The mock's press/lift: lift on hover or keyboard focus, sink on
-            // press, on a slightly overshooting curve.
-            "transition-transform duration-200 ease-[cubic-bezier(.3,.7,.4,1.3)]",
-            "group-hover/icon:-translate-y-0.5 group-focus-visible/icon:-translate-y-0.5",
-            "group-active/icon:translate-y-0 group-active/icon:scale-[.96]",
+            // The menu's actions pin to the icon itself.
+            menu && "relative",
+            // A launcher's press/lift: lift on hover or keyboard focus, sink on
+            // press, on a slightly overshooting curve. A menu's cell
+            // highlights instead (below), as a menu row does.
+            !menu &&
+              "transition-transform duration-200 ease-[cubic-bezier(.3,.7,.4,1.3)]",
+            !menu &&
+              "group-hover/icon:-translate-y-0.5 group-focus-visible/icon:-translate-y-0.5",
+            !menu &&
+              "group-active/icon:translate-y-0 group-active/icon:scale-[.96]",
           )}
         >
           <AvatarPresentationProvider value="tile">
@@ -353,18 +387,51 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
               />
             )}
           </AvatarPresentationProvider>
+          {menu && (cluster.atRest || cluster.revealed) ? (
+            // A menu's actions overhang the icon's own bottom-right corner,
+            // `[revealed][at rest]`, with no chip: each action draws its own
+            // round button (the card cover's primary-corner shape).
+            <Pin to="bottom-right" offset="sm" outset>
+              <Stack direction="row" gap="2xs" align="center">
+                {cluster.revealed ? (
+                  <RowActions pin={null}>
+                    {cluster.revealed({ row, hasChildren: false })}
+                  </RowActions>
+                ) : null}
+                {cluster.atRest ? (
+                  <RowActions pin={null} alwaysVisible>
+                    {cluster.atRest({ row, hasChildren: false })}
+                  </RowActions>
+                ) : null}
+              </Stack>
+            </Pin>
+          ) : null}
         </Center>
-        <Text
-          as="div"
-          variant="caption"
-          className={cn(
-            "max-w-full truncate text-center transition-colors group-hover/icon:text-foreground group-focus-visible/icon:text-foreground",
-            selected ? "text-foreground" : "text-muted-foreground",
-          )}
-        >
-          {renderName(row)}
-        </Text>
-        {cluster.atRest || cluster.revealed ? (
+        {menu ? (
+          // A menu names its cells in the text colour, a rung down: the
+          // caption at the compact density.
+          <ControlSizeProvider size="xs">
+            <Text
+              as="div"
+              variant="caption"
+              className="max-w-full truncate text-center text-foreground"
+            >
+              {renderName(row)}
+            </Text>
+          </ControlSizeProvider>
+        ) : (
+          <Text
+            as="div"
+            variant="caption"
+            className={cn(
+              "max-w-full truncate text-center transition-colors group-hover/icon:text-foreground group-focus-visible/icon:text-foreground",
+              selected ? "text-foreground" : "text-muted-foreground",
+            )}
+          >
+            {renderName(row)}
+          </Text>
+        )}
+        {!menu && (cluster.atRest || cluster.revealed) ? (
           // The tile's corner: `[revealed][at rest]`, each its own float chip,
           // so a resting action never moves when hover adds the others to its
           // left. `RowActions` keeps a press on an action from activating or
@@ -439,6 +506,7 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
           section={section}
           placeholders={props.placeholders}
           geometry={geometry}
+          gridColumns={gridColumns}
           activeId={activeId}
           renderEntry={renderEntry}
         />
@@ -527,12 +595,14 @@ function IconsGrid({
   section,
   placeholders,
   geometry,
+  gridColumns,
   activeId,
   renderEntry,
 }: {
   section: DataViewSection<unknown>;
   placeholders: DataViewPagePlaceholders | undefined;
-  geometry: (typeof GEOMETRY)[DataViewDensity];
+  geometry: Geometry;
+  gridColumns: GridColumns;
   activeId: string | null;
   renderEntry: (
     entry: DataViewRowEntry<unknown>,
@@ -547,14 +617,16 @@ function IconsGrid({
   );
   // Live column count — in both branches when the band pages, so the pad is
   // right in the render a release happens in.
-  const { probeRef, columns } = useIconColumns();
+  const { probeRef, columns: measured } = useIconColumns();
+  // A menu's column count is declared; fixed-width cells' is measured.
+  const columns = "cols" in gridColumns ? gridColumns.cols : measured;
   const windowed = entries.length > VIRTUALIZE_THRESHOLD;
   const probe =
     windowed || phase.paged ? (
       <Grid
         ref={probeRef}
         aria-hidden
-        cellWidth={CELL_WIDTH}
+        {...gridColumns}
         gap={geometry.gap}
         className={cn(geometry.classes, "h-0")}
       />
@@ -566,11 +638,7 @@ function IconsGrid({
     return (
       <>
         {probe}
-        <Grid
-          cellWidth={CELL_WIDTH}
-          gap={geometry.gap}
-          className={geometry.classes}
-        >
+        <Grid {...gridColumns} gap={geometry.gap} className={geometry.classes}>
           {Array.from({ length: phase.pad(columns) }, (_, i) => spacer(i))}
           {entries.map((entry) => renderEntry(entry, section.key))}
         </Grid>
@@ -598,7 +666,7 @@ function IconsGrid({
         >
           {(lane) => (
             <Grid
-              cellWidth={CELL_WIDTH}
+              {...gridColumns}
               gap={geometry.gap}
               className={cn(geometry.classes, geometry.lanePad)}
             >

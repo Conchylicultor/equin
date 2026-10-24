@@ -1,0 +1,9 @@
+/* The helper's window is a transparent system material: the document must not
+   cover it. The panel draws its own translucent fill (`--popover-fill`), so
+   what goes clear is the document and the backdrops above that fill (the pane
+   chrome, the surface) — not a `bg-background` below it. */
+html[data-window-material],
+html[data-window-material] body,
+html[data-window-material] .bg-background:has(.bg-popover-fill) {
+  background: transparent;
+}

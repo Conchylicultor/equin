@@ -2,7 +2,10 @@ import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { useNativeHost } from "@plugins/menu-bar/web";
 import { useNotificationArrivals } from "@plugins/shell/plugins/notifications/web";
 import { Separator } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -24,13 +27,16 @@ export function NativeNotificationsSwitch() {
   const setConfig = useSetConfig(nativeNotificationsConfig);
   if (host.kind !== "present" || host.notify === null) return null;
   return (
-    <Stack gap="xs">
+    <Stack gap="sm">
       {/* Its own rule: where the helper cannot notify the section is absent,
           and so is the rule. */}
-      <Separator />
+      <Inset x="md">
+        <Separator />
+      </Inset>
       <Row
         role="switch"
         aria-checked={enabled}
+        className="gap-md"
         icon={
           <Icon
             icon={enabled ? onIcon : offIcon}

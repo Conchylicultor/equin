@@ -15,4 +15,14 @@ export interface IconsViewOptions<TRow> {
    * square itself overrides the leading field's `cell` instead.
    */
   useTileRef?: Hook<(row: TRow) => Ref<HTMLElement>>;
+  /**
+   * Lay the grid out as a menu's (the menu-bar panel's): exactly `columns`
+   * cells sharing the view's width instead of fixed-width cells centred in
+   * it, each cell a menu target — highlighted on hover rather than lifted —
+   * with its name in the text colour at the compact caption rung, and its
+   * item actions overhanging the icon's bottom-right corner, chipless (each
+   * action draws its own round button). For a surface of known width; the
+   * density prop is ignored.
+   */
+  menu?: { columns: number };
 }

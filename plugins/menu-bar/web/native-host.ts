@@ -5,6 +5,7 @@ import {
   type EquinNativeBridge,
   type NativeCapabilities,
   type NativeHostInfo,
+  type NativeMaterial,
   type NativeNotification,
 } from "../core";
 
@@ -26,6 +27,8 @@ export type NativeHost =
       kind: "present";
       platform: "macos" | "linux";
       capabilities: NativeCapabilities;
+      /** The window is a transparent material the page must not cover. */
+      material: NativeMaterial | null;
       notify: ((n: NativeNotification) => Promise<void>) | null;
       setAttention: ((on: boolean) => Promise<void>) | null;
       openUrl: ((url: string) => Promise<void>) | null;
@@ -63,6 +66,7 @@ function presentHost(
     kind: "present",
     platform: info.platform,
     capabilities: caps,
+    material: info.material,
     notify: caps.notify ? (n) => bridge.notify(n) : null,
     setAttention: caps.attention ? (on) => bridge.setAttention(on) : null,
     openUrl: caps.openUrl ? (url) => bridge.openUrl(url) : null,

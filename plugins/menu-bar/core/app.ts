@@ -7,8 +7,8 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
  *
  * Its own app rather than a pane of Home because a colour scheme belongs to the
  * app owning a document (`<html>.dark` is one class per page), and the panel
- * must follow the OS like the menu-bar panels around it (`colorMode:
- * "system"`) while Home keeps the global setting. Mounted inside Home's path so
+ * is designed light (`colorMode: "light"`, its own theme `menu-bar`) while
+ * Home keeps the global setting. Mounted inside Home's path so
  * the helper's URL is the one it always was; the longest base path wins.
  * `listed: false`: nothing inside equin launches it — the native helper does.
  */
@@ -17,6 +17,6 @@ export const menuBarApp = defineApp({
   name: "Menu bar",
   basePath: "/home/menu-bar",
   icon: symbol("menu"),
-  colorMode: "system",
+  colorMode: "light",
   listed: false,
 });

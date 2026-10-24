@@ -53,6 +53,7 @@ buttons, `--chrome-mask`).
     - `ui/tokens/color-palette --popover`
     - `ui/tokens/shape --spacing`
   - Tokens used by:
+    - `menu-bar`
     - `primitives/css/ui-kit`
     - `primitives/overlay/floating-action`
 

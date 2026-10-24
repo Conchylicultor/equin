@@ -2,6 +2,7 @@ import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useNativeHost } from "../native-host";
 
 /**
@@ -14,7 +15,7 @@ export function PanelFooter() {
   const host = useNativeHost();
   if (host.kind === "pending")
     return <Loading variant="block" className="h-6 w-full" />;
-  const { origin, host: hostname } = window.location;
+  const { origin, hostname } = window.location;
   const home = `${origin}/`;
   const openUrl = host.kind === "present" ? host.openUrl : null;
   const label = (
@@ -23,19 +24,29 @@ export function PanelFooter() {
     </Text>
   );
   const dot = <StatusDot colorClass="bg-success" />;
-  return openUrl !== null ? (
-    <Row icon={dot} title="Open equin" onClick={() => void openUrl(home)}>
-      {label}
-    </Row>
-  ) : (
-    <Row
-      icon={dot}
-      title="Open equin"
-      href={home}
-      target="_blank"
-      rel="noreferrer"
-    >
-      {label}
-    </Row>
+  return (
+    <Inset y="xs">
+      {openUrl !== null ? (
+        <Row
+          icon={dot}
+          title="Open equin"
+          className="gap-md"
+          onClick={() => void openUrl(home)}
+        >
+          {label}
+        </Row>
+      ) : (
+        <Row
+          icon={dot}
+          title="Open equin"
+          className="gap-md"
+          href={home}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {label}
+        </Row>
+      )}
+    </Inset>
   );
 }

@@ -1,9 +1,11 @@
 // @hash 81ba03048557
 {
-  // The menu-bar panel is drawn in the launcher's own theme, `home` (it is the
-  // launcher, compacted into the OS menu bar), selected here because the panel
-  // is an app of its own (`menuBarApp`). Its light/dark is not here: the app
-  // declares `colorMode: "system"` and the user's override lives in
+  // The menu-bar panel is drawn in its own theme, `menu-bar` (a native menu's
+  // look: the system font, 13px rows, the menu palette; its app tiles keep the
+  // launcher's colours), contributed by the menu-bar plugin
+  // (`plugins/menu-bar/web/internal/theme.ts`) and selected here because the
+  // panel is an app of its own (`menuBarApp`). Its light/dark is not here: the
+  // app declares `colorMode: "light"` and the user's override lives in
   // `color-mode.jsonc`, a separate document.
-  "theme": "home"
+  "theme": "menu-bar"
 }

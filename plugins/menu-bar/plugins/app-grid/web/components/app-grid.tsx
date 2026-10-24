@@ -22,9 +22,12 @@ import {
 import { installedApp } from "@plugins/apps-core/plugins/app-launcher/core";
 import { AppIconAvatar } from "@plugins/apps-core/plugins/app-icon/web";
 import type { Activation } from "@plugins/primitives/plugins/link-gesture/core";
+import type { IconsViewOptions } from "@plugins/primitives/plugins/data-view/plugins/icons/core";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { insetClass } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useNativeHost } from "@plugins/menu-bar/web";
 import { menuBarInstalled } from "@plugins/menu-bar/core";
 import { useLive } from "@plugins/network/plugins/live/web";
@@ -62,6 +65,11 @@ function GridFrame({ body }: HostedToolbarParts) {
 }
 
 const GRID_TOOLBAR: HostedToolbar = { kind: "hosted", frame: GridFrame };
+
+/** A menu's grid: four cells sharing the panel's width. */
+const GRID_VIEW_OPTIONS: { icons: IconsViewOptions<AppRow> } = {
+  icons: { menu: { columns: 4 } },
+};
 
 /** An app's own URL, absolute — what the helper opens in the browser. */
 function appUrl(basePath: string): string {
@@ -130,8 +138,16 @@ export function MenuBarAppGrid() {
     return { open: () => void openUrl(url), href: () => url };
   };
   return (
-    // Four rows of compact tiles, then the grid scrolls inside the panel.
-    <Scroll className="max-h-[19.5rem] overscroll-contain">
+    // Four rows of tiles, then the grid scrolls inside the panel.
+    <Scroll
+      className={cn(
+        "max-h-[18.5rem] overscroll-contain",
+        // A region on the `xs` rail (the DataView's bands follow it, owing
+        // nothing more); the grid section pads its own foot.
+        "rail-x-xs",
+        insetClass({ t: "xs" }),
+      )}
+    >
       <DataView<AppRow>
         rows={rows}
         rowKey={(a) => a.id}
@@ -140,6 +156,7 @@ export function MenuBarAppGrid() {
         views={["icons"]}
         defaultView="icons"
         density="compact"
+        viewOptions={GRID_VIEW_OPTIONS}
         toolbar={GRID_TOOLBAR}
         storageKey={MENU_BAR_APPS_VIEW}
         rowActivation={rowActivation}

@@ -23,6 +23,15 @@
         -webkit-user-select: none;
         user-select: none;
       }
+      /* macOS: the window is transparent with rounded corners (set by the
+         helper); the page paints its own 12px rounded body. */
+      html[data-material] {
+        background: transparent;
+      }
+      html[data-material] body {
+        border-radius: 12px;
+        overflow: hidden;
+      }
       main {
         height: 100%;
         display: flex;

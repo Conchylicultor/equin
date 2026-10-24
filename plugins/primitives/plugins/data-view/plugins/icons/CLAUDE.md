@@ -23,6 +23,15 @@ phone home screen. Contributes one `DataViewSlots.View("icons")` entry.
   fixed small geometry at any width: 72px cells, 36px tiles, `2xs` column / `xs`
   row gaps, tighter tile padding. Both geometries live in one `GEOMETRY` record
   that every grid and the column probe read.
+- **Menu layout**: `viewOptions.icons.menu = { columns }` (`IconsViewOptions`)
+  lays the grid out as a menu's instead (the menu-bar panel): exactly
+  `columns` cells sharing the view's width (`Grid cols`, the count declared
+  rather than probed), 40px tiles, `2xs` gaps, each cell a rounded `py-sm`
+  target that highlights on hover (`bg-accent`) instead of lifting, its name
+  in the text colour at the caption's compact rung, and its item actions on
+  the ICON's bottom-right corner (outset `sm`), chipless — each action draws
+  its own round button. Density is ignored. A
+  third entry beside `GEOMETRY` (`MENU_GEOMETRY`).
 - **Selected row**: the `selectedRowId` tile is `aria-current="true"`, its name
   in the foreground colour with a dot under it (a launcher's current app).
 - **Activation**: `props.rowActivation?.(row)` passed straight through. A tile
@@ -87,9 +96,10 @@ through the real body, `web/__tests__/paged-conformance.test.tsx` (data-view's
 - Description: Icons view child for the data-view primitive: a centred launcher grid of fixed-size tiles (the row's leading avatar filling a squircle) with the name underneath, drag-to-reorder in manual order.
 - Web:
   - Contributes: `DataViewSlots.View` "Icons" → `IconsView`
-  - Uses: 37 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×22
     - `primitives/avatar` ×2
+    - `primitives/css/ui-kit` ×2
     - `primitives/rank-reorder` ×2
     - `primitives/row-actions` ×2
     - `primitives/css/center.Center`
@@ -97,12 +107,12 @@ through the real body, `web/__tests__/paged-conformance.test.tsx` (data-view's
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/css/ui-kit.cn`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/link-gesture.activationProps`
     - `primitives/virtual-rows.VirtualRows`
 - Cross-plugin:
   - Uses tokens:
+    - `ui/tokens/color-palette --accent`
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --ring`

@@ -7,6 +7,7 @@ import {
 import { menuBarApp } from "../../core";
 import { SurfaceOverlay } from "@plugins/primitives/plugins/overlay/plugins/surface-overlay/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import {
   Stack,
@@ -16,12 +17,13 @@ import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/eleme
 import { MenuBar } from "../slots";
 import { useNativeHost } from "../native-host";
 import { PanelStatus } from "../internal/panel-status";
+import { useWindowMaterial } from "../internal/window-material";
+import "../internal/window-material.css";
 
 /**
  * The menu-bar panel: the page the native helper's panel window loads
  * (`/home/menu-bar?embed=1` — chromeless, so no rail, tab bar or action bar).
- * The index pane of the menu-bar app (`menuBarApp`, which follows the OS's
- * light/dark), so it has no segment of its own. Its body is the
+ * The index pane of the menu-bar app (`menuBarApp`, always light), so it has no segment of its own. Its body is the
  * `MenuBar.Section` slot and nothing else: the panel names no section.
  */
 export const menuBarPane = Pane.define({
@@ -49,28 +51,40 @@ function PanelSections() {
     { deps: [setPanelHeight] },
   );
   return (
-    <Stack ref={content} gap="none" className={insetClass({ pad: "xs" })}>
+    <Stack ref={content} gap="none" className={insetClass({ pad: "sm" })}>
       <MenuBar.Section.Render />
     </Stack>
   );
 }
 
 function MenuBarPanelBody() {
+  // On a transparent helper window the panel is the material's rounded fill.
+  const material = useWindowMaterial();
   return (
     <PaneChrome pane={menuBarPane}>
       <SurfaceOverlay>
-        <Surface
-          level="overlay"
-          // The helper's window IS the panel: it owns the corners and shadow.
-          className="size-full rounded-none shadow-none ring-0"
+        {/* On a transparent helper window the panel clips to its corners. */}
+        <Clip
+          fill
+          style={
+            material === null
+              ? undefined
+              : { borderRadius: material.cornerRadius }
+          }
         >
-          <PanelStatus>
-            <Scroll className="h-full">
-              <PanelSections />
-            </Scroll>
-            <MenuBar.Mount.Mount />
-          </PanelStatus>
-        </Surface>
+          <Surface
+            level="overlay"
+            // The helper's window IS the panel: it owns the shadow.
+            className="size-full rounded-none shadow-none ring-0"
+          >
+            <PanelStatus>
+              <Scroll className="h-full">
+                <PanelSections />
+              </Scroll>
+              <MenuBar.Mount.Mount />
+            </PanelStatus>
+          </Surface>
+        </Clip>
       </SurfaceOverlay>
     </PaneChrome>
   );

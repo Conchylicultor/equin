@@ -10,6 +10,7 @@
   - Uses:
     - `infra/endpoints.useFetchEndpoint`
     - `menu-bar.MenuBar`
+    - `primitives/css/center.Center`
     - `primitives/css/fill.fillClasses`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.insetClass`
@@ -24,10 +25,11 @@
     - `ui/icons.Icon`
 - Cross-plugin:
   - Uses tokens:
+    - `ui/tokens/color-palette --faint-foreground`
     - `ui/tokens/color-palette --foreground`
-    - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --ring`
     - `ui/tokens/color-palette --success`
+    - `ui/tokens/density --space-2xs`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-scale`

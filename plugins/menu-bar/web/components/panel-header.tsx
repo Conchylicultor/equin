@@ -18,9 +18,9 @@ export function PanelHeader() {
   return (
     <Stack
       direction="row"
-      gap="md"
+      gap="lg"
       align="center"
-      className={insetClass({ x: "sm", t: "sm", b: "md" })}
+      className={insetClass({ x: "md", t: "md", b: "lg" })}
     >
       <img src="/icon.svg" alt="" className={cn("size-7.5", rigidClass())} />
       <Fill>
