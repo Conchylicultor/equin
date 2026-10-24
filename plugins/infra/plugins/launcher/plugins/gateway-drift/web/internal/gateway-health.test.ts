@@ -13,7 +13,7 @@ describe("gatewayVerdict", () => {
     });
   });
 
-  test("stale names each difference and the command", () => {
+  test("stale is one line; the differences are the Update popover's", () => {
     expect(
       ready({
         kind: "stale",
@@ -21,8 +21,7 @@ describe("gatewayVerdict", () => {
       }),
     ).toEqual({
       state: "attention",
-      summary:
-        "Out of date (-listen :9000 → loopback:9000; new -pid-file) — run ./equin start --force",
+      summary: "Out of date",
     });
   });
 

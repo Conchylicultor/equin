@@ -20,7 +20,11 @@ import { InfoRowView, QuietRowsView, StatusRowView } from "./health-row";
 
 type SealedRow = SealContributions<HealthReportRow>;
 
-/** A row with nothing beyond its summary — what `foldQuietRows` may fold. */
+/**
+ * A row with nothing beyond its summary — what `foldQuietRows` may fold. A
+ * `remedy` does not count: it is drawn only while the row is not ok, and a
+ * folded row is ok.
+ */
 function isPlain(row: SealedRow): boolean {
   return (
     row.kind === "status" &&

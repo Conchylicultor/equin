@@ -60,6 +60,10 @@ HealthReport.Row({
   target when the row is expandable, so it must be presentational — controls go
   in `actions`. It gets `expanded` (`GlanceProps`), so it can show less while
   the row is collapsed.
+- **`remedy` is the control that fixes the problem** ("Update"): drawn after
+  `actions` only while the row is `attention` or `critical`. It does not keep
+  the row out of the quiet card (see Merge), so a row that is summary-only
+  while fine can still offer a fix when it is not.
 - **Point at your own pane from `actions`.** The report has no footer and never
   names a contributor's pane.
 
@@ -82,8 +86,8 @@ is unknown, the verdict gives that reason instead of "Checking…".
 
 **Quiet rows fold into one card** (`foldQuietRows`, pure, bun-tested): a
 status row with nothing beyond its summary (no `glance`, `component` or
-`actions`) that is `ok` only says "fine", so two or more of them collapse into
-one card — their titles, "All normal" — that lists each when expanded. A row
+`actions`; a `remedy` is not drawn while `ok`, so it does not count) that is
+`ok` only says "fine", so two or more of them collapse into one card — their titles, "All normal" — that lists each when expanded. A row
 leaves the card the moment it is not `ok`, so a problem is never behind a
 chevron. The card sits after every other row, so a row leaving or rejoining it
 never shifts the rest. The rule reads only the row's shape and state, never its

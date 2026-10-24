@@ -29837,12 +29837,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtimePath`
           - `runtimeShimsDir`
       - Plugins:
-        - **`gateway-drift`** — Gateway drift, shown: the health report's Gateway row — attention while the machine's login-service gateway (installed or running) differs from what ./equin start --force would install now from main, naming each difference (binary, -listen and the other flags, cwd, signature) and the command; folded with Connection, Database and Live reads while current.
+        - **`gateway-drift`** — Gateway drift, shown: the health report's Gateway row — attention while the machine's login-service gateway (installed or running) differs from what ./equin start --force would install now from main, in one line, with an Update remedy launching an agent briefed with each difference (binary, -listen and the other flags, cwd, signature) to run it; folded with Connection, Database and Live reads while current.
           - Web:
             - Contributes: `HealthReport.Row` "Gateway"
             - Uses:
               - `network/live.useLive`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
+              - `primitives/launch.LaunchAgentPopover`
               - `shell/health-report.HealthReport`
+              - `ui/icons.Icon`
           - Server:
             - Contributes: `resource.declare` "gateway-drift"
             - Resources: `gateway-drift` (push, notified, whole: one phrase per kind of difference (binary, each changed flag, cwd, signature, running vs installed) — a fixed handful)
@@ -29860,6 +29865,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `GATEWAY_REFRESH_COMMAND`
               - `gatewayDrift`
               - `GatewayDriftSchema`
+          - Cross-plugin:
+            - Uses tokens: `ui/tokens/shape --spacing`
         - **`login-services`** — Per-user login services, generalized from the gateway's: a LoginService over a LoginServiceSpec (label, argv, cwd, env, stdio log, session background | graphical), rendered as a launchd LaunchAgent on macOS (graphical → LimitLoadToSessionType=Aqua) or a systemd user unit on Linux (graphical → graphical-session.target, no lingering); defineLoginService and the collected login-services/ registry, so ./equin start / stop bring every declared service up and down without naming one. On main's boot, every declared service a start registered follows main: reloaded when main's build of its dependency changed its job (rewritten only, when stopped), the dependency requested through deps first when it is not built yet.
           - Core:
             - Uses: `framework/tooling/collected-dir.defineCollectedDir`
@@ -38502,7 +38509,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selfClass`
               - `Stack`
           - Cross-plugin:
-            - Imported by: 416 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 417 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×107
               - `conversations` ×64
               - `primitives` ×54
@@ -38515,8 +38522,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core` ×6
               - `stats` ×6
               - `build` ×5
+              - `infra` ×5
               - `auth` ×4
-              - `infra` ×4
               - `review` ×4
               - `shell` ×4
               - `integrations` ×3
@@ -38735,7 +38742,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×36
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 391 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 392 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×107
               - `conversations` ×73
               - `primitives` ×44
@@ -38747,8 +38754,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields` ×9
               - `stats` ×6
               - `build` ×5
+              - `infra` ×5
               - `auth` ×4
-              - `infra` ×4
               - `integrations` ×4
               - `review` ×4
               - `reorder` ×3
@@ -39015,7 +39022,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family` ×4
               - `ui/tokens/material` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 435 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 436 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×109
               - `apps` ×97
               - `conversations` ×54
@@ -39028,11 +39035,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core` ×7
               - `reorder` ×6
               - `build` ×5
+              - `infra` ×5
               - `review` ×5
               - `shell` ×5
               - `auth` ×4
               - `config_v2` ×4
-              - `infra` ×4
               - `integrations` ×4
               - `active-data` ×3
               - `backup` ×2
@@ -41335,6 +41342,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/fork-conversation`
           - `conversations/conversation-view/jsonl-viewer/investigate-event`
           - `conversations/conversation-view/rewind`
+          - `infra/launcher/gateway-drift`
           - `page/annotations/todo/task-link`
           - `page/prompt/block`
           - `primitives/launch/investigate`
@@ -49865,7 +49873,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/shadow --shadow`
           - `ui/tokens/shape --spacing`
-        - Imported by: 339 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 340 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×88
           - `conversations` ×58
           - `primitives` ×42
@@ -49884,12 +49892,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell` ×3
           - `backup` ×2
           - `config_v2` ×2
+          - `infra` ×2
           - `reports` ×2
           - `auth`
           - `framework/tooling/codegen`
           - `fullscreen`
           - `improve`
-          - `infra/events-test`
           - `layouts/miller`
           - `map`
           - `menu-bar`
@@ -51411,7 +51419,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `shapeGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --radius-chip-compact`
-            - Tokens used by: 429 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 430 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×93
               - `apps` ×84
               - `primitives` ×70
@@ -51425,9 +51433,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `review` ×5
               - `active-data` ×4
               - `apps-core` ×4
+              - `infra` ×4
               - `shell` ×4
               - `build` ×3
-              - `infra` ×3
               - `stats` ×3
               - `auth` ×2
               - `backup` ×2

@@ -75,6 +75,29 @@ function contributedActions(row: SealedRow): ReactNode {
 }
 
 /**
+ * `actions`, followed by the row's `remedy` while the row needs a look
+ * (`attention` / `critical`) — never while it is fine, which is what lets a row
+ * with a remedy still fold into the quiet card.
+ */
+function withRemedy(
+  row: SealedStatusRow,
+  level: ReturnType<typeof levelOf>,
+  actions: ReactNode,
+): ReactNode {
+  const Remedy = row.remedy;
+  if (!Remedy || (level !== "attention" && level !== "critical"))
+    return actions;
+  return (
+    <>
+      {actions}
+      <ContributedPart row={row}>
+        <Remedy />
+      </ContributedPart>
+    </>
+  );
+}
+
+/**
  * The row's leading column: ONE fixed-size box for both row kinds, so every
  * title starts at the same x whether the row leads with a dot or an icon. An
  * empty one is the indent under it — the spacer IS the box it reserves room
@@ -218,7 +241,7 @@ export function StatusRowView({
       )}
     </ControlSizeProvider>
   );
-  const actions = contributedActions(row);
+  const actions = withRemedy(row, level, contributedActions(row));
   const text = (
     <RowText
       leading={leading}

@@ -86,6 +86,13 @@ export interface StatusRow extends RowCommon {
    * is what gives the row a chevron: a row without one cannot be expanded.
    */
   component?: ComponentType;
+  /**
+   * The control that fixes the row's problem ("Update"), drawn after `actions`
+   * only while the row is in `attention` or `critical`. Unlike `actions` it
+   * does not keep a row out of the quiet card: while the row is `ok` it is not
+   * drawn at all, so a row whose only control is a remedy still folds.
+   */
+  remedy?: ComponentType;
 }
 
 /**
@@ -100,6 +107,7 @@ export interface InfoRow extends RowCommon {
   useInfo: Hook<() => HealthInfo>;
   glance?: never;
   component?: never;
+  remedy?: never;
 }
 
 /** One contribution to `HealthReport.Row`. */

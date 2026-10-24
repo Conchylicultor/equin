@@ -86,7 +86,7 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `selfClass`
     - `Stack`
 - Cross-plugin:
-  - Imported by: 416 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 417 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×107
     - `conversations` ×64
     - `primitives` ×54
@@ -99,8 +99,8 @@ per-site via `// eslint-disable-next-line spacing/no-adhoc-spacing -- reason`.
     - `apps-core` ×6
     - `stats` ×6
     - `build` ×5
+    - `infra` ×5
     - `auth` ×4
-    - `infra` ×4
     - `review` ×4
     - `shell` ×4
     - `integrations` ×3
