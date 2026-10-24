@@ -193,27 +193,14 @@ the code:
     - `ui/tokens/color-palette --muted`
     - `ui/tokens/sidebar-palette --sidebar`
     - `ui/tokens/sidebar-palette --sidebar-accent`
-  - Imported by:
-    - `apps-core/app-embed`
-    - `apps-core/app-launcher`
-    - `apps-core/app-rail`
-    - `apps-core/surface`
-    - `apps-core/tab-bar`
-    - `apps-core/tab-surface`
-    - `apps-core/theme-scope`
-    - `apps/desktop/windows`
-    - `apps/file-explorer/browser`
-    - `apps/prototypes/canvas`
-    - `apps/prototypes/compare/exhibit`
-    - `apps/website/pages/apps`
-    - `apps/website/shell`
-    - `hints`
-    - `hints/ask`
+  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps-core` ×7
+    - `apps` ×7
+    - `hints` ×2
+    - `shell` ×2
     - `layouts/miller`
     - `plugin-meta/exhibits`
     - `primitives/pane`
-    - `shell/global-action-bar`
-    - `shell/toast`
 - Exemptions:
   - Exempts itself from: `theme-boundary/no-adhoc-theme-scope` — `.` (sanctioned)
   - Exempted by: `primitives/css/theme-boundary` (0 debt)

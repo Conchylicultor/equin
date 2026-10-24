@@ -28,8 +28,10 @@ launcher). Design: prototype proto-1792811301-yksedx (the `page` variant).
 - Web:
   - Slots: `newAppPane.Actions`
   - Slot contributors: `newAppPane.Actions` ← `primitives.pane`
-  - Contributes: `Pane.Register` "home-new-app"
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes:
+    - `Pane.Register` "home-new-app"
+    - `ThemeEngine.SubTheme` "New app prompt"
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×3
     - `primitives/pane` ×2
     - `primitives/persistent-draft` ×2
@@ -42,16 +44,19 @@ launcher). Design: prototype proto-1792811301-yksedx (the `page` variant).
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/theme-boundary.Theme`
     - `primitives/dom/web-storage.defineStore`
     - `primitives/icon-button.IconButton`
     - `primitives/launch.useTaskLaunch`
     - `primitives/shortcuts.formatShortcutLabel`
     - `primitives/text-editor/composer.ComposerField`
     - `ui/icons.Icon`
+    - `ui/theme-engine.ThemeEngine`
   - Exports (values): `newAppPane`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --background`
+    - `ui/tokens/color-palette --card`
     - `ui/tokens/color-palette --faint-foreground`
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --input`

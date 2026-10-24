@@ -122,6 +122,11 @@ export {
 } from "./theme-declarations-gen";
 
 export {
+  collectWebSlotContributions,
+  type WebSlotContribution,
+} from "./web-slot-contributions";
+
+export {
   appDeclarationsManifestPath,
   renderAppDeclarationsManifest,
 } from "./app-declarations-gen";

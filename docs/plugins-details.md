@@ -4137,8 +4137,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Web:
             - Slots: `newAppPane.Actions`
             - Slot contributors: `newAppPane.Actions` ← `primitives.pane`
-            - Contributes: `Pane.Register` "home-new-app"
-            - Uses: 23 symbols — full list in [`plugins/apps/plugins/home/plugins/new-app/REFERENCE.md`](../plugins/apps/plugins/home/plugins/new-app/REFERENCE.md)
+            - Contributes:
+              - `Pane.Register` "home-new-app"
+              - `ThemeEngine.SubTheme` "New app prompt"
+            - Uses: 25 symbols — full list in [`plugins/apps/plugins/home/plugins/new-app/REFERENCE.md`](../plugins/apps/plugins/home/plugins/new-app/REFERENCE.md)
               - `primitives/css/ui-kit` ×3
               - `primitives/pane` ×2
               - `primitives/persistent-draft` ×2
@@ -4151,16 +4153,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
+              - `primitives/css/theme-boundary.Theme`
               - `primitives/dom/web-storage.defineStore`
               - `primitives/icon-button.IconButton`
               - `primitives/launch.useTaskLaunch`
               - `primitives/shortcuts.formatShortcutLabel`
               - `primitives/text-editor/composer.ComposerField`
               - `ui/icons.Icon`
+              - `ui/theme-engine.ThemeEngine`
             - Exports (values): `newAppPane`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --background`
+              - `ui/tokens/color-palette --card`
               - `ui/tokens/color-palette --faint-foreground`
               - `ui/tokens/color-palette --foreground`
               - `ui/tokens/color-palette --input`
@@ -25854,6 +25859,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `RegistryGenContext`
               - `ReorderableSlotEntry`
               - `WatchedSlotHit`
+              - `WebSlotContribution`
             - Exports (values):
               - `appDeclarationsManifestPath`
               - `assertSlotsDeclared`
@@ -25873,6 +25879,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `collectIconManifest`
               - `collectImportGraph`
               - `collectTokenGroupVars`
+              - `collectWebSlotContributions`
               - `committedRegistryBundle`
               - `companionManifestPath`
               - `compositionFilteredRegistries`
@@ -38740,27 +38747,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --muted`
               - `ui/tokens/sidebar-palette --sidebar`
               - `ui/tokens/sidebar-palette --sidebar-accent`
-            - Imported by:
-              - `apps-core/app-embed`
-              - `apps-core/app-launcher`
-              - `apps-core/app-rail`
-              - `apps-core/surface`
-              - `apps-core/tab-bar`
-              - `apps-core/tab-surface`
-              - `apps-core/theme-scope`
-              - `apps/desktop/windows`
-              - `apps/file-explorer/browser`
-              - `apps/prototypes/canvas`
-              - `apps/prototypes/compare/exhibit`
-              - `apps/website/pages/apps`
-              - `apps/website/shell`
-              - `hints`
-              - `hints/ask`
+            - Imported by: 21 plugins — full list in [`plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md)
+              - `apps-core` ×7
+              - `apps` ×7
+              - `hints` ×2
+              - `shell` ×2
               - `layouts/miller`
               - `plugin-meta/exhibits`
               - `primitives/pane`
-              - `shell/global-action-bar`
-              - `shell/toast`
           - Exemptions:
             - Exempts itself from: `theme-boundary/no-adhoc-theme-scope` — `.` (sanctioned)
             - Exempted by: `primitives/css/theme-boundary` (0 debt)
@@ -50410,11 +50404,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ThemeEngine.SubTheme`
           - `ThemeEngine.FixedTheme`
           - `ThemeEngine.ThemeSource`
-        - Slot contributors: 45 contributors — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+        - Slot contributors: 46 contributors — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ThemeEngine.TokenGroup` ×18
           - `ThemeEngine.Theme` ×12
+          - `ThemeEngine.SubTheme` ×6
           - `ThemeEngine.VariantGroup` ×6
-          - `ThemeEngine.SubTheme` ×5
           - `ThemeEngine.FixedTheme` ×2
           - `ThemeEngine.ThemeSource` ×2
         - Contributes:
@@ -50561,9 +50555,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shadow` ×5
           - `ui/tokens/type-scale` ×4
           - `ui/tokens/shape` ×3
-        - Imported by: 47 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+        - Imported by: 48 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ui` ×28
-          - `apps` ×14
+          - `apps` ×15
           - `apps-core/chrome-theme`
           - `hints`
           - `menu-bar`

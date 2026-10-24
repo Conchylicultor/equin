@@ -69,7 +69,8 @@ export default function buildRule({
           "0.25rem and `rounded-[…]` is a pinned literal, both bypassing the " +
           "`--radius` shape token. Use a token-driven scale step (`rounded-sm` / " +
           "`rounded-md` / `rounded-lg` / …) so Shape presets can re-soften it, or " +
-          "`rounded-full` / `rounded-none` for an intentional fixed shape.",
+          "`rounded-full` / `rounded-none` for an intentional fixed shape." +
+          " To make ONE instance or region look different (a hero prompt, a featured card), wrap it in a sub-theme that sets the token (`defineSubTheme` + `ThemeEngine.SubTheme` + `<Theme name={subThemeScope(…)}>`, see plugins/ui/plugins/theme-engine/CLAUDE.md).",
       },
     },
     defaultOptions: [],

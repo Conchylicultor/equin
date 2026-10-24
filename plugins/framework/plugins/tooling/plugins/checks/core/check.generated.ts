@@ -115,6 +115,7 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "reorder", id: "reorder", loader: () => import("@plugins/reorder/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen"] },
   { pluginPath: "toolchain", id: "toolchain", loader: () => import("@plugins/toolchain/check"), dependsOn: ["infra/plugins/launcher", "infra/plugins/paths"] },
   { pluginPath: "ui/plugins/icons", id: "ui.icons", loader: () => import("@plugins/ui/plugins/icons/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen"] },
+  { pluginPath: "ui/plugins/theme-engine", id: "ui.theme-engine", loader: () => import("@plugins/ui/plugins/theme-engine/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen"] },
   { pluginPath: "ui/plugins/tokens/plugins/type-scale", id: "ui.tokens.type-scale", loader: () => import("@plugins/ui/plugins/tokens/plugins/type-scale/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen"] },
 ];
 

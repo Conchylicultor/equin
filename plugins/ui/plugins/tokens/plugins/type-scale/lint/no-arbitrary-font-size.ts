@@ -118,7 +118,8 @@ export default function buildRule({
           "sub-scale text-3xs (10px) / text-2xs (11px), or a role: <Text variant> " +
           "from @plugins/primitives/plugins/css/plugins/text/web (or its text-<role> " +
           "utility). The role ladder is closed (TYPE_ROLES in the text plugin's core); " +
-          "a theme resizes a role, it never adds a size.",
+          "a theme resizes a role, it never adds a size." +
+          " To make ONE instance or region look different (a hero prompt, a featured card), wrap it in a sub-theme that sets the token (`defineSubTheme` + `ThemeEngine.SubTheme` + `<Theme name={subThemeScope(…)}>`, see plugins/ui/plugins/theme-engine/CLAUDE.md).",
       },
     },
     defaultOptions: [],

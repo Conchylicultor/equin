@@ -204,6 +204,7 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `RegistryGenContext`
     - `ReorderableSlotEntry`
     - `WatchedSlotHit`
+    - `WebSlotContribution`
   - Exports (values):
     - `appDeclarationsManifestPath`
     - `assertSlotsDeclared`
@@ -223,6 +224,7 @@ wrapper (or a barrel not mentioning `httpRoutes`) is never parsed.
     - `collectIconManifest`
     - `collectImportGraph`
     - `collectTokenGroupVars`
+    - `collectWebSlotContributions`
     - `committedRegistryBundle`
     - `companionManifestPath`
     - `compositionFilteredRegistries`

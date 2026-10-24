@@ -104,6 +104,18 @@ radius.
 <Theme name={subThemeScope(equinDocumentTheme)} surface="canvas">…</Theme>
 ```
 
+It is also how ONE instance of a token-driven primitive looks different without
+retheming its app or overriding a className: Home's New app screen wraps its
+single `ComposerField` in `newAppPromptTheme` (`apps/home/new-app`), which sets
+only `radiusCard`, `padComposerText`, `padComposerActions` and the `composer`
+fill (`var(--card)`, so it still follows Home's palette); every other card and
+composer in Home keeps the standard box.
+
+Declaring it is not enough — it must also be contributed through
+`ThemeEngine.SubTheme`, or the region carries its scope attribute but nothing
+is painted for it. The `theme-engine:sub-themes-contributed` check fails on a
+`defineSubTheme` no contribution registers.
+
 It differs from a theme in three ways:
 
 - **Silence means "the surrounding theme", not "the schema default".**
@@ -208,11 +220,11 @@ exactly.
     - `ThemeEngine.SubTheme`
     - `ThemeEngine.FixedTheme`
     - `ThemeEngine.ThemeSource`
-  - Slot contributors: 45 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 46 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `ThemeEngine.TokenGroup` ×18
     - `ThemeEngine.Theme` ×12
+    - `ThemeEngine.SubTheme` ×6
     - `ThemeEngine.VariantGroup` ×6
-    - `ThemeEngine.SubTheme` ×5
     - `ThemeEngine.FixedTheme` ×2
     - `ThemeEngine.ThemeSource` ×2
   - Contributes:
@@ -359,9 +371,9 @@ exactly.
     - `ui/tokens/shadow` ×5
     - `ui/tokens/type-scale` ×4
     - `ui/tokens/shape` ×3
-  - Imported by: 47 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 48 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui` ×28
-    - `apps` ×14
+    - `apps` ×15
     - `apps-core/chrome-theme`
     - `hints`
     - `menu-bar`

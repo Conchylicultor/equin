@@ -15,7 +15,11 @@ preset (Comfortable / Cozy / Compact) like every other padded chrome surface.
 - Default chrome is `rounded-card border border-border bg-card shadow-sm p-card`
   (`rounded-card` = the shape group's `radiusCard`, default the `rounded-md` step); pass
   `className` to override (cn uses `tailwind-merge`, so `rounded-lg` /
-  `bg-muted/30` / a different padding cleanly replace the defaults).
+  `bg-muted/30` / a different padding cleanly replace the defaults). To give one
+  card (or a region of them) a different radius, padding or fill than the rest of
+  the app, prefer a sub-theme that sets `radiusCard` / `padCard` / `card` over a
+  pinned className — it keeps following the app's theme
+  ([`ui/theme-engine`](../../../../../ui/plugins/theme-engine/CLAUDE.md)).
 
 The `surface/no-adhoc-surface` lint rule (in the `surface` primitive — it
 subsumed the former `no-adhoc-card`) fingerprints ad-hoc raised-surface markup

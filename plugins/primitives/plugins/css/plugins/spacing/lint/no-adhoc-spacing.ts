@@ -65,7 +65,8 @@ export default function buildRule({
           "Raw spacing class `{{token}}` is banned — set layout spacing through the " +
           "<Stack gap> / <Inset pad> primitives from @plugins/primitives/plugins/css/plugins/spacing/web, " +
           "or a `gap-<step>` / `p*-<step>` utility (none|2xs|xs|sm|md|lg|xl|2xl) from the density spacing scale. " +
-          "Margins become a Stack gap or Inset pad — the ramp has no margin classes.",
+          "Margins become a Stack gap or Inset pad — the ramp has no margin classes." +
+          " To make ONE instance or region look different (a hero prompt, a featured card), wrap it in a sub-theme that sets the token (`defineSubTheme` + `ThemeEngine.SubTheme` + `<Theme name={subThemeScope(…)}>`, see plugins/ui/plugins/theme-engine/CLAUDE.md).",
       },
     },
     defaultOptions: [],

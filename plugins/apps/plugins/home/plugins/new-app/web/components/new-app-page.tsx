@@ -24,6 +24,8 @@ import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
+import { subThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -32,6 +34,7 @@ import { homeRootPane } from "@plugins/apps/plugins/home/plugins/shell/web";
 import { APPS_CATEGORY_ID } from "@plugins/apps/plugins/home/core";
 import { APP_IDEAS, dealIdeas } from "../internal/ideas";
 import { newAppPrompt } from "../internal/prompt";
+import { newAppPromptTheme } from "../internal/theme";
 
 const backIcon = symbol("arrow-back");
 const shuffleIcon = symbol("shuffle");
@@ -131,48 +134,51 @@ export function NewAppPage() {
           </Stack>
           <Stack gap="lg">
             <Stack gap="xs">
-              <ComposerField
-                value={draft.text}
-                onChange={(text) => setDraft((d) => ({ ...d, text }))}
-                onSubmit={() => void create()}
-                submitMode="cmd-enter"
-                placeholder="Describe the app you want"
-                autoFocus
-                minRows={5}
-                maxHeight="20rem"
-                namespace="home-new-app"
-                barStart={
-                  <LaunchOptionPills
-                    side="start"
-                    values={options}
-                    onChange={setPicked}
-                    disabled={false}
-                  />
-                }
-                barEnd={
-                  <>
+              {/* This one field wears the mock's box (newAppPromptTheme); every other composer in Home keeps the standard one. */}
+              <Theme name={subThemeScope(newAppPromptTheme)} surface="none">
+                <ComposerField
+                  value={draft.text}
+                  onChange={(text) => setDraft((d) => ({ ...d, text }))}
+                  onSubmit={() => void create()}
+                  submitMode="cmd-enter"
+                  placeholder="Describe the app you want"
+                  autoFocus
+                  minRows={5}
+                  maxHeight="20rem"
+                  namespace="home-new-app"
+                  barStart={
                     <LaunchOptionPills
-                      side="end"
+                      side="start"
                       values={options}
                       onChange={setPicked}
                       disabled={false}
                     />
-                    {/* The field's one action, a rung above the bar's pills. */}
-                    <ControlSizeProvider size="md">
-                      <Button
-                        disabled={!canCreate}
-                        tooltip={blockReason ?? undefined}
-                        onClick={create}
-                      >
-                        Create
-                        <Text variant="caption" className="opacity-50">
-                          {formatShortcutLabel("mod+enter")}
-                        </Text>
-                      </Button>
-                    </ControlSizeProvider>
-                  </>
-                }
-              />
+                  }
+                  barEnd={
+                    <>
+                      <LaunchOptionPills
+                        side="end"
+                        values={options}
+                        onChange={setPicked}
+                        disabled={false}
+                      />
+                      {/* The field's one action, a rung above the bar's pills. */}
+                      <ControlSizeProvider size="md">
+                        <Button
+                          disabled={!canCreate}
+                          tooltip={blockReason ?? undefined}
+                          onClick={create}
+                        >
+                          Create
+                          <Text variant="caption" className="opacity-50">
+                            {formatShortcutLabel("mod+enter")}
+                          </Text>
+                        </Button>
+                      </ControlSizeProvider>
+                    </>
+                  }
+                />
+              </Theme>
               {!availability.available ? (
                 <Text
                   as="div"

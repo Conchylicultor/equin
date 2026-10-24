@@ -20,6 +20,13 @@ The box is themable end to end: its corners are the shape group's
 `bottomSlot` row that wants the text's inset reads `padComposerActions`
 (`p-composer-actions`), as the prompt editor's action row does.
 
+To give ONE field a different box (a hero prompt), wrap it in a sub-theme
+that sets these tokens (`defineSubTheme` + `ThemeEngine.SubTheme` +
+`<Theme name={subThemeScope(…)} surface="none">`, see
+[`ui/theme-engine`](../../../ui/plugins/theme-engine/CLAUDE.md#sub-themes-a-region-that-wears-a-few-values-on-top)) —
+never a look prop or a className. Home's New app prompt is the example
+(`apps/home/new-app`, `newAppPromptTheme`).
+
 ## Node extensions
 
 A `NodeExtension` is the one declaration that makes a token round-trip — this
