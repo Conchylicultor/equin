@@ -56,11 +56,26 @@ function script(rel: string): string {
   return `"${ROOT}/${rel}"`;
 }
 
+// `bun` is a mise shim, which picks its version from the CURRENT directory's
+// mise.toml / mise.lock — and a scratch workspace has none (nor is there a
+// global default), so run from the guards' checkout: its lock picks the bun its
+// guards are written for. The guards read the agent's cwd from the hook input,
+// not from the process.
+function runGuard(rel: string): string {
+  return `cd "${ROOT}" && bun ${script(rel)}`;
+}
+
+// Fails closed. Claude Code blocks a tool call only on exit 2 — any other
+// failure is a "non-blocking error" and the call runs unguarded. The guard
+// refuses through stdout and exits 0, so a non-zero exit is a crash (bun that
+// cannot start, a throwing guard): turn it into a block, its stderr the reason.
 const PRE_TOOL_USE =
   "command -v bun >/dev/null 2>&1 || { echo 'guards: bun is not on PATH, so no PreToolUse guard can run; every tool call is blocked until it is (an agent pane seeds PATH with the mise shims: runtime-tmux agentSessionPath)' >&2; exit 2; }; " +
-  `bun ${script(GUARD_SCRIPTS.preToolUse)}`;
+  `${runGuard(GUARD_SCRIPTS.preToolUse)} || { echo 'guards: the PreToolUse guard failed (above), so every tool call is blocked until it runs' >&2; exit 2; }`;
 
-const STOP = `bun ${script(GUARD_SCRIPTS.stop)}`;
+// Stays fail-open: exit 2 from a stop hook means "keep working", so a crashing
+// stop guard would trap the subagent instead of guarding it.
+const STOP = runGuard(GUARD_SCRIPTS.stop);
 
 /** Every protection an agent runs with. */
 export function agentPolicySettings(): AgentPolicySettings {
