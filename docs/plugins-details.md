@@ -32131,6 +32131,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `primitives/loading.Loading`
       - `primitives/slot-render.defineMountSlot`
       - `primitives/slot-render.defineRenderSlot`
+      - `shell/toast.useSuppressToasts`
       - `ui/theme-engine.ThemeEngine`
     - Exports (types):
       - `MenuBarStatus`
@@ -32222,7 +32223,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `MenuBar.Section` "Apps" → `MenuBarAppGrid`
           - `item-actions` "pin" → `PinAppAction`
-        - Uses: 28 symbols — full list in [`plugins/menu-bar/plugins/app-grid/REFERENCE.md`](../plugins/menu-bar/plugins/app-grid/REFERENCE.md)
+        - Uses: 27 symbols — full list in [`plugins/menu-bar/plugins/app-grid/REFERENCE.md`](../plugins/menu-bar/plugins/app-grid/REFERENCE.md)
           - `primitives/data-view` ×5
           - `apps-core` ×4
           - `apps-core/app-launcher` ×3
@@ -32237,7 +32238,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/spacing.insetClass`
           - `primitives/icon-button.IconButton`
           - `primitives/loading.Loading`
-          - `shell/toast.showToast`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --destructive`
@@ -47383,7 +47383,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/density --space-md`
-    - **`toast`** — Global toast notifications: a plain showToast() backed by sonner's global API, plus the Core.Root-mounted sonner Toaster host. Degrades to a silent no-op when no host is mounted.
+    - **`toast`** — Global toast notifications: a plain showToast() backed by sonner's global API, plus the Core.Root-mounted sonner Toaster host. Degrades to a silent no-op when no host is mounted. useSuppressToasts() lets a surface that is its whole document (the menu-bar panel) turn the host off while mounted.
       - Web:
         - Contributes: `Core.Root` → `ToasterHost`
         - Uses:
@@ -47402,6 +47402,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `isInToast`
           - `showToast`
+          - `useSuppressToasts`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --border`
@@ -47420,7 +47421,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2/settings`
           - `debug/profiling/ops`
           - `infra/health`
-          - `menu-bar/app-grid`
+          - `menu-bar`
           - `reports/optimistic-rejection`
           - `shell/notifications`
       - Core:

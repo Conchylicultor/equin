@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   defineItemActions,
   type ItemActionProps,
@@ -12,7 +12,6 @@ import {
   foldResource,
 } from "@plugins/primitives/plugins/live-state/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { showToast } from "@plugins/shell/plugins/toast/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import {
   menuBarCapabilities,
@@ -59,10 +58,12 @@ function pinPlace(platform: InstallCapabilities["platform"]): string {
  * Dock offers it again). A failed read is an error mark naming it (click:
  * re-read). Pending (the request, then the helper's build) is the button's
  * spinner; a failed pin keeps an error mark whose tooltip says why, and a
- * click on it tries again.
+ * click on it tries again. The panel shows no toasts, so a pin the endpoint
+ * refused outright (no computer behind the page) is that same error mark.
  */
 export function PinAppAction({ row }: ItemActionProps<AppRow>): ReactNode {
   const fetchEndpoint = useFetchEndpoint();
+  const [refused, setRefused] = useState<string | null>(null);
   const state = combineResources({
     capabilities: useLive(menuBarCapabilities),
     pinned: useLive(menuBarPinned),
@@ -101,16 +102,11 @@ export function PinAppAction({ row }: ItemActionProps<AppRow>): ReactNode {
   const place = pinPlace(capabilities.platform);
 
   const pin = async () => {
+    setRefused(null);
     const res = await fetchEndpoint(pinApp, { appId: row.id });
-    if (res.kind === "unavailable") {
-      showToast({
-        title: `Couldn't keep ${row.name} in ${place}`,
-        description: res.message,
-        variant: "error",
-      });
-    }
+    if (res.kind === "unavailable") setRefused(res.message);
   };
-  const failed = request?.state === "failed" ? request : null;
+  const failedMessage = request?.state === "failed" ? request.message : refused;
   return (
     <ControlSizeProvider size="xs">
       <IconButton
@@ -118,14 +114,14 @@ export function PinAppAction({ row }: ItemActionProps<AppRow>): ReactNode {
         // the panel's surface, lit in the accent under the pointer.
         variant="floating"
         shape="pill"
-        icon={failed ? errorIcon : keepIcon}
+        icon={failedMessage !== null ? errorIcon : keepIcon}
         label={
-          failed
-            ? `Keeping ${row.name} in ${place} failed: ${failed.message} — click to retry`
+          failedMessage !== null
+            ? `Keeping ${row.name} in ${place} failed: ${failedMessage} — click to retry`
             : `Keep ${row.name} in ${place}`
         }
         className={
-          failed
+          failedMessage !== null
             ? "text-destructive"
             : "hover:bg-primary hover:text-primary-foreground"
         }

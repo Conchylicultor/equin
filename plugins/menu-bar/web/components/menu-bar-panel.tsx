@@ -7,6 +7,7 @@ import {
   insetClass,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
+import { useSuppressToasts } from "@plugins/shell/plugins/toast/web";
 import { MenuBar } from "../slots";
 import { useNativeHost } from "../native-host";
 import { PanelStatus } from "../internal/panel-status";
@@ -20,8 +21,12 @@ import "../internal/window-material.css";
  * layout, not a pane: a pane always draws its header, which sat behind the
  * panel and showed through its translucent fill. Its body is the
  * `MenuBar.Section` slot and nothing else: the panel names no section.
+ *
+ * It shows no toasts: the app-wide stack does not belong in a menu (it drew
+ * over the app grid), so its sections say their outcomes inline.
  */
 export function MenuBarPanel() {
+  useSuppressToasts();
   // On a transparent helper window the panel is the material's rounded fill.
   const material = useWindowMaterial();
   return (

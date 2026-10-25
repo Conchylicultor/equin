@@ -6,6 +6,7 @@ import {
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { DismissAllButton } from "./dismiss-all-button";
+import { useToastsSuppressed } from "../internal/suppress-toasts";
 
 /**
  * Sonner's own `VIEWPORT_OFFSET` default, restated here because the stack-action
@@ -18,6 +19,12 @@ const VIEWPORT_OFFSET = 24;
 const STACK_GAP = 8;
 
 export function ToasterHost() {
+  // A surface that shows no toasts (the menu-bar panel) is mounted.
+  if (useToastsSuppressed()) return null;
+  return <Toasts />;
+}
+
+function Toasts() {
   const [actionsRef, { height: actionsHeight }] =
     useElementSize<HTMLDivElement>();
 

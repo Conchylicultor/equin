@@ -11,7 +11,7 @@
   - Contributes:
     - `MenuBar.Section` "Apps" → `MenuBarAppGrid`
     - `item-actions` "pin" → `PinAppAction`
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×5
     - `apps-core` ×4
     - `apps-core/app-launcher` ×3
@@ -26,7 +26,6 @@
     - `primitives/css/spacing.insetClass`
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
-    - `shell/toast.showToast`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`

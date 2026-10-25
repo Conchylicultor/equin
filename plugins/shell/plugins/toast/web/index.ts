@@ -3,10 +3,11 @@ import { ToasterHost } from "./components/toaster-host";
 
 export { showToast } from "./internal/show-toast";
 export { isInToast } from "./internal/is-in-toast";
+export { useSuppressToasts } from "./internal/suppress-toasts";
 export { type ToastArgs, type ToastVariant } from "../core";
 
 export default {
   description:
-    "Global toast notifications: a plain showToast() backed by sonner's global API, plus the Core.Root-mounted sonner Toaster host. Degrades to a silent no-op when no host is mounted.",
+    "Global toast notifications: a plain showToast() backed by sonner's global API, plus the Core.Root-mounted sonner Toaster host. Degrades to a silent no-op when no host is mounted. useSuppressToasts() lets a surface that is its whole document (the menu-bar panel) turn the host off while mounted.",
   contributions: [Core.Root({ component: ToasterHost })],
 } satisfies PluginDefinition;

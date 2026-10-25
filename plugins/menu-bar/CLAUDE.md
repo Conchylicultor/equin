@@ -186,6 +186,7 @@ requests the helper build and reloads the tray onto it
     - `primitives/loading.Loading`
     - `primitives/slot-render.defineMountSlot`
     - `primitives/slot-render.defineRenderSlot`
+    - `shell/toast.useSuppressToasts`
     - `ui/theme-engine.ThemeEngine`
   - Exports (types):
     - `MenuBarStatus`

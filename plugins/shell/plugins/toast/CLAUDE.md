@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Global toast notifications: a plain showToast() backed by sonner's global API, plus the Core.Root-mounted sonner Toaster host. Degrades to a silent no-op when no host is mounted.
+- Description: Global toast notifications: a plain showToast() backed by sonner's global API, plus the Core.Root-mounted sonner Toaster host. Degrades to a silent no-op when no host is mounted. useSuppressToasts() lets a surface that is its whole document (the menu-bar panel) turn the host off while mounted.
 - Web:
   - Contributes: `Core.Root` → `ToasterHost`
   - Uses:
@@ -23,6 +23,7 @@
   - Exports (values):
     - `isInToast`
     - `showToast`
+    - `useSuppressToasts`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`
@@ -41,7 +42,7 @@
     - `config_v2/settings`
     - `debug/profiling/ops`
     - `infra/health`
-    - `menu-bar/app-grid`
+    - `menu-bar`
     - `reports/optimistic-rejection`
     - `shell/notifications`
 - Core:
