@@ -69,6 +69,16 @@ registry — and at `RETAINED_INSTANCES` it would evict and sweep the host's rea
 `app-tabs:` payloads just by being remounted a few times (every `src` change
 remounts a frame). With the guards, an embed leaves no trace in storage.
 
+## Focus stays with the host
+
+A same-origin iframe calling `element.focus()` moves the top window's focus
+into the frame, so an embedded app's `autoFocus` would blur the host as its
+frame loads (an open popover closes). In a **framed embed only**, the web
+`register` (`embedFocusGuard`) wraps `HTMLElement` / `SVGElement`
+`.prototype.focus` to drop a call while this document does not have focus;
+once the person clicks into the frame, focus behaves normally. That's why
+`autoFocus` seems to do nothing inside a framed embed.
+
 ## What still renders
 
 The toaster and the headless crash/report collectors mounted at `Core.Root`.
@@ -92,7 +102,7 @@ flag that swallowed error surfaces would be worse than one that shows a toast.
 
 ## Plugin reference
 
-- Description: The declared embedded-document signal: embedMode() reads the `?embed=` flag once at boot (the pane router drops every query on its first write, so it cannot be re-read) — `?embed=1` opens one route with no app chrome, `?embed=chrome` opens the whole app, chrome included — and embedUrl(path, mode) builds an in-app URL that opens that way. isChromelessDocument() is read by the apps layout (no tab bar, no rail) and the floating action bar (hidden); isEmbeddedDocument() by the two sessionStorage writers (app-instance registry, persisted tabs) so a same-origin frame in either mode never evicts the host tab's own state.
+- Description: The declared embedded-document signal: embedMode() reads the `?embed=` flag once at boot (the pane router drops every query on its first write, so it cannot be re-read) — `?embed=1` opens one route with no app chrome, `?embed=chrome` opens the whole app, chrome included — and embedUrl(path, mode) builds an in-app URL that opens that way. isChromelessDocument() is read by the apps layout (no tab bar, no rail) and the floating action bar (hidden); isEmbeddedDocument() by the two sessionStorage writers (app-instance registry, persisted tabs) so a same-origin frame in either mode never evicts the host tab's own state. A framed embed never pulls focus out of its host: its focus() is a no-op until this document has focus (an autofocusing embedded app would otherwise close the host's open popover as its frame loads).
 - Cross-plugin:
   - Imported by:
     - `apps-core/app-launcher`
