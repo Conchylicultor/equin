@@ -1,5 +1,6 @@
 import { serveValue, sliceRange } from "@plugins/network/plugins/live/server";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
+import { transcriptChainReads } from "@plugins/conversations/plugins/transcript-source/server";
 import {
   jsonlEvents,
   transcriptPrompts,
@@ -65,6 +66,7 @@ export function transcriptMeta(events: readonly JsonlEvent[]): TranscriptMeta {
 export const jsonlEventsServed = serveValue(jsonlEvents, {
   source: "external",
   changes: "notified",
+  reads: transcriptChainReads,
   loader: async ({ id }, range) =>
     sliceRange(
       jsonlEvents,
@@ -91,6 +93,7 @@ const toolCallKey = (id: string, toolUseId: string) =>
 export const transcriptToolCallServed = serveValue(transcriptToolCall, {
   source: "external",
   changes: "notified",
+  reads: transcriptChainReads,
   loader: async ({ id, toolUseId }) => {
     const call =
       (await conversationEvents(id)).find(

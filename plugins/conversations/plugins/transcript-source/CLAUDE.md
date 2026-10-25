@@ -97,6 +97,7 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
     - `conversations/conversation-view/jsonl-viewer/background-shells`
     - `conversations/conversation-view/jsonl-viewer/outline`
     - `conversations/conversation-view/jsonl-viewer/subagents`
+    - `conversations/conversation-view/jsonl-viewer/transcript-stats`
     - `conversations/transcript-source/memory`
     - `conversations/transcript-watcher`
 - Sub-plugins:

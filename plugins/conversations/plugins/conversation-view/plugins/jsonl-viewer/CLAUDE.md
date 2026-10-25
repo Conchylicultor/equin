@@ -245,6 +245,7 @@ back.
     - `resource.declare` "jsonl-events.tool-call"
     - `resource.declare` "jsonl-events:meta"
   - Uses:
+    - `conversations/transcript-source.transcriptChainReads`
     - `conversations/transcript-source.TranscriptImageKeyError`
     - `conversations/transcript-source.TranscriptSource`
     - `infra/git/git-read-cache.createSignedMemo`

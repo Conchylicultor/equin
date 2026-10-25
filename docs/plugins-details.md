@@ -15027,6 +15027,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `resource.declare` "jsonl-events.tool-call"
               - `resource.declare` "jsonl-events:meta"
             - Uses:
+              - `conversations/transcript-source.transcriptChainReads`
               - `conversations/transcript-source.TranscriptImageKeyError`
               - `conversations/transcript-source.TranscriptSource`
               - `infra/git/git-read-cache.createSignedMemo`
@@ -16861,6 +16862,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.conversationEvents`
                   - `conversations/conversation-view/jsonl-viewer.watchConversationEvents`
+                  - `conversations/transcript-source.transcriptChainReads`
                   - `network/live.serveValue`
                 - Exports (values): `serveTranscriptFold`
               - Cross-plugin:
@@ -18810,6 +18812,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/jsonl-viewer/background-shells`
           - `conversations/conversation-view/jsonl-viewer/outline`
           - `conversations/conversation-view/jsonl-viewer/subagents`
+          - `conversations/conversation-view/jsonl-viewer/transcript-stats`
           - `conversations/transcript-source/memory`
           - `conversations/transcript-watcher`
       - Plugins:

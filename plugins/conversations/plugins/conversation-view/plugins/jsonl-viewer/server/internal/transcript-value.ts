@@ -1,6 +1,7 @@
 import { serveValue } from "@plugins/network/plugins/live/server";
 import type { LiveValue } from "@plugins/network/plugins/live/core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
+import { transcriptChainReads } from "@plugins/conversations/plugins/transcript-source/server";
 import {
   conversationEvents,
   watchConversationEvents,
@@ -28,6 +29,9 @@ export function serveTranscriptValue<T>(
   return serveValue(value, {
     source: "external",
     changes: "notified",
+    // The loader resolves the transcript chain from Postgres; the watch already
+    // follows a session switch, so this only makes the read declared.
+    reads: transcriptChainReads,
     loader: async ({ id }) => {
       const next = derive(await conversationEvents(id));
       const json = JSON.stringify(next);
